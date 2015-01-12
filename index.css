@@ -1,4 +1,7 @@
 body {
-	background-color: blue;
-	color: green;
+	background-color: grey;
+}
+
+h1 { 
+	color: purple;
 }

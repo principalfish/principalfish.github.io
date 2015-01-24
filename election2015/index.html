@@ -27,8 +27,64 @@
 			 </div>
 			 
 			 <div id ="farleft">
+			 
+				<p> Projections - coming soon</p>
+				<p></p>
+				<p> Filters </p>				
+				<button onclick="resetFilter()">Reset</button>
 				
-				<button onclick="filter()">Click for Labour seats</button>
+				<p> by party </p>
+				 <select name="party" onchange="partyFilter(this.value)">
+					<option value= hidden'></option>
+					<option value="labour">Labour</option>
+					<option value="conservative">Conservative</option>
+					<option value="libdems">Liberal Democrats</option>
+					<option value="ukip">UKIP</option>
+					<option value="snp">SNP</option>
+					<option value="plaidcymru">Plaid Cymru</option>
+					<option value="green">Green</option>
+					<option value="respect">Respect</option>			
+					<option value="independent">Independent</option>	
+					<option value="speaker">Speaker</option>						
+				</select> 
+				
+				<p> by majority</p>
+				<select name="majority" onchange="majorityFilter(this.value)">
+					<option value="hidden"></option>
+					<option value="marginal"> <= 1000 </option>
+					<option value="close">1001-3000</option>
+					<option value="safeish">3001-7000</option>
+					<option value="safe"> >= 7000</option>										
+				</select> 
+				 
+				
+				<p> by region </p>
+				<select name="region" onchange="regionFilter(this.value)">
+					<option value="hidden"></option>
+					<option value="eastofengland">East of England</option>
+					<option value="eastmidlands"> East Midlands </option>
+					<option value="london">London</option>
+					<option value="northeastengland">North East England</option>
+					<option value="northwestengland">North West England</option>
+					<option value="scotland">Scotland</option>
+					<option value="southeastengland">South East England</option>
+					<option value="southwestengland">South West England</option>
+					<option value="westmidlands">West Midlands</option>
+					<option value="wales">Wales</option>	
+					<option value="yorkshireandthehumber">Yorkshire & Humber</option>	
+				</select> 
+				
+			
+				<p> by turnout </p>
+				<select name="turnout" onchange="turnoutFilter(this.value)">
+					<option value="hidden"></option>
+					<option value="low"><55%</option>				
+					<option value="average">55-65%</option>
+					<option value="high">65-75%</option>
+					<option value="extreme">>75%</option>
+					
+			
+				</select> 
 			
 			</div>
 			
@@ -150,7 +206,7 @@
 								.moveToFront()
 								.transition()
 								.style("stroke", "black")
-								.style("stroke-width", 0.6);
+								.style("stroke-width", 0.3);
 						
 								
 							
@@ -371,20 +427,85 @@
 			</div>
 			
 			<script>	
-				function filter(){
-					d3.json("map.json", function(uk){
-						
-						
-						
+			
+				function resetFilter(){
+					d3.json("map.json", function(uk){					
 						g.selectAll(".map")
-							.attr("style", function(d){
-								if (d.properties.incumbent != "labour")
-									return "opacity: 0.2";
-								})
-								
+							.attr("style", function(d){								
+									return "opacity: 1";
+							})								
 					});
-				}	
+				}
 					
+				function partyFilter(value){
+					d3.json("map.json", function(uk){						
+						g.selectAll(".map")
+							.attr("style", function(d){									
+									if (value == "hidden")
+										return "opacity: 1";																			
+									if (d.properties.incumbent != value)
+										return "opacity: 0.1";
+							})
+					});
+				}
+				
+				function majorityFilter(value){
+					d3.json("map.json", function(uk){	
+						g.selectAll(".map")
+							.attr("style", function(d){									
+									if (value == "marginal" && d.properties.info_majorityvotes > 1000)								
+										return "opacity: 0.1";
+										
+									if (value == "close" && (d.properties.info_majorityvotes < 1001 || d.properties.info_majorityvotes > 3000))							
+										return "opacity: 0.1";
+										
+									if (value == "safeish" && (d.properties.info_majorityvotes < 3001 || d.properties.info_majorityvotes > 7001))								
+										return "opacity: 0.1";
+										
+									if (value == "safe" && d.properties.info_majorityvotes < 7001)								
+										return "opacity: 0.1";
+							})
+					});
+				}
+				
+				
+				function regionFilter(value){
+					d3.json("map.json", function(uk){	
+						g.selectAll(".map")
+							.attr("style", function(d){	
+									if (value == "hidden")
+										return "opacity: 1";							
+									if (value != d.properties.region)								
+										return "opacity: 0.1";
+									
+							})
+					});
+				}
+					
+					
+					
+				function turnoutFilter(value){
+					d3.json("map.json", function(uk){	
+						g.selectAll(".map")
+							.attr("style", function(d){	
+									if (value == "low" && d.properties.info_turnout > 55)								
+										return "opacity: 0.1";
+										
+									if (value == "average" && (d.properties.info_turnout < 55|| d.properties.info_turnout > 65))							
+										return "opacity: 0.1";
+										
+									if (value == "high" && (d.properties.info_turnout < 65 || d.properties.info_turnout >= 75))								
+										return "opacity: 0.1";
+										
+									if (value == "extreme" && d.properties.info_turnout <= 75)								
+										return "opacity: 0.1";
+							})
+					});
+				}
+					
+					
+				
+				
 							
 			
 				

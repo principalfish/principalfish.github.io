@@ -129,7 +129,8 @@ body {
 	width: 700px;
 	height: 900px;
 	border: 1px solid black;	
-	display: block;
+	display: block;	
+	overflow: hidden;
 }	
 
 /* right */

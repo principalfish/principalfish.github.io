@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+	<title>UK Election 2015</title>
+	<link type="text/css" rel="stylesheet" href="main.css"/>
+	<link rel="shortcut icon" href="img/logo.png">
+</head>
+
+<body>	
+	<script type="text/javascript" src="js/d3.min.js"></script>
+	<script type="text/javascript" src="js/topojson.js"></script>	
+	<script type="text/javascript" src="js/tooltip.js"></script>	
+	<script type="text/javascript" src="js/dictionary.js"></script>
+	<script type="text/javascript" src="js/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="js/papaparse.min.js"></script>
+	
+		
+	
+		<div id="wrapper">
+			<div id="top">
+				<h2> <a href="#">Election 2015</a></h2>
+				<div id="menu">
+				  <ul>
+					<li><a href="http://www.principalfish.co.uk" class="current">home</a></li>
+					<li><a href="#">links</a></li>
+					<li><a href="#">don't</a></li>
+					<li><a href="#">work!</a></li>
+				  </ul>
+				</div>
+			 </div>
+			<div id ="farleft">
+				
+				
+				<p> click for projection </p>
+				<p> click for live</p>
+				
+				<p> filter by party </p>
+				<p> and votes over x% by party </p>
+				<p> filter by region </p>
+				<p> filter by majority votes</p>
+				<p> filter by turnout </p>
+				<p> filter by  </p>
+			
+			</div>
+			<div id="left">
+					<script>
+						var mapstuff;
+						
+						var width = 700, // width and height of map
+							height = 900;
+							active = d3.select(null);
+						
+						var projection = d3.geo.albers() // variables to change default map position
+							.center([0, 54.6]) //centers vertically and horizontally
+							.rotate([3, 0])
+							.parallels([51, 60])
+							.scale(5400)
+							.translate([width / 2, height / 2]);								
+						
+						var zoom = d3.behavior.zoom()
+							.translate([0, 0])
+							.scale(1)
+							.scaleExtent([1, 25]) // change depth of potential zoom
+							.on("zoom", zoomed); // starts zoom function
+					
+						var path = d3.geo.path()
+							.projection(projection)
+							.pointRadius(0.5);							
+							
+						var svg = d3.select("#left").append("svg")
+							.attr("width", width)
+							.attr("height", height)
+							.on("click", stopped, true);
+					
+						svg.append("rect")
+							.attr("class", "background")
+							.attr("width", width)
+							.attr("height", height)
+							.on("click", reset);	
+						
+						
+						var g = svg.append("g");
+						
+						var previousnode = null;
+						
+						
+						
+						svg
+							.call(zoom) 
+							.call(zoom.event);
+							
+						var blah = d3.json("map.json", function(error, uk) {
+								if (error) return console.error(error);								
+									
+								
+								
+								g.selectAll(".map")
+									.data(topojson.feature(uk, uk.objects.map).features)
+									.enter().append("path")
+									.attr("class", function(d) {
+										return "map " + d.properties.incumbent;	})
+									/* .attr("style", function(d){
+										if (d.properties.info_majoritypercent <= 7)
+											return "opacity: 0.6";
+										if (7 < d.properties.info_majoritypercent < 15)
+											return "opacity: 0.8";									
+									})	*/
+									.attr("d", path) 								
+									.on("click", clicked)
+									.append("svg:title")
+										.text(function(d) { return d.properties.name})
+									
+								g.append("path")
+									.datum(topojson.mesh(uk, uk.objects.map, function(a, b){
+										return a.properties.region != b.properties.region && a != b; }))
+									.attr("d", path)
+									.attr("class", "boundaries");
+									
+							return(uk.objects.map.geometries.properties);
+							
+																
+							});
+							
+						
+						
+						// code to append place labels - needs working on 
+						/*
+						d3.json("places.topojson", function(error, uk) {
+							if (error) return console.error(error);						
+							
+							g.append("path")
+								.datum(topojson.feature(uk, uk.objects.collection))
+								.attr("d", path)
+								.attr("class", "place")		
+								
+								
+							g.selectAll(".place-label")
+									.data(topojson.feature(uk, uk.objects.collection).features)
+								  .enter().append("text")
+									.attr("class", "place-label")	
+									.attr("transform", function(d) { return "translate(" + projection(d.geometry.coordinates) + ")"; })			
+									.attr("dx", "0.5em")									
+									.text(function(d) { return d.properties.NAME; });		
+								
+							});
+								
+							*/		
+								
+						function clicked(d) {
+							
+							d3.select(previousnode)
+								.transition()
+								.style("opacity", 1)
+							
+							d3.select(this)
+									.transition()									
+									.style("opacity", 0.6)
+																		
+							if (active.node() === this) return reset();
+							active.classed("active", false);
+							active = d3.select(this).classed("active", true);
+
+							var bounds = path.bounds(d),
+								dx = bounds[1][0] - bounds[0][0],
+								dy = bounds[1][1] - bounds[0][1],
+								x = (bounds[0][0] + bounds[1][0]) / 2,
+								y = (bounds[0][1] + bounds[1][1]) / 2,
+								scale = .25 / Math.max(dx / width, dy / height),
+								translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+							svg.transition()
+								.duration(750)
+								.call(zoom.translate(translate).scale(scale).event);
+							
+							
+							seatinfo(d)
+							
+							previousnode = this;
+						}
+				
+						function reset() {
+							active.classed("active", false);
+							active = d3.select(null);
+
+							svg.transition()
+								.duration(750)
+								.call(zoom.translate([0, 0]).scale(1).event);
+								
+						}
+
+						function zoomed() {
+							g.style("stroke-width", 1.5 / d3.event.scale + "px");
+							g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+							
+						}
+						
+						function stopped() {
+							if (d3.event.defaultPrevented) d3.event.stopPropagation();
+						}
+						
+				</script>	
+					
+			</div>
+			
+						
+			<div id="right">
+				<div id="topright">
+					<h3 = "information-header"> Information for Selected Seat</h3>	
+					<h4>* - by-election contested since 2010</h4>
+				</div>
+				
+				<div id ="information">				
+					<table>
+						<tr id="information-seatname"></tr>	
+					
+						<tr id="information-party"></tr>
+						<tr id="information-mp"></tr>
+						<tr id="information-majority"></tr>
+						<tr id="information-electorate"></tr>							
+					</table>
+				
+				<div id="charts"> 
+						<div id="information-pie"></div>					
+						<div id="information-chart"></div>	
+				</div>
+					
+					<script>
+					var oldclass = null;
+					
+					function seatinfo(d){
+						
+						$("#information").removeClass(oldclass);		
+						$("#information").addClass(d.properties.incumbent).css("opacity", 0.8);				
+						$("#information-seatname").html("<td>Seat</td><td style=\"width:380px\"> " + d.properties.name + "<span id =\"information-byelection\"></span></td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.region] + "</td>");
+						if (d.properties.info_bielection == "yes")
+							$("#information-byelection").html("*");					
+						$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.incumbent] + "</td>");
+						$("#information-mp").html("<td>MP</td><td>" + d.properties.info_mpfirstname + " " + d.properties.info_mplastname + "</td>");
+						$("#information-majority").html("<td>Majority</td><td> " + d.properties.info_majorityvotes  + "  =  " + d.properties.info_majoritypercent + "%</td>");																	
+						$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " + d.properties.info_turnout + "%</td><td id=\"rightcolumninfotable\">Electorate: " + d.properties.info_electorate + "</td>");	
+						$("#information-pie").html(piechart(d));
+						
+						oldclass = d.properties.incumbent;
+					}
+					
+					
+					
+					function piechart(d){
+						
+						$("#information-pie").empty();
+						$("#information-chart").empty();
+						
+						$("#information-chart").html("<p></p>");
+					
+						var data = [];
+						data.push({ party: "labour", votes: d.properties.info_LAB});
+						data.push({ party: "conservative", votes: d.properties.info_CON});
+						data.push({ party: "libdems", votes: d.properties.info_LIB});
+						data.push({ party: "ukip", votes: d.properties.info_UKIP});
+						data.push({ party: "snp", votes: d.properties.info_SNP});
+						data.push({ party: "plaidcymru", votes: d.properties.info_PC});
+						data.push({ party: "green", votes: d.properties.info_GRN});
+						data.push({ party: "other1", votes: d.properties.info_OTH1});
+						data.push({ party: "other2", votes: d.properties.info_OTH2});
+						
+					
+						var filterdata = [];
+						
+						
+						$.each(data, function(i){
+							if (data[i].votes > 0)
+								filterdata.push(data[i]);
+						});
+						
+					
+						
+						filterdata.sort(function(a, b){						
+								return b.votes - a.votes ; 				
+						});
+						
+						
+						// better way of doing this?
+						
+						
+						var width = 250,
+							height = 250;
+							radius = Math.min(width, height) / 2;
+							
+													
+						var arc = d3.svg.arc()
+							.outerRadius(radius - 10)
+							.innerRadius(0);							
+					
+						var pie = d3.layout.pie()
+							.sort(null)
+							.value(function (d) {
+								return d.votes;
+							});
+							
+						var svg = d3.select("#information-pie").append("svg")
+							.attr("width", width)
+							.attr("height", height)
+							.append("g")
+							.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+							var g = svg.selectAll(".arc")
+								.data(pie(filterdata))
+								.enter().append("g")
+								.attr("class", "arc");
+
+							g.append("path")
+								.attr("d", arc)								
+								.attr("class", function(d, i){									
+										return filterdata[i].party;									
+									});		
+						
+						// creates table with vote counts/percentages
+						$.each(filterdata, function(i){							
+							$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +  
+								partylist[filterdata[i].party] + "</td><td>" + filterdata[i].votes + 
+								"</td><td>" + (100 * filterdata[i].votes/d.properties.info_votescast).toFixed(2) +  "%</td></tr>")
+						})
+								
+						}
+						
+						
+						
+					</script>
+				
+					<div id = "totals">
+						<h3>Total Seats and Votes</h3>
+						<table>
+							<tr>
+								<th>Party</th>
+								<th>Seats</th>
+								<th>Net</th>
+								<th>Votes</th>
+								<th>Vote %</th>
+							</tr>
+						</table>
+					</div>
+					
+					<script>
+						
+						
+						function doStuff(data) {	
+						
+							$.each(data, function(i){
+								$("#totals table").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>"
+								+ data[i].net + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votepercent +"</td></tr>")
+							})
+						};
+						
+						function parseData(url, callBack) {
+							Papa.parse(url, {
+								download: true,
+								header: true,								
+								dynamicTyping: true,
+								complete: function(results) {
+									callBack(results.data);
+								}
+							});
+						}
+
+						parseData("votetotals.csv", doStuff);
+					
+						
+					</script>
+					
+			</div>
+			
+			
+		</div>
+		
+		<div id="footer">	
+				<p> Scroll wheel to zoom on map, click to zoom on specific seat, click and drag to pan around the map </p>		
+				<p> Click on the active seats or in the sea to get back to starting position</p>		
+				<p> Copyright 2015 principalfish.co.uk</p>
+		</div>
+	
+		
+		
+		
+</body>
+	
+<footer>
+	<script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+	  ga('create', 'UA-58696407-1', 'auto');
+	  ga('send', 'pageview');
+
+	</script>
+</footer>

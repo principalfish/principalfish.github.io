@@ -104,10 +104,24 @@ body {
 	color: white;
 }
 
-#farleft p:hover{
+#farleft a:hover{
 	background: #FF5938;
 }
 
+#farleft a {
+	display: block;
+	text-decoration: none;
+	color: #fff;
+}
+
+#farleft a.current {
+	letter-spacing: 1px;
+	color: gray;
+}
+
+#farleft a.current:hover {
+	color: #fff;
+}
 /* map */
 
 #left {
@@ -115,6 +129,8 @@ body {
 	width: 700px;
 	height: 900px;
 	border: 1px solid black;	
+	display: block;
+	overflow: hidden;
 	
 }	
 
@@ -230,8 +246,9 @@ svg .map {
 	stroke-width: 0.1; 
 	stroke-linejoin: round; 
 	cursor: pointer;
-	pointer-events: all; 
+	pointer-events: all; 	
 }
+
 .map:hover {
 	opacity: 0.7;
 	

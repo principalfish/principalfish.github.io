@@ -7,18 +7,17 @@
 </head>
 
 <body>	
-	<script type="text/javascript" src="/js/d3.min.js"></script>
-	<script type="text/javascript" src="/js/topojson.js"></script>	
-	<script type="text/javascript" src="/js/tooltip.js"></script>	
-	<script type="text/javascript" src="/js/dictionary.js"></script>
-	<script type="text/javascript" src="/js/jquery-2.1.3.min.js"></script>
-	<script type="text/javascript" src="/js/papaparse.min.js"></script>
+	<script type="text/javascript" src="js/d3.min.js"></script>
+	<script type="text/javascript" src="js/topojson.js"></script>	
+	<script type="text/javascript" src="js/dictionary.js"></script>
+	<script type="text/javascript" src="js/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="js/papaparse.min.js"></script>
 	
 		
 	
 		<div id="wrapper">
 			<div id="top">
-				<h2>Election 2015</h2>
+				<h2> <a href="#">Election 2015</a></h2>
 				<div id="menu">
 				  <ul>
 					<li><a href="http://www.principalfish.co.uk" class="current">home</a></li>
@@ -28,20 +27,13 @@
 				  </ul>
 				</div>
 			 </div>
-			<div id ="farleft">
+			 
+			 <div id ="farleft">
 				
-				
-				<p> click for projection </p>
-				<p> click for live</p>
-				
-				<p> filter by party </p>
-				<p> and votes over x% by party </p>
-				<p> filter by region </p>
-				<p> filter by majority votes</p>
-				<p> filter by turnout </p>
-				<p> filter by  </p>
+				<p id=filter>Filter</p>
 			
 			</div>
+			
 			<div id="left">
 					<script>
 						var mapstuff;
@@ -89,7 +81,7 @@
 							.call(zoom) 
 							.call(zoom.event);
 							
-						var blah = d3.json("map.json", function(error, uk) {
+						var d3map = d3.json("map.json", function(error, uk) {
 								if (error) return console.error(error);								
 									
 								
@@ -116,7 +108,7 @@
 									.attr("d", path)
 									.attr("class", "boundaries");
 									
-							return(uk.objects.map.geometries.properties);
+							mapstuff = uk.objects.map.geometries;
 							
 																
 							});
@@ -369,12 +361,15 @@
 					
 			</div>
 			
+			<script>			
+			
+			</script>
 			
 		</div>
 		
 		<div id="footer">	
-				<p> Scroll wheel to zoom on map, click to zoom on specific seat, click and drag to pan around the map </p>		
-				<p> Click on the active seats or in the sea to get back to starting position</p>		
+				<p> Scroll wheel to zoom on map, click to zoom on specific seat, click and drag to pan around the map. Click on the active seat or in the sea to get back to starting zoom.</p>		
+		
 				<p> Copyright 2015 principalfish.co.uk</p>
 		</div>
 	

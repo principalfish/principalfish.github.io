@@ -28,7 +28,7 @@
 			 
 			 <div id ="farleft">
 				
-				<p id=filter>Filter</p>
+				<button onclick="filter()">Click for Labour seats</button>
 			
 			</div>
 			
@@ -359,8 +359,22 @@
 					
 			</div>
 			
-			<script>			
+			<script>	
+				function filter(){
+					d3.json(mapstuff, function(uk){
+						
+						g.selectAll(".map")
+							.attr("style", function(d){
+								if (d.properties.incumbent != "labour")
+									return "opacity: 0.2";
+								})
+								
+					});
+				}	
+					
+							
 			
+				
 			</script>
 			
 		</div>

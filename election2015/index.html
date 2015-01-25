@@ -27,7 +27,10 @@
 			 </div>
 			 
 			 <div id ="farleft">
-			 
+				<div id ="resetbutton">
+					<button id ="resetzoom" onclick="reset()">Reset Zoom</button>
+				</div>
+				
 				<div id="projections">
 					<h2>Projections</h2>
 					<h3 id="currentparliament"> Current Parliament </h3>
@@ -203,7 +206,7 @@
 								
 								if (turnout == "null")
 									g.selectAll("#regionfiltered")
-										.attr("id", null)
+										.attr("id", "null")
 								else
 									g.selectAll("#regionfiltered")
 										.attr("style", function(d){	
@@ -219,7 +222,7 @@
 											if (turnout == "extreme" && d.properties.info_turnout < 75)								
 												return "opacity: 0.1";
 									})
-									.attr("id", null);
+										.attr("id", "null");
 							});
 						}
 					
@@ -263,7 +266,7 @@
 						}; 	
 					</script>
 					
-					<script id="currentparliamentscript">
+					<script>
 						var width = 700, // width and height of map
 							height = 900;
 							active = d3.select(null);
@@ -296,7 +299,8 @@
 							.attr("height", height)
 							.on("click", reset);	
 						
-						
+					
+
 						var g = svg.append("g");
 						
 						var previousnode = null;

@@ -120,6 +120,16 @@ body {
 	cursor: pointer;
 }
 
+#resetzoom {
+	height: 30px;
+	width: 100%;	
+}
+
+#resetzoom button{
+	letter-spacing: 2px;
+	width: 100%;	
+}
+
 #projections {
 	height: 120px;
 	
@@ -283,7 +293,7 @@ svg .map {
 }
 
 .map:hover {
-	opacity: 0.7;	
+	opacity: 0.5;	
 }
 
 .place {

@@ -1,4 +1,27 @@
-#farleft {
-	border-right: 1px solid black;
-	border-top: 0px;
+#election {
+	width: 600px;
+	margin-top: 25px;
+	margin-left: auto;
+	margin-right: auto;
+	border-radius: 50px;
+	font-size: 5em;
+	text-align: center;
+	background-color: darkgrey;
+}
+
+#election a:link{
+	text-decoration: none;
+	color: blue;
+}
+
+#election a:visited{	
+	
+}
+
+#election a:hover {
+	color: orange;
+}
+
+#election a:active {
+    color: red;
 }

@@ -100,14 +100,10 @@ body {
 	border-top: 1px solid black;
 	border-bottom: 1px solid black;
 	height: 900px;
-	background: black;
-	color: white;
+	background: darkgrey;
+	color: black;
 	padding-left: 5px;
 	padding-right: 5px;
-}
-
-#farleft a:hover{
-	background: #FF5938;
 }
 
 #farleft h2,h3{
@@ -115,24 +111,26 @@ body {
 	font-weight: normal;
 }
 
-#farleft h3:hover {
-	color: orange;
-	cursor: pointer;
+#instructions {
+	font-size: auto
 }
-
-#resetzoom {
-	height: 30px;
-	width: 100%;	
-}
-
-#resetzoom button{
-	letter-spacing: 2px;
-	width: 100%;	
-}
-
 #projections {
 	height: 120px;
-	
+	width: 100%;	
+}
+
+#projections a {
+	text-decoration: none;
+}
+
+#projections h3 {
+	text-align: center;
+	margin-right: -5px;
+	margin-left: -5px;
+	padding-left: 5px;
+	padding-right: 5px;
+	padding-top: 2px;
+	padding-bottom: 2px;
 }
 
 #filters {
@@ -168,6 +166,9 @@ body {
 }
 /* map */
 
+
+
+
 #left {
 	float: left;
 	width: 700px;
@@ -175,7 +176,18 @@ body {
 	border: 1px solid black;	
 	display: block;	
 	overflow: hidden;
+	position: relative
 }	
+
+#resetbutton {	
+	position: absolute;	
+	padding: 5px;	
+}
+
+#resetzoom {
+	font-size: 1em;
+}
+
 
 /* right */
 

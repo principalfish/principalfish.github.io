@@ -1,0 +1,114 @@
+body {
+	background: #C9C9C9;
+	font-family: Arial, Helvetica, sans-serif;	
+	font-size: 0.75em;	
+}
+
+
+#wrapper {
+	margin-left: auto;
+    margin-right: auto;
+	width: 1460px;
+	height: 100%;
+	display: block;		
+	
+}
+
+
+/*  banner  stuff*/
+
+#top {
+	width: 1444px;
+	height: 60px;
+	color: #fff;
+	background: black;	
+	padding-left: 10px;
+}
+
+#top h2 {
+	color: White;
+	letter-spacing: 3px;
+	font-size: 2.4em;
+	font-weight: normal;
+	position: relative;
+	margin: 0px;
+	top:15px;
+	display:block;
+	float:left;
+	background: url(/img/logo.png) no-repeat;
+	padding-left: 40px;
+}
+
+
+#top h2 a {
+	color: white;
+	text-decoration: none;
+}
+
+#top h2 a:hover {
+        color: #FF5938;
+}
+
+
+/**** Main Menu ***/
+
+
+#menu {
+	display: block;
+	float:right;
+}
+
+#menu ul {
+	margin: 0;
+	list-style: none;
+}
+
+#menu li {
+	display: block;
+	float: left;
+	white-space: nowrap;
+}
+
+#menu li a {
+	display: block;
+	padding: 40px 20px 0px 20px;
+	text-decoration: none;
+	color: #fff;
+}
+
+* html #menu a {width:1%;}
+
+#menu li a:hover {
+	background: #FF5938;
+}
+
+#menu li a.current {
+	letter-spacing: 1px;
+	color: lightgrey;
+}
+
+#menu li a.current:hover {
+	color: #fff;
+}
+
+/* far left */
+ 
+#farleft{
+	float: left;
+	width: 140px;
+	height: auto;
+	border-left: 1px solid black;	
+	border-bottom: 1px solid black;
+	border-top: 1px solid black;
+	height: 900px;
+	background: darkgrey;
+	color: black;
+	padding-left: 5px;
+	padding-right: 5px;
+}
+
+#farleft h2,h3{
+	letter-spacing: 1px;
+	font-weight: normal;
+}
+

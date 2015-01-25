@@ -2,22 +2,23 @@
 <meta charset="utf-8">
 <head>
 	<title>UK Election Maps</title>
-	<link type="text/css" rel="stylesheet" href="main.css"/>
-	<link type="text/css" rel="stylesheet" href="currentparliament.css"/>
-	<link rel="shortcut icon" href="img/logo.png">
+	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/currentparliament.css"/>
+	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
 <body>	
-	<script type="text/javascript" src="/js/d3.min.js"></script>
-	<script type="text/javascript" src="/js/topojson.js"></script>	
-	<script type="text/javascript" src="/js/dictionary.js"></script>
-	<script type="text/javascript" src="/js/jquery-2.1.3.min.js"></script>
-	<script type="text/javascript" src="/js/papaparse.min.js"></script>
-	<script type="text/javascript" src="/election2015/scripts-currentparliament.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/d3.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/topojson.js"></script>	
+	<script type="text/javascript" src="/election2015/scripts/dictionary.js"></script>
+	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/currentparliament.js"></script>
 	
 		<div id="wrapper">
 			<div id="top">
-				<h2>Election 2015</h2>
+				<h2>UK Election Maps</h2>
 				<div id="menu">
 				  <ul>
 					<li><a href="/" class="current">home</a></li>					
@@ -27,18 +28,19 @@
 			 </div>
 			 
 			 <div id ="farleft">
-				<div id="instructions">
-					<p>Scroll wheel to zoom on map</p>
-					<p>Click on seat to centre and zoom and get information</p>
-					<p>Click and drag to pan around the map. </p>						
-				</div>
 				
-				<div id="projections">
-					<h2>Projections</h2>
+				
+				<div id="projections">					
 					<h3 id="2015projection"><a href="/nothereyet.html">2015 Projection</a></h3>
 					<h3 id="currentparliament"> Current Parliament </h3>
 					
-				</div>				
+				</div>	
+
+				<div id="instructions">
+					<p>Scroll wheel to zoom on map</p>
+					<p>Click on seat to center, zoom and get information</p>
+					<p>Click and drag to pan around the map. </p>						
+				</div>
 		
 				
 				<div id="filters">
@@ -99,19 +101,8 @@
 					</select> 
 				</div>
 				
-				
-					
-				<div id= "placelabels">					
-					<button id="placeslabelbutton">Toggle Place Labels</button> 
-					<p> doesnt work right now</p>
-				</div>
-					
 				<script>
-					$(document).ready(function(){
-						$("button#placeslabelbutton").click(function(){
-							$(this).toggleClass("checked");
-						});
-					});
+				
 				</script>				
 			</div>
 			

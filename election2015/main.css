@@ -82,7 +82,7 @@ body {
 
 #menu li a.current {
 	letter-spacing: 1px;
-	color: gray;
+	color: lightgrey;
 }
 
 #menu li a.current:hover {
@@ -94,7 +94,7 @@ body {
  
 #farleft{
 	float: left;
-	width: 150px;
+	width: 140px;
 	height: auto;
 	border-left: 1px solid black;
 	border-top: 1px solid black;
@@ -102,25 +102,59 @@ body {
 	height: 900px;
 	background: black;
 	color: white;
+	padding-left: 5px;
+	padding-right: 5px;
 }
 
 #farleft a:hover{
 	background: #FF5938;
 }
 
-#farleft a {
-	display: block;
-	text-decoration: none;
-	color: #fff;
-}
-
-#farleft a.current {
+#farleft h2,h3{
 	letter-spacing: 1px;
-	color: gray;
+	font-weight: normal;
 }
 
-#farleft a.current:hover {
-	color: #fff;
+#farleft h3:hover {
+	color: orange;
+	cursor: pointer;
+}
+
+#projections {
+	height: 120px;
+	
+}
+
+#filters {
+	height: 310px;
+}
+
+
+
+#filters button {
+	float: right;
+}
+#filters select {
+	width: 100%;
+	text-align: left;
+	background: black;
+	color: white;
+}
+
+#placelabels  {
+	
+}
+
+#placeslabelbutton {	
+	background: white;
+	color: black;
+	font-size: 1em;
+	width: 100%;
+}
+
+#placeslabelbutton.checked{
+	background: black;
+	color: white;
 }
 /* map */
 
@@ -257,7 +291,7 @@ svg .map {
 }
 
 .place-label {
-	font-size: 0.15em;
+	font-size: 0.4em;
 	fill: black;			
 }
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-	<title>UK Election 2015</title>
+	<title>UK Election Maps</title>
 	<link type="text/css" rel="stylesheet" href="main.css"/>
 	<link rel="shortcut icon" href="img/logo.png">
 </head>
@@ -20,83 +20,250 @@
 				<h2>Election 2015</h2>
 				<div id="menu">
 				  <ul>
-					<li><a href="http://www.principalfish.co.uk" class="current">home</a></li>					
-					<li><a href="mailto:principalfish@gmail.com">email</a></li>
+					<li><a href="/" class="current">home</a></li>					
+					<li><a href="mailto:principalfish@gmail.com" class="current">email</a></li>
 				  </ul>
 				</div>
 			 </div>
 			 
 			 <div id ="farleft">
 			 
-				<p> Projections - coming soon</p>
-				<p></p>
-				<p> Filters </p>				
-				<button onclick="resetFilter()">Reset</button>
+				<div id="projections">
+					<h2>Projections</h2>
+					<h3 id="currentparliament"> Current Parliament </h3>
+					<h3 id="2015projection"> 2015 Projection</h3>
+				</div>
 				
-				<p> by party </p>
-				 <select name="party" onchange="partyFilter(this.value)">
-					<option value= hidden'></option>
-					<option value="labour">Labour</option>
-					<option value="conservative">Conservative</option>
-					<option value="libdems">Liberal Democrats</option>
-					<option value="ukip">UKIP</option>
-					<option value="snp">SNP</option>
-					<option value="plaidcymru">Plaid Cymru</option>
-					<option value="green">Green</option>
-					<option value="respect">Respect</option>			
-					<option value="independent">Independent</option>	
-					<option value="speaker">Speaker</option>						
-				</select> 
+				<script>
+						$("#currentparliament").click(function(){
+						});
+						
+						$("#2015projection").click(function(){
+							alert("nothing here yet");
+							/*g.selectAll(".map")
+								.remove()*/		
+						});
+				</script>
 				
-				<p> by majority</p>
-				<select name="majority" onchange="majorityFilter(this.value)">
-					<option value="hidden"></option>
-					<option value="marginal"> <= 1000 </option>
-					<option value="close">1001-3000</option>
-					<option value="safeish">3001-7000</option>
-					<option value="safe"> >= 7000</option>										
-				</select> 
-				 
-				
-				<p> by region </p>
-				<select name="region" onchange="regionFilter(this.value)">
-					<option value="hidden"></option>
-					<option value="eastofengland">East of England</option>
-					<option value="eastmidlands"> East Midlands </option>
-					<option value="london">London</option>
-					<option value="northeastengland">North East England</option>
-					<option value="northwestengland">North West England</option>
-					<option value="scotland">Scotland</option>
-					<option value="southeastengland">South East England</option>
-					<option value="southwestengland">South West England</option>
-					<option value="westmidlands">West Midlands</option>
-					<option value="wales">Wales</option>	
-					<option value="yorkshireandthehumber">Yorkshire & Humber</option>	
-				</select> 
-				
-			
-				<p> by turnout </p>
-				<select name="turnout" onchange="turnoutFilter(this.value)">
-					<option value="hidden"></option>
-					<option value="low"><55%</option>				
-					<option value="average">55-65%</option>
-					<option value="high">65-75%</option>
-					<option value="extreme">>75%</option>
+				<div id="filters">
 					
-			
-				</select> 
-			
+					<h2> Filters <button id ="filterbutton" onclick="resetFilter()">Reset</button></h2>	
+					
+					
+					
+					<p> by party </p>
+					 <select id="dropdownparty" onchange="filterStates[0].party = value, filterMap()">
+						<option value="null"></option>
+						<option value="labour">Labour</option>
+						<option value="conservative">Conservative</option>
+						<option value="libdems">Liberal Democrats</option>
+						<option value="ukip">UKIP</option>
+						<option value="snp">SNP</option>
+						<option value="plaidcymru">Plaid Cymru</option>
+						<option value="green">Green</option>
+						<option value="respect">Respect</option>			
+						<option value="independent">Independent</option>	
+						<option value="speaker">Speaker</option>						
+					</select> 
+					
+					<p> by majority</p>
+					<select id="dropdownmajority" onchange="filterStates[1].majority = value, filterMap()">
+						<option value="null"></option>
+						<option value="marginal"> < 1000 </option>
+						<option value="close">1000-2999</option>
+						<option value="safeish">3000-6999</option>
+						<option value="safe"> > 7000</option>										
+					</select> 
+					 
+					
+					<p> by region </p>
+					<select id="dropdownregion" onchange="filterStates[2].region = value, filterMap()">
+						<option value="null"></option>
+						<option value="eastofengland">East of England</option>
+						<option value="eastmidlands"> East Midlands </option>
+						<option value="london">London</option>
+						<option value="northeastengland">North East England</option>
+						<option value="northwestengland">North West England</option>
+						<option value="scotland">Scotland</option>
+						<option value="southeastengland">South East England</option>
+						<option value="southwestengland">South West England</option>
+						<option value="westmidlands">West Midlands</option>
+						<option value="wales">Wales</option>	
+						<option value="yorkshireandthehumber">Yorkshire & Humber</option>	
+					</select> 
+					
+				
+					<p> by turnout </p>
+					<select id="dropdownturnout" onchange="filterStates[3].turnout = value, filterMap()">
+						<option value="null"></option>
+						<option value="low"><55%</option>				
+						<option value="average">55-65%</option>
+						<option value="high">65-75%</option>
+						<option value="extreme">>75%</option>
+					</select> 
+				</div>
+				
+				<script>
+				
+					filterStates = [{party: "null"}, {majority: "null"}, {region: "null"}, {turnout: "null"}]
+					
+					function filterMap(){
+					
+						var	party  = filterStates[0].party;
+						var majority = filterStates[1].majority;
+						var region = filterStates[2].region;
+						var turnout =  filterStates[3].turnout;
+						
+											
+						d3.json("map.json", function(uk){
+							
+							if (party == "null" && majority == "null" && region == "null" && turnout == "null")
+								g.selectAll(".map")
+									.attr("style", "opacity:1")
+								
+							else
+								g.selectAll(".map")
+									.attr("id", "filtertime")
+									
+								if (party == "null")
+									g.selectAll("#filtertime")
+										.attr("id", "partyfiltered")
+								else
+									g.selectAll("#filtertime")
+										.attr("style", function(d){
+											if (party != d.properties.incumbent)
+												return "opacity: 0.1";
+											})
+										.attr("id", function(d){
+											if (party == d.properties.incumbent)
+												return "partyfiltered"								
+											});
+																
+									
+								if (majority == "null")
+									g.selectAll("#partyfiltered")
+										.attr("id", "majorityfiltered")
+								else	
+									g.selectAll("#partyfiltered")
+										.attr("style", function(d){									
+											if (majority == "marginal" && d.properties.info_majorityvotes >= 1000)								
+												return "opacity: 0.1";
+												
+											if (majority == "close" && (d.properties.info_majorityvotes < 1000|| d.properties.info_majorityvotes >= 3000))							
+												return "opacity: 0.1";
+												
+											if (majority == "safeish" && (d.properties.info_majorityvotes < 3000 || d.properties.info_majorityvotes >= 7000))								
+												return "opacity: 0.1";
+												
+											if (majority == "safe" && d.properties.info_majorityvotes < 7000)								
+												return "opacity: 0.1";								
+											})								
+										.attr("id", function(d){									
+											if (majority == "marginal" && d.properties.info_majorityvotes < 1000)								
+												return "majorityfiltered"
+												
+											if (majority == "close" && (d.properties.info_majorityvotes >= 1000 && d.properties.info_majorityvotes < 3000))							
+												return "majorityfiltered";
+												
+											if (majority == "safeish" && (d.properties.info_majorityvotes >= 3000 && d.properties.info_majorityvotes < 7000))								
+												return "majorityfiltered";
+												
+											if (majority == "safe" && d.properties.info_majorityvotes >= 7000)								
+												return "majorityfiltered";								
+											});
+										
+								if (region == "null")
+									g.selectAll("#majorityfiltered")
+										.attr("id", "regionfiltered")
+								else
+									g.selectAll("#majorityfiltered")	
+										.attr("style", function(d){																		
+											if (region != d.properties.region)								
+												return "opacity: 0.1";	
+										})
+										.attr("id", function(d){																		
+											if (region == d.properties.region)								
+												return "regionfiltered";		
+										});	
+										
+								if (region == "null")
+									g.selectAll("#majorityfiltered")
+										.attr("id", "regionfiltered")
+								else
+									g.selectAll("#majorityfiltered")	
+										.attr("style", function(d){																		
+											if (region != d.properties.region)								
+												return "opacity: 0.1";	
+										})
+										.attr("id", function(d){																		
+											if (region == d.properties.region)								
+												return "regionfiltered";		
+										});	
+								
+								
+								if (turnout == "null")
+									g.selectAll("#regionfiltered")
+										.attr("id", null)
+								else
+									g.selectAll("#regionfiltered")
+										.attr("style", function(d){	
+											if (turnout == "low" && d.properties.info_turnout >= 55)								
+												return "opacity: 0.1";
+												
+											if (turnout == "average" && (d.properties.info_turnout < 55|| d.properties.info_turnout >= 65))							
+												return "opacity: 0.1";
+												
+											if (turnout == "high" && (d.properties.info_turnout < 65 || d.properties.info_turnout >= 75))								
+												return "opacity: 0.1";
+												
+											if (turnout == "extreme" && d.properties.info_turnout < 75)								
+												return "opacity: 0.1";
+									})
+									.attr("id", null);
+							});
+						}
+					
+					function resetFilter(){
+						d3.json("map.json", function(uk){					
+							g.selectAll(".map")
+								.attr("style", function(d){								
+										return "opacity: 1";
+									})	
+								
+						});
+						$("#dropdownparty option:eq(0)").prop("selected", true);
+						$("#dropdownmajority option:eq(0)").prop("selected", true);
+						$("#dropdownregion option:eq(0)").prop("selected", true);
+						$("#dropdownturnout option:eq(0)").prop("selected", true);
+						
+					}
+				</script>
+					
+				<div id= "placelabels">					
+					<button id="placeslabelbutton">Toggle Place Labels</button> 
+					<p> doesnt work right now</p>
+				</div>
+					
+				<script>
+					$(document).ready(function(){
+						$("button#placeslabelbutton").click(function(){
+							$(this).toggleClass("checked");
+						});
+					});
+				</script>
+				
 			</div>
 			
 			<div id="left">
 					<script>
-
 						d3.selection.prototype.moveToFront = function() {
 								return this.each(function(){
 								this.parentNode.appendChild(this);
 							});
 						}; 	
-								
+					</script>
+					
+					<script id="currentparliamentscript">
 						var width = 700, // width and height of map
 							height = 900;
 							active = d3.select(null);
@@ -116,7 +283,7 @@
 					
 						var path = d3.geo.path()
 							.projection(projection)
-							.pointRadius(0.5);							
+							.pointRadius(0.3);							
 							
 						var svg = d3.select("#left").append("svg")
 							.attr("width", width)
@@ -174,24 +341,7 @@
 						
 						// code to append place labels - needs working on 
 						/*
-						d3.json("places.topojson", function(error, uk) {
-							if (error) return console.error(error);						
-							
-							g.append("path")
-								.datum(topojson.feature(uk, uk.objects.collection))
-								.attr("d", path)
-								.attr("class", "place")		
-								
-								
-							g.selectAll(".place-label")
-									.data(topojson.feature(uk, uk.objects.collection).features)
-								  .enter().append("text")
-									.attr("class", "place-label")	
-									.attr("transform", function(d) { return "translate(" + projection(d.geometry.coordinates) + ")"; })			
-									.attr("dx", "0.5em")									
-									.text(function(d) { return d.properties.NAME; });		
-								
-							});
+						
 								
 							*/		
 								
@@ -254,6 +404,7 @@
 							if (d3.event.defaultPrevented) d3.event.stopPropagation();
 						}
 						
+					
 						
 				</script>	
 					
@@ -425,92 +576,6 @@
 					</script>
 					
 			</div>
-			
-			<script>	
-			
-				function resetFilter(){
-					d3.json("map.json", function(uk){					
-						g.selectAll(".map")
-							.attr("style", function(d){								
-									return "opacity: 1";
-							})								
-					});
-				}
-					
-				function partyFilter(value){
-					d3.json("map.json", function(uk){						
-						g.selectAll(".map")
-							.attr("style", function(d){									
-									if (value == "hidden")
-										return "opacity: 1";																			
-									if (d.properties.incumbent != value)
-										return "opacity: 0.1";
-							})
-					});
-				}
-				
-				function majorityFilter(value){
-					d3.json("map.json", function(uk){	
-						g.selectAll(".map")
-							.attr("style", function(d){									
-									if (value == "marginal" && d.properties.info_majorityvotes > 1000)								
-										return "opacity: 0.1";
-										
-									if (value == "close" && (d.properties.info_majorityvotes < 1001 || d.properties.info_majorityvotes > 3000))							
-										return "opacity: 0.1";
-										
-									if (value == "safeish" && (d.properties.info_majorityvotes < 3001 || d.properties.info_majorityvotes > 7001))								
-										return "opacity: 0.1";
-										
-									if (value == "safe" && d.properties.info_majorityvotes < 7001)								
-										return "opacity: 0.1";
-							})
-					});
-				}
-				
-				
-				function regionFilter(value){
-					d3.json("map.json", function(uk){	
-						g.selectAll(".map")
-							.attr("style", function(d){	
-									if (value == "hidden")
-										return "opacity: 1";							
-									if (value != d.properties.region)								
-										return "opacity: 0.1";
-									
-							})
-					});
-				}
-					
-					
-					
-				function turnoutFilter(value){
-					d3.json("map.json", function(uk){	
-						g.selectAll(".map")
-							.attr("style", function(d){	
-									if (value == "low" && d.properties.info_turnout > 55)								
-										return "opacity: 0.1";
-										
-									if (value == "average" && (d.properties.info_turnout < 55|| d.properties.info_turnout > 65))							
-										return "opacity: 0.1";
-										
-									if (value == "high" && (d.properties.info_turnout < 65 || d.properties.info_turnout >= 75))								
-										return "opacity: 0.1";
-										
-									if (value == "extreme" && d.properties.info_turnout <= 75)								
-										return "opacity: 0.1";
-							})
-					});
-				}
-					
-					
-				
-				
-							
-			
-				
-			</script>
-			
 		</div>
 		
 		<div id="footer">	

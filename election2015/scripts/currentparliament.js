@@ -6,7 +6,7 @@ d3.selection.prototype.moveToFront = function() {
 					}; 	
 
 // far left filter scripts
-filterStates = [{party: "null"}, {majoritylow: 0}, {majorityhigh: 50000}, {region: "null"}]
+filterStates = [{party: "null"}, {majoritylow: NaN}, {majorityhigh: NaN}, {region: "null"}]
 
 seatsAfterFilter = []
 
@@ -17,11 +17,17 @@ function filterMap(){
 	var majorityhigh = filterStates[2].majorityhigh;
 	var region = filterStates[3].region;
 	
+	
+	if (isNaN(majoritylow))
+		majoritylow = 0 
+	if (isNaN(majorityhigh))
+		majorityhigh = 1000000
+		
 	seatsAfterFilter = [];
 		
 	d3.json("map.json", function(uk){
 		
-		if (party == "null" && majority == "null" && majoritylow == 0 && majorityhigh == 50000)
+		if (party == "null" && majority == "null" && majoritylow == NaN && majorityhigh == NaN)
 			g.selectAll(".map")
 				.attr("style", "opacity:1")
 				
@@ -87,8 +93,8 @@ function filterMap(){
 function resetFilter(){
 
 	filterStates[0].party = "null"
-	filterStates[1].majoritylow = 0
-	filterStates[2].majorityhigh = 50000
+	filterStates[1].majoritylow = NaN
+	filterStates[2].majorityhigh = NaN
 	filterStates[3].region = "null"							
 	filterMap();
 	

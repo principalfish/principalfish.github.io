@@ -275,7 +275,7 @@ svg .map {
 .respect {background-color: #660000; color:white; fill: #660000;}
 .speaker {background-color: white; color:black ; fill: white;}
 .independent {background-color: grey; color:white; fill: grey;}
-.dup {background-color: orange; color: black; fill: orange;}
+.dup {background-color: #CC6600; color: black; fill:#CC6600;}
 .sdlp { background-color: lightgreen; color: black; fill: lightgreen;}
 .uu {background-color: purple; color:#99FF66; fill: purple;}
 .alliance {background-color: yellow; color: black; fill: yellow;}

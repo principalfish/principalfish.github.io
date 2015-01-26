@@ -144,7 +144,7 @@
 }
 
 #topright {
-	height: 75px;
+	height: 40px;
 	width: 600px;
 	float: left;
 	
@@ -157,6 +157,14 @@
 	border-bottom: 1px solid black;
 	float: left;
 	border-top: 1px solid black;
+}
+
+#information-header{
+	float: left;
+}
+
+#information-bielection{
+	float: right;
 }
 
 #information table {	
@@ -218,10 +226,6 @@
 	font-size: 0.9em;
 }
 
-
-
-
-
 /* map stylings */
 
 svg .boundaries {
@@ -271,6 +275,11 @@ svg .map {
 .respect {background-color: #660000; color:white; fill: #660000;}
 .speaker {background-color: white; color:black ; fill: white;}
 .independent {background-color: grey; color:white; fill: grey;}
+.dup {background-color: orange; color: black; fill: orange;}
+.sdlp { background-color: lightgreen; color: black; fill: lightgreen;}
+.uu {background-color: purple; color:#99FF66; fill: purple;}
+.alliance {background-color: yellow; color: black; fill: yellow;}
+.sinnfein {background-color: darkgreen; color: white; fill: darkgreen;}
 .other1 {background-color: #666666 ; color:white; fill: #666666 ;}
 .other2 {background-color: #999999; color:white; fill: #999999;}
 .null {background-color: white; color:black; fill: white;}

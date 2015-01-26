@@ -10,6 +10,11 @@ partylist["green"] = "Green";
 partylist["respect"] = "Respect";
 partylist["speaker"] = "Speaker";
 partylist["independent"] = "Independent";
+partylist["uu"] = "Ulster Conservatives";
+partylist["sinnfein"] = "Sinn Féin";
+partylist["sdlp"] = "SDLP";
+partylist["dup"] = "DUP";
+partylist["alliance"] = "Alliance";
 partylist["other1"] = "Other";
 partylist["other2"] = "Other";
 
@@ -28,4 +33,5 @@ regionlist["eastmidlands"] = "E. Midlands";
 regionlist["eastofengland"] = "E. England";
 regionlist["scotland"] = "Scotland";
 regionlist["wales"] = "Wales";
+regionlist["northernireland"] = "Northern Ireland";
 

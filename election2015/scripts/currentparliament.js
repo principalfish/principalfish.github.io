@@ -154,7 +154,7 @@ function zoomToClickedFilteredSeat(d){
 		translate = [width / 2 - scale * x, height / 2 - scale * y];
 
 	svg.transition()
-		.duration(2500)
+		.duration(1500)
 		.call(zoom.translate(translate).scale(scale).event);
 	
 			
@@ -170,8 +170,6 @@ function zoomToClickedFilteredSeat(d){
 
 function clicked(d) {
 
-	
-	
 	previous = d3.select(previousnode)
 	current = d3.select(this);
 	repeat();
@@ -189,9 +187,6 @@ function clicked(d) {
 		.each("end", repeat);
 		}
 
-
-	
-
 	var bounds = path.bounds(d),
 		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
 		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
@@ -204,7 +199,7 @@ function clicked(d) {
 
 
 	svg.transition()
-		.duration(2500)
+		.duration(1500)
 		.call(zoom.translate(translate).scale(scale).event);
 	
 	
@@ -216,7 +211,7 @@ function clicked(d) {
 function reset() {
 	
 	svg.transition()
-		.duration(2500)
+		.duration(1500)
 		.call(zoom.translate([0, 0]).scale(1).event);
 		
 }
@@ -245,8 +240,8 @@ function seatinfo(d){
 		$("#information-byelection").html("*");					
 	$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.incumbent] + "</td>");
 	$("#information-mp").html("<td>MP</td><td>" + d.properties.info_mpfirstname + " " + d.properties.info_mplastname + "</td>");
-	$("#information-majority").html("<td>Majority</td><td> " + d.properties.info_majorityvotes  + "  =  " + d.properties.info_majoritypercent + "%</td>");																	
-	$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " + d.properties.info_turnout + 
+	$("#information-majority").html("<td>Majority</td><td> " + d.properties.info_majorityvotes  + "  =  " + (d.properties.info_majoritypercent).toFixed(2) + "%</td>");																	
+	$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " + (d.properties.info_turnout).toFixed(2) + 
 		"%</td><td id=\"rightcolumninfotable\">Electorate: " + d.properties.info_electorate + "</td>");	
 	$("#information-pie").html(piechart(d));
 	
@@ -270,6 +265,11 @@ function piechart(d){
 	data.push({ party: "snp", votes: d.properties.info_SNP});
 	data.push({ party: "plaidcymru", votes: d.properties.info_PC});
 	data.push({ party: "green", votes: d.properties.info_GRN});
+	data.push({ party: "dup", votes: d.properties.info_DUP});
+	data.push({ party: "sdlp", votes: d.properties.info_SDLP});
+	data.push({ party: "uu", votes: d.properties.info_UU});
+	data.push({ party: "sinnfein", votes: d.properties.info_SF});
+	data.push({ party: "alliance", votes: d.properties.info_ALL});
 	data.push({ party: "other1", votes: d.properties.info_OTH1});
 	data.push({ party: "other2", votes: d.properties.info_OTH2});
 	
@@ -339,7 +339,7 @@ function piechart(d){
 function doStuff(data) {	
 
 	$.each(data, function(i){
-		$("#totals table").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votepercent +"</td></tr>")
+		$("#totals table").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr>")
 	})
 };
 

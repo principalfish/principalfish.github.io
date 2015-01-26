@@ -8,6 +8,8 @@ d3.selection.prototype.moveToFront = function() {
 // far left filter scripts
 filterStates = [{party: "null"}, {majoritylow: 0}, {majorityhigh: 50000}, {region: "null"}]
 
+seatsAfterFilter = []
+
 function filterMap(){
 
 	var	party  = filterStates[0].party;
@@ -15,13 +17,14 @@ function filterMap(){
 	var majorityhigh = filterStates[2].majorityhigh;
 	var region = filterStates[3].region;
 	
-	
-						
+	seatsAfterFilter = [];
+		
 	d3.json("map.json", function(uk){
 		
-		if (party == "null" && majority == "null" && majoritylow == 0 && majorityhigh == 0)
+		if (party == "null" && majority == "null" && majoritylow == 0 && majorityhigh == 50000)
 			g.selectAll(".map")
 				.attr("style", "opacity:1")
+				
 			
 		else
 			g.selectAll(".map")
@@ -31,19 +34,19 @@ function filterMap(){
 				g.selectAll("#filtertime")
 					.attr("id", "partyfiltered")
 			else
-				g.selectAll("#filtertime")
+				g.selectAll("#filtertime")					
 					.attr("style", function(d){
 						if (party != d.properties.incumbent)
 							return "opacity: 0.1";
-						})
+						})					
 					.attr("id", function(d){
 						if (party == d.properties.incumbent)
-							return "partyfiltered"								
+							return "partyfiltered"	
 						});
 											
 				
 			
-			g.selectAll("#partyfiltered")
+			g.selectAll("#partyfiltered")				
 				.attr("style", function(d) {
 					if (d.properties.info_majorityvotes < majoritylow || d.properties.info_majorityvotes > majorityhigh )
 						return "opacity: 0.1"
@@ -53,10 +56,14 @@ function filterMap(){
 						return "majorityfiltered";
 					});
 			
-					
+		
+			
 			if (region == "null")
 				g.selectAll("#majorityfiltered")
-					.attr("id", "regionfiltered")
+					.attr("id", function(d){
+							seatsAfterFilter.push(d)					
+												
+						})
 			else
 				g.selectAll("#majorityfiltered")	
 					.attr("style", function(d){																		
@@ -64,20 +71,14 @@ function filterMap(){
 							return "opacity: 0.1";	
 					})
 					.attr("id", function(d){																		
-						if (region == d.properties.region)								
-							return "regionfiltered";		
+						if (region == d.properties.region)			
+							seatsAfterFilter.push(d);												
 					});	
 					
-			if (region == "null")
-				g.selectAll("#majorityfiltered")
-					.attr("id", "regionfiltered")
-			else
-				g.selectAll("#majorityfiltered")	
-					.attr("style", function(d){																		
-						if (region != d.properties.region)								
-							return "opacity: 0.1";	
-					})
-					.attr("id", "null");
+			g.selectAll(".map")
+				.attr("id", function(d) {
+					return "i" + d.properties.info_id
+				});
 		});
 	}
 
@@ -93,6 +94,33 @@ function resetFilter(){
 	$("#majority").get(0).reset()
 	$("#dropdownregion option:eq(0)").prop("selected", true);	
 }
+
+function generateSeatList(){			
+			$("#totalfilteredseats").html(" ");
+			$("#filteredlisttable").html(" ");
+			
+			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
+			$.each(seatsAfterFilter, function(i){
+				$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.incumbent + 
+				"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
+				
+			});
+				
+			
+		}	
+
+
+blah = [];
+
+function zoomToClickedFilteredSeat(d){
+	var id = "#i" + d.properties.info_id	
+	/*
+	d3.selectAll("path")
+		.select(id)		
+			.call(clicked)
+			*/
+	}
+
 
 
 
@@ -124,7 +152,7 @@ function clicked(d) {
 			dy = bounds[1][1] - bounds[0][1],
 			x = (bounds[0][0] + bounds[1][0]) / 2,
 			y = (bounds[0][1] + bounds[1][1]) / 2,
-			scale = .25 / Math.max(dx / width, dy / height),
+			scale = .2 / Math.max(dx / width, dy / height),
 			translate = [width / 2 - scale * x, height / 2 - scale * y];
 
 		svg.transition()
@@ -166,13 +194,15 @@ function seatinfo(d){
 	
 	$("#information").removeClass(oldclass);		
 	$("#information").addClass(d.properties.incumbent).css("opacity", 0.8);				
-	$("#information-seatname").html("<td>Seat</td><td style=\"width:380px\"> " + d.properties.name + "<span id =\"information-byelection\"></span></td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.region] + "</td>");
+	$("#information-seatname").html("<td>Seat</td><td style=\"width:380px\"> " + d.properties.name + 
+		"<span id =\"information-byelection\"></span></td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.region] + "</td>");
 	if (d.properties.info_bielection == "yes")
 		$("#information-byelection").html("*");					
 	$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.incumbent] + "</td>");
 	$("#information-mp").html("<td>MP</td><td>" + d.properties.info_mpfirstname + " " + d.properties.info_mplastname + "</td>");
 	$("#information-majority").html("<td>Majority</td><td> " + d.properties.info_majorityvotes  + "  =  " + d.properties.info_majoritypercent + "%</td>");																	
-	$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " + d.properties.info_turnout + "%</td><td id=\"rightcolumninfotable\">Electorate: " + d.properties.info_electorate + "</td>");	
+	$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " + d.properties.info_turnout + 
+		"%</td><td id=\"rightcolumninfotable\">Electorate: " + d.properties.info_electorate + "</td>");	
 	$("#information-pie").html(piechart(d));
 	
 	oldclass = d.properties.incumbent;

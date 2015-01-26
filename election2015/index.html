@@ -15,6 +15,10 @@
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/currentparliament.js"></script>
+			<script>
+				
+			
+				</script>
 	
 		<div id="wrapper">
 			<div id="top">
@@ -31,15 +35,14 @@
 				
 				
 				<div id="projections">					
-					<h3 id="2015projection"><a href="/nofdsareyet.html">2015 Projection</a></h3>
+					<h3 id="2015projection"><a href="/nothingereyet.html">2015 Projection</a></h3>
 					<h3 id="currentparliament"> Current Parliament </h3>
 					
 				</div>	
 
 				<div id="instructions">
-					<p>Scroll wheel to zoom on map</p>
-					<p>Click on seat to centre, zoom and get information</p>
-					<p>Click and drag to pan around the map. </p>						
+					<p>Map responds to scroll wheel, click + drag</p>
+					<p>Click on seat for info</p>									
 				</div>
 		
 				
@@ -88,10 +91,18 @@
 					</select> </p>
 					
 				</div>
+			
+				<div id ="filteredlist">
+					<button id ="filtertolist" onclick="generateSeatList()">Generate seat list</button>					
+				</div>
+				<div id ="totalfilteredseats">
 				
-				<script>
+				</div>
+				<div id="filteredlisttable">
+						
+				</div>
 				
-				</script>				
+			
 			</div>
 			
 			<div id="left">
@@ -99,6 +110,7 @@
 					<button id ="resetzoom" onclick="reset()">Reset</button>
 				</div>
 					<script>
+
 						var width = 700, // width and height of map
 							height = 900;
 							active = d3.select(null);
@@ -129,7 +141,8 @@
 							.attr("class", "background")
 							.attr("width", width)
 							.attr("height", height)
-							.on("click", reset);	
+							.on("click", reset);
+							
 						
 					
 
@@ -153,16 +166,18 @@
 									.enter().append("path")
 									.attr("class", function(d) {
 										return "map " + d.properties.incumbent;	})
+									.attr("id", function(d) { return "i" + d.properties.info_id})
 									.attr("d", path)							
 									.on("click", clicked)									
 									.append("svg:title")
-										.text(function(d) { return d.properties.name})
+										.text(function(d) { return d.properties.name});
 									
 								g.append("path")
 									.datum(topojson.mesh(uk, uk.objects.map, function(a, b){
 										return a.properties.region != b.properties.region && a != b; }))
 									.attr("d", path)
 									.attr("class", "boundaries");
+									
 							});
 					
 				</script>					

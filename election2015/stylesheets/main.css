@@ -56,13 +56,14 @@
 }
 
 #filters {
-	height: auto;
+	height: 200px;
+	
 }
-
-
 
 #filters button {
 	float: right;
+	background-color: black;
+	color: white;
 }
 #filters select {
 	width: 100%;
@@ -76,10 +77,32 @@
 	background-color: black;
 	color: white;
 }
+
+#filteredlist {
+}
+
+#filteredlist button{
+	width: 100%;
+	background-color: black;
+	color: white;
+}
+
+#filteredlisttable{
+	width: 100%;
+	height: 50%;
+	overflow: auto;
+}
+
+#filteredlisttable td{
+	border-bottom: 1px solid black;
+	width: 140px;
+	overflow: scroll;
+	text-align: center;
+	cursor: pointer;
+
+}
+
 /* map */
-
-
-
 
 #left {
 	float: left;

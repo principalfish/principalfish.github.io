@@ -96,7 +96,7 @@
 #filteredlisttable td{
 	border-bottom: 1px solid black;
 	width: 140px;
-	overflow: scroll;
+	
 	text-align: center;
 	cursor: pointer;
 

@@ -5,7 +5,6 @@
 
 #top {
 	width: 1454px;
-
 }
  
 #farleft{
@@ -27,21 +26,12 @@
 	font-weight: normal;
 }
 
-#farleft h2,h3{
-	letter-spacing: 1px;
-	font-weight: normal;
-}
-
 
 #projections {
 	height: 60px;
 	width: 100%;	
 }
 
-
-#projections a {
-	text-decoration: none;
-}
 
 #projections h3 {
 	text-align: center;
@@ -50,6 +40,15 @@
 	padding-left: 5px;
 	padding-right: 5px;
 	
+}
+
+#projections a {
+	text-decoration: none;
+	color: #fff;
+}
+
+#projections a:hover {
+	color: orange;
 }
 
 #instructions {	

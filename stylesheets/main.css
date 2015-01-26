@@ -9,19 +9,10 @@
 	background-color: darkgrey;
 }
 
-#election a:link{
-	text-decoration: none;
-	color: blue;
+#election a {
+	text-decoration: none;	
 }
 
-#election a:visited{	
-	
-}
-
-#election a:hover {
-	color: orange;
-}
-
-#election a:active {
-    color: red;
+#election  a:hover{
+	color: orange;	
 }

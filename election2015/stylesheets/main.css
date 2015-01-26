@@ -96,8 +96,8 @@
 #filteredlisttable td{
 	border-bottom: 1px solid black;
 	width: 140px;
-	
-	text-align: center;
+	white-space: nowrap;	
+	text-align: left;
 	cursor: pointer;
 
 }

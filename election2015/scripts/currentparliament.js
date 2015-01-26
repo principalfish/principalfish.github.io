@@ -88,8 +88,7 @@ function filterMap(){
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
 			
-			d3.select(current)
-				.attr("opacity", 0.2)
+	
 		});
 	}
 

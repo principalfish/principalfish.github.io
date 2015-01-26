@@ -221,10 +221,27 @@
 	width: 600px;	
 }
 
-#totals th{
+#totalstable th{
 	color: black;
 	font-size: 0.9em;
+	
 }
+
+table#totalstable thead tr .header {
+    background-image: url("/img/bg.gif");
+    background-repeat: no-repeat;
+    background-position: right center;
+    cursor: pointer;
+}
+
+table#totalstable thead tr .headerSortUp {
+    background-image: url("/img/asc.gif");
+}
+
+table#totalstable thead tr .headerSortDown {
+    background-image: url("/img/desc.gif");
+}
+
 
 /* map stylings */
 

@@ -330,17 +330,48 @@ function piechart(d){
 			partylist[filterdata[i].party] + "</td><td>" + filterdata[i].votes + 
 			"</td><td>" + (100 * filterdata[i].votes/d.properties.info_votescast).toFixed(2) +  "%</td></tr>")
 	})
-			
-	}
 	
+	
+		
+}
+
+
 	
 // bottom of right - vote chart 
 
-function doStuff(data) {	
+ // add parser through the tablesorter addParser method 
+$( function() { 
 
-	$.each(data, function(i){
-		$("#totals table").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr>")
-	})
+    $.tablesorter.addParser({
+        id: "numberWithComma",
+        is: function(s) {
+            return /^[0-9]?[0-9,\.]*$/.test(s);
+        },
+        format: function(s) {
+            return $.tablesorter.formatFloat(s.replace(/,/g, ''));
+        },
+        type: "numeric"
+    });
+});
+
+function doStuff(data) {		
+		$.each(data, function(i){
+			if (i == data.length -1)
+				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr></tfoot>")
+			else
+				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr>")
+	
+		})
+		
+	 $(document).ready(function() { 
+		$("table").tablesorter({
+			headers: {
+				2: {
+					sorter: "numberWithComma"
+				}
+			}
+		}); 
+	});
 };
 
 function parseData(url, callBack) {
@@ -354,5 +385,9 @@ function parseData(url, callBack) {
 	});
 }
 
+
+
+
+
 parseData("votetotals.csv", doStuff);
-				
+	

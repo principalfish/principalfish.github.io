@@ -110,15 +110,13 @@ function generateSeatList(){
 		}	
 
 
-blah = [];
+var blah;
 
 function zoomToClickedFilteredSeat(d){
 	var id = "#i" + d.properties.info_id	
-	/*
-	d3.selectAll("path")
-		.select(id)		
-			.call(clicked)
-			*/
+	// do something regarding zooming?
+	seatinfo(d)
+	
 	}
 
 

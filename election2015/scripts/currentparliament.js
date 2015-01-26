@@ -79,6 +79,8 @@ function filterMap(){
 				.attr("id", function(d) {
 					return "i" + d.properties.info_id
 				});
+			$("#totalfilteredseats").html(" ");
+			$("#filteredlisttable").html(" ");
 		});
 	}
 
@@ -92,7 +94,10 @@ function resetFilter(){
 	
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#majority").get(0).reset()
-	$("#dropdownregion option:eq(0)").prop("selected", true);	
+	$("#dropdownregion option:eq(0)").prop("selected", true);
+
+	$("#totalfilteredseats").html(" ");
+	$("#filteredlisttable").html(" ");
 }
 
 function generateSeatList(){			
@@ -108,15 +113,45 @@ function generateSeatList(){
 				
 			
 		}	
-
-
-var blah;
-
+		
 function zoomToClickedFilteredSeat(d){
 	var id = "#i" + d.properties.info_id	
-	// do something regarding zooming?
-	seatinfo(d)
 	
+	// redo this at some point so not just repeating code.
+	
+	d3.select(previousnode)
+			.style("stroke", "darkgrey")
+			.style("stroke-width", 0.1)
+			
+			
+		
+		d3.select(id)
+			.moveToFront()
+			.transition()
+			.style("stroke", "black")
+			.style("stroke-width", 0.5)
+		
+			
+	if (active.node() === id) return reset();
+		active.classed("active", false);
+		active = d3.select(id).classed("active", true);
+
+		var bounds = path.bounds(d),
+			dx = bounds[1][0] - bounds[0][0],
+			dy = bounds[1][1] - bounds[0][1],
+			x = (bounds[0][0] + bounds[1][0]) / 2,
+			y = (bounds[0][1] + bounds[1][1]) / 2,
+			scale = .2 / Math.max(dx / width, dy / height),
+			translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+		svg.transition()
+			.duration(1500)
+			.call(zoom.translate(translate).scale(scale).event);
+		
+				
+	
+	seatinfo(d);
+	previousnode = id;
 	}
 
 
@@ -128,14 +163,16 @@ function clicked(d) {
 
 		d3.select(previousnode)
 			.style("stroke", "darkgrey")
-			.style("stroke-width", 0.1);
+			.style("stroke-width", 0.1)
+		
 			
+		
 		
 		d3.select(this)
 			.moveToFront()
 			.transition()
 			.style("stroke", "black")
-			.style("stroke-width", 0.5);
+			.style("stroke-width", 0.5)
 	
 			
 		

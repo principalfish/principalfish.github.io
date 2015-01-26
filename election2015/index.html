@@ -49,8 +49,7 @@
 					
 					
 					
-					<p> by party </p>
-					 <select id="dropdownparty" onchange="filterStates[0].party = value, filterMap()">
+					<p> by party  <select id="dropdownparty" onchange="filterStates[0].party = value, filterMap()">
 						<option value="null"></option>
 						<option value="labour">Labour</option>
 						<option value="conservative">Conservative</option>
@@ -62,20 +61,18 @@
 						<option value="respect">Respect</option>			
 						<option value="independent">Independent</option>	
 						<option value="speaker">Speaker</option>						
-					</select> 
-					
-					<p> by majority</p>
-					<select id="dropdownmajority" onchange="filterStates[1].majority = value, filterMap()">
-						<option value="null"></option>
-						<option value="marginal"> < 1000 </option>
-						<option value="close">1000-2999</option>
-						<option value="safeish">3000-6999</option>
-						<option value="safe"> > 7000</option>										
-					</select> 
+					</select> </p>
 					 
 					
-					<p> by region </p>
-					<select id="dropdownregion" onchange="filterStates[2].region = value, filterMap()">
+					<p> by majority									
+						<form id="majority">
+						<input type ="text" name="majoritylow" value="0" onchange="filterStates[1].majoritylow = parseInt(value), filterMap()">
+							to	
+						<input type="text" name="majorityhigh" value="50000" onchange="filterStates[2].majorityhigh = parseInt(value), filterMap()">
+						</form>
+					</p>
+					
+					<p> by region <select id="dropdownregion" onchange="filterStates[3].region = value, filterMap()">
 						<option value="null"></option>
 						<option value="eastofengland">East of England</option>
 						<option value="eastmidlands"> East Midlands </option>
@@ -88,17 +85,8 @@
 						<option value="westmidlands">West Midlands</option>
 						<option value="wales">Wales</option>	
 						<option value="yorkshireandthehumber">Yorkshire & Humber</option>	
-					</select> 
+					</select> </p>
 					
-				
-					<p> by turnout </p>
-					<select id="dropdownturnout" onchange="filterStates[3].turnout = value, filterMap()">
-						<option value="null"></option>
-						<option value="low"><55%</option>				
-						<option value="average">55-65%</option>
-						<option value="high">65-75%</option>
-						<option value="extreme">>75%</option>
-					</select> 
 				</div>
 				
 				<script>

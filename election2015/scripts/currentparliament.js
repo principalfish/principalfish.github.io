@@ -6,19 +6,20 @@ d3.selection.prototype.moveToFront = function() {
 					}; 	
 
 // far left filter scripts
-filterStates = [{party: "null"}, {majority: "null"}, {region: "null"}, {turnout: "null"}]
+filterStates = [{party: "null"}, {majoritylow: 0}, {majorityhigh: 50000}, {region: "null"}]
 
 function filterMap(){
 
 	var	party  = filterStates[0].party;
-	var majority = filterStates[1].majority;
-	var region = filterStates[2].region;
-	var turnout =  filterStates[3].turnout;
+	var majoritylow = filterStates[1].majoritylow;
+	var majorityhigh = filterStates[2].majorityhigh;
+	var region = filterStates[3].region;
+	
 	
 						
 	d3.json("map.json", function(uk){
 		
-		if (party == "null" && majority == "null" && region == "null" && turnout == "null")
+		if (party == "null" && majority == "null" && majoritylow == 0 && majorityhigh == 0)
 			g.selectAll(".map")
 				.attr("style", "opacity:1")
 			
@@ -41,37 +42,17 @@ function filterMap(){
 						});
 											
 				
-			if (majority == "null")
-				g.selectAll("#partyfiltered")
-					.attr("id", "majorityfiltered")
-			else	
-				g.selectAll("#partyfiltered")
-					.attr("style", function(d){									
-						if (majority == "marginal" && d.properties.info_majorityvotes >= 1000)								
-							return "opacity: 0.1";
-							
-						if (majority == "close" && (d.properties.info_majorityvotes < 1000|| d.properties.info_majorityvotes >= 3000))							
-							return "opacity: 0.1";
-							
-						if (majority == "safeish" && (d.properties.info_majorityvotes < 3000 || d.properties.info_majorityvotes >= 7000))								
-							return "opacity: 0.1";
-							
-						if (majority == "safe" && d.properties.info_majorityvotes < 7000)								
-							return "opacity: 0.1";								
-						})								
-					.attr("id", function(d){									
-						if (majority == "marginal" && d.properties.info_majorityvotes < 1000)								
-							return "majorityfiltered"
-							
-						if (majority == "close" && (d.properties.info_majorityvotes >= 1000 && d.properties.info_majorityvotes < 3000))							
-							return "majorityfiltered";
-							
-						if (majority == "safeish" && (d.properties.info_majorityvotes >= 3000 && d.properties.info_majorityvotes < 7000))								
-							return "majorityfiltered";
-							
-						if (majority == "safe" && d.properties.info_majorityvotes >= 7000)								
-							return "majorityfiltered";								
-						});
+			
+			g.selectAll("#partyfiltered")
+				.attr("style", function(d) {
+					if (d.properties.info_majorityvotes < majoritylow || d.properties.info_majorityvotes > majorityhigh )
+						return "opacity: 0.1"
+					})
+				.attr("id", function(d) {
+					if (d.properties.info_majorityvotes >= majoritylow && d.properties.info_majorityvotes <=majorityhigh )
+						return "majorityfiltered";
+					});
+			
 					
 			if (region == "null")
 				g.selectAll("#majorityfiltered")
@@ -96,30 +77,6 @@ function filterMap(){
 						if (region != d.properties.region)								
 							return "opacity: 0.1";	
 					})
-					.attr("id", function(d){																		
-						if (region == d.properties.region)								
-							return "regionfiltered";		
-					});	
-			
-			
-			if (turnout == "null")
-				g.selectAll("#regionfiltered")
-					.attr("id", "null")
-			else
-				g.selectAll("#regionfiltered")
-					.attr("style", function(d){	
-						if (turnout == "low" && d.properties.info_turnout >= 55)								
-							return "opacity: 0.1";
-							
-						if (turnout == "average" && (d.properties.info_turnout < 55|| d.properties.info_turnout >= 65))							
-							return "opacity: 0.1";
-							
-						if (turnout == "high" && (d.properties.info_turnout < 65 || d.properties.info_turnout >= 75))								
-							return "opacity: 0.1";
-							
-						if (turnout == "extreme" && d.properties.info_turnout < 75)								
-							return "opacity: 0.1";
-				})
 					.attr("id", "null");
 		});
 	}
@@ -127,17 +84,14 @@ function filterMap(){
 function resetFilter(){
 
 	filterStates[0].party = "null"
-	filterStates[1].majority = "null"
-	filterStates[2].region = "null"
-	filterStates[3].turnout = "null"						
+	filterStates[1].majoritylow = 0
+	filterStates[2].majorityhigh = 50000
+	filterStates[3].region = "null"							
 	filterMap();
 	
 	$("#dropdownparty option:eq(0)").prop("selected", true);
-	$("#dropdownmajority option:eq(0)").prop("selected", true);
-	$("#dropdownregion option:eq(0)").prop("selected", true);
-	$("#dropdownturnout option:eq(0)").prop("selected", true);
-	
-	
+	$("#majority").get(0).reset()
+	$("#dropdownregion option:eq(0)").prop("selected", true);	
 }
 
 

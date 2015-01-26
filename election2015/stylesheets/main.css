@@ -71,6 +71,11 @@
 	color: white;
 }
 
+#filters input {
+	width: 50px;
+	background-color: black;
+	color: white;
+}
 /* map */
 
 

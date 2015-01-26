@@ -12,8 +12,10 @@ body {
 	margin-left: auto;
     margin-right: auto;
 	width: 1000px;
-	height: 100%;
-	display: block;	
+	height: auto;
+	display: block;
+
+	 
 }
 
 

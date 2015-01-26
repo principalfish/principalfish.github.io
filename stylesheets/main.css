@@ -1,3 +1,8 @@
+#main {
+	border: 1px solid black;
+	border-radius: 0 0 10px 10px;
+}
+
 #election {
 	width: 600px;
 	margin-top: 25px;

@@ -14,9 +14,13 @@
 	<script type="text/javascript" src="/election2015/scripts/dictionary.js"></script>
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
-	<script type="text/javascript" src="/election2015/scripts/currentparliament.js"></script>
+	
 			<script>
-				
+			d3.selection.prototype.moveToFront = function() {
+							return this.each(function(){
+							this.parentNode.appendChild(this);
+						});
+					}; 		
 			
 				</script>
 	
@@ -35,7 +39,7 @@
 				
 				
 				<div id="projections">					
-					<!-- <h3 id="2015projection"><a>2015 Projection</a></h3> -->
+					<h3 id="2015projection"><a href="/nothingereyet.html">2015 Projection</a></h3>
 					<h3 id="currentparliament"> Current Parliament </h3>
 					
 				</div>	
@@ -69,9 +73,9 @@
 					
 					<p> by majority									
 						<form id="majority">
-						<input type ="text" name="majoritylow" value="0" onchange="filterStates[1].majoritylow = parseInt(value), filterMap()">
+						<input type ="text" name="majoritylow" value="" onchange="filterStates[1].majoritylow = parseInt(value), filterMap()">
 							to	
-						<input type="text" name="majorityhigh" value="50000" onchange="filterStates[2].majorityhigh = parseInt(value), filterMap()">
+						<input type="text" name="majorityhigh" value="" onchange="filterStates[2].majorityhigh = parseInt(value), filterMap()">
 						</form>
 					</p>
 					
@@ -148,7 +152,8 @@
 
 						var g = svg.append("g");
 						
-						var previousnode, current;					
+						var previousnode = null;
+						
 						
 						
 						svg
@@ -178,6 +183,68 @@
 									.attr("class", "boundaries");
 									
 							});
+							
+							
+						function clicked(d) {
+
+		d3.select(previousnode)
+			.style("stroke", "darkgrey")
+			.style("stroke-width", 0.1)
+		
+			
+		
+		
+		d3.select(this)
+			.moveToFront()
+			.transition()
+			.style("stroke", "black")
+			.style("stroke-width", 0.5)
+	
+			
+		
+		
+		
+		if (active.node() === this) return reset();
+		active.classed("active", false);
+		active = d3.select(this).classed("active", true);
+
+		var bounds = path.bounds(d),
+			dx = bounds[1][0] - bounds[0][0],
+			dy = bounds[1][1] - bounds[0][1],
+			x = (bounds[0][0] + bounds[1][0]) / 2,
+			y = (bounds[0][1] + bounds[1][1]) / 2,
+			scale = .2 / Math.max(dx / width, dy / height),
+			translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+		svg.transition()
+			.duration(1500)
+			.call(zoom.translate(translate).scale(scale).event);
+		
+		
+		previousnode = this;
+	
+	}
+
+	function reset() {
+		active.classed("active", false);
+		active = d3.select(null);
+
+		svg.transition()
+			.duration(1500)
+			.call(zoom.translate([0, 0]).scale(1).event);
+			
+	}
+
+	function zoomed() {
+		g.style("stroke-width", 1.5 / d3.event.scale + "px");
+		g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+		
+	}
+	
+	function stopped() {
+		if (d3.event.defaultPrevented) d3.event.stopPropagation();
+	}
+	
 					
 				</script>					
 			</div>
@@ -211,7 +278,8 @@
 						<table>
 							<tr>
 								<th>Party</th>
-								<th>Seats</th>								
+								<th>Seats</th>
+								<th>Net</th>
 								<th>Votes</th>
 								<th>Vote %</th>
 							</tr>

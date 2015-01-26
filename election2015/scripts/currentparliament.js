@@ -87,6 +87,9 @@ function filterMap(){
 				});
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
+			
+			d3.select(current)
+				.attr("opacity", 0.2)
 		});
 	}
 
@@ -125,36 +128,37 @@ function zoomToClickedFilteredSeat(d){
 	
 	// redo this at some point so not just repeating code.
 	
-	d3.select(previousnode)
-			.style("stroke", "darkgrey")
-			.style("stroke-width", 0.1)
-			
-			
+	previous = d3.select(previousnode)
+	current = d3.select(id);
+	repeat();
+	
+	function repeat(){
+		previous.transition()
+			.attr("opacity", 1)
 		
-		d3.select(id)
-			.moveToFront()
-			.transition()
-			.style("stroke", "black")
-			.style("stroke-width", 0.5)
-		
-			
-	if (active.node() === id) return reset();
-		active.classed("active", false);
-		active = d3.select(id).classed("active", true);
+		current.transition()			
+			.duration(1500)		
+			.attr("opacity", 1)
+		.transition()		
+			.duration(1500)		
+			.attr("opacity", 0.2)
+		.each("end", repeat);
+		}
 
-		var bounds = path.bounds(d),
-			dx = bounds[1][0] - bounds[0][0],
-			dy = bounds[1][1] - bounds[0][1],
-			x = (bounds[0][0] + bounds[1][0]) / 2,
-			y = (bounds[0][1] + bounds[1][1]) / 2,
-			scale = .2 / Math.max(dx / width, dy / height),
-			translate = [width / 2 - scale * x, height / 2 - scale * y];
-
-		svg.transition()
-			.duration(1500)
-			.call(zoom.translate(translate).scale(scale).event);
 		
-				
+	var bounds = path.bounds(d),
+		dx = bounds[1][0] - bounds[0][0],
+		dy = bounds[1][1] - bounds[0][1],
+		x = (bounds[0][0] + bounds[1][0]) / 2,
+		y = (bounds[0][1] + bounds[1][1]) / 2,
+		scale = .2 / Math.max(dx / width, dy / height * 2),
+		translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+	svg.transition()
+		.duration(2500)
+		.call(zoom.translate(translate).scale(scale).event);
+	
+			
 	
 	seatinfo(d);
 	previousnode = id;
@@ -167,66 +171,64 @@ function zoomToClickedFilteredSeat(d){
 
 function clicked(d) {
 
-		d3.select(previousnode)
-			.style("stroke", "darkgrey")
-			.style("stroke-width", 0.1)
-		
-			
-		
-		
-		d3.select(this)
-			.moveToFront()
-			.transition()
-			.style("stroke", "black")
-			.style("stroke-width", 0.5)
-	
-			
-		
-		
-		
-		if (active.node() === this) return reset();
-		active.classed("active", false);
-		active = d3.select(this).classed("active", true);
-
-		var bounds = path.bounds(d),
-			dx = bounds[1][0] - bounds[0][0],
-			dy = bounds[1][1] - bounds[0][1],
-			x = (bounds[0][0] + bounds[1][0]) / 2,
-			y = (bounds[0][1] + bounds[1][1]) / 2,
-			scale = .2 / Math.max(dx / width, dy / height),
-			translate = [width / 2 - scale * x, height / 2 - scale * y];
-
-		svg.transition()
-			.duration(1500)
-			.call(zoom.translate(translate).scale(scale).event);
-		
-		
-		seatinfo(d);
-		previousnode = this;
-	
-	}
-
-	function reset() {
-		active.classed("active", false);
-		active = d3.select(null);
-
-		svg.transition()
-			.duration(1500)
-			.call(zoom.translate([0, 0]).scale(1).event);
-			
-	}
-
-	function zoomed() {
-		g.style("stroke-width", 1.5 / d3.event.scale + "px");
-		g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-		
-	}
-	
-	function stopped() {
-		if (d3.event.defaultPrevented) d3.event.stopPropagation();
-	}
 	
 	
+	previous = d3.select(previousnode)
+	current = d3.select(this);
+	repeat();
+	
+	function repeat(){
+		previous.transition()
+			.attr("opacity", 1)
+		
+		current.transition()			
+			.duration(1500)		
+			.attr("opacity", 1)
+		.transition()		
+			.duration(1500)		
+			.attr("opacity", 0.2)
+		.each("end", repeat);
+		}
+
+
+	
+
+	var bounds = path.bounds(d),
+		dx = bounds[1][0] - bounds[0][0],
+		dy = bounds[1][1] - bounds[0][1],
+		x = (bounds[0][0] + bounds[1][0]) / 2,
+		y = (bounds[0][1] + bounds[1][1]) / 2,
+		scale = .2 / Math.max(dx /  width,  dy / height),
+		translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+	svg.transition()
+		.duration(2500)
+		.call(zoom.translate(translate).scale(scale).event);
+	
+	
+	seatinfo(d);
+	previousnode = this;
+
+}
+
+function reset() {
+	
+	svg.transition()
+		.duration(2500)
+		.call(zoom.translate([0, 0]).scale(1).event);
+		
+}
+
+function zoomed() {
+	g.style("stroke-width", 1.5 / d3.event.scale + "px");
+	g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+	
+}
+
+function stopped() {
+	if (d3.event.defaultPrevented) d3.event.stopPropagation();
+}
+
 // seatinfo on right
 
 var oldclass = null;
@@ -335,8 +337,7 @@ function piechart(d){
 function doStuff(data) {	
 
 	$.each(data, function(i){
-		$("#totals table").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>"
-		+ data[i].net + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votepercent +"</td></tr>")
+		$("#totals table").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votepercent +"</td></tr>")
 	})
 };
 

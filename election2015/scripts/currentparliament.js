@@ -298,8 +298,9 @@ function piechart(d){
 	var filterdata = [];
 	
 	
-	$.each(data, function(i){
-		if (data[i].votes > 0)
+	$.each(data, function(i){	
+		
+		if (data[i].votes > 0 && data[i].party != "other2")			
 			filterdata.push(data[i]);
 	});
 	
@@ -308,6 +309,9 @@ function piechart(d){
 	filterdata.sort(function(a, b){						
 			return b.votes - a.votes ; 				
 	});
+	
+	if (d.properties.info_OTH2 > 0)
+		filterdata.push({party: "other2", votes: d.properties.info_OTH2})
 	
 	
 	// better way of doing this?
@@ -400,7 +404,7 @@ function doStuff(data) {
 				}
 				
 			},
-			sortList:[[1,1], [2,0]]
+			sortList:[[2,1], [1,0]]
 			
 		}); 
 	});

@@ -16,7 +16,7 @@ partylist["sdlp"] = "SDLP";
 partylist["dup"] = "DUP";
 partylist["alliance"] = "Alliance";
 partylist["other1"] = "Other";
-partylist["other2"] = "Other";
+partylist["other2"] = "Others";
 
 
 

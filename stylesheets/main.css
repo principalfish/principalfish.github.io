@@ -1,11 +1,11 @@
 #main {
-	border: 1px solid black;
-	border-radius: 0 0 10px 10px;
+	width:998px;
+	margin-top:10px
 }
 
 #election {
 	width: 600px;
-	margin-top: 25px;
+	
 	margin-left: auto;
 	margin-right: auto;
 	border-radius: 50px;

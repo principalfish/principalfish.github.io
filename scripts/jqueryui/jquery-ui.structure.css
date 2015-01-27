@@ -96,10 +96,9 @@
 	top: 0;
 	left: 0;
 	cursor: default;
-	color: white;
-	background: black;
+	background: white;
 	width: 120px;
-	border: 1px solid white;
+	border: 1px solid black;
 	font-family: Arial, Helvetica, sans-serif;	
 	max-height: 200px;
 	overflow: scroll;

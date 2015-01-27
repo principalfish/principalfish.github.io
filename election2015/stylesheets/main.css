@@ -62,35 +62,38 @@
 #searchforseat input {
 	margin-top: -10px;
 	width: 97%;
-	background: black;
-	color: white;
-
+	background: white;
+	border: 1px solid black;
 }
+
 #filters {
-	height: 165px;	
+	height: 160px;	
 }
 
-#filters p, form {
-	margin-top: -8px;
+#filters p, form {	
+	margin-top: -6px;
 }
 
 #filters button {
+	border: 1px solid black;
 	float: right;
-	background-color: black;
-	color: white;
+	background-color: white;
+	color: black;
 }
 #filters select {
-	
+	border: 1px solid black;
 	width: 100%;
 	text-align: left;
-	background: black;
-	color: white;
+	background: white;
+	color: black;
 }
 
 #filters input {
+	border: 1px solid black;
+	margin-top: -5px;
 	width: 50px;
-	background-color: black;
-	color: white;
+	background-color: white;
+	color: black;
 }
 
 #filteredlist {
@@ -98,8 +101,8 @@
 
 #filteredlist button{
 	width: 100%;
-	background-color: black;
-	color: white;
+	background-color: white;
+	color: black;
 }
 
 #filteredlisttable{

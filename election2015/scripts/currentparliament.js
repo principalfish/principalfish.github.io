@@ -135,15 +135,14 @@ function zoomToClickedFilteredSeat(d){
 		previous.transition()
 			.attr("opacity", 1)
 		
-		current
-			.attr("pointer-events", "none")
+		current		
 			.transition()			
 				.duration(1500)		
 				.attr("opacity", 0.2)
 			.transition()		
 				.duration(1500)		
 				.attr("opacity", 1)
-			.each("end", repeat, function(){ current.attr("pointer-events", null);});
+			.each("end", repeat);
 		}
 
 	var bounds = path.bounds(d),
@@ -184,15 +183,14 @@ function clicked(d) {
 		previous.transition()
 			.attr("opacity", 1)
 		
-		current
-			.attr("pointer-events", "none")
+		current		
 			.transition()			
 				.duration(1500)		
 				.attr("opacity", 0.2)
 			.transition()		
 				.duration(1500)		
 				.attr("opacity", 1)
-			.each("end", repeat, function(){ current.attr("pointer-events", null);});
+			.each("end", repeat);
 		}
 
 	var bounds = path.bounds(d),
@@ -254,7 +252,7 @@ var oldclass = null;
 function seatinfo(d){
 	
 	$("#information").removeClass(oldclass);		
-	$("#information").addClass(d.properties.incumbent).css("opacity", 0.8);				
+	$("#information").addClass(d.properties.incumbent)			
 	$("#information-seatname").html("<td>Seat</td><td style=\"width:380px\"> " + d.properties.name + 
 		"<span id =\"information-byelection\"></span></td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.region] + "</td>");
 	if (d.properties.info_bielection == "yes")
@@ -420,10 +418,6 @@ function parseData(url, callBack) {
 		}
 	});
 }
-
-
-
-
 
 parseData("votetotals.csv", doStuff);
 	

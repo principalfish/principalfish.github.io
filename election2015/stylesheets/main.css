@@ -15,8 +15,7 @@
 	border-left: 1px solid black;	
 	border-bottom: 1px solid black;
 	height: 900px;
-	background: white;
-	color: black;
+	background-color: #99CCFF;	
 	padding-left: 5px;
 	padding-right: 5px;
 	border-radius: 0 0 0 10px;
@@ -125,7 +124,7 @@
 /* map */
 
 #left {
-	float: left;
+	float: left;	
 	width: 700px;
 	height: 900px;
 	border-bottom: 1px solid black;	

@@ -136,7 +136,7 @@
 					
 						var path = d3.geo.path()
 							.projection(projection)
-							.pointRadius(0.3);							
+														
 							
 						var svg = d3.select("#left").append("svg")
 							.attr("width", width)
@@ -217,7 +217,7 @@
 									<th>Party</th>
 									<th class="tablesorter-header" style="width:100px;">Seats</th>								
 									<th class="tablesorter-header">Votes</th>
-									<th class="tablesorter-header" style="width:125px;" >Votes/Seat</th>
+									<th class="tablesorter-header" style="width:115px;" >Votes/Seat</th>
 									<th>Vote %</th>
 								</tr>
 							</thead>
@@ -231,7 +231,7 @@
 		</div>
 		
 		<div id="footer">
-			<p> May have performance issues on firefox </p>
+			<p> May have performance issues on Firefox </p>
 			<p> Rendered using the <a href="http://d3js.org/">d3js</a> library. Thanks to <a href="http://mapshaper.org">Mapshaper</a> and <a href="http://geojson.io">geojson.io</a>.
 			<p> Copyright 2015 principalfish.co.uk</p>
 				

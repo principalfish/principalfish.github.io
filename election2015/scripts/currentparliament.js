@@ -386,11 +386,11 @@ function doStuff(data) {
 		$.each(data, function(i){
 			if (i == data.length -1)
 				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
-				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votesperseat.toLocaleString() + "</td><td>" 
+				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].percentseatoverpercentvote.toFixed(2) + "</td><td>" 
 				+ (data[i].votepercent).toFixed(2) + "</td></tr></tfoot>")
 			else
 				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
-				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votesperseat.toLocaleString() + "</td><td>" 
+				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].percentseatoverpercentvote.toFixed(2) + "</td><td>" 
 				+ (data[i].votepercent).toFixed(2) + "</td></tr>")
 	
 		})

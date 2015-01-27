@@ -412,7 +412,7 @@ function doStuff(data) {
 				}
 				
 			},
-			sortList:[[2,1], [1,0], [3,1]]
+			sortList:[[2,1], [1,0], [3,0]]
 			
 		}); 
 	});

@@ -1,15 +1,15 @@
-party,code,seats,net,votes,votepercent
-Conservative,conservative,303,0,10578010,36.00
-Labour,labour,257,0,8494114,28.91
-Liberal Democrats,libdems,56,0,6715063,22.85
-DUP,dup,8,,161297,0.55
-Scottish National,snp,6,0,494089,1.68
-Other,other1,5,0,1086448,3.70
-Sinn Féin,sinnfein,5,,161536,0.55
-Plaid Cymru,plaidcymru,3,0,165397,0.56
-SDLP,sdlp,3,,109449,0.37
-The UKIPs,ukip,2,0,1005250,3.42
-Green,green,1,0,273040,0.93
-Alliance,alliance,1,,42378,0.14
-Ulster Conservatives,uu,0,,97238,0.33
-Total,total,650,,29383309,100
+party,code,seats,net,votes,votepercent,votesperseat
+Conservative,conservative,303,0,10578010,36.00,34911
+Labour,labour,257,0,8494114,28.91,33051
+Liberal Democrats,libdems,56,0,6715063,22.85,119912
+DUP,dup,8,,161297,0.55,20162
+Scottish National,snp,6,0,494089,1.68,82348
+Other,other1,5,0,1086448,3.70,217290
+Sinn Féin,sinnfein,5,,161536,0.55,32307
+Plaid Cymru,plaidcymru,3,0,165397,0.56,55132
+SDLP,sdlp,3,,109449,0.37,36483
+The UKIPs,ukip,2,0,1005250,3.42,502625
+Green,green,1,0,273040,0.93,273040
+Alliance,alliance,1,,42378,0.14,42378
+Ulster Conservatives,uu,0,,97238,0.33,n/a
+Total,total,650,,29383309,100,45205

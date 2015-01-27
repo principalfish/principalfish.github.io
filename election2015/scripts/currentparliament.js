@@ -381,10 +381,12 @@ function doStuff(data) {
 		$.each(data, function(i){
 			if (i == data.length -1)
 				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
-				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr></tfoot>")
+				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votesperseat.toLocaleString() + "</td><td>" 
+				+ (data[i].votepercent).toFixed(2) + "</td></tr></tfoot>")
 			else
 				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
-				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr>")
+				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].votesperseat.toLocaleString() + "</td><td>" 
+				+ (data[i].votepercent).toFixed(2) + "</td></tr>")
 	
 		})
 		
@@ -394,15 +396,18 @@ function doStuff(data) {
 				2: {
 					sorter: "numberWithComma"
 				},
+				3: {
+					sorter: "numberWithComma"
+				},
 				0: { 
 					sorter: false
 				},
-				3: { 
+				4: { 
 					sorter: false
 				}
 				
 			},
-			sortList:[[2,1], [1,0]]
+			sortList:[[2,1], [1,0], [3,1]]
 			
 		}); 
 	});

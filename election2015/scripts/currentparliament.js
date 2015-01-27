@@ -6,9 +6,14 @@ d3.selection.prototype.moveToFront = function() {
 					}; 	
 
 // far left filter scripts
-filterStates = [{party: "null"}, {majoritylow: NaN}, {majorityhigh: NaN}, {region: "null"}]
+var filterStates = [{party: "null"}, {majoritylow: NaN}, {majorityhigh: NaN}, {region: "null"}]
 
-seatsAfterFilter = []
+var seatsAfterFilter = [];
+var searchSeatData = [];
+var seatNames = [];
+
+
+	
 
 function filterMap(){
 
@@ -17,12 +22,6 @@ function filterMap(){
 	var majorityhigh = filterStates[2].majorityhigh;
 	var region = filterStates[3].region;
 	
-	
-	if (isNaN(majoritylow))
-		majoritylow = 0 
-	if (isNaN(majorityhigh))
-		majorityhigh = 1000000
-		
 	seatsAfterFilter = [];
 		
 	d3.json("map.json", function(uk){
@@ -30,9 +29,14 @@ function filterMap(){
 		if (party == "null" && majority == "null" && majoritylow == NaN && majorityhigh == NaN)
 			g.selectAll(".map")
 				.attr("style", "opacity:1")
-				
-			
+						
 		else
+		
+			if (isNaN(majoritylow))
+				majoritylow = 0 
+			if (isNaN(majorityhigh))
+				majorityhigh = 1000000
+				
 			g.selectAll(".map")
 				.attr("id", "filtertime")
 				
@@ -66,7 +70,7 @@ function filterMap(){
 			
 			if (region == "null")
 				g.selectAll("#majorityfiltered")
-					.attr("id", function(d){
+					.each(function(d){
 							seatsAfterFilter.push(d)					
 												
 						})
@@ -154,7 +158,7 @@ function zoomToClickedFilteredSeat(d){
 		scale = .025 / Math.max(dx /  width,  dy / height),
 		translate = [width / 2 - scale * x, height / 2 - scale * y];
 		
-	disableZoom()
+	disableZoom();
 		
 	svg.transition()		
 			.duration(1500)		
@@ -171,9 +175,9 @@ function zoomToClickedFilteredSeat(d){
 // scripts for zoom/pan/clicked 
 
 
-
+var blah;
 function clicked(d) {
-	
+	blah = d;
 	previous = d3.select(previousnode)
 	current = d3.select(this);
 	
@@ -202,7 +206,7 @@ function clicked(d) {
 		scale = .025 / Math.max(dx /  width,  dy / height),
 		translate = [width / 2 - scale * x, height / 2 - scale * y];
 		
-	disableZoom()
+	disableZoom();
 		
 	svg.transition()		
 			.duration(1500)		
@@ -228,10 +232,11 @@ function enableZoom(){
 }
 
 function reset() {
-	
+	disableZoom();
 	svg.transition()
 		.duration(1500)
-		.call(zoom.translate([0, 0]).scale(1).event);
+		.call(zoom.translate([0, 0]).scale(1).event)
+		.each("end", enableZoom);
 		
 }
 
@@ -426,3 +431,25 @@ function parseData(url, callBack) {
 
 parseData("votetotals.csv", doStuff);
 	
+	
+// autocomplete 
+
+function searchSeats(value){
+	$.each(searchSeatData, function(i){
+		if (searchSeatData[i].properties.name == value)
+			zoomToClickedFilteredSeat(searchSeatData[i])
+	});
+};
+
+$(function()
+{
+
+	$("#searchseats").autocomplete({	
+		source: seatNames,
+		select: function(event, ui){
+			searchSeats(ui.item.label);
+		}
+	
+	});
+		
+});

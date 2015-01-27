@@ -5,6 +5,7 @@
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/currentparliament.css"/>
+	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
@@ -13,14 +14,11 @@
 	<script type="text/javascript" src="/election2015/scripts/topojson.js"></script>	
 	<script type="text/javascript" src="/election2015/scripts/dictionary.js"></script>
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/currentparliament.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/tablesorter.min.js"></script>
-			<script>
-				
 			
-				</script>
-	
 		<div id="wrapper">
 			<div id="top">
 				<h2>UK Election Maps</h2>
@@ -33,19 +31,23 @@
 			 </div>
 			 
 			 <div id ="farleft">
-				
+				<div id="instructions">
+					<p>Map responds to scroll wheel, clicking, dragging</p>											
+				</div>
+		
 				
 				<div id="projections">					
 					<!-- <h3 id="2015projection"><a>2015 Projection</a></h3> -->
 					<h3 id="currentparliament"> Current Parliament </h3>
 					
 				</div>	
-
-				<div id="instructions">
-					<p>Map responds to scroll wheel, clicking, click + drag</p>											
-				</div>
-		
 				
+				<div id="searchforseat">
+					<h2>Seat Search</h2>
+					<input type="text" id="searchseats"/>				
+				</div>
+				
+
 				<div id="filters">
 					
 					<h2> Filters <button id ="filterbutton" onclick="resetFilter()">Reset</button></h2>	
@@ -74,9 +76,9 @@
 					
 					<p> by majority									
 						<form id="majority">
-						<input type ="text" name="majoritylow" value="0" onchange="filterStates[1].majoritylow = parseInt(value), filterMap()">
+						<input type ="text" name="majoritylow" value="0" onchange="filterStates[1].majoritylow = parseInt(value), filterMap()"/>
 							to	
-						<input type="text" name="majorityhigh" value="50000" onchange="filterStates[2].majorityhigh = parseInt(value), filterMap()">
+						<input type="text" name="majorityhigh" value="50000" onchange="filterStates[2].majorityhigh = parseInt(value), filterMap()"/>
 						</form>
 					</p>
 					
@@ -150,7 +152,7 @@
 							.on("click", reset);
 							
 						
-					
+						
 
 						var g = svg.append("g");
 						
@@ -175,7 +177,13 @@
 									.attr("d", path)							
 									.on("click", clicked)									
 									.append("svg:title")
-										.text(function(d) { return d.properties.name});
+										.text(function(d) { return d.properties.name})
+									.each(function(d){
+										seatsAfterFilter.push(d)
+										searchSeatData.push(d)
+										seatNames.push(d.properties.name);
+									});
+									
 									
 								g.append("path")
 									.datum(topojson.mesh(uk, uk.objects.map, function(a, b){

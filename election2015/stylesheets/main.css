@@ -56,8 +56,8 @@
 	
 }
 
-#searchforseat {
-
+#searchforseat h2{
+	 margin-bottom: 5px;	 
 }
 
 #searchforseat input {
@@ -105,7 +105,7 @@
 
 #filteredlisttable{
 	width: 100%;
-	max-height: 50%;
+	max-height: 52%;
 	overflow: auto;
 }
 

@@ -74,12 +74,10 @@
 	margin-top: -6px;
 }
 
-#filters button {
-	border: 1px solid black;
-	float: right;
-	background-color: white;
-	color: black;
+#filters button {	
+	float: right;	
 }
+
 #filters select {
 	border: 1px solid black;
 	width: 100%;
@@ -99,10 +97,9 @@
 #filteredlist {
 }
 
-#filteredlist button{
+#filteredlist button{	
 	width: 100%;
-	background-color: white;
-	color: black;
+	
 }
 
 #filteredlisttable{

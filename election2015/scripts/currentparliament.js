@@ -399,7 +399,9 @@ function doStuff(data) {
 					sorter: false
 				}
 				
-			}
+			},
+			sortList:[[1,1], [2,0]]
+			
 		}); 
 	});
 };

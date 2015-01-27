@@ -43,7 +43,8 @@
 
 				<div id="instructions">
 					<p>Map responds to scroll wheel, click + drag</p>
-					<p>Click on seat for info</p>									
+					<p>Click on seat for info</p>		
+					<p>Runs slowly on Firefox</p>
 				</div>
 		
 				
@@ -131,7 +132,7 @@
 						var zoom = d3.behavior.zoom()
 							.translate([0, 0])
 							.scale(1)
-							.scaleExtent([1, 25]) // change depth of potential zoom
+							.scaleExtent([1, 10]) // change depth of potential zoom
 							.on("zoom", zoomed); // starts zoom function
 					
 						var path = d3.geo.path()
@@ -214,10 +215,10 @@
 						<table id="totalstable" class="tablesorter">
 							<thead>
 								<tr>
-									<th class="tablesorter-header">Party</th>
+									<th>Party</th>
 									<th class="tablesorter-header" style="width:100px;">Seats</th>								
 									<th class="tablesorter-header">Votes</th>
-									<th class="tablesorter-header">Vote %</th>
+									<th>Vote %</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -231,10 +232,9 @@
 		
 		<div id="footer">
 				<p> Copyright 2015 principalfish.co.uk</p>
+				
 		</div>
 	
-		
-		
 		
 </body>
 	

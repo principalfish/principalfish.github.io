@@ -58,7 +58,7 @@ function filterMap(){
 						return "opacity: 0.1"
 					})
 				.attr("id", function(d) {
-					if (d.properties.info_majorityvotes >= majoritylow && d.properties.info_majorityvotes <=majorityhigh )
+					if (d.properties.info_majorityvotes >= majoritylow && d.properties.info_majorityvotes <= majorityhigh )
 						return "majorityfiltered";
 					});
 			
@@ -123,68 +123,27 @@ function generateSeatList(){
 		}	
 		
 function zoomToClickedFilteredSeat(d){
-	var id = "#i" + d.properties.info_id	
-	
-	// redo this at some point so not just repeating code.
+	var id = "#i" + d.properties.info_id;	
+	//rewrite at some point
 	
 	previous = d3.select(previousnode)
 	current = d3.select(id);
+	
 	repeat();
 	
 	function repeat(){
 		previous.transition()
 			.attr("opacity", 1)
 		
-		current.transition()			
-			.duration(1500)		
-			.attr("opacity", 1)
-		.transition()		
-			.duration(1500)		
-			.attr("opacity", 0.2)
-		.each("end", repeat);
-		}
-
-		
-	var bounds = path.bounds(d),
-		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
-		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
-		x = (bounds[0][0] + bounds[1][0]) / 2,
-		y = (bounds[0][1] + bounds[1][1]) / 2,		
-		scale = .025 / Math.max(dx / width, dy / height * 2),
-		translate = [width / 2 - scale * x, height / 2 - scale * y];
-
-	svg.transition()
-		.duration(1500)
-		.call(zoom.translate(translate).scale(scale).event);
-	
-			
-	
-	seatinfo(d);
-	previousnode = id;
-	}
-
-
-
-
-// scripts for zoom/pan/clicked 
-
-function clicked(d) {
-
-	previous = d3.select(previousnode)
-	current = d3.select(this);
-	repeat();
-	
-	function repeat(){
-		previous.transition()
-			.attr("opacity", 1)
-		
-		current.transition()			
-			.duration(1500)		
-			.attr("opacity", 1)
-		.transition()		
-			.duration(1500)		
-			.attr("opacity", 0.2)
-		.each("end", repeat);
+		current
+			.attr("pointer-events", "none")
+			.transition()			
+				.duration(1500)		
+				.attr("opacity", 0.2)
+			.transition()		
+				.duration(1500)		
+				.attr("opacity", 1)
+			.each("end", repeat, function(){ current.attr("pointer-events", null);});
 		}
 
 	var bounds = path.bounds(d),
@@ -196,16 +155,78 @@ function clicked(d) {
 		scale = .025 / Math.max(dx /  width,  dy / height),
 		translate = [width / 2 - scale * x, height / 2 - scale * y];
 		
+	disableZoom()
+		
+	svg.transition()		
+			.duration(1500)		
+			.call(zoom.translate(translate).scale(scale).event)
+			.each("end", enableZoom);
+			
+	seatinfo(d);
+	previousnode = id;
+	}
 
 
-	svg.transition()
-		.duration(1500)
-		.call(zoom.translate(translate).scale(scale).event);
+
+
+// scripts for zoom/pan/clicked 
+
+
+
+function clicked(d) {
 	
+	previous = d3.select(previousnode)
+	current = d3.select(this);
 	
+	repeat();
+	
+	function repeat(){
+		previous.transition()
+			.attr("opacity", 1)
+		
+		current
+			.attr("pointer-events", "none")
+			.transition()			
+				.duration(1500)		
+				.attr("opacity", 0.2)
+			.transition()		
+				.duration(1500)		
+				.attr("opacity", 1)
+			.each("end", repeat, function(){ current.attr("pointer-events", null);});
+		}
+
+	var bounds = path.bounds(d),
+		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
+		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
+		x = (bounds[0][0] + bounds[1][0]) / 2,
+		y = (bounds[0][1] + bounds[1][1]) / 2,		
+		
+		scale = .025 / Math.max(dx /  width,  dy / height),
+		translate = [width / 2 - scale * x, height / 2 - scale * y];
+		
+	disableZoom()
+		
+	svg.transition()		
+			.duration(1500)		
+			.call(zoom.translate(translate).scale(scale).event)
+			.each("end", enableZoom);
+			
 	seatinfo(d);
 	previousnode = this;
+}
 
+function disableZoom(){
+	svg.on("mousedown.zoom", null);
+	svg.on("mousemove.zoom", null);
+	svg.on("dblclick.zoom", null);
+	svg.on("touchstart.zoom", null);
+	svg.on("wheel.zoom", null);
+	svg.on("mousewheel.zoom", null);
+	svg.on("MozMousePixelScroll.zoom", null);
+}
+
+function enableZoom(){
+	svg.call(zoom);
 }
 
 function reset() {
@@ -216,7 +237,7 @@ function reset() {
 		
 }
 
-function zoomed() {
+function zoomed() {	
 	g.style("stroke-width", 1.5 / d3.event.scale + "px");
 	g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 	
@@ -332,6 +353,7 @@ function piechart(d){
 	})
 	
 	
+	
 		
 }
 
@@ -339,9 +361,8 @@ function piechart(d){
 	
 // bottom of right - vote chart 
 
- // add parser through the tablesorter addParser method 
-$( function() { 
 
+$( function() { 
     $.tablesorter.addParser({
         id: "numberWithComma",
         is: function(s) {
@@ -357,9 +378,11 @@ $( function() {
 function doStuff(data) {		
 		$.each(data, function(i){
 			if (i == data.length -1)
-				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr></tfoot>")
+				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
+				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr></tfoot>")
 			else
-				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" + data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr>")
+				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
+				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +"</td></tr>")
 	
 		})
 		
@@ -368,7 +391,14 @@ function doStuff(data) {
 			headers: {
 				2: {
 					sorter: "numberWithComma"
+				},
+				0: { 
+					sorter: false
+				},
+				3: { 
+					sorter: false
 				}
+				
 			}
 		}); 
 	});

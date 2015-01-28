@@ -265,7 +265,7 @@ function seatinfo(d){
 	$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.info_incumbent] + "</td>");
 	$("#information-mp").html("<td>MP</td><td>" + d.properties.info_mpfirstname + " " + d.properties.info_mplastname + "</td>");
 	$("#information-majority").html("<td>Majority</td><td> " + d.properties.info_majorityvotes  + "  =  " + (d.properties.info_majoritypercent).toFixed(2) + "%</td>");																	
-	$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " + (d.properties.info_turnout).toFixed(2) + 
+	$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " +  
 		"%</td><td id=\"rightcolumninfotable\">Electorate: " + d.properties.info_electorate + "</td>");	
 	$("#information-pie").html(piechart(d));
 	

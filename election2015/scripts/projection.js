@@ -279,7 +279,7 @@ function seatinfo(d){
 		$("#information-gain").html("<td>No change </td>")
 	$("#information-pie").html(piechart(d));
 	
-	oldclass = d.properties.incumbent;
+	oldclass = d.properties.info_party;
 }
 
 

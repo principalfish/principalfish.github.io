@@ -6,7 +6,7 @@ d3.selection.prototype.moveToFront = function() {
 					}; 	
 
 // far left filter scripts
-var filterStates = [{party: "null"}, {majoritylow: NaN}, {majorityhigh: NaN}, {region: "null"}]
+var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}]
 
 var seatsAfterFilter = [];
 var searchSeatData = [];
@@ -18,24 +18,19 @@ var seatNames = [];
 function filterMap(){
 
 	var	party  = filterStates[0].party;
-	var majoritylow = filterStates[1].majoritylow;
-	var majorityhigh = filterStates[2].majorityhigh;
-	var region = filterStates[3].region;
+	var gains = filterStates[1].gain;
+	var region = filterStates[2].region;
 	
 	seatsAfterFilter = [];
 		
-	d3.json("projection.json", function(uk){
+	d3.json("/election2015/data/map.json", function(uk){
 		
-		if (party == "null" && majority == "null" && majoritylow == NaN && majorityhigh == NaN)
+		if (party == "null" && region == "null" && gains == "null")
 			g.selectAll(".map")
 				.attr("style", "opacity:1")
 						
 		else
 		
-			if (isNaN(majoritylow))
-				majoritylow = 0 
-			if (isNaN(majorityhigh))
-				majorityhigh = 1000000
 				
 			g.selectAll(".map")
 				.attr("id", "filtertime")
@@ -46,42 +41,60 @@ function filterMap(){
 			else
 				g.selectAll("#filtertime")					
 					.attr("style", function(d){
-						if (party != d.properties.info_incumbent)
+						if (party != d.properties.info_party)
 							return "opacity: 0.1";
 						})					
 					.attr("id", function(d){
-						if (party == d.properties.info_incumbent)
+						if (party == d.properties.info_party)
 							return "partyfiltered"	
 						});
 											
 				
 			
-			g.selectAll("#partyfiltered")				
-				.attr("style", function(d) {
-					if (d.properties.info_majorityvotes < majoritylow || d.properties.info_majorityvotes > majorityhigh )
-						return "opacity: 0.1"
-					})
-				.attr("id", function(d) {
-					if (d.properties.info_majorityvotes >= majoritylow && d.properties.info_majorityvotes <= majorityhigh )
-						return "majorityfiltered";
-					});
+		
+			if (gains == "null")
+					g.selectAll("#partyfiltered")
+						.attr("id", "gainfiltered")
+			
+			else
+				if (gains == "gains")
+					g.selectAll("#partyfiltered")
+						.attr("style", function(d) {
+							if (d.properties.info_party == d.properties.info_incumbent)
+								return "opacity: 0.1";
+							})
+						.attr("id", function(d){
+							if (d.properties.info_party != d.properties.info_incumbent)
+								return "gainfiltered"
+						});
+				
+				if (gains == "nochange")
+					g.selectAll("#partyfiltered")
+						.attr("style", function(d) {
+							if (d.properties.info_party != d.properties.info_incumbent)
+								return "opacity: 0.1";
+							})
+						.attr("id", function(d){
+							if (d.properties.info_party == d.properties.info_incumbent)
+								return "gainfiltered"
+						});
 			
 		
 			
 			if (region == "null")
-				g.selectAll("#majorityfiltered")
+				g.selectAll("#gainfiltered")
 					.each(function(d){
 							seatsAfterFilter.push(d)					
 												
 						})
 			else
-				g.selectAll("#majorityfiltered")	
+				g.selectAll("#gainfiltered")	
 					.attr("style", function(d){																		
-						if (region != d.properties.region)								
+						if (region != d.properties.info_area)								
 							return "opacity: 0.1";	
 					})
 					.attr("id", function(d){																		
-						if (region == d.properties.region)			
+						if (region == d.properties.info_area)			
 							seatsAfterFilter.push(d);												
 					});	
 					
@@ -99,13 +112,12 @@ function filterMap(){
 function resetFilter(){
 
 	filterStates[0].party = "null"
-	filterStates[1].majoritylow = NaN
-	filterStates[2].majorityhigh = NaN
-	filterStates[3].region = "null"							
+	filterStates[1].gain = "null"
+	filterStates[2].region = "null"							
 	filterMap();
 	
 	$("#dropdownparty option:eq(0)").prop("selected", true);
-	$("#majority").get(0).reset()
+	$("#dropdowngains option:eq(0)").prop("selected", true);
 	$("#dropdownregion option:eq(0)").prop("selected", true);
 
 	$("#totalfilteredseats").html(" ");
@@ -118,7 +130,7 @@ function generateSeatList(){
 			
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
 			$.each(seatsAfterFilter, function(i){
-				$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.info_incumbent + 
+				$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.info_party + 
 				"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
 				
 			});
@@ -175,9 +187,9 @@ function zoomToClickedFilteredSeat(d){
 // scripts for zoom/pan/clicked 
 
 
-var blah;
+
 function clicked(d) {
-	blah = d;
+
 	previous = d3.select(previousnode)
 	current = d3.select(this);
 	
@@ -257,19 +269,17 @@ var oldclass = null;
 function seatinfo(d){
 	
 	$("#information").removeClass(oldclass);		
-	$("#information").addClass(d.properties.info_incumbent)			
+	$("#information").addClass(d.properties.info_party)			
 	$("#information-seatname").html("<td>Seat</td><td style=\"width:380px\"> " + d.properties.name + 
-		"<span id =\"information-byelection\"></span></td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.region] + "</td>");
-	if (d.properties.info_bielection == "yes")
-		$("#information-byelection").html("*");					
-	$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.info_incumbent] + "</td>");
-	$("#information-mp").html("<td>MP</td><td>" + d.properties.info_mpfirstname + " " + d.properties.info_mplastname + "</td>");
-	$("#information-majority").html("<td>Majority</td><td> " + d.properties.info_majorityvotes  + "  =  " + (d.properties.info_majoritypercent).toFixed(2) + "%</td>");																	
-	$("#information-electorate").html("<td>Turnout </td><td>" + d.properties.info_votescast + " = " + (d.properties.info_turnout).toFixed(2) + 
-		"%</td><td id=\"rightcolumninfotable\">Electorate: " + d.properties.info_electorate + "</td>");	
+	"</td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.info_area] + "</td>");				
+	$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.info_party] + "</td>");
+	if (d.properties.info_party != d.properties.info_incumbent)
+		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" + d.properties.info_incumbent + "\">" + partylist[d.properties.info_incumbent] + "</span></td>")			
+	else
+		$("#information-gain").html("<td>No change </td>")
 	$("#information-pie").html(piechart(d));
 	
-	oldclass = d.properties.info_incumbent;
+	oldclass = d.properties.incumbent;
 }
 
 
@@ -294,8 +304,8 @@ function piechart(d){
 	data.push({ party: "uu", votes: d.properties.info_UU});
 	data.push({ party: "sinnfein", votes: d.properties.info_SF});
 	data.push({ party: "alliance", votes: d.properties.info_ALL});
-	data.push({ party: "other1", votes: d.properties.info_OTH1});
-	data.push({ party: "other2", votes: d.properties.info_OTH2});
+	data.push({ party: "other", votes: d.properties.info_OTH});
+
 	
 
 	var filterdata = [];
@@ -313,9 +323,9 @@ function piechart(d){
 			return b.votes - a.votes ; 				
 	});
 	
-	if (d.properties.info_OTH2 > 0)
-		filterdata.push({party: "other2", votes: d.properties.info_OTH2})
+	var sumfilterdata = 0;
 	
+	$.each(filterdata, function(i) {sumfilterdata += filterdata[i].votes;})
 	
 	// better way of doing this?
 	
@@ -355,13 +365,9 @@ function piechart(d){
 	// creates table with vote counts/percentages
 	$.each(filterdata, function(i){							
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +  
-			partylist[filterdata[i].party] + "</td><td>" + filterdata[i].votes + 
-			"</td><td>" + (100 * filterdata[i].votes/d.properties.info_votescast).toFixed(2) +  "%</td></tr>")
+			partylist[filterdata[i].party] + "</td><td>" + (100 * filterdata[i].votes/sumfilterdata).toFixed(2) +  "%</td></tr>")
 	})
 	
-	
-	
-		
 }
 
 
@@ -386,33 +392,21 @@ function doStuff(data) {
 		$.each(data, function(i){
 			if (i == data.length -1)
 				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
-				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].net + "</td><td>" 
-				+ (data[i].votepercent).toFixed(2) + "</td></tr></tfoot>")
+					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) + "</td></tr></tfoot>")
 			else
 				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>" 
-				+ data[i].seats + "</td><td>" + (data[i].votes).toLocaleString() + "</td><td>" + data[i].net + "</td><td>" 
-				+ (data[i].votepercent).toFixed(2) + "</td></tr>")
+					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) + "</td></tr>")
 	
 		})
 		
 	 $(document).ready(function() { 
 		$("table").tablesorter({
-			headers: {
-				2: {
-					sorter: "numberWithComma"
-				},
-				3: {
-					sorter: "numberWithComma"
-				},
+			headers: {			
 				0: { 
 					sorter: false
-				},
-				4: { 
-					sorter: false
-				}
-				
+				}					
 			},
-			sortList:[[2,1], [1,0], [3,0]]
+			sortList:[[3,1], [1,0], [2,0]]
 			
 		}); 
 	});
@@ -429,7 +423,7 @@ function parseData(url, callBack) {
 	});
 }
 
-parseData("projectionvotetotals.csv", doStuff);
+parseData("/election2015/data/projectionvotetotals.csv", doStuff);
 	
 	
 // autocomplete 

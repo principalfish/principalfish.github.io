@@ -1,0 +1,15 @@
+party,code,seats,change,votepercent
+Conservative,conservative,2,1,14.38
+Labour,labour,24,-17,31.52
+Liberal Democrats,libdems,1,-10,8.99
+DUP,dup,0,0,0.00
+Scottish National,snp,32,26,38.60
+Other,other1,0,0,0.00
+Sinn Féin,sinnfein,0,0,0.00
+Plaid Cymru,plaidcymru,0,0,0.00
+SDLP,sdlp,0,0,0.00
+UKIP,ukip,0,0,2.97
+Green,green,0,0,3.53
+Alliance,alliance,0,0,0.00
+Ulster Conservatives,uu,0,0,0.00
+Total,total,59,,100

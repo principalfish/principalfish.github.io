@@ -3,8 +3,8 @@
 <head>
 	<title>UK Election Maps</title>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
-	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
-	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/currentparliament.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>	
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/projection.css"/>	
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
@@ -37,8 +37,10 @@
 		
 				
 				<div id="projections">					
-					<!-- <h3 id="2015projection"><a>2015 Projection</a></h3> -->
-					<h3 id="currentparliament"> Projection </h3>
+			
+					<h3 id="currentpage"> 2015 Projection </h3>
+					<h3 id="notactive"><a href="/election2015">Current Parliament</a></h3>
+					
 					
 				</div>	
 				
@@ -64,7 +66,7 @@
 						<option value="plaidcymru">Plaid Cymru</option>
 						<option value="green">Green</option>
 						<option value="dup">DUP</option>
-						<option value="sinnfein">Sinn FÃ©in</option>
+						<option value="sinnfein">Sinn Féin</option>
 						<option value="sdlp">SDLP</option>
 						<option value="alliance">Alliance</option>
 						<option value="uu">Ulster Conservatives</option>				
@@ -74,15 +76,15 @@
 					</select> </p>
 					 
 					
-					<p> by majority									
-						<form id="majority">
-						<input type ="text" name="majoritylow" value="0" onchange="filterStates[1].majoritylow = parseInt(value), filterMap()"/>
-							to	
-						<input type="text" name="majorityhigh" value="50000" onchange="filterStates[2].majorityhigh = parseInt(value), filterMap()"/>
-						</form>
+					<p> by gains/no change						
+						<select id="dropdowngains" onchange="filterStates[1].gain = value, filterMap()">
+							<option value="null"></option>
+							<option value="gains">Gains</option>							
+							<option value="nochange">No Change</option>
+						</select>
 					</p>
 					
-					<p> by region <select id="dropdownregion" onchange="filterStates[3].region = value, filterMap()">
+					<p> by region <select id="dropdownregion" onchange="filterStates[2].region = value, filterMap()">
 						<option value="null"></option>
 						<option value="eastofengland">East of England</option>
 						<option value="eastmidlands"> East Midlands </option>
@@ -163,16 +165,16 @@
 							.call(zoom) 
 							.call(zoom.event);
 							
-						d3.json("projection.json", function(error, uk) {
+						d3.json("/election2015/data/projection.json", function(error, uk) {
 								if (error) return console.error(error);								
 									
 								
 								
 								g.selectAll(".map")
-									.data(topojson.feature(uk, uk.objects.map).features)
+									.data(topojson.feature(uk, uk.objects.projection).features)
 									.enter().append("path")
 									.attr("class", function(d) {
-										return "map " + d.properties.info_incumbent;	})
+										return "map " + d.properties.info_party;	})
 									.attr("id", function(d) { return "i" + d.properties.info_id})
 									.attr("d", path)							
 									.on("click", clicked)									
@@ -186,8 +188,8 @@
 									
 									
 								g.append("path")
-									.datum(topojson.mesh(uk, uk.objects.map, function(a, b){
-										return a.properties.region != b.properties.region && a != b; }))
+									.datum(topojson.mesh(uk, uk.objects.projection, function(a, b){
+										return a.properties.info_area != b.properties.info_area && a != b; }))
 									.attr("d", path)
 									.attr("class", "boundaries");
 									
@@ -200,17 +202,15 @@
 			<div id="right">
 				<div id="topright">
 					<h3 id="information-header"> Information for Selected Seat</h3>	
-					<h4 id="information-bielection">* by-election contested since 2010</h4>
+				
 				</div>
 				
 				<div id ="information">				
 					<table>
-						<tr id="information-seatname"></tr>	
-					
+						<tr id="information-seatname"></tr>						
 						<tr id="information-party"></tr>
-						<tr id="information-mp"></tr>
-						<tr id="information-majority"></tr>
-						<tr id="information-electorate"></tr>							
+						<tr id="information-gain"></tr>						
+										
 					</table>
 				
 				<div id="charts"> 
@@ -223,10 +223,9 @@
 							<thead>
 								<tr>
 									<th>Party</th>
-									<th class="tablesorter-header" style="width:80px;">Seats</th>								
-									<th class="tablesorter-header">Votes</th>
-									<th class="tablesorter-header" style="width:120px; font-size:0.7em;" >Net</th>
-									<th>Vote %</th>
+									<th class="tablesorter-header">Seats</th>								
+									<th class="tablesorter-header">Change</th>							
+									<th class="tablesorter-header">Vote %</th>
 								</tr>
 							</thead>
 							<tbody>

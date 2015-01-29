@@ -24,9 +24,9 @@ function filterMap(){
 	
 	seatsAfterFilter = [];
 		
-	d3.json("map.json", function(uk){
+	d3.json("/election2015/data/map.json", function(uk){
 		
-		if (party == "null" && majority == "null" && majoritylow == NaN && majorityhigh == NaN)
+		if (party == "null" && region == "null" && majoritylow == NaN && majorityhigh == NaN)
 			g.selectAll(".map")
 				.attr("style", "opacity:1")
 						
@@ -175,9 +175,9 @@ function zoomToClickedFilteredSeat(d){
 // scripts for zoom/pan/clicked 
 
 
-var blah;
+
 function clicked(d) {
-	blah = d;
+
 	previous = d3.select(previousnode)
 	current = d3.select(this);
 	
@@ -429,7 +429,7 @@ function parseData(url, callBack) {
 	});
 }
 
-parseData("votetotals.csv", doStuff);
+parseData("/election2015/data/votetotals.csv", doStuff);
 	
 	
 // autocomplete 

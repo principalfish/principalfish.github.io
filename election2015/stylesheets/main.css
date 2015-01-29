@@ -55,6 +55,16 @@
 	
 }
 
+#currentpage {
+	background: blue;
+	color: #FFFF00;
+	margin: 2px;
+}
+
+#notactive {
+	margin: 2px;
+}
+
 #searchforseat h2{
 	 margin-bottom: 5px;	 
 }

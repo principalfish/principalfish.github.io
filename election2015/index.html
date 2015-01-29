@@ -4,7 +4,6 @@
 	<title>UK Election Maps</title>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
-	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/currentparliament.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
@@ -37,8 +36,9 @@
 		
 				
 				<div id="projections">					
-					<!-- <h3 id="2015projection"><a>2015 Projection</a></h3> -->
-					<h3 id="currentparliament"> Current Parliament </h3>
+				
+					<h3 id="notactive"><a href="/election2015/projection.html">2015 Projection</a></h3>
+					<h3 id="currentpage"> Current Parliament </h3>
 					
 				</div>	
 				
@@ -163,7 +163,7 @@
 							.call(zoom) 
 							.call(zoom.event);
 							
-						d3.json("map.json", function(error, uk) {
+						d3.json("/election2015/data/map.json", function(error, uk) {
 								if (error) return console.error(error);								
 									
 								

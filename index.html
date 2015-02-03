@@ -1,38 +1,53 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-	<title>PrincipalFish</title>
+	<title>Principal Fish</title>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
-	<link type="text/css" rel="stylesheet" href="/stylesheets/main.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
+
 </head>
 
 <body>
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<div id="wrapper">
-	<div id="top">
-		<h2>Principal Fish</h2>
-		<div id="menu">
-			<ul>
-				<li><a href="/" class="current">home</a></li>
-				<li><a href="mailto:principalfish@gmail.com" class="current">email</a></li>				
-				
-			</ul>
+		<div id="top">
+			<h2>Principal Fish</h2>
+			<script>
+			$(function(){
+				$("#menu").load("/menu.html")
+			});
+			</script>
+			<div id="menu">		</div>
 		</div>
-	</div>
-	
-	<div id="main">
-		<div id="election">
-			<a href = "/election2015">UK Election Maps</a></p>	
+
+		<div id="main">
+			<div id="content">
+				<h2> 2015 </h2>
+				<h3>February 3rd - Redesign + Photos</h3>
+				<p> Site redesigned. Added <a href ="/photos">photos</a> from last few months with brief descriptions of walks.
+				Will go into more detail on the walks in the future.	Also added <a href="/about">about</a></p>
+				<h3>January 28th - UK Election Map</h3>
+				<p>Current UK parliament is <a href ="/election2015">complete</a>.
+					Rendering is done using the <a href="http://d3js.org/">d3js</a> Javascript library.
+					Has performance issues when zooming in Firefox but not much I can do about it - seems to be a widely reported problem.
+					Stripped down to just the map the animations still lag.</p>
+				<p>Working on a <a href ="/election2015/projection.html">projection</a> for the 2015 election.
+					Had a go at predicting Scotland but not satisfied with the power of spreadsheets to finish the task efficiently.
+					Going to start work on analysing the data using Python next week. Installed python packages NumPy and SciPy to help out.
+				<p> Also aiming to make a live map for the day of the election. </p>
+				<h3>January 20th</h3>
+			  <p> Site up and running.</p>
+			</div>
 		</div>
+
+		<div id="footer">
+				<p> Copyright 2015 principalfish.co.uk</p>
+		</div>
+
 	</div>
-	
-	
-	
-	<div id="footer">
-		<p> Copyright 2015 principalfish.co.uk</p>
-	</div>
-		
+
+
+
 </body>
 
 <footer>

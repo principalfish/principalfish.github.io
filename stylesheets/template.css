@@ -1,16 +1,23 @@
 body {
 	background: #C9C9C9;
-	font-family: Arial, Helvetica, sans-serif;	
-	font-size: 0.75em;	
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 0.75em;
 	height: 100%;
 	width: 100%;
 	margin-top:5px;
 }
 
+body a {
+	text-decoration: none;
+}
+
+body a:hover {
+	color: #be5e00;
+}
 
 #wrapper {
 	margin-left: auto;
-    margin-right: auto;
+  margin-right: auto;
 	width: 1000px;
 	height: auto;
 	display: block;
@@ -22,8 +29,8 @@ body {
 
 #top {
 	width: 100%;
-	height: 60px;	
-	background-color: #3399FF;	
+	height: 60px;
+	background-color: #3399FF;
 	border-radius: 10px 10px 0 0;
 	border: 1px solid black;
 }
@@ -40,7 +47,7 @@ body {
 	float:left;
 	background: url(/img/logo.png) no-repeat;
 	padding-left: 50px;
-	margin-left: 20px;	
+	margin-left: 20px;
 }
 
 
@@ -54,53 +61,63 @@ body {
 }
 
 
-/**** Main Menu ***/
+
+ /* footer */
 
 
-#menu {
-	display: block;
-	float:right;
-}
 
-#menu ul {
-	margin: 0;
-	list-style: none;
-}
-
-#menu li {
-	display: block;
+#farleft {
 	float: left;
-	white-space: nowrap;
+	width: 140px;
+	height: auto;
+	border-left: 1px solid black;
+	border-bottom: 1px solid black;
+	min-height: 500px;
+	background-color: #3399FF;
+	padding-left: 5px;
+	padding-right: 5px;
+	border-radius: 0 0 0 10px;
+	border-right: 1px solid black;
 }
 
-#menu li a {
-	display: block;
-	padding: 40px 20px 0px 20px;
+#farleft a {
 	text-decoration: none;
-	color: #black;
-}
-
-* html #menu a {width:1%;}
-
-
-
-#menu li a.current {
+	font-size: 1.5em;
 	letter-spacing: 1px;
-	color: black;
+
 }
 
-#menu li a.current:hover {
+#farleft a:hover {
 	color: orange;
 }
- /* footer */
- 
-#footer {
-	clear: both;
-    position: relative;
-    z-index: 10;	
+
+
+#farleft p {
+		width: 100%;
+		vertical-align: middle;
+		text-align: center;
 }
 
 
- 
+#main {
+	float: left;
+	border-bottom: 1px solid black;
+	border-right: 1px solid black;
+	border-left: 1px solid black;
+	height: 800px;
+	width: 100%;
+	border-radius: 0 0 10px 10px;
+	background: #99CCFF;
+	font-size: 1.2em;
+	overflow-y: auto;
+}
 
+#content {
+	margin-top:-10px;
+	padding:10px;
+}
 
+#footer {
+	clear: both;
+
+}

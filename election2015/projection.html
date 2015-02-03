@@ -3,59 +3,60 @@
 <head>
 	<title>UK Election Maps</title>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
-	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>	
-	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/projection.css"/>	
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/projection.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
-<body>	
+<body>
 	<script type="text/javascript" src="/election2015/scripts/d3.min.js"></script>
-	<script type="text/javascript" src="/election2015/scripts/topojson.js"></script>	
+	<script type="text/javascript" src="/election2015/scripts/topojson.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/dictionary.js"></script>
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/projection.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/tablesorter.min.js"></script>
-			
+
 		<div id="wrapper">
 			<div id="top">
-				<h2>UK Election Maps</h2>
+				<h2>UK Election Maps<span style="font-size:0.5em;"> -projection for 2015 election (work in progress!)</span></h2>
+				<script>
+				$(function(){
+					$("#menu").load("/menu.html")
+				});
+				</script>
 				<div id="menu">
-				  <ul>
-					<li><a href="/" class="current">home</a></li>					
-					<li><a href="mailto:principalfish@gmail.com" class="current">email</a></li>
-				  </ul>
+
 				</div>
 			 </div>
-			 
+
 			 <div id ="farleft">
 				<div id="instructions">
-					<p>Map responds to scroll wheel, clicking, dragging</p>											
+					<p>Map responds to scroll wheel, clicking, dragging</p>
 				</div>
-		
-				
-				<div id="projections">					
-			
+
+
+				<div id="projections">
+
 					<h3 id="currentpage"> 2015 Projection </h3>
 					<h3 id="notactive"><a href="/election2015">Current Parliament</a></h3>
-					
-					
-				</div>	
-				
+
+
+				</div>
+
 				<div id="searchforseat">
 					<h2>Seat Search</h2>
-					<input type="text" id="searchseats"/>				
+					<input type="text" id="searchseats"/>
 				</div>
-				
+
 
 				<div id="filters">
-					
-					<h2> Filters <button id ="filterbutton" onclick="resetFilter()">Reset</button></h2>	
-					
-					
-					
+
+					<h2> Filters <button id ="filterbutton" onclick="resetFilter()">Reset</button></h2>
+
+
 					<p> by party  <select id="dropdownparty" onchange="filterStates[0].party = value, filterMap()">
 						<option value="null"></option>
 						<option value="labour">Labour</option>
@@ -66,55 +67,55 @@
 						<option value="plaidcymru">Plaid Cymru</option>
 						<option value="green">Green</option>
 						<option value="dup">DUP</option>
-						<option value="sinnfein">Sinn Féin</option>
+						<option value="sinnfein">Sinn Fï¿½in</option>
 						<option value="sdlp">SDLP</option>
 						<option value="alliance">Alliance</option>
-						<option value="uu">Ulster Conservatives</option>				
-						<option value="respect">Respect</option>			
-						<option value="independent">Independent</option>	
-						<option value="speaker">Speaker</option>						
+						<option value="uu">Ulster Conservatives</option>
+						<option value="respect">Respect</option>
+						<option value="independent">Independent</option>
+						<option value="speaker">Speaker</option>
 					</select> </p>
-					 
-					
-					<p> by gains/no change						
+
+
+					<p> by gains/no change
 						<select id="dropdowngains" onchange="filterStates[1].gain = value, filterMap()">
 							<option value="null"></option>
-							<option value="gains">Gains</option>							
+							<option value="gains">Gains</option>
 							<option value="nochange">No Change</option>
 						</select>
 					</p>
-					
+
 					<p> by region <select id="dropdownregion" onchange="filterStates[2].region = value, filterMap()">
 						<option value="null"></option>
 						<option value="eastofengland">East of England</option>
 						<option value="eastmidlands"> East Midlands </option>
 						<option value="london">London</option>
-						<option value="northeastengland">North East England</option>						
+						<option value="northeastengland">North East England</option>
 						<option value="northwestengland">North West England</option>
 						<option value="northernireland">Northern Ireland</option>
 						<option value="scotland">Scotland</option>
 						<option value="southeastengland">South East England</option>
-						<option value="southwestengland">South West England</option>						
-						<option value="wales">Wales</option>	
+						<option value="southwestengland">South West England</option>
+						<option value="wales">Wales</option>
 						<option value="westmidlands">West Midlands</option>
-						<option value="yorkshireandthehumber">Yorkshire & Humber</option>	
+						<option value="yorkshireandthehumber">Yorkshire & Humber</option>
 					</select> </p>
-					
+
 				</div>
-			
+
 				<div id ="filteredlist">
-					<button id ="filtertolist" onclick="generateSeatList()">Generate seat list</button>					
+					<button id ="filtertolist" onclick="generateSeatList()">Generate seat list</button>
 				</div>
 				<div id ="totalfilteredseats">
-				
+
 				</div>
 				<div id="filteredlisttable">
-						
+
 				</div>
-				
-			
+
+
 			</div>
-			
+
 			<div id="left">
 				<div id ="resetbutton">
 					<button id ="resetzoom" onclick="reset()">Reset</button>
@@ -124,60 +125,60 @@
 						var width = 700, // width and height of map
 							height = 900;
 							active = d3.select(null);
-						
+
 						var projection = d3.geo.albers() // variables to change default map position
 							.center([0, 54.3]) //centers vertically and horizontally
 							.rotate([3, 0])
 							.parallels([51, 60])
 							.scale(5800)
-							.translate([width / 2, height / 2]);								
-						
+							.translate([width / 2, height / 2]);
+
 						var zoom = d3.behavior.zoom()
 							.translate([0, 0])
 							.scale(1)
 							.scaleExtent([1, 10]) // change depth of potential zoom
 							.on("zoom", zoomed); // starts zoom function
-					
+
 						var path = d3.geo.path()
 							.projection(projection)
-														
-							
+
+
 						var svg = d3.select("#left").append("svg")
 							.attr("width", width)
 							.attr("height", height)
 							.on("click", stopped, true);
-					
+
 						svg.append("rect")
 							.attr("class", "background")
 							.attr("width", width)
 							.attr("height", height)
 							.on("click", reset);
-							
-						
-						
+
+
+
 
 						var g = svg.append("g");
-						
-						var previousnode, current;					
-						
-						
+
+						var previousnode, current;
+
+
 						svg
-							.call(zoom) 
+							.call(zoom)
 							.call(zoom.event);
-							
+
 						d3.json("/election2015/data/projection.json", function(error, uk) {
-								if (error) return console.error(error);								
-									
-								
-								
+								if (error) return console.error(error);
+
+
+
 								g.selectAll(".map")
 									.data(topojson.feature(uk, uk.objects.projection).features)
 									.enter().append("path")
 									.attr("class", function(d) {
 										return "map " + d.properties.info_party;	})
 									.attr("id", function(d) { return "i" + d.properties.info_id})
-									.attr("d", path)							
-									.on("click", clicked)									
+									.attr("d", path)
+									.on("click", clicked)
 									.append("svg:title")
 										.text(function(d) { return d.properties.name})
 									.each(function(d){
@@ -185,68 +186,68 @@
 										searchSeatData.push(d)
 										seatNames.push(d.properties.name);
 									});
-									
-									
+
+
 								g.append("path")
 									.datum(topojson.mesh(uk, uk.objects.projection, function(a, b){
 										return a.properties.info_area != b.properties.info_area && a != b; }))
 									.attr("d", path)
 									.attr("class", "boundaries");
-									
+
 							});
-					
-				</script>					
+
+				</script>
 			</div>
-			
-						
+
+
 			<div id="right">
 				<div id="topright">
-					<h3 id="information-header"> Information for Selected Seat</h3>	
-				
+					<h3 id="information-header"> Information for Selected Seat</h3>
+
 				</div>
-				
-				<div id ="information">				
+
+				<div id ="information">
 					<table>
-						<tr id="information-seatname"></tr>						
+						<tr id="information-seatname"></tr>
 						<tr id="information-party"></tr>
-						<tr id="information-gain"></tr>						
-										
+						<tr id="information-gain"></tr>
+
 					</table>
-				
-				<div id="charts"> 
-						<div id="information-pie"></div>					
-						<div id="information-chart"></div>	
+
+				<div id="charts">
+						<div id="information-pie"></div>
+						<div id="information-chart"></div>
 				</div>
-				
-					<div id = "totals">					
+
+					<div id = "totals">
 						<table id="totalstable" class="tablesorter">
 							<thead>
 								<tr>
 									<th>Party</th>
-									<th class="tablesorter-header">Seats</th>								
-									<th class="tablesorter-header">Change</th>							
+									<th class="tablesorter-header">Seats</th>
+									<th class="tablesorter-header">Change</th>
 									<th class="tablesorter-header">Vote %</th>
 								</tr>
 							</thead>
 							<tbody>
-								
+
 							</tbody>
 						</table>
-						
-					</div>				
+
+					</div>
 			</div>
 		</div>
-		
+
 		<div id="footer">
 			<p> May have performance issues on Firefox </p>
 			<p> Rendered using the <a href="http://d3js.org/">d3js</a> library with help from <a href="http://mapshaper.org">mapshaper</a> and <a href="http://geojson.io">geojson.io</a>.
 			<p> Copyright 2015 principalfish.co.uk</p>
-				
+
 		</div>
-	
-		
+
+
 </body>
-	
+
 <footer>
 	<script>
 	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

@@ -1,24 +1,22 @@
 #wrapper {
 	width: 1480px;
-	
+
 }
 /* far left */
 
 #top {
 	width: 1452px;
 }
- 
-#farleft{
-	float: left;
-	width: 140px;
-	height: auto;
-	border-left: 1px solid black;	
-	border-bottom: 1px solid black;
-	height: 900px;
-	background-color: #3399FF;
-	padding-left: 5px;
-	padding-right: 5px;
-	border-radius: 0 0 0 10px;
+
+
+#farleft {
+		border-right: 0;
+		height: 900px;
+
+}
+
+#farleft p {
+		text-align: left;
 }
 
 #farleft h2,h3{
@@ -29,7 +27,7 @@
 
 #projections {
 	height: 60px;
-	width: 100%;	
+	width: 100%;
 }
 
 
@@ -39,7 +37,7 @@
 	margin-left: -5px;
 	padding-left: 5px;
 	padding-right: 5px;
-	
+
 }
 
 #projections a {
@@ -51,8 +49,8 @@
 	color: orange;
 }
 
-#instructions {	
-	
+#instructions {
+
 }
 
 #currentpage {
@@ -63,10 +61,12 @@
 
 #notactive {
 	margin: 2px;
+	letter-spacing: 0px;
+	font-size: 0.75em;
 }
 
 #searchforseat h2{
-	 margin-bottom: 5px;	 
+	 margin-bottom: 5px;
 }
 
 #searchforseat input {
@@ -77,15 +77,15 @@
 }
 
 #filters {
-	height: 160px;	
+	height: 160px;
 }
 
-#filters p, form {	
+#filters p, form {
 	margin-top: -6px;
 }
 
-#filters button {	
-	float: right;	
+#filters button {
+	float: right;
 }
 
 #filters select {
@@ -107,9 +107,9 @@
 #filteredlist {
 }
 
-#filteredlist button{	
+#filteredlist button{
 	width: 100%;
-	
+
 }
 
 #filteredlisttable{
@@ -121,33 +121,33 @@
 #filteredlisttable td{
 	border-bottom: 1px solid black;
 	width: 140px;
-	white-space: nowrap;	
+	white-space: nowrap;
 	text-align: left;
 	cursor: pointer;
 
 }
 
-#filteredlisttable td:hover{	
+#filteredlisttable td:hover{
 	opacity: 0.5;
 }
 
 /* map */
 
 #left {
-	float: left;	
+	float: left;
 	width: 700px;
 	height: 900px;
-	border-bottom: 1px solid black;	
-	border-right: 1px solid black;	
-	border-left: 1px solid black;	
-	display: block;	
+	border-bottom: 1px solid black;
+	border-right: 1px solid black;
+	border-left: 1px solid black;
+	display: block;
 	overflow: hidden;
-	position: relative
-}	
+	position: relative;
+}
 
-#resetbutton {	
-	position: absolute;	
-	padding: 5px;	
+#resetbutton {
+	position: absolute;
+	padding: 5px;
 }
 
 #resetzoom {
@@ -159,7 +159,7 @@
 
 #right{
 	height: 900px;
-	float: left;		
+	float: left;
 	width: 600px;
 	border-right: 1px solid black;
 	border-bottom: 1px solid black;
@@ -171,13 +171,13 @@
 	height: 40px;
 	width: 600px;
 	float: left;
-	
+
 }
 
-/* info table */ 
-#information 	{	
+/* info table */
+#information 	{
 	width: 100%;
-	height: 202px;		
+	height: 202px;
 	border-bottom: 1px solid black;
 	float: left;
 	border-top: 1px solid black;
@@ -191,16 +191,16 @@
 	float: right;
 }
 
-#information table {	
+#information table {
 	height: 200px;
 	font-size: 1.5em;
 
 }
 
 #information td {
-	width: auto;	
+	width: auto;
 	padding-left: 3px;
-	padding-right: 3px;	
+	padding-right: 3px;
 }
 
 #rightcolumninfotable {
@@ -223,7 +223,7 @@
 
 #information-chart {
 	float: right;
-	font-size: 1.3em;	
+	font-size: 1.3em;
 }
 
 #information-chart td{
@@ -233,22 +233,22 @@
 /* country totals*/
 
 #totals {
-	height: auto;	
+	height: auto;
 }
 
 
 #totals h3{
-	color: black;	
+	color: black;
 }
 
-#totals table{	
-	width: 600px;	
+#totals table{
+	width: 600px;
 }
 
 #totalstable th{
 	color: black;
 	font-size: 0.9em;
-	
+
 }
 
 table#totalstable thead tr .header {
@@ -271,7 +271,7 @@ table#totalstable thead tr .headerSortDown {
 
 svg .boundaries {
 	 fill: none;
-	 stroke: darkgrey;	  
+	 stroke: darkgrey;
 	 stroke-linejoin: round;
 	 stroke-width: 0.4;
 }
@@ -281,26 +281,26 @@ svg .boundaries {
   pointer-events: all;
 }
 
-svg .map {	
-	stroke: lightgrey; 
-	stroke-width: 0.1; 
-	stroke-linejoin: round; 
+svg .map {
+	stroke: lightgrey;
+	stroke-width: 0.1;
+	stroke-linejoin: round;
 	cursor: pointer;
-	pointer-events: all; 	
+	pointer-events: all;
 }
 
 .map:hover {
-	opacity: 0.5;	
+	opacity: 0.5;
 }
 
 /*
 .place {
-	pointer-events: all; 
+	pointer-events: all;
 }
 
 .place-label {
 	font-size: 0.4em;
-	fill: black;			
+	fill: black;
 }
 */
 

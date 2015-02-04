@@ -17,7 +17,8 @@ partylist["dup"] = "DUP";
 partylist["alliance"] = "Alliance";
 partylist["other1"] = "Other";
 partylist["other2"] = "Others";
-
+partylist["other"] = "Other";
+partylist["total"] = "Total";
 
 
 var regionlist = {};
@@ -33,5 +34,4 @@ regionlist["eastmidlands"] = "E. Midlands";
 regionlist["eastofengland"] = "E. England";
 regionlist["scotland"] = "Scotland";
 regionlist["wales"] = "Wales";
-regionlist["northernireland"] = "Northern Ireland";
-
+regionlist["northernireland"] = "N. Ireland";

@@ -390,12 +390,15 @@ $( function() {
 
 function doStuff(data) {
 		$.each(data, function(i){
+
 			if (i == data.length -1)
-				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>"
-					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) + "</td></tr></tfoot>")
+				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
+					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
+					"</td><td>" + (data[i].votepercentchange) + "</td></tr>");
 			else
-				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + data[i].party + "</td><td>"
-					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) + "</td></tr>")
+				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
+					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
+					"</td><td>" + (data[i].votepercentchange).toFixed(2) + "</td></tr>");
 
 		})
 
@@ -406,7 +409,7 @@ function doStuff(data) {
 					sorter: false
 				}
 			},
-			sortList:[[3,1], [1,0], [2,0]]
+			sortList:[[3,1], [1,0], [2,0], [4,0]]
 
 		});
 	});

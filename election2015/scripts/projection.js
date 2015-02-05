@@ -304,7 +304,7 @@ function piechart(d){
 	data.push({ party: "uu", votes: d.properties.info_uu});
 	data.push({ party: "sinnfein", votes: d.properties.info_sinnfein});
 	data.push({ party: "alliance", votes: d.properties.info_alliance});
-	data.push({ party: "other", votes: d.properties.info_other});
+
 
 
 
@@ -323,11 +323,16 @@ function piechart(d){
 			return b.votes - a.votes ;
 	});
 
+	if (d.properties.info_other > 0)
+		filterdata.push({party: "other", votes: d.properties.info_other})
+
 	var sumfilterdata = 0;
 
 	$.each(filterdata, function(i) {sumfilterdata += filterdata[i].votes;})
 
 	// better way of doing this?
+
+
 
 
 	var width = 250,

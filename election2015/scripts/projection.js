@@ -270,7 +270,7 @@ function seatinfo(d){
 
 	$("#information").removeClass(oldclass);
 	$("#information").addClass(d.properties.info_party)
-	$("#information-seatname").html("<td>Seat</td><td style=\"width:370px\"> " + d.properties.name +
+	$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
 	"</td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.info_area] + "</td>");
 	$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.info_party] + "</td>");
 	if (d.properties.info_party != d.properties.info_incumbent)

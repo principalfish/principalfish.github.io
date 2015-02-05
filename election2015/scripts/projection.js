@@ -395,8 +395,10 @@ $( function() {
 
 function doStuff(data) {
 		$.each(data, function(i){
-
 			if (i == data.length -1)
+					null
+
+			else if (i == data.length -2)
 				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
 					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
 					"</td><td>" + (data[i].votepercentchange) + "</td></tr>");

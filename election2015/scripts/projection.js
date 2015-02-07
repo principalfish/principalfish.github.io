@@ -329,7 +329,7 @@ function piechart(d){
 	var sumfilterdata = 0;
 
 	$.each(filterdata, function(i) {sumfilterdata += parseInt(filterdata[i].votes);})
-	
+
 	// better way of doing this?
 
 
@@ -394,23 +394,34 @@ $( function() {
 });
 
 function doStuff(data) {
+		$("#totalstable").remove()
+		$("#totals").append("<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
+												"<th class=\"tablesorter-header\">Seats</th><th class=\"tablesorter-header\">Change</th>" +
+												"<th class=\"tablesorter-header\">Vote %</th><th class=\"tablesorter-header\">+/-</th>" +
+												"</tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
+												"</tfoot></table>")
+
+		//find wa yto clear cache of tablesorter properly? -
+
 		$.each(data, function(i){
 			if (i == data.length -1)
 					null
 
 			else if (i == data.length -2)
-				$("#totalstable").append("<tfoot><tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
+
+				$("#totalstablefoot").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
 					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
 					"</td><td>" + (data[i].votepercentchange) + "</td></tr>");
 			else
-				$("#totalstable").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
-					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
-					"</td><td>" + (data[i].votepercentchange).toFixed(2) + "</td></tr>");
-
+				if (data[i].votepercent > 0)
+					$("#totalstableinfo").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
+						+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
+						"</td><td>" + (data[i].votepercentchange).toFixed(2) + "</td></tr>");
 		})
 
-	 $(document).ready(function() {
-		$("table").tablesorter({
+
+		$("#totalstable").tablesorter({
+
 			headers: {
 				0: {
 					sorter: false
@@ -419,7 +430,10 @@ function doStuff(data) {
 			sortList:[[3,1], [1,0], [2,0], [4,0]]
 
 		});
-	});
+
+
+
+
 };
 
 function parseData(url, callBack) {
@@ -434,6 +448,24 @@ function parseData(url, callBack) {
 }
 
 parseData("/election2015/data/projectionvotetotals.csv", doStuff);
+
+function selectAreaInfo(value){
+
+	if (value == "country") {parseData("/election2015/data/projectionvotetotals.csv", doStuff)};
+	if (value == "scotland") {parseData("/election2015/data/regions/scotland.csv", doStuff)};
+	if (value == "eastofengland") {parseData("/election2015/data/regions/eastofengland.csv", doStuff)};
+	if (value == "northeastengland") {parseData("/election2015/data/regions/northeastengland.csv", doStuff)};
+	if (value == "northwestengland") {parseData("/election2015/data/regions/northwestengland.csv", doStuff)};
+	if (value == "southwestengland") {parseData("/election2015/data/regions/southwestengland.csv", doStuff)};
+	if (value == "southeastengland") {parseData("/election2015/data/regions/southeastengland.csv", doStuff)};
+	if (value == "london") {parseData("/election2015/data/regions/london.csv", doStuff)};
+	if (value == "wales") {parseData("/election2015/data/regions/wales.csv", doStuff)};
+	if (value == "northernireland") {parseData("/election2015/data/regions/northernireland.csv", doStuff)};
+	if (value == "yorkshireandthehumber") {parseData("/election2015/data/regions/yorkshireandthehumber.csv", doStuff)};
+	if (value == "eastmidlands") {parseData("/election2015/data/regions/eastmidlands.csv", doStuff)};
+	if (value == "westmidlands") {parseData("/election2015/data/regions/westmidlands.csv", doStuff)};
+}
+
 
 
 // autocomplete

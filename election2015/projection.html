@@ -220,6 +220,24 @@
 				</div>
 
 					<div id = "totals">
+
+						<p> Select Region: <select id="selectareatotals" onchange="selectAreaInfo(value)">
+							<option value="country"></option>
+							<option value="eastofengland">East of England</option>
+							<option value="eastmidlands"> East Midlands </option>
+							<option value="london">London</option>
+							<option value="northeastengland">North East England</option>
+							<option value="northwestengland">North West England</option>
+							<option value="northernireland">Northern Ireland</option>
+							<option value="scotland">Scotland</option>
+							<option value="southeastengland">South East England</option>
+							<option value="southwestengland">South West England</option>
+							<option value="wales">Wales</option>
+							<option value="westmidlands">West Midlands</option>
+							<option value="yorkshireandthehumber">Yorkshire & Humber</option>
+						</select></p>
+
+
 						<table id="totalstable" class="tablesorter">
 							<thead>
 								<tr>
@@ -229,10 +247,12 @@
 									<th class="tablesorter-header">Vote %</th>
 									<th class="tablesorter-header">+/-</th>
 								</tr>
-							</thead>
-							<tbody>
 
-							</tbody>
+							</thead>
+
+							<tbody id="totalstableinfo"></tbody>
+							<tfoot id="totalstablefoot"></tfoot>
+
 						</table>
 
 					</div>

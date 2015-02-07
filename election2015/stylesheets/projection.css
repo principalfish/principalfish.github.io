@@ -1,11 +1,11 @@
-/* info table */ 
-#information 	{	
-	
-	height: 100px;		
+/* info table */
+#information 	{
+
+	height: 100px;
 }
 
 
-#information table {	
+#information table {
 	height: 100px;
 	font-size: 1.5em;
 }
@@ -13,4 +13,8 @@
 #information-gain span {
 	padding: 2px;
 	border-radius: 3px 3px 3px 3px;
+}
+
+#selectareatotals {
+	border: 1px solid black;
 }

@@ -328,8 +328,8 @@ function piechart(d){
 
 	var sumfilterdata = 0;
 
-	$.each(filterdata, function(i) {sumfilterdata += filterdata[i].votes;})
-
+	$.each(filterdata, function(i) {sumfilterdata += parseInt(filterdata[i].votes);})
+	
 	// better way of doing this?
 
 

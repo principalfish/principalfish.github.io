@@ -452,6 +452,7 @@ parseData("/election2015/data/projectionvotetotals.csv", doStuff);
 function selectAreaInfo(value){
 
 	if (value == "country") {parseData("/election2015/data/projectionvotetotals.csv", doStuff)};
+	if (value == "england") {parseData("/election2015/data/regions/england.csv", doStuff)};
 	if (value == "scotland") {parseData("/election2015/data/regions/scotland.csv", doStuff)};
 	if (value == "eastofengland") {parseData("/election2015/data/regions/eastofengland.csv", doStuff)};
 	if (value == "northeastengland") {parseData("/election2015/data/regions/northeastengland.csv", doStuff)};

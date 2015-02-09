@@ -4,6 +4,7 @@
 	<title>UK Election Maps</title>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/projection.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
@@ -15,12 +16,12 @@
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
-	<script type="text/javascript" src="/election2015/scripts/currentparliament.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/projection.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/tablesorter.min.js"></script>
 
 		<div id="wrapper">
 			<div id="top">
-				<h2>UK Election Maps</h2>
+				<h2>UK Election Maps<span style="font-size:0.5em;"> - work in progress!</span></h2>
 				<script>
 				$(function(){
 					$("#menu").load("/menu.html")
@@ -39,8 +40,9 @@
 
 				<div id="projections">
 
-					<h3 id="notactive"><a href="/election2015/projection.html">2015 Projection</a></h3>
-					<h3 id="currentpage"> Current Parliament </h3>
+					<h3 id="currentpage"> 2015 Projection </h3>
+					<h3 id="notactive"><a href="/election2015/current.html">Current Parliament</a></h3>
+
 
 				</div>
 
@@ -53,7 +55,6 @@
 				<div id="filters">
 
 					<h2> Filters <button id ="filterbutton" onclick="resetFilter()">Reset</button></h2>
-
 
 
 					<p> by party  <select id="dropdownparty" onchange="filterStates[0].party = value, filterMap()">
@@ -76,15 +77,15 @@
 					</select> </p>
 
 
-					<p> by majority
-						<form id="majority">
-						<input type ="text" name="majoritylow" value="0" onchange="filterStates[1].majoritylow = parseInt(value), filterMap()"/>
-							to
-						<input type="text" name="majorityhigh" value="50000" onchange="filterStates[2].majorityhigh = parseInt(value), filterMap()"/>
-						</form>
+					<p> by gains/no change
+						<select id="dropdowngains" onchange="filterStates[1].gain = value, filterMap()">
+							<option value="null"></option>
+							<option value="gains">Gains</option>
+							<option value="nochange">No Change</option>
+						</select>
 					</p>
 
-					<p> by region <select id="dropdownregion" onchange="filterStates[3].region = value, filterMap()">
+					<p> by region <select id="dropdownregion" onchange="filterStates[2].region = value, filterMap()">
 						<option value="null"></option>
 						<option value="eastofengland">East of England</option>
 						<option value="eastmidlands"> East Midlands </option>
@@ -100,17 +101,21 @@
 						<option value="yorkshireandthehumber">Yorkshire & Humber</option>
 					</select> </p>
 
+					<p> by majority percentage
+						<form id="majority">
+						<input type ="text" name="majoritylow" value=0 onchange="filterStates[3].majoritylow = parseFloat(value), filterMap()"/>
+							to
+						<input type="text" name="majorityhigh" value=100 onchange="filterStates[4].majorityhigh = parseFloat(value), filterMap()"/>
+						</form>
+					</p>
+
 				</div>
 
 				<div id ="filteredlist">
 					<button id ="filtertolist" onclick="generateSeatList()">Generate seat list</button>
 				</div>
-				<div id ="totalfilteredseats">
-
-				</div>
-				<div id="filteredlisttable">
-
-				</div>
+				<div id ="totalfilteredseats"></div>
+				<div id ="filteredlisttable"></div>
 
 
 			</div>
@@ -165,16 +170,16 @@
 							.call(zoom)
 							.call(zoom.event);
 
-						d3.json("/election2015/data/map.json", function(error, uk) {
+						d3.json("/election2015/data/projection.json", function(error, uk) {
 								if (error) return console.error(error);
 
 
 
 								g.selectAll(".map")
-									.data(topojson.feature(uk, uk.objects.map).features)
+									.data(topojson.feature(uk, uk.objects.projection).features)
 									.enter().append("path")
 									.attr("class", function(d) {
-										return "map " + d.properties.incumbent;	})
+										return "map " + d.properties.info_party;	})
 									.attr("id", function(d) { return "i" + d.properties.info_id})
 									.attr("d", path)
 									.on("click", clicked)
@@ -188,8 +193,8 @@
 
 
 								g.append("path")
-									.datum(topojson.mesh(uk, uk.objects.map, function(a, b){
-										return a.properties.region != b.properties.region && a != b; }))
+									.datum(topojson.mesh(uk, uk.objects.projection, function(a, b){
+										return a.properties.info_area != b.properties.info_area && a != b; }))
 									.attr("d", path)
 									.attr("class", "boundaries");
 
@@ -202,41 +207,65 @@
 			<div id="right">
 				<div id="topright">
 					<h3 id="information-header"> Information for Selected Seat</h3>
-					<h4 id="information-bielection">* by-election contested since 2010</h4>
+
 				</div>
 
 				<div id ="information">
 					<table>
 						<tr id="information-seatname"></tr>
-
 						<tr id="information-party"></tr>
-						<tr id="information-mp"></tr>
-						<tr id="information-majority"></tr>
-						<tr id="information-electorate"></tr>
+						<tr id="information-gain"></tr>
+
 					</table>
 
-				<div id="charts">
-						<div id="information-pie"></div>
-						<div id="information-chart"></div>
+
+					<div id="charts">
+							<div id="information-pie"></div>
+							<div id="information-chart"></div>
 				</div>
 
-					<div id = "totals">
-						<table id="totalstable" class="tablesorter">
-							<thead>
-								<tr>
-									<th>Party</th>
-									<th class="tablesorter-header" style="width:80px;">Seats</th>
-									<th class="tablesorter-header">Votes</th>
-									<th class="tablesorter-header" style="width:120px; font-size:0.7em;" >%seats/%vote</th>
-									<th>Vote %</th>
-								</tr>
-							</thead>
-							<tbody>
+				<div id = "totals">
 
-							</tbody>
-						</table>
+					<h3> Select Region <select id="selectareatotals" onchange="selectAreaInfo(value)">
+						<option value="country"></option>
+						<option value="england">England</option>
+						<option value="scotland">Scotland</option>
+						<option value="wales">Wales</option>
+						<option value="northernireland">Northern Ireland</option>
+						<option value="eastofengland">East of England</option>
+						<option value="eastmidlands"> East Midlands </option>
+						<option value="london">London</option>
+						<option value="northeastengland">North East England</option>
+						<option value="northwestengland">North West England</option>
+						<option value="southeastengland">South East England</option>
+						<option value="southwestengland">South West England</option>
+						<option value="westmidlands">West Midlands</option>
+						<option value="yorkshireandthehumber">Yorkshire & Humber</option>
+					</select></h3>
 
-					</div>
+
+					<table id="totalstable" class="tablesorter">
+						<thead>
+							<tr>
+								<th>Party</th>
+								<th class="tablesorter-header">Seats</th>
+								<th class="tablesorter-header">Change</th>
+								<th class="tablesorter-header">Vote %</th>
+								<th class="tablesorter-header">+/-</th>
+							</tr>
+
+						</thead>
+
+						<tbody id="totalstableinfo"></tbody>
+						<tfoot id="totalstablefoot"></tfoot>
+
+					</table>
+
+				</div>
+				<div id="bottomright">
+					<h3> This map is currently a nowcast. </h3>
+					<p>Last updated <script>var x = new Date(document.lastModified); document.write(x)</script></p>
+				</div>
 			</div>
 		</div>
 
@@ -246,8 +275,6 @@
 			<p> Copyright 2015 principalfish.co.uk</p>
 
 		</div>
-
-	</div>
 
 
 </body>

@@ -77,7 +77,7 @@
 }
 
 #filters {
-	height: 160px;
+	height: auto;
 }
 
 #filters p, form {
@@ -114,7 +114,7 @@
 
 #filteredlisttable{
 	width: 100%;
-	max-height: 52%;
+	max-height: 50%;
 	overflow: auto;
 }
 

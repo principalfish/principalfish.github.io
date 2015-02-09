@@ -6,7 +6,7 @@ d3.selection.prototype.moveToFront = function() {
 					};
 
 // far left filter scripts
-var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}]
+var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}]
 
 var seatsAfterFilter = [];
 var searchSeatData = [];
@@ -20,17 +20,29 @@ function filterMap(){
 	var	party  = filterStates[0].party;
 	var gains = filterStates[1].gain;
 	var region = filterStates[2].region;
+	var majoritylow = filterStates[3].majoritylow
+	var majorityhigh = filterStates[4].majorityhigh
+
+
+	if (isNaN(majoritylow))
+		majoritylow = 0
+	if (isNaN(majorityhigh))
+		majorityhigh = 100
+
+
 
 	seatsAfterFilter = [];
 
 	d3.json("/election2015/data/projection.json", function(uk){
 
-		if (party == "null" && region == "null" && gains == "null")
+		if (party == "null" && region == "null" && gains == "null" && majoritylow == 0 && majorityhigh == 100)
 			g.selectAll(".map")
 				.attr("style", "opacity:1")
+				.each(function(d){
+						seatsAfterFilter.push(d)
+					});
 
 		else
-
 
 			g.selectAll(".map")
 				.attr("id", "filtertime")
@@ -83,10 +95,8 @@ function filterMap(){
 
 			if (region == "null")
 				g.selectAll("#gainfiltered")
-					.each(function(d){
-							seatsAfterFilter.push(d)
+					.attr("id", "regionfiltered")
 
-						})
 			else
 				g.selectAll("#gainfiltered")
 					.attr("style", function(d){
@@ -95,8 +105,22 @@ function filterMap(){
 					})
 					.attr("id", function(d){
 						if (region == d.properties.info_area)
-							seatsAfterFilter.push(d);
+							return "regionfiltered"
 					});
+
+
+			g.selectAll("#regionfiltered")
+				.attr("style", function(d) {
+
+					if (parseFloat(d.properties.info_majority) < majoritylow || parseFloat(d.properties.info_majority) > majorityhigh )
+						return "opacity: 0.1"
+
+					})
+				.each(function(d) {
+					if (parseFloat(d.properties.info_majority) >= majoritylow && parseFloat(d.properties.info_majority) <= majorityhigh )
+						seatsAfterFilter.push(d);
+					});
+
 
 			g.selectAll(".map")
 				.attr("id", function(d) {
@@ -114,11 +138,15 @@ function resetFilter(){
 	filterStates[0].party = "null"
 	filterStates[1].gain = "null"
 	filterStates[2].region = "null"
+	filterStates[3].majoritylow = 0
+	filterStates[4].majorityhigh = 100
+
 	filterMap();
 
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);
 	$("#dropdownregion option:eq(0)").prop("selected", true);
+	$("#majority").get(0).reset()
 
 	$("#totalfilteredseats").html(" ");
 	$("#filteredlisttable").html(" ");
@@ -130,8 +158,15 @@ function generateSeatList(){
 
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
 			$.each(seatsAfterFilter, function(i){
-				$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.info_party +
+
+				if (filterStates[1].gain == "gains" && filterStates[0].party != "null")
+				$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.info_incumbent +
 				"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
+
+
+				else
+					$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.info_party +
+					"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
 
 			});
 
@@ -326,15 +361,6 @@ function piechart(d){
 	if (d.properties.info_other > 0)
 		filterdata.push({party: "other", votes: d.properties.info_other})
 
-	var sumfilterdata = 0;
-
-	$.each(filterdata, function(i) {sumfilterdata += parseInt(filterdata[i].votes);})
-
-	// better way of doing this?
-
-
-
-
 	var width = 250,
 		height = 250;
 		radius = Math.min(width, height) / 2;
@@ -370,8 +396,9 @@ function piechart(d){
 	// creates table with vote counts/percentages
 	$.each(filterdata, function(i){
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +
-			partylist[filterdata[i].party] + "</td><td>" + (100 * filterdata[i].votes/sumfilterdata).toFixed(2) +  "%</td></tr>")
+			partylist[filterdata[i].party] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td></tr>")
 	})
+
 
 }
 

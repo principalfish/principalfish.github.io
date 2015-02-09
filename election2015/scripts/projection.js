@@ -53,14 +53,13 @@ function filterMap(){
 			else
 				g.selectAll("#filtertime")
 					.attr("style", function(d){
-						if (party != d.properties.info_party)
+						if (party != seatData[d.properties.name]["party"])
 							return "opacity: 0.1";
 						})
 					.attr("id", function(d){
-						if (party == d.properties.info_party)
+						if (party == seatData[d.properties.name]["party"])
 							return "partyfiltered"
 						});
-
 
 
 
@@ -72,22 +71,22 @@ function filterMap(){
 				if (gains == "gains")
 					g.selectAll("#partyfiltered")
 						.attr("style", function(d) {
-							if (d.properties.info_party == d.properties.info_incumbent)
+							if (seatData[d.properties.name]["party"] == seatData[d.properties.name]["incumbent"])
 								return "opacity: 0.1";
 							})
 						.attr("id", function(d){
-							if (d.properties.info_party != d.properties.info_incumbent)
+							if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
 								return "gainfiltered"
 						});
 
 				if (gains == "nochange")
 					g.selectAll("#partyfiltered")
 						.attr("style", function(d) {
-							if (d.properties.info_party != d.properties.info_incumbent)
+							if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
 								return "opacity: 0.1";
 							})
 						.attr("id", function(d){
-							if (d.properties.info_party == d.properties.info_incumbent)
+							if (seatData[d.properties.name]["party"] == seatData[d.properties.name]["incumbent"])
 								return "gainfiltered"
 						});
 
@@ -100,11 +99,11 @@ function filterMap(){
 			else
 				g.selectAll("#gainfiltered")
 					.attr("style", function(d){
-						if (region != d.properties.info_area)
+						if (region != seatData[d.properties.name]["area"])
 							return "opacity: 0.1";
 					})
 					.attr("id", function(d){
-						if (region == d.properties.info_area)
+						if (region == seatData[d.properties.name]["area"])
 							return "regionfiltered"
 					});
 
@@ -112,19 +111,19 @@ function filterMap(){
 			g.selectAll("#regionfiltered")
 				.attr("style", function(d) {
 
-					if (parseFloat(d.properties.info_majority) < majoritylow || parseFloat(d.properties.info_majority) > majorityhigh )
+					if (parseFloat(seatData[d.properties.name]["majority"]) < majoritylow || parseFloat(seatData[d.properties.name]["majority"]) > majorityhigh )
 						return "opacity: 0.1"
 
 					})
 				.each(function(d) {
-					if (parseFloat(d.properties.info_majority) >= majoritylow && parseFloat(d.properties.info_majority) <= majorityhigh )
+					if (parseFloat(seatData[d.properties.name]["majority"]) >= majoritylow && parseFloat(seatData[d.properties.name]["majority"]) <= majorityhigh )
 						seatsAfterFilter.push(d);
 					});
 
 
 			g.selectAll(".map")
 				.attr("id", function(d) {
-					return "i" + d.properties.info_id
+					return "i" + seatData[d.properties.name]["id"]
 				});
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
@@ -160,12 +159,12 @@ function generateSeatList(){
 			$.each(seatsAfterFilter, function(i){
 
 				if (filterStates[1].gain == "gains" && filterStates[0].party != "null")
-				$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.info_incumbent +
+				$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["incumbent"] +
 				"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
 
 
 				else
-					$("#filteredlisttable").append("<tr class=" + seatsAfterFilter[i].properties.info_party +
+					$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["party"] +
 					"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
 
 			});
@@ -174,7 +173,7 @@ function generateSeatList(){
 		}
 
 function zoomToClickedFilteredSeat(d){
-	var id = "#i" + d.properties.info_id;
+	var id = "#i" + seatData[d.properties.name]["id"];
 	//rewrite at some point
 
 	previous = d3.select(previousnode)
@@ -216,11 +215,7 @@ function zoomToClickedFilteredSeat(d){
 	previousnode = id;
 	}
 
-
-
-
 // scripts for zoom/pan/clicked
-
 
 
 function clicked(d) {
@@ -304,17 +299,18 @@ var oldclass = null;
 function seatinfo(d){
 
 	$("#information").removeClass(oldclass);
-	$("#information").addClass(d.properties.info_party)
+	$("#information").addClass(seatData[d.properties.name]["party"])
 	$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
-	"</td><td id=\"rightcolumninfotable\">" + regionlist[d.properties.info_area] + "</td>");
-	$("#information-party").html("<td>Party</td><td>" + partylist[d.properties.info_party] + "</td>");
-	if (d.properties.info_party != d.properties.info_incumbent)
-		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" + d.properties.info_incumbent + "\">" + partylist[d.properties.info_incumbent] + "</span></td>")
+	"</td><td id=\"rightcolumninfotable\">" + regionlist[seatData[d.properties.name]["area"]] + "</td>");
+	$("#information-party").html("<td>Party</td><td>" + partylist[seatData[d.properties.name]["party"]] + "</td>");
+	if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
+		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" +
+		seatData[d.properties.name]["incumbent"] + "\">" + partylist[seatData[d.properties.name]["incumbent"]] + "</span></td>")
 	else
 		$("#information-gain").html("<td>No change </td>")
 	$("#information-pie").html(piechart(d));
 
-	oldclass = d.properties.info_party;
+	oldclass = seatData[d.properties.name]["party"];
 }
 
 
@@ -327,19 +323,18 @@ function piechart(d){
 	$("#information-chart").html("<p></p>");
 
 	var data = [];
-	data.push({ party: "labour", votes: d.properties.info_labour});
-	data.push({ party: "conservative", votes: d.properties.info_conservative});
-	data.push({ party: "libdems", votes: d.properties.info_libdems});
-	data.push({ party: "ukip", votes: d.properties.info_ukip});
-	data.push({ party: "snp", votes: d.properties.info_snp});
-	data.push({ party: "plaidcymru", votes: d.properties.info_plaidcymru});
-	data.push({ party: "green", votes: d.properties.info_green});
-	data.push({ party: "dup", votes: d.properties.info_dup});
-	data.push({ party: "sdlp", votes: d.properties.info_sdlp});
-	data.push({ party: "uu", votes: d.properties.info_uu});
-	data.push({ party: "sinnfein", votes: d.properties.info_sinnfein});
-	data.push({ party: "alliance", votes: d.properties.info_alliance});
-
+	data.push({ party: "labour", votes: seatData[d.properties.name]["labour"]});
+	data.push({ party: "conservative", votes: seatData[d.properties.name]["conservative"]});
+	data.push({ party: "libdems", votes: seatData[d.properties.name]["libdems"]});
+	data.push({ party: "ukip", votes: seatData[d.properties.name]["ukip"]});
+	data.push({ party: "snp", votes: seatData[d.properties.name]["snp"]});
+	data.push({ party: "plaidcymru", votes: seatData[d.properties.name]["plaidcymru"]});
+	data.push({ party: "green", votes: seatData[d.properties.name]["green"]});
+	data.push({ party: "dup", votes: seatData[d.properties.name]["dup"]});
+	data.push({ party: "sdlp", votes: seatData[d.properties.name]["sdlp"]});
+	data.push({ party: "uu", votes: seatData[d.properties.name]["uu"]});
+	data.push({ party: "sinnfein", votes: seatData[d.properties.name]["sinnfein"]});
+	data.push({ party: "alliance", votes: seatData[d.properties.name]["alliance"]});
 
 
 
@@ -358,8 +353,8 @@ function piechart(d){
 			return b.votes - a.votes ;
 	});
 
-	if (d.properties.info_other > 0)
-		filterdata.push({party: "other", votes: d.properties.info_other})
+	if (seatData[d.properties.name]["other"] > 0)
+		filterdata.push({party: "other", votes: seatData[d.properties.name]["other"]})
 
 	var width = 250,
 		height = 250;
@@ -457,11 +452,18 @@ function doStuff(data) {
 			sortList:[[3,1], [1,0], [2,0], [4,0]]
 
 		});
-
-
-
-
 };
+
+
+
+var seatData = {};
+
+function getSeatInfo(data){
+	$.each(data, function(i){
+		seatData[data[i].seat] = data[i]
+	})
+}
+
 
 function parseData(url, callBack) {
 	Papa.parse(url, {
@@ -474,6 +476,7 @@ function parseData(url, callBack) {
 	});
 }
 
+parseData("/election2015/data/info.csv", getSeatInfo);
 parseData("/election2015/data/projectionvotetotals.csv", doStuff);
 
 function selectAreaInfo(value){
@@ -493,7 +496,6 @@ function selectAreaInfo(value){
 	if (value == "eastmidlands") {parseData("/election2015/data/regions/eastmidlands.csv", doStuff)};
 	if (value == "westmidlands") {parseData("/election2015/data/regions/westmidlands.csv", doStuff)};
 }
-
 
 
 // autocomplete

@@ -1,5 +1,6 @@
 /election2015/stored
 /election2015/projection
+/election2015/backuppredatamove
 
 /election2015/map.txt
 /election2015/list.html
@@ -10,7 +11,6 @@
 /election2015/data/pollinganalysis.pyc
 /election2015/data/pollingdictionary.pyc
 /election2015/data/polls.csv
-/election2015/data/info.csv
 /election2015/data/oldinfo.csv
 /election2015/data/projection.geojson
 /election2015/data/previoustotals.csv
@@ -20,6 +20,3 @@
 /election2015/data/map.prj
 /election2015/data/map.dbf
 /election2015/data/modelchange.csv
-
-
-

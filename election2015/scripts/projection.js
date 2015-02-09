@@ -29,20 +29,9 @@ function filterMap(){
 	if (isNaN(majorityhigh))
 		majorityhigh = 100
 
-
-
 	seatsAfterFilter = [];
 
 	d3.json("/election2015/data/projection.json", function(uk){
-
-		if (party == "null" && region == "null" && gains == "null" && majoritylow == 0 && majorityhigh == 100)
-			g.selectAll(".map")
-				.attr("style", "opacity:1")
-				.each(function(d){
-						seatsAfterFilter.push(d)
-					});
-
-		else
 
 			g.selectAll(".map")
 				.attr("id", "filtertime")
@@ -134,11 +123,11 @@ function filterMap(){
 
 function resetFilter(){
 
-	filterStates[0].party = "null"
-	filterStates[1].gain = "null"
-	filterStates[2].region = "null"
-	filterStates[3].majoritylow = 0
-	filterStates[4].majorityhigh = 100
+	filterStates[0].party = "null";
+	filterStates[1].gain = "null";
+	filterStates[2].region = "null";
+	filterStates[3].majoritylow = 0;
+	filterStates[4].majorityhigh = 100;
 
 	filterMap();
 

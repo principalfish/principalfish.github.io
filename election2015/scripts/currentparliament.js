@@ -22,14 +22,15 @@ function filterMap(){
 	var majorityhigh = filterStates[2].majorityhigh;
 	var region = filterStates[3].region;
 
+	if (isNaN(majoritylow))
+		majoritylow = 0
+	if (isNaN(majorityhigh))
+		majorityhigh = 1000000
+
 	seatsAfterFilter = [];
 
 	d3.json("/election2015/data/currentparliament/map.json", function(uk){
 
-			if (isNaN(majoritylow))
-				majoritylow = 0
-			if (isNaN(majorityhigh))
-				majorityhigh = 1000000
 
 			g.selectAll(".map")
 				.attr("id", "filtertime")

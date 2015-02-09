@@ -414,7 +414,23 @@ function doStuff(data) {
 
 		//find wa yto clear cache of tablesorter properly? -
 
+		var plussign1, plussign2;
+
+
+
 		$.each(data, function(i){
+
+
+				if (data[i].change > 0)
+					plussign1 = "+";
+				else
+					plussign1 = "";
+
+				if (data[i].votepercentchange > 0)
+					plussign2 = "+";
+				else
+					plussign2 = "";
+
 			if (i == data.length -1)
 					null
 
@@ -426,8 +442,8 @@ function doStuff(data) {
 			else
 				if (data[i].votepercent > 0)
 					$("#totalstableinfo").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
-						+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
-						"</td><td>" + (data[i].votepercentchange).toFixed(2) + "</td></tr>");
+						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
+						"</td><td>"  + plussign2 + (data[i].votepercentchange).toFixed(2) + "</td></tr>");
 		})
 
 

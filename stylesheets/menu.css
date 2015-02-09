@@ -13,12 +13,13 @@ nav ul {
 nav li {
   display: block;
   float: left;
+ 
 
 }
 
 nav li a {
   display: block;
-  padding: 40px 20px 0px 20px;
+  padding: 35px 20px 0px 20px;
   text-decoration: none;
 
 }

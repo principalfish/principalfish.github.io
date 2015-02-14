@@ -500,6 +500,7 @@ function selectAreaInfo(value){
 	if (value == "yorkshireandthehumber") {parseData("/election2015/data/regions/yorkshireandthehumber.csv", doStuff)};
 	if (value == "eastmidlands") {parseData("/election2015/data/regions/eastmidlands.csv", doStuff)};
 	if (value == "westmidlands") {parseData("/election2015/data/regions/westmidlands.csv", doStuff)};
+	if (value == "greatbritain") {parseData("/election2015/data/regions/greatbritain.csv", doStuff)};
 }
 
 

@@ -1,651 +1,651 @@
 id,seat,area,incumbent,conservative,labour,libdems,ukip,green,snp,plaidcymru,other,sinnfein,sdlp,uu,dup,alliance,change,party,majority
-377,Morecambe and Lunesdale,northwestengland,conservative,36.08,40.73,1.9,15.84,5.45,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,4.64
-407,North East Hertfordshire,eastofengland,conservative,49.17,26.26,4.51,14.85,5.07,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,22.91
-307,Kensington,london,conservative,51.48,29.14,5.69,7.37,6.2,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,conservative,22.34
-462,Redditch,westmidlands,conservative,40.11,33.4,3.29,17.29,4.34,0.0,0.0,1.57,0.0,0.0,0.0,0.0,0.0,no,conservative,6.71
+377,Morecambe and Lunesdale,northwestengland,conservative,36.02,40.8,1.87,15.86,5.46,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,4.78
+407,North East Hertfordshire,eastofengland,conservative,49.07,26.35,4.53,14.86,5.07,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,conservative,22.72
+307,Kensington,london,conservative,49.38,30.64,6.05,7.52,6.32,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,18.74
+462,Redditch,westmidlands,conservative,40.07,33.41,3.33,17.28,4.34,0.0,0.0,1.57,0.0,0.0,0.0,0.0,0.0,no,conservative,6.67
 36,Belfast North,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.08,34.37,12.66,7.47,39.88,4.55,no,dup,5.51
 226,Fermanagh and South Tyrone,northernireland,sinnfein,0.0,0.0,0.0,0.0,0.0,0.0,0.0,45.59,45.7,7.88,0.0,0.0,0.83,no,sinnfein,0.11
-103,Bury St. Edmunds,eastofengland,conservative,43.65,26.69,7.57,15.39,6.69,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,16.96
-299,Ipswich,eastofengland,conservative,28.57,41.08,2.52,19.25,7.38,0.0,0.0,1.19,0.0,0.0,0.0,0.0,0.0,yes,labour,12.51
-371,Milton Keynes South,southeastengland,conservative,33.2,40.52,4.21,14.66,5.91,0.0,0.0,1.49,0.0,0.0,0.0,0.0,0.0,yes,labour,7.32
-468,Rochdale,northwestengland,labour,16.59,42.0,16.35,17.97,5.08,0.0,0.0,2.01,0.0,0.0,0.0,0.0,0.0,no,labour,24.03
-381,Neath,wales,labour,10.66,50.7,2.22,12.54,4.09,0.0,18.93,0.87,0.0,0.0,0.0,0.0,0.0,no,labour,31.76
-324,Leeds West,yorkshireandthehumber,labour,17.29,46.13,7.81,17.38,9.06,0.0,0.0,2.33,0.0,0.0,0.0,0.0,0.0,no,labour,28.75
-515,South Leicestershire,eastmidlands,conservative,44.94,23.0,5.58,18.02,6.52,0.0,0.0,1.93,0.0,0.0,0.0,0.0,0.0,no,conservative,21.94
-17,Ashton-under-Lyne,northwestengland,labour,22.31,53.15,2.27,14.89,4.73,0.0,0.0,2.65,0.0,0.0,0.0,0.0,0.0,no,labour,30.84
-217,Epsom and Ewell,southeastengland,conservative,52.49,20.01,11.8,11.14,4.48,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,32.48
-594,Walsall North,westmidlands,labour,30.37,39.48,1.95,17.83,3.45,0.0,0.0,6.92,0.0,0.0,0.0,0.0,0.0,no,labour,9.12
-443,Penistone and Stocksbridge,yorkshireandthehumber,labour,30.39,44.76,5.8,13.73,3.1,0.0,0.0,2.22,0.0,0.0,0.0,0.0,0.0,no,labour,14.37
-382,New Forest East,southeastengland,conservative,46.86,16.23,14.25,16.69,5.97,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,30.16
-136,Chipping Barnet,london,conservative,45.58,26.27,5.6,14.4,7.98,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,conservative,19.31
-309,Kilmarnock and Loudoun,scotland,labour,12.48,32.73,1.06,4.05,1.84,47.84,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,15.11
-308,Kettering,eastmidlands,conservative,43.32,31.56,2.29,16.01,4.88,0.0,0.0,1.93,0.0,0.0,0.0,0.0,0.0,no,conservative,11.77
-436,Orkney and Shetland,scotland,libdems,10.38,4.1,50.11,3.81,3.54,28.06,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,libdems,22.05
-1,Aberavon,wales,labour,11.6,56.1,2.4,13.76,4.61,0.0,6.45,5.09,0.0,0.0,0.0,0.0,0.0,no,labour,42.34
-474,Rossendale and Darwen,northwestengland,conservative,38.61,35.75,2.94,15.61,6.9,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,2.86
-11,Angus,scotland,snp,26.09,6.25,1.44,4.55,2.41,59.27,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,snp,33.19
-623,Westmorland and Lonsdale,northwestengland,libdems,32.8,2.61,40.28,15.3,9.01,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,libdems,7.48
-596,Walthamstow,london,labour,10.25,58.02,13.7,9.34,8.4,0.0,0.0,0.29,0.0,0.0,0.0,0.0,0.0,no,labour,44.33
-581,Totnes,southwestengland,conservative,43.31,14.86,20.21,12.78,7.67,0.0,0.0,1.16,0.0,0.0,0.0,0.0,0.0,no,conservative,23.11
-234,Garston and Halewood,northwestengland,labour,14.82,67.63,4.69,9.36,3.39,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,labour,52.81
-602,Warwick and Leamington,westmidlands,conservative,36.7,36.35,3.4,14.32,9.16,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,conservative,0.35
-332,"Lewisham, Deptford",london,labour,10.14,62.13,9.21,7.45,10.18,0.0,0.0,0.89,0.0,0.0,0.0,0.0,0.0,no,labour,51.94
-183,Dundee West,scotland,labour,8.45,30.7,1.73,2.81,1.88,53.84,0.0,0.59,0.0,0.0,0.0,0.0,0.0,yes,snp,23.14
-191,East Devon,southwestengland,conservative,43.59,19.31,15.35,14.88,6.87,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,24.28
+103,Bury St. Edmunds,eastofengland,conservative,43.61,26.77,7.53,15.39,6.69,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,16.85
+299,Ipswich,eastofengland,conservative,28.7,41.0,2.48,19.24,7.38,0.0,0.0,1.19,0.0,0.0,0.0,0.0,0.0,yes,labour,12.3
+371,Milton Keynes South,southeastengland,conservative,33.3,40.35,4.3,14.65,5.93,0.0,0.0,1.48,0.0,0.0,0.0,0.0,0.0,yes,labour,7.05
+468,Rochdale,northwestengland,labour,16.72,42.08,16.17,17.97,5.09,0.0,0.0,1.97,0.0,0.0,0.0,0.0,0.0,no,labour,24.11
+381,Neath,wales,labour,10.84,50.64,2.18,12.58,4.1,0.0,18.8,0.87,0.0,0.0,0.0,0.0,0.0,no,labour,31.84
+324,Leeds West,yorkshireandthehumber,labour,17.4,46.07,7.78,17.37,9.05,0.0,0.0,2.32,0.0,0.0,0.0,0.0,0.0,no,labour,28.67
+515,South Leicestershire,eastmidlands,conservative,44.86,23.09,5.59,18.01,6.52,0.0,0.0,1.92,0.0,0.0,0.0,0.0,0.0,no,conservative,21.77
+17,Ashton-under-Lyne,northwestengland,labour,22.42,53.1,2.23,14.92,4.74,0.0,0.0,2.6,0.0,0.0,0.0,0.0,0.0,no,labour,30.68
+217,Epsom and Ewell,southeastengland,conservative,52.4,20.08,11.8,11.14,4.5,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,32.32
+594,Walsall North,westmidlands,labour,30.48,39.47,1.92,17.84,3.46,0.0,0.0,6.84,0.0,0.0,0.0,0.0,0.0,no,labour,8.99
+443,Penistone and Stocksbridge,yorkshireandthehumber,labour,30.4,44.73,5.81,13.74,3.1,0.0,0.0,2.22,0.0,0.0,0.0,0.0,0.0,no,labour,14.33
+382,New Forest East,southeastengland,conservative,46.82,16.31,14.21,16.67,5.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,30.14
+136,Chipping Barnet,london,conservative,43.85,27.66,5.88,14.44,8.03,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,16.19
+309,Kilmarnock and Loudoun,scotland,labour,12.63,32.52,1.01,4.06,1.86,47.92,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,15.4
+308,Kettering,eastmidlands,conservative,43.3,31.61,2.25,16.03,4.89,0.0,0.0,1.92,0.0,0.0,0.0,0.0,0.0,no,conservative,11.69
+436,Orkney and Shetland,scotland,libdems,10.71,4.56,48.48,3.87,3.59,28.78,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,libdems,19.7
+1,Aberavon,wales,labour,11.78,55.97,2.35,13.79,4.62,0.0,6.47,5.01,0.0,0.0,0.0,0.0,0.0,no,labour,42.18
+474,Rossendale and Darwen,northwestengland,conservative,38.48,35.84,2.98,15.61,6.9,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,2.64
+11,Angus,scotland,snp,25.79,6.7,1.37,4.57,2.43,59.13,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,snp,33.34
+623,Westmorland and Lonsdale,northwestengland,libdems,32.98,2.67,39.9,15.4,9.05,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,libdems,6.92
+596,Walthamstow,london,labour,11.83,56.83,12.95,9.6,8.53,0.0,0.0,0.27,0.0,0.0,0.0,0.0,0.0,no,labour,43.88
+581,Totnes,southwestengland,conservative,43.3,14.95,20.12,12.78,7.71,0.0,0.0,1.15,0.0,0.0,0.0,0.0,0.0,no,conservative,23.18
+234,Garston and Halewood,northwestengland,labour,14.97,67.44,4.71,9.39,3.4,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,labour,52.47
+602,Warwick and Leamington,westmidlands,conservative,36.7,36.31,3.44,14.33,9.16,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,conservative,0.39
+332,"Lewisham, Deptford",london,labour,11.7,60.37,9.08,7.66,10.21,0.0,0.0,0.98,0.0,0.0,0.0,0.0,0.0,no,labour,48.67
+183,Dundee West,scotland,labour,8.66,30.6,1.64,2.83,1.9,53.79,0.0,0.58,0.0,0.0,0.0,0.0,0.0,yes,snp,23.19
+191,East Devon,southwestengland,conservative,43.53,19.38,15.34,14.86,6.89,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,24.14
 506,South Antrim,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.36,14.2,9.03,30.2,33.92,7.29,no,dup,3.73
-270,Harwich and North Essex,eastofengland,conservative,47.43,34.12,5.66,8.63,3.25,0.0,0.0,0.9,0.0,0.0,0.0,0.0,0.0,no,conservative,13.31
-90,Bristol North West,southwestengland,conservative,31.75,37.67,14.53,6.42,9.44,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,yes,labour,5.92
-4,Aberdeen South,scotland,labour,21.64,22.63,14.74,4.57,3.36,31.93,0.0,1.14,0.0,0.0,0.0,0.0,0.0,yes,snp,9.3
-210,Edmonton,london,labour,23.94,56.5,1.81,12.09,5.29,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,labour,32.56
-279,Hereford and South Herefordshire,westmidlands,conservative,43.51,8.54,22.38,16.93,8.33,0.0,0.0,0.32,0.0,0.0,0.0,0.0,0.0,no,conservative,21.14
-402,North East Bedfordshire,eastofengland,conservative,51.55,25.95,3.6,13.92,4.39,0.0,0.0,0.59,0.0,0.0,0.0,0.0,0.0,no,conservative,25.6
-363,Mid Norfolk,eastofengland,conservative,46.72,28.41,4.07,15.64,4.34,0.0,0.0,0.81,0.0,0.0,0.0,0.0,0.0,no,conservative,18.31
-631,Witham,eastofengland,conservative,51.61,30.72,3.51,11.33,2.83,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,20.89
-202,Eastbourne,southeastengland,libdems,34.82,8.58,32.12,16.83,4.85,0.0,0.0,2.79,0.0,0.0,0.0,0.0,0.0,yes,conservative,2.69
-154,Coventry South,westmidlands,labour,30.37,45.46,3.7,13.92,6.32,0.0,0.0,0.23,0.0,0.0,0.0,0.0,0.0,no,labour,15.09
-252,Great Grimsby,yorkshireandthehumber,labour,24.95,33.06,5.33,29.28,3.93,0.0,0.0,3.45,0.0,0.0,0.0,0.0,0.0,no,labour,3.77
-114,Cardiff South and Penarth,wales,labour,25.83,45.19,4.9,11.74,7.98,0.0,3.95,0.4,0.0,0.0,0.0,0.0,0.0,no,labour,19.36
+270,Harwich and North Essex,eastofengland,conservative,47.38,34.15,5.67,8.63,3.25,0.0,0.0,0.91,0.0,0.0,0.0,0.0,0.0,no,conservative,13.23
+90,Bristol North West,southwestengland,conservative,31.86,37.54,14.53,6.42,9.46,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,yes,labour,5.68
+4,Aberdeen South,scotland,labour,21.5,22.88,14.33,4.57,3.36,32.24,0.0,1.11,0.0,0.0,0.0,0.0,0.0,yes,snp,9.36
+210,Edmonton,london,labour,24.99,55.19,1.53,12.35,5.45,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,no,labour,30.2
+279,Hereford and South Herefordshire,westmidlands,conservative,43.57,8.65,22.16,16.97,8.34,0.0,0.0,0.31,0.0,0.0,0.0,0.0,0.0,no,conservative,21.4
+402,North East Bedfordshire,eastofengland,conservative,51.47,26.06,3.53,13.93,4.4,0.0,0.0,0.6,0.0,0.0,0.0,0.0,0.0,no,conservative,25.4
+363,Mid Norfolk,eastofengland,conservative,46.64,28.47,4.1,15.63,4.34,0.0,0.0,0.81,0.0,0.0,0.0,0.0,0.0,no,conservative,18.17
+631,Witham,eastofengland,conservative,51.55,30.81,3.45,11.35,2.84,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,20.74
+202,Eastbourne,southeastengland,libdems,35.01,8.67,31.82,16.85,4.88,0.0,0.0,2.76,0.0,0.0,0.0,0.0,0.0,yes,conservative,3.19
+154,Coventry South,westmidlands,labour,30.46,45.33,3.74,13.92,6.33,0.0,0.0,0.23,0.0,0.0,0.0,0.0,0.0,no,labour,14.87
+252,Great Grimsby,yorkshireandthehumber,labour,25.0,33.14,5.34,29.16,3.93,0.0,0.0,3.43,0.0,0.0,0.0,0.0,0.0,no,labour,3.97
+114,Cardiff South and Penarth,wales,labour,25.9,45.12,4.89,11.76,7.98,0.0,3.97,0.39,0.0,0.0,0.0,0.0,0.0,no,labour,19.23
 511,South Down,northernireland,sdlp,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.57,29.53,49.86,7.19,8.64,1.2,no,sdlp,20.33
-628,Windsor,southeastengland,conservative,59.23,17.64,8.4,9.65,4.22,0.0,0.0,0.84,0.0,0.0,0.0,0.0,0.0,no,conservative,41.59
-590,Vale of Glamorgan,wales,conservative,36.19,35.62,2.18,14.33,6.81,0.0,4.8,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,0.57
-104,Caerphilly,wales,labour,13.98,48.43,2.14,14.17,4.49,0.0,15.49,1.3,0.0,0.0,0.0,0.0,0.0,no,labour,32.94
-92,Bristol West,southwestengland,libdems,13.66,38.03,31.09,3.38,13.67,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,labour,6.94
-168,Derby North,eastmidlands,labour,27.92,35.59,10.79,17.18,6.31,0.0,0.0,2.22,0.0,0.0,0.0,0.0,0.0,no,labour,7.67
-539,St. Ives,southwestengland,libdems,33.04,14.95,27.67,17.29,6.78,0.0,0.0,0.28,0.0,0.0,0.0,0.0,0.0,yes,conservative,5.37
-541,Staffordshire Moorlands,westmidlands,conservative,41.28,32.52,2.96,18.12,5.12,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,8.76
-467,Richmond Park,london,conservative,48.1,5.08,27.96,9.94,8.85,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,20.14
-642,Worcester,westmidlands,conservative,35.17,35.67,4.38,15.98,7.96,0.0,0.0,0.84,0.0,0.0,0.0,0.0,0.0,yes,labour,0.5
-370,Milton Keynes North,southeastengland,conservative,35.33,35.23,6.94,15.14,6.11,0.0,0.0,1.25,0.0,0.0,0.0,0.0,0.0,no,conservative,0.1
-432,Ogmore,wales,labour,12.89,58.52,2.26,12.47,4.12,0.0,8.9,0.85,0.0,0.0,0.0,0.0,0.0,no,labour,45.63
-633,Wolverhampton South West,westmidlands,conservative,37.06,42.13,2.42,14.79,3.51,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,yes,labour,5.07
-442,Pendle,northwestengland,conservative,37.08,35.6,4.47,16.2,4.7,0.0,0.0,1.96,0.0,0.0,0.0,0.0,0.0,no,conservative,1.48
-292,Huddersfield,yorkshireandthehumber,labour,24.53,42.11,7.82,15.94,8.35,0.0,0.0,1.24,0.0,0.0,0.0,0.0,0.0,no,labour,17.58
-141,City of Durham,northeastengland,labour,19.58,58.49,5.94,4.37,10.7,0.0,0.0,0.92,0.0,0.0,0.0,0.0,0.0,no,labour,38.92
-120,Castle Point,eastofengland,conservative,43.28,24.61,1.66,23.62,3.85,0.0,0.0,2.97,0.0,0.0,0.0,0.0,0.0,no,conservative,18.67
-21,Banff and Buchan,scotland,snp,25.94,4.7,1.51,3.81,1.79,61.25,0.0,0.99,0.0,0.0,0.0,0.0,0.0,no,snp,35.31
-466,Richmond (Yorks),yorkshireandthehumber,conservative,65.78,19.52,4.5,6.87,3.33,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,46.27
-207,Edinburgh South,scotland,labour,23.0,21.38,20.3,4.21,7.69,22.71,0.0,0.71,0.0,0.0,0.0,0.0,0.0,yes,conservative,0.29
-135,Chippenham,southwestengland,libdems,35.02,13.02,30.21,15.29,5.95,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,yes,conservative,4.81
+628,Windsor,southeastengland,conservative,59.07,17.73,8.46,9.66,4.24,0.0,0.0,0.84,0.0,0.0,0.0,0.0,0.0,no,conservative,41.34
+590,Vale of Glamorgan,wales,conservative,36.13,35.68,2.14,14.35,6.82,0.0,4.82,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,0.45
+104,Caerphilly,wales,labour,14.15,48.36,2.11,14.2,4.5,0.0,15.39,1.29,0.0,0.0,0.0,0.0,0.0,no,labour,32.97
+92,Bristol West,southwestengland,libdems,13.9,38.01,30.84,3.39,13.69,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,yes,labour,7.18
+168,Derby North,eastmidlands,labour,28.03,35.57,10.71,17.17,6.31,0.0,0.0,2.2,0.0,0.0,0.0,0.0,0.0,no,labour,7.54
+539,St. Ives,southwestengland,libdems,33.17,15.05,27.41,17.28,6.81,0.0,0.0,0.28,0.0,0.0,0.0,0.0,0.0,yes,conservative,5.75
+541,Staffordshire Moorlands,westmidlands,conservative,41.23,32.54,3.0,18.11,5.12,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,8.69
+467,Richmond Park,london,conservative,48.11,6.17,25.92,10.51,9.23,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,conservative,22.19
+642,Worcester,westmidlands,conservative,35.19,35.64,4.4,15.97,7.95,0.0,0.0,0.85,0.0,0.0,0.0,0.0,0.0,yes,labour,0.45
+370,Milton Keynes North,southeastengland,conservative,35.4,35.12,7.0,15.12,6.13,0.0,0.0,1.24,0.0,0.0,0.0,0.0,0.0,no,conservative,0.28
+432,Ogmore,wales,labour,13.07,58.34,2.22,12.5,4.13,0.0,8.89,0.85,0.0,0.0,0.0,0.0,0.0,no,labour,45.27
+633,Wolverhampton South West,westmidlands,conservative,37.12,42.08,2.37,14.81,3.52,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,yes,labour,4.97
+442,Pendle,northwestengland,conservative,36.99,35.7,4.49,16.2,4.7,0.0,0.0,1.92,0.0,0.0,0.0,0.0,0.0,no,conservative,1.28
+292,Huddersfield,yorkshireandthehumber,labour,24.59,42.09,7.79,15.94,8.34,0.0,0.0,1.25,0.0,0.0,0.0,0.0,0.0,no,labour,17.5
+141,City of Durham,northeastengland,labour,19.66,58.39,5.96,4.38,10.68,0.0,0.0,0.93,0.0,0.0,0.0,0.0,0.0,no,labour,38.73
+120,Castle Point,eastofengland,conservative,43.26,24.71,1.63,23.59,3.86,0.0,0.0,2.95,0.0,0.0,0.0,0.0,0.0,no,conservative,18.54
+21,Banff and Buchan,scotland,snp,25.69,5.12,1.44,3.85,1.81,61.13,0.0,0.97,0.0,0.0,0.0,0.0,0.0,no,snp,35.44
+466,Richmond (Yorks),yorkshireandthehumber,conservative,65.48,19.73,4.54,6.9,3.35,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,45.75
+207,Edinburgh South,scotland,labour,22.91,21.78,19.68,4.23,7.6,23.1,0.0,0.7,0.0,0.0,0.0,0.0,0.0,yes,snp,0.18
+135,Chippenham,southwestengland,libdems,35.15,13.12,29.93,15.3,5.99,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,yes,conservative,5.22
 98,Buckingham,southeastengland,other,0.0,0.0,0.0,0.0,0.0,0.0,0.0,100.0,0.0,0.0,0.0,0.0,0.0,no,other,100.0
-181,"Dumfriesshire, Clydesdale and Tweeddale",scotland,conservative,40.45,16.16,7.15,4.81,1.94,29.31,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,11.14
-75,Bradford East,yorkshireandthehumber,libdems,23.6,35.99,17.36,13.96,6.55,0.0,0.0,2.55,0.0,0.0,0.0,0.0,0.0,yes,labour,12.39
-399,North Dorset,southwestengland,conservative,48.41,11.16,21.1,14.44,4.83,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,27.31
-543,Stevenage,eastofengland,conservative,32.97,42.76,2.49,15.88,4.03,0.0,0.0,1.87,0.0,0.0,0.0,0.0,0.0,yes,labour,9.79
-552,Stourbridge,westmidlands,conservative,39.51,35.08,2.62,17.12,4.38,0.0,0.0,1.29,0.0,0.0,0.0,0.0,0.0,no,conservative,4.43
-96,Broxbourne,eastofengland,conservative,48.24,24.75,1.96,18.89,2.66,0.0,0.0,3.49,0.0,0.0,0.0,0.0,0.0,no,conservative,23.48
-360,Mid Bedfordshire,eastofengland,conservative,46.24,23.11,5.42,19.16,5.87,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,conservative,23.13
-144,Clwyd South,wales,labour,27.48,44.28,2.66,12.77,3.92,0.0,8.32,0.58,0.0,0.0,0.0,0.0,0.0,no,labour,16.8
-284,High Peak,eastmidlands,conservative,37.24,34.53,6.51,13.17,8.48,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,2.71
-542,Stalybridge and Hyde,northwestengland,labour,31.31,45.39,2.7,14.85,4.67,0.0,0.0,1.09,0.0,0.0,0.0,0.0,0.0,no,labour,14.08
-177,Dudley North,westmidlands,labour,32.68,40.68,1.55,17.98,4.76,0.0,0.0,2.35,0.0,0.0,0.0,0.0,0.0,no,labour,8.01
-438,Oxford East,southeastengland,labour,13.05,48.62,14.67,7.42,16.2,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,labour,32.42
-267,Harrow East,london,conservative,40.71,39.96,2.54,11.33,5.45,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,0.75
-113,Cardiff North,wales,conservative,33.88,41.83,2.76,10.87,7.53,0.0,3.04,0.09,0.0,0.0,0.0,0.0,0.0,yes,labour,7.95
-347,Luton South,eastofengland,labour,24.38,48.4,3.69,12.8,3.16,0.0,0.0,7.58,0.0,0.0,0.0,0.0,0.0,no,labour,24.02
-108,Camborne and Redruth,southwestengland,conservative,30.48,25.42,18.98,17.59,6.9,0.0,0.0,0.63,0.0,0.0,0.0,0.0,0.0,no,conservative,5.06
-9,Alyn and Deeside,wales,labour,29.0,44.78,2.78,14.86,4.26,0.0,3.57,0.75,0.0,0.0,0.0,0.0,0.0,no,labour,15.78
-500,Sittingbourne and Sheppey,southeastengland,conservative,34.62,27.88,2.71,28.34,5.0,0.0,0.0,1.45,0.0,0.0,0.0,0.0,0.0,no,conservative,6.29
-601,Warrington South,northwestengland,conservative,32.94,36.69,10.06,15.41,4.9,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,3.75
-586,Tynemouth,northeastengland,labour,29.89,47.18,2.16,14.03,6.35,0.0,0.0,0.39,0.0,0.0,0.0,0.0,0.0,no,labour,17.29
-394,"Normanton, Pontefract and Castleford",yorkshireandthehumber,labour,21.9,52.94,2.5,13.3,3.14,0.0,0.0,6.22,0.0,0.0,0.0,0.0,0.0,no,labour,31.04
-393,Newton Abbot,southwestengland,conservative,36.73,13.05,23.68,19.05,7.47,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,no,conservative,13.05
-411,North Shropshire,westmidlands,conservative,48.35,20.61,5.87,17.23,7.1,0.0,0.0,0.84,0.0,0.0,0.0,0.0,0.0,no,conservative,27.74
-291,Hove,southeastengland,conservative,31.7,44.92,8.27,6.99,8.09,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,yes,labour,13.23
-419,North West Hampshire,southeastengland,conservative,53.07,21.03,8.64,14.15,3.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,32.04
-250,Grantham and Stamford,eastmidlands,conservative,44.77,19.56,6.21,19.82,6.61,0.0,0.0,3.03,0.0,0.0,0.0,0.0,0.0,no,conservative,24.94
-133,Chichester,southeastengland,conservative,47.64,16.56,11.33,16.63,7.84,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,31.01
-186,Ealing Central and Acton,london,conservative,36.36,34.26,13.34,8.6,7.24,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,conservative,2.1
-45,Bexleyheath and Crayford,london,conservative,42.48,24.86,2.05,23.13,4.17,0.0,0.0,3.3,0.0,0.0,0.0,0.0,0.0,no,conservative,17.61
-565,Tamworth,westmidlands,conservative,42.91,36.3,2.57,14.95,3.2,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,6.61
-513,South East Cornwall,southwestengland,conservative,40.43,13.65,21.78,17.21,6.71,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,conservative,18.64
-88,Brighton Pavilion,southeastengland,green,17.6,34.87,2.99,5.77,38.72,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,green,3.85
-285,Hitchin and Harpenden,eastofengland,conservative,51.47,22.88,7.24,12.03,6.27,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,conservative,28.6
-573,Thornbury and Yate,southwestengland,libdems,30.58,12.95,35.04,15.91,5.45,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,libdems,4.46
-410,North Norfolk,eastofengland,libdems,25.27,9.72,33.84,23.0,8.15,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,no,libdems,8.57
-570,The Cotswolds,southwestengland,conservative,48.53,19.49,13.81,12.85,5.2,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,29.04
-83,Brentwood and Ongar,eastofengland,conservative,53.06,17.08,4.42,18.33,4.53,0.0,0.0,2.58,0.0,0.0,0.0,0.0,0.0,no,conservative,34.73
-262,Hammersmith,london,labour,29.73,44.44,2.68,12.24,10.71,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,labour,14.71
-364,Mid Sussex,southeastengland,conservative,42.56,10.99,19.13,18.58,8.51,0.0,0.0,0.23,0.0,0.0,0.0,0.0,0.0,no,conservative,23.43
-323,Leeds North West,yorkshireandthehumber,libdems,22.96,23.15,28.74,16.27,8.54,0.0,0.0,0.35,0.0,0.0,0.0,0.0,0.0,no,libdems,5.6
-585,Twickenham,london,libdems,29.94,7.73,43.7,9.73,8.67,0.0,0.0,0.24,0.0,0.0,0.0,0.0,0.0,no,libdems,13.76
-142,Clacton,eastofengland,ukip,26.56,24.77,1.39,38.37,6.17,0.0,0.0,2.73,0.0,0.0,0.0,0.0,0.0,no,ukip,11.82
-15,Ashfield,eastmidlands,labour,19.67,37.13,15.4,18.4,4.17,0.0,0.0,5.23,0.0,0.0,0.0,0.0,0.0,no,labour,17.46
-312,Kingston upon Hull North,yorkshireandthehumber,labour,12.11,46.14,19.69,15.45,5.03,0.0,0.0,1.58,0.0,0.0,0.0,0.0,0.0,no,labour,26.45
-28,Bassetlaw,eastmidlands,labour,28.37,50.3,1.58,15.8,3.84,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,labour,21.93
-556,Stretford and Urmston,northwestengland,labour,26.43,53.81,2.62,10.59,6.49,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,27.39
-522,South Swindon,southwestengland,conservative,32.35,43.21,4.83,14.99,4.53,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,yes,labour,10.86
-130,Cheltenham,southwestengland,libdems,34.06,9.71,33.35,15.0,7.74,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,yes,conservative,0.71
-361,Mid Derbyshire,eastmidlands,conservative,47.22,28.81,5.69,12.39,4.57,0.0,0.0,1.32,0.0,0.0,0.0,0.0,0.0,no,conservative,18.41
+181,"Dumfriesshire, Clydesdale and Tweeddale",scotland,conservative,39.59,16.63,7.13,4.82,1.96,29.7,0.0,0.18,0.0,0.0,0.0,0.0,0.0,no,conservative,9.89
+75,Bradford East,yorkshireandthehumber,libdems,23.69,36.09,17.15,13.98,6.55,0.0,0.0,2.54,0.0,0.0,0.0,0.0,0.0,yes,labour,12.4
+399,North Dorset,southwestengland,conservative,48.36,11.25,21.02,14.45,4.86,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,27.35
+543,Stevenage,eastofengland,conservative,33.08,42.68,2.44,15.9,4.04,0.0,0.0,1.86,0.0,0.0,0.0,0.0,0.0,yes,labour,9.6
+552,Stourbridge,westmidlands,conservative,39.48,35.06,2.67,17.11,4.38,0.0,0.0,1.29,0.0,0.0,0.0,0.0,0.0,no,conservative,4.42
+96,Broxbourne,eastofengland,conservative,48.17,24.87,1.93,18.91,2.67,0.0,0.0,3.46,0.0,0.0,0.0,0.0,0.0,no,conservative,23.3
+360,Mid Bedfordshire,eastofengland,conservative,46.16,23.21,5.42,19.14,5.87,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,conservative,22.95
+144,Clwyd South,wales,labour,27.54,44.25,2.61,12.79,3.92,0.0,8.31,0.58,0.0,0.0,0.0,0.0,0.0,no,labour,16.71
+284,High Peak,eastmidlands,conservative,37.26,34.52,6.51,13.18,8.47,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,2.74
+542,Stalybridge and Hyde,northwestengland,labour,31.32,45.42,2.65,14.86,4.68,0.0,0.0,1.07,0.0,0.0,0.0,0.0,0.0,no,labour,14.11
+177,Dudley North,westmidlands,labour,32.75,40.63,1.52,17.98,4.77,0.0,0.0,2.34,0.0,0.0,0.0,0.0,0.0,no,labour,7.88
+438,Oxford East,southeastengland,labour,13.24,48.44,14.64,7.44,16.19,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,labour,32.25
+267,Harrow East,london,conservative,39.97,40.55,2.3,11.59,5.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,0.58
+113,Cardiff North,wales,conservative,33.87,41.84,2.71,10.89,7.54,0.0,3.06,0.09,0.0,0.0,0.0,0.0,0.0,yes,labour,7.97
+347,Luton South,eastofengland,labour,24.59,48.31,3.63,12.82,3.17,0.0,0.0,7.48,0.0,0.0,0.0,0.0,0.0,no,labour,23.72
+108,Camborne and Redruth,southwestengland,conservative,30.58,25.43,18.9,17.54,6.93,0.0,0.0,0.62,0.0,0.0,0.0,0.0,0.0,no,conservative,5.15
+9,Alyn and Deeside,wales,labour,29.04,44.75,2.73,14.88,4.26,0.0,3.59,0.75,0.0,0.0,0.0,0.0,0.0,no,labour,15.7
+500,Sittingbourne and Sheppey,southeastengland,conservative,34.69,27.85,2.8,28.2,5.03,0.0,0.0,1.43,0.0,0.0,0.0,0.0,0.0,no,conservative,6.49
+601,Warrington South,northwestengland,conservative,32.91,36.79,9.98,15.42,4.9,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,3.88
+586,Tynemouth,northeastengland,labour,29.85,47.23,2.13,14.05,6.36,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,labour,17.38
+394,"Normanton, Pontefract and Castleford",yorkshireandthehumber,labour,22.03,52.89,2.45,13.33,3.14,0.0,0.0,6.16,0.0,0.0,0.0,0.0,0.0,no,labour,30.86
+393,Newton Abbot,southwestengland,conservative,36.79,13.14,23.53,19.01,7.5,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,no,conservative,13.26
+411,North Shropshire,westmidlands,conservative,48.23,20.72,5.88,17.23,7.1,0.0,0.0,0.84,0.0,0.0,0.0,0.0,0.0,no,conservative,27.51
+291,Hove,southeastengland,conservative,31.83,44.72,8.32,7.0,8.11,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,yes,labour,12.89
+419,North West Hampshire,southeastengland,conservative,52.96,21.09,8.69,14.15,3.12,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,31.87
+250,Grantham and Stamford,eastmidlands,conservative,44.7,19.67,6.21,19.8,6.61,0.0,0.0,3.0,0.0,0.0,0.0,0.0,0.0,no,conservative,24.9
+133,Chichester,southeastengland,conservative,47.57,16.63,11.32,16.6,7.87,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,30.94
+186,Ealing Central and Acton,london,conservative,36.01,35.26,12.53,8.73,7.31,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,no,conservative,0.74
+45,Bexleyheath and Crayford,london,conservative,41.49,26.54,1.74,22.83,4.33,0.0,0.0,3.06,0.0,0.0,0.0,0.0,0.0,no,conservative,14.95
+565,Tamworth,westmidlands,conservative,42.86,36.29,2.62,14.96,3.2,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,6.58
+513,South East Cornwall,southwestengland,conservative,40.45,13.74,21.67,17.19,6.75,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,conservative,18.77
+88,Brighton Pavilion,southeastengland,green,17.74,34.72,3.06,5.77,38.64,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,green,3.92
+285,Hitchin and Harpenden,eastofengland,conservative,51.37,23.0,7.21,12.04,6.27,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,conservative,28.37
+573,Thornbury and Yate,southwestengland,libdems,30.77,13.06,34.7,15.92,5.49,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,libdems,3.92
+410,North Norfolk,eastofengland,libdems,25.51,9.84,33.42,23.04,8.17,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,no,libdems,7.9
+570,The Cotswolds,southwestengland,conservative,48.42,19.57,13.82,12.84,5.23,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,conservative,28.86
+83,Brentwood and Ongar,eastofengland,conservative,52.94,17.2,4.44,18.33,4.53,0.0,0.0,2.56,0.0,0.0,0.0,0.0,0.0,no,conservative,34.6
+262,Hammersmith,london,labour,29.93,44.09,2.84,12.38,10.59,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,labour,14.16
+364,Mid Sussex,southeastengland,conservative,42.6,11.07,19.02,18.55,8.53,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,no,conservative,23.58
+323,Leeds North West,yorkshireandthehumber,libdems,23.09,23.34,28.39,16.3,8.54,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,libdems,5.04
+585,Twickenham,london,libdems,31.62,9.26,39.53,10.32,9.07,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,libdems,7.91
+142,Clacton,eastofengland,ukip,26.67,24.84,1.37,38.24,6.18,0.0,0.0,2.7,0.0,0.0,0.0,0.0,0.0,no,ukip,11.57
+15,Ashfield,eastmidlands,labour,19.84,37.14,15.27,18.4,4.18,0.0,0.0,5.17,0.0,0.0,0.0,0.0,0.0,no,labour,17.3
+312,Kingston upon Hull North,yorkshireandthehumber,labour,12.25,46.16,19.48,15.48,5.04,0.0,0.0,1.59,0.0,0.0,0.0,0.0,0.0,no,labour,26.68
+28,Bassetlaw,eastmidlands,labour,28.51,50.16,1.55,15.82,3.85,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,labour,21.65
+556,Stretford and Urmston,northwestengland,labour,26.5,53.76,2.57,10.61,6.5,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,27.26
+522,South Swindon,southwestengland,conservative,32.43,43.01,4.93,14.98,4.56,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,yes,labour,10.57
+130,Cheltenham,southwestengland,libdems,34.22,9.8,33.03,15.02,7.78,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,yes,conservative,1.19
+361,Mid Derbyshire,eastmidlands,conservative,47.13,28.87,5.7,12.4,4.58,0.0,0.0,1.32,0.0,0.0,0.0,0.0,0.0,no,conservative,18.26
 400,North Down,northernireland,other,0.0,0.0,0.0,0.0,0.0,0.0,0.0,70.69,0.8,2.21,20.85,0.0,5.45,no,other,49.84
-29,Bath,southwestengland,libdems,25.62,12.91,39.98,7.52,13.84,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,libdems,14.36
-549,Stoke-on-Trent North,westmidlands,labour,22.47,50.83,3.81,14.93,3.07,0.0,0.0,4.89,0.0,0.0,0.0,0.0,0.0,no,labour,28.36
-554,Stratford-on-Avon,westmidlands,conservative,52.96,12.06,13.58,13.43,5.52,0.0,0.0,2.45,0.0,0.0,0.0,0.0,0.0,no,conservative,39.39
-31,Battersea,london,conservative,43.42,36.99,2.61,10.61,6.26,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,conservative,6.43
-322,Leeds North East,yorkshireandthehumber,labour,28.36,44.22,3.8,15.21,8.01,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,no,labour,15.86
-259,Halifax,yorkshireandthehumber,labour,30.15,40.32,3.66,15.08,7.16,0.0,0.0,3.63,0.0,0.0,0.0,0.0,0.0,no,labour,10.18
-87,Brighton Kemptown,southeastengland,conservative,31.94,45.73,4.92,7.85,9.49,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,yes,labour,13.79
-603,Washington and Sunderland West,northeastengland,labour,18.68,55.72,2.91,15.93,5.33,0.0,0.0,1.42,0.0,0.0,0.0,0.0,0.0,no,labour,37.04
-128,Chelmsford,eastofengland,conservative,40.03,18.06,14.74,21.2,5.35,0.0,0.0,0.63,0.0,0.0,0.0,0.0,0.0,no,conservative,18.83
-637,Wokingham,southeastengland,conservative,47.14,16.89,12.2,15.63,4.95,0.0,0.0,3.2,0.0,0.0,0.0,0.0,0.0,no,conservative,30.25
-605,Waveney,eastofengland,conservative,28.79,43.7,1.79,18.74,6.96,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,yes,labour,14.91
-77,Bradford West,yorkshireandthehumber,other,22.42,40.35,1.42,12.1,5.75,0.0,0.0,17.96,0.0,0.0,0.0,0.0,0.0,yes,labour,17.94
-126,Chatham and Aylesford,southeastengland,conservative,37.61,41.02,2.09,13.49,3.49,0.0,0.0,2.3,0.0,0.0,0.0,0.0,0.0,yes,labour,3.41
-624,Weston-Super-Mare,southwestengland,conservative,36.72,18.66,20.18,16.42,6.9,0.0,0.0,1.12,0.0,0.0,0.0,0.0,0.0,no,conservative,16.54
-487,Scunthorpe,yorkshireandthehumber,labour,29.04,42.59,3.41,18.62,5.48,0.0,0.0,0.85,0.0,0.0,0.0,0.0,0.0,no,labour,13.55
-208,Edinburgh South West,scotland,labour,24.34,27.15,5.26,3.86,7.02,31.11,0.0,1.27,0.0,0.0,0.0,0.0,0.0,yes,snp,3.96
-230,Forest of Dean,southwestengland,conservative,38.03,33.67,7.21,15.16,5.93,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,4.35
-379,Motherwell and Wishaw,scotland,labour,8.65,42.79,1.52,4.44,2.04,40.27,0.0,0.31,0.0,0.0,0.0,0.0,0.0,no,labour,2.52
-489,Sefton Central,northwestengland,labour,30.55,45.22,4.18,14.45,5.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,14.68
-597,Wansbeck,northeastengland,labour,15.48,51.44,10.85,14.37,6.41,0.0,0.0,1.45,0.0,0.0,0.0,0.0,0.0,no,labour,35.95
-302,Islington South and Finsbury,london,labour,14.99,46.42,18.75,11.22,8.43,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,labour,27.67
-514,South Holland and The Deepings,eastmidlands,conservative,57.87,16.65,2.46,18.79,3.2,0.0,0.0,1.03,0.0,0.0,0.0,0.0,0.0,no,conservative,39.09
-494,Sheffield Hallam,yorkshireandthehumber,libdems,21.14,18.71,35.63,14.64,9.45,0.0,0.0,0.43,0.0,0.0,0.0,0.0,0.0,no,libdems,14.49
+29,Bath,southwestengland,libdems,25.86,13.03,39.58,7.54,13.86,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,libdems,13.71
+549,Stoke-on-Trent North,westmidlands,labour,22.63,50.67,3.85,14.94,3.08,0.0,0.0,4.84,0.0,0.0,0.0,0.0,0.0,no,labour,28.04
+554,Stratford-on-Avon,westmidlands,conservative,52.9,12.18,13.49,13.46,5.54,0.0,0.0,2.44,0.0,0.0,0.0,0.0,0.0,no,conservative,39.41
+31,Battersea,london,conservative,42.33,37.87,2.44,10.85,6.41,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,conservative,4.46
+322,Leeds North East,yorkshireandthehumber,labour,28.37,44.18,3.84,15.21,8.0,0.0,0.0,0.4,0.0,0.0,0.0,0.0,0.0,no,labour,15.8
+259,Halifax,yorkshireandthehumber,labour,30.14,40.33,3.7,15.08,7.15,0.0,0.0,3.6,0.0,0.0,0.0,0.0,0.0,no,labour,10.19
+87,Brighton Kemptown,southeastengland,conservative,32.06,45.51,5.0,7.86,9.51,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,yes,labour,13.44
+603,Washington and Sunderland West,northeastengland,labour,18.75,55.59,2.97,15.93,5.33,0.0,0.0,1.43,0.0,0.0,0.0,0.0,0.0,no,labour,36.85
+128,Chelmsford,eastofengland,conservative,40.07,18.18,14.58,21.18,5.35,0.0,0.0,0.64,0.0,0.0,0.0,0.0,0.0,no,conservative,18.89
+637,Wokingham,southeastengland,conservative,47.1,16.96,12.19,15.62,4.97,0.0,0.0,3.16,0.0,0.0,0.0,0.0,0.0,no,conservative,30.14
+605,Waveney,eastofengland,conservative,28.91,43.59,1.76,18.74,6.97,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,yes,labour,14.68
+77,Bradford West,yorkshireandthehumber,other,22.54,40.44,1.4,12.14,5.76,0.0,0.0,17.72,0.0,0.0,0.0,0.0,0.0,yes,labour,17.9
+126,Chatham and Aylesford,southeastengland,conservative,37.68,40.86,2.19,13.49,3.51,0.0,0.0,2.27,0.0,0.0,0.0,0.0,0.0,yes,labour,3.18
+624,Weston-Super-Mare,southwestengland,conservative,36.77,18.73,20.08,16.39,6.93,0.0,0.0,1.1,0.0,0.0,0.0,0.0,0.0,no,conservative,16.68
+487,Scunthorpe,yorkshireandthehumber,labour,29.04,42.56,3.45,18.6,5.48,0.0,0.0,0.86,0.0,0.0,0.0,0.0,0.0,no,labour,13.52
+208,Edinburgh South West,scotland,labour,24.07,27.19,5.3,3.86,6.92,31.42,0.0,1.23,0.0,0.0,0.0,0.0,0.0,yes,snp,4.23
+230,Forest of Dean,southwestengland,conservative,38.03,33.58,7.3,15.14,5.96,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,4.45
+379,Motherwell and Wishaw,scotland,labour,8.87,42.25,1.44,4.45,2.07,40.61,0.0,0.31,0.0,0.0,0.0,0.0,0.0,no,labour,1.64
+489,Sefton Central,northwestengland,labour,30.53,45.21,4.2,14.45,5.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,14.68
+597,Wansbeck,northeastengland,labour,15.59,51.39,10.78,14.38,6.41,0.0,0.0,1.45,0.0,0.0,0.0,0.0,0.0,no,labour,35.8
+302,Islington South and Finsbury,london,labour,16.53,46.23,17.17,11.42,8.5,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,no,labour,29.05
+514,South Holland and The Deepings,eastmidlands,conservative,57.68,16.78,2.51,18.79,3.21,0.0,0.0,1.03,0.0,0.0,0.0,0.0,0.0,no,conservative,38.9
+494,Sheffield Hallam,yorkshireandthehumber,libdems,21.3,18.93,35.2,14.69,9.46,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,no,libdems,13.89
 365,Mid Ulster,northernireland,sinnfein,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.26,52.23,14.62,10.76,14.26,0.87,no,sinnfein,37.6
-97,Broxtowe,eastmidlands,conservative,33.86,39.72,2.7,15.91,7.4,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,yes,labour,5.86
-492,Sheffield Brightside and Hillsborough,yorkshireandthehumber,labour,9.26,56.05,4.11,15.77,10.13,0.0,0.0,4.68,0.0,0.0,0.0,0.0,0.0,no,labour,40.28
+97,Broxtowe,eastmidlands,conservative,33.9,39.63,2.75,15.91,7.4,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,yes,labour,5.73
+492,Sheffield Brightside and Hillsborough,yorkshireandthehumber,labour,9.39,55.92,4.14,15.79,10.12,0.0,0.0,4.65,0.0,0.0,0.0,0.0,0.0,no,labour,40.13
 196,East Londonderry,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.32,19.61,15.89,17.51,34.52,5.14,no,dup,14.92
-249,Gower,wales,labour,30.65,46.46,3.09,8.06,4.77,0.0,6.59,0.37,0.0,0.0,0.0,0.0,0.0,no,labour,15.81
-540,Stafford,westmidlands,conservative,41.03,36.7,2.63,15.1,4.21,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,conservative,4.33
-245,Glenrothes,scotland,labour,6.37,42.46,1.14,4.02,2.45,43.56,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,1.11
-396,North Ayrshire and Arran,scotland,labour,13.95,28.53,1.46,5.07,2.61,48.24,0.0,0.14,0.0,0.0,0.0,0.0,0.0,yes,snp,19.71
-268,Harrow West,london,labour,32.42,47.3,2.9,11.72,5.66,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,14.88
-340,"Liverpool, West Derby",northwestengland,labour,7.33,64.29,1.77,13.17,8.49,0.0,0.0,4.95,0.0,0.0,0.0,0.0,0.0,no,labour,51.12
-187,Ealing North,london,labour,26.22,55.58,2.38,8.0,6.75,0.0,0.0,1.06,0.0,0.0,0.0,0.0,0.0,no,labour,29.36
-544,Stirling,scotland,labour,23.7,25.87,2.86,3.7,3.96,39.56,0.0,0.34,0.0,0.0,0.0,0.0,0.0,yes,snp,13.7
-62,Blaydon,northeastengland,labour,13.11,52.4,11.19,15.49,6.49,0.0,0.0,1.32,0.0,0.0,0.0,0.0,0.0,no,labour,36.91
-388,Newcastle upon Tyne North,northeastengland,labour,16.13,46.32,15.6,12.76,8.2,0.0,0.0,0.99,0.0,0.0,0.0,0.0,0.0,no,labour,30.2
+249,Gower,wales,labour,30.7,46.44,3.03,8.08,4.78,0.0,6.61,0.37,0.0,0.0,0.0,0.0,0.0,no,labour,15.74
+540,Stafford,westmidlands,conservative,40.99,36.67,2.68,15.1,4.21,0.0,0.0,0.35,0.0,0.0,0.0,0.0,0.0,no,conservative,4.32
+245,Glenrothes,scotland,labour,6.59,41.94,1.09,4.05,2.47,43.86,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,1.91
+396,North Ayrshire and Arran,scotland,labour,14.05,28.46,1.38,5.07,2.62,48.27,0.0,0.13,0.0,0.0,0.0,0.0,0.0,yes,snp,19.81
+268,Harrow West,london,labour,32.38,46.7,3.3,11.86,5.76,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,14.32
+340,"Liverpool, West Derby",northwestengland,labour,7.45,64.21,1.75,13.22,8.5,0.0,0.0,4.87,0.0,0.0,0.0,0.0,0.0,no,labour,50.99
+187,Ealing North,london,labour,27.19,54.54,2.0,8.22,6.91,0.0,0.0,1.13,0.0,0.0,0.0,0.0,0.0,no,labour,27.35
+544,Stirling,scotland,labour,23.4,25.89,2.99,3.71,3.94,39.72,0.0,0.35,0.0,0.0,0.0,0.0,0.0,yes,snp,13.84
+62,Blaydon,northeastengland,labour,13.23,52.35,11.11,15.5,6.49,0.0,0.0,1.33,0.0,0.0,0.0,0.0,0.0,no,labour,36.85
+388,Newcastle upon Tyne North,northeastengland,labour,16.23,46.35,15.45,12.77,8.2,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,no,labour,30.12
 317,Lagan Valley,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,8.64,4.13,5.26,20.94,50.0,11.03,no,dup,29.06
-156,Crewe and Nantwich,northwestengland,conservative,40.98,36.19,2.19,14.45,5.85,0.0,0.0,0.35,0.0,0.0,0.0,0.0,0.0,no,conservative,4.79
-504,Solihull,westmidlands,libdems,38.72,10.13,26.13,17.05,7.0,0.0,0.0,0.96,0.0,0.0,0.0,0.0,0.0,yes,conservative,12.59
-618,West Lancashire,northwestengland,labour,30.14,44.76,1.87,16.98,6.19,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,14.62
-480,Rushcliffe,eastmidlands,conservative,46.7,22.84,6.4,14.67,9.38,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,23.86
-253,Great Yarmouth,eastofengland,conservative,31.35,39.41,1.97,22.15,3.89,0.0,0.0,1.23,0.0,0.0,0.0,0.0,0.0,yes,labour,8.07
-459,Reading East,southeastengland,conservative,34.27,33.54,10.75,13.73,7.65,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,conservative,0.73
-23,Barnsley Central,yorkshireandthehumber,labour,15.69,53.54,3.05,15.18,3.61,0.0,0.0,8.93,0.0,0.0,0.0,0.0,0.0,no,labour,37.85
-508,South Cambridgeshire,eastofengland,conservative,38.94,16.01,11.74,19.89,12.15,0.0,0.0,1.28,0.0,0.0,0.0,0.0,0.0,no,conservative,19.05
-610,Welwyn Hatfield,eastofengland,conservative,46.34,28.78,2.39,16.4,6.05,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,conservative,17.56
-532,Southend West,eastofengland,conservative,40.4,21.7,8.94,18.44,6.98,0.0,0.0,3.54,0.0,0.0,0.0,0.0,0.0,no,conservative,18.71
-33,Beckenham,london,conservative,53.68,14.11,5.62,18.99,6.96,0.0,0.0,0.65,0.0,0.0,0.0,0.0,0.0,no,conservative,34.69
-634,Wyre and Preston North,northwestengland,conservative,47.02,23.01,5.07,19.41,5.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,24.01
-182,Dundee East,scotland,snp,13.61,17.35,1.54,2.54,1.68,62.69,0.0,0.59,0.0,0.0,0.0,0.0,0.0,no,snp,45.33
-485,Salisbury,southwestengland,conservative,43.3,14.27,19.25,16.11,6.32,0.0,0.0,0.75,0.0,0.0,0.0,0.0,0.0,no,conservative,24.05
-148,Colne Valley,yorkshireandthehumber,conservative,35.0,30.72,11.17,14.14,7.58,0.0,0.0,1.39,0.0,0.0,0.0,0.0,0.0,no,conservative,4.28
-48,Birmingham Erdington,westmidlands,labour,28.88,44.56,2.41,13.94,6.56,0.0,0.0,3.65,0.0,0.0,0.0,0.0,0.0,no,labour,15.69
-295,Ilford North,london,conservative,40.78,35.23,2.2,13.75,6.52,0.0,0.0,1.51,0.0,0.0,0.0,0.0,0.0,no,conservative,5.55
-315,Kirkcaldy and Cowdenbeath,scotland,labour,8.92,47.94,1.49,4.07,2.41,35.02,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,labour,12.91
+156,Crewe and Nantwich,northwestengland,conservative,40.87,36.31,2.15,14.48,5.86,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,conservative,4.55
+504,Solihull,westmidlands,libdems,38.82,10.25,25.84,17.09,7.02,0.0,0.0,0.97,0.0,0.0,0.0,0.0,0.0,yes,conservative,12.98
+618,West Lancashire,northwestengland,labour,30.14,44.77,1.84,17.0,6.2,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,14.63
+480,Rushcliffe,eastmidlands,conservative,46.6,22.94,6.4,14.68,9.38,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,23.67
+253,Great Yarmouth,eastofengland,conservative,31.46,39.36,1.93,22.13,3.89,0.0,0.0,1.23,0.0,0.0,0.0,0.0,0.0,yes,labour,7.9
+459,Reading East,southeastengland,conservative,34.35,33.45,10.75,13.72,7.67,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,conservative,0.9
+23,Barnsley Central,yorkshireandthehumber,labour,15.82,53.44,3.1,15.2,3.62,0.0,0.0,8.82,0.0,0.0,0.0,0.0,0.0,no,labour,37.61
+508,South Cambridgeshire,eastofengland,conservative,38.97,16.13,11.63,19.88,12.12,0.0,0.0,1.28,0.0,0.0,0.0,0.0,0.0,no,conservative,19.1
+610,Welwyn Hatfield,eastofengland,conservative,46.28,28.85,2.34,16.42,6.06,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,conservative,17.43
+532,Southend West,eastofengland,conservative,40.42,21.8,8.87,18.43,6.98,0.0,0.0,3.5,0.0,0.0,0.0,0.0,0.0,no,conservative,18.61
+33,Beckenham,london,conservative,51.42,15.8,5.94,18.96,7.13,0.0,0.0,0.75,0.0,0.0,0.0,0.0,0.0,no,conservative,32.46
+634,Wyre and Preston North,northwestengland,conservative,46.82,23.19,5.08,19.41,5.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,23.63
+182,Dundee East,scotland,snp,13.71,17.69,1.46,2.55,1.7,62.3,0.0,0.58,0.0,0.0,0.0,0.0,0.0,no,snp,44.61
+485,Salisbury,southwestengland,conservative,43.28,14.36,19.18,16.09,6.35,0.0,0.0,0.74,0.0,0.0,0.0,0.0,0.0,no,conservative,24.1
+148,Colne Valley,yorkshireandthehumber,conservative,34.95,30.84,11.08,14.15,7.57,0.0,0.0,1.4,0.0,0.0,0.0,0.0,0.0,no,conservative,4.11
+48,Birmingham Erdington,westmidlands,labour,29.0,44.48,2.37,13.96,6.56,0.0,0.0,3.62,0.0,0.0,0.0,0.0,0.0,no,labour,15.48
+295,Ilford North,london,conservative,39.9,36.16,1.85,13.92,6.67,0.0,0.0,1.51,0.0,0.0,0.0,0.0,0.0,no,conservative,3.74
+315,Kirkcaldy and Cowdenbeath,scotland,labour,9.16,47.27,1.42,4.1,2.44,35.48,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,labour,11.79
 190,East Antrim,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.98,6.95,6.91,23.49,46.0,10.67,no,dup,22.51
-640,Wyre Forest,westmidlands,conservative,31.59,15.34,1.7,18.62,5.86,0.0,0.0,26.89,0.0,0.0,0.0,0.0,0.0,no,conservative,4.7
-446,Peterborough,eastofengland,conservative,28.82,34.86,2.64,25.9,7.12,0.0,0.0,0.66,0.0,0.0,0.0,0.0,0.0,yes,labour,6.04
-216,Epping Forest,eastofengland,conservative,42.63,20.28,3.08,24.82,6.8,0.0,0.0,2.39,0.0,0.0,0.0,0.0,0.0,no,conservative,17.81
-524,South West Bedfordshire,eastofengland,conservative,43.44,27.49,2.99,18.96,5.85,0.0,0.0,1.29,0.0,0.0,0.0,0.0,0.0,no,conservative,15.95
-649,Wrexham,wales,labour,23.02,43.26,7.48,14.55,5.0,0.0,5.91,0.78,0.0,0.0,0.0,0.0,0.0,no,labour,20.23
-384,Newark,eastmidlands,conservative,54.4,27.06,5.63,9.72,3.18,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,27.34
-520,South Staffordshire,westmidlands,conservative,50.3,23.09,2.87,16.68,5.49,0.0,0.0,1.58,0.0,0.0,0.0,0.0,0.0,no,conservative,27.21
-72,Bournemouth East,southwestengland,conservative,42.39,22.37,14.37,15.46,5.31,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,20.02
-89,Bristol East,southwestengland,labour,22.08,48.29,9.12,7.27,9.84,0.0,0.0,3.4,0.0,0.0,0.0,0.0,0.0,no,labour,26.2
-607,Weaver Vale,northwestengland,conservative,35.79,40.4,3.31,14.29,5.68,0.0,0.0,0.53,0.0,0.0,0.0,0.0,0.0,yes,labour,4.61
-244,Glasgow South West,scotland,labour,5.89,43.28,1.37,4.23,4.72,36.84,0.0,3.67,0.0,0.0,0.0,0.0,0.0,no,labour,6.44
-423,Northampton North,eastmidlands,conservative,30.72,32.25,11.1,17.6,6.76,0.0,0.0,1.56,0.0,0.0,0.0,0.0,0.0,yes,labour,1.53
-632,Witney,southeastengland,conservative,55.67,21.52,6.2,9.65,6.76,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,34.15
-625,Wigan,northwestengland,labour,22.26,53.1,2.35,16.85,4.27,0.0,0.0,1.17,0.0,0.0,0.0,0.0,0.0,no,labour,30.83
-431,Ochil and South Perthshire,scotland,labour,18.87,21.17,1.69,4.21,2.92,50.96,0.0,0.18,0.0,0.0,0.0,0.0,0.0,yes,snp,29.79
-342,Llanelli,wales,labour,10.94,43.4,1.43,12.36,5.23,0.0,26.64,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,16.76
-469,Rochester and Strood,southeastengland,ukip,33.41,25.2,3.21,35.22,2.87,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,ukip,1.8
-338,"Liverpool, Walton",northwestengland,labour,5.04,70.8,1.99,13.33,8.56,0.0,0.0,0.28,0.0,0.0,0.0,0.0,0.0,no,labour,57.48
-221,Exeter,southwestengland,labour,23.68,45.51,5.86,14.11,9.42,0.0,0.0,1.42,0.0,0.0,0.0,0.0,0.0,no,labour,21.83
-600,Warrington North,northwestengland,labour,25.97,47.39,4.16,16.56,5.43,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,no,labour,21.43
-330,Lewisham East,london,labour,19.63,48.93,13.42,7.41,10.26,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,labour,29.31
-617,West Ham,london,labour,10.6,69.32,2.06,6.94,4.93,0.0,0.0,6.15,0.0,0.0,0.0,0.0,0.0,no,labour,58.73
-8,Altrincham and Sale West,northwestengland,conservative,47.99,26.48,8.85,10.21,6.46,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,21.51
-277,Hendon,london,conservative,36.09,42.76,2.08,13.48,5.59,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,6.67
-547,Stockton South,northeastengland,conservative,35.78,42.09,2.3,14.54,4.06,0.0,0.0,1.22,0.0,0.0,0.0,0.0,0.0,yes,labour,6.31
-368,Middlesbrough South and East Cleveland,northeastengland,labour,34.08,45.09,2.56,13.02,3.65,0.0,0.0,1.61,0.0,0.0,0.0,0.0,0.0,no,labour,11.01
-247,Gordon,scotland,libdems,17.4,8.72,22.13,3.85,1.67,44.82,0.0,1.41,0.0,0.0,0.0,0.0,0.0,yes,snp,22.68
-86,Brigg and Goole,yorkshireandthehumber,conservative,42.38,37.51,2.25,13.7,3.5,0.0,0.0,0.64,0.0,0.0,0.0,0.0,0.0,no,conservative,4.87
-369,Midlothian,scotland,labour,11.34,30.72,4.6,4.29,3.32,44.71,0.0,1.02,0.0,0.0,0.0,0.0,0.0,yes,snp,13.99
-574,Thurrock,eastofengland,conservative,22.53,36.91,1.26,31.85,3.1,0.0,0.0,4.35,0.0,0.0,0.0,0.0,0.0,yes,labour,5.06
-593,Wallasey,northwestengland,labour,26.6,52.51,1.94,12.76,6.14,0.0,0.0,0.04,0.0,0.0,0.0,0.0,0.0,no,labour,25.91
-235,Gateshead,northeastengland,labour,12.3,57.06,5.51,16.51,6.8,0.0,0.0,1.82,0.0,0.0,0.0,0.0,0.0,no,labour,40.55
-222,Falkirk,scotland,other,10.42,29.06,1.58,2.1,0.82,56.02,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,26.96
-589,Vale of Clwyd,wales,labour,30.75,45.97,1.84,11.74,4.08,0.0,5.22,0.39,0.0,0.0,0.0,0.0,0.0,no,labour,15.23
-505,Somerton and Frome,southwestengland,libdems,35.68,8.14,29.36,17.43,9.34,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.32
-439,Oxford West and Abingdon,southeastengland,conservative,40.06,19.05,27.13,6.49,7.23,0.0,0.0,0.04,0.0,0.0,0.0,0.0,0.0,no,conservative,12.93
-614,West Bromwich West,westmidlands,labour,25.21,46.58,1.74,16.79,4.14,0.0,0.0,5.54,0.0,0.0,0.0,0.0,0.0,no,labour,21.36
-107,Camberwell and Peckham,london,labour,9.47,67.09,7.6,6.06,9.14,0.0,0.0,0.64,0.0,0.0,0.0,0.0,0.0,no,labour,57.61
-269,Hartlepool,northeastengland,labour,25.67,47.22,3.25,17.52,4.71,0.0,0.0,1.63,0.0,0.0,0.0,0.0,0.0,no,labour,21.56
-178,Dudley South,westmidlands,conservative,38.99,35.46,2.34,18.35,4.87,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,3.53
-306,Kenilworth and Southam,westmidlands,conservative,50.4,16.45,11.0,15.79,6.24,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,conservative,33.95
-53,Birmingham Perry Barr,westmidlands,labour,19.06,54.85,6.58,12.81,6.25,0.0,0.0,0.44,0.0,0.0,0.0,0.0,0.0,no,labour,35.79
-491,Sevenoaks,southeastengland,conservative,46.59,19.41,6.13,19.06,6.03,0.0,0.0,2.79,0.0,0.0,0.0,0.0,0.0,no,conservative,27.17
-583,Truro and Falmouth,southwestengland,conservative,35.7,17.31,22.75,17.02,6.63,0.0,0.0,0.58,0.0,0.0,0.0,0.0,0.0,no,conservative,12.96
-261,Halton,northwestengland,labour,16.92,59.24,2.0,16.59,5.47,0.0,0.0,-0.21,0.0,0.0,0.0,0.0,0.0,no,labour,42.32
-76,Bradford South,yorkshireandthehumber,labour,26.25,45.41,3.41,14.53,6.77,0.0,0.0,3.63,0.0,0.0,0.0,0.0,0.0,no,labour,19.16
-51,Birmingham Ladywood,westmidlands,labour,10.14,58.85,10.73,13.81,6.47,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,45.04
-318,Lanark and Hamilton East,scotland,labour,14.37,33.28,1.77,4.29,1.26,44.78,0.0,0.24,0.0,0.0,0.0,0.0,0.0,yes,snp,11.49
-389,Newcastle-under-Lyme,westmidlands,labour,29.16,38.66,4.46,21.19,6.53,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,9.51
-93,Broadland,eastofengland,conservative,37.3,20.59,10.29,22.72,8.86,0.0,0.0,0.25,0.0,0.0,0.0,0.0,0.0,no,conservative,14.58
-172,Dewsbury,yorkshireandthehumber,conservative,31.07,35.04,2.5,13.74,7.38,0.0,0.0,10.27,0.0,0.0,0.0,0.0,0.0,yes,labour,3.96
-528,South West Surrey,southeastengland,conservative,52.05,10.37,13.7,14.96,8.7,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,conservative,37.08
-646,Wycombe,southeastengland,conservative,42.58,26.01,12.83,13.1,5.34,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,16.58
-228,Finchley and Golders Green,london,conservative,45.19,38.05,3.46,7.07,6.22,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,7.15
-476,Rotherham,yorkshireandthehumber,labour,14.37,47.99,2.38,20.2,3.83,0.0,0.0,11.23,0.0,0.0,0.0,0.0,0.0,no,labour,27.78
-283,Heywood and Middleton,northwestengland,labour,24.92,44.98,6.37,17.52,4.95,0.0,0.0,1.27,0.0,0.0,0.0,0.0,0.0,no,labour,20.06
-225,Feltham and Heston,london,labour,28.92,46.57,2.43,12.55,6.25,0.0,0.0,3.29,0.0,0.0,0.0,0.0,0.0,no,labour,17.65
-551,Stone,westmidlands,conservative,49.82,24.51,7.55,14.1,4.02,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,25.32
-106,Calder Valley,yorkshireandthehumber,conservative,37.45,31.35,8.71,14.33,6.91,0.0,0.0,1.25,0.0,0.0,0.0,0.0,0.0,no,conservative,6.1
-424,Northampton South,eastmidlands,conservative,37.4,28.3,4.68,17.85,6.82,0.0,0.0,4.95,0.0,0.0,0.0,0.0,0.0,no,conservative,9.1
-577,Tooting,london,labour,34.99,48.15,2.72,6.43,7.59,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,labour,13.16
-507,South Basildon and East Thurrock,eastofengland,conservative,29.6,34.38,1.69,20.34,11.18,0.0,0.0,2.81,0.0,0.0,0.0,0.0,0.0,yes,labour,4.78
-159,Croydon South,london,conservative,50.27,21.52,8.62,13.39,6.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.74
-188,"Ealing, Southall",london,labour,24.78,56.35,2.68,8.63,7.17,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,labour,31.57
-40,Berwick-upon-Tweed,northeastengland,libdems,34.89,15.53,28.08,14.52,6.48,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.8
-473,"Ross, Skye and Lochaber",scotland,libdems,11.41,6.05,37.87,4.71,3.37,35.09,0.0,1.5,0.0,0.0,0.0,0.0,0.0,no,libdems,2.79
-326,Leicester South,eastmidlands,labour,20.23,52.86,11.25,8.56,6.39,0.0,0.0,0.71,0.0,0.0,0.0,0.0,0.0,no,labour,32.63
-647,Ynys Mon,wales,labour,18.38,35.87,1.07,13.63,3.58,0.0,24.08,3.38,0.0,0.0,0.0,0.0,0.0,no,labour,11.8
-43,Beverley and Holderness,yorkshireandthehumber,conservative,46.07,25.23,6.95,15.83,4.76,0.0,0.0,1.16,0.0,0.0,0.0,0.0,0.0,no,conservative,20.84
-109,Cambridge,eastofengland,libdems,20.02,33.76,20.58,8.47,17.01,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,yes,labour,13.19
-636,Woking,southeastengland,conservative,46.13,14.25,21.17,12.4,5.97,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,24.96
-297,Inverclyde,scotland,labour,11.69,39.88,2.27,3.75,1.61,40.79,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,0.91
-304,Jarrow,northeastengland,labour,17.41,56.9,3.47,14.75,4.73,0.0,0.0,2.73,0.0,0.0,0.0,0.0,0.0,no,labour,39.49
-496,Sheffield South East,yorkshireandthehumber,labour,14.63,51.08,6.61,15.58,10.01,0.0,0.0,2.08,0.0,0.0,0.0,0.0,0.0,no,labour,35.51
-472,Romsey and Southampton North,southeastengland,conservative,40.98,10.5,21.87,18.89,7.76,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,19.11
-152,Coventry North East,westmidlands,labour,19.23,52.2,2.57,14.25,6.43,0.0,0.0,5.31,0.0,0.0,0.0,0.0,0.0,no,labour,32.97
-288,Hornsey and Wood Green,london,libdems,12.48,36.67,35.02,5.97,9.77,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,yes,labour,1.66
-198,East Renfrewshire,scotland,labour,31.27,35.22,1.5,4.55,3.1,24.36,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,3.95
-562,Sutton Coldfield,westmidlands,conservative,53.27,24.13,3.89,11.7,5.99,0.0,0.0,1.03,0.0,0.0,0.0,0.0,0.0,no,conservative,29.13
-401,North Durham,northeastengland,labour,17.48,46.72,8.42,15.9,6.14,0.0,0.0,5.33,0.0,0.0,0.0,0.0,0.0,no,labour,29.24
-418,North West Durham,northeastengland,labour,11.04,48.04,18.49,16.09,5.91,0.0,0.0,0.43,0.0,0.0,0.0,0.0,0.0,no,labour,29.55
-630,Wirral West,northwestengland,conservative,38.1,38.83,2.48,13.72,6.55,0.0,0.0,0.31,0.0,0.0,0.0,0.0,0.0,yes,labour,0.73
-366,Mid Worcestershire,westmidlands,conservative,48.67,16.21,7.29,21.41,6.42,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,27.26
-162,Dagenham and Rainham,london,labour,29.32,42.75,1.52,14.16,1.53,0.0,0.0,10.72,0.0,0.0,0.0,0.0,0.0,no,labour,13.43
-558,Suffolk Coastal,eastofengland,conservative,37.43,23.17,8.56,21.22,9.62,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,14.25
-385,Newbury,southeastengland,conservative,52.23,7.99,19.25,13.69,6.77,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,32.98
-55,Birmingham Yardley,westmidlands,libdems,17.17,36.1,24.11,13.19,6.4,0.0,0.0,3.04,0.0,0.0,0.0,0.0,0.0,yes,labour,11.99
-343,Loughborough,eastmidlands,conservative,39.26,38.96,3.88,11.64,5.12,0.0,0.0,1.14,0.0,0.0,0.0,0.0,0.0,no,conservative,0.31
-145,Clwyd West,wales,conservative,36.13,27.39,2.19,14.64,5.45,0.0,14.06,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,8.75
-627,Winchester,southeastengland,conservative,46.9,10.65,27.95,7.69,6.65,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,no,conservative,18.95
-260,Haltemprice and Howden,yorkshireandthehumber,conservative,47.81,18.43,9.28,17.1,4.98,0.0,0.0,2.4,0.0,0.0,0.0,0.0,0.0,no,conservative,29.38
-236,Gedling,eastmidlands,labour,32.17,42.44,2.2,17.45,5.03,0.0,0.0,0.72,0.0,0.0,0.0,0.0,0.0,no,labour,10.27
-118,Carmarthen West and South Pembrokeshire,wales,conservative,34.39,34.24,1.67,16.02,4.5,0.0,9.06,0.12,0.0,0.0,0.0,0.0,0.0,no,conservative,0.15
-519,South Shields,northeastengland,labour,18.31,54.83,2.1,14.98,4.88,0.0,0.0,4.9,0.0,0.0,0.0,0.0,0.0,no,labour,36.52
-412,North Somerset,southwestengland,conservative,41.61,18.88,17.48,15.54,6.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,22.73
-19,"Ayr, Carrick and Cumnock",scotland,labour,24.71,30.08,1.43,2.86,1.0,39.91,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,9.83
-335,Lincoln,eastmidlands,conservative,35.2,39.73,5.28,11.79,6.12,0.0,0.0,1.87,0.0,0.0,0.0,0.0,0.0,yes,labour,4.53
-564,Swansea West,wales,labour,17.46,38.55,12.63,18.43,8.11,0.0,3.62,1.21,0.0,0.0,0.0,0.0,0.0,no,labour,20.12
-282,Hexham,northeastengland,conservative,41.56,22.28,12.57,13.68,6.22,0.0,0.0,3.7,0.0,0.0,0.0,0.0,0.0,no,conservative,19.28
+640,Wyre Forest,westmidlands,conservative,31.75,15.5,1.67,18.66,5.88,0.0,0.0,26.54,0.0,0.0,0.0,0.0,0.0,no,conservative,5.2
+446,Peterborough,eastofengland,conservative,28.93,34.84,2.6,25.85,7.12,0.0,0.0,0.66,0.0,0.0,0.0,0.0,0.0,yes,labour,5.91
+216,Epping Forest,eastofengland,conservative,42.62,20.4,3.02,24.79,6.8,0.0,0.0,2.37,0.0,0.0,0.0,0.0,0.0,no,conservative,17.83
+524,South West Bedfordshire,eastofengland,conservative,43.41,27.57,2.93,18.96,5.85,0.0,0.0,1.28,0.0,0.0,0.0,0.0,0.0,no,conservative,15.84
+649,Wrexham,wales,labour,23.12,43.21,7.42,14.55,5.0,0.0,5.92,0.78,0.0,0.0,0.0,0.0,0.0,no,labour,20.09
+384,Newark,eastmidlands,conservative,54.26,27.16,5.65,9.74,3.19,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,27.1
+520,South Staffordshire,westmidlands,conservative,50.15,23.18,2.92,16.68,5.49,0.0,0.0,1.58,0.0,0.0,0.0,0.0,0.0,no,conservative,26.97
+72,Bournemouth East,southwestengland,conservative,42.34,22.42,14.37,15.44,5.34,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,19.92
+89,Bristol East,southwestengland,labour,22.28,48.04,9.19,7.28,9.86,0.0,0.0,3.34,0.0,0.0,0.0,0.0,0.0,no,labour,25.76
+607,Weaver Vale,northwestengland,conservative,35.71,40.45,3.34,14.3,5.68,0.0,0.0,0.52,0.0,0.0,0.0,0.0,0.0,yes,labour,4.74
+244,Glasgow South West,scotland,labour,6.11,42.8,1.3,4.25,4.71,37.3,0.0,3.53,0.0,0.0,0.0,0.0,0.0,no,labour,5.5
+423,Northampton North,eastmidlands,conservative,30.8,32.27,11.02,17.59,6.76,0.0,0.0,1.56,0.0,0.0,0.0,0.0,0.0,yes,labour,1.47
+632,Witney,southeastengland,conservative,55.52,21.58,6.28,9.65,6.79,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,33.94
+625,Wigan,northwestengland,labour,22.37,53.04,2.31,16.86,4.27,0.0,0.0,1.15,0.0,0.0,0.0,0.0,0.0,no,labour,30.67
+431,Ochil and South Perthshire,scotland,labour,18.79,21.38,1.6,4.22,2.94,50.9,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,snp,29.51
+342,Llanelli,wales,labour,11.12,43.42,1.41,12.4,5.25,0.0,26.4,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,17.02
+469,Rochester and Strood,southeastengland,ukip,33.48,25.2,3.29,35.05,2.89,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,ukip,1.57
+338,"Liverpool, Walton",northwestengland,labour,5.14,70.67,1.96,13.38,8.58,0.0,0.0,0.28,0.0,0.0,0.0,0.0,0.0,no,labour,57.29
+221,Exeter,southwestengland,labour,23.84,45.27,5.96,14.1,9.44,0.0,0.0,1.39,0.0,0.0,0.0,0.0,0.0,no,labour,21.42
+600,Warrington North,northwestengland,labour,26.0,47.35,4.18,16.56,5.43,0.0,0.0,0.49,0.0,0.0,0.0,0.0,0.0,no,labour,21.35
+330,Lewisham East,london,labour,20.95,48.33,12.6,7.55,10.19,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,labour,27.39
+617,West Ham,london,labour,12.37,67.82,1.76,7.28,5.17,0.0,0.0,5.6,0.0,0.0,0.0,0.0,0.0,no,labour,55.44
+8,Altrincham and Sale West,northwestengland,conservative,47.82,26.67,8.81,10.24,6.46,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,21.14
+277,Hendon,london,conservative,35.82,42.96,1.76,13.7,5.76,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,7.14
+547,Stockton South,northeastengland,conservative,35.67,42.2,2.26,14.56,4.07,0.0,0.0,1.23,0.0,0.0,0.0,0.0,0.0,yes,labour,6.53
+368,Middlesbrough South and East Cleveland,northeastengland,labour,33.96,45.13,2.63,13.03,3.65,0.0,0.0,1.61,0.0,0.0,0.0,0.0,0.0,no,labour,11.17
+247,Gordon,scotland,libdems,17.44,9.23,21.34,3.87,1.69,45.06,0.0,1.37,0.0,0.0,0.0,0.0,0.0,yes,snp,23.72
+86,Brigg and Goole,yorkshireandthehumber,conservative,42.27,37.61,2.21,13.73,3.51,0.0,0.0,0.66,0.0,0.0,0.0,0.0,0.0,no,conservative,4.66
+369,Midlothian,scotland,labour,11.48,30.52,4.66,4.29,3.32,44.74,0.0,0.99,0.0,0.0,0.0,0.0,0.0,yes,snp,14.21
+574,Thurrock,eastofengland,conservative,22.7,36.89,1.24,31.76,3.11,0.0,0.0,4.31,0.0,0.0,0.0,0.0,0.0,yes,labour,5.12
+593,Wallasey,northwestengland,labour,26.66,52.46,1.9,12.79,6.15,0.0,0.0,0.04,0.0,0.0,0.0,0.0,0.0,no,labour,25.8
+235,Gateshead,northeastengland,labour,12.42,56.93,5.53,16.51,6.8,0.0,0.0,1.82,0.0,0.0,0.0,0.0,0.0,no,labour,40.42
+222,Falkirk,scotland,other,10.62,29.02,1.5,2.12,0.83,55.91,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,26.89
+589,Vale of Clwyd,wales,labour,30.77,45.93,1.81,11.77,4.09,0.0,5.24,0.39,0.0,0.0,0.0,0.0,0.0,no,labour,15.16
+505,Somerton and Frome,southwestengland,libdems,35.81,8.22,29.11,17.43,9.38,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.7
+439,Oxford West and Abingdon,southeastengland,conservative,40.16,19.14,26.9,6.5,7.26,0.0,0.0,0.04,0.0,0.0,0.0,0.0,0.0,no,conservative,13.25
+614,West Bromwich West,westmidlands,labour,25.36,46.48,1.72,16.8,4.15,0.0,0.0,5.48,0.0,0.0,0.0,0.0,0.0,no,labour,21.12
+107,Camberwell and Peckham,london,labour,11.04,64.97,7.73,6.26,9.24,0.0,0.0,0.76,0.0,0.0,0.0,0.0,0.0,no,labour,53.92
+269,Hartlepool,northeastengland,labour,25.65,47.21,3.3,17.51,4.71,0.0,0.0,1.63,0.0,0.0,0.0,0.0,0.0,no,labour,21.56
+178,Dudley South,westmidlands,conservative,38.98,35.46,2.34,18.34,4.87,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,3.53
+306,Kenilworth and Southam,westmidlands,conservative,50.31,16.58,10.93,15.81,6.25,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,conservative,33.73
+53,Birmingham Perry Barr,westmidlands,labour,19.23,54.65,6.58,12.83,6.26,0.0,0.0,0.46,0.0,0.0,0.0,0.0,0.0,no,labour,35.42
+491,Sevenoaks,southeastengland,conservative,46.52,19.47,6.2,19.01,6.05,0.0,0.0,2.75,0.0,0.0,0.0,0.0,0.0,no,conservative,27.05
+583,Truro and Falmouth,southwestengland,conservative,35.77,17.39,22.61,16.99,6.66,0.0,0.0,0.57,0.0,0.0,0.0,0.0,0.0,no,conservative,13.16
+261,Halton,northwestengland,labour,17.05,59.11,1.96,16.61,5.47,0.0,0.0,-0.21,0.0,0.0,0.0,0.0,0.0,no,labour,42.06
+76,Bradford South,yorkshireandthehumber,labour,26.3,45.35,3.45,14.54,6.76,0.0,0.0,3.6,0.0,0.0,0.0,0.0,0.0,no,labour,19.06
+51,Birmingham Ladywood,westmidlands,labour,10.3,58.68,10.68,13.85,6.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,44.83
+318,Lanark and Hamilton East,scotland,labour,14.49,33.07,1.67,4.3,1.27,44.94,0.0,0.25,0.0,0.0,0.0,0.0,0.0,yes,snp,11.88
+389,Newcastle-under-Lyme,westmidlands,labour,29.23,38.6,4.48,21.16,6.53,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,9.36
+93,Broadland,eastofengland,conservative,37.33,20.69,10.2,22.69,8.85,0.0,0.0,0.24,0.0,0.0,0.0,0.0,0.0,no,conservative,14.65
+172,Dewsbury,yorkshireandthehumber,conservative,31.1,35.16,2.45,13.77,7.38,0.0,0.0,10.15,0.0,0.0,0.0,0.0,0.0,yes,labour,4.06
+528,South West Surrey,southeastengland,conservative,51.97,10.45,13.68,14.96,8.73,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,conservative,37.01
+646,Wycombe,southeastengland,conservative,42.59,26.01,12.8,13.09,5.37,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,16.57
+228,Finchley and Golders Green,london,conservative,43.7,38.7,4.07,7.21,6.32,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,5.0
+476,Rotherham,yorkshireandthehumber,labour,14.52,48.0,2.34,20.21,3.84,0.0,0.0,11.1,0.0,0.0,0.0,0.0,0.0,no,labour,27.78
+283,Heywood and Middleton,northwestengland,labour,24.98,44.98,6.35,17.51,4.95,0.0,0.0,1.24,0.0,0.0,0.0,0.0,0.0,no,labour,20.0
+225,Feltham and Heston,london,labour,29.46,46.32,2.04,12.75,6.39,0.0,0.0,3.04,0.0,0.0,0.0,0.0,0.0,no,labour,16.86
+551,Stone,westmidlands,conservative,49.71,24.61,7.54,14.11,4.03,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,25.1
+106,Calder Valley,yorkshireandthehumber,conservative,37.35,31.46,8.67,14.34,6.91,0.0,0.0,1.26,0.0,0.0,0.0,0.0,0.0,no,conservative,5.89
+424,Northampton South,eastmidlands,conservative,37.41,28.35,4.7,17.83,6.82,0.0,0.0,4.89,0.0,0.0,0.0,0.0,0.0,no,conservative,9.06
+577,Tooting,london,labour,35.0,47.94,2.61,6.62,7.72,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,labour,12.95
+507,South Basildon and East Thurrock,eastofengland,conservative,29.71,34.36,1.66,20.33,11.15,0.0,0.0,2.78,0.0,0.0,0.0,0.0,0.0,yes,labour,4.66
+159,Croydon South,london,conservative,48.3,23.26,8.54,13.57,6.34,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,25.04
+188,"Ealing, Southall",london,labour,25.79,55.02,2.55,8.83,7.3,0.0,0.0,0.52,0.0,0.0,0.0,0.0,0.0,no,labour,29.24
+40,Berwick-upon-Tweed,northeastengland,libdems,34.89,15.74,27.79,14.58,6.51,0.0,0.0,0.49,0.0,0.0,0.0,0.0,0.0,yes,conservative,7.1
+473,"Ross, Skye and Lochaber",scotland,libdems,11.67,6.56,36.5,4.74,3.4,35.66,0.0,1.46,0.0,0.0,0.0,0.0,0.0,no,libdems,0.84
+326,Leicester South,eastmidlands,labour,20.41,52.7,11.19,8.58,6.4,0.0,0.0,0.72,0.0,0.0,0.0,0.0,0.0,no,labour,32.3
+647,Ynys Mon,wales,labour,18.54,35.95,1.05,13.67,3.59,0.0,23.86,3.34,0.0,0.0,0.0,0.0,0.0,no,labour,12.09
+43,Beverley and Holderness,yorkshireandthehumber,conservative,45.88,25.39,6.95,15.84,4.76,0.0,0.0,1.18,0.0,0.0,0.0,0.0,0.0,no,conservative,20.49
+109,Cambridge,eastofengland,libdems,20.23,33.83,20.33,8.49,16.96,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,yes,labour,13.5
+636,Woking,southeastengland,conservative,46.15,14.34,21.03,12.4,6.0,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,25.11
+297,Inverclyde,scotland,labour,11.86,39.34,2.43,3.76,1.62,40.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,1.65
+304,Jarrow,northeastengland,labour,17.5,56.78,3.52,14.75,4.73,0.0,0.0,2.72,0.0,0.0,0.0,0.0,0.0,no,labour,39.28
+496,Sheffield South East,yorkshireandthehumber,labour,14.76,50.97,6.61,15.58,9.99,0.0,0.0,2.09,0.0,0.0,0.0,0.0,0.0,no,labour,35.39
+472,Romsey and Southampton North,southeastengland,conservative,41.04,10.58,21.72,18.86,7.79,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,19.32
+152,Coventry North East,westmidlands,labour,19.39,52.02,2.62,14.27,6.44,0.0,0.0,5.26,0.0,0.0,0.0,0.0,0.0,no,labour,32.63
+288,Hornsey and Wood Green,london,libdems,14.29,38.22,31.24,6.23,9.94,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,yes,labour,6.97
+198,East Renfrewshire,scotland,labour,30.9,35.13,1.43,4.58,3.13,24.82,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,4.23
+562,Sutton Coldfield,westmidlands,conservative,53.1,24.24,3.92,11.71,5.99,0.0,0.0,1.03,0.0,0.0,0.0,0.0,0.0,no,conservative,28.87
+401,North Durham,northeastengland,labour,17.57,46.73,8.39,15.89,6.14,0.0,0.0,5.27,0.0,0.0,0.0,0.0,0.0,no,labour,29.16
+418,North West Durham,northeastengland,labour,11.17,48.08,18.31,16.1,5.92,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,no,labour,29.77
+630,Wirral West,northwestengland,conservative,38.02,38.94,2.43,13.75,6.56,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.0,yes,labour,0.91
+366,Mid Worcestershire,westmidlands,conservative,48.57,16.33,7.27,21.4,6.43,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,27.17
+162,Dagenham and Rainham,london,labour,30.02,43.23,1.29,14.42,1.59,0.0,0.0,9.44,0.0,0.0,0.0,0.0,0.0,no,labour,13.21
+558,Suffolk Coastal,eastofengland,conservative,37.44,23.26,8.5,21.19,9.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,14.18
+385,Newbury,southeastengland,conservative,52.21,8.06,19.16,13.7,6.81,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,33.05
+55,Birmingham Yardley,westmidlands,libdems,17.35,36.16,23.84,13.22,6.42,0.0,0.0,3.02,0.0,0.0,0.0,0.0,0.0,yes,labour,12.32
+343,Loughborough,eastmidlands,conservative,39.26,38.9,3.92,11.65,5.12,0.0,0.0,1.14,0.0,0.0,0.0,0.0,0.0,no,conservative,0.36
+145,Clwyd West,wales,conservative,36.09,27.52,2.15,14.66,5.47,0.0,13.99,0.12,0.0,0.0,0.0,0.0,0.0,no,conservative,8.57
+627,Winchester,southeastengland,conservative,46.97,10.73,27.74,7.71,6.69,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,conservative,19.23
+260,Haltemprice and Howden,yorkshireandthehumber,conservative,47.64,18.61,9.24,17.12,4.99,0.0,0.0,2.4,0.0,0.0,0.0,0.0,0.0,no,conservative,29.03
+236,Gedling,eastmidlands,labour,32.26,42.36,2.16,17.45,5.04,0.0,0.0,0.72,0.0,0.0,0.0,0.0,0.0,no,labour,10.1
+118,Carmarthen West and South Pembrokeshire,wales,conservative,34.34,34.31,1.64,16.03,4.51,0.0,9.04,0.12,0.0,0.0,0.0,0.0,0.0,no,conservative,0.03
+519,South Shields,northeastengland,labour,18.41,54.79,2.06,15.01,4.88,0.0,0.0,4.85,0.0,0.0,0.0,0.0,0.0,no,labour,36.38
+412,North Somerset,southwestengland,conservative,41.58,18.95,17.43,15.51,6.53,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,22.63
+19,"Ayr, Carrick and Cumnock",scotland,labour,24.47,30.04,1.36,2.88,1.01,40.24,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,10.2
+335,Lincoln,eastmidlands,conservative,35.25,39.67,5.3,11.8,6.12,0.0,0.0,1.87,0.0,0.0,0.0,0.0,0.0,yes,labour,4.42
+564,Swansea West,wales,labour,17.61,38.56,12.47,18.42,8.11,0.0,3.64,1.2,0.0,0.0,0.0,0.0,0.0,no,labour,20.14
+282,Hexham,northeastengland,conservative,41.41,22.48,12.5,13.71,6.23,0.0,0.0,3.67,0.0,0.0,0.0,0.0,0.0,no,conservative,18.94
 38,Belfast West,northernireland,sinnfein,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,71.12,16.71,3.0,7.49,1.67,no,sinnfein,54.41
-124,Ceredigion,wales,libdems,10.04,7.44,32.4,11.92,9.13,0.0,29.06,0.0,0.0,0.0,0.0,0.0,0.0,no,libdems,3.34
-10,Amber Valley,eastmidlands,conservative,35.63,41.37,2.22,12.16,4.49,0.0,0.0,4.14,0.0,0.0,0.0,0.0,0.0,yes,labour,5.74
-134,Chingford and Woodford Green,london,conservative,52.66,24.73,3.25,9.27,8.43,0.0,0.0,1.66,0.0,0.0,0.0,0.0,0.0,no,conservative,27.93
-85,Bridgwater and West Somerset,southwestengland,conservative,42.65,29.38,13.59,9.47,3.52,0.0,0.0,1.39,0.0,0.0,0.0,0.0,0.0,no,conservative,13.27
-263,Hampstead and Kilburn,london,labour,31.01,38.58,17.46,6.74,6.01,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,labour,7.57
-447,Plymouth Moor View,southwestengland,labour,23.64,43.77,4.22,20.65,5.91,0.0,0.0,1.81,0.0,0.0,0.0,0.0,0.0,no,labour,20.13
-310,Kingston and Surbiton,london,libdems,29.78,8.65,35.25,16.19,9.99,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,libdems,5.47
-110,Cannock Chase,westmidlands,conservative,36.68,36.29,2.82,18.19,2.85,0.0,0.0,3.17,0.0,0.0,0.0,0.0,0.0,no,conservative,0.39
-39,Bermondsey and Old Southwark,london,libdems,13.11,31.81,37.61,6.35,9.48,0.0,0.0,1.65,0.0,0.0,0.0,0.0,0.0,no,libdems,5.8
-281,Hertsmere,eastofengland,conservative,48.09,27.34,2.68,15.95,4.92,0.0,0.0,1.03,0.0,0.0,0.0,0.0,0.0,no,conservative,20.75
-169,Derby South,eastmidlands,labour,24.67,45.47,5.13,17.61,6.39,0.0,0.0,0.73,0.0,0.0,0.0,0.0,0.0,no,labour,20.8
-349,Maidenhead,southeastengland,conservative,58.95,13.42,13.68,9.27,4.06,0.0,0.0,0.62,0.0,0.0,0.0,0.0,0.0,no,conservative,45.27
-316,Knowsley,northwestengland,labour,7.82,77.94,2.08,8.85,3.2,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,labour,69.09
-428,Nottingham North,eastmidlands,labour,22.11,52.48,3.05,11.8,8.0,0.0,0.0,2.55,0.0,0.0,0.0,0.0,0.0,no,labour,30.37
-100,Burton,westmidlands,conservative,39.43,33.71,2.31,18.19,4.54,0.0,0.0,1.82,0.0,0.0,0.0,0.0,0.0,no,conservative,5.73
-276,Hemsworth,yorkshireandthehumber,labour,21.15,50.0,1.91,13.37,3.18,0.0,0.0,10.39,0.0,0.0,0.0,0.0,0.0,no,labour,28.85
-161,Cynon Valley,wales,labour,7.72,54.4,1.95,13.11,4.42,0.0,18.4,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,36.0
-409,North Herefordshire,westmidlands,conservative,50.81,8.62,14.87,17.12,8.39,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,conservative,33.7
-619,West Suffolk,eastofengland,conservative,46.66,24.26,4.6,17.81,3.79,0.0,0.0,2.89,0.0,0.0,0.0,0.0,0.0,no,conservative,22.4
-517,South Northamptonshire,eastmidlands,conservative,52.6,19.99,6.1,14.73,6.39,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,32.61
-479,Runnymede and Weybridge,southeastengland,conservative,52.08,21.85,7.69,13.24,4.94,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,30.23
-218,Erewash,eastmidlands,conservative,34.81,36.27,3.09,17.45,5.8,0.0,0.0,2.59,0.0,0.0,0.0,0.0,0.0,yes,labour,1.46
-18,Aylesbury,southeastengland,conservative,51.01,22.22,13.88,9.15,3.74,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.79
-59,Blackpool North and Cleveleys,northwestengland,conservative,39.5,41.07,2.06,14.26,2.95,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,labour,1.57
-457,Putney,london,conservative,49.05,28.65,3.03,11.99,7.08,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,conservative,20.39
-70,Boston and Skegness,eastmidlands,conservative,37.34,19.0,1.83,35.01,4.83,0.0,0.0,1.99,0.0,0.0,0.0,0.0,0.0,no,conservative,2.34
-32,Beaconsfield,southeastengland,conservative,59.16,20.12,6.34,11.58,2.57,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,no,conservative,39.04
-531,Southampton Test,southeastengland,labour,24.99,46.05,6.87,14.47,7.59,0.0,0.0,0.04,0.0,0.0,0.0,0.0,0.0,no,labour,21.07
-645,Worthing West,southeastengland,conservative,43.65,18.15,11.59,17.16,9.35,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,25.51
+124,Ceredigion,wales,libdems,10.27,7.57,32.06,12.01,9.18,0.0,28.91,0.0,0.0,0.0,0.0,0.0,0.0,no,libdems,3.15
+10,Amber Valley,eastmidlands,conservative,35.72,41.33,2.18,12.19,4.49,0.0,0.0,4.1,0.0,0.0,0.0,0.0,0.0,yes,labour,5.61
+134,Chingford and Woodford Green,london,conservative,50.24,26.32,3.89,9.44,8.48,0.0,0.0,1.64,0.0,0.0,0.0,0.0,0.0,no,conservative,23.92
+85,Bridgwater and West Somerset,southwestengland,conservative,42.64,29.37,13.61,9.47,3.54,0.0,0.0,1.36,0.0,0.0,0.0,0.0,0.0,no,conservative,13.27
+263,Hampstead and Kilburn,london,labour,31.46,39.35,16.06,6.86,6.1,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,labour,7.89
+447,Plymouth Moor View,southwestengland,labour,23.81,43.56,4.32,20.59,5.95,0.0,0.0,1.78,0.0,0.0,0.0,0.0,0.0,no,labour,19.75
+310,Kingston and Surbiton,london,libdems,30.95,10.19,31.8,16.68,10.25,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,libdems,0.86
+110,Cannock Chase,westmidlands,conservative,36.69,36.27,2.87,18.17,2.85,0.0,0.0,3.14,0.0,0.0,0.0,0.0,0.0,no,conservative,0.43
+39,Bermondsey and Old Southwark,london,libdems,14.94,33.69,33.43,6.61,9.66,0.0,0.0,1.67,0.0,0.0,0.0,0.0,0.0,yes,labour,0.27
+281,Hertsmere,eastofengland,conservative,48.02,27.43,2.63,15.96,4.93,0.0,0.0,1.03,0.0,0.0,0.0,0.0,0.0,no,conservative,20.59
+169,Derby South,eastmidlands,labour,24.8,45.33,5.15,17.6,6.39,0.0,0.0,0.73,0.0,0.0,0.0,0.0,0.0,no,labour,20.53
+349,Maidenhead,southeastengland,conservative,58.84,13.51,13.67,9.28,4.08,0.0,0.0,0.62,0.0,0.0,0.0,0.0,0.0,no,conservative,45.17
+316,Knowsley,northwestengland,labour,7.96,77.78,2.05,8.89,3.21,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,labour,68.89
+428,Nottingham North,eastmidlands,labour,22.26,52.28,3.1,11.82,8.0,0.0,0.0,2.53,0.0,0.0,0.0,0.0,0.0,no,labour,30.02
+100,Burton,westmidlands,conservative,39.44,33.74,2.27,18.19,4.55,0.0,0.0,1.82,0.0,0.0,0.0,0.0,0.0,no,conservative,5.7
+276,Hemsworth,yorkshireandthehumber,labour,21.28,49.98,1.88,13.41,3.19,0.0,0.0,10.27,0.0,0.0,0.0,0.0,0.0,no,labour,28.7
+161,Cynon Valley,wales,labour,7.88,54.32,1.92,13.16,4.44,0.0,18.28,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,36.04
+409,North Herefordshire,westmidlands,conservative,50.77,8.72,14.76,17.15,8.4,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,33.62
+619,West Suffolk,eastofengland,conservative,46.58,24.35,4.61,17.8,3.79,0.0,0.0,2.86,0.0,0.0,0.0,0.0,0.0,no,conservative,22.23
+517,South Northamptonshire,eastmidlands,conservative,52.46,20.11,6.11,14.75,6.4,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,conservative,32.35
+479,Runnymede and Weybridge,southeastengland,conservative,51.97,21.9,7.75,13.23,4.96,0.0,0.0,0.18,0.0,0.0,0.0,0.0,0.0,no,conservative,30.07
+218,Erewash,eastmidlands,conservative,34.84,36.23,3.13,17.43,5.8,0.0,0.0,2.57,0.0,0.0,0.0,0.0,0.0,yes,labour,1.39
+18,Aylesbury,southeastengland,conservative,50.95,22.28,13.86,9.15,3.76,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.67
+59,Blackpool North and Cleveleys,northwestengland,conservative,39.41,41.16,2.02,14.28,2.95,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,labour,1.75
+457,Putney,london,conservative,46.93,29.96,3.65,12.13,7.16,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,conservative,16.97
+70,Boston and Skegness,eastmidlands,conservative,37.37,19.12,1.8,34.88,4.84,0.0,0.0,1.98,0.0,0.0,0.0,0.0,0.0,no,conservative,2.5
+32,Beaconsfield,southeastengland,conservative,59.0,20.2,6.42,11.59,2.59,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,conservative,38.8
+531,Southampton Test,southeastengland,labour,25.14,45.82,6.92,14.46,7.61,0.0,0.0,0.04,0.0,0.0,0.0,0.0,0.0,no,labour,20.67
+645,Worthing West,southeastengland,conservative,43.62,18.21,11.58,17.13,9.36,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,25.41
 587,Upper Bann,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,25.06,13.14,25.37,33.7,2.73,no,dup,8.33
-404,North East Derbyshire,eastmidlands,labour,28.63,40.0,7.27,20.56,3.54,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,11.36
-357,Meon Valley,southeastengland,conservative,54.75,12.11,17.52,8.17,6.94,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,no,conservative,37.23
-557,Stroud,southwestengland,conservative,28.86,43.95,3.46,13.42,10.28,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,yes,labour,15.09
-94,Bromley and Chislehurst,london,conservative,48.83,16.22,6.72,19.79,7.25,0.0,0.0,1.19,0.0,0.0,0.0,0.0,0.0,no,conservative,29.03
-550,Stoke-on-Trent South,westmidlands,labour,26.27,43.58,2.49,14.77,3.03,0.0,0.0,9.86,0.0,0.0,0.0,0.0,0.0,no,labour,17.31
-378,Morley and Outwood,yorkshireandthehumber,labour,33.94,43.63,2.72,13.26,3.11,0.0,0.0,3.34,0.0,0.0,0.0,0.0,0.0,no,labour,9.68
-319,Lancaster and Fleetwood,northwestengland,conservative,31.14,36.68,3.5,15.28,13.02,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,yes,labour,5.54
-255,Guildford,southeastengland,conservative,45.42,8.71,20.76,16.32,8.71,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,24.66
-477,Rugby,westmidlands,conservative,38.62,32.98,4.36,16.96,6.49,0.0,0.0,0.59,0.0,0.0,0.0,0.0,0.0,no,conservative,5.65
-387,Newcastle upon Tyne East,northeastengland,labour,13.52,48.84,14.82,13.56,8.5,0.0,0.0,0.76,0.0,0.0,0.0,0.0,0.0,no,labour,34.02
-232,Fylde,northwestengland,conservative,49.25,22.41,5.97,16.19,6.18,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,26.83
-482,Rutland and Melton,eastmidlands,conservative,49.93,17.11,10.12,13.79,7.55,0.0,0.0,1.5,0.0,0.0,0.0,0.0,0.0,no,conservative,32.82
-345,Ludlow,westmidlands,conservative,50.42,7.97,15.54,18.17,7.46,0.0,0.0,0.44,0.0,0.0,0.0,0.0,0.0,no,conservative,32.26
-405,North East Fife,scotland,libdems,21.2,7.32,30.81,4.21,2.58,33.88,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,3.07
-413,North Swindon,southwestengland,conservative,35.21,39.78,4.67,14.73,4.37,0.0,0.0,1.23,0.0,0.0,0.0,0.0,0.0,yes,labour,4.56
-390,Newport East,wales,labour,20.7,43.53,12.66,15.15,4.97,0.0,1.98,1.01,0.0,0.0,0.0,0.0,0.0,no,labour,22.83
-523,South Thanet,southeastengland,conservative,30.65,32.15,1.95,31.29,3.97,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,0.86
-502,Sleaford and North Hykeham,eastmidlands,conservative,48.68,19.42,3.79,16.75,5.27,0.0,0.0,6.09,0.0,0.0,0.0,0.0,0.0,no,conservative,29.26
-464,Rhondda,wales,labour,4.72,56.27,1.48,12.79,4.27,0.0,16.09,4.38,0.0,0.0,0.0,0.0,0.0,no,labour,40.18
-629,Wirral South,northwestengland,labour,34.87,42.89,2.41,13.42,6.41,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,8.03
-22,Barking,london,labour,11.82,53.0,1.31,19.48,1.35,0.0,0.0,13.05,0.0,0.0,0.0,0.0,0.0,no,labour,33.52
-569,Tewkesbury,southwestengland,conservative,42.39,20.72,18.77,13.55,4.48,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,conservative,21.67
-458,Rayleigh and Wickford,eastofengland,conservative,48.17,21.35,2.26,16.96,5.71,0.0,0.0,5.55,0.0,0.0,0.0,0.0,0.0,no,conservative,26.82
-293,Huntingdon,eastofengland,conservative,49.13,20.55,10.36,15.47,2.2,0.0,0.0,2.29,0.0,0.0,0.0,0.0,0.0,no,conservative,28.58
-223,Fareham,southeastengland,conservative,46.14,20.87,8.1,18.15,6.57,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,conservative,25.27
+404,North East Derbyshire,eastmidlands,labour,28.74,39.93,7.25,20.54,3.55,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,11.19
+357,Meon Valley,southeastengland,conservative,54.69,12.2,17.46,8.18,6.97,0.0,0.0,0.51,0.0,0.0,0.0,0.0,0.0,no,conservative,37.23
+557,Stroud,southwestengland,conservative,28.97,43.73,3.56,13.42,10.29,0.0,0.0,0.03,0.0,0.0,0.0,0.0,0.0,yes,labour,14.76
+94,Bromley and Chislehurst,london,conservative,46.97,17.91,6.87,19.63,7.38,0.0,0.0,1.23,0.0,0.0,0.0,0.0,0.0,no,conservative,27.34
+550,Stoke-on-Trent South,westmidlands,labour,26.44,43.55,2.45,14.8,3.04,0.0,0.0,9.73,0.0,0.0,0.0,0.0,0.0,no,labour,17.11
+378,Morley and Outwood,yorkshireandthehumber,labour,33.9,43.62,2.78,13.27,3.11,0.0,0.0,3.32,0.0,0.0,0.0,0.0,0.0,no,labour,9.71
+319,Lancaster and Fleetwood,northwestengland,conservative,31.1,36.75,3.52,15.28,12.97,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,yes,labour,5.65
+255,Guildford,southeastengland,conservative,45.44,8.79,20.63,16.32,8.74,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,24.81
+477,Rugby,westmidlands,conservative,38.6,32.98,4.38,16.95,6.49,0.0,0.0,0.6,0.0,0.0,0.0,0.0,0.0,no,conservative,5.62
+387,Newcastle upon Tyne East,northeastengland,labour,13.64,48.84,14.69,13.57,8.49,0.0,0.0,0.78,0.0,0.0,0.0,0.0,0.0,no,labour,34.15
+232,Fylde,northwestengland,conservative,49.03,22.6,5.96,16.22,6.19,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,26.44
+482,Rutland and Melton,eastmidlands,conservative,49.84,17.23,10.06,13.81,7.56,0.0,0.0,1.49,0.0,0.0,0.0,0.0,0.0,no,conservative,32.6
+345,Ludlow,westmidlands,conservative,50.39,8.07,15.42,18.19,7.47,0.0,0.0,0.46,0.0,0.0,0.0,0.0,0.0,no,conservative,32.19
+405,North East Fife,scotland,libdems,21.19,7.85,29.7,4.24,2.61,34.41,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,4.71
+413,North Swindon,southwestengland,conservative,35.27,39.62,4.78,14.71,4.4,0.0,0.0,1.21,0.0,0.0,0.0,0.0,0.0,yes,labour,4.36
+390,Newport East,wales,labour,20.84,43.52,12.51,15.16,4.97,0.0,2.0,1.01,0.0,0.0,0.0,0.0,0.0,no,labour,22.68
+523,South Thanet,southeastengland,conservative,30.76,32.08,2.04,31.13,3.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,0.95
+502,Sleaford and North Hykeham,eastmidlands,conservative,48.58,19.54,3.83,16.76,5.27,0.0,0.0,6.02,0.0,0.0,0.0,0.0,0.0,no,conservative,29.05
+464,Rhondda,wales,labour,4.85,56.22,1.46,12.85,4.29,0.0,16.02,4.32,0.0,0.0,0.0,0.0,0.0,no,labour,40.2
+629,Wirral South,northwestengland,labour,34.83,42.95,2.37,13.44,6.42,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,8.12
+22,Barking,london,labour,13.52,52.7,1.12,19.66,1.43,0.0,0.0,11.57,0.0,0.0,0.0,0.0,0.0,no,labour,33.05
+569,Tewkesbury,southwestengland,conservative,42.37,20.79,18.7,13.54,4.5,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,21.58
+458,Rayleigh and Wickford,eastofengland,conservative,48.11,21.48,2.22,16.99,5.72,0.0,0.0,5.48,0.0,0.0,0.0,0.0,0.0,no,conservative,26.63
+293,Huntingdon,eastofengland,conservative,49.08,20.68,10.28,15.48,2.2,0.0,0.0,2.27,0.0,0.0,0.0,0.0,0.0,no,conservative,28.4
+223,Fareham,southeastengland,conservative,46.07,20.92,8.14,18.11,6.59,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,conservative,25.15
 620,West Tyrone,northernireland,sinnfein,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.35,48.72,14.36,13.87,19.62,2.09,no,sinnfein,29.1
-65,Bolsover,eastmidlands,labour,22.99,56.63,2.48,12.17,2.74,0.0,0.0,3.0,0.0,0.0,0.0,0.0,0.0,no,labour,33.64
-155,Crawley,southeastengland,conservative,35.79,40.41,2.52,15.21,3.72,0.0,0.0,2.35,0.0,0.0,0.0,0.0,0.0,yes,labour,4.63
-650,York Outer,yorkshireandthehumber,conservative,42.66,21.07,18.36,10.94,6.68,0.0,0.0,0.29,0.0,0.0,0.0,0.0,0.0,no,conservative,21.59
-571,The Wrekin,westmidlands,conservative,43.02,29.29,3.08,16.46,7.33,0.0,0.0,0.82,0.0,0.0,0.0,0.0,0.0,no,conservative,13.73
-638,Wolverhampton North East,westmidlands,labour,30.34,43.93,2.0,15.79,3.85,0.0,0.0,4.08,0.0,0.0,0.0,0.0,0.0,no,labour,13.59
-227,Filton and Bradley Stoke,southwestengland,conservative,32.5,36.25,9.3,15.16,5.19,0.0,0.0,1.61,0.0,0.0,0.0,0.0,0.0,yes,labour,3.75
-448,"Plymouth, Sutton and Devonport",southwestengland,conservative,25.24,39.57,8.51,20.65,5.91,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,yes,labour,14.32
-61,Blaenau Gwent,wales,labour,5.38,55.66,1.47,12.52,2.37,0.0,3.63,18.98,0.0,0.0,0.0,0.0,0.0,no,labour,36.68
-493,Sheffield Central,yorkshireandthehumber,labour,8.49,44.45,20.82,15.77,10.14,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,labour,23.63
-257,Hackney South and Shoreditch,london,labour,9.91,62.96,7.73,3.3,14.77,0.0,0.0,1.33,0.0,0.0,0.0,0.0,0.0,no,labour,48.19
-427,Nottingham East,eastmidlands,labour,21.32,49.67,8.71,12.14,8.11,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,28.35
-465,Ribble Valley,northwestengland,conservative,51.51,27.09,5.5,11.76,4.06,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,24.42
-353,Manchester Central,northwestengland,labour,9.65,54.63,8.68,14.15,12.3,0.0,0.0,0.59,0.0,0.0,0.0,0.0,0.0,no,labour,40.48
-386,Newcastle upon Tyne Central,northeastengland,labour,16.65,49.87,7.71,14.3,8.8,0.0,0.0,2.68,0.0,0.0,0.0,0.0,0.0,no,labour,33.22
-122,Central Devon,southwestengland,conservative,45.19,12.89,17.16,17.34,7.41,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,27.85
-545,Stockport,northwestengland,labour,22.79,47.01,8.01,17.05,4.67,0.0,0.0,0.47,0.0,0.0,0.0,0.0,0.0,no,labour,24.22
-648,York Central,yorkshireandthehumber,labour,23.06,43.41,8.37,11.07,13.67,0.0,0.0,0.43,0.0,0.0,0.0,0.0,0.0,no,labour,20.36
-14,Arundel and South Downs,southeastengland,conservative,54.15,15.16,12.87,12.25,5.58,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,38.98
-403,North East Cambridgeshire,eastofengland,conservative,44.38,26.53,3.13,20.82,2.54,0.0,0.0,2.61,0.0,0.0,0.0,0.0,0.0,no,conservative,17.85
-454,Preseli Pembrokeshire,wales,conservative,37.78,34.47,2.12,11.86,5.39,0.0,8.38,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,3.3
-131,Chesham and Amersham,southeastengland,conservative,54.16,9.85,12.54,16.18,7.26,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,37.98
-373,Mole Valley,southeastengland,conservative,52.93,12.35,13.34,14.3,7.08,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,38.62
-350,Maidstone and The Weald,southeastengland,conservative,43.55,16.77,19.79,15.35,4.25,0.0,0.0,0.29,0.0,0.0,0.0,0.0,0.0,no,conservative,23.76
-34,Bedford,eastofengland,conservative,29.85,44.43,2.89,16.33,6.18,0.0,0.0,0.32,0.0,0.0,0.0,0.0,0.0,yes,labour,14.58
-572,Thirsk and Malton,yorkshireandthehumber,conservative,50.75,16.07,7.27,16.75,8.36,0.0,0.0,0.8,0.0,0.0,0.0,0.0,0.0,no,conservative,34.0
-478,"Ruislip, Northwood and Pinner",london,conservative,57.7,20.91,3.13,14.43,3.37,0.0,0.0,0.46,0.0,0.0,0.0,0.0,0.0,no,conservative,36.79
-408,North East Somerset,southwestengland,conservative,33.11,42.01,7.6,14.18,3.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,8.9
-534,Spelthorne,southeastengland,conservative,40.81,24.69,10.53,18.83,4.5,0.0,0.0,0.64,0.0,0.0,0.0,0.0,0.0,no,conservative,16.11
-592,Wakefield,yorkshireandthehumber,labour,33.3,44.28,2.53,13.76,3.28,0.0,0.0,2.85,0.0,0.0,0.0,0.0,0.0,no,labour,10.97
-546,Stockton North,northeastengland,labour,23.07,46.87,2.46,16.31,4.8,0.0,0.0,6.48,0.0,0.0,0.0,0.0,0.0,no,labour,23.79
-272,Havant,southeastengland,conservative,40.95,24.27,7.49,20.0,6.91,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,conservative,16.68
-416,North Warwickshire,westmidlands,conservative,35.98,42.59,1.72,14.25,3.19,0.0,0.0,2.27,0.0,0.0,0.0,0.0,0.0,yes,labour,6.61
-331,Lewisham West and Penge,london,labour,21.93,47.19,13.79,7.05,9.92,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,labour,25.26
-354,"Manchester, Gorton",northwestengland,labour,8.83,51.09,12.91,14.27,12.4,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,no,labour,36.82
-246,Gloucester,southwestengland,conservative,30.1,43.48,5.47,16.39,4.41,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,yes,labour,13.38
-6,Aldershot,southeastengland,conservative,41.24,19.72,17.88,15.22,5.19,0.0,0.0,0.74,0.0,0.0,0.0,0.0,0.0,no,conservative,21.51
-579,Torfaen,wales,labour,16.81,48.93,2.46,16.02,5.07,0.0,4.82,5.9,0.0,0.0,0.0,0.0,0.0,no,labour,32.12
-67,Bolton South East,northwestengland,labour,22.74,51.17,2.39,17.89,4.77,0.0,0.0,1.05,0.0,0.0,0.0,0.0,0.0,no,labour,28.43
-434,Oldham East and Saddleworth,northwestengland,labour,24.62,36.76,13.75,18.5,4.83,0.0,0.0,1.54,0.0,0.0,0.0,0.0,0.0,no,labour,12.14
-568,Telford,westmidlands,labour,31.73,40.43,2.26,17.01,7.53,0.0,0.0,1.04,0.0,0.0,0.0,0.0,0.0,no,labour,8.7
-362,Mid Dorset and North Poole,southwestengland,libdems,37.05,10.91,28.43,19.39,4.22,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,8.62
-488,Sedgefield,northeastengland,labour,20.32,48.41,4.64,16.94,6.22,0.0,0.0,3.47,0.0,0.0,0.0,0.0,0.0,no,labour,28.08
-163,Darlington,northeastengland,labour,28.03,42.63,7.04,15.86,5.99,0.0,0.0,0.44,0.0,0.0,0.0,0.0,0.0,no,labour,14.6
-215,"Enfield, Southgate",london,conservative,46.05,34.01,2.47,11.98,5.15,0.0,0.0,0.35,0.0,0.0,0.0,0.0,0.0,no,conservative,12.04
-258,Halesowen and Rowley Regis,westmidlands,conservative,37.02,39.03,2.2,17.15,4.46,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,yes,labour,2.01
-204,Eddisbury,northwestengland,conservative,49.31,24.74,6.28,14.08,5.59,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,24.57
-54,Birmingham Selly Oak,westmidlands,labour,29.2,43.76,7.05,12.27,6.16,0.0,0.0,1.56,0.0,0.0,0.0,0.0,0.0,no,labour,14.56
-119,Carshalton and Wallington,london,libdems,34.43,9.19,38.83,13.44,3.51,0.0,0.0,0.6,0.0,0.0,0.0,0.0,0.0,no,libdems,4.4
-536,St. Austell and Newquay,southwestengland,libdems,32.83,13.05,26.4,16.94,6.61,0.0,0.0,4.17,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.42
-503,Slough,southeastengland,labour,26.96,55.48,2.68,11.5,3.23,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,labour,28.51
-414,North Thanet,southeastengland,conservative,39.6,26.92,4.38,22.31,6.79,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,12.69
-194,East Hampshire,southeastengland,conservative,48.82,13.0,13.44,16.54,7.72,0.0,0.0,0.48,0.0,0.0,0.0,0.0,0.0,no,conservative,32.28
-189,Easington,northeastengland,labour,10.95,60.4,2.32,17.52,6.33,0.0,0.0,2.48,0.0,0.0,0.0,0.0,0.0,no,labour,42.88
-320,Leeds Central,yorkshireandthehumber,labour,16.21,49.24,4.19,16.9,8.83,0.0,0.0,4.63,0.0,0.0,0.0,0.0,0.0,no,labour,32.34
-251,Gravesham,southeastengland,conservative,39.12,36.52,2.08,17.79,3.16,0.0,0.0,1.32,0.0,0.0,0.0,0.0,0.0,no,conservative,2.6
-584,Tunbridge Wells,southeastengland,conservative,48.91,17.24,9.63,16.55,7.32,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,no,conservative,31.66
-359,Merthyr Tydfil and Rhymney,wales,labour,6.6,53.23,12.47,13.34,2.48,0.0,5.08,6.8,0.0,0.0,0.0,0.0,0.0,no,labour,39.89
-147,Colchester,eastofengland,libdems,26.07,19.15,27.3,16.99,9.9,0.0,0.0,0.59,0.0,0.0,0.0,0.0,0.0,no,libdems,1.23
-12,Arfon,wales,plaidcymru,13.94,33.94,2.07,10.36,5.39,0.0,34.31,0.0,0.0,0.0,0.0,0.0,0.0,no,plaidcymru,0.37
-265,Harlow,eastofengland,conservative,28.79,34.96,1.64,16.9,16.19,0.0,0.0,1.51,0.0,0.0,0.0,0.0,0.0,yes,labour,6.17
-175,Doncaster North,yorkshireandthehumber,labour,18.63,51.75,2.26,16.57,3.18,0.0,0.0,7.6,0.0,0.0,0.0,0.0,0.0,no,labour,33.11
-149,Congleton,northwestengland,conservative,43.97,20.18,14.01,15.45,6.25,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,23.79
-27,Basingstoke,southeastengland,conservative,42.28,28.35,8.72,13.83,6.75,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,13.93
-57,Blackburn,northwestengland,labour,22.61,50.35,2.23,17.03,4.45,0.0,0.0,3.33,0.0,0.0,0.0,0.0,0.0,no,labour,27.74
-346,Luton North,eastofengland,labour,24.15,58.96,1.64,11.37,2.8,0.0,0.0,1.08,0.0,0.0,0.0,0.0,0.0,no,labour,34.81
-641,Yeovil,southwestengland,libdems,26.61,9.95,38.43,18.08,6.46,0.0,0.0,0.48,0.0,0.0,0.0,0.0,0.0,no,libdems,11.83
-25,Barrow and Furness,northwestengland,labour,33.5,52.61,1.53,9.82,2.16,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,labour,19.11
-60,Blackpool South,northwestengland,labour,33.16,45.51,2.22,15.3,3.29,0.0,0.0,0.53,0.0,0.0,0.0,0.0,0.0,no,labour,12.35
-289,Horsham,southeastengland,conservative,47.14,12.95,16.0,15.3,8.38,0.0,0.0,0.23,0.0,0.0,0.0,0.0,0.0,no,conservative,31.14
-391,Newport West,wales,labour,29.4,46.95,2.54,13.65,4.37,0.0,2.61,0.47,0.0,0.0,0.0,0.0,0.0,no,labour,17.55
-555,Streatham,london,labour,13.68,46.11,19.79,6.17,14.03,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,no,labour,26.32
-329,Lewes,southeastengland,libdems,29.36,8.45,34.58,16.87,10.54,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,libdems,5.22
-598,Wantage,southeastengland,conservative,47.81,22.59,12.86,10.15,6.59,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,25.22
-486,Scarborough and Whitby,yorkshireandthehumber,conservative,39.35,29.48,6.28,17.15,6.92,0.0,0.0,0.81,0.0,0.0,0.0,0.0,0.0,no,conservative,9.87
-367,Middlesbrough,northeastengland,labour,15.38,47.64,4.35,20.25,5.85,0.0,0.0,6.53,0.0,0.0,0.0,0.0,0.0,no,labour,27.4
-604,Watford,eastofengland,conservative,30.49,39.64,11.87,11.78,5.68,0.0,0.0,0.55,0.0,0.0,0.0,0.0,0.0,yes,labour,9.15
-352,Maldon,eastofengland,conservative,54.96,20.8,3.16,15.43,4.46,0.0,0.0,1.19,0.0,0.0,0.0,0.0,0.0,no,conservative,34.16
-301,Islington North,london,labour,10.18,59.52,11.46,10.75,8.08,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,48.05
-112,Cardiff Central,wales,libdems,18.7,33.27,23.26,12.97,8.47,0.0,3.17,0.16,0.0,0.0,0.0,0.0,0.0,yes,labour,10.0
-95,Bromsgrove,westmidlands,conservative,40.68,24.62,4.8,18.31,5.87,0.0,0.0,5.71,0.0,0.0,0.0,0.0,0.0,no,conservative,16.06
-116,Carlisle,northwestengland,conservative,34.22,38.86,2.23,18.1,6.65,0.0,0.0,-0.05,0.0,0.0,0.0,0.0,0.0,yes,labour,4.64
-41,"Berwickshire, Roxburgh and Selkirk",scotland,libdems,32.82,3.56,30.93,5.49,3.53,23.62,0.0,0.04,0.0,0.0,0.0,0.0,0.0,yes,conservative,1.89
-305,Keighley,yorkshireandthehumber,conservative,38.6,39.48,2.23,12.6,5.97,0.0,0.0,1.12,0.0,0.0,0.0,0.0,0.0,yes,labour,0.88
-273,Hayes and Harlington,london,labour,22.33,55.13,1.44,14.0,3.42,0.0,0.0,3.68,0.0,0.0,0.0,0.0,0.0,no,labour,32.81
-578,Torbay,southwestengland,libdems,30.26,11.55,28.84,23.56,5.57,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,yes,conservative,1.42
-313,Kingston upon Hull West and Hessle,yorkshireandthehumber,labour,18.63,48.71,8.16,15.58,5.12,0.0,0.0,3.8,0.0,0.0,0.0,0.0,0.0,no,labour,30.07
-575,Tiverton and Honiton,southwestengland,conservative,43.62,15.97,16.16,16.99,7.26,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,26.64
-497,Sherwood,eastmidlands,conservative,38.15,44.94,2.4,9.92,3.25,0.0,0.0,1.34,0.0,0.0,0.0,0.0,0.0,yes,labour,6.79
-58,Blackley and Broughton,northwestengland,labour,14.28,52.46,1.92,14.42,12.57,0.0,0.0,4.35,0.0,0.0,0.0,0.0,0.0,no,labour,38.04
-298,"Inverness, Nairn, Badenoch and Strathspey",scotland,libdems,12.53,10.24,27.05,4.12,2.84,40.94,0.0,2.29,0.0,0.0,0.0,0.0,0.0,yes,snp,13.89
-201,East Yorkshire,yorkshireandthehumber,conservative,46.73,24.44,5.85,16.15,4.91,0.0,0.0,1.92,0.0,0.0,0.0,0.0,0.0,no,conservative,22.29
-426,Norwich South,eastofengland,libdems,19.1,41.2,13.91,7.99,17.5,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.0,yes,labour,22.1
-437,Orpington,london,conservative,55.74,8.64,8.99,18.83,6.89,0.0,0.0,0.91,0.0,0.0,0.0,0.0,0.0,no,conservative,36.9
-164,Dartford,southeastengland,conservative,38.94,35.0,2.58,17.23,3.19,0.0,0.0,3.06,0.0,0.0,0.0,0.0,0.0,no,conservative,3.94
-102,Bury South,northwestengland,labour,30.82,44.64,3.03,15.63,5.54,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,labour,13.82
-336,Linlithgow and East Falkirk,scotland,labour,11.28,32.95,2.0,2.12,0.82,50.83,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,17.88
-74,Bracknell,southeastengland,conservative,45.46,24.85,7.49,15.67,5.61,0.0,0.0,0.92,0.0,0.0,0.0,0.0,0.0,no,conservative,20.61
-374,Monmouth,wales,conservative,43.37,29.22,2.86,14.72,7.41,0.0,2.43,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,14.15
-30,Batley and Spen,yorkshireandthehumber,labour,29.18,44.35,2.29,13.86,7.38,0.0,0.0,2.94,0.0,0.0,0.0,0.0,0.0,no,labour,15.17
-535,St. Albans,eastofengland,conservative,32.4,25.24,13.5,18.1,10.75,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,7.16
+65,Bolsover,eastmidlands,labour,23.18,56.46,2.44,12.21,2.75,0.0,0.0,2.97,0.0,0.0,0.0,0.0,0.0,no,labour,33.28
+155,Crawley,southeastengland,conservative,35.87,40.26,2.62,15.2,3.74,0.0,0.0,2.32,0.0,0.0,0.0,0.0,0.0,yes,labour,4.39
+650,York Outer,yorkshireandthehumber,conservative,42.59,21.27,18.19,10.98,6.69,0.0,0.0,0.29,0.0,0.0,0.0,0.0,0.0,no,conservative,21.32
+571,The Wrekin,westmidlands,conservative,42.94,29.33,3.12,16.45,7.33,0.0,0.0,0.83,0.0,0.0,0.0,0.0,0.0,no,conservative,13.61
+638,Wolverhampton North East,westmidlands,labour,30.46,43.86,1.97,15.81,3.86,0.0,0.0,4.04,0.0,0.0,0.0,0.0,0.0,no,labour,13.4
+227,Filton and Bradley Stoke,southwestengland,conservative,32.58,36.12,9.36,15.14,5.22,0.0,0.0,1.58,0.0,0.0,0.0,0.0,0.0,yes,labour,3.55
+448,"Plymouth, Sutton and Devonport",southwestengland,conservative,25.39,39.4,8.58,20.58,5.94,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,yes,labour,14.01
+61,Blaenau Gwent,wales,labour,5.52,55.68,1.45,12.59,2.38,0.0,3.66,18.72,0.0,0.0,0.0,0.0,0.0,no,labour,36.96
+493,Sheffield Central,yorkshireandthehumber,labour,8.61,44.5,20.61,15.81,10.14,0.0,0.0,0.33,0.0,0.0,0.0,0.0,0.0,no,labour,23.89
+257,Hackney South and Shoreditch,london,labour,11.5,61.34,7.84,3.42,14.52,0.0,0.0,1.37,0.0,0.0,0.0,0.0,0.0,no,labour,46.82
+427,Nottingham East,eastmidlands,labour,21.48,49.51,8.67,12.17,8.11,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,28.04
+465,Ribble Valley,northwestengland,conservative,51.28,27.28,5.51,11.78,4.07,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,24.0
+353,Manchester Central,northwestengland,labour,9.78,54.56,8.63,14.18,12.27,0.0,0.0,0.58,0.0,0.0,0.0,0.0,0.0,no,labour,40.39
+386,Newcastle upon Tyne Central,northeastengland,labour,16.74,49.82,7.69,14.3,8.78,0.0,0.0,2.67,0.0,0.0,0.0,0.0,0.0,no,labour,33.08
+122,Central Devon,southwestengland,conservative,45.14,12.98,17.12,17.31,7.44,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,27.82
+545,Stockport,northwestengland,labour,22.87,46.99,7.96,17.05,4.67,0.0,0.0,0.46,0.0,0.0,0.0,0.0,0.0,no,labour,24.12
+648,York Central,yorkshireandthehumber,labour,23.14,43.4,8.33,11.09,13.62,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,no,labour,20.26
+14,Arundel and South Downs,southeastengland,conservative,54.04,15.25,12.86,12.25,5.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,38.79
+403,North East Cambridgeshire,eastofengland,conservative,44.36,26.63,3.07,20.82,2.54,0.0,0.0,2.59,0.0,0.0,0.0,0.0,0.0,no,conservative,17.73
+454,Preseli Pembrokeshire,wales,conservative,37.7,34.55,2.08,11.89,5.4,0.0,8.37,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,3.15
+131,Chesham and Amersham,southeastengland,conservative,54.06,9.93,12.54,16.18,7.3,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,37.89
+373,Mole Valley,southeastengland,conservative,52.84,12.44,13.32,14.3,7.11,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,38.53
+350,Maidstone and The Weald,southeastengland,conservative,43.58,16.85,19.67,15.34,4.27,0.0,0.0,0.29,0.0,0.0,0.0,0.0,0.0,no,conservative,23.91
+34,Bedford,eastofengland,conservative,29.98,44.32,2.84,16.34,6.18,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,yes,labour,14.34
+572,Thirsk and Malton,yorkshireandthehumber,conservative,50.54,16.24,7.27,16.77,8.36,0.0,0.0,0.82,0.0,0.0,0.0,0.0,0.0,no,conservative,33.77
+478,"Ruislip, Northwood and Pinner",london,conservative,54.87,22.69,3.79,14.59,3.48,0.0,0.0,0.59,0.0,0.0,0.0,0.0,0.0,no,conservative,32.18
+408,North East Somerset,southwestengland,conservative,33.19,41.83,7.68,14.17,3.12,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,8.63
+534,Spelthorne,southeastengland,conservative,40.82,24.71,10.54,18.78,4.52,0.0,0.0,0.63,0.0,0.0,0.0,0.0,0.0,no,conservative,16.11
+592,Wakefield,yorkshireandthehumber,labour,33.31,44.3,2.48,13.79,3.29,0.0,0.0,2.84,0.0,0.0,0.0,0.0,0.0,no,labour,11.0
+546,Stockton North,northeastengland,labour,23.09,46.87,2.52,16.31,4.8,0.0,0.0,6.4,0.0,0.0,0.0,0.0,0.0,no,labour,23.77
+272,Havant,southeastengland,conservative,40.94,24.28,7.53,19.93,6.94,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,conservative,16.66
+416,North Warwickshire,westmidlands,conservative,36.04,42.54,1.69,14.27,3.19,0.0,0.0,2.26,0.0,0.0,0.0,0.0,0.0,yes,labour,6.5
+331,Lewisham West and Penge,london,labour,23.11,46.81,12.92,7.18,9.87,0.0,0.0,0.11,0.0,0.0,0.0,0.0,0.0,no,labour,23.7
+354,"Manchester, Gorton",northwestengland,labour,8.96,51.08,12.8,14.31,12.38,0.0,0.0,0.49,0.0,0.0,0.0,0.0,0.0,no,labour,36.77
+246,Gloucester,southwestengland,conservative,30.21,43.27,5.57,16.36,4.44,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,yes,labour,13.06
+6,Aldershot,southeastengland,conservative,41.27,19.79,17.78,15.2,5.21,0.0,0.0,0.74,0.0,0.0,0.0,0.0,0.0,no,conservative,21.48
+579,Torfaen,wales,labour,16.97,48.85,2.42,16.04,5.08,0.0,4.84,5.81,0.0,0.0,0.0,0.0,0.0,no,labour,31.87
+67,Bolton South East,northwestengland,labour,22.83,51.13,2.35,17.89,4.77,0.0,0.0,1.03,0.0,0.0,0.0,0.0,0.0,no,labour,28.3
+434,Oldham East and Saddleworth,northwestengland,labour,24.69,36.87,13.61,18.49,4.84,0.0,0.0,1.51,0.0,0.0,0.0,0.0,0.0,no,labour,12.17
+568,Telford,westmidlands,labour,31.81,40.37,2.22,17.02,7.53,0.0,0.0,1.05,0.0,0.0,0.0,0.0,0.0,no,labour,8.56
+362,Mid Dorset and North Poole,southwestengland,libdems,37.17,11.0,28.19,19.38,4.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,8.98
+488,Sedgefield,northeastengland,labour,20.37,48.37,4.67,16.93,6.21,0.0,0.0,3.44,0.0,0.0,0.0,0.0,0.0,no,labour,28.0
+163,Darlington,northeastengland,labour,27.99,42.69,7.03,15.86,5.99,0.0,0.0,0.43,0.0,0.0,0.0,0.0,0.0,no,labour,14.7
+215,"Enfield, Southgate",london,conservative,44.73,35.24,2.07,12.23,5.3,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,no,conservative,9.5
+258,Halesowen and Rowley Regis,westmidlands,conservative,37.06,39.01,2.16,17.16,4.47,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,yes,labour,1.95
+204,Eddisbury,northwestengland,conservative,49.1,24.93,6.27,14.1,5.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,24.17
+54,Birmingham Selly Oak,westmidlands,labour,29.3,43.66,7.04,12.28,6.16,0.0,0.0,1.56,0.0,0.0,0.0,0.0,0.0,no,labour,14.35
+119,Carshalton and Wallington,london,libdems,35.59,10.85,35.03,14.05,3.73,0.0,0.0,0.74,0.0,0.0,0.0,0.0,0.0,yes,conservative,0.56
+536,St. Austell and Newquay,southwestengland,libdems,32.98,13.15,26.18,16.93,6.65,0.0,0.0,4.1,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.8
+503,Slough,southeastengland,labour,27.14,55.17,2.77,11.51,3.25,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,labour,28.03
+414,North Thanet,southeastengland,conservative,39.61,26.89,4.46,22.23,6.81,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,12.71
+194,East Hampshire,southeastengland,conservative,48.76,13.08,13.41,16.52,7.75,0.0,0.0,0.49,0.0,0.0,0.0,0.0,0.0,no,conservative,32.24
+189,Easington,northeastengland,labour,11.07,60.23,2.37,17.52,6.34,0.0,0.0,2.47,0.0,0.0,0.0,0.0,0.0,no,labour,42.72
+320,Leeds Central,yorkshireandthehumber,labour,16.33,49.15,4.22,16.89,8.81,0.0,0.0,4.59,0.0,0.0,0.0,0.0,0.0,no,labour,32.25
+251,Gravesham,southeastengland,conservative,39.16,36.41,2.18,17.76,3.18,0.0,0.0,1.31,0.0,0.0,0.0,0.0,0.0,no,conservative,2.75
+584,Tunbridge Wells,southeastengland,conservative,48.82,17.31,9.65,16.52,7.34,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,no,conservative,31.51
+359,Merthyr Tydfil and Rhymney,wales,labour,6.75,53.21,12.35,13.39,2.48,0.0,5.11,6.7,0.0,0.0,0.0,0.0,0.0,no,labour,39.83
+147,Colchester,eastofengland,libdems,26.27,19.3,26.93,17.01,9.9,0.0,0.0,0.6,0.0,0.0,0.0,0.0,0.0,no,libdems,0.66
+12,Arfon,wales,plaidcymru,14.13,34.08,2.03,10.4,5.4,0.0,33.96,0.0,0.0,0.0,0.0,0.0,0.0,yes,labour,0.11
+265,Harlow,eastofengland,conservative,28.9,34.94,1.61,16.92,16.12,0.0,0.0,1.51,0.0,0.0,0.0,0.0,0.0,yes,labour,6.04
+175,Doncaster North,yorkshireandthehumber,labour,18.77,51.7,2.22,16.59,3.19,0.0,0.0,7.52,0.0,0.0,0.0,0.0,0.0,no,labour,32.93
+149,Congleton,northwestengland,conservative,43.86,20.37,13.88,15.49,6.27,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,23.49
+27,Basingstoke,southeastengland,conservative,42.27,28.32,8.75,13.81,6.78,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,13.95
+57,Blackburn,northwestengland,labour,22.71,50.33,2.19,17.04,4.46,0.0,0.0,3.27,0.0,0.0,0.0,0.0,0.0,no,labour,27.62
+346,Luton North,eastofengland,labour,24.35,58.74,1.61,11.4,2.81,0.0,0.0,1.08,0.0,0.0,0.0,0.0,0.0,no,labour,34.39
+641,Yeovil,southwestengland,libdems,26.84,10.05,38.05,18.08,6.5,0.0,0.0,0.47,0.0,0.0,0.0,0.0,0.0,no,libdems,11.21
+25,Barrow and Furness,northwestengland,labour,33.51,52.6,1.5,9.85,2.17,0.0,0.0,0.37,0.0,0.0,0.0,0.0,0.0,no,labour,19.09
+60,Blackpool South,northwestengland,labour,33.15,45.55,2.18,15.32,3.29,0.0,0.0,0.52,0.0,0.0,0.0,0.0,0.0,no,labour,12.4
+289,Horsham,southeastengland,conservative,47.11,13.03,15.93,15.29,8.41,0.0,0.0,0.23,0.0,0.0,0.0,0.0,0.0,no,conservative,31.18
+391,Newport West,wales,labour,29.44,46.9,2.49,13.68,4.38,0.0,2.63,0.47,0.0,0.0,0.0,0.0,0.0,no,labour,17.46
+555,Streatham,london,labour,15.32,46.2,18.15,6.35,13.79,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,labour,28.05
+329,Lewes,southeastengland,libdems,29.56,8.54,34.24,16.89,10.57,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,libdems,4.68
+598,Wantage,southeastengland,conservative,47.76,22.64,12.84,10.15,6.61,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,25.12
+486,Scarborough and Whitby,yorkshireandthehumber,conservative,39.22,29.6,6.28,17.15,6.92,0.0,0.0,0.83,0.0,0.0,0.0,0.0,0.0,no,conservative,9.62
+367,Middlesbrough,northeastengland,labour,15.48,47.62,4.38,20.22,5.85,0.0,0.0,6.45,0.0,0.0,0.0,0.0,0.0,no,labour,27.41
+604,Watford,eastofengland,conservative,30.62,39.59,11.76,11.79,5.68,0.0,0.0,0.56,0.0,0.0,0.0,0.0,0.0,yes,labour,8.97
+352,Maldon,eastofengland,conservative,54.85,20.94,3.1,15.45,4.47,0.0,0.0,1.19,0.0,0.0,0.0,0.0,0.0,no,conservative,33.91
+301,Islington North,london,labour,11.73,58.02,11.0,11.03,8.22,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,46.29
+112,Cardiff Central,wales,libdems,18.86,33.38,22.93,13.0,8.48,0.0,3.19,0.16,0.0,0.0,0.0,0.0,0.0,yes,labour,10.45
+95,Bromsgrove,westmidlands,conservative,40.65,24.71,4.82,18.3,5.88,0.0,0.0,5.65,0.0,0.0,0.0,0.0,0.0,no,conservative,15.94
+116,Carlisle,northwestengland,conservative,34.17,38.94,2.19,18.1,6.65,0.0,0.0,-0.05,0.0,0.0,0.0,0.0,0.0,yes,labour,4.77
+41,"Berwickshire, Roxburgh and Selkirk",scotland,libdems,32.6,3.98,30.01,5.55,3.57,24.25,0.0,0.04,0.0,0.0,0.0,0.0,0.0,yes,conservative,2.59
+305,Keighley,yorkshireandthehumber,conservative,38.53,39.55,2.19,12.62,5.97,0.0,0.0,1.13,0.0,0.0,0.0,0.0,0.0,yes,labour,1.03
+273,Hayes and Harlington,london,labour,23.54,54.07,1.21,14.23,3.55,0.0,0.0,3.39,0.0,0.0,0.0,0.0,0.0,no,labour,30.54
+578,Torbay,southwestengland,libdems,30.43,11.65,28.59,23.51,5.61,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,yes,conservative,1.85
+313,Kingston upon Hull West and Hessle,yorkshireandthehumber,labour,18.75,48.64,8.13,15.59,5.12,0.0,0.0,3.77,0.0,0.0,0.0,0.0,0.0,no,labour,29.89
+575,Tiverton and Honiton,southwestengland,conservative,43.57,16.05,16.13,16.96,7.29,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,26.61
+497,Sherwood,eastmidlands,conservative,38.22,44.88,2.36,9.94,3.26,0.0,0.0,1.34,0.0,0.0,0.0,0.0,0.0,yes,labour,6.66
+58,Blackley and Broughton,northwestengland,labour,14.42,52.42,1.89,14.45,12.55,0.0,0.0,4.28,0.0,0.0,0.0,0.0,0.0,no,labour,37.97
+298,"Inverness, Nairn, Badenoch and Strathspey",scotland,libdems,12.72,10.76,26.03,4.14,2.86,41.29,0.0,2.2,0.0,0.0,0.0,0.0,0.0,yes,snp,15.26
+201,East Yorkshire,yorkshireandthehumber,conservative,46.54,24.61,5.87,16.16,4.91,0.0,0.0,1.92,0.0,0.0,0.0,0.0,0.0,no,conservative,21.93
+426,Norwich South,eastofengland,libdems,19.31,41.17,13.76,8.01,17.44,0.0,0.0,0.31,0.0,0.0,0.0,0.0,0.0,yes,labour,21.87
+437,Orpington,london,conservative,53.81,10.07,8.96,19.02,7.14,0.0,0.0,1.01,0.0,0.0,0.0,0.0,0.0,no,conservative,34.79
+164,Dartford,southeastengland,conservative,38.99,34.91,2.68,17.2,3.21,0.0,0.0,3.02,0.0,0.0,0.0,0.0,0.0,no,conservative,4.08
+102,Bury South,northwestengland,labour,30.8,44.63,3.07,15.63,5.53,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,labour,13.83
+336,Linlithgow and East Falkirk,scotland,labour,11.46,32.73,2.05,2.14,0.83,50.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,18.07
+74,Bracknell,southeastengland,conservative,45.41,24.86,7.54,15.65,5.63,0.0,0.0,0.91,0.0,0.0,0.0,0.0,0.0,no,conservative,20.55
+374,Monmouth,wales,conservative,43.24,29.34,2.81,14.74,7.42,0.0,2.45,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,13.9
+30,Batley and Spen,yorkshireandthehumber,labour,29.21,44.35,2.25,13.89,7.38,0.0,0.0,2.93,0.0,0.0,0.0,0.0,0.0,no,labour,15.13
+535,St. Albans,eastofengland,conservative,32.49,25.33,13.36,18.09,10.73,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,7.17
 231,Foyle,northernireland,sdlp,0.0,0.0,0.0,0.0,0.0,0.0,0.0,7.65,32.07,44.95,3.11,11.7,0.52,no,sdlp,12.88
-137,Chorley,northwestengland,labour,31.96,43.23,1.94,17.25,5.51,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,labour,11.27
-356,Mansfield,eastmidlands,labour,24.28,43.54,2.42,16.68,3.48,0.0,0.0,9.61,0.0,0.0,0.0,0.0,0.0,no,labour,19.27
-333,Leyton and Wanstead,london,labour,18.28,49.62,13.01,9.74,8.72,0.0,0.0,0.63,0.0,0.0,0.0,0.0,0.0,no,labour,31.34
-165,Daventry,eastmidlands,conservative,55.26,18.72,5.08,15.06,5.52,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,no,conservative,36.55
-287,Hornchurch and Upminster,london,conservative,43.25,19.09,2.22,26.45,4.13,0.0,0.0,4.86,0.0,0.0,0.0,0.0,0.0,no,conservative,16.81
+137,Chorley,northwestengland,labour,31.95,43.27,1.91,17.26,5.52,0.0,0.0,0.1,0.0,0.0,0.0,0.0,0.0,no,labour,11.32
+356,Mansfield,eastmidlands,labour,24.45,43.5,2.39,16.7,3.49,0.0,0.0,9.48,0.0,0.0,0.0,0.0,0.0,no,labour,19.05
+333,Leyton and Wanstead,london,labour,19.62,48.82,12.22,9.87,8.73,0.0,0.0,0.74,0.0,0.0,0.0,0.0,0.0,no,labour,29.2
+165,Daventry,eastmidlands,conservative,55.1,18.84,5.1,15.07,5.53,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,no,conservative,36.26
+287,Hornchurch and Upminster,london,conservative,42.35,20.96,1.92,26.02,4.32,0.0,0.0,4.43,0.0,0.0,0.0,0.0,0.0,no,conservative,16.33
 553,Strangford,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.67,3.74,7.08,28.16,46.87,8.48,no,dup,18.72
-238,Glasgow Central,scotland,labour,6.61,35.29,4.04,4.45,5.01,40.16,0.0,4.43,0.0,0.0,0.0,0.0,0.0,yes,snp,4.87
-69,Bootle,northwestengland,labour,7.31,68.82,2.22,15.2,5.94,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,no,labour,53.62
-143,Cleethorpes,yorkshireandthehumber,conservative,41.07,38.08,3.92,14.68,2.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,2.99
+238,Glasgow Central,scotland,labour,6.81,34.98,4.14,4.46,4.97,40.41,0.0,4.23,0.0,0.0,0.0,0.0,0.0,yes,snp,5.42
+69,Bootle,northwestengland,labour,7.43,68.68,2.18,15.25,5.96,0.0,0.0,0.49,0.0,0.0,0.0,0.0,0.0,no,labour,53.43
+143,Cleethorpes,yorkshireandthehumber,conservative,40.94,38.15,3.96,14.7,2.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,2.79
 395,North Antrim,northernireland,dup,0.0,0.0,0.0,0.0,0.0,0.0,0.0,18.17,12.67,9.15,10.71,46.34,2.97,no,dup,28.17
-171,Devizes,southwestengland,conservative,48.41,17.88,11.19,16.05,6.33,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,30.53
-430,Nuneaton,westmidlands,conservative,33.78,35.92,2.07,19.43,6.15,0.0,0.0,2.65,0.0,0.0,0.0,0.0,0.0,yes,labour,2.14
-214,Enfield North,london,conservative,38.1,41.0,2.16,11.88,5.11,0.0,0.0,1.76,0.0,0.0,0.0,0.0,0.0,yes,labour,2.9
-271,Hastings and Rye,southeastengland,conservative,32.41,45.48,3.09,11.82,5.74,0.0,0.0,1.46,0.0,0.0,0.0,0.0,0.0,yes,labour,13.07
-341,Livingston,scotland,labour,9.8,30.72,1.68,4.42,2.21,49.88,0.0,1.29,0.0,0.0,0.0,0.0,0.0,yes,snp,19.16
-595,Walsall South,westmidlands,labour,32.95,44.04,2.24,17.19,3.25,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,labour,11.09
-205,Edinburgh East,scotland,labour,9.97,26.15,6.02,3.92,7.27,42.81,0.0,3.85,0.0,0.0,0.0,0.0,0.0,yes,snp,16.65
-78,Braintree,eastofengland,conservative,39.61,25.53,2.57,24.0,7.86,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,no,conservative,14.08
-266,Harrogate and Knaresborough,yorkshireandthehumber,conservative,45.21,8.07,25.05,14.67,6.66,0.0,0.0,0.33,0.0,0.0,0.0,0.0,0.0,no,conservative,20.16
-167,Denton and Reddish,northwestengland,labour,22.19,55.18,2.97,14.81,4.73,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,labour,33.0
-599,Warley,westmidlands,labour,21.6,55.59,2.3,16.46,4.03,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,33.99
-115,Cardiff West,wales,labour,25.93,45.48,2.61,11.75,7.83,0.0,6.41,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,19.55
-220,Esher and Walton,southeastengland,conservative,50.93,16.94,8.98,14.96,7.48,0.0,0.0,0.71,0.0,0.0,0.0,0.0,0.0,no,conservative,33.98
-311,Kingston upon Hull East,yorkshireandthehumber,labour,15.48,55.68,7.48,15.02,4.89,0.0,0.0,1.44,0.0,0.0,0.0,0.0,0.0,no,labour,40.21
-383,New Forest West,southeastengland,conservative,52.45,16.06,8.45,16.94,6.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,35.51
-174,Doncaster Central,yorkshireandthehumber,labour,22.74,45.0,5.38,17.04,3.26,0.0,0.0,6.58,0.0,0.0,0.0,0.0,0.0,no,labour,22.27
-509,South Derbyshire,eastmidlands,conservative,41.61,34.28,2.39,15.47,4.39,0.0,0.0,1.86,0.0,0.0,0.0,0.0,0.0,no,conservative,7.33
-80,Brent Central,london,libdems,7.75,44.62,32.15,7.49,7.64,0.0,0.0,0.35,0.0,0.0,0.0,0.0,0.0,yes,labour,12.46
+171,Devizes,southwestengland,conservative,48.28,17.96,11.24,16.02,6.36,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,30.32
+430,Nuneaton,westmidlands,conservative,33.84,35.91,2.04,19.43,6.16,0.0,0.0,2.63,0.0,0.0,0.0,0.0,0.0,yes,labour,2.07
+214,Enfield North,london,conservative,37.64,41.45,1.82,12.12,5.25,0.0,0.0,1.73,0.0,0.0,0.0,0.0,0.0,yes,labour,3.81
+271,Hastings and Rye,southeastengland,conservative,32.52,45.26,3.18,11.82,5.76,0.0,0.0,1.45,0.0,0.0,0.0,0.0,0.0,yes,labour,12.74
+341,Livingston,scotland,labour,10.0,30.6,1.59,4.43,2.22,49.91,0.0,1.25,0.0,0.0,0.0,0.0,0.0,yes,snp,19.31
+595,Walsall South,westmidlands,labour,33.03,43.96,2.2,17.2,3.26,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,no,labour,10.93
+205,Edinburgh East,scotland,labour,10.15,26.17,6.01,3.93,7.15,42.92,0.0,3.68,0.0,0.0,0.0,0.0,0.0,yes,snp,16.75
+78,Braintree,eastofengland,conservative,39.61,25.61,2.52,23.96,7.86,0.0,0.0,0.43,0.0,0.0,0.0,0.0,0.0,no,conservative,14.0
+266,Harrogate and Knaresborough,yorkshireandthehumber,conservative,45.21,8.21,24.83,14.74,6.69,0.0,0.0,0.33,0.0,0.0,0.0,0.0,0.0,no,conservative,20.39
+167,Denton and Reddish,northwestengland,labour,22.27,55.05,3.01,14.82,4.73,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,labour,32.78
+599,Warley,westmidlands,labour,21.78,55.42,2.27,16.49,4.05,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,33.64
+115,Cardiff West,wales,labour,26.0,45.42,2.56,11.77,7.83,0.0,6.42,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,19.43
+220,Esher and Walton,southeastengland,conservative,50.81,17.01,9.01,14.94,7.51,0.0,0.0,0.71,0.0,0.0,0.0,0.0,0.0,no,conservative,33.8
+311,Kingston upon Hull East,yorkshireandthehumber,labour,15.61,55.54,7.47,15.03,4.9,0.0,0.0,1.45,0.0,0.0,0.0,0.0,0.0,no,labour,39.93
+383,New Forest West,southeastengland,conservative,52.33,16.14,8.5,16.92,6.12,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,35.41
+174,Doncaster Central,yorkshireandthehumber,labour,22.82,44.98,5.4,17.04,3.26,0.0,0.0,6.5,0.0,0.0,0.0,0.0,0.0,no,labour,22.15
+509,South Derbyshire,eastmidlands,conservative,41.61,34.3,2.35,15.49,4.4,0.0,0.0,1.85,0.0,0.0,0.0,0.0,0.0,no,conservative,7.31
+80,Brent Central,london,libdems,9.32,45.6,28.89,7.84,7.91,0.0,0.0,0.43,0.0,0.0,0.0,0.0,0.0,yes,labour,16.71
 37,Belfast South,northernireland,sdlp,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,43.04,17.59,24.41,14.96,no,sdlp,18.63
-160,"Cumbernauld, Kilsyth and Kirkintilloch East",scotland,labour,7.61,39.24,1.47,2.5,0.99,48.02,0.0,0.18,0.0,0.0,0.0,0.0,0.0,yes,snp,8.78
-422,North Wiltshire,southwestengland,conservative,45.95,12.72,18.89,16.06,6.3,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,27.06
-68,Bolton West,northwestengland,labour,34.93,41.89,2.58,16.3,4.17,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,labour,6.96
-435,Oldham West and Royton,northwestengland,labour,20.94,49.4,3.48,18.12,4.77,0.0,0.0,3.29,0.0,0.0,0.0,0.0,0.0,no,labour,28.45
-3,Aberdeen North,scotland,labour,11.63,27.73,5.53,4.48,3.35,46.33,0.0,0.96,0.0,0.0,0.0,0.0,0.0,yes,snp,18.6
-16,Ashford,southeastengland,conservative,44.79,23.54,7.4,18.29,5.99,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,21.25
-2,Aberconwy,wales,conservative,32.64,28.76,2.95,13.72,4.52,0.0,17.34,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,3.89
-398,North Devon,southwestengland,libdems,30.92,10.29,32.72,18.0,6.88,0.0,0.0,1.19,0.0,0.0,0.0,0.0,0.0,no,libdems,1.8
-56,Bishop Auckland,northeastengland,labour,23.12,42.39,6.22,16.95,6.23,0.0,0.0,5.1,0.0,0.0,0.0,0.0,0.0,no,labour,19.27
-24,Barnsley East,yorkshireandthehumber,labour,15.04,53.62,3.6,14.98,3.53,0.0,0.0,9.23,0.0,0.0,0.0,0.0,0.0,no,labour,38.58
-192,East Dunbartonshire,scotland,libdems,15.66,20.23,26.87,4.98,3.77,28.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,1.62
-537,St. Helens North,northwestengland,labour,20.27,57.37,4.63,12.95,4.6,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,labour,37.1
-254,Greenwich and Woolwich,london,labour,18.73,51.47,3.66,14.87,8.06,0.0,0.0,3.22,0.0,0.0,0.0,0.0,0.0,no,labour,32.74
-613,West Bromwich East,westmidlands,labour,24.67,47.94,1.91,16.46,4.0,0.0,0.0,5.03,0.0,0.0,0.0,0.0,0.0,no,labour,23.28
-211,Ellesmere Port and Neston,northwestengland,labour,31.0,47.39,2.22,13.69,5.44,0.0,0.0,0.26,0.0,0.0,0.0,0.0,0.0,no,labour,16.39
-441,Paisley and Renfrewshire South,scotland,labour,9.2,41.35,1.47,4.19,2.38,40.07,0.0,1.33,0.0,0.0,0.0,0.0,0.0,no,labour,1.28
-452,Portsmouth North,southeastengland,conservative,35.68,35.85,5.6,14.89,6.98,0.0,0.0,1.01,0.0,0.0,0.0,0.0,0.0,yes,labour,0.17
-325,Leicester East,eastmidlands,labour,22.37,59.5,2.22,8.1,6.09,0.0,0.0,1.72,0.0,0.0,0.0,0.0,0.0,no,labour,37.13
-527,South West Norfolk,eastofengland,conservative,39.88,26.51,3.26,22.24,6.57,0.0,0.0,1.54,0.0,0.0,0.0,0.0,0.0,no,conservative,13.36
-321,Leeds East,yorkshireandthehumber,labour,18.57,49.74,2.4,16.62,8.68,0.0,0.0,3.99,0.0,0.0,0.0,0.0,0.0,no,labour,31.17
-397,North Cornwall,southwestengland,libdems,35.38,8.28,32.05,17.34,6.78,0.0,0.0,0.18,0.0,0.0,0.0,0.0,0.0,yes,conservative,3.33
-616,West Dunbartonshire,scotland,labour,7.02,43.03,1.25,3.69,2.16,42.67,0.0,0.18,0.0,0.0,0.0,0.0,0.0,no,labour,0.36
-449,Pontypridd,wales,labour,14.71,47.07,12.67,13.45,4.4,0.0,7.33,0.36,0.0,0.0,0.0,0.0,0.0,no,labour,32.36
-498,Shipley,yorkshireandthehumber,conservative,45.28,31.96,4.53,12.36,5.87,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,13.32
-26,Basildon and Billericay,eastofengland,conservative,34.86,25.78,1.9,30.02,5.62,0.0,0.0,1.81,0.0,0.0,0.0,0.0,0.0,no,conservative,4.84
-82,Brentford and Isleworth,london,conservative,34.33,37.3,9.0,12.57,6.18,0.0,0.0,0.61,0.0,0.0,0.0,0.0,0.0,yes,labour,2.97
-611,Wentworth and Dearne,yorkshireandthehumber,labour,16.48,58.72,2.71,15.38,2.88,0.0,0.0,3.83,0.0,0.0,0.0,0.0,0.0,no,labour,42.25
-91,Bristol South,southwestengland,labour,17.66,50.92,12.22,6.27,10.09,0.0,0.0,2.84,0.0,0.0,0.0,0.0,0.0,no,labour,33.26
-229,Folkestone and Hythe,southeastengland,conservative,40.89,16.75,13.15,20.31,7.15,0.0,0.0,1.75,0.0,0.0,0.0,0.0,0.0,no,conservative,20.58
-563,Swansea East,wales,labour,11.35,52.45,2.54,18.1,7.89,0.0,5.7,1.97,0.0,0.0,0.0,0.0,0.0,no,labour,34.35
-274,Hazel Grove,northwestengland,libdems,31.72,14.76,32.17,16.8,4.54,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,libdems,0.45
-376,Moray,scotland,snp,22.69,6.46,2.6,4.38,2.42,61.46,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,snp,38.78
-456,Pudsey,yorkshireandthehumber,conservative,36.0,39.66,5.14,12.67,6.02,0.0,0.0,0.52,0.0,0.0,0.0,0.0,0.0,yes,labour,3.66
-195,"East Kilbride, Strathaven and Lesmahagow",scotland,labour,12.02,33.65,1.51,4.04,1.14,46.56,0.0,1.08,0.0,0.0,0.0,0.0,0.0,yes,snp,12.91
-351,Makerfield,northwestengland,labour,15.93,50.04,2.38,16.78,4.19,0.0,0.0,10.68,0.0,0.0,0.0,0.0,0.0,no,labour,33.26
-548,Stoke-on-Trent Central,westmidlands,labour,19.21,43.75,6.44,16.61,3.57,0.0,0.0,10.43,0.0,0.0,0.0,0.0,0.0,no,labour,24.54
-264,Harborough,eastmidlands,conservative,47.29,15.17,14.34,14.8,6.69,0.0,0.0,1.71,0.0,0.0,0.0,0.0,0.0,no,conservative,32.12
-643,Workington,northwestengland,labour,28.74,46.32,1.92,16.42,6.19,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,no,labour,17.58
-212,Elmet and Rothwell,yorkshireandthehumber,conservative,38.06,37.05,2.39,14.24,7.55,0.0,0.0,0.71,0.0,0.0,0.0,0.0,0.0,no,conservative,1.01
-206,Edinburgh North and Leith,scotland,labour,15.45,23.58,19.89,3.97,7.2,27.24,0.0,2.66,0.0,0.0,0.0,0.0,0.0,yes,snp,3.65
-150,Copeland,northwestengland,labour,33.32,49.09,1.51,12.88,2.69,0.0,0.0,0.51,0.0,0.0,0.0,0.0,0.0,no,labour,15.77
+160,"Cumbernauld, Kilsyth and Kirkintilloch East",scotland,labour,7.84,38.86,1.4,2.52,1.01,48.22,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,snp,9.35
+422,North Wiltshire,southwestengland,conservative,45.9,12.81,18.83,16.05,6.34,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,27.07
+68,Bolton West,northwestengland,labour,34.88,41.96,2.55,16.31,4.18,0.0,0.0,0.12,0.0,0.0,0.0,0.0,0.0,no,labour,7.07
+435,Oldham West and Royton,northwestengland,labour,21.04,49.35,3.51,18.11,4.77,0.0,0.0,3.23,0.0,0.0,0.0,0.0,0.0,no,labour,28.31
+3,Aberdeen North,scotland,labour,11.76,27.65,5.54,4.48,3.34,46.29,0.0,0.93,0.0,0.0,0.0,0.0,0.0,yes,snp,18.64
+16,Ashford,southeastengland,conservative,44.74,23.56,7.44,18.25,6.01,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,21.17
+2,Aberconwy,wales,conservative,32.65,28.89,2.89,13.75,4.53,0.0,17.22,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,3.77
+398,North Devon,southwestengland,libdems,31.11,10.38,32.41,18.0,6.93,0.0,0.0,1.18,0.0,0.0,0.0,0.0,0.0,no,libdems,1.3
+56,Bishop Auckland,northeastengland,labour,23.13,42.43,6.23,16.94,6.22,0.0,0.0,5.04,0.0,0.0,0.0,0.0,0.0,no,labour,19.3
+24,Barnsley East,yorkshireandthehumber,labour,15.17,53.53,3.65,15.0,3.54,0.0,0.0,9.12,0.0,0.0,0.0,0.0,0.0,no,labour,38.35
+192,East Dunbartonshire,scotland,libdems,15.8,20.62,25.87,4.99,3.78,28.93,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,3.06
+537,St. Helens North,northwestengland,labour,20.38,57.24,4.64,12.97,4.61,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,labour,36.86
+254,Greenwich and Woolwich,london,labour,19.9,50.1,4.17,14.83,8.06,0.0,0.0,2.94,0.0,0.0,0.0,0.0,0.0,no,labour,30.21
+613,West Bromwich East,westmidlands,labour,24.82,47.84,1.87,16.48,4.01,0.0,0.0,4.98,0.0,0.0,0.0,0.0,0.0,no,labour,23.01
+211,Ellesmere Port and Neston,northwestengland,labour,31.0,47.39,2.18,13.72,5.45,0.0,0.0,0.26,0.0,0.0,0.0,0.0,0.0,no,labour,16.39
+441,Paisley and Renfrewshire South,scotland,labour,9.43,40.87,1.39,4.21,2.41,40.41,0.0,1.29,0.0,0.0,0.0,0.0,0.0,no,labour,0.45
+452,Portsmouth North,southeastengland,conservative,35.73,35.72,5.67,14.87,7.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,no,conservative,0.01
+325,Leicester East,eastmidlands,labour,22.56,59.3,2.19,8.13,6.11,0.0,0.0,1.72,0.0,0.0,0.0,0.0,0.0,no,labour,36.74
+527,South West Norfolk,eastofengland,conservative,39.89,26.59,3.2,22.21,6.58,0.0,0.0,1.53,0.0,0.0,0.0,0.0,0.0,no,conservative,13.29
+321,Leeds East,yorkshireandthehumber,labour,18.69,49.65,2.41,16.62,8.67,0.0,0.0,3.96,0.0,0.0,0.0,0.0,0.0,no,labour,30.97
+397,North Cornwall,southwestengland,libdems,35.53,8.37,31.76,17.35,6.82,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,conservative,3.78
+616,West Dunbartonshire,scotland,labour,7.24,42.5,1.19,3.71,2.19,42.99,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,snp,0.49
+449,Pontypridd,wales,labour,14.89,47.02,12.52,13.47,4.4,0.0,7.33,0.36,0.0,0.0,0.0,0.0,0.0,no,labour,32.13
+498,Shipley,yorkshireandthehumber,conservative,45.1,32.08,4.56,12.38,5.87,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,13.02
+26,Basildon and Billericay,eastofengland,conservative,34.91,25.86,1.87,29.93,5.63,0.0,0.0,1.8,0.0,0.0,0.0,0.0,0.0,no,conservative,4.98
+82,Brentford and Isleworth,london,conservative,33.95,37.73,8.77,12.6,6.24,0.0,0.0,0.72,0.0,0.0,0.0,0.0,0.0,yes,labour,3.78
+611,Wentworth and Dearne,yorkshireandthehumber,labour,16.6,58.54,2.77,15.4,2.88,0.0,0.0,3.81,0.0,0.0,0.0,0.0,0.0,no,labour,41.94
+91,Bristol South,southwestengland,labour,17.89,50.67,12.27,6.28,10.11,0.0,0.0,2.79,0.0,0.0,0.0,0.0,0.0,no,labour,32.78
+229,Folkestone and Hythe,southeastengland,conservative,40.91,16.82,13.12,20.25,7.17,0.0,0.0,1.73,0.0,0.0,0.0,0.0,0.0,no,conservative,20.65
+563,Swansea East,wales,labour,11.52,52.32,2.5,18.11,7.9,0.0,5.72,1.95,0.0,0.0,0.0,0.0,0.0,no,labour,34.21
+274,Hazel Grove,northwestengland,libdems,31.82,14.95,31.8,16.87,4.56,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,0.03
+376,Moray,scotland,snp,22.46,6.9,2.73,4.39,2.43,61.1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,snp,38.64
+456,Pudsey,yorkshireandthehumber,conservative,35.92,39.69,5.16,12.68,6.01,0.0,0.0,0.54,0.0,0.0,0.0,0.0,0.0,yes,labour,3.77
+195,"East Kilbride, Strathaven and Lesmahagow",scotland,labour,12.19,33.42,1.43,4.06,1.15,46.69,0.0,1.05,0.0,0.0,0.0,0.0,0.0,yes,snp,13.27
+351,Makerfield,northwestengland,labour,16.08,50.07,2.34,16.81,4.2,0.0,0.0,10.5,0.0,0.0,0.0,0.0,0.0,no,labour,33.27
+548,Stoke-on-Trent Central,westmidlands,labour,19.38,43.69,6.44,16.62,3.58,0.0,0.0,10.29,0.0,0.0,0.0,0.0,0.0,no,labour,24.31
+264,Harborough,eastmidlands,conservative,47.26,15.3,14.23,14.82,6.7,0.0,0.0,1.71,0.0,0.0,0.0,0.0,0.0,no,conservative,31.96
+643,Workington,northwestengland,labour,28.77,46.32,1.88,16.43,6.19,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,no,labour,17.56
+212,Elmet and Rothwell,yorkshireandthehumber,conservative,37.98,37.13,2.34,14.26,7.55,0.0,0.0,0.73,0.0,0.0,0.0,0.0,0.0,no,conservative,0.86
+206,Edinburgh North and Leith,scotland,labour,15.59,23.87,19.27,3.99,7.11,27.62,0.0,2.56,0.0,0.0,0.0,0.0,0.0,yes,snp,3.75
+150,Copeland,northwestengland,labour,33.31,49.1,1.49,12.91,2.69,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,no,labour,15.78
 35,Belfast East,northernireland,alliance,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.4,2.45,1.12,21.09,33.01,36.92,no,alliance,3.9
-499,Shrewsbury and Atcham,westmidlands,conservative,40.46,23.07,11.95,17.06,7.05,0.0,0.0,0.39,0.0,0.0,0.0,0.0,0.0,no,conservative,17.39
-635,Wythenshawe and Sale East,northwestengland,labour,23.99,50.61,6.29,11.76,7.06,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.0,no,labour,26.62
-243,Glasgow South,scotland,labour,10.57,33.87,1.81,3.79,4.11,42.78,0.0,3.06,0.0,0.0,0.0,0.0,0.0,yes,snp,8.92
-417,North West Cambridgeshire,eastofengland,conservative,44.48,25.93,3.5,18.43,6.98,0.0,0.0,0.69,0.0,0.0,0.0,0.0,0.0,no,conservative,18.55
+499,Shrewsbury and Atcham,westmidlands,conservative,40.44,23.17,11.86,17.06,7.06,0.0,0.0,0.4,0.0,0.0,0.0,0.0,0.0,no,conservative,17.27
+635,Wythenshawe and Sale East,northwestengland,labour,24.07,50.55,6.27,11.77,7.05,0.0,0.0,0.29,0.0,0.0,0.0,0.0,0.0,no,labour,26.49
+243,Glasgow South,scotland,labour,10.77,33.64,1.71,3.81,4.1,43.02,0.0,2.94,0.0,0.0,0.0,0.0,0.0,yes,snp,9.38
+417,North West Cambridgeshire,eastofengland,conservative,44.44,26.02,3.43,18.43,6.98,0.0,0.0,0.7,0.0,0.0,0.0,0.0,0.0,no,conservative,18.42
 392,Newry and Armagh,northernireland,sinnfein,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.44,42.23,23.84,18.69,12.72,1.09,no,sinnfein,18.39
-495,Sheffield Heeley,yorkshireandthehumber,labour,14.96,46.11,10.87,15.96,10.26,0.0,0.0,1.84,0.0,0.0,0.0,0.0,0.0,no,labour,30.15
-463,Reigate,southeastengland,conservative,44.1,17.22,9.79,18.76,9.14,0.0,0.0,0.99,0.0,0.0,0.0,0.0,0.0,no,conservative,25.33
-209,Edinburgh West,scotland,libdems,22.13,13.84,22.29,3.63,6.59,31.53,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,9.24
-433,Old Bexley and Sidcup,london,conservative,47.45,18.25,2.55,23.08,4.12,0.0,0.0,4.55,0.0,0.0,0.0,0.0,0.0,no,conservative,24.37
-157,Croydon Central,london,conservative,34.36,34.86,2.31,13.56,6.38,0.0,0.0,8.53,0.0,0.0,0.0,0.0,0.0,yes,labour,0.5
-344,Louth and Horncastle,eastmidlands,conservative,50.28,21.42,7.45,14.27,2.99,0.0,0.0,3.59,0.0,0.0,0.0,0.0,0.0,no,conservative,28.86
-71,Bosworth,eastmidlands,conservative,39.97,18.57,15.79,17.71,5.1,0.0,0.0,2.86,0.0,0.0,0.0,0.0,0.0,no,conservative,21.4
-129,Chelsea and Fulham,london,conservative,63.62,20.56,3.16,6.62,5.65,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,conservative,43.06
-339,"Liverpool, Wavertree",northwestengland,labour,6.19,56.51,15.09,13.35,8.66,0.0,0.0,0.2,0.0,0.0,0.0,0.0,0.0,no,labour,41.41
-481,Rutherglen and Hamilton West,scotland,labour,9.34,44.6,1.93,4.4,1.29,38.44,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,6.16
-256,Hackney North and Stoke Newington,london,labour,10.84,62.4,9.15,3.08,14.16,0.0,0.0,0.38,0.0,0.0,0.0,0.0,0.0,no,labour,48.23
-125,Charnwood,eastmidlands,conservative,49.4,23.78,6.72,11.96,5.25,0.0,0.0,2.88,0.0,0.0,0.0,0.0,0.0,no,conservative,25.62
-200,East Worthing and Shoreham,southeastengland,conservative,45.08,26.66,10.98,12.78,4.36,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,18.42
-132,Chesterfield,eastmidlands,labour,14.18,43.92,20.19,15.39,5.73,0.0,0.0,0.6,0.0,0.0,0.0,0.0,0.0,no,labour,23.73
-138,Christchurch,southwestengland,conservative,54.8,18.88,11.28,12.63,2.42,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,35.92
-576,Tonbridge and Malling,southeastengland,conservative,49.0,19.09,7.2,18.31,6.06,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,conservative,29.91
-512,South East Cambridgeshire,eastofengland,conservative,47.0,14.5,17.89,13.54,6.74,0.0,0.0,0.31,0.0,0.0,0.0,0.0,0.0,no,conservative,29.11
-224,Faversham and Mid Kent,southeastengland,conservative,48.15,24.18,5.48,17.58,4.09,0.0,0.0,0.52,0.0,0.0,0.0,0.0,0.0,no,conservative,23.97
-173,Don Valley,yorkshireandthehumber,labour,27.62,43.18,2.89,16.64,3.15,0.0,0.0,6.52,0.0,0.0,0.0,0.0,0.0,no,labour,15.56
-50,Birmingham Hodge Hill,westmidlands,labour,10.07,56.33,10.88,12.74,6.27,0.0,0.0,3.71,0.0,0.0,0.0,0.0,0.0,no,labour,43.59
-242,Glasgow North West,scotland,labour,9.56,37.66,3.67,4.23,4.64,36.97,0.0,3.29,0.0,0.0,0.0,0.0,0.0,no,labour,0.69
-139,Cities of London and Westminster,london,conservative,47.22,21.99,5.41,14.61,10.56,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,no,conservative,25.22
-582,Tottenham,london,labour,11.1,67.26,3.76,6.16,9.19,0.0,0.0,2.53,0.0,0.0,0.0,0.0,0.0,no,labour,56.16
-606,Wealden,southeastengland,conservative,48.27,15.16,9.59,19.64,7.34,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.63
-490,Selby and Ainsty,yorkshireandthehumber,conservative,47.9,30.14,3.27,13.85,3.92,0.0,0.0,0.93,0.0,0.0,0.0,0.0,0.0,no,conservative,17.75
-314,Kingswood,southwestengland,conservative,30.72,43.92,4.36,14.54,4.99,0.0,0.0,1.47,0.0,0.0,0.0,0.0,0.0,yes,labour,13.2
-355,"Manchester, Withington",northwestengland,libdems,8.88,41.48,25.38,12.91,11.29,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,yes,labour,16.1
-79,Brecon and Radnorshire,wales,libdems,34.27,13.18,28.25,14.24,7.48,0.0,2.4,0.17,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.02
-461,Redcar,northeastengland,libdems,12.35,38.52,30.35,14.03,3.99,0.0,0.0,0.76,0.0,0.0,0.0,0.0,0.0,yes,labour,8.17
-5,Airdrie and Shotts,scotland,labour,7.72,38.4,1.2,4.43,2.1,45.91,0.0,0.24,0.0,0.0,0.0,0.0,0.0,yes,snp,7.51
-530,Southampton Itchen,southeastengland,labour,27.78,44.26,5.9,14.43,7.57,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,labour,16.49
-63,Blyth Valley,northeastengland,labour,14.72,50.35,10.72,14.4,6.43,0.0,0.0,3.37,0.0,0.0,0.0,0.0,0.0,no,labour,35.63
-372,Mitcham and Morden,london,labour,19.77,60.56,2.08,12.72,3.37,0.0,0.0,1.51,0.0,0.0,0.0,0.0,0.0,no,labour,40.79
-123,Central Suffolk and North Ipswich,eastofengland,conservative,42.71,23.95,5.2,18.25,9.74,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,conservative,18.75
-52,Birmingham Northfield,westmidlands,labour,30.91,44.42,2.42,12.87,6.26,0.0,0.0,3.12,0.0,0.0,0.0,0.0,0.0,no,labour,13.51
-20,Banbury,southeastengland,conservative,43.52,26.26,5.84,16.54,7.69,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,17.27
-44,Bexhill and Battle,southeastengland,conservative,42.56,18.28,10.82,17.01,5.39,0.0,0.0,5.95,0.0,0.0,0.0,0.0,0.0,no,conservative,24.28
-275,Hemel Hempstead,eastofengland,conservative,45.33,32.02,3.79,11.78,5.23,0.0,0.0,1.84,0.0,0.0,0.0,0.0,0.0,no,conservative,13.31
-588,Uxbridge and South Ruislip,london,conservative,47.2,25.44,5.67,15.35,3.72,0.0,0.0,2.63,0.0,0.0,0.0,0.0,0.0,no,conservative,21.77
-280,Hertford and Stortford,eastofengland,conservative,47.84,22.04,5.92,15.7,7.11,0.0,0.0,1.39,0.0,0.0,0.0,0.0,0.0,no,conservative,25.79
-158,Croydon North,london,labour,18.52,59.44,2.42,13.08,6.12,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,no,labour,40.92
-533,Southport,northwestengland,libdems,33.91,11.18,32.87,15.86,6.18,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,1.04
-445,Perth and North Perthshire,scotland,snp,26.29,5.96,1.68,3.39,1.83,60.7,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,snp,34.41
-185,Dwyfor Meirionnydd,wales,plaidcymru,19.17,16.48,1.84,11.5,6.13,0.0,43.3,1.59,0.0,0.0,0.0,0.0,0.0,no,plaidcymru,24.14
-184,Dunfermline and West Fife,scotland,labour,7.02,33.51,22.14,4.32,2.52,30.49,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,3.02
-66,Bolton North East,northwestengland,labour,31.14,46.59,1.84,16.16,4.22,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,15.45
-453,Portsmouth South,southeastengland,other,26.87,21.02,26.61,16.31,7.62,0.0,0.0,1.56,0.0,0.0,0.0,0.0,0.0,yes,conservative,0.26
-560,Surrey Heath,southeastengland,conservative,54.74,17.73,11.24,12.64,3.65,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,37.0
-328,Leigh,northwestengland,labour,18.7,52.87,3.0,17.08,4.29,0.0,0.0,4.05,0.0,0.0,0.0,0.0,0.0,no,labour,34.17
-290,Houghton and Sunderland South,northeastengland,labour,17.98,52.64,2.04,15.59,5.2,0.0,0.0,6.55,0.0,0.0,0.0,0.0,0.0,no,labour,34.65
-559,Sunderland Central,northeastengland,labour,26.68,49.35,2.83,15.13,4.97,0.0,0.0,1.04,0.0,0.0,0.0,0.0,0.0,no,labour,22.67
-294,Hyndburn,northwestengland,labour,30.19,44.01,1.75,17.04,3.61,0.0,0.0,3.41,0.0,0.0,0.0,0.0,0.0,no,labour,13.82
-84,Bridgend,wales,labour,28.58,43.43,5.12,12.57,4.1,0.0,5.78,0.42,0.0,0.0,0.0,0.0,0.0,no,labour,14.85
-621,West Worcestershire,westmidlands,conservative,49.0,8.2,20.44,14.81,7.55,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.55
-64,Bognor Regis and Littlehampton,southeastengland,conservative,40.34,19.67,7.42,24.76,5.43,0.0,0.0,2.38,0.0,0.0,0.0,0.0,0.0,no,conservative,15.58
-475,Rother Valley,yorkshireandthehumber,labour,26.43,46.45,3.12,17.3,2.97,0.0,0.0,3.73,0.0,0.0,0.0,0.0,0.0,no,labour,20.02
-566,Tatton,northwestengland,conservative,51.08,19.58,5.65,16.19,6.56,0.0,0.0,0.94,0.0,0.0,0.0,0.0,0.0,no,conservative,31.5
-197,East Lothian,scotland,labour,19.65,29.13,4.54,4.38,3.43,38.38,0.0,0.48,0.0,0.0,0.0,0.0,0.0,yes,snp,9.25
-240,Glasgow North,scotland,labour,6.98,29.9,17.31,4.8,5.43,31.94,0.0,3.64,0.0,0.0,0.0,0.0,0.0,yes,snp,2.05
-529,South West Wiltshire,southwestengland,conservative,44.83,19.65,13.72,15.55,6.1,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,25.18
-358,Meriden,westmidlands,conservative,47.1,22.56,3.28,17.18,7.02,0.0,0.0,2.87,0.0,0.0,0.0,0.0,0.0,no,conservative,24.54
-510,South Dorset,southwestengland,conservative,33.93,37.69,5.25,16.88,6.19,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,yes,labour,3.77
-241,Glasgow North East,scotland,labour,4.78,48.73,1.17,4.4,4.97,33.24,0.0,2.72,0.0,0.0,0.0,0.0,0.0,no,labour,15.49
-286,Holborn and St. Pancras,london,labour,17.41,55.65,14.21,6.53,5.84,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,no,labour,38.24
-501,Skipton and Ripon,yorkshireandthehumber,conservative,47.52,11.82,14.13,18.23,7.66,0.0,0.0,0.64,0.0,0.0,0.0,0.0,0.0,no,conservative,29.29
-644,Worsley and Eccles South,northwestengland,labour,28.47,45.18,2.41,17.0,6.48,0.0,0.0,0.47,0.0,0.0,0.0,0.0,0.0,no,labour,16.7
-193,East Ham,london,labour,10.68,76.06,2.02,6.39,4.56,0.0,0.0,0.28,0.0,0.0,0.0,0.0,0.0,no,labour,65.38
-567,Taunton Deane,southwestengland,libdems,35.33,9.73,32.45,15.86,6.64,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,2.88
-153,Coventry North West,westmidlands,labour,26.49,46.7,3.54,13.92,6.36,0.0,0.0,2.99,0.0,0.0,0.0,0.0,0.0,no,labour,20.22
-440,Paisley and Renfrewshire North,scotland,labour,13.76,36.31,1.62,4.02,2.24,41.58,0.0,0.48,0.0,0.0,0.0,0.0,0.0,yes,snp,5.27
-233,Gainsborough,eastmidlands,conservative,47.5,18.47,11.65,16.32,5.4,0.0,0.0,0.66,0.0,0.0,0.0,0.0,0.0,no,conservative,29.03
-105,"Caithness, Sutherland and Easter Ross",scotland,libdems,11.86,11.48,26.67,5.09,3.71,40.73,0.0,0.47,0.0,0.0,0.0,0.0,0.0,yes,snp,14.06
-380,Na h-Eileanan an Iar,scotland,snp,3.56,16.02,1.03,2.75,1.39,68.55,0.0,6.71,0.0,0.0,0.0,0.0,0.0,no,snp,52.53
-348,Macclesfield,northwestengland,conservative,45.96,24.08,6.93,15.82,6.41,0.0,0.0,0.81,0.0,0.0,0.0,0.0,0.0,no,conservative,21.88
-337,"Liverpool, Riverside",northwestengland,labour,9.19,62.69,6.27,13.08,8.5,0.0,0.0,0.27,0.0,0.0,0.0,0.0,0.0,no,labour,49.61
-521,South Suffolk,eastofengland,conservative,41.2,22.36,10.13,18.4,7.91,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,18.84
-219,Erith and Thamesmead,london,labour,23.92,43.91,1.95,19.02,5.72,0.0,0.0,5.49,0.0,0.0,0.0,0.0,0.0,no,labour,19.99
-518,South Ribble,northwestengland,conservative,39.21,35.58,1.99,17.56,5.37,0.0,0.0,0.29,0.0,0.0,0.0,0.0,0.0,no,conservative,3.63
-460,Reading West,southeastengland,conservative,34.16,38.36,5.46,13.6,8.06,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,yes,labour,4.2
-580,Torridge and West Devon,southwestengland,conservative,39.32,10.16,22.19,19.8,8.32,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,no,conservative,17.14
-429,Nottingham South,eastmidlands,labour,30.97,42.32,7.74,10.78,7.68,0.0,0.0,0.51,0.0,0.0,0.0,0.0,0.0,no,labour,11.35
-615,West Dorset,southwestengland,conservative,40.73,12.37,22.2,16.44,8.26,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,18.54
-450,Poole,southwestengland,conservative,38.85,20.55,13.72,19.9,5.89,0.0,0.0,1.1,0.0,0.0,0.0,0.0,0.0,no,conservative,18.3
-73,Bournemouth West,southwestengland,conservative,39.06,24.33,15.05,15.88,5.51,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,conservative,14.73
-111,Canterbury,southeastengland,conservative,38.62,24.39,16.08,12.78,8.07,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,conservative,14.22
-622,Westminster North,london,labour,33.94,47.24,2.48,7.64,8.4,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.0,no,labour,13.3
-420,North West Leicestershire,eastmidlands,conservative,41.23,33.41,2.72,14.72,4.67,0.0,0.0,3.26,0.0,0.0,0.0,0.0,0.0,no,conservative,7.82
-525,South West Devon,southwestengland,conservative,50.44,21.36,9.57,11.6,7.03,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,29.07
-421,North West Norfolk,eastofengland,conservative,45.74,20.3,3.61,23.04,5.59,0.0,0.0,1.72,0.0,0.0,0.0,0.0,0.0,no,conservative,22.7
-101,Bury North,northwestengland,conservative,36.77,38.6,2.56,15.97,5.7,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,yes,labour,1.82
-7,Aldridge-Brownhills,westmidlands,conservative,54.28,21.75,3.08,17.45,3.29,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,conservative,32.53
-375,Montgomeryshire,wales,conservative,40.3,9.26,17.99,15.66,8.15,0.0,8.3,0.34,0.0,0.0,0.0,0.0,0.0,no,conservative,22.31
-538,St. Helens South and Whiston,northwestengland,labour,16.27,59.8,6.09,13.01,4.61,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,no,labour,43.52
-455,Preston,northwestengland,labour,17.55,47.99,6.65,20.1,7.54,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,no,labour,27.89
-81,Brent North,london,labour,28.05,53.67,3.27,6.99,7.36,0.0,0.0,0.66,0.0,0.0,0.0,0.0,0.0,no,labour,25.63
-415,North Tyneside,northeastengland,labour,15.5,54.06,6.63,15.39,6.88,0.0,0.0,1.54,0.0,0.0,0.0,0.0,0.0,no,labour,38.55
-406,North East Hampshire,southeastengland,conservative,54.73,16.26,10.04,13.11,5.86,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,38.47
-47,Birmingham Edgbaston,westmidlands,labour,33.99,43.83,2.32,12.69,6.19,0.0,0.0,0.99,0.0,0.0,0.0,0.0,0.0,no,labour,9.83
-199,East Surrey,southeastengland,conservative,53.06,15.71,11.09,15.21,4.69,0.0,0.0,0.25,0.0,0.0,0.0,0.0,0.0,no,conservative,37.35
-444,Penrith and The Border,northwestengland,conservative,56.63,16.73,12.22,8.62,5.38,0.0,0.0,0.42,0.0,0.0,0.0,0.0,0.0,no,conservative,39.9
-471,Romford,london,conservative,44.53,16.7,1.79,28.65,4.17,0.0,0.0,4.16,0.0,0.0,0.0,0.0,0.0,no,conservative,15.88
-484,Salford and Eccles,northwestengland,labour,17.94,43.86,8.74,17.82,6.8,0.0,0.0,4.84,0.0,0.0,0.0,0.0,0.0,no,labour,25.93
-639,Wolverhampton South East,westmidlands,labour,25.88,51.71,2.33,15.99,3.94,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,labour,25.83
-42,Bethnal Green and Bow,london,labour,9.82,45.8,5.19,8.48,10.58,0.0,0.0,20.13,0.0,0.0,0.0,0.0,0.0,no,labour,25.67
-166,Delyn,wales,labour,29.89,44.02,2.25,14.79,4.3,0.0,4.41,0.33,0.0,0.0,0.0,0.0,0.0,no,labour,14.13
-591,Vauxhall,london,labour,16.27,53.13,9.32,6.47,14.47,0.0,0.0,0.34,0.0,0.0,0.0,0.0,0.0,no,labour,36.86
-121,Central Ayrshire,scotland,labour,20.01,31.38,1.88,3.02,1.07,42.49,0.0,0.15,0.0,0.0,0.0,0.0,0.0,yes,snp,11.11
-470,Rochford and Southend East,eastofengland,conservative,40.02,29.57,3.05,18.2,5.53,0.0,0.0,3.65,0.0,0.0,0.0,0.0,0.0,no,conservative,10.45
-13,Argyll and Bute,scotland,libdems,22.57,10.28,18.2,4.56,2.93,40.29,0.0,1.17,0.0,0.0,0.0,0.0,0.0,yes,snp,17.72
-300,Isle of Wight,southeastengland,conservative,38.23,17.75,14.27,18.83,7.84,0.0,0.0,3.06,0.0,0.0,0.0,0.0,0.0,no,conservative,19.4
-151,Corby,eastmidlands,labour,32.61,39.11,1.86,19.47,5.65,0.0,0.0,1.31,0.0,0.0,0.0,0.0,0.0,no,labour,6.5
-626,Wimbledon,london,conservative,47.7,23.93,10.26,11.32,6.69,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,23.77
-237,Gillingham and Rainham,southeastengland,conservative,39.1,37.29,4.65,13.4,3.43,0.0,0.0,2.13,0.0,0.0,0.0,0.0,0.0,no,conservative,1.81
-303,Islwyn,wales,labour,10.85,50.81,1.46,14.36,4.64,0.0,11.54,6.35,0.0,0.0,0.0,0.0,0.0,no,labour,36.46
-179,Dulwich and West Norwood,london,labour,18.36,53.66,12.72,6.06,9.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,35.3
-334,Lichfield,westmidlands,conservative,50.5,22.14,5.11,17.59,4.65,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.36
-49,Birmingham Hall Green,westmidlands,labour,13.66,37.84,8.8,11.99,6.11,0.0,0.0,21.6,0.0,0.0,0.0,0.0,0.0,no,labour,16.24
-99,Burnley,northwestengland,libdems,15.19,36.58,20.37,16.1,3.39,0.0,0.0,8.37,0.0,0.0,0.0,0.0,0.0,yes,labour,16.21
-609,Wells,southwestengland,libdems,36.69,14.09,28.74,16.03,4.13,0.0,0.0,0.32,0.0,0.0,0.0,0.0,0.0,yes,conservative,7.95
-612,West Aberdeenshire and Kincardine,scotland,libdems,28.96,5.17,24.43,4.0,1.79,35.47,0.0,0.17,0.0,0.0,0.0,0.0,0.0,yes,snp,6.51
-127,Cheadle,northwestengland,libdems,39.15,11.2,30.51,15.26,3.88,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,8.64
-526,South West Hertfordshire,eastofengland,conservative,44.08,17.37,6.46,21.97,8.54,0.0,0.0,1.57,0.0,0.0,0.0,0.0,0.0,no,conservative,22.1
-239,Glasgow East,scotland,labour,3.76,39.84,0.72,3.93,4.38,45.62,0.0,1.76,0.0,0.0,0.0,0.0,0.0,yes,snp,5.78
-327,Leicester West,eastmidlands,labour,25.84,44.49,7.62,10.53,7.08,0.0,0.0,4.45,0.0,0.0,0.0,0.0,0.0,no,labour,18.65
-608,Wellingborough,eastmidlands,conservative,47.24,29.89,3.36,13.41,3.85,0.0,0.0,2.25,0.0,0.0,0.0,0.0,0.0,no,conservative,17.34
-248,Gosport,southeastengland,conservative,45.44,25.44,6.64,14.75,3.88,0.0,0.0,3.86,0.0,0.0,0.0,0.0,0.0,no,conservative,20.0
-46,Birkenhead,northwestengland,labour,15.18,61.64,2.67,13.93,6.58,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,46.46
-451,Poplar and Limehouse,london,labour,20.81,40.63,1.89,8.62,10.58,0.0,0.0,17.47,0.0,0.0,0.0,0.0,0.0,no,labour,19.82
-117,Carmarthen East and Dinefwr,wales,plaidcymru,16.69,26.48,1.58,17.9,7.22,0.0,30.12,0.0,0.0,0.0,0.0,0.0,0.0,no,plaidcymru,3.65
-278,Henley,southeastengland,conservative,48.02,17.08,9.34,15.92,9.2,0.0,0.0,0.45,0.0,0.0,0.0,0.0,0.0,no,conservative,30.94
-516,South Norfolk,eastofengland,conservative,40.36,19.8,8.14,20.88,10.46,0.0,0.0,0.35,0.0,0.0,0.0,0.0,0.0,no,conservative,19.49
-176,Dover,southeastengland,conservative,32.55,39.0,2.83,19.03,5.35,0.0,0.0,1.24,0.0,0.0,0.0,0.0,0.0,yes,labour,6.45
-170,Derbyshire Dales,eastmidlands,conservative,49.76,22.37,7.29,12.67,7.81,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,27.39
-561,Sutton and Cheam,london,libdems,40.36,7.2,35.43,13.0,3.33,0.0,0.0,0.69,0.0,0.0,0.0,0.0,0.0,yes,conservative,4.93
-425,Norwich North,eastofengland,conservative,35.83,44.58,3.02,8.79,7.1,0.0,0.0,0.69,0.0,0.0,0.0,0.0,0.0,yes,labour,8.76
-180,Dumfries and Galloway,scotland,labour,31.76,29.94,1.4,4.31,1.66,30.93,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,0.84
-146,"Coatbridge, Chryston and Bellshill",scotland,labour,7.37,47.35,1.29,4.26,1.93,37.8,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,9.55
-203,Eastleigh,southeastengland,libdems,30.26,14.58,28.06,20.7,6.25,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,yes,conservative,2.2
-296,Ilford South,london,labour,22.5,54.07,3.24,13.56,6.37,0.0,0.0,0.26,0.0,0.0,0.0,0.0,0.0,no,labour,31.57
-483,Saffron Walden,eastofengland,conservative,52.8,17.24,7.98,15.2,6.39,0.0,0.0,0.4,0.0,0.0,0.0,0.0,0.0,no,conservative,35.56
-140,City of Chester,northwestengland,conservative,37.83,39.08,3.68,13.73,5.45,0.0,0.0,0.23,0.0,0.0,0.0,0.0,0.0,yes,labour,1.25
-213,Eltham,london,labour,31.07,42.04,2.13,14.36,7.78,0.0,0.0,2.63,0.0,0.0,0.0,0.0,0.0,no,labour,10.97
+495,Sheffield Heeley,yorkshireandthehumber,labour,15.09,46.07,10.8,15.97,10.24,0.0,0.0,1.84,0.0,0.0,0.0,0.0,0.0,no,labour,30.1
+463,Reigate,southeastengland,conservative,44.06,17.28,9.81,18.71,9.16,0.0,0.0,0.98,0.0,0.0,0.0,0.0,0.0,no,conservative,25.34
+209,Edinburgh West,scotland,libdems,22.02,14.33,21.5,3.65,6.53,31.97,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,9.95
+433,Old Bexley and Sidcup,london,conservative,46.03,20.09,2.6,22.84,4.28,0.0,0.0,4.15,0.0,0.0,0.0,0.0,0.0,no,conservative,23.19
+157,Croydon Central,london,conservative,34.33,35.91,1.94,13.75,6.53,0.0,0.0,7.53,0.0,0.0,0.0,0.0,0.0,yes,labour,1.58
+344,Louth and Horncastle,eastmidlands,conservative,50.19,21.54,7.44,14.29,2.99,0.0,0.0,3.55,0.0,0.0,0.0,0.0,0.0,no,conservative,28.65
+71,Bosworth,eastmidlands,conservative,40.0,18.69,15.65,17.72,5.11,0.0,0.0,2.84,0.0,0.0,0.0,0.0,0.0,no,conservative,21.31
+129,Chelsea and Fulham,london,conservative,60.61,22.56,3.68,6.85,5.83,0.0,0.0,0.46,0.0,0.0,0.0,0.0,0.0,no,conservative,38.05
+339,"Liverpool, Wavertree",northwestengland,labour,6.3,56.49,14.96,13.4,8.67,0.0,0.0,0.19,0.0,0.0,0.0,0.0,0.0,no,labour,41.52
+481,Rutherglen and Hamilton West,scotland,labour,9.58,44.03,1.83,4.42,1.3,38.84,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,5.19
+256,Hackney North and Stoke Newington,london,labour,12.47,60.83,9.06,3.19,13.95,0.0,0.0,0.5,0.0,0.0,0.0,0.0,0.0,no,labour,46.87
+125,Charnwood,eastmidlands,conservative,49.3,23.89,6.72,11.97,5.26,0.0,0.0,2.86,0.0,0.0,0.0,0.0,0.0,no,conservative,25.42
+200,East Worthing and Shoreham,southeastengland,conservative,45.06,26.66,10.99,12.77,4.38,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,18.4
+132,Chesterfield,eastmidlands,labour,14.35,43.88,20.0,15.42,5.74,0.0,0.0,0.61,0.0,0.0,0.0,0.0,0.0,no,labour,23.88
+138,Christchurch,southwestengland,conservative,54.63,18.97,11.34,12.63,2.44,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,35.66
+576,Tonbridge and Malling,southeastengland,conservative,48.9,19.15,7.26,18.27,6.08,0.0,0.0,0.35,0.0,0.0,0.0,0.0,0.0,no,conservative,29.75
+512,South East Cambridgeshire,eastofengland,conservative,47.03,14.64,17.7,13.56,6.75,0.0,0.0,0.32,0.0,0.0,0.0,0.0,0.0,no,conservative,29.33
+224,Faversham and Mid Kent,southeastengland,conservative,48.07,24.21,5.55,17.54,4.1,0.0,0.0,0.52,0.0,0.0,0.0,0.0,0.0,no,conservative,23.86
+173,Don Valley,yorkshireandthehumber,labour,27.65,43.16,2.94,16.64,3.16,0.0,0.0,6.45,0.0,0.0,0.0,0.0,0.0,no,labour,15.51
+50,Birmingham Hodge Hill,westmidlands,labour,10.23,56.2,10.83,12.77,6.29,0.0,0.0,3.69,0.0,0.0,0.0,0.0,0.0,no,labour,43.42
+242,Glasgow North West,scotland,labour,9.76,37.24,3.78,4.23,4.61,37.24,0.0,3.14,0.0,0.0,0.0,0.0,0.0,no,labour,0.0
+139,Cities of London and Westminster,london,conservative,45.37,23.59,5.72,14.68,10.47,0.0,0.0,0.18,0.0,0.0,0.0,0.0,0.0,no,conservative,21.78
+582,Tottenham,london,labour,12.7,64.93,4.35,6.35,9.27,0.0,0.0,2.4,0.0,0.0,0.0,0.0,0.0,no,labour,52.23
+606,Wealden,southeastengland,conservative,48.19,15.24,9.61,19.59,7.37,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.6
+490,Selby and Ainsty,yorkshireandthehumber,conservative,47.68,30.28,3.31,13.86,3.92,0.0,0.0,0.95,0.0,0.0,0.0,0.0,0.0,no,conservative,17.4
+314,Kingswood,southwestengland,conservative,30.83,43.71,4.46,14.53,5.02,0.0,0.0,1.45,0.0,0.0,0.0,0.0,0.0,yes,labour,12.88
+355,"Manchester, Withington",northwestengland,libdems,9.01,41.61,25.07,12.96,11.29,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,yes,labour,16.54
+79,Brecon and Radnorshire,wales,libdems,34.36,13.34,27.88,14.3,7.51,0.0,2.43,0.17,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.47
+461,Redcar,northeastengland,libdems,12.5,38.69,29.97,14.07,4.0,0.0,0.0,0.78,0.0,0.0,0.0,0.0,0.0,yes,labour,8.72
+5,Airdrie and Shotts,scotland,labour,7.94,38.01,1.14,4.45,2.12,46.1,0.0,0.25,0.0,0.0,0.0,0.0,0.0,yes,snp,8.09
+530,Southampton Itchen,southeastengland,labour,27.91,44.05,5.97,14.42,7.6,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,labour,16.13
+63,Blyth Valley,northeastengland,labour,14.83,50.33,10.66,14.41,6.43,0.0,0.0,3.34,0.0,0.0,0.0,0.0,0.0,no,labour,35.49
+372,Mitcham and Morden,london,labour,21.22,59.01,1.75,13.0,3.5,0.0,0.0,1.52,0.0,0.0,0.0,0.0,0.0,no,labour,37.79
+123,Central Suffolk and North Ipswich,eastofengland,conservative,42.66,24.04,5.2,18.24,9.72,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,18.62
+52,Birmingham Northfield,westmidlands,labour,31.02,44.34,2.37,12.89,6.27,0.0,0.0,3.1,0.0,0.0,0.0,0.0,0.0,no,labour,13.32
+20,Banbury,southeastengland,conservative,43.48,26.25,5.91,16.51,7.71,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,no,conservative,17.23
+44,Bexhill and Battle,southeastengland,conservative,42.57,18.35,10.83,16.98,5.42,0.0,0.0,5.86,0.0,0.0,0.0,0.0,0.0,no,conservative,24.22
+275,Hemel Hempstead,eastofengland,conservative,45.3,32.07,3.77,11.78,5.24,0.0,0.0,1.83,0.0,0.0,0.0,0.0,0.0,no,conservative,13.23
+588,Uxbridge and South Ruislip,london,conservative,45.43,26.96,5.99,15.36,3.8,0.0,0.0,2.47,0.0,0.0,0.0,0.0,0.0,no,conservative,18.47
+280,Hertford and Stortford,eastofengland,conservative,47.74,22.15,5.91,15.7,7.11,0.0,0.0,1.38,0.0,0.0,0.0,0.0,0.0,no,conservative,25.6
+158,Croydon North,london,labour,19.95,57.82,2.09,13.31,6.29,0.0,0.0,0.54,0.0,0.0,0.0,0.0,0.0,no,labour,37.87
+533,Southport,northwestengland,libdems,34.0,11.35,32.5,15.93,6.21,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,1.5
+445,Perth and North Perthshire,scotland,snp,26.0,6.42,1.6,3.42,1.85,60.56,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,snp,34.55
+185,Dwyfor Meirionnydd,wales,plaidcymru,19.37,16.66,1.81,11.55,6.15,0.0,42.87,1.58,0.0,0.0,0.0,0.0,0.0,no,plaidcymru,23.51
+184,Dunfermline and West Fife,scotland,labour,7.26,33.48,21.45,4.34,2.54,30.93,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,2.54
+66,Bolton North East,northwestengland,labour,31.14,46.6,1.8,16.18,4.23,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,no,labour,15.46
+453,Portsmouth South,southeastengland,other,27.04,21.09,26.38,16.29,7.65,0.0,0.0,1.55,0.0,0.0,0.0,0.0,0.0,yes,conservative,0.67
+560,Surrey Heath,southeastengland,conservative,54.63,17.82,11.25,12.64,3.66,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,36.81
+328,Leigh,northwestengland,labour,18.81,52.79,3.04,17.08,4.3,0.0,0.0,3.98,0.0,0.0,0.0,0.0,0.0,no,labour,33.98
+290,Houghton and Sunderland South,northeastengland,labour,18.08,52.62,2.0,15.61,5.21,0.0,0.0,6.47,0.0,0.0,0.0,0.0,0.0,no,labour,34.54
+559,Sunderland Central,northeastengland,labour,26.65,49.31,2.88,15.13,4.97,0.0,0.0,1.05,0.0,0.0,0.0,0.0,0.0,no,labour,22.66
+294,Hyndburn,northwestengland,labour,30.21,44.06,1.72,17.05,3.62,0.0,0.0,3.35,0.0,0.0,0.0,0.0,0.0,no,labour,13.85
+84,Bridgend,wales,labour,28.62,43.39,5.1,12.58,4.1,0.0,5.79,0.42,0.0,0.0,0.0,0.0,0.0,no,labour,14.78
+621,West Worcestershire,westmidlands,conservative,49.0,8.31,20.26,14.85,7.57,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.74
+64,Bognor Regis and Littlehampton,southeastengland,conservative,40.34,19.73,7.47,24.66,5.46,0.0,0.0,2.35,0.0,0.0,0.0,0.0,0.0,no,conservative,15.69
+475,Rother Valley,yorkshireandthehumber,labour,26.48,46.39,3.17,17.29,2.97,0.0,0.0,3.71,0.0,0.0,0.0,0.0,0.0,no,labour,19.91
+566,Tatton,northwestengland,conservative,50.87,19.76,5.66,16.22,6.57,0.0,0.0,0.92,0.0,0.0,0.0,0.0,0.0,no,conservative,31.1
+197,East Lothian,scotland,labour,19.53,29.02,4.6,4.38,3.43,38.56,0.0,0.48,0.0,0.0,0.0,0.0,0.0,yes,snp,9.54
+240,Glasgow North,scotland,labour,7.21,29.94,16.82,4.81,5.39,32.34,0.0,3.48,0.0,0.0,0.0,0.0,0.0,yes,snp,2.4
+529,South West Wiltshire,southwestengland,conservative,44.75,19.72,13.73,15.53,6.13,0.0,0.0,0.14,0.0,0.0,0.0,0.0,0.0,no,conservative,25.03
+358,Meriden,westmidlands,conservative,46.98,22.66,3.32,17.17,7.02,0.0,0.0,2.85,0.0,0.0,0.0,0.0,0.0,no,conservative,24.33
+510,South Dorset,southwestengland,conservative,33.98,37.55,5.34,16.85,6.22,0.0,0.0,0.06,0.0,0.0,0.0,0.0,0.0,yes,labour,3.57
+241,Glasgow North East,scotland,labour,4.99,48.11,1.12,4.43,4.97,33.77,0.0,2.62,0.0,0.0,0.0,0.0,0.0,no,labour,14.34
+286,Holborn and St. Pancras,london,labour,18.98,54.61,13.35,6.68,5.96,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,no,labour,35.63
+501,Skipton and Ripon,yorkshireandthehumber,conservative,47.4,11.97,14.03,18.26,7.67,0.0,0.0,0.66,0.0,0.0,0.0,0.0,0.0,no,conservative,29.13
+644,Worsley and Eccles South,northwestengland,labour,28.5,45.19,2.37,17.0,6.48,0.0,0.0,0.46,0.0,0.0,0.0,0.0,0.0,no,labour,16.69
+193,East Ham,london,labour,12.48,73.98,1.73,6.73,4.8,0.0,0.0,0.28,0.0,0.0,0.0,0.0,0.0,no,labour,61.49
+567,Taunton Deane,southwestengland,libdems,35.48,9.82,32.14,15.87,6.69,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,3.33
+153,Coventry North West,westmidlands,labour,26.6,46.56,3.57,13.92,6.37,0.0,0.0,2.97,0.0,0.0,0.0,0.0,0.0,no,labour,19.96
+440,Paisley and Renfrewshire North,scotland,labour,13.89,35.97,1.54,4.03,2.25,41.83,0.0,0.48,0.0,0.0,0.0,0.0,0.0,yes,snp,5.86
+233,Gainsborough,eastmidlands,conservative,47.43,18.59,11.57,16.33,5.4,0.0,0.0,0.67,0.0,0.0,0.0,0.0,0.0,no,conservative,28.84
+105,"Caithness, Sutherland and Easter Ross",scotland,libdems,12.05,11.98,25.65,5.09,3.71,41.05,0.0,0.47,0.0,0.0,0.0,0.0,0.0,yes,snp,15.4
+380,Na h-Eileanan an Iar,scotland,snp,3.73,16.44,0.98,2.78,1.42,68.23,0.0,6.42,0.0,0.0,0.0,0.0,0.0,no,snp,51.8
+348,Macclesfield,northwestengland,conservative,45.79,24.26,6.91,15.84,6.41,0.0,0.0,0.79,0.0,0.0,0.0,0.0,0.0,no,conservative,21.53
+337,"Liverpool, Riverside",northwestengland,labour,9.31,62.55,6.26,13.12,8.5,0.0,0.0,0.27,0.0,0.0,0.0,0.0,0.0,no,labour,49.43
+521,South Suffolk,eastofengland,conservative,41.19,22.46,10.05,18.4,7.91,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,18.73
+219,Erith and Thamesmead,london,labour,24.85,43.81,1.64,18.91,5.87,0.0,0.0,4.92,0.0,0.0,0.0,0.0,0.0,no,labour,18.96
+518,South Ribble,northwestengland,conservative,39.11,35.7,1.95,17.57,5.38,0.0,0.0,0.28,0.0,0.0,0.0,0.0,0.0,no,conservative,3.41
+460,Reading West,southeastengland,conservative,34.23,38.2,5.53,13.59,8.08,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,yes,labour,3.97
+580,Torridge and West Devon,southwestengland,conservative,39.37,10.24,22.07,19.76,8.35,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,conservative,17.29
+429,Nottingham South,eastmidlands,labour,31.06,42.23,7.72,10.79,7.68,0.0,0.0,0.52,0.0,0.0,0.0,0.0,0.0,no,labour,11.17
+615,West Dorset,southwestengland,conservative,40.75,12.46,22.08,16.43,8.29,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,18.67
+450,Poole,southwestengland,conservative,38.84,20.61,13.72,19.83,5.91,0.0,0.0,1.08,0.0,0.0,0.0,0.0,0.0,no,conservative,18.23
+73,Bournemouth West,southwestengland,conservative,39.05,24.36,15.03,15.85,5.54,0.0,0.0,0.17,0.0,0.0,0.0,0.0,0.0,no,conservative,14.7
+111,Canterbury,southeastengland,conservative,38.66,24.41,16.0,12.77,8.09,0.0,0.0,0.05,0.0,0.0,0.0,0.0,0.0,no,conservative,14.25
+622,Westminster North,london,labour,34.08,47.16,2.09,7.86,8.51,0.0,0.0,0.3,0.0,0.0,0.0,0.0,0.0,no,labour,13.07
+420,North West Leicestershire,eastmidlands,conservative,41.2,33.41,2.77,14.72,4.68,0.0,0.0,3.23,0.0,0.0,0.0,0.0,0.0,no,conservative,7.78
+525,South West Devon,southwestengland,conservative,50.28,21.43,9.64,11.59,7.06,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.85
+421,North West Norfolk,eastofengland,conservative,45.66,20.41,3.64,23.0,5.59,0.0,0.0,1.71,0.0,0.0,0.0,0.0,0.0,no,conservative,22.66
+101,Bury North,northwestengland,conservative,36.71,38.7,2.51,15.98,5.71,0.0,0.0,0.4,0.0,0.0,0.0,0.0,0.0,yes,labour,1.99
+7,Aldridge-Brownhills,westmidlands,conservative,54.11,21.87,3.13,17.45,3.3,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,conservative,32.25
+375,Montgomeryshire,wales,conservative,40.31,9.38,17.79,15.71,8.17,0.0,8.31,0.33,0.0,0.0,0.0,0.0,0.0,no,conservative,22.51
+538,St. Helens South and Whiston,northwestengland,labour,16.4,59.66,6.09,13.03,4.61,0.0,0.0,0.21,0.0,0.0,0.0,0.0,0.0,no,labour,43.25
+455,Preston,northwestengland,labour,17.66,47.94,6.63,20.08,7.53,0.0,0.0,0.16,0.0,0.0,0.0,0.0,0.0,no,labour,27.86
+81,Brent North,london,labour,28.56,52.29,3.88,7.09,7.41,0.0,0.0,0.77,0.0,0.0,0.0,0.0,0.0,no,labour,23.73
+415,North Tyneside,northeastengland,labour,15.6,53.96,6.63,15.39,6.88,0.0,0.0,1.55,0.0,0.0,0.0,0.0,0.0,no,labour,38.36
+406,North East Hampshire,southeastengland,conservative,54.6,16.34,10.06,13.11,5.89,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,38.26
+47,Birmingham Edgbaston,westmidlands,labour,34.07,43.75,2.28,12.71,6.2,0.0,0.0,0.99,0.0,0.0,0.0,0.0,0.0,no,labour,9.68
+199,East Surrey,southeastengland,conservative,52.95,15.79,11.1,15.2,4.71,0.0,0.0,0.25,0.0,0.0,0.0,0.0,0.0,no,conservative,37.16
+444,Penrith and The Border,northwestengland,conservative,56.46,16.93,12.15,8.66,5.4,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,no,conservative,39.52
+471,Romford,london,conservative,43.55,18.58,1.54,28.13,4.38,0.0,0.0,3.83,0.0,0.0,0.0,0.0,0.0,no,conservative,15.42
+484,Salford and Eccles,northwestengland,labour,18.05,43.9,8.69,17.81,6.8,0.0,0.0,4.75,0.0,0.0,0.0,0.0,0.0,no,labour,25.84
+639,Wolverhampton South East,westmidlands,labour,26.03,51.56,2.29,16.01,3.95,0.0,0.0,0.15,0.0,0.0,0.0,0.0,0.0,no,labour,25.53
+42,Bethnal Green and Bow,london,labour,11.42,46.1,5.62,8.76,10.63,0.0,0.0,17.47,0.0,0.0,0.0,0.0,0.0,no,labour,28.63
+166,Delyn,wales,labour,29.92,43.99,2.21,14.81,4.31,0.0,4.43,0.32,0.0,0.0,0.0,0.0,0.0,no,labour,14.07
+591,Vauxhall,london,labour,17.74,52.04,9.11,6.62,14.09,0.0,0.0,0.4,0.0,0.0,0.0,0.0,0.0,no,labour,34.31
+121,Central Ayrshire,scotland,labour,19.94,31.27,1.78,3.04,1.08,42.74,0.0,0.14,0.0,0.0,0.0,0.0,0.0,yes,snp,11.47
+470,Rochford and Southend East,eastofengland,conservative,40.04,29.63,2.99,18.2,5.53,0.0,0.0,3.61,0.0,0.0,0.0,0.0,0.0,no,conservative,10.41
+13,Argyll and Bute,scotland,libdems,22.4,10.78,17.58,4.57,2.95,40.59,0.0,1.14,0.0,0.0,0.0,0.0,0.0,yes,snp,18.19
+300,Isle of Wight,southeastengland,conservative,38.28,17.82,14.22,18.79,7.86,0.0,0.0,3.02,0.0,0.0,0.0,0.0,0.0,no,conservative,19.49
+151,Corby,eastmidlands,labour,32.68,39.06,1.83,19.46,5.66,0.0,0.0,1.31,0.0,0.0,0.0,0.0,0.0,no,labour,6.38
+626,Wimbledon,london,conservative,46.04,25.61,9.94,11.52,6.81,0.0,0.0,0.08,0.0,0.0,0.0,0.0,0.0,no,conservative,20.43
+237,Gillingham and Rainham,southeastengland,conservative,39.15,37.17,4.74,13.39,3.45,0.0,0.0,2.11,0.0,0.0,0.0,0.0,0.0,no,conservative,1.98
+303,Islwyn,wales,labour,11.02,50.74,1.43,14.39,4.65,0.0,11.5,6.26,0.0,0.0,0.0,0.0,0.0,no,labour,36.35
+179,Dulwich and West Norwood,london,labour,19.82,52.69,12.05,6.21,9.23,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,32.87
+334,Lichfield,westmidlands,conservative,50.37,22.25,5.13,17.59,4.66,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,conservative,28.12
+49,Birmingham Hall Green,westmidlands,labour,13.84,37.91,8.78,12.03,6.13,0.0,0.0,21.31,0.0,0.0,0.0,0.0,0.0,no,labour,16.6
+99,Burnley,northwestengland,libdems,15.35,36.76,20.13,16.14,3.4,0.0,0.0,8.22,0.0,0.0,0.0,0.0,0.0,yes,labour,16.63
+609,Wells,southwestengland,libdems,36.81,14.19,28.48,16.03,4.16,0.0,0.0,0.32,0.0,0.0,0.0,0.0,0.0,yes,conservative,8.32
+612,West Aberdeenshire and Kincardine,scotland,libdems,28.69,5.64,23.63,4.04,1.81,36.02,0.0,0.16,0.0,0.0,0.0,0.0,0.0,yes,snp,7.33
+127,Cheadle,northwestengland,libdems,39.21,11.38,30.18,15.33,3.89,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,conservative,9.03
+526,South West Hertfordshire,eastofengland,conservative,44.03,17.49,6.44,21.94,8.54,0.0,0.0,1.56,0.0,0.0,0.0,0.0,0.0,no,conservative,22.08
+239,Glasgow East,scotland,labour,3.94,39.45,0.68,3.96,4.37,45.9,0.0,1.7,0.0,0.0,0.0,0.0,0.0,yes,snp,6.45
+327,Leicester West,eastmidlands,labour,25.98,44.4,7.6,10.54,7.08,0.0,0.0,4.4,0.0,0.0,0.0,0.0,0.0,no,labour,18.41
+608,Wellingborough,eastmidlands,conservative,47.14,29.94,3.41,13.42,3.86,0.0,0.0,2.23,0.0,0.0,0.0,0.0,0.0,no,conservative,17.2
+248,Gosport,southeastengland,conservative,45.41,25.45,6.7,14.74,3.9,0.0,0.0,3.8,0.0,0.0,0.0,0.0,0.0,no,conservative,19.95
+46,Birkenhead,northwestengland,labour,15.3,61.45,2.71,13.95,6.58,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,46.15
+451,Poplar and Limehouse,london,labour,22.25,41.36,1.6,8.93,10.63,0.0,0.0,15.23,0.0,0.0,0.0,0.0,0.0,no,labour,19.11
+117,Carmarthen East and Dinefwr,wales,plaidcymru,16.85,26.61,1.55,17.92,7.24,0.0,29.82,0.0,0.0,0.0,0.0,0.0,0.0,no,plaidcymru,3.21
+278,Henley,southeastengland,conservative,47.93,17.14,9.36,15.9,9.22,0.0,0.0,0.45,0.0,0.0,0.0,0.0,0.0,no,conservative,30.79
+516,South Norfolk,eastofengland,conservative,40.35,19.91,8.09,20.85,10.44,0.0,0.0,0.36,0.0,0.0,0.0,0.0,0.0,no,conservative,19.5
+176,Dover,southeastengland,conservative,32.64,38.85,2.92,18.99,5.37,0.0,0.0,1.23,0.0,0.0,0.0,0.0,0.0,yes,labour,6.21
+170,Derbyshire Dales,eastmidlands,conservative,49.65,22.48,7.28,12.69,7.81,0.0,0.0,0.09,0.0,0.0,0.0,0.0,0.0,no,conservative,27.17
+561,Sutton and Cheam,london,libdems,41.14,8.63,32.19,13.66,3.55,0.0,0.0,0.83,0.0,0.0,0.0,0.0,0.0,yes,conservative,8.95
+425,Norwich North,eastofengland,conservative,35.93,44.5,2.96,8.81,7.1,0.0,0.0,0.69,0.0,0.0,0.0,0.0,0.0,yes,labour,8.57
+180,Dumfries and Galloway,scotland,labour,31.31,29.97,1.33,4.33,1.68,31.38,0.0,0.0,0.0,0.0,0.0,0.0,0.0,yes,snp,0.07
+146,"Coatbridge, Chryston and Bellshill",scotland,labour,7.61,46.69,1.23,4.29,1.95,38.23,0.0,0.0,0.0,0.0,0.0,0.0,0.0,no,labour,8.46
+203,Eastleigh,southeastengland,libdems,30.43,14.68,27.79,20.68,6.29,0.0,0.0,0.13,0.0,0.0,0.0,0.0,0.0,yes,conservative,2.64
+296,Ilford South,london,labour,23.44,52.48,3.81,13.61,6.45,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,no,labour,29.04
+483,Saffron Walden,eastofengland,conservative,52.69,17.36,7.94,15.21,6.39,0.0,0.0,0.41,0.0,0.0,0.0,0.0,0.0,no,conservative,35.32
+140,City of Chester,northwestengland,conservative,37.73,39.15,3.71,13.74,5.45,0.0,0.0,0.22,0.0,0.0,0.0,0.0,0.0,yes,labour,1.43
+213,Eltham,london,labour,31.25,42.15,1.78,14.48,7.87,0.0,0.0,2.47,0.0,0.0,0.0,0.0,0.0,no,labour,10.9

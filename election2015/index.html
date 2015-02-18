@@ -269,7 +269,21 @@
 				</div>
 				<div id="bottomright">
 
-					<h3 style="text-align: center; font-size: 2em; font-weight: bold;">Last updated <script>var x = new Date(document.lastModified).toUTCString(); document.write(x)</script></h3>
+					<h3>Last updated
+						<script>
+							var x = new Date(document.lastModified).toUTCString(); document.write(x)
+						</script>
+					</h3>
+
+					<h3>Days to Election :
+						<script>
+							var today = new Date();
+							var date = new Date("May 5, 2015")
+							var diff = date.getTime() - today.getTime();
+							var daysUntilElection = Math.floor(diff / (1000 * 60 * 60 * 24));
+							document.write(daysUntilElection);
+						</script>
+					</h3>
 				</div>
 			</div>
 		</div>

@@ -43,7 +43,10 @@
 					<h3 id="currentpage"> 2015 Nowcast </h3>
 					<h3 id="notactive"><a href="/election2015/current.html">Current Parliament</a></h3>
 
+				</div>
 
+				<div id="aboutbutton">
+					<button id="aboutmap" onclick="toggle_visibility('aboutpopup');">Methodology</button>
 				</div>
 
 				<div id="searchforseat">
@@ -118,36 +121,13 @@
 				<div id ="filteredlisttable"></div>
 
 
-			</div>
-
-			<div id="left">
-				<div id ="resetbutton">
-					<button id ="resetmap" onclick="reset()">Reset</button>
-				</div>
-
-				<div id ="aboutbutton">
-					<button id ="aboutmap" onclick="toggle_visibility('aboutpopup');">About</button>
-
-				</div>
-
-				<script>
-					function toggle_visibility(id){
-						var e = document.getElementById(id);
-						if (e.style.display == "block")
-							e.style.display = "none";
-						else
-							e.style.display = "block";
-					}
-
-				</script>
-
 				<div id="aboutpopup">
 					<div class="aboutwrapper">
 						<div class ="aboutinfo">
 
 							<h3> About the Map </h3>
 
-						  <p>Dung beetles are beetles that feed partly or exclusively on dungs or feces.
+							<p>Dung beetles are beetles that feed partly or exclusively on dungs or feces.
 								They possess exceptional dung disposal capacity and one dung beetle can bury dung that is 250 times heavier than itself in one night.
 								Many dung beetles, known as rollers, roll dung into round balls, which are used as a food source or brooding chambers.
 								Other dung beetles, known as tunnelers, bury the dung wherever they find it.
@@ -158,6 +138,15 @@
 							<p><a href="javascript:void(0)" onclick="toggle_visibility('aboutpopup');">Close </a></p>
 						</div>
 					</div>
+				</div>
+
+
+			</div>
+
+			<div id="left">
+
+				<div id="resetbutton">
+					<button id="resetmap" onclick="reset()">Reset</button>
 				</div>
 
 					<script>
@@ -262,7 +251,7 @@
 					<div id="charts">
 							<div id="information-pie"></div>
 							<div id="information-chart"></div>
-				</div>
+					</div>
 
 				<div id = "totals">
 
@@ -305,13 +294,13 @@
 				</div>
 				<div id="bottomright">
 
-					<h3>Last updated
+					<h3 style="float:left; position:absolute;">Last updated
 						<script>
 							var x = new Date(document.lastModified).toUTCString(); document.write(x)
 						</script>
 					</h3>
 
-					<h3>Days to Election :
+					<h3 style="float: left; padding-top: 25px;">Days to Election :
 						<script>
 							var today = new Date();
 							var date = new Date("May 5, 2015")
@@ -320,6 +309,10 @@
 							document.write(daysUntilElection);
 						</script>
 					</h3>
+
+
+
+
 				</div>
 			</div>
 		</div>

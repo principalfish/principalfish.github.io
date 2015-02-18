@@ -142,11 +142,12 @@
 	border-left: 1px solid black;
 	display: block;
 	overflow: hidden;
-	position: relative;
+	/*position: relative;*/
 }
 
 #resetbutton {
 	position: absolute;
+	z-index: 1;
 	padding: 5px;
 }
 

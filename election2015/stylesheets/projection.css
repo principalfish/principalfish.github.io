@@ -52,7 +52,7 @@
 	top : 0;
 	left : 0;
 	background-color: black;
-	opacity: 0.8;
+	opacity: 0.9;
 	width: 100%;
 	height : 120%;
 }
@@ -65,8 +65,9 @@
 }
 
 .aboutinfo {
-		background-color: #FFF;
-		padding: 15px;
-		
+		background-color: white;
+		color: black;
+		padding: 5px;
+		opacity: 1;
 		border-radius : 6px;
 }

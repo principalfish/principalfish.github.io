@@ -122,8 +122,44 @@
 
 			<div id="left">
 				<div id ="resetbutton">
-					<button id ="resetzoom" onclick="reset()">Reset</button>
+					<button id ="resetmap" onclick="reset()">Reset</button>
 				</div>
+
+				<div id ="aboutbutton">
+					<button id ="aboutmap" onclick="toggle_visibility('aboutpopup');">About</button>
+
+				</div>
+
+				<script>
+					function toggle_visibility(id){
+						var e = document.getElementById(id);
+						if (e.style.display == "block")
+							e.style.display = "none";
+						else
+							e.style.display = "block";
+					}
+
+				</script>
+
+				<div id="aboutpopup">
+					<div class="aboutwrapper">
+						<div class ="aboutinfo">
+
+							<h3> About the Map </h3>
+
+						  <p>Dung beetles are beetles that feed partly or exclusively on dungs or feces.
+								They possess exceptional dung disposal capacity and one dung beetle can bury dung that is 250 times heavier than itself in one night.
+								Many dung beetles, known as rollers, roll dung into round balls, which are used as a food source or brooding chambers.
+								Other dung beetles, known as tunnelers, bury the dung wherever they find it.
+								A third group, the dwellers, neither roll nor burrow: they simply live in manure.
+								They are often attracted by the dung collected by burrowing owls. Dung Beetles can grow to 3 cm long and 2 cm wide.
+							</p>
+
+							<p><a href="javascript:void(0)" onclick="toggle_visibility('aboutpopup');">Close </a></p>
+						</div>
+					</div>
+				</div>
+
 					<script>
 
 

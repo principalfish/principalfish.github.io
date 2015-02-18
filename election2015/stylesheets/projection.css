@@ -69,3 +69,12 @@
 		font-size: 1.35em;
 		border-radius : 6px;
 }
+
+#filteredlist a {
+	text-decoration: none;
+	color: #fff;
+}
+
+#filteredlist a:hover {
+	color: orange;
+}

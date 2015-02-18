@@ -21,7 +21,7 @@
 
 		<div id="wrapper">
 			<div id="top">
-				<h2>UK Election Maps<span style="font-size:0.5em;"> - nowcast </span></h2>
+				<h2>UK Election Maps<span style="font-size:0.5em;"> - Projection </span></h2>
 				<script>
 				$(function(){
 					$("#menu").load("/menu.html")
@@ -40,15 +40,12 @@
 
 				<div id="projections">
 
-					<h3 id="currentpage"> 2015 Nowcast </h3>
+					<h3 id="currentpage"> 2015 Projection </h3>
 					<h3 id="notactive"><a href="/election2015/current.html">Current Parliament</a></h3>
 					<h3 id="notactive"><a href="javascript:void(0)" onclick="toggle_visibility('aboutpopup');">Methodology</a></h3>
 
 				</div>
 
-				<!-- <div id="aboutbutton"> -->
-					<!-- <button id="aboutmap" onclick="toggle_visibility('aboutpopup');">Methodology</button>
-				</div> -->
 
 				<div id="searchforseat">
 					<h2>Seat Search</h2>
@@ -295,20 +292,22 @@
 				</div>
 				<div id="bottomright">
 
-					<h3 style="float:left; position:absolute;">Last updated
+					<h3 style="float:left; position:absolute;">Last updated :
 						<script>
 							var x = new Date(document.lastModified).toUTCString(); document.write(x)
 						</script>
 					</h3>
 
-					<h3 style="float: left; padding-top: 25px;">Days to Election :
-						<script>
-							var today = new Date();
-							var date = new Date("May 5, 2015")
-							var diff = date.getTime() - today.getTime();
-							var daysUntilElection = Math.floor(diff / (1000 * 60 * 60 * 24));
-							document.write(daysUntilElection);
-						</script>
+					<h3 style="float: left; padding-top: 25px;">Election Day : Thu, 7 May 2015</h3>
+
+					<h3 style="float: right; padding-top: 25px; padding-right: 5px;">  Days to Election :
+					<script>
+						var today = new Date();
+						var date = new Date("May 7, 2015")
+						var diff = date.getTime() - today.getTime();
+						var daysUntilElection = Math.floor(diff / (1000 * 60 * 60 * 24));
+						document.write(daysUntilElection);
+					</script>
 					</h3>
 
 

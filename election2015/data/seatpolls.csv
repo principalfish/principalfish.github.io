@@ -1,0 +1,85 @@
+"pollster"	"pollsterweight"	"date"	"day"	"month"	"year"	"seat"	"total"	"conservative"	"labour"	"libdems"	"ukip"	"green"	"snp"	"plaidcymru"	"other"	"sdlp"	"sinnfein"	"alliance"	"dup"	"uu"	"weight"
+"ashcroft"		22/01/15	22	1	2015	"Airdrie and Shotts"	1000	7	39	1	5	1	47		0						
+"ashcroft"		12/07/14	12	7	2014	"Amber Valley"	482	34	35	4	23	3			2						
+"ashcroft"		30/07/14	30	7	2014	"Bedford"	419	30	39	9	17	4			2						
+"lucidtalk"		28/01/15	28	1	2015	"Belfast East"	820								22			29	34	15	
+"ashcroft"		13/09/14	13	9	2014	"Bermondsey and Old Southwark"	561	14	35	36	9	5			2						
+"ashcroft"		28/08/14	28	8	2014	"Berwick-upon-Tweed"	1000	33	16	30	17	3			1						
+"ashcroft"		31/10/14	31	10	2014	"Birmingham Yardley"	503	12	31	34	19	2			1						
+"ashcroft"		18/10/14	18	10	2014	"Blackpool North and Cleveleys"	1000	35	32	5	24	3			1						
+"survation"		24/11/13	24	11	2013	"Bognor Regis and Littlehampton"	508	37	20	11	27	5			5						
+"ashcroft"		05/02/15	5	2	2015	"Boston and Skegness"	1000	38	17	5	35	3			2						
+"ashcroft"		21/06/14	21	6	2014	"Bradford East"	1000	12	45	23	15	2			3						
+"ashcroft"		01/11/14	1	11	2014	"Brecon and Radnorshire"	553	27	15	31	17	2		8	0						
+"ashcroft"		22/06/14	22	6	2014	"Brent Central"	478	13	54	19	7	5			1						
+"ashcroft"		26/09/14	26	9	2014	"Brentford and Isleworth"	419	32	45	10	7	4			1						
+"ashcroft"		20/11/14	20	11	2014	"Brighton Pavilion"	644	21	28	5	8	38			1						
+"ashcroft"		04/07/14	4	7	2014	"Broxtowe"	491	30	39	7	18	4			2						
+"ashcroft"		30/10/14	30	10	2014	"Burnley"	469	11	38	23	25	2			2						
+"icm"		08/04/14	8	4	2014	"Cambridge"	500	18	41	8	5	5			2						
+"ashcroft"		27/10/14	27	10	2014	"Cannock Chase"	1000	27	32	8	30	2			1						
+"ashcroft"		22/09/14	22	9	2014	"Cardiff Central"	542	17	36	24	9	5		9	0						
+"ashcroft"		27/06/14	27	6	2014	"Cardiff North"	1000	30	41	6	12	3		7	1						
+"ashcroft"		13/12/14	13	12	2014	"Carmarthen West and South Pembrokeshire"	515	33	29	4	14	3		16	1						
+"ashcroft"		05/02/15	5	2	2015	"Castle Point"	1002	37	16	3	36	2			6						
+"ashcroft"		18/10/14	18	10	2014	"City of Chester"	1000	36	37	7	15	5			1						
+"ashcroft"		17/01/15	17	1	2015	"Coatbridge, Chryston and Bellshill"	1001	6	43	1	3	1	46		1						
+"ashcroft"		14/11/14	14	11	2014	"Colchester"	505	22	17	36	18	6			1						
+"survation"		24/11/13	24	11	2013	"Crewe and Nantwich"	313	33	46	6	11				5						
+"ashcroft"		22/01/15	22	1	2015	"Cumbernauld, Kilsyth and Kirkintilloch East"	1000	6	34	2	3	3	52		1						
+"ashcroft"		23/11/14	23	11	2014	"Doncaster North"	725	13	54	4	25	2			3						
+"ashcroft"		27/11/14	27	11	2014	"Dudley North"	510	24	37	3	34				3						
+"ashcroft"		30/01/15	30	1	2015	"Dundee West"	1000	6	25	3	2	5	59		0						
+"ashcroft"		06/12/14	6	12	2014	"Ealing Central and Acton"	586	34	40	11	6	7			2						
+"ashcroft"		28/08/14	28	8	2014	"Eastleigh"	538	25	12	40	21	2			1						
+"ashcroft"		13/12/14	13	12	2014	"Elmet and Rothwell"	570	39	35	6	16	3			1						
+"ashcroft"		25/09/14	25	9	2014	"Enfield North"	503	34	44	3	12	3			3						
+"survation"		04/04/14	4	4	2014	"Folkestone and Hythe"	529	36	18	10	33	2			1						
+"ashcroft"		10/01/15	10	1	2015	"Glasgow Central"	1000	5	35	3	3	7	45		2						
+"ashcroft"		08/01/15	8	1	2015	"Glasgow East"	1001	4	37	1	4	2	51		2						
+"ashcroft"		10/01/15	10	1	2015	"Glasgow North"	1001	5	33	4	1	11	45		1						
+"ashcroft"		08/01/15	8	1	2015	"Glasgow North East"	1001	4	46	1	5	4	39		1						
+"ashcroft"		17/01/15	17	1	2015	"Glasgow North West"	1000	7	38	3	2	5	44		1						
+"ashcroft"		16/01/15	16	1	2015	"Glasgow South"	1001	9	33	2	3	3	48		1						
+"ashcroft"		15/01/15	15	1	2015	"Glasgow South West"	1000	4	42	2	5	2	45		1						
+"ashcroft"		29/01/15	29	1	2015	"Gordon"	1002	11	14	26	4	1	43		1						
+"ashcroft"		27/11/14	27	11	2014	"Great Grimsby"	448	20	35	8	34				4						
+"ashcroft"		16/07/14	16	7	2014	"Great Yarmouth"	441	33	28	3	32	3			2						
+"ashcroft"		03/08/14	3	8	2014	"Hampstead and Kilburn"	570	32	48	10	3	6			2						
+"ashcroft"		07/12/14	7	12	2014	"Harrow East"	524	40	37	6	13	3									
+"ashcroft"		15/11/14	15	11	2014	"Hazel Grove"	564	29	15	35	17	4									
+"ashcroft"		29/06/14	29	6	2014	"Hendon"	511	35	45	4	12	3			2						
+"ashcroft"		13/09/14	13	9	2014	"Hornsey and Wood Green"	553	14	43	30	3	8			1						
+"ashcroft"		27/09/14	27	9	2014	"Hove"	568	34	37	6	11	12									
+"ashcroft"		29/01/15	29	1	2015	"Inverness, Nairn, Badenoch and Strathspey"	1000	10	13	21	4	1	50		1						
+"ashcroft"		04/07/14	4	7	2014	"Lancaster and Fleetwood"	482	27	39	3	19	11			2						
+"ashcroft"		21/06/14	21	6	2014	"Manchester, Withington"	1000	7	56	22	4	10			1						
+"ashcroft"		22/01/15	22	1	2015	"Motherwell and Wishaw"	1000	5	39	1	3	1	50		1						
+"ashcroft"		05/02/15	5	2	2015	"North East Cambridgeshire"	1000	46	17	7	25	4			1						
+"ashcroft"		28/06/14	28	6	2014	"North Warwickshire"	1000	30	41	2	22	2			2						
+"ashcroft"		21/06/14	21	6	2014	"Norwich South"	1000	18	33	12	15	20			1						
+"ashcroft"		03/10/14	3	10	2014	"Nuneaton"	1000	36	39	3	19	2			1						
+"ashcroft"		21/06/14	21	6	2014	"Oxford West and Abingdon"	550	38	18	30	9	4									
+"ashcroft"		29/01/15	29	1	2015	"Paisley and Renfrewshire South"	1000	6	40	2	1	2	48		1						
+"ashcroft"		14/12/14	14	12	2014	"Pendle"	525	36	33	11	17	2			1						
+"ashcroft"		23/07/14	23	7	2014	"Plymouth, Sutton and Devonport"	506	27	35	3	22	8			1						
+"ashcroft"		06/11/14	6	11	2014	"Portsmouth South"	555	30	20	25	17	6			1						
+"ashcroft"		06/09/14	6	9	2014	"Redcar"	1000	12	44	18	23	2			1						
+"ashcroft"		29/11/14	29	11	2014	"Rother Valley"	480	18	40	4	34	3			2						
+"ashcroft"		22/11/14	22	11	2014	"Sheffield Hallam"	962	19	30	27	13	10			1						
+"ashcroft"		05/02/15	5	2	2015	"South Basildon and East Thurrock"	1001	35	28	3	29	3			1						
+"ashcroft"		06/12/14	6	12	2014	"South Swindon"	508	34	34	7	20	4			1						
+"ashcroft"		24/11/14	24	11	2014	"South Thanet"	1003	33	27	4	32				4						
+"survation"		05/12/14	5	12	2014	"South West Surrey"	587	57	11	8	15	7			1						
+"ashcroft"		16/08/14	16	8	2014	"St. Austell and Newquay"	493	27	13	26	25	6			3						
+"ashcroft"		13/12/14	13	12	2014	"Stevenage"	497	33	38	7	18	3									
+"survation"		12/11/14	12	11	2014	"Stockton South"	571	39	37	3	18	3									
+"ashcroft"		16/07/14	16	7	2014	"Stroud"	561	30	41	6	11	11									
+"ashcroft"		26/06/14	26	6	2014	"Thurrock"	1002	28	30	2	36				4						
+"icm"		01/05/14	30	4	2014	"Twickenham"	278	34	23	32	5	4			2						
+"ashcroft"		06/12/14	6	12	2014	"Warwick and Leamington"	534	38	34	7	14	7									
+"ashcroft"		20/11/14	20	11	2014	"Watford"	506	30	24	28	14	3			1						
+"ashcroft"		22/01/15	22	1	2015	"West Dunbartonshire"	1000	6	38	1	4	2	47		1						
+"survation"		04/12/14	4	12	2014	"Witney"	531	53	16	4	19	7			1						
+"ashcroft"		19/10/14	19	10	2014	"Worcester"	1000	34	36	5	17	7			1						
+"ashcroft"		20/11/14	20	11	2014	"Wyre Forest"	488	34	21	4	29	6			6						

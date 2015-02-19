@@ -25,13 +25,13 @@
 }
 
 
-#projections {
+.projections {
 	height: 60px;
 	width: 100%;
 }
 
 
-#projections h3 {
+.projections h3 {
 	text-align: center;
 	margin-right: -5px;
 	margin-left: -5px;
@@ -40,12 +40,12 @@
 
 }
 
-#projections a {
+.projections a {
 	text-decoration: none;
 	color: #fff;
 }
 
-#projections a:hover {
+.projections a:hover {
 	color: orange;
 }
 
@@ -53,16 +53,21 @@
 
 }
 
-#currentpage {
+
+.currentpage {
 	background: blue;
 	color: #FFFF00;
 	margin: 2px;
 }
 
-#notactive {
+.notactive {
 	margin: 2px;
 	letter-spacing: 0px;
 	font-size: 0.75em;
+}
+
+#otherlinks {
+	border-top: 1px solid black;	
 }
 
 #searchforseat h2{

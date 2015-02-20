@@ -11,19 +11,19 @@ function doStuff(data) {
 			else
   				$("#polltablebody").append("<tr class=\"" + data[i].party + "\" style=\"opacity: 0.9;\"><td style=\"text-align: left;\">" + data[i].seat + "</td><td>" +
           regionlist[data[i].area] + "</td><td style=\"text-align: left;\">" + partylist[data[i].incumbent] + "</td><td>" + partylist[data[i].party] + "</td><td>" + data[i].change +
-          "</td><td>" + (data[i].conservative).toFixed(2) +
-          "</td><td>" + (data[i].labour).toFixed(2) +
-          "</td><td>" + (data[i].libdems).toFixed(2) +
-          "</td><td>" + (data[i].ukip).toFixed(2) +
-          "</td><td>" + (data[i].green).toFixed(2) +
-          "</td><td>" + (data[i].snp).toFixed(2) +
-          "</td><td>" + (data[i].plaidcymru).toFixed(2)+
-          "</td><td>" + (data[i].other).toFixed(2) +
-          "</td><td>" + (data[i].sdlp).toFixed(2) +
-          "</td><td>" + (data[i].sinnfein).toFixed(2) +
-          "</td><td>" + (data[i].alliance).toFixed(2) +
-          "</td><td>" + (data[i].dup).toFixed(2) +
-          "</td><td>" + (data[i].uu).toFixed(2) +
+          "</td><td class=\"conservative\">" + (data[i].conservative).toFixed(2) +
+          "</td><td class=\"labour\">" + (data[i].labour).toFixed(2) +
+          "</td><td class=\"libdems\">" + (data[i].libdems).toFixed(2) +
+          "</td><td class=\"ukip\">" + (data[i].ukip).toFixed(2) +
+          "</td><td class=\"green\">" + (data[i].green).toFixed(2) +
+          "</td><td class=\"snp\">" + (data[i].snp).toFixed(2) +
+          "</td><td class=\"plaidcymru\">" + (data[i].plaidcymru).toFixed(2)+
+          "</td><td class=\"other\">" + (data[i].other).toFixed(2) +
+          "</td><td class=\"sdlp\">" + (data[i].sdlp).toFixed(2) +
+          "</td><td class=\"sinnfein\">" + (data[i].sinnfein).toFixed(2) +
+          "</td><td class=\"alliance\">" + (data[i].alliance).toFixed(2) +
+          "</td><td class=\"dup\">" + (data[i].dup).toFixed(2) +
+          "</td><td class=\"uu\">" + (data[i].uu).toFixed(2) +
           "</td></tr>")
 		})
 

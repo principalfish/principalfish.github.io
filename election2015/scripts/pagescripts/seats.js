@@ -11,7 +11,7 @@ function doStuff(data) {
 			else
   				$("#polltablebody").append("<tr class=\"" + data[i].party + "\" style=\"opacity: 0.9;\"><td style=\"text-align: left;\">" + data[i].seat + "</td><td>" +
           regionlist[data[i].area] + "</td><td style=\"text-align: left;\">" + partylist[data[i].incumbent] + "</td><td>" + partylist[data[i].party] + "</td><td>" + data[i].change +
-          "</td><td class=\"conservative\">" + (data[i].conservative).toFixed(2) +
+          "</td><td style=\"background-color:#99CCFF; border:0px;\"></td><td class=\"conservative\">" + (data[i].conservative).toFixed(2) +
           "</td><td class=\"labour\">" + (data[i].labour).toFixed(2) +
           "</td><td class=\"libdems\">" + (data[i].libdems).toFixed(2) +
           "</td><td class=\"ukip\">" + (data[i].ukip).toFixed(2) +
@@ -32,7 +32,6 @@ function doStuff(data) {
       sortInitialOrder: "asc",
       headers: {
 				4: { sortInitialOrder: 'desc' },
-        5: { sortInitialOrder: 'desc' },
         6: { sortInitialOrder: 'desc' },
         7: { sortInitialOrder: 'desc' },
         8: { sortInitialOrder: 'desc' },
@@ -44,7 +43,12 @@ function doStuff(data) {
         14: { sortInitialOrder: 'desc' },
         15: { sortInitialOrder: 'desc' },
         16: { sortInitialOrder: 'desc' },
-        17: { sortInitialOrder: 'desc' }
+        17: { sortInitialOrder: 'desc' },
+				18: { sortInitialOrder: 'desc' },
+
+				5: {
+					sorter: false
+				}
 
     },
 			sortList:[[0,0]]

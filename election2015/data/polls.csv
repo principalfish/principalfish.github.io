@@ -1,0 +1,204 @@
+"pollster"	"type"	"pollsterweight"	"date"	"day"	"month"	"year"	"region"	"total"	"conservative"	"labour"	"libdems"	"ukip"	"green"	"snp"	"plaidcymru"	"other"	"sdlp"	"sinnfein"	"alliance"	"dup"	"uu"	"weight"	"initialweight"	"area"
+"me"	"regional"			11	2	2015	"null"	1000	150	300	90	30	30	400		0								
+"me"	"regional"			11	2	2015	"null"	1000	390	300	70	175	40		5	20								
+"yougov"	"regional"		"18/02/2015"	18	2	2015	"London"	223	74	91	16	27	13	0	0	4								
+"yougov"	"regional"		"18/02/2015"	18	2	2015	"Rest of South"	566	221	142	79	91	28	0	0	6								
+"yougov"	"regional"		"18/02/2015"	18	2	2015	"Midlands and Wales"	373	119	134	26	60	22	0	4	4								
+"yougov"	"regional"		"18/02/2015"	18	2	2015	"North England"	429	124	180	21	69	34	0	0	0								
+"yougov"	"regional"		"18/02/2015"	18	2	2015	"Scotland"	152	26	40	5	6	11	65	0	0								
+"survation"	"regional"		"17/02/2015"	17	2	2015	"Scotland"	797	119	219	40	25	27	361		4								
+"tns"	"regional"		"16/02/2015"	16	2	2015	"NE Yorks Humber"	75	15	38	7	8	5			2								
+"tns"	"regional"		"16/02/2015"	16	2	2015	"North West"	63	13	26	2	13	9			1								
+"tns"	"regional"		"16/02/2015"	16	2	2015	"East and West Midlands"	89	23	33	3	20	7			4								
+"tns"	"regional"		"16/02/2015"	16	2	2015	"South East East of England"	121	47	32	7	25	7			3								
+"tns"	"regional"		"16/02/2015"	16	2	2015	"Greater London"	65	21	22	6	12	3			1								
+"tns"	"regional"		"16/02/2015"	16	2	2015	"Wales and West"	67	15	25	7	14	4		2									
+"yougov"	"regional"		"17/02/2015"	17	2	2015	"London"	198	73	75	16	24	10	0	0	0								
+"yougov"	"regional"		"17/02/2015"	17	2	2015	"Rest of South"	503	191	131	45	86	45	0	0	5								
+"yougov"	"regional"		"17/02/2015"	17	2	2015	"Midlands and Wales"	331	103	126	17	60	17	0	3	7								
+"yougov"	"regional"		"17/02/2015"	17	2	2015	"North England"	381	110	164	15	57	30	0	0	0								
+"yougov"	"regional"		"17/02/2015"	17	2	2015	"Scotland"	135	28	39	8	9	3	47	0	0								
+"yougov"	"regional"		"16/02/2015"	16	2	2015	"London"	202	69	73	8	34	14	0	0	4								
+"yougov"	"regional"		"16/02/2015"	16	2	2015	"Rest of South"	514	180	144	51	93	41	0	0	5								
+"yougov"	"regional"		"16/02/2015"	16	2	2015	"Midlands and Wales"	338	122	105	14	61	30	0	7	0								
+"yougov"	"regional"		"16/02/2015"	16	2	2015	"North England"	389	101	159	19	78	31	0	0	0								
+"yougov"	"regional"		"16/02/2015"	16	2	2015	"Scotland"	137	29	32	8	3	5	59	0	1								
+"ashcroft"	"regional"		"15/02/2015"	15	2	2015	"South East"	142	41	44	16	22	16			3								
+"ashcroft"	"regional"		"15/02/2015"	15	2	2015	"Midlands"	133	51	33	6	29	10			4								
+"ashcroft"	"regional"		"15/02/2015"	15	2	2015	"North England"	123	26	51	9	22	10			5								
+"ashcroft"	"regional"		"15/02/2015"	15	2	2015	"Wales and South West"	73	27	22	8	10	4		2	1								
+"ashcroft"	"regional"		"15/02/2015"	15	2	2015	"Scotland"	48	7	12	2	3	2	21		1								
+"icm"	"regional"		"15/02/2015"	15	2	2015	"Scotland"	44	7	9	0	1	0	25		1								
+"icm"	"regional"		"15/02/2015"	15	2	2015	"Wales"	24	9	7	1	2	1		3	1								
+"icm"	"regional"		"15/02/2015"	15	2	2015	"North"	97	36	42	4	7	7											
+"icm"	"regional"		"15/02/2015"	15	2	2015	"Midlands"	137	58	43	5	18	9			4								
+"icm"	"regional"		"15/02/2015"	15	2	2015	"SouthICM"	150	52	35	20	15	16			1								
+"populus"	"regional"		"14/02/2015"	14	2	2015	"South East"	347	117	109	43	60	15			1								
+"populus"	"regional"		"14/02/2015"	14	2	2015	"Midlands"	327	132	95	27	46	17			10								
+"populus"	"regional"		"14/02/2015"	14	2	2015	"North England"	278	85	106	24	48	12			2								
+"populus"	"regional"		"14/02/2015"	14	2	2015	"Wales and South West"	151	34	65	17	21	9		4	1								
+"populus"	"regional"		"14/02/2015"	14	2	2015	"Scotland"	117	15	29	15	4	2	52										
+"yougov"	"regional"		"13/02/2015"	13	2	2015	"London"	204	59	73	18	29	24	0	0	0								
+"yougov"	"regional"		"13/02/2015"	13	2	2015	"Rest of South"	517	207	145	47	88	26	0	0	5								
+"yougov"	"regional"		"13/02/2015"	13	2	2015	"Midlands and Wales"	347	108	135	10	59	21	0	10	0								
+"yougov"	"regional"		"13/02/2015"	13	2	2015	"North England"	399	104	180	20	56	32	0	0	4								
+"yougov"	"regional"		"13/02/2015"	13	2	2015	"Scotland"	141	27	37	14	8	1	52	0	0								
+"comres"	"regional"		"12/02/2015"	12	2	2015	"South East"	338	136	105	29	55	13											
+"comres"	"regional"		"12/02/2015"	12	2	2015	"Midlands"	367	128	132	26	68	11			2								
+"comres"	"regional"		"12/02/2015"	12	2	2015	"North England"	329	95	141	15	60	15			2								
+"comres"	"regional"		"12/02/2015"	12	2	2015	"Wales and South West"	188	57	66	18	33	7		6	2								
+"comres"	"regional"		"12/02/2015"	12	2	2015	"Scotland"	135	15	18	7	6	8	80										
+"opinium"	"regional"		"12/02/2015"	12	2	2015	"Great Britain"	1430	479	497	111	197	86	41	5	15								
+"populus"	"regional"		"12/02/2015"	12	2	2015	"South East"	333	120	120	27	42	19			5								
+"populus"	"regional"		"12/02/2015"	12	2	2015	"Midlands"	309	100	104	26	58	16			4								
+"populus"	"regional"		"12/02/2015"	12	2	2015	"North England"	282	74	120	28	38	16			6								
+"populus"	"regional"		"12/02/2015"	12	2	2015	"Wales and South West"	172	64	42	22	28	11		4									
+"populus"	"regional"		"12/02/2015"	12	2	2015	"Scotland"	123	17	29	11	7	5	53										
+"yougov"	"regional"		"12/02/2015"	12	2	2015	"London"	204	67	71	16	27	24	0	0	0								
+"yougov"	"regional"		"12/02/2015"	12	2	2015	"Rest of South"	517	181	145	52	98	31	0	0	5								
+"yougov"	"regional"		"12/02/2015"	12	2	2015	"Midlands and Wales"	341	130	113	7	58	24	0	7	3								
+"yougov"	"regional"		"12/02/2015"	12	2	2015	"North England"	392	102	180	24	51	31	0	0	0								
+"yougov"	"regional"		"12/02/2015"	12	2	2015	"Scotland"	139	18	31	14	3	1	71	0	0								
+"mori"	"regional"		"10/02/2015"	10	2	2015	"North"	115	33	50	4	16	5		5	1								
+"mori"	"regional"		"10/02/2015"	10	2	2015	"MidlandsMori"	142	55	47	12	17	8		5									
+"mori"	"regional"		"10/02/2015"	10	2	2015	"SouthMori"	116	47	34	10	8	16			0								
+"mori"	"regional"		"10/02/2015"	10	2	2015	"London"	61	22	27	5	3	3			2								
+"mori"	"regional"		"10/02/2015"	10	2	2015	"Scotland"	51	7	12	1	1	1	30										
+"yougov"	"regional"		"11/02/2015"	11	2	2015	"London"	226	75	84	18	32	14	0	0	5								
+"yougov"	"regional"		"11/02/2015"	11	2	2015	"Rest of South"	573	212	138	52	109	57	0	0	6								
+"yougov"	"regional"		"11/02/2015"	11	2	2015	"Midlands and Wales"	377	124	132	19	64	23	0	11	0								
+"yougov"	"regional"		"11/02/2015"	11	2	2015	"North England"	434	135	169	30	61	35	0	0	4								
+"yougov"	"regional"		"11/02/2015"	11	2	2015	"Scotland"	153	28	49	6	5	6	61	0	0								
+"yougov"	"regional"		"10/02/2015"	10	2	2015	"London"	215	67	88	11	19	28	0	0	2								
+"yougov"	"regional"		"10/02/2015"	10	2	2015	"Rest of South"	545	234	136	38	87	44	0	0	5								
+"yougov"	"regional"		"10/02/2015"	10	2	2015	"Midlands and Wales"	359	118	133	18	54	25	0	7	4								
+"yougov"	"regional"		"10/02/2015"	10	2	2015	"North England"	413	112	182	33	54	29	0	0	4								
+"yougov"	"regional"		"10/02/2015"	10	2	2015	"Scotland"	146	23	44	3	4	6	63	0	0								
+"yougov"	"regional"		"09/02/2015"	9	2	2015	"London"	199	68	76	16	26	10	0	0	2								
+"yougov"	"regional"		"09/02/2015"	9	2	2015	"Rest of South"	504	207	116	55	76	50	0	0	0								
+"yougov"	"regional"		"09/02/2015"	9	2	2015	"Midlands and Wales"	332	120	106	23	53	20	0	7	3								
+"yougov"	"regional"		"09/02/2015"	9	2	2015	"North England"	382	107	176	15	53	23	0	0	4								
+"yougov"	"regional"		"09/02/2015"	9	2	2015	"Scotland"	135	23	34	7	7	7	57	0	1								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"Scotland"	453	71	139	19	6	29	184		2								
+"ashcroft"	"regional"		"08/02/2015"	8	2	2015	"South East"	153	59	37	22	20	13			2								
+"ashcroft"	"regional"		"08/02/2015"	8	2	2015	"Midlands"	148	55	48	14	20	9			1								
+"ashcroft"	"regional"		"08/02/2015"	8	2	2015	"North England"	116	33	49	4	26	1			2								
+"ashcroft"	"regional"		"08/02/2015"	8	2	2015	"Wales and South West"	82	28	25	5	10	10		3	0								
+"ashcroft"	"regional"		"08/02/2015"	8	2	2015	"Scotland"	50	10	11	2	2	2	23		1								
+"populus"	"regional"		"08/02/2015"	8	2	2015	"South East"	326	123	106	33	47	15			2								
+"populus"	"regional"		"08/02/2015"	8	2	2015	"Midlands"	308	113	96	28	54	12			4								
+"populus"	"regional"		"08/02/2015"	8	2	2015	"North England"	298	99	115	20	54	9			2								
+"populus"	"regional"		"08/02/2015"	8	2	2015	"Wales and South West"	162	46	64	16	23	8		4	1								
+"populus"	"regional"		"08/02/2015"	8	2	2015	"Scotland"	119	20	34	7	2	2	54		1								
+"opinium"	"regional"		"06/02/2015"	6	2	2015	"Great Britain"	1423	449	483	96	210	111	52	6	15								
+"yougov"	"regional"		"06/02/2015"	6	2	2015	"London"	214	75	79	13	26	17	0	0	0								
+"yougov"	"regional"		"06/02/2015"	6	2	2015	"Rest of South"	542	217	119	60	92	43	0	0	11								
+"yougov"	"regional"		"06/02/2015"	6	2	2015	"Midlands and Wales"	357	107	132	18	68	21	0	7	4								
+"yougov"	"regional"		"06/02/2015"	6	2	2015	"North England"	410	111	176	25	62	37	0	0	0								
+"yougov"	"regional"		"06/02/2015"	6	2	2015	"Scotland"	145	32	36	3	7	9	57	0	0								
+"populus"	"regional"		"05/02/2015"	5	2	2015	"Midlands"	312	109	102	13	66	15			7								
+"populus"	"regional"		"05/02/2015"	5	2	2015	"North England"	266	67	125	16	43	11			3								
+"populus"	"regional"		"05/02/2015"	5	2	2015	"Scotland"	130	21	41	12	1	3	52		1								
+"populus"	"regional"		"05/02/2015"	5	2	2015	"South East"	348	129	100	31	62	21			4								
+"populus"	"regional"		"05/02/2015"	5	2	2015	"Wales and South West"	157	53	42	20	26	8		4	2								
+"yougov"	"regional"		"04/02/2015"	4	2	2015	"London"	224	72	90	20	29	13			2								
+"yougov"	"regional"		"04/02/2015"	4	2	2015	"Midlands and Wales"	374	131	135	22	49	34		7									
+"yougov"	"regional"		"04/02/2015"	4	2	2015	"North England"	430	120	181	26	65	26			13								
+"yougov"	"regional"		"04/02/2015"	4	2	2015	"Rest of South"	568	250	142	40	85	51			6								
+"yougov"	"regional"		"04/02/2015"	4	2	2015	"Scotland"	152	30	35	6	6	6	73										
+"yougov"	"regional"		"03/02/2015"	3	2	2015	"London"	218	72	81	22	22	15	0	0	7								
+"yougov"	"regional"		"03/02/2015"	3	2	2015	"Midlands and Wales"	365	131	124	26	58	22	0	4	4								
+"yougov"	"regional"		"03/02/2015"	3	2	2015	"North England"	419	122	180	17	59	34	0	0	8								
+"yougov"	"regional"		"03/02/2015"	3	2	2015	"Rest of South"	554	211	155	55	94	39	0	0	6								
+"yougov"	"regional"		"03/02/2015"	3	2	2015	"Scotland"	148	28	34	3	7	6	70	0	0								
+"populus"	"regional"		"02/02/2015"	2	2	2015	"Midlands"	292	106	89	25	50	17			5								
+"populus"	"regional"		"02/02/2015"	2	2	2015	"North England"	299	75	131	30	36	13			3								
+"populus"	"regional"		"02/02/2015"	2	2	2015	"Scotland"	130	19	29	14	5	3	59										
+"populus"	"regional"		"02/02/2015"	2	2	2015	"South East"	317	126	108	18	42	18			4								
+"populus"	"regional"		"02/02/2015"	2	2	2015	"Wales and South West"	159	50	54	12	26	9		3	5								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"East and West Midlands"	88	27	34	7	10	6			5								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"Greater London"	76	19	22	7	15	9			5								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"NE Yorks Humber"	69	17	33	3	9	6			1								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"North West"	71	16	31	5	11	7			1								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"Scotland"	58	10	16	2	3	2	23		0								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"South East East of England"	125	46	24	8	32	10			5								
+"tns"	"regional"		"02/02/2015"	2	2	2015	"Wales and West"	78	17	27	5	21	5		1	2								
+"yougov"	"regional"		"02/02/2015"	2	2	2015	"London"	209	79	88	10	21	6	0	0	2								
+"yougov"	"regional"		"02/02/2015"	2	2	2015	"Midlands and Wales"	349	101	154	7	63	14	0	7	0								
+"yougov"	"regional"		"02/02/2015"	2	2	2015	"North England"	401	120	160	24	52	32	0	0	8								
+"yougov"	"regional"		"02/02/2015"	2	2	2015	"Rest of South"	530	207	127	64	95	32	0	0	5								
+"yougov"	"regional"		"02/02/2015"	2	2	2015	"Scotland"	835	125	228	30	10	35	402		5								
+"yougov"	"regional"		"02/02/2015"	2	2	2015	"Scotland"	142	33	40	9	4	9	50	0	0								
+"ashcroft"	"regional"		"01/02/2015"	1	2	2015	"Midlands"	150	52	45	12	22	16			3								
+"ashcroft"	"regional"		"01/02/2015"	1	2	2015	"North England"	145	44	52	6	28	14			2								
+"ashcroft"	"regional"		"01/02/2015"	1	2	2015	"Scotland"	52	6	15	2	2	3	24										
+"ashcroft"	"regional"		"01/02/2015"	1	2	2015	"South East"	135	50	39	12	21	13			1								
+"ashcroft"	"regional"		"01/02/2015"	1	2	2015	"Wales and South West"	77	21	21	12	12	5		4	2								
+"opinium"	"regional"		"30/01/2015"	30	1	2015	"Great Britain"	1475	472	493	71	261	89	67	7	15								
+"populus"	"regional"		"29/01/2015"	29	1	2015	"Midlands"	290	102	86	34	53	13			2								
+"populus"	"regional"		"29/01/2015"	29	1	2015	"North England"	272	84	114	21	41	11			1								
+"populus"	"regional"		"29/01/2015"	29	1	2015	"Scotland"	123	26	37	15	6	3	36										
+"populus"	"regional"		"29/01/2015"	29	1	2015	"South East"	311	133	92	29	41	15											
+"populus"	"regional"		"29/01/2015"	29	1	2015	"Wales and South West"	167	48	76	13	19	8		2									
+"yougov"	"regional"		"29/01/2015"	29	1	2015	"London"	204	65	82	12	27	18	0	0	0								
+"yougov"	"regional"		"29/01/2015"	29	1	2015	"Midlands and Wales"	341	116	130	17	48	14	0	10	3								
+"yougov"	"regional"		"29/01/2015"	29	1	2015	"North England"	392	125	169	24	43	31	0	0	0								
+"yougov"	"regional"		"29/01/2015"	29	1	2015	"Rest of South"	518	212	130	41	93	41	0	0	0								
+"yougov"	"regional"		"29/01/2015"	29	1	2015	"Scotland"	139	24	35	6	8	6	60	0	3								
+"yougov"	"regional"		"28/01/2015"	28	1	2015	"London"	198	65	75	6	28	16	0	0	2								
+"yougov"	"regional"		"28/01/2015"	28	1	2015	"Midlands and Wales"	331	116	106	17	53	23	0	10	0								
+"yougov"	"regional"		"28/01/2015"	28	1	2015	"North England"	381	103	156	23	65	30	0	0	4								
+"yougov"	"regional"		"28/01/2015"	28	1	2015	"Rest of South"	503	191	136	35	96	35	0	0	5								
+"yougov"	"regional"		"28/01/2015"	28	1	2015	"Scotland"	135	31	38	4	3	3	54	0	0								
+"yougov"	"regional"		"27/01/2015"	27	1	2015	"London"	198	61	73	20	24	14	0	0	4								
+"yougov"	"regional"		"27/01/2015"	27	1	2015	"Midlands and Wales"	331	113	106	20	60	23	0	3	3								
+"yougov"	"regional"		"27/01/2015"	27	1	2015	"North England"	381	107	168	23	46	30	0	0	0								
+"yougov"	"regional"		"27/01/2015"	27	1	2015	"Rest of South"	503	211	121	40	86	40	0	0	5								
+"yougov"	"regional"		"27/01/2015"	27	1	2015	"Scotland"	135	31	38	4	0	4	59	0	0								
+"yougov"	"regional"		"26/01/2015"	26	1	2015	"London"	212	64	81	17	36	6	0	0	2								
+"yougov"	"regional"		"26/01/2015"	26	1	2015	"Midlands and Wales"	354	103	145	18	64	21	0	4	0								
+"yougov"	"regional"		"26/01/2015"	26	1	2015	"North England"	407	138	142	16	69	33	0	0	4								
+"yougov"	"regional"		"26/01/2015"	26	1	2015	"Rest of South"	538	242	118	48	70	48	0	0	0								
+"yougov"	"regional"		"26/01/2015"	26	1	2015	"Scotland"	144	26	46	3	1	3	63	0	0								
+"ashcroft"	"regional"		"25/01/2015"	25	1	2015	"Midlands"	139	59	38	8	22	9			4								
+"ashcroft"	"regional"		"25/01/2015"	25	1	2015	"North England"	136	34	55	6	27	11			2								
+"ashcroft"	"regional"		"25/01/2015"	25	1	2015	"Scotland"	46	7	11	2	3	5	18										
+"ashcroft"	"regional"		"25/01/2015"	25	1	2015	"South East"	143	47	46	8	22	17			3								
+"ashcroft"	"regional"		"25/01/2015"	25	1	2015	"Wales and South West"	71	19	24	6	9	8		4	1								
+"populus"	"regional"		"25/01/2015"	25	1	2015	"Midlands"	291	100	91	22	59	18			1								
+"populus"	"regional"		"25/01/2015"	25	1	2015	"North England"	297	94	128	18	40	16			1								
+"populus"	"regional"		"25/01/2015"	25	1	2015	"Scotland"	103	19	38	3	5	2	36										
+"populus"	"regional"		"25/01/2015"	25	1	2015	"South East"	317	138	82	39	35	21			2								
+"populus"	"regional"		"25/01/2015"	25	1	2015	"Wales and South West"	158	40	68	19	16	11		4									
+"survation"	"regional"		"25/01/2015"	25	1	2015	"London"	113	29	45	8	21	9			1								
+"survation"	"regional"		"25/01/2015"	25	1	2015	"East and West Midlands"	141	49	37	2	51				1								
+"survation"	"regional"		"25/01/2015"	25	1	2015	"North"	189	37	86	9	52	4											
+"survation"	"regional"		"25/01/2015"	25	1	2015	"Scotland"	77	9	19	5	7		37										
+"survation"	"regional"		"25/01/2015"	25	1	2015	"SouthSurvation"	249	119	42	21	52	12			2								
+"survation"	"regional"		"25/01/2015"	25	1	2015	"Wales"	31	8	14	2	2	1		3									
+"yougov"	"regional"		"23/01/2015"	23	1	2015	"London"	202	65	73	14	34	10	0	0	2								
+"yougov"	"regional"		"23/01/2015"	23	1	2015	"Midlands and Wales"	338	108	115	17	54	30	0	7	7								
+"yougov"	"regional"		"23/01/2015"	23	1	2015	"North England"	388	97	175	27	50	27	0	0	4								
+"yougov"	"regional"		"23/01/2015"	23	1	2015	"Rest of South"	513	215	108	46	92	46	0	0	0								
+"yougov"	"regional"		"23/01/2015"	23	1	2015	"Scotland"	137	19	34	10	12	3	59	0	1								
+"yougov"	"regional"		"22/01/2015"	22	1	2015	"London"	210	69	80	19	29	11	0	0	0								
+"yougov"	"regional"		"22/01/2015"	22	1	2015	"Midlands and Wales"	351	105	144	14	67	18	0	4	4								
+"yougov"	"regional"		"22/01/2015"	22	1	2015	"North England"	403	93	157	32	73	44	0	0	0								
+"yougov"	"regional"		"22/01/2015"	22	1	2015	"Rest of South"	533	208	133	43	101	48	0	0	0								
+"yougov"	"regional"		"22/01/2015"	22	1	2015	"Scotland"	143	31	33	7	4	9	59	0	0								
+"yougov"	"regional"		"21/01/2015"	21	1	2015	"London"	1034	331	434	72	103	83			10								
+"yougov"	"regional"		"21/01/2015"	21	1	2015	"London"	211	65	80	21	27	15	0	0	2								
+"yougov"	"regional"		"21/01/2015"	21	1	2015	"Midlands and Wales"	352	123	116	18	56	21	0	14	0								
+"yougov"	"regional"		"21/01/2015"	21	1	2015	"North England"	405	105	178	16	53	41	0	0	4								
+"yougov"	"regional"		"21/01/2015"	21	1	2015	"Rest of South"	535	219	139	43	80	48	0	0	0								
+"yougov"	"regional"		"21/01/2015"	21	1	2015	"Scotland"	143	26	44	6	3	3	59	0	1								
+"yougov"	"regional"		"21/01/2015"	21	1	2015	"Wales"	1036	238	383	62	166	83		104	10								
+"mori"	"regional"		"20/01/2015"	20	1	2015	"Scotland"	872	113	216	35	8	41	446		13								
+"tns"	"regional"		"20/01/2015"	20	1	2015	"East and West Midlands"	103	35	31	6	19	3			8								
+"tns"	"regional"		"20/01/2015"	20	1	2015	"Greater London"	71	19	25	7	11	5			3								
+"tns"	"regional"		"20/01/2015"	20	1	2015	"NE Yorks Humber"	65	20	26	5	10	3											
+"tns"	"regional"		"20/01/2015"	20	1	2015	"North West"	57	10	26	3	10	5			2								
+"tns"	"regional"		"20/01/2015"	20	1	2015	"Scotland"	53	11	11	2		6	23										
+"tns"	"regional"		"20/01/2015"	20	1	2015	"South East East of England"	121	48	30	13	25	5			1								
+"tns"	"regional"		"20/01/2015"	20	1	2015	"Wales and West"	82	27	22	7	15	10		1	1								
+"whoever"	"regional"		"11/02/2015"	11	2	2015	"Northern Ireland"	100								17	15	24	6	26	12			

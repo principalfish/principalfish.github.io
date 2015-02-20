@@ -1,0 +1,58 @@
+
+
+#info {
+  float: left;
+  border-bottom: 1px solid black;
+  border-right: 1px solid black;
+  border-left: 1px solid black;
+  height: 900px;
+  width: 1280px;
+  border-radius: 0 0 10px 0;
+  background: #99CCFF;
+  overflow-y: auto;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+#polltable {
+	width: 100%;
+
+}
+
+#info table {
+    border-collapse: collapse;
+}
+
+#polltable th{
+  font-size: 0.85em;
+}
+
+#polltable td{
+   border: 1px solid black;
+}
+
+#polltablebody td, tr{
+
+	text-align: center;
+}
+
+
+table#polltable thead tr .header {
+    background-image: url("/img/bg.gif");
+    background-repeat: no-repeat;
+    background-position: right center;
+    cursor: pointer;
+}
+
+table#polltable thead tr .headerSortUp {
+    background-image: url("/img/asc.gif");
+}
+
+table#polltable thead tr .headerSortDown {
+    background-image: url("/img/desc.gif");
+}
+
+
+#info p{
+  font-size: 1.2em;
+}

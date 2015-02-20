@@ -35,3 +35,17 @@ regionlist["eastofengland"] = "E. England";
 regionlist["scotland"] = "Scotland";
 regionlist["wales"] = "Wales";
 regionlist["northernireland"] = "N. Ireland";
+
+
+var pollsters = {};
+
+pollsters["ashcroft"] = "Ashcroft"
+pollsters["yougov"] = "Yougov"
+pollsters["survation"] = "Survation"
+pollsters["tns"] = "TNS BRMB"
+pollsters["icm"] = "ICM"
+pollsters["populus"] = "Populus"
+pollsters["mori"] = "Ipsos Mori"
+pollsters["opinium"] = "Opinium"
+pollsters["comres"] = "Comres"
+pollsters["lucidtalk"] = "Lucidtalk"

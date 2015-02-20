@@ -392,13 +392,11 @@ function doStuff(data) {
 
 	 $(document).ready(function() {
 		$("table").tablesorter({
-			headers: {
-				2: {
-					sorter: "numberWithComma"
-				},
-				3: {
-					sorter: "numberWithComma"
-				},
+
+			sortInitialOrder: "asc",
+      headers: {
+				1: { sortInitialOrder: 'desc' },
+        3: { sortInitialOrder: 'desc' },
 				0: {
 					sorter: false
 				},
@@ -406,8 +404,9 @@ function doStuff(data) {
 					sorter: false
 				}
 
-			},
-			sortList:[[2,1], [1,0], [3,0]]
+    },
+
+			sortList:[[2,1]]
 
 		});
 	});

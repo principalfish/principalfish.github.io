@@ -5,6 +5,7 @@
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/projection.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
@@ -17,7 +18,8 @@
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/nowcast.js"></script>
-	<script type="text/javascript" src="/election2015/scripts/tablesorter.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.widgets.min.js"></script>
 
 		<div id="wrapper">
 			<div id="top">
@@ -33,9 +35,6 @@
 			</div>
 
 			<div id ="farleft">
-				<div id="instructions">
-					<p>Map responds to scroll wheel, clicking, dragging</p>
-				</div>
 
 
 				<div class="projections">
@@ -47,7 +46,10 @@
 				</div>
 
 				<div class ="projections" id="otherlinks">
-					<h3 class="notactive"><a href="javascript:void(0)" onclick="toggle_visibility('aboutpopup');">Methodology</a></h3>
+					<h3 class="notactive"><a href="/election2015/methodology.html">Methodology</a></h3>
+					<h3 class="notactive"><a href="/election2015/polls.html">Polls</a></h3>
+					<h3 class="notactive"><a href="/election2015/seats.html">Seat List </a></h3>
+					<!-- <h3 class="notactive"><a href="/election2015/trends.html">Trends</a></h3> -->
 				</div>
 
 
@@ -124,24 +126,6 @@
 				<div id ="filteredlisttable"></div>
 
 
-				<div id="aboutpopup">
-					<div class="aboutwrapper">
-						<div class ="aboutinfo">
-
-							<h3> About the Map </h3>
-
-							<p>Dung beetles are beetles that feed partly or exclusively on dungs or feces.
-								They possess exceptional dung disposal capacity and one dung beetle can bury dung that is 250 times heavier than itself in one night.
-								Many dung beetles, known as rollers, roll dung into round balls, which are used as a food source or brooding chambers.
-								Other dung beetles, known as tunnelers, bury the dung wherever they find it.
-								A third group, the dwellers, neither roll nor burrow: they simply live in manure.
-								They are often attracted by the dung collected by burrowing owls. Dung Beetles can grow to 3 cm long and 2 cm wide.
-							</p>
-
-							<p><a href="javascript:void(0)" onclick="toggle_visibility('aboutpopup');">Close </a></p>
-						</div>
-					</div>
-				</div>
 
 
 			</div>
@@ -303,7 +287,7 @@
 						</script>
 					</h3>
 
-					<h3 style="float: left; padding-top: 25px;">Election Day : Thu, 7 May 2015</h3>
+					<h3 style="float: left; padding-top: 25px; padding-left: 8px;">Election Day : Thu, 7 May 2015</h3>
 
 					<h3 style="float: right; padding-top: 25px; padding-right: 5px;">  Days to Election :
 					<script>

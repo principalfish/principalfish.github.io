@@ -67,7 +67,7 @@
 }
 
 #otherlinks {
-	border-top: 1px solid black;	
+	border-top: 1px solid black;
 }
 
 #searchforseat h2{
@@ -265,11 +265,11 @@ table#totalstable thead tr .header {
     cursor: pointer;
 }
 
-table#totalstable thead tr .headerSortUp {
+table#totalstable thead tr .headerUp {
     background-image: url("/img/asc.gif");
 }
 
-table#totalstable thead tr .headerSortDown {
+table#totalstable thead tr .headerDown {
     background-image: url("/img/desc.gif");
 }
 

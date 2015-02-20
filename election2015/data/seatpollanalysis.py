@@ -58,12 +58,12 @@ with open("seatpolls.csv", "rb") as csvfile:
 
 
         info = Poll(pollster = row["pollster"], pollsterweight = row["pollsterweight"], date = row["date"],
-                    day = row["day"], month = row["month"], year = row["year"], seat = row["seat"], total = row["total"],
+                    day = row["day"], month = row["month"], year = row["year"], seat = row["region"], total = row["total"],
                     labour = row["labour"], conservative = row["conservative"], libdems = row["libdems"], ukip = row["ukip"],
                     green = row["green"], snp = row["snp"], plaidcymru = row["plaidcymru"], other = row["other"], sdlp = row["sdlp"],
                     sinnfein = row["sinnfein"], alliance = row["alliance"], dup = row["dup"], uu = row["uu"], weight = row["weight"])
 
-        seatpolling[row["seat"]] = info
+        seatpolling[row["region"]] = info
 
     csvfile.close()
 

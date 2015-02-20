@@ -333,3 +333,16 @@ svg .map {
 .null {background-color: white; color:black; fill: white;}
 .total {background-color: black; color: white;}
 .other {background-color: #666666 ; color:white; fill: #666666 ;}
+
+
+
+.yougov {background-color: red; color: white;}
+.survation {background-color: orange; color: black;}
+.tns {background-color: yellow; color: black;}
+.ashcroft {background-color: green; color: white;}
+.icm {background-color: blue; color: white;}
+.populus {background-color: purple; color: lightgreen;}
+.comres {background-color: brown; color: white;}
+.opinium {background-color: pink; color: black;}
+.lucidtalk {background-color: black; color: white;}
+.mori {background-color: grey; color: black;}

@@ -53,11 +53,15 @@
 			</div>
 
 			<div id="info">
-				<p style="font-size: 1.5em;">
+				<p style="font-size: 1.5em; width: 300px; float:left; ">
 					<a href ="#" onclick="parseData('/election2015/data/polls.csv', doStuff);">Regional/National Polls</a>
 					&nbsp; &nbsp;
 					<a href ="#" onclick="parseData('/election2015/data/seatpolls.csv', doStuff);">Seat Polls</a>
 
+				</p>
+
+				<p style="float:right;">
+					Note some regions have different definitions dependent on the pollster. "South" in particular.
 				</p>
 
 				<table id="polltable" class="tablesorter">

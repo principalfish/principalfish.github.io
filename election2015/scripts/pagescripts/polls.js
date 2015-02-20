@@ -51,7 +51,7 @@ function doStuff(data) {
 
 			else
         if (data[i].pollster != "me" && data[i].pollster != "whoever")
-  				$("#polltablebody").append("<tr><td  class=\"" + data[i].pollster + "\" style=\"text-align: left;\">" + pollsters[data[i].pollster] + "</td><td>" +
+  				$("#polltablebody").append("<tr onmouseover=\"background-color: black; color:white;\"><td  class=\"" + data[i].pollster + "\" style=\"text-align: left;\">" + pollsters[data[i].pollster] + "</td><td>" +
           data[i].date + "</td><td style=\"text-align: left;\">" + data[i].region + "</td><td>" + data[i].total +
           "</td><td>" + (100 * data[i].conservative/total).toFixed(0) +
           "</td><td>" + (100 * data[i].labour/total).toFixed(0) +

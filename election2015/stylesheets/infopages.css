@@ -36,10 +36,7 @@
 	text-align: center;
 }
 
-#polltablebody tr:hover {
-  background-color: black;
-  color: white;
-}
+
 
 
 table#polltable thead tr .header {

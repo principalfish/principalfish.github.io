@@ -121,3 +121,7 @@ body a:hover {
 	clear: both;
 
 }
+
+.squareroot {
+	text-decoration: overline;
+}

@@ -9,21 +9,21 @@ function doStuff(data) {
 					null
 
 			else
-  				$("#polltablebody").append("<tr  class=\"" + data[i].party + "\" style=\"opacity: 0.9;\"><td style=\"text-align: left; width: 75px;\">" + data[i].seat +
-					"</td><td style=\"width: 100px;\">" + regionlist[data[i].area] +
-					"</td><td style=\"width: 80px;\">" + partylist[data[i].incumbent] +
-					"</td><td style=\"width: 80px;\">" + partylist[data[i].party] +
-					"</td><td style=\"width: 66px\">" + data[i].change +
-					"</td><td style=\"width: 68px\">" + data[i].majority +
+  				$("#polltablebody").append("<tr  class=\"" + data[i].party + "\" style=\"opacity: 0.9;\"><td style=\"text-align: left; \">" + data[i].seat +
+					"</td><td style=\"\">" + regionlist[data[i].area] +
+					"</td><td style=\"\">" + partylist[data[i].incumbent] +
+					"</td><td style=\"\">" + partylist[data[i].party] +
+					"</td><td style=\"\">" + data[i].change +
+					"</td><td style=\"\">" + data[i].majority +
           "</td><td style=\"\">" + (data[i].conservative).toFixed(2) +
-          "</td><td style=\"width: 62px\">" + (data[i].labour).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].labour).toFixed(2) +
           "</td><td style=\"\">" + (data[i].libdems).toFixed(2) +
           "</td><td style=\"\">" + (data[i].ukip).toFixed(2) +
-          "</td><td style=\"width: 57px\">" + (data[i].green).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].green).toFixed(2) +
           "</td><td style=\"\">" + (data[i].snp).toFixed(2) +
           "</td><td style=\"\">" + (data[i].plaidcymru).toFixed(2)+
           "</td><td style=\"\">" + (data[i].other).toFixed(2) +
-          "</td><td style=\"width: 54px;\">" + (data[i].sdlp).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].sdlp).toFixed(2) +
           "</td><td style=\"\">" + (data[i].sinnfein).toFixed(2) +
           "</td><td style=\"\">" + (data[i].alliance).toFixed(2) +
           "</td><td style=\"\">" + (data[i].dup).toFixed(2) +
@@ -54,7 +54,8 @@ function doStuff(data) {
 					sorter: false
 				}
     },
-			sortList:[[0,0]]
+			sortList:[[0,0]],
+			widgets: ["stickyHeaders"]
 
 		});
 };

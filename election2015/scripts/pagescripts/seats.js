@@ -14,15 +14,16 @@ function doStuff(data) {
 					"</td><td style=\"width: 80px;\">" + partylist[data[i].incumbent] +
 					"</td><td style=\"width: 80px;\">" + partylist[data[i].party] +
 					"</td><td style=\"width: 66px\">" + data[i].change +
+					"</td><td style=\"width: 68px\">" + data[i].majority +
           "</td><td style=\"\">" + (data[i].conservative).toFixed(2) +
           "</td><td style=\"width: 62px\">" + (data[i].labour).toFixed(2) +
           "</td><td style=\"\">" + (data[i].libdems).toFixed(2) +
           "</td><td style=\"\">" + (data[i].ukip).toFixed(2) +
-          "</td><td style=\"\">" + (data[i].green).toFixed(2) +
+          "</td><td style=\"width: 57px\">" + (data[i].green).toFixed(2) +
           "</td><td style=\"\">" + (data[i].snp).toFixed(2) +
           "</td><td style=\"\">" + (data[i].plaidcymru).toFixed(2)+
           "</td><td style=\"\">" + (data[i].other).toFixed(2) +
-          "</td><td style=\"\">" + (data[i].sdlp).toFixed(2) +
+          "</td><td style=\"width: 54px;\">" + (data[i].sdlp).toFixed(2) +
           "</td><td style=\"\">" + (data[i].sinnfein).toFixed(2) +
           "</td><td style=\"\">" + (data[i].alliance).toFixed(2) +
           "</td><td style=\"\">" + (data[i].dup).toFixed(2) +
@@ -49,7 +50,7 @@ function doStuff(data) {
         16: { sortInitialOrder: 'desc' },
         17: { sortInitialOrder: 'desc' },
 
-				18: {
+				19: {
 					sorter: false
 				}
     },

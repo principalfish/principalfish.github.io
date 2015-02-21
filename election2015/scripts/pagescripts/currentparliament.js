@@ -412,6 +412,40 @@ function doStuff(data) {
 	});
 };
 
+
+function loadmap(){d3.json("/election2015/data/currentparliament/map.json", function(error, uk) {
+	if (error) return console.error(error);
+
+
+
+	g.selectAll(".map")
+		.data(topojson.feature(uk, uk.objects.map).features)
+		.enter().append("path")
+		.attr("class", function(d) {
+			return "map " + d.properties.incumbent;	})
+		.attr("id", function(d) { return "i" + d.properties.info_id})
+		.attr("d", path)
+		.on("click", clicked)
+		.append("svg:title")
+			.text(function(d) { return d.properties.name})
+		.each(function(d){
+			seatsAfterFilter.push(d)
+			searchSeatData.push(d)
+			seatNames.push(d.properties.name);
+		});
+
+
+	g.append("path")
+		.datum(topojson.mesh(uk, uk.objects.map, function(a, b){
+			return a.properties.region != b.properties.region && a != b; }))
+		.attr("d", path)
+		.attr("class", "boundaries");
+
+});
+}
+
+loadmap();
+
 function parseData(url, callBack) {
 	Papa.parse(url, {
 		download: true,

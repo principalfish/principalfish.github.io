@@ -6,6 +6,7 @@
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/infopages.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/methodology.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
@@ -49,17 +50,68 @@
 
 			</div>
 
-			<div id="info">
+			<div id="methodology">
 
-				<h1> About the Map </h1>
+				<h2> About the Map </h2>
 
-				<p>Dung beetles are beetles that feed partly or exclusively on dungs or feces.
-					They possess exceptional dung disposal capacity and one dung beetle can bury dung that is 250 times heavier than itself in one night.
-					Many dung beetles, known as rollers, roll dung into round balls, which are used as a food source or brooding chambers.
-					Other dung beetles, known as tunnelers, bury the dung wherever they find it.
-					A third group, the dwellers, neither roll nor burrow: they simply live in manure.
-					They are often attracted by the dung collected by burrowing owls. Dung Beetles can grow to 3 cm long and 2 cm wide.
-				</p>
+				<p>  The data for the map was originally OS data for UK constituencies in shapefile format and around 180Mb in size.
+				  QGIS, <a href="http://geojson.io">geojson.io</a>, and <a href="http://mapshaper.org">mapshaper</a> were used to transform
+					and simplify this data to a topojson file format of size 120kb.	This is rendered on the webpage using <a href="http://d3js.org">d3js</a>.</p>
+
+				<p>	Unfortunately no OS data for Northern Ireland constituencies could be found so they were drawn by hand on
+					top of a pre existing	map of Ireland in QGIS. </p>
+
+				<p>	A series of python scripts takes poll/previous election data and outputs a csv file of all seats with 2010 winner, 2015 winner,
+					2015 majority	and a percentage for each party.
+					This file is loaded on the webpage and links with the topojson to colour the map, give information when seats are clicked and apply any filters.
+					</p>
+
+				<p> The vote totals table is a separate series of csv files updated by the same scripts. </p>
+
+				<h2> About the Projection and Python Scripts</h2>
+
+				<h4> Poll Analysis </h4>
+
+				<p> I split polls regionally based on the EU constituencies of the UK - 9 in England plus Scotland, Wales and Northern Ireland</p>
+
+				<p> Polling data is written to a csv file. The polling analysis script reads the polling region name and looks it up in a polling dictionary.
+				"North England" for example will tell it to apply the poll to the EU constituencies "North East England", "North West England" and "Yorkshire and the Humber".</p>
+				<p> Pollsters have different definitions for some regions, especially "South" and "Midlands".
+					Figuring which region had which EU constituencies and was done by comparing sums of populations of the EU constituencies to the number of people polled. </p>
+				<p>The script looks up the party percent for the overall region in 2010.
+					It works out the difference implied by the poll and creates a separate poll for each EU constituency with party percents of 2010% + difference </p>
+
+				<p> After doing this for all polls, they are weighted proportional to (square root of sample size / square root of number of regions in polling region)
+					and multiplied by 0.8 <sup>number of days since poll</sup> - ie - they lose 20% of their value per day. <p>
+				<p> They are then averaged per region and a set of 12 regional party polling averages is sent to the main analysis script. </p>
+
+				<h4>Example</h4>
+				<p>An Ashcroft poll has Con = 30%,  Lab = 40% in "North England" with a sample of 250 on March 18th. Today is March 21st</p>
+				<p>The polling dictionary has the reference:  "North England" : ["northeastengland", "northwestengland", "yorkshireandthehumber"]. </p>
+				<p>The overall percentages from 2010 are looked up for "North England" - say Con = 35%, Lab = 35%. (this is the sum of votes for each party in the 3 regions in "North England" / total of votes of 3 in "North England")</p>
+				<p>The differences of -5 Con and +5 Lab are applied to 2010 results for each region.</p>
+				<p>Say in North East England in 2010, Con = 30%, Lab = 40% would become Con = 25%, Lab = 45%.</p>
+				<p>And in North West England, Con = 35%, Lab = 40% becomes Con = 30%, Lab = 45%.</p>
+				<p>A separate poll is created for each EU constituency in "North England" </p>
+				<p>This poll is given a weight proportional to square root(250) / square root(3) - 3 is number of EU constituencies in "North England".</p>
+				<p> Is it then incoorporated into the weighted polling average for each region </p>
+
+
+				<p> Seat specific polls are done in a separate script and only lose 1% of their value per day</p>
+
+				<h4> Seat Analysis </h4>
+
+				<p>.. </p>
+
+
+
+
+
+
+
+
+
+
 
 			</div>
 			<div id="footer">

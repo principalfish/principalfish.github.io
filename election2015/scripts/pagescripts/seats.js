@@ -9,21 +9,24 @@ function doStuff(data) {
 					null
 
 			else
-  				$("#polltablebody").append("<tr class=\"" + data[i].party + "\" style=\"opacity: 0.9;\"><td style=\"text-align: left;\">" + data[i].seat + "</td><td>" +
-          regionlist[data[i].area] + "</td><td style=\"text-align: left;\">" + partylist[data[i].incumbent] + "</td><td>" + partylist[data[i].party] + "</td><td>" + data[i].change +
-          "</td><td style=\"background-color:#99CCFF;\"></td><td class=\"conservative\">" + (data[i].conservative).toFixed(2) +
-          "</td><td class=\"labour\">" + (data[i].labour).toFixed(2) +
-          "</td><td class=\"libdems\">" + (data[i].libdems).toFixed(2) +
-          "</td><td class=\"ukip\">" + (data[i].ukip).toFixed(2) +
-          "</td><td class=\"green\">" + (data[i].green).toFixed(2) +
-          "</td><td class=\"snp\">" + (data[i].snp).toFixed(2) +
-          "</td><td class=\"plaidcymru\">" + (data[i].plaidcymru).toFixed(2)+
-          "</td><td class=\"other\">" + (data[i].other).toFixed(2) +
-          "</td><td class=\"sdlp\">" + (data[i].sdlp).toFixed(2) +
-          "</td><td class=\"sinnfein\">" + (data[i].sinnfein).toFixed(2) +
-          "</td><td class=\"alliance\">" + (data[i].alliance).toFixed(2) +
-          "</td><td class=\"dup\">" + (data[i].dup).toFixed(2) +
-          "</td><td class=\"uu\">" + (data[i].uu).toFixed(2) +
+  				$("#polltablebody").append("<tr  class=\"" + data[i].party + "\" style=\"opacity: 0.9;\"><td style=\"text-align: left; width: 75px;\">" + data[i].seat +
+					"</td><td style=\"width: 100px;\">" + regionlist[data[i].area] +
+					"</td><td style=\"width: 80px;\">" + partylist[data[i].incumbent] +
+					"</td><td style=\"width: 80px;\">" + partylist[data[i].party] +
+					"</td><td style=\"width: 66px\">" + data[i].change +
+          "</td><td style=\"\">" + (data[i].conservative).toFixed(2) +
+          "</td><td style=\"width: 62px\">" + (data[i].labour).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].libdems).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].ukip).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].green).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].snp).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].plaidcymru).toFixed(2)+
+          "</td><td style=\"\">" + (data[i].other).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].sdlp).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].sinnfein).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].alliance).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].dup).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].uu).toFixed(2) +
           "</td></tr>")
 		})
 
@@ -32,6 +35,7 @@ function doStuff(data) {
       sortInitialOrder: "asc",
       headers: {
 				4: { sortInitialOrder: 'desc' },
+				5: { sortInitialOrder: 'desc' },
         6: { sortInitialOrder: 'desc' },
         7: { sortInitialOrder: 'desc' },
         8: { sortInitialOrder: 'desc' },
@@ -44,12 +48,10 @@ function doStuff(data) {
         15: { sortInitialOrder: 'desc' },
         16: { sortInitialOrder: 'desc' },
         17: { sortInitialOrder: 'desc' },
-				18: { sortInitialOrder: 'desc' },
 
-				5: {
+				18: {
 					sorter: false
 				}
-
     },
 			sortList:[[0,0]]
 

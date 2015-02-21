@@ -15,25 +15,26 @@ $( function() {
 function doStuff(data) {
 
     $("#polltable").remove()
-    $("#info").append("<table id=\"polltable\" class=\"tablesorter\"><thead><tr>" +
+    $("#tableinfo").append("<table id=\"polltable\" class=\"tablesorter\"><thead><tr id=\"polltableheader\">" +
           "<th class=\"tablesorter-header\" style =\"width:80px;\">Pollster</th>" +
-          "<th class=\"tablesorter-header\">Date</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:150px;\">Region/Seat</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:65px;\">Polled</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:95px;\">Conservative</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:65px;\">Labour</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:75px;\">Lib Dems</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:55px;\">UKIP</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:60px;\">Green</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:50px;\">SNP</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:90px;\">Plaid Cymru</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:60px;\">Other</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:60px;\">SDLP</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:70px;\">Sinn Féin</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:70px;\">Alliance</th>" +
-          "<th class=\"tablesorter-header\" style =\"width:50px;\">DUP</th>" +
-          " <th class=\"tablesorter-header\" style =\"width:40px;\">UU</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:80px;\">Date</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:142px;\">Region/Seat</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:40px;\">Polled</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">Con</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:42px;\">Labour</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">Lib</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">UKIP</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">Green</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">SNP</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">Plaid</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:45px;\">Other</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">SDLP</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:37px;\">SF</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:38px;\">All</th>" +
+          "<th class=\"tablesorter-header\" style =\"width:38px;\">DUP</th>" +
+          " <th class=\"tablesorter-header\" style =\"width:38px;\">UU</th>" +
           "</tr>" +
+          "<tr><td colspan=\"18\" style=\"height: 15px\"></td></tr>" +
           "</thead>" +
           " <tbody id=\"polltablebody\"></tbody>" +
           "</table>")
@@ -51,21 +52,24 @@ function doStuff(data) {
 
 			else
         if (data[i].pollster != "me" && data[i].pollster != "whoever")
-  				$("#polltablebody").append("<tr onmouseover=\"background-color: black; color:white;\"><td  class=\"" + data[i].pollster + "\" style=\"text-align: left;\">" + pollsters[data[i].pollster] + "</td><td>" +
-          data[i].date + "</td><td style=\"text-align: left;\">" + data[i].region + "</td><td>" + data[i].total +
-          "</td><td>" + (100 * data[i].conservative/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].labour/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].libdems/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].ukip/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].green/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].snp/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].plaidcymru/total).toFixed(0)+
-          "</td><td>" + (100 * data[i].other/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].sdlp/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].sinnfein/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].alliance/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].dup/total).toFixed(0) +
-          "</td><td>" + (100 * data[i].uu/total).toFixed(0) +
+  				$("#polltablebody").append("<tr onmouseover=\"background-color: black; color:white;\"><td  class=\"" + data[i].pollster +
+          "\" style=\"text-align: left; width: 102px;\">" + pollsters[data[i].pollster] +
+          "</td><td style=\"width:102px;\">" + data[i].date +
+          "</td><td style=\"text-align:left; width:164px;\">" + data[i].region +
+          "</td><td style=\"width:62px;\">" + data[i].total +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].conservative/total).toFixed(0) +
+          "</td><td style=\"width:64px;\">" + (100 * data[i].labour/total).toFixed(0) +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].libdems/total).toFixed(0) +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].ukip/total).toFixed(0) +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].green/total).toFixed(0) +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].snp/total).toFixed(0) +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].plaidcymru/total).toFixed(0)+
+          "</td><td style=\"width:67px;\">" + (100 * data[i].other/total).toFixed(0) +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].sdlp/total).toFixed(0) +
+          "</td><td style=\"width:59px;\">" + (100 * data[i].sinnfein/total).toFixed(0) +
+          "</td><td style=\"width:60px;\">" + (100 * data[i].alliance/total).toFixed(0) +
+          "</td><td style=\"width:60px;\">" + (100 * data[i].dup/total).toFixed(0) +
+          "</td><td style=\"width:60px;\">" + (100 * data[i].uu/total).toFixed(0) +
           "</td></tr>")
 		})
 
@@ -89,7 +93,11 @@ function doStuff(data) {
         13: { sortInitialOrder: 'desc' },
         14: { sortInitialOrder: 'desc' },
         15: { sortInitialOrder: 'desc' },
-        16: { sortInitialOrder: 'desc' }
+        16: { sortInitialOrder: 'desc' },
+
+				17: {
+					sorter: false
+				}
 
     },
 			sortList:[[1,1]]

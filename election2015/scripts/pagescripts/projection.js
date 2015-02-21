@@ -5,6 +5,8 @@ d3.selection.prototype.moveToFront = function() {
 						});
 					};
 
+
+
 // far left filter scripts
 var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}]
 
@@ -469,6 +471,8 @@ function doStuff(data) {
 
 
 function loadmap(){
+
+	
 	d3.json("/election2015/data/projection.json", function(error, uk) {
 		if (error) return console.error(error);
 

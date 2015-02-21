@@ -466,7 +466,37 @@ function doStuff(data) {
 		});
 };
 
+function loadmap(){
+	d3.json("/election2015/data/projection.json", function(error, uk) {
+		if (error) return console.error(error);
 
+
+
+		g.selectAll(".map")
+			.data(topojson.feature(uk, uk.objects.projection).features)
+			.enter().append("path")
+			.attr("class", function(d) {
+				return "map " + seatData[d.properties.name]["party"];	})
+			.attr("id", function(d) { return "i" + seatData[d.properties.name]["id"]})
+			.attr("d", path)
+			.on("click", clicked)
+			.append("svg:title")
+				.text(function(d) { return seatData[d.properties.name]["seat"]})
+			.each(function(d){
+				seatsAfterFilter.push(d)
+				searchSeatData.push(d)
+				seatNames.push(d.properties.name);
+			});
+
+
+		g.append("path")
+			.datum(topojson.mesh(uk, uk.objects.projection, function(a, b){
+				return seatData[a.properties.name]["area"] != seatData[b.properties.name]["area"] && a != b; }))
+			.attr("d", path)
+			.attr("class", "boundaries");
+
+	});
+};
 
 var seatData = {};
 
@@ -474,6 +504,7 @@ function getSeatInfo(data){
 	$.each(data, function(i){
 		seatData[data[i].seat] = data[i]
 	})
+	loadmap()
 }
 
 

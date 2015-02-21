@@ -50,10 +50,7 @@ function doStuff(data) {
         15: { sortInitialOrder: 'desc' },
         16: { sortInitialOrder: 'desc' },
         17: { sortInitialOrder: 'desc' },
-
-				19: {
-					sorter: false
-				}
+				17: { sortInitialOrder: 'desc' }
     },
 			sortList:[[0,0]],
 			widgets: ["stickyHeaders"]

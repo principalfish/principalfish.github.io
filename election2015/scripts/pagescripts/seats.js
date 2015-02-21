@@ -14,21 +14,21 @@ function doStuff(data) {
 					"</td><td style=\"\">" + partylist[data[i].incumbent] +
 					"</td><td style=\"\">" + partylist[data[i].party] +
 					"</td><td style=\"\">" + data[i].change +
-					"</td><td style=\"\">" + data[i].majority2010 +
-					"</td><td style=\"\">" + data[i].majority +
-          "</td><td style=\"\">" + data[i].conservative +
-          "</td><td style=\"\">" + data[i].labour +
-          "</td><td style=\"\">" + data[i].libdems +
-          "</td><td style=\"\">" + data[i].ukip +
-          "</td><td style=\"\">" + data[i].green +
-          "</td><td style=\"\">" + data[i].snp +
-          "</td><td style=\"\">" + data[i].plaidcymru+
-          "</td><td style=\"\">" + data[i].other +
-          "</td><td style=\"\">" + data[i].sdlp +
-          "</td><td style=\"\">" + data[i].sinnfein +
-          "</td><td style=\"\">" + data[i].alliance +
-          "</td><td style=\"\">" + data[i].dup +
-          "</td><td style=\"\">" + data[i].uu +
+					"</td><td style=\"\">" + (data[i].majority2010).toFixed(2) +
+					"</td><td style=\"\">" + (data[i].majority).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].conservative).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].labour).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].libdems).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].ukip).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].green).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].snp).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].plaidcymru).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].other).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].sdlp).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].sinnfein).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].alliance).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].dup).toFixed(2) +
+          "</td><td style=\"\">" + (data[i].uu).toFixed(2) +
           "</td></tr>")
 		})
 
@@ -53,7 +53,7 @@ function doStuff(data) {
 				17: { sortInitialOrder: 'desc' }
     },
 			sortList:[[0,0]],
-			widgets: ["stickyHeaders"]
+			widgets: ["stickyHeaders", "filter"]
 
 		});
 };

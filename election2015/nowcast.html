@@ -183,7 +183,7 @@
 							.call(zoom)
 							.call(zoom.event);
 
-						$(document).ready(function(){
+						$(window).bind("load", function(){
 							d3.json("/election2015/data/projection.json", function(error, uk) {
 								if (error) return console.error(error);
 

@@ -1,6 +1,11 @@
 "pollster"	"type"	"pollsterweight"	"date"	"day"	"month"	"year"	"region"	"total"	"conservative"	"labour"	"libdems"	"ukip"	"green"	"snp"	"plaidcymru"	"other"	"sdlp"	"sinnfein"	"alliance"	"dup"	"uu"	"weight"	"initialweight"	"area"
 "me"	"regional"			11	2	2015	"null"	1000	150	300	90	30	30	400		0								
 "me"	"regional"			11	2	2015	"null"	1000	390	300	70	175	40		5	20								
+"yougov"	"regional"		"20/02/2015"	20	2	2015	"London"	201	62	82	14	24	12	0	0	2								
+"yougov"	"regional"		"20/02/2015"	20	2	2015	"Rest of South"	510	199	138	51	71	31	0	0	10								
+"yougov"	"regional"		"20/02/2015"	20	2	2015	"Midlands and Wales"	336	104	124	24	57	20	0	7	0								
+"yougov"	"regional"		"20/02/2015"	20	2	2015	"North England"	386	127	158	19	50	27	0	0	4								
+"yougov"	"regional"		"20/02/2015"	20	2	2015	"Scotland"	136	19	33	14	5	5	58	0	3								
 "opinium"	"regional"		"20/02/2015"	20	2	2015	"England"	1243	445	413	84	194	91			13								
 "opinium"	"regional"		"20/02/2015"	20	2	2015	"Scotland"	124	35	31	2	7	10	39		1								
 "opinium"	"regional"		"20/02/2015"	20	2	2015	"Wales"	63	18	24	6	8	1		3	4								

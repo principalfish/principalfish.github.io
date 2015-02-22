@@ -100,7 +100,7 @@ function doStuff(data) {
 
     },
 			sortList:[[1,1]],
-      widgets:["stickyHeaders"]
+      widgets:["stickyHeaders", "filter"]
 
 		});
 };

@@ -1,11 +1,16 @@
 "pollster"	"type"	"pollsterweight"	"date"	"day"	"month"	"year"	"region"	"total"	"conservative"	"labour"	"libdems"	"ukip"	"green"	"snp"	"plaidcymru"	"other"	"sdlp"	"sinnfein"	"alliance"	"dup"	"uu"	"weight"	"initialweight"	"area"
 "me"	"regional"			11	2	2015	"null"	1000	150	300	90	30	30	400		0								
 "me"	"regional"			11	2	2015	"null"	1000	390	300	70	175	40		5	20								
-"populus"	"regional"		22/02/2015	22	2	2015	"South East"	315	108	98	37	48	25			0								
-"populus"	"regional"		22/02/2015	22	2	2015	"Midlands"	335	119	92	34	61	23			7								
-"populus"	"regional"		22/02/2015	22	2	2015	"North England"	302	29	60	18	50	15			5								
-"populus"	"regional"		22/02/2015	22	2	2015	"Wales and South West"	159	38	25	15	22	12		4	1								
-"populus"	"regional"		22/02/2015	22	2	2015	"Scotland"	130	19	38	10	7	2	49										
+"ashcroft"	"regional"		"22/02/2015"	22	2	2015	"South East"	155	43	66	10	17	13			5								
+"ashcroft"	"regional"		"22/02/2015"	22	2	2015	"Midlands"	145	62	40	8	24	9			2								
+"ashcroft"	"regional"		"22/02/2015"	22	2	2015	"North England"	118	29	61	8	10	8			3								
+"ashcroft"	"regional"		"22/02/2015"	22	2	2015	"Wales and South West"	77	24	19	5	12	12		4	1								
+"ashcroft"	"regional"		"22/02/2015"	22	2	2015	"Scotland"	51	13	10	5	1	1	22										
+"populus"	"regional"		"22/02/2015"	22	2	2015	"South East"	315	108	98	37	48	25			0								
+"populus"	"regional"		"22/02/2015"	22	2	2015	"Midlands"	335	119	92	34	61	23			7								
+"populus"	"regional"		"22/02/2015"	22	2	2015	"North England"	302	29	60	18	50	15			5								
+"populus"	"regional"		"22/02/2015"	22	2	2015	"Wales and South West"	159	38	25	15	22	12		4	1								
+"populus"	"regional"		"22/02/2015"	22	2	2015	"Scotland"	130	19	38	10	7	2	49										
 "yougov"	"regional"		"20/02/2015"	20	2	2015	"London"	201	62	82	14	24	12	0	0	2								
 "yougov"	"regional"		"20/02/2015"	20	2	2015	"Rest of South"	510	199	138	51	71	31	0	0	10								
 "yougov"	"regional"		"20/02/2015"	20	2	2015	"Midlands and Wales"	336	104	124	24	57	20	0	7	0								

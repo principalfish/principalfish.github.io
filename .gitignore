@@ -10,6 +10,8 @@
 /election2015/data/analysis.py
 /election2015/data/pollinganalysis.pyc
 /election2015/data/pollingdictionary.pyc
+/election2015/data/seatpollanalysis.pyc
+/election2015/data/seatpollanalysis.py
 
 /election2015/data/oldinfo.csv
 /election2015/data/previoustotals.csv

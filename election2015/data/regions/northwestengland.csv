@@ -1,8 +1,8 @@
 code,seats,change,votepercent,votepercentchange
-conservative,18,-4,29.81,-1.88
-labour,54,7,40.58,1.23
-libdems,3,-3,11.86,-9.73
-ukip,0,0,11.99,8.99
+conservative,18,-4,29.85,-1.84
+labour,54,7,40.57,1.22
+libdems,3,-3,11.88,-9.71
+ukip,0,0,11.94,8.94
 snp,0,0,0.0,0.0
 plaidcymru,0,0,0.0,0.0
 green,0,0,4.06,3.21
@@ -11,5 +11,5 @@ sdlp,0,0,0.0,0.0
 dup,0,0,0.0,0.0
 sinnfein,0,0,0.0,0.0
 alliance,0,0,0.0,0.0
-other,0,0,1.69,-1.82
+other,0,0,1.7,-1.81
 total,75,,100.00,

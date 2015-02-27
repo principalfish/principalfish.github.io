@@ -81,10 +81,10 @@
 				<p>The script looks up the party percent for the overall region in 2010.
 					It works out the difference implied by the poll and creates a separate poll for each EU constituency with party percentages of 2010% + difference. </p>
 
-				<p> After doing this for all polls, they are weighted proportional to &radic;<span class="squareroot">sample size / number of regions in polling region</span>
+				<p> After doing this for all polls, they are weighted proportional to &radic;<span class="squareroot"><sup>sample size</sup></span> / &radic;<span class="squareroot"><sub>number of regions in polling region</sub></span>
 					and multiplied by 0.8 <sup>number of days since poll</sup> - they lose 20% of their value per day. <p>
 				<p> They are then averaged per region and a set of 12 regional party polling averages is produced. </p>
-				<p> Seat specific polls are done in a separate script and only lose 1.5% of their value per day.</p>
+				<p> Seat specific polls are done in a separate script and lose 1.5% of their value per day.</p>
 
 				<h4>Example</h4>
 				<p>An Ashcroft poll has Con = 30%,  Lab = 40% in "North England" with a sample of 250 on March 16th. Today is March 21st</p>
@@ -94,7 +94,7 @@
 				<p>Say in North East England in 2010, Con = 30%, Lab = 45% would become Con = 25%, Lab = 50%.</p>
 				<p>And in North West England, Con = 35%, Lab = 40% becomes Con = 30%, Lab = 45%.</p>
 				<p>A separate poll is created for each EU constituency in "North England" </p>
-				<p>This poll is given a weight proportional to &radic;<span class="squareroot">250 / 3</span>. 3 is number of EU constituencies in "North England".</p>
+				<p>This poll is given a weight proportional to &radic;<span class="squareroot"><sup>250</sup></span> / &radic;<span class="squareroot"><sub>3</sub></span>. 3 is number of EU constituencies in "North England".</p>
 				<p> This weight is multipled by 0.8 <sup>5</sup>. 5 is number of days since poll. </p>
 				<p> Once all polls in the file are read, split, analysed and weighted, these numbers are incorporated into the set of 12 overall regional polls.</p>
 

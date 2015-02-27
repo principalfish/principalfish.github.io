@@ -81,7 +81,7 @@
 				<p>The script looks up the party percent for the overall region in 2010.
 					It works out the difference implied by the poll and creates a separate poll for each EU constituency with party percentages of 2010% + difference. </p>
 
-				<p> After doing this for all polls, they are weighted proportional to &radic;<span class="squareroot"><sup>sample size</sup></span> / &radic;<span class="squareroot"><sub>number of regions in polling region</sub></span>
+				<p> After doing this for all polls, they are weighted proportional to the square root of (<sup>sample size</sup>&frasl;<sub>number of regions in polling region</sub>)
 					and multiplied by 0.8 <sup>number of days since poll</sup> - they lose 20% of their value per day. <p>
 				<p> They are then averaged per region and a set of 12 regional party polling averages is produced. </p>
 				<p> Seat specific polls are done in a separate script and lose 1.5% of their value per day.</p>
@@ -89,12 +89,12 @@
 				<h4>Example</h4>
 				<p>An Ashcroft poll has Con = 30%,  Lab = 40% in "North England" with a sample of 250 on March 16th. Today is March 21st</p>
 				<p>The polling dictionary has the reference:  "North England" : ["northeastengland", "northwestengland", "yorkshireandthehumber"]. </p>
-				<p>The overall percentages from 2010 are looked up for "North England" - say Con = 35%, Lab = 35%. (this is the sum of votes for each party in the 3 areas in "North England" / total of votes of 3 areas in "North England")</p>
+				<p>The overall percentages from 2010 are looked up for "North England" - say Con = 35%, Lab = 35%. (this is the sum of votes for each party in the 3 regions in "North England" / total of votes of 3 regions in "North England")</p>
 				<p>The differences of -5 Con and +5 Lab are applied to 2010 results for each EU constituency.</p>
 				<p>Say in North East England in 2010, Con = 30%, Lab = 45% would become Con = 25%, Lab = 50%.</p>
 				<p>And in North West England, Con = 35%, Lab = 40% becomes Con = 30%, Lab = 45%.</p>
 				<p>A separate poll is created for each EU constituency in "North England" </p>
-				<p>This poll is given a weight proportional to &radic;<span class="squareroot"><sup>250</sup></span> / &radic;<span class="squareroot"><sub>3</sub></span>. 3 is number of EU constituencies in "North England".</p>
+				<p>This poll is given a weight proportional to &radic;<span class="squareroot">250 &frasl; 3 </span>. 3 is number of EU constituencies in "North England".</p>
 				<p> This weight is multipled by 0.8 <sup>5</sup>. 5 is number of days since poll. </p>
 				<p> Once all polls in the file are read, split, analysed and weighted, these numbers are incorporated into the set of 12 overall regional polls.</p>
 
@@ -109,14 +109,14 @@
 				This effect is linearly proportional to the number of days left until the election.</p>
 				<p> The party regional relative change is calculated. This is (forecasted regional polling %) / (2010 regional %). </p>
 				<p> For the seat, how much the party polls in it relative to the region is calculated. </p>
-				<p> The new vote percent for each party in a seat is distributed around a mean of the regional relative change inversely proportional to how the seat is for the party relative to the area. </p>
+				<p> The new vote percent for each party in a seat is distributed around a mean of the regional relative change inversely proportional to how the seat is for the party relative to the region. </p>
 
 				<p> The upshot of this is that if a party is polling better in a region than in 2010, the seats they do better in in that region will see a smaller increase in the vote than the seats they did poorly in.</p>
 				<p> If a party is polling worse in a region than in 2010, the seats they did better in in that region will see a smaller decrease in the vote than the seats they did poorly in.</p>
 
 				<p> This produces a seat change factor - which is them multiplied by the old percentage to get the 2015 projected percentage. </p>
 
-				<p> After this, incumbency factors are applied. These are based of off the idea that incumbents tend to retain a percentage of the vote.
+				<p> After this, incumbency factors are applied. These are based off of the idea that incumbents tend to retain a percentage of the vote.
 				This is particularly true for the Lib Dems. <a href="http://nottspolitics.org/2013/01/25/how-incumbency-changed-the-outcome-of-the-2010-election/">See here</a>.</p>
 
 				<p> After doing all of these transformations, the numbers often don't add up to 100% so they are normalised. </p>
@@ -136,8 +136,8 @@
 				<p> Forecasted regional polling % = current polling %  + reversion * (2010 % - current polling %)</p>
 				<p> = 7.64 + 0.28 * (23.46 - 7.64) = 12.00%. </p>
 				<p> Regional relative change = 12.00 / 23.46 = 0.51.</p>
-				<p> Seat relative to area = 43.72 / 23.46 = 1.86. This seat is a good one for the Liberal Democratss in the North East.</p>
-				<p> Seat change factor = 1 +  (area relative change - 1 )  / (seat relative to area)<sup>3/2</sup></p>
+				<p> Seat relative to region = 43.72 / 23.46 = 1.86. This seat is a good one for the Liberal Democratss in the North East.</p>
+				<p> Seat change factor = 1 +  (region relative change - 1 )  / (seat relative to region)<sup>3/2</sup></p>
 				<p> = 1 + (0.51 - 1)/ 1.86<sup>2/3</sup> = 0.68</p>
 				<p> The Lib Dems retain 68% of their vote in this seat vs the 51% regionwide </p>
 				<p> New seat percentage = 2010 seat percentage * seat change factor </p>
@@ -152,7 +152,7 @@
 
 
 				<h4> Possible Improvements </h4>
-				<p> Incumbency bonus is applied in a fairly broad manner. It would be better to apply it based on wether the same MP is standing or not.
+				<p> Incumbency bonus is applied in a fairly broad manner. It would be better to apply it based on whether the same MP is standing or not.
 					Historical data could be used to help work out how incumbency bonuses change if incumbent MP are stepping down.
 					However, this may end up being far too specific to individual MPs/seats/historical situations and a broader approach could be better.</p>
 				<p> Reversion factor is an arbitrary number. Again, historical trends could be analysed to find a more accurate number to apply there.</p>

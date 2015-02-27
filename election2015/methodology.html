@@ -103,13 +103,58 @@
 
 				<h4> Seat Analysis </h4>
 
-				<p>For each party in each seat a series of formula is applied </p>
+				<p>For each party in each seat a series of formulae are applied. </p>
+				<p>Firstly, the regional party polling averages from the polling script are altered relative to 2010 results and the number of days until the election.
+				This is the forecasting part of the model and assumes there will be a reversion to the status quo as we approach election day.
+				This effect is linearly proportional to the number of days left until the election.</p>
+				<p> The party regional relative change is calculated. This is (forecasted regional polling %) / (2010 regional %). </p>
+				<p> For the seat, how much the party polls in it relative to the region is calculated. </p>
+				<p> The new vote percent for each party in a seat is distributed around a mean of the regional relative change inversely proportional to how the seat is for the party relative to the area. </p>
+
+				<p> The upshot of this is that if a party is polling better in a region than in 2010, the seats they do better in in that region will see a smaller increase in the vote than the seats they did poorly in.</p>
+				<p> If a party is polling worse in a region than in 2010, the seats they did better in in that region will see a smaller decrease in the vote than the seats they did poorly in.</p>
+
+				<p> This produces a seat change factor - which is them multiplied by the old percentage to get the 2015 projected percentage. </p>
+
+				<p> After this, incumbency factors are applied. These are based of off the idea that incumbents tend to retain a percentage of the vote.
+				This is particularly true for the Lib Dems. <a href="http://nottspolitics.org/2013/01/25/how-incumbency-changed-the-outcome-of-the-2010-election/">See here</a>.</p>
+
+				<p> After doing all of these transformations, the numbers often don't add up to 100% so they are normalised. </p>
+
+				<p> Finally, seat specific polls are applied (only the most recent is used if there are multiple). If these are recent they tend to have quite an influence on the percentages.
+					The difference between the poll and the current projected percentage is multiplied by the poll weight and added to the current value.</p>
+
+				<p> Again, this can result in numbers not adding up to 100 so normalisation is done again. It is important to normalise before seat poll analysis since those numbers need to apply to accurate percentages.</p>
+
+				<p> This is done for every seat and final data is appended to various csvs which are used by the webpage. The nowcast is the projection without the reversion factor.</p>
 
 
+				<h4> Example </h4>
+				<p> Liberal Democrats in Berwick-upon-tweed in North East England. Feb 26th 2015.</p>
+				<p> 2010 regional % = 23.46. Current regional polling % = 7.64.  2010 seat percent = 43.72%.</p>
+				<p> Days to election = 69. Reversion factor = 0.004 * days to election = 0.28. </p>
+				<p> Forecasted regional polling % = current polling %  + reversion * (2010 % - current polling %)</p>
+				<p> = 7.64 + 0.28 * (23.46 - 7.64) = 12.00%. </p>
+				<p> Regional relative change = 12.00 / 23.46 = 0.51.</p>
+				<p> Seat relative to area = 43.72 / 23.46 = 1.86.</p>
+				<p> Seat change factor = 1 +  (area relative change - 1 )  / (seat relative to area)<sup>3/2</sup></p>
+				<p> = 1 + (0.51 - 1)/ 1.86<sup>2/3</sup> = 0.68</p>
+				<p> New seat percentage = 2010 seat percentage * seat change factor </p>
+				<p> = 43.72 * 0.68 = 29.73%</p>
+				<p> I give the Liberal Democrats an incumbency bonus of 5% for this election (less than it has been historically)</p>
+				<p> Projected percentage = 34.73%
+				<p> This is normalised to 34.17%.</p>
+				<p> There was a seat poll done in Berwick on Aug 28th 2014. In it, Liberal Democrats had a percentage of 30%.
+					Since this is quite an old poll it only has a weight of 0.06 on the day of writing. </p>
+				<p> Final projected percentage = projected percentage - poll weight *  (projected percentage - poll percentage) </p>
+				<p> = 34.17 - 0.06 * (34.17 - 30) = 33.92% </p>
 
 
-
-
+				<h4> Possible Improvements </h4>
+				<p> Incumbency bonus is applied in a fairly broad manner. It would be better to apply it based on wether the same MP is standing or not.
+					Historical data could be used to help work out how incumbency bonuses change if incumbent MP are stepping down.
+					However, this may end up being far too specific to individual MPs/seats/historical situations and a broader approach could be better.</p>
+				<p> Reversion factor is an arbitrary number. Again, historical trends could be analysed to find a more accurate number to apply there.</p>
 
 
 

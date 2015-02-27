@@ -59,7 +59,7 @@
 					and simplify this data to a topojson file format of size 120kb.	This is rendered on the webpage using <a href="http://d3js.org">d3js</a>.</p>
 
 				<p>	Unfortunately no OS data for Northern Ireland constituencies could be found so they were drawn by hand on
-					top of a pre existing	map of Ireland in QGIS. </p>
+					top of a pre-existing	map of Ireland in QGIS. </p>
 
 				<p>	A series of python scripts takes poll/previous election data and outputs a csv file of all seats with 2010 winner, 2015 winner,
 					2015 majority	and a percentage for each party.
@@ -79,11 +79,11 @@
 				<p> Pollsters have different definitions for some regions, especially "South" and "Midlands".
 					Figuring which region had which EU constituencies and was done by comparing sums of populations of the EU constituencies to the number of people polled. </p>
 				<p>The script looks up the party percent for the overall region in 2010.
-					It works out the difference implied by the poll and creates a separate poll for each EU constituency with party percents of 2010% + difference. </p>
+					It works out the difference implied by the poll and creates a separate poll for each EU constituency with party percentages of 2010% + difference. </p>
 
 				<p> After doing this for all polls, they are weighted proportional to &radic;<span class="squareroot">sample size / number of regions in polling region</span>
 					and multiplied by 0.8 <sup>number of days since poll</sup> - they lose 20% of their value per day. <p>
-				<p> They are then averaged per region and a set of 12 regional party polling averages is sent to the seat analysis script. </p>
+				<p> They are then averaged per region and a set of 12 regional party polling averages is produced. </p>
 				<p> Seat specific polls are done in a separate script and only lose 1.5% of their value per day.</p>
 
 				<h4>Example</h4>
@@ -103,7 +103,7 @@
 
 				<h4> Seat Analysis </h4>
 
-				<p>For each party in each seat a series of formulae are applied. </p>
+				<p>For each party in each seat a series of formulae are applied. The general idea is that 2010 percentages are multiplied by a seat change factor to get projected percentages. </p>
 				<p>Firstly, the regional party polling averages from the polling script are altered relative to 2010 results and the number of days until the election.
 				This is the forecasting part of the model and assumes there will be a reversion to the status quo as we approach election day.
 				This effect is linearly proportional to the number of days left until the election.</p>
@@ -136,9 +136,10 @@
 				<p> Forecasted regional polling % = current polling %  + reversion * (2010 % - current polling %)</p>
 				<p> = 7.64 + 0.28 * (23.46 - 7.64) = 12.00%. </p>
 				<p> Regional relative change = 12.00 / 23.46 = 0.51.</p>
-				<p> Seat relative to area = 43.72 / 23.46 = 1.86.</p>
+				<p> Seat relative to area = 43.72 / 23.46 = 1.86. This seat is a good one for the Liberal Democratss in the North East.</p>
 				<p> Seat change factor = 1 +  (area relative change - 1 )  / (seat relative to area)<sup>3/2</sup></p>
 				<p> = 1 + (0.51 - 1)/ 1.86<sup>2/3</sup> = 0.68</p>
+				<p> The Lib Dems retain 68% of their vote in this seat vs the 51% regionwide </p>
 				<p> New seat percentage = 2010 seat percentage * seat change factor </p>
 				<p> = 43.72 * 0.68 = 29.73%</p>
 				<p> I give the Liberal Democrats an incumbency bonus of 5% for this election (less than it has been historically)</p>

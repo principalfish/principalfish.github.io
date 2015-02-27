@@ -1,17 +1,17 @@
 "pollster"	"type"	"pollsterweight"	"date"	"day"	"month"	"year"	"region"	"total"	"conservative"	"labour"	"libdems"	"ukip"	"green"	"snp"	"plaidcymru"	"other"	"sdlp"	"sinnfein"	"alliance"	"dup"	"uu"	"weight"	"initialweight"	"area"
 "me"	"regional"			11	2	2015	"null"	1000	150	300	90	30	30	400		0								
 "me"	"regional"			11	2	2015	"null"	1000	390	300	70	175	40		5	20								
-"populus"	"regional"		27/02/2015	27	2	2015	"South East"	324	118	105	32	45	24											
-"populus"	"regional"		27/02/2015	27	2	2015	"Midlands"	323	97	115	25	66	17			2								
-"populus"	"regional"		27/02/2015	27	2	2015	"North England"	262	80	104	19	41	13			4								
-"populus"	"regional"		27/02/2015	27	2	2015	"Wales and South West"	163	55	43	22	30	8		5									
-"populus"	"regional"		27/02/2015	27	2	2015	"Scotland"	121	14	24	12	12	6	52		1								
+"populus"	"regional"		"27/02/2015"	27	2	2015	"South East"	324	118	105	32	45	24											
+"populus"	"regional"		"27/02/2015"	27	2	2015	"Midlands"	323	97	115	25	66	17			2								
+"populus"	"regional"		"27/02/2015"	27	2	2015	"North England"	262	80	104	19	41	13			4								
+"populus"	"regional"		"27/02/2015"	27	2	2015	"Wales and South West"	163	55	43	22	30	8		5									
+"populus"	"regional"		"27/02/2015"	27	2	2015	"Scotland"	121	14	24	12	12	6	52		1								
 "yougov"	"regional"		"26/02/2015"	26	2	2015	"London"	210	76	84	17	25	8	0	0	0								
 "yougov"	"regional"		"26/02/2015"	26	2	2015	"Rest of South"	532	192	138	74	80	43	0	0	0								
 "yougov"	"regional"		"26/02/2015"	26	2	2015	"Midlands and Wales"	351	130	140	11	49	7	0	7	4								
 "yougov"	"regional"		"26/02/2015"	26	2	2015	"North England"	403	117	169	28	56	28	0	0	0								
 "yougov"	"regional"		"26/02/2015"	26	2	2015	"Scotland"	143	24	34	7	10	6	60	0	0								
-"tns"	"regional"		"25/02/2015"	25	2	2015	"Scotland"	450	63	135	14	14	18	206										
+"tns"	"regional"		"25/02/2015"	25	2	2015	"Scotland"	575	71	171	27	15	26	264										
 "yougov"	"regional"		"25/02/2015"	25	2	2015	"London"	202	59	71	22	26	20	0	0	0								
 "yougov"	"regional"		"25/02/2015"	25	2	2015	"Rest of South"	514	231	108	62	82	26	0	0	0								
 "yougov"	"regional"		"25/02/2015"	25	2	2015	"Midlands and Wales"	338	98	139	14	57	24	0	3	0								

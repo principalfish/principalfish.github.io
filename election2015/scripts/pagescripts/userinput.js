@@ -25,3 +25,8 @@ function userInputCheck(inputform, country){
   $(spanId).html(otherPercentage);
 
 }
+
+
+//for the map, change values in seatData object
+
+// the vote totals, page state changes what the vote totals show

@@ -492,6 +492,7 @@ function loadmap(){
 				seatsAfterFilter.push(d)
 				searchSeatData.push(d)
 				seatNames.push(d.properties.name);
+
 			});
 
 
@@ -502,16 +503,34 @@ function loadmap(){
 			.attr("class", "boundaries");
 
 	});
+
+
 }
 
+
+regionalVoteTotals = {}
+
+function getVoteTotals(region) {
+
+	alert(region)
+	sum = 0;
+	$.each(seatNames, function(i) {
+		alert(seatNames[i]);
+	});
+
+}
+
+// get complete seat Data for site
 var seatData = {};
 
 function getSeatInfo(data){
+
 	$.each(data, function(i){
 		seatData[data[i].seat] = data[i]
-	})
+	});
 	loadmap()
 }
+
 
 
 
@@ -528,6 +547,8 @@ function parseData(url, callBack) {
 
 parseData("/election2015/data/info.csv", getSeatInfo);
 parseData("/election2015/data/projectionvotetotals.csv", doStuff);
+
+
 
 function selectAreaInfo(value){
 
@@ -548,6 +569,17 @@ function selectAreaInfo(value){
 	if (value == "greatbritain") {parseData("/election2015/data/regions/greatbritain.csv", doStuff)};
 }
 
+
+
+
+//collate vote totals
+
+
+//
+// setTimeout(function(){
+// 	$.each(regionlist, getVoteTotals)
+// 	} , 2500 );
+//
 
 // autocomplete
 

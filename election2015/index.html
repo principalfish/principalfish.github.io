@@ -18,6 +18,7 @@
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/pagescripts/projection.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/pagescripts/userinput.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.widgets.min.js"></script>
 
@@ -151,15 +152,16 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
-						</tr>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
+							</tr>
 						</table>
-						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
 					</form>
+					<p class="inputsubmit"><button class="submitbutton" type="submit" value="Submit" onchange=""/>Submit</button> <span style="float:right"> Other : <span id="otherengland">100 </span></span></p>
+
 					</table>
 
 					<h4>Scotland</h4>
@@ -178,15 +180,17 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=99 onchange=""/></td>
-						</tr>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
+
+							</tr>
+
 						</table>
-						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
+						<p class="inputsubmit"><button class="submitbutton" type="submit" value="Submit" onchange=""/>Submit</button> <span style="float:right"> Other : <span id="otherscotland">100 </span></span></p>
 					</form>
 					</table>
 
@@ -205,15 +209,16 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=99 onchange=""/></td>
-						</tr>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
+
+							</tr>
 						</table>
-						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
+						<p class="inputsubmit"><button class="submitbutton" type="submit" value="Submit" onchange=""/>Submit</button> <span style="float:right"> Other : <span id="otherwales">100 </span></span></p>
 					</form>
 					</table>
 
@@ -231,14 +236,15 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
-								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
-						</tr>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
+
+							</tr>
 						</table>
-						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
+						<p class="inputsubmit"><button class="submitbutton" type="submit" value="Submit" onchange=""/>Submit</button> <span style="float:right"> Other : <span id="othernorthernireland">100 </span></span></p>
 					</form>
 					</table>
 				</div>

@@ -1,16 +1,24 @@
 #userinput {
 	position: absolute;
 	z-index: 1;
-	margin-left: 550px;
+	margin-left: 510px;
 	margin-top: 5px;
-	width: 140px;
+	width: 180px;
 	height: 325px;
 	background: #99CCFF;
 
 	border: 1px solid black;
 }
 
+#userinput tr{
+	width: 100%;
 
+}
+
+#userinput tr{
+	width: auto;
+
+}
 
 #userinput table tr td {
 	font-size: 0.8em;
@@ -25,17 +33,18 @@
 
 
 .inputnumbers {
-	width: 15px;
+	width: 22px;
 }
 
 .inputsubmit {
 	margin-top: -3px;
+	margin-left: 5px;
 	font-size: 0.95em;
-	width: 100%;
+	width: 95%;
 	padding: 1px;
 
 }
 
 .submitbutton {
-	font-size: 0.85em;
+	font-size: 0.95em;
 }

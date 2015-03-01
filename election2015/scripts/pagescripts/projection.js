@@ -472,7 +472,7 @@ function doStuff(data) {
 
 function loadmap(){
 
-	
+
 	d3.json("/election2015/data/projection.json", function(error, uk) {
 		if (error) return console.error(error);
 

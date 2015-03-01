@@ -52,3 +52,55 @@
 #filteredlist a:hover {
 	color: orange;
 }
+
+
+#userinput {
+	position: absolute;
+	z-index: 1;
+	margin-left: 510px;
+	margin-top: 5px;
+	width: 180px;
+	height: 340px;
+	background: #99CCFF;
+
+	border: 1px solid black;
+}
+
+#userinput tr{
+	width: 100%;
+
+}
+
+#userinput tr{
+	width: auto;
+
+}
+
+#userinput table tr td {
+	font-size: 0.9em;
+}
+
+#userinput h4{
+	width: 100%;
+	text-align: center;
+	margin-bottom: 3px;
+	margin-top: 0;
+}
+
+
+.inputnumbers {
+	width: 22px;
+}
+
+.inputsubmit {
+	margin-top: -3px;
+	margin-left: 5px;
+	font-size: 0.95em;
+	width: 95%;
+	padding: 1px;
+
+}
+
+.submitbutton {
+	font-size: 0.95em;
+}

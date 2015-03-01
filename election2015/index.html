@@ -134,6 +134,115 @@
 					<button id="resetmap" onclick="reset()">Reset</button>
 				</div>
 
+				<div id="userinput">
+					<h4> Input your own numbers (soon)</h4>
+					<h4>England</h4>
+
+					<form id="englandinput">
+
+						<table>
+							<tr>
+								<td>Con</td>
+								<td>Lab</td>
+								<td>Lib</td>
+								<td>UKIP</td>
+								<td>Grn</td>
+
+							</tr>
+
+							<tr>
+								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
+						</tr>
+						</table>
+						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
+					</form>
+					</table>
+
+					<h4>Scotland</h4>
+
+					<form id="scotlandinput">
+
+						<table>
+							<tr>
+								<td>Con</td>
+								<td>Lab</td>
+								<td>Lib</td>
+								<td>UKIP</td>
+								<td>Grn</td>
+								<td>SNP</td>
+
+							</tr>
+
+							<tr>
+								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=99 onchange=""/></td>
+						</tr>
+						</table>
+						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
+					</form>
+					</table>
+
+					<h4>Wales</h4>
+
+					<form id="walesinput">
+
+						<table>
+							<tr>
+								<td>Con</td>
+								<td>Lab</td>
+								<td>Lib</td>
+								<td>UKIP</td>
+								<td>Grn</td>
+								<td>PC</td>
+							</tr>
+
+							<tr>
+								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=99 onchange=""/></td>
+						</tr>
+						</table>
+						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
+					</form>
+					</table>
+
+					<h4>Northern Ireland</h4>
+
+					<form id="northernirelandinput">
+
+						<table>
+							<tr>
+								<td>DUP</td>
+								<td>SF</td>
+								<td>SDLP</td>
+								<td>UC</td>
+								<td>All</td>
+							</tr>
+
+							<tr>
+								<td><input class="inputnumbers" type ="text" name="" value=34 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=32 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=4 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=1 onchange=""/></td>
+								<td><input class="inputnumbers" type ="text" name="" value=100 onchange=""/></td>
+						</tr>
+						</table>
+						<p class="inputsubmit"><input class="submitbutton" type="submit" value="Submit" onchange=""/>&nbsp; <span style="float:right"> Other : 100% </p>
+					</form>
+					</table>
+				</div>
+
 					<script>
 
 
@@ -143,7 +252,7 @@
 
 						var projection = d3.geo.albers() // variables to change default map position
 							.center([0, 54.3]) //centers vertically and horizontally
-							.rotate([3, 0])
+							.rotate([2.25, 0])
 							.parallels([51, 60])
 							.scale(5800)
 							.translate([width / 2, height / 2]);

@@ -528,9 +528,9 @@ function getSeatInfo(data){
 	$.each(data, function(i){
 		seatData[data[i].seat] = data[i]
 	});
+
 	loadmap()
 }
-
 
 
 

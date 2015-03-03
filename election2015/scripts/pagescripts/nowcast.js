@@ -520,11 +520,11 @@ function parseData(url, callBack) {
 }
 
 parseData("/election2015/data/nowcast.csv", getSeatInfo);
-parseData("/election2015/data/nowcastvotetotals.csv", doStuff);
+parseData("/election2015/data/nowcastregions/nowcastvotetotals.csv", doStuff);
 
 function selectAreaInfo(value){
 
-	if (value == "country") {parseData("/election2015/data/nowcastvotetotals.csv", doStuff)};
+	if (value == "country") {parseData("/election2015/data/nowcastregions/nowcastvotetotals.csv", doStuff)};
 	if (value == "england") {parseData("/election2015/data/nowcastregions/england.csv", doStuff)};
 	if (value == "scotland") {parseData("/election2015/data/nowcastregions/scotland.csv", doStuff)};
 	if (value == "eastofengland") {parseData("/election2015/data/nowcastregions/eastofengland.csv", doStuff)};

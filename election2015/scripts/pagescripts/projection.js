@@ -524,7 +524,15 @@ southeastenglandVoteTotals = [];
 southwestenglandVoteTotals = [];
 londonVoteTotals = [];
 
+
+//for use purely in user input calculations
+previousTotals = {};
+previousPercentages = {};
+
 function getVoteTotalsInitial(data, region) {
+
+
+
 	region = region.slice(27)
 
 
@@ -536,83 +544,150 @@ function getVoteTotalsInitial(data, region) {
 		info["change"] = data[i].change
 		info["votepercent"] = data[i].votepercent
 		info["votepercentchange"] = data[i].votepercentchange
-		nationalVoteTotals.push(info)
+		nationalVoteTotals.push(info);
 	});
 
 	displayVoteTotals(nationalVoteTotals)
 }
 
 function getVoteTotals(data, region) {
-	region = region.slice(27)
+
+	if (region == "/election2015/data/previoustotals.csv"){
+		$.each(data, function(i){
+			var info = {};
+			info["region"] = data[i].region;
+			info["turnout2010"] = data[i].turnout2010;
+			info["conservative"] = data[i].conservative;
+			info["labour"] = data[i].labour;
+			info["libdems"] = data[i].libdems;
+			info["ukip"] = data[i].ukip;
+			info["snp"] = data[i].snp;
+			info["plaidcymru"] = data[i].plaidcymru;
+			info["green"] = data[i].green;
+			info["uu"] = data[i].uu;
+			info["sdlp"] = data[i].sdlp;
+			info["dup"] = data[i].dup;
+			info["sinnfein"] = data[i].sinnfein;
+			info["alliance"] = data[i].alliance;
+			info["other"] = data[i].other;
+
+
+			previousTotals[data[i].region] = info;
+		});
+
+		$.each(data, function(i){
+			var info = {};
+			info["conservative"] = 100 *  data[i].conservative / parseFloat(data[i].turnout2010);
+			info["labour"] = 100 *  data[i].labour / parseFloat(data[i].turnout2010);
+			info["libdems"] = 100 *  data[i].libdems / parseFloat(data[i].turnout2010);
+			info["ukip"] = 100 *  data[i].ukip / parseFloat(data[i].turnout2010);
+			info["snp"] = 100 *  data[i].snp / parseFloat(data[i].turnout2010);
+			info["plaidcymru"] = 100 *  data[i].plaidcymru / parseFloat(data[i].turnout2010);
+			info["green"] = 100 *  data[i].green / parseFloat(data[i].turnout2010);
+			info["uu"] = 100 *  data[i].uu / parseFloat(data[i].turnout2010);
+			info["sdlp"] = 100 *  data[i].sdlp / parseFloat(data[i].turnout2010);
+			info["dup"] = 100 *  data[i].dup / parseFloat(data[i].turnout2010);
+			info["sinnfein"] = 100 *  data[i].sinnfein / parseFloat(data[i].turnout2010);
+			info["alliance"] = 100 *  data[i].alliance / parseFloat(data[i].turnout2010);
+			info["other"] = 100 *  data[i].other / parseFloat(data[i].turnout2010);
+
+
+			previousPercentages[data[i].region] = info;
+		});
+	}
+
+	else
+		region = region.slice(27)
 
 
 
-	$.each(data, function(i){
-		var info = {};
-		info["code"] = data[i].code
-		info["seats"] = data[i].seats
-		info["change"] = data[i].change
-		info["votepercent"] = data[i].votepercent
-		info["votepercentchange"] = data[i].votepercentchange
+		$.each(data, function(i){
+			var info = {};
+			info["code"] = data[i].code;
+			info["seats"] = data[i].seats;
+			info["change"] = data[i].change;
+			info["votepercent"] = data[i].votepercent;
+			info["votepercentchange"] = data[i].votepercentchange;
 
 
-	if (region == "greatbritain.csv")
-		greatbritainVoteTotals.push(info)
+		if (region == "greatbritain.csv")
+			greatbritainVoteTotals.push(info)
 
-	if (region == "england.csv")
-		englandVoteTotals.push(info)
+		if (region == "england.csv")
+			englandVoteTotals.push(info)
 
-	if (region == "scotland.csv")
-		scotlandVoteTotals.push(info)
+		if (region == "scotland.csv")
+			scotlandVoteTotals.push(info)
 
-	if (region == "wales.csv")
-		walesVoteTotals.push(info)
+		if (region == "wales.csv")
+			walesVoteTotals.push(info)
 
-	if (region == "northernireland.csv")
-		northernirelandVoteTotals.push(info)
+		if (region == "northernireland.csv")
+			northernirelandVoteTotals.push(info)
 
-	if (region == "eastofengland.csv")
-		eastofenglandVoteTotals.push(info)
+		if (region == "eastofengland.csv")
+			eastofenglandVoteTotals.push(info)
 
-	if (region == "northeastengland.csv")
-		northeastenglandVoteTotals.push(info)
+		if (region == "northeastengland.csv")
+			northeastenglandVoteTotals.push(info)
 
-	if (region == "northwestengland.csv")
-		northwestenglandVoteTotals.push(info)
+		if (region == "northwestengland.csv")
+			northwestenglandVoteTotals.push(info)
 
-	if (region == "southeastengland.csv")
-		southeastenglandVoteTotals.push(info)
+		if (region == "southeastengland.csv")
+			southeastenglandVoteTotals.push(info)
 
-	if (region == "southwestengland.csv")
-		southwestenglandVoteTotals.push(info)
+		if (region == "southwestengland.csv")
+			southwestenglandVoteTotals.push(info)
 
-	if (region == "london.csv")
-		londonVoteTotals.push(info)
+		if (region == "london.csv")
+			londonVoteTotals.push(info)
 
-	if (region == "eastmidlands.csv")
-		eastmidlandsVoteTotals.push(info)
+		if (region == "eastmidlands.csv")
+			eastmidlandsVoteTotals.push(info)
 
-	if (region == "westmidlands.csv")
-		westmidlandsVoteTotals.push(info)
+		if (region == "westmidlands.csv")
+			westmidlandsVoteTotals.push(info)
 
-	if (region == "yorkshireandthehumber.csv")
-		yorkshireandthehumberVoteTotals.push(info)
+		if (region == "yorkshireandthehumber.csv")
+			yorkshireandthehumberVoteTotals.push(info)
 
-	});
+		});
 
 }
 
 
 // get complete seat Data for site
 var seatData = {};
+var oldSeatData = {};
 
 function getSeatInfo(data){
 
 	$.each(data, function(i){
-		seatData[data[i].seat] = data[i]
+		seatData[data[i].seat] = data[i];
 	});
 
 	loadmap()
+}
+
+function getOldSeatInfo(data){
+	$.each(data, function(i){
+		data[i].labour /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].conservative /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].libdems /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].ukip /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].green /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].other /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].plaidcymru /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].snp /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].sdlp /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].dup /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].sinnfein /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].alliance /= (parseFloat(data[i].turnout2010) / 100 )
+		data[i].uu /= (parseFloat(data[i].turnout2010) / 100 )
+
+		oldSeatData[data[i].seat] = data[i];
+	});
 }
 
 
@@ -628,29 +703,34 @@ function parseData(url, callBack) {
 	});
 }
 
-parseData("/election2015/data/info.csv", getSeatInfo);
+function getInfoFromFiles(){
+	parseData("/election2015/data/info.csv", getSeatInfo);
+	parseData("/election2015/data/regions/projectionvotetotals.csv", getVoteTotalsInitial);
 
-parseData("/election2015/data/regions/projectionvotetotals.csv", getVoteTotalsInitial);
+	// get rest of vote totals for later
 
+	parseData("/election2015/data/regions/greatbritain.csv", getVoteTotals);
+	parseData("/election2015/data/regions/england.csv", getVoteTotals);
+	parseData("/election2015/data/regions/scotland.csv", getVoteTotals);
+	parseData("/election2015/data/regions/wales.csv", getVoteTotals);
+	parseData("/election2015/data/regions/northernireland.csv", getVoteTotals);
+	parseData("/election2015/data/regions/northeastengland.csv", getVoteTotals);
+	parseData("/election2015/data/regions/northwestengland.csv", getVoteTotals);
+	parseData("/election2015/data/regions/southeastengland.csv", getVoteTotals);
+	parseData("/election2015/data/regions/southwestengland.csv", getVoteTotals);
+	parseData("/election2015/data/regions/london.csv", getVoteTotals);
+	parseData("/election2015/data/regions/eastmidlands.csv", getVoteTotals);
+	parseData("/election2015/data/regions/westmidlands.csv", getVoteTotals);
+	parseData("/election2015/data/regions/eastofengland.csv", getVoteTotals);
+	parseData("/election2015/data/regions/yorkshireandthehumber.csv", getVoteTotals);
 
-// get rest of vote totals for later
-parseData("/election2015/data/regions/greatbritain.csv", getVoteTotals);
-parseData("/election2015/data/regions/england.csv", getVoteTotals);
-parseData("/election2015/data/regions/scotland.csv", getVoteTotals);
-parseData("/election2015/data/regions/wales.csv", getVoteTotals);
-parseData("/election2015/data/regions/northernireland.csv", getVoteTotals);
-parseData("/election2015/data/regions/northeastengland.csv", getVoteTotals);
-parseData("/election2015/data/regions/northwestengland.csv", getVoteTotals);
-parseData("/election2015/data/regions/southeastengland.csv", getVoteTotals);
-parseData("/election2015/data/regions/southwestengland.csv", getVoteTotals);
-parseData("/election2015/data/regions/london.csv", getVoteTotals);
-parseData("/election2015/data/regions/eastmidlands.csv", getVoteTotals);
-parseData("/election2015/data/regions/westmidlands.csv", getVoteTotals);
-parseData("/election2015/data/regions/eastofengland.csv", getVoteTotals);
-parseData("/election2015/data/regions/yorkshireandthehumber.csv", getVoteTotals);
+	parseData("/election2015/data/previoustotals.csv", getVoteTotals);
 
+	parseData("/election2015/data/oldinfo.csv", getOldSeatInfo);
 
+};
 
+getInfoFromFiles();
 
 function selectAreaInfo(value){
 

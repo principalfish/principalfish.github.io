@@ -276,8 +276,4 @@ function alterMap(){
   // update vote total arrays
 
 
-
-// while calculating, put up window using css, remove when calculation done
-
-
 // reset button for user input, reset user input states too

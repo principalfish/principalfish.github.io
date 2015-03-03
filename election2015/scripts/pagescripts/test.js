@@ -647,7 +647,7 @@ parseData("/election2015/data/regions/london.csv", getVoteTotals);
 parseData("/election2015/data/regions/eastmidlands.csv", getVoteTotals);
 parseData("/election2015/data/regions/westmidlands.csv", getVoteTotals);
 parseData("/election2015/data/regions/eastofengland.csv", getVoteTotals);
-
+parseData("/election2015/data/regions/yorkshireandthehumber.csv", getVoteTotals);
 
 
 

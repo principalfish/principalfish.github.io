@@ -18,11 +18,14 @@ function sumFormPercentages(inputform){
   var sum = 0
   $sumpercentages.each(function() {
     var value = Number($(this).val());
-    if (!isNaN(value)) sum += value;
+    if (isNaN(value)) {
+      value = 0;
+    }
+    sum += value;
   });
 
   if (sum > 100){
-     var otherPercentage = "< 0";
+     var otherPercentage = 0;
      return otherPercentage
   }
 
@@ -61,22 +64,42 @@ function analyseUserInput(inputform, region){
     var userRegionalTotals = {};
 
     if (region == "england"){
+      $.each(englandUserNumbers, function(party){
+        if (isNaN(englandUserNumbers[party])){
+          englandUserNumbers[party] = 0;
+        }
+      });
       englandUserNumbers["other"] = 100 - englandUserNumbers["labour"] - englandUserNumbers["conservative"] - englandUserNumbers["libdems"] - englandUserNumbers["ukip"] - englandUserNumbers["green"];
       var percentages = englandUserNumbers;
     }
 
     if (region == "scotland"){
+      $.each(scotlandUserNumbers, function(party){
+        if (isNaN(scotlandUserNumbers[party])){
+          scotlandUserNumbers[party] = 0;
+        }
+      });
       scotlandUserNumbers["other"] = 100 - scotlandUserNumbers["labour"] - scotlandUserNumbers["conservative"] - scotlandUserNumbers["libdems"] - scotlandUserNumbers["ukip"] - scotlandUserNumbers["green"] - scotlandUserNumbers["snp"];
       var percentages = scotlandUserNumbers;
     }
 
     if (region == "wales"){
+      $.each(walesUserNumbers, function(party){
+        if (isNaN(walesUserNumbers[party])){
+          walesUserNumbers[party] = 0;
+        }
+      });
       walesUserNumbers["other"] = 100 - walesUserNumbers["labour"] - walesUserNumbers["conservative"] - walesUserNumbers["libdems"] - walesUserNumbers["ukip"] - walesUserNumbers["green"] - walesUserNumbers["plaidcymru"];
 
       var percentages = walesUserNumbers;
     }
 
     if (region == "northernireland"){
+      $.each(northernirelandUserNumbers, function(party){
+        if (isNaN(northernirelandUserNumbers[party])){
+          northernirelandUserNumbers[party] = 0;
+        }
+      });
       northernirelandUserNumbers["other"] = 100 - northernirelandUserNumbers["dup"] - northernirelandUserNumbers["sdlp"] - northernirelandUserNumbers["sinnfein"] - northernirelandUserNumbers["uu"] - northernirelandUserNumbers["alliance"];
       var percentages = northernirelandUserNumbers;
     }
@@ -178,84 +201,90 @@ function seatAnalysis(region, percentages, regionalRelativeChanges){
 
     for (seat in seatData){
 
-      if (oldSeatData[seat]["area"] == regions[region][area]){
+      if (seat == "Buckingham"){
 
-        var newSeatData = {};
+      }
 
-        for (party in percentages){
+      else {
+        if (oldSeatData[seat]["area"] == regions[region][area]){
 
-          var seatRelativeToArea = oldSeatData[seat][party] / previousPercentages[regions[region][area]][party];
+          var newSeatData = {};
+
+          for (party in percentages){
+
+            var seatRelativeToArea = oldSeatData[seat][party] / previousPercentages[regions[region][area]][party];
 
 
-          var distribute = regionalRelativeChanges[regions[region][area]][party] - 1;
+            var distribute = regionalRelativeChanges[regions[region][area]][party] - 1;
 
-          var seatchange = 1 + (distribute / Math.sqrt(seatRelativeToArea));
+            var seatchange = 1 + (distribute / Math.sqrt(seatRelativeToArea));
 
-          if (seatchange < 0.15){
-            seatchange = 0.15;
+            if (seatchange < 0.15){
+              seatchange = 0.15;
+            }
+
+            var newPercentage = seatchange * oldSeatData[seat][party]
+
+            if (oldSeatData[seat]["incumbent"] == party){
+              if (party == "conservative"){
+                newPercentage += 1
+              }
+
+              if (party == "libdems"){
+                newPercentage += 5
+              }
+
+              if (party == "ukip"){
+                newPercentage += 8
+              }
+
+              if (party == "green"){
+                newPercentage += 8
+              }
+
+              if (party == "labour"){
+                newPercentage += 2
+              }
+
+            }
+
+            newSeatData[party] = newPercentage;
           }
 
-          var newPercentage = seatchange * oldSeatData[seat][party]
+          var sumPercentages = 0
 
-          if (oldSeatData[seat]["incumbent"] == party){
-            if (party == "conservative"){
-              newPercentage += 1
-            }
+          for (party in newSeatData){
+            sumPercentages += newSeatData[party]
+          }
 
-            if (party == "libdems"){
-              newPercentage += 5
-            }
+          var normaliser = sumPercentages / 100;
 
-            if (party == "ukip"){
-              newPercentage += 8
-            }
-
-            if (party == "green"){
-              newPercentage += 8
-            }
-
-            if (party == "labour"){
-              newPercentage += 2
-            }
+          for (party in newSeatData){
+            newSeatData[party] /= normaliser
+            seatData[seat][party] = newSeatData[party]
 
           }
 
-          newSeatData[party] = newPercentage;
-        }
+          var sortable = [];
 
-        var sumPercentages = 0
+          for (var party in newSeatData) {
+            sortable.push([party, newSeatData[party]])
+          }
+          sortable.sort(function(a, b) {return a[1] - b[1]});
 
-        for (party in newSeatData){
-          sumPercentages += newSeatData[party]
-        }
+          var maxParty = sortable.pop();
+          var secondMaxParty = sortable.pop();
 
-        var normaliser = sumPercentages / 100;
-
-        for (party in newSeatData){
-          newSeatData[party] /= normaliser
-          seatData[seat][party] = newSeatData[party]
-
-        }
-
-        var sortable = [];
-
-        for (var party in newSeatData) {
-          sortable.push([party, newSeatData[party]])
-        }
-        sortable.sort(function(a, b) {return a[1] - b[1]});
-
-        var maxParty = sortable.pop();
-        var secondMaxParty = sortable.pop();
-
-        seatData[seat]["party"] = maxParty[0];
-        seatData[seat]["majority"] = maxParty[1] - secondMaxParty[1];
+          seatData[seat]["party"] = maxParty[0];
+          seatData[seat]["majority"] = maxParty[1] - secondMaxParty[1];
 
 
-        if (maxParty == seatData[seat]["incumbent"]){
-          seatData[seat]["change"] = "no";
-        }
-        else{
-          seatData[seat]["change"] = "yes";
+          if (maxParty == seatData[seat]["incumbent"]){
+            seatData[seat]["change"] = "no";
+          }
+          else{
+            seatData[seat]["change"] = "yes";
+          }
         }
       }
     }
@@ -328,7 +357,7 @@ function getAlteredVotes(area){
       totalvotescast2010 += previousTotals[areas[region]]["turnout2010"];
     })
 
-    totalvotescast = totalvotescast2010 * 1.02;
+    totalvotescast = parseInt(totalvotescast2010 * 1.02);
 
     totalseats = 0 ;
 
@@ -357,20 +386,23 @@ function getAlteredVotes(area){
 
           votepercent += seatData[seat][parties[party]] * oldSeatData[seat]["turnout2010"]  * 1.02 / 100 ;
           votepercentchange += oldSeatData[seat][parties[party]] * oldSeatData[seat]["turnout2010"] / 100 ;
+
         }
       });
 
-      votepercent = parseFloat((100 * votepercent / parseFloat(totalvotescast)).toFixed(2));
+      votepercent =  parseFloat((100 * votepercent / parseFloat(totalvotescast)).toFixed(2));
       change = seatssum - change;
+
       votepercentchange = 100 * votepercentchange / parseFloat(totalvotescast2010);
       votepercentchange = parseFloat((votepercent - votepercentchange).toFixed(2));
+
+
 
       info["code"] = code;
       info["seats"] = seatssum;
       info["change"] = change;
       info["votepercent"] = votepercent;
       info["votepercentchange"] = votepercentchange;
-
 
       holdingArray.push(info);
 
@@ -380,14 +412,19 @@ function getAlteredVotes(area){
     var totals = {"code": "total", "seats" : totalseats, "change": "", "votepercent" : 100.00, "votepercentchange" : ""};
     var stupidcsvextrarow = {"code": "", "seats" : undefined, "change": undefined, "votepercent" : undefined, "votepercentchange" : undefined};
 
+
     holdingArray.push(totals);
     holdingArray.push(stupidcsvextrarow);
+
+
+
 
     alterTable(area, holdingArray);
 
 }
 
-var test;
+var test = [];
+var test2 ;
 function alterTable(area, holdingarray){
 
   if (area == "all"){
@@ -434,7 +471,6 @@ function alterTable(area, holdingarray){
   if (area == "yorkshireandthehumber"){
     yorkshireandthehumberVoteTotals = holdingarray;
   }
-
 
   if (area == "eastofengland"){
     eastofenglandVoteTotals = holdingarray;

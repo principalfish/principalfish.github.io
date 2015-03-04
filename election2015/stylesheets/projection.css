@@ -60,7 +60,7 @@
 	margin-left: 510px;
 	margin-top: 5px;
 	width: 180px;
-	height: 340px;
+	height: 360px;
 	background: #99CCFF;
 
 	border: 1px solid black;
@@ -87,6 +87,12 @@
 	margin-top: 0;
 }
 
+#resetinputs{
+	width: 100%;
+	margin-left: 50px;
+	margin-top: -10px;
+
+}
 
 .inputnumbers {
 	width: 22px;

@@ -143,7 +143,7 @@ function resetFilter(){
 }
 
 function generateSeatList(){
-			$("#totalfilteredseats").html(" ");
+			$("#totalfilteredseats").html(" ");g
 			$("#filteredlisttable").html(" ");
 
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
@@ -406,6 +406,7 @@ $( function() {
     });
 });
 
+
 function displayVoteTotals(data) {
 		$("#totalstable").remove()
 		$("#totals").append("<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
@@ -417,8 +418,6 @@ function displayVoteTotals(data) {
 		//find wa yto clear cache of tablesorter properly? -
 
 		var plussign1, plussign2;
-
-
 
 		$.each(data, function(i){
 
@@ -531,11 +530,7 @@ previousPercentages = {};
 
 function getVoteTotalsInitial(data, region) {
 
-
-
 	region = region.slice(27)
-
-
 
 	$.each(data, function(i){
 		var info = {};
@@ -577,6 +572,7 @@ function getVoteTotals(data, region) {
 
 		$.each(data, function(i){
 			var info = {};
+			
 			info["conservative"] = 100 *  data[i].conservative / parseFloat(data[i].turnout2010);
 			info["labour"] = 100 *  data[i].labour / parseFloat(data[i].turnout2010);
 			info["libdems"] = 100 *  data[i].libdems / parseFloat(data[i].turnout2010);
@@ -598,8 +594,6 @@ function getVoteTotals(data, region) {
 
 	else
 		region = region.slice(27)
-
-
 
 		$.each(data, function(i){
 			var info = {};
@@ -670,6 +664,15 @@ function getSeatInfo(data){
 	loadmap()
 }
 
+function getSeatInfoAgain(data){
+
+	$.each(data, function(i){
+		seatData[data[i].seat] = data[i];
+	});
+
+	alterMap("reset");
+}
+
 function getOldSeatInfo(data){
 	$.each(data, function(i){
 		data[i].labour /= (parseFloat(data[i].turnout2010) / 100 )
@@ -703,8 +706,16 @@ function parseData(url, callBack) {
 	});
 }
 
-function getInfoFromFiles(){
+function getMapInfo(){
 	parseData("/election2015/data/info.csv", getSeatInfo);
+
+	parseData("/election2015/data/previoustotals.csv", getVoteTotals);
+
+	parseData("/election2015/data/oldinfo.csv", getOldSeatInfo);
+}
+
+function getInfoFromFiles(){
+
 	parseData("/election2015/data/regions/projectionvotetotals.csv", getVoteTotalsInitial);
 
 	// get rest of vote totals for later
@@ -724,12 +735,9 @@ function getInfoFromFiles(){
 	parseData("/election2015/data/regions/eastofengland.csv", getVoteTotals);
 	parseData("/election2015/data/regions/yorkshireandthehumber.csv", getVoteTotals);
 
-	parseData("/election2015/data/previoustotals.csv", getVoteTotals);
-
-	parseData("/election2015/data/oldinfo.csv", getOldSeatInfo);
-
 };
 
+getMapInfo();
 getInfoFromFiles();
 
 function selectAreaInfo(value){

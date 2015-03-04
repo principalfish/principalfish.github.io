@@ -79,9 +79,8 @@
 						<option value="sdlp">SDLP</option>
 						<option value="alliance">Alliance</option>
 						<option value="uu">Ulster Conservatives</option>
-						<option value="respect">Respect</option>
-						<option value="independent">Independent</option>
-						<option value="speaker">Speaker</option>
+						<option value="other">Other</option>
+
 					</select> </p>
 
 
@@ -161,7 +160,7 @@
 							</tr>
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput('england')"/>Submit</button> <span style="float:right"> Other : <span id="otherengland"> 100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(englandinput, 'england')"/>Submit</button> <span style="float:right"> Other : <span id="otherengland"> 100 </span></span></p>
 
 					</table>
 
@@ -192,7 +191,7 @@
 
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput('scotland')"/>Submit</button> <span style="float:right"> Other : <span id="otherscotland">100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(scotlandinput, 'scotland')"/>Submit</button> <span style="float:right"> Other : <span id="otherscotland">100 </span></span></p>
 
 					</table>
 
@@ -221,7 +220,7 @@
 							</tr>
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput('wales')"/>Submit</button> <span style="float:right"> Other : <span id="otherwales">100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(walesinput, 'wales')"/>Submit</button> <span style="float:right"> Other : <span id="otherwales">100 </span></span></p>
 
 					</table>
 
@@ -248,11 +247,12 @@
 							</tr>
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput('northernireland')"/>Submit</button> <span style="float:right"> Other : <span id="othernorthernireland">100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(northernirelandinput, 'northernireland')"/>Submit</button> <span style="float:right"> Other : <span id="othernorthernireland">100 </span></span></p>
 
 					</table>
-
-
+					<div id ="resetinputs">
+						<button class = "resetmap" onclick ="resetInputs()"/>Reset All </button>
+					</div>
 				</div>
 
 					<script>
@@ -396,9 +396,7 @@
 
 		<div id="footer">
 			<p> May have performance issues on Firefox </p>
-			<p> Rendered using the <a href="http://d3js.org/">d3js</a> library with help from <a href="http://mapshaper.org">mapshaper</a> and <a href="http://geojson.io">geojson.io</a>.
 			<p> Copyright 2015 principalfish.co.uk</p>
-
 		</div>
 
 

@@ -294,7 +294,7 @@ function alterVoteTotals(region){
   }
   $("#selectareatotals option:eq(0)").prop("selected", true);
   // double check later if this works
-  selectAreaInfo(region);
+  selectAreaInfo("country");
 }
 
 

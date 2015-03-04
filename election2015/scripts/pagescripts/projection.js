@@ -502,10 +502,7 @@ function loadmap(){
 			.attr("class", "boundaries");
 
 	});
-
-
 }
-
 
 nationalVoteTotals = [];
 greatbritainVoteTotals = [];
@@ -572,7 +569,7 @@ function getVoteTotals(data, region) {
 
 		$.each(data, function(i){
 			var info = {};
-			
+
 			info["conservative"] = 100 *  data[i].conservative / parseFloat(data[i].turnout2010);
 			info["labour"] = 100 *  data[i].labour / parseFloat(data[i].turnout2010);
 			info["libdems"] = 100 *  data[i].libdems / parseFloat(data[i].turnout2010);

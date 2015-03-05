@@ -2,7 +2,7 @@
 
 function userInputCheck(inputform, country){
 
-  var otherPercentage = sumFormPercentages(inputform);
+  var otherPercentage = sumFormPercentages(inputform).toFixed(0);
 
   spanId = "#other" + country
 
@@ -25,7 +25,7 @@ function sumFormPercentages(inputform){
   });
 
   if (sum > 100){
-     var otherPercentage = 0;
+     var otherPercentage = "< 0";
      return otherPercentage
   }
 
@@ -201,55 +201,60 @@ function seatAnalysis(region, percentages, regionalRelativeChanges){
 
     for (seat in seatData){
 
-      if (seat == "Buckingham"){
 
-      }
-
-      else {
         if (oldSeatData[seat]["area"] == regions[region][area]){
 
           var newSeatData = {};
 
           for (party in percentages){
 
+
             var seatRelativeToArea = oldSeatData[seat][party] / previousPercentages[regions[region][area]][party];
 
+            if (seatRelativeToArea == 0) {
+              newSeatData[party] = 0
+            }
+            else {
+              var distribute = regionalRelativeChanges[regions[region][area]][party] - 1;
 
-            var distribute = regionalRelativeChanges[regions[region][area]][party] - 1;
+              var seatchange = 1 + (distribute / Math.sqrt(seatRelativeToArea));
 
-            var seatchange = 1 + (distribute / Math.sqrt(seatRelativeToArea));
+              if (seatchange < 0.15){
+                seatchange = 0.15;
+              }
 
-            if (seatchange < 0.15){
-              seatchange = 0.15;
+
+              var newPercentage = seatchange * oldSeatData[seat][party]
+
+              if (oldSeatData[seat]["incumbent"] == party){
+                if (party == "conservative"){
+                  newPercentage += 1
+                }
+
+                if (party == "libdems"){
+                  newPercentage += 5
+                }
+
+                if (party == "ukip"){
+                  newPercentage += 8
+                }
+
+                if (party == "green"){
+                  newPercentage += 8
+                }
+
+                if (party == "labour"){
+                  newPercentage += 2
+                }
+
+              }
+
+              newSeatData[party] = newPercentage;
             }
 
-            var newPercentage = seatchange * oldSeatData[seat][party]
-
-            if (oldSeatData[seat]["incumbent"] == party){
-              if (party == "conservative"){
-                newPercentage += 1
-              }
-
-              if (party == "libdems"){
-                newPercentage += 5
-              }
-
-              if (party == "ukip"){
-                newPercentage += 8
-              }
-
-              if (party == "green"){
-                newPercentage += 8
-              }
-
-              if (party == "labour"){
-                newPercentage += 2
-              }
-
-            }
-
-            newSeatData[party] = newPercentage;
           }
+
+
 
           var sumPercentages = 0
 
@@ -272,6 +277,9 @@ function seatAnalysis(region, percentages, regionalRelativeChanges){
           }
           sortable.sort(function(a, b) {return a[1] - b[1]});
 
+
+
+
           var maxParty = sortable.pop();
           var secondMaxParty = sortable.pop();
 
@@ -286,7 +294,7 @@ function seatAnalysis(region, percentages, regionalRelativeChanges){
             seatData[seat]["change"] = "yes";
           }
         }
-      }
+
     }
   }
 }
@@ -423,8 +431,7 @@ function getAlteredVotes(area){
 
 }
 
-var test = [];
-var test2 ;
+
 function alterTable(area, holdingarray){
 
   if (area == "all"){

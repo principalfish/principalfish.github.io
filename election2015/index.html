@@ -79,9 +79,8 @@
 						<option value="sdlp">SDLP</option>
 						<option value="alliance">Alliance</option>
 						<option value="uu">Ulster Conservatives</option>
-						<option value="respect">Respect</option>
-						<option value="independent">Independent</option>
-						<option value="speaker">Speaker</option>
+						<option value="other">Other</option>
+
 					</select> </p>
 
 
@@ -135,8 +134,9 @@
 					<button id="resetmap" onclick="reset()">Reset</button>
 				</div>
 
-				<!-- <div id="userinput">
-					<h4> Input your own numbers (soon)</h4>
+				<div id="userinput">
+					<h4> Input your own percentages</h4>
+
 					<h4>England</h4>
 
 					<form id="englandinput">
@@ -152,15 +152,15 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['conservative'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['labour'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['libdems'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['ukip'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['green'] = parseFloat(value)"/></td>
 							</tr>
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton"  onchange=""/>Submit</button> <span style="float:right"> Other : <span id="otherengland">100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(englandinput, 'england')"/>Submit</button> <span style="float:right"> Other : <span id="otherengland"> 100 </span></span></p>
 
 					</table>
 
@@ -180,18 +180,18 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['conservative'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['labour'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['libdems'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['ukip'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['green'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['snp'] = parseFloat(value)"/></td>
 
 							</tr>
 
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton" onchange=""/>Submit</button> <span style="float:right"> Other : <span id="otherscotland">100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(scotlandinput, 'scotland')"/>Submit</button> <span style="float:right"> Other : <span id="otherscotland">100 </span></span></p>
 
 					</table>
 
@@ -210,17 +210,17 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['conservative'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['labour'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['libdems'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['ukip'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['green'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['plaidcymru'] = parseFloat(value)"/></td>
 
 							</tr>
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton" onchange=""/>Submit</button> <span style="float:right"> Other : <span id="otherwales">100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(walesinput, 'wales')"/>Submit</button> <span style="float:right"> Other : <span id="otherwales">100 </span></span></p>
 
 					</table>
 
@@ -238,19 +238,22 @@
 							</tr>
 
 							<tr>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['dup'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sinnfein'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sdlp'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['uu'] = parseFloat(value)"/></td>
+								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['alliance'] = parseFloat(value)"/></td>
 
 							</tr>
 						</table>
 					</form>
-					<p class="inputsubmit"><button class="submitbutton"  onchange=""/>Submit</button> <span style="float:right"> Other : <span id="othernorthernireland">100 </span></span></p>
+					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(northernirelandinput, 'northernireland')"/>Submit</button> <span style="float:right"> Other : <span id="othernorthernireland">100 </span></span></p>
 
 					</table>
-				</div> -->
+					<div id ="resetinputs">
+						<button class = "resetmap" onclick ="resetInputs()"/>Reset All </button>
+					</div>
+				</div>
 
 					<script>
 
@@ -393,9 +396,7 @@
 
 		<div id="footer">
 			<p> May have performance issues on Firefox </p>
-			<p> Rendered using the <a href="http://d3js.org/">d3js</a> library with help from <a href="http://mapshaper.org">mapshaper</a> and <a href="http://geojson.io">geojson.io</a>.
 			<p> Copyright 2015 principalfish.co.uk</p>
-
 		</div>
 
 

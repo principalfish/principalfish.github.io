@@ -526,3 +526,22 @@ function resetInputs(){
   southwestenglandVoteTotals = [];
   londonVoteTotals = [];
 }
+
+var isFirefox = typeof InstallTrigger !== 'undefined';
+var isIE = /*@cc_on!@*/false || !!document.documentMode;
+
+
+$(document).ready(function(){
+  if (isFirefox == true){
+    $(".inputnumbers").css("width", "20px");
+    $("#userinput p").css("margin-bottom", "1px");
+    $("#resetinputs").css("padding-top", "8px");
+
+
+  }
+
+  if (isIE == true){
+    $(".submitbutton").css("font-size", "0.85em");
+    $("#userinput h4").css("margin-top", "-2px");
+  }
+});

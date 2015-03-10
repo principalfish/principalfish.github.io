@@ -1,7 +1,18 @@
 "pollster"	"type"	"pollsterweight"	"date"	"day"	"month"	"year"	"region"	"total"	"conservative"	"labour"	"libdems"	"ukip"	"green"	"snp"	"plaidcymru"	"other"	"sdlp"	"sinnfein"	"alliance"	"dup"	"uu"	"weight"
+"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"West Aberdeenshire and Kincardine"	1001	25	10	20	3	2	39								
+"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"Ross, Skye and Lochaber"	1000	8	9	35	3	5	40		1						
+"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"Dumfriesshire, Clydesdale and Tweeddale"	1000	34	18	7	4	2	34		1						
+"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"Ayr, Carrick and Cumnock"	1000	21	31	2	3		42		1						
+"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"Dumfries and Galloway"	1000	30	28	2	4	2	34								
+"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"East Renfrewshire"	1000	26	34	2	1	3	33								
+"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"Edinburgh South West"	1000	19	27	4	2	7	40								
+"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"Kirkcaldy and Cowdenbeath"	1000	7	39	3	3	3	45								
+"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"Norwich North"	1000	34	35	5	16	10									
+"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"High Peak"	1000	37	38	6	12	6			1						
+"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"Vale of Glamorgan"	1000	38	32	4	10	3		12	1						
+"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"Colne Valley"	1000	33	32	12	11	10			2						
 "ashcroft"	"seat"		"22/01/2015"	22	1	2015	"Airdrie and Shotts"	1000	7	39	1	5	1	47		0						
 "ashcroft"	"seat"		"12/07/2014"	12	7	2014	"Amber Valley"	482	34	35	4	23	3			2						
-"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"Ayr, Carrick and Cumnock"	1000	21	31	2	3		42		1						
 "ashcroft"	"seat"		"30/07/2014"	30	7	2014	"Bedford"	419	30	39	9	17	4			2						
 "lucidtalk"	"seat"		"28/01/2015"	28	1	2015	"Belfast East"	820								22			29	34	15	
 "ashcroft"	"seat"		"13/09/2014"	13	9	2014	"Bermondsey and Old Southwark"	561	14	35	36	9	5			2						
@@ -26,18 +37,13 @@
 "ashcroft"	"seat"		"18/10/2014"	18	10	2014	"City of Chester"	1000	36	37	7	15	5			1						
 "ashcroft"	"seat"		"17/01/2015"	17	1	2015	"Coatbridge, Chryston and Bellshill"	1001	6	43	1	3	1	46		1						
 "ashcroft"	"seat"		"14/11/2014"	14	11	2014	"Colchester"	505	22	17	36	18	6			1						
-"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"Colne Valley"	1000	33	32	12	11	10			2						
 "survation"	"seat"		"24/11/2013"	24	11	2013	"Crewe and Nantwich"	313	33	46	6	11				5						
 "ashcroft"	"seat"		"22/01/2015"	22	1	2015	"Cumbernauld, Kilsyth and Kirkintilloch East"	1000	6	34	2	3	3	52		1						
 "ashcroft"	"seat"		"23/11/2014"	23	11	2014	"Doncaster North"	725	13	54	4	25	2			3						
 "ashcroft"	"seat"		"27/11/2014"	27	11	2014	"Dudley North"	510	24	37	3	34				3						
-"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"Dumfries and Galloway"	1000	30	28	2	4	2	34								
-"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"Dumfriesshire, Clydesdale and Tweeddale"	1000	34	18	7	4	2	34		1						
 "ashcroft"	"seat"		"30/01/2015"	30	1	2015	"Dundee West"	1000	6	25	3	2	5	59		0						
 "ashcroft"	"seat"		"06/12/2014"	6	12	2014	"Ealing Central and Acton"	586	34	40	11	6	7			2						
-"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"East Renfrewshire"	1000	26	34	2	1	3	33								
 "ashcroft"	"seat"		"28/08/2014"	28	8	2014	"Eastleigh"	538	25	12	40	21	2			1						
-"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"Edinburgh South West"	1000	19	27	4	2	7	40								
 "ashcroft"	"seat"		"13/12/2014"	13	12	2014	"Elmet and Rothwell"	570	39	35	6	16	3			1						
 "ashcroft"	"seat"		"25/09/2014"	25	9	2014	"Enfield North"	503	34	44	3	12	3			3						
 "survation"	"seat"		"04/04/2014"	4	4	2014	"Folkestone and Hythe"	529	36	18	10	33	2			1						
@@ -55,17 +61,14 @@
 "ashcroft"	"seat"		"07/12/2014"	7	12	2014	"Harrow East"	524	40	37	6	13	3									
 "ashcroft"	"seat"		"15/11/2014"	15	11	2014	"Hazel Grove"	564	29	15	35	17	4									
 "ashcroft"	"seat"		"29/06/2014"	29	6	2014	"Hendon"	511	35	45	4	12	3			2						
-"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"High Peak"	1000	37	38	6	12	6			1						
-"survation"	"seat"		03/03/2015	3	3	2015	"Hornsey and Wood Green"	295	15	38	35	4	8			1						
+"ashcroft"	"seat"		"13/09/2014"	13	9	2014	"Hornsey and Wood Green"	553	14	43	30	3	8			1						
 "ashcroft"	"seat"		"27/09/2014"	27	9	2014	"Hove"	568	34	37	6	11	12									
 "ashcroft"	"seat"		"29/01/2015"	29	1	2015	"Inverness, Nairn, Badenoch and Strathspey"	1000	10	13	21	4	1	50		1						
-"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"Kirkcaldy and Cowdenbeath"	1000	7	39	3	3	3	45								
 "ashcroft"	"seat"		"04/07/2014"	4	7	2014	"Lancaster and Fleetwood"	482	27	39	3	19	11			2						
 "ashcroft"	"seat"		"21/06/2014"	21	6	2014	"Manchester, Withington"	1000	7	56	22	4	10			1						
 "ashcroft"	"seat"		"22/01/2015"	22	1	2015	"Motherwell and Wishaw"	1000	5	39	1	3	1	50		1						
 "ashcroft"	"seat"		"05/02/2015"	5	2	2015	"North East Cambridgeshire"	1000	46	17	7	25	4			1						
 "ashcroft"	"seat"		"28/06/2014"	28	6	2014	"North Warwickshire"	1000	30	41	2	22	2			2						
-"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"Norwich North"	1000	34	35	5	16	10									
 "ashcroft"	"seat"		"21/06/2014"	21	6	2014	"Norwich South"	1000	18	33	12	15	20			1						
 "ashcroft"	"seat"		"03/10/2014"	3	10	2014	"Nuneaton"	1000	36	39	3	19	2			1						
 "ashcroft"	"seat"		"21/06/2014"	21	6	2014	"Oxford West and Abingdon"	550	38	18	30	9	4									
@@ -74,7 +77,6 @@
 "ashcroft"	"seat"		"23/07/2014"	23	7	2014	"Plymouth, Sutton and Devonport"	506	27	35	3	22	8			1						
 "ashcroft"	"seat"		"06/11/2014"	6	11	2014	"Portsmouth South"	555	30	20	25	17	6			1						
 "ashcroft"	"seat"		"06/09/2014"	6	9	2014	"Redcar"	1000	12	44	18	23	2			1						
-"ashcroft"	"seat"		"26/02/2015"	26	2	2015	"Ross, Skye and Lochaber"	1000	8	9	35	3	5	40		1						
 "ashcroft"	"seat"		"29/11/2014"	29	11	2014	"Rother Valley"	480	18	40	4	34	3			2						
 "ashcroft"	"seat"		"22/11/2014"	22	11	2014	"Sheffield Hallam"	962	19	30	27	13	10			1						
 "ashcroft"	"seat"		"05/02/2015"	5	2	2015	"South Basildon and East Thurrock"	1001	35	28	3	29	3			1						
@@ -87,10 +89,8 @@
 "ashcroft"	"seat"		"16/07/2014"	16	7	2014	"Stroud"	561	30	41	6	11	11									
 "ashcroft"	"seat"		"26/06/2014"	26	6	2014	"Thurrock"	1002	28	30	2	36				4						
 "icm"	"seat"		"30/04/2014"	30	4	2014	"Twickenham"	278	34	23	32	5	4			2						
-"ashcroft"	"seat"		"12/02/2015"	12	2	2015	"Vale of Glamorgan"	1000	38	32	4	10	3		12	1						
 "ashcroft"	"seat"		"06/12/2014"	6	12	2014	"Warwick and Leamington"	534	38	34	7	14	7									
 "ashcroft"	"seat"		"20/11/2014"	20	11	2014	"Watford"	506	30	24	28	14	3			1						
-"ashcroft"	"seat"		"19/02/2015"	19	2	2015	"West Aberdeenshire and Kincardine"	1001	25	10	20	3	2	39								
 "ashcroft"	"seat"		"22/01/2015"	22	1	2015	"West Dunbartonshire"	1000	6	38	1	4	2	47		1						
 "survation"	"seat"		"04/12/2014"	4	12	2014	"Witney"	531	53	16	4	19	7			1						
 "ashcroft"	"seat"		"19/10/2014"	19	10	2014	"Worcester"	1000	34	36	5	17	7			1						

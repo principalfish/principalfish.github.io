@@ -56,14 +56,17 @@
 
 			<div id="trends">
 				<p style="font-size: 1.5em;">
-					<a href ="#" onclick="">Seat Totals</a>
+					<a href ="#" onclick="drawGraph('seats')">Seat Totals</a>
 					&nbsp; &nbsp;
-					<a href ="#" onclick="">Percentages</a>				
+					<a href ="#" onclick="drawGraph('percent')">Percentages</a>
 
 				</p>
+				<p style="margin-bottom: -15px;"> Mouseover for more information (soon)</p>
+				<div id="graph">
+				</div>
 				<script>
 
-				  var svg = d3.select("#trends")
+				  var svg = d3.select("#graph")
 				      .append("svg")
 				          .attr("width", width + margin.left + margin.right)
 				          .attr("height", height + margin.top + margin.bottom)

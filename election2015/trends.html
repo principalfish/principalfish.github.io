@@ -8,6 +8,10 @@
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
+
+	<style> /* set the CSS */
+
+</style>
 </head>
 
 <body>
@@ -15,6 +19,8 @@
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/d3.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/pagescripts/trends.js"></script>
 
 
 		<div id="wrapper">
@@ -48,16 +54,17 @@
 
 			</div>
 
-			<div id="info">
-				<h3> About the Map </h3>
+			<div id="trends">
+				<script>
 
-				<p>Dung beetles are beetles that feed partly or exclusively on dungs or feces.
-					They possess exceptional dung disposal capacity and one dung beetle can bury dung that is 250 times heavier than itself in one night.
-					Many dung beetles, known as rollers, roll dung into round balls, which are used as a food source or brooding chambers.
-					Other dung beetles, known as tunnelers, bury the dung wherever they find it.
-					A third group, the dwellers, neither roll nor burrow: they simply live in manure.
-					They are often attracted by the dung collected by burrowing owls. Dung Beetles can grow to 3 cm long and 2 cm wide.
-				</p>
+				  var svg = d3.select("#trends")
+				      .append("svg")
+				          .attr("width", width + margin.left + margin.right)
+				          .attr("height", height + margin.top + margin.bottom)
+				      .append("g")
+				          .attr("transform",
+				                "translate(" + margin.left + "," + margin.top + ")");
+				</script>
 
 			</div>
 			<div id="footer">

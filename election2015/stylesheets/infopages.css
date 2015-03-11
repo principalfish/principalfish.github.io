@@ -93,7 +93,7 @@ table#polltable thead tr .headerSortDown {
 
 
 
-path {    
+path {
     stroke-width: 2.5;
     fill: none;
 }
@@ -104,4 +104,9 @@ path {
     stroke: grey;
     stroke-width: 1;
     shape-rendering: crispEdges;
+}
+
+.label {
+  font-size: 1.5em;
+  letter-spacing: 2px;
 }

@@ -316,26 +316,26 @@ svg .map {
 
 /* party based stylings */
 
-.labour { background-color:#CC0000; color: white; fill: #CC0000; }
-.conservative {background-color: #0000FF; color: #FFFF00; fill: #0000FF; }
-.libdems {background-color: #FF9900; color:black; fill:#FF9900; }
-.snp { background-color: #FFFF00; color:#0000FF; fill: #FFFF00; }
-.ukip { background-color: #660099; color:#99FF66; fill: #660099;}
-.green { background-color: #6AB023; color:black; fill: #6AB023;}
-.plaidcymru {background-color: #337147; color:black; fill: #337147;}
-.respect {background-color: #660000; color:white; fill: #660000;}
-.speaker {background-color: white; color:black ; fill: white;}
-.independent {background-color: grey; color:white; fill: grey;}
-.dup {background-color: #D46A4C; color: black; fill:#D46A4C;}
-.sdlp { background-color: #99FF66; color: black; fill: #99FF66;}
-.uu {background-color: #9999FF; color:black; fill: #9999FF;}
-.alliance {background-color: #F6CB2F; color: black; fill: #F6CB2F;}
-.sinnfein {background-color: #008800; color: black; fill: #008800;}
-.other1 {background-color: #666666 ; color:white; fill: #666666 ;}
-.other2 {background-color: #999999; color:white; fill: #999999;}
-.null {background-color: white; color:black; fill: white;}
-.total {background-color: black; color: white;}
-.other {background-color: #666666 ; color:white; fill: #666666 ;}
+.labour { background-color:#CC0000; color: white; fill: #CC0000; stroke: #CC0000;}
+.conservative {background-color: #0000FF; color: #FFFF00; fill: #0000FF; stroke: #0000FF; }
+.libdems {background-color: #FF9900; color:black; fill:#FF9900; stroke: #FF9900;}
+.snp { background-color: #FFFF00; color:#0000FF; fill: #FFFF00; stroke: #FFFF00;}
+.ukip { background-color: #660099; color:#99FF66; fill: #660099; stroke: #660099;}
+.green { background-color: #6AB023; color:black; fill: #6AB023; stroke: #6AB023;}
+.plaidcymru {background-color: #337147; color:black; fill: #337147; stroke: #337147;}
+.respect {background-color: #660000; color:white; fill: #660000; stroke: #660000;}
+.speaker {background-color: white; color:black ; fill: white; stroke: white;}
+.independent {background-color: grey; color:white; fill: grey; stroke: grey;}
+.dup {background-color: #D46A4C; color: black; fill:#D46A4C; stroke: #D46A4C;}
+.sdlp { background-color: #99FF66; color: black; fill: #99FF66; stroke: #99FF66;}
+.uu {background-color: #9999FF; color:black; fill: #9999FF; stroke: #9999FF;}
+.alliance {background-color: #F6CB2F; color: black; fill: #F6CB2F; stroke: #F6CB2F;}
+.sinnfein {background-color: #008800; color: black; fill: #008800; stroke: #008800;}
+.other1 {background-color: #666666 ; color:white; fill: #666666 ; stroke: #666666;}
+.other2 {background-color: #999999; color:white; fill: #999999; stroke: #999999;}
+.null {background-color: white; color:black; fill: white; stroke: white;}
+.total {background-color: black; color: white; stroke: black;}
+.other {background-color: #666666 ; color:white; fill: #666666 ; stroke: #666666;}
 
 
 /* pollster stylings */

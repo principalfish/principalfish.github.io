@@ -93,9 +93,8 @@ table#polltable thead tr .headerSortDown {
 
 
 
-path {
-    stroke: red;
-    stroke-width: 1;
+path {    
+    stroke-width: 2.5;
     fill: none;
 }
 

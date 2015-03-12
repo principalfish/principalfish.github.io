@@ -89,6 +89,7 @@ function drawGraph(type){
             .style("fill", "none")
             .attr("d", line(d.values))
             .on("mouseover", writeToTable(d.values))
+            .on("mouseout", emptyTable)
 
           }
       });
@@ -158,4 +159,10 @@ function writeToTable(d) {
   }
 
 
+}
+
+function emptyTable(){
+
+    $("#graphinfo").empty();
+  
 }

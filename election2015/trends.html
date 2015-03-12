@@ -49,19 +49,49 @@
 					<h3 class="notactive"><a href="/election2015/methodology.html">Methodology</a></h3>
 					<h3 class="notactive"><a href="/election2015/polls.html">Polls</a></h3>
 					<h3 class="notactive"><a href="/election2015/seats.html">Seat List </a></h3>
-					<!-- <h3 class="currentpage">Trends</h3> -->
+					<h3 class="currentpage">Trends</h3>
 				</div>
 
 			</div>
 
 			<div id="trends">
-				<p style="font-size: 1.5em;">
-					<a href ="#" onclick="drawGraph('seats')">Seat Totals</a>
+				<p id="trendsoptions">
+					<a href ="#" onclick="currentState = 'seats', drawGraph('seats')">Seat Totals</a>
 					&nbsp; &nbsp;
-					<a href ="#" onclick="drawGraph('percent')">Percentages</a>
+					<a href ="#" onclick="currentState = 'percent', drawGraph('percent')">Percentages</a>
 
 				</p>
-				<p style="margin-bottom: -15px;"> Mouseover for more information (soon)</p>
+
+				<div id="trendscheckbox">
+
+					<table>
+						<tr>
+							<td><input type="checkbox"  value="conservative" onchange="reDrawGraph(value)" checked> Conservative</td>
+							<td><input type="checkbox"  value="ukip" onchange="reDrawGraph(value)" checked> UKIP</td>
+							<td><input type="checkbox"  value="green" onchange="reDrawGraph(value)" checked> Green</td>
+							<td><input type="checkbox"  value="sinnfein" onchange="reDrawGraph(value)"> Sinn Féin</td>
+							<td><input type="checkbox"  value="other" onchange="reDrawGraph(value)"> Other</td>
+						</tr>
+
+						<tr>
+							<td><input type="checkbox"  value="labour" onchange="reDrawGraph(value)" checked> Labour</td>
+							<td><input type="checkbox"  value="snp" onchange="reDrawGraph(value)" checked> SNP</td>
+							<td><input type="checkbox"  value="dup" onchange="reDrawGraph(value)"> DUP</td>
+							<td><input type="checkbox"  value="alliance" onchange="reDrawGraph(value)"> Alliance</td>
+						</tr>
+
+						<tr>
+							<td><input type="checkbox"  value="libdems" onchange="reDrawGraph(value)" checked> Liberal Democrats</td>
+							<td><input type="checkbox"  value="plaidcymru" onchange="reDrawGraph(value)" checked> Plaid Cymru</td>
+							<td><input type="checkbox"  value="sdlp" onchange="reDrawGraph(value)"> SDLP</td>
+							<td><input type="checkbox"  value="uu" onchange="reDrawGraph(value)"> Ulster Conservatives</td>
+						</tr>
+
+
+					</table>
+				</div>
+
+				<p id="trendsinfo"> Mouseover for more information (soon)</p>
 				<div id="graph">
 				</div>
 				<script>

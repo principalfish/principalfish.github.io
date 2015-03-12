@@ -2,6 +2,9 @@ var margin = {top: 30, right: 20, bottom: 40, left: 50},
     width = 1280 - margin.left - margin.right,
     height = 845 - margin.top - margin.bottom;
 
+var currentState = "seats"
+
+var graphParties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green"]
 
 function drawGraph(type){
 
@@ -9,7 +12,7 @@ function drawGraph(type){
        .remove();
   d3.selectAll("text")
         .remove();
-  
+
 
   var parseDate = d3.time.format("%Y-%m-%d").parse;
 
@@ -28,7 +31,7 @@ function drawGraph(type){
       .x(function(d) { return x(d.day); })
       .y(function(d) { if (type == "seats") return y(d.seats); if (type =="percent") return y(d.percent)});
 
-  var graphparties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green"]
+
 
   d3.tsv("/election2015/data/trends.csv", function(error, data) {
 
@@ -48,7 +51,8 @@ function drawGraph(type){
 
       // Scale the range of the data
       x.domain(d3.extent(data, function(d) { return d.day; }));
-      y.domain([0, d3.max(data, function(d) { if (type == "seats") return d.seats + 25; if (type == "percent") return d.percent + 5; }) ]);
+      y.domain([d3.min(data, function(d) { if (type == "seats") return d.seats ; if (type == "percent") return d.percent; }),
+                d3.max(data, function(d) { if (type == "seats") return d.seats + 25; if (type == "percent") return d.percent + 5; }) ]);
 
 
       var dataNest = d3.nest()
@@ -57,7 +61,7 @@ function drawGraph(type){
 
 
       dataNest.forEach(function(d) {
-        if (graphparties.indexOf(d.key) >= 0){
+        if (graphParties.indexOf(d.key) >= 0){
           svg.append("path")
 
             .attr("class", d.key)
@@ -102,3 +106,20 @@ function drawGraph(type){
 
 
 drawGraph("seats")
+
+
+function reDrawGraph(party){
+  var indexOfParty = graphParties.indexOf(party)
+
+  if (indexOfParty >= 0){
+    graphParties.splice(indexOfParty, 1)
+  }
+
+  if (indexOfParty < 0){
+    graphParties.push(party)
+  }
+
+
+
+  drawGraph(currentState)
+}

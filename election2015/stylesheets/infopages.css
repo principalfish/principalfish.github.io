@@ -110,3 +110,22 @@ path {
   font-size: 1.5em;
   letter-spacing: 2px;
 }
+
+#trendsoptions {
+  font-size: 1.5em;
+  width: 250px;
+}
+
+#trendscheckbox {
+   float:right;
+   margin-top: -50px;
+   margin-bottom: -45px;
+   width: 500px;
+   height: 80px;
+   border: 1px solid black;
+}
+
+#trendsinfo {
+  width: 250px;
+  margin-bottom: -15px;
+}

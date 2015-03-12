@@ -119,13 +119,17 @@ path {
 #trendscheckbox {
    float:right;
    margin-top: -50px;
-   margin-bottom: -45px;
+   margin-bottom : -10px;
    width: 500px;
-   height: 80px;
+   height: 75px;
    border: 1px solid black;
 }
 
 #trendsinfo {
   width: 250px;
   margin-bottom: -15px;
+}
+
+#graph {
+  margin-top: -50px;
 }

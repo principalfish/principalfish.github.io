@@ -1,6 +1,6 @@
 var margin = {top: 30, right: 20, bottom: 40, left: 50},
     width = 1280 - margin.left - margin.right,
-    height = 845 - margin.top - margin.bottom;
+    height = 820 - margin.top - margin.bottom;
 
 var currentState = "seats"
 
@@ -105,7 +105,7 @@ function drawGraph(type){
 }
 
 
-drawGraph("seats")
+drawGraph(currentState)
 
 
 function reDrawGraph(party){

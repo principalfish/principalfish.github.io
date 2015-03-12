@@ -144,19 +144,13 @@ path {
   height: auto;
   background-color: #3399FF;
   text-align: center;
-
 }
 
+#graphinfo h3 {
+  margin: 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-weight: bold;
 
-div.tooltip {
-  position: absolute;
-  text-align: center;
-  width: 60px;
-  height: 12px;
-  padding: 8px;
-  font: 10px sans-serif;
-  background: #ddd;
-  border: solid 1px #aaa;
-  border-radius: 8px;
-  pointer-events: none;
+
 }

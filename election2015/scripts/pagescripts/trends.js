@@ -8,8 +8,6 @@ var graphParties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcy
 
 var parseDate = d3.time.format("%Y-%m-%d").parse;
 
-
-
 function drawGraph(type){
 
   d3.selectAll("path")
@@ -23,7 +21,7 @@ function drawGraph(type){
   var y = d3.scale.linear().range([height, 0]);
 
   var xAxis = d3.svg.axis().scale(x)
-    .orient("bottom").ticks(10);
+    .orient("bottom").ticks(12);
 
   var yAxis = d3.svg.axis().scale(y)
     .orient("left").ticks(25);
@@ -41,7 +39,8 @@ function drawGraph(type){
 
       data.forEach(function(d) {
         if (graphParties.indexOf(d.party) != -1){
-          filteredData.push(d)
+          d.day = parseDate(d.day);
+          filteredData.push(d);
         }
 
 
@@ -50,7 +49,7 @@ function drawGraph(type){
 
 
       filteredData.forEach(function(d) {
-          d.day = parseDate(d.day);
+
           if (type == "seats"){
             d.seats = +d.seats;
           }
@@ -111,7 +110,6 @@ function drawGraph(type){
 
       filteredData.forEach(function(d) {
 
-
           svg.selectAll("dot")
               .data(filteredData)
           .enter().append("circle")
@@ -169,8 +167,6 @@ function drawGraph(type){
 drawGraph(currentState);
 
 
-
-
 function reDrawGraph(party){
   var indexOfParty = graphParties.indexOf(party)
 
@@ -188,25 +184,31 @@ function reDrawGraph(party){
 
 function writeToTable(d, type, filteredData) {
 
-    var data = []
+    var data = [];
 
-    date = d.day
+    var dateSelected = Date.parse(d.day);
+
 
     $.each(filteredData, function(i){
-      if (filteredData[i].day == date){
-        
+      var testDate = Date.parse(filteredData[i].day)
+      if (testDate == dateSelected){
+        data.push(filteredData[i])
       }
 
     });
 
+    console.log(data)
+
+    date = new Date(dateSelected)
+    simpleDate =  date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear();
 
 
     $("#graphinfo").empty();
-    $("#graphinfo").append("<h2>Date: " + d.day + "</h2>");
-    $.each(graphParties, function(i){
+    $("#graphinfo").append("<h2>Date: " + simpleDate + "</h2>");
+    $.each(data, function(i){
 
 
-      $("#graphinfo").append("<h3 class=\"" + graphParties[i] +"\">" + partylist[graphParties[i]] + ": " + d.seats + "</h3>")
+      $("#graphinfo").append("<h3 class=\"" + data[i].party +"\">" + partylist[data[i].party] + ": " + data[i].seats + "</h3>")
     });
 
 
@@ -214,6 +216,6 @@ function writeToTable(d, type, filteredData) {
 
 function emptyTable(){
 
-    $("#graphinfo").empty();
+    // $("#graphinfo").empty();
 
 }

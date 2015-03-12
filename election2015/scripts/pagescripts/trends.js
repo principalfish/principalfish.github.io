@@ -51,8 +51,26 @@ function drawGraph(type){
 
       // Scale the range of the data
       x.domain(d3.extent(data, function(d) { return d.day; }));
-      y.domain([d3.min(data, function(d) { if (type == "seats") return d.seats ; if (type == "percent") return d.percent; }),
-                d3.max(data, function(d) { if (type == "seats") return d.seats + 25; if (type == "percent") return d.percent + 5; }) ]);
+
+      var yMinimum = d3.min(data, function(d) {
+        
+        if (type == "seats"){
+          return d.seats ;
+          }
+
+        if (type == "percent"){
+          return d.percent;
+
+        }
+      });
+
+      var yMaximum = d3.max(data, function(d) {
+        if (type == "seats")
+          return d.seats + 25;
+        if (type == "percent")
+          return d.percent + 5; });
+
+      y.domain([yMinimum, yMaximum]);
 
 
       var dataNest = d3.nest()

@@ -113,7 +113,7 @@ function drawGraph(type){
           svg.selectAll("dot")
               .data(filteredData)
           .enter().append("circle")
-              .attr("r", 3)
+              .attr("r", 5)
               .attr("cx", function(d) { return x(d.day); })
               .attr("cy", function(d) {
                 if (type == "seats"){

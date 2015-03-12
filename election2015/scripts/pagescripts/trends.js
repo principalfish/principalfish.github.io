@@ -10,6 +10,8 @@ var parseDate = d3.time.format("%Y-%m-%d").parse;
 
 function drawGraph(type){
 
+  $("#graphinfo").empty();
+
   d3.selectAll("path")
        .remove();
   d3.selectAll("text")
@@ -19,11 +21,6 @@ function drawGraph(type){
 
   d3.selectAll(".axis")
         .remove();
-
-
-
-
-
 
   var x = d3.time.scale().range([0, width]);
   var y = d3.scale.linear().range([height, 0]);

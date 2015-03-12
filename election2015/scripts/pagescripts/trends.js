@@ -21,7 +21,7 @@ function drawGraph(type){
   var y = d3.scale.linear().range([height, 0]);
 
   var xAxis = d3.svg.axis().scale(x)
-    .orient("bottom").ticks(12);
+    .orient("bottom").ticks(8);
 
   var yAxis = d3.svg.axis().scale(y)
     .orient("left").ticks(25);
@@ -196,8 +196,6 @@ function writeToTable(d, type, filteredData) {
       }
 
     });
-
-    console.log(data)
 
     date = new Date(dateSelected)
     simpleDate =  date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear();

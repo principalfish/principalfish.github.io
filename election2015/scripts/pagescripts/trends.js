@@ -1,6 +1,6 @@
 var margin = {top: 40, right: 20, bottom: 40, left: 50},
     width = 1000 - margin.left - margin.right,
-    height = 875 - margin.top - margin.bottom;
+    height = 855 - margin.top - margin.bottom;
 
 var currentState = "seats"
 
@@ -202,11 +202,18 @@ function writeToTable(d, type, filteredData) {
 
 
     $("#graphinfo").empty();
-    $("#graphinfo").append("<h2>Date: " + simpleDate + "</h2>");
+    $("#graphinfo").append("<h2>Date : " + simpleDate + "</h2>");
     $.each(data, function(i){
 
+      if (type == "seats"){
+        info = data[i].seats;
+      }
 
-      $("#graphinfo").append("<h3 class=\"" + data[i].party +"\">" + partylist[data[i].party] + ": " + data[i].seats + "</h3>")
+      if (type == "percent"){
+        info = data[i].percent;
+      }
+
+      $("#graphinfo").append("<h3 class=\"" + data[i].party +"\">" + partylist[data[i].party] + ": " + info + "</h3>");
     });
 
 

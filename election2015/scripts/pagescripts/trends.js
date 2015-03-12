@@ -1,6 +1,6 @@
 var margin = {top: 40, right: 20, bottom: 40, left: 50},
     width = 1000 - margin.left - margin.right,
-    height = 855 - margin.top - margin.bottom;
+    height = 875 - margin.top - margin.bottom;
 
 var currentState = "seats"
 
@@ -17,20 +17,32 @@ function drawGraph(type){
   d3.selectAll("circle")
         .remove();
 
+  d3.selectAll(".axis")
+        .remove();
+
+
+
+
+
+
   var x = d3.time.scale().range([0, width]);
   var y = d3.scale.linear().range([height, 0]);
 
   var xAxis = d3.svg.axis().scale(x)
-    .orient("bottom").ticks(8);
+    .orient("bottom").ticks(8)
+
 
   var yAxis = d3.svg.axis().scale(y)
-    .orient("left").ticks(25);
+    .orient("left").ticks(25)
+
+;
 
 
 
   var line = d3.svg.line()
       .x(function(d) { return x(d.day); })
       .y(function(d) { if (type == "seats") return y(d.seats); if (type =="percent") return y(d.percent)});
+
 
 
   d3.tsv("/election2015/data/trends.csv", function(error, data) {
@@ -133,12 +145,14 @@ function drawGraph(type){
 
       svg.append("g")
           .attr("class", "x axis")
+          .attr("class", "axis")
           .attr("transform", "translate(0," + height + ")")
           .attr("transform", "translate(0," + height + ")")
           .call(xAxis);
 
       svg.append("g")
           .attr("class", "y axis")
+          .attr("class", "axis")
           .call(yAxis);
 
 
@@ -202,7 +216,7 @@ function writeToTable(d, type, filteredData) {
 
 
     $("#graphinfo").empty();
-    $("#graphinfo").append("<h2>Date : " + simpleDate + "</h2>");
+    $("#graphinfo").append("<h2>Date: " + simpleDate + "</h2>");
     $.each(data, function(i){
 
       if (type == "seats"){
@@ -216,11 +230,33 @@ function writeToTable(d, type, filteredData) {
       $("#graphinfo").append("<h3 class=\"" + data[i].party +"\">" + partylist[data[i].party] + ": " + info + "</h3>");
     });
 
+    // vertical black line
+
+
+
+    var vertical = d3.select(".chart")
+            .append("div")
+            .style("position", "absolute")
+            .style("z-index", "100")
+            .style("width", "2px")
+            .style("height", "800px")
+            .style("top", "140px")
+            .style("bottom", "900px")
+            .style("background", "black")
+            .attr("class", "verticalline");
+
+
+    d3.select(".chart")
+        .on("mouseover", function(){
+           mousex = d3.event.pageX
+           vertical.style("left", mousex + "px")});
+
 
 }
 
 function emptyTable(){
-
+    d3.selectAll(".verticalline")
+      .remove()
     // $("#graphinfo").empty();
 
 }

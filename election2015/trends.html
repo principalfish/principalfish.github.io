@@ -52,6 +52,22 @@
 					<h3 class="currentpage">Trends</h3>
 				</div>
 
+				<div id="trendscheckbox">
+					<p class="conservative"><input type="checkbox"  value="conservative" onchange="reDrawGraph(value)" checked> Conservative</p>
+					<p class="labour"><input type="checkbox"  value="labour" onchange="reDrawGraph(value)" checked> Labour</p>
+					<p class="libdems"><input type="checkbox"  value="libdems" onchange="reDrawGraph(value)" checked> Liberal Democrats</p>
+					<p class="ukip"><input type="checkbox"  value="ukip" onchange="reDrawGraph(value)" checked> UKIP</p>
+					<p class="green"><input type="checkbox"  value="green" onchange="reDrawGraph(value)" checked> Green</p>
+					<p class="snp"><input type="checkbox"  value="snp" onchange="reDrawGraph(value)" checked> SNP</p>
+					<p class="plaidcymru"><input type="checkbox"  value="plaidcymru" onchange="reDrawGraph(value)" checked> Plaid Cymru</p>
+					<p class="dup"><input type="checkbox"  value="dup" onchange="reDrawGraph(value)"> DUP</p>
+					<p class="sinnfein"><input type="checkbox"  value="sinnfein" onchange="reDrawGraph(value)"> Sinn Féin</p>
+					<p class="sdlp"><input type="checkbox"  value="sdlp" onchange="reDrawGraph(value)"> SDLP</p>
+					<p class="alliance"><input type="checkbox"  value="alliance" onchange="reDrawGraph(value)"> Alliance</p>
+					<p class="uu"><input type="checkbox"  value="uu" onchange="reDrawGraph(value)"> Ulster Conservatives</p>
+					<p class="other"><input type="checkbox"  value="other" onchange="reDrawGraph(value)"> Other</p>
+				</div>
+
 			</div>
 
 			<div id="trends">
@@ -62,36 +78,7 @@
 
 				</p>
 
-				<div id="trendscheckbox">
 
-					<table>
-						<tr>
-							<td class="conservative"><input type="checkbox"  value="conservative" onchange="reDrawGraph(value)" checked> Conservative</td>
-							<td class="ukip"><input type="checkbox"  value="ukip" onchange="reDrawGraph(value)" checked> UKIP</td>
-							<td class="green"><input type="checkbox"  value="green" onchange="reDrawGraph(value)" checked> Green</td>
-							<td class="sinnfein"><input type="checkbox"  value="sinnfein" onchange="reDrawGraph(value)"> Sinn Féin</td>
-							<td class="other"><input type="checkbox"  value="other" onchange="reDrawGraph(value)"> Other</td>
-						</tr>
-
-						<tr>
-							<td class="labour"><input type="checkbox"  value="labour" onchange="reDrawGraph(value)" checked> Labour</td>
-							<td class="snp"><input type="checkbox"  value="snp" onchange="reDrawGraph(value)" checked> SNP</td>
-							<td class="dup"><input type="checkbox"  value="dup" onchange="reDrawGraph(value)"> DUP</td>
-							<td class="alliance"><input type="checkbox"  value="alliance" onchange="reDrawGraph(value)"> Alliance</td>
-						</tr>
-
-						<tr>
-							<td class="libdems"><input type="checkbox"  value="libdems" onchange="reDrawGraph(value)" checked> Liberal Democrats</td>
-							<td class="plaidcymru"><input type="checkbox"  value="plaidcymru" onchange="reDrawGraph(value)" checked> Plaid Cymru</td>
-							<td class="sdlp"><input type="checkbox"  value="sdlp" onchange="reDrawGraph(value)"> SDLP</td>
-							<td class="uu"><input type="checkbox"  value="uu" onchange="reDrawGraph(value)"> Ulster Conservatives</td>
-						</tr>
-
-
-					</table>
-				</div>
-
-				<p id="trendsinfo"> Mouseover for more information (soon)</p>
 				<div id="graph">
 				</div>
 				<script>
@@ -104,15 +91,22 @@
 				          .attr("transform",
 				                "translate(" + margin.left + "," + margin.top + ")");
 
+
 				</script>
+				<div id="graphinfo">
+
+
+				</div>
 
 			</div>
+
 			<div id="footer">
 				<p> Copyright 2015 principalfish.co.uk</p>
 			</div>
 
 
 		</div>
+
 
 
 

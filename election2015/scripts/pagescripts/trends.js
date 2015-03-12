@@ -1,6 +1,6 @@
-var margin = {top: 30, right: 20, bottom: 40, left: 50},
-    width = 1280 - margin.left - margin.right,
-    height = 820 - margin.top - margin.bottom;
+var margin = {top: 40, right: 20, bottom: 40, left: 50},
+    width = 1000 - margin.left - margin.right,
+    height = 875 - margin.top - margin.bottom;
 
 var currentState = "seats"
 
@@ -33,6 +33,8 @@ function drawGraph(type){
 
 
 
+
+
   d3.tsv("/election2015/data/trends.csv", function(error, data) {
 
 
@@ -53,7 +55,7 @@ function drawGraph(type){
       x.domain(d3.extent(data, function(d) { return d.day; }));
 
       var yMinimum = d3.min(data, function(d) {
-        
+
         if (type == "seats"){
           return d.seats ;
           }
@@ -66,7 +68,7 @@ function drawGraph(type){
 
       var yMaximum = d3.max(data, function(d) {
         if (type == "seats")
-          return d.seats + 25;
+          return d.seats + 40;
         if (type == "percent")
           return d.percent + 5; });
 
@@ -79,12 +81,15 @@ function drawGraph(type){
 
 
       dataNest.forEach(function(d) {
+
         if (graphParties.indexOf(d.key) >= 0){
           svg.append("path")
 
             .attr("class", d.key)
             .style("fill", "none")
             .attr("d", line(d.values))
+            .on("mouseover", writeToTable(d.values))
+
           }
       });
 
@@ -117,13 +122,14 @@ function drawGraph(type){
         .attr("dy", ".75em")
         .attr("transform", "rotate(-90)")
         .text("Seats / Percentages");
-
   });
 
 }
 
 
-drawGraph(currentState)
+drawGraph(currentState);
+
+
 
 
 function reDrawGraph(party){
@@ -137,7 +143,19 @@ function reDrawGraph(party){
     graphParties.push(party)
   }
 
+  drawGraph(currentState);
+}
 
 
-  drawGraph(currentState)
+function writeToTable(d) {
+  return function(){
+    console.log(d)
+    $("#graphinfo").empty();
+    $("#graphinfo").append("<h2>Date: " + "date" + "</h2>");
+    $.each(graphParties, function(i){
+      $("#graphinfo").append("<h3 class=\"" + graphParties[i] +"\">" + partylist[graphParties[i]] + ": number" + "</h3>")
+    });
+  }
+
+
 }

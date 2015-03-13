@@ -1,6 +1,6 @@
 var margin = {top: 40, right: 20, bottom: 40, left: 50},
     width = 1000 - margin.left - margin.right,
-    height = 875 - margin.top - margin.bottom;
+    height = 865 - margin.top - margin.bottom;
 
 var currentState = "seats"
 

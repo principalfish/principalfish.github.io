@@ -1,17 +1,22 @@
 "pollster"	"type"	"pollsterweight"	"date"	"day"	"month"	"year"	"region"	"total"	"conservative"	"labour"	"libdems"	"ukip"	"green"	"snp"	"plaidcymru"	"other"	"sdlp"	"sinnfein"	"alliance"	"dup"	"uu"	"weight"	"initialweight"	"area"
 "me"	"regional"			11	2	2015	"null"	1000	137	300	90	30	30	400		0								
 "me"	"regional"			11	2	2015	"null"	1000	400	300	0	175	40		5	20								
-"comres"	"regional"		13/03/2015	13	3	2015	"Scotland"	138	22	29	8	16	5	57		1								
-"comres"	"regional"		13/03/2015	13	3	2015	"North East England"	75	19	36	1	17	2			0								
-"comres"	"regional"		13/03/2015	13	3	2015	"North West England"	190	54	77	10	36	10			3								
-"comres"	"regional"		13/03/2015	13	3	2015	"Yorkshire and Humber"	128	34	44	6	34	9			1								
-"comres"	"regional"		13/03/2015	13	3	2015	"West Midlands"	138	46	52	8	30	1			1								
-"comres"	"regional"		13/03/2015	13	3	2015	"Wales"	82	25	25	5	15	4		8	0								
-"comres"	"regional"		13/03/2015	13	3	2015	"East of England"	135	41	33	10	31	19			1								
-"comres"	"regional"		13/03/2015	13	3	2015	"London"	183	72	58	10	30	11			2								
-"comres"	"regional"		13/03/2015	13	3	2015	"South East England"	189	74	53	14	34	13			1								
-"comres"	"regional"		13/03/2015	13	3	2015	"South West England"	146	39	48	19	31	8			1								
-"comres"	"regional"		13/03/2015	13	3	2015	"East Midlands"	117	35	40	11	27	3			1								
+"yougov"	"regional"		"13/03/2015"	13	3	2015	"London"	214	79	79	13	34	9	0	0	0								
+"yougov"	"regional"		"13/03/2015"	13	3	2015	"Rest of South"	542	228	141	54	81	33	0	0	5								
+"yougov"	"regional"		"13/03/2015"	13	3	2015	"Midlands and Wales"	357	125	129	25	54	18	0	4	4								
+"yougov"	"regional"		"13/03/2015"	13	3	2015	"North England"	411	123	189	16	62	21	0	0	0								
+"yougov"	"regional"		"13/03/2015"	13	3	2015	"Scotland"	145	20	36	4	4	7	71	0	3								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"Scotland"	138	22	29	8	16	5	57		1								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"North East England"	75	19	36	1	17	2			0								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"North West England"	190	54	77	10	36	10			3								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"Yorkshire and Humber"	128	34	44	6	34	9			1								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"West Midlands"	138	46	52	8	30	1			1								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"Wales"	82	25	25	5	15	4		8	0								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"East of England"	135	41	33	10	31	19			1								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"London"	183	72	58	10	30	11			2								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"South East England"	189	74	53	14	34	13			1								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"South West England"	146	39	48	19	31	8			1								
+"comres"	"regional"		"13/03/2015"	13	3	2015	"East Midlands"	117	35	40	11	27	3			1								
 "opinium"	"regional"		"12/03/2015"	12	3	2015	"England"	1261	437	446	86	191	89			10								
 "opinium"	"regional"		"12/03/2015"	12	3	2015	"Scotland"	122	23	34	7	2	6	50		1								
 "opinium"	"regional"		"12/03/2015"	12	3	2015	"Wales"	69	18	24	5	7	4		8	4								

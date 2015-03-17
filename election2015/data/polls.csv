@@ -1,6 +1,16 @@
 pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu	weight	initialweight	area
 me	regional			11	2	2015	null	1000	137	300	90	30	30	400		0								
 me	regional			11	2	2015	null	1000	400	300	0	175	40		5	20								
+yougov	regional		16/03/2015	16	3	2015	London	215	69	75	24	26	19	0	0	0								
+yougov	regional		16/03/2015	16	3	2015	Rest of South	547	235	131	44	88	44	0	0	5								
+yougov	regional		16/03/2015	16	3	2015	Midlands and Wales	360	104	133	22	65	22	0	11	0								
+yougov	regional		16/03/2015	16	3	2015	North England	414	108	207	25	41	25	0	0	0								
+yougov	regional		16/03/2015	16	3	2015	Scotland	146	34	41	9	4	6	54	0	0								
+ashcroft	regional		15/03/2015	15	3	2015	South East	143	44	37	13	28	17			4								
+ashcroft	regional		15/03/2015	15	3	2015	Midlands	119	47	34	9	18	9			2								
+ashcroft	regional		15/03/2015	15	3	2015	North England	126	35	44	9	24	9			6								
+ashcroft	regional		15/03/2015	15	3	2015	Wales and South West	64	21	18	4	11	5		3	2								
+ashcroft	regional		15/03/2015	15	3	2015	Scotland	59	10	15	5	1	2	26										
 populus	regional		15/03/2015	15	3	2015	South East	315	113	99	36	49	17			1								
 populus	regional		15/03/2015	15	3	2015	Midlands	333	134	97	21	61	16			3								
 populus	regional		15/03/2015	15	3	2015	North England	304	94	127	21	49	12			1								
@@ -52,11 +62,6 @@ yougov	regional		10/03/2015	10	3	2015	Rest of South	519	223	109	62	93	31	0	0	5
 yougov	regional		10/03/2015	10	3	2015	Midlands and Wales	342	109	113	24	62	17	0	10	3								
 yougov	regional		10/03/2015	10	3	2015	North England	393	110	185	20	43	31	0	0	0								
 yougov	regional		10/03/2015	10	3	2015	Scotland	139	25	28	4	6	7	67	0	1								
-ashcroft	regional		09/03/2015	9	3	2015	South East	223	76	85	25	29	11	0	0	0								
-ashcroft	regional		09/03/2015	9	3	2015	Midlands	567	249	119	68	85	40	0	0	0								
-ashcroft	regional		09/03/2015	9	3	2015	North England	373	131	119	19	60	22	0	11	4								
-ashcroft	regional		09/03/2015	9	3	2015	Wales and South West	429	137	189	17	56	30	0	0	0								
-ashcroft	regional		09/03/2015	9	3	2015	Scotland	152	26	40	8	6	3	70	0	0								
 ashcroft	regional		08/03/2015	8	3	2015	South East	133	47	43	10	17	15			1								
 ashcroft	regional		08/03/2015	8	3	2015	Midlands	122	43	36	3	25	12			3								
 ashcroft	regional		08/03/2015	8	3	2015	North England	121	43	43	2	25	6			2								

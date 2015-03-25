@@ -32,7 +32,7 @@ function doStuff(data) {
           "<th class=\"tablesorter-header\">SF</th>" +
           "<th class=\"tablesorter-header\">All</th>" +
           "<th class=\"tablesorter-header\">DUP</th>" +
-          " <th class=\"tablesorter-header\">UU</th>" +
+          " <th class=\"tablesorter-header\">UUP</th>" +
           "</tr>" +
           "</thead>" +
           " <tbody id=\"polltablebody\"></tbody>" +

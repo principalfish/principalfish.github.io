@@ -45,11 +45,11 @@ class Poll(object):
         self.initialweight = 1
 
 
-        self.weight = self.initialweight * math.sqrt(float(self.total)/1000) * math.pow(0.985, daysince) # lose 1.5% of value per day since poll
+        self.weight = self.initialweight * math.sqrt(float(self.total)/1000) * math.pow(0.99, daysince) # lose 1.5% of value per day since poll
 
 
-        if self.weight < 0:
-            self.weight = 0
+        if self.weight < 0.25:
+            self.weight = 0.25
 
 
 with open("seatpolls.csv", "rb") as csvfile:

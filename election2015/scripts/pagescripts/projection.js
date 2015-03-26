@@ -186,6 +186,9 @@ function zoomToClickedFilteredSeat(d){
 			.each("end", repeat);
 		}
 
+
+
+
 	var bounds = path.bounds(d),
 		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
 		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
@@ -482,6 +485,7 @@ function loadmap(){
 			.enter().append("path")
 			.attr("class", function(d) {
 				return "map " + seatData[d.properties.name]["party"];	})
+			.attr("opacity", 1)
 			.attr("id", function(d) { return "i" + seatData[d.properties.name]["id"]})
 			.attr("d", path)
 			.on("click", clicked)

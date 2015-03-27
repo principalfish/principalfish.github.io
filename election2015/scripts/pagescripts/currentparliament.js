@@ -12,9 +12,6 @@ var seatsAfterFilter = [];
 var searchSeatData = [];
 var seatNames = [];
 
-
-
-
 function filterMap(){
 
 	var	party  = filterStates[0].party;

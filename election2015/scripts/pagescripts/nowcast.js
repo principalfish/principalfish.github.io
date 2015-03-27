@@ -1,23 +1,7 @@
-function getVoteTotalsInitial(data, region) {
-
-	region = region.slice(33)
-
-	$.each(data, function(i){
-		var info = {};
-		info["code"] = data[i].code
-		info["seats"] = data[i].seats
-		info["change"] = data[i].change
-		info["votepercent"] = data[i].votepercent
-		info["votepercentchange"] = data[i].votepercentchange
-		nationalVoteTotals.push(info);
-	});
-
-	displayVoteTotals(nationalVoteTotals)
-}
-
+// gets vote totals for each region and adds data to relevant array for use when user elects
 function getVoteTotals(data, region) {
 
-		region = region.slice(34);	
+		region = region.slice(34);
 		$.each(data, function(i){
 			var info = {};
 			info["code"] = data[i].code;
@@ -72,10 +56,13 @@ function getVoteTotals(data, region) {
 		});
 }
 
+// get relevant data for map
 function getMapInfo(){
 	parseData("/election2015/data/nowcast.csv", getSeatInfo);
 }
 
+
+// get vote totals for initial display and possible future display
 function getInfoFromFiles(){
 
 	parseData("/election2015/data/nowcastregions/nowcastvotetotals.csv", getVoteTotalsInitial);
@@ -99,5 +86,6 @@ function getInfoFromFiles(){
 
 };
 
+// initiate flow
 getMapInfo();
 getInfoFromFiles();

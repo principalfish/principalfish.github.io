@@ -1,9 +1,14 @@
+// for trends.html
+// use d3 to draw line graph
 var margin = {top: 40, right: 20, bottom: 40, left: 50},
     width = 1000 - margin.left - margin.right,
     height = 865 - margin.top - margin.bottom;
 
+
+// changes based on what is selected
 var currentState = "seats"
 
+// changes with what user selects from #farleft
 var graphParties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green"]
 
 var parseDate = d3.time.format("%Y-%m-%d").parse;
@@ -30,17 +35,12 @@ function drawGraph(type){
 
 
   var yAxis = d3.svg.axis().scale(y)
-    .orient("left").ticks(25)
-
-;
-
+    .orient("left").ticks(25);
 
 
   var line = d3.svg.line()
       .x(function(d) { return x(d.day); })
       .y(function(d) { if (type == "seats") return y(d.seats); if (type =="percent") return y(d.percent)});
-
-
 
   d3.tsv("/election2015/data/trends.csv", function(error, data) {
 
@@ -51,8 +51,6 @@ function drawGraph(type){
           d.day = parseDate(d.day);
           filteredData.push(d);
         }
-
-
 
       });
 
@@ -70,7 +68,6 @@ function drawGraph(type){
 
       });
 
-      // Scale the range of the data
       x.domain(d3.extent(filteredData, function(d) { return d.day; }));
 
       var yMinimum = d3.min(filteredData, function(d) {
@@ -116,7 +113,6 @@ function drawGraph(type){
       });
 
 
-
       filteredData.forEach(function(d) {
 
           svg.selectAll("dot")
@@ -136,9 +132,6 @@ function drawGraph(type){
               .on("mouseout", emptyTable)
 
         });
-
-
-
 
       svg.append("g")
           .attr("class", "x axis")
@@ -174,9 +167,7 @@ function drawGraph(type){
 
 }
 
-
 drawGraph(currentState);
-
 
 function reDrawGraph(party){
   var indexOfParty = graphParties.indexOf(party)
@@ -228,8 +219,6 @@ function writeToTable(d, type, filteredData) {
     });
 
     // vertical black line
-
-
 
     var vertical = d3.select(".chart")
             .append("div")

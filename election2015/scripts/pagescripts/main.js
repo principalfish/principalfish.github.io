@@ -25,13 +25,16 @@ function filterMap(){
 	var majoritylow = filterStates[3].majoritylow
 	var majorityhigh = filterStates[4].majorityhigh
 
+	// change nonsense user inputs
 	if (isNaN(majoritylow))
 		majoritylow = 0
 	if (isNaN(majorityhigh))
 		majorityhigh = 100
 
+	// reset seatsAfterFilter from any previous filters.
 	seatsAfterFilter = [];
 
+	// use d3 to access seat list to cross reference seatData for filters - product of old way of doing it
 	d3.json("/election2015/data/projection.json", function(uk){
 
 			g.selectAll(".map")
@@ -93,7 +96,6 @@ function filterMap(){
 							return "regionfiltered"
 					});
 
-
 			g.selectAll("#regionfiltered")
 				.attr("style", function(d) {
 
@@ -105,7 +107,6 @@ function filterMap(){
 					if (parseFloat(seatData[d.properties.name]["majority"]) >= majoritylow && parseFloat(seatData[d.properties.name]["majority"]) <= majorityhigh )
 						seatsAfterFilter.push(d);
 					});
-
 
 			g.selectAll(".map")
 				.attr("id", function(d) {
@@ -158,6 +159,7 @@ function generateSeatList(){
 			});
 		}
 
+// close to duplicate of clicked() due to slightly difference in data type used. fix at some point. this one is for generate seat list and seat search box
 function zoomToClickedFilteredSeat(d){
 	var id = "#i" + seatData[d.properties.name]["id"];
 	//rewrite at some point
@@ -167,6 +169,7 @@ function zoomToClickedFilteredSeat(d){
 
 	repeat();
 
+	// flashes selected seat on map
 	function repeat(){
 		previous.transition()
 			.attr("opacity", 1)
@@ -180,9 +183,6 @@ function zoomToClickedFilteredSeat(d){
 				.attr("opacity", 1)
 			.each("end", repeat);
 		}
-
-
-
 
 	var bounds = path.bounds(d),
 		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
@@ -207,6 +207,7 @@ function zoomToClickedFilteredSeat(d){
 // scripts for zoom/pan/clicked
 
 
+// close to duplicate of zoomtoclickedfilteredseat() due to slightly difference in data type used. fix at some point. this one is for normal map clicking
 function clicked(d) {
 
 	previous = d3.select(previousnode)
@@ -248,6 +249,8 @@ function clicked(d) {
 	previousnode = this;
 }
 
+
+// stops users messing up zoom animation
 function disableZoom(){
 	svg.on("mousedown.zoom", null);
 	svg.on("mousemove.zoom", null);
@@ -258,10 +261,12 @@ function disableZoom(){
 	svg.on("MozMousePixelScroll.zoom", null);
 }
 
+// reenables users ability to zoom pan etc
 function enableZoom(){
 	svg.call(zoom);
 }
 
+// reset button for map
 function reset() {
 	disableZoom();
 	svg.transition()
@@ -271,6 +276,7 @@ function reset() {
 
 }
 
+// zoom function
 function zoomed() {
 	g.style("stroke-width", 1.5 / d3.event.scale + "px");
 	g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
@@ -281,10 +287,12 @@ function stopped() {
 	if (d3.event.defaultPrevented) d3.event.stopPropagation();
 }
 
-// seatinfo on right
+// fill seat info in #right when seat clicked/selected
 
+// to colour the information
 var oldclass = null;
 
+// fills out table of info at top of #right
 function seatinfo(d){
 
 	$("#information").removeClass(oldclass);
@@ -302,8 +310,7 @@ function seatinfo(d){
 	oldclass = seatData[d.properties.name]["party"];
 }
 
-
-
+// d3 make pie chart of vote counts ni selected seat
 function piechart(d){
 
 	$("#information-pie").empty();
@@ -325,18 +332,13 @@ function piechart(d){
 	data.push({ party: "sinnfein", votes: seatData[d.properties.name]["sinnfein"]});
 	data.push({ party: "alliance", votes: seatData[d.properties.name]["alliance"]});
 
-
-
 	var filterdata = [];
-
 
 	$.each(data, function(i){
 
 		if (data[i].votes > 0 && data[i].party != "other")
 			filterdata.push(data[i]);
 	});
-
-
 
 	filterdata.sort(function(a, b){
 			return b.votes - a.votes ;
@@ -348,7 +350,6 @@ function piechart(d){
 	var width = 250,
 		height = 250;
 		radius = Math.min(width, height) / 2;
-
 
 	var arc = d3.svg.arc()
 		.outerRadius(radius - 10)
@@ -366,26 +367,25 @@ function piechart(d){
 		.append("g")
 		.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
-		var g = svg.selectAll(".arc")
+	var g = svg.selectAll(".arc")
 			.data(pie(filterdata))
 			.enter().append("g")
 			.attr("class", "arc");
 
-		g.append("path")
-			.attr("d", arc)
-			.attr("class", function(d, i){
-					return filterdata[i].party;
-				});
+	g.append("path")
+		.attr("d", arc)
+		.attr("class", function(d, i){
+				return filterdata[i].party;
+			});
 
 	// creates table with vote counts/percentages
 	$.each(filterdata, function(i){
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +
 			partylist[filterdata[i].party] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td></tr>")
 	})
-
-
 }
 
+// load + colour map at page load
 function loadmap(){
 	d3.json("/election2015/data/projection.json", function(error, uk) {
 		if (error) return console.error(error);
@@ -416,9 +416,7 @@ function loadmap(){
 	});
 }
 
-// bottom of right - vote chart
-
-
+// add number with comma parser to tablesorter - not used in index/nowcast atm.
 $( function() {
     $.tablesorter.addParser({
         id: "numberWithComma",
@@ -432,6 +430,9 @@ $( function() {
     });
 });
 
+// when user selects region this removes old vote list and replaces with selection
+// problem with cache of tablesorter not being cleared result in multiple tables being displayed
+// just rewriting the html as fix
 function displayVoteTotals(data) {
 		$("#totalstable").remove()
 		$("#totals").append("<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
@@ -440,12 +441,9 @@ function displayVoteTotals(data) {
 												"</tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
 												"</tfoot></table>")
 
-		//find wa yto clear cache of tablesorter properly? -
-
 		var plussign1, plussign2;
 
 		$.each(data, function(i){
-
 
 				if (data[i].change > 0)
 					plussign1 = "+";
@@ -483,17 +481,12 @@ function displayVoteTotals(data) {
 					0: {
 						sorter: false
 					}
-
 	    },
-
 				sortList:[[3,1]]
-
-
 		});
 };
 
-
-// autocomplete
+// autocomplete search box, references array generated on page load
 
 function searchSeats(value){
 	$.each(searchSeatData, function(i){
@@ -502,6 +495,7 @@ function searchSeats(value){
 	});
 };
 
+// autocoomplete function
 $(function()
 {
 	$("#searchseats").autocomplete({
@@ -512,8 +506,10 @@ $(function()
 	});
 });
 
+//seatData contains all information display on page. filled on page load using getSeatInfo
 var seatData = {};
 
+// fills seatData, loads map afterwards
 function getSeatInfo(data){
 
 	$.each(data, function(i){
@@ -523,6 +519,7 @@ function getSeatInfo(data){
 	loadmap()
 }
 
+//empty arrays for csv data for each regional vote total
 nationalVoteTotals = [];
 greatbritainVoteTotals = [];
 englandVoteTotals = [];
@@ -539,9 +536,8 @@ southeastenglandVoteTotals = [];
 southwestenglandVoteTotals = [];
 londonVoteTotals = [];
 
+// collects great britain vote totals from csv and displays it
 function getVoteTotalsInitial(data, region) {
-
-	region = region.slice(27)
 
 	$.each(data, function(i){
 		var info = {};
@@ -556,6 +552,7 @@ function getVoteTotalsInitial(data, region) {
 	displayVoteTotals(nationalVoteTotals)
 }
 
+// aSync callback function for csv files
 function parseData(url, callBack) {
 	Papa.parse(url, {
 		download: true,
@@ -567,6 +564,7 @@ function parseData(url, callBack) {
 	});
 }
 
+//user eslect region vote totals
 function selectAreaInfo(value){
 
 	if (value == "country") {displayVoteTotals(nationalVoteTotals)};
@@ -585,3 +583,21 @@ function selectAreaInfo(value){
 	if (value == "westmidlands") {displayVoteTotals(westmidlandsVoteTotals)};
 	if (value == "greatbritain") {displayVoteTotals(greatbritainVoteTotals)};
 }
+
+// get national vote totals  and display it on page load
+function getVoteTotalsInitial(data, region) {
+
+	$.each(data, function(i){
+		var info = {};
+		info["code"] = data[i].code
+		info["seats"] = data[i].seats
+		info["change"] = data[i].change
+		info["votepercent"] = data[i].votepercent
+		info["votepercentchange"] = data[i].votepercentchange
+		nationalVoteTotals.push(info);
+	});
+
+	displayVoteTotals(nationalVoteTotals)
+}
+
+// most csv file data collection happens in projection.js or nowcast.js duie to difference in data/file names

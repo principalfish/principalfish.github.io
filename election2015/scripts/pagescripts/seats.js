@@ -1,9 +1,8 @@
-
+// for seat.html
+// fill out table with info from info.csv
 function doStuff(data) {
 
-
 		$.each(data, function(i){
-
 
 			if (i == data.length -1)
 					null
@@ -58,8 +57,7 @@ function doStuff(data) {
 		});
 };
 
-
-
+// get relevant data for seat list
 function parseData(url, callBack) {
 	Papa.parse(url, {
 		download: true,

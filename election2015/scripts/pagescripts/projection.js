@@ -2,25 +2,9 @@
 previousTotals = {};
 previousPercentages = {};
 
-function getVoteTotalsInitial(data, region) {
-
-	region = region.slice(27)
-
-	$.each(data, function(i){
-		var info = {};
-		info["code"] = data[i].code
-		info["seats"] = data[i].seats
-		info["change"] = data[i].change
-		info["votepercent"] = data[i].votepercent
-		info["votepercentchange"] = data[i].votepercentchange
-		nationalVoteTotals.push(info);
-	});
-
-	displayVoteTotals(nationalVoteTotals)
-}
-
+// get vote totals for dual purpose of displaying on page on user select and use in user input calculation
 function getVoteTotals(data, region) {
-	
+
 	if (region == "/election2015/data/previoustotals.csv"){
 		$.each(data, function(i){
 			var info = {};
@@ -117,16 +101,10 @@ function getVoteTotals(data, region) {
 
 		if (region == "yorkshireandthehumber.csv")
 			yorkshireandthehumberVoteTotals.push(info)
-
 		});
-
 }
 
-
-// get complete seat Data for site
-var oldSeatData = {};
-
-
+// used when resetting userinputs
 function getSeatInfoAgain(data){
 
 	$.each(data, function(i){
@@ -135,6 +113,9 @@ function getSeatInfoAgain(data){
 
 	alterMap("reset");
 }
+
+// get complete 2010 seat Data for use in user input calculations
+var oldSeatData = {};
 
 function getOldSeatInfo(data){
 	$.each(data, function(i){
@@ -156,7 +137,6 @@ function getOldSeatInfo(data){
 	});
 }
 
-
 function getMapInfo(){
 	parseData("/election2015/data/info.csv", getSeatInfo);
 
@@ -165,6 +145,7 @@ function getMapInfo(){
 	parseData("/election2015/data/oldinfo.csv", getOldSeatInfo);
 }
 
+// get vote totals for initial display and possible future display
 function getInfoFromFiles(){
 
 	parseData("/election2015/data/regions/projectionvotetotals.csv", getVoteTotalsInitial);
@@ -188,17 +169,14 @@ function getInfoFromFiles(){
 
 };
 
+//initiate data accrual + map load
 getMapInfo();
 getInfoFromFiles();
-
-
-
 
 //collate vote totals
 
 
 // USER INPUT
-// python - > javascript conversion
 
 // func to check user input percentages dont add up to more than 100 and to work out other percentage
 
@@ -211,6 +189,7 @@ function userInputCheck(inputform, country){
   $(spanId).html(otherPercentage);
 
 };
+
 
 function sumFormPercentages(inputform){
 
@@ -242,6 +221,8 @@ walesUserNumbers = {"conservative": 0, "labour" : 0, "libdems" : 0, "ukip" : 0, 
 northernirelandUserNumbers = {"dup" : 0, "sinnfein": 0, "sdlp": 0, "uu": 0, "alliance" : 0} ;
 
 
+// CONVERSION OF BACK-END PYTHON SCRIPT TO JAVASCRIPT FOR USE IN BROWSER
+// simplified
 var regions = {
     "england"  : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland", "southwestengland", "eastofengland",
                   "eastmidlands", "westmidlands", "london"],
@@ -372,8 +353,6 @@ function analyseUserInput(inputform, region){
     alterMap(region);
   }
 }
-
-
 
 function getRegionalChange(region, percentages, userRegionalTotals){
   var regionalRelativeChanges = {};
@@ -729,9 +708,10 @@ function resetInputs(){
   londonVoteTotals = [];
 }
 
+
+// deal with annoyances with various browsers for input forms
 var isFirefox = typeof InstallTrigger !== 'undefined';
 var isIE = /*@cc_on!@*/false || !!document.documentMode;
-
 
 $(document).ready(function(){
   if (isFirefox == true){
@@ -739,7 +719,7 @@ $(document).ready(function(){
     $("#userinput p").css("margin-bottom", "1px");
     $("#resetinputs").css("padding-top", "8px");
   }
-
+	s
   if (isIE == true){
     $(".submitbutton").css("font-size", "0.85em");
     $("#userinput h4").css("margin-top", "-2px");

@@ -1,3 +1,7 @@
+//for polls.html
+
+
+
 $( function() {
     $.tablesorter.addParser({
         id: "numberWithComma",
@@ -104,8 +108,6 @@ function doStuff(data) {
 
 		});
 };
-
-
 
 function parseData(url, callBack) {
 	Papa.parse(url, {

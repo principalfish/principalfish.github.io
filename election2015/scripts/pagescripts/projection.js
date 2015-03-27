@@ -14,7 +14,7 @@ var seatsAfterFilter = [];
 var searchSeatData = [];
 var seatNames = [];
 
-
+var testvariable = "poop";
 
 
 function filterMap(){

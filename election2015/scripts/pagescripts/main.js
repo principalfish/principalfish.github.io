@@ -6,7 +6,6 @@ d3.selection.prototype.moveToFront = function() {
 						});
 					};
 
-
 // current state of user input filters
 var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}]
 

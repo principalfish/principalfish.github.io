@@ -17,8 +17,7 @@ function getVoteTotalsInitial(data, region) {
 
 function getVoteTotals(data, region) {
 
-		region = region.slice(34)
-		console.log(region)
+		region = region.slice(34);	
 		$.each(data, function(i){
 			var info = {};
 			info["code"] = data[i].code;

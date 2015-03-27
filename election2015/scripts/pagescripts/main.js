@@ -1,3 +1,5 @@
+// FOR index and nowcast
+
 //add to d3js prototype
 // brings elements to top when (for use when clicking on seat)
 d3.selection.prototype.moveToFront = function() {
@@ -17,12 +19,11 @@ var seatNames = []; // for use with search box
 // control flow for analysing user filter inputs
 function filterMap(){
 
-	var	party  = filterStates[0].party;
+	var	party = filterStates[0].party;
 	var gains = filterStates[1].gain;
 	var region = filterStates[2].region;
 	var majoritylow = filterStates[3].majoritylow
 	var majorityhigh = filterStates[4].majorityhigh
-
 
 	if (isNaN(majoritylow))
 		majoritylow = 0
@@ -50,8 +51,6 @@ function filterMap(){
 							return "partyfiltered"
 						});
 
-
-
 			if (gains == "null")
 					g.selectAll("#partyfiltered")
 						.attr("id", "gainfiltered")
@@ -78,8 +77,6 @@ function filterMap(){
 							if (seatData[d.properties.name]["party"] == seatData[d.properties.name]["incumbent"])
 								return "gainfiltered"
 						});
-
-
 
 			if (region == "null")
 				g.selectAll("#gainfiltered")

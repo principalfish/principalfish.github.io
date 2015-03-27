@@ -719,7 +719,7 @@ $(document).ready(function(){
     $("#userinput p").css("margin-bottom", "1px");
     $("#resetinputs").css("padding-top", "8px");
   }
-	s
+
   if (isIE == true){
     $(".submitbutton").css("font-size", "0.85em");
     $("#userinput h4").css("margin-top", "-2px");

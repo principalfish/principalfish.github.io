@@ -439,8 +439,6 @@ def getregionalchange(area):
             array4[element] = array1[element] / array2[element]  # adds to relative change to array 4
 
 
-
-
     # currently nullified but may use later
 
     # info = Region(alliance = array3["alliance"], conservative = array3["conservative"], dup = array3["dup"],
@@ -598,12 +596,28 @@ def writenationaltotals():
 
         output.close()
 
-        # append file to see daily change in model - eventually generate a graph
-    with open("trends.csv", "ab") as updatefile:
-        writetofile = csv.writer(updatefile, delimiter ="\t")
-        for i in range(len(partytotals)):
-            writetofile.writerow(partytotals[i])
-        updatefile.close()
+    # append file to see daily change in model - eventually generate a graph
+
+    trends = []
+
+    with open("trends.csv", "rb") as readfile:
+        readfile = csv.reader(readfile, delimiter ="\t")
+
+        for line in readfile:
+            if line[0] != str(date.today()):
+                trends.append(line)
+
+
+    for i in range(len(partytotals)):
+        trends.append(partytotals[i])
+
+    with open("trends.csv", "wb") as updatefile:
+         writetofile = csv.writer(updatefile, delimiter ="\t")
+         for i in range(len(trends)):
+             writetofile.writerow(trends[i])
+         updatefile.close()
+
+
 
 #write england csv
 def writeengland():

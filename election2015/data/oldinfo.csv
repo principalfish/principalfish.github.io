@@ -1,651 +1,651 @@
-"id"	"incumbent"	"seat"	"area"	"turnout2010"	"conservative"	"labour"	"libdems"	"ukip"	"snp"	"plaidcymru"	"green"	"uu"	"sdlp"	"dup"	"sinnfein"	"alliance"	"other"	"party"	"change"	"majority2010"
-1	"labour"	"Aberavon"	"wales"	31424	4411	16073	5034	755		2198	67						2753			35.66
-2	"conservative"	"Aberconwy"	"wales"	30228	10734	7336	5786	682		5341	60						137			11.34
-3	"labour"	"Aberdeen North"	"scotland"	38352	4666	16746	7001	302	8385		416						903			22.18
-4	"labour"	"Aberdeen South"	"scotland"	43685	8914	15722	12216	302	5102		416						1080			8.15
-5	"labour"	"Airdrie and Shotts"	"scotland"	36430	3133	20849	2898	310	8441		209						528			34.61
-6	"conservative"	"Aldershot"	"southeastengland"	45663	21203	5489	15617	1638			340						1034			12.31
-7	"conservative"	"Aldridge-Brownhills"	"westmidlands"	39777	22913	7647	6833	1509			78						394			39.51
-8	"conservative"	"Altrincham and Sale West"	"northwestengland"	49136	24176	11073	12581	706			368						100			23.47
-9	"labour"	"Alyn and Deeside"	"wales"	40097	12885	15804	7308	1096		1549	74						1368			7.31
-10	"conservative"	"Amber Valley"	"eastmidlands"	46524	17746	17210	6636	1124			159						3460			1.17
-11	"snp"	"Angus"	"scotland"	38122	11738	6535	4090	438	15020		314						100			8.65
-12	"plaidcymru"	"Arfon"	"wales"	26099	4416	7928	3666	398		9383	74						100			5.58
-13	"libdems"	"Argyll and Bute"	"scotland"	45953	10861	10274	14292	404	8563		420						1217			7.59
-14	"conservative"	"Arundel and South Downs"	"southeastengland"	55054	32333	4835	15642	1417			449						100			29.81
-15	"labour"	"Ashfield"	"eastmidlands"	49542	10698	16239	16047	2419			151						4279			0.4
-16	"conservative"	"Ashford"	"southeastengland"	55265	29878	9204	12581	3265			581						100			31.34
-17	"labour"	"Ashton-under-Lyne"	"northwestengland"	38189	9510	18604	5703	1041			183						2929			23.66
-18	"conservative"	"Aylesbury"	"southeastengland"	53112	27736	6695	15118	855			235						100			23.73
-19	"labour"	"Ayr, Carrick and Cumnock"	"scotland"	46277	11721	21632	4264	170	8276		105						100			21.6
-20	"conservative"	"Banbury"	"southeastengland"	56048	29703	10773	11476	2778			970						524			32.41
-21	"snp"	"Banff and Buchan"	"scotland"	39040	11841	5382	4365	302	15868		209						1010			10.47
-22	"labour"	"Barking"	"london"	45593	8073	24628	3719	2791			85						7306			36.51
-23	"labour"	"Barnsley Central"	"yorkshireandthehumber"	36617	6388	17487	6394	1239			136						5005			51.73
-24	"labour"	"Barnsley East"	"yorkshireandthehumber"	37998	6329	18059	6969	1239			136						5298			28.89
-25	"labour"	"Barrow and Furness"	"northwestengland"	43756	16018	21226	4424	634			79						1085			11.8
-26	"conservative"	"Basildon and Billericay"	"eastofengland"	45259	21922	9584	6538	7500			460						1934			29.68
-27	"conservative"	"Basingstoke"	"southeastengland"	51202	25590	10327	12414	1731			628						247			26.01
-28	"labour"	"Bassetlaw"	"eastmidlands"	49961	16803	25018	5570	2205			156						407			16.57
-29	"libdems"	"Bath"	"southwestengland"	47477	14768	3251	26651	612			2632						406			25.24
-30	"labour"	"Batley and Spen"	"yorkshireandthehumber"	52513	17159	21565	8095	1635			666						3685			8.62
-31	"conservative"	"Battersea"	"london"	49071	23103	17126	7176	780			518						323			12.25
-32	"conservative"	"Beaconsfield"	"southeastengland"	50907	32053	6135	10271	1197			156						666			41.5
-33	"conservative"	"Beckenham"	"london"	47764	27597	6893	9813	2419			628						1224			37.29
-34	"conservative"	"Bedford"	"eastofengland"	46148	17546	16193	8957	1731			449						877			3
-35	"alliance"	"Belfast East"	"northernireland"	34488								7305	365	11306	817	12839	1856			4.45
-36	"dup"	"Belfast North"	"northernireland"	36993								2837	4544	14812	12588	1809	403			6.01
-37	"sdlp"	"Belfast South"	"northernireland"	33150								5910	14026	8100		5114	200			17.33
-38	"sinnfein"	"Belfast West"	"northernireland"	32133								1000	5261	2436	22840	596				57.18
-39	"libdems"	"Bermondsey and Old Southwark"	"london"	45268	7638	13060	21590	339			931						1645			19.1
-40	"libdems"	"Berwick-upon-Tweed"	"northeastengland"	38457	14116	5061	16806	987			183						1213			7
-41	"libdems"	"Berwickshire, Roxburgh and Selkirk"	"scotland"	49407	16555	5003	22230	625	4497		612						134			11.58
-42	"labour"	"Bethnal Green and Bow"	"london"	51689	7071	21784	10210	589			1416						10807			22.82
-43	"conservative"	"Beverley and Holderness"	"yorkshireandthehumber"	52518	25063	11224	12076	1896			277						2305			24.41
-44	"conservative"	"Bexhill and Battle"	"southeastengland"	57707	28147	6524	15267	2631			469						4649			23.6
-45	"conservative"	"Bexleyheath and Crayford"	"london"	43643	21794	11450	5502	3512			297						2508			23.95
-46	"labour"	"Birkenhead"	"northwestengland"	36841	6687	22082	6554	973			352						150			43.58
-47	"labour"	"Birmingham Edgbaston"	"westmidlands"	42038	15620	16894	6387	909			229						1469			3.06
-48	"labour"	"Birmingham Erdington"	"westmidlands"	36372	11592	14869	5742	909			229						2501			9.22
-49	"labour"	"Birmingham Hall Green"	"westmidlands"	49445	7320	16039	11988	909			229						12430			7.8
-50	"labour"	"Birmingham Hodge Hill"	"westmidlands"	43426	4936	22077	11775	909			229						2970			24.26
-51	"labour"	"Birmingham Ladywood"	"westmidlands"	35740	4277	19950	9845	909			229						100			28.2
-52	"labour"	"Birmingham Northfield"	"westmidlands"	41713	14059	16841	6550	909			229						2595			6.65
-53	"labour"	"Birmingham Perry Barr"	"westmidlands"	42038	8960	21142	9234	909			229						1034			28.32
-54	"labour"	"Birmingham Selly Oak"	"westmidlands"	46436	14468	17950	10371	909			229						1979			7.48
-55	"libdems"	"Birmingham Yardley"	"westmidlands"	41328	7836	13160	16162	909			229						2502			7.35
-56	"labour"	"Bishop Auckland"	"northeastengland"	41657	10805	16023	9189	1571			196						4000			12.68
-57	"labour"	"Blackburn"	"northwestengland"	46510	11895	21751	6918	1731			209						3993			21.66
-58	"labour"	"Blackley and Broughton"	"northwestengland"	35456	6260	18563	4861	1069			1416						3626			35.97
-59	"conservative"	"Blackpool North and Cleveleys"	"northwestengland"	40267	16964	14814	5400	997			103						1754			5.3
-60	"labour"	"Blackpool South"	"northwestengland"	35175	12597	14449	5082	997			103						1712			5.26
-61	"labour"	"Blaenau Gwent"	"wales"	32732	2265	16974	3285	682		1333	30						8050			32.46
-62	"labour"	"Blaydon"	"northeastengland"	46518	7159	22297	13180	1447			241						2277			20.3
-63	"labour"	"Blyth Valley"	"northeastengland"	38162	6412	17156	10488	987			183						2845			17.29
-64	"conservative"	"Bognor Regis and Littlehampton"	"southeastengland"	47744	24087	6580	11024	5000			449						2125			27.88
-65	"labour"	"Bolsover"	"eastmidlands"	43573	10812	21994	6821	1029			76						2640			25.42
-66	"labour"	"Bolton North East"	"northwestengland"	43340	15786	19870	5624	1635			196						182			9.44
-67	"labour"	"Bolton South East"	"northwestengland"	39304	10148	18782	6289	1635			196						2207			21.8
-68	"labour"	"Bolton West"	"northwestengland"	47008	18235	18327	8177	1635			196						391			0.19
-69	"labour"	"Bootle"	"northwestengland"	40498	3678	27426	6245	1297			312						1414			51.31
-70	"conservative"	"Boston and Skegness"	"eastmidlands"	45566	21325	8899	6371	10000			235						2449			28.81
-71	"conservative"	"Bosworth"	"eastmidlands"	55543	23132	8674	18100	2450			224						3270			9.27
-72	"conservative"	"Bournemouth East"	"southwestengland"	43397	21320	5836	13592	1571			466						249			17.55
-73	"conservative"	"Bournemouth West"	"southwestengland"	41060	18808	6171	13225	1571			466						456			13.4
-74	"conservative"	"Bracknell"	"southeastengland"	51784	27327	8755	11623	2116			461						1309			30.12
-75	"libdems"	"Bradford East"	"yorkshireandthehumber"	42028	10860	13272	13637	1239			377						2688			0.9
-76	"labour"	"Bradford South"	"yorkshireandthehumber"	38227	11060	15682	6948	1239			377						2966			12.16
-77	"other"	"Bradford West"	"yorkshireandthehumber"	49342	12638	18401	4732	1239			377						12000			30.9
-78	"conservative"	"Braintree"	"eastofengland"	50554	25901	9780	9247	4286			870						1080			32.76
-79	"libdems"	"Brecon and Radnorshire"	"wales"	38909	14182	4096	17929	907		989	209						432			9.65
-80	"libdems"	"Brent Central"	"london"	45874	5067	18681	20026	439			653						881			2.97
-81	"labour"	"Brent North"	"london"	52412	16486	24514	8879	439			653						1314			15.35
-82	"conservative"	"Brentford and Isleworth"	"london"	53610	20022	18064	12718	1041			518						1311			3.64
-83	"conservative"	"Brentwood and Ongar"	"eastofengland"	50505	28793	4992	11872	1903			274						2314			33.45
-84	"labour"	"Bridgend"	"wales"	38455	11668	13931	8658	696		2269	63						1020			5.9
-85	"conservative"	"Bridgwater and West Somerset"	"southwestengland"	52668	24675	9332	15426	855			307						1597			16.97
-86	"conservative"	"Brigg and Goole"	"yorkshireandthehumber"	43511	19680	14533	6414	1268			159						1498			11.73
-87	"conservative"	"Brighton Kemptown"	"southeastengland"	40982	16217	14889	7691	661			1040						194			3.11
-88	"green"	"Brighton Pavilion"	"southeastengland"	42622	12275	14986	7159	635			12000						228			2.42
-89	"labour"	"Bristol East"	"southwestengland"	44664	12749	16471	10993	589			1516						2491			8.27
-90	"conservative"	"Bristol North West"	"southwestengland"	50536	19115	13059	15841	544			1466						635			6.5
-91	"labour"	"Bristol South"	"southwestengland"	47840	11086	18600	13866	523			1670						2345			9.79
-92	"libdems"	"Bristol West"	"southwestengland"	54815	10169	15227	26593	302			3263						613			20.54
-93	"conservative"	"Broadland"	"eastofengland"	53750	24338	7287	17046	3545			1002						871			13.84
-94	"conservative"	"Bromley and Chislehurst"	"london"	44216	23569	7295	9669	2419			628						1446			31.56
-95	"conservative"	"Bromsgrove"	"westmidlands"	51370	22558	11250	10124	2157			246						4748			21.9
-96	"conservative"	"Broxbourne"	"eastofengland"	46401	26844	8040	6107	2236			152						2777			41.18
-97	"conservative"	"Broxtowe"	"eastmidlands"	53634	20585	20196	8907	2236			581						1422			0.74
-98	"other"	"Buckingham"	"southeastengland"	30000													30000			26.54
-99	"libdems"	"Burnley"	"northwestengland"	42423	6950	13114	14932	1200			121						5920			4.34
-100	"conservative"	"Burton"	"westmidlands"	50998	22188	15884	7891	2206			161						2409			12.65
-101	"conservative"	"Bury North"	"northwestengland"	45494	18070	15827	7645	1432			292						2137			4.99
-102	"labour"	"Bury South"	"northwestengland"	48572	16216	19508	8796	1432			292						2237			6.82
-103	"conservative"	"Bury St. Edmunds"	"eastofengland"	55859	27899	9776	15519	1731			554						100			21.08
-104	"labour"	"Caerphilly"	"wales"	38947	6622	17377	5688	1041		6460	82						1635			27.8
-105	"libdems"	"Caithness, Sutherland and Easter Ross"	"scotland"	29431	3744	7081	11907	321	5516		400						520			16.78
-106	"conservative"	"Calder Valley"	"yorkshireandthehumber"	51612	20397	13966	13037	1571			508						2349			12.42
-107	"labour"	"Camberwell and Peckham"	"london"	46633	6080	27619	10432	339			931						1167			36.84
-108	"conservative"	"Camborne and Redruth"	"southwestengland"	42694	15969	6945	15903	2062			718						943			0.16
-109	"libdems"	"Cambridge"	"eastofengland"	48476	12829	12174	19621	751			3185						507			13.55
-110	"conservative"	"Cannock Chase"	"westmidlands"	46250	18271	15076	7732	1879			75						2900			7.01
-111	"conservative"	"Canterbury"	"southeastengland"	48688	22050	7940	16002	1417			825						173			12.29
-112	"libdems"	"Cardiff Central"	"wales"	36100	7799	10400	14976	755		1246	292						390			12.66
-113	"conservative"	"Cardiff North"	"wales"	47427	17860	17666	8724	755		1588	292						300			0.41
-114	"labour"	"Cardiff South and Penarth"	"wales"	43959	12553	17262	9875	755		1851	292						1129			27.44
-115	"labour"	"Cardiff West"	"wales"	40380	12143	16894	7186	755		2868	292						100			11.6
-116	"conservative"	"Carlisle"	"northwestengland"	42840	16589	15736	6567	1923			414						1725			2.02
-117	"plaidcymru"	"Carmarthen East and Dinefwr"	"wales"	38739	8506	10065	4609	2066		13546	292						100			9.16
-118	"conservative"	"Carmarthen West and South Pembrokeshire"	"wales"	40843	16649	13226	4890	1571		4232	93						364			8.45
-119	"libdems"	"Carshalton and Wallington"	"london"	45396	16920	4015	22180	987			209						1100			11.46
-120	"conservative"	"Castle Point"	"eastofengland"	35804	19806	6609	4232	4000			196						2000			16.95
-121	"labour"	"Central Ayrshire"	"scotland"	44299	8943	20950	5236	170	8364		105						422			27.34
-122	"conservative"	"Central Devon"	"southwestengland"	53297	27737	3715	18507	2419			996						100			17.13
-123	"conservative"	"Central Suffolk and North Ipswich"	"eastofengland"	53166	27125	8636	13339	2314			1211						507			25.81
-124	"libdems"	"Ceredigion"	"wales"	37850	4421	2210	19139	644		10815	335						100			21.76
-125	"conservative"	"Charnwood"	"eastmidlands"	53316	26560	10536	11531	1185			218						3116			28.07
-126	"conservative"	"Chatham and Aylesford"	"southeastengland"	44174	20230	14161	5832	1478			217						1874			13.85
-127	"libdems"	"Cheadle"	"northwestengland"	52789	21445	4920	24717	1400			183						100			6.23
-128	"conservative"	"Chelmsford"	"eastofengland"	55845	25207	5980	20097	2791			384						1306			9.36
-129	"conservative"	"Chelsea and Fulham"	"london"	39543	24093	7371	6473	302			321						770			41.96
-130	"libdems"	"Cheltenham"	"southwestengland"	54499	21739	2703	26659	1807			1066						493			9.32
-131	"conservative"	"Chesham and Amersham"	"southeastengland"	52531	31658	2942	14948	2171			690						100			31.86
-132	"labour"	"Chesterfield"	"eastmidlands"	45664	7214	17891	17342	1583			233						1360			1.2
-133	"conservative"	"Chichester"	"southeastengland"	56390	31427	5937	15550	2648			948						100			27.96
-134	"conservative"	"Chingford and Woodford Green"	"london"	42640	22743	9780	7242	523			705						1558			30.07
-135	"libdems"	"Chippenham"	"southwestengland"	52844	21500	3620	23970	1796			647						1066			4.72
-136	"conservative"	"Chipping Barnet"	"london"	50066	24700	12773	10202	1417			825						470			23.57
-137	"labour"	"Chorley"	"northwestengland"	50118	18922	21515	6957	2218			353						359			5.21
-138	"conservative"	"Christchurch"	"southwestengland"	47038	27888	4849	12478	1144			180						100			31.18
-139	"conservative"	"Cities of London and Westminster"	"london"	37427	19264	8188	7574	1124			1085						463			29.99
-140	"conservative"	"City of Chester"	"northwestengland"	46590	18995	16412	8930	1096			277						693			5.52
-141	"labour"	"City of Durham"	"northeastengland"	40557	8622	20698	8617	216			628						1686			29.48
-142	"ukip"	"Clacton"	"eastofengland"	49502	20000	10799	5577	9000			667						2845			35.1
-143	"conservative"	"Cleethorpes"	"yorkshireandthehumber"	43167	18939	14641	8192	1417			93						100			9.56
-144	"labour"	"Clwyd South"	"wales"	34747	10477	13311	5965	682		3009	56						1100			8.17
-145	"conservative"	"Clwyd West"	"wales"	38517	15833	9414	5801	1124		5864	114						335			16.84
-146	"labour"	"Coatbridge, Chryston and Bellshill"	"scotland"	42216	3374	27728	3519	310	7014		209						100			49.75
-147	"libdems"	"Colchester"	"eastofengland"	47119	15169	5680	22151	1731			1040						1095			15.13
-148	"conservative"	"Colne Valley"	"yorkshireandthehumber"	55275	20440	14589	15603	1635			666						2634			8.75
-149	"conservative"	"Congleton"	"northwestengland"	50491	23250	8747	16187	1417			368						449			13.91
-150	"labour"	"Copeland"	"northwestengland"	42697	15866	19699	4365	947			102						1474			8.96
-151	"labour"	"Corby"	"eastmidlands"	59492	22886	22991	7834	3934			371						2525			21.84
-152	"labour"	"Coventry North East"	"westmidlands"	44024	9609	21384	7210	1153			269						3889			27.14
-153	"labour"	"Coventry North West"	"westmidlands"	46700	13648	19936	8344	1153			269						2840			13.51
-154	"labour"	"Coventry South"	"westmidlands"	45450	15352	19197	8278	1153			269						691			8.37
-155	"conservative"	"Crawley"	"southeastengland"	48032	21264	15336	6844	2001			259						2080			12.48
-156	"conservative"	"Crewe and Nantwich"	"northwestengland"	51528	23420	17374	7656	1417			368						1220			11.84
-157	"conservative"	"Croydon Central"	"london"	49735	19567	16688	6553	1268			554						5281			5.8
-158	"labour"	"Croydon North"	"london"	51414	12466	28947	7226	1268			554						1129			47.87
-159	"conservative"	"Croydon South"	"london"	54483	28684	11287	12866	1268			554						100			28.08
-160	"labour"	"Cumbernauld, Kilsyth and Kirkintilloch East"	"scotland"	41474	3407	23549	3924	127	9794		93						476			33.43
-161	"labour"	"Cynon Valley"	"wales"	29810	3010	15681	4120	730		6064	65						100			32.19
-162	"labour"	"Dagenham and Rainham"	"london"	43531	15183	17813	3806	1239			85						5565			5.95
-163	"labour"	"Darlington"	"northeastengland"	43263	13503	16891	10046	1446			191						1262			7.9
-164	"conservative"	"Dartford"	"southeastengland"	51184	24428	13800	7361	2699			229						2649			21.22
-165	"conservative"	"Daventry"	"eastmidlands"	50622	29252	8168	10064	1712			244						1187			37.06
-166	"labour"	"Delyn"	"wales"	37512	12811	15083	5747	1096		1844	74						844			6.14
-167	"labour"	"Denton and Reddish"	"northwestengland"	37018	9360	19191	6727	1041			183						297			26.12
-168	"labour"	"Derby North"	"eastmidlands"	46476	14283	14896	12638	2070			310						2434			1.36
-169	"labour"	"Derby South"	"eastmidlands"	41592	11729	17851	8430	2070			310						1357			14.86
-170	"conservative"	"Derbyshire Dales"	"eastmidlands"	46053	24378	9061	10512	1207			512						278			29.64
-171	"conservative"	"Devizes"	"southwestengland"	46139	25519	4711	12514	1796			647						707			28.06
-172	"conservative"	"Dewsbury"	"yorkshireandthehumber"	56017	18898	17372	9150	1635			666						8588			2.78
-173	"labour"	"Don Valley"	"yorkshireandthehumber"	43164	12877	16472	7422	1764			136						4755			8.28
-174	"labour"	"Doncaster Central"	"yorkshireandthehumber"	41962	10340	16569	8795	1764			136						4620			14.92
-175	"labour"	"Doncaster North"	"yorkshireandthehumber"	41324	8728	19637	6174	1764			136						5147			26.3
-176	"conservative"	"Dover"	"southeastengland"	52364	22174	16900	7962	3590			493						1602			10.47
-177	"labour"	"Dudley North"	"westmidlands"	37583	14274	14923	4066	1731			137						2072			1.68
-178	"conservative"	"Dudley South"	"westmidlands"	37281	16450	12594	5989	1731			137						100			10.1
-179	"labour"	"Dulwich and West Norwood"	"london"	47576	10684	22461	13096	339			931						100			19.42
-180	"labour"	"Dumfries and Galloway"	"scotland"	52118	16501	23950	4608	372	6419		209						100			14.28
-181	"conservative"	"Dumfriesshire, Clydesdale and Tweeddale"	"scotland"	45895	17457	13263	9080	372	4945		209						510			9.14
-182	"snp"	"Dundee East"	"scotland"	40519	6177	13529	4285	138	15350		183						796			4.49
-183	"labour"	"Dundee West"	"scotland"	37508	3461	17994	4233	138	10716		183						722			19.6
-184	"labour"	"Dunfermline and West Fife"	"scotland"	48903	3305	22639	17169	284	5201		292						100			11.18
-185	"plaidcymru"	"Dwyfor Meirionnydd"	"wales"	28972	6447	4021	3538	501		12814	103						1310			22.03
-186	"conservative"	"Ealing Central and Acton"	"london"	46886	17944	14228	13041	501			554						485			7.87
-187	"labour"	"Ealing North"	"london"	47676	14722	24023	6283	501			554						1460			19.51
-188	"labour"	"Ealing, Southall"	"london"	43239	12733	22024	6383	501			554						911			21.73
-189	"labour"	"Easington"	"northeastengland"	34923	4790	20579	5597	1571			196						2317			42.91
-190	"dup"	"East Antrim"	"northernireland"	30502								7223	2019	13993	2064	3377	1826			22.2
-191	"conservative"	"East Devon"	"southwestengland"	50659	25662	5721	16548	1731			825						100			17.17
-192	"libdems"	"East Dunbartonshire"	"scotland"	48224	7431	16367	18551	427	5054		592						100			4.55
-193	"labour"	"East Ham"	"london"	50743	7645	35471	5849	418			352						822			55.24
-194	"conservative"	"East Hampshire"	"southeastengland"	52972	29137	4043	15640	2284			793						1020			26.3
-195	"labour"	"East Kilbride, Strathaven and Lesmahagow"	"scotland"	51523	6613	26241	5052	339	11738		136						1302			28.47
-196	"dup"	"East Londonderry"	"northernireland"	34950								6218	5399	12097	6742	1922	2572			15.32
-197	"labour"	"East Lothian"	"scotland"	49347	9661	21919	8288	350	7883		536						862			24.93
-198	"labour"	"East Renfrewshire"	"scotland"	51554	15567	25987	4720	387	4535		460						100			20.36
-199	"conservative"	"East Surrey"	"southeastengland"	53401	31007	4925	14133	1916			347						805			30.88
-200	"conservative"	"East Worthing and Shoreham"	"southeastengland"	47190	23458	8087	12353	1281			275						389			22.95
-201	"conservative"	"East Yorkshire"	"yorkshireandthehumber"	50200	24328	10401	10842	1896			277						2779			26.31
-202	"libdems"	"Eastbourne"	"southeastengland"	53590	21223	2497	24658	2246			359						2441			6.59
-203	"libdems"	"Eastleigh"	"southeastengland"	56306	21102	5153	24866	4000			614						496			4.26
-204	"conservative"	"Eddisbury"	"northwestengland"	45043	23472	9794	10217	1096			277						100			29.19
-205	"labour"	"Edinburgh East"	"scotland"	40758	4358	17314	7751	250	8133		1567						2309			23.03
-206	"labour"	"Edinburgh North and Leith"	"scotland"	48249	7079	17740	16016	250	4568		1567						1953			3.64
-207	"labour"	"Edinburgh South"	"scotland"	44694	9452	15215	14899	250	3354		1567						881			0.72
-208	"labour"	"Edinburgh South West"	"scotland"	46355	11026	19473	8194	250	5530		1567						1239			18.58
-209	"libdems"	"Edinburgh West"	"scotland"	47340	10767	12881	16684	250	6115		1567						100			8.19
-210	"labour"	"Edmonton"	"london"	40072	12052	21665	4252	855			352						856			23.81
-211	"labour"	"Ellesmere Port and Neston"	"northwestengland"	44174	15419	19750	6663	1096			277						782			9.79
-212	"conservative"	"Elmet and Rothwell"	"yorkshireandthehumber"	56391	23778	19257	9109	1863			764						2052			8.1
-213	"labour"	"Eltham"	"london"	42320	15753	17416	5299	1297			720						2066			3.96
-214	"conservative"	"Enfield North"	"london"	44273	18804	17112	5403	855			352						1707			3.81
-215	"conservative"	"Enfield, Southgate"	"london"	44462	21928	14302	6124	855			352						861			17.19
-216	"conservative"	"Epping Forest"	"eastofengland"	48186	25148	6641	10017	3950			554						2267			32.48
-217	"conservative"	"Epsom and Ewell"	"southeastengland"	54382	30868	6538	14734	1220			327						266			29.36
-218	"conservative"	"Erewash"	"eastmidlands"	48607	18805	16304	8343	2338			279						2801			5.25
-219	"labour"	"Erith and Thamesmead"	"london"	43110	13365	19068	5116	2419			449						3466			13.43
-220	"conservative"	"Esher and Walton"	"southeastengland"	55738	32134	5829	13541	2054			798						1256			34.09
-221	"labour"	"Exeter"	"southwestengland"	52929	17221	19942	10581	1997			1907						1781			5.21
-222	"other"	"Falkirk"	"scotland"	49818	5698	23207	5225	127	15364		93						100			15.45
-223	"conservative"	"Fareham"	"southeastengland"	54883	30037	7719	12945	3105			658						618			31.45
-224	"conservative"	"Faversham and Mid Kent"	"southeastengland"	46909	26250	7748	9162	2419			274						940			36.58
-225	"labour"	"Feltham and Heston"	"london"	48509	16516	21174	6679	1041			518						2645			26.71
-226	"sinnfein"	"Fermanagh and South Tyrone"	"northernireland"	46803									3574		21304	437	21488			0.01
-227	"conservative"	"Filton and Bradley Stoke"	"southwestengland"	49006	19686	12772	12197	1829			536						1699			14.31
-228	"conservative"	"Finchley and Golders Green"	"london"	46629	21688	15879	8036	398			449						100			12.32
-229	"conservative"	"Folkestone and Hythe"	"southeastengland"	53664	26109	5719	15987	3639			740						1909			19.17
-230	"conservative"	"Forest of Dean"	"southwestengland"	49655	22853	11789	10676	1849			661						100			22.69
-231	"sdlp"	"Foyle"	"northernireland"	37889								1221	16922	4489	12098	223	2936			12.73
-232	"conservative"	"Fylde"	"northwestengland"	42940	22826	8624	9641	1442			330						100			30.18
-233	"conservative"	"Gainsborough"	"eastmidlands"	49213	24266	7701	13707	1871			221						1512			21.44
-234	"labour"	"Garston and Halewood"	"northwestengland"	42251	6908	25493	8616	544			124						268			39.41
-235	"labour"	"Gateshead"	"northeastengland"	38380	5716	20712	8163	1447			241						2184			32.8
-236	"labour"	"Gedling"	"eastmidlands"	49097	17962	19821	7350	2450			221						1598			3.86
-237	"conservative"	"Gillingham and Rainham"	"southeastengland"	46992	21624	12944	8484	1478			217						1863			18.55
-238	"labour"	"Glasgow Central"	"scotland"	30985	2158	15908	5010	233	5357		647						1901			34.5
-239	"labour"	"Glasgow East"	"scotland"	32606	1453	19797	1617	233	7957		647						1131			36.81
-240	"labour"	"Glasgow North"	"scotland"	30264	2089	13181	9283	233	3530		647						1530			13.16
-241	"labour"	"Glasgow North East"	"scotland"	30060	1569	20100	2262	233	4158		647						1320			54.21
-242	"labour"	"Glasgow North West"	"scotland"	36233	3537	19233	5622	233	5430		647						1760			38.25
-243	"labour"	"Glasgow South"	"scotland"	40745	4592	20736	4739	233	8078		647						1949			31.57
-244	"labour"	"Glasgow South West"	"scotland"	32432	2084	19863	2870	233	5192		647						1772			46.16
-245	"labour"	"Glenrothes"	"scotland"	40665	2922	25247	3108	284	8799		292						100			40.61
-246	"conservative"	"Gloucester"	"southwestengland"	51559	20267	17847	9767	2482			483						564			4.77
-247	"libdems"	"Gordon"	"scotland"	49349	9111	9811	17575	302	10827		209						1451			13.83
-248	"conservative"	"Gosport"	"southeastengland"	47122	24300	7944	9887	1666			247						2739			30.71
-249	"labour"	"Gower"	"wales"	41743	13333	16016	7947	398		2760	83						963			6.44
-250	"conservative"	"Grantham and Stamford"	"eastmidlands"	54194	26552	9503	11726	3320			429						3414			28.08
-251	"conservative"	"Gravesham"	"southeastengland"	47304	22956	13644	6293	2718			213						1470			19.69
-252	"labour"	"Great Grimsby"	"yorkshireandthehumber"	34170	10063	10777	7388	6000			159						2683			2.17
-253	"conservative"	"Great Yarmouth"	"eastofengland"	46472	18571	14295	6188	3096			242						1521			9.93
-254	"labour"	"Greenwich and Woolwich"	"london"	41920	10109	20262	7498	1297			720						2265			24.65
-255	"conservative"	"Guildford"	"southeastengland"	57946	29618	2812	21836	2392			1092						280			14
-256	"labour"	"Hackney North and Stoke Newington"	"london"	46161	6759	25553	11092	155			2049						951			31.11
-257	"labour"	"Hackney South and Shoreditch"	"london"	42520	5800	23888	9600	155			2049						1426			33.34
-258	"conservative"	"Halesowen and Rowley Regis"	"westmidlands"	43403	18115	16092	6515	1731			137						433			4.6
-259	"labour"	"Halifax"	"yorkshireandthehumber"	44764	14806	16278	8335	1571			508						3482			3.38
-260	"conservative"	"Haltemprice and Howden"	"yorkshireandthehumber"	50005	24486	7630	12884	2066			277						3068			23.81
-261	"labour"	"Halton"	"northwestengland"	41361	8339	23843	5718	1577			270						1563			37.51
-262	"labour"	"Hammersmith"	"london"	48345	17261	20810	7567	1051			1492						567			7.48
-263	"labour"	"Hampstead and Kilburn"	"london"	52681	17290	17332	16491	398			449						542			0.08
-264	"conservative"	"Harborough"	"eastmidlands"	55560	26894	6981	17097	1731			384						2511			17.83
-265	"conservative"	"Harlow"	"eastofengland"	47185	19691	14766	5990	2420			3662						1840			11.22
-266	"conservative"	"Harrogate and Knaresborough"	"yorkshireandthehumber"	53897	24305	3413	23266	1571			449						1094			1.96
-267	"conservative"	"Harrow East"	"london"	47621	21435	18032	6850	855			416						100			7.09
-268	"labour"	"Harrow West"	"london"	45841	16968	20111	7458	855			416						100			6.82
-269	"labour"	"Hartlepool"	"northeastengland"	37104	10758	16267	6533	1550			110						2002			14.41
-270	"conservative"	"Harwich and North Essex"	"eastofengland"	46851	23001	9774	11554	612			159						1235			23.36
-271	"conservative"	"Hastings and Rye"	"southeastengland"	50689	20468	18475	7825	1409			493						1649			4
-272	"conservative"	"Havant"	"southeastengland"	44833	22433	7777	10273	3122			614						809			27.7
-273	"labour"	"Hayes and Harlington"	"london"	43652	12553	23377	3726	1297			222						2633			25.39
-274	"libdems"	"Hazel Grove"	"northwestengland"	41540	14114	5234	20485	1400			183						100			15.18
-275	"conservative"	"Hemel Hempstead"	"eastofengland"	50082	24721	10295	11315	1014			325						1886			27.1
-276	"labour"	"Hemsworth"	"yorkshireandthehumber"	45213	10662	20506	5667	1268			147						7005			22.45
-277	"conservative"	"Hendon"	"london"	46459	19635	19529	5734	1268			449						100			0.23
-278	"conservative"	"Henley"	"southeastengland"	53802	30054	5835	13466	2302			1238						1020			30.99
-279	"conservative"	"Hereford and South Herefordshire"	"westmidlands"	49305	22366	3506	19885	1643			513						986			5.13
-280	"conservative"	"Hertford and Stortford"	"eastofengland"	56356	29810	7620	14373	1731			591						1858			27.88
-281	"conservative"	"Hertsmere"	"eastofengland"	47317	26476	8871	8210	1620			316						1397			37.24
-282	"conservative"	"Hexham"	"northeastengland"	44744	18795	8253	13007	987			183						3428			13.31
-283	"labour"	"Heywood and Middleton"	"northwestengland"	46150	12528	18499	10474	1699			230						2700			2.17
-284	"conservative"	"High Peak"	"eastmidlands"	49841	20587	15910	10993	1441			709						235			9.29
-285	"conservative"	"Hitchin and Harpenden"	"eastofengland"	54318	29869	7413	14598	1124			449						357			27.91
-286	"labour"	"Holborn and St. Pancras"	"london"	53608	11134	25198	15256	398			449						994			18.19
-287	"conservative"	"Hornchurch and Upminster"	"london"	53154	27469	11098	7426	5553			368						4007			30.66
-288	"libdems"	"Hornsey and Wood Green"	"london"	55375	9174	18720	25595	398			1271						292			12.49
-289	"conservative"	"Horsham"	"southeastengland"	55535	29447	4189	17987	2066			975						809			20.52
-290	"labour"	"Houghton and Sunderland South"	"northeastengland"	38417	8147	19137	5292	1297			136						4423			28.91
-291	"conservative"	"Hove"	"southeastengland"	47882	18294	16426	11240	647			825						85			3.75
-292	"labour"	"Huddersfield"	"yorkshireandthehumber"	40892	11253	15725	10023	1635			666						1882			11.04
-293	"conservative"	"Huntingdon"	"eastofengland"	52324	26516	5982	15697	1417			114						2161			19.94
-294	"labour"	"Hyndburn"	"northwestengland"	42562	14441	17531	5033	1633			147						3723			7.24
-295	"conservative"	"Ilford North"	"london"	46922	21506	16102	5966	1268			554						1702			11.49
-296	"labour"	"Ilford South"	"london"	50386	14014	25301	8679	1268			554						746			22.05
-297	"labour"	"Inverclyde"	"scotland"	37515	4502	20993	5007	198	6577		142						100			20.78
-298	"libdems"	"Inverness, Nairn, Badenoch and Strathspey"	"scotland"	47175	6278	10407	19172	321	8803		400						1852			18.61
-299	"conservative"	"Ipswich"	"eastofengland"	48228	18371	16292	8556	2641			705						1582			4.43
-300	"conservative"	"Isle of Wight"	"southeastengland"	71473	32810	8169	22283	4239			1202						3636			14.98
-301	"labour"	"Islington North"	"london"	43979	6339	24276	11875	730			754						100			27.83
-302	"labour"	"Islington South and Finsbury"	"london"	43633	8449	18407	14838	730			754						450			8.19
-303	"labour"	"Islwyn"	"wales"	34919	4854	17069	3597	1041		4518	82						3716			35.21
-304	"labour"	"Jarrow"	"northeastengland"	40071	8002	20910	7163	1124			116						2709			33.28
-305	"conservative"	"Keighley"	"yorkshireandthehumber"	47793	20003	17063	7059	1239			377						2097			6.16
-306	"conservative"	"Kenilworth and Southam"	"westmidlands"	48847	25945	6949	13393	1478			263						362			25.92
-307	"conservative"	"Kensington"	"london"	34479	17595	8979	6872	302			321						197			24.51
-308	"conservative"	"Kettering"	"eastmidlands"	49396	23247	14153	7498	1969			201						2430			19.21
-309	"labour"	"Kilmarnock and Loudoun"	"scotland"	47183	6592	24460	3419	349	12082		237						100			26.59
-310	"libdems"	"Kingston and Surbiton"	"london"	57894	20868	5337	28428	2265			1604						473			13.24
-311	"labour"	"Kingston upon Hull East"	"yorkshireandthehumber"	32747	5667	16387	7790	1096			183						1595			25.15
-312	"labour"	"Kingston upon Hull North"	"yorkshireandthehumber"	32763	4365	13044	12403	1096			183						1643			1.93
-313	"labour"	"Kingston upon Hull West and Hessle"	"yorkshireandthehumber"	31125	6361	13378	7636	1096			183						2442			18.23
-314	"conservative"	"Kingswood"	"southwestengland"	48647	19362	16917	8072	1829			536						1644			5.1
-315	"labour"	"Kirkcaldy and Cowdenbeath"	"scotland"	45631	4258	29559	4269	284	6550		292						406			50.24
-316	"labour"	"Knowsley"	"northwestengland"	44479	4004	31650	5964	544			124						1895			57.52
-317	"dup"	"Lagan Valley"	"northernireland"	36540								7713	1835	18199	1465	4174	3154			28.7
-318	"labour"	"Lanark and Hamilton East"	"scotland"	46515	6981	23258	5249	339	9780		136						670			28.95
-319	"conservative"	"Lancaster and Fleetwood"	"northwestengland"	42344	15404	15071	8167	1417			1776						1151			0.78
-320	"labour"	"Leeds Central"	"yorkshireandthehumber"	39589	7541	18434	7789	1863			764						3630			28.47
-321	"labour"	"Leeds East"	"yorkshireandthehumber"	40008	8763	19056	6618	1863			764						3376			27.22
-322	"labour"	"Leeds North East"	"yorkshireandthehumber"	48888	15742	20287	9310	1863			764						1354			9.56
-323	"libdems"	"Leeds North West"	"yorkshireandthehumber"	44570	11550	9132	20653	1863			764						1040			20.93
-324	"labour"	"Leeds West"	"yorkshireandthehumber"	37975	7641	16389	9373	1863			764						2377			18.1
-325	"labour"	"Leicester East"	"eastmidlands"	47772	11722	25804	6817	676			281						2194			29.34
-326	"labour"	"Leicester South"	"eastmidlands"	46919	10066	21479	12671	676			281						1468			35.34
-327	"labour"	"Leicester West"	"eastmidlands"	35532	9728	13745	8107	676			281						2717			11.21
-328	"labour"	"Leigh"	"northwestengland"	44622	9284	21295	8049	1571			183						4169			27.09
-329	"libdems"	"Lewes"	"southeastengland"	51296	18401	2508	26048	2419			1516						674			15.27
-330	"labour"	"Lewisham East"	"london"	41732	9850	17966	11750	378			996						758			14.9
-331	"labour"	"Lewisham West and Penge"	"london"	44388	11489	18501	12673	378			996						317			12.94
-332	"labour"	"Lewisham, Deptford"	"london"	39856	5551	22132	9633	378			996						1132			30.32
-333	"labour"	"Leyton and Wanstead"	"london"	39834	8928	17511	11095	523			705						983			15.98
-334	"conservative"	"Lichfield"	"westmidlands"	51170	28048	10230	10365	2057			167						100			34.29
-335	"conservative"	"Lincoln"	"eastmidlands"	46230	17163	16105	9256	1044			265						2193			2.31
-336	"labour"	"Linlithgow and East Falkirk"	"scotland"	51774	6146	25634	6589	127	13081		93						100			24.4
-337	"labour"	"Liverpool, Riverside"	"northwestengland"	38387	4243	22998	8825	881			628						706			36.53
-338	"labour"	"Liverpool, Walton"	"northwestengland"	35052	2241	24709	4891	881			628						1596			57.72
-339	"labour"	"Liverpool, Wavertree"	"northwestengland"	38041	2830	20132	12965	881			628						499			18.9
-340	"labour"	"Liverpool, West Derby"	"northwestengland"	36306	3311	22953	4486	881			628						3941			51.61
-341	"labour"	"Livingston"	"scotland"	48160	5158	23215	5316	398	12424		292						1351			22.52
-342	"labour"	"Llanelli"	"wales"	37520	5381	15916	3902	855		11215	114						100			12.55
-343	"conservative"	"Loughborough"	"eastmidlands"	53486	21971	18227	9675	1185			218						2040			7.09
-344	"conservative"	"Louth and Horncastle"	"eastmidlands"	49912	25065	8760	11194	1417			93						3292			27.47
-345	"conservative"	"Ludlow"	"westmidlands"	48836	25720	3272	15971	1929			400						1195			20.01
-346	"labour"	"Luton North"	"eastofengland"	42611	13672	21192	4784	985			152						1316			17.48
-347	"labour"	"Luton South"	"eastofengland"	42522	12396	14725	9567	985			152						4187			5.52
-348	"conservative"	"Macclesfield"	"northwestengland"	49659	23503	10164	11544	1417			368						2590			23.89
-349	"conservative"	"Maidenhead"	"southeastengland"	53613	31937	3795	15168	881			263						1095			31.22
-350	"conservative"	"Maidstone and The Weald"	"southeastengland"	48963	23491	4769	17602	1731			274						774			12.04
-351	"labour"	"Makerfield"	"northwestengland"	45596	8210	20700	7082	1571			183						7779			28.53
-352	"conservative"	"Maldon"	"eastofengland"	47615	28661	6070	9254	1441			262						1464			40.52
-353	"labour"	"Manchester Central"	"northwestengland"	40551	4704	21059	10620	1069			1416						2022			59.68
-354	"labour"	"Manchester, Gorton"	"northwestengland"	39423	4224	19211	12508	1069			1416						1334			17.49
-355	"libdems"	"Manchester, Withington"	"northwestengland"	45681	5005	18216	20110	1069			1416						204			4.21
-356	"labour"	"Mansfield"	"eastmidlands"	47398	12741	18753	7469	1984			116						6447			12.42
-357	"conservative"	"Meon Valley"	"southeastengland"	51454	28818	3266	16693	730			529						971			23.66
-358	"conservative"	"Meriden"	"westmidlands"	52840	26956	10703	9278	1997			406						3169			31.16
-359	"labour"	"Merthyr Tydfil and Rhymney"	"wales"	31971	2412	14007	9951	611		1621	27						3213			12.64
-360	"conservative"	"Mid Bedfordshire"	"eastofengland"	54367	28815	8108	13663	2419			449						712			27.6
-361	"conservative"	"Mid Derbyshire"	"eastmidlands"	47562	22877	11585	9711	1124			159						1917			23.85
-362	"libdems"	"Mid Dorset and North Poole"	"southwestengland"	47857	20831	2748	21100	2669			375						100			0.57
-363	"conservative"	"Mid Norfolk"	"eastofengland"	48695	25123	8857	11267	1477			255						1261			27.29
-364	"conservative"	"Mid Sussex"	"southeastengland"	57661	28329	3689	20927	3154			1078						842			13.25
-365	"sinnfein"	"Mid Ulster"	"northernireland"	40842								4509	5826	5876	21239	397	2995			12.58
-366	"conservative"	"Mid Worcestershire"	"westmidlands"	50786	27770	7613	11906	3226			346						100			31.15
-367	"labour"	"Middlesbrough"	"northeastengland"	34037	6283	15351	6662	1961			151						3923			48.68
-368	"labour"	"Middlesbrough South and East Cleveland"	"northeastengland"	45499	16461	18138	7340	987			89						2394			3.63
-369	"labour"	"Midlothian"	"scotland"	39504	4661	18449	6711	278	8100		417						957			26.37
-370	"conservative"	"Milton Keynes North"	"southeastengland"	54284	23419	14458	11894	2178			572						1612			16.63
-371	"conservative"	"Milton Keynes South"	"southeastengland"	55386	23034	17833	9787	2178			572						1831			9.4
-372	"labour"	"Mitcham and Morden"	"london"	43740	11056	24722	5202	987			209						1579			31.2
-373	"conservative"	"Mole Valley"	"southeastengland"	53353	31263	3804	15610	1772			657						100			28.81
-374	"conservative"	"Monmouth"	"wales"	46447	22466	12041	9026	1344		1273	289						100			22.41
-375	"conservative"	"Montgomeryshire"	"wales"	33966	13976	2407	12792	907		2802	209						708			3.5
-376	"snp"	"Moray"	"scotland"	40638	10683	7007	5956	410	16273		324						100			13.63
-377	"conservative"	"Morecambe and Lunesdale"	"northwestengland"	42906	18035	17169	5791	1571			292						100			1.99
-378	"labour"	"Morley and Outwood"	"yorkshireandthehumber"	48723	17264	18365	8186	1268			147						3535			2.25
-379	"labour"	"Motherwell and Wishaw"	"scotland"	39704	3660	23910	3840	310	7104		209						609			42.96
-380	"snp"	"Na h-Eileanan an Iar"	"scotland"	14922	647	4838	1097	60	6723		56						1412			12.81
-381	"labour"	"Neath"	"wales"	37248	4847	17172	5535	755		7397	67						1342			26.33
-382	"conservative"	"New Forest East"	"southeastengland"	49343	26443	4915	15136	2215			473						100			22.6
-383	"conservative"	"New Forest West"	"southeastengland"	46579	27980	4666	11084	2215			473						100			35.52
-384	"conservative"	"Newark"	"eastmidlands"	50480	27590	11438	10246	855			103						100			19.13
-385	"conservative"	"Newbury"	"southeastengland"	59248	33057	2505	20809	1731			628						253			20.9
-386	"labour"	"Newcastle upon Tyne Central"	"northeastengland"	34209	6611	15694	8228	920			384						2302			21.86
-387	"labour"	"Newcastle upon Tyne East"	"northeastengland"	38594	6068	17043	12590	920			384						1519			11.77
-388	"labour"	"Newcastle upon Tyne North"	"northeastengland"	43716	7966	17950	14536	920			384						1890			7.77
-389	"labour"	"Newcastle-under-Lyme"	"westmidlands"	42907	14841	16393	8466	2803			324						100			3.59
-390	"labour"	"Newport East"	"wales"	34843	7918	12744	11094	907		724	76						1291			4.79
-391	"labour"	"Newport West"	"wales"	39198	12845	16389	6587	907		1122	76						1183			8.92
-392	"sinnfein"	"Newry and Armagh"	"northernireland"	44906								8558	10526	5764	18857	545	656			18.55
-393	"conservative"	"Newton Abbot"	"southwestengland"	47923	20774	3387	20251	2603			909						82			1.08
-394	"labour"	"Normanton, Pontefract and Castleford"	"yorkshireandthehumber"	47612	11314	22293	7585	1268			147						5047			23.74
-395	"dup"	"North Antrim"	"northernireland"	42397								4634	3738	19672	5265	1368	7720			29.62
-396	"labour"	"North Ayrshire and Arran"	"scotland"	46968	7212	21860	4630	549	11965		374						449			21.46
-397	"libdems"	"North Cornwall"	"southwestengland"	47478	19531	1971	22512	2062			718						530			6.36
-398	"libdems"	"North Devon"	"southwestengland"	50120	18484	2671	24305	2387			793						1444			11.34
-399	"conservative"	"North Dorset"	"southwestengland"	53140	27640	2910	20015	1528			456						218			14.08
-400	"other"	"North Down"	"northernireland"	32438								6817	680		250	1876	22815			42.9
-401	"labour"	"North Durham"	"northeastengland"	44104	8766	18539	10927	1417			196						4324			17.37
-402	"conservative"	"North East Bedfordshire"	"eastofengland"	55436	30989	8957	12047	1417			292						1265			34.1
-403	"conservative"	"North East Cambridgeshire"	"eastofengland"	52069	26862	9274	10437	2772			153						2500			31.55
-404	"labour"	"North East Derbyshire"	"eastmidlands"	47080	15503	17948	10947	3223			126						100			5.2
-405	"libdems"	"North East Fife"	"scotland"	39621	8715	6869	17763	284	5685		292						100			22.58
-406	"conservative"	"North East Hampshire"	"southeastengland"	53099	32075	5173	13478	1550			480						100			35.13
-407	"conservative"	"North East Hertfordshire"	"eastofengland"	49683	26995	8291	11801	1417			321						388			30.13
-408	"conservative"	"North East Somerset"	"southwestengland"	51196	21130	16216	11433	1731			292						100			9.6
-409	"conservative"	"North Herefordshire"	"westmidlands"	45896	24631	3373	14744	1643			513						586			20.78
-410	"libdems"	"North Norfolk"	"eastofengland"	50348	15928	2896	27554	3284			756						95			23.41
-411	"conservative"	"North Shropshire"	"westmidlands"	51307	26692	9406	10864	1929			400						1667			30.52
-412	"conservative"	"North Somerset"	"southwestengland"	58776	28549	6448	20687	2170			867						100			13.57
-413	"conservative"	"North Swindon"	"southwestengland"	50623	22408	15348	8668	1896			456						1542			14.04
-414	"conservative"	"North Thanet"	"southeastengland"	46523	22826	9298	8400	4000			628						100			31.21
-415	"labour"	"North Tyneside"	"northeastengland"	46763	8514	23505	10621	1478			292						2459			27.76
-416	"conservative"	"North Warwickshire"	"westmidlands"	47746	18993	18939	5481	1270			92						2517			0.11
-417	"conservative"	"North West Cambridgeshire"	"eastofengland"	56676	29425	9877	12748	2419			628						1407			28.61
-418	"labour"	"North West Durham"	"northeastengland"	47036	6146	20496	17429	1571			196						1325			6.63
-419	"conservative"	"North West Hampshire"	"southeastengland"	52801	31072	6980	12489	1731			209						100			34.87
-420	"conservative"	"North West Leicestershire"	"eastmidlands"	52725	23147	15636	8639	1720			193						3396			14.46
-421	"conservative"	"North West Norfolk"	"eastofengland"	48716	25916	6353	11106	3180			384						1839			30.98
-422	"conservative"	"North Wiltshire"	"southwestengland"	48880	25114	3239	17631	1796			647						208			15.37
-423	"conservative"	"Northampton North"	"eastmidlands"	40731	13735	11799	11250	1912			323						1806			4.81
-424	"conservative"	"Northampton South"	"eastmidlands"	38859	15917	9913	7579	1912			323						3309			15.4
-425	"conservative"	"Norwich North"	"eastofengland"	41046	17280	13379	7783	620			449						1008			9.16
-426	"libdems"	"Norwich South"	"eastofengland"	43305	10902	13650	13960	620			2942						799			0.65
-427	"labour"	"Nottingham East"	"eastmidlands"	32501	7846	15022	8053	818			408						125			21.05
-428	"labour"	"Nottingham North"	"eastmidlands"	34402	8508	16646	5849	818			408						1944			23.74
-429	"labour"	"Nottingham South"	"eastmidlands"	40647	13437	15209	9406	818			408						1140			4.34
-430	"conservative"	"Nuneaton"	"westmidlands"	47640	18536	16467	6846	2525			294						2797			4.63
-431	"labour"	"Ochil and South Perthshire"	"scotland"	50541	10342	19131	5754	398	13944		483						609			10.28
-432	"labour"	"Ogmore"	"wales"	34779	5398	18644	5260	696		3326	63						1242			38.23
-433	"conservative"	"Old Bexley and Sidcup"	"london"	45978	24625	8768	6996	3512			297						3200			34.86
-434	"labour"	"Oldham East and Saddleworth"	"northwestengland"	44774	11773	14186	14083	1764			209						2758			10.19
-435	"labour"	"Oldham West and Royton"	"northwestengland"	43497	10151	19503	8193	1764			209						3676			21.79
-436	"libdems"	"Orkney and Shetland"	"scotland"	18480	2032	2061	11989	105	2042		224						100			51.32
-437	"conservative"	"Orpington"	"london"	49277	29200	4400	12000	2419			628						1440			35.17
-438	"labour"	"Oxford East"	"southeastengland"	52739	9727	21938	17357	850			3824						189			8.87
-439	"conservative"	"Oxford West and Abingdon"	"southeastengland"	55440	23906	5999	23730	612			628						143			0.31
-440	"labour"	"Paisley and Renfrewshire North"	"scotland"	44281	6381	23613	4597	280	8333		263						783			34.96
-441	"labour"	"Paisley and Renfrewshire South"	"scotland"	40572	3979	23842	3812	280	7228		263						1137			41.54
-442	"conservative"	"Pendle"	"northwestengland"	45266	17512	13927	9095	1360			204						3035			7.96
-443	"labour"	"Penistone and Stocksbridge"	"yorkshireandthehumber"	45923	14516	17565	9800	1239			136						2699			6.55
-444	"conservative"	"Penrith and The Border"	"northwestengland"	44806	24071	5834	12830	472			220						1093			24.93
-445	"snp"	"Perth and North Perthshire"	"scotland"	48846	14739	7923	5954	284	19118		263						534			9.07
-446	"conservative"	"Peterborough"	"eastofengland"	45972	18133	13272	8816	4614			665						1176			10.82
-447	"labour"	"Plymouth Moor View"	"southwestengland"	41754	13845	15433	7016	3363			656						1646			3.82
-448	"conservative"	"Plymouth, Sutton and Devonport"	"southwestengland"	43950	15050	13901	10829	3363			656						356			2.62
-449	"labour"	"Pontypridd"	"wales"	36016	5932	14220	11435	730		2673	65						821			7.59
-450	"conservative"	"Poole"	"southwestengland"	48475	22532	6041	14991	2984			628						1365			15.9
-451	"labour"	"Poplar and Limehouse"	"london"	47503	12649	18679	5209	589			1416						9149			12.91
-452	"conservative"	"Portsmouth North"	"southeastengland"	44479	19533	12244	8874	1764			609						1194			16.52
-453	"other"	"Portsmouth South"	"southeastengland"	42857	13721	5640	18921	1764			609						1390			12.6
-454	"conservative"	"Preseli Pembrokeshire"	"wales"	39736	16944	12339	5759	755		3654	114						100			11.63
-455	"labour"	"Preston"	"northwestengland"	33295	7060	15668	7935	1929			453						380			23.79
-456	"conservative"	"Pudsey"	"yorkshireandthehumber"	49433	18874	17215	10224	1239			377						1549			3.38
-457	"conservative"	"Putney"	"london"	41102	21223	11170	6907	780			518						459			24.65
-458	"conservative"	"Rayleigh and Wickford"	"eastofengland"	52954	30257	7577	7919	2066			449						4379			42.68
-459	"conservative"	"Reading East"	"southeastengland"	50593	21269	12729	13664	1731			825						168			15.21
-460	"conservative"	"Reading West"	"southeastengland"	48214	20523	14519	9546	1670			909						852			12.63
-461	"libdems"	"Redcar"	"northeastengland"	41254	5790	13741	18955	987			89						1602			12.43
-462	"conservative"	"Redditch"	"westmidlands"	44293	19138	13317	7750	1642			126						1923			13.22
-463	"conservative"	"Reigate"	"southeastengland"	50688	26688	5672	13097	3056			1195						1345			27.19
-464	"labour"	"Rhondda"	"wales"	31649	1993	17183	3309	730		5630	65						2599			37.18
-465	"conservative"	"Ribble Valley"	"northwestengland"	50099	26298	11529	10732	871			184						232			28.25
-466	"conservative"	"Richmond (Yorks)"	"yorkshireandthehumber"	52803	33541	8150	10205	546			164						250			43.69
-467	"conservative"	"Richmond Park"	"london"	59782	29461	2979	25370	805			1085						217			6.9
-468	"labour"	"Rochdale"	"northwestengland"	45857	8305	16699	15810	1699			230						3094			1.94
-469	"ukip"	"Rochester and Strood"	"southeastengland"	46944	22000	10000	7800	8000			217						300			7.29
-470	"conservative"	"Rochford and Southend East"	"eastofengland"	40974	19509	8459	8084	1731			321						2467			26.54
-471	"conservative"	"Romford"	"london"	47277	26031	9077	5572	6038			352						3304			36.48
-472	"conservative"	"Romsey and Southampton North"	"southeastengland"	51177	24345	3116	20189	2893			792						100			8.49
-473	"libdems"	"Ross, Skye and Lochaber"	"scotland"	34842	4260	5265	18335	321	5263		400						1056			37.52
-474	"conservative"	"Rossendale and Darwen"	"northwestengland"	47422	19691	15198	8541	1417			449						2081			9.53
-475	"labour"	"Rother Valley"	"yorkshireandthehumber"	45939	13281	19147	8111	2066			136						3606			12.55
-476	"labour"	"Rotherham"	"yorkshireandthehumber"	37279	6279	16741	5994	2419			159						6272			24.79
-477	"conservative"	"Rugby"	"westmidlands"	49134	20901	14901	9434	1829			315						1375			12.64
-478	"conservative"	"Ruislip, Northwood and Pinner"	"london"	49477	28866	9806	8345	1297			222						1097			37.96
-479	"conservative"	"Runnymede and Weybridge"	"southeastengland"	46421	26915	6446	10406	1382			331						541			34.29
-480	"conservative"	"Rushcliffe"	"eastmidlands"	52820	27470	11128	11659	1889			980						100			29.45
-481	"labour"	"Rutherglen and Hamilton West"	"scotland"	46883	4540	28566	5636	339	7564		136						100			44.7
-482	"conservative"	"Rutland and Melton"	"eastmidlands"	54763	28228	7893	14228	1556			523						2345			25.35
-483	"conservative"	"Saffron Walden"	"eastofengland"	53812	30155	5288	14913	1507			455						1050			28.03
-484	"labour"	"Salford and Eccles"	"northwestengland"	42461	8497	16655	10930	1635			377						4367			13.78
-485	"conservative"	"Salisbury"	"southwestengland"	49271	23859	3690	17893	1796			647						1141			12.31
-486	"conservative"	"Scarborough and Whitby"	"yorkshireandthehumber"	49305	21108	12978	11093	2274			528						1885			16.5
-487	"labour"	"Scunthorpe"	"yorkshireandthehumber"	36876	12091	14640	6774	2066			263						1447			6.88
-488	"labour"	"Sedgefield"	"northeastengland"	40383	9445	18141	8033	1571			196						3124			21.62
-489	"labour"	"Sefton Central"	"northwestengland"	48143	16445	20307	9656	1297			312						100			7.97
-490	"conservative"	"Selby and Ainsty"	"yorkshireandthehumber"	51646	25562	13297	9180	1464			210						2054			23.71
-491	"conservative"	"Sevenoaks"	"southeastengland"	51104	28076	6541	10561	3130			525						2448			35.45
-492	"labour"	"Sheffield Brightside and Hillsborough"	"yorkshireandthehumber"	39578	4468	21400	7768	1667			1040						3682			35.03
-493	"labour"	"Sheffield Central"	"yorkshireandthehumber"	41520	4206	17138	16973	1667			1040						943			0.4
-494	"libdems"	"Sheffield Hallam"	"yorkshireandthehumber"	51281	12040	8228	27324	1667			1040						1429			29.89
-495	"labour"	"Sheffield Heeley"	"yorkshireandthehumber"	40612	7081	17409	11602	1667			1040						2260			14.21
-496	"labour"	"Sheffield South East"	"yorkshireandthehumber"	41779	7202	20169	9664	1667			1040						2484			25.37
-497	"conservative"	"Sherwood"	"eastmidlands"	48670	19211	18997	7283	855			103						1973			0.44
-498	"conservative"	"Shipley"	"yorkshireandthehumber"	49521	24002	14058	9890	1239			377						100			20.12
-499	"conservative"	"Shrewsbury and Atcham"	"westmidlands"	53531	23313	10915	15369	1929			400						1256			14.98
-500	"conservative"	"Sittingbourne and Sheppey"	"southeastengland"	52249	24313	11930	7943	8000			476						1782			25.49
-501	"conservative"	"Skipton and Ripon"	"yorkshireandthehumber"	55399	27685	5498	17735	2739			705						1897			18.18
-502	"conservative"	"Sleaford and North Hykeham"	"eastmidlands"	59795	30719	10051	10814	2488			266						5783			33.44
-503	"labour"	"Slough"	"southeastengland"	47600	16361	21884	6943	1279			216						495			11.57
-504	"libdems"	"Solihull"	"westmidlands"	56663	23460	4891	23635	1997			406						1943			0.32
-505	"libdems"	"Somerton and Frome"	"southwestengland"	62786	26976	2675	28793	2984			1884						236			3
-506	"dup"	"South Antrim"	"northernireland"	34009								10353	2955	11536	4729	2607	1829			3.48
-507	"conservative"	"South Basildon and East Thurrock"	"eastofengland"	48095	19624	13852	5977	3180			1776						2643			12.9
-508	"conservative"	"South Cambridgeshire"	"eastofengland"	60619	27995	6024	20157	2970			2041						1968			13.27
-509	"conservative"	"South Derbyshire"	"eastmidlands"	51191	22935	15807	8012	1865			174						2459			14.14
-510	"conservative"	"South Dorset"	"southwestengland"	51134	22667	15224	9557	2696			825						233			14.79
-511	"sdlp"	"South Down"	"northernireland"	41688								3093	20648	3645	12236	560	1506			19.75
-512	"conservative"	"South East Cambridgeshire"	"eastofengland"	56947	27629	4380	21683	1283			485						1006			10.32
-513	"conservative"	"South East Cornwall"	"southwestengland"	48642	22390	3507	19170	2062			718						641			6.49
-514	"conservative"	"South Holland and The Deepings"	"eastmidlands"	48531	29639	7024	7759	2569			107						1796			43.6
-515	"conservative"	"South Leicestershire"	"eastmidlands"	55303	27000	11392	11476	2791			416						2721			28.44
-516	"conservative"	"South Norfolk"	"eastofengland"	55920	27133	7252	16193	3140			1466						1086			19.89
-517	"conservative"	"South Northamptonshire"	"eastmidlands"	59050	33081	10380	12603	1980			411						735			34.19
-518	"conservative"	"South Ribble"	"northwestengland"	51968	23396	17842	7271	2302			339						1054			10.79
-519	"labour"	"South Shields"	"northeastengland"	36857	7886	18995	5189	1124			116						3500			26.3
-520	"conservative"	"South Staffordshire"	"westmidlands"	50023	26834	10244	8427	1731			209						2182			32.89
-521	"conservative"	"South Suffolk"	"eastofengland"	50863	24550	7368	15861	2141			704						100			16.9
-522	"conservative"	"South Swindon"	"southwestengland"	47128	19687	16143	8305	1896			456						336			7.52
-523	"conservative"	"South Thanet"	"southeastengland"	51379	22043	14426	6935	10000			352						100			16.58
-524	"conservative"	"South West Bedfordshire"	"eastofengland"	51701	26815	9948	10166	2419			449						1703			32.79
-525	"conservative"	"South West Devon"	"southwestengland"	48337	27908	6193	12034	1124			825						100			31.84
-526	"conservative"	"South West Hertfordshire"	"eastofengland"	59525	30773	6526	15853	3580			996						2148			26.29
-527	"conservative"	"South West Norfolk"	"eastofengland"	48881	23753	9119	10613	3180			518						1774			26.73
-528	"conservative"	"South West Surrey"	"southeastengland"	58268	33605	3419	17287	2075			1094						772			28.5
-529	"conservative"	"South West Wiltshire"	"southwestengland"	49022	25321	5613	14954	1796			647						446			21.15
-530	"labour"	"Southampton Itchen"	"southeastengland"	44644	16134	16326	9256	1772			776						168			0.43
-531	"labour"	"Southampton Test"	"southeastengland"	44340	14588	17001	9865	1772			776						126			5.46
-532	"conservative"	"Southend West"	"eastofengland"	43823	20086	5850	12816	1731			449						2496			16.67
-533	"libdems"	"Southport"	"northwestengland"	43241	15683	4116	21707	1297			312						100			13.77
-534	"conservative"	"Spelthorne"	"southeastengland"	46303	22261	7789	12242	2682			304						1003			21.18
-535	"conservative"	"St. Albans"	"eastofengland"	53769	21533	9288	19228	2301			1488						100			4.36
-536	"libdems"	"St. Austell and Newquay"	"southwestengland"	48415	18877	3386	20189	2062			718						3029			2.78
-537	"labour"	"St. Helens North"	"northwestengland"	43829	9940	23041	8992	933			201						483			29.4
-538	"labour"	"St. Helens South and Whiston"	"northwestengland"	46228	8209	24364	10242	933			201						2040			30.65
-539	"libdems"	"St. Ives"	"southwestengland"	44987	17900	3751	19619	2062			718						783			3.74
-540	"conservative"	"Stafford"	"westmidlands"	49948	22047	16587	8211	1417			136						1103			10.87
-541	"conservative"	"Staffordshire Moorlands"	"westmidlands"	42666	19793	13104	7338	1918			170						100			15.27
-542	"labour"	"Stalybridge and Hyde"	"northwestengland"	40301	13445	16189	6965	1041			183						2259			6.71
-543	"conservative"	"Stevenage"	"eastofengland"	44909	18491	14913	7432	1591			240						1811			8.01
-544	"labour"	"Stirling"	"scotland"	47124	11254	19558	6797	250	8091		681						746			17.73
-545	"labour"	"Stockport"	"northwestengland"	39296	9913	16697	9778	1400			183						1201			17.34
-546	"labour"	"Stockton North"	"northeastengland"	39397	10247	16923	6342	1387			118						4430			16.9
-547	"conservative"	"Stockton South"	"northeastengland"	50268	19577	19245	7600	1387			118						2391			0.66
-548	"labour"	"Stoke-on-Trent Central"	"westmidlands"	32647	6833	12605	7039	1041			68						4591			17.14
-549	"labour"	"Stoke-on-Trent North"	"westmidlands"	39290	9580	17815	7120	1041			68						3196			20.49
-550	"labour"	"Stoke-on-Trent South"	"westmidlands"	40068	11316	15446	6323	1041			68						5404			10.36
-551	"conservative"	"Stone"	"westmidlands"	45980	23890	9770	10598	1124			114						100			28.14
-552	"conservative"	"Stourbridge"	"westmidlands"	46985	20153	14989	7733	1731			137						1862			10.93
-553	"dup"	"Strangford"	"northernireland"	31943								9050	2164	14926	1161	2828	1814			18.08
-554	"conservative"	"Stratford-on-Avon"	"westmidlands"	49906	26052	4809	14706	1041			183						2602			22.45
-555	"labour"	"Streatham"	"london"	47994	8578	20037	16778	358			2105						583			6.96
-556	"labour"	"Stretford and Urmston"	"northwestengland"	43792	12886	21821	7601	706			368						178			19.9
-557	"conservative"	"Stroud"	"southwestengland"	58945	23679	22380	8955	2187			2649						116			2.24
-558	"conservative"	"Suffolk Coastal"	"eastofengland"	54894	25475	8812	16347	3332			1278						100			16.63
-559	"labour"	"Sunderland Central"	"northeastengland"	42787	12770	19495	7191	1297			136						1913			15.84
-560	"conservative"	"Surrey Heath"	"southeastengland"	52976	31326	5552	14037	1419			247						100			31.81
-561	"libdems"	"Sutton and Cheam"	"london"	48493	20548	3376	22156	987			209						1232			3.31
-562	"conservative"	"Sutton Coldfield"	"westmidlands"	50135	27303	10298	9117	909			229						1749			36.31
-563	"labour"	"Swansea East"	"wales"	33272	4823	16819	5981	1603		2181	268						1715			33.17
-564	"labour"	"Swansea West"	"wales"	36226	7407	12335	11831	1603		1437	268						1463			1.42
-565	"conservative"	"Tamworth"	"westmidlands"	45962	21238	15148	7516	1290			87						235			13.13
-566	"conservative"	"Tatton"	"northwestengland"	47089	24687	7803	10200	1417			368						2541			32.03
-567	"libdems"	"Taunton Deane"	"southwestengland"	59157	24538	2967	28531	2200			881						100			6.87
-568	"labour"	"Telford"	"westmidlands"	41344	14996	15974	6399	1635			406						1513			2.37
-569	"conservative"	"Tewkesbury"	"southwestengland"	53498	25472	6253	19162	1467			434						319			11.69
-570	"conservative"	"The Cotswolds"	"southwestengland"	53875	29075	5886	16211	1376			538						428			23.46
-571	"conservative"	"The Wrekin"	"westmidlands"	46380	21922	12472	8019	1635			406						1505			20.56
-572	"conservative"	"Thirsk and Malton"	"yorkshireandthehumber"	37580	20167	5169	8886	1603			591						1418			29.58
-573	"libdems"	"Thornbury and Yate"	"southwestengland"	49169	17916	3385	25032	1829			536						184			14.76
-574	"conservative"	"Thurrock"	"eastofengland"	49819	16869	16777	4901	9000			234						3884			0.2
-575	"conservative"	"Tiverton and Honiton"	"southwestengland"	54153	27614	4907	18294	2419			996						100			16.98
-576	"conservative"	"Tonbridge and Malling"	"southeastengland"	51999	29723	6476	11545	2929			533						895			35.43
-577	"labour"	"Tooting"	"london"	50647	19514	22038	7509	398			705						361			4.98
-578	"libdems"	"Torbay"	"southwestengland"	50486	19048	3231	23126	4297			612						709			8.29
-579	"labour"	"Torfaen"	"wales"	37673	7541	16847	6264	1288		2005	95						3683			24.72
-580	"conservative"	"Torridge and West Devon"	"southwestengland"	55176	25230	2917	22273	3180			1271						766			5.35
-581	"conservative"	"Totnes"	"southwestengland"	45974	21940	3538	17013	1124			825						1281			10.3
-582	"labour"	"Tottenham"	"london"	40475	6064	24128	7197	302			825						1852			41.61
-583	"conservative"	"Truro and Falmouth"	"southwestengland"	48933	20349	4697	19914	2062			718						1039			0.89
-584	"conservative"	"Tunbridge Wells"	"southeastengland"	50411	28302	5448	12726	2267			704						876			30.95
-585	"libdems"	"Twickenham"	"london"	59934	20343	4583	32483	805			1085						770			20.33
-586	"labour"	"Tynemouth"	"northeastengland"	52894	18121	23860	7845	1478			292						1404			10.9
-587	"dup"	"Upper Bann"	"northernireland"	41383								10639	5276	14000	10237	1231	100			8.12
-588	"conservative"	"Uxbridge and South Ruislip"	"london"	44728	21758	10542	8995	1297			222						2070			24.88
-589	"labour"	"Vale of Clwyd"	"wales"	35904	12508	15017	4472	659		2068	65						954			7.06
-590	"conservative"	"Vale of Glamorgan"	"wales"	48330	20341	16034	7403	1417		2667	263						236			8.85
-591	"labour"	"Vauxhall"	"london"	44501	9301	21498	10847	358			2105						837			24.66
-592	"labour"	"Wakefield"	"yorkshireandthehumber"	44944	15841	17454	7256	1268			147						3020			3.63
-593	"labour"	"Wallasey"	"northwestengland"	41967	13071	21578	5693	973			352						107			20.42
-594	"labour"	"Walsall North"	"westmidlands"	36440	12395	13385	4754	1509			78						3916			2.74
-595	"labour"	"Walsall South"	"westmidlands"	39423	14456	16211	5880	1509			78						886			4.29
-596	"labour"	"Walthamstow"	"london"	40721	5734	21252	11774	523			705						644			23.12
-597	"labour"	"Wansbeck"	"northeastengland"	37959	6714	17548	10517	987			183						1919			18.37
-598	"conservative"	"Wantage"	"southeastengland"	54991	29284	7855	15737	1124			591						100			24.04
-599	"labour"	"Warley"	"westmidlands"	37583	9484	20240	5929	1387			103						100			28.11
-600	"labour"	"Warrington North"	"northwestengland"	46132	13364	20135	9196	1603			277						1516			15.32
-601	"conservative"	"Warrington South"	"northwestengland"	54744	19641	18088	15094	1603			277						100			2.83
-602	"conservative"	"Warwick and Leamington"	"westmidlands"	50010	20876	17363	8977	1417			784						197			7.16
-603	"labour"	"Washington and Sunderland West"	"northeastengland"	37485	8157	19615	6382	1297			136						1913			30.69
-604	"conservative"	"Watford"	"eastofengland"	55159	19291	14750	17866	1122			401						1217			2.58
-605	"conservative"	"Waveney"	"eastofengland"	50959	20571	19802	6811	2968			745						106			1.5
-606	"conservative"	"Wealden"	"southeastengland"	54234	31090	5266	13911	3586			825						100			31.25
-607	"conservative"	"Weaver Vale"	"northwestengland"	44194	16953	15962	8196	1096			277						1523			2.25
-608	"conservative"	"Wellingborough"	"eastmidlands"	51173	24918	13131	8848	1382			137						2648			22.82
-609	"libdems"	"Wells"	"southwestengland"	56286	23760	4198	24560	2066			416						1004			1.43
-610	"conservative"	"Welwyn Hatfield"	"eastofengland"	49261	27894	10471	8010	1906			475						158			35.58
-611	"labour"	"Wentworth and Dearne"	"yorkshireandthehumber"	40109	7396	21316	6787	1417			114						3189			33.06
-612	"libdems"	"West Aberdeenshire and Kincardine"	"scotland"	45372	13678	6159	17362	302	7086		209						513			8.15
-613	"labour"	"West Bromwich East"	"westmidlands"	38896	10961	17657	4993	1387			103						3355			17.64
-614	"labour"	"West Bromwich West"	"westmidlands"	36535	10612	16263	4336	1387			103						3394			15.62
-615	"conservative"	"West Dorset"	"southwestengland"	57882	27287	3815	23364	2330			1314						100			6.84
-616	"labour"	"West Dunbartonshire"	"scotland"	42103	3242	25905	3434	235	8497		246						505			41.19
-617	"labour"	"West Ham"	"london"	46496	6888	29422	5392	418			352						3838			47.99
-618	"labour"	"West Lancashire"	"northwestengland"	48587	17540	21883	6573	2130			449						217			8.96
-619	"conservative"	"West Suffolk"	"eastofengland"	47339	24312	7089	11262	1731			209						2341			27.14
-620	"sinnfein"	"West Tyrone"	"northernireland"	37275								5281	5212	7365	18050	859	508			28.67
-621	"conservative"	"West Worcestershire"	"westmidlands"	53640	27213	3661	20459	1400			441						100			12.49
-622	"labour"	"Westminster North"	"london"	40030	15251	17377	5513	398			705						664			5.37
-623	"libdems"	"Westmorland and Lonsdale"	"northwestengland"	52886	18632	1158	30896	1479			888						250			23.82
-624	"conservative"	"Weston-Super-Mare"	"southwestengland"	54402	23356	5772	20665	2170			867						1517			5.1
-625	"labour"	"Wigan"	"northwestengland"	43449	10917	21404	6797	1571			183						2506			23.76
-626	"conservative"	"Wimbledon"	"london"	47234	23257	10550	11849	780			518						235			24.07
-627	"conservative"	"Winchester"	"southeastengland"	56522	27155	3051	24107	730			529						503			5.45
-628	"conservative"	"Windsor"	"southeastengland"	48966	30172	4910	11118	881			263						1148			38.42
-629	"labour"	"Wirral South"	"northwestengland"	40150	15745	16276	6611	973			352						100			1.33
-630	"conservative"	"Wirral West"	"northwestengland"	39991	16726	14290	6630	973			352						827			6.19
-631	"conservative"	"Witham"	"eastofengland"	43860	24448	8656	9252	855			136						100			32.45
-632	"conservative"	"Witney"	"southeastengland"	55478	33973	7511	11233	1069			628						666			39.36
-636	"conservative"	"Woking"	"southeastengland"	52993	26551	4246	19744	1352			464						248			12.9
-637	"conservative"	"Wokingham"	"southeastengland"	54966	28754	5516	15262	2066			384						2765			24.74
-638	"labour"	"Wolverhampton North East"	"westmidlands"	35439	11964	14448	4711	1124			87						2633			7.12
-639	"labour"	"Wolverhampton South East"	"westmidlands"	33715	9912	16505	5277	1124			87						338			19
-633	"conservative"	"Wolverhampton South West"	"westmidlands"	40356	16344	15653	6430	1124			87						246			1.72
-642	"conservative"	"Worcester"	"westmidlands"	49450	19358	16376	9525	1639			527						1620			6.09
-643	"labour"	"Workington"	"northwestengland"	40266	13290	17865	5318	1489			332						1910			11.65
-644	"labour"	"Worsley and Eccles South"	"northwestengland"	41676	13555	17892	6883	1635			377						1334			10.4
-645	"conservative"	"Worthing West"	"southeastengland"	48730	25416	5800	13687	2488			1199						300			23.88
-649	"labour"	"Wrexham"	"wales"	33204	8375	12161	8503	805		2029	74						1134			11.09
-646	"conservative"	"Wycombe"	"southeastengland"	48216	23423	8326	13863	1417			384						416			19.85
-634	"conservative"	"Wyre and Preston North"	"northwestengland"	51446	26877	10932	11033	2650			334						100			30.88
-640	"conservative"	"Wyre Forest"	"westmidlands"	52326	18793	7298	6040	2455			273						17270			5.19
-635	"labour"	"Wythenshawe and Sale East"	"northwestengland"	40652	10412	17987	9107	706			368						1840			37.54
-641	"libdems"	"Yeovil"	"southwestengland"	58321	18807	2991	31843	2791			825						1162			22.81
-647	"labour"	"Ynys Mon"	"wales"	34274	7744	11490	2592	907		9029	55						2388			7.14
-648	"labour"	"York Central"	"yorkshireandthehumber"	46110	12122	18573	11694	1014			2049						1325			13.88
-650	"conservative"	"York Outer"	"yorkshireandthehumber"	53689	22912	9108	19224	1014			449						956			6.92
+id	incumbent	seat	area	turnout2010	conservative	labour	libdems	ukip	snp	plaidcymru	green	uu	sdlp	dup	sinnfein	alliance	other	party	change	majority2010
+10	conservative	Amber Valley	eastmidlands	46524	17746	17210	6636	1124			159						3460			1.17
+15	labour	Ashfield	eastmidlands	49542	10698	16239	16047	2419			151						4279			0.4
+28	labour	Bassetlaw	eastmidlands	49961	16803	25018	5570	2205			156						407			16.57
+65	labour	Bolsover	eastmidlands	43573	10812	21994	6821	1029			76						2640			25.42
+70	conservative	Boston and Skegness	eastmidlands	45566	21325	8899	6371	10000			235						2449			28.81
+71	conservative	Bosworth	eastmidlands	55543	23132	8674	18100	2450			224						3270			9.27
+97	conservative	Broxtowe	eastmidlands	53634	20585	20196	8907	2236			581						1422			0.74
+125	conservative	Charnwood	eastmidlands	53316	26560	10536	11531	1185			218						3116			28.07
+132	labour	Chesterfield	eastmidlands	45664	7214	17891	17342	1583			233						1360			1.2
+151	labour	Corby	eastmidlands	59492	22886	22991	7834	3934			371						2525			21.84
+165	conservative	Daventry	eastmidlands	50622	29252	8168	10064	1712			244						1187			37.06
+168	labour	Derby North	eastmidlands	46476	14283	14896	12638	2070			310						2434			1.36
+169	labour	Derby South	eastmidlands	41592	11729	17851	8430	2070			310						1357			14.86
+170	conservative	Derbyshire Dales	eastmidlands	46053	24378	9061	10512	1207			512						278			29.64
+218	conservative	Erewash	eastmidlands	48607	18805	16304	8343	2338			279						2801			5.25
+233	conservative	Gainsborough	eastmidlands	49213	24266	7701	13707	1871			221						1512			21.44
+236	labour	Gedling	eastmidlands	49097	17962	19821	7350	2450			221						1598			3.86
+250	conservative	Grantham and Stamford	eastmidlands	54194	26552	9503	11726	3320			429						3414			28.08
+264	conservative	Harborough	eastmidlands	55560	26894	6981	17097	1731			384						2511			17.83
+284	conservative	High Peak	eastmidlands	49841	20587	15910	10993	1441			709						235			9.29
+308	conservative	Kettering	eastmidlands	49396	23247	14153	7498	1969			201						2430			19.21
+325	labour	Leicester East	eastmidlands	47772	11722	25804	6817	676			281						2194			29.34
+326	labour	Leicester South	eastmidlands	46919	10066	21479	12671	676			281						1468			35.34
+327	labour	Leicester West	eastmidlands	35532	9728	13745	8107	676			281						2717			11.21
+335	conservative	Lincoln	eastmidlands	46230	17163	16105	9256	1044			265						2193			2.31
+343	conservative	Loughborough	eastmidlands	53486	21971	18227	9675	1185			218						2040			7.09
+344	conservative	Louth and Horncastle	eastmidlands	49912	25065	8760	11194	1417			93						3292			27.47
+356	labour	Mansfield	eastmidlands	47398	12741	18753	7469	1984			116						6447			12.42
+361	conservative	Mid Derbyshire	eastmidlands	47562	22877	11585	9711	1124			159						1917			23.85
+384	conservative	Newark	eastmidlands	50480	27590	11438	10246	855			103						100			19.13
+404	labour	North East Derbyshire	eastmidlands	47080	15503	17948	10947	3223			126						100			5.2
+420	conservative	North West Leicestershire	eastmidlands	52725	23147	15636	8639	1720			193						3396			14.46
+423	conservative	Northampton North	eastmidlands	40731	13735	11799	11250	1912			323						1806			4.81
+424	conservative	Northampton South	eastmidlands	38859	15917	9913	7579	1912			323						3309			15.4
+427	labour	Nottingham East	eastmidlands	32501	7846	15022	8053	818			408						125			21.05
+428	labour	Nottingham North	eastmidlands	34402	8508	16646	5849	818			408						1944			23.74
+429	labour	Nottingham South	eastmidlands	40647	13437	15209	9406	818			408						1140			4.34
+480	conservative	Rushcliffe	eastmidlands	52820	27470	11128	11659	1889			980						100			29.45
+482	conservative	Rutland and Melton	eastmidlands	54763	28228	7893	14228	1556			523						2345			25.35
+497	conservative	Sherwood	eastmidlands	48670	19211	18997	7283	855			103						1973			0.44
+502	conservative	Sleaford and North Hykeham	eastmidlands	59795	30719	10051	10814	2488			266						5783			33.44
+509	conservative	South Derbyshire	eastmidlands	51191	22935	15807	8012	1865			174						2459			14.14
+514	conservative	South Holland and The Deepings	eastmidlands	48531	29639	7024	7759	2569			107						1796			43.6
+515	conservative	South Leicestershire	eastmidlands	55303	27000	11392	11476	2791			416						2721			28.44
+517	conservative	South Northamptonshire	eastmidlands	59050	33081	10380	12603	1980			411						735			34.19
+608	conservative	Wellingborough	eastmidlands	51173	24918	13131	8848	1382			137						2648			22.82
+26	conservative	Basildon and Billericay	eastofengland	45259	21922	9584	6538	7500			460						1934			29.68
+34	conservative	Bedford	eastofengland	46148	17546	16193	8957	1731			449						877			3
+78	conservative	Braintree	eastofengland	50554	25901	9780	9247	4286			870						1080			32.76
+83	conservative	Brentwood and Ongar	eastofengland	50505	28793	4992	11872	1903			274						2314			33.45
+93	conservative	Broadland	eastofengland	53750	24338	7287	17046	3545			1002						871			13.84
+96	conservative	Broxbourne	eastofengland	46401	26844	8040	6107	2236			152						2777			41.18
+103	conservative	Bury St. Edmunds	eastofengland	55859	27899	9776	15519	1731			554						100			21.08
+109	libdems	Cambridge	eastofengland	48476	12829	12174	19621	751			3185						507			13.55
+120	conservative	Castle Point	eastofengland	35804	19806	6609	4232	4000			196						2000			16.95
+123	conservative	Central Suffolk and North Ipswich	eastofengland	53166	27125	8636	13339	2314			1211						507			25.81
+128	conservative	Chelmsford	eastofengland	55845	25207	5980	20097	2791			384						1306			9.36
+142	ukip	Clacton	eastofengland	49502	20000	10799	5577	9000			667						2845			35.1
+147	libdems	Colchester	eastofengland	47119	15169	5680	22151	1731			1040						1095			15.13
+216	conservative	Epping Forest	eastofengland	48186	25148	6641	10017	3950			554						2267			32.48
+253	conservative	Great Yarmouth	eastofengland	46472	18571	14295	6188	3096			242						1521			9.93
+265	conservative	Harlow	eastofengland	47185	19691	14766	5990	2420			3662						1840			11.22
+270	conservative	Harwich and North Essex	eastofengland	46851	23001	9774	11554	612			159						1235			23.36
+275	conservative	Hemel Hempstead	eastofengland	50082	24721	10295	11315	1014			325						1886			27.1
+280	conservative	Hertford and Stortford	eastofengland	56356	29810	7620	14373	1731			591						1858			27.88
+281	conservative	Hertsmere	eastofengland	47317	26476	8871	8210	1620			316						1397			37.24
+285	conservative	Hitchin and Harpenden	eastofengland	54318	29869	7413	14598	1124			449						357			27.91
+293	conservative	Huntingdon	eastofengland	52324	26516	5982	15697	1417			114						2161			19.94
+299	conservative	Ipswich	eastofengland	48228	18371	16292	8556	2641			705						1582			4.43
+346	labour	Luton North	eastofengland	42611	13672	21192	4784	985			152						1316			17.48
+347	labour	Luton South	eastofengland	42522	12396	14725	9567	985			152						4187			5.52
+352	conservative	Maldon	eastofengland	47615	28661	6070	9254	1441			262						1464			40.52
+360	conservative	Mid Bedfordshire	eastofengland	54367	28815	8108	13663	2419			449						712			27.6
+363	conservative	Mid Norfolk	eastofengland	48695	25123	8857	11267	1477			255						1261			27.29
+402	conservative	North East Bedfordshire	eastofengland	55436	30989	8957	12047	1417			292						1265			34.1
+403	conservative	North East Cambridgeshire	eastofengland	52069	26862	9274	10437	2772			153						2500			31.55
+407	conservative	North East Hertfordshire	eastofengland	49683	26995	8291	11801	1417			321						388			30.13
+410	libdems	North Norfolk	eastofengland	50348	15928	2896	27554	3284			756						95			23.41
+417	conservative	North West Cambridgeshire	eastofengland	56676	29425	9877	12748	2419			628						1407			28.61
+421	conservative	North West Norfolk	eastofengland	48716	25916	6353	11106	3180			384						1839			30.98
+425	conservative	Norwich North	eastofengland	41046	17280	13379	7783	620			449						1008			9.16
+426	libdems	Norwich South	eastofengland	43305	10902	13650	13960	620			2942						799			0.65
+446	conservative	Peterborough	eastofengland	45972	18133	13272	8816	4614			665						1176			10.82
+458	conservative	Rayleigh and Wickford	eastofengland	52954	30257	7577	7919	2066			449						4379			42.68
+470	conservative	Rochford and Southend East	eastofengland	40974	19509	8459	8084	1731			321						2467			26.54
+483	conservative	Saffron Walden	eastofengland	53812	30155	5288	14913	1507			455						1050			28.03
+507	conservative	South Basildon and East Thurrock	eastofengland	48095	19624	13852	5977	3180			1776						2643			12.9
+508	conservative	South Cambridgeshire	eastofengland	60619	27995	6024	20157	2970			2041						1968			13.27
+512	conservative	South East Cambridgeshire	eastofengland	56947	27629	4380	21683	1283			485						1006			10.32
+516	conservative	South Norfolk	eastofengland	55920	27133	7252	16193	3140			1466						1086			19.89
+521	conservative	South Suffolk	eastofengland	50863	24550	7368	15861	2141			704						100			16.9
+524	conservative	South West Bedfordshire	eastofengland	51701	26815	9948	10166	2419			449						1703			32.79
+526	conservative	South West Hertfordshire	eastofengland	59525	30773	6526	15853	3580			996						2148			26.29
+527	conservative	South West Norfolk	eastofengland	48881	23753	9119	10613	3180			518						1774			26.73
+532	conservative	Southend West	eastofengland	43823	20086	5850	12816	1731			449						2496			16.67
+535	conservative	St. Albans	eastofengland	53769	21533	9288	19228	2301			1488						100			4.36
+543	conservative	Stevenage	eastofengland	44909	18491	14913	7432	1591			240						1811			8.01
+558	conservative	Suffolk Coastal	eastofengland	54894	25475	8812	16347	3332			1278						100			16.63
+574	conservative	Thurrock	eastofengland	49819	16869	16777	4901	9000			234						3884			0.2
+604	conservative	Watford	eastofengland	55159	19291	14750	17866	1122			401						1217			2.58
+605	conservative	Waveney	eastofengland	50959	20571	19802	6811	2968			745						106			1.5
+610	conservative	Welwyn Hatfield	eastofengland	49261	27894	10471	8010	1906			475						158			35.58
+619	conservative	West Suffolk	eastofengland	47339	24312	7089	11262	1731			209						2341			27.14
+631	conservative	Witham	eastofengland	43860	24448	8656	9252	855			136						100			32.45
+22	labour	Barking	london	45593	8073	24628	3719	2791			85						7306			36.51
+31	conservative	Battersea	london	49071	23103	17126	7176	780			518						323			12.25
+33	conservative	Beckenham	london	47764	27597	6893	9813	2419			628						1224			37.29
+39	libdems	Bermondsey and Old Southwark	london	45268	7638	13060	21590	339			931						1645			19.1
+42	labour	Bethnal Green and Bow	london	51689	7071	21784	10210	589			1416						10807			22.82
+45	conservative	Bexleyheath and Crayford	london	43643	21794	11450	5502	3512			297						2508			23.95
+80	libdems	Brent Central	london	45874	5067	18681	20026	439			653						881			2.97
+81	labour	Brent North	london	52412	16486	24514	8879	439			653						1314			15.35
+82	conservative	Brentford and Isleworth	london	53610	20022	18064	12718	1041			518						1311			3.64
+94	conservative	Bromley and Chislehurst	london	44216	23569	7295	9669	2419			628						1446			31.56
+107	labour	Camberwell and Peckham	london	46633	6080	27619	10432	339			931						1167			36.84
+119	libdems	Carshalton and Wallington	london	45396	16920	4015	22180	987			209						1100			11.46
+129	conservative	Chelsea and Fulham	london	39543	24093	7371	6473	302			321						770			41.96
+134	conservative	Chingford and Woodford Green	london	42640	22743	9780	7242	523			705						1558			30.07
+136	conservative	Chipping Barnet	london	50066	24700	12773	10202	1417			825						470			23.57
+139	conservative	Cities of London and Westminster	london	37427	19264	8188	7574	1124			1085						463			29.99
+157	conservative	Croydon Central	london	49735	19567	16688	6553	1268			554						5281			5.8
+158	labour	Croydon North	london	51414	12466	28947	7226	1268			554						1129			47.87
+159	conservative	Croydon South	london	54483	28684	11287	12866	1268			554						100			28.08
+162	labour	Dagenham and Rainham	london	43531	15183	17813	3806	1239			85						5565			5.95
+179	labour	Dulwich and West Norwood	london	47576	10684	22461	13096	339			931						100			19.42
+186	conservative	Ealing Central and Acton	london	46886	17944	14228	13041	501			554						485			7.87
+187	labour	Ealing North	london	47676	14722	24023	6283	501			554						1460			19.51
+188	labour	Ealing, Southall	london	43239	12733	22024	6383	501			554						911			21.73
+193	labour	East Ham	london	50743	7645	35471	5849	418			352						822			55.24
+210	labour	Edmonton	london	40072	12052	21665	4252	855			352						856			23.81
+213	labour	Eltham	london	42320	15753	17416	5299	1297			720						2066			3.96
+214	conservative	Enfield North	london	44273	18804	17112	5403	855			352						1707			3.81
+215	conservative	Enfield, Southgate	london	44462	21928	14302	6124	855			352						861			17.19
+219	labour	Erith and Thamesmead	london	43110	13365	19068	5116	2419			449						3466			13.43
+225	labour	Feltham and Heston	london	48509	16516	21174	6679	1041			518						2645			26.71
+228	conservative	Finchley and Golders Green	london	46629	21688	15879	8036	398			449						100			12.32
+254	labour	Greenwich and Woolwich	london	41920	10109	20262	7498	1297			720						2265			24.65
+256	labour	Hackney North and Stoke Newington	london	46161	6759	25553	11092	155			2049						951			31.11
+257	labour	Hackney South and Shoreditch	london	42520	5800	23888	9600	155			2049						1426			33.34
+262	labour	Hammersmith	london	48345	17261	20810	7567	1051			1492						567			7.48
+263	labour	Hampstead and Kilburn	london	52681	17290	17332	16491	398			449						542			0.08
+267	conservative	Harrow East	london	47621	21435	18032	6850	855			416						100			7.09
+268	labour	Harrow West	london	45841	16968	20111	7458	855			416						100			6.82
+273	labour	Hayes and Harlington	london	43652	12553	23377	3726	1297			222						2633			25.39
+277	conservative	Hendon	london	46459	19635	19529	5734	1268			449						100			0.23
+286	labour	Holborn and St. Pancras	london	53608	11134	25198	15256	398			449						994			18.19
+287	conservative	Hornchurch and Upminster	london	53154	27469	11098	7426	5553			368						4007			30.66
+288	libdems	Hornsey and Wood Green	london	55375	9174	18720	25595	398			1271						292			12.49
+295	conservative	Ilford North	london	46922	21506	16102	5966	1268			554						1702			11.49
+296	labour	Ilford South	london	50386	14014	25301	8679	1268			554						746			22.05
+301	labour	Islington North	london	43979	6339	24276	11875	730			754						100			27.83
+302	labour	Islington South and Finsbury	london	43633	8449	18407	14838	730			754						450			8.19
+307	conservative	Kensington	london	34479	17595	8979	6872	302			321						197			24.51
+310	libdems	Kingston and Surbiton	london	57894	20868	5337	28428	2265			1604						473			13.24
+330	labour	Lewisham East	london	41732	9850	17966	11750	378			996						758			14.9
+331	labour	Lewisham West and Penge	london	44388	11489	18501	12673	378			996						317			12.94
+332	labour	Lewisham, Deptford	london	39856	5551	22132	9633	378			996						1132			30.32
+333	labour	Leyton and Wanstead	london	39834	8928	17511	11095	523			705						983			15.98
+372	labour	Mitcham and Morden	london	43740	11056	24722	5202	987			209						1579			31.2
+433	conservative	Old Bexley and Sidcup	london	45978	24625	8768	6996	3512			297						3200			34.86
+437	conservative	Orpington	london	49277	29200	4400	12000	2419			628						1440			35.17
+451	labour	Poplar and Limehouse	london	47503	12649	18679	5209	589			1416						9149			12.91
+457	conservative	Putney	london	41102	21223	11170	6907	780			518						459			24.65
+467	conservative	Richmond Park	london	59782	29461	2979	25370	805			1085						217			6.9
+471	conservative	Romford	london	47277	26031	9077	5572	6038			352						3304			36.48
+478	conservative	Ruislip, Northwood and Pinner	london	49477	28866	9806	8345	1297			222						1097			37.96
+555	labour	Streatham	london	47994	8578	20037	16778	358			2105						583			6.96
+561	libdems	Sutton and Cheam	london	48493	20548	3376	22156	987			209						1232			3.31
+577	labour	Tooting	london	50647	19514	22038	7509	398			705						361			4.98
+582	labour	Tottenham	london	40475	6064	24128	7197	302			825						1852			41.61
+585	libdems	Twickenham	london	59934	20343	4583	32483	805			1085						770			20.33
+588	conservative	Uxbridge and South Ruislip	london	44728	21758	10542	8995	1297			222						2070			24.88
+591	labour	Vauxhall	london	44501	9301	21498	10847	358			2105						837			24.66
+596	labour	Walthamstow	london	40721	5734	21252	11774	523			705						644			23.12
+617	labour	West Ham	london	46496	6888	29422	5392	418			352						3838			47.99
+622	labour	Westminster North	london	40030	15251	17377	5513	398			705						664			5.37
+626	conservative	Wimbledon	london	47234	23257	10550	11849	780			518						235			24.07
+40	libdems	Berwick-upon-Tweed	northeastengland	38457	14116	5061	16806	987			183						1213			7
+56	labour	Bishop Auckland	northeastengland	41657	10805	16023	9189	1571			196						4000			12.68
+62	labour	Blaydon	northeastengland	46518	7159	22297	13180	1447			241						2277			20.3
+63	labour	Blyth Valley	northeastengland	38162	6412	17156	10488	987			183						2845			17.29
+141	labour	City of Durham	northeastengland	40557	8622	20698	8617	216			628						1686			29.48
+163	labour	Darlington	northeastengland	43263	13503	16891	10046	1446			191						1262			7.9
+189	labour	Easington	northeastengland	34923	4790	20579	5597	1571			196						2317			42.91
+235	labour	Gateshead	northeastengland	38380	5716	20712	8163	1447			241						2184			32.8
+269	labour	Hartlepool	northeastengland	37104	10758	16267	6533	1550			110						2002			14.41
+282	conservative	Hexham	northeastengland	44744	18795	8253	13007	987			183						3428			13.31
+290	labour	Houghton and Sunderland South	northeastengland	38417	8147	19137	5292	1297			136						4423			28.91
+304	labour	Jarrow	northeastengland	40071	8002	20910	7163	1124			116						2709			33.28
+367	labour	Middlesbrough	northeastengland	34037	6283	15351	6662	1961			151						3923			48.68
+368	labour	Middlesbrough South and East Cleveland	northeastengland	45499	16461	18138	7340	987			89						2394			3.63
+386	labour	Newcastle upon Tyne Central	northeastengland	34209	6611	15694	8228	920			384						2302			21.86
+387	labour	Newcastle upon Tyne East	northeastengland	38594	6068	17043	12590	920			384						1519			11.77
+388	labour	Newcastle upon Tyne North	northeastengland	43716	7966	17950	14536	920			384						1890			7.77
+401	labour	North Durham	northeastengland	44104	8766	18539	10927	1417			196						4324			17.37
+415	labour	North Tyneside	northeastengland	46763	8514	23505	10621	1478			292						2459			27.76
+418	labour	North West Durham	northeastengland	47036	6146	20496	17429	1571			196						1325			6.63
+461	libdems	Redcar	northeastengland	41254	5790	13741	18955	987			89						1602			12.43
+488	labour	Sedgefield	northeastengland	40383	9445	18141	8033	1571			196						3124			21.62
+519	labour	South Shields	northeastengland	36857	7886	18995	5189	1124			116						3500			26.3
+546	labour	Stockton North	northeastengland	39397	10247	16923	6342	1387			118						4430			16.9
+547	conservative	Stockton South	northeastengland	50268	19577	19245	7600	1387			118						2391			0.66
+559	labour	Sunderland Central	northeastengland	42787	12770	19495	7191	1297			136						1913			15.84
+586	labour	Tynemouth	northeastengland	52894	18121	23860	7845	1478			292						1404			10.9
+597	labour	Wansbeck	northeastengland	37959	6714	17548	10517	987			183						1919			18.37
+603	labour	Washington and Sunderland West	northeastengland	37485	8157	19615	6382	1297			136						1913			30.69
+35	alliance	Belfast East	northernireland	34488							100			18611	817	13139	1856			4.45
+36	dup	Belfast North	northernireland	36993									4544	17649	12588	1809	403			6.01
+37	sdlp	Belfast South	northernireland	33150				100			100	5910	14026	8100	100	5114	200			17.33
+38	sinnfein	Belfast West	northernireland	32133				100				1000	5261	2436	22840	596				57.18
+190	dup	East Antrim	northernireland	30502				100				7223	3000	13993		3377	1826			22.2
+196	dup	East Londonderry	northernireland	34950								6218	5399	12097	6742	1922	2572			15.32
+226	sinnfein	Fermanagh and South Tyrone	northernireland	46803								21300	3574		21304	437	188			0.01
+231	sdlp	Foyle	northernireland	37889				100				1221	16922	4489	12098	223	2936			12.73
+317	dup	Lagan Valley	northernireland	36540								7713	1835	18199	1465	4174	3154			28.7
+365	sinnfein	Mid Ulster	northernireland	40842				100				4509	5826	5876	21239	397	2995			12.58
+392	sinnfein	Newry and Armagh	northernireland	44906								13558	10526		18857	545	656			18.55
+395	dup	North Antrim	northernireland	42397								4634	3738	19672	5265	1368	7720			29.62
+400	other	North Down	northernireland	32438								6817	680		250	1876	22815			42.9
+506	dup	South Antrim	northernireland	34009								10353	2955	11536	4729	2607	1829			3.48
+511	sdlp	South Down	northernireland	41688								3093	20648	3645	12236	560	1506			19.75
+553	dup	Strangford	northernireland	31943								9050	2164	14926	1161	2828	1814			18.08
+587	dup	Upper Bann	northernireland	41383								10639	5276	14000	10237	1231	100			8.12
+620	sinnfein	West Tyrone	northernireland	37275								5281	5212	7365	18050	859	508			28.67
+8	conservative	Altrincham and Sale West	northwestengland	49136	24176	11073	12581	706			368						100			23.47
+17	labour	Ashton-under-Lyne	northwestengland	38189	9510	18604	5703	1041			183						2929			23.66
+25	labour	Barrow and Furness	northwestengland	43756	16018	21226	4424	634			79						1085			11.8
+46	labour	Birkenhead	northwestengland	36841	6687	22082	6554	973			352						150			43.58
+57	labour	Blackburn	northwestengland	46510	11895	21751	6918	1731			209						3993			21.66
+58	labour	Blackley and Broughton	northwestengland	35456	6260	18563	4861	1069			1416						3626			35.97
+59	conservative	Blackpool North and Cleveleys	northwestengland	40267	16964	14814	5400	997			103						1754			5.3
+60	labour	Blackpool South	northwestengland	35175	12597	14449	5082	997			103						1712			5.26
+66	labour	Bolton North East	northwestengland	43340	15786	19870	5624	1635			196						182			9.44
+67	labour	Bolton South East	northwestengland	39304	10148	18782	6289	1635			196						2207			21.8
+68	labour	Bolton West	northwestengland	47008	18235	18327	8177	1635			196						391			0.19
+69	labour	Bootle	northwestengland	40498	3678	27426	6245	1297			312						1414			51.31
+99	libdems	Burnley	northwestengland	42423	6950	13114	14932	1200			121						5920			4.34
+101	conservative	Bury North	northwestengland	45494	18070	15827	7645	1432			292						2137			4.99
+102	labour	Bury South	northwestengland	48572	16216	19508	8796	1432			292						2237			6.82
+116	conservative	Carlisle	northwestengland	42840	16589	15736	6567	1923			414						1725			2.02
+127	libdems	Cheadle	northwestengland	52789	21445	4920	24717	1400			183						100			6.23
+137	labour	Chorley	northwestengland	50118	18922	21515	6957	2218			353						359			5.21
+140	conservative	City of Chester	northwestengland	46590	18995	16412	8930	1096			277						693			5.52
+149	conservative	Congleton	northwestengland	50491	23250	8747	16187	1417			368						449			13.91
+150	labour	Copeland	northwestengland	42697	15866	19699	4365	947			102						1474			8.96
+156	conservative	Crewe and Nantwich	northwestengland	51528	23420	17374	7656	1417			368						1220			11.84
+167	labour	Denton and Reddish	northwestengland	37018	9360	19191	6727	1041			183						297			26.12
+204	conservative	Eddisbury	northwestengland	45043	23472	9794	10217	1096			277						100			29.19
+211	labour	Ellesmere Port and Neston	northwestengland	44174	15419	19750	6663	1096			277						782			9.79
+232	conservative	Fylde	northwestengland	42940	22826	8624	9641	1442			330						100			30.18
+234	labour	Garston and Halewood	northwestengland	42251	6908	25493	8616	544			124						268			39.41
+261	labour	Halton	northwestengland	41361	8339	23843	5718	1577			270						1563			37.51
+274	libdems	Hazel Grove	northwestengland	41540	14114	5234	20485	1400			183						100			15.18
+283	labour	Heywood and Middleton	northwestengland	46150	12528	18499	10474	1699			230						2700			2.17
+294	labour	Hyndburn	northwestengland	42562	14441	17531	5033	1633			147						3723			7.24
+316	labour	Knowsley	northwestengland	44479	4004	31650	5964	544			124						1895			57.52
+319	conservative	Lancaster and Fleetwood	northwestengland	42344	15404	15071	8167	1417			1776						1151			0.78
+328	labour	Leigh	northwestengland	44622	9284	21295	8049	1571			183						4169			27.09
+337	labour	Liverpool, Riverside	northwestengland	38387	4243	22998	8825	881			628						706			36.53
+338	labour	Liverpool, Walton	northwestengland	35052	2241	24709	4891	881			628						1596			57.72
+339	labour	Liverpool, Wavertree	northwestengland	38041	2830	20132	12965	881			628						499			18.9
+340	labour	Liverpool, West Derby	northwestengland	36306	3311	22953	4486	881			628						3941			51.61
+348	conservative	Macclesfield	northwestengland	49659	23503	10164	11544	1417			368						2590			23.89
+351	labour	Makerfield	northwestengland	45596	8210	20700	7082	1571			183						7779			28.53
+353	labour	Manchester Central	northwestengland	40551	4704	21059	10620	1069			1416						2022			59.68
+354	labour	Manchester, Gorton	northwestengland	39423	4224	19211	12508	1069			1416						1334			17.49
+355	libdems	Manchester, Withington	northwestengland	45681	5005	18216	20110	1069			1416						204			4.21
+377	conservative	Morecambe and Lunesdale	northwestengland	42906	18035	17169	5791	1571			292						100			1.99
+434	labour	Oldham East and Saddleworth	northwestengland	44774	11773	14186	14083	1764			209						2758			10.19
+435	labour	Oldham West and Royton	northwestengland	43497	10151	19503	8193	1764			209						3676			21.79
+442	conservative	Pendle	northwestengland	45266	17512	13927	9095	1360			204						3035			7.96
+444	conservative	Penrith and The Border	northwestengland	44806	24071	5834	12830	472			220						1093			24.93
+455	labour	Preston	northwestengland	33295	7060	15668	7935	1929			453						380			23.79
+465	conservative	Ribble Valley	northwestengland	50099	26298	11529	10732	871			184						232			28.25
+468	labour	Rochdale	northwestengland	45857	8305	16699	15810	1699			230						3094			1.94
+474	conservative	Rossendale and Darwen	northwestengland	47422	19691	15198	8541	1417			449						2081			9.53
+484	labour	Salford and Eccles	northwestengland	42461	8497	16655	10930	1635			377						4367			13.78
+489	labour	Sefton Central	northwestengland	48143	16445	20307	9656	1297			312						100			7.97
+518	conservative	South Ribble	northwestengland	51968	23396	17842	7271	2302			339						1054			10.79
+533	libdems	Southport	northwestengland	43241	15683	4116	21707	1297			312						100			13.77
+537	labour	St. Helens North	northwestengland	43829	9940	23041	8992	933			201						483			29.4
+538	labour	St. Helens South and Whiston	northwestengland	46228	8209	24364	10242	933			201						2040			30.65
+542	labour	Stalybridge and Hyde	northwestengland	40301	13445	16189	6965	1041			183						2259			6.71
+545	labour	Stockport	northwestengland	39296	9913	16697	9778	1400			183						1201			17.34
+556	labour	Stretford and Urmston	northwestengland	43792	12886	21821	7601	706			368						178			19.9
+566	conservative	Tatton	northwestengland	47089	24687	7803	10200	1417			368						2541			32.03
+593	labour	Wallasey	northwestengland	41967	13071	21578	5693	973			352						107			20.42
+600	labour	Warrington North	northwestengland	46132	13364	20135	9196	1603			277						1516			15.32
+601	conservative	Warrington South	northwestengland	54744	19641	18088	15094	1603			277						100			2.83
+607	conservative	Weaver Vale	northwestengland	44194	16953	15962	8196	1096			277						1523			2.25
+618	labour	West Lancashire	northwestengland	48587	17540	21883	6573	2130			449						217			8.96
+623	libdems	Westmorland and Lonsdale	northwestengland	52886	18632	1158	30896	1479			888						250			23.82
+625	labour	Wigan	northwestengland	43449	10917	21404	6797	1571			183						2506			23.76
+629	labour	Wirral South	northwestengland	40150	15745	16276	6611	973			352						100			1.33
+630	conservative	Wirral West	northwestengland	39991	16726	14290	6630	973			352						827			6.19
+643	labour	Workington	northwestengland	40266	13290	17865	5318	1489			332						1910			11.65
+644	labour	Worsley and Eccles South	northwestengland	41676	13555	17892	6883	1635			377						1334			10.4
+634	conservative	Wyre and Preston North	northwestengland	51446	26877	10932	11033	2650			334						100			30.88
+635	labour	Wythenshawe and Sale East	northwestengland	40652	10412	17987	9107	706			368						1840			37.54
+3	labour	Aberdeen North	scotland	38352	4666	16746	7001	302	8385		416						903			22.18
+4	labour	Aberdeen South	scotland	43685	8914	15722	12216	302	5102		416						1080			8.15
+5	labour	Airdrie and Shotts	scotland	36430	3133	20849	2898	310	8441		209						528			34.61
+11	snp	Angus	scotland	38122	11738	6535	4090	438	15020		314						100			8.65
+13	libdems	Argyll and Bute	scotland	45953	10861	10274	14292	404	8563		420						1217			7.59
+19	labour	Ayr, Carrick and Cumnock	scotland	46277	11721	21632	4264	170	8276		105						100			21.6
+21	snp	Banff and Buchan	scotland	39040	11841	5382	4365	302	15868		209						1010			10.47
+41	libdems	Berwickshire, Roxburgh and Selkirk	scotland	49407	16555	5003	22230	625	4497		612						134			11.58
+105	libdems	Caithness, Sutherland and Easter Ross	scotland	29431	3744	7081	11907	321	5516		400						520			16.78
+121	labour	Central Ayrshire	scotland	44299	8943	20950	5236	170	8364		105						422			27.34
+146	labour	Coatbridge, Chryston and Bellshill	scotland	42216	3374	27728	3519	310	7014		209						100			49.75
+160	labour	Cumbernauld, Kilsyth and Kirkintilloch East	scotland	41474	3407	23549	3924	127	9794		93						476			33.43
+180	labour	Dumfries and Galloway	scotland	52118	16501	23950	4608	372	6419		209						100			14.28
+181	conservative	Dumfriesshire, Clydesdale and Tweeddale	scotland	45895	17457	13263	9080	372	4945		209						510			9.14
+182	snp	Dundee East	scotland	40519	6177	13529	4285	138	15350		183						796			4.49
+183	labour	Dundee West	scotland	37508	3461	17994	4233	138	10716		183						722			19.6
+184	labour	Dunfermline and West Fife	scotland	48903	3305	22639	17169	284	5201		292						100			11.18
+192	libdems	East Dunbartonshire	scotland	48224	7431	16367	18551	427	5054		592						100			4.55
+195	labour	East Kilbride, Strathaven and Lesmahagow	scotland	51523	6613	26241	5052	339	11738		136						1302			28.47
+197	labour	East Lothian	scotland	49347	9661	21919	8288	350	7883		536						862			24.93
+198	labour	East Renfrewshire	scotland	51554	15567	25987	4720	387	4535		460						100			20.36
+205	labour	Edinburgh East	scotland	40758	4358	17314	7751	250	8133		1567						2309			23.03
+206	labour	Edinburgh North and Leith	scotland	48249	7079	17740	16016	250	4568		1567						1953			3.64
+207	labour	Edinburgh South	scotland	44694	9452	15215	14899	250	3354		1567						881			0.72
+208	labour	Edinburgh South West	scotland	46355	11026	19473	8194	250	5530		1567						1239			18.58
+209	libdems	Edinburgh West	scotland	47340	10767	12881	16684	250	6115		1567						100			8.19
+222	other	Falkirk	scotland	49818	5698	23207	5225	127	15364		93						100			15.45
+238	labour	Glasgow Central	scotland	30985	2158	15908	5010	233	5357		647						1901			34.5
+239	labour	Glasgow East	scotland	32606	1453	19797	1617	233	7957		647						1131			36.81
+240	labour	Glasgow North	scotland	30264	2089	13181	9283	233	3530		647						1530			13.16
+241	labour	Glasgow North East	scotland	30060	1569	20100	2262	233	4158		647						1320			54.21
+242	labour	Glasgow North West	scotland	36233	3537	19233	5622	233	5430		647						1760			38.25
+243	labour	Glasgow South	scotland	40745	4592	20736	4739	233	8078		647						1949			31.57
+244	labour	Glasgow South West	scotland	32432	2084	19863	2870	233	5192		647						1772			46.16
+245	labour	Glenrothes	scotland	40665	2922	25247	3108	284	8799		292						100			40.61
+247	libdems	Gordon	scotland	49349	9111	9811	17575	302	10827		209						1451			13.83
+297	labour	Inverclyde	scotland	37515	4502	20993	5007	198	6577		142						100			20.78
+298	libdems	Inverness, Nairn, Badenoch and Strathspey	scotland	47175	6278	10407	19172	321	8803		400						1852			18.61
+309	labour	Kilmarnock and Loudoun	scotland	47183	6592	24460	3419	349	12082		237						100			26.59
+315	labour	Kirkcaldy and Cowdenbeath	scotland	45631	4258	29559	4269	284	6550		292						406			50.24
+318	labour	Lanark and Hamilton East	scotland	46515	6981	23258	5249	339	9780		136						670			28.95
+336	labour	Linlithgow and East Falkirk	scotland	51774	6146	25634	6589	127	13081		93						100			24.4
+341	labour	Livingston	scotland	48160	5158	23215	5316	398	12424		292						1351			22.52
+369	labour	Midlothian	scotland	39504	4661	18449	6711	278	8100		417						957			26.37
+376	snp	Moray	scotland	40638	10683	7007	5956	410	16273		324						100			13.63
+379	labour	Motherwell and Wishaw	scotland	39704	3660	23910	3840	310	7104		209						609			42.96
+380	snp	Na h-Eileanan an Iar	scotland	14922	647	4838	1097	60	6723		56						1412			12.81
+396	labour	North Ayrshire and Arran	scotland	46968	7212	21860	4630	549	11965		374						449			21.46
+405	libdems	North East Fife	scotland	39621	8715	6869	17763	284	5685		292						100			22.58
+431	labour	Ochil and South Perthshire	scotland	50541	10342	19131	5754	398	13944		483						609			10.28
+436	libdems	Orkney and Shetland	scotland	18480	2032	2061	11989	105	2042		224						100			51.32
+440	labour	Paisley and Renfrewshire North	scotland	44281	6381	23613	4597	280	8333		263						783			34.96
+441	labour	Paisley and Renfrewshire South	scotland	40572	3979	23842	3812	280	7228		263						1137			41.54
+445	snp	Perth and North Perthshire	scotland	48846	14739	7923	5954	284	19118		263						534			9.07
+473	libdems	Ross, Skye and Lochaber	scotland	34842	4260	5265	18335	321	5263		400						1056			37.52
+481	labour	Rutherglen and Hamilton West	scotland	46883	4540	28566	5636	339	7564		136						100			44.7
+544	labour	Stirling	scotland	47124	11254	19558	6797	250	8091		681						746			17.73
+612	libdems	West Aberdeenshire and Kincardine	scotland	45372	13678	6159	17362	302	7086		209						513			8.15
+616	labour	West Dunbartonshire	scotland	42103	3242	25905	3434	235	8497		246						505			41.19
+6	conservative	Aldershot	southeastengland	45663	21203	5489	15617	1638			340						1034			12.31
+14	conservative	Arundel and South Downs	southeastengland	55054	32333	4835	15642	1417			449						100			29.81
+16	conservative	Ashford	southeastengland	55265	29878	9204	12581	3265			581						100			31.34
+18	conservative	Aylesbury	southeastengland	53112	27736	6695	15118	855			235						100			23.73
+20	conservative	Banbury	southeastengland	56048	29703	10773	11476	2778			970						524			32.41
+27	conservative	Basingstoke	southeastengland	51202	25590	10327	12414	1731			628						247			26.01
+32	conservative	Beaconsfield	southeastengland	50907	32053	6135	10271	1197			156						666			41.5
+44	conservative	Bexhill and Battle	southeastengland	57707	28147	6524	15267	2631			469						4649			23.6
+64	conservative	Bognor Regis and Littlehampton	southeastengland	47744	24087	6580	11024	5000			449						2125			27.88
+74	conservative	Bracknell	southeastengland	51784	27327	8755	11623	2116			461						1309			30.12
+87	conservative	Brighton Kemptown	southeastengland	40982	16217	14889	7691	661			1040						194			3.11
+88	green	Brighton Pavilion	southeastengland	42622	12275	14986	7159	635			12000						228			2.42
+98	other	Buckingham	southeastengland	30000													30000			26.54
+111	conservative	Canterbury	southeastengland	48688	22050	7940	16002	1417			825						173			12.29
+126	conservative	Chatham and Aylesford	southeastengland	44174	20230	14161	5832	1478			217						1874			13.85
+131	conservative	Chesham and Amersham	southeastengland	52531	31658	2942	14948	2171			690						100			31.86
+133	conservative	Chichester	southeastengland	56390	31427	5937	15550	2648			948						100			27.96
+155	conservative	Crawley	southeastengland	48032	21264	15336	6844	2001			259						2080			12.48
+164	conservative	Dartford	southeastengland	51184	24428	13800	7361	2699			229						2649			21.22
+176	conservative	Dover	southeastengland	52364	22174	16900	7962	3590			493						1602			10.47
+194	conservative	East Hampshire	southeastengland	52972	29137	4043	15640	2284			793						1020			26.3
+199	conservative	East Surrey	southeastengland	53401	31007	4925	14133	1916			347						805			30.88
+200	conservative	East Worthing and Shoreham	southeastengland	47190	23458	8087	12353	1281			275						389			22.95
+202	libdems	Eastbourne	southeastengland	53590	21223	2497	24658	2246			359						2441			6.59
+203	libdems	Eastleigh	southeastengland	56306	21102	5153	24866	4000			614						496			4.26
+217	conservative	Epsom and Ewell	southeastengland	54382	30868	6538	14734	1220			327						266			29.36
+220	conservative	Esher and Walton	southeastengland	55738	32134	5829	13541	2054			798						1256			34.09
+223	conservative	Fareham	southeastengland	54883	30037	7719	12945	3105			658						618			31.45
+224	conservative	Faversham and Mid Kent	southeastengland	46909	26250	7748	9162	2419			274						940			36.58
+229	conservative	Folkestone and Hythe	southeastengland	53664	26109	5719	15987	3639			740						1909			19.17
+237	conservative	Gillingham and Rainham	southeastengland	46992	21624	12944	8484	1478			217						1863			18.55
+248	conservative	Gosport	southeastengland	47122	24300	7944	9887	1666			247						2739			30.71
+251	conservative	Gravesham	southeastengland	47304	22956	13644	6293	2718			213						1470			19.69
+255	conservative	Guildford	southeastengland	57946	29618	2812	21836	2392			1092						280			14
+271	conservative	Hastings and Rye	southeastengland	50689	20468	18475	7825	1409			493						1649			4
+272	conservative	Havant	southeastengland	44833	22433	7777	10273	3122			614						809			27.7
+278	conservative	Henley	southeastengland	53802	30054	5835	13466	2302			1238						1020			30.99
+289	conservative	Horsham	southeastengland	55535	29447	4189	17987	2066			975						809			20.52
+291	conservative	Hove	southeastengland	47882	18294	16426	11240	647			825						85			3.75
+300	conservative	Isle of Wight	southeastengland	71473	32810	8169	22283	4239			1202						3636			14.98
+329	libdems	Lewes	southeastengland	51296	18401	2508	26048	2419			1516						674			15.27
+349	conservative	Maidenhead	southeastengland	53613	31937	3795	15168	881			263						1095			31.22
+350	conservative	Maidstone and The Weald	southeastengland	48963	23491	4769	17602	1731			274						774			12.04
+357	conservative	Meon Valley	southeastengland	51454	28818	3266	16693	730			529						971			23.66
+364	conservative	Mid Sussex	southeastengland	57661	28329	3689	20927	3154			1078						842			13.25
+370	conservative	Milton Keynes North	southeastengland	54284	23419	14458	11894	2178			572						1612			16.63
+371	conservative	Milton Keynes South	southeastengland	55386	23034	17833	9787	2178			572						1831			9.4
+373	conservative	Mole Valley	southeastengland	53353	31263	3804	15610	1772			657						100			28.81
+382	conservative	New Forest East	southeastengland	49343	26443	4915	15136	2215			473						100			22.6
+383	conservative	New Forest West	southeastengland	46579	27980	4666	11084	2215			473						100			35.52
+385	conservative	Newbury	southeastengland	59248	33057	2505	20809	1731			628						253			20.9
+406	conservative	North East Hampshire	southeastengland	53099	32075	5173	13478	1550			480						100			35.13
+414	conservative	North Thanet	southeastengland	46523	22826	9298	8400	4000			628						100			31.21
+419	conservative	North West Hampshire	southeastengland	52801	31072	6980	12489	1731			209						100			34.87
+438	labour	Oxford East	southeastengland	52739	9727	21938	17357	850			3824						189			8.87
+439	conservative	Oxford West and Abingdon	southeastengland	55440	23906	5999	23730	612			628						143			0.31
+452	conservative	Portsmouth North	southeastengland	44479	19533	12244	8874	1764			609						1194			16.52
+453	other	Portsmouth South	southeastengland	42857	13721	5640	18921	1764			609						1390			12.6
+459	conservative	Reading East	southeastengland	50593	21269	12729	13664	1731			825						168			15.21
+460	conservative	Reading West	southeastengland	48214	20523	14519	9546	1670			909						852			12.63
+463	conservative	Reigate	southeastengland	50688	26688	5672	13097	3056			1195						1345			27.19
+469	ukip	Rochester and Strood	southeastengland	46944	22000	10000	7800	8000			217						300			7.29
+472	conservative	Romsey and Southampton North	southeastengland	51177	24345	3116	20189	2893			792						100			8.49
+479	conservative	Runnymede and Weybridge	southeastengland	46421	26915	6446	10406	1382			331						541			34.29
+491	conservative	Sevenoaks	southeastengland	51104	28076	6541	10561	3130			525						2448			35.45
+500	conservative	Sittingbourne and Sheppey	southeastengland	52249	24313	11930	7943	8000			476						1782			25.49
+503	labour	Slough	southeastengland	47600	16361	21884	6943	1279			216						495			11.57
+523	conservative	South Thanet	southeastengland	51379	22043	14426	6935	10000			352						100			16.58
+528	conservative	South West Surrey	southeastengland	58268	33605	3419	17287	2075			1094						772			28.5
+530	labour	Southampton Itchen	southeastengland	44644	16134	16326	9256	1772			776						168			0.43
+531	labour	Southampton Test	southeastengland	44340	14588	17001	9865	1772			776						126			5.46
+534	conservative	Spelthorne	southeastengland	46303	22261	7789	12242	2682			304						1003			21.18
+560	conservative	Surrey Heath	southeastengland	52976	31326	5552	14037	1419			247						100			31.81
+576	conservative	Tonbridge and Malling	southeastengland	51999	29723	6476	11545	2929			533						895			35.43
+584	conservative	Tunbridge Wells	southeastengland	50411	28302	5448	12726	2267			704						876			30.95
+598	conservative	Wantage	southeastengland	54991	29284	7855	15737	1124			591						100			24.04
+606	conservative	Wealden	southeastengland	54234	31090	5266	13911	3586			825						100			31.25
+627	conservative	Winchester	southeastengland	56522	27155	3051	24107	730			529						503			5.45
+628	conservative	Windsor	southeastengland	48966	30172	4910	11118	881			263						1148			38.42
+632	conservative	Witney	southeastengland	55478	33973	7511	11233	1069			628						666			39.36
+636	conservative	Woking	southeastengland	52993	26551	4246	19744	1352			464						248			12.9
+637	conservative	Wokingham	southeastengland	54966	28754	5516	15262	2066			384						2765			24.74
+645	conservative	Worthing West	southeastengland	48730	25416	5800	13687	2488			1199						300			23.88
+646	conservative	Wycombe	southeastengland	48216	23423	8326	13863	1417			384						416			19.85
+29	libdems	Bath	southwestengland	47477	14768	3251	26651	612			2632						406			25.24
+72	conservative	Bournemouth East	southwestengland	43397	21320	5836	13592	1571			466						249			17.55
+73	conservative	Bournemouth West	southwestengland	41060	18808	6171	13225	1571			466						456			13.4
+85	conservative	Bridgwater and West Somerset	southwestengland	52668	24675	9332	15426	855			307						1597			16.97
+89	labour	Bristol East	southwestengland	44664	12749	16471	10993	589			1516						2491			8.27
+90	conservative	Bristol North West	southwestengland	50536	19115	13059	15841	544			1466						635			6.5
+91	labour	Bristol South	southwestengland	47840	11086	18600	13866	523			1670						2345			9.79
+92	libdems	Bristol West	southwestengland	54815	10169	15227	26593	302			3263						613			20.54
+108	conservative	Camborne and Redruth	southwestengland	42694	15969	6945	15903	2062			718						943			0.16
+122	conservative	Central Devon	southwestengland	53297	27737	3715	18507	2419			996						100			17.13
+130	libdems	Cheltenham	southwestengland	54499	21739	2703	26659	1807			1066						493			9.32
+135	libdems	Chippenham	southwestengland	52844	21500	3620	23970	1796			647						1066			4.72
+138	conservative	Christchurch	southwestengland	47038	27888	4849	12478	1144			180						100			31.18
+171	conservative	Devizes	southwestengland	46139	25519	4711	12514	1796			647						707			28.06
+191	conservative	East Devon	southwestengland	50659	25662	5721	16548	1731			825						100			17.17
+221	labour	Exeter	southwestengland	52929	17221	19942	10581	1997			1907						1781			5.21
+227	conservative	Filton and Bradley Stoke	southwestengland	49006	19686	12772	12197	1829			536						1699			14.31
+230	conservative	Forest of Dean	southwestengland	49655	22853	11789	10676	1849			661						100			22.69
+246	conservative	Gloucester	southwestengland	51559	20267	17847	9767	2482			483						564			4.77
+314	conservative	Kingswood	southwestengland	48647	19362	16917	8072	1829			536						1644			5.1
+362	libdems	Mid Dorset and North Poole	southwestengland	47857	20831	2748	21100	2669			375						100			0.57
+393	conservative	Newton Abbot	southwestengland	47923	20774	3387	20251	2603			909						82			1.08
+397	libdems	North Cornwall	southwestengland	47478	19531	1971	22512	2062			718						530			6.36
+398	libdems	North Devon	southwestengland	50120	18484	2671	24305	2387			793						1444			11.34
+399	conservative	North Dorset	southwestengland	53140	27640	2910	20015	1528			456						218			14.08
+408	conservative	North East Somerset	southwestengland	51196	21130	16216	11433	1731			292						100			9.6
+412	conservative	North Somerset	southwestengland	58776	28549	6448	20687	2170			867						100			13.57
+413	conservative	North Swindon	southwestengland	50623	22408	15348	8668	1896			456						1542			14.04
+422	conservative	North Wiltshire	southwestengland	48880	25114	3239	17631	1796			647						208			15.37
+447	labour	Plymouth Moor View	southwestengland	41754	13845	15433	7016	3363			656						1646			3.82
+448	conservative	Plymouth, Sutton and Devonport	southwestengland	43950	15050	13901	10829	3363			656						356			2.62
+450	conservative	Poole	southwestengland	48475	22532	6041	14991	2984			628						1365			15.9
+485	conservative	Salisbury	southwestengland	49271	23859	3690	17893	1796			647						1141			12.31
+505	libdems	Somerton and Frome	southwestengland	62786	26976	2675	28793	2984			1884						236			3
+510	conservative	South Dorset	southwestengland	51134	22667	15224	9557	2696			825						233			14.79
+513	conservative	South East Cornwall	southwestengland	48642	22390	3507	19170	2062			718						641			6.49
+522	conservative	South Swindon	southwestengland	47128	19687	16143	8305	1896			456						336			7.52
+525	conservative	South West Devon	southwestengland	48337	27908	6193	12034	1124			825						100			31.84
+529	conservative	South West Wiltshire	southwestengland	49022	25321	5613	14954	1796			647						446			21.15
+536	libdems	St. Austell and Newquay	southwestengland	48415	18877	3386	20189	2062			718						3029			2.78
+539	libdems	St. Ives	southwestengland	44987	17900	3751	19619	2062			718						783			3.74
+557	conservative	Stroud	southwestengland	58945	23679	22380	8955	2187			2649						116			2.24
+567	libdems	Taunton Deane	southwestengland	59157	24538	2967	28531	2200			881						100			6.87
+569	conservative	Tewkesbury	southwestengland	53498	25472	6253	19162	1467			434						319			11.69
+570	conservative	The Cotswolds	southwestengland	53875	29075	5886	16211	1376			538						428			23.46
+573	libdems	Thornbury and Yate	southwestengland	49169	17916	3385	25032	1829			536						184			14.76
+575	conservative	Tiverton and Honiton	southwestengland	54153	27614	4907	18294	2419			996						100			16.98
+578	libdems	Torbay	southwestengland	50486	19048	3231	23126	4297			612						709			8.29
+580	conservative	Torridge and West Devon	southwestengland	55176	25230	2917	22273	3180			1271						766			5.35
+581	conservative	Totnes	southwestengland	45974	21940	3538	17013	1124			825						1281			10.3
+583	conservative	Truro and Falmouth	southwestengland	48933	20349	4697	19914	2062			718						1039			0.89
+609	libdems	Wells	southwestengland	56286	23760	4198	24560	2066			416						1004			1.43
+615	conservative	West Dorset	southwestengland	57882	27287	3815	23364	2330			1314						100			6.84
+624	conservative	Weston-Super-Mare	southwestengland	54402	23356	5772	20665	2170			867						1517			5.1
+641	libdems	Yeovil	southwestengland	58321	18807	2991	31843	2791			825						1162			22.81
+1	labour	Aberavon	wales	31424	4411	16073	5034	755		2198	67						2753			35.66
+2	conservative	Aberconwy	wales	30228	10734	7336	5786	682		5341	60						137			11.34
+9	labour	Alyn and Deeside	wales	40097	12885	15804	7308	1096		1549	74						1368			7.31
+12	plaidcymru	Arfon	wales	26099	4416	7928	3666	398		9383	74						100			5.58
+61	labour	Blaenau Gwent	wales	32732	2265	16974	3285	682		1333	30						8050			32.46
+79	libdems	Brecon and Radnorshire	wales	38909	14182	4096	17929	907		989	209						432			9.65
+84	labour	Bridgend	wales	38455	11668	13931	8658	696		2269	63						1020			5.9
+104	labour	Caerphilly	wales	38947	6622	17377	5688	1041		6460	82						1635			27.8
+112	libdems	Cardiff Central	wales	36100	7799	10400	14976	755		1246	292						390			12.66
+113	conservative	Cardiff North	wales	47427	17860	17666	8724	755		1588	292						300			0.41
+114	labour	Cardiff South and Penarth	wales	43959	12553	17262	9875	755		1851	292						1129			27.44
+115	labour	Cardiff West	wales	40380	12143	16894	7186	755		2868	292						100			11.6
+117	plaidcymru	Carmarthen East and Dinefwr	wales	38739	8506	10065	4609	2066		13546	292						100			9.16
+118	conservative	Carmarthen West and South Pembrokeshire	wales	40843	16649	13226	4890	1571		4232	93						364			8.45
+124	libdems	Ceredigion	wales	37850	4421	2210	19139	644		10815	335						100			21.76
+144	labour	Clwyd South	wales	34747	10477	13311	5965	682		3009	56						1100			8.17
+145	conservative	Clwyd West	wales	38517	15833	9414	5801	1124		5864	114						335			16.84
+161	labour	Cynon Valley	wales	29810	3010	15681	4120	730		6064	65						100			32.19
+166	labour	Delyn	wales	37512	12811	15083	5747	1096		1844	74						844			6.14
+185	plaidcymru	Dwyfor Meirionnydd	wales	28972	6447	4021	3538	501		12814	103						1310			22.03
+249	labour	Gower	wales	41743	13333	16016	7947	398		2760	83						963			6.44
+303	labour	Islwyn	wales	34919	4854	17069	3597	1041		4518	82						3716			35.21
+342	labour	Llanelli	wales	37520	5381	15916	3902	855		11215	114						100			12.55
+359	labour	Merthyr Tydfil and Rhymney	wales	31971	2412	14007	9951	611		1621	27						3213			12.64
+374	conservative	Monmouth	wales	46447	22466	12041	9026	1344		1273	289						100			22.41
+375	conservative	Montgomeryshire	wales	33966	13976	2407	12792	907		2802	209						708			3.5
+381	labour	Neath	wales	37248	4847	17172	5535	755		7397	67						1342			26.33
+390	labour	Newport East	wales	34843	7918	12744	11094	907		724	76						1291			4.79
+391	labour	Newport West	wales	39198	12845	16389	6587	907		1122	76						1183			8.92
+432	labour	Ogmore	wales	34779	5398	18644	5260	696		3326	63						1242			38.23
+449	labour	Pontypridd	wales	36016	5932	14220	11435	730		2673	65						821			7.59
+454	conservative	Preseli Pembrokeshire	wales	39736	16944	12339	5759	755		3654	114						100			11.63
+464	labour	Rhondda	wales	31649	1993	17183	3309	730		5630	65						2599			37.18
+563	labour	Swansea East	wales	33272	4823	16819	5981	1603		2181	268						1715			33.17
+564	labour	Swansea West	wales	36226	7407	12335	11831	1603		1437	268						1463			1.42
+579	labour	Torfaen	wales	37673	7541	16847	6264	1288		2005	95						3683			24.72
+589	labour	Vale of Clwyd	wales	35904	12508	15017	4472	659		2068	65						954			7.06
+590	conservative	Vale of Glamorgan	wales	48330	20341	16034	7403	1417		2667	263						236			8.85
+649	labour	Wrexham	wales	33204	8375	12161	8503	805		2029	74						1134			11.09
+647	labour	Ynys Mon	wales	34274	7744	11490	2592	907		9029	55						2388			7.14
+7	conservative	Aldridge-Brownhills	westmidlands	39777	22913	7647	6833	1509			78						394			39.51
+47	labour	Birmingham Edgbaston	westmidlands	42038	15620	16894	6387	909			229						1469			3.06
+48	labour	Birmingham Erdington	westmidlands	36372	11592	14869	5742	909			229						2501			9.22
+49	labour	Birmingham Hall Green	westmidlands	49445	7320	16039	11988	909			229						12430			7.8
+50	labour	Birmingham Hodge Hill	westmidlands	43426	4936	22077	11775	909			229						2970			24.26
+51	labour	Birmingham Ladywood	westmidlands	35740	4277	19950	9845	909			229						100			28.2
+52	labour	Birmingham Northfield	westmidlands	41713	14059	16841	6550	909			229						2595			6.65
+53	labour	Birmingham Perry Barr	westmidlands	42038	8960	21142	9234	909			229						1034			28.32
+54	labour	Birmingham Selly Oak	westmidlands	46436	14468	17950	10371	909			229						1979			7.48
+55	libdems	Birmingham Yardley	westmidlands	41328	7836	13160	16162	909			229						2502			7.35
+95	conservative	Bromsgrove	westmidlands	51370	22558	11250	10124	2157			246						4748			21.9
+100	conservative	Burton	westmidlands	50998	22188	15884	7891	2206			161						2409			12.65
+110	conservative	Cannock Chase	westmidlands	46250	18271	15076	7732	1879			75						2900			7.01
+152	labour	Coventry North East	westmidlands	44024	9609	21384	7210	1153			269						3889			27.14
+153	labour	Coventry North West	westmidlands	46700	13648	19936	8344	1153			269						2840			13.51
+154	labour	Coventry South	westmidlands	45450	15352	19197	8278	1153			269						691			8.37
+177	labour	Dudley North	westmidlands	37583	14274	14923	4066	1731			137						2072			1.68
+178	conservative	Dudley South	westmidlands	37281	16450	12594	5989	1731			137						100			10.1
+258	conservative	Halesowen and Rowley Regis	westmidlands	43403	18115	16092	6515	1731			137						433			4.6
+279	conservative	Hereford and South Herefordshire	westmidlands	49305	22366	3506	19885	1643			513						986			5.13
+306	conservative	Kenilworth and Southam	westmidlands	48847	25945	6949	13393	1478			263						362			25.92
+334	conservative	Lichfield	westmidlands	51170	28048	10230	10365	2057			167						100			34.29
+345	conservative	Ludlow	westmidlands	48836	25720	3272	15971	1929			400						1195			20.01
+358	conservative	Meriden	westmidlands	52840	26956	10703	9278	1997			406						3169			31.16
+366	conservative	Mid Worcestershire	westmidlands	50786	27770	7613	11906	3226			346						100			31.15
+389	labour	Newcastle-under-Lyme	westmidlands	42907	14841	16393	8466	2803			324						100			3.59
+409	conservative	North Herefordshire	westmidlands	45896	24631	3373	14744	1643			513						586			20.78
+411	conservative	North Shropshire	westmidlands	51307	26692	9406	10864	1929			400						1667			30.52
+416	conservative	North Warwickshire	westmidlands	47746	18993	18939	5481	1270			92						2517			0.11
+430	conservative	Nuneaton	westmidlands	47640	18536	16467	6846	2525			294						2797			4.63
+462	conservative	Redditch	westmidlands	44293	19138	13317	7750	1642			126						1923			13.22
+477	conservative	Rugby	westmidlands	49134	20901	14901	9434	1829			315						1375			12.64
+499	conservative	Shrewsbury and Atcham	westmidlands	53531	23313	10915	15369	1929			400						1256			14.98
+504	libdems	Solihull	westmidlands	56663	23460	4891	23635	1997			406						1943			0.32
+520	conservative	South Staffordshire	westmidlands	50023	26834	10244	8427	1731			209						2182			32.89
+540	conservative	Stafford	westmidlands	49948	22047	16587	8211	1417			136						1103			10.87
+541	conservative	Staffordshire Moorlands	westmidlands	42666	19793	13104	7338	1918			170						100			15.27
+548	labour	Stoke-on-Trent Central	westmidlands	32647	6833	12605	7039	1041			68						4591			17.14
+549	labour	Stoke-on-Trent North	westmidlands	39290	9580	17815	7120	1041			68						3196			20.49
+550	labour	Stoke-on-Trent South	westmidlands	40068	11316	15446	6323	1041			68						5404			10.36
+551	conservative	Stone	westmidlands	45980	23890	9770	10598	1124			114						100			28.14
+552	conservative	Stourbridge	westmidlands	46985	20153	14989	7733	1731			137						1862			10.93
+554	conservative	Stratford-on-Avon	westmidlands	49906	26052	4809	14706	1041			183						2602			22.45
+562	conservative	Sutton Coldfield	westmidlands	50135	27303	10298	9117	909			229						1749			36.31
+565	conservative	Tamworth	westmidlands	45962	21238	15148	7516	1290			87						235			13.13
+568	labour	Telford	westmidlands	41344	14996	15974	6399	1635			406						1513			2.37
+571	conservative	The Wrekin	westmidlands	46380	21922	12472	8019	1635			406						1505			20.56
+594	labour	Walsall North	westmidlands	36440	12395	13385	4754	1509			78						3916			2.74
+595	labour	Walsall South	westmidlands	39423	14456	16211	5880	1509			78						886			4.29
+599	labour	Warley	westmidlands	37583	9484	20240	5929	1387			103						100			28.11
+602	conservative	Warwick and Leamington	westmidlands	50010	20876	17363	8977	1417			784						197			7.16
+613	labour	West Bromwich East	westmidlands	38896	10961	17657	4993	1387			103						3355			17.64
+614	labour	West Bromwich West	westmidlands	36535	10612	16263	4336	1387			103						3394			15.62
+621	conservative	West Worcestershire	westmidlands	53640	27213	3661	20459	1400			441						100			12.49
+638	labour	Wolverhampton North East	westmidlands	35439	11964	14448	4711	1124			87						2633			7.12
+639	labour	Wolverhampton South East	westmidlands	33715	9912	16505	5277	1124			87						338			19
+633	conservative	Wolverhampton South West	westmidlands	40356	16344	15653	6430	1124			87						246			1.72
+642	conservative	Worcester	westmidlands	49450	19358	16376	9525	1639			527						1620			6.09
+640	conservative	Wyre Forest	westmidlands	52326	18793	7298	6040	2455			273						17270			5.19
+23	labour	Barnsley Central	yorkshireandthehumber	36617	6388	17487	6394	1239			136						5005			51.73
+24	labour	Barnsley East	yorkshireandthehumber	37998	6329	18059	6969	1239			136						5298			28.89
+30	labour	Batley and Spen	yorkshireandthehumber	52513	17159	21565	8095	1635			666						3685			8.62
+43	conservative	Beverley and Holderness	yorkshireandthehumber	52518	25063	11224	12076	1896			277						2305			24.41
+75	libdems	Bradford East	yorkshireandthehumber	42028	10860	13272	13637	1239			377						2688			0.9
+76	labour	Bradford South	yorkshireandthehumber	38227	11060	15682	6948	1239			377						2966			12.16
+77	other	Bradford West	yorkshireandthehumber	49342	12638	18401	4732	1239			377						12000			30.9
+86	conservative	Brigg and Goole	yorkshireandthehumber	43511	19680	14533	6414	1268			159						1498			11.73
+106	conservative	Calder Valley	yorkshireandthehumber	51612	20397	13966	13037	1571			508						2349			12.42
+143	conservative	Cleethorpes	yorkshireandthehumber	43167	18939	14641	8192	1417			93						100			9.56
+148	conservative	Colne Valley	yorkshireandthehumber	55275	20440	14589	15603	1635			666						2634			8.75
+172	conservative	Dewsbury	yorkshireandthehumber	56017	18898	17372	9150	1635			666						8588			2.78
+173	labour	Don Valley	yorkshireandthehumber	43164	12877	16472	7422	1764			136						4755			8.28
+174	labour	Doncaster Central	yorkshireandthehumber	41962	10340	16569	8795	1764			136						4620			14.92
+175	labour	Doncaster North	yorkshireandthehumber	41324	8728	19637	6174	1764			136						5147			26.3
+201	conservative	East Yorkshire	yorkshireandthehumber	50200	24328	10401	10842	1896			277						2779			26.31
+212	conservative	Elmet and Rothwell	yorkshireandthehumber	56391	23778	19257	9109	1863			764						2052			8.1
+252	labour	Great Grimsby	yorkshireandthehumber	34170	10063	10777	7388	6000			159						2683			2.17
+259	labour	Halifax	yorkshireandthehumber	44764	14806	16278	8335	1571			508						3482			3.38
+260	conservative	Haltemprice and Howden	yorkshireandthehumber	50005	24486	7630	12884	2066			277						3068			23.81
+266	conservative	Harrogate and Knaresborough	yorkshireandthehumber	53897	24305	3413	23266	1571			449						1094			1.96
+276	labour	Hemsworth	yorkshireandthehumber	45213	10662	20506	5667	1268			147						7005			22.45
+292	labour	Huddersfield	yorkshireandthehumber	40892	11253	15725	10023	1635			666						1882			11.04
+305	conservative	Keighley	yorkshireandthehumber	47793	20003	17063	7059	1239			377						2097			6.16
+311	labour	Kingston upon Hull East	yorkshireandthehumber	32747	5667	16387	7790	1096			183						1595			25.15
+312	labour	Kingston upon Hull North	yorkshireandthehumber	32763	4365	13044	12403	1096			183						1643			1.93
+313	labour	Kingston upon Hull West and Hessle	yorkshireandthehumber	31125	6361	13378	7636	1096			183						2442			18.23
+320	labour	Leeds Central	yorkshireandthehumber	39589	7541	18434	7789	1863			764						3630			28.47
+321	labour	Leeds East	yorkshireandthehumber	40008	8763	19056	6618	1863			764						3376			27.22
+322	labour	Leeds North East	yorkshireandthehumber	48888	15742	20287	9310	1863			764						1354			9.56
+323	libdems	Leeds North West	yorkshireandthehumber	44570	11550	9132	20653	1863			764						1040			20.93
+324	labour	Leeds West	yorkshireandthehumber	37975	7641	16389	9373	1863			764						2377			18.1
+378	labour	Morley and Outwood	yorkshireandthehumber	48723	17264	18365	8186	1268			147						3535			2.25
+394	labour	Normanton, Pontefract and Castleford	yorkshireandthehumber	47612	11314	22293	7585	1268			147						5047			23.74
+443	labour	Penistone and Stocksbridge	yorkshireandthehumber	45923	14516	17565	9800	1239			136						2699			6.55
+456	conservative	Pudsey	yorkshireandthehumber	49433	18874	17215	10224	1239			377						1549			3.38
+466	conservative	Richmond (Yorks)	yorkshireandthehumber	52803	33541	8150	10205	546			164						250			43.69
+475	labour	Rother Valley	yorkshireandthehumber	45939	13281	19147	8111	2066			136						3606			12.55
+476	labour	Rotherham	yorkshireandthehumber	37279	6279	16741	5994	2419			159						6272			24.79
+486	conservative	Scarborough and Whitby	yorkshireandthehumber	49305	21108	12978	11093	2274			528						1885			16.5
+487	labour	Scunthorpe	yorkshireandthehumber	36876	12091	14640	6774	2066			263						1447			6.88
+490	conservative	Selby and Ainsty	yorkshireandthehumber	51646	25562	13297	9180	1464			210						2054			23.71
+492	labour	Sheffield Brightside and Hillsborough	yorkshireandthehumber	39578	4468	21400	7768	1667			1040						3682			35.03
+493	labour	Sheffield Central	yorkshireandthehumber	41520	4206	17138	16973	1667			1040						943			0.4
+494	libdems	Sheffield Hallam	yorkshireandthehumber	51281	12040	8228	27324	1667			1040						1429			29.89
+495	labour	Sheffield Heeley	yorkshireandthehumber	40612	7081	17409	11602	1667			1040						2260			14.21
+496	labour	Sheffield South East	yorkshireandthehumber	41779	7202	20169	9664	1667			1040						2484			25.37
+498	conservative	Shipley	yorkshireandthehumber	49521	24002	14058	9890	1239			377						100			20.12
+501	conservative	Skipton and Ripon	yorkshireandthehumber	55399	27685	5498	17735	2739			705						1897			18.18
+572	conservative	Thirsk and Malton	yorkshireandthehumber	37580	20167	5169	8886	1603			591						1418			29.58
+592	labour	Wakefield	yorkshireandthehumber	44944	15841	17454	7256	1268			147						3020			3.63
+611	labour	Wentworth and Dearne	yorkshireandthehumber	40109	7396	21316	6787	1417			114						3189			33.06
+648	labour	York Central	yorkshireandthehumber	46110	12122	18573	11694	1014			2049						1325			13.88
+650	conservative	York Outer	yorkshireandthehumber	53689	22912	9108	19224	1014			449						956			6.92

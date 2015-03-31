@@ -216,13 +216,13 @@ id	incumbent	seat	area	turnout2010	conservative	labour	libdems	ukip	snp	plaidcym
 317	dup	Lagan Valley	northernireland	36540								7713	1835	18199	1465	4174	3154			28.7
 365	sinnfein	Mid Ulster	northernireland	40842				100				4509	5826	5876	21239	397	2995			12.58
 392	sinnfein	Newry and Armagh	northernireland	44906								13558	10526		18857	545	656			18.55
-395	dup	North Antrim	northernireland	42397								4634	3738	19672	5265	1368	7720			29.62
-400	other	North Down	northernireland	32438								6817	680		250	1876	22815			42.9
+395	dup	North Antrim	northernireland	42397				100				4634	3738	19672	5265	1368	7720			29.62
+400	other	North Down	northernireland	32438							100	6817	680		250	1876	22815			42.9
 506	dup	South Antrim	northernireland	34009								10353	2955	11536	4729	2607	1829			3.48
 511	sdlp	South Down	northernireland	41688								3093	20648	3645	12236	560	1506			19.75
 553	dup	Strangford	northernireland	31943								9050	2164	14926	1161	2828	1814			18.08
 587	dup	Upper Bann	northernireland	41383								10639	5276	14000	10237	1231	100			8.12
-620	sinnfein	West Tyrone	northernireland	37275								5281	5212	7365	18050	859	508			28.67
+620	sinnfein	West Tyrone	northernireland	37275							100	5281	5212	7365	18050	859	508			28.67
 8	conservative	Altrincham and Sale West	northwestengland	49136	24176	11073	12581	706			368						100			23.47
 17	labour	Ashton-under-Lyne	northwestengland	38189	9510	18604	5703	1041			183						2929			23.66
 25	labour	Barrow and Furness	northwestengland	43756	16018	21226	4424	634			79						1085			11.8

@@ -15,7 +15,7 @@ for election projection
 	
 	
 - pagescripts are in /election2015/scripts/pagescripts
-- 
+ 
 	- main.js has functions for index and nowcast.html
 	 
 	- projection.js mostly does user input analysis	

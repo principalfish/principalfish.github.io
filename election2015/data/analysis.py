@@ -794,3 +794,17 @@ writenationaltotals()
 writeengland()
 writegreatbritain()
 writeregionaltotals()
+
+
+# console stuff
+close_seats = {}
+
+relevant_seats = []
+for seat in seats:
+    if seats[seat].majority < 1:
+        relevant_parties = []
+        for party in parties:
+            if seats[seat].partyinfo[party][6] > 20:
+                relevant_parties.append([party,seats[seat].partyinfo[party][6]])
+
+        close_seats[seat] = relevant_parties

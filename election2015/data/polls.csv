@@ -1,6 +1,9 @@
 pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu	weight	initialweight	area
 me	regional			11	2	2015	null	1000	137	300	90	30	30	400		0								
 me	regional			11	2	2015	null	1000	400	300	0	175	40		5	20								
+opinium	regional		03/04/2015	3	4	2015	England	1276	449	443	93	197	88			15								
+opinium	regional		03/04/2015	3	4	2015	Scotland	129	23	38	9	4	6	58		1								
+opinium	regional		03/04/2015	3	4	2015	Wales	64	23	19	6	13	3		5	0								
 survation	regional		03/04/2015	3	4	2015	London	122	31	51	14	24	2			0								
 survation	regional		03/04/2015	3	4	2015	East and West Midlands	156	60	46	7	34	9			1								
 survation	regional		03/04/2015	3	4	2015	North	226	70	89	16	43	8			2								

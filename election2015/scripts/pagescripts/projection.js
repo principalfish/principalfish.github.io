@@ -182,18 +182,26 @@ getInfoFromFiles();
 
 function userInputCheck(inputform, country){
 
+
   var otherPercentage = sumFormPercentages(inputform).toFixed(0);
 
   spanId = "#other" + country
 
-  $(spanId).html(otherPercentage);
 
+	if (otherPercentage < 0) {
+		$(spanId).html("< 0");
+	}
+
+	else {
+		$(spanId).html(otherPercentage);
+	}
 };
 
 
 function sumFormPercentages(inputform){
 
   var $form = $(inputform);
+
   var $sumpercentages = $form.find(".inputnumbers");
 
   var sum = 0
@@ -205,14 +213,10 @@ function sumFormPercentages(inputform){
     sum += value;
   });
 
-  if (sum > 100){
-     var otherPercentage = "< 0";
-     return otherPercentage
-  }
+	console.log(sum)
 
-  else
-    var otherPercentage = 100 - sum
-    return otherPercentage
+	var otherPercentage = 100 - sum
+	return otherPercentage
 }
 
 englandUserNumbers = {"conservative": 0, "labour" : 0, "libdems" :0, "ukip" : 0, "green": 0};
@@ -232,13 +236,13 @@ var regions = {
 };
 
 parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other"]
-
+25
 // if user input is NaN set to 0
 function analyseUserInput(inputform, region){
 
   var otherPercentage = sumFormPercentages(inputform);
 
-  if (otherPercentage == "< 0"){
+  if (otherPercentage < 0){
     alert("Percentages add up to more than 100, try again.");
   }
 

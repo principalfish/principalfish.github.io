@@ -213,8 +213,6 @@ function sumFormPercentages(inputform){
     sum += value;
   });
 
-	console.log(sum)
-
 	var otherPercentage = 100 - sum
 	return otherPercentage
 }

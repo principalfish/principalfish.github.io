@@ -236,7 +236,7 @@ var regions = {
 };
 
 parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other"]
-25
+
 // if user input is NaN set to 0
 function analyseUserInput(inputform, region){
 

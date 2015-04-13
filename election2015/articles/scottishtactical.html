@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+	<title>Scottish Tactical Voting</title>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
+  <link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
+	<link rel="shortcut icon" href="/img/logo.png">
+
+</head>
+
+<style>
+  #changes {
+    font-size: 1.35em;
+    border-collapse: collapse ;
+    text-align: center;
+  }
+
+  #changes td{
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+</style>
+
+<body>
+	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
+	<div id="wrapper">
+		<div id="top">
+			<h2>UK Election 2015</h2>
+			<script>
+			$(function(){
+				$("#menu").load("/menu.html")
+			});
+			</script>
+			<div id="menu">		</div>
+		</div>
+
+
+		<div id="main">
+			<div id="content">
+
+        <h4> Apr 13th 2015 </h4>
+
+        <h3> Scottish Tactical Voting </h3>
+          <p>At the time of writing, my <a href="/election2015/">model</a>
+            has the SNP getting 45 seats, Labour 11, Conservatives 2 and Liberal Democrats 1 in Scotland.
+          On April 10th, Yougov published a
+          <a href ="https://d25d2506sfb94s.cloudfront.net/cumulus_uploads/document/uaoy4ef6ez/Channel4_Scotland_Results_150409_Website.pdf">  survey of 1056 voters regarding tactical voting in Scotland.</a>
+          My model does not account for tactical voting so I decided to take a look at how much these numbers could affect the seat distribution.</p>
+          <p> I filtered Scottish seats for SNP seats with < 20% predicted majority. This was a total of 36 seats, 27 ex-Labour and 9 ex-Lib Dem.
+            I assume that tactical voting will tend back toward the incumbent MP.</p>
+
+          <h4>Table of Changes</h4>
+          <table id="changes">
+            <thead style = "font-size: 0.75em;">
+              <td> Party </td>
+              <td> 2010 seats </td>
+              <td> 2015 predicted seats</td>
+              <td> 2015 seats after tactical voting </td>
+              <td> Change from prediction  </td>
+
+            </thead>
+
+            <tr style="background: #FFFF00; color: #0000FF">
+              <td> SNP </td>
+              <td> 6 </td>
+              <td> 45</td>
+              <td> 29 </td>
+              <td> -16  </td>
+
+            </tr>
+
+            <tr style="background: #CC0000; color: white">
+              <td> Labour </td>
+              <td> 40 </td>
+              <td> 11</td>
+              <td> 22 </td>
+              <td> +11  </td>
+
+            </tr>
+
+            <tr style="background: #FF9900;">
+              <td> Liberal Democrats </td>
+              <td> 11 </td>
+              <td> 1 </td>
+              <td> 6 </td>
+              <td> +5 </td>
+            </tr>
+
+            <tr style="background: #0000FF; color: #FFFF00">
+              <td> Conservatives </td>
+              <td> 1 </td>
+              <td> 2 </td>
+              <td> 2 </td>
+              <td> 0  </td>
+
+            </tr>
+
+          </table>
+
+          <p> Click <a href="/election2015/articles/new_scotland.csv"> here</a> to download a full set of data. </p>
+					<p> See also:
+            <a href = "https://yougov.co.uk/news/2015/04/10/how-tactically-minded-scots-may-affect-election/"> Yougov analysis of its own poll </a> with similar, but smaller, changes predicted as a result of tactical voting.</p>
+
+
+
+          <h4> Labour/SNP Battleground </h4>
+          <p> In the poll, Yougov found that 44% of Conservatives and 50% of Liberal Democrats would vote Labour if they thought they could beat the SNP. 10% and 11% would switch to SNP.
+          <p> Of the 27 seats in the Labour/SNP battleground I found this caused 11 seats to stay Labour that I predicted would go to the SNP.<p>
+          <p> The largest predicted majority to fall was 7.57% in Ayr, Carrick and Cumnock. Previously I had SNP on 39.81%, Labour on 32.24%, Conservatives on 22.33% and LDs on 1.98%.
+            Labour picking up 44% of Conservative voters and 50% of LDs gave them a boost of 10.81%, up to 43.05%.  SNP pick up 2.45% to get to 42.26%, 0.79% behind the new Labour total.
+          </p>
+          <p> The other seats to stay Labour with tactical voting were Edinburgh South West, East Lothian, Aberdeen South, Glasgow North, Paisley and Renfrewshire North, Dumfries and Galloway, West Dunbartonshire, Motherwell and Wishaw, Paisley and Renfrewshire South and Edinburgh North and Leith.
+
+            Two seats were also very close (< 0.1% predicted SNP majority) - Glasgow Central and Central Ayrshire.</p>
+
+            <p>An interesting case is Dumfries and Galloway, I have had this as a close 3 way race since starting the model.
+            It was Labour vs Conservative in 2010 with a 14% Labour majority and I currently have it narrowly going to the SNP with Labour in 2nd and Conservatives close in 3rd.
+            A <a href = "http://lordashcroftpolls.com/2015/03/dumfries-galloway/">Lord Ashcroft poll in February</a> gave a similar result with the Conservatives in 2nd.
+            This seat has gone all 3 colours over the last two months of modelling. The tactical voting gives a 10% Labour majority due to picking up a lot of Conservative votes.
+            The Conservative percentage drops from 30.26% to 13.92%. In reality this may not happen, Conservatives may think they can win it and not tactically vote Labour at all, it will be an interesting one to watch on election night.</p>
+
+
+          <h4> Liberal Democrat/SNP Battleground </h4>
+          <p> The poll found 38% of Labour voters and 58% of Conservatives would switch to the Lib Dems if they thought they could beat the SNP. 27% and 11% would similarly switch to the SNP</p>
+          <p> Of the 9 seats in the Battleground I found 5 stayed Lib Dem due to tactical voting. The largest overturned majority was 10.07% in West Aberdeen.
+            The other seats to stay Lib Dem were Edinburgh West, North East Fife, East Dunbartonshire and Ross Skye and Lochaber. None of the other 4 were particularly close. </p>
+            <p> West Aberdeenshire is a interesting case as I currently have the Lib Dems in 3rd place there with 23.05% behind the Conservatives (26.82%) and SNP (36.89%), somewhat in line with the <a href = "http://lordashcroftpolls.com/2015/03/aberdeenshire-west-kincardine/">Ashcroft poll there in February.</a>
+              They gain a huge amount from Conservative tactical voting and actually overturn a 13.84% deficit to win. Similar to Dumfries and Galloway, this may not happen.
+
+
+          <h4> Conservative/SNP Battleground </h4>
+          <p> The poll found 31% and 39% of Labour and Lib Dems willing to vote Conservative and 30% and 21% willing to vote SNP. </p>
+          <p> SNP are not currently set to gain the only Conservative seat in Scotland, although it is very close.
+            According to the poll, tactical voting will help Conservatives hold on to Dumfriesshire, Clydesdale and Tweeddale.
+            It is unclear how it will affect Berwickshire, Roxburgh and Selkirk - a potential Conservative gain from Lib Dems with the SNP not too far behind in 3rd. </p>
+
+
+
+          <h4> Conclusion </h4>
+          <p> From this analysis, it appears tactical voting in Scotland could have a huge impact on the result. I currently have Labour on 292 and Lib Dems on 23 nationally.
+            With these changes they would end up on 303 and 28, giving them enough for a majority in coalition. </p>
+
+          <p> It is unclear as to what extent tactical voting is already accounted for in the polls. It is also unclear what will happen in 3 way races.
+            As such it is hard to say if the the full effect of tactical voting implied by the poll will occur.</p>
+
+
+
+			</div>
+		</div>
+
+		<div id="footer">
+				<p> Copyright 2015 principalfish.co.uk</p>
+		</div>
+
+	</div>
+
+
+
+</body>
+
+<footer>
+
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+		ga('create', 'UA-58696407-1', 'auto');
+		ga('send', 'pageview');
+	</script>
+</footer>

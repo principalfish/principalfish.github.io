@@ -118,7 +118,10 @@ with open("polls.csv", "rb") as csvfile:
             if item in parties:
                 if row[item] == "":
                     row[item] = 0
-                row[item] = 100 * int(row[item]) / float(row["total"])
+                if row["type"] == "regional":
+                    row[item] = 100 * int(row[item]) / float(row["total"])
+                else:
+                    row[item] = int(row[item])
 
         area = row["region"]
 

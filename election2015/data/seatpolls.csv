@@ -32,18 +32,21 @@ ashcroft	seat		05/02/2015	5	2	2015	Castle Point	1002	37	16	3	36	2			6
 ashcroft	seat		01/09/2014	1	9	2014	Cheadle	500	30	19	34	13	2			3						
 ashcroft	seat		01/11/2014	1	11	2014	Cheltenham	500	34	7	42	11	5			1						
 ashcroft	seat		01/09/2014	1	9	2014	Chippenham	500	39	14	24	16	6			1						
+ashcroft	seat		11/04/15	11	4	2015	Cleethorpes	524	38	36	6	15	3			1						
 ashcroft	seat		05/03/2015	5	3	2015	City of Chester	548	34	45	7	10	3			1						
 ashcroft	seat		17/01/2015	17	1	2015	Coatbridge, Chryston and Bellshill	1001	6	43	1	3	1	46		1						
 ashcroft	seat		14/11/2014	14	11	2014	Colchester	505	22	17	36	18	6			1						
 ashcroft	seat		12/02/2015	12	2	2015	Colne Valley	1000	33	32	12	11	10			2						
 ashcroft	seat		01/10/2014	1	10	2014	Corby	500	30	40	5	21	2			2						
-survation	seat		24/11/2013	24	11	2013	Crewe and Nantwich	313	33	46	6	11				5						
+ashcroft	seat		11/04/15	11	4	2015	Crewe and Nantwich	586	38	41	4	13	1			1						
 ashcroft	seat		12/03/2015	12	3	2015	Croydon Central	524	37	41	3	13	5			1						
 ashcroft	seat		22/01/2015	22	1	2015	Cumbernauld, Kilsyth and Kirkintilloch East	1000	6	34	2	3	3	52		1						
 ashcroft	seat		01/05/2014	1	5	2014	Derby North	500	23	44	12	17	2			2						
 ashcroft	seat		01/09/2014	1	9	2014	Dewsbury	500	30	40	4	18	6			3						
 ashcroft	seat		23/11/2014	23	11	2014	Doncaster North	725	13	55	4	25	2			2						
 ashcroft	seat		27/11/2014	27	11	2014	Dudley North	510	24	37	3	34				3						
+ashcroft	seat		11/04/15	11	4	2015	Dudley South	575	39	35	3	18	4									
+ashcroft	seat		11/04/15	11	4	2015	Dover	581	40	32	3	20	4									
 ashcroft	seat		26/02/2015	26	2	2015	Dumfries and Galloway	1000	30	28	2	4	2	34								
 ashcroft	seat		19/02/2015	19	2	2015	Dumfriesshire, Clydesdale and Tweeddale	1000	34	18	7	4	2	34		1						
 ashcroft	seat		30/01/2015	30	1	2015	Dundee West	1000	6	25	3	2	5	59		0						
@@ -55,6 +58,7 @@ ashcroft	seat		19/02/2015	19	2	2015	Edinburgh South West	1000	19	27	4	2	7	40
 ashcroft	seat		13/12/2014	13	12	2014	Elmet and Rothwell	570	39	35	6	16	3			1						
 ashcroft	seat		25/09/2014	25	9	2014	Enfield North	503	34	44	3	12	3			3						
 ashcroft	seat		01/10/2014	1	10	2014	Erewash	500	30	38	5	22	4			1						
+ashcroft	seat		11/04/15	11	4	2015	Finchley and Golders Green	609	41	43	6	6	4									
 survation	seat		04/04/2014	4	4	2014	Folkestone and Hythe	529	36	18	10	33	2			1						
 ashcroft	seat		10/01/2015	10	1	2015	Glasgow Central	1000	5	35	3	3	7	45		2						
 ashcroft	seat		08/01/2015	8	1	2015	Glasgow East	1001	4	37	1	4	2	51		2						
@@ -69,6 +73,7 @@ ashcroft	seat		27/11/2014	27	11	2014	Great Grimsby	448	20	35	8	34				4
 ashcroft	seat		16/07/2014	16	7	2014	Great Yarmouth	441	33	28	3	31	4			1						
 ashcroft	seat		05/03/2015	5	3	2015	Halesowen and Rowley Regis	563	37	39	4	15	3			2						
 ashcroft	seat		01/05/2014	1	5	2014	Halifax	500	26	43	8	18	2			3						
+ashcroft	seat		11/04/15	11	4	2015	Harlow	534	44	34	3	16	2			1						
 ashcroft	seat		03/08/2014	3	8	2014	Hampstead and Kilburn	570	30	47	13	2	6			1						
 ashcroft	seat		01/06/2014	1	6	2014	Harrogate and Knaresborough	500	41	11	24	16	8			0						
 ashcroft	seat		4/4/15	4	4	2015	Harrow East	582	39	43	6	9	2			1						
@@ -88,6 +93,7 @@ ashcroft	seat		4/4/15	4	4	2015	Loughborough	556	45	36	3	12	3			1
 ashcroft	seat		21/06/2014	21	6	2014	Manchester, Withington	1000	7	56	22	4	10			1						
 ashcroft	seat		01/09/2014	1	9	2014	Mid Dorset and North Poole	500	38	8	32	19	3			1						
 ashcroft	seat		4/4/15	4	4	2015	Morecambe and Lunesdale	601	36	42	5	12	5			1						
+ashcroft	seat		11/04/15	11	4	2015	Milton Keynes South	499	37	39	8	10	4			2						
 ashcroft	seat		01/05/2014	1	5	2014	Morley and Outwood	500	24	41	5	20	2			8						
 ashcroft	seat		22/01/2015	22	1	2015	Motherwell and Wishaw	1000	5	39	1	3	1	50		1						
 ashcroft	seat		01/06/2014	1	6	2014	Newton Abbot	500	39	13	20	20	7			1						
@@ -97,6 +103,7 @@ ashcroft	seat		01/10/2014	1	10	2014	Northampton North	500	31	35	9	22	2			1
 ashcroft	seat		05/02/2015	5	2	2015	North East Cambridgeshire	1000	46	17	7	25	4			1						
 ashcroft	seat		28/06/2014	28	6	2014	North Warwickshire	1000	30	41	2	22	2			2						
 ashcroft	seat		12/02/2015	12	2	2015	Norwich North	1000	34	35	5	16	10									
+ashcroft	seat		11/04/15	11	4	2015	North East Somerset	601	44	28	8	10	8			1						
 ashcroft	seat		21/06/2014	21	6	2014	Norwich South	1000	18	33	12	15	20			1						
 ashcroft	seat		05/03/2015	5	3	2015	Nuneaton	533	34	39	4	14	8			1						
 ashcroft	seat		01/09/2014	1	9	2014	Oxford West and Abingdon	550	38	18	30	9	4									
@@ -107,6 +114,7 @@ ashcroft	seat		01/12/2014	1	12	2014	Plymouth Moor View	500	36	35	5	30	2			1
 ashcroft	seat		23/07/2014	23	7	2014	Plymouth, Sutton and Devonport	506	26	39	6	21	8			1						
 ashcroft	seat		06/11/2014	6	11	2014	Portsmouth South	555	30	20	25	17	6			1						
 ashcroft	seat		06/09/2014	6	9	2014	Redcar	1000	12	44	18	23	2			1						
+ashcroft	seat		11/04/15	11	4	2015	Rossendale and Darwen	541	42	42	4	8	2			1						
 ashcroft	seat		26/02/2015	26	2	2015	Ross, Skye and Lochaber	1000	8	9	35	3	5	40		1						
 ashcroft	seat		29/11/2014	29	11	2014	Rother Valley	480	18	40	4	34	3			2						
 ashcroft	seat		28/03/2015	28	3	2015	Sheffield Hallam	641	16	36	34	7	6			1						
@@ -116,6 +124,7 @@ ashcroft	seat		01/09/2014	1	9	2014	Somerton and Frome	500	41	9	27	17	5			1
 ashcroft	seat		05/02/2015	5	2	2015	South Basildon and East Thurrock	1001	35	28	3	29	3			1						
 ashcroft	seat		12/03/2015	12	3	2015	South Swindon	519	37	37	5	16	4			1						
 comres	seat		18/03/2015	18	3	2015	South Thanet	737	31	29	5	30	3			2						
+ashcroft	seat		11/04/15	11	4	2015	South Ribble	591	39	39	8	12	2			1						
 survation	seat		05/12/2014	5	12	2014	South West Surrey	587	57	11	8	15	7			1						
 ashcroft	seat		01/11/2014	1	11	2014	Southport	500	24	14	37	21	2			1						
 ashcroft	seat		07/03/2015	7	3	2015	Southampton Itchen	539	31	39	7	17	5									

@@ -320,7 +320,6 @@ function piechart(d){
 
 	var data = [];
 
-	console.log(d.properties.name)
 	relevant_party_info = seatData[d.properties.name]["party_info"]
 	$.each(relevant_party_info, function(d){
 		votes = relevant_party_info[d]["vote_percentage"]
@@ -394,6 +393,7 @@ function loadmap(){
 			.data(topojson.feature(uk, uk.objects.projection).features)
 			.enter().append("path")
 			.attr("class", function(d) {
+			
 				if (seatData[d.properties.name]["seat_info"]["winning_party"] != undefined){
 					return "map " + seatData[d.properties.name]["seat_info"]["winning_party"] ;}
 				else{
@@ -522,9 +522,13 @@ function getSeatInfo(data){
 	})
 
 	loadmap()
+	//getVoteTotals()
+
+	//
 }
 
-//empty arrays for csv data for each regional vote total
+//empty arrays for data for each regional vote total
+
 nationalVoteTotals = [];
 greatbritainVoteTotals = [];
 englandVoteTotals = [];
@@ -541,33 +545,13 @@ southeastenglandVoteTotals = [];
 southwestenglandVoteTotals = [];
 londonVoteTotals = [];
 
-// collects great britain vote totals from csv and displays it
-function getVoteTotalsInitial(data, region) {
+// function to populate above arrays
+// regions_in_uk = ["london", "southeastengland", "southwestengland", "westmidlands", "northwestengland", "northeastengland",
+// 								"yorkshireandthehumber", "eastmidlands", "eastofengland", "scotland", "wales", "northernireland"]
 
-	$.each(data, function(i){
-		var info = {};
-		info["code"] = data[i].code
-		info["seats"] = data[i].seats
-		info["change"] = data[i].change
-		info["votepercent"] = data[i].votepercent
-		info["votepercentchange"] = data[i].votepercentchange
-		nationalVoteTotals.push(info);
-	});
+//initiate data accrual + map load
+getSeatInfo();
 
-	displayVoteTotals(nationalVoteTotals)
-}
-
-// aSync callback function for csv files
-function parseData(url, callBack) {
-	Papa.parse(url, {
-		download: true,
-		header: true,
-		dynamicTyping: true,
-		complete: function(results) {
-			callBack(results.data, url);
-		}
-	});
-}
 
 //user eslect region vote totals
 function selectAreaInfo(value){
@@ -588,119 +572,3 @@ function selectAreaInfo(value){
 	if (value == "westmidlands") {displayVoteTotals(westmidlandsVoteTotals)};
 	if (value == "greatbritain") {displayVoteTotals(greatbritainVoteTotals)};
 }
-
-// get national vote totals  and display it on page load
-function getVoteTotalsInitial(data, region) {
-
-	$.each(data, function(i){
-		var info = {};
-		info["code"] = data[i].code
-		info["seats"] = data[i].seats
-		info["change"] = data[i].change
-		info["votepercent"] = data[i].votepercent
-		info["votepercentchange"] = data[i].votepercentchange
-		nationalVoteTotals.push(info);
-	});
-
-	displayVoteTotals(nationalVoteTotals)
-}
-
-// most csv file data collection happens in projection.js or nowcast.js duie to difference in data/file names
-
-
-//for use purely in user input calculations
-previousTotals = {};
-previousPercentages = {};
-
-// get vote totals for dual purpose of displaying on page on user select and use in user input calculation
-function getVoteTotals(data, region) {
-		region = region.slice(8)
-
-		$.each(data, function(i){
-			var info = {};
-			info["code"] = data[i].code;
-			info["seats"] = data[i].seats;
-			info["change"] = data[i].change;
-			info["votepercent"] = data[i].votepercent;
-			info["votepercentchange"] = data[i].votepercentchange;
-
-
-		if (region == "greatbritain.csv")
-			greatbritainVoteTotals.push(info)
-
-		if (region == "england.csv")
-			englandVoteTotals.push(info)
-
-		if (region == "scotland.csv")
-			scotlandVoteTotals.push(info)
-
-		if (region == "wales.csv")
-			walesVoteTotals.push(info)
-
-		if (region == "northernireland.csv")
-			northernirelandVoteTotals.push(info)
-
-		if (region == "eastofengland.csv")
-			eastofenglandVoteTotals.push(info)
-
-		if (region == "northeastengland.csv")
-			northeastenglandVoteTotals.push(info)
-
-		if (region == "northwestengland.csv")
-			northwestenglandVoteTotals.push(info)
-
-		if (region == "southeastengland.csv")
-			southeastenglandVoteTotals.push(info)
-
-		if (region == "southwestengland.csv")
-			southwestenglandVoteTotals.push(info)
-
-		if (region == "london.csv")
-			londonVoteTotals.push(info)
-
-		if (region == "eastmidlands.csv")
-			eastmidlandsVoteTotals.push(info)
-
-		if (region == "westmidlands.csv")
-			westmidlandsVoteTotals.push(info)
-
-		if (region == "yorkshireandthehumber.csv")
-			yorkshireandthehumberVoteTotals.push(info)
-		});
-}
-
-
-function getMapInfo(){
-	getSeatInfo();
-
-	parseData("/election2015/data/previoustotals.csv", getVoteTotals);
-
-}
-
-// get vote totals for initial display and possible future display
-function getInfoFromFiles(){
-
-	parseData("regions/projectionvotetotals.csv", getVoteTotalsInitial);
-
-	// get rest of vote totals for later
-
-	parseData("regions/greatbritain.csv", getVoteTotals);
-	parseData("regions/england.csv", getVoteTotals);
-	parseData("regions/scotland.csv", getVoteTotals);
-	parseData("regions/wales.csv", getVoteTotals);
-	parseData("regions/northernireland.csv", getVoteTotals);
-	parseData("regions/northeastengland.csv", getVoteTotals);
-	parseData("regions/northwestengland.csv", getVoteTotals);
-	parseData("regions/southeastengland.csv", getVoteTotals);
-	parseData("regions/southwestengland.csv", getVoteTotals);
-	parseData("regions/london.csv", getVoteTotals);
-	parseData("regions/eastmidlands.csv", getVoteTotals);
-	parseData("regions/westmidlands.csv", getVoteTotals);
-	parseData("regions/eastofengland.csv", getVoteTotals);
-	parseData("regions/yorkshireandthehumber.csv", getVoteTotals);
-
-};
-
-//initiate data accrual + map load
-getMapInfo();
-getInfoFromFiles();

@@ -69,8 +69,6 @@ for file in files:
         my_seat_name = seat_name_map[seat_name]
         my_seat_id = seat_map[seat_id]
 
-
-
         seat_info = {}
 
         seat_info["id"] = my_seat_id
@@ -91,19 +89,26 @@ for file in files:
 
         area = old_data[str(my_seat_id)]["area"]
         incumbent = old_data[str(my_seat_id)]["incumbent"]
+        if incumbent == "independent" or incumbent == "speaker":
+            incumbent = "other"
+
         seat_info["area"] = area
+
         seat_info["incumbent"] = incumbent
 
         candidates = itemlist[0].getElementsByTagName("Candidate")
 
 
         by_party = {}
+        sum_others = 0
+        sum_others_percentage = 0
 
         for candidate in candidates:
 
             name = candidate.attributes['firstName'].value + " " + candidate.attributes['surname'].value
 
             results = candidate.getElementsByTagName("Party")
+
 
             for result in results:
 
@@ -116,7 +121,13 @@ for file in files:
 
                 else:
                     if vote_percentage > 15:
-                        by_party["other"] = {"name" : name, "vote_total" : vote_total, "vote_percentage" : vote_percentage}
+                        by_party["other1"] = {"name" : name, "vote_total" : vote_total, "vote_percentage" : vote_percentage}
+
+                    else:
+                        sum_others += vote_total
+                        sum_others_percentage += vote_percentage
+
+        by_party["other2"] = {"name" : "Others", "vote_total" : sum_others, "vote_percentage" : sum_others_percentage}
 
 
 

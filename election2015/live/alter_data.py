@@ -52,7 +52,7 @@ path = "testdata/test-general-election-2015-tory-hung-20150227/results/"
 files = os.listdir(path)
 
 def get_data(file):
-    if "result" in file and "Berwick-upon-Tweed" in file:
+    if "result" in file and "Berwick" in file:
         file_dir = path + file
         xmldoc = minidom.parse(file_dir)
 
@@ -121,18 +121,15 @@ def get_data(file):
 
                 else:
                     if vote_percentage > 20:
-                        by_party["other"] = {"name" : name, "vote_total" : vote_total, "vote_percentage" : vote_percentage}
+                        by_party["other1"] = {"name" : name, "vote_total" : vote_total, "vote_percentage" : vote_percentage}
 
                     else:
                         sum_others += vote_total
                         sum_others_percentage += vote_percentage
 
 
-        # if sum_others <= 0 and sum_others_percentage <= 0:
-        #
-        #     pass
-        # else:
-        #     by_party["other"] = {"name" : "Others", "vote_total" : sum_others, "vote_percentage" : sum_others_percentage}
+        if not (sum_others <= 0 and sum_others_percentage <= 0):
+            by_party["other2"] = {"name" : "Others", "vote_total" : sum_others, "vote_percentage" : sum_others_percentage}
 
 
         live_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}

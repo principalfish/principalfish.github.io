@@ -294,6 +294,7 @@ var oldclass = null;
 
 // fills out table of info at top of #right
 function seatinfo(d){
+	if (d.properties.name in seatData){
 
 	$("#information").removeClass(oldclass);
 	$("#information").addClass(seatData[d.properties.name]["seat_info"]["winning_party"])
@@ -308,6 +309,20 @@ function seatinfo(d){
 	$("#information-pie").html(piechart(d));
 
 	oldclass = seatData[d.properties.name]["seat_info"]["winning_party"];
+	}
+
+	else{
+		$("#information").removeClass(oldclass);
+		$("#information").addClass("null")
+		$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
+		"</td><td id=\"rightcolumninfotable\"></td>");
+		$("#information-party").html("<td>Party</td><td>" + "</td>");
+
+		$("#information-gain").html("<td></td>");
+
+		oldclass = "null"
+	}
+
 }
 
 // d3 make pie chart of vote counts ni selected seat
@@ -393,24 +408,27 @@ function loadmap(){
 			.data(topojson.feature(uk, uk.objects.projection).features)
 			.enter().append("path")
 			.attr("class", function(d) {
-
-				if (seatData[d.properties.name]["seat_info"]["winning_party"] != undefined){
-					return "map " + seatData[d.properties.name]["seat_info"]["winning_party"] ;}
-				else{
-					return "null";
+				seatname = d.properties.name
+				if (seatname in seatData){
+					seatParty = seatData[seatname]["seat_info"]["winning_party"]
+					return "map " + seatParty
+				}
+				else {
+					return "null"
 				}
 
 				})
 			.attr("opacity", 1)
-			.attr("id", function(d) { return "i" + seatData[d.properties.name]["seat_info"]["id"]})
 			.attr("d", path)
 			.on("click", clicked)
 			.append("svg:title")
 				.text(function(d) { return d.properties.name})
 			.each(function(d){
-				seatsAfterFilter.push(d)
-				searchSeatData.push(d)
-				seatNames.push(d.properties.name);
+				if (d.properties.name in seatData){
+					seatsAfterFilter.push(d)
+					searchSeatData.push(d)
+					seatNames.push(d.properties.name);
+				}
 			});
 
 	});

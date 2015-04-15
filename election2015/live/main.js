@@ -527,21 +527,9 @@ $(function()
 //seatData contains all information display on page. filled on page load using getSeatInfo
 var seatData = {};
 
-// fills seatData, loads map afterwards
-function getSeatInfo(data){
-	$.getJSON('info.json', function(data) {
-		$.each(data, function(seat){
-			seatData[seat] = data[seat]
-		});
-	});
 
 
-	loadmap()
-	//getVoteTotals()
 
-	//
-}
-getSeatInfo();
 
 //empty arrays for data for each regional vote total
 
@@ -588,3 +576,23 @@ function selectAreaInfo(value){
 	if (value == "westmidlands") {displayVoteTotals(westmidlandsVoteTotals)};
 	if (value == "greatbritain") {displayVoteTotals(greatbritainVoteTotals)};
 }
+
+
+function getData(){
+	return $.ajax({
+  	url: "info.json",
+		type: "GET",
+
+	});
+}
+
+function getSeatInfo(data){
+	var x = JSON.parse(data)
+  $.each(x, function(seat){
+		seatData[seat] = x[seat]
+	})
+	loadmap()
+}
+
+// call the function
+getData().done(getSeatInfo);

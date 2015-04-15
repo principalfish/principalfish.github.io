@@ -529,15 +529,12 @@ var seatData = {};
 
 // fills seatData, loads map afterwards
 function getSeatInfo(data){
-	d3.json("info.json", function(error, seats) {
-		//if (error) return console.error(error);
-
-		$.each(seats, function(seat){
-
-			seatData[seat] = seats[seat]
-
+	$.getJSON('info.json', function(data) {
+		$.each(data, function(seat){
+			seatData[seat] = data[seat]
 		});
-	})
+	});
+
 
 	loadmap()
 	//getVoteTotals()

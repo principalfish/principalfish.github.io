@@ -4,8 +4,6 @@ from pollinganalysis import regionalpartytotals
 from collections import defaultdict
 from seatpollanalysis import seatpolling
 
-
-
 parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other"]
 
 # create region objects for various sets of polling/results - 2010, current polling, current polling vs 2010 etc

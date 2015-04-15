@@ -300,6 +300,7 @@ function seatinfo(d){
 	$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
 	"</td><td id=\"rightcolumninfotable\">" + regionlist[seatData[d.properties.name]["area"]] + "</td>");
 	$("#information-party").html("<td>Party</td><td>" + partylist[seatData[d.properties.name]["party"]] + "</td>");
+
 	if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
 		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" +
 		seatData[d.properties.name]["incumbent"] + "\">" + partylist[seatData[d.properties.name]["incumbent"]] + "</span></td>")

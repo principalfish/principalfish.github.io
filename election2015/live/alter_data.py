@@ -120,7 +120,7 @@ def get_data(file):
                     by_party[party_map[party]] = {"name" : name, "vote_total" : vote_total, "vote_percentage" : vote_percentage}
 
                 else:
-                    if vote_percentage > 20:
+                    if vote_percentage > 25:
                         by_party["other1"] = {"name" : name, "vote_total" : vote_total, "vote_percentage" : vote_percentage}
 
                     else:

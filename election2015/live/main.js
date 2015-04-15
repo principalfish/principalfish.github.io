@@ -296,11 +296,20 @@ var oldclass = null;
 function seatinfo(d){
 	if (d.properties.name in seatData){
 
+	seat_info = seatData[d.properties.name]["seat_info"]
+
 	$("#information").removeClass(oldclass);
-	$("#information").addClass(seatData[d.properties.name]["seat_info"]["winning_party"])
+	$("#information").addClass(seat_info["winning_party"])
 	$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
-	"</td><td id=\"rightcolumninfotable\">" + regionlist[seatData[d.properties.name]["seat_info"]["area"]] + "</td>");
-	$("#information-party").html("<td>Party</td><td>" + partylist[seatData[d.properties.name]["seat_info"]["winning_party"]] + "</td>");
+	"</td><td id=\"rightcolumninfotable\">" + regionlist[seat_info["area"]] + "</td>");
+	$("#information-party").html("<td>Party</td><td>" + partylist[seat_info["winning_party"]]
+
+	+ "<td> Declared at " + seat_info["declared_at"]  + "</td>" // alternate with expectated declaration time pre declaration (not in data set yet)
+	+ "<td> Electorate : " + seat_info["electorate"] + "</td><td> Turnout  : " + seat_info["percentage_turnout"] + "</td><td> Majority : " + seat_info["majority_percentage"] + "%</td></tr>"
+
+	);
+
+
 	if (seatData[d.properties.name]["seat_info"]["winning_party"] != seatData[d.properties.name]["seat_info"]["incumbent"])
 		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" +
 		seatData[d.properties.name]["seat_info"]["incumbent"] + "\">" + partylist[seatData[d.properties.name]["seat_info"]["incumbent"]] + "</span></td>")
@@ -392,10 +401,11 @@ function piechart(d){
 				return filterdata[i].party;
 			});
 
+
 	// creates table with vote counts/percentages
 	$.each(filterdata, function(i){
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +
-			partylist[filterdata[i].party] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td></tr>")
+			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td></tr>")
 	})
 }
 

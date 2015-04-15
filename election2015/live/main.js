@@ -46,11 +46,11 @@ function filterMap(){
 			else
 				g.selectAll("#filtertime")
 					.attr("style", function(d){
-						if (party != seatData[d.properties.name]["party"])
+						if (party != seatData[d.properties.name]["seat_info"]["winning_party"])
 							return "opacity: 0.1";
 						})
 					.attr("id", function(d){
-						if (party == seatData[d.properties.name]["party"])
+						if (party == seatData[d.properties.name]["seat_info"]["winning_party"])
 							return "partyfiltered"
 						});
 
@@ -62,22 +62,22 @@ function filterMap(){
 				if (gains == "gains")
 					g.selectAll("#partyfiltered")
 						.attr("style", function(d) {
-							if (seatData[d.properties.name]["party"] == seatData[d.properties.name]["incumbent"])
+							if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
 								return "opacity: 0.1";
 							})
 						.attr("id", function(d){
-							if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
+							if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
 								return "gainfiltered"
 						});
 
 				if (gains == "nochange")
 					g.selectAll("#partyfiltered")
 						.attr("style", function(d) {
-							if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
+							if (seatData[d.properties.name]["party"] != "gain")
 								return "opacity: 0.1";
 							})
 						.attr("id", function(d){
-							if (seatData[d.properties.name]["party"] == seatData[d.properties.name]["incumbent"])
+							if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
 								return "gainfiltered"
 						});
 
@@ -88,29 +88,29 @@ function filterMap(){
 			else
 				g.selectAll("#gainfiltered")
 					.attr("style", function(d){
-						if (region != seatData[d.properties.name]["area"])
+						if (region != seatData[d.properties.name]["seat_info"]["area"])
 							return "opacity: 0.1";
 					})
 					.attr("id", function(d){
-						if (region == seatData[d.properties.name]["area"])
+						if (region == seatData[d.properties.name]["seat_info"]["area"])
 							return "regionfiltered"
 					});
 
 			g.selectAll("#regionfiltered")
 				.attr("style", function(d) {
 
-					if (parseFloat(seatData[d.properties.name]["majority"]) < majoritylow || parseFloat(seatData[d.properties.name]["majority"]) > majorityhigh )
+					if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) > majorityhigh )
 						return "opacity: 0.1"
 
 					})
 				.each(function(d) {
-					if (parseFloat(seatData[d.properties.name]["majority"]) >= majoritylow && parseFloat(seatData[d.properties.name]["majority"]) <= majorityhigh )
+					if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) <= majorityhigh )
 						seatsAfterFilter.push(d);
 					});
 
 			g.selectAll(".map")
 				.attr("id", function(d) {
-					return "i" + seatData[d.properties.name]["id"]
+					return "i" + seatData[d.properties.name]["seat_info"]["id"]
 				});
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
@@ -148,12 +148,12 @@ function generateSeatList(){
 			$.each(seatsAfterFilter, function(i){
 
 				if (filterStates[1].gain == "gains" && filterStates[0].party != "null")
-				$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["incumbent"] +
+				$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] +
 				"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
 
 
 				else
-					$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["party"] +
+					$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["winning_party"] +
 					"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
 
 			});
@@ -161,7 +161,7 @@ function generateSeatList(){
 
 // close to duplicate of clicked() due to slightly difference in data type used. fix at some point. this one is for generate seat list and seat search box
 function zoomToClickedFilteredSeat(d){
-	var id = "#i" + seatData[d.properties.name]["id"];
+	var id = "#i" + seatData[d.properties.name]["seat_info"]["id"];
 	//rewrite at some point
 
 	previous = d3.select(previousnode)
@@ -296,18 +296,18 @@ var oldclass = null;
 function seatinfo(d){
 
 	$("#information").removeClass(oldclass);
-	$("#information").addClass(seatData[d.properties.name]["party"])
+	$("#information").addClass(seatData[d.properties.name]["seat_info"]["winning_party"])
 	$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
-	"</td><td id=\"rightcolumninfotable\">" + regionlist[seatData[d.properties.name]["area"]] + "</td>");
-	$("#information-party").html("<td>Party</td><td>" + partylist[seatData[d.properties.name]["party"]] + "</td>");
-	if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
+	"</td><td id=\"rightcolumninfotable\">" + regionlist[seatData[d.properties.name]["seat_info"]["area"]] + "</td>");
+	$("#information-party").html("<td>Party</td><td>" + partylist[seatData[d.properties.name]["seat_info"]["winning_party"]] + "</td>");
+	if (seatData[d.properties.name]["seat_info"]["winning_party"] != seatData[d.properties.name]["seat_info"]["incumbent"])
 		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" +
-		seatData[d.properties.name]["incumbent"] + "\">" + partylist[seatData[d.properties.name]["incumbent"]] + "</span></td>")
+		seatData[d.properties.name]["seat_info"]["incumbent"] + "\">" + partylist[seatData[d.properties.name]["seat_info"]["incumbent"]] + "</span></td>")
 	else
 		$("#information-gain").html("<td>No change </td>")
 	$("#information-pie").html(piechart(d));
 
-	oldclass = seatData[d.properties.name]["party"];
+	oldclass = seatData[d.properties.name]["seat_info"]["winning_party"];
 }
 
 // d3 make pie chart of vote counts ni selected seat
@@ -319,18 +319,13 @@ function piechart(d){
 	$("#information-chart").html("<p></p>");
 
 	var data = [];
-	data.push({ party: "labour", votes: seatData[d.properties.name]["labour"]});
-	data.push({ party: "conservative", votes: seatData[d.properties.name]["conservative"]});
-	data.push({ party: "libdems", votes: seatData[d.properties.name]["libdems"]});
-	data.push({ party: "ukip", votes: seatData[d.properties.name]["ukip"]});
-	data.push({ party: "snp", votes: seatData[d.properties.name]["snp"]});
-	data.push({ party: "plaidcymru", votes: seatData[d.properties.name]["plaidcymru"]});
-	data.push({ party: "green", votes: seatData[d.properties.name]["green"]});
-	data.push({ party: "dup", votes: seatData[d.properties.name]["dup"]});
-	data.push({ party: "sdlp", votes: seatData[d.properties.name]["sdlp"]});
-	data.push({ party: "uu", votes: seatData[d.properties.name]["uu"]});
-	data.push({ party: "sinnfein", votes: seatData[d.properties.name]["sinnfein"]});
-	data.push({ party: "alliance", votes: seatData[d.properties.name]["alliance"]});
+
+	console.log(d.properties.name)
+	relevant_party_info = seatData[d.properties.name]["party_info"]
+	$.each(relevant_party_info, function(d){
+		votes = relevant_party_info[d]["vote_percentage"]
+		data.push({party: d, votes: votes})
+	})
 
 	var filterdata = [];
 
@@ -344,8 +339,13 @@ function piechart(d){
 			return b.votes - a.votes ;
 	});
 
-	if (seatData[d.properties.name]["other"] > 0)
-		filterdata.push({party: "other", votes: seatData[d.properties.name]["other"]})
+	var keys = Object.keys(relevant_party_info)
+
+
+	if (keys.indexOf("other") != -1){
+		filterdata.push({party: "other", votes: relevant_party_info["other"]["vote_percentage"]})
+	}
+
 
 	var width = 250,
 		height = 250;
@@ -394,19 +394,19 @@ function loadmap(){
 			.data(topojson.feature(uk, uk.objects.projection).features)
 			.enter().append("path")
 			.attr("class", function(d) {
-				if (seatData[d.properties.name]["party"] != undefined){
-					return "map " + seatData[d.properties.name]["party"] ;}
+				if (seatData[d.properties.name]["seat_info"]["winning_party"] != undefined){
+					return "map " + seatData[d.properties.name]["seat_info"]["winning_party"] ;}
 				else{
 					return "null";
 				}
 
 				})
 			.attr("opacity", 1)
-			.attr("id", function(d) { return "i" + seatData[d.properties.name]["id"]})
+			.attr("id", function(d) { return "i" + seatData[d.properties.name]["seat_info"]["id"]})
 			.attr("d", path)
 			.on("click", clicked)
 			.append("svg:title")
-				.text(function(d) { return seatData[d.properties.name]["seat"]})
+				.text(function(d) { return d.properties.name})
 			.each(function(d){
 				seatsAfterFilter.push(d)
 				searchSeatData.push(d)
@@ -511,10 +511,15 @@ var seatData = {};
 
 // fills seatData, loads map afterwards
 function getSeatInfo(data){
+	d3.json("info.json", function(error, seats) {
+		if (error) return console.error(error);
 
-	$.each(data, function(i){
-		seatData[data[i].seat] = data[i];
-	});
+		$.each(seats, function(seat){
+
+			seatData[seat] = seats[seat]
+
+		});
+	})
 
 	loadmap()
 }
@@ -666,7 +671,7 @@ function getVoteTotals(data, region) {
 
 
 function getMapInfo(){
-	parseData("info.csv", getSeatInfo);
+	getSeatInfo();
 
 	parseData("/election2015/data/previoustotals.csv", getVoteTotals);
 

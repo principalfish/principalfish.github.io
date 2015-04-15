@@ -1,31 +1,12 @@
 //for use purely in user input calculations
-previousTotals = {};
 previousPercentages = {};
+
 
 // get vote totals for dual purpose of displaying on page on user select and use in user input calculation
 function getVoteTotals(data, region) {
 
 	if (region == "/election2015/data/previoustotals.csv"){
-		$.each(data, function(i){
-			var info = {};
-			info["region"] = data[i].region;
-			info["turnout2010"] = data[i].turnout2010;
-			info["conservative"] = data[i].conservative;
-			info["labour"] = data[i].labour;
-			info["libdems"] = data[i].libdems;
-			info["ukip"] = data[i].ukip;
-			info["snp"] = data[i].snp;
-			info["plaidcymru"] = data[i].plaidcymru;
-			info["green"] = data[i].green;
-			info["uu"] = data[i].uu;
-			info["sdlp"] = data[i].sdlp;
-			info["dup"] = data[i].dup;
-			info["sinnfein"] = data[i].sinnfein;
-			info["alliance"] = data[i].alliance;
-			info["other"] = data[i].other;
 
-			previousTotals[data[i].region] = info;
-		});
 
 		$.each(data, function(i){
 			var info = {};

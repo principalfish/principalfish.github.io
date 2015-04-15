@@ -61,3 +61,19 @@ for item in data["objects"]["map"]["geometries"]:
 
 with open("old_data.json", "w") as output:
     json.dump(old_seats, output)
+
+previous_totals = {}
+with open("previoustotals.csv", "r") as input_csv:
+    reader = csv.DictReader(input_csv, delimiter = "\t")
+
+
+
+    for row in reader:
+        for item in row:
+            if item != "region":
+                row[item] = int(row[item])
+        area = row["region"]
+        previous_totals[area] = row
+
+with open("previous_totals.json", "w") as output:
+    json.dump(previous_totals, output)

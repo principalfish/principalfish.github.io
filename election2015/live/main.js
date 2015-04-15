@@ -454,10 +454,11 @@ $( function() {
 // problem with cache of tablesorter not being cleared result in multiple tables being displayed
 // just rewriting the html as fix
 function displayVoteTotals(data) {
+
 		$("#totalstable").remove()
 		$("#totals").append("<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
 												"<th class=\"tablesorter-header\">Seats</th><th class=\"tablesorter-header\">Change</th>" +
-												"<th class=\"tablesorter-header\">Vote %</th><th class=\"tablesorter-header\">+/-</th>" +
+												"<th class=\"tablesorter-header\">Votes</th><th class=\"tablesorter-header\">Vote %</th>" +
 												"</tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
 												"</tfoot></table>")
 
@@ -481,28 +482,28 @@ function displayVoteTotals(data) {
 			else if (i == data.length -2)
 
 				$("#totalstablefoot").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
-					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
-					"</td><td>" + (data[i].votepercentchange) + "</td></tr>");
+					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent).toFixed(2) +
+					 "</td></tr>");
 			else
 				if (data[i].votepercent > 0)
 					$("#totalstableinfo").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
-						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
-						"</td><td>"  + plussign2 + (data[i].votepercentchange).toFixed(2) + "</td></tr>");
+						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent).toFixed(2) +
+					 "</td></tr>");
 		})
 
 
 		$("#totalstable").tablesorter({
 
-				sortInitialOrder: "asc",
+				sortInitialOrder: "desc",
 	      headers: {
-					1: { sortInitialOrder: 'desc' },
+
 					2: { sortInitialOrder: 'desc' },
-	        4: { sortInitialOrder: 'desc' },
+					3: { sortInitialOrder: 'desc' },
 					0: {
 						sorter: false
 					}
 	    },
-				sortList:[[3,1]]
+				sortList:[1]
 		});
 };
 
@@ -529,10 +530,6 @@ $(function()
 //seatData contains all information display on page. filled on page load using getSeatInfo
 var seatData = {};
 
-
-
-
-
 //empty arrays for data for each regional vote total
 
 nationalVoteTotals = [];
@@ -551,11 +548,6 @@ southeastenglandVoteTotals = [];
 southwestenglandVoteTotals = [];
 londonVoteTotals = [];
 
-// function to populate above arrays
-// regions_in_uk = ["london", "southeastengland", "southwestengland", "westmidlands", "northwestengland", "northeastengland",
-// 								"yorkshireandthehumber", "eastmidlands", "eastofengland", "scotland", "wales", "northernireland"]
-
-//initiate data accrual + map load
 
 
 
@@ -594,7 +586,209 @@ function getSeatInfo(data){
 		seatData[seat] = data[seat]
 	})
 	loadmap()
+
+	areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);
+
+	getVoteTotals("all")
+	displayVoteTotals(nationalVoteTotals)
+
+	getVoteTotals("greatbritain")
+	getVoteTotals("england")
+
+	for (area in areas){
+		getVoteTotals(areas[area])
+	}
 }
 
 // call the function
 getData().done(getSeatInfo);
+
+var regions = {
+    "england"  : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland", "southwestengland", "eastofengland",
+                  "eastmidlands", "westmidlands", "london"],
+    "scotland"  : ["scotland"],
+    "wales" : ["wales"],
+    "northernireland" : ["northernireland"]
+};
+
+parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other1", "other2"]
+
+
+function getVoteTotals(area){
+
+    var areas = [];
+
+    if (area == "all"){
+      areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);
+    }
+
+    else if (area == "greatbritain"){
+      areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]);
+    }
+
+    else if (area == "england"){
+      areas = regions["england"];
+    }
+    else {
+      areas.push(area);
+    }
+
+		var totalvotescast = 0
+
+		$.each(seatData, function(seat){
+
+			if (areas.indexOf(seatData[seat]["seat_info"]["area"]) != -1 ){
+				totalvotescast += parseInt(seatData[seat]["seat_info"]["turnout"]);
+			}
+		});
+
+		var holdingArray = []
+		var totalseats = 0;
+		var totalvotes = 0;
+
+		var otherSeatssum = 0;
+		var otherChange = 0;
+		var otherTotalVotes = 0
+		var otherVotePercent = 0
+
+		$.each(parties, function(party){
+			info = {}
+			var code = parties[party];
+			if (code == "other1" || code == "other2"){
+				code = "other"
+			}
+			var seatssum = 0;
+			var change = 0;
+			var totalvotes = 0;
+			var votepercent = 0;
+
+			$.each(seatData, function(seat){
+
+				if (areas.indexOf(seatData[seat]["seat_info"]["area"]) > -1){
+
+
+					if (seatData[seat]["seat_info"]["winning_party"] == code){
+						seatssum += 1;
+						totalseats += 1;
+
+					}
+
+
+					if (seatData[seat]["seat_info"]["incumbent"] == code){
+						change += 1;
+					}
+
+					parties_in_seat = Object.keys(seatData[seat]["party_info"])
+
+					if (parties_in_seat.indexOf(parties[party]) != -1) {
+						totalvotes += seatData[seat]["party_info"][parties[party]]["vote_total"];
+					}
+
+
+					}
+				})
+
+
+			votepercent =  parseFloat((100 * totalvotes / parseFloat(totalvotescast)).toFixed(2));
+			change = seatssum - change;
+
+			if (code == "other"){
+				otherSeatssum = seatssum;
+				otherChange = change;
+				otherTotalVotes +=totalvotes;
+				otherVotePercent += votepercent
+
+			}
+
+			else {
+				info["code"] = code;
+				info["seats"] = seatssum;
+				info["change"] = change;
+				info["votes"] = totalvotes;
+				info["votepercent"] = votepercent;
+
+				holdingArray.push(info);
+			}
+
+		});
+
+		var others = {"code": "other", "seats" : otherSeatssum, "change": otherChange, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
+		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : 100.00};
+		var stupidcsvextrarow = {"code": "", "seats" : undefined, "change": undefined, "votes" : "", "votepercent" : undefined};
+
+
+		holdingArray.push(others)
+    holdingArray.push(totals);
+    holdingArray.push(stupidcsvextrarow);
+
+
+
+
+    alterTable(area, holdingArray);
+
+}
+
+
+function alterTable(area, holdingarray){
+
+  if (area == "all"){
+    nationalVoteTotals = holdingarray;
+  }
+
+  if (area == "greatbritain"){
+    greatbritainVoteTotals = holdingarray;
+  }
+
+  if (area == "england"){
+    englandVoteTotals = holdingarray;
+  }
+
+  if (area == "scotland"){
+    scotlandVoteTotals = holdingarray;
+  }
+
+  if (area == "wales"){
+    walesVoteTotals = holdingarray;
+  }
+
+  if (area == "northernireland"){
+    northernirelandVoteTotals = holdingarray;
+  }
+
+  if (area == "northeastengland"){
+    northeastenglandVoteTotals = holdingarray;
+  }
+
+  if (area == "northwestengland"){
+    northwestenglandVoteTotals = holdingarray;
+  }
+
+  if (area == "westmidlands"){
+    westmidlandsVoteTotals = holdingarray;
+  }
+
+
+  if (area == "eastmidlands"){
+    eastmidlandsVoteTotals = holdingarray;
+  }
+
+  if (area == "yorkshireandthehumber"){
+    yorkshireandthehumberVoteTotals = holdingarray;
+  }
+
+  if (area == "eastofengland"){
+    eastofenglandVoteTotals = holdingarray;
+  }
+
+  if (area == "southeastengland"){
+    southeastenglandVoteTotals = holdingarray;
+  }
+
+  if (area == "southwestengland"){
+    southwestenglandVoteTotals = holdingarray;
+  }
+
+  if (area == "london"){
+    londonVoteTotals = holdingarray;
+  }
+}

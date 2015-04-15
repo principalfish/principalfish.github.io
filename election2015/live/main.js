@@ -305,7 +305,7 @@ function seatinfo(d){
 	$("#information-party").html("<td>Party</td><td>" + partylist[seat_info["winning_party"]]
 
 	+ "<td> Declared at " + seat_info["declared_at"]  + "</td>" // alternate with expectated declaration time pre declaration (not in data set yet)
-	+ "<td> Electorate : " + seat_info["electorate"] + "</td><td> Turnout  : " + seat_info["percentage_turnout"] + "</td><td> Majority : " + seat_info["majority_percentage"] + "%</td></tr>"
+	+ "<td> Electorate : " + seat_info["electorate"] + "</td><td> Turnout  : " + seat_info["percentage_turnout"] + "%</td><td> Majority : " + seat_info["majority_percentage"] + "%</td></tr>"
 
 	);
 

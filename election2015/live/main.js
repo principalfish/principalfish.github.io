@@ -1,5 +1,12 @@
 // FOR index and nowcast
 
+
+//////////// CHANGE**///////////
+// any reference to seatData[seatname] has changed
+// seatData[seatname]["seat_info"] contains information about the seat in general (turnout/electorate/declaration time etc)
+// seatData[seatname]["party_info"] contains names and vote totals for each party
+
+
 //add to d3js prototype
 // brings elements to top when (for use when clicking on seat)
 d3.selection.prototype.moveToFront = function() {
@@ -296,6 +303,8 @@ var oldclass = null;
 function seatinfo(d){
 	if (d.properties.name in seatData){
 
+		//////////// CHANGE**///////////
+		//ADDED A BUNCH OF NEW INFORMATION, declaration time, electorate, turnout, majrority (lines 316/317)
 	seat_info = seatData[d.properties.name]["seat_info"]
 
 	$("#information").removeClass(oldclass);
@@ -344,7 +353,11 @@ function piechart(d){
 
 	var data = [];
 
+	//////////// CHANGE**///////////
+
+	// for loop instead of awful shit before
 	relevant_party_info = seatData[d.properties.name]["party_info"]
+
 	$.each(relevant_party_info, function(d){
 		votes = relevant_party_info[d]["vote_percentage"]
 		data.push({party: d, votes: votes})
@@ -362,6 +375,8 @@ function piechart(d){
 			return b.votes - a.votes ;
 	});
 
+	//////////// CHANGE**///////////
+	// different way of getting other into array (due to slightly difference in other in data)
 	var keys = Object.keys(relevant_party_info)
 
 
@@ -402,6 +417,8 @@ function piechart(d){
 			});
 
 
+		//////////// CHANGE**///////////
+		// different way of getting other into array replaced party name with candidate name (line 425)
 	// creates table with vote counts/percentages
 	$.each(filterdata, function(i){
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +
@@ -465,6 +482,9 @@ $( function() {
 // just rewriting the html as fix
 function displayVoteTotals(data) {
 
+		///////// CHANGE**
+		//Columns 3 and 4 were formerly Vote% and Vote%Change, now they are Votes and Vote%
+		//objects that populate these tables are in an identical format just .votepercentchange is replaced by .votes
 		$("#totalstable").remove()
 		$("#totals").append("<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
 												"<th class=\"tablesorter-header\">Seats</th><th class=\"tablesorter-header\">Change</th>" +
@@ -577,6 +597,8 @@ function selectAreaInfo(value){
 	if (value == "greatbritain") {displayVoteTotals(greatbritainVoteTotals)};
 }
 
+///////// CHANGE**
+// everything below here is vastly different but probably not relevant
 
 function getData(){
 	return $.ajax({
@@ -588,6 +610,7 @@ function getData(){
 }
 
 function getSeatInfo(data){
+
   $.each(data, function(seat){
 		seatData[seat] = data[seat]
 	})
@@ -726,9 +749,6 @@ function getVoteTotals(area){
 		holdingArray.push(others)
     holdingArray.push(totals);
     holdingArray.push(stupidcsvextrarow);
-
-
-
 
     alterTable(area, holdingArray);
 

@@ -393,7 +393,7 @@ function loadmap(){
 			.data(topojson.feature(uk, uk.objects.projection).features)
 			.enter().append("path")
 			.attr("class", function(d) {
-			
+
 				if (seatData[d.properties.name]["seat_info"]["winning_party"] != undefined){
 					return "map " + seatData[d.properties.name]["seat_info"]["winning_party"] ;}
 				else{
@@ -512,7 +512,7 @@ var seatData = {};
 // fills seatData, loads map afterwards
 function getSeatInfo(data){
 	d3.json("info.json", function(error, seats) {
-		if (error) return console.error(error);
+		//if (error) return console.error(error);
 
 		$.each(seats, function(seat){
 
@@ -526,6 +526,7 @@ function getSeatInfo(data){
 
 	//
 }
+getSeatInfo();
 
 //empty arrays for data for each regional vote total
 
@@ -550,7 +551,7 @@ londonVoteTotals = [];
 // 								"yorkshireandthehumber", "eastmidlands", "eastofengland", "scotland", "wales", "northernireland"]
 
 //initiate data accrual + map load
-getSeatInfo();
+
 
 
 //user eslect region vote totals

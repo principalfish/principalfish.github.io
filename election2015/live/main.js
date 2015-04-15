@@ -401,6 +401,8 @@ function piechart(d){
 
 // load + colour map at page load
 function loadmap(){
+
+
 	d3.json("/election2015/data/projection.json", function(error, uk) {
 		if (error) return console.error(error);
 
@@ -580,6 +582,7 @@ function selectAreaInfo(value){
 
 function getData(){
 	return $.ajax({
+		dataType: "json",
   	url: "info.json",
 		type: "GET",
 
@@ -587,9 +590,8 @@ function getData(){
 }
 
 function getSeatInfo(data){
-	var x = JSON.parse(data)
-  $.each(x, function(seat){
-		seatData[seat] = x[seat]
+  $.each(data, function(seat){
+		seatData[seat] = data[seat]
 	})
 	loadmap()
 }

@@ -471,10 +471,6 @@ function displayVoteTotals(data) {
 				else
 					plussign1 = "";
 
-				if (data[i].votepercentchange > 0)
-					plussign2 = "+";
-				else
-					plussign2 = "";
 
 			if (i == data.length -1)
 					null
@@ -494,16 +490,16 @@ function displayVoteTotals(data) {
 
 		$("#totalstable").tablesorter({
 
-				sortInitialOrder: "desc",
-	      headers: {
-
+				sortInitialOrder: "asc",
+				headers: {
+					1: { sortInitialOrder: 'desc' },
 					2: { sortInitialOrder: 'desc' },
-					3: { sortInitialOrder: 'desc' },
+					4: { sortInitialOrder: 'desc' },
 					0: {
 						sorter: false
 					}
-	    },
-				sortList:[1]
+			},
+				sortList:[[3,1]]
 		});
 };
 

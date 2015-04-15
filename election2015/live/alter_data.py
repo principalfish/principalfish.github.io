@@ -48,7 +48,7 @@ winners_map = {
     "Ind" : "other"
 }
 
-path = "testdata/test-general-election-2015-tory-hung-20150227/results/"
+path = "testdata/test-general-election-2015-lab-maj-20150227/results/"
 files = os.listdir(path)
 
 def get_data(file):

@@ -1,0 +1,3903 @@
+
+{
+   "344":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Kingswood",
+      "pf_id":"314",
+      "pf_seat_name":"Kingswood"
+   },
+   "345":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Kirkcaldy & Cowdenbeath",
+      "pf_id":"315",
+      "pf_seat_name":"Kirkcaldy and Cowdenbeath"
+   },
+   "346":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Knowsley",
+      "pf_id":"316",
+      "pf_seat_name":"Knowsley"
+   },
+   "347":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Lagan Valley",
+      "pf_id":"317",
+      "pf_seat_name":"Lagan Valley"
+   },
+   "340":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Kensington",
+      "pf_id":"307",
+      "pf_seat_name":"Kensington"
+   },
+   "341":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Kettering",
+      "pf_id":"308",
+      "pf_seat_name":"Kettering"
+   },
+   "342":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Kilmarnock & Loudoun",
+      "pf_id":"309",
+      "pf_seat_name":"Kilmarnock and Loudoun"
+   },
+   "343":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Kingston & Surbiton",
+      "pf_id":"310",
+      "pf_seat_name":"Kingston and Surbiton"
+   },
+   "348":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Lanark & Hamilton East",
+      "pf_id":"318",
+      "pf_seat_name":"Lanark and Hamilton East"
+   },
+   "349":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Lancashire West",
+      "pf_id":"618",
+      "pf_seat_name":"West Lancashire"
+   },
+   "595":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Walthamstow",
+      "pf_id":"596",
+      "pf_seat_name":"Walthamstow"
+   },
+   "606":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Wealden",
+      "pf_id":"606",
+      "pf_seat_name":"Wealden"
+   },
+   "594":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Walsall South",
+      "pf_id":"595",
+      "pf_seat_name":"Walsall South"
+   },
+   "619":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Wiltshire North",
+      "pf_id":"422",
+      "pf_seat_name":"North Wiltshire"
+   },
+   "298":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Hastings & Rye",
+      "pf_id":"271",
+      "pf_seat_name":"Hastings and Rye"
+   },
+   "299":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Havant",
+      "pf_id":"272",
+      "pf_seat_name":"Havant"
+   },
+   "296":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Hartlepool",
+      "pf_id":"269",
+      "pf_seat_name":"Hartlepool"
+   },
+   "297":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Harwich & Essex North",
+      "pf_id":"270",
+      "pf_seat_name":"Harwich and North Essex"
+   },
+   "294":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Harrow East",
+      "pf_id":"267",
+      "pf_seat_name":"Harrow East"
+   },
+   "295":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Harrow West",
+      "pf_id":"268",
+      "pf_seat_name":"Harrow West"
+   },
+   "292":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Harlow",
+      "pf_id":"265",
+      "pf_seat_name":"Harlow"
+   },
+   "293":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Harrogate & Knaresborough",
+      "pf_id":"266",
+      "pf_seat_name":"Harrogate and Knaresborough"
+   },
+   "290":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Hampstead & Kilburn",
+      "pf_id":"263",
+      "pf_seat_name":"Hampstead and Kilburn"
+   },
+   "291":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Harborough",
+      "pf_id":"264",
+      "pf_seat_name":"Harborough"
+   },
+   "591":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Wakefield",
+      "pf_id":"592",
+      "pf_seat_name":"Wakefield"
+   },
+   "590":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Vauxhall",
+      "pf_id":"591",
+      "pf_seat_name":"Vauxhall"
+   },
+   "593":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Walsall North",
+      "pf_id":"594",
+      "pf_seat_name":"Walsall North"
+   },
+   "592":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Wallasey",
+      "pf_id":"593",
+      "pf_seat_name":"Wallasey"
+   },
+   "199":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Dorset South",
+      "pf_id":"510",
+      "pf_seat_name":"South Dorset"
+   },
+   "198":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Dorset North",
+      "pf_id":"399",
+      "pf_seat_name":"North Dorset"
+   },
+   "597":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Wantage",
+      "pf_id":"598",
+      "pf_seat_name":"Wantage"
+   },
+   "596":{
+      "declaration_time":"12:00:00",
+      "off_seat_name":"Wansbeck",
+      "pf_id":"597",
+      "pf_seat_name":"Wansbeck"
+   },
+   "195":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Doncaster Central",
+      "pf_id":"174",
+      "pf_seat_name":"Doncaster Central"
+   },
+   "194":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Don Valley",
+      "pf_id":"173",
+      "pf_seat_name":"Don Valley"
+   },
+   "197":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Dorset Mid & Poole North",
+      "pf_id":"362",
+      "pf_seat_name":"Mid Dorset and North Poole"
+   },
+   "196":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Doncaster North",
+      "pf_id":"175",
+      "pf_seat_name":"Doncaster North"
+   },
+   "191":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Devon South West",
+      "pf_id":"525",
+      "pf_seat_name":"South West Devon"
+   },
+   "190":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Devon North",
+      "pf_id":"398",
+      "pf_seat_name":"North Devon"
+   },
+   "193":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Dewsbury",
+      "pf_id":"172",
+      "pf_seat_name":"Dewsbury"
+   },
+   "192":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Devon West & Torridge",
+      "pf_id":"580",
+      "pf_seat_name":"Torridge and West Devon"
+   },
+   "270":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Gloucester",
+      "pf_id":"246",
+      "pf_seat_name":"Gloucester"
+   },
+   "271":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Gordon",
+      "pf_id":"247",
+      "pf_seat_name":"Gordon"
+   },
+   "272":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Gosport",
+      "pf_id":"248",
+      "pf_seat_name":"Gosport"
+   },
+   "273":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Gower",
+      "pf_id":"249",
+      "pf_seat_name":"Gower"
+   },
+   "274":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Grantham & Stamford",
+      "pf_id":"250",
+      "pf_seat_name":"Grantham and Stamford"
+   },
+   "275":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Gravesham",
+      "pf_id":"251",
+      "pf_seat_name":"Gravesham"
+   },
+   "276":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Great Grimsby",
+      "pf_id":"252",
+      "pf_seat_name":"Great Grimsby"
+   },
+   "277":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Great Yarmouth",
+      "pf_id":"253",
+      "pf_seat_name":"Great Yarmouth"
+   },
+   "278":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Greenwich & Woolwich",
+      "pf_id":"254",
+      "pf_seat_name":"Greenwich and Woolwich"
+   },
+   "279":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Guildford",
+      "pf_id":"255",
+      "pf_seat_name":"Guildford"
+   },
+   "524":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Southampton Test",
+      "pf_id":"531",
+      "pf_seat_name":"Southampton Test"
+   },
+   "525":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Southend West",
+      "pf_id":"532",
+      "pf_seat_name":"Southend West"
+   },
+   "526":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Southport",
+      "pf_id":"533",
+      "pf_seat_name":"Southport"
+   },
+   "527":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Spelthorne",
+      "pf_id":"534",
+      "pf_seat_name":"Spelthorne"
+   },
+   "520":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"South Holland & The Deepings",
+      "pf_id":"514",
+      "pf_seat_name":"South Holland and The Deepings"
+   },
+   "521":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"South Ribble",
+      "pf_id":"518",
+      "pf_seat_name":"South Ribble"
+   },
+   "522":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"South Shields",
+      "pf_id":"519",
+      "pf_seat_name":"South Shields"
+   },
+   "523":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Southampton Itchen",
+      "pf_id":"530",
+      "pf_seat_name":"Southampton Itchen"
+   },
+   "599":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Warrington North",
+      "pf_id":"600",
+      "pf_seat_name":"Warrington North"
+   },
+   "528":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Stafford",
+      "pf_id":"540",
+      "pf_seat_name":"Stafford"
+   },
+   "529":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Staffordshire Moorlands",
+      "pf_id":"541",
+      "pf_seat_name":"Staffordshire Moorlands"
+   },
+   "449":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Penrith & The Border",
+      "pf_id":"444",
+      "pf_seat_name":"Penrith and The Border"
+   },
+   "448":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Penistone & Stocksbridge",
+      "pf_id":"443",
+      "pf_seat_name":"Penistone and Stocksbridge"
+   },
+   "443":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Oxford East",
+      "pf_id":"438",
+      "pf_seat_name":"Oxford East"
+   },
+   "442":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Orpington",
+      "pf_id":"437",
+      "pf_seat_name":"Orpington"
+   },
+   "441":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Orkney & Shetland",
+      "pf_id":"436",
+      "pf_seat_name":"Orkney and Shetland"
+   },
+   "440":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Oldham West & Royton",
+      "pf_id":"435",
+      "pf_seat_name":"Oldham West and Royton"
+   },
+   "447":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Pendle",
+      "pf_id":"442",
+      "pf_seat_name":"Pendle"
+   },
+   "446":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Paisley & Renfrewshire South",
+      "pf_id":"441",
+      "pf_seat_name":"Paisley and Renfrewshire South"
+   },
+   "445":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Paisley & Renfrewshire North",
+      "pf_id":"440",
+      "pf_seat_name":"Paisley and Renfrewshire North"
+   },
+   "444":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Oxford West & Abingdon",
+      "pf_id":"439",
+      "pf_seat_name":"Oxford West and Abingdon"
+   },
+   "108":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Buckingham",
+      "pf_id":"98",
+      "pf_seat_name":"Buckingham"
+   },
+   "109":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Burnley",
+      "pf_id":"99",
+      "pf_seat_name":"Burnley"
+   },
+   "102":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bristol West",
+      "pf_id":"92",
+      "pf_seat_name":"Bristol West"
+   },
+   "103":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Broadland",
+      "pf_id":"93",
+      "pf_seat_name":"Broadland"
+   },
+   "100":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bristol North West",
+      "pf_id":"90",
+      "pf_seat_name":"Bristol North West"
+   },
+   "101":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Bristol South",
+      "pf_id":"91",
+      "pf_seat_name":"Bristol South"
+   },
+   "106":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Broxbourne",
+      "pf_id":"96",
+      "pf_seat_name":"Broxbourne"
+   },
+   "107":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Broxtowe",
+      "pf_id":"97",
+      "pf_seat_name":"Broxtowe"
+   },
+   "104":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Bromley & Chislehurst",
+      "pf_id":"94",
+      "pf_seat_name":"Bromley and Chislehurst"
+   },
+   "105":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Bromsgrove",
+      "pf_id":"95",
+      "pf_seat_name":"Bromsgrove"
+   },
+   "39":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Beaconsfield",
+      "pf_id":"32",
+      "pf_seat_name":"Beaconsfield"
+   },
+   "38":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Battersea",
+      "pf_id":"31",
+      "pf_seat_name":"Battersea"
+   },
+   "33":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Basildon South & Thurrock East",
+      "pf_id":"507",
+      "pf_seat_name":"South Basildon and East Thurrock"
+   },
+   "32":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Basildon & Billericay",
+      "pf_id":"26",
+      "pf_seat_name":"Basildon and Billericay"
+   },
+   "31":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Barrow & Furness",
+      "pf_id":"25",
+      "pf_seat_name":"Barrow and Furness"
+   },
+   "30":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Barnsley East",
+      "pf_id":"24",
+      "pf_seat_name":"Barnsley East"
+   },
+   "37":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Batley & Spen",
+      "pf_id":"30",
+      "pf_seat_name":"Batley and Spen"
+   },
+   "36":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Bath",
+      "pf_id":"29",
+      "pf_seat_name":"Bath"
+   },
+   "35":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Bassetlaw",
+      "pf_id":"28",
+      "pf_seat_name":"Bassetlaw"
+   },
+   "34":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Basingstoke",
+      "pf_id":"27",
+      "pf_seat_name":"Basingstoke"
+   },
+   "641":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Wrexham",
+      "pf_id":"649",
+      "pf_seat_name":"Wrexham"
+   },
+   "640":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Wrekin, The",
+      "pf_id":"571",
+      "pf_seat_name":"The Wrekin"
+   },
+   "643":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Wyre & Preston North",
+      "pf_id":"634",
+      "pf_seat_name":"Wyre and Preston North"
+   },
+   "642":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Wycombe",
+      "pf_id":"646",
+      "pf_seat_name":"Wycombe"
+   },
+   "645":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Wythenshawe & Sale East",
+      "pf_id":"635",
+      "pf_seat_name":"Wythenshawe and Sale East"
+   },
+   "644":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Wyre Forest",
+      "pf_id":"640",
+      "pf_seat_name":"Wyre Forest"
+   },
+   "438":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Old Bexley & Sidcup",
+      "pf_id":"433",
+      "pf_seat_name":"Old Bexley and Sidcup"
+   },
+   "439":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Oldham East & Saddleworth",
+      "pf_id":"434",
+      "pf_seat_name":"Oldham East and Saddleworth"
+   },
+   "436":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Ochil & Perthshire South",
+      "pf_id":"431",
+      "pf_seat_name":"Ochil and South Perthshire"
+   },
+   "437":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Ogmore",
+      "pf_id":"432",
+      "pf_seat_name":"Ogmore"
+   },
+   "434":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Nottingham South",
+      "pf_id":"429",
+      "pf_seat_name":"Nottingham South"
+   },
+   "435":{
+      "declaration_time":"01:00:00",
+      "off_seat_name":"Nuneaton",
+      "pf_id":"430",
+      "pf_seat_name":"Nuneaton"
+   },
+   "432":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Nottingham East",
+      "pf_id":"427",
+      "pf_seat_name":"Nottingham East"
+   },
+   "433":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Nottingham North",
+      "pf_id":"428",
+      "pf_seat_name":"Nottingham North"
+   },
+   "430":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Norwich North",
+      "pf_id":"425",
+      "pf_seat_name":"Norwich North"
+   },
+   "431":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Norwich South",
+      "pf_id":"426",
+      "pf_seat_name":"Norwich South"
+   },
+   "339":{
+      "declaration_time":"12:00:00",
+      "off_seat_name":"Kenilworth & Southam",
+      "pf_id":"306",
+      "pf_seat_name":"Kenilworth and Southam"
+   },
+   "338":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Keighley",
+      "pf_id":"305",
+      "pf_seat_name":"Keighley"
+   },
+   "335":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Islington South & Finsbury",
+      "pf_id":"302",
+      "pf_seat_name":"Islington South and Finsbury"
+   },
+   "334":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Islington North",
+      "pf_id":"301",
+      "pf_seat_name":"Islington North"
+   },
+   "337":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Jarrow",
+      "pf_id":"304",
+      "pf_seat_name":"Jarrow"
+   },
+   "336":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Islwyn",
+      "pf_id":"303",
+      "pf_seat_name":"Islwyn"
+   },
+   "331":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Inverness, Nairn, Badenoch & Strathspey",
+      "pf_id":"298",
+      "pf_seat_name":"Inverness, Nairn, Badenoch and Strathspey"
+   },
+   "330":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Inverclyde",
+      "pf_id":"297",
+      "pf_seat_name":"Inverclyde"
+   },
+   "333":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Isle of Wight",
+      "pf_id":"300",
+      "pf_seat_name":"Isle of Wight"
+   },
+   "332":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Ipswich",
+      "pf_id":"299",
+      "pf_seat_name":"Ipswich"
+   },
+   "6":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Airdrie and Shotts",
+      "pf_id":"5",
+      "pf_seat_name":"Airdrie and Shotts"
+   },
+   "99":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Bristol East",
+      "pf_id":"89",
+      "pf_seat_name":"Bristol East"
+   },
+   "98":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Brighton Pavilion",
+      "pf_id":"88",
+      "pf_seat_name":"Brighton Pavilion"
+   },
+   "91":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Brent North",
+      "pf_id":"81",
+      "pf_seat_name":"Brent North"
+   },
+   "90":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Brent Central",
+      "pf_id":"80",
+      "pf_seat_name":"Brent Central"
+   },
+   "93":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Brentwood & Ongar",
+      "pf_id":"83",
+      "pf_seat_name":"Brentwood and Ongar"
+   },
+   "92":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Brentford & Isleworth",
+      "pf_id":"82",
+      "pf_seat_name":"Brentford and Isleworth"
+   },
+   "95":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Bridgwater & Somerset West",
+      "pf_id":"85",
+      "pf_seat_name":"Bridgwater and West Somerset"
+   },
+   "94":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Bridgend",
+      "pf_id":"84",
+      "pf_seat_name":"Bridgend"
+   },
+   "97":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Brighton Kemptown",
+      "pf_id":"87",
+      "pf_seat_name":"Brighton Kemptown"
+   },
+   "96":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Brigg & Goole",
+      "pf_id":"86",
+      "pf_seat_name":"Brigg and Goole"
+   },
+   "559":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Swansea West",
+      "pf_id":"564",
+      "pf_seat_name":"Swansea West"
+   },
+   "558":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Swansea East",
+      "pf_id":"563",
+      "pf_seat_name":"Swansea East"
+   },
+   "555":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Sussex Mid",
+      "pf_id":"364",
+      "pf_seat_name":"Mid Sussex"
+   },
+   "554":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Surrey South West",
+      "pf_id":"528",
+      "pf_seat_name":"South West Surrey"
+   },
+   "557":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Sutton Coldfield",
+      "pf_id":"562",
+      "pf_seat_name":"Sutton Coldfield"
+   },
+   "556":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Sutton & Cheam",
+      "pf_id":"561",
+      "pf_seat_name":"Sutton and Cheam"
+   },
+   "551":{
+      "declaration_time":"00:01:00",
+      "off_seat_name":"Sunderland Central",
+      "pf_id":"559",
+      "pf_seat_name":"Sunderland Central"
+   },
+   "550":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Suffolk West",
+      "pf_id":"619",
+      "pf_seat_name":"West Suffolk"
+   },
+   "553":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Surrey Heath",
+      "pf_id":"560",
+      "pf_seat_name":"Surrey Heath"
+   },
+   "552":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Surrey East",
+      "pf_id":"199",
+      "pf_seat_name":"East Surrey"
+   },
+   "238":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Enfield Southgate",
+      "pf_id":"215",
+      "pf_seat_name":"Enfield, Southgate"
+   },
+   "239":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Epping Forest",
+      "pf_id":"216",
+      "pf_seat_name":"Epping Forest"
+   },
+   "234":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Ellesmere Port & Neston",
+      "pf_id":"211",
+      "pf_seat_name":"Ellesmere Port and Neston"
+   },
+   "235":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Elmet & Rothwell",
+      "pf_id":"212",
+      "pf_seat_name":"Elmet and Rothwell"
+   },
+   "236":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Eltham",
+      "pf_id":"213",
+      "pf_seat_name":"Eltham"
+   },
+   "237":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Enfield North",
+      "pf_id":"214",
+      "pf_seat_name":"Enfield North"
+   },
+   "230":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Edinburgh South",
+      "pf_id":"207",
+      "pf_seat_name":"Edinburgh South"
+   },
+   "231":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Edinburgh South West",
+      "pf_id":"208",
+      "pf_seat_name":"Edinburgh South West"
+   },
+   "232":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Edinburgh West",
+      "pf_id":"209",
+      "pf_seat_name":"Edinburgh West"
+   },
+   "233":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Edmonton",
+      "pf_id":"210",
+      "pf_seat_name":"Edmonton"
+   },
+   "1":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Aberavon",
+      "pf_id":"1",
+      "pf_seat_name":"Aberavon"
+   },
+   "614":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"West Ham",
+      "pf_id":"617",
+      "pf_seat_name":"West Ham"
+   },
+   "146":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Chingford & Woodford Green",
+      "pf_id":"134",
+      "pf_seat_name":"Chingford and Woodford Green"
+   },
+   "147":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Chippenham",
+      "pf_id":"135",
+      "pf_seat_name":"Chippenham"
+   },
+   "144":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Chesterfield",
+      "pf_id":"132",
+      "pf_seat_name":"Chesterfield"
+   },
+   "145":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Chichester",
+      "pf_id":"133",
+      "pf_seat_name":"Chichester"
+   },
+   "142":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Chesham & Amersham",
+      "pf_id":"131",
+      "pf_seat_name":"Chesham and Amersham"
+   },
+   "143":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Chester, City of",
+      "pf_id":"140",
+      "pf_seat_name":"City of Chester"
+   },
+   "140":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Chelsea & Fulham",
+      "pf_id":"129",
+      "pf_seat_name":"Chelsea and Fulham"
+   },
+   "141":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Cheltenham",
+      "pf_id":"130",
+      "pf_seat_name":"Cheltenham"
+   },
+   "612":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"West Bromwich East",
+      "pf_id":"613",
+      "pf_seat_name":"West Bromwich East"
+   },
+   "613":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"West Bromwich West",
+      "pf_id":"614",
+      "pf_seat_name":"West Bromwich West"
+   },
+   "610":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Welwyn Hatfield",
+      "pf_id":"610",
+      "pf_seat_name":"Welwyn Hatfield"
+   },
+   "611":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Wentworth & Dearne",
+      "pf_id":"611",
+      "pf_seat_name":"Wentworth and Dearne"
+   },
+   "616":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Westmorland & Lonsdale",
+      "pf_id":"623",
+      "pf_seat_name":"Westmorland and Lonsdale"
+   },
+   "617":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Weston-Super-Mare",
+      "pf_id":"624",
+      "pf_seat_name":"Weston-Super-Mare"
+   },
+   "148":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Chipping Barnet",
+      "pf_id":"136",
+      "pf_seat_name":"Chipping Barnet"
+   },
+   "149":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Chorley",
+      "pf_id":"137",
+      "pf_seat_name":"Chorley"
+   },
+   "623":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Windsor",
+      "pf_id":"628",
+      "pf_seat_name":"Windsor"
+   },
+   "622":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Winchester",
+      "pf_id":"627",
+      "pf_seat_name":"Winchester"
+   },
+   "133":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Carshalton & Wallington",
+      "pf_id":"119",
+      "pf_seat_name":"Carshalton and Wallington"
+   },
+   "132":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Carmarthen West & Pembrokeshire South",
+      "pf_id":"118",
+      "pf_seat_name":"Carmarthen West and South Pembrokeshire"
+   },
+   "131":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Carmarthen East & Dinefwr",
+      "pf_id":"117",
+      "pf_seat_name":"Carmarthen East and Dinefwr"
+   },
+   "130":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Carlisle",
+      "pf_id":"116",
+      "pf_seat_name":"Carlisle"
+   },
+   "137":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Chatham & Aylesford",
+      "pf_id":"126",
+      "pf_seat_name":"Chatham and Aylesford"
+   },
+   "136":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Charnwood",
+      "pf_id":"125",
+      "pf_seat_name":"Charnwood"
+   },
+   "135":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Ceredigion",
+      "pf_id":"124",
+      "pf_seat_name":"Ceredigion"
+   },
+   "134":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Castle Point",
+      "pf_id":"120",
+      "pf_seat_name":"Castle Point"
+   },
+   "494":{
+      "declaration_time":"13:00:00",
+      "off_seat_name":"St Ives",
+      "pf_id":"539",
+      "pf_seat_name":"St. Ives"
+   },
+   "495":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Salford & Eccles",
+      "pf_id":"484",
+      "pf_seat_name":"Salford and Eccles"
+   },
+   "139":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Chelmsford",
+      "pf_id":"128",
+      "pf_seat_name":"Chelmsford"
+   },
+   "138":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Cheadle",
+      "pf_id":"127",
+      "pf_seat_name":"Cheadle"
+   },
+   "490":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"St Albans",
+      "pf_id":"535",
+      "pf_seat_name":"St. Albans"
+   },
+   "491":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"St Austell & Newquay",
+      "pf_id":"536",
+      "pf_seat_name":"St. Austell and Newquay"
+   },
+   "492":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"St Helens North",
+      "pf_id":"537",
+      "pf_seat_name":"St. Helens North"
+   },
+   "493":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"St Helens South & Whiston",
+      "pf_id":"538",
+      "pf_seat_name":"St. Helens South and Whiston"
+   },
+   "24":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Ayrshire Central",
+      "pf_id":"121",
+      "pf_seat_name":"Central Ayrshire"
+   },
+   "25":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Ayrshire North & Arran",
+      "pf_id":"396",
+      "pf_seat_name":"North Ayrshire and Arran"
+   },
+   "26":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Banbury",
+      "pf_id":"20",
+      "pf_seat_name":"Banbury"
+   },
+   "27":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Banff & Buchan",
+      "pf_id":"21",
+      "pf_seat_name":"Banff and Buchan"
+   },
+   "20":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Ashford",
+      "pf_id":"16",
+      "pf_seat_name":"Ashford"
+   },
+   "21":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Ashton Under Lyne",
+      "pf_id":"17",
+      "pf_seat_name":"Ashton-under-Lyne"
+   },
+   "22":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Aylesbury",
+      "pf_id":"18",
+      "pf_seat_name":"Aylesbury"
+   },
+   "23":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Ayr, Carrick & Cumnock",
+      "pf_id":"19",
+      "pf_seat_name":"Ayr, Carrick and Cumnock"
+   },
+   "28":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Barking",
+      "pf_id":"22",
+      "pf_seat_name":"Barking"
+   },
+   "29":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Barnsley Central",
+      "pf_id":"23",
+      "pf_seat_name":"Barnsley Central"
+   },
+   "407":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Na h-Eileanan an Iar",
+      "pf_id":"380",
+      "pf_seat_name":"Na h-Eileanan an Iar"
+   },
+   "406":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Motherwell & Wishaw",
+      "pf_id":"379",
+      "pf_seat_name":"Motherwell and Wishaw"
+   },
+   "405":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Morley & Outwood",
+      "pf_id":"378",
+      "pf_seat_name":"Morley and Outwood"
+   },
+   "404":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Morecambe & Lunesdale",
+      "pf_id":"377",
+      "pf_seat_name":"Morecambe and Lunesdale"
+   },
+   "403":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Moray",
+      "pf_id":"376",
+      "pf_seat_name":"Moray"
+   },
+   "402":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Montgomeryshire",
+      "pf_id":"375",
+      "pf_seat_name":"Montgomeryshire"
+   },
+   "401":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Monmouth",
+      "pf_id":"374",
+      "pf_seat_name":"Monmouth"
+   },
+   "400":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Mole Valley",
+      "pf_id":"373",
+      "pf_seat_name":"Mole Valley"
+   },
+   "629":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Wokingham",
+      "pf_id":"637",
+      "pf_seat_name":"Wokingham"
+   },
+   "409":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"New Forest East",
+      "pf_id":"382",
+      "pf_seat_name":"New Forest East"
+   },
+   "408":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Neath",
+      "pf_id":"381",
+      "pf_seat_name":"Neath"
+   },
+   "628":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Woking",
+      "pf_id":"636",
+      "pf_seat_name":"Woking"
+   },
+   "379":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Ludlow",
+      "pf_id":"345",
+      "pf_seat_name":"Ludlow"
+   },
+   "378":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Louth & Horncastle",
+      "pf_id":"344",
+      "pf_seat_name":"Louth and Horncastle"
+   },
+   "371":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Liverpool Walton",
+      "pf_id":"338",
+      "pf_seat_name":"Liverpool, Walton"
+   },
+   "370":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Liverpool Riverside",
+      "pf_id":"337",
+      "pf_seat_name":"Liverpool, Riverside"
+   },
+   "373":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Liverpool West Derby",
+      "pf_id":"340",
+      "pf_seat_name":"Liverpool, West Derby"
+   },
+   "372":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Liverpool Wavertree",
+      "pf_id":"339",
+      "pf_seat_name":"Liverpool, Wavertree"
+   },
+   "375":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Llanelli",
+      "pf_id":"342",
+      "pf_seat_name":"Llanelli"
+   },
+   "374":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Livingston",
+      "pf_id":"341",
+      "pf_seat_name":"Livingston"
+   },
+   "377":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Loughborough",
+      "pf_id":"343",
+      "pf_seat_name":"Loughborough"
+   },
+   "376":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Londonderry East",
+      "pf_id":"196",
+      "pf_seat_name":"East Londonderry"
+   },
+   "618":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Wigan",
+      "pf_id":"625",
+      "pf_seat_name":"Wigan"
+   },
+   "393":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Merthyr Tydfil & Rhymney",
+      "pf_id":"359",
+      "pf_seat_name":"Merthyr Tydfil and Rhymney"
+   },
+   "392":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Meriden",
+      "pf_id":"358",
+      "pf_seat_name":"Meriden"
+   },
+   "88":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Braintree",
+      "pf_id":"78",
+      "pf_seat_name":"Braintree"
+   },
+   "89":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Brecon & Radnorshire",
+      "pf_id":"79",
+      "pf_seat_name":"Brecon and Radnorshire"
+   },
+   "397":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Milton Keynes North",
+      "pf_id":"370",
+      "pf_seat_name":"Milton Keynes North"
+   },
+   "396":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Midlothian",
+      "pf_id":"369",
+      "pf_seat_name":"Midlothian"
+   },
+   "395":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Middlesbrough South & Cleveland East",
+      "pf_id":"368",
+      "pf_seat_name":"Middlesbrough South and East Cleveland"
+   },
+   "394":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Middlesbrough",
+      "pf_id":"367",
+      "pf_seat_name":"Middlesbrough"
+   },
+   "82":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Bournemouth East",
+      "pf_id":"72",
+      "pf_seat_name":"Bournemouth East"
+   },
+   "83":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Bournemouth West",
+      "pf_id":"73",
+      "pf_seat_name":"Bournemouth West"
+   },
+   "80":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Boston & Skegness",
+      "pf_id":"70",
+      "pf_seat_name":"Boston and Skegness"
+   },
+   "81":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bosworth",
+      "pf_id":"71",
+      "pf_seat_name":"Bosworth"
+   },
+   "86":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Bradford South",
+      "pf_id":"76",
+      "pf_seat_name":"Bradford South"
+   },
+   "87":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Bradford West",
+      "pf_id":"77",
+      "pf_seat_name":"Bradford West"
+   },
+   "84":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bracknell",
+      "pf_id":"74",
+      "pf_seat_name":"Bracknell"
+   },
+   "85":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Bradford East",
+      "pf_id":"75",
+      "pf_seat_name":"Bradford East"
+   },
+   "7":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Aldershot",
+      "pf_id":"6",
+      "pf_seat_name":"Aldershot"
+   },
+   "601":{
+      "declaration_time":"12:00:00",
+      "off_seat_name":"Warwick & Leamington",
+      "pf_id":"602",
+      "pf_seat_name":"Warwick and Leamington"
+   },
+   "607":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Weaver Vale",
+      "pf_id":"607",
+      "pf_seat_name":"Weaver Vale"
+   },
+   "586":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Upper Bann",
+      "pf_id":"587",
+      "pf_seat_name":"Upper Bann"
+   },
+   "587":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Uxbridge & Ruislip South",
+      "pf_id":"588",
+      "pf_seat_name":"Uxbridge and South Ruislip"
+   },
+   "584":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Tyrone West",
+      "pf_id":"620",
+      "pf_seat_name":"West Tyrone"
+   },
+   "585":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Ulster Mid",
+      "pf_id":"365",
+      "pf_seat_name":"Mid Ulster"
+   },
+   "582":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Tynemouth",
+      "pf_id":"586",
+      "pf_seat_name":"Tynemouth"
+   },
+   "583":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Tyneside North",
+      "pf_id":"415",
+      "pf_seat_name":"North Tyneside"
+   },
+   "580":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Tunbridge Wells",
+      "pf_id":"584",
+      "pf_seat_name":"Tunbridge Wells"
+   },
+   "581":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Twickenham",
+      "pf_id":"585",
+      "pf_seat_name":"Twickenham"
+   },
+   "588":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Vale of Clwyd",
+      "pf_id":"589",
+      "pf_seat_name":"Vale of Clwyd"
+   },
+   "589":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Vale of Glamorgan",
+      "pf_id":"590",
+      "pf_seat_name":"Vale of Glamorgan"
+   },
+   "245":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Falkirk",
+      "pf_id":"222",
+      "pf_seat_name":"Falkirk"
+   },
+   "244":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Exeter",
+      "pf_id":"221",
+      "pf_seat_name":"Exeter"
+   },
+   "247":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Faversham & Kent Mid",
+      "pf_id":"224",
+      "pf_seat_name":"Faversham and Mid Kent"
+   },
+   "246":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Fareham",
+      "pf_id":"223",
+      "pf_seat_name":"Fareham"
+   },
+   "241":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Erewash",
+      "pf_id":"218",
+      "pf_seat_name":"Erewash"
+   },
+   "240":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Epsom & Ewell",
+      "pf_id":"217",
+      "pf_seat_name":"Epsom and Ewell"
+   },
+   "243":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Esher & Walton",
+      "pf_id":"220",
+      "pf_seat_name":"Esher and Walton"
+   },
+   "242":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Erith & Thamesmead",
+      "pf_id":"219",
+      "pf_seat_name":"Erith and Thamesmead"
+   },
+   "615":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Westminster North",
+      "pf_id":"622",
+      "pf_seat_name":"Westminster North"
+   },
+   "249":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Fermanagh & South Tyrone",
+      "pf_id":"226",
+      "pf_seat_name":"Fermanagh and South Tyrone"
+   },
+   "248":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Feltham & Heston",
+      "pf_id":"225",
+      "pf_seat_name":"Feltham and Heston"
+   },
+   "519":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Somerton & Frome",
+      "pf_id":"505",
+      "pf_seat_name":"Somerton and Frome"
+   },
+   "518":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Somerset North East",
+      "pf_id":"408",
+      "pf_seat_name":"North East Somerset"
+   },
+   "511":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Shropshire North",
+      "pf_id":"411",
+      "pf_seat_name":"North Shropshire"
+   },
+   "510":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Shrewsbury & Atcham",
+      "pf_id":"499",
+      "pf_seat_name":"Shrewsbury and Atcham"
+   },
+   "513":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Skipton & Ripon",
+      "pf_id":"501",
+      "pf_seat_name":"Skipton and Ripon"
+   },
+   "512":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Sittingbourne & Sheppey",
+      "pf_id":"500",
+      "pf_seat_name":"Sittingbourne and Sheppey"
+   },
+   "515":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Slough",
+      "pf_id":"503",
+      "pf_seat_name":"Slough"
+   },
+   "514":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Sleaford & North Hykeham",
+      "pf_id":"502",
+      "pf_seat_name":"Sleaford and North Hykeham"
+   },
+   "517":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Somerset North",
+      "pf_id":"412",
+      "pf_seat_name":"North Somerset"
+   },
+   "516":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Solihull",
+      "pf_id":"504",
+      "pf_seat_name":"Solihull"
+   },
+   "458":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Portsmouth South",
+      "pf_id":"453",
+      "pf_seat_name":"Portsmouth South"
+   },
+   "459":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Preseli Pembrokeshire",
+      "pf_id":"454",
+      "pf_seat_name":"Preseli Pembrokeshire"
+   },
+   "621":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Wimbledon",
+      "pf_id":"626",
+      "pf_seat_name":"Wimbledon"
+   },
+   "620":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Wiltshire South West",
+      "pf_id":"529",
+      "pf_seat_name":"South West Wiltshire"
+   },
+   "627":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Witney",
+      "pf_id":"632",
+      "pf_seat_name":"Witney"
+   },
+   "626":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Witham",
+      "pf_id":"631",
+      "pf_seat_name":"Witham"
+   },
+   "625":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Wirral West",
+      "pf_id":"630",
+      "pf_seat_name":"Wirral West"
+   },
+   "624":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Wirral South",
+      "pf_id":"629",
+      "pf_seat_name":"Wirral South"
+   },
+   "450":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Perth & Perthshire North",
+      "pf_id":"445",
+      "pf_seat_name":"Perth and North Perthshire"
+   },
+   "451":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Peterborough",
+      "pf_id":"446",
+      "pf_seat_name":"Peterborough"
+   },
+   "452":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Plymouth Moor View",
+      "pf_id":"447",
+      "pf_seat_name":"Plymouth Moor View"
+   },
+   "453":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Plymouth Sutton & Devonport",
+      "pf_id":"448",
+      "pf_seat_name":"Plymouth, Sutton and Devonport"
+   },
+   "454":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Pontypridd",
+      "pf_id":"449",
+      "pf_seat_name":"Pontypridd"
+   },
+   "455":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Poole",
+      "pf_id":"450",
+      "pf_seat_name":"Poole"
+   },
+   "456":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Poplar & Limehouse",
+      "pf_id":"451",
+      "pf_seat_name":"Poplar and Limehouse"
+   },
+   "457":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Portsmouth North",
+      "pf_id":"452",
+      "pf_seat_name":"Portsmouth North"
+   },
+   "179":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Delyn",
+      "pf_id":"166",
+      "pf_seat_name":"Delyn"
+   },
+   "178":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Daventry",
+      "pf_id":"165",
+      "pf_seat_name":"Daventry"
+   },
+   "177":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Dartford",
+      "pf_id":"164",
+      "pf_seat_name":"Dartford"
+   },
+   "176":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Darlington",
+      "pf_id":"163",
+      "pf_seat_name":"Darlington"
+   },
+   "175":{
+      "declaration_time":"01:00:00",
+      "off_seat_name":"Dagenham & Rainham",
+      "pf_id":"162",
+      "pf_seat_name":"Dagenham and Rainham"
+   },
+   "174":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Cynon Valley",
+      "pf_id":"161",
+      "pf_seat_name":"Cynon Valley"
+   },
+   "173":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Cumbernauld, Kilsyth & Kirkintilloch East",
+      "pf_id":"160",
+      "pf_seat_name":"Cumbernauld, Kilsyth and Kirkintilloch East"
+   },
+   "172":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Croydon South",
+      "pf_id":"159",
+      "pf_seat_name":"Croydon South"
+   },
+   "171":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Croydon North",
+      "pf_id":"158",
+      "pf_seat_name":"Croydon North"
+   },
+   "170":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Croydon Central",
+      "pf_id":"157",
+      "pf_seat_name":"Croydon Central"
+   },
+   "253":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Folkestone & Hythe",
+      "pf_id":"229",
+      "pf_seat_name":"Folkestone and Hythe"
+   },
+   "182":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Derby South",
+      "pf_id":"169",
+      "pf_seat_name":"Derby South"
+   },
+   "183":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Derbyshire Dales",
+      "pf_id":"170",
+      "pf_seat_name":"Derbyshire Dales"
+   },
+   "180":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Denton & Reddish",
+      "pf_id":"167",
+      "pf_seat_name":"Denton and Reddish"
+   },
+   "181":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Derby North",
+      "pf_id":"168",
+      "pf_seat_name":"Derby North"
+   },
+   "186":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Derbyshire South",
+      "pf_id":"509",
+      "pf_seat_name":"South Derbyshire"
+   },
+   "187":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Devizes",
+      "pf_id":"171",
+      "pf_seat_name":"Devizes"
+   },
+   "184":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Derbyshire Mid",
+      "pf_id":"361",
+      "pf_seat_name":"Mid Derbyshire"
+   },
+   "185":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Derbyshire North East",
+      "pf_id":"404",
+      "pf_seat_name":"North East Derbyshire"
+   },
+   "188":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Devon Central",
+      "pf_id":"122",
+      "pf_seat_name":"Central Devon"
+   },
+   "189":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Devon East",
+      "pf_id":"191",
+      "pf_seat_name":"East Devon"
+   },
+   "650":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Yorkshire East",
+      "pf_id":"201",
+      "pf_seat_name":"East Yorkshire"
+   },
+   "11":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Amber Valley",
+      "pf_id":"10",
+      "pf_seat_name":"Amber Valley"
+   },
+   "10":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Alyn & Deeside",
+      "pf_id":"9",
+      "pf_seat_name":"Alyn and Deeside"
+   },
+   "13":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Antrim East",
+      "pf_id":"190",
+      "pf_seat_name":"East Antrim"
+   },
+   "12":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Angus",
+      "pf_id":"11",
+      "pf_seat_name":"Angus"
+   },
+   "15":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Antrim South",
+      "pf_id":"506",
+      "pf_seat_name":"South Antrim"
+   },
+   "14":{
+      "declaration_time":"01:00:00",
+      "off_seat_name":"Antrim North",
+      "pf_id":"395",
+      "pf_seat_name":"North Antrim"
+   },
+   "17":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Argyll & Bute",
+      "pf_id":"13",
+      "pf_seat_name":"Argyll and Bute"
+   },
+   "16":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Arfon",
+      "pf_id":"12",
+      "pf_seat_name":"Arfon"
+   },
+   "19":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Ashfield",
+      "pf_id":"15",
+      "pf_seat_name":"Ashfield"
+   },
+   "18":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Arundel & South Downs",
+      "pf_id":"14",
+      "pf_seat_name":"Arundel and South Downs"
+   },
+   "62":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Birmingham Northfield",
+      "pf_id":"52",
+      "pf_seat_name":"Birmingham Northfield"
+   },
+   "322":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Huddersfield",
+      "pf_id":"292",
+      "pf_seat_name":"Huddersfield"
+   },
+   "323":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Hull East",
+      "pf_id":"311",
+      "pf_seat_name":"Kingston upon Hull East"
+   },
+   "320":{
+      "declaration_time":"23:00:00",
+      "off_seat_name":"Houghton & Sunderland South",
+      "pf_id":"290",
+      "pf_seat_name":"Houghton and Sunderland South"
+   },
+   "321":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Hove",
+      "pf_id":"291",
+      "pf_seat_name":"Hove"
+   },
+   "326":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Huntingdon",
+      "pf_id":"293",
+      "pf_seat_name":"Huntingdon"
+   },
+   "327":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Hyndburn",
+      "pf_id":"294",
+      "pf_seat_name":"Hyndburn"
+   },
+   "324":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Hull North",
+      "pf_id":"312",
+      "pf_seat_name":"Kingston upon Hull North"
+   },
+   "325":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Hull West & Hessle",
+      "pf_id":"313",
+      "pf_seat_name":"Kingston upon Hull West and Hessle"
+   },
+   "328":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Ilford North",
+      "pf_id":"295",
+      "pf_seat_name":"Ilford North"
+   },
+   "329":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Ilford South",
+      "pf_id":"296",
+      "pf_seat_name":"Ilford South"
+   },
+   "201":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Dover",
+      "pf_id":"176",
+      "pf_seat_name":"Dover"
+   },
+   "200":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Dorset West",
+      "pf_id":"615",
+      "pf_seat_name":"West Dorset"
+   },
+   "203":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Down South",
+      "pf_id":"511",
+      "pf_seat_name":"South Down"
+   },
+   "202":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Down North",
+      "pf_id":"400",
+      "pf_seat_name":"North Down"
+   },
+   "205":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Dudley South",
+      "pf_id":"178",
+      "pf_seat_name":"Dudley South"
+   },
+   "204":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Dudley North",
+      "pf_id":"177",
+      "pf_seat_name":"Dudley North"
+   },
+   "207":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Dumfries & Galloway",
+      "pf_id":"180",
+      "pf_seat_name":"Dumfries and Galloway"
+   },
+   "206":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Dulwich & West Norwood",
+      "pf_id":"179",
+      "pf_seat_name":"Dulwich and West Norwood"
+   },
+   "209":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Dunbartonshire East",
+      "pf_id":"192",
+      "pf_seat_name":"East Dunbartonshire"
+   },
+   "208":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Dumfriesshire, Clydesdale & Tweeddale",
+      "pf_id":"181",
+      "pf_seat_name":"Dumfriesshire, Clydesdale and Tweeddale"
+   },
+   "77":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bolton South East",
+      "pf_id":"67",
+      "pf_seat_name":"Bolton South East"
+   },
+   "76":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bolton North East",
+      "pf_id":"66",
+      "pf_seat_name":"Bolton North East"
+   },
+   "75":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bolsover",
+      "pf_id":"65",
+      "pf_seat_name":"Bolsover"
+   },
+   "74":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Bognor Regis & Littlehampton",
+      "pf_id":"64",
+      "pf_seat_name":"Bognor Regis and Littlehampton"
+   },
+   "73":{
+      "declaration_time":"12:00:00",
+      "off_seat_name":"Blyth Valley",
+      "pf_id":"63",
+      "pf_seat_name":"Blyth Valley"
+   },
+   "72":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Blaydon",
+      "pf_id":"62",
+      "pf_seat_name":"Blaydon"
+   },
+   "71":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Blaenau Gwent",
+      "pf_id":"61",
+      "pf_seat_name":"Blaenau Gwent"
+   },
+   "70":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Blackpool South",
+      "pf_id":"60",
+      "pf_seat_name":"Blackpool South"
+   },
+   "79":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Bootle",
+      "pf_id":"69",
+      "pf_seat_name":"Bootle"
+   },
+   "78":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bolton West",
+      "pf_id":"68",
+      "pf_seat_name":"Bolton West"
+   },
+   "2":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Aberconwy",
+      "pf_id":"2",
+      "pf_seat_name":"Aberconwy"
+   },
+   "542":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Strangford",
+      "pf_id":"553",
+      "pf_seat_name":"Strangford"
+   },
+   "543":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Stratford-on-Avon",
+      "pf_id":"554",
+      "pf_seat_name":"Stratford-on-Avon"
+   },
+   "540":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Stone",
+      "pf_id":"551",
+      "pf_seat_name":"Stone"
+   },
+   "541":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Stourbridge",
+      "pf_id":"552",
+      "pf_seat_name":"Stourbridge"
+   },
+   "546":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Stroud",
+      "pf_id":"557",
+      "pf_seat_name":"Stroud"
+   },
+   "547":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Suffolk Central & Ipswich North",
+      "pf_id":"123",
+      "pf_seat_name":"Central Suffolk and North Ipswich"
+   },
+   "544":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Streatham",
+      "pf_id":"555",
+      "pf_seat_name":"Streatham"
+   },
+   "545":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Stretford & Urmston",
+      "pf_id":"556",
+      "pf_seat_name":"Stretford and Urmston"
+   },
+   "8":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Aldridge-Brownhills",
+      "pf_id":"7",
+      "pf_seat_name":"Aldridge-Brownhills"
+   },
+   "548":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Suffolk Coastal",
+      "pf_id":"558",
+      "pf_seat_name":"Suffolk Coastal"
+   },
+   "549":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Suffolk South",
+      "pf_id":"521",
+      "pf_seat_name":"South Suffolk"
+   },
+   "68":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Blackley & Broughton",
+      "pf_id":"58",
+      "pf_seat_name":"Blackley and Broughton"
+   },
+   "598":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Warley",
+      "pf_id":"599",
+      "pf_seat_name":"Warley"
+   },
+   "120":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Cambridgeshire North East",
+      "pf_id":"403",
+      "pf_seat_name":"North East Cambridgeshire"
+   },
+   "121":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Cambridgeshire North West",
+      "pf_id":"417",
+      "pf_seat_name":"North West Cambridgeshire"
+   },
+   "122":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Cambridgeshire South",
+      "pf_id":"508",
+      "pf_seat_name":"South Cambridgeshire"
+   },
+   "123":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Cambridgeshire South East",
+      "pf_id":"512",
+      "pf_seat_name":"South East Cambridgeshire"
+   },
+   "124":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Cannock Chase",
+      "pf_id":"110",
+      "pf_seat_name":"Cannock Chase"
+   },
+   "125":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Canterbury",
+      "pf_id":"111",
+      "pf_seat_name":"Canterbury"
+   },
+   "126":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Cardiff Central",
+      "pf_id":"112",
+      "pf_seat_name":"Cardiff Central"
+   },
+   "127":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Cardiff North",
+      "pf_id":"113",
+      "pf_seat_name":"Cardiff North"
+   },
+   "128":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Cardiff South & Penarth",
+      "pf_id":"114",
+      "pf_seat_name":"Cardiff South and Penarth"
+   },
+   "129":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Cardiff West",
+      "pf_id":"115",
+      "pf_seat_name":"Cardiff West"
+   },
+   "414":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Newcastle upon Tyne Central",
+      "pf_id":"386",
+      "pf_seat_name":"Newcastle upon Tyne Central"
+   },
+   "415":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Newcastle upon Tyne East",
+      "pf_id":"387",
+      "pf_seat_name":"Newcastle upon Tyne East"
+   },
+   "416":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Newcastle upon Tyne North",
+      "pf_id":"388",
+      "pf_seat_name":"Newcastle upon Tyne North"
+   },
+   "417":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Newport East",
+      "pf_id":"390",
+      "pf_seat_name":"Newport East"
+   },
+   "410":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"New Forest West",
+      "pf_id":"383",
+      "pf_seat_name":"New Forest West"
+   },
+   "411":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Newark",
+      "pf_id":"384",
+      "pf_seat_name":"Newark"
+   },
+   "412":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Newbury",
+      "pf_id":"385",
+      "pf_seat_name":"Newbury"
+   },
+   "413":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Newcastle-under-Lyme",
+      "pf_id":"389",
+      "pf_seat_name":"Newcastle-under-Lyme"
+   },
+   "498":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Scunthorpe",
+      "pf_id":"487",
+      "pf_seat_name":"Scunthorpe"
+   },
+   "418":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Newport West",
+      "pf_id":"391",
+      "pf_seat_name":"Newport West"
+   },
+   "419":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Newry & Armagh",
+      "pf_id":"392",
+      "pf_seat_name":"Newry and Armagh"
+   },
+   "499":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Sedgefield",
+      "pf_id":"488",
+      "pf_seat_name":"Sedgefield"
+   },
+   "319":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Horsham",
+      "pf_id":"289",
+      "pf_seat_name":"Horsham"
+   },
+   "318":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Hornsey & Wood Green",
+      "pf_id":"288",
+      "pf_seat_name":"Hornsey and Wood Green"
+   },
+   "313":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Heywood & Middleton",
+      "pf_id":"283",
+      "pf_seat_name":"Heywood and Middleton"
+   },
+   "312":{
+      "declaration_time":"12:00:00",
+      "off_seat_name":"Hexham",
+      "pf_id":"282",
+      "pf_seat_name":"Hexham"
+   },
+   "311":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Hertsmere",
+      "pf_id":"281",
+      "pf_seat_name":"Hertsmere"
+   },
+   "310":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Hertfordshire South West",
+      "pf_id":"526",
+      "pf_seat_name":"South West Hertfordshire"
+   },
+   "317":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Hornchurch & Upminster",
+      "pf_id":"287",
+      "pf_seat_name":"Hornchurch and Upminster"
+   },
+   "316":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Holborn & St Pancras",
+      "pf_id":"286",
+      "pf_seat_name":"Holborn and St. Pancras"
+   },
+   "315":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Hitchin & Harpenden",
+      "pf_id":"285",
+      "pf_seat_name":"Hitchin and Harpenden"
+   },
+   "314":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"High Peak",
+      "pf_id":"284",
+      "pf_seat_name":"High Peak"
+   },
+   "496":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Salisbury",
+      "pf_id":"485",
+      "pf_seat_name":"Salisbury"
+   },
+   "497":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Scarborough & Whitby",
+      "pf_id":"486",
+      "pf_seat_name":"Scarborough and Whitby"
+   },
+   "3":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Aberdeen North",
+      "pf_id":"3",
+      "pf_seat_name":"Aberdeen North"
+   },
+   "368":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Lincoln",
+      "pf_id":"335",
+      "pf_seat_name":"Lincoln"
+   },
+   "369":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Linlithgow & Falkirk East",
+      "pf_id":"336",
+      "pf_seat_name":"Linlithgow and East Falkirk"
+   },
+   "366":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Leyton & Wanstead",
+      "pf_id":"333",
+      "pf_seat_name":"Leyton and Wanstead"
+   },
+   "367":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Lichfield",
+      "pf_id":"334",
+      "pf_seat_name":"Lichfield"
+   },
+   "364":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Lewisham East",
+      "pf_id":"330",
+      "pf_seat_name":"Lewisham East"
+   },
+   "365":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Lewisham West & Penge",
+      "pf_id":"331",
+      "pf_seat_name":"Lewisham West and Penge"
+   },
+   "362":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Lewes",
+      "pf_id":"329",
+      "pf_seat_name":"Lewes"
+   },
+   "363":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Lewisham Deptford",
+      "pf_id":"332",
+      "pf_seat_name":"Lewisham, Deptford"
+   },
+   "360":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Leicestershire South",
+      "pf_id":"515",
+      "pf_seat_name":"South Leicestershire"
+   },
+   "361":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Leigh",
+      "pf_id":"328",
+      "pf_seat_name":"Leigh"
+   },
+   "380":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Luton North",
+      "pf_id":"346",
+      "pf_seat_name":"Luton North"
+   },
+   "381":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Luton South",
+      "pf_id":"347",
+      "pf_seat_name":"Luton South"
+   },
+   "382":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Macclesfield",
+      "pf_id":"348",
+      "pf_seat_name":"Macclesfield"
+   },
+   "383":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Maidenhead",
+      "pf_id":"349",
+      "pf_seat_name":"Maidenhead"
+   },
+   "384":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Maidstone & The Weald",
+      "pf_id":"350",
+      "pf_seat_name":"Maidstone and The Weald"
+   },
+   "385":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Makerfield",
+      "pf_id":"351",
+      "pf_seat_name":"Makerfield"
+   },
+   "386":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Maldon",
+      "pf_id":"352",
+      "pf_seat_name":"Maldon"
+   },
+   "387":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Manchester Central",
+      "pf_id":"353",
+      "pf_seat_name":"Manchester Central"
+   },
+   "388":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Manchester Gorton",
+      "pf_id":"354",
+      "pf_seat_name":"Manchester, Gorton"
+   },
+   "389":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Manchester Withington",
+      "pf_id":"355",
+      "pf_seat_name":"Manchester, Withington"
+   },
+   "605":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Waveney",
+      "pf_id":"605",
+      "pf_seat_name":"Waveney"
+   },
+   "579":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Truro & Falmouth",
+      "pf_id":"583",
+      "pf_seat_name":"Truro and Falmouth"
+   },
+   "578":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Tottenham",
+      "pf_id":"582",
+      "pf_seat_name":"Tottenham"
+   },
+   "604":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Watford",
+      "pf_id":"604",
+      "pf_seat_name":"Watford"
+   },
+   "573":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Tonbridge & Malling",
+      "pf_id":"576",
+      "pf_seat_name":"Tonbridge and Malling"
+   },
+   "572":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Tiverton & Honiton",
+      "pf_id":"575",
+      "pf_seat_name":"Tiverton and Honiton"
+   },
+   "571":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Thurrock",
+      "pf_id":"574",
+      "pf_seat_name":"Thurrock"
+   },
+   "570":{
+      "declaration_time":"02:15:00",
+      "off_seat_name":"Thornbury & Yate",
+      "pf_id":"573",
+      "pf_seat_name":"Thornbury and Yate"
+   },
+   "577":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Totnes",
+      "pf_id":"581",
+      "pf_seat_name":"Totnes"
+   },
+   "576":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Torfaen",
+      "pf_id":"579",
+      "pf_seat_name":"Torfaen"
+   },
+   "575":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Torbay",
+      "pf_id":"578",
+      "pf_seat_name":"Torbay"
+   },
+   "574":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Tooting",
+      "pf_id":"577",
+      "pf_seat_name":"Tooting"
+   },
+   "60":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Birmingham Hodge Hill",
+      "pf_id":"50",
+      "pf_seat_name":"Birmingham Hodge Hill"
+   },
+   "61":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Birmingham Ladywood",
+      "pf_id":"51",
+      "pf_seat_name":"Birmingham Ladywood"
+   },
+   "258":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Garston & Halewood",
+      "pf_id":"234",
+      "pf_seat_name":"Garston and Halewood"
+   },
+   "259":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Gateshead",
+      "pf_id":"235",
+      "pf_seat_name":"Gateshead"
+   },
+   "64":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Birmingham Selly Oak",
+      "pf_id":"54",
+      "pf_seat_name":"Birmingham Selly Oak"
+   },
+   "65":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Birmingham Yardley",
+      "pf_id":"55",
+      "pf_seat_name":"Birmingham Yardley"
+   },
+   "66":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Bishop Auckland",
+      "pf_id":"56",
+      "pf_seat_name":"Bishop Auckland"
+   },
+   "67":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Blackburn",
+      "pf_id":"57",
+      "pf_seat_name":"Blackburn"
+   },
+   "252":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Finchley & Golders Green",
+      "pf_id":"228",
+      "pf_seat_name":"Finchley and Golders Green"
+   },
+   "69":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Blackpool North & Cleveleys",
+      "pf_id":"59",
+      "pf_seat_name":"Blackpool North and Cleveleys"
+   },
+   "250":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Fife North East",
+      "pf_id":"405",
+      "pf_seat_name":"North East Fife"
+   },
+   "251":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Filton & Bradley Stoke",
+      "pf_id":"227",
+      "pf_seat_name":"Filton and Bradley Stoke"
+   },
+   "256":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Fylde",
+      "pf_id":"232",
+      "pf_seat_name":"Fylde"
+   },
+   "257":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Gainsborough",
+      "pf_id":"233",
+      "pf_seat_name":"Gainsborough"
+   },
+   "254":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Forest of Dean",
+      "pf_id":"230",
+      "pf_seat_name":"Forest of Dean"
+   },
+   "255":{
+      "declaration_time":"01:00:00",
+      "off_seat_name":"Foyle",
+      "pf_id":"231",
+      "pf_seat_name":"Foyle"
+   },
+   "603":{
+      "declaration_time":"23:30:00",
+      "off_seat_name":"Washington & Sunderland West",
+      "pf_id":"603",
+      "pf_seat_name":"Washington and Sunderland West"
+   },
+   "602":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Warwickshire North",
+      "pf_id":"416",
+      "pf_seat_name":"North Warwickshire"
+   },
+   "508":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Sherwood",
+      "pf_id":"497",
+      "pf_seat_name":"Sherwood"
+   },
+   "509":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Shipley",
+      "pf_id":"498",
+      "pf_seat_name":"Shipley"
+   },
+   "506":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Sheffield Heeley",
+      "pf_id":"495",
+      "pf_seat_name":"Sheffield Heeley"
+   },
+   "507":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Sheffield South East",
+      "pf_id":"496",
+      "pf_seat_name":"Sheffield South East"
+   },
+   "504":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Sheffield Central",
+      "pf_id":"493",
+      "pf_seat_name":"Sheffield Central"
+   },
+   "505":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Sheffield Hallam",
+      "pf_id":"494",
+      "pf_seat_name":"Sheffield Hallam"
+   },
+   "502":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Sevenoaks",
+      "pf_id":"491",
+      "pf_seat_name":"Sevenoaks"
+   },
+   "503":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Sheffield Brightside & Hillsborough",
+      "pf_id":"492",
+      "pf_seat_name":"Sheffield Brightside and Hillsborough"
+   },
+   "500":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Sefton Central",
+      "pf_id":"489",
+      "pf_seat_name":"Sefton Central"
+   },
+   "501":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Selby & Ainsty",
+      "pf_id":"490",
+      "pf_seat_name":"Selby and Ainsty"
+   },
+   "630":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Wolverhampton North East",
+      "pf_id":"638",
+      "pf_seat_name":"Wolverhampton North East"
+   },
+   "631":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Wolverhampton South East",
+      "pf_id":"639",
+      "pf_seat_name":"Wolverhampton South East"
+   },
+   "632":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Wolverhampton South West",
+      "pf_id":"633",
+      "pf_seat_name":"Wolverhampton South West"
+   },
+   "633":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Worcester",
+      "pf_id":"642",
+      "pf_seat_name":"Worcester"
+   },
+   "469":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Renfrewshire East",
+      "pf_id":"198",
+      "pf_seat_name":"East Renfrewshire"
+   },
+   "468":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Reigate",
+      "pf_id":"463",
+      "pf_seat_name":"Reigate"
+   },
+   "636":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Workington",
+      "pf_id":"643",
+      "pf_seat_name":"Workington"
+   },
+   "637":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Worsley & Eccles South",
+      "pf_id":"644",
+      "pf_seat_name":"Worsley and Eccles South"
+   },
+   "465":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Reading West",
+      "pf_id":"460",
+      "pf_seat_name":"Reading West"
+   },
+   "464":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Reading East",
+      "pf_id":"459",
+      "pf_seat_name":"Reading East"
+   },
+   "467":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Redditch",
+      "pf_id":"462",
+      "pf_seat_name":"Redditch"
+   },
+   "466":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Redcar",
+      "pf_id":"461",
+      "pf_seat_name":"Redcar"
+   },
+   "461":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Pudsey",
+      "pf_id":"456",
+      "pf_seat_name":"Pudsey"
+   },
+   "460":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Preston",
+      "pf_id":"455",
+      "pf_seat_name":"Preston"
+   },
+   "463":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Rayleigh & Wickford",
+      "pf_id":"458",
+      "pf_seat_name":"Rayleigh and Wickford"
+   },
+   "462":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Putney",
+      "pf_id":"457",
+      "pf_seat_name":"Putney"
+   },
+   "168":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Crawley",
+      "pf_id":"155",
+      "pf_seat_name":"Crawley"
+   },
+   "169":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Crewe & Nantwich",
+      "pf_id":"156",
+      "pf_seat_name":"Crewe and Nantwich"
+   },
+   "164":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Cotswolds, The",
+      "pf_id":"570",
+      "pf_seat_name":"The Cotswolds"
+   },
+   "165":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Coventry North East",
+      "pf_id":"152",
+      "pf_seat_name":"Coventry North East"
+   },
+   "166":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Coventry North West",
+      "pf_id":"153",
+      "pf_seat_name":"Coventry North West"
+   },
+   "167":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Coventry South",
+      "pf_id":"154",
+      "pf_seat_name":"Coventry South"
+   },
+   "160":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Copeland",
+      "pf_id":"150",
+      "pf_seat_name":"Copeland"
+   },
+   "161":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Corby",
+      "pf_id":"151",
+      "pf_seat_name":"Corby"
+   },
+   "162":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Cornwall North",
+      "pf_id":"397",
+      "pf_seat_name":"North Cornwall"
+   },
+   "163":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Cornwall South East",
+      "pf_id":"513",
+      "pf_seat_name":"South East Cornwall"
+   },
+   "600":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Warrington South",
+      "pf_id":"601",
+      "pf_seat_name":"Warrington South"
+   },
+   "9":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Altrincham & Sale West",
+      "pf_id":"8",
+      "pf_seat_name":"Altrincham and Sale West"
+   },
+   "647":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Ynys Mon",
+      "pf_id":"647",
+      "pf_seat_name":"Ynys Mon"
+   },
+   "646":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Yeovil",
+      "pf_id":"641",
+      "pf_seat_name":"Yeovil"
+   },
+   "649":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"York Outer",
+      "pf_id":"650",
+      "pf_seat_name":"York Outer"
+   },
+   "648":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"York Central",
+      "pf_id":"648",
+      "pf_seat_name":"York Central"
+   },
+   "357":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Leicester South",
+      "pf_id":"326",
+      "pf_seat_name":"Leicester South"
+   },
+   "356":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Leicester East",
+      "pf_id":"325",
+      "pf_seat_name":"Leicester East"
+   },
+   "355":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Leeds West",
+      "pf_id":"324",
+      "pf_seat_name":"Leeds West"
+   },
+   "354":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Leeds North West",
+      "pf_id":"323",
+      "pf_seat_name":"Leeds North West"
+   },
+   "353":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Leeds North East",
+      "pf_id":"322",
+      "pf_seat_name":"Leeds North East"
+   },
+   "352":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Leeds East",
+      "pf_id":"321",
+      "pf_seat_name":"Leeds East"
+   },
+   "351":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Leeds Central",
+      "pf_id":"320",
+      "pf_seat_name":"Leeds Central"
+   },
+   "350":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Lancaster & Fleetwood",
+      "pf_id":"319",
+      "pf_seat_name":"Lancaster and Fleetwood"
+   },
+   "359":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Leicestershire North West",
+      "pf_id":"420",
+      "pf_seat_name":"North West Leicestershire"
+   },
+   "358":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Leicester West",
+      "pf_id":"327",
+      "pf_seat_name":"Leicester West"
+   },
+   "216":{
+      "declaration_time":"00:30:00",
+      "off_seat_name":"Durham North West",
+      "pf_id":"418",
+      "pf_seat_name":"North West Durham"
+   },
+   "217":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Dwyfor Meirionnydd",
+      "pf_id":"185",
+      "pf_seat_name":"Dwyfor Meirionnydd"
+   },
+   "214":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Durham, City of",
+      "pf_id":"141",
+      "pf_seat_name":"City of Durham"
+   },
+   "215":{
+      "declaration_time":"01:00:00",
+      "off_seat_name":"Durham North",
+      "pf_id":"401",
+      "pf_seat_name":"North Durham"
+   },
+   "212":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Dundee West",
+      "pf_id":"183",
+      "pf_seat_name":"Dundee West"
+   },
+   "213":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Dunfermline & Fife West",
+      "pf_id":"184",
+      "pf_seat_name":"Dunfermline and West Fife"
+   },
+   "210":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Dunbartonshire West",
+      "pf_id":"616",
+      "pf_seat_name":"West Dunbartonshire"
+   },
+   "211":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Dundee East",
+      "pf_id":"182",
+      "pf_seat_name":"Dundee East"
+   },
+   "218":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Ealing Central & Acton",
+      "pf_id":"186",
+      "pf_seat_name":"Ealing Central and Acton"
+   },
+   "219":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Ealing North",
+      "pf_id":"187",
+      "pf_seat_name":"Ealing North"
+   },
+   "289":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Hampshire North West",
+      "pf_id":"419",
+      "pf_seat_name":"North West Hampshire"
+   },
+   "288":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Hampshire North East",
+      "pf_id":"406",
+      "pf_seat_name":"North East Hampshire"
+   },
+   "4":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Aberdeen South",
+      "pf_id":"4",
+      "pf_seat_name":"Aberdeen South"
+   },
+   "281":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Hackney South & Shoreditch",
+      "pf_id":"257",
+      "pf_seat_name":"Hackney South and Shoreditch"
+   },
+   "280":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Hackney North & Stoke Newington",
+      "pf_id":"256",
+      "pf_seat_name":"Hackney North and Stoke Newington"
+   },
+   "283":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Halifax",
+      "pf_id":"259",
+      "pf_seat_name":"Halifax"
+   },
+   "282":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Halesowen & Rowley Regis",
+      "pf_id":"258",
+      "pf_seat_name":"Halesowen and Rowley Regis"
+   },
+   "285":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Halton",
+      "pf_id":"261",
+      "pf_seat_name":"Halton"
+   },
+   "284":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Haltemprice & Howden",
+      "pf_id":"260",
+      "pf_seat_name":"Haltemprice and Howden"
+   },
+   "287":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Hampshire East",
+      "pf_id":"194",
+      "pf_seat_name":"East Hampshire"
+   },
+   "286":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Hammersmith",
+      "pf_id":"262",
+      "pf_seat_name":"Hammersmith"
+   },
+   "263":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Glasgow East",
+      "pf_id":"239",
+      "pf_seat_name":"Glasgow East"
+   },
+   "262":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Glasgow Central",
+      "pf_id":"238",
+      "pf_seat_name":"Glasgow Central"
+   },
+   "261":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Gillingham & Rainham",
+      "pf_id":"237",
+      "pf_seat_name":"Gillingham and Rainham"
+   },
+   "260":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Gedling",
+      "pf_id":"236",
+      "pf_seat_name":"Gedling"
+   },
+   "267":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Glasgow South",
+      "pf_id":"243",
+      "pf_seat_name":"Glasgow South"
+   },
+   "266":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Glasgow North West",
+      "pf_id":"242",
+      "pf_seat_name":"Glasgow North West"
+   },
+   "265":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Glasgow North East",
+      "pf_id":"241",
+      "pf_seat_name":"Glasgow North East"
+   },
+   "264":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Glasgow North",
+      "pf_id":"240",
+      "pf_seat_name":"Glasgow North"
+   },
+   "269":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Glenrothes",
+      "pf_id":"245",
+      "pf_seat_name":"Glenrothes"
+   },
+   "268":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Glasgow South West",
+      "pf_id":"244",
+      "pf_seat_name":"Glasgow South West"
+   },
+   "59":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Birmingham Hall Green",
+      "pf_id":"49",
+      "pf_seat_name":"Birmingham Hall Green"
+   },
+   "58":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Birmingham Erdington",
+      "pf_id":"48",
+      "pf_seat_name":"Birmingham Erdington"
+   },
+   "55":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Bexleyheath & Crayford",
+      "pf_id":"45",
+      "pf_seat_name":"Bexleyheath and Crayford"
+   },
+   "54":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Bexhill & Battle",
+      "pf_id":"44",
+      "pf_seat_name":"Bexhill and Battle"
+   },
+   "57":{
+      "declaration_time":"05:30:00",
+      "off_seat_name":"Birmingham Edgbaston",
+      "pf_id":"47",
+      "pf_seat_name":"Birmingham Edgbaston"
+   },
+   "56":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Birkenhead",
+      "pf_id":"46",
+      "pf_seat_name":"Birkenhead"
+   },
+   "51":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Berwickshire, Roxburgh & Selkirk",
+      "pf_id":"41",
+      "pf_seat_name":"Berwickshire, Roxburgh and Selkirk"
+   },
+   "50":{
+      "declaration_time":"12:00:00",
+      "off_seat_name":"Berwick-upon-Tweed",
+      "pf_id":"40",
+      "pf_seat_name":"Berwick-upon-Tweed"
+   },
+   "53":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Beverley & Holderness",
+      "pf_id":"43",
+      "pf_seat_name":"Beverley and Holderness"
+   },
+   "52":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Bethnal Green & Bow",
+      "pf_id":"42",
+      "pf_seat_name":"Bethnal Green and Bow"
+   },
+   "537":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Stoke-on-Trent Central",
+      "pf_id":"548",
+      "pf_seat_name":"Stoke-on-Trent Central"
+   },
+   "536":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Stockton South",
+      "pf_id":"547",
+      "pf_seat_name":"Stockton South"
+   },
+   "535":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Stockton North",
+      "pf_id":"546",
+      "pf_seat_name":"Stockton North"
+   },
+   "63":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Birmingham Perry Barr",
+      "pf_id":"53",
+      "pf_seat_name":"Birmingham Perry Barr"
+   },
+   "533":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Stirling",
+      "pf_id":"544",
+      "pf_seat_name":"Stirling"
+   },
+   "532":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Stevenage",
+      "pf_id":"543",
+      "pf_seat_name":"Stevenage"
+   },
+   "531":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Stalybridge & Hyde",
+      "pf_id":"542",
+      "pf_seat_name":"Stalybridge and Hyde"
+   },
+   "530":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Staffordshire South",
+      "pf_id":"520",
+      "pf_seat_name":"South Staffordshire"
+   },
+   "539":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Stoke-on-Trent South",
+      "pf_id":"550",
+      "pf_seat_name":"Stoke-on-Trent South"
+   },
+   "538":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Stoke-on-Trent North",
+      "pf_id":"549",
+      "pf_seat_name":"Stoke-on-Trent North"
+   },
+   "115":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Caithness, Sutherland & Easter Ross",
+      "pf_id":"105",
+      "pf_seat_name":"Caithness, Sutherland and Easter Ross"
+   },
+   "114":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Caerphilly",
+      "pf_id":"104",
+      "pf_seat_name":"Caerphilly"
+   },
+   "117":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Camberwell & Peckham",
+      "pf_id":"107",
+      "pf_seat_name":"Camberwell and Peckham"
+   },
+   "116":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Calder Valley",
+      "pf_id":"106",
+      "pf_seat_name":"Calder Valley"
+   },
+   "111":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bury North",
+      "pf_id":"101",
+      "pf_seat_name":"Bury North"
+   },
+   "110":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Burton",
+      "pf_id":"100",
+      "pf_seat_name":"Burton"
+   },
+   "113":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bury St Edmunds",
+      "pf_id":"103",
+      "pf_seat_name":"Bury St. Edmunds"
+   },
+   "112":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bury South",
+      "pf_id":"102",
+      "pf_seat_name":"Bury South"
+   },
+   "119":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Cambridge",
+      "pf_id":"109",
+      "pf_seat_name":"Cambridge"
+   },
+   "118":{
+      "declaration_time":"06:30:00",
+      "off_seat_name":"Camborne & Redruth",
+      "pf_id":"108",
+      "pf_seat_name":"Camborne and Redruth"
+   },
+   "429":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Northamptonshire South",
+      "pf_id":"517",
+      "pf_seat_name":"South Northamptonshire"
+   },
+   "428":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Northampton South",
+      "pf_id":"424",
+      "pf_seat_name":"Northampton South"
+   },
+   "534":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Stockport",
+      "pf_id":"545",
+      "pf_seat_name":"Stockport"
+   },
+   "421":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Norfolk Mid",
+      "pf_id":"363",
+      "pf_seat_name":"Mid Norfolk"
+   },
+   "420":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Newton Abbot",
+      "pf_id":"393",
+      "pf_seat_name":"Newton Abbot"
+   },
+   "423":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Norfolk North West",
+      "pf_id":"421",
+      "pf_seat_name":"North West Norfolk"
+   },
+   "422":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Norfolk North",
+      "pf_id":"410",
+      "pf_seat_name":"North Norfolk"
+   },
+   "425":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Norfolk South West",
+      "pf_id":"527",
+      "pf_seat_name":"South West Norfolk"
+   },
+   "424":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Norfolk South",
+      "pf_id":"516",
+      "pf_seat_name":"South Norfolk"
+   },
+   "427":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Northampton North",
+      "pf_id":"423",
+      "pf_seat_name":"Northampton North"
+   },
+   "426":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Normanton, Pontefract & Castleford",
+      "pf_id":"394",
+      "pf_seat_name":"Normanton, Pontefract and Castleford"
+   },
+   "308":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Hertford & Stortford",
+      "pf_id":"280",
+      "pf_seat_name":"Hertford and Stortford"
+   },
+   "309":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Hertfordshire North East",
+      "pf_id":"407",
+      "pf_seat_name":"North East Hertfordshire"
+   },
+   "300":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Hayes & Harlington",
+      "pf_id":"273",
+      "pf_seat_name":"Hayes and Harlington"
+   },
+   "301":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Hazel Grove",
+      "pf_id":"274",
+      "pf_seat_name":"Hazel Grove"
+   },
+   "302":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Hemel Hempstead",
+      "pf_id":"275",
+      "pf_seat_name":"Hemel Hempstead"
+   },
+   "303":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Hemsworth",
+      "pf_id":"276",
+      "pf_seat_name":"Hemsworth"
+   },
+   "304":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Hendon",
+      "pf_id":"277",
+      "pf_seat_name":"Hendon"
+   },
+   "305":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Henley",
+      "pf_id":"278",
+      "pf_seat_name":"Henley"
+   },
+   "306":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Hereford & Herefordshire South",
+      "pf_id":"279",
+      "pf_seat_name":"Hereford and South Herefordshire"
+   },
+   "307":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Herefordshire North",
+      "pf_id":"409",
+      "pf_seat_name":"North Herefordshire"
+   },
+   "568":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Thanet South",
+      "pf_id":"523",
+      "pf_seat_name":"South Thanet"
+   },
+   "569":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Thirsk & Malton",
+      "pf_id":"572",
+      "pf_seat_name":"Thirsk and Malton"
+   },
+   "560":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Swindon North",
+      "pf_id":"413",
+      "pf_seat_name":"North Swindon"
+   },
+   "561":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Swindon South",
+      "pf_id":"522",
+      "pf_seat_name":"South Swindon"
+   },
+   "562":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Tamworth",
+      "pf_id":"565",
+      "pf_seat_name":"Tamworth"
+   },
+   "563":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Tatton",
+      "pf_id":"566",
+      "pf_seat_name":"Tatton"
+   },
+   "564":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Taunton Deane",
+      "pf_id":"567",
+      "pf_seat_name":"Taunton Deane"
+   },
+   "565":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Telford",
+      "pf_id":"568",
+      "pf_seat_name":"Telford"
+   },
+   "566":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Tewkesbury",
+      "pf_id":"569",
+      "pf_seat_name":"Tewkesbury"
+   },
+   "567":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Thanet North",
+      "pf_id":"414",
+      "pf_seat_name":"North Thanet"
+   },
+   "229":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Edinburgh North & Leith",
+      "pf_id":"206",
+      "pf_seat_name":"Edinburgh North and Leith"
+   },
+   "228":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Edinburgh East",
+      "pf_id":"205",
+      "pf_seat_name":"Edinburgh East"
+   },
+   "227":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Eddisbury",
+      "pf_id":"204",
+      "pf_seat_name":"Eddisbury"
+   },
+   "226":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Eastleigh",
+      "pf_id":"203",
+      "pf_seat_name":"Eastleigh"
+   },
+   "225":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Eastbourne",
+      "pf_id":"202",
+      "pf_seat_name":"Eastbourne"
+   },
+   "224":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"East Lothian",
+      "pf_id":"197",
+      "pf_seat_name":"East Lothian"
+   },
+   "223":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"East Kilbride, Strathaven & Lesmahagow",
+      "pf_id":"195",
+      "pf_seat_name":"East Kilbride, Strathaven and Lesmahagow"
+   },
+   "222":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"East Ham",
+      "pf_id":"193",
+      "pf_seat_name":"East Ham"
+   },
+   "221":{
+      "declaration_time":"01:30:00",
+      "off_seat_name":"Easington",
+      "pf_id":"189",
+      "pf_seat_name":"Easington"
+   },
+   "220":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Ealing Southall",
+      "pf_id":"188",
+      "pf_seat_name":"Ealing, Southall"
+   },
+   "391":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Meon Valley",
+      "pf_id":"357",
+      "pf_seat_name":"Meon Valley"
+   },
+   "390":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Mansfield",
+      "pf_id":"356",
+      "pf_seat_name":"Mansfield"
+   },
+   "151":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Cities of London & Westminster",
+      "pf_id":"139",
+      "pf_seat_name":"Cities of London and Westminster"
+   },
+   "150":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Christchurch",
+      "pf_id":"138",
+      "pf_seat_name":"Christchurch"
+   },
+   "153":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Cleethorpes",
+      "pf_id":"143",
+      "pf_seat_name":"Cleethorpes"
+   },
+   "152":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Clacton",
+      "pf_id":"142",
+      "pf_seat_name":"Clacton"
+   },
+   "155":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Clwyd West",
+      "pf_id":"145",
+      "pf_seat_name":"Clwyd West"
+   },
+   "154":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Clwyd South",
+      "pf_id":"144",
+      "pf_seat_name":"Clwyd South"
+   },
+   "157":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Colchester",
+      "pf_id":"147",
+      "pf_seat_name":"Colchester"
+   },
+   "156":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Coatbridge, Chryston & Bellshill",
+      "pf_id":"146",
+      "pf_seat_name":"Coatbridge, Chryston and Bellshill"
+   },
+   "159":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Congleton",
+      "pf_id":"149",
+      "pf_seat_name":"Congleton"
+   },
+   "158":{
+      "declaration_time":"04:30:00",
+      "off_seat_name":"Colne Valley",
+      "pf_id":"148",
+      "pf_seat_name":"Colne Valley"
+   },
+   "609":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Wells",
+      "pf_id":"609",
+      "pf_seat_name":"Wells"
+   },
+   "608":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Wellingborough",
+      "pf_id":"608",
+      "pf_seat_name":"Wellingborough"
+   },
+   "634":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Worcestershire Mid",
+      "pf_id":"366",
+      "pf_seat_name":"Mid Worcestershire"
+   },
+   "399":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Mitcham & Morden",
+      "pf_id":"372",
+      "pf_seat_name":"Mitcham and Morden"
+   },
+   "635":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Worcestershire West",
+      "pf_id":"621",
+      "pf_seat_name":"West Worcestershire"
+   },
+   "398":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Milton Keynes South",
+      "pf_id":"371",
+      "pf_seat_name":"Milton Keynes South"
+   },
+   "48":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Belfast West",
+      "pf_id":"38",
+      "pf_seat_name":"Belfast West"
+   },
+   "49":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bermondsey & Old Southwark",
+      "pf_id":"39",
+      "pf_seat_name":"Bermondsey and Old Southwark"
+   },
+   "46":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Belfast North",
+      "pf_id":"36",
+      "pf_seat_name":"Belfast North"
+   },
+   "47":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Belfast South",
+      "pf_id":"37",
+      "pf_seat_name":"Belfast South"
+   },
+   "44":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Bedfordshire South West",
+      "pf_id":"524",
+      "pf_seat_name":"South West Bedfordshire"
+   },
+   "45":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Belfast East",
+      "pf_id":"35",
+      "pf_seat_name":"Belfast East"
+   },
+   "42":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Bedfordshire Mid",
+      "pf_id":"360",
+      "pf_seat_name":"Mid Bedfordshire"
+   },
+   "43":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Bedfordshire North East",
+      "pf_id":"402",
+      "pf_seat_name":"North East Bedfordshire"
+   },
+   "40":{
+      "declaration_time":"03:30:00",
+      "off_seat_name":"Beckenham",
+      "pf_id":"33",
+      "pf_seat_name":"Beckenham"
+   },
+   "41":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Bedford",
+      "pf_id":"34",
+      "pf_seat_name":"Bedford"
+   },
+   "638":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Worthing East & Shoreham",
+      "pf_id":"200",
+      "pf_seat_name":"East Worthing and Shoreham"
+   },
+   "5":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"West Aberdeenshire and Kincardine",
+      "pf_id":"612",
+      "pf_seat_name":"West Aberdeenshire and Kincardine"
+   },
+   "639":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Worthing West",
+      "pf_id":"645",
+      "pf_seat_name":"Worthing West"
+   },
+   "489":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Saffron Walden",
+      "pf_id":"483",
+      "pf_seat_name":"Saffron Walden"
+   },
+   "488":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Rutland & Melton",
+      "pf_id":"482",
+      "pf_seat_name":"Rutland and Melton"
+   },
+   "487":{
+      "declaration_time":"02:00:00",
+      "off_seat_name":"Rutherglen & Hamilton West",
+      "pf_id":"481",
+      "pf_seat_name":"Rutherglen and Hamilton West"
+   },
+   "486":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Rushcliffe",
+      "pf_id":"480",
+      "pf_seat_name":"Rushcliffe"
+   },
+   "485":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Runnymede & Weybridge",
+      "pf_id":"479",
+      "pf_seat_name":"Runnymede and Weybridge"
+   },
+   "484":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Ruislip, Northwood & Pinner",
+      "pf_id":"478",
+      "pf_seat_name":"Ruislip, Northwood and Pinner"
+   },
+   "483":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Rugby",
+      "pf_id":"477",
+      "pf_seat_name":"Rugby"
+   },
+   "482":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Rotherham",
+      "pf_id":"476",
+      "pf_seat_name":"Rotherham"
+   },
+   "481":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Rother Valley",
+      "pf_id":"475",
+      "pf_seat_name":"Rother Valley"
+   },
+   "480":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Rossendale & Darwen",
+      "pf_id":"474",
+      "pf_seat_name":"Rossendale and Darwen"
+   },
+   "472":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Richmond (Yorks)",
+      "pf_id":"466",
+      "pf_seat_name":"Richmond (Yorks)"
+   },
+   "473":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Richmond Park",
+      "pf_id":"467",
+      "pf_seat_name":"Richmond Park"
+   },
+   "470":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Rhondda",
+      "pf_id":"464",
+      "pf_seat_name":"Rhondda"
+   },
+   "471":{
+      "declaration_time":"03:00:00",
+      "off_seat_name":"Ribble Valley",
+      "pf_id":"465",
+      "pf_seat_name":"Ribble Valley"
+   },
+   "476":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Rochford & Southend East",
+      "pf_id":"470",
+      "pf_seat_name":"Rochford and Southend East"
+   },
+   "477":{
+      "declaration_time":"06:00:00",
+      "off_seat_name":"Romford",
+      "pf_id":"471",
+      "pf_seat_name":"Romford"
+   },
+   "474":{
+      "declaration_time":"02:30:00",
+      "off_seat_name":"Rochdale",
+      "pf_id":"468",
+      "pf_seat_name":"Rochdale"
+   },
+   "475":{
+      "declaration_time":"05:00:00",
+      "off_seat_name":"Rochester & Strood",
+      "pf_id":"469",
+      "pf_seat_name":"Rochester and Strood"
+   },
+   "478":{
+      "declaration_time":"04:00:00",
+      "off_seat_name":"Romsey & Southampton North",
+      "pf_id":"472",
+      "pf_seat_name":"Romsey and Southampton North"
+   },
+   "479":{
+      "declaration_time":"07:00:00",
+      "off_seat_name":"Ross, Skye & Lochaber",
+      "pf_id":"473",
+      "pf_seat_name":"Ross, Skye and Lochaber"
+   }
+}

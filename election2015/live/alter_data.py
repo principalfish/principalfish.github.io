@@ -52,7 +52,7 @@ path = "testdata/test-general-election-2015-tory-hung-20150227/results/"
 files = os.listdir(path)
 
 def get_data(file):
-    if "result" in file and "Berwick" in file:
+    if "result" in file:
         file_dir = path + file
         xmldoc = minidom.parse(file_dir)
 

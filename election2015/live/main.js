@@ -46,7 +46,11 @@ function filterMap(){
 
 			g.selectAll(".map")
 				.attr("id", "filtertime")
-				.each(function(d){ console.log(d.properties.name)})
+				.attr("style", function(d) {
+					if (d.properties.name in seatData){
+						return "opacity : 0.1"
+					}
+					})
 
 
 			if (party == "null")

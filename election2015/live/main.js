@@ -1,4 +1,20 @@
-// FOR index and nowcast
+// for live
+
+/////ideassssss
+
+//for refreshing, redo functions getseatinfo + loadmap + displayVoteTotals(nationalVoteTotals) every minute or so
+// initiate while loop when user on site - delay of 60 seconds
+
+// live ticker where user inputs was
+// smilar while loop + refresh
+// lists seats in order of declaration time
+// scrollable + clickable
+
+
+// before /after for each seat
+// before for when seat clicked pre - declaration?
+// need to load other data in for that..
+// possible old_seat_info.json has enough info
 
 
 //////////// CHANGE**///////////
@@ -320,7 +336,7 @@ var oldclass;
 // fills out table of info at top of #right
 function seatinfo(d){
 	$("#information").removeClass(oldclass);
-	$("#seat_info").empty()
+	$("#information").empty()
 
 
 	if (d.properties.name in seatData){
@@ -328,7 +344,7 @@ function seatinfo(d){
 
 		$("#information").addClass(seat_info["winning_party"])
 
-		$("#seat_info").append("<h2> " + d.properties.name + "</h2>")
+		$("#information").append("<h2> " + d.properties.name + "</h2>")
 
 
 		//////////// CHANGE**///////////
@@ -352,8 +368,8 @@ function seatinfo(d){
 		$("#information").addClass("not_here")
 		$("#information-pie").empty();
 		$("#information-chart").empty();
-		$("#seat_info").append("<h2>" + d.properties.name + "</h2>")
-		$
+		$("#information").append("<h2>" + d.properties.name + "</h2>")
+
 
 
 		oldclass = "not_here"
@@ -402,8 +418,8 @@ function piechart(d){
 	}
 
 
-	var width = 250,
-		height = 250;
+	var width = 225,
+		height = 225;
 		radius = Math.min(width, height) / 2;
 
 	var arc = d3.svg.arc()
@@ -511,7 +527,7 @@ function displayVoteTotals(data) {
 												"</tfoot></table>")
 
 		var plussign1, plussign2;
-		
+
 		$.each(data, function(i){
 
 				if (data[i].change > 0){

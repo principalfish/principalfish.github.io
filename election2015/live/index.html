@@ -7,6 +7,7 @@
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/projection.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
+	<link rel="stylesheet" href="main.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
@@ -183,20 +184,24 @@
 
 
 			<div id="right">
-				<div id="topright">
-					<h3 id="information-header"> Information for Selected Seat</h3>
 
-				</div>
 				<!--- CHANGE** more stuff in here-->
 				<div id ="information">
-					<div id = "seat_info">
-					</div>
 
 
-					<div id="charts">
-							<div id="information-pie"></div>
-							<div id="information-chart"></div>
-					</div>
+				</div>
+
+
+				<div id="charts">
+						<div id="information-pie"></div>
+						<div id="information-chart"></div>
+				</div>
+
+				<div id="coalitions">
+					<h3> Possible Coalitions </h3>
+
+				</div>
+
 
 				<div id = "totals">
 
@@ -219,6 +224,7 @@
 					</select></h3>
 
 
+
 					<table id="totalstable" class="tablesorter">
 						<thead>
 							<tr>
@@ -237,16 +243,7 @@
 					</table>
 
 				</div>
-				<div id="bottomright">
-						<!--- CHANGE** No days to any more-->
-					<h3 style="float:left; width: 400px; position:absolute;">Last updated :
-						<script>
-							var x = new Date(document.lastModified).toUTCString(); document.write(x)
-						</script>
-					</h3>
 
-
-				</div>
 			</div>
 		</div>
 

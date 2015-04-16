@@ -45,12 +45,17 @@ function filterMap(){
 	d3.json("/election2015/data/projection.json", function(uk){
 
 			g.selectAll(".map")
-				.attr("id", "filtertime")
-				.attr("style", function(d) {
+				.attr("id", function(d) {
 					if (d.properties.name in seatData){
-						return "opacity : 0.1"
+						return "filtertime"
 					}
 					})
+				.attr("style", function(d) {
+					if (!(d.properties.name in seatData)){
+						return "opacity: 0.1;"
+					}
+					})
+
 
 
 			if (party == "null")

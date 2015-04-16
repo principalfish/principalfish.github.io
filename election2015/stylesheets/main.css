@@ -282,9 +282,9 @@ table#totalstable thead tr .headerDown {
 
 svg .boundaries {
 	 fill: none;
-	 stroke: black;
+	 stroke: darkgrey;
 	 stroke-linejoin: round;
-	 stroke-width: 0.5;
+	 stroke-width: 0.4;
 }
 
  .background {
@@ -293,8 +293,8 @@ svg .boundaries {
 }
 
 svg .map {
-	stroke: lightgrey;
-	stroke-width: 0.1;
+	stroke: black;
+	stroke-width: 0.25;
 	stroke-linejoin: round;
 	cursor: pointer;
 	pointer-events: all;

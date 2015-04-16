@@ -44,6 +44,8 @@ function filterMap(){
 	// use d3 to access seat list to cross reference seatData for filters - product of old way of doing it
 	d3.json("/election2015/data/projection.json", function(uk){
 
+			g.selectAll()
+
 			g.selectAll(".map")
 				.attr("id", "filtertime")
 
@@ -116,12 +118,7 @@ function filterMap(){
 						seatsAfterFilter.push(d);
 					});
 
-			g.selectAll("#regionfiltered")
-				.attr("style", function(d){
-					if (seatData[d.properties.name]["seat_info"] == undefined){
-						return "opacity: 0.1"
-					}
-				})
+
 
 			g.selectAll(".map")
 				.attr("id", function(d) {

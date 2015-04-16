@@ -14,4 +14,6 @@ while(True):
     print "\n" * 5
     time.sleep(5)
     subprocess.call("autorun.sh", shell = True)
-    time.sleep(113)
+    for i in range(113):
+        print i
+        time.sleep(1)

@@ -118,7 +118,9 @@ function filterMap(){
 
 			g.selectAll("#regionfiltered")
 				.attr("style", function(d){
-					console.log(d.properties.name)
+					if (seatData[d.properties.name]["seat_info"] == undefined){
+						return "opacity: 0.1"
+					}
 				})
 
 			g.selectAll(".map")

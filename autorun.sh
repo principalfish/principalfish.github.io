@@ -1,9 +1,5 @@
 #!/bin/sh
-git checkout dev
+git checkout master
 git add .
-
-now=$(date +"%T")
-echo "Current time : $now"
-
-git commit -am now
+git commit -am electionupdate
 git push

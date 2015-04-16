@@ -46,6 +46,8 @@ function filterMap(){
 
 			g.selectAll(".map")
 				.attr("id", "filtertime")
+				.each(function(d){ console.log(d.properties.name)})
+
 
 			if (party == "null")
 				g.selectAll("#filtertime")

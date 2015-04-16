@@ -44,9 +44,9 @@ function filterMap(){
 	// use d3 to access seat list to cross reference seatData for filters - product of old way of doing it
 	d3.json("/election2015/data/projection.json", function(uk){
 
-			g.selectAll(".not_here")
-				.attr("style", "opacity: 0.1")
-				
+			// g.selectAll(".not_here")
+			// 	.attr("style", "opacity: 0.1")
+
 			g.selectAll(".map")
 				.attr("id", "filtertime")
 
@@ -142,6 +142,8 @@ function resetFilter(){
 	filterStates[4].majorityhigh = 100;
 
 	filterMap();
+
+
 
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);

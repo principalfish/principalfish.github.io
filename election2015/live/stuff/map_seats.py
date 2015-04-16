@@ -4,6 +4,7 @@ import json
 seats = {}
 seat_map = {}
 seat_name_map = {}
+seat_declaration_times = {}
 
 with open("test.csv", "r") as input_file:
     reader = csv.reader(input_file, delimiter = "\t")
@@ -18,6 +19,7 @@ with open("test.csv", "r") as input_file:
 
         seat_map[off_id] = pf_id
         seat_name_map[off_seat_name] = pf_seat_name
+        seat_declaration_times[pf_seat_name] = declaration_time
 
 with open("seat_map.json", "w") as output:
     json.dump(seat_map, output)
@@ -77,3 +79,6 @@ with open("previoustotals.csv", "r") as input_csv:
 
 with open("previous_totals.json", "w") as output:
     json.dump(previous_totals, output)
+
+with open("seat_declaration_times.json", "w") as output:
+    json.dump(seat_declaration_times, output)

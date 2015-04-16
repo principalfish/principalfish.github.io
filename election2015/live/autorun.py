@@ -18,7 +18,6 @@ old_data = json.loads(old)
 
 live_data = {}
 
-
 party_map = {
     "Conservative": "conservative",
     "Labour" : "labour",
@@ -73,6 +72,8 @@ def get_data(file):
         my_seat_name = seat_name_map[seat_name]
         my_seat_id = seat_map[seat_id]
 
+
+
         seat_info = {}
 
         seat_info["id"] = my_seat_id
@@ -83,6 +84,7 @@ def get_data(file):
         seat_info["change"] = (itemlist[0].attributes['gainOrHold'].value)
         seat_info["majority_total"] =  (itemlist[0].attributes['majority'].value)
         seat_info["majority_percentage"] = (itemlist[0].attributes['percentageMajority'].value)
+
 
         winning_party = (itemlist[0].attributes['winningParty'].value)
         if winning_party in winners_map.keys():

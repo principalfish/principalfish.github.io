@@ -52,7 +52,7 @@ function filterMap(setting){
 				g.selectAll(".not_here")
 					.attr("style", "opacity: 0.1")
 				}
-			
+
 
 
 			g.selectAll(".map")
@@ -273,6 +273,8 @@ function clicked(d) {
 }
 
 
+
+
 // stops users messing up zoom animation
 function disableZoom(){
 	svg.on("mousedown.zoom", null);
@@ -329,8 +331,10 @@ function seatinfo(d){
 	"</td><td id=\"rightcolumninfotable\">" + regionlist[seat_info["area"]] + "</td>");
 	$("#information-party").html("<td>Party</td><td>" + partylist[seat_info["winning_party"]]
 
-	+ "<td> Declared at " + seat_info["declared_at"]  + "</td>" // alternate with expectated declaration time pre declaration (not in data set yet)
-	+ "<td> Electorate : " + seat_info["electorate"] + "</td><td> Turnout  : " + seat_info["percentage_turnout"] + "%</td><td> Majority : " + seat_info["majority_percentage"] + "%</td></tr>"
+	+ "<td> Declared at " + seat_info["declared_at"]  + "</td>"
+	// alternate with expectated declaration time pre declaration (locating in seatDeclarations[d.properties.name]
+	+ "<td> Electorate : " + seat_info["electorate"] + "</td><td> Turnout  : " + seat_info["percentage_turnout"]
+	+ "%</td><td> Majority : " + seat_info["majority_percentage"] + "%</td></tr>"
 
 	);
 
@@ -647,6 +651,14 @@ function getSeatInfo(data){
 
 // call the function
 getData().done(getSeatInfo);
+
+seatDeclarations = {}
+
+$.getJSON("seat_declaration_times.json", function(seats){
+	$.each(seats, function(seat) {
+		seatDeclarations[seat] = seats[seat]
+	});
+});
 
 var regions = {
     "england"  : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland", "southwestengland", "eastofengland",

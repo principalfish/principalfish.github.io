@@ -5,8 +5,6 @@ import subprocess
 
 
 while(True):
-
-    print "\n" * 5
     print "********************"
     print datetime.datetime.now()
     execfile("update_data.py")
@@ -15,5 +13,6 @@ while(True):
     time.sleep(5)
     subprocess.call("autorun.sh", shell = True)
     for i in range(113):
-        print "time to next update", 113 - i, "seconds"
+        if 113 - i % 10 == 0:
+            print "time to next update", 113 - i, "seconds"
         time.sleep(1)

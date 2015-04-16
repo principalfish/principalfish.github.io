@@ -116,13 +116,12 @@ function filterMap(){
 						seatsAfterFilter.push(d);
 					});
 
-			g.selectAll(".map")
+			g.selectAll("#regionfiltered")
 				.attr("style", function(d){
-					if (!(d.properties.name in seatData)){
-						console.log(d.properties.name)
-						return "opacity: 0.1"
-					}
+					console.log(d.properties.name)
 				})
+
+			g.selectAll(".map")
 				.attr("id", function(d) {
 					return "i" + seatData[d.properties.name]["seat_info"]["id"]
 				});

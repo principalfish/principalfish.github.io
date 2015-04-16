@@ -1,5 +1,6 @@
 #!/bin/sh
 git checkout master
 git add .
-git commit -am date
+the_time = date +%Y%m%d%H%M%S
+git commit -am "%the_time"
 git push

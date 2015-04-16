@@ -15,5 +15,5 @@ while(True):
     time.sleep(5)
     subprocess.call("autorun.sh", shell = True)
     for i in range(113):
-        print i
+        print "time to next update", 113 - i, "seconds"
         time.sleep(1)

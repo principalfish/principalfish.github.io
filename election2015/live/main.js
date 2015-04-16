@@ -119,6 +119,7 @@ function filterMap(){
 			g.selectAll(".map")
 				.attr("style", function(d){
 					if (!(d.properties.name in seatData)){
+						console.log(d.properties.name)
 						return "opacity: 0.1"
 					}
 				})

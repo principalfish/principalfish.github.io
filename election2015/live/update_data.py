@@ -48,11 +48,13 @@ winners_map = {
     "Ind" : "other"
 }
 
-path = "testdata/test-general-election-2015-lab-maj-20150227/results/"
+path = "testdata/my_test/"
 files = os.listdir(path)
 
 def get_data(file):
+
     if "result" in file:
+
         file_dir = path + file
         xmldoc = minidom.parse(file_dir)
 
@@ -135,9 +137,17 @@ def get_data(file):
         live_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
 
 
+
+
 for file in files:
     get_data(file)
 
+
+
+count = 0
+for seat in live_data:
+    count +=1
+print "seats declared so far", count
 
 # berwick = live_data["50"]
 #

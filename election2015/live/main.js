@@ -45,17 +45,7 @@ function filterMap(){
 	d3.json("/election2015/data/projection.json", function(uk){
 
 			g.selectAll(".map")
-				.attr("id", function(d) {
-					if (d.properties.name in seatData){
-						return "filtertime"
-					}
-					})
-				.attr("style", function(d) {
-					if (!(d.properties.name in seatData)){
-						return "opacity: 0.1;"
-					}
-					})
-
+				.attr("id", "filtertime")
 
 
 			if (party == "null")
@@ -127,6 +117,11 @@ function filterMap(){
 					});
 
 			g.selectAll(".map")
+				.attr("style", function(d){
+					if (!(d.properties.name in seatData)){
+						return "opacity: 0.1"
+					}
+				})
 				.attr("id", function(d) {
 					return "i" + seatData[d.properties.name]["seat_info"]["id"]
 				});

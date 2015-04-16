@@ -315,52 +315,49 @@ function stopped() {
 // fill seat info in #right when seat clicked/selected
 
 // to colour the information
-var oldclass = null;
+var oldclass;
 
 // fills out table of info at top of #right
 function seatinfo(d){
+	$("#information").removeClass(oldclass);
+	$("#seat_info").empty()
+
+
 	if (d.properties.name in seatData){
+		seat_info = seatData[d.properties.name]["seat_info"]
+
+		$("#information").addClass(seat_info["winning_party"])
+
+		$("#seat_info").append("<h2> " + d.properties.name + "</h2>")
+
 
 		//////////// CHANGE**///////////
-		//ADDED A BUNCH OF NEW INFORMATION, declaration time, electorate, turnout, majrority (lines 316/317)
-	seat_info = seatData[d.properties.name]["seat_info"]
+		$("#information-pie").html(piechart(d));
 
-	$("#information").removeClass(oldclass);
-	$("#information").addClass(seat_info["winning_party"])
-	$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
-	"</td><td id=\"rightcolumninfotable\">" + regionlist[seat_info["area"]] + "</td>");
-	$("#information-party").html("<td>Party</td><td>" + partylist[seat_info["winning_party"]]
-
-	+ "<td> Declared at " + seat_info["declared_at"]  + "</td>"
-	// alternate with expectated declaration time pre declaration (locating in seatDeclarations[d.properties.name]
-	+ "<td> Electorate : " + seat_info["electorate"] + "</td><td> Turnout  : " + seat_info["percentage_turnout"]
-	+ "%</td><td> Majority : " + seat_info["majority_percentage"] + "%</td></tr>"
-
-	);
+		// if declared
+		//
+		// add seat name = d.properties.name, region = regionlist[seat_info["area"]],  party name = partylist[seat_info["winning_party"]
+		// if its a gain or no change =  seat_info["winning_party"] == seat_info["incumbent"]
+		// declaration time =  seat_info["declared_at"], majority = seat_info["majority_percentage"]
+		// pie chart
 
 
-	if (seatData[d.properties.name]["seat_info"]["winning_party"] != seatData[d.properties.name]["seat_info"]["incumbent"])
-		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" +
-		seatData[d.properties.name]["seat_info"]["incumbent"] + "\">" + partylist[seatData[d.properties.name]["seat_info"]["incumbent"]] + "</span></td>")
-	else
-		$("#information-gain").html("<td>No change </td>")
-	$("#information-pie").html(piechart(d));
-
-	oldclass = seatData[d.properties.name]["seat_info"]["winning_party"];
+		// else
+		//
+		// add seat name = d.properties.name, expected declaration time = seatDeclarations[d.properties.name]
+		// clear pie chart + table
+		oldclass = seat_info["winning_party"]
 	}
-
 	else{
-		$("#information").removeClass(oldclass);
-		$("#information").addClass("null")
-		$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
-		"</td><td id=\"rightcolumninfotable\"></td>");
-		$("#information-party").html("<td>Party</td><td>" + "</td>");
+		$("#information").addClass("not_here")
+		$("#information-pie").empty();
+		$("#information-chart").empty();
+		$("#seat_info").append("<h2>" + d.properties.name + "</h2>")
+		$
 
-		$("#information-gain").html("<td></td>");
 
-		oldclass = "null"
+		oldclass = "not_here"
 	}
-
 }
 
 // d3 make pie chart of vote counts ni selected seat
@@ -502,6 +499,7 @@ $( function() {
 // just rewriting the html as fix
 function displayVoteTotals(data) {
 
+
 		///////// CHANGE**
 		//Columns 3 and 4 were formerly Vote% and Vote%Change, now they are Votes and Vote%
 		//objects that populate these tables are in an identical format just .votepercentchange is replaced by .votes
@@ -513,29 +511,34 @@ function displayVoteTotals(data) {
 												"</tfoot></table>")
 
 		var plussign1, plussign2;
-
+		
 		$.each(data, function(i){
 
-				if (data[i].change > 0)
+				if (data[i].change > 0){
 					plussign1 = "+";
-				else
+				}
+				else{
 					plussign1 = "";
+				}
 
-
-			if (i == data.length -1)
+			if (i == data.length -1){
 					null
+				}
 
-			else if (i == data.length -2)
-
+			else if (i == data.length -2){
 				$("#totalstablefoot").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
 					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent).toFixed(2) +
 					 "</td></tr>");
-			else
+				}
+			else{
 				if (data[i].votepercent > 0)
 					$("#totalstableinfo").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
 						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent).toFixed(2) +
 					 "</td></tr>");
+				}
+
 		})
+
 
 
 		$("#totalstable").tablesorter({
@@ -639,7 +642,8 @@ function getSeatInfo(data){
 	areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);
 
 	getVoteTotals("all")
-	displayVoteTotals(nationalVoteTotals)
+
+
 
 	getVoteTotals("greatbritain")
 	getVoteTotals("england")
@@ -647,6 +651,7 @@ function getSeatInfo(data){
 	for (area in areas){
 		getVoteTotals(areas[area])
 	}
+	displayVoteTotals(nationalVoteTotals)
 }
 
 // call the function

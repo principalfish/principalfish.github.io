@@ -181,7 +181,7 @@ function resetFilter(){
 
 // using seatsAfterFilter, generates list of filtered seats
 function generateSeatList(){
-			$("#totalfilteredseats").html(" ");g
+			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
 
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
@@ -202,16 +202,20 @@ function generateSeatList(){
 // close to duplicate of clicked() due to slightly difference in data type used. fix at some point. this one is for generate seat list and seat search box
 function zoomToClickedFilteredSeat(d){
 
+
 	var id = "#i" + seatData[d.properties.name]["seat_info"]["id"];
 	//rewrite at some point
 
 	previous = d3.select(previousnode)
+
 	current = d3.select(id);
+
 
 	repeat();
 
 	// flashes selected seat on map
 	function repeat(){
+
 		previous.transition()
 			.attr("opacity", 1)
 
@@ -250,6 +254,8 @@ function zoomToClickedFilteredSeat(d){
 
 // close to duplicate of zoomtoclickedfilteredseat() due to slightly difference in data type used. fix at some point. this one is for normal map clicking
 function clicked(d) {
+
+
 
 	previous = d3.select(previousnode)
 	current = d3.select(this);
@@ -337,6 +343,7 @@ var oldclass;
 
 // fills out table of info at top of #right
 function seatinfo(d){
+
 	$("#information").removeClass(oldclass);
 	$("#information").empty()
 
@@ -427,6 +434,7 @@ function piechart(d){
 			filterdata.push(data[i]);
 	});
 
+
 	filterdata.sort(function(a, b){
 			return b.votes - a.votes ;
 	});
@@ -506,7 +514,7 @@ function possibleCoalitions(voteTotals){
 										{"parties": "Con*/Lib",  "seats" : data["conservative"] + data["libdems"]  + 1},
 										{"parties": "Con*/UKIP",  "seats" : data["conservative"] + data["ukip"] + 1},
 										{"parties": "Lab/SNP",  "seats" : data["labour"] + data["snp"]},
-										{"parties": "Lab/SNP/Lib",  "seats" : data["labour"] + data["snp"] + data["libdems"]}
+										{"parties": "Lab/Lib/SNP",  "seats" : data["labour"] + data["snp"] + data["libdems"]}
 										]
 
 
@@ -545,6 +553,12 @@ function loadmap(){
 
 				})
 			.attr("opacity", 1)
+			.attr("id", function(d) {
+				if (d.properties.name in seatData){
+
+					return "i" + seatData[d.properties.name]["seat_info"]["id"]
+					}
+				})
 			.attr("d", path)
 			.on("click", clicked)
 			.append("svg:title")
@@ -992,6 +1006,7 @@ function autoRefresh () {
 			searchSeatData = []; // for use with search box
 			seatNames = []; // for use with search box
 			seatData = {};
+			seatInfoForTicker = [];
 
 			$("#selectareatotals option:eq(0)").prop("selected", true);
 
@@ -999,7 +1014,6 @@ function autoRefresh () {
 			//console.log(Date())
 
 			autoRefresh();
-
 
 		}, 90000 )//x / 1000 = seconds
 		}
@@ -1009,7 +1023,7 @@ var refreshState = true;
 autoRefresh();
 
 
-var seatInfoForTicker = {}
+var seatInfoForTicker = [];
 
 function activateTicker(){
 
@@ -1018,15 +1032,38 @@ function activateTicker(){
 		g.selectAll(".map")
 			.each(function(d){
 				seat = d.properties.name
-				seatInfoForTicker[seat] = {"declared_at" : seatData[seat]["seat_info"]["declared_at"],
-																		"winning_party" : seatData[seat]["seat_info"]["winning_party"],
-																		"change" : seatData[seat]["seat_info"]["change"],
-																		}
+				geometry = d
+
+				var declaredAt = Date.parse(seatData[seat]["seat_info"]["declared_at"])
+
+
+				seatInfoForTicker.push({"name" : seat,
+																"declared_at" : declaredAt,
+																"winning_party" : seatData[seat]["seat_info"]["winning_party"],
+																"change" : seatData[seat]["seat_info"]["change"],
+																"geometry" : geometry
+																	})
 			})
 
 
-			$.each(seatInfoForTicker, function(d){
+			seatInfoForTicker.sort(function(a, b){
+					return b.declared_at - a.declared_at;
+			});
 
+			$.each(seatInfoForTicker, function(i){
+				var seatinfo = seatInfoForTicker[i]
+
+				var toDate = new Date(seatinfo.declared_at).toLocaleString()
+				var onlyTime = toDate.substr(toDate.indexOf(",") + 1);
+				var onlyTime = onlyTime.substr(0, 6);
+
+
+
+				$("#ticker").append("<tr class=\"" + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 3px\";>"
+														+ onlyTime + "</td style=\"padding-right: 3px;\"><td>"
+														+ seatinfo.name + "</td><td>"
+														+ seatinfo.change.toUpperCase()	+ "</td></tr>")
 			})
+
 		})
 }

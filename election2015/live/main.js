@@ -210,6 +210,7 @@ function zoomToClickedFilteredSeat(d){
 
 	current = d3.select(id);
 
+	console.log(current)
 
 	repeat();
 
@@ -254,8 +255,6 @@ function zoomToClickedFilteredSeat(d){
 
 // close to duplicate of zoomtoclickedfilteredseat() due to slightly difference in data type used. fix at some point. this one is for normal map clicking
 function clicked(d) {
-
-
 
 	previous = d3.select(previousnode)
 	current = d3.select(this);
@@ -571,6 +570,9 @@ function loadmap(){
 				}
 			});
 
+
+			activateTicker();
+
 	});
 }
 
@@ -746,7 +748,7 @@ function getSeatInfo(data){
 	}
 	displayVoteTotals(nationalVoteTotals)
 	possibleCoalitions(nationalVoteTotals)
-	activateTicker()
+
 }
 
 // call the function
@@ -1024,45 +1026,68 @@ autoRefresh();
 
 
 var seatInfoForTicker = [];
+var gainedSeats = [];
 
 function activateTicker(){
+	d3.selectAll(".map")
+		.each(function(d){
 
-	d3.json("/election2015/data/projection.json", function(uk){
-		g.selectAll(".map")
-			.each(function(d){
-				seat = d.properties.name
-				geometry = d
+			seat = d.properties.name
+			geometry = d
 
-				var declaredAt = Date.parse(seatData[seat]["seat_info"]["declared_at"])
+			var declaredAt = Date.parse(seatData[seat]["seat_info"]["declared_at"])
 
+			// for flash gained seats
+			if (seatData[seat]["seat_info"]["change"] == "gain"){
+				gainedSeats.push({pf_id: seatData[seat]["seat_info"]["id"]})
+			}
 
-				seatInfoForTicker.push({"name" : seat,
-																"declared_at" : declaredAt,
-																"winning_party" : seatData[seat]["seat_info"]["winning_party"],
-																"change" : seatData[seat]["seat_info"]["change"],
-																"geometry" : geometry
-																	})
-			})
-
-
-			seatInfoForTicker.sort(function(a, b){
-					return b.declared_at - a.declared_at;
-			});
-
-			$.each(seatInfoForTicker, function(i){
-				var seatinfo = seatInfoForTicker[i]
-
-				var toDate = new Date(seatinfo.declared_at).toLocaleString()
-				var onlyTime = toDate.substr(toDate.indexOf(",") + 1);
-				var onlyTime = onlyTime.substr(0, 6);
+			seatInfoForTicker.push({"name" : seat,
+															"declared_at" : declaredAt,
+															"winning_party" : seatData[seat]["seat_info"]["winning_party"],
+															"change" : seatData[seat]["seat_info"]["change"],
+															"geometry" : geometry
+																})
+		})
 
 
+		seatInfoForTicker.sort(function(a, b){
+				return b.declared_at - a.declared_at;
+		});
 
-				$("#ticker").append("<tr class=\"" + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
-														+ onlyTime + "</td style=\"padding-right: 8px;\"><td>"
-														+ seatinfo.name + "</td><td>"
-														+ seatinfo.change.toUpperCase()	+ "</td></tr>")
-			})
+		$.each(seatInfoForTicker, function(i){
+			var seatinfo = seatInfoForTicker[i]
+
+			var toDate = new Date(seatinfo.declared_at).toLocaleString()
+			var onlyTime = toDate.substr(toDate.indexOf(",") + 1);
+			var onlyTime = onlyTime.substr(0, 6);
+
+			$("#ticker").append("<tr class=\"" + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
+													+ onlyTime + "</td style=\"padding-right: 8px;\"><td>"
+													+ seatinfo.name + "</td><td>"
+													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
+
 
 		})
+
+}
+
+function flashGains(){
+	$.each(gainedSeats, function(i){
+		var id = "#i" + gainedSeats[i].pf_id
+		current = d3.select(id)
+
+		console.log(current)
+		repeat();
+
+		function repeat(){
+			current
+				.transition()
+					.duration(4000)
+					.attr("opacity", 0.2)
+				.transition()
+					.duration(4000)
+					.attr("opacity", 1)
+			}
+	});
 }

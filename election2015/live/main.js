@@ -703,6 +703,7 @@ function selectAreaInfo(value){
 // everything below here is vastly different but probably not relevant
 
 function getData(){
+
 	return $.ajax({
 		dataType: "json",
   	url: "info.json",
@@ -721,8 +722,6 @@ function getSeatInfo(data){
 	areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);
 
 	getVoteTotals("all")
-
-
 
 	getVoteTotals("greatbritain")
 	getVoteTotals("england")
@@ -976,7 +975,8 @@ function autoRefresh () {
 			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 			searchSeatData = []; // for use with search box
 			seatNames = []; // for use with search box
-			seatData = [];
+
+
 			getData().done(getSeatInfo);
 
 			// rewrite title

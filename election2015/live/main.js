@@ -996,7 +996,7 @@ function autoRefresh () {
 	if (!(refreshState)) {
 			$("#refreshstate").html("OFF");
 			$("#refreshbutton").css("margin-left", "793px");
-			console.log("not refreshing")
+			//console.log("not refreshing")
 			return
 		}
 
@@ -1005,7 +1005,7 @@ function autoRefresh () {
 		$("#refreshstate").html("ON");
 		$("#refreshbutton").css("margin-left", "798px")
 
-		console.log("refreshing")
+		//console.log("refreshing")
 
 		setTimeout(function () {
 			// remove old map - buggy otherwise

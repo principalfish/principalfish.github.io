@@ -976,6 +976,7 @@ function autoRefresh () {
 			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 			searchSeatData = []; // for use with search box
 			seatNames = []; // for use with search box
+			seatData = [];
 			getData().done(getSeatInfo);
 
 			// rewrite title

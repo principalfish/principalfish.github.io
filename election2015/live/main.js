@@ -1140,7 +1140,11 @@ function DO_NOT_PRESS(){
 	d3.selectAll(".not_here")
 		.attr("class", "map ukip");
 
-	alert("Why would you do this?")
+	alert("Why would you do this?");
+
+	$("#right").append("<div id=\"farage\" style =\"position: absolute\"><img style=\"position: relative; z=index: -1; height: 800px; width: 600px;\" src=\"farage.png\"></div>");
+
+
 
 
 
@@ -1158,20 +1162,14 @@ function DO_NOT_PRESS(){
 
 			resetFilter()
 			$("#selectareatotals option:eq(0)").prop("selected", true);
-
+			$("#farage").remove();
 			getData().done(getSeatInfo);
+
 			//console.log(Date())
 
 
 
 		}, 10000 )//x / 1000 = seconds
-
-
-
-
-
-
-
 
 
 }

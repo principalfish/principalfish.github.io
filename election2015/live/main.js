@@ -1008,6 +1008,7 @@ function autoRefresh () {
 		console.log("refreshing")
 
 		setTimeout(function () {
+			window.location.reload(true)
 			// remove old map - buggy otherwise
 			$("svg .map").remove()
 			$("svg .not_here").remove()
@@ -1023,11 +1024,12 @@ function autoRefresh () {
 			$("#selectareatotals option:eq(0)").prop("selected", true);
 
 			getData().done(getSeatInfo);
+
 			//console.log(Date())
 
 			autoRefresh();
 
-		}, 90000 )//x / 1000 = seconds
+		}, 10000 )//x / 1000 = seconds
 		}
 }
 
@@ -1164,6 +1166,7 @@ function DO_NOT_PRESS(){
 			$("#selectareatotals option:eq(0)").prop("selected", true);
 			$("#farage").remove();
 			getData().done(getSeatInfo);
+
 
 			//console.log(Date())
 

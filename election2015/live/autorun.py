@@ -5,6 +5,7 @@ from xml.dom import minidom
 import os
 import csv
 import json
+import moment
 
 
 seat_dict = open("seat_map.json").read()
@@ -23,6 +24,7 @@ parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "gr
 party_map = {
     "Conservative": "conservative",
     "Labour" : "labour",
+    "Labour and Co-operative" : "labour",
     "Liberal Democrat" : "libdems",
     "UK Independence Party" : "ukip",
     "Scottish National Party": "snp",
@@ -54,6 +56,7 @@ winners_map = {
     "Ind" : "other"
 }
 
+
 def get_data(file):
 
     if "result" in file:
@@ -74,19 +77,20 @@ def get_data(file):
         my_seat_name = seat_name_map[seat_name]
         my_seat_id = seat_map[seat_id]
 
-
-
+        time_string = declaration_time[0:-6]
+        m = moment.date(time_string, '%Y-%m-%dT%H:%M:%S' )
+        time_string_declare = str(m.hour) + ":" + str(m.minute)
         seat_info = {}
 
         seat_info["id"] = my_seat_id
         seat_info["declared_at"] = declaration_time
+        seat_info["declared_at_simple"] = time_string_declare
         seat_info["electorate"] =  (itemlist[0].attributes['electorate'].value)
         seat_info["turnout"] = (itemlist[0].attributes['turnout'].value)
         seat_info["percentage_turnout"] = (itemlist[0].attributes['percentageTurnout'].value)
         seat_info["change"] = (itemlist[0].attributes['gainOrHold'].value)
         seat_info["majority_total"] =  (itemlist[0].attributes['majority'].value)
         seat_info["majority_percentage"] = (itemlist[0].attributes['percentageMajority'].value)
-
 
         winning_party = (itemlist[0].attributes['winningParty'].value)
         if winning_party in winners_map.keys():
@@ -122,6 +126,8 @@ def get_data(file):
                 vote_total = float(result.attributes["votes"].value)
                 vote_percentage = float(result.attributes["percentageShare"].value)
                 party = result.attributes["name"].value
+
+
 
                 if party in party_map.keys():
                     by_party[party_map[party]] = {"name" : name, "vote_total" : vote_total, "vote_percentage" : vote_percentage}

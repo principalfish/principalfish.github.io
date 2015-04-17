@@ -39,6 +39,7 @@ var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majorityl
 var seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
+var filterToTicker = [];
 
 // control flow for analysing user filter inputs
 function filterMap(setting){
@@ -153,8 +154,9 @@ function filterMap(setting){
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
 
-
+			generateSeatList();
 		});
+
 	}
 
 // resets all filters and map to default state
@@ -184,8 +186,13 @@ function generateSeatList(){
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
 
+			filterToTicker = [];
+
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
 			$.each(seatsAfterFilter, function(i){
+
+				// to modify ticker
+				filterToTicker.push(seatsAfterFilter[i].properties.name)
 
 				if (filterStates[1].gain == "gains" && filterStates[0].party != "null")
 				$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] +
@@ -197,6 +204,8 @@ function generateSeatList(){
 					"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
 
 			});
+
+			activateTicker()
 		}
 
 // close to duplicate of clicked() due to slightly difference in data type used. fix at some point. this one is for generate seat list and seat search box
@@ -209,8 +218,6 @@ function zoomToClickedFilteredSeat(d){
 	previous = d3.select(previousnode)
 
 	current = d3.select(id);
-
-	console.log(current)
 
 	repeat();
 
@@ -381,9 +388,8 @@ function seatinfo(d){
 												+ "% <span style =\"float: right;\"> Turnout: " + seat_info["percentage_turnout"] + "%</span></p>")
 
 		// declaration time
-		var timeStamp = Date.parse(seat_info["declared_at"])
-		var toDate = new Date(timeStamp).toLocaleString()
-		var onlyTime = toDate.substr(toDate.indexOf(",") + 1);
+
+		var onlyTime = seat_info["declared_at_simple"]
 
 		$("#information").append("<p> Declared at:  " + onlyTime +  "</p>")
 
@@ -397,7 +403,7 @@ function seatinfo(d){
 		$("#information-pie").empty();
 		$("#information-chart").empty();
 		$("#information").append("<p>" + d.properties.name + "</p>")
-		$("#information").append("<p> Expected Declaration Time : " + seatDeclarations[d.properties.name] + "</p>")
+		$("#information").append("<p> Expected Declaration Time : " + seatDeclarations[d.properties.name].substr(0, 5) + "</p>")
 
 
 		oldclass = "not_here"
@@ -567,6 +573,7 @@ function loadmap(){
 					seatsAfterFilter.push(d)
 					searchSeatData.push(d)
 					seatNames.push(d.properties.name);
+					filterToTicker.push(d.properties.name)
 				}
 			});
 
@@ -989,6 +996,7 @@ function autoRefresh () {
 	if (!(refreshState)) {
 			$("#refreshstate").html("OFF");
 			$("#refreshbutton").css("margin-left", "793px");
+			console.log("not refreshing")
 			return
 		}
 
@@ -997,7 +1005,7 @@ function autoRefresh () {
 		$("#refreshstate").html("ON");
 		$("#refreshbutton").css("margin-left", "798px")
 
-
+		console.log("refreshing")
 
 		setTimeout(function () {
 			// remove old map - buggy otherwise
@@ -1009,8 +1017,9 @@ function autoRefresh () {
 			seatNames = []; // for use with search box
 			seatData = {};
 			seatInfoForTicker = [];
+			filterToTicker = [];
 
-			$("#selectareatotals option:eq(0)").prop("selected", true);
+			resetFilter()
 
 			getData().done(getSeatInfo);
 			//console.log(Date())
@@ -1029,26 +1038,38 @@ var seatInfoForTicker = [];
 // var gainSeats = [];
 
 function activateTicker(){
+
+	seatInfoForTicker = [];
+
+	$(".tickerSeats").remove();
+
 	d3.selectAll(".map")
 		.each(function(d){
+
 
 			seat = d.properties.name
 			geometry = d
 
 			var declaredAt = Date.parse(seatData[seat]["seat_info"]["declared_at"])
+			var declaredAtSimple = seatData[seat]["seat_info"]["declared_at_simple"]
+
+
 
 			// for flash gained seats
 			// if (seatData[seat]["seat_info"]["change"] == "gain"){
 			// 	gainedSeats.push({pf_id: seatData[seat]["seat_info"]["id"]})
 			// }
+			if (filterToTicker.indexOf(seat) != -1){
 
-			seatInfoForTicker.push({"name" : seat,
-															"declared_at" : declaredAt,
-															"winning_party" : seatData[seat]["seat_info"]["winning_party"],
-															"change" : seatData[seat]["seat_info"]["change"],
-															"geometry" : geometry
-																})
-		})
+				seatInfoForTicker.push({"name" : seat,
+																"declared_at" : declaredAt,
+																"declared_at_simple" : declaredAtSimple,
+																"winning_party" : seatData[seat]["seat_info"]["winning_party"],
+																"change" : seatData[seat]["seat_info"]["change"],
+																"geometry" : geometry
+																	})
+					}
+			})
 
 
 		seatInfoForTicker.sort(function(a, b){
@@ -1058,9 +1079,7 @@ function activateTicker(){
 		$.each(seatInfoForTicker, function(i){
 			var seatinfo = seatInfoForTicker[i]
 
-			var toDate = new Date(seatinfo.declared_at).toLocaleString()
-			var onlyTime = toDate.substr(toDate.indexOf(",") + 1);
-			var onlyTime = onlyTime.substr(0, 6);
+
 
 			var onlyGainedSeats = "";
 			if (seatinfo.change == "hold"){
@@ -1068,8 +1087,8 @@ function activateTicker(){
 			}
 
 
-			$("#ticker").append("<tr  class=\"" + onlyGainedSeats + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
-													+ onlyTime + "</td style=\"padding-right: 8px;\"><td>"
+			$("#ticker").append("<tr  class=\"tickerSeats " + onlyGainedSeats + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
+													+ seatinfo.declared_at_simple + "</td style=\"padding-right: 8px;\"><td>"
 													+ seatinfo.name + "</td><td>"
 													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
 
@@ -1082,7 +1101,7 @@ flashGainsState = false;
 
 function flashGains(){
 	if (flashGainsState == false){
-		$(".tickerGainSeats").css("opacity", 0.5)
+		$(".tickerGainSeats").css("opacity", 0.1)
 		flashGainsState = true
 		}
 
@@ -1090,9 +1109,6 @@ function flashGains(){
 		$(".tickerGainSeats").css("opacity", 1)
 		flashGainsState = false
 	}
-
-
-
 
 
 		// var id = "#i" + gainedSeats[i].pf_id

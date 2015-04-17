@@ -11,6 +11,10 @@
   width :900px;
 }
 
+#filteredlisttable {
+  max-height: 52%;
+}
+
 #resetbutton {
   margin-left: 835px;
 }
@@ -22,26 +26,17 @@
 }
 
 #refreshbutton {
-  margin-top: 22px;
+  margin-top: 25px;
   margin-left: 798px;
 }
 
 #togglegainsbutton {
-  margin-top: 22px;
+  margin-top: 25px;
   margin-left: 698px;
 
 }
 
 
-
-#refreshbutton {
-  margin-top: 22px;
-  margin-left: 798px;
-  position: absolute;
-  width: ;
-	z-index: 1;
-	padding: 5px;
-}
 
 #ticker {
   position: absolute;
@@ -49,7 +44,7 @@
   margin-left: 600px;
   margin-top: 55px;
   width: 290px;
-  height: 825px;
+  height: 840px;
   background: #99CCFF;
   border: 1px solid black;
   overflow: auto;

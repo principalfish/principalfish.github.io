@@ -173,12 +173,12 @@ while(True):
         with open("info.json", "w") as output:
             json.dump(live_data, output)
         print "updating git"
-        subprocess.call("autorun.sh", shell = True)
+        #subprocess.call("autorun.sh", shell = True)
 
     print "\n" * 3
     seats_declared = total_seats
 
-    delay = 120
+    delay = 30
     for i in range(delay):
         if (delay - i) % 10 == 0:
             print "time to next update", delay - i, "seconds"

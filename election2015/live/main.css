@@ -22,17 +22,21 @@
 }
 
 #coalitions {
-  height: 100px;
+  height: 75px;
   width: 100%;
   float: left;
   border-bottom: 1px solid black
 }
 
+#coalitions h3 {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
 
 #totals {
   float: left;
   width: 100%;
-  height: 397px;
+  height: 422px;
   border-bottom: 0;
 }
 

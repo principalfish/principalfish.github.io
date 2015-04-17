@@ -486,6 +486,8 @@ function piechart(d){
 // POSSIBLE COALITIONS
 
 function possibleCoalitions(voteTotals){
+
+	$(".coalitionlist").html("")
 	data = {}
 	$.each(voteTotals, function(i){
 		data[voteTotals[i]["code"]] = voteTotals[i]["seats"]
@@ -505,10 +507,10 @@ function possibleCoalitions(voteTotals){
 	});
 
 	$.each(coalitions, function(i){
-		$("#coalitions").append("<h3 style=\"float:left\">" + coalitions[i].parties + ":" + coalitions[i].seats + "&nbsp&nbsp&nbsp</h3>")
+		$("#coalitions").append("<h3 class =\"coalitionlist\" style=\"float:left\">" + coalitions[i].parties + ":" + coalitions[i].seats + "&nbsp&nbsp&nbsp</h3>")
 	})
 
-	$("#coalitions").append("<h5>*assumes speaker counts for Conservatives</h5>")
+	$("#coalitions").append("<h5  class =\"coalitionlist\">*assumes speaker counts for Conservatives</h5>")
 
 
 }
@@ -833,6 +835,7 @@ function getVoteTotals(area){
 
 			}
 
+
 			else {
 				info["code"] = code;
 				info["seats"] = seatssum;
@@ -849,6 +852,9 @@ function getVoteTotals(area){
 		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : 100.00};
 		var stupidcsvextrarow = {"code": "", "seats" : undefined, "change": undefined, "votes" : "", "votepercent" : undefined};
 
+		if (area == "all"){
+			seatsDeclared = totalseats - otherSeatssum
+		}
 
 		holdingArray.push(others)
     holdingArray.push(totals);
@@ -922,3 +928,22 @@ function alterTable(area, holdingarray){
     londonVoteTotals = holdingarray;
   }
 }
+
+var seatsDeclared;
+// auto refresh elements
+
+function autoRefresh () {
+   setTimeout(function () {
+		  $("svg .map").remove()
+			$("svg .not_here").remove()
+			getData().done(getSeatInfo);
+
+			title = "Election LIVE " + seatsDeclared + "/650";
+			document.title = title;
+			autoRefresh();
+
+   }, 30000)
+}
+
+
+autoRefresh();

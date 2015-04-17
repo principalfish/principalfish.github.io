@@ -1001,7 +1001,7 @@ function autoRefresh () {
 			autoRefresh();
 
 
-			}, 5000 )//x / 1000 = seconds
+		}, 60000 )//x / 1000 = seconds
 		}
 }
 

@@ -1029,7 +1029,7 @@ function autoRefresh () {
 
 			autoRefresh();
 
-		}, 10000 )//x / 1000 = seconds
+		}, 90000 )//x / 1000 = seconds
 		}
 }
 

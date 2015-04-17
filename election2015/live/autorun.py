@@ -189,6 +189,7 @@ while(True):
     path = "testdata/my_test/"
     files = os.listdir(path)
 
+    live_data = {}
     for file in files:
         get_data(file)
 

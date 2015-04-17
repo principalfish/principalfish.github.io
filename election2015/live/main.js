@@ -736,6 +736,10 @@ function getData(){
 	});
 }
 
+
+$.ajaxSetup({ cache: false });
+
+
 function getSeatInfo(data){
 
   $.each(data, function(seat){
@@ -990,8 +994,6 @@ function alterTable(area, holdingarray){
 
 
 // auto refresh elements
-
-$.ajaxSetup({ cache: false });
 
 function autoRefresh () {
 

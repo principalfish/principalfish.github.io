@@ -985,7 +985,7 @@ function autoRefresh () {
 			autoRefresh();
 
 
-   }, 120000)
+   }, 25000)
 }
 
 

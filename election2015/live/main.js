@@ -986,14 +986,14 @@ function autoRefresh () {
 
 	if (!(refreshState)) {
 			$("#refreshstate").html("OFF");
-			$("#refreshbutton").css("margin-left", "593px");
+			$("#refreshbutton").css("margin-left", "793px");
 			return
 		}
 
 	else {
 
 		$("#refreshstate").html("ON");
-		$("#refreshbutton").css("margin-left", "598px")
+		$("#refreshbutton").css("margin-left", "798px")
 
 
 
@@ -1027,7 +1027,6 @@ var seatInfoForTicker = [];
 
 function activateTicker(){
 
-
 	d3.json("/election2015/data/projection.json", function(uk){
 		g.selectAll(".map")
 			.each(function(d){
@@ -1059,8 +1058,8 @@ function activateTicker(){
 
 
 
-				$("#ticker").append("<tr class=\"" + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 3px\";>"
-														+ onlyTime + "</td style=\"padding-right: 3px;\"><td>"
+				$("#ticker").append("<tr class=\"" + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
+														+ onlyTime + "</td style=\"padding-right: 8px;\"><td>"
 														+ seatinfo.name + "</td><td>"
 														+ seatinfo.change.toUpperCase()	+ "</td></tr>")
 			})

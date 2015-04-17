@@ -1,11 +1,23 @@
 /*for overwriting other main.css*/
+#wrapper {
+	width: 1680px;
+}
+
+#top {
+	width: 1652px;
+}
+
+#left {
+  width :900px;
+}
+
 #resetbutton {
-  margin-left: 635px;
+  margin-left: 835px;
 }
 
 #refreshbutton {
   margin-top: 22px;
-  margin-left: 598px;
+  margin-left: 798px;
   position: absolute;
   width: ;
 	z-index: 1;
@@ -15,10 +27,10 @@
 #ticker {
   position: absolute;
   z-index: 1;
-  margin-left: 500px;
+  margin-left: 600px;
   margin-top: 55px;
-  width: 190px;
-  height: 450px;
+  width: 290px;
+  height: 825px;
   background: #99CCFF;
   border: 1px solid black;
   overflow: auto;

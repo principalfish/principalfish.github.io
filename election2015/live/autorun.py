@@ -231,7 +231,7 @@ while(True):
     print "\n" * 3
     seats_declared = total_seats
 
-    delay = 30 # 118 tp accont for minor delay
+    delay = 120 # 118 tp accont for minor delay
     for i in range(delay):
         if (delay - i) % 10 == 0:
             print "time to next update", delay - i, "seconds"

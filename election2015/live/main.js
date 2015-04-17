@@ -508,7 +508,7 @@ function piechart(d){
 
 function possibleCoalitions(voteTotals){
 
-	$(".coalitionlist").html("")
+	$("#coalitionlist").html("")
 	data = {}
 	$.each(voteTotals, function(i){
 		data[voteTotals[i]["code"]] = voteTotals[i]["seats"]
@@ -528,10 +528,10 @@ function possibleCoalitions(voteTotals){
 	});
 
 	$.each(coalitions, function(i){
-		$("#coalitions").append("<h3 class =\"coalitionlist\" style=\"float:left\">" + coalitions[i].parties + ":" + coalitions[i].seats + "&nbsp&nbsp&nbsp</h3>")
+		$("#coalitionlist").append("<h3 class =\"coalitionlist\" style=\"float:left; width: 118px;\">" + coalitions[i].parties + ":" + coalitions[i].seats + "&nbsp&nbsp&nbsp</h3>")
 	})
 
-	$("#coalitions").append("<h5  class =\"coalitionlist\">*assumes speaker counts for Conservatives</h5>")
+
 
 
 }
@@ -1020,13 +1020,14 @@ function autoRefresh () {
 			filterToTicker = [];
 
 			resetFilter()
+			$("#selectareatotals option:eq(0)").prop("selected", true);
 
 			getData().done(getSeatInfo);
 			//console.log(Date())
 
 			autoRefresh();
 
-		}, 90000 )//x / 1000 = seconds
+		}, 5000 )//x / 1000 = seconds
 		}
 }
 

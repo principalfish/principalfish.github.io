@@ -1,8 +1,10 @@
 // for live
 
-/////ideassssss
+/////ideas
 
-//
+// NOT DONE
+// alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-1 : 60 seconds, 1-4: 30s, 4-7: 60s, 7-: 120 seconds
+// make css less shit
 
 
 //DONE
@@ -17,7 +19,7 @@
 // possible coalitions
 
 
-//////////// CHANGE**///////////
+//////////// CHANGE**///////////x
 // any reference to seatData[seatname] has changed
 // seatData[seatname]["seat_info"] contains information about the seat in general (turnout/electorate/declaration time etc)
 // seatData[seatname]["party_info"] contains names and vote totals for each party

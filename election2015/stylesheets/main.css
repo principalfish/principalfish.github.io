@@ -305,6 +305,14 @@ svg .map {
 	opacity: 0.5;
 }
 
+svg .not_here{
+	cursor: pointer;
+}
+
+.not_here:hover {
+	opacity: 0.5;
+}
+
 /*
 .place {
 	pointer-events: all;

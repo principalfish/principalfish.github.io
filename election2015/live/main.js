@@ -10,11 +10,14 @@
 // lists seats in order of declaration time
 // scrollable + clickable
 
+// real time clock somewhere on page ( to pright of map?)
 
 // before /after for each seat
 // before for when seat clicked pre - declaration?
 // need to load other data in for that..
 // possible old_seat_info.json has enough info
+
+// possible coalitions
 
 
 //////////// CHANGE**///////////
@@ -338,38 +341,58 @@ function seatinfo(d){
 	$("#information").removeClass(oldclass);
 	$("#information").empty()
 
+	// if declared
+	//
+	// add seat name = d.properties.name, region = regionlist[seat_info["area"]],  party name = partylist[seat_info["winning_party"]
+	// if its a gain or no change =  seat_info["change"]
+	// declaration time =  seat_info["declared_at"], majority = seat_info["majority_percentage"] + seat_info["majority_total"], turnout =
+	// pie chart
+
+
+	// else
+	//
+	// add seat name = d.properties.name, expected declaration time = seatDeclarations[d.properties.name]
+	// clear pie chart + table
 
 	if (d.properties.name in seatData){
 		seat_info = seatData[d.properties.name]["seat_info"]
 
 		$("#information").addClass(seat_info["winning_party"])
 
-		$("#information").append("<h2> " + d.properties.name + "</h2>")
+		// seatname and region
+		$("#information").append("<p> " + d.properties.name + "<span style =\"float: right;\">" + regionlist[seat_info["area"]] + "</span></p>")
 
+		var previousParty = ""
+		if (seat_info["change"] == "gain"){
+			previousParty = "from &nbsp&nbsp&nbsp" + "<span style=\" padding: 5px; border-radius: 5px 5px 5px 5px;\" class=\"" + seat_info["incumbent"] + "\">" + partylist[seat_info["incumbent"]] + "</span>"
+		}
+
+		// party + hold/gain and from whom
+		$("#information").append("<p>" + partylist[seat_info["winning_party"]] + "&nbsp&nbsp&nbsp"
+											+ seat_info["change"].toUpperCase() + "&nbsp&nbsp&nbsp" + "<span>" + previousParty + "</span></p>")
+
+		// majority + turnout
+		$("#information").append("<p> Majority: " + seat_info["majority_total"] + " = " + seat_info["majority_percentage"]
+												+ "% <span style =\"float: right;\"> Turnout: " + seat_info["percentage_turnout"] + "%</span></p>")
+
+		// declaration time
+		var timeStamp = Date.parse(seat_info["declared_at"])
+		var toDate = new Date(timeStamp).toLocaleString()
+		var onlyTime = toDate.substr(0, toDate.length -2).substr(toDate.indexOf(",") + 1);
+
+		$("#information").append("<p> Declared at:  " + onlyTime +  "</p>")
 
 		//////////// CHANGE**///////////
 		$("#information-pie").html(piechart(d));
 
-		// if declared
-		//
-		// add seat name = d.properties.name, region = regionlist[seat_info["area"]],  party name = partylist[seat_info["winning_party"]
-		// if its a gain or no change =  seat_info["winning_party"] == seat_info["incumbent"]
-		// declaration time =  seat_info["declared_at"], majority = seat_info["majority_percentage"]
-		// pie chart
-
-
-		// else
-		//
-		// add seat name = d.properties.name, expected declaration time = seatDeclarations[d.properties.name]
-		// clear pie chart + table
 		oldclass = seat_info["winning_party"]
 	}
 	else{
 		$("#information").addClass("not_here")
 		$("#information-pie").empty();
 		$("#information-chart").empty();
-		$("#information").append("<h2>" + d.properties.name + "</h2>")
-
+		$("#information").append("<p>" + d.properties.name + "</p>")
+		$("#information").append("<p> Expected Declaration Time : " + seatDeclarations[d.properties.name] + "</p>")
 
 
 		oldclass = "not_here"
@@ -457,6 +480,37 @@ function piechart(d){
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +
 			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td></tr>")
 	})
+}
+
+// **CHANGE
+// POSSIBLE COALITIONS
+
+function possibleCoalitions(voteTotals){
+	data = {}
+	$.each(voteTotals, function(i){
+		data[voteTotals[i]["code"]] = voteTotals[i]["seats"]
+	})
+
+	var coalitions = [
+										{"parties": "Lab/Lib",  "seats" : data["labour"] + data["libdems"]},
+										{"parties": "Con*/Lib",  "seats" : data["conservative"] + data["libdems"]  + 1},
+										{"parties": "Con*/UKIP",  "seats" : data["conservative"] + data["ukip"] + 1},
+										{"parties": "Lab/SNP",  "seats" : data["labour"] + data["snp"]},
+										{"parties": "Lab/SNP/Lib",  "seats" : data["labour"] + data["snp"] + data["libdems"]}
+										]
+
+
+	coalitions.sort(function(a, b){
+			return b.seats - a.seats ;
+	});
+
+	$.each(coalitions, function(i){
+		$("#coalitions").append("<h3 style=\"float:left\">" + coalitions[i].parties + ":" + coalitions[i].seats + "&nbsp&nbsp&nbsp</h3>")
+	})
+
+	$("#coalitions").append("<h5>*assumes speaker counts for Conservatives</h5>")
+
+
 }
 
 // load + colour map at page load
@@ -668,6 +722,7 @@ function getSeatInfo(data){
 		getVoteTotals(areas[area])
 	}
 	displayVoteTotals(nationalVoteTotals)
+	possibleCoalitions(nationalVoteTotals)
 }
 
 // call the function

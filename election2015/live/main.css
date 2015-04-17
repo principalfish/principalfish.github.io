@@ -1,11 +1,18 @@
 /*for overwriting other main.css*/
 
 #information {
-  height: 175px;
-  width: 100%
-  padding: 5px;
+
+  height: 165px;
+  width: 594px;
+  padding: 3px;
+
   float:left;
   border-top: 0px;
+}
+
+#information p{
+  width: 100%;
+  font-size: 1.5em;
 }
 
 #charts{
@@ -21,6 +28,7 @@
   border-bottom: 1px solid black
 }
 
+
 #totals {
   float: left;
   width: 100%;
@@ -29,5 +37,5 @@
 }
 
 #totals table{
-  font-size: 1.5em;
+  font-size: 1.33em;
 }

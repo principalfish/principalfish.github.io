@@ -1,4 +1,28 @@
 /*for overwriting other main.css*/
+#resetbutton {
+  margin-left: 635px;
+}
+
+#refreshbutton {
+  margin-top: 22px;
+  margin-left: 598px;
+  position: absolute;
+  width: ;
+	z-index: 1;
+	padding: 5px;
+}
+
+#ticker {
+  position: absolute;
+  z-index: 1;
+  margin-left: 510px;
+  margin-top: 55px;
+  width: 180px;
+  height: 450px;
+  background: #99CCFF;
+  border: 1px solid black;
+  overflow: auto;
+}
 
 #information {
 

@@ -201,6 +201,7 @@ function generateSeatList(){
 
 // close to duplicate of clicked() due to slightly difference in data type used. fix at some point. this one is for generate seat list and seat search box
 function zoomToClickedFilteredSeat(d){
+
 	var id = "#i" + seatData[d.properties.name]["seat_info"]["id"];
 	//rewrite at some point
 
@@ -731,6 +732,7 @@ function getSeatInfo(data){
 	}
 	displayVoteTotals(nationalVoteTotals)
 	possibleCoalitions(nationalVoteTotals)
+	activateTicker()
 }
 
 // call the function
@@ -967,26 +969,64 @@ function alterTable(area, holdingarray){
 // auto refresh elements
 
 function autoRefresh () {
-   setTimeout(function () {
+
+	if (!(refreshState)) {
+			$("#refreshstate").html("OFF");
+			$("#refreshbutton").css("margin-left", "593px");
+			return
+		}
+
+	else {
+
+		$("#refreshstate").html("ON");
+		$("#refreshbutton").css("margin-left", "598px")
+
+
+
+		setTimeout(function () {
 			// remove old map - buggy otherwise
-		  $("svg .map").remove()
+			$("svg .map").remove()
 			$("svg .not_here").remove()
 			// reacquire data + reload map
 			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 			searchSeatData = []; // for use with search box
 			seatNames = []; // for use with search box
+			seatData = {};
 
+			$("#selectareatotals option:eq(0)").prop("selected", true);
 
 			getData().done(getSeatInfo);
-
-			// rewrite title
-
 			//console.log(Date())
+
 			autoRefresh();
 
 
-   }, 25000)
+			}, 5000 )//x / 1000 = seconds
+		}
 }
 
-
+var refreshState = true;
 autoRefresh();
+
+
+var seatInfoForTicker = {}
+
+function activateTicker(){
+
+
+	d3.json("/election2015/data/projection.json", function(uk){
+		g.selectAll(".map")
+			.each(function(d){
+				seat = d.properties.name
+				seatInfoForTicker[seat] = {"declared_at" : seatData[seat]["seat_info"]["declared_at"],
+																		"winning_party" : seatData[seat]["seat_info"]["winning_party"],
+																		"change" : seatData[seat]["seat_info"]["change"],
+																		}
+			})
+
+
+			$.each(seatInfoForTicker, function(d){
+
+			})
+		})
+}

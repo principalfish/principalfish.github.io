@@ -1087,8 +1087,8 @@ function activateTicker(){
 			}
 
 
-			$("#ticker").append("<tr  class=\"tickerSeats " + onlyGainedSeats + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
-													+ seatinfo.declared_at_simple + "</td style=\"padding-right: 8px;\"><td>"
+			$("#ticker").append("<tr class=\"tickerSeats "  + onlyGainedSeats + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\">" +
+													"<td style=\"padding-right: 8px\";>" + seatinfo.declared_at_simple + "</td ><td style=\"padding-right: 8px; width: 100%;\">"
 													+ seatinfo.name + "</td><td>"
 													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
 

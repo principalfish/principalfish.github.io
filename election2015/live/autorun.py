@@ -79,7 +79,19 @@ def get_data(file):
 
         time_string = declaration_time[0:-6]
         m = moment.date(time_string, '%Y-%m-%dT%H:%M:%S' )
-        time_string_declare = str(m.hour) + ":" + str(m.minute)
+
+
+        minutes = str(m.minute)
+        hours = str(m.hours)
+
+        if len(str(m.minute)) == 1:
+            minutes = "0" + minutes
+
+        if len(str(m.hours)) == 1:
+            hours = "0" + hours
+
+
+        time_string_declare = hours + ":" + minutes
         seat_info = {}
 
         seat_info["id"] = my_seat_id

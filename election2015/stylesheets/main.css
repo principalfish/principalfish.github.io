@@ -68,7 +68,8 @@
 
 #otherlinks {
 	border-top: 1px solid black;
-	padding-bottom: 12px;
+	padding-bottom: 18px;
+
 }
 
 #searchforseat h2{
@@ -120,7 +121,7 @@
 
 #filteredlisttable{
 	width: 100%;
-	max-height: 48%;
+	max-height: 45%;
 	overflow: auto;
 }
 

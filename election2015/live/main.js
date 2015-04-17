@@ -991,6 +991,8 @@ function alterTable(area, holdingarray){
 
 // auto refresh elements
 
+$.ajaxSetup({ cache: false });
+
 function autoRefresh () {
 
 	if (!(refreshState)) {
@@ -1008,7 +1010,7 @@ function autoRefresh () {
 		console.log("refreshing")
 
 		setTimeout(function () {
-			window.location.reload(true)
+			//window.location.reload(true)
 			// remove old map - buggy otherwise
 			$("svg .map").remove()
 			$("svg .not_here").remove()

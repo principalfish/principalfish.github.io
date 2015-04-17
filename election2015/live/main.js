@@ -1026,7 +1026,7 @@ autoRefresh();
 
 
 var seatInfoForTicker = [];
-var gainedSeats = [];
+// var gainSeats = [];
 
 function activateTicker(){
 	d3.selectAll(".map")
@@ -1038,9 +1038,9 @@ function activateTicker(){
 			var declaredAt = Date.parse(seatData[seat]["seat_info"]["declared_at"])
 
 			// for flash gained seats
-			if (seatData[seat]["seat_info"]["change"] == "gain"){
-				gainedSeats.push({pf_id: seatData[seat]["seat_info"]["id"]})
-			}
+			// if (seatData[seat]["seat_info"]["change"] == "gain"){
+			// 	gainedSeats.push({pf_id: seatData[seat]["seat_info"]["id"]})
+			// }
 
 			seatInfoForTicker.push({"name" : seat,
 															"declared_at" : declaredAt,
@@ -1062,7 +1062,13 @@ function activateTicker(){
 			var onlyTime = toDate.substr(toDate.indexOf(",") + 1);
 			var onlyTime = onlyTime.substr(0, 6);
 
-			$("#ticker").append("<tr class=\"" + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
+			var onlyGainedSeats = "";
+			if (seatinfo.change == "hold"){
+				var onlyGainedSeats = "tickerGainSeats "
+			}
+
+
+			$("#ticker").append("<tr  class=\"" + onlyGainedSeats + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\"><td style=\"padding-right: 8px\";>"
 													+ onlyTime + "</td style=\"padding-right: 8px;\"><td>"
 													+ seatinfo.name + "</td><td>"
 													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
@@ -1072,22 +1078,37 @@ function activateTicker(){
 
 }
 
+flashGainsState = false;
+
 function flashGains(){
-	$.each(gainedSeats, function(i){
-		var id = "#i" + gainedSeats[i].pf_id
-		current = d3.select(id)
+	if (flashGainsState == false){
+		$(".tickerGainSeats").css("opacity", 0.5)
+		flashGainsState = true
+		}
 
-		console.log(current)
-		repeat();
+	else {
+		$(".tickerGainSeats").css("opacity", 1)
+		flashGainsState = false
+	}
 
-		function repeat(){
-			current
-				.transition()
-					.duration(4000)
-					.attr("opacity", 0.2)
-				.transition()
-					.duration(4000)
-					.attr("opacity", 1)
-			}
-	});
+
+
+
+
+		// var id = "#i" + gainedSeats[i].pf_id
+		// current = d3.select(id)
+		//
+		// console.log(current)
+		// repeat();
+		//
+		// function repeat(){
+		// 	current
+		// 		.transition()
+		// 			.duration(4000)
+		// 			.attr("opacity", 0.2)
+		// 		.transition()
+		// 			.duration(4000)
+		// 			.attr("opacity", 1)
+		// 	}
+
 }

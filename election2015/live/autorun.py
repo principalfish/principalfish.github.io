@@ -18,6 +18,8 @@ old_data = json.loads(old)
 
 live_data = {}
 
+parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others"]
+
 party_map = {
     "Conservative": "conservative",
     "Labour" : "labour",
@@ -95,7 +97,7 @@ def get_data(file):
 
         area = old_data[str(my_seat_id)]["area"]
         incumbent = old_data[str(my_seat_id)]["incumbent"]
-        if incumbent == "independent" or incumbent == "speaker":
+        if incumbent == "independent" or incumbent == "speaker" or incumbent == "respect":
             incumbent = "other"
 
         seat_info["area"] = area
@@ -103,7 +105,6 @@ def get_data(file):
         seat_info["incumbent"] = incumbent
 
         candidates = itemlist[0].getElementsByTagName("Candidate")
-
 
         by_party = {}
         sum_others = 0
@@ -138,10 +139,44 @@ def get_data(file):
             by_party["other2"] = {"name" : "Others", "vote_total" : sum_others, "vote_percentage" : sum_others_percentage}
 
 
+
+
+        old_seat = old_data[str(my_seat_id)]
+        total_old_votes = 0
+
+        for party in parties:
+            if old_seat[party] != None:
+                total_old_votes += old_seat[party]
+
+        parties_in_result = []
+        for party in by_party:
+            parties_in_result.append(party)
+
+        for party in parties_in_result:
+            if party == "other2":
+                old_party = "other"
+            elif party == "other1":
+                old_party = "others"
+            else:
+                old_party = party
+
+            if old_seat[old_party] == None:
+                old_votes = 0
+            else:
+                old_votes = old_seat[old_party]
+
+
+            old_vote_percentage = 100 * old_votes / float(total_old_votes)
+
+            change_in_percentage = by_party[party]["vote_percentage"] - old_vote_percentage
+            by_party[party]["change_in_percentage"] = change_in_percentage
+
+
+
         live_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
 
 
-times_of_updates = []
+
 
 seats_declared = 0
 
@@ -149,8 +184,7 @@ while(True):
     print "********************"
     current_time = datetime.datetime.now()
     print current_time
-    times_of_updates.append(current_time)
-    print times_of_updates
+
 
     path = "testdata/my_test/"
     files = os.listdir(path)
@@ -173,12 +207,12 @@ while(True):
         with open("info.json", "w") as output:
             json.dump(live_data, output)
         print "updating git"
-        #subprocess.call("autorun.sh", shell = True)
+        subprocess.call("autorun.sh", shell = True)
 
     print "\n" * 3
     seats_declared = total_seats
 
-    delay = 30
+    delay = 30 # 118 tp accont for minor delay
     for i in range(delay):
         if (delay - i) % 10 == 0:
             print "time to next update", delay - i, "seconds"

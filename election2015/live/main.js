@@ -10,8 +10,6 @@
 // lists seats in order of declaration time
 // scrollable + clickable
 
-// real time clock somewhere on page ( to pright of map?)
-
 // before /after for each seat
 // before for when seat clicked pre - declaration?
 // need to load other data in for that..
@@ -378,7 +376,7 @@ function seatinfo(d){
 		// declaration time
 		var timeStamp = Date.parse(seat_info["declared_at"])
 		var toDate = new Date(timeStamp).toLocaleString()
-		var onlyTime = toDate.substr(0, toDate.length -2).substr(toDate.indexOf(",") + 1);
+		var onlyTime = toDate.substr(toDate.indexOf(",") + 1);
 
 		$("#information").append("<p> Declared at:  " + onlyTime +  "</p>")
 
@@ -402,6 +400,7 @@ function seatinfo(d){
 // d3 make pie chart of vote counts ni selected seat
 function piechart(d){
 
+
 	$("#information-pie").empty();
 	$("#information-chart").empty();
 
@@ -412,11 +411,11 @@ function piechart(d){
 	//////////// CHANGE**///////////
 
 	// for loop instead of awful shit before
-	relevant_party_info = seatData[d.properties.name]["party_info"]
+	var relevant_party_info = seatData[d.properties.name]["party_info"]
 
 	$.each(relevant_party_info, function(d){
 		votes = relevant_party_info[d]["vote_percentage"]
-		data.push({party: d, votes: votes})
+		data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change_in_percentage"]})
 	})
 
 	var filterdata = [];
@@ -437,7 +436,7 @@ function piechart(d){
 
 
 	if (keys.indexOf("other") != -1){
-		filterdata.push({party: "other", votes: relevant_party_info["other"]["vote_percentage"]})
+		filterdata.push({party: "other", votes: relevant_party_info["other"]["vote_percentage"], vote_change: relevant_party_info["other"]["change_in_percentage"]})
 	}
 
 
@@ -476,9 +475,17 @@ function piechart(d){
 		//////////// CHANGE**///////////
 		// different way of getting other into array replaced party name with candidate name (line 425)
 	// creates table with vote counts/percentages
+
+
 	$.each(filterdata, function(i){
+		var plussign = "";
+		if (filterdata[i].vote_change > 0){
+			plussign = "+";
+		}
+
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +
-			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td></tr>")
+			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td><td>"
+			+ plussign + (parseFloat(filterdata[i].vote_change)).toFixed(2) +  "</td></tr>")
 	})
 }
 
@@ -852,9 +859,7 @@ function getVoteTotals(area){
 		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : 100.00};
 		var stupidcsvextrarow = {"code": "", "seats" : undefined, "change": undefined, "votes" : "", "votepercent" : undefined};
 
-		if (area == "all"){
-			seatsDeclared = totalseats - otherSeatssum
-		}
+
 
 		holdingArray.push(others)
     holdingArray.push(totals);
@@ -869,6 +874,35 @@ function alterTable(area, holdingarray){
 
   if (area == "all"){
     nationalVoteTotals = holdingarray;
+
+		title = "Election LIVE "
+
+		$.each(nationalVoteTotals, function(i){
+			if (nationalVoteTotals[i].code == "total"){
+				title += nationalVoteTotals[i].seats + "/650"
+			}
+		})
+
+		$.each(nationalVoteTotals, function(i){
+			if (nationalVoteTotals[i].code == "conservative"){
+				title += " CON " + nationalVoteTotals[i].seats
+			}
+			if (nationalVoteTotals[i].code == "labour"){
+				title += " LAB " + nationalVoteTotals[i].seats
+			}
+			if (nationalVoteTotals[i].code == "libdems"){
+				title += " LIB " + nationalVoteTotals[i].seats
+			}
+			if (nationalVoteTotals[i].code == "ukip"){
+				title += " UKIP " + nationalVoteTotals[i].seats
+			}
+			if (nationalVoteTotals[i].code == "snp"){
+				title += " SNP " + nationalVoteTotals[i].seats
+			}
+
+		})
+
+		document.title = title;
   }
 
   if (area == "greatbritain"){
@@ -929,20 +963,28 @@ function alterTable(area, holdingarray){
   }
 }
 
-var seatsDeclared;
+
+
 // auto refresh elements
 
 function autoRefresh () {
    setTimeout(function () {
+			// remove old map - buggy otherwise
 		  $("svg .map").remove()
 			$("svg .not_here").remove()
+			// reacquire data + reload map
+			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
+			searchSeatData = []; // for use with search box
+			seatNames = []; // for use with search box
 			getData().done(getSeatInfo);
 
-			title = "Election LIVE " + seatsDeclared + "/650";
-			document.title = title;
+			// rewrite title
+
+			//console.log(Date())
 			autoRefresh();
 
-   }, 30000)
+
+   }, 120000)
 }
 
 

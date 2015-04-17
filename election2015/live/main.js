@@ -1129,3 +1129,49 @@ function activateTicker(){
 // 		// 	}
 //
 // }
+
+function DO_NOT_PRESS(){
+
+
+	d3.selectAll(".map")
+		.attr("class", "map ukip");
+
+
+	d3.selectAll(".not_here")
+		.attr("class", "map ukip");
+
+	alert("Why would you do this?")
+
+
+
+		setTimeout(function () {
+			// remove old map - buggy otherwise
+			$("svg .map").remove()
+			$("svg .not_here").remove()
+			// reacquire data + reload map
+			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
+			searchSeatData = []; // for use with search box
+			seatNames = []; // for use with search box
+			seatData = {};
+			seatInfoForTicker = [];
+			filterToTicker = [];
+
+			resetFilter()
+			$("#selectareatotals option:eq(0)").prop("selected", true);
+
+			getData().done(getSeatInfo);
+			//console.log(Date())
+
+
+
+		}, 10000 )//x / 1000 = seconds
+
+
+
+
+
+
+
+
+
+}

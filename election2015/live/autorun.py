@@ -204,7 +204,7 @@ while(True):
     print current_time
 
 
-    path = "testdata/my_test/"
+    path = "testdata/real_data/"
     files = os.listdir(path)
 
     live_data = {}

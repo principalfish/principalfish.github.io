@@ -2,6 +2,11 @@
 
 /////ideassssss
 
+//
+
+
+//DONE
+
 //for refreshing, redo functions getseatinfo + loadmap + displayVoteTotals(nationalVoteTotals) every minute or so
 // initiate while loop when user on site - delay of 60 seconds
 
@@ -9,12 +14,6 @@
 // smilar while loop + refresh
 // lists seats in order of declaration time
 // scrollable + clickable
-
-// before /after for each seat
-// before for when seat clicked pre - declaration?
-// need to load other data in for that..
-// possible old_seat_info.json has enough info
-
 // possible coalitions
 
 

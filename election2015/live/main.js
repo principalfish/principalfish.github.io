@@ -1097,34 +1097,34 @@ function activateTicker(){
 
 }
 
-flashGainsState = false;
-
-function flashGains(){
-	if (flashGainsState == false){
-		$(".tickerGainSeats").css("opacity", 0.1)
-		flashGainsState = true
-		}
-
-	else {
-		$(".tickerGainSeats").css("opacity", 1)
-		flashGainsState = false
-	}
-
-
-		// var id = "#i" + gainedSeats[i].pf_id
-		// current = d3.select(id)
-		//
-		// console.log(current)
-		// repeat();
-		//
-		// function repeat(){
-		// 	current
-		// 		.transition()
-		// 			.duration(4000)
-		// 			.attr("opacity", 0.2)
-		// 		.transition()
-		// 			.duration(4000)
-		// 			.attr("opacity", 1)
-		// 	}
-
-}
+// flashGainsState = false;
+//
+// function flashGains(){
+// 	if (flashGainsState == false){
+// 		$(".tickerGainSeats").attr("style", "opacity:0.1;")
+// 		flashGainsState = true
+// 		}
+//
+// 	else {
+// 		$(".tickerGainSeats").attr("style", "opacity:1;")
+// 		flashGainsState = false
+// 	}
+//
+//
+// 		// var id = "#i" + gainedSeats[i].pf_id
+// 		// current = d3.select(id)
+// 		//
+// 		// console.log(current)
+// 		// repeat();
+// 		//
+// 		// function repeat(){
+// 		// 	current
+// 		// 		.transition()
+// 		// 			.duration(4000)
+// 		// 			.attr("opacity", 0.2)
+// 		// 		.transition()
+// 		// 			.duration(4000)
+// 		// 			.attr("opacity", 1)
+// 		// 	}
+//
+// }

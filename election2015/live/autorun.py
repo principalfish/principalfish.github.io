@@ -201,8 +201,25 @@ seats_declared = 0
 while(True):
     print "********************"
     current_time = datetime.datetime.now()
-    print current_time
 
+    current_time = str(current_time)[0:16]
+    print current_time
+    parsed_time = moment.date(current_time, "%Y-%m-%d %H:%M")
+
+    hours = parsed_time.hours
+    days = parsed_time.day
+    months = parsed_time.month
+
+    delay = 90 # 118 tp accont for minor delay
+
+    if days == 8 and months == 5:
+
+        if hours >=0 and hours < 2:
+            delay = 60
+        if hours >=2 and hours < 5 :
+            delay = 30
+        if hours >=5 and hours < 7:
+            delay = 60
 
     path = "testdata/real_data/"
     files = os.listdir(path)
@@ -231,7 +248,7 @@ while(True):
     print "\n" * 3
     seats_declared = total_seats
 
-    delay = 120 # 118 tp accont for minor delay
+
     for i in range(delay):
         if (delay - i) % 10 == 0:
             print "time to next update", delay - i, "seconds"

@@ -998,6 +998,38 @@ function alterTable(area, holdingarray){
 
 function autoRefresh () {
 
+	var refreshRate = 90000;
+
+	var today = new Date();
+	var dd = today.getDate();
+	var mm = today.getMonth() + 1;
+	var hh = today.getHours();
+	// alter refresh delay rate based on time -
+	//for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
+
+	if (mm == 5 && dd == 8){
+
+		if (hh >= 0 && hh < 2){
+			refreshRate = 60000;
+		}
+
+		if (hh >= 2 && hh < 5){
+			refreshRate = 30000;
+		}
+
+		if (hh >= 5 && hh < 7){
+			refreshRate = 60000;
+		}
+
+	}
+
+	console.log(refreshRate)
+
+
+
+
+
+
 	if (!(refreshState)) {
 			$("#refreshstate").html("OFF");
 			$("#refreshbutton").css("margin-left", "793px");
@@ -1034,7 +1066,7 @@ function autoRefresh () {
 
 			autoRefresh();
 
-		}, 90000 )//x / 1000 = seconds
+		}, refreshRate )//x / 1000 = seconds
 		}
 }
 
@@ -1156,24 +1188,7 @@ function DO_NOT_PRESS(){
 
 
 		setTimeout(function () {
-			// remove old map - buggy otherwise
-			$("svg .map").remove()
-			$("svg .not_here").remove()
-			// reacquire data + reload map
-			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
-			searchSeatData = []; // for use with search box
-			seatNames = []; // for use with search box
-			seatData = {};
-			seatInfoForTicker = [];
-			filterToTicker = [];
-
-			resetFilter()
-			$("#selectareatotals option:eq(0)").prop("selected", true);
-			$("#farage").remove();
-			getData().done(getSeatInfo);
-
-
-			//console.log(Date())
+			window.location.reload(true)
 
 
 

@@ -3,7 +3,7 @@
 /////ideas
 
 // NOT DONE
-// alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-1 : 60 seconds, 1-4: 30s, 4-7: 60s, 7-: 120 seconds
+// alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-1 : , 1-4: 30s, 4-7: 60s, 7-: 120 seconds
 // make css less shit
 
 

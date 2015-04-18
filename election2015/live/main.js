@@ -1021,6 +1021,7 @@ function autoRefresh () {
 	if (!(refreshState)) {
 			$("#refreshstate").html("OFF");
 			console.log("not refreshing")
+			$("#refresh")
 			return
 		}
 

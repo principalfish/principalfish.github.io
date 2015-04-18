@@ -572,10 +572,13 @@ function loadmap(){
 			.each(function(d){
 				if (d.properties.name in seatData){
 					seatsAfterFilter.push(d)
-					searchSeatData.push(d)
-					seatNames.push(d.properties.name);
+
 					filterToTicker.push(d.properties.name)
 				}
+				
+				searchSeatData.push(d)
+				seatNames.push(d.properties.name);
+
 			});
 
 

@@ -723,8 +723,8 @@ function getSeatInfo(data){
 
 // call the function
 getData().done(getSeatInfo);
+var seatDeclarations = {};
 
-seatDeclarations = {}
 
 $.getJSON("seat_declaration_times.json", function(seats){
 	$.each(seats, function(seat) {

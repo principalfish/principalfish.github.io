@@ -25,9 +25,11 @@
 		<div id="wrapper">
 			<div id="top">
 				<h2>UK Election Maps - LIVE &nbsp; <span style="font-size: 0.75em;">Currently running a full test</span></h2>
-				<div id="refreshbutton" class="mapbuttons" >
+
+				<div id="refreshbutton">
 					<button id="togglerefresh" onclick="refreshState = !(refreshState), autoRefresh()">Refresh: <span id="refreshstate">ON</span></button>
 				</div>
+
 				<script>
 				$(function(){
 					$("#menu").load("/menu.html")

@@ -11,6 +11,12 @@
   width :900px;
 }
 
+#mid {
+	float: left;
+	background: white;
+	width: 300px;
+}
+
 #filteredlisttable {
   max-height: 50%;
 }

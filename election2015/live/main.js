@@ -214,7 +214,6 @@ function generateSeatList(){
 function zoomToClickedFilteredSeat(d){
 
 	var id = "#i" + predictions[d.properties.name]["id"]
-	console.log(id)
 	previous = d3.select(previousnode);
 	current = d3.select(id);
 
@@ -515,7 +514,6 @@ function loadmap(){
 				})
 			.attr("opacity", 1)
 			.attr("id", function(d) {
-				console.log(predictions[d.properties.name]["id"])
 				return "i" + parseInt(predictions[d.properties.name]["id"])
 
 				})

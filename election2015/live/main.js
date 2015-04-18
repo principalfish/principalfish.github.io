@@ -964,36 +964,44 @@ function electionTimer(){
 	var diff = targetDate.getTime() - today.getTime();
 
 	var days = String(Math.floor(diff / (1000 * 60 * 60 * 24)));
-	var hours = String(Math.floor(diff / (1000 * 60 * 60) % days));
+	var hours =  String(Math.floor(diff / (1000 * 60 * 60) % 24));
+
 	var minutes = String(Math.floor(diff / (1000 * 60) % 60));
 	var seconds = String(Math.floor(diff / 1000 % 60));
-	var daysString;
 
-	while (hours.length < 2){
-		hours = "0" + hours
-	}
-	while (minutes.length < 2){
-		minutes = "0" + minutes
-	}
-	while (seconds.length < 2){
-		seconds = "0" + seconds
+
+	if (days == "0" && hours == "0" && minutes == "0" && seconds == "0"){
+		$("#electioncountdown").html("IT'S HAPPENING!");
+		return
 	}
 
-	if (days == 1){
-		daysString = " day "
-		}
 	else {
-		daysString = " days "
+		while (minutes.length < 2){
+			minutes = "0" + minutes;
+		}
+		while (seconds.length < 2){
+			seconds = "0" + seconds;
+		}
+
+		var daysString;
+
+		if (days == 1){
+			daysString = " day ";
+			}
+		else {
+			daysString = " days ";
+		}
+
+		toWrite = "Polls close in " + days + daysString + hours +  ":" + minutes  + ":" + seconds
+
+		$("#electioncountdown").html(toWrite);
+
+		setTimeout(function () {
+			electionTimer()
+		}, 100)
+
+
 	}
-
-	toWrite = "Polls close in " + days + daysString + hours +  ":" + minutes  + ":" + seconds
-
-	$("#electioncountdown").html(toWrite);
-
-	setTimeout(function () {
-		electionTimer()
-	}, 100)
-
 }
 
 function changeRefresh(state){

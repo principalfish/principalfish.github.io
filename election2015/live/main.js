@@ -68,8 +68,8 @@ function filterMap(setting){
 	d3.json("/election2015/data/projection.json", function(uk){
 
 			if (setting == "reset"){
-				g.selectAll(".not_here")
-					.style("opacity", 1)
+				g.selectAll(".faded_not_here")
+					.attr("class", "not_here")
 				}
 			else {
 				g.selectAll(".not_here")

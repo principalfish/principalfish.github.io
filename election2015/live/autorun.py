@@ -212,17 +212,16 @@ while(True):
     days = parsed_time.day
     months = parsed_time.month
 
-    delay = 90 # 118 tp accont for minor delay
-
+    delay = 30 
     ## test
-    if days == 18 and months == 4:
-
-        if hours >=11 and hours < 12:
-            delay = 60
-        if hours >=12 and hours < 15 :
-            delay = 30
-        if hours >=15 and hours < 17:
-            delay = 60
+    # if days == 18 and months == 4:
+    #
+    #     if hours >=11 and hours < 12:
+    #         delay = 60
+    #     if hours >=12 and hours < 15 :
+    #         delay = 30
+    #     if hours >=15 and hours < 17:
+    #         delay = 60
 
     ## real election
     # if days == 8 and months == 5:

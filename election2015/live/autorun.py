@@ -101,7 +101,7 @@ def get_data(file):
         seat_info["id"] = my_seat_id
         seat_info["declared_at"] = declaration_time
         seat_info["declared_at_simple"] = time_string_declare
-        seat_info["electorate"] =  (itemlist[0].attributes['electorate'].value)
+        #seat_info["electorate"] =  (itemlist[0].attributes['electorate'].value)
         seat_info["turnout"] = (itemlist[0].attributes['turnout'].value)
         seat_info["percentage_turnout"] = (itemlist[0].attributes['percentageTurnout'].value)
         seat_info["change"] = (itemlist[0].attributes['gainOrHold'].value)

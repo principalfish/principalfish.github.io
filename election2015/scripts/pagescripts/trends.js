@@ -1,7 +1,7 @@
 // for trends.html
 // use d3 to draw line graph
 var margin = {top: 40, right: 20, bottom: 40, left: 50},
-    width = 1000 - margin.left - margin.right,
+    width = 1280 - margin.left - margin.right,
     height = 865 - margin.top - margin.bottom;
 
 
@@ -15,13 +15,9 @@ var parseDate = d3.time.format("%Y-%m-%d").parse;
 
 function drawGraph(type){
 
-  $("#graphinfo").empty();
-
   d3.selectAll("path")
        .remove();
   d3.selectAll("text")
-        .remove();
-  d3.selectAll("circle")
         .remove();
 
   d3.selectAll(".axis")
@@ -117,19 +113,7 @@ function drawGraph(type){
 
           svg.selectAll("dot")
               .data(filteredData)
-          .enter().append("circle")
-              .attr("r", 5)
-              .attr("cx", function(d) { return x(d.day); })
-              .attr("cy", function(d) {
-                if (type == "seats"){
-                  return y(d.seats);}
-                if (type == "percent"){
-                  return y(d.percent)
-                }
-                  })
-              .attr("class", function(d) {return d.party})
-              .on("mouseover", function(d) {return writeToTable(d, type, filteredData)})
-              .on("mouseout", emptyTable)
+
 
         });
 
@@ -181,68 +165,4 @@ function reDrawGraph(party){
   }
 
   drawGraph(currentState);
-}
-
-
-function writeToTable(d, type, filteredData) {
-
-    var data = [];
-
-    var dateSelected = Date.parse(d.day);
-
-
-    $.each(filteredData, function(i){
-      var testDate = Date.parse(filteredData[i].day)
-      if (testDate == dateSelected){
-        data.push(filteredData[i])
-      }
-
-    });
-
-    date = new Date(dateSelected)
-    simpleDate =  date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear();
-
-
-    $("#graphinfo").empty();
-    $("#graphinfo").append("<h2>Date: " + simpleDate + "</h2>");
-    $.each(data, function(i){
-
-      if (type == "seats"){
-        info = data[i].seats;
-      }
-
-      if (type == "percent"){
-        info = data[i].percent;
-      }
-
-      $("#graphinfo").append("<h3 class=\"" + data[i].party +"\">" + partylist[data[i].party] + ": " + info + "</h3>");
-    });
-
-    // vertical black line
-
-    var vertical = d3.select(".chart")
-            .append("div")
-            .style("position", "absolute")
-            .style("z-index", "100")
-            .style("width", "2px")
-            .style("height", "800px")
-            .style("top", "140px")
-            .style("bottom", "900px")
-            .style("background", "black")
-            .attr("class", "verticalline");
-
-
-    d3.select(".chart")
-        .on("mouseover", function(){
-           mousex = d3.event.pageX
-           vertical.style("left", mousex + "px")});
-
-
-}
-
-function emptyTable(){
-    d3.selectAll(".verticalline")
-      .remove()
-    // $("#graphinfo").empty();
-
 }

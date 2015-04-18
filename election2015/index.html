@@ -371,14 +371,13 @@
 						</script>
 					</h3>
 
-					<h3 style="float: left; padding-top: 25px; padding-right: 5px;">  Time to Election :
+					<h3 style="float: left; padding-top: 25px; margin-left: -1px">  Time to Election :
 					<script>
 						var today = new Date();
-						console.log(today)
+
 						var date = new Date("May 7, 2015 7:00:00")
 						var diff = date.getTime() - today.getTime();
-//
-// % (daysUntilElection * hoursUntilElection)
+
 						var daysUntilElection = Math.floor(diff / (1000 * 60 * 60 * 24));
 						var hoursUntilElection = Math.floor(diff / (1000 * 60 * 60) % daysUntilElection );
 						var minutesUntilElection = Math.floor(diff / (1000 * 60) % 60);

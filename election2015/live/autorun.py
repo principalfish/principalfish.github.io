@@ -212,7 +212,8 @@ while(True):
 
     delay = 90 # 118 tp accont for minor delay
 
-    if days == 8 and months == 5:
+    ## test
+    if days == 18 and months == 4:
 
         if hours >=0 and hours < 2:
             delay = 60
@@ -220,6 +221,16 @@ while(True):
             delay = 30
         if hours >=5 and hours < 7:
             delay = 60
+
+    ## real election
+    # if days == 8 and months == 5:
+    #
+    #     if hours >=0 and hours < 2:
+    #         delay = 60
+    #     if hours >=2 and hours < 5 :
+    #         delay = 30
+    #     if hours >=5 and hours < 7:
+    #         delay = 60
 
     path = "testdata/real_data/"
     files = os.listdir(path)

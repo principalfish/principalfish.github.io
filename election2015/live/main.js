@@ -997,7 +997,6 @@ function autoRefresh () {
 	// }
 
 	if (!(refreshState)) {
-			console.log("not refreshing");
 			$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF");
 			setTimeout(function(){
 				autoRefresh()
@@ -1005,7 +1004,7 @@ function autoRefresh () {
 		}
 
 	else {
-		console.log("Refresh Rate", refreshRate/1000, "s");
+
 
 
 		setTimeout(function () {

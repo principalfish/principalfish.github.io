@@ -667,7 +667,7 @@ function displayVoteTotals(data) {
 function searchSeats(value){
 	$.each(searchSeatData, function(i){
 		if (searchSeatData[i].properties.name == value)
-			clicked(searchSeatData[i])
+			zoomToClickedFilteredSeat(searchSeatData[i])
 	});
 };
 

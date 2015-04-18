@@ -217,8 +217,6 @@ function zoomToClickedFilteredSeat(d){
 
 	var id = "#i" + seatsToIDs[d.properties.name];
 
-
-
 	previous = d3.select(previousnode);
 	current = d3.select(this);
 
@@ -257,7 +255,7 @@ function zoomToClickedFilteredSeat(d){
 			.each("end", enableZoom);
 
 	seatinfo(d);
-	previousnode = id;
+	previousnode = this;
 	}
 
 

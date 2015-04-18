@@ -1112,14 +1112,15 @@ function activateTicker(){
 			// }
 
 
-			$("#ticker").append("<tr id=\"" +  + "\" class=\"tickerSeats "  + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\">" +
+			$("#ticker").append("<tr id=\"ticker" + seatData[seatinfo.name]["seat_info"]["id"] + "\" class=\"tickerSeats "  + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\">" +
 													"<td style=\"padding-right: 8px\";>" + seatinfo.declared_at_simple + "</td ><td style=\"padding-right: 8px; width: 100%;\">"
 													+ seatinfo.name + "</td><td style=\"padding-right: 8px\">"
 													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
 
 			if (currentSeats.indexOf(seatinfo.name) == -1){
 				currentSeats.push(seatinfo.name)
-
+				var id = "ticker" + seatData[seatinfo.name]["seat_info"]["id"]
+				console.log(id)
 
 			}
 

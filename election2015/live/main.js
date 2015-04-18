@@ -736,7 +736,7 @@ var predictions = {};
 
 $.getJSON("predictions.json", function(data){
 	$.each(data, function(seat){
-		predictions[seat] = {incumbent : data[seat]["incumbent"], party : data[seat]["party"] }
+		predictions[seat] = {incumbent : data[seat]["incumbent"], party : data[seat]["party"], "id": data[seat]["id"] }
 	})
 });
 

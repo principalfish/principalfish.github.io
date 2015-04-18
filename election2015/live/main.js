@@ -209,8 +209,10 @@ function generateSeatList(){
 			activateTicker()
 		}
 
+var clicked1, clicked2;
 // close to duplicate of clicked() due to slightly difference in data type used. fix at some point. this one is for generate seat list and seat search box
 function zoomToClickedFilteredSeat(d){
+	clicked1 = d
 
 
 	var id = "#i" + seatData[d.properties.name]["seat_info"]["id"];
@@ -263,6 +265,8 @@ function zoomToClickedFilteredSeat(d){
 
 // close to duplicate of zoomtoclickedfilteredseat() due to slightly difference in data type used. fix at some point. this one is for normal map clicking
 function clicked(d) {
+	clicked2 = d
+
 
 	previous = d3.select(previousnode)
 	current = d3.select(this);

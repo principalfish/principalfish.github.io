@@ -41,6 +41,7 @@ var seatsAfterFilter = []; // for use with user inputs in filters - changing map
 var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
 var filterToTicker = [];
+var seatsToIds = []; // for mapping seats to ids to stop errors when seats arent populated with data
 
 // control flow for analysing user filter inputs
 function filterMap(setting){
@@ -550,7 +551,7 @@ function loadmap(){
 			.enter().append("path")
 			.attr("class", function(d) {
 				seatname = d.properties.name
-			
+
 				if (seatname in seatData){
 					seatParty = seatData[seatname]["seat_info"]["winning_party"]
 					return "map " + seatParty

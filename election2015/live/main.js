@@ -515,9 +515,9 @@ function loadmap(){
 				})
 			.attr("opacity", 1)
 			.attr("id", function(d) {
-				if (d.properties.name in seatData){
-					return "i" + seatData[d.properties.name]["seat_info"]["id"]
-					}
+				console.log(predictions[d.properties.name]["id"])
+				return "#" + parseInt(predictions[d.properties.name]["id"])
+
 				})
 			.attr("d", path)
 			.on("click", zoomToClickedFilteredSeat)
@@ -526,11 +526,12 @@ function loadmap(){
 			.each(function(d){
 				if (d.properties.name in seatData){
 					seatsAfterFilter.push(d)
-					filterToTicker.push(d.properties.name)				}
+					filterToTicker.push(d.properties.name)
+					}
 
 
 				searchSeatData.push(d)
-				seatNames.push(d.properties.name);				
+				seatNames.push(d.properties.name);
 
 			});
 

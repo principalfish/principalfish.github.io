@@ -8,14 +8,13 @@
 }
 
 #left {
-  width :900px;
+  width :600px;
 }
 
 #mid {
-	float: left;
-	background: white;
-	width: 300px;
+
 }
+
 #filteredlisttable {
   max-height: 50%;
 }
@@ -30,10 +29,11 @@
 }
 
 #ticker {
-  position: absolute;
-  z-index: 1;
-  margin-left: 600px;
-  margin-top: 5px;
+	float: left;
+	background: white;
+
+  /*position: absolute;
+  z-index: 1;*/  
   width: 295px;
   height: 890px;
   overflow: auto;

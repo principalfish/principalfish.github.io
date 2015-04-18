@@ -127,7 +127,8 @@
 }
 
 #filteredlisttable td{
-	border-bottom: 1px solid black;
+	
+	border-bottom: 2px solid #3399FF;
 	width: 140px;
 	white-space: nowrap;
 	text-align: left;

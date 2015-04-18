@@ -67,6 +67,11 @@
   font-size: 1.5em;
 }
 
+.partyinfospan {
+	padding: 5px;
+	border-radius: 5px 5px 5px 5px;
+}
+
 #charts{
   float: left;
   width: 100%;

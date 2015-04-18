@@ -212,7 +212,7 @@ while(True):
     days = parsed_time.day
     months = parsed_time.month
 
-    delay = 30 
+    delay = 30
     ## test
     # if days == 18 and months == 4:
     #

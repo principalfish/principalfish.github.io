@@ -3,12 +3,11 @@
 /////ideas
 
 // NOT DONE
-// alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-2 : 60 seconds, 2-5: 30s, 5-7: 60s, 7-: 120 seconds
-// make css less shit
 
 
 //DONE
-
+// alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-2 : 60 seconds, 2-5: 30s, 5-7: 60s, 7-: 120 seconds
+// make css less shit - maybe
 //for refreshing, redo functions getseatinfo + loadmap + displayVoteTotals(nationalVoteTotals) every minute or so
 // initiate while loop when user on site - delay of 60 seconds
 
@@ -959,22 +958,26 @@ function alterTable(area, holdingarray){
 }
 
 
+function changeRefresh(state){
+	if (state == false){
+		$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF - will refresh one more time")
+
+	}
+	if (state == true){
+		$("#refreshbuttonlink").html("Refresh Map + Ticker : ON");
+	}
+}
 
 // auto refresh elements
 
 function autoRefresh () {
-
 	var refreshRate = 90000;
-
 	var today = new Date();
 	var dd = today.getDate();
 	var mm = today.getMonth() + 1;
 	var hh = today.getHours();
 
-
 	// alter refresh delay rate based on time -
-
-
 	//for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
 	//
 	// if (mm == 5 && dd == 8){
@@ -993,37 +996,23 @@ function autoRefresh () {
 	//
 	// }
 
-	//for test
-
-	if (mm == 4 && dd == 18){
-
-		if (hh >= 11 && hh < 12){
-			refreshRate = 60000;
-		}
-
-		if (hh >= 12 && hh < 15){
-			refreshRate = 30000;
-		}
-
-		if (hh >= 15 && hh < 17){
-			refreshRate = 60000;
-		}
-
-	}
-
 	if (!(refreshState)) {
-		//	console.log("not refreshing")
-			$("#refreshbutton").remove()
-			return
+			console.log("not refreshing");
+			$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF");
+			setTimeout(function(){
+				autoRefresh()
+			}, refreshRate)
 		}
 
 	else {
-		//console.log("Refresh Rate", refreshRate/1000, "s");
+		console.log("Refresh Rate", refreshRate/1000, "s");
 
 
 		setTimeout(function () {
 			//window.location.reload(true)
 			// remove old map - buggy otherwise
+			$("#refreshbuttonlink").html("Refresh Map + Ticker : ON Rate: " + refreshRate / 1000 +  "s");
+
 			$("svg .map").remove()
 			$("svg .not_here").remove()
 			// reacquire data + reload map
@@ -1182,7 +1171,7 @@ function DO_NOT_PRESS(){
 
 	alert("Why would you do this?");
 
-	$("#right").append("<div id=\"farage\" style =\"position: absolute\"><img style=\"position: relative; z=index: -1; height: 800px; width: 600px;\" src=\"farage.png\"></div>");
+	$("body").append("<div id=\"farage\" style =\"position: absolute; margin-left: 800px\"><img style=\"position: relative; z=index: -1; height: 800px; width: 600px;\" src=\"farage.png\"></div>");
 
 
 

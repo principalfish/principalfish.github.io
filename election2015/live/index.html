@@ -26,9 +26,7 @@
 			<div id="top">
 				<h2>UK Election Maps - LIVE &nbsp; <span style="font-size: 0.75em;">Finished full test</span></h2>
 
-				<div id="refreshbutton">
-					<button id="togglerefresh" onclick="refreshState = !(refreshState), autoRefresh()">Turn off auto-refresh</button>
-				</div>
+
 
 				<script>
 				$(function(){
@@ -189,10 +187,14 @@
 
 			</div>
 
+			<div id="mid">
+				<div id="refreshbutton">
+					<h5><a id="refreshbuttonlink" href="#" onclick="refreshState = !(refreshState); changeRefresh(refreshState)">Refresh Map + Ticker : ON</a><h5>
+				</div>
 
 				<div id="ticker">
 				</div>
-
+			</div>
 
 
 

@@ -29,7 +29,6 @@ function drawGraph(type){
   var xAxis = d3.svg.axis().scale(x)
     .orient("bottom").ticks(8)
 
-
   var yAxis = d3.svg.axis().scale(y)
     .orient("left").ticks(25);
 

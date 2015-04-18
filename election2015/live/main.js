@@ -725,6 +725,11 @@ function getSeatInfo(data){
 getData().done(getSeatInfo);
 var seatDeclarations = {};
 
+// get predictions for none declared seats
+var predictions = {};
+
+$
+
 
 $.getJSON("seat_declaration_times.json", function(seats){
 	$.each(seats, function(seat) {

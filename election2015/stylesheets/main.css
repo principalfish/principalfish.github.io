@@ -319,8 +319,6 @@ svg .map {
 }
 
 svg .not_here{
-	stroke: black;
-	stroke-width: 0.2;
 	cursor: pointer;
 }
 

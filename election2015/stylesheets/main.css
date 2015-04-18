@@ -319,6 +319,8 @@ svg .map {
 }
 
 svg .not_here{
+	stroke: black;
+	stroke-width: 0.2;
 	cursor: pointer;
 }
 
@@ -356,7 +358,7 @@ svg .not_here{
 .sinnfein {background-color: #008800; color: black; fill: #008800; stroke: #008800;}
 .other1 {background-color: #666666 ; color:white; fill: #666666 ; stroke: #666666;}
 .other2 {background-color: #999999; color:white; fill: #999999; stroke: #999999;}
-.not_here {background-color: white; color:black; fill: white; stroke: grey; stroke-width : 0.3px; }
+.not_here {background-color: white; color:black; fill: white; stroke: black; stroke-width : 0.2; }
 .null {background-color: white; color: black;}
 .total {background-color: black; color: white; stroke: grey; }
 .other {background-color: #666666 ; color:white; fill: #666666 ; stroke: #666666;}

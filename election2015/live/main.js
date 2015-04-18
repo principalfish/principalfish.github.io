@@ -322,7 +322,7 @@ function seatinfo(d){
 		//$("#information").addClass(seat_info["winning_party"])
 
 		// seatname and region
-		$("#information").append("<p> " + d.properties.name + "<span style =\"float: right;\">" + regionlist[seat_info["area"]] + "</span></p>")
+		$("#information").append("<h3> " + d.properties.name + "<span style =\"float: right;\">" + regionlist[seat_info["area"]] + "</span></h3>")
 
 		var previousParty = ""
 		if (seat_info["change"] == "gain"){
@@ -330,18 +330,18 @@ function seatinfo(d){
 		}
 
 		// party + hold/gain and from whom
-		$("#information").append("<p><span class=\"partyinfospan " + seat_info["winning_party"] +  "\">" + partylist[seat_info["winning_party"]] + "&nbsp&nbsp&nbsp"
-											+ seat_info["change"].toUpperCase() + "</span>&nbsp&nbsp&nbsp" + "<span>" + previousParty + "</span></p>")
+		$("#information").append("<h3><span class=\"partyinfospan " + seat_info["winning_party"] +  "\">" + partylist[seat_info["winning_party"]] + "&nbsp&nbsp&nbsp"
+											+ seat_info["change"].toUpperCase() + "</span>&nbsp&nbsp&nbsp" + "<span>" + previousParty + "</span></h3>")
 
 		// majority + turnout
-		$("#information").append("<p> Majority: " + seat_info["majority_total"] + " = " + seat_info["majority_percentage"]
-												+ "% <span style =\"float: right;\"> Turnout: " + seat_info["percentage_turnout"] + "%</span></p>")
+		$("#information").append("<h3> Majority: " + seat_info["majority_total"] + " = " + seat_info["majority_percentage"]
+												+ "% <span style =\"float: right;\"> Turnout: " + seat_info["percentage_turnout"] + "%</span></h3>")
 
 		// declaration time
 
 		var onlyTime = seat_info["declared_at_simple"]
 
-		$("#information").append("<p> Declared at:  " + onlyTime +  "</p>")
+		$("#information").append("<h3> Declared at:  " + onlyTime +  "</h3>")
 
 		//////////// CHANGE**///////////
 		$("#information-pie").html(piechart(d));
@@ -352,10 +352,10 @@ function seatinfo(d){
 		//$("#information").addClass("null")
 		$("#information-pie").empty();
 		$("#information-chart").empty();
-		$("#information").append("<p>" + d.properties.name + "</p>")
-		$("#information").append("<p> Expected Declaration Time : " + seatDeclarations[d.properties.name].substr(0, 5) + "</p>")
-		$("#information").append("<p> Incumbent : <span class=\"" + predictions[d.properties.name].incumbent + " partyinfospan\">" + partylist[predictions[d.properties.name].incumbent] + "</span></p>")
-		$("#information").append("<p> Predicted : <span class=\"" + predictions[d.properties.name].party + " partyinfospan\">" + partylist[predictions[d.properties.name].party] + "</span></p>")
+		$("#information").append("<h3>" + d.properties.name + "</h3>")
+		$("#information").append("<h3> Expected Declaration Time : " + seatDeclarations[d.properties.name].substr(0, 5) + "</h3>")
+		$("#information").append("<h3> Incumbent : <span class=\"" + predictions[d.properties.name].incumbent + " partyinfospan\">" + partylist[predictions[d.properties.name].incumbent] + "</span></h3>")
+		$("#information").append("<h3> Predicted : <span class=\"" + predictions[d.properties.name].party + " partyinfospan\">" + partylist[predictions[d.properties.name].party] + "</span></h3>")
 
 
 		//oldclass = "null"

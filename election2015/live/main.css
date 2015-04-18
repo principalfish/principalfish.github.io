@@ -79,9 +79,10 @@
   border-top: 0px;
 }
 
-#information p{
-  width: 100%;
+#information h3{
   font-size: 1.5em;
+	margin-top: 15px;
+	margin-bottom : 16px;
 
 }
 

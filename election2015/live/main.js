@@ -1008,36 +1008,36 @@ function autoRefresh () {
 
 
 	//for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
+	//
+	// if (mm == 5 && dd == 8){
+	//
+	// 	if (hh >= 0 && hh < 2){
+	// 		refreshRate = 60000;
+	// 	}
+	//
+	// 	if (hh >= 2 && hh < 5){
+	// 		refreshRate = 30000;
+	// 	}
+	//
+	// 	if (hh >= 5 && hh < 7){
+	// 		refreshRate = 60000;
+	// 	}
+	//
+	// }
 
-	if (mm == 5 && dd == 8){
+	//for test
 
-		if (hh >= 0 && hh < 2){
+	if (mm == 4 && dd == 18){
+
+		if (hh >= 11 && hh < 12){
 			refreshRate = 60000;
 		}
 
-		if (hh >= 2 && hh < 5){
+		if (hh >= 12 && hh < 15){
 			refreshRate = 30000;
 		}
 
-		if (hh >= 5 && hh < 7){
-			refreshRate = 60000;
-		}
-
-	}
-
-	//for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
-
-	if (mm == 5 && dd == 8){
-
-		if (hh >= 0 && hh < 2){
-			refreshRate = 60000;
-		}
-
-		if (hh >= 2 && hh < 5){
-			refreshRate = 30000;
-		}
-
-		if (hh >= 5 && hh < 7){
+		if (hh >= 15 && hh < 17){
 			refreshRate = 60000;
 		}
 

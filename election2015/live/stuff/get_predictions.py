@@ -9,8 +9,9 @@ with open("../../data/info.csv", "r") as input:
         seat = row["seat"]
         incumbent = row["incumbent"]
         party = row["party"]
+        id = row["id"]
 
-        to_dump[seat] = {"incumbent": incumbent, "party": party}
+        to_dump[seat] = {"incumbent": incumbent, "party": party, "id": id}
 
 
 with open("predictions.json", "w") as output:

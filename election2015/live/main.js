@@ -1124,15 +1124,29 @@ function activateTicker(){
 				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
 
 				if (pageRefreshTotal > 1){
-					console.log(id)
-					$(id).css('filter', 'alpha(opacity=40)');
-				//	$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
-					$(id).fadeTo("slow", 0).fadeTo("slow", 1).fadeTo("slow", 0).fadeTo("slow", 1).fadeTo("slow", 0).fadeTo("slow", 1);
+					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 
 				}
 			}
 		});
 }
+
+
+// for browsers
+var isFirefox = typeof InstallTrigger !== 'undefined';
+var isIE = /*@cc_on!@*/false || !!document.documentMode;
+
+$(document).ready(function(){
+  if (isFirefox == true){
+		console.log("firefox")
+  }
+
+  if (isIE == true){
+		console.log("IE")
+
+  }
+});
+
 
 // flashGainsState = false;
 //

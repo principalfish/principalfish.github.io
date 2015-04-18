@@ -30,13 +30,11 @@
 
 #ticker {
 	float: left;
-	background: white;
-
-  /*position: absolute;
-  z-index: 1;*/  
+	background: #99CCFF;
   width: 295px;
-  height: 890px;
+  height: 900px;
   overflow: auto;
+	border-bottom: 1px solid black;
 }
 
 #ticker td{

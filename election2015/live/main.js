@@ -1138,7 +1138,7 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode;
 
 $(document).ready(function(){
   if (isFirefox == true || isIE == true){
-		$("#refreshbutton").css("margin-left", "100px")
+		$("#refreshbutton").css("margin-left", "795px")
 	  }
 
 });

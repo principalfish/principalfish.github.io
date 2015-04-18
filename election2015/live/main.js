@@ -1040,7 +1040,7 @@ function autoRefresh () {
 			getData().done(getSeatInfo);
 
 			//console.log(Date())
-			var x = new Date(document.lastModified).toLocaleString();
+			var x = new Date().toLocaleString();
 			document.getElementById("lastupdated").innerHTML = x
 
 

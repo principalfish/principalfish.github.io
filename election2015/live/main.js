@@ -321,7 +321,7 @@ function seatinfo(d){
 	if (d.properties.name in seatData){
 		seat_info = seatData[d.properties.name]["seat_info"]
 
-		$("#information").addClass(seat_info["winning_party"])
+		//$("#information").addClass(seat_info["winning_party"])
 
 		// seatname and region
 		$("#information").append("<p> " + d.properties.name + "<span style =\"float: right;\">" + regionlist[seat_info["area"]] + "</span></p>")

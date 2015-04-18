@@ -1120,7 +1120,7 @@ function activateTicker(){
 				currentSeats.push(seatinfo.name)
 				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
 
-				if (pageRefreshTotal > 1){
+				if (pageRefreshTotal > 1 && !(isIE)){
 					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 
 				}
@@ -1130,9 +1130,9 @@ function activateTicker(){
 
 
 // for browsers
-// var isFirefox = typeof InstallTrigger !== 'undefined';
-// var isIE = /*@cc_on!@*/false || !!document.documentMode;
-//
+var isFirefox = typeof InstallTrigger !== 'undefined';
+var isIE = /*@cc_on!@*/false || !!document.documentMode;
+
 // // $(document).ready(function(){
 // //   if (isFirefox == true || isIE == true){
 // // 		$("#refreshbutton").css("margin-left", "795px")

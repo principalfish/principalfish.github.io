@@ -33,6 +33,8 @@ d3.selection.prototype.moveToFront = function() {
 						});
 					};
 
+
+var pageRefreshTotal = 0
 // current state of user input filters
 var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}]
 
@@ -42,7 +44,7 @@ var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
 var filterToTicker = [];
 var seatsToIDs = {}; // for mapping seats to ids to stop errors when seats arent populated with data
-var currentSeats = []; // for use flashing new seats in ticker
+var currentSeats = []; // for use flashing new se
 
 // control flow for analysing user filter inputs
 function filterMap(setting){
@@ -722,6 +724,7 @@ function getSeatInfo(data){
 	}
 	displayVoteTotals(nationalVoteTotals)
 	possibleCoalitions(nationalVoteTotals)
+	pageRefreshTotal += 1
 
 }
 
@@ -1120,7 +1123,7 @@ function activateTicker(){
 			if (currentSeats.indexOf(seatinfo.name) == -1){
 				currentSeats.push(seatinfo.name)
 				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
-				$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000)
+				$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000)
 
 			}
 

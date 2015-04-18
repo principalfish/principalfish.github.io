@@ -23,14 +23,13 @@
   margin-left: 802px;
 }
 
-
 #ticker {
   position: absolute;
   z-index: 1;
   margin-left: 600px;
   margin-top: 5px;
   width: 295px;
-  height: 880px;
+  height: 890px;
   overflow: auto;
 }
 

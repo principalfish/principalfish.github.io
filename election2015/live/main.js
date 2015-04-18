@@ -1020,7 +1020,6 @@ function autoRefresh () {
 
 	if (!(refreshState)) {
 			$("#refreshstate").html("OFF");
-			$("#refreshbutton").css("margin-left", "797px");
 			console.log("not refreshing")
 			return
 		}
@@ -1028,8 +1027,6 @@ function autoRefresh () {
 	else {
 		console.log("Refresh Rate", refreshRate/1000, "s");
 		$("#refreshstate").html("ON");
-		$("#refreshbutton").css("margin-left", "802px");
-
 
 		setTimeout(function () {
 			//window.location.reload(true)

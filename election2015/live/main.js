@@ -1116,9 +1116,12 @@ function activateTicker(){
 													"<td style=\"padding-right: 8px\";>" + seatinfo.declared_at_simple + "</td ><td style=\"padding-right: 8px; width: 100%;\">"
 													+ seatinfo.name + "</td><td style=\"padding-right: 8px\">"
 													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
+												})
+			if (currentSeats.indexOf(seatinfo.name) == -1){
+				currentSeats.push(seatinfo.name)
+			}
 
 
-		})
 }
 
 // flashGainsState = false;

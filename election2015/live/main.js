@@ -214,8 +214,9 @@ function generateSeatList(){
 
 // close to duplicate of clicked() due to slightly difference in data type used. fix at some point. this one is for generate seat list and seat search box
 function zoomToClickedFilteredSeat(d){
+
 	var id = "#i" + seatsToIDs[d.properties.name];
-	//rewrite at some point
+	console.log(id)
 
 	previous = d3.select(previousnode);
 

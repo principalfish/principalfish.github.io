@@ -531,7 +531,7 @@ function loadmap(){
 
 				searchSeatData.push(d)
 				seatNames.push(d.properties.name);
-				seatsToIDs[d.properties.name] = predictions[d.properties.name]["id"]
+				seatsToIDs[d.properties.name] = parseInt(predictions[d.properties.name]["id"])
 
 			});
 

@@ -314,6 +314,8 @@ svg .map {
 
 .map:hover {
 	opacity: 0.5;
+	stroke: black;
+	stroke-width: 0.2;
 }
 
 svg .not_here{

@@ -1040,6 +1040,9 @@ function autoRefresh () {
 			getData().done(getSeatInfo);
 
 			//console.log(Date())
+			var x = new Date(document.lastModified).toLocaleString();
+			document.getElementById("lastupdated").innerHTML = x
+
 
 			autoRefresh();
 
@@ -1115,7 +1118,6 @@ function activateTicker(){
 
 
 				if (pageRefreshTotal > 1 && !(isIE)){
-					console.log(mapID)
 					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 					$(mapID).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 				}

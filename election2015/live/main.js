@@ -1045,7 +1045,6 @@ function autoRefresh () {
 
 	}
 
-
 	if (!(refreshState)) {
 			$("#refreshstate").html("OFF");
 			$("#refreshbutton").css("margin-left", "793px");

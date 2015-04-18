@@ -1,6 +1,6 @@
 // for trends.html
 // use d3 to draw line graph
-var margin = {top: 40, right: 20, bottom: 40, left: 50},
+var margin = {top: 40, right: 50, bottom: 40, left: 50},
     width = 1280 - margin.left - margin.right,
     height = 865 - margin.top - margin.bottom;
 
@@ -25,12 +25,16 @@ function drawGraph(type){
 
   var x = d3.time.scale().range([0, width]);
   var y = d3.scale.linear().range([height, 0]);
+  var y1 = d3.scale.linear().range([height, 0]);
 
   var xAxis = d3.svg.axis().scale(x)
     .orient("bottom").ticks(8)
 
   var yAxis = d3.svg.axis().scale(y)
     .orient("left").ticks(25);
+
+  var yAxis1 = d3.svg.axis().scale(y)
+    .orient("right").ticks(25);	
 
 
   var line = d3.svg.line()
@@ -127,8 +131,12 @@ function drawGraph(type){
           .attr("class", "y axis")
           .attr("class", "axis")
           .call(yAxis);
-
-
+		  
+	 svg.append("g")
+          .attr("class", "y axis")
+		  .attr("transform", "translate(" + width + " ,0)")	
+          .attr("class", "axis")
+          .call(yAxis1);
 
   	  svg.append("text")
     	    .attr("class", "x label")

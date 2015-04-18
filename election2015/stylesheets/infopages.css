@@ -137,20 +137,4 @@ path {
 
 }
 
-#graphinfo {
-  float: right;
-  margin-top: 25px;
-  width: 200px;
-  height: auto;
-  background-color: #3399FF;
-  text-align: center;
-}
 
-#graphinfo h3 {
-  margin: 0;
-  padding-top: 6px;
-  padding-bottom: 6px;
-  font-weight: bold;
-
-
-}

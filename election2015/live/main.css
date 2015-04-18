@@ -15,10 +15,6 @@
   max-height: 50%;
 }
 
-#resetbutton {
-  margin-left: 835px;
-}
-
 .mapbuttons {
   position: absolute;
   z-index: 1;
@@ -27,7 +23,6 @@
 }
 
 #refreshbutton {
-  margin-top: 25px;
   margin-left: 798px;
 }
 
@@ -37,9 +32,9 @@
   position: absolute;
   z-index: 1;
   margin-left: 600px;
-  margin-top: 55px;
+  margin-top: 27px;
   width: 290px;
-  height: 835px;
+  height: 855px;
   background: #99CCFF;
   border: 1px solid black;
   overflow: auto;

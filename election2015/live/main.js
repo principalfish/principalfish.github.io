@@ -1121,9 +1121,10 @@ function activateTicker(){
 				currentSeats.push(seatinfo.name)
 				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
 				var mapID = "#" + seatData[seatinfo.name]["seat_info"]["id"];
-				console.log(mapID)
+
 
 				if (pageRefreshTotal > 1 && !(isIE)){
+					console.log(mapID)
 					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 					$(mapID).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 				}

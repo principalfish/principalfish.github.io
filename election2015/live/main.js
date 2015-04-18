@@ -223,6 +223,7 @@ function zoomToClickedFilteredSeat(d){
 	current = d3.select(id);
 	console.log(current)
 
+	current[0][0] = "path" + id
 	repeat();
 
 	// flashes selected seat on map

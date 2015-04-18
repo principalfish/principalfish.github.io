@@ -43,7 +43,6 @@ var seatsAfterFilter = []; // for use with user inputs in filters - changing map
 var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
 var filterToTicker = [];
-var seatsToIDs = {}; // for mapping seats to ids to stop errors when seats arent populated with data
 var currentSeats = []; // for use flashing new se
 
 // control flow for analysing user filter inputs
@@ -215,6 +214,7 @@ function generateSeatList(){
 function zoomToClickedFilteredSeat(d){
 
 	var id = "#i" + predictions[d.properties.name]["id"]
+	console.log(id)
 	previous = d3.select(previousnode);
 	current = d3.select(id);
 
@@ -516,7 +516,7 @@ function loadmap(){
 			.attr("opacity", 1)
 			.attr("id", function(d) {
 				console.log(predictions[d.properties.name]["id"])
-				return "#" + parseInt(predictions[d.properties.name]["id"])
+				return "i" + parseInt(predictions[d.properties.name]["id"])
 
 				})
 			.attr("d", path)
@@ -1035,7 +1035,6 @@ function autoRefresh () {
 			seatData = {};
 			seatInfoForTicker = [];
 			filterToTicker = [];
-			seatsToIDs = {};
 
 			resetFilter()
 			$("#selectareatotals option:eq(0)").prop("selected", true);

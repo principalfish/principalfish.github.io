@@ -56,6 +56,7 @@ winners_map = {
     "Ind" : "other"
 }
 
+seat_list = []
 
 def get_data(file):
 
@@ -192,8 +193,6 @@ def get_data(file):
 
 
         live_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
-
-
 
 
 seats_declared = 0

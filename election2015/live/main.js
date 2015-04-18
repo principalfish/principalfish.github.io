@@ -357,7 +357,7 @@ function seatinfo(d){
 		$("#information-chart").empty();
 		$("#information").append("<p>" + d.properties.name + "</p>")
 		$("#information").append("<p> Expected Declaration Time : " + seatDeclarations[d.properties.name].substr(0, 5) + "</p>")
-		$("#information").append("<p> Incumbent : " + partylist[predictions[d.properties.name].incumbent] + "</p>")
+		$("#information").append("<p class=\"" + predictions[d.properties.name].incumbent + "\"> Incumbent : " + partylist[predictions[d.properties.name].incumbent] + "</p>")
 		$("#information").append("<p> Predicted : " + partylist[predictions[d.properties.name].party] + "</p>")
 
 

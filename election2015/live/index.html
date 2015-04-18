@@ -141,22 +141,15 @@
 					<button id="resetmap" onclick="reset()">Reset</button>
 				</div>
 
-
-
-				<div id="ticker">
-
-
-				</div>
-
 					<script>
 
-						var width = 900, // width and height of map
+						var width = 600, // width and height of map
 							height = 900;
 							active = d3.select(null);
 
 						var projection = d3.geo.albers() // variables to change default map position
 							.center([0, 54.3]) //centers vertically and horizontally
-							.rotate([0.5, 0])
+							.rotate([2.25, 0])
 							.parallels([51, 60])
 							.scale(5800)
 							.translate([width / 2, height / 2]);
@@ -192,6 +185,10 @@
 
 				</script>
 
+			<div id ="mid">
+				<div id="ticker">
+				</div>
+			</div>
 
 			</div>
 

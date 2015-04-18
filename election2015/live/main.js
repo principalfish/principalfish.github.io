@@ -1004,6 +1004,8 @@ function autoRefresh () {
 	var dd = today.getDate();
 	var mm = today.getMonth() + 1;
 	var hh = today.getHours();
+
+
 	// alter refresh delay rate based on time -
 
 
@@ -1042,9 +1044,6 @@ function autoRefresh () {
 		}
 
 	}
-
-
-
 
 
 	if (!(refreshState)) {

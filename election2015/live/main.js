@@ -516,6 +516,11 @@ function loadmap(){
 
 				})
 			.attr("opacity", 1)
+			.attr("id", function(d) {
+				if (d.properties.name in seatData){
+					return "i" + seatData[d.properties.name]["seat_info"]["id"]
+					}
+				})
 			.attr("d", path)
 			.on("click", zoomToClickedFilteredSeat)
 			.append("svg:title")
@@ -531,10 +536,7 @@ function loadmap(){
 				seatNames.push(d.properties.name);
 				seatsToIDs[d.properties.name] = i
 
-			})
-			.attr("id", function(d) {
-					return "i" + i
-				});
+			});
 
 
 			activateTicker();

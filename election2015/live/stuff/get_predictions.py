@@ -1,6 +1,8 @@
 import csv
 import json
 
+to_dump = {}
+
 with open("../../data/info.csv", "r") as input:
     reader = csv.DictReader(input, delimiter = ",")
     for row  in reader:
@@ -8,4 +10,8 @@ with open("../../data/info.csv", "r") as input:
         incumbent = row["incumbent"]
         party = row["party"]
 
-        print seat, incumbent, party
+        to_dump[seat] = {"incumbent": incumbent, "party": party}
+
+
+with open("predictions.json", "w") as output:
+    json.dump(to_dump, output)

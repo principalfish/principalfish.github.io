@@ -221,6 +221,7 @@ function zoomToClickedFilteredSeat(d){
 	previous = d3.select(previousnode);
 
 	current = d3.select(id);
+	console.log(current)
 
 	repeat();
 

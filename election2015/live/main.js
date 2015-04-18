@@ -1057,9 +1057,8 @@ function autoRefresh () {
 	else {
 		console.log("Refresh Rate", refreshRate/1000, "s");
 		$("#refreshstate").html("ON");
-		$("#refreshbutton").css("margin-left", "798px")
+		$("#refreshbutton").css("margin-left", "798px");
 
-		
 
 		setTimeout(function () {
 			//window.location.reload(true)

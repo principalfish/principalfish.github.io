@@ -352,14 +352,14 @@ function seatinfo(d){
 		oldclass = seat_info["winning_party"]
 	}
 	else{
-		$("#information").addClass("not_here")
+		$("#information").addClass("null")
 		$("#information-pie").empty();
 		$("#information-chart").empty();
 		$("#information").append("<p>" + d.properties.name + "</p>")
 		$("#information").append("<p> Expected Declaration Time : " + seatDeclarations[d.properties.name].substr(0, 5) + "</p>")
 
 
-		oldclass = "not_here"
+		oldclass = "null"
 	}
 }
 

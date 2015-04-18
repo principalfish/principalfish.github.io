@@ -350,6 +350,7 @@ svg .not_here{
 .other1 {background-color: #666666 ; color:white; fill: #666666 ; stroke: #666666;}
 .other2 {background-color: #999999; color:white; fill: #999999; stroke: #999999;}
 .not_here {background-color: white; color:black; fill: white; stroke: grey; stroke-width : 0.3px; }
+.null {backround-color: white; color: black;}
 .total {background-color: black; color: white; stroke: grey; }
 .other {background-color: #666666 ; color:white; fill: #666666 ; stroke: #666666;}
 

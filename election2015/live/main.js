@@ -1133,15 +1133,15 @@ function activateTicker(){
 
 
 // for browsers
-var isFirefox = typeof InstallTrigger !== 'undefined';
-var isIE = /*@cc_on!@*/false || !!document.documentMode;
-
-$(document).ready(function(){
-  if (isFirefox == true || isIE == true){
-		$("#refreshbutton").css("margin-left", "795px")
-	  }
-
-});
+// var isFirefox = typeof InstallTrigger !== 'undefined';
+// var isIE = /*@cc_on!@*/false || !!document.documentMode;
+//
+// // $(document).ready(function(){
+// //   if (isFirefox == true || isIE == true){
+// // 		$("#refreshbutton").css("margin-left", "795px")
+// 	  }
+//
+// });
 
 
 // flashGainsState = false;

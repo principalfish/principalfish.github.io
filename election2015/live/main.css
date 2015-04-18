@@ -59,9 +59,14 @@
   border-top: 0px;
 }
 
+#information {
+	margin-top: -10px;
+}
+
 #information p{
   width: 100%;
   font-size: 1.5em;
+
 }
 
 .partyinfospan {

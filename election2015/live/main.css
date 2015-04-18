@@ -39,8 +39,7 @@
 
 #ticker td{
   	cursor:pointer;
-    font-size: 1.2em;
-    min-width: 100%;
+    font-size: 1.2em;    
 }
 
 #ticker tr:hover{

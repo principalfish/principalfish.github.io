@@ -1138,7 +1138,7 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode;
 
 $(document).ready(function(){
   if (isFirefox == true){
-		console.log("firefox")
+		$("#ticker")
   }
 
   if (isIE == true){

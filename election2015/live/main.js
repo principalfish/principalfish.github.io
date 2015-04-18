@@ -42,6 +42,7 @@ var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
 var filterToTicker = [];
 var seatsToIDs = {}; // for mapping seats to ids to stop errors when seats arent populated with data
+var currentSeats = []; // for use flashing new seats in ticker
 
 // control flow for analysing user filter inputs
 function filterMap(setting){

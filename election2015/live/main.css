@@ -47,10 +47,6 @@
   	opacity: 0.5;
 }
 
-.tickerSeats tr{
-	border-radius: 5px 5px 5px 5px;
-
-}
 .tickerSeats td{
 	border-top: 3px solid #99CCFF;
  	padding-bottom: 2px;

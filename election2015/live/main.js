@@ -992,7 +992,7 @@ function electionTimer(){
 			daysString = " days ";
 		}
 
-		toWrite = "Polls close in " + days + daysString + hours +  ":" + minutes  + ":" + seconds
+		var toWrite = "Polls close in " + days + daysString + hours +  ":" + minutes  + ":" + seconds
 
 		$("#electioncountdown").html(toWrite);
 

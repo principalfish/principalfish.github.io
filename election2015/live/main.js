@@ -332,7 +332,7 @@ function seatinfo(d){
 		}
 
 		// party + hold/gain and from whom
-		$("#information").append("<p><span>" + partylist[seat_info["winning_party"]] + "&nbsp&nbsp&nbsp"
+		$("#information").append("<p><span class=\"partyinfospan " + seat_info["winning_party"] +  "\">" + partylist[seat_info["winning_party"]] + "&nbsp&nbsp&nbsp"
 											+ seat_info["change"].toUpperCase() + "&nbsp&nbsp&nbsp" + "<span>" + previousParty + "</span></p>")
 
 		// majority + turnout

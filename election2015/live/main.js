@@ -536,15 +536,12 @@ function loadmap(){
 				seatNames.push(d.properties.name);
 				seatsToIDs[d.properties.name] = i
 
-			})
-			.attr("id", function(d){
-				return "i" + seatsToIDs[d.properties.name]
 			});
 
-			// g.selectAll(".not_here")
-			// 	.attr("id", function(d){
-			// 		return "i" + seatsToIDs[d.properties.name]
-			// 	});
+			g.selectAll(".not_here")
+				.attr("id", function(d){
+					return "i" + seatsToIDs[d.properties.name]
+				});
 
 
 			activateTicker();

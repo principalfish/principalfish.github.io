@@ -302,7 +302,7 @@ var oldclass;
 // fills out table of info at top of #right
 function seatinfo(d){
 
-	$("#information").removeClass(oldclass);
+//	$("#information").removeClass(oldclass);
 	$("#information").empty()
 
 	// if declared
@@ -351,7 +351,7 @@ function seatinfo(d){
 		oldclass = seat_info["winning_party"]
 	}
 	else{
-		$("#information").addClass("null")
+		//$("#information").addClass("null")
 		$("#information-pie").empty();
 		$("#information-chart").empty();
 		$("#information").append("<p>" + d.properties.name + "</p>")
@@ -360,7 +360,7 @@ function seatinfo(d){
 		$("#information").append("<p> Predicted : <span class=\"" + predictions[d.properties.name].party + " partyinfospan\">" + partylist[predictions[d.properties.name].party] + "</span></p>")
 
 
-		oldclass = "null"
+		//oldclass = "null"
 	}
 }
 

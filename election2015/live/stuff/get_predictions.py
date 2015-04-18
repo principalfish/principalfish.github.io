@@ -15,4 +15,4 @@ with open("../../data/info.csv", "r") as input:
 
 with open("predictions.json", "w") as output:
 
-    json.dump("var predictions =", to_dump, output)
+    json.dump(to_dump, output)

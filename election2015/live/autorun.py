@@ -76,7 +76,9 @@ def get_data(file):
         seat_id = itemlist[0].attributes['number'].value
 
         my_seat_name = seat_name_map[seat_name]
-        print my_seat_name
+        if my_seat_name not in seat_list:
+            print my_seat_name
+            seat_list.append(my_seat_name)
         my_seat_id = seat_map[seat_id]
 
         time_string = declaration_time[0:-6]

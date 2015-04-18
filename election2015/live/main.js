@@ -484,6 +484,7 @@ function possibleCoalitions(voteTotals){
 
 	$.each(coalitions, function(i){
 		$("#coalitionlist").append(coalitions[i].parties + ":" + coalitions[i].seats)
+		$("#coalitionlist").text("\xA0")
 	})
 
 

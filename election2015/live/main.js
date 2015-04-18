@@ -1123,16 +1123,12 @@ function activateTicker(){
 			if (currentSeats.indexOf(seatinfo.name) == -1){
 				currentSeats.push(seatinfo.name)
 				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
-				
+
 				if (pageRefreshTotal > 1){
-					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000)
+					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 				}
 			}
-
 		});
-
-
-
 }
 
 // flashGainsState = false;

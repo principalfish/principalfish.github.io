@@ -31,15 +31,15 @@
   position: absolute;
   z-index: 1;
   margin-left: 600px;
-  margin-top: 30px;
+  margin-top: 10px;
   width: 295px;
-  height: 860px;
+  height: 880px;
   overflow: auto;
 }
 
 #ticker td{
   	cursor:pointer;
-    font-size: 1.2em;    
+    font-size: 1.2em;
 }
 
 #ticker tr:hover{

@@ -201,12 +201,11 @@ function generateSeatList(){
 
 				if (filterStates[1].gain == "gains" && filterStates[0].party != "null")
 				$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] +
-				"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
-
+				"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>");
 
 				else
 					$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["winning_party"] +
-					"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>")
+					"><td onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">" + seatsAfterFilter[i].properties.name + "</td></tr>");
 
 			});
 
@@ -218,7 +217,7 @@ function zoomToClickedFilteredSeat(d){
 	var id = "#i" + seatsToIDs[d.properties.name];
 	//rewrite at some point
 
-	previous = d3.select(previousnode)
+	previous = d3.select(previousnode);
 
 	current = d3.select(id);
 

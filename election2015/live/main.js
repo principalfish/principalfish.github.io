@@ -73,7 +73,7 @@ function filterMap(setting){
 				}
 			else {
 				g.selectAll(".not_here")
-					.style("opacity", 0.1)
+					.attr("class", "faded_not_here")
 				}
 
 

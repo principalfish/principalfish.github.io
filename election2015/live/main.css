@@ -101,3 +101,8 @@
 #totals table{
   font-size: 1.33em;
 }
+
+
+.faded_not_here{
+	opacity: 0.1;
+}

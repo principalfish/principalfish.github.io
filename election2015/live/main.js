@@ -214,7 +214,7 @@ function generateSeatList(){
 
 function zoomToClickedFilteredSeat(d){
 
-	var id = "#i" + seatsToIDs[d.properties.name];
+	var id = "#i" + predictions[d.properties.name]["id"]
 	previous = d3.select(previousnode);
 	current = d3.select(id);
 

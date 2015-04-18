@@ -329,7 +329,7 @@ function seatinfo(d){
 
 		var previousParty = ""
 		if (seat_info["change"] == "gain"){
-			previousParty = "from &nbsp&nbsp&nbsp" + "<span style=\" padding: 5px; border-radius: 5px 5px 5px 5px;\" class=\"" + seat_info["incumbent"] + "\">" + partylist[seat_info["incumbent"]] + "</span>"
+			previousParty = "from &nbsp&nbsp&nbsp" + "<span class=\"" + seat_info["incumbent"] + "\">" + partylist[seat_info["incumbent"]] + "</span>"
 		}
 
 		// party + hold/gain and from whom
@@ -358,7 +358,7 @@ function seatinfo(d){
 		$("#information").append("<p>" + d.properties.name + "</p>")
 		$("#information").append("<p> Expected Declaration Time : " + seatDeclarations[d.properties.name].substr(0, 5) + "</p>")
 		$("#information").append("<p> Incumbent : <span class=\"" + predictions[d.properties.name].incumbent + "\">" + partylist[predictions[d.properties.name].incumbent] + "</span></p>")
-		$("#information").append("<p> Predicted : <span class=\"" + predictions[d.properties.name].predicted + "\">" + partylist[predictions[d.properties.name].predicted] + "</span></p>")
+		$("#information").append("<p> Predicted : <span class=\"" + predictions[d.properties.name].party + "\">" + partylist[predictions[d.properties.name].party] + "</span></p>")
 
 
 		oldclass = "null"

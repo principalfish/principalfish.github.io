@@ -215,11 +215,11 @@ while(True):
     ## test
     if days == 18 and months == 4:
 
-        if hours >=0 and hours < 2:
+        if hours >=11 and hours < 12:
             delay = 60
-        if hours >=2 and hours < 5 :
+        if hours >=12 and hours < 15 :
             delay = 30
-        if hours >=5 and hours < 7:
+        if hours >=15 and hours < 17:
             delay = 60
 
     ## real election

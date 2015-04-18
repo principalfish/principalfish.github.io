@@ -1005,6 +1005,8 @@ function autoRefresh () {
 	var mm = today.getMonth() + 1;
 	var hh = today.getHours();
 	// alter refresh delay rate based on time -
+
+
 	//for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
 
 	if (mm == 5 && dd == 8){
@@ -1023,7 +1025,25 @@ function autoRefresh () {
 
 	}
 
-	console.log(refreshRate)
+	//for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
+
+	if (mm == 5 && dd == 8){
+
+		if (hh >= 0 && hh < 2){
+			refreshRate = 60000;
+		}
+
+		if (hh >= 2 && hh < 5){
+			refreshRate = 30000;
+		}
+
+		if (hh >= 5 && hh < 7){
+			refreshRate = 60000;
+		}
+
+	}
+
+	console.log("Refresh Rate", refreshRate/1000, "s")
 
 
 

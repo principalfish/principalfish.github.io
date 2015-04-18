@@ -2,6 +2,10 @@ import csv
 import json
 
 with open("../../data/info.csv", "r") as input:
-    reader = csv.reader(input, delimiter = ",")
+    reader = csv.DictReader(input, delimiter = ",")
     for row  in reader:
-        print row
+        seat = row["seat"]
+        incumbent = row["incumbent"]
+        party = row["party"]
+
+        print seat, incumbent, party

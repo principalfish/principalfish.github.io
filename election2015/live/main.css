@@ -80,9 +80,10 @@
   border-bottom: 1px solid black
 }
 
-#coalitions h3 {
+#coalitions h3,h5 {
   margin-top: 5px;
   margin-bottom: 5px;
+	margin-left: 5px;
 
 }
 

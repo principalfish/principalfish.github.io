@@ -1119,8 +1119,8 @@ function activateTicker(){
 
 			if (currentSeats.indexOf(seatinfo.name) == -1){
 				currentSeats.push(seatinfo.name)
-				var id = "ticker" + seatData[seatinfo.name]["seat_info"]["id"]
-				console.log(id)
+				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
+				$(id).fadeIn(1000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000)
 
 			}
 

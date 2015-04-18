@@ -1117,7 +1117,6 @@ function activateTicker(){
 
 
 		})
-
 }
 
 // flashGainsState = false;

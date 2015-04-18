@@ -1043,7 +1043,7 @@ function autoRefresh () {
 
 	}
 
-	console.log("Refresh Rate", refreshRate/1000, "s")
+
 
 
 
@@ -1058,7 +1058,7 @@ function autoRefresh () {
 		}
 
 	else {
-
+		console.log("Refresh Rate", refreshRate/1000, "s");
 		$("#refreshstate").html("ON");
 		$("#refreshbutton").css("margin-left", "798px")
 

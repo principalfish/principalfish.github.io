@@ -232,6 +232,8 @@ while(True):
     #     if hours >=5 and hours < 7:
     #         delay = 60
 
+    print "Refresh Rate: ", delay, "seconds"
+
     path = "testdata/real_data/"
     files = os.listdir(path)
 

@@ -538,6 +538,9 @@ function loadmap(){
 
 			});
 
+			g.selectAll(".not_here")
+				.attr("id", "123")
+
 
 			activateTicker();
 

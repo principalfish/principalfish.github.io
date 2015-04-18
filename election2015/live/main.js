@@ -1019,15 +1019,14 @@ function autoRefresh () {
 	}
 
 	if (!(refreshState)) {
-			$("#refreshstate").html("OFF");
 			console.log("not refreshing")
-			$("#refresh")
+			$("#refreshbutton").remove()
 			return
 		}
 
 	else {
 		console.log("Refresh Rate", refreshRate/1000, "s");
-		$("#refreshstate").html("ON");
+
 
 		setTimeout(function () {
 			//window.location.reload(true)

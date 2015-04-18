@@ -258,7 +258,12 @@
 
 				</div>
 				<div id="footer">
-					<p>Last Updated: time &nbsp; Copyright 2015 principalfish.co.uk</p>
+					<p>Last Updated:
+					<script>
+						var x = new Date(document.lastModified).toLocaleString(); document.write(x)
+					</script>
+					&nbsp;&nbsp;&nbsp;
+					Copyright 2015 principalfish.co.uk</p>
 				</div>
 
 			</div>

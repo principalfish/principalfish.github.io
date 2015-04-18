@@ -530,8 +530,7 @@ function loadmap(){
 
 
 				searchSeatData.push(d)
-				seatNames.push(d.properties.name);
-				seatsToIDs[d.properties.name] = parseInt(predictions[d.properties.name]["id"])
+				seatNames.push(d.properties.name);				
 
 			});
 

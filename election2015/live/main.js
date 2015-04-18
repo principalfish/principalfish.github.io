@@ -69,11 +69,11 @@ function filterMap(setting){
 
 			if (setting == "reset"){
 				g.selectAll(".not_here")
-					.css("opacity", 1)
+					.style("opacity", 1)
 				}
 			else {
 				g.selectAll(".not_here")
-					.css("opacity", 0.1)
+					.style("opacity", 0.1)
 				}
 
 

@@ -263,48 +263,48 @@ function zoomToClickedFilteredSeat(d){
 
 
 // close to duplicate of zoomtoclickedfilteredseat() due to slightly difference in data type used. fix at some point. this one is for normal map clicking
-function clicked(d) {
-
-
-
-	previous = d3.select(previousnode)
-	current = d3.select(this);
-
-	repeat();
-
-	function repeat(){
-		previous.transition()
-			.attr("opacity", 1)
-
-		current
-			.transition()
-				.duration(1500)
-				.attr("opacity", 0.2)
-			.transition()
-				.duration(1500)
-				.attr("opacity", 1)
-			.each("end", repeat);
-		}
-
-	var bounds = path.bounds(d),
-		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
-		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
-		x = (bounds[0][0] + bounds[1][0]) / 2,
-		y = (bounds[0][1] + bounds[1][1]) / 2,
-
-		scale = .025 / Math.max(dx /  width,  dy / height),
-		translate = [width / 2 - scale * x, height / 2 - scale * y];
-
-	disableZoom();
-
-	svg.transition()
-			.duration(1500)
-			.call(zoom.translate(translate).scale(scale).event)
-			.each("end", enableZoom);
-
-	seatinfo(d);
-	previousnode = this;
-}
+// function clicked(d) {
+//
+//
+//
+// 	previous = d3.select(previousnode)
+// 	current = d3.select(this);
+//
+// 	repeat();
+//
+// 	function repeat(){
+// 		previous.transition()
+// 			.attr("opacity", 1)
+//
+// 		current
+// 			.transition()
+// 				.duration(1500)
+// 				.attr("opacity", 0.2)
+// 			.transition()
+// 				.duration(1500)
+// 				.attr("opacity", 1)
+// 			.each("end", repeat);
+// 		}
+//
+// 	var bounds = path.bounds(d),
+// 		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
+// 		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
+// 		x = (bounds[0][0] + bounds[1][0]) / 2,
+// 		y = (bounds[0][1] + bounds[1][1]) / 2,
+//
+// 		scale = .025 / Math.max(dx /  width,  dy / height),
+// 		translate = [width / 2 - scale * x, height / 2 - scale * y];
+//
+// 	disableZoom();
+//
+// 	svg.transition()
+// 			.duration(1500)
+// 			.call(zoom.translate(translate).scale(scale).event)
+// 			.each("end", enableZoom);
+//
+// 	seatinfo(d);
+// 	previousnode = this;
+// }
 
 
 

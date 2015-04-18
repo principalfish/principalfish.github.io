@@ -27,7 +27,6 @@
 }
 
 
-
 #ticker {
   position: absolute;
   z-index: 1;
@@ -35,8 +34,6 @@
   margin-top: 30px;
   width: 290px;
   height: 860px;
-  background: #99CCFF;
-  border: 1px solid black;
   overflow: auto;
 }
 
@@ -48,8 +45,6 @@
 
 #ticker tr:hover{
   	opacity: 0.5;
-
-
 }
 
 #information {

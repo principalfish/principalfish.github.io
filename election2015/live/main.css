@@ -7,6 +7,7 @@
 	width: 1652px;
 }
 
+
 #left {
   width :600px;
 	border-right: 0
@@ -28,9 +29,26 @@
 	border-right: 1px solid black;
 }
 
+#refreshbutton {
+	width: 100%;
+	background-color: black;
+	padding-top: 1px;
+	padding-bottom: 1px;
+	margin-bottom: 2px;
+	text-align: center;
+}
+
+#refreshbutton a{
+	color: white;
+
+}
+
+#refreshbutton a:hover{
+	color: orange;
+}
+
 #refreshbuttonlink {
 
- width: 300px;
 }
 
 #ticker {

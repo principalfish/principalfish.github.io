@@ -717,6 +717,7 @@ function getSeatInfo(data){
 	possibleCoalitions(nationalVoteTotals)
 	pageRefreshTotal += 1
 
+
 }
 
 // call the function
@@ -957,6 +958,33 @@ function alterTable(area, holdingarray){
   }
 }
 
+function electionTimer(){
+	var today = new Date();
+	var targetDate = new Date("May 7, 2015 22:00:00")
+	var diff = targetDate.getTime() - today.getTime();
+
+	var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+	var hours = Math.floor(diff / (1000 * 60 * 60) % days );
+	var minutes = Math.floor(diff / (1000 * 60) % 60);
+	var seconds = Math.floor(diff / 1000 % 60);
+	var daysString;
+
+	if (days == 1){
+		daysString = " day "
+		}
+	else {
+		daysString = " days "
+	}
+
+	toWrite = "Polls close in " + days + daysString + hours +  ":" + minutes  + ":" + seconds
+	console.log(toWrite)
+	$("#electioncountdown").html(toWrite);
+
+	setTimeout(function () {
+		electionTimer()
+	}, 500)
+
+}
 
 function changeRefresh(state){
 	if (state == false){
@@ -1004,8 +1032,6 @@ function autoRefresh () {
 		}
 
 	else {
-
-
 
 		setTimeout(function () {
 			//window.location.reload(true)
@@ -1117,6 +1143,8 @@ function activateTicker(){
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';
 var isIE = /*@cc_on!@*/false || !!document.documentMode;
+
+
 
 // // $(document).ready(function(){
 // //   if (isFirefox == true || isIE == true){

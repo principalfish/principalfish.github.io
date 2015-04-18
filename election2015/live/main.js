@@ -227,7 +227,7 @@ function zoomToClickedFilteredSeat(d){
 		previous.transition()
 			.attr("opacity", 1)
 
-		d3.select(id)
+		current
 			.transition()
 				.duration(1500)
 				.attr("opacity", 0.2)
@@ -518,7 +518,6 @@ function loadmap(){
 			.attr("opacity", 1)
 			.attr("id", function(d) {
 				if (d.properties.name in seatData){
-
 					return "i" + seatData[d.properties.name]["seat_info"]["id"]
 					}
 				})

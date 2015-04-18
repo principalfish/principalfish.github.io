@@ -1070,7 +1070,6 @@ function activateTicker(){
 	d3.selectAll(".map")
 		.each(function(d){
 
-
 			seat = d.properties.name
 			geometry = d
 

@@ -1137,14 +1137,10 @@ var isFirefox = typeof InstallTrigger !== 'undefined';
 var isIE = /*@cc_on!@*/false || !!document.documentMode;
 
 $(document).ready(function(){
-  if (isFirefox == true){
-		$("#ticker")
-  }
+  if (isFirefox == true || isIE == true){
+		$("#refreshbutton").css("margin-left", "100px")
+	  }
 
-  if (isIE == true){
-		console.log("IE")
-
-  }
 });
 
 

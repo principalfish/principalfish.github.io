@@ -113,3 +113,7 @@
 	opacity: 0.1;
 	background-color: white; color:black; fill: white; stroke: grey; stroke-width : 0.3px;
 }
+
+#footer {
+	margin-top: -10px;
+}

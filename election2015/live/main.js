@@ -526,20 +526,15 @@ function loadmap(){
 			.each(function(d){
 				if (d.properties.name in seatData){
 					seatsAfterFilter.push(d)
-					filterToTicker.push(d.properties.name)
-				}
+					filterToTicker.push(d.properties.name)				}
 
-				i += 1;
+
 				searchSeatData.push(d)
 				seatNames.push(d.properties.name);
-				seatsToIDs[d.properties.name] = i
+				seatsToIDs[d.properties.name] = predictions[d.properties.name]["id"]
 
 			});
 
-			g.selectAll(".not_here")
-				.attr("id", function(d){
-					return "i" + seatsToIDs[d.properties.name]
-				});
 
 
 			activateTicker();

@@ -1120,10 +1120,11 @@ function activateTicker(){
 			if (currentSeats.indexOf(seatinfo.name) == -1){
 				currentSeats.push(seatinfo.name)
 				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
+				var mapID = seatData[seatinfo.name]["seat_info"]["id"];
 
 				if (pageRefreshTotal > 1 && !(isIE)){
 					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
-
+					$(mapID).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
 				}
 			}
 		});

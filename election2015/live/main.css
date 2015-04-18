@@ -47,8 +47,14 @@
   	opacity: 0.5;
 }
 
-.tickerSeats {
- 	padding-bottom: 5px;
+.tickerSeats tr{
+	border-radius: 5px 5px 5px 5px;
+
+}
+.tickerSeats td{
+	border-radius: 5px 5px 5px 5px;
+ 	padding-bottom: 3px;
+	padding-top: 3px;
 }
 
 #information {

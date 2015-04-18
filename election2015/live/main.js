@@ -227,7 +227,7 @@ function zoomToClickedFilteredSeat(d){
 		previous.transition()
 			.attr("opacity", 1)
 
-		current
+		d3.select(id)
 			.transition()
 				.duration(1500)
 				.attr("opacity", 0.2)

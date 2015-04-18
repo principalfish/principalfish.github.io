@@ -539,7 +539,9 @@ function loadmap(){
 			});
 
 			g.selectAll(".not_here")
-				.attr("id", "123")
+				.attr("id", function(d){
+					return "i" + seatsToIDs[d.properties.name]
+				});
 
 
 			activateTicker();

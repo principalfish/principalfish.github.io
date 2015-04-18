@@ -47,12 +47,14 @@
   	opacity: 0.5;
 }
 
-#information {
+.tickerSeats {
+ 	padding-bottom: 5px;
+}
 
+#information {
   height: 165px;
   width: 594px;
   padding: 3px;
-
   float:left;
   border-top: 0px;
 }

@@ -151,8 +151,8 @@ function getInfoFromFiles(){
 };
 
 //initiate data accrual + map load
-getMapInfo();
-getInfoFromFiles();
+$(document).ready(function(){ getMapInfo()});
+$(document).ready(function(){ getInfoFromFiles()});
 
 //collate vote totals
 

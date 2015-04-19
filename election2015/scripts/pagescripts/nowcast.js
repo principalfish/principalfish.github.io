@@ -87,5 +87,5 @@ function getInfoFromFiles(){
 };
 
 // initiate flow
-getMapInfo();
-getInfoFromFiles();
+$(document).ready(function(){ getMapInfo()});
+$(document).ready(function(){ getInfoFromFiles()});

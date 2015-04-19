@@ -154,10 +154,8 @@ function filterMap(setting){
 				.attr("id", function(d) {
 					return "i" + seatData[d.properties.name]["seat_info"]["id"]
 				});
-
-
+				
 			if (setting != "reset"){
-				console.log(setting)
 				generateSeatList();
 			}
 

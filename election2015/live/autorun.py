@@ -98,7 +98,7 @@ def get_data(file):
         time_string_declare = hours + ":" + minutes
         seat_info = {}
 
-        seat_info["id"] = my_seat_id
+        #seat_info["id"] = my_seat_id
         seat_info["declared_at"] = declaration_time
         seat_info["declared_at_simple"] = time_string_declare
         #seat_info["electorate"] =  (itemlist[0].attributes['electorate'].value)

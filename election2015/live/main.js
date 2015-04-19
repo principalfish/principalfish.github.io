@@ -3,12 +3,15 @@
 /////ideas
 
 // NOT DONE
-
+// 1 seat = 1.4ish kb of data
+// load info in from new_info.json file (last 5 minutes of data?) - append to seatData
+// when refreshing, will require redo of loadmap function...maybe?
+// check if browser is re d/ling livemap.json every refresh -
 
 //DONE
 // alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-2 : 60 seconds, 2-5: 30s, 5-7: 60s, 7-: 120 seconds
 // make css less shit - maybe
-//for refreshing, redo functions getseatinfo + loadmap + displayVoteTotals(nationalVoteTotals) every minute or so
+// for refreshing, redo functions getseatinfo + loadmap + displayVoteTotals(nationalVoteTotals) every minute or so
 // initiate while loop when user on site - delay of 60 seconds
 
 // live ticker where user inputs was
@@ -17,12 +20,15 @@
 // scrollable + clickable
 // possible coalitions
 
+// check filtermap not re d/ling livemap too due to uncached ajax
+// can remove d3.json("livemap") in filterMap? check thoroguhky - seems to remove filteredlist
+// also reset doesnt - > filterlist...not a bad thing?
+// ISSUE  - if filter is selected  - on refresh .not_here won't flash - because its faded not here- change
 
-//////////// CHANGE**///////////x
+//////////// CHANGE**///////////
 // any reference to seatData[seatname] has changed
 // seatData[seatname]["seat_info"] contains information about the seat in general (turnout/electorate/declaration time etc)
 // seatData[seatname]["party_info"] contains names and vote totals for each party
-
 
 //add to d3js prototype
 // brings elements to top when (for use when clicking on seat)
@@ -63,102 +69,98 @@ function filterMap(setting){
 	seatsAfterFilter = [];
 
 	// use d3 to access seat list to cross reference seatData for filters - product of old way of doing it
-	d3.json("/election2015/data/projection.json", function(uk){
+	if (setting == "reset"){
+		g.selectAll(".faded_not_here")
+			.attr("class", "not_here");
+		}
+	else {
+		g.selectAll(".not_here")
+			.attr("class", "faded_not_here")
+		}
 
-			if (setting == "reset"){
-				g.selectAll(".faded_not_here")
-					.attr("class", "not_here")
-				}
-			else {
-				g.selectAll(".not_here")
-					.attr("class", "faded_not_here")
-				}
-
-
-
-			g.selectAll(".map")
-				.attr("id", "filtertime")
+	g.selectAll(".map")
+		.attr("id", "filtertime")
 
 
-			if (party == "null")
-				g.selectAll("#filtertime")
-					.attr("id", "partyfiltered")
-			else
-				g.selectAll("#filtertime")
-					.attr("style", function(d){
-						if (party != seatData[d.properties.name]["seat_info"]["winning_party"])
-							return "opacity: 0.1";
-						})
-					.attr("id", function(d){
-						if (party == seatData[d.properties.name]["seat_info"]["winning_party"])
-							return "partyfiltered"
-						});
-
-			if (gains == "null")
-					g.selectAll("#partyfiltered")
-						.attr("id", "gainfiltered")
-
-			else
-				if (gains == "gains")
-					g.selectAll("#partyfiltered")
-						.attr("style", function(d) {
-							if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
-								return "opacity: 0.1";
-							})
-						.attr("id", function(d){
-							if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
-								return "gainfiltered"
-						});
-
-				if (gains == "nochange")
-					g.selectAll("#partyfiltered")
-						.attr("style", function(d) {
-							if (seatData[d.properties.name]["party"] != "gain")
-								return "opacity: 0.1";
-							})
-						.attr("id", function(d){
-							if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
-								return "gainfiltered"
-						});
-
-			if (region == "null")
-				g.selectAll("#gainfiltered")
-					.attr("id", "regionfiltered")
-
-			else
-				g.selectAll("#gainfiltered")
-					.attr("style", function(d){
-						if (region != seatData[d.properties.name]["seat_info"]["area"])
-							return "opacity: 0.1";
-					})
-					.attr("id", function(d){
-						if (region == seatData[d.properties.name]["seat_info"]["area"])
-							return "regionfiltered"
-					});
-
-			g.selectAll("#regionfiltered")
-				.attr("style", function(d) {
-
-					if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) > majorityhigh )
-						return "opacity: 0.1"
-
-					})
-				.each(function(d) {
-					if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) <= majorityhigh )
-						seatsAfterFilter.push(d);
-					});
-
-
-
-			g.selectAll(".map")
-				.attr("id", function(d) {
-					return "i" + seatData[d.properties.name]["seat_info"]["id"]
+	if (party == "null")
+		g.selectAll("#filtertime")
+			.attr("id", "partyfiltered")
+	else
+		g.selectAll("#filtertime")
+			.attr("style", function(d){
+				if (party != seatData[d.properties.name]["seat_info"]["winning_party"])
+					return "opacity: 0.1";
+				})
+			.attr("id", function(d){
+				if (party == seatData[d.properties.name]["seat_info"]["winning_party"])
+					return "partyfiltered"
 				});
 
-			generateSeatList();
+	if (gains == "null")
+			g.selectAll("#partyfiltered")
+				.attr("id", "gainfiltered")
+
+	else
+		if (gains == "gains")
+			g.selectAll("#partyfiltered")
+				.attr("style", function(d) {
+					if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
+						return "opacity: 0.1";
+					})
+				.attr("id", function(d){
+					if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
+						return "gainfiltered"
+				});
+
+		if (gains == "nochange")
+			g.selectAll("#partyfiltered")
+				.attr("style", function(d) {
+					if (seatData[d.properties.name]["party"] != "gain")
+						return "opacity: 0.1";
+					})
+				.attr("id", function(d){
+					if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
+						return "gainfiltered"
+				});
+
+	if (region == "null")
+		g.selectAll("#gainfiltered")
+			.attr("id", "regionfiltered")
+
+	else
+		g.selectAll("#gainfiltered")
+			.attr("style", function(d){
+				if (region != seatData[d.properties.name]["seat_info"]["area"])
+					return "opacity: 0.1";
+			})
+			.attr("id", function(d){
+				if (region == seatData[d.properties.name]["seat_info"]["area"])
+					return "regionfiltered"
+			});
+
+	g.selectAll("#regionfiltered")
+		.attr("style", function(d) {
+
+			if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) > majorityhigh )
+				return "opacity: 0.1"
+
+			})
+		.each(function(d) {
+			if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) <= majorityhigh )
+				seatsAfterFilter.push(d);
+			});
 
 
+
+	g.selectAll(".map")
+		.attr("id", function(d) {
+			return "i" + seatData[d.properties.name]["seat_info"]["id"]
 		});
+
+	generateSeatList();
+
+
+
 
 	}
 
@@ -682,6 +684,7 @@ function selectAreaInfo(value){
 function getData(){
 
 	return $.ajax({
+		cache: false,
 		dataType: "json",
   	url: "info.json",
 		type: "GET",
@@ -689,8 +692,6 @@ function getData(){
 	});
 }
 
-
-$.ajaxSetup({ cache: false });
 
 
 function getSeatInfo(data){
@@ -1052,12 +1053,13 @@ function autoRefresh () {
 	else {
 
 		setTimeout(function () {
-			//window.location.reload(true)
+
 			// remove old map - buggy otherwise
 			$("#refreshbuttonlink").html("Refresh Map + Ticker : ON Rate: " + refreshRate / 1000 +  "s");
 
-			$("svg .map").remove()
-			$("svg .not_here").remove()
+			$("svg .map").remove();
+			$("svg .not_here").remove();
+			$("svg .faded_not_here").remove();
 			// reacquire data + reload map
 			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 			searchSeatData = []; // for use with search box
@@ -1075,8 +1077,7 @@ function autoRefresh () {
 
 			//console.log(Date())
 			var x = new Date().toLocaleString();
-			document.getElementById("lastupdated").innerHTML = x
-
+			document.getElementById("lastupdated").innerHTML = x;
 
 			autoRefresh();
 

@@ -141,7 +141,7 @@ function resetFilter(){
 
 // using seatsAfterFilter, generates list of filtered seats
 function generateSeatList(){
-			$("#totalfilteredseats").html(" ");g
+			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
 
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
@@ -165,9 +165,7 @@ function zoomToClickedFilteredSeat(d){
 	//rewrite at some point
 
 	previous = d3.select(previousnode)
-	console.log(previous)
 	current = d3.select(id);
-	console.log(current)
 
 	repeat();
 

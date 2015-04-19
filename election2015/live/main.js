@@ -154,10 +154,13 @@ function filterMap(setting){
 				.attr("id", function(d) {
 					return "i" + seatData[d.properties.name]["seat_info"]["id"]
 				});
-			$("#totalfilteredseats").html(" ");
-			$("#filteredlisttable").html(" ");
 
-			generateSeatList();
+
+			if (setting != "reset"){
+				console.log(setting)
+				generateSeatList();
+			}
+
 		});
 
 	}
@@ -180,8 +183,7 @@ function resetFilter(){
 	$("#dropdownregion option:eq(0)").prop("selected", true);
 	$("#majority").get(0).reset()
 
-	$("#totalfilteredseats").html(" ");
-	$("#filteredlisttable").html(" ");
+	
 }
 
 // using seatsAfterFilter, generates list of filtered seats
@@ -489,13 +491,12 @@ function possibleCoalitions(voteTotals){
 // load + colour map at page load
 function loadmap(){
 
-	console.log(seatData)
 
-	d3.json("/election2015/data/projection.json", function(error, uk) {
+	d3.json("livemap.json", function(error, uk) {
 		if (error) return console.error(error);
 
 		g.selectAll(".map")
-			.data(topojson.feature(uk, uk.objects.projection).features)
+			.data(topojson.feature(uk, uk.objects.map).features)
 			.enter().append("path")
 			.attr("class", function(d) {
 				seatname = d.properties.name
@@ -511,7 +512,8 @@ function loadmap(){
 				})
 			.attr("opacity", 1)
 			.attr("id", function(d) {
-				return "i" + parseInt(predictions[d.properties.name]["id"])
+
+				return "i" + d.properties.info_id
 
 				})
 			.attr("d", path)
@@ -727,7 +729,7 @@ var predictions = {};
 
 $.getJSON("predictions.json", function(data){
 	$.each(data, function(seat){
-		predictions[seat] = {incumbent : data[seat]["incumbent"], party : data[seat]["party"], "id": data[seat]["id"] }
+		predictions[seat] = {incumbent : data[seat]["incumbent"], party : data[seat]["party"]}
 	})
 });
 

@@ -8,10 +8,8 @@ with open("../../data/info.csv", "r") as input:
     for row  in reader:
         seat = row["seat"]
         incumbent = row["incumbent"]
-        party = row["party"]
-        id =  row["id"]
-
-        to_dump[seat] = {"incumbent": incumbent, "party": party, "id": id}
+        party = row["party"]     
+        to_dump[seat] = {"incumbent": incumbent, "party": party}
 
 
 with open("predictions.json", "w") as output:

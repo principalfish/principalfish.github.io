@@ -468,8 +468,8 @@ function possibleCoalitions(voteTotals){
 
 	var coalitions = [
 										{"parties": "Lab/Lib",  "seats" : data["labour"] + data["libdems"]},
-										{"parties": "Con*/Lib",  "seats" : data["conservative"] + data["libdems"]  + 1},
-										{"parties": "Con*/UKIP",  "seats" : data["conservative"] + data["ukip"] + 1},
+										{"parties": "Con/Lib",  "seats" : data["conservative"] + data["libdems"]},
+										{"parties": "Con/UKIP",  "seats" : data["conservative"] + data["ukip"]},
 										{"parties": "Lab/SNP",  "seats" : data["labour"] + data["snp"]},
 										{"parties": "Lab/Lib/SNP",  "seats" : data["labour"] + data["snp"] + data["libdems"]}
 										]

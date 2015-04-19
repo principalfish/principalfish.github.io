@@ -42,8 +42,9 @@
 
 					<h3 class="notactive"><a href="/election2015/"> 2015 Projection</a></h3>
 					<h3 class="currentpage">2015 Nowcast</h3>
+					<h3 class="notactive"><a href="/election2015/live/">LIVE!</a></h3>
 					<h3 class="notactive"><a href="/election2015/current.html">Current Parliament </a></h3>
-					<h3 class="notactive"><a href="/election2015/live/">LIVE! - Testing</a></h3>
+			
 
 				</div>
 
@@ -247,23 +248,27 @@
 				</div>
 				<div id="bottomright">
 
-					<h3 style="float:left; width: 400px; position:absolute;">Last updated :
+					<h3 style="position:absolute;">Last updated :
 						<script>
 							var x = new Date(document.lastModified).toUTCString(); document.write(x)
 						</script>
 					</h3>
-
-					<h3 style="float: left; padding-top: 25px; padding-left: 2px;">Election Day : Thu, 7 May 2015</h3>
-
-					<h3 style="float: right; padding-top: 25px; padding-right: 5px;">  Days to Election :
+					<h3 style="float: left; padding-top: 25px; margin-left: -1px">  Time to Election :
 					<script>
 						var today = new Date();
-						var date = new Date("May 7, 2015")
+
+						var date = new Date("May 7, 2015 7:00:00")
 						var diff = date.getTime() - today.getTime();
-						var daysUntilElection = Math.floor(diff / (1000 * 60 * 60 * 24));
-						document.write(daysUntilElection);
+
+						var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+						var hours = Math.floor(diff / (1000 * 60 * 60) % 24 );
+
+						var toWrite = "Days: " + days + " Hours: " + hours;
+
+						document.write(toWrite);
 					</script>
 					</h3>
+
 
 
 

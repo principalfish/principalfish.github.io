@@ -183,7 +183,7 @@ function resetFilter(){
 	$("#dropdownregion option:eq(0)").prop("selected", true);
 	$("#majority").get(0).reset()
 
-	
+
 }
 
 // using seatsAfterFilter, generates list of filtered seats
@@ -1004,7 +1004,6 @@ function electionTimer(){
 			electionTimer()
 		}, 100)
 
-
 	}
 }
 
@@ -1021,7 +1020,7 @@ function changeRefresh(state){
 // auto refresh elements
 
 function autoRefresh () {
-	var refreshRate = 10000;
+	var refreshRate = 90000;
 	var today = new Date();
 	var dd = today.getDate();
 	var mm = today.getMonth() + 1;
@@ -1073,7 +1072,9 @@ function autoRefresh () {
 			resetFilter()
 			$("#selectareatotals option:eq(0)").prop("selected", true);
 
-			getData().done(getSeatInfo);
+			// load after d3?
+
+			$(document).ready(function(){ getData().done(getSeatInfo)});
 
 			//console.log(Date())
 			var x = new Date().toLocaleString();

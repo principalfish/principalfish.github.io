@@ -721,7 +721,7 @@ function getSeatInfo(data){
 }
 
 // call the function
-getData().done(getSeatInfo);
+$(document).ready(function(){ getData().done(getSeatInfo)});
 var seatDeclarations = {};
 
 // get predictions for none declared seats

@@ -614,7 +614,7 @@ id,seat,area,incumbent,conservative,labour,libdems,ukip,green,snp,plaidcymru,oth
 13,Argyll and Bute,scotland,libdems,23.04,10.23,20.27,3.95,2.44,39.24,0.0,0.82,0.0,0.0,0.0,0.0,0.0,yes,snp,16.19
 300,Isle of Wight,southeastengland,conservative,41.47,18.45,13.17,18.01,6.35,0.0,0.0,2.54,0.0,0.0,0.0,0.0,0.0,no,conservative,23.03
 151,Corby,eastmidlands,labour,31.7,41.23,3.14,19.19,3.76,0.0,0.0,0.99,0.0,0.0,0.0,0.0,0.0,no,labour,9.53
-35,Belfast East,northernireland,alliance,0.0,0.0,0.0,0.0,0.09,0.0,0.0,17.03,1.17,0.0,0.0,47.28,34.43,yes,dup,12.85
+35,Belfast East,northernireland,alliance,0.0,0.0,0.0,0.85,0.52,0.0,0.0,14.54,2.02,0.43,0.0,47.06,34.58,yes,dup,12.48
 237,Gillingham and Rainham,southeastengland,conservative,41.2,38.02,4.35,11.84,2.89,0.0,0.0,1.71,0.0,0.0,0.0,0.0,0.0,no,conservative,3.18
 303,Islwyn,wales,labour,12.17,52.62,1.45,13.85,3.48,0.0,11.69,4.73,0.0,0.0,0.0,0.0,0.0,no,labour,38.77
 91,Bristol South,southwestengland,labour,18.65,52.27,12.21,6.32,8.64,0.0,0.0,1.9,0.0,0.0,0.0,0.0,0.0,no,labour,33.62

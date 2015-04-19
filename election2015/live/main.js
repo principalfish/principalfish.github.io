@@ -154,10 +154,9 @@ function filterMap(setting){
 				.attr("id", function(d) {
 					return "i" + seatData[d.properties.name]["seat_info"]["id"]
 				});
-				
-			if (setting != "reset"){
-				generateSeatList();
-			}
+
+			generateSeatList();
+
 
 		});
 
@@ -175,13 +174,13 @@ function resetFilter(){
 	filterMap("reset");
 
 
-
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);
 	$("#dropdownregion option:eq(0)").prop("selected", true);
 	$("#majority").get(0).reset()
 
-
+	$("#totalfilteredseats").html(" ");
+	$("#filteredlisttable").html(" ");
 }
 
 // using seatsAfterFilter, generates list of filtered seats
@@ -212,7 +211,7 @@ function generateSeatList(){
 
 function zoomToClickedFilteredSeat(d){
 
-	var id = "#i" + predictions[d.properties.name]["id"]
+	var id = "#i" + d.properties.info_id
 	previous = d3.select(previousnode);
 	current = d3.select(id);
 

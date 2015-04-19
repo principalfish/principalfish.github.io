@@ -441,7 +441,7 @@ function loadmap(){d3.json("/election2015/data/currentparliament/map.json", func
 });
 }
 
-loadmap();
+$(document).ready(function(){loadmap()});
 
 function parseData(url, callBack) {
 	Papa.parse(url, {
@@ -454,7 +454,7 @@ function parseData(url, callBack) {
 	});
 }
 
-parseData("/election2015/data//currentparliament/votetotals.csv", doStuff);
+$(document).ready(function(){parseData("/election2015/data//currentparliament/votetotals.csv", doStuff);});
 
 
 // autocomplete

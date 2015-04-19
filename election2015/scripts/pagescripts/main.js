@@ -168,7 +168,7 @@ function zoomToClickedFilteredSeat(d){
 	console.log(previous)
 	current = d3.select(id);
 	console.log(current)
-	
+
 	repeat();
 
 	// flashes selected seat on map
@@ -570,7 +570,7 @@ function parseData(url, callBack) {
 //user eslect region vote totals
 function selectAreaInfo(value){
 
-	if (value == "country") {displayVoteTotals(nationalVoteTotals)};
+	if (value == "country" || value == "null") {displayVoteTotals(nationalVoteTotals)};
 	if (value == "england") {displayVoteTotals(englandVoteTotals)};
 	if (value == "scotland") {displayVoteTotals(scotlandVoteTotals)};
 	if (value == "eastofengland") {displayVoteTotals(eastofenglandVoteTotals)};

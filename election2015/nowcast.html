@@ -44,7 +44,7 @@
 					<h3 class="currentpage">2015 Nowcast</h3>
 					<h3 class="notactive"><a href="/election2015/live/">LIVE!</a></h3>
 					<h3 class="notactive"><a href="/election2015/current.html">Current Parliament </a></h3>
-			
+
 
 				</div>
 
@@ -95,7 +95,7 @@
 						</select>
 					</p>
 
-					<p> by region <select id="dropdownregion" onchange="filterStates[2].region = value, filterMap()">
+					<p> by region <select id="dropdownregion" onchange="filterStates[2].region = value, filterMap(), selectAreaInfo(value), $('#selectareatotals option:eq(0)').prop('selected', true);">
 						<option value="null"></option>
 						<option value="eastofengland">East of England</option>
 						<option value="eastmidlands"> East Midlands </option>
@@ -210,6 +210,7 @@
 				<div id = "totals">
 
 					<h3> Select Region <select id="selectareatotals" onchange="selectAreaInfo(value)">
+						<option value="country"></option>
 						<option value="country">United Kingdom</option>
 						<option value="greatbritain">Great Britain</option>
 						<option value="england">England</option>

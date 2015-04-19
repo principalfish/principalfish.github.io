@@ -491,7 +491,7 @@ function loadmap(){
 
 	console.log(seatData)
 
-	d3.json("map.json", function(error, uk) {
+	d3.json("/election2015/data/projection.json", function(error, uk) {
 		if (error) return console.error(error);
 
 		g.selectAll(".map")
@@ -1019,30 +1019,30 @@ function changeRefresh(state){
 // auto refresh elements
 
 function autoRefresh () {
-	var refreshRate = 90000;
+	var refreshRate = 10000;
 	var today = new Date();
 	var dd = today.getDate();
 	var mm = today.getMonth() + 1;
 	var hh = today.getHours();
 
-	// alter refresh delay rate based on time -
-	//for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
-	//
-	// if (mm == 5 && dd == 8){
-	//
-	// 	if (hh >= 0 && hh < 2){
-	// 		refreshRate = 60000;
-	// 	}
-	//
-	// 	if (hh >= 2 && hh < 5){
-	// 		refreshRate = 30000;
-	// 	}
-	//
-	// 	if (hh >= 5 && hh < 7){
-	// 		refreshRate = 60000;
-	// 	}
-	//
-	// }
+	//alter refresh delay rate based on time -
+	// for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
+
+	if (mm == 5 && dd == 8){
+
+		if (hh >= 0 && hh < 2){
+			refreshRate = 60000;
+		}
+
+		if (hh >= 2 && hh < 5){
+			refreshRate = 30000;
+		}
+
+		if (hh >= 5 && hh < 7){
+			refreshRate = 60000;
+		}
+
+	}
 
 	if (!(refreshState)) {
 			$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF");

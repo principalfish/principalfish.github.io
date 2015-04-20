@@ -63,7 +63,7 @@ id,seat,area,incumbent,conservative,labour,libdems,ukip,green,snp,plaidcymru,oth
 371,Milton Keynes South,southeastengland,conservative,36.68,39.5,7.39,10.69,3.93,0.0,0.0,1.8,0.0,0.0,0.0,0.0,0.0,yes,labour,2.82,9.4
 21,Banff and Buchan,scotland,snp,24.83,3.47,2.27,2.97,1.24,64.5,0.0,0.72,0.0,0.0,0.0,0.0,0.0,no,snp,39.67,10.47
 466,Richmond (Yorks),yorkshireandthehumber,conservative,66.12,19.11,6.35,6.01,2.33,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,47.01,43.69
-207,Edinburgh South,scotland,labour,22.17,22.63,20.26,3.14,6.41,24.88,0.0,0.5,0.0,0.0,0.0,0.0,0.0,yes,snp,2.25,0.72
+207,Edinburgh South,scotland,labour,17.62,30.83,11.88,2.23,3.87,32.69,0.0,0.89,0.0,0.0,0.0,0.0,0.0,yes,snp,1.86,0.72
 135,Chippenham,southwestengland,libdems,37.69,12.67,30.99,13.51,4.63,0.0,0.0,0.51,0.0,0.0,0.0,0.0,0.0,yes,conservative,6.69,4.72
 98,Buckingham,southeastengland,other,0.0,0.0,0.0,0.0,0.0,0.0,0.0,100.0,0.0,0.0,0.0,0.0,0.0,no,other,100.0,26.54
 181,"Dumfriesshire, Clydesdale and Tweeddale",scotland,conservative,35.62,19.5,5.6,2.36,1.83,34.26,0.0,0.83,0.0,0.0,0.0,0.0,0.0,no,conservative,1.36,9.14
@@ -471,7 +471,7 @@ id,seat,area,incumbent,conservative,labour,libdems,ukip,green,snp,plaidcymru,oth
 190,East Antrim,northernireland,dup,0.0,0.0,0.0,0.17,0.0,0.0,0.0,13.84,0.0,8.97,18.2,47.88,10.94,no,dup,29.69,22.2
 211,Ellesmere Port and Neston,northwestengland,labour,33.18,49.2,3.06,10.93,3.38,0.0,0.0,0.25,0.0,0.0,0.0,0.0,0.0,no,labour,16.03,9.79
 441,Paisley and Renfrewshire South,scotland,labour,6.88,40.12,1.42,2.25,1.14,47.14,0.0,1.06,0.0,0.0,0.0,0.0,0.0,yes,snp,7.01,41.54
-208,Edinburgh South West,scotland,labour,18.04,32.37,8.02,2.17,3.72,34.65,0.0,1.03,0.0,0.0,0.0,0.0,0.0,yes,snp,2.28,18.58
+208,Edinburgh South West,scotland,labour,21.24,27.79,5.77,2.38,6.43,35.9,0.0,0.48,0.0,0.0,0.0,0.0,0.0,yes,snp,8.11,18.58
 325,Leicester East,eastmidlands,labour,21.95,60.7,3.96,7.73,4.45,0.0,0.0,1.22,0.0,0.0,0.0,0.0,0.0,no,labour,38.76,29.34
 527,South West Norfolk,eastofengland,conservative,42.23,26.33,4.89,20.42,5.08,0.0,0.0,1.05,0.0,0.0,0.0,0.0,0.0,no,conservative,15.9,26.73
 321,Leeds East,yorkshireandthehumber,labour,20.32,51.41,4.08,13.86,6.3,0.0,0.0,4.03,0.0,0.0,0.0,0.0,0.0,no,labour,31.09,27.22

@@ -63,7 +63,7 @@ id,seat,area,incumbent,conservative,labour,libdems,ukip,green,snp,plaidcymru,oth
 371,Milton Keynes South,southeastengland,conservative,36.33,40.05,6.67,11.12,4.14,0.0,0.0,1.69,0.0,0.0,0.0,0.0,0.0,yes,labour,3.72
 21,Banff and Buchan,scotland,snp,24.75,3.32,2.14,2.99,1.25,64.85,0.0,0.69,0.0,0.0,0.0,0.0,0.0,no,snp,40.1
 466,Richmond (Yorks),yorkshireandthehumber,conservative,66.32,19.41,5.39,6.32,2.49,0.0,0.0,0.07,0.0,0.0,0.0,0.0,0.0,no,conservative,46.91
-207,Edinburgh South,scotland,labour,22.21,22.4,20.04,3.18,6.47,25.23,0.0,0.47,0.0,0.0,0.0,0.0,0.0,yes,snp,2.83
+207,Edinburgh South,scotland,labour,17.47,30.77,11.03,2.29,3.87,33.71,0.0,0.86,0.0,0.0,0.0,0.0,0.0,yes,snp,2.94
 135,Chippenham,southwestengland,libdems,37.59,13.14,29.71,14.19,4.9,0.0,0.0,0.48,0.0,0.0,0.0,0.0,0.0,yes,conservative,7.88
 98,Buckingham,southeastengland,other,0.0,0.0,0.0,0.0,0.0,0.0,0.0,100.0,0.0,0.0,0.0,0.0,0.0,no,other,100.0
 181,"Dumfriesshire, Clydesdale and Tweeddale",scotland,conservative,35.5,19.16,5.03,2.41,1.89,35.19,0.0,0.83,0.0,0.0,0.0,0.0,0.0,no,conservative,0.3
@@ -471,7 +471,7 @@ id,seat,area,incumbent,conservative,labour,libdems,ukip,green,snp,plaidcymru,oth
 190,East Antrim,northernireland,dup,0.0,0.0,0.0,0.16,0.0,0.0,0.0,14.4,0.0,8.89,17.74,47.92,10.9,no,dup,30.18
 211,Ellesmere Port and Neston,northwestengland,labour,33.1,49.44,2.23,11.4,3.58,0.0,0.0,0.25,0.0,0.0,0.0,0.0,0.0,no,labour,16.34
 441,Paisley and Renfrewshire South,scotland,labour,6.75,39.39,1.11,2.3,1.16,48.3,0.0,0.99,0.0,0.0,0.0,0.0,0.0,yes,snp,8.9
-208,Edinburgh South West,scotland,labour,17.81,32.06,7.67,2.22,3.72,35.55,0.0,0.97,0.0,0.0,0.0,0.0,0.0,yes,snp,3.48
+208,Edinburgh South West,scotland,labour,21.15,27.34,5.37,2.43,6.54,36.76,0.0,0.41,0.0,0.0,0.0,0.0,0.0,yes,snp,9.42
 325,Leicester East,eastmidlands,labour,21.8,61.16,3.22,8.1,4.73,0.0,0.0,0.98,0.0,0.0,0.0,0.0,0.0,no,labour,39.36
 527,South West Norfolk,eastofengland,conservative,41.84,26.95,3.71,21.25,5.38,0.0,0.0,0.87,0.0,0.0,0.0,0.0,0.0,no,conservative,14.88
 321,Leeds East,yorkshireandthehumber,labour,20.28,51.71,3.25,14.39,6.63,0.0,0.0,3.74,0.0,0.0,0.0,0.0,0.0,no,labour,31.43

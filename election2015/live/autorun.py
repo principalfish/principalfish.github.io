@@ -18,6 +18,7 @@ old = open("old_data.json").read()
 old_data = json.loads(old)
 
 live_data = {}
+new_data = {}
 
 parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others"]
 
@@ -84,7 +85,6 @@ def get_data(file):
         time_string = declaration_time[0:-6]
         m = moment.date(time_string, '%Y-%m-%dT%H:%M:%S' )
 
-
         minutes = str(m.minute)
         hours = str(m.hours)
 
@@ -95,13 +95,14 @@ def get_data(file):
             hours = "0" + hours
 
 
+
         time_string_declare = hours + ":" + minutes
         seat_info = {}
 
         #seat_info["id"] = my_seat_id
         seat_info["declared_at"] = declaration_time
         seat_info["declared_at_simple"] = time_string_declare
-        #seat_info["electorate"] =  (itemlist[0].attributes['electorate'].value)
+        seat_info["electorate"] =  int((itemlist[0].attributes['electorate'].value))
         seat_info["turnout"] = (itemlist[0].attributes['turnout'].value)
         seat_info["percentage_turnout"] = (itemlist[0].attributes['percentageTurnout'].value)
         seat_info["change"] = (itemlist[0].attributes['gainOrHold'].value)
@@ -193,7 +194,14 @@ def get_data(file):
             change_in_percentage = by_party[party]["vote_percentage"] - old_vote_percentage
             by_party[party]["change_in_percentage"] = change_in_percentage
 
+        time_diff = test_time - m
+        #time_diff = current_time - m
 
+        minutes_diff = divmod(time_diff.days * 86400 + time_diff.seconds, 60)
+        minutes_since_declaration =  -minutes_diff[0]
+
+        if minutes_since_declaration < 5:
+            new_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
 
         live_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
 
@@ -201,8 +209,18 @@ def get_data(file):
 seats_declared = 0
 
 while(True):
+
     print "********************"
     current_time = datetime.datetime.now()
+
+    #################test shit
+    f = moment.date(current_time)
+    f_m = f.minute
+    f_h = f.hours
+    f_s = f.seconds
+    test_time =  datetime.datetime(2015, 4, 16, f_h + 9, f_m, f_s)
+    ###################
+
 
     current_time = str(current_time)[0:16]
     print current_time
@@ -239,6 +257,7 @@ while(True):
     files = os.listdir(path)
 
     live_data = {}
+    new_data = {}
     for file in files:
         get_data(file)
 
@@ -256,6 +275,8 @@ while(True):
         print "dumping to json"
         with open("info.json", "w") as output:
             json.dump(live_data, output)
+        with open("new_info.json", "w") as out:
+            json.dump(new_data, out)
         print "updating git"
         subprocess.call("autorun.sh", shell = True)
 

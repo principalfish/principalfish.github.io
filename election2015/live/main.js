@@ -3,10 +3,8 @@
 /////ideas
 
 // NOT DONE
-// 1 seat = 1.4ish kb of data
-// load info in from new_info.json file (last 5 minutes of data?) - append to seatData
-// when refreshing, will require redo of loadmap function...maybe?
-// check if browser is re d/ling livemap.json every refresh -
+// total turnout?
+
 
 //DONE
 // alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-2 : 60 seconds, 2-5: 30s, 5-7: 60s, 7-: 120 seconds
@@ -20,10 +18,15 @@
 // scrollable + clickable
 // possible coalitions
 
-// check filtermap not re d/ling livemap too due to uncached ajax
+// check if browser is re d/ling livemap.json every refresh - it isn't now...i think
 // can remove d3.json("livemap") in filterMap? check thoroguhky - seems to remove filteredlist
 // also reset doesnt - > filterlist...not a bad thing?
 // ISSUE  - if filter is selected  - on refresh .not_here won't flash - because its faded not here- change
+
+// 1 seat = 1.4ish kb of data
+// load info in from new_info.json file (last 5 minutes of data?) - append to seatData
+// when refreshing, will require redo of loadmap function...maybe?
+
 
 //////////// CHANGE**///////////
 // any reference to seatData[seatname] has changed
@@ -49,6 +52,7 @@ var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
 var filterToTicker = [];
 var currentSeats = []; // for use flashing new se
+var totalElectorate = 0;
 
 // control flow for analysing user filter inputs
 function filterMap(setting){
@@ -154,12 +158,10 @@ function filterMap(setting){
 
 	g.selectAll(".map")
 		.attr("id", function(d) {
-			return "i" + seatData[d.properties.name]["seat_info"]["id"]
+			return "i" + d.properties.info_id
 		});
 
 	generateSeatList();
-
-
 
 
 	}
@@ -437,8 +439,6 @@ function piechart(d){
 		.attr("class", function(d, i){
 				return filterdata[i].party;
 			});
-
-
 		//////////// CHANGE**///////////
 		// different way of getting other into array replaced party name with candidate name (line 425)
 	// creates table with vote counts/percentages
@@ -490,7 +490,6 @@ function possibleCoalitions(voteTotals){
 // load + colour map at page load
 function loadmap(){
 
-
 	d3.json("livemap.json", function(error, uk) {
 		if (error) return console.error(error);
 
@@ -507,13 +506,10 @@ function loadmap(){
 				else {
 					return "not_here"
 				}
-
-				})
+			})
 			.attr("opacity", 1)
 			.attr("id", function(d) {
-
 				return "i" + d.properties.info_id
-
 				})
 			.attr("d", path)
 			.on("click", zoomToClickedFilteredSeat)
@@ -521,17 +517,13 @@ function loadmap(){
 				.text(function(d) { return d.properties.name})
 			.each(function(d){
 				if (d.properties.name in seatData){
-					seatsAfterFilter.push(d)
-					filterToTicker.push(d.properties.name)
+					seatsAfterFilter.push(d);
+					filterToTicker.push(d.properties.name);
 					}
-
-
-				searchSeatData.push(d)
+				searchSeatData.push(d);
 				seatNames.push(d.properties.name);
 
 			});
-
-
 
 			activateTicker();
 
@@ -556,8 +548,6 @@ $( function() {
 // problem with cache of tablesorter not being cleared result in multiple tables being displayed
 // just rewriting the html as fix
 function displayVoteTotals(data) {
-
-
 		///////// CHANGE**
 		//Columns 3 and 4 were formerly Vote% and Vote%Change, now they are Votes and Vote%
 		//objects that populate these tables are in an identical format just .votepercentchange is replaced by .votes
@@ -585,7 +575,7 @@ function displayVoteTotals(data) {
 
 			else if (i == data.length -2){
 				$("#totalstablefoot").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
-					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent).toFixed(2) +
+					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent) +
 					 "</td></tr>");
 				}
 			else{
@@ -596,8 +586,6 @@ function displayVoteTotals(data) {
 				}
 
 		})
-
-
 
 		$("#totalstable").tablesorter({
 
@@ -637,8 +625,6 @@ $(function()
 //seatData contains all information display on page. filled on page load using getSeatInfo
 var seatData = {};
 
-//empty arrays for data for each regional vote total
-
 nationalVoteTotals = [];
 greatbritainVoteTotals = [];
 englandVoteTotals = [];
@@ -655,12 +641,8 @@ southeastenglandVoteTotals = [];
 southwestenglandVoteTotals = [];
 londonVoteTotals = [];
 
-
-
-
 //user eslect region vote totals
 function selectAreaInfo(value){
-
 	if (value == "country") {displayVoteTotals(nationalVoteTotals)};
 	if (value == "england") {displayVoteTotals(englandVoteTotals)};
 	if (value == "scotland") {displayVoteTotals(scotlandVoteTotals)};
@@ -681,45 +663,50 @@ function selectAreaInfo(value){
 ///////// CHANGE**
 // everything below here is vastly different but probably not relevant
 
-function getData(){
+function getData(url){
 
 	return $.ajax({
 		cache: false,
 		dataType: "json",
-  	url: "info.json",
+  	url: url,
 		type: "GET",
-
 	});
 }
-
-
 
 function getSeatInfo(data){
 
   $.each(data, function(seat){
-		seatData[seat] = data[seat]
+		if (!(seat in seatData)){
+			seatData[seat] = data[seat];
+			totalElectorate += data[seat]["seat_info"]["electorate"];
+		}
 	})
-	loadmap()
+	loadmap();
 
 	areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);
 
-	getVoteTotals("all")
+	getVoteTotals("all");
 
-	getVoteTotals("greatbritain")
-	getVoteTotals("england")
+	getVoteTotals("greatbritain");
+	getVoteTotals("england");
 
 	for (area in areas){
-		getVoteTotals(areas[area])
+		getVoteTotals(areas[area]);
 	}
-	displayVoteTotals(nationalVoteTotals)
-	possibleCoalitions(nationalVoteTotals)
-	pageRefreshTotal += 1
+	displayVoteTotals(nationalVoteTotals);
+	possibleCoalitions(nationalVoteTotals);
+	pageRefreshTotal += 1;
 
-
+	var totalTurnout = 100 * nationalVoteTotals[nationalVoteTotals.length - 2].votes / totalElectorate ;
+	if (isNaN(totalTurnout)){
+		totalTurnout = 100;
+	}
+	totalTurnout = String(totalTurnout.toFixed(2)) + "%"
+	document.getElementById("totalturnout").innerHTML = totalTurnout
 }
 
 // call the function
-$(document).ready(function(){ getData().done(getSeatInfo)});
+$(document).ready(function(){ getData("info.json").done(getSeatInfo)});
 var seatDeclarations = {};
 
 // get predictions for none declared seats
@@ -801,11 +788,9 @@ function getVoteTotals(area){
 
 				if (areas.indexOf(seatData[seat]["seat_info"]["area"]) > -1){
 
-
 					if (seatData[seat]["seat_info"]["winning_party"] == code){
 						seatssum += 1;
 						totalseats += 1;
-
 					}
 
 
@@ -819,10 +804,8 @@ function getVoteTotals(area){
 						totalvotes += seatData[seat]["party_info"][parties[party]]["vote_total"];
 					}
 
-
 					}
 				})
-
 
 			votepercent =  parseFloat((100 * totalvotes / parseFloat(totalvotescast)).toFixed(2));
 			change = seatssum - change;
@@ -832,9 +815,7 @@ function getVoteTotals(area){
 				otherChange = change;
 				otherTotalVotes +=totalvotes;
 				otherVotePercent += votepercent
-
 			}
-
 
 			else {
 				info["code"] = code;
@@ -842,24 +823,19 @@ function getVoteTotals(area){
 				info["change"] = change;
 				info["votes"] = totalvotes;
 				info["votepercent"] = votepercent;
-
 				holdingArray.push(info);
 			}
-
 		});
 
 		var others = {"code": "other", "seats" : otherSeatssum, "change": otherChange, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
-		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : 100.00};
+		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : " "};
 		var stupidcsvextrarow = {"code": "", "seats" : undefined, "change": undefined, "votes" : "", "votepercent" : undefined};
-
-
 
 		holdingArray.push(others)
     holdingArray.push(totals);
     holdingArray.push(stupidcsvextrarow);
 
     alterTable(area, holdingArray);
-
 }
 
 
@@ -1064,16 +1040,13 @@ function autoRefresh () {
 			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 			searchSeatData = []; // for use with search box
 			seatNames = []; // for use with search box
-			seatData = {};
 			seatInfoForTicker = [];
 			filterToTicker = [];
 
 			resetFilter()
 			$("#selectareatotals option:eq(0)").prop("selected", true);
 
-			// load after d3?
-
-			$(document).ready(function(){ getData().done(getSeatInfo)});
+			$(document).ready(function(){ getData("new_info.json").done(getSeatInfo)});
 
 			//console.log(Date())
 			var x = new Date().toLocaleString();
@@ -1107,12 +1080,6 @@ function activateTicker(){
 			var declaredAt = Date.parse(seatData[seat]["seat_info"]["declared_at"])
 			var declaredAtSimple = seatData[seat]["seat_info"]["declared_at_simple"]
 
-
-
-			// for flash gained seats
-			// if (seatData[seat]["seat_info"]["change"] == "gain"){
-			// 	gainedSeats.push({pf_id: seatData[seat]["seat_info"]["id"]})
-			// }
 			if (filterToTicker.indexOf(seat) != -1){
 
 				seatInfoForTicker.push({"name" : seat,
@@ -1120,11 +1087,11 @@ function activateTicker(){
 																"declared_at_simple" : declaredAtSimple,
 																"winning_party" : seatData[seat]["seat_info"]["winning_party"],
 																"change" : seatData[seat]["seat_info"]["change"],
-																"geometry" : geometry
+																"geometry" : geometry,
+																"id" : d.properties.info_id
 																	})
 					}
 			})
-
 
 		seatInfoForTicker.sort(function(a, b){
 				return b.declared_at - a.declared_at;
@@ -1133,24 +1100,16 @@ function activateTicker(){
 		$.each(seatInfoForTicker, function(i){
 			var seatinfo = seatInfoForTicker[i]
 
-
-			//
-			// var onlyGainedSeats = "";
-			// if (seatinfo.change == "hold"){
-			// 	var onlyGainedSeats = "tickerGainSeats "
-			// }
-
-
-			$("#ticker").append("<tr id=\"ticker" + seatData[seatinfo.name]["seat_info"]["id"] + "\" class=\"tickerSeats "  + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\">" +
+			$("#ticker").append("<tr id=\"ticker" + seatinfo.id + "\" class=\"tickerSeats "  + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\">" +
 													"<td style=\"padding-right: 8px\";>" + seatinfo.declared_at_simple + "</td ><td style=\"padding-right: 8px; width: 100%;\">"
 													+ seatinfo.name + "</td><td style=\"padding-right: 8px\">"
 													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
 
 			if (currentSeats.indexOf(seatinfo.name) == -1){
+			//	console.log(seatinfo.name)
 				currentSeats.push(seatinfo.name)
-				var id = "#ticker" + seatData[seatinfo.name]["seat_info"]["id"]
-				var mapID = "#i" + seatData[seatinfo.name]["seat_info"]["id"];
-
+				var id = "#ticker" + seatinfo.id;
+				var mapID = "#i" + seatinfo.id;
 
 				if (pageRefreshTotal > 1 && !(isIE)){
 					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
@@ -1160,77 +1119,19 @@ function activateTicker(){
 		});
 }
 
-
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';
 var isIE = /*@cc_on!@*/false || !!document.documentMode;
 
 
-
-// // $(document).ready(function(){
-// //   if (isFirefox == true || isIE == true){
-// // 		$("#refreshbutton").css("margin-left", "795px")
-// 	  }
-//
-// });
-
-
-// flashGainsState = false;
-//
-// function flashGains(){
-// 	if (flashGainsState == false){
-// 		$(".tickerGainSeats").attr("style", "opacity:0.1;")
-// 		flashGainsState = true
-// 		}
-//
-// 	else {
-// 		$(".tickerGainSeats").attr("style", "opacity:1;")
-// 		flashGainsState = false
-// 	}
-//
-//
-// 		// var id = "#i" + gainedSeats[i].pf_id
-// 		// current = d3.select(id)
-// 		//
-// 		// console.log(current)
-// 		// repeat();
-// 		//
-// 		// function repeat(){
-// 		// 	current
-// 		// 		.transition()
-// 		// 			.duration(4000)
-// 		// 			.attr("opacity", 0.2)
-// 		// 		.transition()
-// 		// 			.duration(4000)
-// 		// 			.attr("opacity", 1)
-// 		// 	}
-//
-// }
-
 function DO_NOT_PRESS(){
-
-
 	d3.selectAll(".map")
 		.attr("class", "map ukip");
-
-
 	d3.selectAll(".not_here")
 		.attr("class", "map ukip");
-
 	alert("Why would you do this?");
-
 	$("body").append("<div id=\"farage\" style =\"position: absolute; margin-left: 800px\"><img style=\"position: relative; z=index: -1; height: 800px; width: 600px;\" src=\"farage.png\"></div>");
-
-
-
-
-
 		setTimeout(function () {
 			window.location.reload(true)
-
-
-
 		}, 10000 )//x / 1000 = seconds
-
-
 }

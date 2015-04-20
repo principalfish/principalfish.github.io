@@ -1,6 +1,11 @@
 pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu	weight	initialweight	area
 me	regional			11	2	2015	null	1000	137	300	90	30	30	400		0								
 me	regional			11	2	2015	null	1000	400	300	0	175	40		5	20								
+ashcroft	regional		19/04/2015	19	4	2015	South East	158	50	57	16	23	9			2								
+ashcroft	regional		19/04/2015	19	4	2015	Midlands	141	60	33	14	27	5			1								
+ashcroft	regional		19/04/2015	19	4	2015	North England	128	43	54	8	10	7			6								
+ashcroft	regional		19/04/2015	19	4	2015	Wales and South West	69	25	15	8	11	3		6	1								
+ashcroft	regional		19/04/2015	19	4	2015	Scotland	59	6	9	7	2		35										
 icm	regional		19/04/2015	19	4	2015	Scotland	58	8	10	2	3	2	33		1								
 icm	regional		19/04/2015	19	4	2015	Wales	34	8	9	1	5	1		9	0								
 icm	regional		19/04/2015	19	4	2015	North	140	40	64	13	14	4			3								

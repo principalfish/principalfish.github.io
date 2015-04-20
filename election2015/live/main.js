@@ -3,8 +3,6 @@
 /////ideas
 
 // NOT DONE
-// total turnout?
-
 
 //DONE
 // alter refresh delay rate based on time - for night itself - 11-12: 90s, 12-2 : 60 seconds, 2-5: 30s, 5-7: 60s, 7-: 120 seconds
@@ -40,7 +38,6 @@ d3.selection.prototype.moveToFront = function() {
 							this.parentNode.appendChild(this);
 						});
 					};
-
 
 var pageRefreshTotal = 0
 // current state of user input filters
@@ -389,8 +386,7 @@ function piechart(d){
 	var filterdata = [];
 
 	$.each(data, function(i){
-
-		if (data[i].votes > 0 && data[i].party != "other")
+		if (data[i].votes > 0 && data[i].party != "other2")
 			filterdata.push(data[i]);
 	});
 
@@ -400,18 +396,17 @@ function piechart(d){
 
 	//////////// CHANGE**///////////
 	// different way of getting other into array (due to slightly difference in other in data)
-	var keys = Object.keys(relevant_party_info)
+	var keys = Object.keys(relevant_party_info);
 
-
-	if (keys.indexOf("other") != -1){
-		filterdata.push({party: "other", votes: relevant_party_info["other"]["vote_percentage"], vote_change: relevant_party_info["other"]["change_in_percentage"]})
+	if (keys.indexOf("other2") != -1){
+		filterdata.push({party: "other2", votes: relevant_party_info["other2"]["vote_percentage"], vote_change: relevant_party_info["other2"]["change_in_percentage"]});
 	}
 
 	// BAR CHART
 
 	var barchartdata = [];
 	$.each(filterdata, function(i){
-		if (filterdata[i].votes >=5){
+		if (filterdata[i].votes >= 3){
 			barchartdata.push(filterdata[i]);
 		}
 	});
@@ -440,7 +435,8 @@ function piechart(d){
     .orient("left")
     .ticks(6);
 
-	y.domain([0, d3.max(barchartdata, function(d) { return d.votes; })]);
+	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; })
+	y.domain([0, max_of_votes + (10 - max_of_votes % 10)]);
 
 	svg1.append("g")
     .attr("class", "y axis")

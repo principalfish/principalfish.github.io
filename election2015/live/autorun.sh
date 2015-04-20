@@ -2,5 +2,5 @@
 git checkout master
 git add .
 git config --global push.default simple
-git commit -am full_election_update
+git commit -am more_testing
 git push

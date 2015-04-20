@@ -412,7 +412,7 @@ function piechart(d){
 
 	var barchartdata = [];
 	$.each(filterdata, function(i){
-		if (filterdata[i].votes >=1){
+		if (filterdata[i].votes >=5){
 			barchartdata.push(filterdata[i]);
 		}
 	});
@@ -438,7 +438,7 @@ function piechart(d){
 	var yAxis = d3.svg.axis()
     .scale(y)
     .orient("left")
-    .ticks(5);
+    .ticks(6);
 
 	y.domain([0, d3.max(barchartdata, function(d) { return d.votes; })]);
 

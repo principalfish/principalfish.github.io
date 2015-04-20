@@ -84,6 +84,7 @@ def get_data(file):
         time_string = declaration_time[0:-6]
         m = moment.date(time_string, '%Y-%m-%dT%H:%M:%S' )
 
+
         minutes = str(m.minute)
         hours = str(m.hours)
 
@@ -160,9 +161,6 @@ def get_data(file):
         if not (sum_others <= 0 and sum_others_percentage <= 0):
             by_party["other2"] = {"name" : "Others", "vote_total" : sum_others, "vote_percentage" : sum_others_percentage}
 
-
-
-
         old_seat = old_data[str(my_seat_id)]
         total_old_votes = 0
 
@@ -194,16 +192,16 @@ def get_data(file):
             by_party[party]["change_in_percentage"] = change_in_percentage
 
         # time_diff = test_time - m
-        time_diff = current_time - m
-        print current_time
-        print m
-        print time_diff
 
-        #minutes_diff = divmod(time_diff.days * 86400 + time_diff.seconds, 60)
-        #minutes_since_declaration =  -minutes_diff[0]
+        #now = datetime.datetime.now()
+        now = test_time
+        time_diff = now - m
 
-        #if minutes_since_declaration < 8:
-        #    new_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
+        minutes_diff = divmod(time_diff.days * 86400 + time_diff.seconds, 60)
+        minutes_since_declaration =  -minutes_diff[0]
+
+        if minutes_since_declaration < 8:
+           new_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
 
         live_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
 
@@ -215,13 +213,13 @@ while(True):
     print "********************"
     current_time = datetime.datetime.now()
 
-    #################test shit
-    # f = moment.date(current_time)
-    # f_m = f.minute
-    # f_h = f.hours
-    # f_s = f.seconds
-    # test_time =  datetime.datetime(2015, 4, 16, f_h + 9, f_m, f_s)
-    ###################
+    ################test shit
+    f = moment.date(current_time)
+    f_m = f.minute
+    f_h = f.hours
+    f_s = f.seconds
+    test_time =  datetime.datetime(2015, 4, 16, f_h, f_m, f_s)
+    ##################
 
     current_time = str(current_time)[0:16]
     print current_time
@@ -279,7 +277,7 @@ while(True):
         with open("new_info.json", "w") as out:
             json.dump(new_data, out)
         print "updating git"
-        #subprocess.call("autorun.sh", shell = True)
+        subprocess.call("autorun.sh", shell = True)
 
     print "\n" * 3
     seats_declared = total_seats

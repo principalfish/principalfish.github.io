@@ -151,4 +151,16 @@
 
 #footer {
 	top: -10;
+
+}
+
+
+/*for test*/
+#right {
+	border-radius: 0 0 0 0 ;
+	border-left: 1px solid black;
+}
+
+#mid {
+	border-radius: 0 0 5px 0;
 }

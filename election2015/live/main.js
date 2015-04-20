@@ -424,7 +424,7 @@ function piechart(d){
 	var height = 225 - margin.top - margin.bottom;
 	var bargap = 2;
 	var barwidth = d3.min([60, (width / dataitems) - bargap]);
-	var animationdelay = 2000;
+	var animationdelay = 250;
 
 	var svg1 = d3.select("#information-pie")
 		.append("svg")
@@ -457,7 +457,7 @@ function piechart(d){
       .attr("height", 0)
 			.attr("class", function(d) { return d.party;})
 		.transition()
-      .delay(function(d, i) { return i * animationdelay; })
+      .delay(function(d, i) { return i * animationdelay / 2; })
       .duration(animationdelay)
       .attr("y", function(d) { return y(d.votes); })
       .attr("height", function(d) { return height - y(d.votes); });

@@ -1079,12 +1079,9 @@ function autoRefresh () {
 		}
 
 	else {
-
 		setTimeout(function () {
-
 			// remove old map - buggy otherwise
 			$("#refreshbuttonlink").html("Refresh Map + Ticker : ON Rate: " + refreshRate / 1000 +  "s");
-
 			$("svg .map").remove();
 			$("svg .not_here").remove();
 			$("svg .faded_not_here").remove();
@@ -1112,7 +1109,6 @@ function autoRefresh () {
 
 var refreshState = true;
 autoRefresh();
-
 
 var seatInfoForTicker = [];
 // var gainSeats = [];

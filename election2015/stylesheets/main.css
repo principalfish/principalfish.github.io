@@ -164,13 +164,9 @@
 
 }
 
-
 #resetmap {
 	font-size: 1.2em;
-
 }
-
-
 
 /* right */
 
@@ -236,6 +232,13 @@
 	float: left;
 	width: 250px;
 	height: 250px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
 }
 
 #information-chart {

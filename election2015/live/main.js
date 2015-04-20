@@ -394,7 +394,6 @@ function piechart(d){
 			filterdata.push(data[i]);
 	});
 
-
 	filterdata.sort(function(a, b){
 			return b.votes - a.votes ;
 	});

@@ -295,20 +295,19 @@ var oldclass = null;
 // fills out table of info at top of #right
 function seatinfo(d){
 
-	$("#information").removeClass(oldclass);
-	$("#information").addClass(seatData[d.properties.name]["party"])
+
 	$("#information-seatname").html("<td>Seat</td><td style=\"width:360px\"> " + d.properties.name +
 	"</td><td id=\"rightcolumninfotable\">" + regionlist[seatData[d.properties.name]["area"]] + "</td>");
-	$("#information-party").html("<td>Party</td><td>" + partylist[seatData[d.properties.name]["party"]] + "</td>");
+	$("#information-party").html("<td>Party</td><td><span class=\"partybutton "
+					+ seatData[d.properties.name]["party"] + "\">"
+					+ partylist[seatData[d.properties.name]["party"]] + "</td>");
 
 	if (seatData[d.properties.name]["party"] != seatData[d.properties.name]["incumbent"])
-		$("#information-gain").html("<td>Gain from</td><td><span id=\"information-gain-span\"class=\"" +
+		$("#information-gain").html("<td>Gain from</td><td><span class=\"partybutton " +
 		seatData[d.properties.name]["incumbent"] + "\">" + partylist[seatData[d.properties.name]["incumbent"]] + "</span></td>")
 	else
 		$("#information-gain").html("<td>No change </td>")
 	$("#information-pie").html(piechart(d));
-
-	oldclass = seatData[d.properties.name]["party"];
 }
 
 // d3 make pie chart of vote counts ni selected seat
@@ -316,7 +315,6 @@ function piechart(d){
 
 	$("#information-pie").empty();
 	$("#information-chart").empty();
-
 	$("#information-chart").html("<p></p>");
 
 	var data = [];
@@ -348,36 +346,59 @@ function piechart(d){
 	if (seatData[d.properties.name]["other"] > 0)
 		filterdata.push({party: "other", votes: seatData[d.properties.name]["other"]})
 
-	var width = 250,
-		height = 250;
-		radius = Math.min(width, height) / 2;
+	// BAR CHART
 
-	var arc = d3.svg.arc()
-		.outerRadius(radius - 10)
-		.innerRadius(0);
+	var barchartdata = [];
+	$.each(filterdata, function(i){
+		if (filterdata[i].votes >= 2){
+			barchartdata.push(filterdata[i]);
+		}
+	});
 
-	var pie = d3.layout.pie()
-		.sort(null)
-		.value(function (d) {
-			return d.votes;
-		});
+	var dataitems = barchartdata.length
+	var margin = {top: 10, right: 0, bottom: 10, left: 25};
 
-	var svg = d3.select("#information-pie").append("svg")
-		.attr("width", width)
-		.attr("height", height)
+	var width = 375 - margin.left - margin.right;
+	var height = 250 - margin.top - margin.bottom;
+	var bargap = 2;
+	var barwidth = d3.min([60, (width / dataitems) - bargap]);
+	var animationdelay = 250;
+
+	var svg1 = d3.select("#information-pie")
+		.append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
 		.append("g")
-		.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+    	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-	var g = svg.selectAll(".arc")
-			.data(pie(filterdata))
-			.enter().append("g")
-			.attr("class", "arc");
+	var y = d3.scale.linear()
+		.range([height, 0])
 
-	g.append("path")
-		.attr("d", arc)
-		.attr("class", function(d, i){
-				return filterdata[i].party;
-			});
+	var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .ticks(6);
+
+	y.domain([0, d3.max(barchartdata, function(d) { return d.votes; })]);
+
+	svg1.append("g")
+    .attr("class", "y axis")
+    .call(yAxis);
+
+	svg1.selectAll("rect")
+		.data(barchartdata)
+		.enter()
+		.append("rect")
+      .attr("x", function(d, i) { return bargap * (i + 1) + barwidth * (i); })
+      .attr("width", barwidth)
+			.attr("y", height)
+      .attr("height", 0)
+			.attr("class", function(d) { return d.party;})
+		.transition()
+      .delay(function(d, i) { return i * animationdelay / 2; })
+      .duration(animationdelay)
+      .attr("y", function(d) { return y(d.votes); })
+      .attr("height", function(d) { return height - y(d.votes); });
 
 	// creates table with vote counts/percentages
 	$.each(filterdata, function(i){

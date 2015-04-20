@@ -107,14 +107,6 @@
 	white-space:nowrap;
 }
 
-.axis path,
-.axis line {
-  fill: none;
-  stroke: black;
-  shape-rendering: crispEdges;
-}
-
-
 #coalitions {
   height: 60px;
   width: 100%;

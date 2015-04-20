@@ -529,16 +529,13 @@ function possibleCoalitions(voteTotals){
 										{"parties": "Lab/Lib/SNP",  "seats" : data["labour"] + data["snp"] + data["libdems"]}
 										]
 
-
 	coalitions.sort(function(a, b){
 			return b.seats - a.seats ;
 	});
 
 	$.each(coalitions, function(i){
 		$("#coalitionlist").append(coalitions[i].parties + ":" + coalitions[i].seats + "\xA0\xA0\xA0\xA0\xA0")
-
 	})
-
 }
 
 // load + colour map at page load

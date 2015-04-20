@@ -461,12 +461,12 @@ function displayVoteTotals(data) {
 
 			else if (i == data.length -2)
 
-				$("#totalstablefoot").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
+				$("#totalstablefoot").append("<tr style=\"text-align: center;\" class=\"" + data[i].code +"\"><td style=\"text-align: left;\">" + partylist[data[i].code] + "</td><td>"
 					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
 					"</td><td>" + (data[i].votepercentchange) + "</td></tr>");
 			else
 				if (data[i].votepercent > 0)
-					$("#totalstableinfo").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
+					$("#totalstableinfo").append("<tr style=\"text-align: center;\" class=\"" + data[i].code +"\"><td style=\"text-align: left;\">" + partylist[data[i].code] + "</td><td>"
 						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td>" + (data[i].votepercent).toFixed(2) +
 						"</td><td>"  + plussign2 + (data[i].votepercentchange).toFixed(2) + "</td></tr>");
 		})

@@ -574,14 +574,14 @@ function displayVoteTotals(data) {
 				}
 
 			else if (i == data.length -2){
-				$("#totalstablefoot").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
-					+ data[i].seats + "</td><td>" + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent) +
+				$("#totalstablefoot").append("<tr style=\"text-align: center;\" class=\"" + data[i].code +"\"><td style=\"text-align: left;\">" + partylist[data[i].code] + "</td><td>"
+					+ data[i].seats + "</td><td>" + data[i].change + "</td><td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td>" + (data[i].votepercent) +
 					 "</td></tr>");
 				}
 			else{
 				if (data[i].votepercent > 0)
-					$("#totalstableinfo").append("<tr class=\"" + data[i].code +"\"><td>" + partylist[data[i].code] + "</td><td>"
-						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td>" + data[i].votes + "</td><td>" + (data[i].votepercent).toFixed(2) +
+					$("#totalstableinfo").append("<tr style=\"text-align: center;\" class=\"" + data[i].code +"\"><td style=\"text-align: left;\">" + partylist[data[i].code] + "</td><td>"
+						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +
 					 "</td></tr>");
 				}
 
@@ -591,14 +591,14 @@ function displayVoteTotals(data) {
 
 				sortInitialOrder: "asc",
 				headers: {
-					1: { sortInitialOrder: 'desc' },
+					3: { sortInitialOrder: 'desc' },
 					2: { sortInitialOrder: 'desc' },
 					4: { sortInitialOrder: 'desc' },
 					0: {
 						sorter: false
 					}
 			},
-				sortList:[[3,1]]
+				sortList:[[1,1]]
 		});
 };
 

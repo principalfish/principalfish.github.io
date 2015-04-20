@@ -7,7 +7,6 @@ import csv
 import json
 import moment
 
-
 seat_dict = open("seat_map.json").read()
 seat_map = json.loads(seat_dict)
 
@@ -194,13 +193,13 @@ def get_data(file):
             change_in_percentage = by_party[party]["vote_percentage"] - old_vote_percentage
             by_party[party]["change_in_percentage"] = change_in_percentage
 
-        time_diff = test_time - m
-        #time_diff = current_time - m
+        # time_diff = test_time - m
+        time_diff = current_time - m
 
         minutes_diff = divmod(time_diff.days * 86400 + time_diff.seconds, 60)
         minutes_since_declaration =  -minutes_diff[0]
 
-        if minutes_since_declaration < 5:
+        if minutes_since_declaration < 8:
             new_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
 
         live_data[my_seat_name] = {"seat_info" : seat_info, "party_info" : by_party}
@@ -214,13 +213,12 @@ while(True):
     current_time = datetime.datetime.now()
 
     #################test shit
-    f = moment.date(current_time)
-    f_m = f.minute
-    f_h = f.hours
-    f_s = f.seconds
-    test_time =  datetime.datetime(2015, 4, 16, f_h + 9, f_m, f_s)
+    # f = moment.date(current_time)
+    # f_m = f.minute
+    # f_h = f.hours
+    # f_s = f.seconds
+    # test_time =  datetime.datetime(2015, 4, 16, f_h + 9, f_m, f_s)
     ###################
-
 
     current_time = str(current_time)[0:16]
     print current_time

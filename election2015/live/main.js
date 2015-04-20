@@ -424,6 +424,7 @@ function piechart(d){
 	var height = 225 - margin.top - margin.bottom;
 	var bargap = 2;
 	var barwidth = d3.min([60, (width / dataitems) - bargap]);
+	var animationdelay = 2000;
 
 	var svg1 = d3.select("#information-pie")
 		.append("svg")
@@ -456,8 +457,8 @@ function piechart(d){
       .attr("height", 0)
 			.attr("class", function(d) { return d.party;})
 		.transition()
-      .delay(function(d, i) { return i * 100; })
-      .duration(200)
+      .delay(function(d, i) { return i * animationdelay; })
+      .duration(animationdelay)
       .attr("y", function(d) { return y(d.votes); })
       .attr("height", function(d) { return height - y(d.votes); });
 
@@ -752,7 +753,7 @@ function getSeatInfo(data){
 	if (isNaN(totalTurnout)){
 		totalTurnout = 100;
 	}
-	totalTurnout = String(totalTurnout.toFixed(2)) + "%"
+	totalTurnout = "Turnout : " + String(totalTurnout.toFixed(2)) + "%"
 	document.getElementById("totalturnout").innerHTML = totalTurnout
 }
 

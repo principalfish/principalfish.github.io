@@ -598,7 +598,7 @@ function displayVoteTotals(data) {
 						sorter: false
 					}
 			},
-				sortList:[[1,1]]
+				sortList:[[1,1], [3, 1]]
 		});
 };
 

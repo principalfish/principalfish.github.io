@@ -369,8 +369,14 @@ function piechart(d){
 		.append("g")
     	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+	var x = d3.scale.ordinal().range([0, dataitems * (barwidth + 2)]);
+
+	var xAxis = d3.svg.axis()
+	    .scale(x)
+	    .orient("bottom");
+
 	var y = d3.scale.linear()
-		.range([height, 0])
+		.range([height, 0]);
 
 	var yAxis = d3.svg.axis()
     .scale(y)
@@ -378,7 +384,13 @@ function piechart(d){
     .ticks(6);
 
 	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; })
-	y.domain([0, max_of_votes + (10 - max_of_votes % 10)]);
+	//max_of_votes + (10 - max_of_votes % 10)
+	y.domain([0, 70]);
+
+	svg1.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
 
 	svg1.append("g")
     .attr("class", "y axis")

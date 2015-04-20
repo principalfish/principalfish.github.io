@@ -22,9 +22,10 @@
 #mid {
 	float: left;
 	background: #99CCFF;
-  width: 300px;
+  width: 299px;
   height: 900px;
 	overflow: auto;
+	border-left: 1px solid black;
 	border-bottom: 1px solid black;
 	border-right: 1px solid black;
 }
@@ -52,6 +53,7 @@
 }
 
 #ticker {
+
 }
 
 #ticker td{

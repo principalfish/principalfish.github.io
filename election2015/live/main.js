@@ -408,37 +408,91 @@ function piechart(d){
 		filterdata.push({party: "other", votes: relevant_party_info["other"]["vote_percentage"], vote_change: relevant_party_info["other"]["change_in_percentage"]})
 	}
 
+	// BAR CHART
 
-	var width = 225,
-		height = 225;
-		radius = Math.min(width, height) / 2;
+	var barchartdata = [];
+	$.each(filterdata, function(i){
+		if (filterdata[i].votes >=1){
+			barchartdata.push(filterdata[i]);
+		}
+	});
 
-	var arc = d3.svg.arc()
-		.outerRadius(radius - 10)
-		.innerRadius(0);
+	var dataitems = barchartdata.length
+	var margin = {top: 10, right: 0, bottom: 10, left: 25};
 
-	var pie = d3.layout.pie()
-		.sort(null)
-		.value(function (d) {
-			return d.votes;
-		});
+	var width = 300 - margin.left - margin.right;
+	var height = 225 - margin.top - margin.bottom;
+	var bargap = 2;
+	var barwidth = d3.min([60, (width / dataitems) - bargap]);
 
-	var svg = d3.select("#information-pie").append("svg")
-		.attr("width", width)
-		.attr("height", height)
+	var svg1 = d3.select("#information-pie")
+		.append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
 		.append("g")
-		.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+    	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-	var g = svg.selectAll(".arc")
-			.data(pie(filterdata))
-			.enter().append("g")
-			.attr("class", "arc");
+	var y = d3.scale.linear()
+		.range([height, 0])
 
-	g.append("path")
-		.attr("d", arc)
-		.attr("class", function(d, i){
-				return filterdata[i].party;
-			});
+	var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .ticks(5);
+
+	y.domain([0, d3.max(barchartdata, function(d) { return d.votes; })]);
+
+	svg1.append("g")
+    .attr("class", "y axis")
+    .call(yAxis);
+
+	svg1.selectAll("rect")
+		.data(barchartdata)
+		.enter()
+		.append("rect")
+      .attr("x", function(d, i) { return bargap * (i + 1) + barwidth * (i); })
+      .attr("width", barwidth)
+			.attr("y", height)
+      .attr("height", 0)
+			.attr("class", function(d) { return d.party;})
+		.transition()
+      .delay(function(d, i) { return i * 100; })
+      .duration(200)
+      .attr("y", function(d) { return y(d.votes); })
+      .attr("height", function(d) { return height - y(d.votes); });
+
+
+	// PIE CHART
+	// var width = 225,
+	// 	height = 225;
+	// 	radius = Math.min(width, height) / 2;
+	//
+	// var arc = d3.svg.arc()
+	// 	.outerRadius(radius - 10)
+	// 	.innerRadius(0);
+	//
+	// var pie = d3.layout.pie()
+	// 	.sort(null)
+	// 	.value(function (d) {
+	// 		return d.votes;
+	// 	});
+	//
+	// var svg = d3.select("#information-pie").append("svg")
+	// 	.attr("width", width)
+	// 	.attr("height", height)
+	// 	.append("g")
+	// 	.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+	//
+	// var g = svg.selectAll(".arc")
+	// 		.data(pie(filterdata))
+	// 		.enter().append("g")
+	// 		.attr("class", "arc");
+	//
+	// g.append("path")
+	// 	.attr("d", arc)
+	// 	.attr("class", function(d, i){
+	// 			return filterdata[i].party;
+	// 		});
 		//////////// CHANGE**///////////
 		// different way of getting other into array replaced party name with candidate name (line 425)
 	// creates table with vote counts/percentages
@@ -450,7 +504,7 @@ function piechart(d){
 			plussign = "+";
 		}
 
-		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td>" +
+		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td style=\"max-width: 170px;\">" +
 			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td><td>"
 			+ plussign + (parseFloat(filterdata[i].vote_change)).toFixed(2) +  "</td></tr>")
 	})

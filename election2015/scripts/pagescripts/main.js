@@ -249,7 +249,6 @@ function clicked(d) {
 	previousnode = this;
 }
 
-
 // stops users messing up zoom animation
 function disableZoom(){
 	svg.on("mousedown.zoom", null);
@@ -273,7 +272,6 @@ function reset() {
 		.duration(1500)
 		.call(zoom.translate([0, 0]).scale(1).event)
 		.each("end", enableZoom);
-
 }
 
 // zoom function
@@ -379,7 +377,8 @@ function piechart(d){
     .orient("left")
     .ticks(6);
 
-	y.domain([0, d3.max(barchartdata, function(d) { return d.votes; })]);
+	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; })
+	y.domain([0, max_of_votes + (10 - max_of_votes % 10)]);
 
 	svg1.append("g")
     .attr("class", "y axis")

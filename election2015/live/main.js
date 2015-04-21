@@ -511,6 +511,14 @@ function piechart(d){
 			plussign = "+";
 		}
 
+		var vote_change
+		if (filterdata[i].vote_change ==""){
+			vote_change = ""
+		}
+		else {
+			vote_change =
+		}
+
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td style=\"max-width: 170px;\">" +
 			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td><td>"
 			+ plussign + vote_change +  "</td></tr>")

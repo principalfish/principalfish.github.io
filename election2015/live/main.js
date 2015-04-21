@@ -1202,4 +1202,7 @@ function dayMode(){
 
 	document.getElementById("nightmode").disabled = true;
 	$('link[rel=stylesheet][href~="nightmode.css"]').prop('disabled', true);
+	$("#choosemodebutton").attr("onclick", "nightMode()");
+	$("#choosemodebutton").html("Night Mode");
+
 }

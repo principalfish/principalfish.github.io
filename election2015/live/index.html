@@ -8,7 +8,7 @@
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="stylesheet" href="main.css"/>
-	<link rel="stylesheet" href="nightmode.css" disabled/>
+	<link rel="stylesheet" href="nightmode.css" id="nightmode" disabled/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
@@ -28,6 +28,7 @@
 
 				<script>
 					electionTimer();
+					document.getElementById("nightmode").disabled = true;
 				</script>
 
 

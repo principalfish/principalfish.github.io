@@ -1191,9 +1191,12 @@ function DO_NOT_PRESS(){
 
 
 function nightMode(){
+	document.getElementById("nightmode").disabled = false;
 	$('link[rel=stylesheet][href~="nightmode.css"]').attr('disabled', false);
 }
 
 function dayMode(){
-	$('link[rel=stylesheet][href~="nightmode.css"]').attr('disabled', true);
+
+	document.getElementById("nightmode").disabled = true;
+	$('link[rel=stylesheet][href~="nightmode.css"]').prop('disabled', true);
 }

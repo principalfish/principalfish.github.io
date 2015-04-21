@@ -55,7 +55,6 @@ def get_data(file):
 
             change_in_percentage = vote_percentage - old_percentage
 
-
             by_party[party] = {"name" : name,
                                 "vote_total" : vote_total,
                                 "vote_percentage" : vote_percentage,

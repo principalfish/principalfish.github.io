@@ -334,8 +334,8 @@ function seatinfo(d){
 											+ seat_info["change"].toUpperCase() + "</span>&nbsp&nbsp&nbsp" + "<span>" + previousParty + "</span></h3>")
 
 		// majority + turnout
-		$("#information").append("<h3> Majority: " + seat_info["majority_total"] + " = " + seat_info["majority_percentage"]
-												+ "% <span style =\"float: right;\"> Turnout: " + seat_info["percentage_turnout"] + "%</span></h3>")
+		$("#information").append("<h3> Majority: " + seat_info["majority_total"] + " = " + seat_info["majority_percentage"].toFixed(2)
+												+ "% <span style =\"float: right;\"> Turnout: " + seat_info["percentage_turnout"].toFixed(2) + "%</span></h3>")
 
 		// declaration time
 

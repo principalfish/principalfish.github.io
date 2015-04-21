@@ -513,7 +513,7 @@ function piechart(d){
 
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td style=\"max-width: 170px;\">" +
 			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td><td>"
-			+ plussign + (parseFloat(filterdata[i].vote_change)).toFixed(2) +  "</td></tr>")
+			+ plussign + vote_change +  "</td></tr>")
 	})
 }
 

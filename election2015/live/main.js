@@ -791,7 +791,7 @@ var regions = {
     "northernireland" : ["northernireland"]
 };
 
-parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other1", "other2"]
+parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other1", "other2", "other", "others"]
 
 
 function getVoteTotals(area){
@@ -834,7 +834,7 @@ function getVoteTotals(area){
 		$.each(parties, function(party){
 			info = {}
 			var code = parties[party];
-			if (code == "other1" || code == "other2"){
+			if (code == "other" || code == "others"){
 				code = "other"
 			}
 			var seatssum = 0;
@@ -1130,7 +1130,7 @@ function activateTicker(){
 			seat = d.properties.name
 			geometry = d
 
-			var declaredAt = Date.parse(seatData[seat]["seat_info"]["declared_at"])
+			var declaredAt = seatData[seat]["seat_info"]["declared_at"];
 			var declaredAtSimple = seatData[seat]["seat_info"]["declared_at_simple"]
 
 			if (filterToTicker.indexOf(seat) != -1){
@@ -1148,6 +1148,7 @@ function activateTicker(){
 
 		seatInfoForTicker.sort(function(a, b){
 				return b.declared_at - a.declared_at;
+
 		});
 
 		$.each(seatInfoForTicker, function(i){

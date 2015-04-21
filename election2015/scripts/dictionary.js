@@ -18,6 +18,7 @@ partylist["alliance"] = "Alliance";
 partylist["other1"] = "Other";
 partylist["other2"] = "Others";
 partylist["other"] = "Other";
+partylist["others"] = "Others";
 partylist["total"] = "Total";
 
 

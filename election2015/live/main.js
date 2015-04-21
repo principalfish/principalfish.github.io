@@ -442,8 +442,7 @@ function piechart(d){
     .ticks(6);
 
 	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; })
-	//max_of_votes + (10 - max_of_votes % 10)
-	y.domain([0, 70]);
+	y.domain([0, d3.max([60, (max_of_votes + (10 - max_of_votes % 10))])]);
 
 	svg1.append("g")
       .attr("class", "x axis")
@@ -965,7 +964,6 @@ function alterTable(area, holdingarray){
     westmidlandsVoteTotals = holdingarray;
   }
 
-
   if (area == "eastmidlands"){
     eastmidlandsVoteTotals = holdingarray;
   }
@@ -1189,4 +1187,13 @@ function DO_NOT_PRESS(){
 		setTimeout(function () {
 			window.location.reload(true)
 		}, 10000 )//x / 1000 = seconds
+}
+
+
+function nightMode(){
+	$('link[rel=stylesheet][href~="nightmode.css"]').attr('disabled', false);
+}
+
+function dayMode(){
+	$('link[rel=stylesheet][href~="nightmode.css"]').attr('disabled', true);
 }

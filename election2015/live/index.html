@@ -8,6 +8,7 @@
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="stylesheet" href="main.css"/>
+	<link rel="stylesheet" href="nightmode.css" disabled/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
@@ -53,12 +54,9 @@
 
 				</div>
 
-				<div class ="projections" id="otherlinks">
-					<h3 class="notactive"><a href="/election2015/methodology.html">Methodology</a></h3>
-					<h3 class="notactive"><a href="/election2015/polls.html">Polls</a></h3>
-					<h3 class="notactive"><a href="/election2015/seats.html">Seat List </a></h3>
-					<h3 class="notactive"><a href="/election2015/trends.html">Trends</a></h3>
-					<h3 class="notactive"><a href="/election2015/articles/">Articles</a></h3>
+				<div id="choosemode">
+					<button onclick="nightMode()">Night Mode</button>
+					<button onclick="dayMode()">Day Mode</button>
 				</div>
 
 

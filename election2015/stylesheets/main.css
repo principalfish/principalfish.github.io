@@ -22,12 +22,10 @@
 	font-weight: normal;
 }
 
-
 .projections {
 	height: 75px;
 	width: 100%;
 }
-
 
 .projections h3 {
 	text-align: center;
@@ -123,7 +121,7 @@
 
 #filteredlisttable{
 	width: 100%;
-	max-height: 45%;
+	max-height: 50%;
 	overflow: auto;
 }
 

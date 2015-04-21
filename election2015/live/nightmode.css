@@ -1,0 +1,35 @@
+body{background-color: #333333;}
+
+button{background-color: #555555;}
+button{color: white;}
+h2,h3,p,span {color: white;}
+
+#top{background-color: #555555;}
+#top h2{color: white;}
+#menu a{color: white;}
+#top ul{background-color: #555555;}
+
+#farleft{background-color: #555555;}
+#farleft td{border-bottom: 1px solid #555555;}
+.currentpage{background-color: #777777;}
+#farleft input{background-color: #555555; color: white;}
+
+#farleft select{background-color: #555555; color: white;}
+
+#left rect{fill: #777777;}
+#left .not_here{fill: #eeeeee;}
+#left .faded_not_here{fill: #eeeeee;}
+
+#mid{background-color: #777777;}
+#ticker{background-color: #777777;}
+#ticker td{border-bottom: 3px solid #777777;}
+
+#right{background-color: #777777;}
+#charts svg{fill: white;}
+.axis path,
+.axis line{stroke: white;}
+
+
+#totals select{background-color: #777777; color: white;}
+#totals th{color: white;}
+#totals h3{color: white;}

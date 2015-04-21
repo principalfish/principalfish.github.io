@@ -384,8 +384,8 @@ function piechart(d){
     .ticks(6);
 
 	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; })
-	//max_of_votes + (10 - max_of_votes % 10)
-	y.domain([0, 70]);
+	//
+	y.domain([0, d3.max([60, (max_of_votes + (10 - max_of_votes % 10)) ])]);
 
 	svg1.append("g")
       .attr("class", "x axis")

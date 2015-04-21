@@ -7,17 +7,24 @@
 	width: 1652px;
 }
 
-
 #left {
   width :600px;
 	border-right: 0
 }
 
-
-#filteredlisttable {
-  max-height: 50%;
+#choosemode {
+	padding-bottom: 10px;
 }
 
+#choosemode button{
+	width : 100%;
+	padding: 4px;
+	letter-spacing : 1px;
+}
+
+#filteredlisttable {
+  max-height: 52%;
+}
 
 #mid {
 	float: left;
@@ -41,7 +48,6 @@
 
 #refreshbutton a{
 	color: white;
-
 }
 
 #refreshbutton a:hover{
@@ -49,12 +55,9 @@
 }
 
 #refreshbuttonlink {
-
 }
 
-
 #ticker {
-
 }
 
 #ticker td{
@@ -125,7 +128,6 @@
 	font-size: 1.05em;
 }
 
-
 #totals {
   float: left;
   width: 100%;
@@ -147,5 +149,4 @@
 
 #footer {
 	top: -10;
-
 }

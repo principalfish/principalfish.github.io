@@ -84,7 +84,7 @@ def get_data(file):
 
     all_the_votes.remove(max(all_the_votes))
     majority_total = max_party[1] - max(all_the_votes)
-    majority_percentage = 100 * majority_total / turnout
+    majority_percentage = 100 * majority_total / float(turnout)
     by_seat["majority_total"] = majority_total
     by_seat["majority_percentage"] = majority_percentage
 
@@ -100,9 +100,6 @@ def get_data(file):
     now = time.time()
     if now - declared_at < 360:
         new_data[seat_name] = {"seat_info" : by_seat, "party_info" : by_party}
-
-
-
 
 seats_declared = 0
 

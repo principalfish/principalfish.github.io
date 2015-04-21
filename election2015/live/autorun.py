@@ -54,9 +54,9 @@ def get_data(file):
             old_percentage = 100 * old_votes / float(old_data[seat_name]["turnout"])
 
             if party == "other" or party == "others":
+                change_in_percentage = ""
+            else:
                 change_in_percentage = vote_percentage - old_percentage
-
-            change_in_percentage
 
 
             by_party[party] = {"name" : name,

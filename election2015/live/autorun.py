@@ -71,7 +71,6 @@ def get_data(file):
 
         itemlist = xmldoc.getElementsByTagName('Constituency')
 
-
         seat_name = itemlist[0].attributes['name'].value
         seat_id = itemlist[0].attributes['number'].value
 

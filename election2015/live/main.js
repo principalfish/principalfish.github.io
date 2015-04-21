@@ -380,8 +380,11 @@ function piechart(d){
 
 	$.each(relevant_party_info, function(d){
 		votes = relevant_party_info[d]["vote_percentage"]
+		
 		data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change_in_percentage"]})
 	})
+
+
 
 	var filterdata = [];
 

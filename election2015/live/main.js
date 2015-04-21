@@ -1193,7 +1193,9 @@ function DO_NOT_PRESS(){
 function nightMode(){
 	document.getElementById("nightmode").disabled = false;
 	$('link[rel=stylesheet][href~="nightmode.css"]').attr('disabled', false);
-	$("#choosemodebutton")
+	$("#choosemodebutton").attr("onclick", "dayMode()");
+	$("#choosemodebutton").html("Day Mode");
+
 }
 
 function dayMode(){

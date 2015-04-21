@@ -380,13 +380,16 @@ function piechart(d){
 
 	$.each(relevant_party_info, function(d){
 		votes = relevant_party_info[d]["vote_percentage"]
-		data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change_in_percentage"]})
+		if (votes > 0){
+			data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change_in_percentage"]})
+		}
+
 	})
 
 	var filterdata = [];
 
 	$.each(data, function(i){
-		if (data[i].votes > 0 && data[i].party != "other2")
+		if (data[i].votes > 0 && data[i].party != "others")
 			filterdata.push(data[i]);
 	});
 
@@ -398,8 +401,8 @@ function piechart(d){
 	// different way of getting other into array (due to slightly difference in other in data)
 	var keys = Object.keys(relevant_party_info);
 
-	if (keys.indexOf("other2") != -1){
-		filterdata.push({party: "other2", votes: relevant_party_info["other2"]["vote_percentage"], vote_change: relevant_party_info["other2"]["change_in_percentage"]});
+	if (keys.indexOf("others") != -1 && relevant_party_info["others"]["vote_percentage"] > 0){
+		filterdata.push({party: "others", votes: relevant_party_info["others"]["vote_percentage"], vote_change: relevant_party_info["others"]["change_in_percentage"]});
 	}
 
 	// BAR CHART

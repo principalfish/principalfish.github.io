@@ -511,12 +511,12 @@ function piechart(d){
 			plussign = "+";
 		}
 
-		var vote_change
+		var vote_change;
 		if (filterdata[i].vote_change ==""){
-			vote_change = ""
+			vote_change = "";
 		}
 		else {
-			vote_change =
+			vote_change = parseFloat(filterdata[i].vote_change).toFixed(2);
 		}
 
 		$("#information-chart").append("<tr class=" + filterdata[i].party + " style=\"font-weight: bold;\"><td style=\"max-width: 170px;\">" +

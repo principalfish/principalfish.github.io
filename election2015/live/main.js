@@ -627,8 +627,17 @@ function displayVoteTotals(data) {
 												"</tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
 												"</tfoot></table>")
 
-		var plussign1, plussign2;
+		var other_change = 0
+		$.each(data, function(i){
 
+				if (parties.indexOf(data[i].code) != -1 && data[i].code != "other" ){
+					other_change -= data[i].change
+				}
+		})
+
+		data[data.length - 3].change = other_change
+
+		var plussign1, plussign2;
 		$.each(data, function(i){
 
 				if (data[i].change > 0){
@@ -653,7 +662,6 @@ function displayVoteTotals(data) {
 						+ data[i].seats + "</td><td>"  + plussign1 + data[i].change + "</td><td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td>" + (data[i].votepercent).toFixed(2) +
 					 "</td></tr>");
 				}
-
 		})
 
 		$("#totalstable").tablesorter({
@@ -802,7 +810,7 @@ var regions = {
     "northernireland" : ["northernireland"]
 };
 
-parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other1", "other2", "other", "others"]
+parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others"]
 
 
 function getVoteTotals(area){
@@ -833,14 +841,14 @@ function getVoteTotals(area){
 			}
 		});
 
-		var holdingArray = []
+		var holdingArray = [];
 		var totalseats = 0;
 		var totalvotes = 0;
 
 		var otherSeatssum = 0;
 		var otherChange = 0;
-		var otherTotalVotes = 0
-		var otherVotePercent = 0
+		var otherTotalVotes = 0;
+		var otherVotePercent = 0;
 
 		$.each(parties, function(party){
 			info = {}
@@ -874,7 +882,7 @@ function getVoteTotals(area){
 					}
 
 					}
-				})
+				});
 
 			votepercent =  parseFloat((100 * totalvotes / parseFloat(totalvotescast)).toFixed(2));
 			change = seatssum - change;
@@ -896,11 +904,11 @@ function getVoteTotals(area){
 			}
 		});
 
-		var others = {"code": "other", "seats" : otherSeatssum, "change": otherChange, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
+		var others = {"code": "other", "seats" : otherSeatssum, "change": 0, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
 		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : " "};
 		var stupidcsvextrarow = {"code": "", "seats" : undefined, "change": undefined, "votes" : "", "votepercent" : undefined};
 
-		holdingArray.push(others)
+		holdingArray.push(others);
     holdingArray.push(totals);
     holdingArray.push(stupidcsvextrarow);
 

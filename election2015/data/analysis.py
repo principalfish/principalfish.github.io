@@ -168,7 +168,7 @@ class Seat(object):
             new = seatchange * partypercent
 
             if self.incumbent == "libdems" and party == "libdems":
-                new += 6
+                new += 8
 
             elif self.incumbent == "ukip" and party == "ukip":
                 new += 8
@@ -488,9 +488,9 @@ def revertseatpollpercentage(poll, party):
     a = date(2015, 5, 7) #election day
     b = date.today()
     daystoelection = (a - b).days
-    reversionfactor = 0.004 * daystoelection
+    reversionfactor = 0 * daystoelection
     if seats[poll].area == "scotland":
-        reversionfactor = 0.0025 * daystoelection
+        reversionfactor = 0 * daystoelection
 
     change = seats[poll].partyinfo[party][3] - seats[poll].partyinfo[party][1]
     change *= reversionfactor

@@ -1,6 +1,11 @@
 pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu	weight	initialweight	area
 me	regional			11	2	2015	null	1000	137	300	90	30	30	400		0								
 me	regional			11	2	2015	null	1000	400	300	0	175	40		5	20								
+yougov	percentage		22/04/2015	22	4	2015	London	264	33	40	5	13	7			1								
+yougov	percentage		22/04/2015	22	4	2015	Rest of South	670	39	27	10	17	6			1								
+yougov	percentage		22/04/2015	22	4	2015	Midlands and Wales	441	39	34	5	15	5		2	0								
+yougov	percentage		22/04/2015	22	4	2015	North England	507	27	46	7	15	5			0								
+yougov	percentage		22/04/2015	22	4	2015	Scotland	179	17	23	6	4	3	44		3								
 yougov	percentage		21/04/2015	21	4	2015	London	230	34	40	6	9	7			2								
 yougov	percentage		21/04/2015	21	4	2015	Rest of South	585	40	26	11	17	6			0								
 yougov	percentage		21/04/2015	21	4	2015	Midlands and Wales	385	40	32	6	13	4		4	1								
@@ -34,24 +39,9 @@ populus	regional		19/04/2015	19	4	2015	Midlands	357	126	118	23	66	21			4
 populus	regional		19/04/2015	19	4	2015	North England	304	101	122	24	45	9			3								
 populus	regional		19/04/2015	19	4	2015	Wales and South West	174	61	57	16	25	7		8	1								
 populus	regional		19/04/2015	19	4	2015	Scotland	130	19	32	15	3	3	58		0								
-yougov	percentage		19/04/2015	19	4	2015	London	214	33	39	9	10	6			1								
-yougov	percentage		19/04/2015	19	4	2015	Rest of South	544	39	27	10	16	7			1								
-yougov	percentage		19/04/2015	19	4	2015	Midlands and Wales	358	32	38	6	17	5			0								
-yougov	percentage		19/04/2015	19	4	2015	North England	412	37	43	4	11	4		1	0								
-yougov	percentage		19/04/2015	19	4	2015	Scotland	146	14	26	12	1		47		0								
-yougov	percentage		18/04/2015	18	4	2015	London	228	37	39	8	8	5			1								
-yougov	percentage		18/04/2015	18	4	2015	Rest of South	578	39	30	14	14	6			0								
-yougov	percentage		18/04/2015	18	4	2015	Midlands and Wales	381	32	38	15	15	6		2	1								
-yougov	percentage		18/04/2015	18	4	2015	North England	438	28	43	17	17	5			1								
-yougov	percentage		18/04/2015	18	4	2015	Scotland	155	19	27	6	6	2	40		1								
 opinium	regional		17/04/2015	17	4	2015	England	1302	495	417	112	181	77			15								
 opinium	regional		17/04/2015	17	4	2015	Scotland	139	26	39	11	3	5	56		0								
 opinium	regional		17/04/2015	17	4	2015	Wales	77	20	29	5	13	2		8	1								
-yougov	percentage		17/04/2015	17	4	2015	London	219	30	42	7	15	4			1								
-yougov	percentage		17/04/2015	17	4	2015	Rest of South	557	43	24	13	13	6			1								
-yougov	percentage		17/04/2015	17	4	2015	Midlands and Wales	367	36	38	6	12	4		2	0								
-yougov	percentage		17/04/2015	17	4	2015	North England	421	28	42	6	18	5			1								
-yougov	percentage		17/04/2015	17	4	2015	Scotland	149	13	31	7	4	2	44		0								
 survation	regional		17/04/2015	17	4	2015	London	140	46	56	12	18	5			0								
 survation	regional		17/04/2015	17	4	2015	East and West Midlands	157	57	49	12	32	5			0								
 survation	regional		17/04/2015	17	4	2015	North	263	83	116	13	44	4			3								
@@ -63,27 +53,11 @@ populus	regional		16/04/2015	16	4	2015	Midlands	325	122	101	36	55	8			3
 populus	regional		16/04/2015	16	4	2015	North England	300	89	139	21	36	15			1								
 populus	regional		16/04/2015	16	4	2015	Wales and South West	175	59	57	16	27	9		5	2								
 populus	regional		16/04/2015	16	4	2015	Scotland	129	15	36	10	4	1	63		1								
-yougov	percentage		16/04/2015	16	4	2015	London	248	29	38	11	15	7			1								
-yougov	percentage		16/04/2015	16	4	2015	Rest of South	630	44	29	9	13	4			1								
-yougov	percentage		16/04/2015	16	4	2015	Midlands and Wales	415	37	33	5	15	6		4	0								
-yougov	percentage		16/04/2015	16	4	2015	North England	477	29	43	5	17	5			1								
-yougov	percentage		16/04/2015	16	4	2015	Scotland	169	19	23	5	4	4	44		0								
 mori	regional		15/04/2015	15	4	2015	North	156	49	71	8	18	10											
 mori	regional		15/04/2015	15	4	2015	MidlandsMori	196	67	67	20	24	11		7									
 mori	regional		15/04/2015	15	4	2015	SouthMori	143	59	36	14	16	18											
 mori	regional		15/04/2015	15	4	2015	London	78	20	40	3	7	8											
 mori	regional		15/04/2015	15	4	2015	Scotland	65	13	8	3	0	6	35										
-yougov	percentage		15/04/2015	15	4	2015	London	242	36	39	9	8	5			1								
-yougov	percentage		15/04/2015	15	4	2015	Rest of South	616	40	27	10	18	5			1								
-yougov	percentage		15/04/2015	15	4	2015	Midlands and Wales	405	34	37	7	15	4		3	0								
-yougov	percentage		15/04/2015	15	4	2015	North England	466	31	44	6	12	6			1								
-yougov	percentage		15/04/2015	15	4	2015	Scotland	165	17	28	8	3	3	41		0								
-yougov	percentage		15/04/2015	15	4	2015	Wales	1143	26	40	6	13	4		12									
-yougov	percentage		14/04/2015	14	4	2015	London	236	29	48	6	10	6			1								
-yougov	percentage		14/04/2015	14	4	2015	Rest of South	599	41	25	11	16	6			0								
-yougov	percentage		14/04/2015	14	4	2015	Midlands and Wales	394	34	37	6	15	6		1	1								
-yougov	percentage		14/04/2015	14	4	2015	North England	453	30	44	7	12	6			1								
-yougov	percentage		14/04/2015	14	4	2015	Scotland	160	20	26	6	3	2	43		0								
 tns	regional		13/04/2015	13	4	2015	Scotland	58	10	15	5	2	0		25	0								
 tns	regional		13/04/2015	13	4	2015	NE Yorks Humber	86	23	33	8	16	6			0								
 tns	regional		13/04/2015	13	4	2015	North West	69	21	30	6	9	3			0								
@@ -91,11 +65,6 @@ tns	regional		13/04/2015	13	4	2015	East and West Midlands	103	40	37	6	12	7			1
 tns	regional		13/04/2015	13	4	2015	South East East of England	158	71	33	13	29	8			4								
 tns	regional		13/04/2015	13	4	2015	Greater London	70	22	24	8	11	3			1								
 tns	regional		13/04/2015	13	4	2015	Wales and West	87	26	29	13	9	6	2		1								
-yougov	percentage		13/04/2015	13	4	2015	London	313	34	38	10	12	5			0								
-yougov	percentage		13/04/2015	13	4	2015	Rest of South	794	40	25	10	17	6			1								
-yougov	percentage		13/04/2015	13	4	2015	Midlands and Wales	523	35	37	7	12	7		3	0								
-yougov	percentage		13/04/2015	13	4	2015	North England	501	27	47	6	13	5			1								
-yougov	percentage		13/04/2015	13	4	2015	Scotland	213	14	27	8	4	3	44		0								
 ashcroft	regional		12/04/2015	12	4	2015	South East	147	50	48	20	18	9			2								
 ashcroft	regional		12/04/2015	12	4	2015	Midlands	131	53	45	6	23	2			1								
 ashcroft	regional		12/04/2015	12	4	2015	North England	126	39	53	8	19	6			1								
@@ -106,57 +75,8 @@ icm	regional		12/04/2015	12	4	2015	Wales	33	5	10	0	6	4		6	1
 icm	regional		12/04/2015	12	4	2015	North	145	68	45	7	11	12			2								
 icm	regional		12/04/2015	12	4	2015	Midlands	147	55	53	14	13	10			1								
 icm	regional		12/04/2015	12	4	2015	SouthICM	199	79	74	15	16	16											
-populus	regional		12/04/2015	12	4	2015	South East	346	129	108	35	52	19			3								
-populus	regional		12/04/2015	12	4	2015	Midlands	331	124	98	26	66	16			1								
-populus	regional		12/04/2015	12	4	2015	North England	311	82	142	19	49	17			2								
-populus	regional		12/04/2015	12	4	2015	Wales and South West	169	68	52	11	16	15		5	1								
-populus	regional		12/04/2015	12	4	2015	Scotland	132	21	32	8	6	2	64										
 tns	regional		08/04/2015	8	4	2015	Scotland	548	69	139	30	4	19	286		1								
-yougov	percentage		12/04/2015	12	4	2015	London	220	34	38	7	14	6			1								
-yougov	percentage		12/04/2015	12	4	2015	Rest of South	558	39	29	9	15	6			1								
-yougov	percentage		12/04/2015	12	4	2015	Midlands and Wales	367	38	37	4	14	4		1	0								
-yougov	percentage		12/04/2015	12	4	2015	North England	422	28	46	7	15	5			0								
-yougov	percentage		12/04/2015	12	4	2015	Scotland	149	20	29	5	3	3	40		0								
-yougov	regional		11/04/2015	11	4	2015	London	242	85	104	24	10	17	0	0	2								
-yougov	regional		11/04/2015	11	4	2015	Rest of South	613	233	147	67	110	49	0	0	0								
-yougov	regional		11/04/2015	11	4	2015	Midlands and Wales	404	149	154	20	53	16	0	20	0								
-yougov	regional		11/04/2015	11	4	2015	North England	464	139	204	23	60	28	0	0	5								
-yougov	regional		11/04/2015	11	4	2015	Scotland	164	30	41	3	8	7	71	0	2								
 opinium	regional		10/04/2015	10	4	2015	England	1316	505	455	99	152	80			14								
 opinium	regional		10/04/2015	10	4	2015	Scotland	146	24	34	7	4	7	61		0								
 opinium	regional		10/04/2015	10	4	2015	Wales	86	25	26	4	10	6		6	1								
-yougov	regional		10/04/2015	10	4	2015	London	228	82	93	16	23	9	0	0	5								
-yougov	regional		10/04/2015	10	4	2015	Rest of South	579	243	156	58	81	41	0	0	0								
-yougov	regional		10/04/2015	10	4	2015	Midlands and Wales	381	122	145	23	69	15	0	4	4								
-yougov	regional		10/04/2015	10	4	2015	North England	438	127	193	26	61	22	0	0	0								
-yougov	regional		10/04/2015	10	4	2015	Scotland	155	23	47	12	6	3	62	0	0								
-populus	regional		09/04/2015	9	4	2015	South East	368	119	103	28	42	26			4								
-populus	regional		09/04/2015	9	4	2015	Midlands	361	95	105	27	79	23			2								
-populus	regional		09/04/2015	9	4	2015	North England	311	82	111	17	50	16			2								
-populus	regional		09/04/2015	9	4	2015	Wales and South West	192	61	54	18	28	7		8	2								
-populus	regional		09/04/2015	9	4	2015	Scotland	134	21	32	5	2	2	56		2								
-yougov	regional		09/04/2015	9	4	2015	London	248	94	97	17	22	10	0	0	2								
-yougov	regional		09/04/2015	9	4	2015	Rest of South	630	252	158	63	113	38	0	0	6								
-yougov	regional		09/04/2015	9	4	2015	Midlands and Wales	415	158	145	25	58	17	0	8	4								
-yougov	regional		09/04/2015	9	4	2015	North England	477	162	229	24	33	14	0	0	0								
-yougov	regional		09/04/2015	9	4	2015	Scotland	169	20	42	22	7	8	71	0	0								
-yougov	regional		09/04/2015	9	4	2015	Scotland	903	161	232	41	20	10	439										
-comres	regional		08/04/2015	8	4	2015	Scotland	72	13	13	13	2	3	27		1								
-comres	regional		08/04/2015	8	4	2015	North East England	26	4	11	7	3	0			0								
-comres	regional		08/04/2015	8	4	2015	North West England	84	23	34	11	13	2			2								
-comres	regional		08/04/2015	8	4	2015	Yorkshire and Humber	64	18	34	6	4	2			0								
-comres	regional		08/04/2015	8	4	2015	West Midlands	63	31	20	2	7	2			1								
-comres	regional		08/04/2015	8	4	2015	East Midlands	42	19	10	2	9	2			0								
-comres	regional		08/04/2015	8	4	2015	Wales	30	10	9	3	1	2		4	0								
-comres	regional		08/04/2015	8	4	2015	East of England	59	21	19	9	8	3			0								
-comres	regional		08/04/2015	8	4	2015	London	85	27	35	5	15	3			0								
-comres	regional		08/04/2015	8	4	2015	South East England	90	40	26	7	11	4			2								
-comres	regional		08/04/2015	8	4	2015	South West England	53	19	11	13	6	2			1								
-panelbase	regional		09/04/2015	9	4	2015	Great Britain	742	229	272	57	116	26	50	6	12								
-survation	regional		09/04/2015	9	4	2015	London	101	22	39	21	16	1			1								
-survation	regional		09/04/2015	9	4	2015	East and West Midlands	155	56	47	13	34	3			2								
-survation	regional		09/04/2015	9	4	2015	North	211	57	113	12	18	11			1								
-survation	regional		09/04/2015	9	4	2015	SouthSurvation	343	132	95	29	63	23			3								
-survation	regional		09/04/2015	9	4	2015	Scotland	77	10	20	3	2	2	40		1								
-survation	regional		09/04/2015	9	4	2015	Wales	49	8	16	6	10			9									
 whoever	regional		11/03/2015	11	3	2015	Northern Ireland	100								17	15	24	6	26	12			

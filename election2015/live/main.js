@@ -1205,7 +1205,7 @@ function DO_NOT_PRESS(){
 	alert("Why would you do this?");
 	$("body").append("<div id=\"farage\" style =\"position: absolute; margin-left: 800px\"><img style=\"position: relative; z=index: -1; height: 800px; width: 600px;\" src=\"farage.png\"></div>");
 		setTimeout(function () {
-			window.location.reload(true)
+			window.location.reload(true);
 		}, 10000 )//x / 1000 = seconds
 }
 

@@ -1,6 +1,12 @@
 pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu	weight	initialweight	area
 me	regional			11	2	2015	null	1000	137	300	90	30	30	400		0								
 me	regional			11	2	2015	null	1000	400	300	0	175	40		5	20								
+yougov	percentage		24/04/2015	24	4	2015	London	204	28	47	9	7	9			0								
+yougov	percentage		24/04/2015	24	4	2015	Rest of South	518	39	25	12	15	7			1								
+yougov	percentage		24/04/2015	24	4	2015	Midlands and Wales	341	31	38	6	17	5		2	1								
+yougov	percentage		24/04/2015	24	4	2015	North England	392	34	41	5	14	4			2								
+yougov	percentage		24/04/2015	24	4	2015	Scotland	139	15	28	9	3	2	42		1								
+yougov	percentage		22/04/2015	22	4	2015	London	909	32	44	8	10	5			1								
 populus	regional		23/04/2015	23	4	2015	South East	400	137	144	41	62	17			0								
 populus	regional		23/04/2015	23	4	2015	Midlands	391	148	118	30	68	24			3								
 populus	regional		23/04/2015	23	4	2015	North England	381	120	154	18	58	28			2								
@@ -33,11 +39,6 @@ yougov	percentage		22/04/2015	22	4	2015	Rest of South	670	39	27	10	17	6			1
 yougov	percentage		22/04/2015	22	4	2015	Midlands and Wales	441	39	34	5	15	5		2	0								
 yougov	percentage		22/04/2015	22	4	2015	North England	507	27	46	7	15	5			0								
 yougov	percentage		22/04/2015	22	4	2015	Scotland	179	17	23	6	4	3	44		3								
-yougov	percentage		21/04/2015	21	4	2015	London	230	34	40	6	9	7			2								
-yougov	percentage		21/04/2015	21	4	2015	Rest of South	585	40	26	11	17	6			0								
-yougov	percentage		21/04/2015	21	4	2015	Midlands and Wales	385	40	32	6	13	4		4	1								
-yougov	percentage		21/04/2015	21	4	2015	North England	443	29	47	5	13	6			0								
-yougov	percentage		21/04/2015	21	4	2015	Scotland	157	19	28	8	2	4	40		0								
 tns	regional		20/04/2015	20	4	2015	Scotland	54	8	19	4	1	1	21		0								
 tns	regional		20/04/2015	20	4	2015	NE Yorks Humber	76	19	36	5	11	3			2								
 tns	regional		20/04/2015	20	4	2015	North West	72	26	30	4	7	2			3								

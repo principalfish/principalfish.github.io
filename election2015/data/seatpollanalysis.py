@@ -44,9 +44,9 @@ class Poll(object):
 
         self.initialweight = 1
 
+        degrade_factor = 0.99
 
-        self.weight = self.initialweight * math.pow(0.99, daysince) # lose 1% of value per day since polla
-
+        self.weight = self.initialweight * math.pow(degrade_factor, daysince) # lose 1% of value per day since poll
 
         if self.weight < 0.25:
             self.weight = 0.25

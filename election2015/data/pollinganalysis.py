@@ -89,12 +89,13 @@ class Poll(object):
         dayofpoll = date(int(self.year), int(self.month), int(self.day))
         daysince =  (today - dayofpoll).days
 
-        self.initialweight = math.sqrt(float(self.total)) / (10 * math.sqrt(len(pollingregions[self.region])))
+        self.initialweight =  1
 
+        degrade_factor = math.sqrt(math.pow(float(self.total) / len(pollingregions[self.region]), 0.1) / 1.5) * 0.8
 
-        self.weight = self.initialweight * math.pow(0.8, daysince) # degrade to 80% of value each day
-        if self.weight < 0:
-            self.weight = 0
+        self.weight = self.initialweight * math.pow(degrade_factor, daysince)
+
+        print self.date, self.total, self.weight
 
         # tests
         if self.region == "test" or self.region == "testscotland":

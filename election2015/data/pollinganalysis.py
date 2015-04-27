@@ -95,8 +95,6 @@ class Poll(object):
 
         self.weight = self.initialweight * math.pow(degrade_factor, daysince)
 
-        print self.date, self.total, self.weight
-
         # tests
         if self.region == "test" or self.region == "testscotland":
             self.weight = 1000000000

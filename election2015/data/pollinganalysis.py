@@ -70,10 +70,14 @@ class Poll(object):
                 sum += int(previousregionaltotals[region][party])
                 total +=  int(previousregionaltotals[region]["turnout2010"])
 
+
             f[party] = 100 * sum / float(total)
 
 
+        #print self.region, self.area, f
         partychange = {}
+
+
 
         # apply +/- for poll region to each previous regional percent, add to partyinfo
         for party in parties:
@@ -81,7 +85,8 @@ class Poll(object):
 
             partypercent = 100 * int(previousregionaltotals[self.area][party]) / float(previousregionaltotals[self.area]["turnout2010"])
             partypercent += partychange[party]
-            self.partyinfo[party][1] = partypercent
+            self.partyinfo[party][1] = partypercent            
+
 
     #weight polls based on days since poll and sqrt of number polled.
     def weightpolls(self):
@@ -96,7 +101,7 @@ class Poll(object):
         self.weight = self.initialweight * math.pow(degrade_factor, daysince)
 
         # tests
-        if self.region == "test" or self.region == "testscotland":
+        if self.region == "testengland" or self.region == "testscotland" or self.region == "testwales":
             self.weight = 1000000000
 
         if self.region == "null":

@@ -1,6 +1,7 @@
 pollingregions = {
-    "test": ["yorkshireandthehumber", "wales", "northeastengland", "northwestengland", "southeastengland", "southwestengland", "london", "eastofengland", "eastmidlands", "westmidlands"],
+    "testengland": ["yorkshireandthehumber", "northeastengland", "northwestengland", "southeastengland", "southwestengland", "london", "eastofengland", "eastmidlands", "westmidlands"],
     "testscotland" : ["scotland"],
+    "testwales" : ["wales"],
     "null": [],
 
     "Great Britain": ["scotland", "yorkshireandthehumber", "wales", "northeastengland", "northwestengland", "southeastengland", "southwestengland", "london", "eastofengland", "eastmidlands", "westmidlands"],
@@ -21,7 +22,7 @@ pollingregions = {
     "North West England" : ["northwestengland"],
     "Yorkshire and Humber" : ["yorkshireandthehumber"],
     "East of England" : ["eastofengland"],
-	
+
 
     #ashcroft and populus
     "Wales and South West" : ["wales", "southwestengland"],

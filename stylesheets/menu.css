@@ -30,7 +30,7 @@ nav li a {
 nav li a:hover {
   color: orange;
 }
-
+/*
 
 nav ul li ul {
   display: none;
@@ -54,9 +54,9 @@ nav ul ul {
   border-radius: 0px;
   padding: 0;
 
-}
+}*/
 
-nav ul ul li {
+/*nav ul ul li {
   float: none;
   border-top: 1px solid black;
   border-left: 1px solid black;
@@ -76,9 +76,9 @@ nav ul ul ul {
   position: absolute;
   left: 100%;
   top:0;
-}
+}*/
 
-
+/*
 #first {
   margin-top:6px;
 }
@@ -86,4 +86,4 @@ nav ul ul ul {
 #last {
   border-bottom : 1px solid black;
 
-}
+}*/

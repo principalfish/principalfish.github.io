@@ -2,6 +2,12 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
+survation	regional		27/04/2015	27	4	2015	Scotland	866	124	221	46	17	12	444		1								
+yougov	percentage		27/04/2015	27	4	2015	London	272	30	41	11	11	7			0								
+yougov	percentage		27/04/2015	27	4	2015	Rest of South	691	43	26	12	13	5			1								
+yougov	percentage		27/04/2015	27	4	2015	Midlands and Wales	455	36	36	7	12	5		4	0								
+yougov	percentage		27/04/2015	27	4	2015	North England	523	31	41	6	13	6			1								
+yougov	percentage		27/04/2015	27	4	2015	Scotland	185	17	30	7	3	2	42		0								
 ashcroft	regional		26/04/2015	26	4	2015	South East	147	64	43	9	18	11			3								
 ashcroft	regional		26/04/2015	26	4	2015	Midlands	160	53	55	15	23	13			2								
 ashcroft	regional		26/04/2015	26	4	2015	North England	130	46	44	11	16	13			1								
@@ -23,11 +29,6 @@ yougov	percentage		26/04/2015	26	4	2015	Rest of South	681	41	26	10	16	6			1
 yougov	percentage		26/04/2015	26	4	2015	Midlands and Wales	449	38	33	6	16	4		1	1								
 yougov	percentage		26/04/2015	26	4	2015	North England	516	26	47	6	16	5			1								
 yougov	percentage		26/04/2015	26	4	2015	Scotland	182	11	29	6	2	4	45		2								
-yougov	percentage		25/04/2015	25	4	2015	London	291	35	40	8	13	4			1								
-yougov	percentage		25/04/2015	25	4	2015	Rest of South	738	37	25	13	16	7			1								
-yougov	percentage		25/04/2015	25	4	2015	Midlands and Wales	486	36	36	4	15	5		4	1								
-yougov	percentage		25/04/2015	25	4	2015	North England	559	29	44	7	14	5			1								
-yougov	percentage		25/04/2015	25	4	2015	Scotland	198	15	31	8	3	3	40		0								
 survation	regional		25/04/2015	25	4	2015	London	97	37	26	13	19	1			0								
 survation	regional		25/04/2015	25	4	2015	East and West Midlands	135	43	52	10	27	2			1								
 survation	regional		25/04/2015	25	4	2015	North	185	58	70	14	32	0			2								

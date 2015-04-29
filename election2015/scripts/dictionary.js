@@ -51,6 +51,7 @@ pollsters["opinium"] = "Opinium"
 pollsters["comres"] = "Comres"
 pollsters["lucidtalk"] = "Lucidtalk"
 pollsters["panelbase"] = "Panelbase"
+pollsters["bmg"] = "BMG"
 
 
 var previousTotals = {

@@ -150,3 +150,17 @@
 #footer {
 	top: -10;
 }
+
+
+#previewmap {
+	position: fixed;
+	z-index : 10000;
+	margin-left: -50px;
+	top: 40%;
+	width: 310px;
+	height: 100px;
+	background: white;
+	border: 1px solid black;
+	border-radius : 15px;
+	padding: 15px;
+}

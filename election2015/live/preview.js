@@ -50,7 +50,7 @@ relevantSeats = [
 
   ////////
 
-  {"name" : "11pm: The first two seats expected to declare",
+  {"name" : "11pm - Midnight: The first two seats expected to declare",
   "number" : 290,
   "mapnumbers" : [290, 603],
   "description" : "Both are safe Labour seats in the North East. <p>Sunderland South, part of which became Houghton and Sunderland South in 2010, was the first seat to declare on election night in all elections from 1992-2005.</p> "

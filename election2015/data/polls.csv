@@ -2,6 +2,12 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
+survation	regional		2/05/2015	2	5	2015	London	224	56	97	28	33	10			1								
+survation	regional		2/05/2015	2	5	2015	East and West Midlands	288	106	96	13	61	11			0								
+survation	regional		2/05/2015	2	5	2015	North	408	121	178	23	68	14			4								
+survation	regional		2/05/2015	2	5	2015	SouthSurvation	601	235	157	49	123	34			4								
+survation	regional		2/05/2015	2	5	2015	Scotland	177	23	47	18	3	2	83										
+survation	regional		2/05/2015	2	5	2015	Wales	81	20	32	2	10	6		10									
 comres	regional		30/04/2015	30	4	2015	Scotland	63	11	16	5	0	1	27		2								
 comres	regional		30/04/2015	30	4	2015	North East England	34	9	18	1	4	1			1								
 comres	regional		30/04/2015	30	4	2015	North West England	80	16	40	6	15	1			1								
@@ -87,12 +93,6 @@ tns	regional		19/04/2015	19	4	2015	Scotland	457	59	97	27	8	10	239		2
 opinium	regional		24/04/2015	24	4	2015	England	1287	461	428	116	188	85			12								
 opinium	regional		24/04/2015	24	4	2015	Scotland	145	30	38	5	1	1	56		2								
 opinium	regional		24/04/2015	24	4	2015	Wales	80	22	23	7	8	4		3	1								
-survation	regional		23/04/2015	23	4	2015	London	100	29	40	16	14	1			0								
-survation	regional		23/04/2015	23	4	2015	East and West Midlands	151	46	49	12	32	10			0								
-survation	regional		23/04/2015	23	4	2015	North	215	73	73	18	38	12			1								
-survation	regional		23/04/2015	23	4	2015	SouthSurvation	351	145	72	30	85	17			1								
-survation	regional		23/04/2015	23	4	2015	Scotland	94	14	25	13	0		42										
-survation	regional		23/04/2015	23	4	2015	Wales	46	13	20	3	4	2		3									
 tns	regional		20/04/2015	20	4	2015	Scotland	54	8	19	4	1	1	21		0								
 tns	regional		20/04/2015	20	4	2015	NE Yorks Humber	76	19	36	5	11	3			2								
 tns	regional		20/04/2015	20	4	2015	North West	72	26	30	4	7	2			3								

@@ -2,6 +2,11 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
+yougov	percentage		1/05/2015	1	5	2015	London	202	35	44	5	8	7			1								
+yougov	percentage		1/05/2015	1	5	2015	Rest of South	512	40	22	12	19	5			1								
+yougov	percentage		1/05/2015	1	5	2015	Midlands and Wales	337	36	33	8	12	7		3	2								
+yougov	percentage		1/05/2015	1	5	2015	North England	387	26	47	6	15	5											
+yougov	percentage		1/05/2015	1	5	2015	Scotland	137	19	28	8	2	2	42										
 survation	regional		1/05/2015	1	5	2015	London	104	22	46	14	19	4			0								
 survation	regional		1/05/2015	1	5	2015	East and West Midlands	150	65	42	16	21	5			1								
 survation	regional		1/05/2015	1	5	2015	North	210	60	95	9	36	9			1								
@@ -15,21 +20,14 @@ populus	regional		30/04/2015	30	4	2015	Wales and South West	179	59	61	14	32	6		6
 populus	regional		30/04/2015	30	4	2015	Scotland	133	23	37	8	6		58		0								
 yougov	percentage		30/04/2015	30	4	2015	London	221	38	42	5	10	4			1								
 yougov	percentage		30/04/2015	30	4	2015	Rest of South	562	44	24	11	13	6			1								
-yougov	percentage		30/04/2015	30	4	2015	Midlands and Wales	370	33	35	8	15	5			2								
-yougov	percentage		30/04/2015	30	4	2015	North England	425	26	48	7	12	5		2	2								
+yougov	percentage		30/04/2015	30	4	2015	Midlands and Wales	370	33	35	8	15	5		2	2								
+yougov	percentage		30/04/2015	30	4	2015	North England	425	26	48	7	12	5			2								
 yougov	percentage		30/04/2015	30	4	2015	Scotland	150	19	27	6	2	1	46										
-yougov	percentage		29/04/2015	29	4	2015	London	233	36	37	11	10	4			2								
-yougov	percentage		29/04/2015	29	4	2015	Rest of South	592	39	25	12	16	7			1								
-yougov	percentage		29/04/2015	29	4	2015	Midlands and Wales	390	35	37	7	14	3		3	0								
-yougov	percentage		29/04/2015	29	4	2015	North England	448	35	46	6	9	3			1								
-yougov	percentage		29/04/2015	29	4	2015	Scotland	159	16	26	7	2	4	45		0								
 mori	regional		29/04/2015	29	4	2015	North	157	39	65	13	20	14			6								
 mori	regional		29/04/2015	29	4	2015	MidlandsMori	192	77	64	7	26	8		5	3								
 mori	regional		29/04/2015	29	4	2015	SouthMori	159	74	27	23	15	19			2								
 mori	regional		29/04/2015	29	4	2015	London	89	37	32	7	4	9											
 mori	regional		29/04/2015	29	4	2015	Scotland	68	10	13	6	1		39										
-yougov	percentage		27/04/2015	27	4	2015	London	272	30	41	11	11	7			0								
-yougov	percentage		27/04/2015	27	4	2015	Rest of South	691	43	26	12	13	5			1								
 comres	regional		28/04/2015	28	4	2015	Scotland	70	19	23	1	2	2	23		1								
 comres	regional		28/04/2015	28	4	2015	North East England	32	10	18	1	2	2			1								
 comres	regional		28/04/2015	28	4	2015	North West England	75	20	39	9	6	0			1								

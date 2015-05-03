@@ -62,8 +62,9 @@ def get_data(file):
             by_party[party] = {"name" : name,
                                 "vote_total" : vote_total,
                                 "vote_percentage" : vote_percentage,
-                                "change_in_percentage": change_in_percentage}
-
+                                "change_in_percentage": change_in_percentage,
+                                "old_votes" : old_votes
+                                }
 
     by_seat = {}
     by_seat["area"] = old_data[seat_name]["area"]
@@ -74,6 +75,12 @@ def get_data(file):
         change = "gain"
     else:
         change = "hold"
+
+    old_turnout = 0
+    for party in by_party:
+        old_turnout += by_party[party]["old_votes"]
+
+    by_seat["old_turnout"] = old_turnout
 
     by_seat["change"] = change
     by_seat["electorate"] = electorate
@@ -93,7 +100,6 @@ def get_data(file):
 
     by_seat["declared_at"] = declared_at
     by_seat["declared_at_simple"] = declared_at_simple
-
 
     live_data[seat_name] = {"seat_info" : by_seat, "party_info" : by_party}
 
@@ -147,7 +153,7 @@ while(True):
         with open("new_info.json", "w") as out:
             json.dump(new_data, out)
         print "updating git"
-        subprocess.call("autorun.sh", shell = True)
+        #subprocess.call("autorun.sh", shell = True)
 
     print "\n" * 3
     seats_declared = total_seats

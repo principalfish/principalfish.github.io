@@ -150,32 +150,3 @@
 #footer {
 	top: -10;
 }
-
-
-#previewmap {
-	position: fixed;
-	z-index : 10000;
-	margin-left: -50px;
-	top: 40%;
-	width: 310px;
-	height: 150px;
-	background: white;
-	border: 1px solid black;
-	border-radius : 15px;
-	padding: 5px;
-}
-
-#previewmap p {
-	width: 100%;
-	text-align: center;
-}
-
-#boldpreview {
-	font-weight: bold;
-}
-
-#nextpreview {
-	position: absolute;
-	bottom: 0;
-	right: 0;
-}

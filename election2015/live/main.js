@@ -39,9 +39,10 @@ d3.selection.prototype.moveToFront = function() {
 						});
 					};
 
-var pageRefreshTotal = 0
+var timeSinceRefresh = 0;
+var pageRefreshTotal = 0;
 // current state of user input filters
-var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}]
+var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}];
 
 // empty arrays for various data
 var seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
@@ -1100,6 +1101,7 @@ function changeRefresh(state){
 
 function autoRefresh () {
 	var refreshRate = 90000;
+
 	var today = new Date();
 	var dd = today.getDate();
 	var mm = today.getMonth() + 1;
@@ -1123,16 +1125,18 @@ function autoRefresh () {
 		}
 
 	}
-
+	
 	if (!(refreshState)) {
 			$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF");
 			setTimeout(function(){
+				timeSinceRefresh += refreshRate;
 				autoRefresh()
 			}, refreshRate)
 		}
 
 	else {
 		setTimeout(function () {
+
 			// remove old map - buggy otherwise
 			$("#refreshbuttonlink").html("Refresh Map + Ticker : ON Rate: " + refreshRate / 1000 +  "s");
 			$("svg .map").remove();
@@ -1148,7 +1152,16 @@ function autoRefresh () {
 			resetFilter()
 			$("#selectareatotals option:eq(0)").prop("selected", true);
 
-			$(document).ready(function(){ getData("new_info.json").done(getSeatInfo)});
+
+			if (timeSinceRefresh > 200000) {
+				$(document).ready(function(){ getData("info.json").done(getSeatInfo)});
+			}
+
+			else {
+				$(document).ready(function(){ getData("new_info.json").done(getSeatInfo)});
+			}
+
+			timeSinceRefresh = 0;
 
 			//console.log(Date())
 			var x = new Date().toLocaleString();

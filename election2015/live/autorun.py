@@ -107,7 +107,7 @@ def get_data(file):
         seat_list.append(seat_name)
 
     now = time.time()
-    if now - declared_at < 360:
+    if now - declared_at < 420:
         new_data[seat_name] = {"seat_info" : by_seat, "party_info" : by_party}
 
 seats_declared = 0

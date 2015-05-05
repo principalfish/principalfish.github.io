@@ -2,6 +2,12 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
+bmg	regional		5/05/2015	5	5	2015	London	92	23	37	17	7	4			4								
+bmg	regional		5/05/2015	5	5	2015	East and West Midlands	142	55	49	14	18	6			0								
+bmg	regional		5/05/2015	5	5	2015	North	205	65	81	16	28	11			4								
+bmg	regional		5/05/2015	5	5	2015	Rest of South	293	127	85	22	51	8			1								
+bmg	regional		5/05/2015	5	5	2015	Scotland	84	10	23	9	2	3	37		1								
+bmg	regional		5/05/2015	5	5	2015	Wales	44	10	15	4	3	2		8									
 survation	regional		5/05/2015	5	5	2015	London	147	55	52	14	19	8			0								
 survation	regional		5/05/2015	5	5	2015	East and West Midlands	208	70	81	14	35	7			0								
 survation	regional		5/05/2015	5	5	2015	North	306	82	139	23	46	13			3								

@@ -2,6 +2,17 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
+comres	regional		5/05/2015	5	5	2015	Scotland	73	10	15	10	3	1	35										
+comres	regional		5/05/2015	5	5	2015	North East England	37	14	12	1	6	0			1								
+comres	regional		5/05/2015	5	5	2015	North West England	98	32	21	11	14	4											
+comres	regional		5/05/2015	5	5	2015	Yorkshire and Humber	73	15	26	7	13	2											
+comres	regional		5/05/2015	5	5	2015	West Midlands	68	25	23	2	7	4											
+comres	regional		5/05/2015	5	5	2015	East Midlands	65	18	30	3	5	1			1								
+comres	regional		5/05/2015	5	5	2015	Wales	45	8	9	2	11	3		4	1								
+comres	regional		5/05/2015	5	5	2015	East of England	83	35	16	5	13	5											
+comres	regional		5/05/2015	5	5	2015	London	123	18	55	4	8	3											
+comres	regional		5/05/2015	5	5	2015	South East England	127	42	18	8	20	5			1								
+comres	regional		5/05/2015	5	5	2015	South West England	73	36	8	9	5	4											
 bmg	regional		5/05/2015	5	5	2015	London	92	23	37	17	7	4			4								
 bmg	regional		5/05/2015	5	5	2015	East and West Midlands	142	55	49	14	18	6			0								
 bmg	regional		5/05/2015	5	5	2015	North	205	65	81	16	28	11			4								
@@ -66,17 +77,6 @@ mori	regional		29/04/2015	29	4	2015	MidlandsMori	192	77	64	7	26	8		5	3
 mori	regional		29/04/2015	29	4	2015	SouthMori	159	74	27	23	15	19			2								
 mori	regional		29/04/2015	29	4	2015	London	89	37	32	7	4	9											
 mori	regional		29/04/2015	29	4	2015	Scotland	68	10	13	6	1		39										
-comres	regional		28/04/2015	28	4	2015	Scotland	70	19	23	1	2	2	23		1								
-comres	regional		28/04/2015	28	4	2015	North East England	32	10	18	1	2	2			1								
-comres	regional		28/04/2015	28	4	2015	North West England	75	20	39	9	6	0			1								
-comres	regional		28/04/2015	28	4	2015	Yorkshire and Humber	64	25	27	3	4	4			0								
-comres	regional		28/04/2015	28	4	2015	West Midlands	59	29	13	3	9	5			1								
-comres	regional		28/04/2015	28	4	2015	East Midlands	51	16	16	6	7	5			2								
-comres	regional		28/04/2015	28	4	2015	Wales	31	8	6	2	8	4		4	0								
-comres	regional		28/04/2015	28	4	2015	East of England	65	26	21	4	8	5			0								
-comres	regional		28/04/2015	28	4	2015	London	84	22	38	9	6	6			1								
-comres	regional		28/04/2015	28	4	2015	South East England	88	33	25	5	15	4			6								
-comres	regional		28/04/2015	28	4	2015	South West England	62	29	10	7	10	5			1								
 bmg	regional		27/04/2015	27	4	2015	London	104	31	37	21	9	5			0								
 bmg	regional		27/04/2015	27	4	2015	East and West Midlands	147	55	49	14	25	2			2								
 bmg	regional		27/04/2015	27	4	2015	North	193	57	71	19	36	11			1								

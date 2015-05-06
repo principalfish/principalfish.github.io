@@ -2,6 +2,13 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
+tns	regional		4/05/2015	4	5	2015	Scotland	57	7	16	5	0	2	24		3								
+tns	regional		4/05/2015	4	5	2015	NE Yorks Humber	88	23	39	4	14	5			2								
+tns	regional		4/05/2015	4	5	2015	North West	66	20	24	5	12	2			1								
+tns	regional		4/05/2015	4	5	2015	East and West Midlands	106	36	30	12	21	7			0								
+tns	regional		4/05/2015	4	5	2015	South East East of England	156	68	39	8	25	13			2								
+tns	regional		4/05/2015	4	5	2015	Greater London	77	22	32	7	11	4			0								
+tns	regional		4/05/2015	4	5	2015	Wales and West	95	37	27	12	9	6		4	0								
 yougov	percentage		5/05/2015	5	5	2015	London	275	40	38	6	11	5			0								
 yougov	percentage		5/05/2015	5	5	2015	Rest of South	698	38	25	15	15	5			2								
 yougov	percentage		5/05/2015	5	5	2015	Midlands and Wales	460	37	39	4	12	4		3	1								
@@ -106,13 +113,6 @@ tns	regional		19/04/2015	19	4	2015	Scotland	457	59	97	27	8	10	239		2
 opinium	regional		24/04/2015	24	4	2015	England	1287	461	428	116	188	85			12								
 opinium	regional		24/04/2015	24	4	2015	Scotland	145	30	38	5	1	1	56		2								
 opinium	regional		24/04/2015	24	4	2015	Wales	80	22	23	7	8	4		3	1								
-tns	regional		20/04/2015	20	4	2015	Scotland	54	8	19	4	1	1	21		0								
-tns	regional		20/04/2015	20	4	2015	NE Yorks Humber	76	19	36	5	11	3			2								
-tns	regional		20/04/2015	20	4	2015	North West	72	26	30	4	7	2			3								
-tns	regional		20/04/2015	20	4	2015	East and West Midlands	99	37	29	4	19	6			3								
-tns	regional		20/04/2015	20	4	2015	South East East of England	149	55	35	10	33	11			4								
-tns	regional		20/04/2015	20	4	2015	Greater London	72	18	31	8	10	5			1								
-tns	regional		20/04/2015	20	4	2015	Wales and West	96	33	31	14	11	4		3									
 icm	regional		19/04/2015	19	4	2015	Scotland	58	8	10	2	3	2	33		1								
 icm	regional		19/04/2015	19	4	2015	Wales	34	8	9	1	5	1		9	0								
 icm	regional		19/04/2015	19	4	2015	North	140	40	64	13	14	4			3								

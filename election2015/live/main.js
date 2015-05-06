@@ -144,12 +144,12 @@ function filterMap(setting){
 	g.selectAll("#regionfiltered")
 		.attr("style", function(d) {
 
-			if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) > majorityhigh )
+			if (parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) > majorityhigh )
 				return "opacity: 0.1"
 
 			})
 		.each(function(d) {
-			if (parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["majority_percentage"]) <= majorityhigh )
+			if (parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) <= majorityhigh )
 				seatsAfterFilter.push(d);
 			});
 
@@ -336,12 +336,12 @@ function seatinfo(d){
 											+ seat_info["change"].toUpperCase() + "</span>&nbsp&nbsp&nbsp" + "<span>" + previousParty + "</span></h3>")
 
 		// majority + turnout
-		$("#information").append("<h3> Majority: " + seat_info["majority_total"] + " = " + seat_info["majority_percentage"].toFixed(2)
+		$("#information").append("<h3> Majority: " + seat_info["maj"] + " = " + seat_info["maj_percent"].toFixed(2)
 												+ "% <span style =\"float: right;\"> Turnout: " + seat_info["percentage_turnout"].toFixed(2) + "%</span></h3>")
 
 		// declaration time
 
-		var onlyTime = seat_info["declared_at_simple"]
+		var onlyTime = seat_info["declared"]
 
 		$("#information").append("<h3> Declared at:  " + onlyTime +  "</h3>")
 
@@ -381,9 +381,9 @@ function piechart(d){
 	var relevant_party_info = seatData[d.properties.name]["party_info"]
 
 	$.each(relevant_party_info, function(d){
-		votes = relevant_party_info[d]["vote_percentage"]
+		votes = relevant_party_info[d]["percent"]
 		if (votes > 0){
-			data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change_in_percentage"]})
+			data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change"]})
 		}
 
 	})
@@ -403,8 +403,8 @@ function piechart(d){
 	// different way of getting other into array (due to slightly difference in other in data)
 	var keys = Object.keys(relevant_party_info);
 
-	if (keys.indexOf("others") != -1 && relevant_party_info["others"]["vote_percentage"] > 0){
-		filterdata.push({party: "others", votes: relevant_party_info["others"]["vote_percentage"], vote_change: relevant_party_info["others"]["change_in_percentage"]});
+	if (keys.indexOf("others") != -1 && relevant_party_info["others"]["percent"] > 0){
+		filterdata.push({party: "others", votes: relevant_party_info["others"]["percent"], vote_change: relevant_party_info["others"]["change"]});
 	}
 
 	// BAR CHART
@@ -903,8 +903,8 @@ function getVoteTotals(area){
 					parties_in_seat = Object.keys(seatData[seat]["party_info"])
 
 					if (parties_in_seat.indexOf(parties[party]) != -1) {
-						totalvotes += seatData[seat]["party_info"][parties[party]]["vote_total"];
-						oldvotetotal += seatData[seat]["party_info"][parties[party]]["old_votes"]
+						totalvotes += seatData[seat]["party_info"][parties[party]]["total"];
+						oldvotetotal += seatData[seat]["party_info"][parties[party]]["old"]
 					}
 
 					}
@@ -1125,7 +1125,7 @@ function autoRefresh () {
 		}
 
 	}
-	
+
 	if (!(refreshState)) {
 			$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF");
 			setTimeout(function(){
@@ -1191,8 +1191,8 @@ function activateTicker(){
 			seat = d.properties.name
 			geometry = d
 
-			var declaredAt = seatData[seat]["seat_info"]["declared_at"];
-			var declaredAtSimple = seatData[seat]["seat_info"]["declared_at_simple"]
+			var declaredAt = seatData[seat]["seat_info"]["timestamp"];
+			var declaredAtSimple = seatData[seat]["seat_info"]["declared"]
 
 			if (filterToTicker.indexOf(seat) != -1){
 

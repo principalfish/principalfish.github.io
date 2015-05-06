@@ -8,6 +8,7 @@ pollingregions = {
 
     "England" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland", "eastofengland", "yorkshireandthehumber", "southwestengland", "westmidlands", "eastmidlands" ],
 
+	"England and Wales" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland", "eastofengland", "yorkshireandthehumber", "southwestengland", "westmidlands", "eastmidlands", "wales"],
     # general regions
     "Scotland" : ["scotland"],
     "Wales" : ["wales"],

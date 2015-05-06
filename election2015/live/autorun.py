@@ -56,14 +56,14 @@ def get_data(file):
             if party == "other" or party == "others":
                 change_in_percentage = ""
             else:
-                change_in_percentage = vote_percentage - old_percentage
+                change_in_percentage = round(vote_percentage - old_percentage, 2)
 
 
             by_party[party] = {"name" : name,
-                                "vote_total" : vote_total,
-                                "vote_percentage" : vote_percentage,
-                                "change_in_percentage": change_in_percentage,
-                                "old_votes" : old_votes
+                                "total" : vote_total,
+                                "percent" : round(vote_percentage, 2),
+                                "change": change_in_percentage,
+                                "old" : old_votes
                                 }
 
     by_seat = {}
@@ -78,7 +78,7 @@ def get_data(file):
 
     old_turnout = 0
     for party in by_party:
-        old_turnout += by_party[party]["old_votes"]
+        old_turnout += by_party[party]["old"]
 
     by_seat["old_turnout"] = old_turnout
 
@@ -89,17 +89,17 @@ def get_data(file):
 
     all_the_votes = []
     for candidate in by_party:
-        all_the_votes.append(by_party[candidate]["vote_total"])
+        all_the_votes.append(by_party[candidate]["total"])
 
 
     all_the_votes.remove(max(all_the_votes))
     majority_total = max_party[1] - max(all_the_votes)
     majority_percentage = 100 * majority_total / float(turnout)
-    by_seat["majority_total"] = majority_total
-    by_seat["majority_percentage"] = majority_percentage
+    by_seat["maj"] = majority_total
+    by_seat["maj_percent"] = round(majority_percentage, 2)
 
-    by_seat["declared_at"] = declared_at
-    by_seat["declared_at_simple"] = declared_at_simple
+    by_seat["timestamp"] = declared_at
+    by_seat["declared"] = declared_at_simple
 
     live_data[seat_name] = {"seat_info" : by_seat, "party_info" : by_party}
 

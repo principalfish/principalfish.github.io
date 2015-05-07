@@ -2,6 +2,11 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
+mori	regional		7/05/2015	7	5	2015	North																	
+mori	regional		7/05/2015	7	5	2015	MidlandsMori																	
+mori	regional		7/05/2015	7	5	2015	SouthMori																	
+mori	regional		7/05/2015	7	5	2015	London																	
+mori	regional		7/05/2015	7	5	2015	Scotland																	
 ashcroft	regional		7/05/2015	7	5	2015	South East	471	177	143	51	49	44			8								
 ashcroft	regional		7/05/2015	7	5	2015	Midlands	455	171	133	43	63	36			10								
 ashcroft	regional		7/05/2015	7	5	2015	North England	406	115	188	26	56	16			4								

@@ -191,8 +191,6 @@ while(True):
             ss_actual = ""
             ss_turnout = ""
 
-            print seat
-
             if seat in live_data:
                 ss_turnout = live_data[seat]["seat_info"]["percentage_turnout"]
                 ss_actual = live_data[seat]["seat_info"]["winning_party"]
@@ -213,14 +211,13 @@ while(True):
             if incumbent == "speaker" or incumbent == "respect" or incumbent == "independent":
                 incumbent = "other"
 
-            print seat, incumbent
 
             for_spreadsheet.append({
                 "id" : old_data[seat]["off_id"],
                 "name" : seat,
                 "incumbent" : party_map[old_data[seat]["incumbent"]],
-                "incumbent_vote" : round(100 * old_data[seat][incumbent] / float(old_data[seat]["turnout"]), 2),
-                "incumbent_majority" : old_data[seat]["majority_percent_2010"],
+                "vote" : round(100 * old_data[seat][incumbent] / float(old_data[seat]["turnout"]), 2),
+                "majority" : old_data[seat]["majority_percent_2010"],
                 "closest_party" : party_map[ss_second_large],
                 "expected" : "",
                 "actual" : party_map[ss_actual],

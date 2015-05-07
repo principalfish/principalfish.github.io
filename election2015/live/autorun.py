@@ -39,6 +39,7 @@ party_map = {
     "speaker" : "Speaker",
     "independent" : "Independent",
     "respect" : "Respect",
+    "-" : "-",
     "" : ""
 }
 
@@ -187,9 +188,9 @@ while(True):
         print "updating spreadsheet json"
 
         for seat in old_data:
-            ss_change = ""
-            ss_actual = ""
-            ss_turnout = ""
+            ss_change = "-"
+            ss_actual = "-"
+            ss_turnout = "-"
 
             if seat in live_data:
                 ss_turnout = live_data[seat]["seat_info"]["percentage_turnout"]
@@ -219,11 +220,15 @@ while(True):
                 "vote" : round(100 * old_data[seat][incumbent] / float(old_data[seat]["turnout"]), 2),
                 "majority" : old_data[seat]["majority_percent_2010"],
                 "closest_party" : party_map[ss_second_large],
-                "expected" : "",
+                "expected" : "-",
                 "actual" : party_map[ss_actual],
                 "turnout" : ss_turnout,
                 "change" : ss_change
                 })
+
+            ss_change = "-"
+            ss_actual = "-"
+            ss_turnout = "-"
 
 
         with open("spreadsheet_info.json", "w") as out_file:

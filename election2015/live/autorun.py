@@ -13,6 +13,7 @@ seat_map = json.loads(seat_dict)
 old = open("old_data.json").read()
 old_data = json.loads(old)
 
+
 live_data = {}
 new_data = {}
 
@@ -184,55 +185,55 @@ while(True):
         #subprocess.call("autorun.sh", shell = True)
 
         ## for spreadsheet update
+        #
+        # print "updating spreadsheet json"
+        #
+        # for seat in old_data:
+        #     ss_change = "-"
+        #     ss_actual = "-"
+        #     ss_turnout = "-"
+        #
+        #     if seat in live_data:
+        #         ss_turnout = live_data[seat]["seat_info"]["percentage_turnout"]
+        #         ss_actual = live_data[seat]["seat_info"]["winning_party"]
+        #         if live_data[seat]["seat_info"]["change"] == "gain":
+        #             ss_change = party_map[live_data[seat]["seat_info"]["winning_party"]] +  " gain from " + party_map[old_data[seat]["incumbent"]]
+        #
+        #     old_votes_for_spreadsheet = {}
+        #
+        #     for party in parties:
+        #         ss_incumbent = old_data[seat]["incumbent"]
+        #         if party != ss_incumbent:
+        #             old_votes_for_spreadsheet[party] =  old_data[seat][party]
+        #
+        #     ss_second_large = max(old_votes_for_spreadsheet.iteritems(), key=operator.itemgetter(1))[0]
+        #
+        #     incumbent = old_data[seat]["incumbent"]
+        #
+        #     if incumbent == "speaker" or incumbent == "respect" or incumbent == "independent":
+        #         incumbent = "other"
+        #
+        #
+        #     for_spreadsheet.append({
+        #         "id" : old_data[seat]["off_id"],
+        #         "name" : seat,
+        #         "incumbent" : party_map[old_data[seat]["incumbent"]],
+        #         "vote" : round(100 * old_data[seat][incumbent] / float(old_data[seat]["turnout"]), 2),
+        #         "majority" : old_data[seat]["majority_percent_2010"],
+        #         "closest_party" : party_map[ss_second_large],
+        #         "expected" : "-",
+        #         "actual" : party_map[ss_actual],
+        #         "turnout" : ss_turnout,
+        #         "change" : ss_change
+        #         })
+        #
+        #     ss_change = "-"
+        #     ss_actual = "-"
+        #     ss_turnout = "-"
 
-        print "updating spreadsheet json"
 
-        for seat in old_data:
-            ss_change = "-"
-            ss_actual = "-"
-            ss_turnout = "-"
-
-            if seat in live_data:
-                ss_turnout = live_data[seat]["seat_info"]["percentage_turnout"]
-                ss_actual = live_data[seat]["seat_info"]["winning_party"]
-                if live_data[seat]["seat_info"]["change"] == "gain":
-                    ss_change = party_map[live_data[seat]["seat_info"]["winning_party"]] +  " gain from " + party_map[old_data[seat]["incumbent"]]
-
-            old_votes_for_spreadsheet = {}
-
-            for party in parties:
-                ss_incumbent = old_data[seat]["incumbent"]
-                if party != ss_incumbent:
-                    old_votes_for_spreadsheet[party] =  old_data[seat][party]
-
-            ss_second_large = max(old_votes_for_spreadsheet.iteritems(), key=operator.itemgetter(1))[0]
-
-            incumbent = old_data[seat]["incumbent"]
-
-            if incumbent == "speaker" or incumbent == "respect" or incumbent == "independent":
-                incumbent = "other"
-
-
-            for_spreadsheet.append({
-                "id" : old_data[seat]["off_id"],
-                "name" : seat,
-                "incumbent" : party_map[old_data[seat]["incumbent"]],
-                "vote" : round(100 * old_data[seat][incumbent] / float(old_data[seat]["turnout"]), 2),
-                "majority" : old_data[seat]["majority_percent_2010"],
-                "closest_party" : party_map[ss_second_large],
-                "expected" : "-",
-                "actual" : party_map[ss_actual],
-                "turnout" : ss_turnout,
-                "change" : ss_change
-                })
-
-            ss_change = "-"
-            ss_actual = "-"
-            ss_turnout = "-"
-
-
-        with open("spreadsheet_info.json", "w") as out_file:
-            json.dump(for_spreadsheet, out_file)
+        # with open("spreadsheet_info.json", "w") as out_file:
+        #     json.dump(for_spreadsheet, out_file)
 
     print "\n" * 3
     seats_declared = total_seats

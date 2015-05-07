@@ -1100,7 +1100,6 @@ function changeRefresh(state){
 // auto refresh elements
 
 function autoRefresh () {
-	var refreshRate = 90000;
 
 	var today = new Date();
 	var dd = today.getDate();
@@ -1110,7 +1109,7 @@ function autoRefresh () {
 	//alter refresh delay rate based on time -
 	// for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
 
-	if (mm == 5 && dd == 8){
+	if (mm == 6 && dd == 8){
 
 		if (hh >= 0 && hh < 2){
 			refreshRate = 60000;

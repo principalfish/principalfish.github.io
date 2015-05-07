@@ -2,21 +2,21 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional			11	2	2015	null	10000	3407	3504	997	1431	504			157								
 me	regional			11	2	2015	null	10000	1161	2959	858	191	199	4561		71								
 me	regional			11	2	2015	null	10000	2192	4201	672	1334	424		997	180								
-mori	regional		7/05/2015	7	5	2015	North																	
-mori	regional		7/05/2015	7	5	2015	MidlandsMori																	
-mori	regional		7/05/2015	7	5	2015	SouthMori																	
-mori	regional		7/05/2015	7	5	2015	London																	
-mori	regional		7/05/2015	7	5	2015	Scotland																	
+populus	regional		7/05/2015	7	5	2015	South East	637	239	190	66	88	44			9								
+populus	regional		7/05/2015	7	5	2015	Midlands	617	263	179	55	105	22			3								
+populus	regional		7/05/2015	7	5	2015	North England	548	156	237	44	72	32			8								
+populus	regional		7/05/2015	7	5	2015	Wales and South West	323	93	99	46	49	16		14	7								
+populus	regional		7/05/2015	7	5	2015	Scotland	224	29	67	17	8	8	95										
 ashcroft	regional		7/05/2015	7	5	2015	South East	471	177	143	51	49	44			8								
 ashcroft	regional		7/05/2015	7	5	2015	Midlands	455	171	133	43	63	36			10								
 ashcroft	regional		7/05/2015	7	5	2015	North England	406	115	188	26	56	16			4								
 ashcroft	regional		7/05/2015	7	5	2015	Wales and South West	255	87	68	33	31	17		14	5								
 ashcroft	regional		7/05/2015	7	5	2015	Scotland	167	18	41	11	2	4	91		2								
-icm	regional		7/05/2015	7	5	2015	Scotland	89	13	18	4	4	0	47		3								
-icm	regional		7/05/2015	7	5	2015	Wales	52	9	16	6	10	1		10	1								
-icm	regional		7/05/2015	7	5	2015	North	209	63	103	14	24	4			1								
-icm	regional		7/05/2015	7	5	2015	Midlands	235	98	87	9	34	2			5								
-icm	regional		7/05/2015	7	5	2015	SouthICM	302	123	89	35	34	18			3								
+icm	regional		7/05/2015	7	5	2015	Scotland	117	15	26	5	4	2	62		3								
+icm	regional		7/05/2015	7	5	2015	Wales	66	11	22	7	14	1		10	1								
+icm	regional		7/05/2015	7	5	2015	North	279	74	142	19	31	11			2								
+icm	regional		7/05/2015	7	5	2015	Midlands	291	122	104	13	44	5			4								
+icm	regional		7/05/2015	7	5	2015	SouthICM	404	165	117	44	48	24			5								
 survation	regional		6/05/2015	6	5	2015	Scotland	1443	224	358	86	29	34	706		5								
 survation	regional		6/05/2015	6	5	2015	London	448	156	179	41	51	18			4								
 survation	regional		6/05/2015	6	5	2015	East and West Midlands	578	217	197	35	108	18			3								
@@ -94,11 +94,6 @@ populus	regional		3/05/2015	3	5	2015	Scotland	134	22	33	10	3	5	61
 opinium	regional		30/04/2015	30	4	2015	England	1324	501	457	99	188	82			8								
 opinium	regional		30/04/2015	30	4	2015	Scotland	158	21	39	12	4	2	50										
 opinium	regional		30/04/2015	30	4	2015	Wales	87	16	34	8	13	1		9									
-populus	regional		30/04/2015	30	4	2015	South East	356	139	106	39	51	18			3								
-populus	regional		30/04/2015	30	4	2015	Midlands	353	139	108	25	63	15			3								
-populus	regional		30/04/2015	30	4	2015	North England	314	86	138	22	50	15			1								
-populus	regional		30/04/2015	30	4	2015	Wales and South West	179	59	61	14	32	6		6	1								
-populus	regional		30/04/2015	30	4	2015	Scotland	133	23	37	8	6		58		0								
 mori	regional		29/04/2015	29	4	2015	North	157	39	65	13	20	14			6								
 mori	regional		29/04/2015	29	4	2015	MidlandsMori	192	77	64	7	26	8		5	3								
 mori	regional		29/04/2015	29	4	2015	SouthMori	159	74	27	23	15	19			2								

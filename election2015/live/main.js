@@ -1100,76 +1100,78 @@ function changeRefresh(state){
 // auto refresh elements
 
 function autoRefresh () {
-
-	var today = new Date();
-	var dd = today.getDate();
-	var mm = today.getMonth() + 1;
-	var hh = today.getHours();
-
-	//alter refresh delay rate based on time -
-	// for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
-
-	if (mm == 6 && dd == 8){
-
-		if (hh >= 0 && hh < 2){
-			refreshRate = 60000;
-		}
-
-		if (hh >= 2 && hh < 5){
-			refreshRate = 30000;
-		}
-
-		if (hh >= 5 && hh < 7){
-			refreshRate = 60000;
-		}
-
-	}
-
-	if (!(refreshState)) {
-			$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF");
-			setTimeout(function(){
-				timeSinceRefresh += refreshRate;
-				autoRefresh()
-			}, refreshRate)
-		}
-
-	else {
-		setTimeout(function () {
-
-			// remove old map - buggy otherwise
-			$("#refreshbuttonlink").html("Refresh Map + Ticker : ON Rate: " + refreshRate / 1000 +  "s");
-			$("svg .map").remove();
-			$("svg .not_here").remove();
-			$("svg .faded_not_here").remove();
-			// reacquire data + reload map
-			seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
-			searchSeatData = []; // for use with search box
-			seatNames = []; // for use with search box
-			seatInfoForTicker = [];
-			filterToTicker = [];
-
-			resetFilter()
-			$("#selectareatotals option:eq(0)").prop("selected", true);
-
-
-			if (timeSinceRefresh > 200000) {
-				$(document).ready(function(){ getData("info.json").done(getSeatInfo)});
-			}
-
-			else {
-				$(document).ready(function(){ getData("new_info.json").done(getSeatInfo)});
-			}
-
-			timeSinceRefresh = 0;
-
-			//console.log(Date())
-			var x = new Date().toLocaleString();
-			document.getElementById("lastupdated").innerHTML = x;
-
-			autoRefresh();
-
-		}, refreshRate )//x / 1000 = seconds
-		}
+	// null
+	// var refreshRate = 10000000000;
+	//
+	// var today = new Date();
+	// var dd = today.getDate();
+	// var mm = today.getMonth() + 1;
+	// var hh = today.getHours();
+	//
+	// //alter refresh delay rate based on time -
+	// // for night itself - 11-12: 90s, 12-2 : 60s, 2-5: 30s, 5-7: 60s, 7-: 90 seconds
+	//
+	// if (mm == 6 && dd == 8){
+	//
+	// 	if (hh >= 0 && hh < 2){
+	// 		refreshRate = 60000;
+	// 	}
+	//
+	// 	if (hh >= 2 && hh < 5){
+	// 		refreshRate = 30000;
+	// 	}
+	//
+	// 	if (hh >= 5 && hh < 7){
+	// 		refreshRate = 60000;
+	// 	}
+	//
+	// }
+	//
+	// if (!(refreshState)) {
+	// 		$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF");
+	// 		setTimeout(function(){
+	// 			timeSinceRefresh += refreshRate;
+	// 			autoRefresh()
+	// 		}, refreshRate)
+	// 	}
+	//
+	// else {
+	// 	setTimeout(function () {
+	//
+	// 		// remove old map - buggy otherwise
+	// 		$("#refreshbuttonlink").html("Refresh Map + Ticker : ON Rate: " + refreshRate / 1000 +  "s");
+	// 		$("svg .map").remove();
+	// 		$("svg .not_here").remove();
+	// 		$("svg .faded_not_here").remove();
+	// 		// reacquire data + reload map
+	// 		seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
+	// 		searchSeatData = []; // for use with search box
+	// 		seatNames = []; // for use with search box
+	// 		seatInfoForTicker = [];
+	// 		filterToTicker = [];
+	//
+	// 		resetFilter()
+	// 		$("#selectareatotals option:eq(0)").prop("selected", true);
+	//
+	//
+	// 		if (timeSinceRefresh > 200000) {
+	// 			$(document).ready(function(){ getData("info.json").done(getSeatInfo)});
+	// 		}
+	//
+	// 		else {
+	// 			$(document).ready(function(){ getData("new_info.json").done(getSeatInfo)});
+	// 		}
+	//
+	// 		timeSinceRefresh = 0;
+	//
+	// 		//console.log(Date())
+	// 		var x = new Date().toLocaleString();
+	// 		document.getElementById("lastupdated").innerHTML = x;
+	//
+	// 		autoRefresh();
+	//
+	// 	}, refreshRate )//x / 1000 = seconds
+	// 	}
 }
 
 var refreshState = true;

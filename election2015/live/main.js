@@ -343,7 +343,7 @@ function seatinfo(d){
 
 		var onlyTime = seat_info["declared"]
 
-		$("#information").append("<h3> Declared at:  " + onlyTime +  "</h3>")
+	//	$("#information").append("<h3> Declared at:  " + onlyTime +  "</h3>")
 
 		//////////// CHANGE**///////////
 		$("#information-pie").html(piechart(d));

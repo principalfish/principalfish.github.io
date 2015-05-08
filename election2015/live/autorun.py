@@ -182,7 +182,7 @@ while(True):
         with open("new_info.json", "w") as out:
             json.dump(new_data, out)
         print "updating git"
-        subprocess.call("autorun.sh", shell = True)
+        #subprocess.call("autorun.sh", shell = True)
 
         ## for spreadsheet update
         #

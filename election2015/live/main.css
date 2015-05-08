@@ -1,16 +1,5 @@
 /*for overwriting other main.css*/
-#wrapper {
-	width: 1680px;
-}
 
-#top {
-	width: 1652px;
-}
-
-#left {
-  width :600px;
-	border-right: 0
-}
 
 #choosemode {
 	padding-bottom: 10px;
@@ -26,54 +15,6 @@
   max-height: 52%;
 }
 
-#mid {
-	float: left;
-	background: #99CCFF;
-  width: 299px;
-  height: 900px;
-	overflow: auto;
-	border-left: 1px solid black;
-	border-bottom: 1px solid black;
-	border-right: 1px solid black;
-}
-
-#refreshbutton {
-	width: 100%;
-	background-color: black;
-	padding-top: 1px;
-	padding-bottom: 1px;
-	margin-bottom: 2px;
-	text-align: center;
-}
-
-#refreshbutton a{
-	color: white;
-}
-
-#refreshbutton a:hover{
-	color: orange;
-}
-
-#refreshbuttonlink {
-}
-
-#ticker {
-}
-
-#ticker td{
-  	cursor:pointer;
-    font-size: 1.2em;
-}
-
-#ticker tr:hover{
-  	opacity: 0.5;
-}
-
-.tickerSeats td{
-	border-bottom: 3px solid #99CCFF;
- 	padding-bottom: 2px;
-	padding-top: 2px;
-}
 
 
 #information {

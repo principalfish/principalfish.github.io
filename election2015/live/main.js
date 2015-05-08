@@ -209,7 +209,7 @@ function generateSeatList(){
 
 			});
 
-			activateTicker()
+			// activateTicker()
 		}
 
 function zoomToClickedFilteredSeat(d){
@@ -596,7 +596,7 @@ function loadmap(){
 
 			});
 
-			activateTicker();
+			// activateTicker();
 
 	});
 }
@@ -1038,68 +1038,68 @@ function alterTable(area, holdingarray){
   }
 }
 
-function electionTimer(){
-	var today = new Date();
-	var targetDate = new Date("May 7, 2015 22:00:00")
-	var diff = targetDate.getTime() - today.getTime();
-
-	var days = String(Math.floor(diff / (1000 * 60 * 60 * 24)));
-	var hours =  String(Math.floor(diff / (1000 * 60 * 60) % 24));
-
-	var minutes = String(Math.floor(diff / (1000 * 60) % 60));
-	var seconds = String(Math.floor(diff / 1000 % 60));
-
-
-	if (days == "0" && hours == "0" && minutes == "0" && seconds == "0"){
-		$("#electioncountdown").html("");
-		return
-	}
-
-	else {
-		while (hours.length < 2){
-			hours = "0" + hours;
-		}
-
-		while (minutes.length < 2){
-			minutes = "0" + minutes;
-		}
-		while (seconds.length < 2){
-			seconds = "0" + seconds;
-		}
-
-		var daysString;
-
-		if (days == 1){
-			daysString = " day ";
-			}
-		else {
-			daysString = " days ";
-		}
-
-		var toWrite = "Polls close in " + days + daysString + hours +  ":" + minutes  + ":" + seconds
-
-		$("#electioncountdown").html(toWrite);
-
-		setTimeout(function () {
-			electionTimer()
-		}, 100)
-
-	}
-}
-
-function changeRefresh(state){
-	if (state == false){
-		$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF - will refresh one more time")
-
-	}
-	if (state == true){
-		$("#refreshbuttonlink").html("Refresh Map + Ticker : ON");
-	}
-}
-
-// auto refresh elements
-
-function autoRefresh () {
+// function electionTimer(){
+// 	var today = new Date();
+// 	var targetDate = new Date("May 7, 2015 22:00:00")
+// 	var diff = targetDate.getTime() - today.getTime();
+//
+// 	var days = String(Math.floor(diff / (1000 * 60 * 60 * 24)));
+// 	var hours =  String(Math.floor(diff / (1000 * 60 * 60) % 24));
+//
+// 	var minutes = String(Math.floor(diff / (1000 * 60) % 60));
+// 	var seconds = String(Math.floor(diff / 1000 % 60));
+//
+//
+// 	if (days == "0" && hours == "0" && minutes == "0" && seconds == "0"){
+// 		$("#electioncountdown").html("");
+// 		return
+// 	}
+//
+// 	else {
+// 		while (hours.length < 2){
+// 			hours = "0" + hours;
+// 		}
+//
+// 		while (minutes.length < 2){
+// 			minutes = "0" + minutes;
+// 		}
+// 		while (seconds.length < 2){
+// 			seconds = "0" + seconds;
+// 		}
+//
+// 		var daysString;
+//
+// 		if (days == 1){
+// 			daysString = " day ";
+// 			}
+// 		else {
+// 			daysString = " days ";
+// 		}
+//
+// 		var toWrite = "Polls close in " + days + daysString + hours +  ":" + minutes  + ":" + seconds
+//
+// 		$("#electioncountdown").html(toWrite);
+//
+// 		setTimeout(function () {
+// 			electionTimer()
+// 		}, 100)
+//
+// 	}
+// }
+// //
+// function changeRefresh(state){
+// 	if (state == false){
+// 		$("#refreshbuttonlink").html("Refresh Map + Ticker : OFF - will refresh one more time")
+//
+// 	}
+// 	if (state == true){
+// 		$("#refreshbuttonlink").html("Refresh Map + Ticker : ON");
+// 	}
+// }
+//
+// // auto refresh elements
+//
+// function autoRefresh () {
 	// null
 	// var refreshRate = 10000000000;
 	//
@@ -1171,69 +1171,69 @@ function autoRefresh () {
 	// 		autoRefresh();
 	//
 	// 	}, refreshRate )//x / 1000 = seconds
-	// 	}
-}
-
-var refreshState = true;
-autoRefresh();
-
-var seatInfoForTicker = [];
-// var gainSeats = [];
-
-function activateTicker(){
-
-	seatInfoForTicker = [];
-
-	$(".tickerSeats").remove();
-
-	d3.selectAll(".map")
-		.each(function(d){
-
-			seat = d.properties.name
-			geometry = d
-
-			var declaredAt = seatData[seat]["seat_info"]["timestamp"];
-			var declaredAtSimple = seatData[seat]["seat_info"]["declared"]
-
-			if (filterToTicker.indexOf(seat) != -1){
-
-				seatInfoForTicker.push({"name" : seat,
-																"declared_at" : declaredAt,
-																"declared_at_simple" : declaredAtSimple,
-																"winning_party" : seatData[seat]["seat_info"]["winning_party"],
-																"change" : seatData[seat]["seat_info"]["change"],
-																"geometry" : geometry,
-																"id" : d.properties.info_id
-																	})
-					}
-			})
-
-		seatInfoForTicker.sort(function(a, b){
-				return b.declared_at - a.declared_at;
-
-		});
-
-		$.each(seatInfoForTicker, function(i){
-			var seatinfo = seatInfoForTicker[i]
-
-			$("#ticker").append("<tr id=\"ticker" + seatinfo.id + "\" class=\"tickerSeats "  + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\">" +
-													"<td style=\"padding-right: 8px\";>" + seatinfo.declared_at_simple + "</td ><td style=\"padding-right: 8px; width: 100%;\">"
-													+ seatinfo.name + "</td><td style=\"padding-right: 8px\">"
-													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
-
-			if (currentSeats.indexOf(seatinfo.name) == -1){
-			//	console.log(seatinfo.name)
-				currentSeats.push(seatinfo.name)
-				var id = "#ticker" + seatinfo.id;
-				var mapID = "#i" + seatinfo.id;
-
-				if (pageRefreshTotal > 1 && !(isIE)){
-					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
-					$(mapID).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
-				}
-			}
-		});
-}
+// 	// 	}
+// }
+//
+// var refreshState = true;
+// autoRefresh();
+//
+// var seatInfoForTicker = [];
+// // var gainSeats = [];
+//
+// function activateTicker(){
+//
+// 	seatInfoForTicker = [];
+//
+// 	$(".tickerSeats").remove();
+//
+// 	d3.selectAll(".map")
+// 		.each(function(d){
+//
+// 			seat = d.properties.name
+// 			geometry = d
+//
+// 			var declaredAt = seatData[seat]["seat_info"]["timestamp"];
+// 			var declaredAtSimple = seatData[seat]["seat_info"]["declared"]
+//
+// 			if (filterToTicker.indexOf(seat) != -1){
+//
+// 				seatInfoForTicker.push({"name" : seat,
+// 																"declared_at" : declaredAt,
+// 																"declared_at_simple" : declaredAtSimple,
+// 																"winning_party" : seatData[seat]["seat_info"]["winning_party"],
+// 																"change" : seatData[seat]["seat_info"]["change"],
+// 																"geometry" : geometry,
+// 																"id" : d.properties.info_id
+// 																	})
+// 					}
+// 			})
+//
+// 		seatInfoForTicker.sort(function(a, b){
+// 				return b.declared_at - a.declared_at;
+//
+// 		});
+//
+// 		$.each(seatInfoForTicker, function(i){
+// 			var seatinfo = seatInfoForTicker[i]
+//
+// 			$("#ticker").append("<tr id=\"ticker" + seatinfo.id + "\" class=\"tickerSeats "  + seatinfo.winning_party + "\" onclick=\"zoomToClickedFilteredSeat(seatInfoForTicker[" + i + "].geometry)\">" +
+// 													"<td style=\"padding-right: 8px\";>" + seatinfo.declared_at_simple + "</td ><td style=\"padding-right: 8px; width: 100%;\">"
+// 													+ seatinfo.name + "</td><td style=\"padding-right: 8px\">"
+// 													+ seatinfo.change.toUpperCase()	+ "</td></tr>")
+//
+// 			if (currentSeats.indexOf(seatinfo.name) == -1){
+// 			//	console.log(seatinfo.name)
+// 				currentSeats.push(seatinfo.name)
+// 				var id = "#ticker" + seatinfo.id;
+// 				var mapID = "#i" + seatinfo.id;
+//
+// 				if (pageRefreshTotal > 1 && !(isIE)){
+// 					$(id).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
+// 					$(mapID).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000).fadeOut(2000).fadeIn(2000);
+// 				}
+// 			}
+// 		});
+// }
 
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';

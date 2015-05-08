@@ -26,8 +26,7 @@
 			<div id="top">
 				<h2>UK Election Maps - LIVE &nbsp;&nbsp;</h2>
 
-				<script>
-					electionTimer();
+				<script>					
 					document.getElementById("nightmode").disabled = true;
 				</script>
 
@@ -40,11 +39,6 @@
 				<div id="menu">
 
 				</div>
-			</div>
-
-
-			<div id ="notworking">
-					<h1 style=" top: 250px; left: 500px; position: absolute; width: 600px; border: 5px solid black; height: 500px, z-index:10000; background-color: white;"> Sorry not working. Check out <a href="http://www.bbc.co.uk/news/election/2015/results">BBC results site</h1>
 			</div>
 
 			<div id ="farleft">
@@ -146,7 +140,7 @@
 
 					<script>
 
-						var width = 600, // width and height of map
+						var width = 750, // width and height of map
 							height = 900;
 							active = d3.select(null);
 
@@ -187,15 +181,6 @@
 							.call(zoom.event);
 
 				</script>
-			</div>
-
-			<div id="mid">
-				<div id="refreshbutton">
-					<h5><a id="refreshbuttonlink" href="#" onclick="refreshState = !(refreshState); changeRefresh(refreshState)">Refresh Map + Ticker : ON</a><h5>
-				</div>
-
-				<div id="ticker">
-				</div>
 			</div>
 
 

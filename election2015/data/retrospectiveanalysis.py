@@ -168,7 +168,7 @@ class Seat(object):
             new = seatchange * partypercent
 
             if self.incumbent == "libdems" and party == "libdems":
-                new += 5
+                new += 8
 
             elif self.incumbent == "ukip" and party == "ukip":
                 new += 8
@@ -177,10 +177,10 @@ class Seat(object):
                 new += 8
 
             elif self.incumbent == "labour" and party == "labour":
-                new += 0
+                new += 2
 
             elif self.incumbent == "conservative" and party == "conservative":
-                new += 3
+                new += 1
 
             return new
 

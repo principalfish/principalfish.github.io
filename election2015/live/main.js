@@ -33,6 +33,11 @@
 
 //add to d3js prototype
 // brings elements to top when (for use when clicking on seat)
+
+
+
+
+
 d3.selection.prototype.moveToFront = function() {
 							return this.each(function(){
 							this.parentNode.appendChild(this);
@@ -52,6 +57,20 @@ var filterToTicker = [];
 var currentSeats = []; // for use flashing new se
 var totalElectorate = 0;
 var oldElectorate = 0;
+var previousTotals = {
+	"eastmidlands": 2180243,
+	"eastofengland": 2871212,
+	"london": 3348875,
+	"northeastengland": 1161554,
+	"northernireland": 661055,
+	"northwestengland": 3205582,
+	"scotland": 2456365,
+	"southeastengland": 4274287,
+	"southwestengland": 2773443,
+	"wales": 1441758,
+	"westmidlands": 2640572,
+	"yorkshireandthehumber": 2368363
+}
 
 // control flow for analysing user filter inputs
 function filterMap(setting){
@@ -837,6 +856,8 @@ function getVoteTotals(area){
 
     var areas = [];
 
+
+
     if (area == "all"){
       areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);
     }
@@ -852,16 +873,23 @@ function getVoteTotals(area){
       areas.push(area);
     }
 
+
+
 		var totalvotescast = 0;
+
 		var oldturnout = 0;
 
 		$.each(seatData, function(seat){
 
 			if (areas.indexOf(seatData[seat]["seat_info"]["area"]) != -1 ){
 				totalvotescast += parseInt(seatData[seat]["seat_info"]["turnout"]);
-				oldturnout += parseInt(seatData[seat]["seat_info"]["old_turnout"]);
+
 			}
 		});
+
+		$.each(areas, function(area){
+			oldturnout +=  previousTotals[areas[area]]
+		})
 
 		var holdingArray = [];
 		var totalseats = 0;
@@ -933,6 +961,9 @@ function getVoteTotals(area){
 				holdingArray.push(info);
 			}
 		});
+
+		console.log(area, totalvotescast)
+		console.log(oldturnout)
 
 		var others = {"code": "other", "seats" : otherSeatssum, "change": 0, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
 		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : " "};

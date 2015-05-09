@@ -107,6 +107,7 @@ def get_data(file):
     old_turnout = 0
     for party in by_party:
         old_turnout += by_party[party]["old"]
+    print old_turnout
 
     by_seat["old_turnout"] = old_turnout
 

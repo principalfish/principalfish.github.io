@@ -962,9 +962,6 @@ function getVoteTotals(area){
 			}
 		});
 
-		console.log(area, totalvotescast)
-		console.log(oldturnout)
-
 		var others = {"code": "other", "seats" : otherSeatssum, "change": 0, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
 		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : " "};
 		var stupidcsvextrarow = {"code": "", "seats" : undefined, "change": undefined, "votes" : "", "votepercent" : undefined};

@@ -335,6 +335,14 @@ function seatinfo(d){
 	if (d.properties.name in seatData){
 		seat_info = seatData[d.properties.name]["seat_info"]
 
+		if (seat_info["incumbent"] == "speaker" || seat_info["incumbent"] == "independent"){
+			seat_info["incumbent"] = "other"
+		}
+
+		if (seat_info["incumbent"] == seat_info["winning_party"]){
+			seat_info["change"] = "hold"
+		}
+
 		//$("#information").addClass(seat_info["winning_party"])
 
 		// seatname and region

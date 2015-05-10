@@ -607,6 +607,12 @@ function loadmap(){
 
 			});
 
+		g.append("path")
+			.datum(topojson.mesh(uk, uk.objects.map, function(a, b){
+				return seatData[a.properties.name]["seat_info"]["area"] != seatData[b.properties.name]["seat_info"]["area"] && a != b; }))
+			.attr("d", path)
+			.attr("class", "boundaries");
+
 			// activateTicker();
 
 	});

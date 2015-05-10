@@ -84,8 +84,6 @@ class Seat(object):
                             "sinnfein" :[self.sinnfein, 0, 0, 0, 0, 0, 0, 0], "snp" : [self.snp, 0, 0, 0, 0, 0, 0, 0],
                             "ukip" : [self.ukip, 0, 0, 0, 0, 0, 0, 0], "uu" : [self.uu, 0, 0, 0, 0, 0, 0, 0]}
 
-        self.seatpoll = False
-        self.seatpollweight = 0
 
     #  set partyinfo[party][1] to percentage
     def getseatpercentages(self):
@@ -148,7 +146,7 @@ class Seat(object):
 
         if seatrelativetoarea == 0:
             return 0
-        #
+
         # # #    uns
         # else:
         #     new = partypercent + areanumericalchange
@@ -235,24 +233,6 @@ class Seat(object):
         # if self.seat == "Berwick-upon-Tweed":
         #     for key, value in (self.partyinfo).iteritems():
         #         print key, value
-
-
-    def seatpollanalysis(self):
-
-        if self.seatpoll == True:
-            #apply seatpoll absed on weight of poll
-            sum = 0
-            for key, value in self.partyinfo.iteritems():
-                diff = value[6] - value[3]
-                diff *= self.seatpollweight
-                value[6] -= diff
-                sum += value[6]
-
-            #normalise again
-            normaliser = 100 / sum
-            for key, value in (self.partyinfo).iteritems():
-                value[6] *= normaliser
-
 
 
     # multiplies new turnout (currently increased by 1.02) by percentages to get new seat vote totals per party
@@ -405,28 +385,6 @@ def getregionalchange(area):
     for property, value in vars(regionalresults[area]).iteritems():
         array2[property] = value # add 2010 regional results to array 2
 
-    # apply reversion factor
-    # function of days until election
-    # takes percentages in array1 and reverts them toward the 2010 %ages in array2
-
-    # reverison linearly proportional to dyas left
-    a = date(2015, 5, 7) #election day
-    b = date.today()
-    daystoelection = (a - b).days
-    # daystoelection = 1
-    if area == "scotland":
-        reversionfactor = 0.001 * daystoelection
-    else:
-        reversionfactor = 0.004 * daystoelection
-
-
-    for element in array1:
-        change = array1[element] - array2[element]
-        if element == "ukip":
-            change *= 0.8
-        change *= reversionfactor
-        array1[element] -= change
-
 
     for element in array1:
         array3[element] = array1[element] - array2[element] # adds to regional net change (+ or -) in array 3
@@ -490,7 +448,6 @@ for seat in seats:
 for seat in seats:
     seats[seat].getnewpercentages()
     seats[seat].normalisepercentages()
-    seats[seat].seatpollanalysis()
     seats[seat].newseattotals()
     seats[seat].writetofile()
 

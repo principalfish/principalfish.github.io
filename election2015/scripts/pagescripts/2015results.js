@@ -1,3 +1,7 @@
+
+
+
+
 // for live
 
 /////ideas
@@ -265,18 +269,17 @@ function zoomToClickedFilteredSeat(d){
 		current_colour = 1;
 	}
 
-	console.log(current_colour)
-
 	previous = d3.select(previousnode);
 	current = d3.select(id);
 
 	repeat();
 
+	previous.transition()
+		.attr("opacity", previous_opacity)
 	// flashes selected seat on map
 	function repeat(){
 
-		previous.transition()
-			.attr("opacity", previous_opacity)
+
 
 		current
 			.transition()
@@ -1087,7 +1090,7 @@ function voteShare(value){
 
 	else {
 
-		resetFilter();
+		// resetFilter();
 
 		var	max = 0;
 		var min = 100;
@@ -1130,8 +1133,12 @@ function voteShare(value){
 
 					var vote_range = max - min;
 					vote_share = vote_share - min;
+					if (vote_share < 0) {
+						vote_share = 0
+					}
 
 					seatData[seat_name]["seat_info"]["current_colour"] = vote_share / vote_range
+
 					return vote_share / vote_range;
 
 				})
@@ -1141,6 +1148,7 @@ function voteShare(value){
 	}
 	keyOnMap(value, max, min, colour, text_colour);
 	colour = null;
+
 
 
 }

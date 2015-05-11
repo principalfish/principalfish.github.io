@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-	<title>UK 2015 Election Projection</title>
+	<title>2015 Parliament</title>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/projection.css"/>
 	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
+	<link rel="stylesheet" href="stylesheets/2015results.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
@@ -16,15 +17,15 @@
 	<script type="text/javascript" src="/election2015/scripts/dictionary.js"></script>
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
-	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
-	<script type="text/javascript" src="/election2015/scripts/pagescripts/main.js"></script>
-	<script type="text/javascript" src="/election2015/scripts/pagescripts/projection.js"></script>
+	<script type="text/javascript" src="scripts/pagescripts/2015results.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.min.js"></script>
 	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.widgets.min.js"></script>
 
 		<div id="wrapper">
 			<div id="top">
-				<h2>UK Election Maps - FINAL Projection</h2>
+				<h2>UK Election Maps - 2015 Parliament</h2>
+
+
 				<script>
 				$(function(){
 					$("#menu").load("/menu.html")
@@ -39,23 +40,11 @@
 
 
 				<div class="projections">
-
-					<h3 class="currentpage"> 2015 Projection </h3>
-					<h3 class="notactive"><a href="/election2015/live/">LIVE!</a></h3>
-					<h3 class="notactive"><a href="/election2015/currentparliament.html">Current Parliament</a></h3>
+					<h3 class="currentpage">Current Parliament</h3>
 					<h3 class="notactive"><a href="/election2015/2010parliament.html">2010 Parliament</a></h3>
-
-
-
+					<h3 class="notactive"><a href="/election2015/projection.html"> 2015 Projection</a></h3>
 				</div>
 
-				<div class ="projections" id="otherlinks">
-					<h3 class="notactive"><a href="/election2015/methodology.html">Methodology</a></h3>
-					<h3 class="notactive"><a href="/election2015/polls.html">Polls</a></h3>
-					<h3 class="notactive"><a href="/election2015/seats.html">Seat List </a></h3>
-					<h3 class="notactive"><a href="/election2015/trends.html">Trends</a></h3>
-					<h3 class="notactive"><a href="/election2015/articles/">Articles</a></h3>
-				</div>
 
 
 				<div id="searchforseat">
@@ -123,152 +112,28 @@
 				</div>
 
 				<div id ="filteredlist">
-					<button id ="filtertolist" onclick="generateSeatList()">Generate seat list</button>
+
 				</div>
 				<div id ="totalfilteredseats"></div>
 				<div id ="filteredlisttable"></div>
 
-
-
 			</div>
 
 			<div id="left">
-
+				<!--- CHANGE** No user inputs-->
 				<div id="resetbutton">
 					<button id="resetmap" onclick="reset()">Reset</button>
 				</div>
 
-				<div id="userinput">
-					<h4> Input your own percentages</h4>
-
-					<h4>England</h4>
-
-					<form id="englandinput">
-
-						<table>
-							<tr>
-								<td>Con</td>
-								<td>Lab</td>
-								<td>Lib</td>
-								<td>UKIP</td>
-								<td>Grn</td>
-
-							</tr>
-
-							<tr>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['conservative'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['labour'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['libdems'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['ukip'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="england" value=0 onchange="userInputCheck(englandinput, name), englandUserNumbers['green'] = parseFloat(value)"/></td>
-							</tr>
-						</table>
-					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(englandinput, 'england')"/>Submit</button> <span style="float:right"> Other : <span id="otherengland"> 100 </span></span></p>
-
-
-
-					<h4>Scotland</h4>
-
-					<form id="scotlandinput">
-
-						<table>
-							<tr>
-								<td>Con</td>
-								<td>Lab</td>
-								<td>Lib</td>
-								<td>UKIP</td>
-								<td>Grn</td>
-								<td>SNP</td>
-
-							</tr>
-
-							<tr>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['conservative'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['labour'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['libdems'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['ukip'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['green'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="scotland" value=0 onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['snp'] = parseFloat(value)"/></td>
-
-							</tr>
-
-						</table>
-					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(scotlandinput, 'scotland')"/>Submit</button> <span style="float:right"> Other : <span id="otherscotland">100 </span></span></p>
-
-
-
-					<h4>Wales</h4>
-
-					<form id="walesinput">
-
-						<table>
-							<tr>
-								<td>Con</td>
-								<td>Lab</td>
-								<td>Lib</td>
-								<td>UKIP</td>
-								<td>Grn</td>
-								<td>PC</td>
-							</tr>
-
-							<tr>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['conservative'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['labour'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['libdems'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['ukip'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['green'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="wales" value=0 onchange="userInputCheck(walesinput, name), walesUserNumbers['plaidcymru'] = parseFloat(value)"/></td>
-
-							</tr>
-						</table>
-					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(walesinput, 'wales')"/>Submit</button> <span style="float:right"> Other : <span id="otherwales">100 </span></span></p>
-
-
-
-					<h4>Northern Ireland</h4>
-
-					<form id="northernirelandinput">
-
-						<table>
-							<tr>
-								<td>DUP</td>
-								<td>SF</td>
-								<td>SDLP</td>
-								<td>UUP</td>
-								<td>All</td>
-							</tr>
-
-							<tr>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['dup'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sinnfein'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sdlp'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['uu'] = parseFloat(value)"/></td>
-								<td><input class="inputnumbers" type ="text" name="northernireland" value=0 onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['alliance'] = parseFloat(value)"/></td>
-
-							</tr>
-						</table>
-					</form>
-					<p class="inputsubmit"><button class="submitbutton" onclick="analyseUserInput(northernirelandinput, 'northernireland')"/>Submit</button> <span style="float:right"> Other : <span id="othernorthernireland">100 </span></span></p>
-
-
-					<div id ="resetinputs">
-						<button class = "resetmap" onclick ="resetInputs()"/>Reset All </button>
-					</div>
-				</div>
-
 					<script>
 
-
-						var width = 700, // width and height of map
+						var width = 750, // width and height of map
 							height = 900;
 							active = d3.select(null);
 
 						var projection = d3.geo.albers() // variables to change default map position
 							.center([0, 54.3]) //centers vertically and horizontally
-							.rotate([2.25, 0])
+							.rotate([3.1, 0])
 							.parallels([51, 60])
 							.scale(5800)
 							.translate([width / 2, height / 2]);
@@ -306,29 +171,21 @@
 			</div>
 
 
-			<div id="right">
-				<div id="topright">
-					<h3 id="information-header"> Information for Selected Seat</h3>
 
+			<div id="right">
+				<div id ="information">
 				</div>
 
-				<div id ="information">
-					<table>
-						<tr id="information-seatname"></tr>
-						<tr id="information-party"></tr>
-						<tr id="information-gain"></tr>
 
-					</table>
+				<div id="charts">
+						<div id="information-pie"></div>
+						<div id="information-chart"></div>
+				</div>
 
-
-					<div id="charts">
-							<div id="information-pie"></div>
-							<div id="information-chart"></div>
-					</div>
 
 				<div id = "totals">
 
-					<h3> Select Region <select id="selectareatotals" onchange="selectAreaInfo(value)">
+					<h3 style="width: 98%"> Select Region <select id="selectareatotals" onchange="selectAreaInfo(value)">
 						<option value="country"></option>
 						<option value="country">United Kingdom</option>
 						<option value="greatbritain">Great Britain</option>
@@ -345,7 +202,8 @@
 						<option value="southwestengland">South West England</option>
 						<option value="westmidlands">West Midlands</option>
 						<option value="yorkshireandthehumber">Yorkshire & Humber</option>
-					</select></h3>
+					</select>
+					<span style="float:right;" id="totalturnout"></span></h3>
 
 					<table id="totalstable" class="tablesorter">
 						<thead>
@@ -353,8 +211,9 @@
 								<th>Party</th>
 								<th class="tablesorter-header">Seats</th>
 								<th class="tablesorter-header">Change</th>
+								<th class="tablesorter-header">Votes</th>
 								<th class="tablesorter-header">Vote %</th>
-								<th class="tablesorter-header">+/-</th>
+								<th class="tablesorter-header">% +/-</th>
 							</tr>
 
 						</thead>
@@ -364,24 +223,24 @@
 
 					</table>
 
-				</div>
-				<div id="bottomright">
-
-					<h3 style="width: 100%; text-align: left; margin-bottom: -35px">Last updated :
-						<script>
-							var x = new Date(document.lastModified).toUTCString(); document.write(x)
-						</script>
-					</h3>
 
 				</div>
+				<div id="footer">
+
+					<p>&nbsp;Last Updated :
+					<span id ="lastupdated"></span>
+					<script>
+						var x = new Date(document.lastModified).toLocaleString();
+						document.getElementById("lastupdated").innerHTML = x
+
+					</script>
+
+					&nbsp;&nbsp;
+					Copyright 2015 principalfish.co.uk</p>
+				</div>
+
 			</div>
 		</div>
-
-		<div id="footer">
-			<p> May have performance issues on Firefox </p>
-			<p> Copyright 2015 principalfish.co.uk</p>
-		</div>
-
 
 </body>
 

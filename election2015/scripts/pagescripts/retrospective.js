@@ -30,7 +30,7 @@ function getVoteTotals(data, region) {
 	}
 
 	else
-		region = region.slice(40);	
+		region = region.slice(40);
 
 		$.each(data, function(i){
 			var info = {};

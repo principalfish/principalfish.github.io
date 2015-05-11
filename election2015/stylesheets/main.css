@@ -343,6 +343,17 @@ svg .not_here{
 	opacity: 0.5;
 }
 
+#keyonmap {
+	position: absolute;
+	margin-top: 25px;
+	margin-left : 5px;
+	height: 150px;
+	width: 75px;
+	font-size: 1.2em;
+	padding: 2px;
+
+}
+
 /*
 .place {
 	pointer-events: all;

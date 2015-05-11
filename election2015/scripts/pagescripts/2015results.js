@@ -71,6 +71,9 @@ var seatsFromIDs = {};
 // control flow for analysing user filter inputs
 function filterMap(setting){
 
+	d3.selectAll(".map")
+		.attr("opacity", 1)
+
 	var	party = filterStates[0].party;
 	var gains = filterStates[1].gain;
 	var region = filterStates[2].region;
@@ -1034,10 +1037,11 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode
 
 function voteShare(value){
 
-	console.log(value)
+
+
 	var relevant_class = "." + value;
 	var colour = $(relevant_class).css("background-color");
-	console.log(colour)
+	var text_colour = $(relevant_class).css("color");
 
 	if (value == "null"){
 
@@ -1094,5 +1098,51 @@ function voteShare(value){
 
 
 	}
+	keyOnMap(value, max, min, colour, text_colour);
 	colour = null;
+
+
+}
+
+
+function keyOnMap(value, max, min, colour, text_colour){
+
+	var orig_color = colour;
+
+	$("#keyonmap").html("");
+
+
+
+	if (value == "null"){
+		null
+	}
+
+	else {
+
+		var vote_range = max - min;
+		var gap = vote_range / 5;
+		var opacities = {};
+
+		for (var i = 0; i < 6; i++){
+			var num = (min + gap * i);
+			var opacity = num / vote_range;
+			num = num.toFixed(1);
+			opacities[num] = opacity;
+		}
+
+		$.each(opacities, function(num){
+			colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
+
+
+			$("#keyonmap").append("<div style=\" color:"
+			+ text_colour + "; text-align: center; background-color: "
+			+ colour + "\">"
+			+ num + "%</div>")
+
+			colour = orig_color
+
+		});
+
+	}
+
 }

@@ -1034,17 +1034,45 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode
 
 function voteShare(value){
 
+	console.log(value)
+	var relevant_class = "." + value;
+	var colour = $(relevant_class).css("background-color");
+	console.log(colour)
+
 	if (value == "null"){
+
+		$(".map").remove()
 		loadmap();
 
 	}
 
 	else {
+
+
+
+		var	max = 0;
+		var min = 100;
+		$.each(seatData, function(seat){
+			if (value in seatData[seat]["party_info"]){
+				var percentage = seatData[seat]["party_info"][value]["percent"];
+				if (percentage > 0){
+					if (percentage > max){
+						max = percentage;
+					}
+					if (percentage < min){
+						min = percentage
+					}
+
+				}
+			}
+		})
+
+
 		for (var i = 0; i < 651; i++){
 			var id_vote_share = "#i" + i;
 
 			d3.select(id_vote_share)
-				.attr("class", value)
+				.style("fill", colour)
 				.attr("opacity", function(d) {
 					var seat_name = seatsFromIDs[id_vote_share]
 					if (value in seatData[seat_name]["party_info"]){
@@ -1054,12 +1082,17 @@ function voteShare(value){
 						var vote_share = 0
 					}
 
-					return vote_share / 60;
+					var vote_range = max - min;
+					vote_share = vote_share - min;
+
+					return vote_share / vote_range;
 
 				})
 
 		}
 
-	}
 
+
+	}
+	colour = null;
 }

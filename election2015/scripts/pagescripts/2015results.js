@@ -178,6 +178,7 @@ function filterMap(setting){
 			return "i" + d.properties.info_id
 		});
 
+
 	generateSeatList();
 
 
@@ -232,6 +233,21 @@ function generateSeatList(){
 function zoomToClickedFilteredSeat(d){
 
 	var id = "#i" + d.properties.info_id;
+
+
+	if (previousnode != undefined){
+		var previous_seat = seatsFromIDs[previousnode]
+		var previous_opacity = seatData[previous_seat]["seat_info"]["current_colour"]
+
+		}
+
+	if (previous_opacity == undefined){
+		previous_opacity = 1;
+	}
+
+	console.log(previous_seat)
+	console.log(previous_opacity)
+
 	previous = d3.select(previousnode);
 	current = d3.select(id);
 
@@ -241,7 +257,7 @@ function zoomToClickedFilteredSeat(d){
 	function repeat(){
 
 		previous.transition()
-			.attr("opacity", 1)
+			.attr("opacity", previous_opacity)
 
 		current
 			.transition()
@@ -618,7 +634,7 @@ function loadmap(){
 			.attr("d", path)
 			.attr("class", "boundaries");
 
-			// activateTicker();
+
 
 	});
 }
@@ -1038,13 +1054,14 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode
 function voteShare(value){
 
 
-
 	var relevant_class = "." + value;
 	var colour = $(relevant_class).css("background-color");
 	var text_colour = $(relevant_class).css("color");
 
 	if (value == "null"){
-
+		$.each(seatData, function(seat){
+			seatData[seat]["seat_info"]["current_colour"] = 1;
+		})
 		$(".map").remove()
 		loadmap();
 
@@ -1052,7 +1069,7 @@ function voteShare(value){
 
 	else {
 
-
+		resetFilter();
 
 		var	max = 0;
 		var min = 100;
@@ -1070,6 +1087,14 @@ function voteShare(value){
 				}
 			}
 		})
+
+		if (min > 10){
+			min = 10;
+		}
+
+		if (max > 60){
+			max = 60;
+		}
 
 
 		for (var i = 0; i < 651; i++){
@@ -1089,13 +1114,12 @@ function voteShare(value){
 					var vote_range = max - min;
 					vote_share = vote_share - min;
 
+					seatData[seat_name]["seat_info"]["current_colour"] = vote_share / vote_range
 					return vote_share / vote_range;
 
 				})
 
 		}
-
-
 
 	}
 	keyOnMap(value, max, min, colour, text_colour);
@@ -1111,8 +1135,6 @@ function keyOnMap(value, max, min, colour, text_colour){
 
 	$("#keyonmap").html("");
 
-
-
 	if (value == "null"){
 		null
 	}
@@ -1123,14 +1145,16 @@ function keyOnMap(value, max, min, colour, text_colour){
 		var gap = vote_range / 5;
 		var opacities = {};
 
-
 		for (var i = 0; i < 6; i++){
-			var num = (min + gap * i);		
+			var num = (min + gap * i);
 			var opacity = (num - min) / vote_range;
 			num = num.toFixed(1);
+
+			if (num == 60.0){
+				num = num + "+";
+			}
 			opacities[num] = opacity;
 		}
-
 
 		$.each(opacities, function(num){
 			colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")

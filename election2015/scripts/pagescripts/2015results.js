@@ -1088,8 +1088,8 @@ function voteShare(value){
 			}
 		})
 
-		if (min > 10){
-			min = 10;
+		if (min > 20){
+			min = 20;
 		}
 
 		if (max > 60){

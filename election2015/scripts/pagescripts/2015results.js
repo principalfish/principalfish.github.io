@@ -193,6 +193,10 @@ function resetFilter(){
 	filterStates[3].majoritylow = 0;
 	filterStates[4].majorityhigh = 100;
 
+	$.each(seatData, function(seat){
+		seatData[seat]["seat_info"]["current_colour"] = 1;
+	})
+
 	filterMap("reset");
 
 
@@ -242,11 +246,10 @@ function zoomToClickedFilteredSeat(d){
 		}
 
 	if (previous_opacity == undefined){
-		previous_opacity = 1;
+		var previous_opacity = 1;
 	}
 
-	console.log(previous_seat)
-	console.log(previous_opacity)
+
 
 	previous = d3.select(previousnode);
 	current = d3.select(id);

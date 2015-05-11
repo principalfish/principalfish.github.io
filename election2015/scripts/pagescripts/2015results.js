@@ -39,8 +39,7 @@ d3.selection.prototype.moveToFront = function() {
 						});
 					};
 
-var timeSinceRefresh = 0;
-var pageRefreshTotal = 0;
+
 // current state of user input filters
 var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}];
 
@@ -48,7 +47,7 @@ var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majorityl
 var seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
-var filterToTicker = [];
+
 var currentSeats = []; // for use flashing new se
 var totalElectorate = 0;
 var oldElectorate = 0;
@@ -66,6 +65,8 @@ var previousTotals = {
 	"westmidlands": 2640572,
 	"yorkshireandthehumber": 2368363
 }
+
+var seatsFromIDs = {};
 
 // control flow for analysing user filter inputs
 function filterMap(setting){
@@ -205,13 +206,12 @@ function generateSeatList(){
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
 
-			filterToTicker = [];
 
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
 			$.each(seatsAfterFilter, function(i){
 
 				// to modify ticker
-				filterToTicker.push(seatsAfterFilter[i].properties.name)
+
 
 				if (filterStates[1].gain == "gains" && filterStates[0].party != "null")
 				$("#filteredlisttable").append("<tr class=" + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] +
@@ -600,10 +600,12 @@ function loadmap(){
 			.each(function(d){
 				if (d.properties.name in seatData){
 					seatsAfterFilter.push(d);
-					filterToTicker.push(d.properties.name);
+
 					}
 				searchSeatData.push(d);
 				seatNames.push(d.properties.name);
+				seatsFromIDs["#i" + d.properties.info_id] = d.properties.name
+
 
 			});
 
@@ -809,7 +811,7 @@ function getSeatInfo(data){
 	}
 	displayVoteTotals(nationalVoteTotals);
 	possibleCoalitions(nationalVoteTotals);
-	pageRefreshTotal += 1;
+
 
 	var totalTurnout = 100 * nationalVoteTotals[nationalVoteTotals.length - 2].votes / totalElectorate ;
 	if (isNaN(totalTurnout)){
@@ -1025,3 +1027,39 @@ function alterTable(area, holdingarray){
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';
 var isIE = /*@cc_on!@*/false || !!document.documentMode
+
+
+
+// for voteshare
+
+function voteShare(value){
+
+	if (value == "null"){
+		loadmap();
+
+	}
+
+	else {
+		for (var i = 0; i < 651; i++){
+			var id_vote_share = "#i" + i;
+
+			d3.select(id_vote_share)
+				.attr("class", value)
+				.attr("opacity", function(d) {
+					var seat_name = seatsFromIDs[id_vote_share]
+					if (value in seatData[seat_name]["party_info"]){
+						var vote_share = seatData[seat_name]["party_info"][value]["percent"]
+					}
+					else {
+						var vote_share = 0
+					}
+
+					return vote_share / 60;
+
+				})
+
+		}
+
+	}
+
+}

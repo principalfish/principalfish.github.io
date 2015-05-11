@@ -67,6 +67,21 @@
 	padding-bottom: 25px;
 }
 
+#votesharebyparty{
+	padding-bottom: 10px;
+}
+
+#votesharebyparty h2{
+	margin-bottom: -10px;
+}
+
+#votesharebyparty select{
+	border: 1px solid black;
+	width: 100%;
+	text-align: left;
+	background: white;
+	color: black;
+}
 
 #searchforseat{
 	margin-top: -15px;
@@ -121,7 +136,7 @@
 
 #filteredlisttable{
 	width: 100%;
-	max-height: 45%;
+	max-height: 40%;
 	overflow: auto;
 }
 

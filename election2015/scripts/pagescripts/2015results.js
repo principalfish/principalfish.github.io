@@ -1123,23 +1123,24 @@ function keyOnMap(value, max, min, colour, text_colour){
 		var gap = vote_range / 5;
 		var opacities = {};
 
+
 		for (var i = 0; i < 6; i++){
-			var num = (min + gap * i);
-			var opacity = num / vote_range;
+			var num = (min + gap * i);		
+			var opacity = (num - min) / vote_range;
 			num = num.toFixed(1);
 			opacities[num] = opacity;
 		}
 
+
 		$.each(opacities, function(num){
 			colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
-
 
 			$("#keyonmap").append("<div style=\" color:"
 			+ text_colour + "; text-align: center; background-color: "
 			+ colour + "\">"
-			+ num + "%</div>")
+			+ num + "%</div>");
 
-			colour = orig_color
+			colour = orig_color;
 
 		});
 

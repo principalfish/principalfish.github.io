@@ -74,6 +74,8 @@ function filterMap(setting){
 	d3.selectAll(".map")
 		.attr("opacity", 1)
 
+	$("#keyonmap").html("");
+
 	var	party = filterStates[0].party;
 	var gains = filterStates[1].gain;
 	var region = filterStates[2].region;
@@ -197,8 +199,10 @@ function resetFilter(){
 		seatData[seat]["seat_info"]["current_colour"] = 1;
 	})
 
-	filterMap("reset");
+	var previous_opacity = 1;
+	var current_colour = 1;
 
+	filterMap("reset");
 
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);
@@ -234,6 +238,10 @@ function generateSeatList(){
 			// activateTicker()
 		}
 
+var previous_opacity ;
+var current_colour;
+
+
 function zoomToClickedFilteredSeat(d){
 
 	var id = "#i" + d.properties.info_id;
@@ -241,15 +249,23 @@ function zoomToClickedFilteredSeat(d){
 
 	if (previousnode != undefined){
 		var previous_seat = seatsFromIDs[previousnode]
-		var previous_opacity = seatData[previous_seat]["seat_info"]["current_colour"]
+		previous_opacity = seatData[previous_seat]["seat_info"]["current_colour"]
 
 		}
 
 	if (previous_opacity == undefined){
-		var previous_opacity = 1;
+		previous_opacity = 1;
 	}
 
 
+	var current_seat = seatsFromIDs[id]
+	current_colour = seatData[current_seat]["seat_info"]["current_colour"]
+
+	if (current_colour == undefined){
+		current_colour = 1;
+	}
+
+	console.log(current_colour)
 
 	previous = d3.select(previousnode);
 	current = d3.select(id);
@@ -268,7 +284,7 @@ function zoomToClickedFilteredSeat(d){
 				.attr("opacity", 0.2)
 			.transition()
 				.duration(1500)
-				.attr("opacity", 1)
+				.attr("opacity", current_colour)
 			.each("end", repeat);
 		}
 
@@ -1067,7 +1083,6 @@ function voteShare(value){
 		})
 		$(".map").remove()
 		loadmap();
-
 	}
 
 	else {
@@ -1086,7 +1101,6 @@ function voteShare(value){
 					if (percentage < min){
 						min = percentage
 					}
-
 				}
 			}
 		})

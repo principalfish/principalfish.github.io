@@ -70,9 +70,10 @@ var previousTotals = {
 	"yorkshireandthehumber": 2368363
 }
 
-swingState = ["null", "null"]
-
+var swingState = ["null", "null"]
+var partyVoteShare = "null"
 var seatsFromIDs = {};
+
 
 // control flow for analysing user filter inputs
 function filterMap(setting){
@@ -208,7 +209,15 @@ function resetFilter(){
 	var previous_opacity = 1;
 	var current_colour = 1;
 
+	swingStates = ["", ""];
+
+	partyVoteShare = "null"
+
 	filterMap("reset");
+
+	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
+	$("#swingfrom option:eq(0)").prop("selected", true);
+	$("#swingto option:eq(0)").prop("selected", true);
 
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);
@@ -245,7 +254,6 @@ function generateSeatList(){
 
 var previous_opacity ;
 var current_colour;
-
 
 function zoomToClickedFilteredSeat(d){
 
@@ -1071,8 +1079,9 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode
 
 // for voteshare
 
-function voteShare(value){
+function voteShare(){
 
+	var value = partyVoteShare;
 
 	var relevant_class = "." + value;
 	var colour = $(relevant_class).css("background-color");
@@ -1279,7 +1288,6 @@ function swingKeyOnMap(partyA, partyB, max){
 	}
 
 	else {
-		console.log(partyA, partyB, max)
 		var gap = max / 5;
 		var opacities = {};
 
@@ -1313,19 +1321,6 @@ function swingKeyOnMap(partyA, partyB, max){
 			$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
 			+ num + "%</div>");
 		})
-
-
-
 	}
 
-
-	// $.each(opacities, function(num){
-	// 	colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
-	//
-	// 	$("#keyonmap").append("<div style=\" color:"
-	// 	+ text_colour + "; text-align: center; background-color: "
-	// 	+ colour + "\">"
-	// 	+ num + "%</div>");
-	//
-	// 	colour = orig_color;
 }

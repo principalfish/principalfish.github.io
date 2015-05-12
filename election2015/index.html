@@ -48,7 +48,7 @@
 				<div id="votesharebyparty">
 					<h2>Vote Share</h2>
 
-					<p> by party	<select id="votesharebypartyselect" onchange ="voteShare(value)">
+					<p> by party	<select id="votesharebypartyselect" onchange ="partyVoteShare = value; voteShare(value)">
 							<option value="null"></option>
 							<option value="labour">Labour</option>
 							<option value="conservative">Conservative</option>
@@ -68,7 +68,7 @@
 				<div id="swingfromto">
 					<h2>Swing</h2>
 
-					<p> from	<select id="swingfrom" onchange ="swingState[0] = value; swingFromTo();">
+					<p> between	<select id="swingfrom" onchange ="swingState[0] = value; swingFromTo();">
 							<option value="null"></option>
 							<option value="labour">Labour</option>
 							<option value="conservative">Conservative</option>
@@ -84,7 +84,7 @@
 							<option value="uu">UUP</option>
 							<option value="other">Other</option></select></p>
 
-					<p> to	<select id="swingto" onchange ="swingState[1] = value; swingFromTo();">
+					<p> and	<select id="swingto" onchange ="swingState[1] = value; swingFromTo();">
 							<option value="null"></option>
 							<option value="labour">Labour</option>
 							<option value="conservative">Conservative</option>

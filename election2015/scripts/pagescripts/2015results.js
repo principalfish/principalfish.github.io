@@ -1217,9 +1217,9 @@ function swingFromTo(){
 
 		for (var i = 1; i < 651; i++){
 			var id_vote_share = "#i" + i;
-			console.log(id_vote_share)
+		
 			var	seat_name = seatsFromIDs[id_vote_share];
-			console.log(seat_name)
+
 			var swing;
 
 			if (partyA in seatData[seat_name]["party_info"] && partyB in seatData[seat_name]["party_info"]){

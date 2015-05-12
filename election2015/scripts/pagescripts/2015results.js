@@ -224,7 +224,6 @@ function generateSeatList(){
 			$("#totalfilteredseats").html(" ");
 			$("#filteredlisttable").html(" ");
 
-
 			$("#totalfilteredseats").append("<p>Total : " + seatsAfterFilter.length + "</p>");
 			$.each(seatsAfterFilter, function(i){
 
@@ -1187,9 +1186,7 @@ function keyOnMap(value, max, min, colour, text_colour){
 			colour = orig_color;
 
 		});
-
 	}
-
 }
 
 
@@ -1197,9 +1194,11 @@ function swingFromTo(){
 
 	$("#keyonmap").html("");
 
+	partyA = swingState[0];
+	partyB = swingState[1];
+
 	if (swingState[0] != "null" && swingState[1] != "null" && swingState[0] != swingState[1]){
-		partyA = swingState[0];
-		partyB = swingState[1];
+
 
 		var	max = 0;
 
@@ -1210,14 +1209,14 @@ function swingFromTo(){
 				var swing = (percentage_changeB - percentage_changeA) / 2
 				if (Math.abs(swing) > max){
 
-					max = Math.abs(swing)
+					max = Math.abs(swing);
 				}
 			}
 		})
 
 		for (var i = 1; i < 651; i++){
 			var id_vote_share = "#i" + i;
-		
+
 			var	seat_name = seatsFromIDs[id_vote_share];
 
 			var swing;
@@ -1233,11 +1232,17 @@ function swingFromTo(){
 				swing = 0;
 			}
 
+			if (max == 0) {
+				d3.select(id_vote_share)
+					.style("fill", "none")
+					.attr("opacity", 0);
+			}
 
-			if (swing >= 0){
+			else if (swing >= 0){
 				d3.select(id_vote_share)
 				.style("fill", "blue")
 				.attr("opacity", function(d){
+					seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(swing) / max;
 					return swing / max ;
 				})
 			}
@@ -1246,15 +1251,81 @@ function swingFromTo(){
 				d3.select(id_vote_share)
 				.style("fill", "red")
 				.attr("opacity", function(d){
+
+					seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(swing) / max;
 					return Math.abs(swing) / max ;
 				})
 			}
 		}
 	}
 
-
 	else {
+		$.each(seatData, function(seat){
+			seatData[seat]["seat_info"]["current_colour"] = 1;
+		})
 		$(".map").remove()
 		loadmap();
 	}
+
+	swingKeyOnMap(partyA, partyB, max);
+}
+
+
+function swingKeyOnMap(partyA, partyB, max){
+	$("#keyonmap").html("");
+
+	if (partyA == "null" || partyB == "null" || partyA == partyB){
+		null;
+	}
+
+	else {
+		console.log(partyA, partyB, max)
+		var gap = max / 5;
+		var opacities = {};
+
+		for (var i = 0; i < 6; i++){
+			var num = (max - gap * i);
+
+			var opacity = (num) / max;
+			num = num.toFixed(1);
+
+			opacities[num] = opacity;
+		}
+
+
+		$.each(opacities, function(num){
+			$("#keyonmap").append("<div style=\"background-color: rgba(0, 0, 255, " + opacities[num] + "); color: white;\">+"
+			+ num + "%</div>");
+		})
+
+		var opacities = {};
+
+		for (var i = 1; i < 6; i++){
+			var num = (gap * i);
+
+			var opacity = (num) / max;
+			num = num.toFixed(1);
+
+			opacities[num] = opacity;
+		}
+
+		$.each(opacities, function(num){
+			$("#keyonmap").append("<div style=\"background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
+			+ num + "%</div>");
+		})
+
+
+
+	}
+
+
+	// $.each(opacities, function(num){
+	// 	colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
+	//
+	// 	$("#keyonmap").append("<div style=\" color:"
+	// 	+ text_colour + "; text-align: center; background-color: "
+	// 	+ colour + "\">"
+	// 	+ num + "%</div>");
+	//
+	// 	colour = orig_color;
 }

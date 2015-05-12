@@ -1160,8 +1160,13 @@ function voteShare(){
 
 		if (previousnode != undefined){
 			var last_seat = seatData[seatsFromIDs[previousnode]];
+			if (value in last_seat["party_info"] ){
+				previous_opacity = (last_seat["party_info"][value]["percent"] - min) / (max - min);
+				}
 
-			previous_opacity = (last_seat["party_info"][value]["percent"] - min) / (max - min)
+			else {
+				previous_opacity = 0;
+				}
 		}
 
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
@@ -1284,8 +1289,14 @@ function swingFromTo(){
 		}
 		if (previousnode != undefined){
 			var last_seat = seatData[seatsFromIDs[previousnode]];
-			swing = last_seat["party_info"][partyB]["change"] - last_seat["party_info"][partyA]["change"]
-			previous_opacity = swing / max;
+
+			if (partyA in last_seat["party_info"] && partyB in last_seat["party_info"]){
+				swing = last_seat["party_info"][partyB]["change"] - last_seat["party_info"][partyA]["change"]
+				previous_opacity = swing / max;
+			}
+			else {
+				previous_opacity = 0;
+			}
 		}
 
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
@@ -1410,8 +1421,14 @@ function voteShareChange(){
 
 		}
 		if (previousnode != undefined){
+
 			var last_seat = seatData[seatsFromIDs[previousnode]];
-			previous_opacity = (Math.abs(last_seat["party_info"][value]["change"]) / max);
+			if (value in last_seat["party_info"]){
+				previous_opacity = (Math.abs(last_seat["party_info"][value]["change"]) / max);
+			}
+			else {
+				previous_opacity = 0;
+			}
 		}
 
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");

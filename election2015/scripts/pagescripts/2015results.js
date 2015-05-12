@@ -70,6 +70,8 @@ var previousTotals = {
 	"yorkshireandthehumber": 2368363
 }
 
+swingState = ["null", "null"]
+
 var seatsFromIDs = {};
 
 // control flow for analysing user filter inputs
@@ -278,9 +280,6 @@ function zoomToClickedFilteredSeat(d){
 		.attr("opacity", previous_opacity)
 	// flashes selected seat on map
 	function repeat(){
-
-
-
 		current
 			.transition()
 				.duration(1500)
@@ -1102,7 +1101,7 @@ function voteShare(value){
 						max = percentage;
 					}
 					if (percentage < min){
-						min = percentage
+						min = percentage;
 					}
 				}
 			}
@@ -1142,14 +1141,10 @@ function voteShare(value){
 					return vote_share / vote_range;
 
 				})
-
 		}
-
 	}
 	keyOnMap(value, max, min, colour, text_colour);
 	colour = null;
-
-
 
 }
 
@@ -1195,4 +1190,71 @@ function keyOnMap(value, max, min, colour, text_colour){
 
 	}
 
+}
+
+
+function swingFromTo(){
+
+	$("#keyonmap").html("");
+
+	if (swingState[0] != "null" && swingState[1] != "null" && swingState[0] != swingState[1]){
+		partyA = swingState[0];
+		partyB = swingState[1];
+
+		var	max = 0;
+
+		$.each(seatData, function(seat){
+			if (partyA in seatData[seat]["party_info"] && partyB in seatData[seat]["party_info"]){
+				var percentage_changeA = seatData[seat]["party_info"][partyA]["change"];
+				var percentage_changeB = seatData[seat]["party_info"][partyB]["change"];
+				var swing = (percentage_changeB - percentage_changeA) / 2
+				if (Math.abs(swing) > max){
+
+					max = Math.abs(swing)
+				}
+			}
+		})
+
+		for (var i = 1; i < 651; i++){
+			var id_vote_share = "#i" + i;
+			console.log(id_vote_share)
+			var	seat_name = seatsFromIDs[id_vote_share];
+			console.log(seat_name)
+			var swing;
+
+			if (partyA in seatData[seat_name]["party_info"] && partyB in seatData[seat_name]["party_info"]){
+
+				var percentage_changeA = seatData[seat_name]["party_info"][partyA]["change"];
+				var percentage_changeB = seatData[seat_name]["party_info"][partyB]["change"];
+				swing = (percentage_changeB - percentage_changeA) / 2;
+			}
+
+			else {
+				swing = 0;
+			}
+
+
+			if (swing >= 0){
+				d3.select(id_vote_share)
+				.style("fill", "blue")
+				.attr("opacity", function(d){
+					return swing / max ;
+				})
+			}
+
+			else {
+				d3.select(id_vote_share)
+				.style("fill", "red")
+				.attr("opacity", function(d){
+					return Math.abs(swing) / max ;
+				})
+			}
+		}
+	}
+
+
+	else {
+		$(".map").remove()
+		loadmap();
+	}
 }

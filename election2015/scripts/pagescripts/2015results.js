@@ -218,7 +218,7 @@ function resetFilter(){
 	filterMap("reset");
 
 	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
-	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);	
+	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);
 	$("#swingfrom option:eq(0)").prop("selected", true);
 	$("#swingto option:eq(0)").prop("selected", true);
 
@@ -259,7 +259,6 @@ var previous_opacity ;
 var current_colour;
 
 function zoomToClickedFilteredSeat(d){
-
 	var id = "#i" + d.properties.info_id;
 
 
@@ -284,21 +283,8 @@ function zoomToClickedFilteredSeat(d){
 	previous = d3.select(previousnode);
 	current = d3.select(id);
 
-	repeat();
+	flashSeat(previous, current, previous_opacity, current_colour);
 
-	previous.transition()
-		.attr("opacity", previous_opacity)
-	// flashes selected seat on map
-	function repeat(){
-		current
-			.transition()
-				.duration(1500)
-				.attr("opacity", 0.2)
-			.transition()
-				.duration(1500)
-				.attr("opacity", current_colour)
-			.each("end", repeat);
-		}
 
 	var bounds = path.bounds(d),
 		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
@@ -318,7 +304,27 @@ function zoomToClickedFilteredSeat(d){
 
 	seatinfo(d);
 	previousnode = id;
+}
+
+function flashSeat(previous, current, previous_opacity, current_colour, optional){
+
+	if (optional == undefined){
+		repeat();
 	}
+	previous.transition()
+		.attr("opacity", previous_opacity)
+	// flashes selected seat on map
+	function repeat(){
+		current
+			.transition()
+				.duration(1500)
+				.attr("opacity", 0.2)
+			.transition()
+				.duration(1500)
+				.attr("opacity", current_colour)
+			.each("end", repeat);
+		}
+}
 
 
 // stops users messing up zoom animation
@@ -1099,7 +1105,6 @@ function voteShare(){
 
 	else {
 
-		// resetFilter();
 
 		var	max = 0;
 		var min = 100;
@@ -1152,6 +1157,15 @@ function voteShare(){
 
 				})
 		}
+
+		if (previousnode != undefined){
+			var last_seat = seatData[seatsFromIDs[previousnode]];
+
+			previous_opacity = (last_seat["party_info"][value]["percent"] - min) / (max - min)
+		}
+
+		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
+
 	}
 	keyOnMap(value, max, min, colour, text_colour);
 	colour = null;
@@ -1268,6 +1282,14 @@ function swingFromTo(){
 				})
 			}
 		}
+		if (previousnode != undefined){
+			var last_seat = seatData[seatsFromIDs[previousnode]];
+			swing = last_seat["party_info"][partyB]["change"] - last_seat["party_info"][partyA]["change"]
+			previous_opacity = swing / max;
+		}
+
+		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
+
 		swingKeyOnMap(max);
 	}
 
@@ -1319,8 +1341,6 @@ function swingKeyOnMap(max){
 		$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
 		+ num + "%</div>");
 	})
-
-
 }
 
 function voteShareChange(){
@@ -1337,8 +1357,6 @@ function voteShareChange(){
 	}
 
 	else {
-
-		// resetFilter();
 
 		var	max = 0;
 		var min = 0;
@@ -1391,6 +1409,13 @@ function voteShareChange(){
 			}
 
 		}
+		if (previousnode != undefined){
+			var last_seat = seatData[seatsFromIDs[previousnode]];
+			previous_opacity = (Math.abs(last_seat["party_info"][value]["change"]) / max);
+		}
+
+		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
+
 		swingKeyOnMap(max);
 		colour = null;
 	}

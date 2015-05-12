@@ -209,7 +209,7 @@ function resetFilter(){
 	var previous_opacity = 1;
 	var current_colour = 1;
 
-	swingState = ["", ""];
+	swingState = ["null", "null"];
 
 	partyVoteShare = "null"
 

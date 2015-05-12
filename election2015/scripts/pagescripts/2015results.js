@@ -1294,7 +1294,7 @@ function swingKeyOnMap(partyA, partyB, max){
 
 
 		$.each(opacities, function(num){
-			$("#keyonmap").append("<div style=\"background-color: rgba(0, 0, 255, " + opacities[num] + "); color: white;\">+"
+			$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(0, 0, 255, " + opacities[num] + "); color: white;\">+"
 			+ num + "%</div>");
 		})
 
@@ -1310,7 +1310,7 @@ function swingKeyOnMap(partyA, partyB, max){
 		}
 
 		$.each(opacities, function(num){
-			$("#keyonmap").append("<div style=\"background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
+			$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
 			+ num + "%</div>");
 		})
 

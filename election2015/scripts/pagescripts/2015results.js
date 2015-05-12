@@ -1291,13 +1291,17 @@ function swingFromTo(){
 			var last_seat = seatData[seatsFromIDs[previousnode]];
 
 			if (partyA in last_seat["party_info"] && partyB in last_seat["party_info"]){
-				swing = last_seat["party_info"][partyB]["change"] - last_seat["party_info"][partyA]["change"]
-				previous_opacity = swing / max;
+				swing = (last_seat["party_info"][partyB]["change"] - last_seat["party_info"][partyA]["change"] )/ 2;
+		
+				previous_opacity = Math.abs(swing) / max;
+
 			}
 			else {
 				previous_opacity = 0;
 			}
 		}
+
+		console.log(previous_opacity)
 
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
 

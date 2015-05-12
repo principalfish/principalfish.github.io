@@ -67,15 +67,16 @@
 	padding-bottom: 25px;
 }
 
-#votesharebyparty, #swingfromto {
+#votesharebyparty, #swingfromto, #votesharechangebyparty {
+	margin-top: -20px;
 	padding-bottom: 10px;
 }
 
-#votesharebyparty h2, #swingfromto h2{
+#votesharebyparty h2, #swingfromto h2, #votesharechangebyparty h2{
 	margin-bottom: -10px;
 }
 
-#votesharebyparty select, #swingfromto select{
+#votesharebyparty select, #swingfromto select, #votesharechangebyparty select{
 	border: 1px solid black;
 	width: 100%;
 	text-align: left;

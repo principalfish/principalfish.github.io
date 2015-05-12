@@ -72,6 +72,7 @@ var previousTotals = {
 
 var swingState = ["null", "null"]
 var partyVoteShare = "null"
+var partyVoteShareChange = "null"
 var seatsFromIDs = {};
 
 
@@ -212,10 +213,12 @@ function resetFilter(){
 	swingState = ["null", "null"];
 
 	partyVoteShare = "null"
+	partyVoteShareChange = "null"
 
 	filterMap("reset");
 
 	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
+	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);	
 	$("#swingfrom option:eq(0)").prop("selected", true);
 	$("#swingto option:eq(0)").prop("selected", true);
 
@@ -1080,7 +1083,6 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode
 // for voteshare
 
 function voteShare(){
-
 	var value = partyVoteShare;
 
 	var relevant_class = "." + value;
@@ -1266,6 +1268,7 @@ function swingFromTo(){
 				})
 			}
 		}
+		swingKeyOnMap(max);
 	}
 
 	else {
@@ -1276,51 +1279,120 @@ function swingFromTo(){
 		loadmap();
 	}
 
-	swingKeyOnMap(partyA, partyB, max);
+
 }
 
 
-function swingKeyOnMap(partyA, partyB, max){
+function swingKeyOnMap(max){
 	$("#keyonmap").html("");
 
-	if (partyA == "null" || partyB == "null" || partyA == partyB){
-		null;
+	var gap = max / 5;
+	var opacities = {};
+
+	for (var i = 0; i < 6; i++){
+		var num = (max - gap * i);
+
+		var opacity = (num) / max;
+		num = num.toFixed(1);
+
+		opacities[num] = opacity;
+	}
+
+
+	$.each(opacities, function(num){
+		$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(0, 0, 255, " + opacities[num] + "); color: white;\">+"
+		+ num + "%</div>");
+	})
+
+	var opacities = {};
+
+	for (var i = 1; i < 6; i++){
+		var num = (gap * i);
+
+		var opacity = (num) / max;
+		num = num.toFixed(1);
+
+		opacities[num] = opacity;
+	}
+
+	$.each(opacities, function(num){
+		$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
+		+ num + "%</div>");
+	})
+
+
+}
+
+function voteShareChange(){
+	var value = partyVoteShareChange;
+
+	var relevant_class = "." + value;
+
+	if (value == "null"){
+		$.each(seatData, function(seat){
+			seatData[seat]["seat_info"]["current_colour"] = 1;
+		})
+		$(".map").remove()
+		loadmap();
 	}
 
 	else {
-		var gap = max / 5;
-		var opacities = {};
 
-		for (var i = 0; i < 6; i++){
-			var num = (max - gap * i);
+		// resetFilter();
 
-			var opacity = (num) / max;
-			num = num.toFixed(1);
+		var	max = 0;
+		var min = 0;
+		$.each(seatData, function(seat){
+			if (value in seatData[seat]["party_info"]){
+				var percentage = seatData[seat]["party_info"][value]["change"];
+				if (percentage > max){
+					max = percentage;
+					}
+				if (percentage < min){
+					min = percentage;
+					}
+				}
+			})
 
-			opacities[num] = opacity;
+		if (Math.abs(min) > max){
+			max = Math.abs(min);
 		}
 
+		for (var i = 1; i < 651; i++){
+			var id_vote_share = "#i" + i;
 
-		$.each(opacities, function(num){
-			$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(0, 0, 255, " + opacities[num] + "); color: white;\">+"
-			+ num + "%</div>");
-		})
+			var seat_name = seatsFromIDs[id_vote_share];
 
-		var opacities = {};
+			var change;
 
-		for (var i = 1; i < 6; i++){
-			var num = (gap * i);
+			if (value in seatData[seat_name]["party_info"]){
+				change = seatData[seat_name]["party_info"][value]["change"]
+				}
+			else  {
+				change = 0;
+			}
 
-			var opacity = (num) / max;
-			num = num.toFixed(1);
+			if (change >= 0){
+				d3.select(id_vote_share)
+					.style("fill", "blue")
+					.attr("opacity",function(d){
+						seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
+						return Math.abs(change) / max;
+					});
+			}
 
-			opacities[num] = opacity;
+			else {
+				d3.select(id_vote_share)
+					.style("fill", "red")
+					.attr("opacity",function(d){
+						seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
+						return Math.abs(change) / max;
+					});
+			}
+
 		}
-
-		$.each(opacities, function(num){
-			$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
-			+ num + "%</div>");
-		})
+		swingKeyOnMap(max);
+		colour = null;
 	}
 
 }

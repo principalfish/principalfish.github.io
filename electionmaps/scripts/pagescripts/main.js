@@ -1,4 +1,5 @@
 // empty arrays for various data
+var pageSetting = "2015parliament"
 var seatData = {}; //seatData contains all information display on page. filled on page load using getSeatInfo
 var seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 var searchSeatData = []; // for use with search box
@@ -7,7 +8,7 @@ var seatsFromIDs = {}; // for translating IDs to seats
 
 var currentSeats = []; // for use flashing new se
 var totalElectorate = 0;
-var oldElectorate = 0;
+
 var previousTotals = {
 	"eastmidlands": 2180243,
 	"eastofengland": 2871212,
@@ -37,7 +38,7 @@ var partyVoteShare = "null"
 var partyVoteShareChange = "null"
 
 
-parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others"]
+parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others", "independent", "respect", "speaker"]
 
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';
@@ -174,13 +175,20 @@ function seatinfo(d){
     $("#information-seatname").text("Seat: " + d.properties.name);
 	$(partyNameElement).text("Party: " + partylist[seatInfo["winning_party"]]);
     $(partyFlairElement).addClass(seatInfo["winning_party"]);
-	if (seatInfo["winning_party"] != seatInfo["incumbent"]) {
-		$(gainNameElement).text("Gain from " + partylist[seatInfo["incumbent"]]);
-        $(gainFlairElement).addClass(seatInfo["incumbent"]);
-    }
+
+	if(pageSetting != "2010parliament"){
+		if (seatInfo["winning_party"] != seatInfo["incumbent"]) {
+			$(gainNameElement).text("Gain from " + partylist[seatInfo["incumbent"]]);
+	        $(gainFlairElement).addClass(seatInfo["incumbent"]);
+	    }
+		else {
+			$(gainNameElement).text("No change")
+	    }
+		}
 	else {
-		$(gainNameElement).text("No change")
-    }
+		$(gainNameElement).text("");
+	}
+
 	$("#information-majority").text("Majority: " + seatInfo["maj_percent"]
 	+ " % = " + seatInfo["maj"]);
 
@@ -299,6 +307,7 @@ function piechart(d){
 		}
 
 		var vote_change;
+
 		if (filterdata[i].vote_change ==""){
 			vote_change = "";
 		}
@@ -306,16 +315,31 @@ function piechart(d){
 			vote_change = parseFloat(filterdata[i].vote_change).toFixed(2);
 		}
 
-		$("#information-chart table").append("<tr><td><div class= \" party-flair " + filterdata[i].party + "\"></div><td style=\"max-width: 170px;\">" +
-			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td><td>"
-			+ plussign + vote_change +  "</td></tr>");
+		var to_add = "<tr><td><div class= \" party-flair " + filterdata[i].party + "\"></div><td style=\"max-width: 170px;\">" +
+			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td>";
+
+		if (pageSetting == "2010parliament"){
+			to_add += "</tr>";
+		}
+		else {
+			to_add += ("<td>" + plussign + vote_change +  "</td></tr>");
+		}
+
+		$("#information-chart table").append(to_add);
 	})
+
+	if (seatData[d.properties.name]["seat_info"]["byelection"] != null){
+		$("#information-byelection").text("By-election since " + pageSetting.slice(0, 4));
+	}
+	else {
+		$("#information-byelection").text("");
+	}
 }
 
 // load + colour map at page load
 function loadmap(){
 
-	d3.json("data/2015parliament/livemap.json", function(error, uk) {
+	d3.json("data/map.json", function(error, uk) {
 		if (error) return console.error(error);
 
 		g.selectAll(".map")
@@ -384,11 +408,25 @@ $(function()
 function displayVoteTotals(data) {
 
 		$("#totalstable").remove()
-		$("#totalstablediv").append("<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
-												"<th class=\"tablesorter-header\">Seats</th><th class=\"tablesorter-header\">Change</th>" +
-												"<th class=\"tablesorter-header\">Votes</th><th class=\"tablesorter-header\">Vote %</th>" +
-												"	<th class=\"tablesorter-header\">% +/-</th></tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
-												"</tfoot></table>")
+
+		var table_to_add = "<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
+												"<th class=\"tablesorter-header\">Seats</th>";
+
+
+
+		if (pageSetting == "2010parliament"){
+			table_to_add += "<th class=\"tablesorter-header\">Votes</th><th class=\"tablesorter-header\">Vote %</th></tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
+			"</tfoot></table>";
+		}
+
+		else {
+			table_to_add += "<th class=\"tablesorter-header\">Change</th>" +
+			"<th class=\"tablesorter-header\">Votes</th><th class=\"tablesorter-header\">Vote %</th>" +
+			"	<th class=\"tablesorter-header\">% +/-</th></tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
+			"</tfoot></table>";
+		}
+
+		$("#totalstablediv").append(table_to_add);
 
 
 		var percentChange;
@@ -415,32 +453,48 @@ function displayVoteTotals(data) {
 
 			if (i == data.length -1){
 
-				$("#totalstablefoot").append("<tr style=\"text-align: center;\" class=\"" + data[i].code +"\"><td style=\"text-align: left;\">"
+				var table_foot = "<tr style=\"text-align: center;\" class=\"" + data[i].code +"\"><td style=\"text-align: left;\">"
 				+ partylist[data[i].code] + "</td><td style=\"text-align: right;\">"
-					+ data[i].seats + "</td><td></td><td style=\"text-align: right;\">"
-					+ data[i].votes.toLocaleString() + "</td><td></td><td></td></tr>");
+					+ data[i].seats + "</td>";
+
+				if (pageSetting == "2010parliament"){
+					table_foot += "<td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td></td></tr>";
 				}
+
+				else {
+					table_foot += "<td></td><td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td></td><td></td></tr>";
+				}
+
+				$("#totalstablefoot").append(table_foot);
+				}
+
 			else if (data[i].votes > 0){
 
-				$("#totalstableinfo").append("<tr><td><div class=\"party-flair " + data[i].code + "\"></div>"
+				var table_row = "<tr><td><div class=\"party-flair " + data[i].code + "\"></div>"
 				+ partylist[data[i].code] + "</td><td style=\"text-align: right;\">"
-				+ data[i].seats + "</td><td style=\"text-align: right;\">"
-				+ plussign1 + data[i].change + "</td><td style=\"text-align: right;\">"
-				+ data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
-				+ data[i].votepercent + "</td><td>"
-				+ plussign2 + percentChange + "</td></tr>");
+				+ data[i].seats + "</td>";
+
+				if (pageSetting == "2010parliament"){
+					table_row += "<td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
+					+ data[i].votepercent + "</td></tr>";
+				}
+
+				else {
+					table_row += "<td style=\"text-align: right;\">"
+					+ plussign1 + data[i].change + "</td><td style=\"text-align: right;\">"
+					+ data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
+					+ data[i].votepercent + "</td><td>"
+					+ plussign2 + percentChange + "</td></tr>";
+				}
+
+				$("#totalstableinfo").append(table_row);
 			}
 
 		})
 
-
 		$("#totalstable").tablesorter({
-
-				sortInitialOrder: "asc",
+				sortInitialOrder: "desc",
 	      headers: {
-					1: { sortInitialOrder: 'desc' },
-					2: { sortInitialOrder: 'desc' },
-	        4: { sortInitialOrder: 'desc' },
 					0: {
 						sorter: false
 					}
@@ -1184,9 +1238,7 @@ function voteShareChange(){
 		swingKeyOnMap(max);
 		colour = null;
 	}
-
 }
-
 
 function getData(url){
 
@@ -1204,7 +1256,6 @@ function getSeatInfo(data){
 		if (!(seat in seatData)){
 			seatData[seat] = data[seat];
 			totalElectorate += data[seat]["seat_info"]["electorate"];
-			oldElectorate += data[seat]["seat_info"]["old_electorate"];
 		}
 	})
 	loadmap();
@@ -1234,4 +1285,54 @@ function getSeatInfo(data){
 }
 
 // call the function
-$(document).ready(function(){ getData("data/2015parliament/info.json").done(getSeatInfo)});
+
+function loadTheMap(url){
+	seatData = {};
+	seatsAfterFilter = [];
+	totalElectorate = 0;
+	$(".map").remove();
+	$(document).ready(function(){ getData("data/" + url + "/info.json").done(getSeatInfo)});
+}
+
+loadTheMap("2015parliament");
+
+var previousSetting = "2015parliament"
+
+function alterTheUI(setting){
+
+	pageSetting = setting;
+
+	var alterClass = "#nav" + previousSetting;
+	var alterSelected = "#nav" + pageSetting;
+
+
+	$(alterClass).attr("class", "notactive");
+	$(alterSelected).attr("class", "currentpage");
+
+
+	if (setting == "2015parliament") {
+		$("title").text("UK Election Maps - 2015 Parliament");
+		$("#headertitle").text("2015");
+		$("#dropdowngainslabel").show();
+		$("#dropdowngains").show();
+		$("#swingfromto").show();
+		$("#votesharechangebyparty").show();
+
+	}
+
+	if (setting == "2010parliament"){
+
+
+		$("title").text("UK Election Maps - 2010 Parliament");
+		$("#headertitle").text("2010");
+		$("")
+		$("#dropdowngainslabel").hide();
+		$("#dropdowngains").hide();
+		$("#swingfromto").hide();
+		$("#votesharechangebyparty").hide();
+	}
+
+	previousSetting = setting;
+
+
+}

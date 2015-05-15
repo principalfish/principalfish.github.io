@@ -56,8 +56,7 @@ def get_data(file):
     turnout = data["seat_info"]["turnout"]
     electorate = data["seat_info"]["electorate"]
     percentage_turnout = data["seat_info"]["percentage_turnout"]
-    declared_at = data["seat_info"]["declared_at"]
-    declared_at_simple = data["seat_info"]["declared_at_simple"]
+
 
     by_party = {}
 
@@ -104,12 +103,12 @@ def get_data(file):
     else:
         change = "hold"
 
-    old_turnout = 0
-    for party in by_party:
-        old_turnout += by_party[party]["old"]
-    print old_turnout
-
-    by_seat["old_turnout"] = old_turnout
+    # old_turnout = 0
+    # for party in by_party:
+    #     old_turnout += by_party[party]["old"]
+    # print old_turnout
+    #
+    # by_seat["old_turnout"] = old_turnout
 
     by_seat["change"] = change
     by_seat["electorate"] = electorate
@@ -127,17 +126,12 @@ def get_data(file):
     by_seat["maj"] = majority_total
     by_seat["maj_percent"] = round(majority_percentage, 2)
 
-    by_seat["timestamp"] = declared_at
-    by_seat["declared"] = declared_at_simple
-
     live_data[seat_name] = {"seat_info" : by_seat, "party_info" : by_party}
 
     if seat_name not in seat_list:
         seat_list.append(seat_name)
 
-    now = time.time()
-    if now - declared_at < 420:
-        new_data[seat_name] = {"seat_info" : by_seat, "party_info" : by_party}
+
 
 
 seats_declared = 0

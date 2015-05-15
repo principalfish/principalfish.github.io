@@ -78,7 +78,7 @@ body {
   > div {
     @include border-radius-bottom(3px);
     background-color: $dash-box-background;
-    padding: 5px 20px;
+    padding: 5px 10px;
     border: 1px solid rgba(171, 171, 171, 0.85);
     border-top: none;
   }
@@ -181,13 +181,13 @@ header {
     text-decoration: none;
   }
 
-  a:hover {
-    color: orange;
-  }
-
   .currentpage {
     background: $dark-blue;
     color: #FFF;
+  }
+
+  a:visited {
+    color:  rgba(244, 244, 244, 0.61);
   }
 
   .notactive {
@@ -297,7 +297,7 @@ svg .map {
 
 
     > div:nth-child(2n -1) {
-      width: 250px;
+      width: 220px;
       clear: left;
     }
 
@@ -335,6 +335,12 @@ svg .map {
       stroke: black;
       shape-rendering: crispEdges;
     }
+
+
+  }
+  #information-byelection {
+    display: absolute;
+    top: 340px;
   }
 }
 

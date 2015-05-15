@@ -463,7 +463,7 @@ table#totalstable {
     display: block;
     overflow-y: scroll;
     overflow-x: hidden;
-    max-height: 420px;
+    max-height: 300px;
     margin-bottom: 2px;
 
     > div {
@@ -482,7 +482,7 @@ table#totalstable {
 
 #chloropleths {
   position: absolute;
-  top: $widget-margin-top + 635;
+  top: $widget-margin-top + 630;
   left: $side-bar-width + $map-container-width;
   width: $filters-width;
 

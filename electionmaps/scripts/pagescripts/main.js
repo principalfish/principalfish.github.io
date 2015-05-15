@@ -52,6 +52,7 @@ var previous_opacity ;
 var current_colour;
 
 function zoomToClickedFilteredSeat(d){
+	
 	var id = "#i" + d.properties.info_id;
 
 	if (previousnode != undefined){
@@ -92,7 +93,7 @@ function zoomToClickedFilteredSeat(d){
 			.each("end", enableZoom);
 
 
-	$("#seat-information").toggle();
+	$("#seat-information").show();
 	seatinfo(d);
 	previousnode = id;
 }
@@ -117,7 +118,6 @@ function flashSeat(previous, current, previous_opacity, current_colour, optional
 		}
 }
 
-
 // stops users messing up zoom animation
 function disableZoom(){
 	svg.on("mousedown.zoom", null);
@@ -137,7 +137,7 @@ function enableZoom(){
 // reset button for map
 function reset() {
 	if ($("#seat-information").is(":visible")){
-		$("#seat-information").toggle();
+		$("#seat-information").hide();
 		}
 	disableZoom();
 	svg.transition()
@@ -1046,8 +1046,6 @@ function swingFromTo(){
 				previous_opacity = 0;
 			}
 		}
-
-		console.log(previous_opacity)
 
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
 

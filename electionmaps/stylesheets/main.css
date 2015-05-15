@@ -180,7 +180,7 @@ header {
 
 #resetbutton {
   position: absolute;
-  bottom: 5px;
+  top: 5px;
   left: 155px;
   z-index: 1; }
 
@@ -212,10 +212,11 @@ svg .map {
 
 /* info table */
 #seat-information {
+  display: none;
   position: absolute;
-  left: 750px;
-  top: 5px;
-  width: 675px;
+  left: 155px;
+  top: 510px;
+  width: 590px;
   float: left;
   /* pie chart and votes */ }
   #seat-information > div {
@@ -259,9 +260,9 @@ svg .map {
 #totals {
   position: absolute;
   width: 525px;
-  left: 1280px;
+  left: 750px;
   height: auto;
-  top: 350px; }
+  top: 5px; }
 
 #totals h3 {
   color: black; }
@@ -291,8 +292,8 @@ table#totalstable .total {
 
 #searchforseat {
   position: absolute;
-  top: 350px;
-  left: 750px;
+  top: 400px;
+  left: 1015px;
   width: 260px; }
   #searchforseat input {
     margin-top: -10px;
@@ -303,7 +304,7 @@ table#totalstable .total {
 #filters {
   position: absolute;
   left: 750px;
-  top: 412px;
+  top: 400px;
   height: auto;
   width: 260px; }
   #filters label {
@@ -332,7 +333,7 @@ table#totalstable .total {
 .filteredlisttablecontainer {
   position: absolute;
   left: 1015px;
-  top: 350px;
+  top: 470px;
   height: auto;
   width: 260px; }
   .filteredlisttablecontainer > div {
@@ -374,7 +375,7 @@ table#totalstable .total {
   z-index: 1;
   top: 316px;
   right: 0px;
-  width: 675px; }
+  width: 590px; }
   #userinput .country-container {
     overflow: hidden;
     width: 50%;

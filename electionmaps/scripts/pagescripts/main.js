@@ -31,6 +31,12 @@ var regions = {
     "northernireland" : ["northernireland"]
 };
 
+var swingState = ["null", "null"];
+
+var partyVoteShare = "null"
+var partyVoteShareChange = "null"
+
+
 parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others"]
 
 // for browsers
@@ -76,7 +82,7 @@ function zoomToClickedFilteredSeat(d){
 		y = (bounds[0][1] + bounds[1][1]) / 2,
 
 		scale = .025 / Math.max(dx /  width,  dy / height),
-		translate = [width / 2 - scale * x, height / 2 - scale * y];
+		translate = [width / 2 - scale * x, height / 3 - scale * y];
 
 	disableZoom();
 
@@ -85,6 +91,8 @@ function zoomToClickedFilteredSeat(d){
 			.call(zoom.translate(translate).scale(scale).event)
 			.each("end", enableZoom);
 
+
+	$("#seat-information").toggle();
 	seatinfo(d);
 	previousnode = id;
 }
@@ -128,6 +136,9 @@ function enableZoom(){
 
 // reset button for map
 function reset() {
+	if ($("#seat-information").is(":visible")){
+		$("#seat-information").toggle();
+		}
 	disableZoom();
 	svg.transition()
 		.duration(1500)

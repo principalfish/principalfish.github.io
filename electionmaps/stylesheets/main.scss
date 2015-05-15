@@ -92,6 +92,7 @@ body {
   margin-right: 5px;
 }
 
+
 /* End resued classes */
 
 #wrapper {
@@ -227,7 +228,7 @@ header {
 
 #resetbutton {
   position: absolute;
-  bottom: 5px;
+  top: 5px;
   left: ($side-bar-width + 5);
   z-index: 1;
 }
@@ -266,10 +267,13 @@ svg .map {
 
 
 /* info table */
+
+
 #seat-information 	{
+  display: none;
   position: absolute;
-  left: $side-bar-width + $map-container-width;
-  top: $widget-margin-top;
+  left: $side-bar-width + 5;
+  top: $widget-margin-top + 505;
   width: $seat-info-width;
   float: left;
 
@@ -339,9 +343,9 @@ svg .map {
 #totals {
   position: absolute;
   width: $totals-info-width;
-  left: $side-bar-width + $map-container-width + $totals-info-width + 5;
+  left: $side-bar-width + $map-container-width;
   height: auto;
-  top: $widget-margin-top + 345;
+  top: $widget-margin-top;
 }
 
 #totals h3{
@@ -387,8 +391,8 @@ table#totalstable {
 
 #searchforseat {
   position: absolute;
-  top: $widget-margin-top + 345;
-  left: $side-bar-width + $map-container-width;
+  top: $widget-margin-top + 395;
+  left: $side-bar-width + $map-container-width + $filters-width + 5;
   width: $filters-width;
 
   input {
@@ -402,7 +406,7 @@ table#totalstable {
 #filters {
   position: absolute;
   left: $side-bar-width + $map-container-width;
-  top: $widget-margin-top + 407;
+  top: $widget-margin-top + 395;
   height: auto;
   width: $filters-width;
 
@@ -447,7 +451,7 @@ table#totalstable {
 .filteredlisttablecontainer {
   position: absolute;
   left: $side-bar-width + $map-container-width + 265;
-  top: $widget-margin-top + 345;
+  top: $widget-margin-top + 465;
   height: auto;
   width: $filters-width;
 

@@ -227,9 +227,11 @@
                             <option value="yorkshireandthehumber">Yorkshire & Humber</option>
                         </select>
                         <label>by majority percentage</label>
+													<form id="majority">
                             <input type ="text" name="majoritylow" value=0 onchange="filterStates[3].majoritylow = parseFloat(value), filterMap()"/>
                             to
                             <input type="text" name="majorityhigh" value=100 onchange="filterStates[4].majorityhigh = parseFloat(value), filterMap()"/>
+													</form>
 
                         <div class="filter-buttons">
                             <button id="filtertolist" onclick="generateSeatList()">Generate seat list</button>
@@ -249,6 +251,87 @@
                 </div>
 
 
+				<div id="chloropleths" class="dash-box">
+					<h2>Chloropleths</h2>
+
+					<div id="votesharebyparty">
+						<label for="votesharebypartyselect">Vote share: </label>
+						<select id="votesharebypartyselect" onchange ="partyVoteShare = value; voteShare()">
+								<option value="null"></option>
+								<option value="labour">Labour</option>
+								<option value="conservative">Conservative</option>
+								<option value="libdems">Liberal Democrats</option>
+								<option value="ukip">UKIP</option>
+								<option value="snp">SNP</option>
+								<option value="plaidcymru">Plaid Cymru</option>
+								<option value="green">Green</option>
+								<option value="dup">DUP</option>
+								<option value="sinnfein">Sinn Féin</option>
+								<option value="sdlp">SDLP</option>
+								<option value="alliance">Alliance</option>
+								<option value="uu">UUP</option>
+							</select>
+					</div>
+
+					<div id="votesharechangebyparty">
+
+						<label for="votesharechangebypartyselect">Vote share +/-: </label>
+						<select id="votesharechangebypartyselect" onchange ="partyVoteShareChange = value; voteShareChange()">
+								<option value="null"></option>
+								<option value="labour">Labour</option>
+								<option value="conservative">Conservative</option>
+								<option value="libdems">Liberal Democrats</option>
+								<option value="ukip">UKIP</option>
+								<option value="snp">SNP</option>
+								<option value="plaidcymru">Plaid Cymru</option>
+								<option value="green">Green</option>
+								<option value="dup">DUP</option>
+								<option value="sinnfein">Sinn Féin</option>
+								<option value="sdlp">SDLP</option>
+								<option value="alliance">Alliance</option>
+								<option value="uu">UUP</option>
+						</select>
+					</div>
+
+					<div id="swingfromto">
+
+							<label for="swingfrom">Swing between: </label>
+							<select id="swingfrom" onchange ="swingState[0] = value; swingFromTo();">
+								<option value="null"></option>
+								<option value="labour">Labour</option>
+								<option value="conservative">Conservative</option>
+								<option value="libdems">Liberal Democrats</option>
+								<option value="ukip">UKIP</option>
+								<option value="snp">SNP</option>
+								<option value="plaidcymru">Plaid Cymru</option>
+								<option value="green">Green</option>
+								<option value="dup">DUP</option>
+								<option value="sinnfein">Sinn Féin</option>
+								<option value="sdlp">SDLP</option>
+								<option value="alliance">Alliance</option>
+								<option value="uu">UUP</option>
+							</select>
+
+
+							<label for="swingto"> and </label>
+							<select id="swingto" onchange ="swingState[1] = value; swingFromTo();">
+								<option value="null"></option>
+								<option value="labour">Labour</option>
+								<option value="conservative">Conservative</option>
+								<option value="libdems">Liberal Democrats</option>
+								<option value="ukip">UKIP</option>
+								<option value="snp">SNP</option>
+								<option value="plaidcymru">Plaid Cymru</option>
+								<option value="green">Green</option>
+								<option value="dup">DUP</option>
+								<option value="sinnfein">Sinn Féin</option>
+								<option value="sdlp">SDLP</option>
+								<option value="alliance">Alliance</option>
+								<option value="uu">UUP</option>
+						</select>
+					</div>
+
+				</div>
 
 
 

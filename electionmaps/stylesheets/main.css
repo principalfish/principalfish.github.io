@@ -71,7 +71,7 @@ body {
   border-bottom-right-radius: 3px;
   background-clip: padding-box;
   background-color: #f4f4f6;
-  padding: 10px 20px;
+  padding: 5px 20px;
   border: 1px solid rgba(171, 171, 171, 0.85);
   border-top: none; }
 
@@ -215,7 +215,7 @@ svg .map {
   position: absolute;
   left: 750px;
   top: 5px;
-  width: 525px;
+  width: 675px;
   float: left;
   /* pie chart and votes */ }
   #seat-information > div {
@@ -227,9 +227,10 @@ svg .map {
     #seat-information .seat-summary > div {
       overflow: hidden;
       float: left;
-      margin-bottom: 3px; }
+      margin-bottom: 3px;
+      font-weight: bold; }
     #seat-information .seat-summary > div:nth-child(2n -1) {
-      width: 170px;
+      width: 250px;
       clear: left; }
     #seat-information .seat-summary .party-name {
       display: inline-block; }
@@ -241,7 +242,8 @@ svg .map {
       box-sizing: border-box;
       width: 50%;
       float: left;
-      height: auto; }
+      height: auto;
+      font-weight: bold; }
     #seat-information #charts #information-chart {
       right: 0;
       margin-top: 10px; }
@@ -259,7 +261,7 @@ svg .map {
   width: 525px;
   left: 1280px;
   height: auto;
-  top: 365px; }
+  top: 350px; }
 
 #totals h3 {
   color: black; }
@@ -289,7 +291,7 @@ table#totalstable .total {
 
 #searchforseat {
   position: absolute;
-  top: 365px;
+  top: 350px;
   left: 750px;
   width: 260px; }
   #searchforseat input {
@@ -301,7 +303,7 @@ table#totalstable .total {
 #filters {
   position: absolute;
   left: 750px;
-  top: 445px;
+  top: 412px;
   height: auto;
   width: 260px; }
   #filters label {
@@ -330,7 +332,7 @@ table#totalstable .total {
 .filteredlisttablecontainer {
   position: absolute;
   left: 1015px;
-  top: 365px;
+  top: 350px;
   height: auto;
   width: 260px; }
   .filteredlisttablecontainer > div {
@@ -346,23 +348,21 @@ table#totalstable .total {
     .filteredlisttablecontainer #filteredlisttable > div:hover {
       opacity: 0.5; }
 
-#coalitions {
+#chloropleths {
   position: absolute;
-  z-index: 1;
-  top: 922px;
-  right: 530px;
-  width: 525px; }
-
-#ticker-container {
-  position: absolute;
-  z-index: 1;
-  top: 5px;
-  right: 0px;
-  width: 525px; }
-  #ticker-container > div {
-    height: 210px;
-    overflow-y: scroll;
-    overflow-x: hidden; }
+  top: 640px;
+  left: 750px;
+  width: 260px; }
+  #chloropleths select {
+    border: 1px solid black;
+    width: 100%;
+    margin-bottom: 5px;
+    text-align: left;
+    background: white;
+    color: black; }
+  #chloropleths label {
+    width: 100%;
+    display: block; }
 
 #information-bielection {
   float: right;
@@ -374,7 +374,7 @@ table#totalstable .total {
   z-index: 1;
   top: 316px;
   right: 0px;
-  width: 525px; }
+  width: 675px; }
   #userinput .country-container {
     overflow: hidden;
     width: 50%;

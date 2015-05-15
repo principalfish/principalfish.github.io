@@ -78,7 +78,7 @@ body {
   > div {
     @include border-radius-bottom(3px);
     background-color: $dash-box-background;
-    padding: 10px 20px;
+    padding: 5px 20px;
     border: 1px solid rgba(171, 171, 171, 0.85);
     border-top: none;
   }
@@ -273,6 +273,7 @@ svg .map {
   width: $seat-info-width;
   float: left;
 
+
   > div {
     padding-bottom: 0;
     height: 300px;
@@ -287,12 +288,16 @@ svg .map {
       overflow: hidden;
       float: left;
       margin-bottom: 3px;
+      font-weight: bold;
     }
 
+
     > div:nth-child(2n -1) {
-      width: 170px;
+      width: 250px;
       clear: left;
     }
+
+
     .party-name {
       display: inline-block;
     }
@@ -309,6 +314,7 @@ svg .map {
       width: 50%;
       float: left;
       height: auto;
+      font-weight: bold;
     }
 
     #information-chart {
@@ -332,10 +338,10 @@ svg .map {
 
 #totals {
   position: absolute;
-  width: $seat-info-width;
-  left: $side-bar-width + $map-container-width + $seat-info-width + 5;
+  width: $totals-info-width;
+  left: $side-bar-width + $map-container-width + $totals-info-width + 5;
   height: auto;
-  top: $widget-margin-top + 360px;
+  top: $widget-margin-top + 345;
 }
 
 #totals h3{
@@ -381,7 +387,7 @@ table#totalstable {
 
 #searchforseat {
   position: absolute;
-  top: $widget-margin-top + 360;
+  top: $widget-margin-top + 345;
   left: $side-bar-width + $map-container-width;
   width: $filters-width;
 
@@ -393,11 +399,10 @@ table#totalstable {
   }
 }
 
-
 #filters {
   position: absolute;
   left: $side-bar-width + $map-container-width;
-  top: $widget-margin-top + 440px;
+  top: $widget-margin-top + 407;
   height: auto;
   width: $filters-width;
 
@@ -442,7 +447,7 @@ table#totalstable {
 .filteredlisttablecontainer {
   position: absolute;
   left: $side-bar-width + $map-container-width + 265;
-  top: $widget-margin-top + 360;
+  top: $widget-margin-top + 345;
   height: auto;
   width: $filters-width;
 
@@ -471,28 +476,25 @@ table#totalstable {
 }
 
 
-
-#coalitions {
+#chloropleths {
   position: absolute;
-  z-index: 1;
-  top: 922px;
-  right: $seat-info-width + 5;
-  width: $seat-info-width;
-}
+  top: $widget-margin-top + 635;
+  left: $side-bar-width + $map-container-width;
+  width: $filters-width;
 
-#ticker-container {
-  position: absolute;
-  z-index: 1;
-  top: $widget-margin-top;
-  right: 0px;
-  width: $seat-info-width;
-
-  > div {
-    height: 210px;
-    overflow-y: scroll;
-    overflow-x: hidden;
+  select {
+    border: 1px solid black;
+    width: 100%;
+    margin-bottom: 5px;
+    text-align: left;
+    background: white;
+    color: black;
   }
 
+  label {
+    width: 100%;
+    display: block;
+  }
 }
 
 

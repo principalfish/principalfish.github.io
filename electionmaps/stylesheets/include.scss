@@ -1,6 +1,7 @@
 // Colours
 
-$background: #f4f4f6;
+$background: darkgrey;
+$dash-box-background : #f4f4f6;
 $dark-blue: #203040;
 $lighter-blue: #293b51;
 
@@ -10,11 +11,9 @@ $map-height: 850px;
 $map-container-width: 600px;
 $side-bar-width: 150px;
 $projections-nav-item-height: 35px;
-$filters-width: 250px;
+$filters-width: 260px;
 $seat-info-width: 525px;
 $widget-margin-top: 5px;
-
-
 
 // mixins
 

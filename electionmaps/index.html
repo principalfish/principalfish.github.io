@@ -91,6 +91,10 @@
 					</script>
 				</div>
 
+				<div id="resetbutton">
+						<button id="resetmap" onclick="reset()">Reset</button>
+				</div>
+
 				<div id="seat-information" class="dash-box">
 						<h2> Information for Selected Seat</h2>
 
@@ -118,6 +122,54 @@
 
 				</div>
 
+				<div id="totals" class="dash-box">
+
+            <h2>Totals</h2>
+
+            <div id="totalstablediv">
+
+                <label for="selectareatotals"> Select Region</label>
+                <select id="selectareatotals" onchange="selectAreaInfo(value)">
+                    <option value="country"></option>
+                    <option value="greatbritain">Great Britain</option>
+                    <option value="england">England</option>
+                    <option value="scotland">Scotland</option>
+                    <option value="wales">Wales</option>
+                    <option value="northernireland">Northern Ireland</option>
+                    <option value="eastofengland">East of England</option>
+                    <option value="eastmidlands"> East Midlands</option>
+                    <option value="london">London</option>
+                    <option value="northeastengland">North East England</option>
+                    <option value="northwestengland">North West England</option>
+                    <option value="southeastengland">South East England</option>
+                    <option value="southwestengland">South West England</option>
+                    <option value="westmidlands">West Midlands</option>
+                    <option value="yorkshireandthehumber">Yorkshire & Humber</option>
+                </select>
+
+								<div id="totalturnout">Turnout</div>
+
+
+                <table id="totalstable" class="tablesorter">
+                    <thead>
+                    <tr>
+                        <th>Party</th>
+                        <th class="tablesorter-header">Seats</th>
+                        <th class="tablesorter-header">Change</th>
+                        <th class="tablesorter-header">Votes</th>
+												<th class="tablesorter-header">Vote %</th>
+                        <th class="tablesorter-header">% +/-</th>
+                    </tr>
+
+                    </thead>
+
+                    <tbody id="totalstableinfo"></tbody>
+                    <tfoot id="totalstablefoot"></tfoot>
+
+                </table>
+            </div>
+        </div>
+
 				<div id="searchforseat" class="dash-box">
                     <h2>Seat Search</h2>
                     <div>
@@ -126,7 +178,7 @@
 				</div>
 
 
-				<!-- <div id="filters" class="dash-box">
+			<div id="filters" class="dash-box">
 
 					<h2>Filters</h2>
 
@@ -196,9 +248,6 @@
                     </div>
                 </div>
 
-        <div id="resetbutton">
-            <button id="resetmap" onclick="reset()">Reset</button>
-        </div> -->
 
 
 
@@ -370,50 +419,7 @@
             </div>
         </div>
 
-        <div id="totals" class="dash-box">
-
-            <h2>Totals</h2>
-
-            <div>
-
-                <label for="selectareatotals"> Select Region</label>
-                <select id="selectareatotals" onchange="selectAreaInfo(value)">
-                    <option value="country"></option>
-                    <option value="greatbritain">Great Britain</option>
-                    <option value="england">England</option>
-                    <option value="scotland">Scotland</option>
-                    <option value="wales">Wales</option>
-                    <option value="northernireland">Northern Ireland</option>
-                    <option value="eastofengland">East of England</option>
-                    <option value="eastmidlands"> East Midlands</option>
-                    <option value="london">London</option>
-                    <option value="northeastengland">North East England</option>
-                    <option value="northwestengland">North West England</option>
-                    <option value="southeastengland">South East England</option>
-                    <option value="southwestengland">South West England</option>
-                    <option value="westmidlands">West Midlands</option>
-                    <option value="yorkshireandthehumber">Yorkshire & Humber</option>
-                </select>
-
-
-                <table id="totalstable" class="tablesorter">
-                    <thead>
-                    <tr>
-                        <th>Party</th>
-                        <th class="tablesorter-header">Seats</th>
-                        <th class="tablesorter-header">Change</th>
-                        <th class="tablesorter-header">Vote %</th>
-                        <th class="tablesorter-header">+/-</th>
-                    </tr>
-
-                    </thead>
-
-                    <tbody id="totalstableinfo"></tbody>
-                    <tfoot id="totalstablefoot"></tfoot>
-
-                </table>
-            </div>
-        </div> -->
+         -->
 </div>
 
 <footer>

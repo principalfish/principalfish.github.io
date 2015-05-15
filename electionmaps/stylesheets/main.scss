@@ -77,7 +77,7 @@ body {
 
   > div {
     @include border-radius-bottom(3px);
-    background-color: #fff;
+    background-color: $dash-box-background;
     padding: 10px 20px;
     border: 1px solid rgba(171, 171, 171, 0.85);
     border-top: none;
@@ -96,7 +96,7 @@ body {
 
 #wrapper {
   position: relative;
-  width: 1400px;
+  width: 1800px;
   height: auto;
   display: block;
   overflow: hidden;
@@ -328,24 +328,62 @@ svg .map {
   }
 }
 
+/* country totals*/
 
+#totals {
+  position: absolute;
+  width: $seat-info-width;
+  left: $side-bar-width + $map-container-width + $seat-info-width + 5;
+  height: auto;
+  top: $widget-margin-top + 360px;
+}
 
+#totals h3{
+  color: black;
+}
 
+#totals table{
+  overflow: hidden;
+  width: 100%;
+  background-color: $dash-box-background;
+}
+//
+#totalstable th{
+  color: black;
+  font-size: 0.9em;
+}
 
+#totalturnout {
+  float: right;
+}
 
+table#totalstable {
 
+  thead tr .header {
+    cursor: pointer;
+  }
 
+  thead tr .headerUp {
+    background-image: url("/img/asc.gif");
+  }
 
+  thead tr .headerDown {
+    background-image: url("/img/desc.gif");
+  }
 
+  .total {
+    background-color: $dark-blue;
+    color: white;
+    stroke: black;
+  }
 
-
-
-
+}
 
 #searchforseat {
   position: absolute;
-  top: $widget-margin-top + 400;
-  left: ($side-bar-width + $map-container-width);
+  top: $widget-margin-top + 360;
+  left: $side-bar-width + $map-container-width;
+  width: $filters-width;
 
   input {
     margin-top: -10px;
@@ -356,12 +394,10 @@ svg .map {
 }
 
 
-
-
 #filters {
   position: absolute;
-  right: (($seat-info-width + 10));
-  top: $widget-margin-top;
+  left: $side-bar-width + $map-container-width;
+  top: $widget-margin-top + 440px;
   height: auto;
   width: $filters-width;
 
@@ -405,8 +441,8 @@ svg .map {
 
 .filteredlisttablecontainer {
   position: absolute;
-  right: ($seat-info-width + 10);
-  top: 255px;
+  left: $side-bar-width + $map-container-width + 265;
+  top: $widget-margin-top + 360;
   height: auto;
   width: $filters-width;
 
@@ -434,13 +470,7 @@ svg .map {
   }
 }
 
-.current .filteredlisttablecontainer {
-  top: 208px;
-}
 
-.live #seat-information {
-  top: 275px;
-}
 
 #coalitions {
   position: absolute;
@@ -546,92 +576,6 @@ $userinput-fieldspacing: 5px;
   }
 
 }
-
-
-
-
-
-/* country totals*/
-
-#totals {
-  position: absolute;
-  width: $seat-info-width;
-  right: 0px;
-  height: auto;
-  top: 316px;
-}
-
-.projection #totals {
-  top: 586px;
-}
-
-.live #totals {
-  top: 586px;
-}
-
-#totals h3{
-  color: black;
-}
-
-#totals table{
-  overflow: hidden;
-  width: 100%;
-}
-//
-#totalstable th{
-  color: black;
-  font-size: 0.9em;
-
-}
-
-table#totalstable {
-
-  thead tr .header {
-    cursor: pointer;
-  }
-
-  thead tr .headerUp {
-    background-image: url("/img/asc.gif");
-  }
-
-  thead tr .headerDown {
-    background-image: url("/img/desc.gif");
-  }
-
-
-
-  .total {
-    background-color: $dark-blue;
-    color: white;
-    stroke: black;
-  }
-
-}
-
-
-
-#times {
-  position: absolute; top: 896px;
-  right: ($seat-info-width + 10);
-
-  > div {
-    overflow: hidden;
-    font-size: 80%;
-  }
-
-}
-
-
-/*
-.place {
-	pointer-events: all;
-}
-
-.place-label {
-	font-size: 0.4em;
-	fill: black;
-}
-*/
 
 /* party based stylings */
 

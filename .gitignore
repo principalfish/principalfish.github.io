@@ -8,5 +8,5 @@
 /node_modules/
 Gruntfile.js
 package.json
-
+/.sass_cache/
 /template.html

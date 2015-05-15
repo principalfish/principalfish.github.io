@@ -30,7 +30,7 @@ table {
 
 /* elements end */
 body {
-  background: #f4f4f6;
+  background: darkgrey;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 12px;
   height: 100%;
@@ -70,7 +70,7 @@ body {
   -moz-border-bottom-left-radius: 3px;
   border-bottom-right-radius: 3px;
   background-clip: padding-box;
-  background-color: #fff;
+  background-color: #f4f4f6;
   padding: 10px 20px;
   border: 1px solid rgba(171, 171, 171, 0.85);
   border-top: none; }
@@ -88,7 +88,7 @@ body {
 /* End resued classes */
 #wrapper {
   position: relative;
-  width: 1400px;
+  width: 1800px;
   height: auto;
   display: block;
   overflow: hidden; }
@@ -253,10 +253,45 @@ svg .map {
       stroke: black;
       shape-rendering: crispEdges; }
 
+/* country totals*/
+#totals {
+  position: absolute;
+  width: 525px;
+  left: 1280px;
+  height: auto;
+  top: 365px; }
+
+#totals h3 {
+  color: black; }
+
+#totals table {
+  overflow: hidden;
+  width: 100%;
+  background-color: #f4f4f6; }
+
+#totalstable th {
+  color: black;
+  font-size: 0.9em; }
+
+#totalturnout {
+  float: right; }
+
+table#totalstable thead tr .header {
+  cursor: pointer; }
+table#totalstable thead tr .headerUp {
+  background-image: url("/img/asc.gif"); }
+table#totalstable thead tr .headerDown {
+  background-image: url("/img/desc.gif"); }
+table#totalstable .total {
+  background-color: #203040;
+  color: white;
+  stroke: black; }
+
 #searchforseat {
   position: absolute;
-  top: 405px;
-  left: 750px; }
+  top: 365px;
+  left: 750px;
+  width: 260px; }
   #searchforseat input {
     margin-top: -10px;
     width: 97%;
@@ -265,10 +300,10 @@ svg .map {
 
 #filters {
   position: absolute;
-  right: 535px;
-  top: 5px;
+  left: 750px;
+  top: 445px;
   height: auto;
-  width: 250px; }
+  width: 260px; }
   #filters label {
     width: 100%;
     display: block; }
@@ -294,10 +329,10 @@ svg .map {
 
 .filteredlisttablecontainer {
   position: absolute;
-  right: 535px;
-  top: 255px;
+  left: 1015px;
+  top: 365px;
   height: auto;
-  width: 250px; }
+  width: 260px; }
   .filteredlisttablecontainer > div {
     padding-right: 0; }
   .filteredlisttablecontainer #filteredlisttable {
@@ -310,12 +345,6 @@ svg .map {
       cursor: pointer; }
     .filteredlisttablecontainer #filteredlisttable > div:hover {
       opacity: 0.5; }
-
-.current .filteredlisttablecontainer {
-  top: 208px; }
-
-.live #seat-information {
-  top: 275px; }
 
 #coalitions {
   position: absolute;
@@ -385,60 +414,6 @@ svg .map {
     margin-right: auto;
     display: block; }
 
-/* country totals*/
-#totals {
-  position: absolute;
-  width: 525px;
-  right: 0px;
-  height: auto;
-  top: 316px; }
-
-.projection #totals {
-  top: 586px; }
-
-.live #totals {
-  top: 586px; }
-
-#totals h3 {
-  color: black; }
-
-#totals table {
-  overflow: hidden;
-  width: 100%; }
-
-#totalstable th {
-  color: black;
-  font-size: 0.9em; }
-
-table#totalstable thead tr .header {
-  cursor: pointer; }
-table#totalstable thead tr .headerUp {
-  background-image: url("/img/asc.gif"); }
-table#totalstable thead tr .headerDown {
-  background-image: url("/img/desc.gif"); }
-table#totalstable .total {
-  background-color: #203040;
-  color: white;
-  stroke: black; }
-
-#times {
-  position: absolute;
-  top: 896px;
-  right: 535px; }
-  #times > div {
-    overflow: hidden;
-    font-size: 80%; }
-
-/*
-.place {
-	pointer-events: all;
-}
-
-.place-label {
-	font-size: 0.4em;
-	fill: black;
-}
-*/
 /* party based stylings */
 .labour {
   background-color: #CC0000;

@@ -1302,6 +1302,9 @@ function alterTheUI(setting){
 
 	pageSetting = setting;
 
+	resetFilter();
+	$("#selectareatotals option:eq(0)").prop("selected", true);
+
 	var alterClass = "#nav" + previousSetting;
 	var alterSelected = "#nav" + pageSetting;
 

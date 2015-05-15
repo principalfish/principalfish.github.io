@@ -237,6 +237,18 @@ header {
   font-size: 1.2em;
 }
 
+#keyonmap {
+  left: ($side-bar-width + 5);
+  z-index: 1;
+  top: 30px;
+  position: absolute;
+  height: 150px;
+	width: 75px;
+	font-size: 1.2em;
+	padding: 2px;
+  background-color: darkgrey;
+}
+
 /* map stylings */
 svg .boundaries {
 	 fill: none;

@@ -52,7 +52,7 @@ var previous_opacity ;
 var current_colour;
 
 function zoomToClickedFilteredSeat(d){
-	
+
 	var id = "#i" + d.properties.info_id;
 
 	if (previousnode != undefined){
@@ -237,7 +237,7 @@ function piechart(d){
 	var dataitems = barchartdata.length
 	var margin = {top: 10, right: 0, bottom: 10, left: 25};
 
-	var width = 300 - margin.left - margin.right;
+	var width = 250 - margin.left - margin.right;
 	var height = 225 - margin.top - margin.bottom;
 	var bargap = 2;
 	var barwidth = d3.min([60, (width / dataitems) - bargap]);

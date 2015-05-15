@@ -349,19 +349,19 @@ table#totalstable .total {
     .filteredlisttablecontainer #filteredlisttable > div:hover {
       opacity: 0.5; }
 
-#chloropleths {
+#choropleths {
   position: absolute;
   top: 635px;
   left: 750px;
   width: 260px; }
-  #chloropleths select {
+  #choropleths select {
     border: 1px solid black;
     width: 100%;
     margin-bottom: 5px;
     text-align: left;
     background: white;
     color: black; }
-  #chloropleths label {
+  #choropleths label {
     width: 100%;
     display: block; }
 

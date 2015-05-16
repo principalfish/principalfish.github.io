@@ -195,8 +195,7 @@ header {
   height: 150px;
   width: 75px;
   font-size: 1.2em;
-  padding: 2px;
-  background-color: darkgrey; }
+  padding: 2px; }
 
 /* map stylings */
 svg .boundaries {

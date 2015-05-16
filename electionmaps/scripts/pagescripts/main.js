@@ -1,5 +1,5 @@
 // empty arrays for various data
-var pageSetting = "2015parliament"
+var pageSetting = "2015parliament";
 var seatData = {}; //seatData contains all information display on page. filled on page load using getSeatInfo
 var seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 var searchSeatData = []; // for use with search box
@@ -10,18 +10,35 @@ var currentSeats = []; // for use flashing new se
 var totalElectorate = 0;
 
 var previousTotals = {
-	"eastmidlands": 2180243,
-	"eastofengland": 2871212,
-	"london": 3348875,
-	"northeastengland": 1161554,
-	"northernireland": 661055,
-	"northwestengland": 3205582,
-	"scotland": 2456365,
-	"southeastengland": 4274287,
-	"southwestengland": 2773443,
-	"wales": 1441758,
-	"westmidlands": 2640572,
-	"yorkshireandthehumber": 2368363
+
+	"2010" : {
+						"eastmidlands": 2180243,
+						"eastofengland": 2871212,
+						"london": 3348875,
+						"northeastengland": 1161554,
+						"northernireland": 661055,
+						"northwestengland": 3205582,
+						"scotland": 2456365,
+						"southeastengland": 4274287,
+						"southwestengland": 2773443,
+						"wales": 1441758,
+						"westmidlands": 2640572,
+						"yorkshireandthehumber": 2368363
+						},
+
+	"2015" : {
+						"eastmidlands": 2180243,
+						"eastofengland": 2871212,
+						"london": 3348875,
+						"northeastengland": 1161554,
+						"northernireland": 661055,
+						"northwestengland": 3205582,
+						"scotland": 2456365,
+						"southeastengland": 4274287,
+						"southwestengland": 2773443,
+						"wales": 1441758,
+						"westmidlands": 2640572,
+						"yorkshireandthehumber": 2368363}
 };
 
 var regions = {
@@ -476,14 +493,14 @@ function displayVoteTotals(data) {
 
 				if (pageSetting == "2010parliament"){
 					table_row += "<td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
-					+ data[i].votepercent + "</td></tr>";
+					+ data[i].votepercent.toFixed(2) + "</td></tr>";
 				}
 
 				else {
 					table_row += "<td style=\"text-align: right;\">"
 					+ plussign1 + data[i].change + "</td><td style=\"text-align: right;\">"
 					+ data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
-					+ data[i].votepercent + "</td><td>"
+					+ data[i].votepercent.toFixed(2) + "</td><td>"
 					+ plussign2 + percentChange + "</td></tr>";
 				}
 
@@ -571,7 +588,7 @@ function getVoteTotals(area){
 		});
 
 		$.each(areas, function(area){
-			oldturnout +=  previousTotals[areas[area]]
+			oldturnout +=  previousTotals[pageSetting.slice(0,4)][areas[area]]
 		})
 
 		var holdingArray = [];
@@ -1315,7 +1332,7 @@ function alterTheUI(setting){
 
 	if (setting == "2015parliament") {
 		$("title").text("UK Election Maps - 2015 Parliament");
-		$("#headertitle").text("2015");
+		$("#headertitle").text("2015 Parliament");
 		$("#dropdowngainslabel").show();
 		$("#dropdowngains").show();
 		$("#swingfromto").show();
@@ -1325,14 +1342,24 @@ function alterTheUI(setting){
 
 	if (setting == "2010parliament"){
 
-
 		$("title").text("UK Election Maps - 2010 Parliament");
-		$("#headertitle").text("2010");
-		$("")
+		$("#headertitle").text("2010 Parliament");
+
 		$("#dropdowngainslabel").hide();
 		$("#dropdowngains").hide();
 		$("#swingfromto").hide();
 		$("#votesharechangebyparty").hide();
+	}
+
+	if (setting == "2015projection"){
+
+		$("title").text("UK Election Maps - 2015 Projection");
+		$("#headertitle").text("2015 Projection");
+	
+		$("#dropdowngainslabel").show();
+		$("#dropdowngains").show();
+		$("#swingfromto").show();
+		$("#votesharechangebyparty").show();
 	}
 
 	previousSetting = setting;

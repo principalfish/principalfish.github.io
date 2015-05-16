@@ -213,8 +213,8 @@ header {
 #seatlist {
   position: absolute;
   z-index : 500;
-  left: $side-bar-width + 15;
-  top: 55px;
+  left: $side-bar-width + 5;
+  top: 40px;
   display: none;
   max-height: 720px;
   max-width: 1100px;
@@ -234,8 +234,15 @@ header {
   }
 }
 
-.seatlistregion {
-
+#methodology {
+  position: absolute;
+  z-index : 500;
+  left: $side-bar-width + 20;
+  top: 72px;
+  max-height: 720px;
+  max-width: 1100px;
+  overflow: auto;
+  display: none;
 }
 
 /* map */

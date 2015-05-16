@@ -1307,6 +1307,14 @@ function showSeatList(region){
 	$("#seatlist").show();
 }
 
+function showMethodology(){
+	$("#methodology").html("")
+	$(function(){
+			$("#methodology").load("methodology.html");
+	});
+	$("#methodology").show();
+}
+
 // call the function
 
 function loadTheMap(url){

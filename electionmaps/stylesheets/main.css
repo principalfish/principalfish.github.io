@@ -171,7 +171,6 @@ header {
 
 #seatlist {
   position: absolute;
-  z-index: 500;
   left: 155px;
   top: 40px;
   display: none;

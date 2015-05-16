@@ -1298,6 +1298,8 @@ function getSeatInfo(data){
 
 }
 
+var currentZindex = 2;
+
 function showSeatList(region){
 	$("#polltablebody").html("")
 	$(function(){
@@ -1305,7 +1307,10 @@ function showSeatList(region){
 	});
 
 	$("#seatlist").show();
+	currentZindex += 1;
+	$("#seatlist").css('z-index', currentZindex);
 }
+
 
 function showMethodology(){
 	$("#methodology").html("")
@@ -1313,6 +1318,8 @@ function showMethodology(){
 			$("#methodology").load("methodology.html");
 	});
 	$("#methodology").show();
+	currentZindex += 1;
+	$("#methodology").css('z-index', currentZindex);
 }
 
 // call the function

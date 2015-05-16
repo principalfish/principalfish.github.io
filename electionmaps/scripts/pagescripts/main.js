@@ -1360,7 +1360,7 @@ function alterTheUI(setting){
 		$("#swingfromto").show();
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
-		$("#navprojcetionmethodology").hide();
+		$("#navprojectionmethodology").hide();
 	}
 
 	if (setting == "2010parliament"){
@@ -1372,7 +1372,7 @@ function alterTheUI(setting){
 		$("#swingfromto").hide();
 		$("#votesharechangebyparty").hide();
 		$("#navseatlist").hide();
-		$("#navprojcetionmethodology").hide();
+		$("#navprojectionmethodology").hide();
 	}
 
 	if (setting == "2015projection"){

@@ -92,6 +92,17 @@ body {
   margin-right: 5px;
 }
 
+.closebox {
+  @include border-radius(2px);
+  display: inline-block;
+  float: right;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  cursor: pointer;
+
+}
+
 
 /* End resued classes */
 
@@ -199,19 +210,32 @@ header {
   }
 }
 
-.content {
-  margin-left: ($side-bar-width + 5);
+#seatlist {
+  position: absolute;
+  z-index : 500;
+  left: $side-bar-width + 15;
+  top: 55px;
+  display: none;
+  max-height: 720px;
+  max-width: 1100px;
+  overflow: auto;
+
+
+  #polltable {
+
+    > td, th {
+      text-align: center;
+    }
+  }
+
+
+  .tablesorter, .tablesorter .tablesorter-filter {
+      width: 100%;
+  }
 }
 
-.methodology {
-  margin-left: ($side-bar-width + 25);
-  font-size: 140%;
-  max-width: 600px;
-  color: #464646;
+.seatlistregion {
 
-  p {
-    line-height: 1.4;
-  }
 }
 
 /* map */

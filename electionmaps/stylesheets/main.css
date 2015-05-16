@@ -85,6 +85,18 @@ body {
   height: 10px;
   margin-right: 5px; }
 
+.closebox {
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  background-clip: padding-box;
+  display: inline-block;
+  float: right;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  cursor: pointer; }
+
 /* End resued classes */
 #wrapper {
   position: relative;
@@ -157,16 +169,19 @@ header {
     .projections .notactive a {
       color: rgba(244, 244, 244, 0.61); }
 
-.content {
-  margin-left: 155px; }
-
-.methodology {
-  margin-left: 175px;
-  font-size: 140%;
-  max-width: 600px;
-  color: #464646; }
-  .methodology p {
-    line-height: 1.4; }
+#seatlist {
+  position: absolute;
+  z-index: 500;
+  left: 165px;
+  top: 55px;
+  display: none;
+  max-height: 720px;
+  max-width: 1100px;
+  overflow: auto; }
+  #seatlist #polltable > td, #seatlist #polltable th {
+    text-align: center; }
+  #seatlist .tablesorter, #seatlist .tablesorter .tablesorter-filter {
+    width: 100%; }
 
 /* map */
 #map {

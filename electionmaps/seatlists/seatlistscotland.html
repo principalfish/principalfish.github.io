@@ -1,0 +1,109 @@
+<h2> Seat List - Scotland <div class="closebox" onclick="$('#seatlist').hide()">X</div> </h2>
+<div id="seatlistinfo">
+  <button class="seatlistregion" onclick="showSeatList('england')">England</button>
+  <button class="seatlistregion" onclick="showSeatList('wales')">Wales</button>
+  <button class="seatlistregion" onclick="showSeatList('northernireland')">Northern Ireland</button>
+
+  <p>To see gains sorted by party, sort by change, then hold shift and click new. For losses, change then shift + old</p>
+  <p>Operators such as <, <=, >, >=, = work in the search boxes. 3?.?? will return numbers in that columm between 30 and 40.</p>
+
+    <table id="polltable" class="tablesorter">
+      <thead>
+        <tr id="polltableheader">
+          <th class="tablesorter-header">Seat</th>
+          <th class="tablesorter-header">Region</th>
+          <th class="tablesorter-header">Old</th>
+          <th class="tablesorter-header">New</th>
+          <th class="tablesorter-header">Change</th>
+          <th class="tablesorter-header">Majority</th>
+          <th class="tablesorter-header">Con</th>
+          <th class="tablesorter-header">Labour</th>
+          <th class="tablesorter-header">Lib</th>
+          <th class="tablesorter-header">UKIP</th>
+          <th class="tablesorter-header">Green</th>
+          <th class="tablesorter-header">SNP</th>
+          <th class="tablesorter-header">Other</th>
+        </tr>
+
+      </thead>
+
+      <tbody id="polltablebody">
+
+      </tbody>
+
+      <script>
+      $.each(seatData, function(seat){
+        var partyPercentages = {};
+
+        var area = seatData[seat].seat_info["area"];
+
+
+        if (regions["scotland"].indexOf(area) != -1){
+
+
+          $.each(parties, function(i){
+            var party = parties[i];
+
+            if (seatData[seat].party_info[party] == undefined){
+              partyPercentages[party] = 0;
+            }
+
+            else {
+              partyPercentages[party] = seatData[seat].party_info[party].percent.toFixed(2);
+            }
+          });
+
+          partyPercentages["other"] = parseFloat(partyPercentages["other"] + partyPercentages["others"]).toFixed(2);
+
+          if (partyPercentages["other"] == 0){
+            partyPercentages["other"] = 0;
+          }
+
+          $("#polltablebody").append("<tr><td style=\"max-width: 150px;\"><div class=\"party-flair " + seatData[seat]["seat_info"]["winning_party"]
+          + "\"></div>" + seat + "</td><td>"
+          + regionlist[seatData[seat].seat_info.area] + "</td><td>"
+          + partylist[seatData[seat].seat_info.incumbent] + "</td><td>"
+          + partylist[seatData[seat].seat_info.winning_party] + "</td><td>"
+          + seatData[seat].seat_info.change.toUpperCase() + "</td><td>"
+          + seatData[seat].seat_info.maj_percent + "</td><td><div class=\"party-flair conservative\"></div>"
+          + partyPercentages["conservative"] + "</td><td><div class=\"party-flair labour\"></div>"
+          + partyPercentages["labour"] + "</td><td><div class=\"party-flair libdems\"></div>"
+          + partyPercentages["libdems"] + "</td><td><div class=\"party-flair ukip\"></div>"
+          + partyPercentages["ukip"] + "</td><td><div class=\"party-flair green\"></div>"
+          + partyPercentages["green"] + "</td><td><div class=\"party-flair snp\"></div>"
+          + partyPercentages["snp"] + "</td><td><div class=\"party-flair other\"></div>"
+          + partyPercentages["other"]
+          + "</td></tr>")
+          }
+        });
+
+
+      $("#polltable").tablesorter({
+        sortInitialOrder: "asc",
+        headers: {
+          4: { sortInitialOrder: 'desc' },
+          5: { sortInitialOrder: 'desc' },
+          6: { sortInitialOrder: 'desc' },
+          7: { sortInitialOrder: 'desc' },
+          8: { sortInitialOrder: 'desc' },
+          9: { sortInitialOrder: 'desc' },
+          10: { sortInitialOrder: 'desc' },
+          11: { sortInitialOrder: 'desc' },
+          12: { sortInitialOrder: 'desc' },
+          13: { sortInitialOrder: 'desc' },
+          14: { sortInitialOrder: 'desc' },
+          15: { sortInitialOrder: 'desc' },
+          16: { sortInitialOrder: 'desc' },
+          17: { sortInitialOrder: 'desc' },
+          17: { sortInitialOrder: 'desc' }
+        },
+        sortList:[[0,0]],
+        widgets: ["filter"]
+
+      });
+
+</script>
+
+
+    </table>
+</div>

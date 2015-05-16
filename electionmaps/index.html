@@ -39,8 +39,8 @@
 					<h3 id="nav2010parliament" class="notactive"><a href="#" onclick="loadTheMap('2010parliament'); alterTheUI('2010parliament');">2010 Parliament</a></h3>
 					<h3 id="nav2015projection" class="notactive"><a href="#" onclick="loadTheMap('2015projection'); alterTheUI('2015projection');">2015 Projection</a></h3>
                     <div class="divider"></div>
-					<h3 class="notactive"><a href="#">Seat List </a></h3>
-					<h3 class="notactive"><a href="#">Methodology</a></h3>
+					<h3 id="navseatlist" class="notactive" onclick="showSeatList('england');"><a href="#">Seat List </a></h3>
+					<h3 id="navprojectionmethodology" style="display:none" class="notactive"><a href="#">Methodology</a></h3>
 
                 </nav>
 
@@ -96,8 +96,12 @@
 
 				</div>
 
+				<div id="seatlist" class="dash-box">
+				</div>
+
 				<div id="seat-information" class="dash-box">
-						<h2 id="information-seatname"> </h2>
+						<h2 id="information-seatname"><span id="information-seatname-span"></span><div class="closebox" onclick="$('#seat-information').hide()">X</div></h2>
+
 
 						<div>
 								<div class="seat-summary">

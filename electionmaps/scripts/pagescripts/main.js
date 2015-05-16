@@ -188,7 +188,7 @@ function seatinfo(d){
 	var seatInfo = seatData[d.properties.name]["seat_info"];
 	$(partyFlairElement).removeClass(oldPartyClass);
   $(gainFlairElement).removeClass(oldIncumbentClass);
-	$("#information-seatname").text(d.properties.name);
+	$("#information-seatname-span").text(d.properties.name);
 	$("#information-region").text("Region: " + regionlist[seatInfo["area"]]);
 
 	$(partyNameElement).text("Party: " + partylist[seatInfo["winning_party"]]);
@@ -1295,6 +1295,16 @@ function getSeatInfo(data){
 
 	totalTurnout = "Turnout : " + String(totalTurnout.toFixed(2)) + "%"
 	document.getElementById("totalturnout").innerHTML = totalTurnout
+
+}
+
+function showSeatList(region){
+	$("#polltablebody").html("")
+	$(function(){
+			$("#seatlist").load("seatlists/seatlist" + region + ".html")
+	});
+
+	$("#seatlist").show();
 }
 
 // call the function
@@ -1308,6 +1318,7 @@ function loadTheMap(url){
 }
 
 loadTheMap("2015parliament");
+
 
 var previousSetting = "2015parliament"
 
@@ -1333,32 +1344,34 @@ function alterTheUI(setting){
 		$("#dropdowngains").show();
 		$("#swingfromto").show();
 		$("#votesharechangebyparty").show();
-
+		$("#navseatlist").show();
+		$("#navprojcetionmethodology").hide();
 	}
 
 	if (setting == "2010parliament"){
 
 		$("title").text("UK Election Maps - 2010 Parliament");
 		$("#headertitle").text("2010 Parliament");
-
 		$("#dropdowngainslabel").hide();
 		$("#dropdowngains").hide();
 		$("#swingfromto").hide();
 		$("#votesharechangebyparty").hide();
+		$("#navseatlist").hide();
+		$("#navprojcetionmethodology").hide();
 	}
 
 	if (setting == "2015projection"){
 
 		$("title").text("UK Election Maps - 2015 Projection");
 		$("#headertitle").text("2015 Projection");
-
 		$("#dropdowngainslabel").show();
 		$("#dropdowngains").show();
 		$("#swingfromto").show();
 		$("#votesharechangebyparty").show();
+		$("#navseatlist").show();
+		$("#navprojectionmethodology").show();
 	}
 
 	previousSetting = setting;
-
 
 }

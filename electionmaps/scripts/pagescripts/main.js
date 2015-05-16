@@ -1260,7 +1260,7 @@ function voteShareChange(){
 function getData(url){
 
 	return $.ajax({
-		cache: false,
+		cache: true,
 		dataType: "json",
   	url: url,
 		type: "GET",
@@ -1355,7 +1355,7 @@ function alterTheUI(setting){
 
 		$("title").text("UK Election Maps - 2015 Projection");
 		$("#headertitle").text("2015 Projection");
-	
+
 		$("#dropdowngainslabel").show();
 		$("#dropdowngains").show();
 		$("#swingfromto").show();

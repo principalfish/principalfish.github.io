@@ -4,7 +4,7 @@
 	<title>UK Election Maps - 2015 Parliament</title>
 	<link type="text/css" rel="stylesheet" href="/electionmaps/stylesheets/main.css"/>
 	<link type="text/css" rel="stylesheet" href="/electionmaps/stylesheets/theme.default.css"/>
-	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
+	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.min.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
@@ -15,7 +15,6 @@
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
 	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/main.js"></script>
-	<!-- <script type="text/javascript" src="/electionmaps/scripts/pagescripts/userinput.js"></script> -->
 	<script type="text/javascript" src="/electionmaps/scripts/jquery.tablesorter.min.js"></script>
 	<script type="text/javascript" src="/electionmaps/scripts/jquery.tablesorter.widgets.min.js"></script>
 
@@ -41,8 +40,6 @@
                     <div class="divider"></div>
 					<h3 id="navseatlist" class="notactive" onclick="showSeatList('england');"><a href="#">Seat List </a></h3>
 					<h3 id="navprojectionmethodology" style="display:none" class="notactive" onclick="showMethodology();"><a href="#">Methodology</a></h3>
-					<!-- <h3 id="navprojectionuserinput" style="display:none" class="notactive" onclick="userInput();"><a href="#">User Input</a></h3> -->
-
                 </nav>
 
 
@@ -103,8 +100,6 @@
 				<div id="methodology" class="dash-box">
 				</div>
 
-				<div id="userinput" class="dash-box">
-				</div>
 
 				<div id="seat-information" class="dash-box">
 						<h2 id="information-seatname"><span id="information-seatname-span"></span><div class="closebox" onclick="$('#seat-information').hide()">X</div></h2>

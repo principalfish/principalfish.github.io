@@ -1,8 +1,8 @@
 /*!
- * jQuery UI CSS Framework 1.11.2
+ * jQuery UI CSS Framework 1.11.4
  * http://jqueryui.com
  *
- * Copyright 2014 jQuery Foundation and other contributors
+ * Copyright jQuery Foundation and other contributors
  * Released under the MIT license.
  * http://jquery.org/license
  *
@@ -91,34 +91,25 @@
 	width: 100%;
 	height: 100%;
 }
+.ui-draggable-handle {
+	-ms-touch-action: none;
+	touch-action: none;
+}
 .ui-autocomplete {
 	position: absolute;
 	top: 0;
 	left: 0;
 	cursor: default;
-	background: white;
-	width: 120px;
-	border: 1px solid black;
-	font-family: Arial, Helvetica, sans-serif;	
-	max-height: 200px;
-	overflow: scroll;
-	white-space: nowrap;	
 }
-
-
 .ui-menu {
 	list-style: none;
 	padding: 0;
 	margin: 0;
 	display: block;
-	outline: none;	
-	
+	outline: none;
 }
 .ui-menu .ui-menu {
 	position: absolute;
-	background: black;
-	color: white;
-	
 }
 .ui-menu .ui-menu-item {
 	position: relative;

@@ -9,53 +9,10 @@ var seatsFromIDs = {}; // for translating IDs to seats
 var currentSeats = []; // for use flashing new se
 var totalElectorate = 0;
 
-var previousTotals = {
-
-	"2010" : {
-						"eastmidlands": 2180243,
-						"eastofengland": 2871212,
-						"london": 3348875,
-						"northeastengland": 1161554,
-						"northernireland": 661055,
-						"northwestengland": 3205582,
-						"scotland": 2456365,
-						"southeastengland": 4274287,
-						"southwestengland": 2773443,
-						"wales": 1441758,
-						"westmidlands": 2640572,
-						"yorkshireandthehumber": 2368363
-						},
-
-	"2015" : {
-						"eastmidlands": 2180243,
-						"eastofengland": 2871212,
-						"london": 3348875,
-						"northeastengland": 1161554,
-						"northernireland": 661055,
-						"northwestengland": 3205582,
-						"scotland": 2456365,
-						"southeastengland": 4274287,
-						"southwestengland": 2773443,
-						"wales": 1441758,
-						"westmidlands": 2640572,
-						"yorkshireandthehumber": 2368363}
-};
-
-var regions = {
-    "england"  : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland", "southwestengland", "eastofengland",
-                  "eastmidlands", "westmidlands", "london"],
-    "scotland"  : ["scotland"],
-    "wales" : ["wales"],
-    "northernireland" : ["northernireland"]
-};
-
 var swingState = ["null", "null"];
 
 var partyVoteShare = "null"
 var partyVoteShareChange = "null"
-
-
-parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others", "independent", "respect", "speaker"]
 
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';
@@ -552,7 +509,6 @@ function selectAreaInfo(value){
 	if (value == "greatbritain") {displayVoteTotals(greatbritainVoteTotals)};
 }
 
-
 function getVoteTotals(area){
     var areas = [];
 
@@ -584,7 +540,7 @@ function getVoteTotals(area){
 		});
 
 		$.each(areas, function(area){
-			oldturnout +=  previousTotals[pageSetting.slice(0,4)][areas[area]]
+			oldturnout +=  previousTotalsVoteTotals[pageSetting.slice(0,4)][areas[area]]
 		})
 
 		var holdingArray = [];
@@ -1323,15 +1279,15 @@ function showMethodology(){
 }
 
 // function userInput(){
-// 	console.log("fdafds")
-// 	$("#userinput").html("")
+//
+// 	$("#userinput").html("");
 // 	$(function(){
 // 			$("#userinput").load("userinput.html");
 // 	});
 // 	$("#userinput").show();
+// 	currentZindex += 1;
+// 	$("#userinput").css('z-index', currentZindex);
 // }
-
-// call the function
 
 function loadTheMap(url){
 	seatData = {};
@@ -1343,6 +1299,11 @@ function loadTheMap(url){
 
 loadTheMap("2015parliament");
 
+$(function() {
+    // $("#userinput").draggable();
+		$("#methodology").draggable();
+		$("#seatlist").draggable();
+  });
 
 var previousSetting = "2015parliament"
 
@@ -1369,7 +1330,7 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
 		$("#navprojectionmethodology").hide();
-		$("#navprojectionuserinput").hide();
+		// $("#navprojectionuserinput").hide();
 	}
 
 	if (setting == "2010parliament"){
@@ -1382,7 +1343,7 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").hide();
 		$("#navseatlist").hide();
 		$("#navprojectionmethodology").hide();
-		$("#navprojectionuserinput").hide();
+		// $("#navprojectionuserinput").hide();
 	}
 
 	if (setting == "2015projection"){
@@ -1395,7 +1356,7 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
 		$("#navprojectionmethodology").show();
-		$("#navprojectionuserinput").show();
+		// $("#navprojectionuserinput").show();
 	}
 
 	previousSetting = setting;

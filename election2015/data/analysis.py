@@ -605,7 +605,6 @@ def writenationaltotals():
             if line[0] != str(date.today()):
                 trends.append(line)
 
-
     for i in range(len(partytotals)):
         trends.append(partytotals[i])
 

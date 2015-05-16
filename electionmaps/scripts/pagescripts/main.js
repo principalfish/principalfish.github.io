@@ -201,7 +201,6 @@ function seatinfo(d){
 	else {
 		$(gainNameElement).text("");
     }
-	}
 
 	$("#information-majority").text("Majority: " + seatInfo["maj_percent"]
 	+ " % = " + seatInfo["maj"]);

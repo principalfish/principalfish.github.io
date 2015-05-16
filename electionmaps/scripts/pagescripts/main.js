@@ -187,23 +187,20 @@ function seatinfo(d){
 
 	var seatInfo = seatData[d.properties.name]["seat_info"];
 	$(partyFlairElement).removeClass(oldPartyClass);
-    $(gainFlairElement).removeClass(oldIncumbentClass);
+  $(gainFlairElement).removeClass(oldIncumbentClass);
+	$("#information-seatname").text(d.properties.name);
 	$("#information-region").text("Region: " + regionlist[seatInfo["area"]]);
-    $("#information-seatname").text("Seat: " + d.properties.name);
+
 	$(partyNameElement).text("Party: " + partylist[seatInfo["winning_party"]]);
     $(partyFlairElement).addClass(seatInfo["winning_party"]);
 
-	if(pageSetting != "2010parliament"){
-		if (seatInfo["winning_party"] != seatInfo["incumbent"]) {
-			$(gainNameElement).text("Gain from " + partylist[seatInfo["incumbent"]]);
-	        $(gainFlairElement).addClass(seatInfo["incumbent"]);
-	    }
-		else {
-			$(gainNameElement).text("No change")
-	    }
-		}
+	if (seatInfo["winning_party"] != seatInfo["incumbent"]) {
+		$(gainNameElement).text("Gain from " + partylist[seatInfo["incumbent"]]);
+        $(gainFlairElement).addClass(seatInfo["incumbent"]);
+    }
 	else {
 		$(gainNameElement).text("");
+    }
 	}
 
 	$("#information-majority").text("Majority: " + seatInfo["maj_percent"]

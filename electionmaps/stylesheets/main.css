@@ -216,7 +216,6 @@ header {
   z-index: 1;
   top: 30px;
   position: absolute;
-  height: 150px;
   width: 75px;
   font-size: 1.2em;
   padding: 2px; }
@@ -409,10 +408,12 @@ table#totalstable .total {
 /* Input your own percentages */
 #userinput {
   position: absolute;
-  z-index: 1;
-  top: 316px;
-  right: 0px;
-  width: 590px; }
+  z-index: 500;
+  left: 170px;
+  top: 45px;
+  overflow: auto;
+  display: none;
+  width: 550px; }
   #userinput .country-container {
     overflow: hidden;
     width: 50%;

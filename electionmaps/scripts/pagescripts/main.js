@@ -1322,6 +1322,15 @@ function showMethodology(){
 	$("#methodology").css('z-index', currentZindex);
 }
 
+// function userInput(){
+// 	console.log("fdafds")
+// 	$("#userinput").html("")
+// 	$(function(){
+// 			$("#userinput").load("userinput.html");
+// 	});
+// 	$("#userinput").show();
+// }
+
 // call the function
 
 function loadTheMap(url){
@@ -1347,7 +1356,6 @@ function alterTheUI(setting){
 	var alterClass = "#nav" + previousSetting;
 	var alterSelected = "#nav" + pageSetting;
 
-
 	$(alterClass).attr("class", "notactive");
 	$(alterSelected).attr("class", "currentpage");
 
@@ -1361,6 +1369,7 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
 		$("#navprojectionmethodology").hide();
+		$("#navprojectionuserinput").hide();
 	}
 
 	if (setting == "2010parliament"){
@@ -1373,6 +1382,7 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").hide();
 		$("#navseatlist").hide();
 		$("#navprojectionmethodology").hide();
+		$("#navprojectionuserinput").hide();
 	}
 
 	if (setting == "2015projection"){
@@ -1385,6 +1395,7 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
 		$("#navprojectionmethodology").show();
+		$("#navprojectionuserinput").show();
 	}
 
 	previousSetting = setting;

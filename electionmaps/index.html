@@ -14,8 +14,8 @@
 	<script type="text/javascript" src="/electionmaps/scripts/dictionary.js"></script>
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/papaparse.min.js"></script>
 	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/main.js"></script>
+	<!-- <script type="text/javascript" src="/electionmaps/scripts/pagescripts/userinput.js"></script> -->
 	<script type="text/javascript" src="/electionmaps/scripts/jquery.tablesorter.min.js"></script>
 	<script type="text/javascript" src="/electionmaps/scripts/jquery.tablesorter.widgets.min.js"></script>
 
@@ -41,6 +41,7 @@
                     <div class="divider"></div>
 					<h3 id="navseatlist" class="notactive" onclick="showSeatList('england');"><a href="#">Seat List </a></h3>
 					<h3 id="navprojectionmethodology" style="display:none" class="notactive" onclick="showMethodology();"><a href="#">Methodology</a></h3>
+					<!-- <h3 id="navprojectionuserinput" style="display:none" class="notactive" onclick="userInput();"><a href="#">User Input</a></h3> -->
 
                 </nav>
 
@@ -100,6 +101,9 @@
 				</div>
 
 				<div id="methodology" class="dash-box">
+				</div>
+
+				<div id="userinput" class="dash-box">
 				</div>
 
 				<div id="seat-information" class="dash-box">
@@ -344,174 +348,7 @@
 
 
 
-<!--
-        <div id="userinput" class="dash-box">
-            <h2> Input your own percentages</h2>
-
-            <div>
-                <div class="country-container">
-                    <h3>England</h3>
-
-                    <form id="englandinput">
-                        <div>
-                            <label for="england-con">Con</label>
-                            <input class="inputnumbers" type="text" name="england" id="england-con" value=0
-                                   onchange="userInputCheck(englandinput, name), englandUserNumbers['conservative'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="england-lab">Lab</label>
-                            <input class="inputnumbers" type="text" name="england" id="england-lab" value=0
-                                   onchange="userInputCheck(englandinput, name), englandUserNumbers['labour'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="england-lib">Lib</label>
-                            <input class="inputnumbers" type="text" name="england" id="england-lib" value=0
-                                   onchange="userInputCheck(englandinput, name), englandUserNumbers['libdems'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="england-ukip">UKIP</label>
-                            <input class="inputnumbers" type="text" name="england" id="england-ukip" value=0
-                                   onchange="userInputCheck(englandinput, name), englandUserNumbers['ukip'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="england-grn">Grn</label>
-                            <input class="inputnumbers" type="text" name="england" id="england-grn" value=0
-                                   onchange="userInputCheck(englandinput, name), englandUserNumbers['green'] = parseFloat(value)"/>
-                        </div>
-                        <div class="other-percentage">Other <span id="otherengland"> 100 </span></div>
-                    </form>
-                    <button class="submitbutton" onclick="analyseUserInput(englandinput, 'england')"/>
-                    Submit</button>
-
-                </div>
-
-
-                <div class="country-container">
-                    <h3>Scotland</h3>
-
-                    <form id="scotlandinput">
-                        <div>
-                            <label for="scotland-con">Con</label>
-                            <input class="inputnumbers" type="text" name="scotland" id="scotland-con" value=0
-                                   onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['conservative'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="scotland-lab">Lab</label>
-                            <input class="inputnumbers" type="text" name="scotland" id="scotland-lab"
-                                   value=0
-                                   onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['labour'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="scotland-lib">Lib</label>
-                            <input class="inputnumbers" type="text" name="scotland" id="scotland-lib"
-                                   value=0
-                                   onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['libdems'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="scotland-ukip">UKIP</label>
-                            <input class="inputnumbers" type="text" name="scotland" id="scotland-ukip" value=0
-                                   onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['ukip'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="scotland-grn">Grn</label>
-                            <input class="inputnumbers" type="text" name="scotland" id="scotland-grn"
-                                   value=0
-                                   onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['green'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="scotland-snp">SNP</label>
-                            <input class="inputnumbers" type="text" name="scotland" id="scotland-snp"
-                                   value=0
-                                   onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['snp'] = parseFloat(value)"/>
-                        </div>
-                        <div class="other-percentage"> Other <span id="otherscotland">100 </span></div>
-
-                    </form>
-                    <button class="submitbutton" onclick="analyseUserInput(scotlandinput, 'scotland')"/>
-                    Submit</button>
-
-
-                </div>
-
-                <div class="country-container">
-                    <h3>Wales</h3>
-
-                    <form id="walesinput">
-
-                        <div>
-                            <label for="wales-con">Con</label>
-                            <input class="inputnumbers" type="text" name="wales" id="wales-con" value=0
-                                   onchange="userInputCheck(walesinput, name), walesUserNumbers['conservative'] = parseFloat(value)"/>
-                        </div>
-                        <div>
-                            <label for="wales-lab">Lab</label>
-                            <input class="inputnumbers" type="text" name="wales" id="wales-lab" value=0
-                                   onchange="userInputCheck(walesinput, name), walesUserNumbers['labour'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="wales-lib">Lib</label>
-                            <input class="inputnumbers" type="text" name="wales" id="wales-lib" value=0
-                                   onchange="userInputCheck(walesinput, name), walesUserNumbers['libdems'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="wales-ukip">UKIP</label>
-                            <input class="inputnumbers" type="text" name="wales" id="wales-ukip" value=0
-                                   onchange="userInputCheck(walesinput, name), walesUserNumbers['ukip'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="wales-grn">Grn</label>
-                            <input class="inputnumbers" type="text" name="wales" id="wales-grn" value=0
-                                   onchange="userInputCheck(walesinput, name), walesUserNumbers['green'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="wales-pc">PC</label>
-                            <input class="inputnumbers" type="text" name="wales" id="wales-pc" value=0
-                                   onchange="userInputCheck(walesinput, name), walesUserNumbers['plaidcymru'] = parseFloat(value)"/>
-                        </div>
-                        <div class="other-percentage"> Other <span id="otherwales">100 </span></div>
-                    </form>
-                    <button class="submitbutton" onclick="analyseUserInput(walesinput, 'wales')"/>
-                    Submit</button>
-
-                </div>
-
-
-                <div class="country-container">
-                    <h3>Northern Ireland</h3>
-
-                    <form id="northernirelandinput">
-                        <div>
-                            <label for="northernireland-dup">DUP</label>
-                            <input class="inputnumbers" type="text" name="northernireland"
-                                   id="northernireland-dup" value=0
-                                   onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['dup'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="northernireland-sf">SF</label>
-                            <input class="inputnumbers" type="text" name="northernireland"
-                                   id="northernireland-sf" value=0
-                                   onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sinnfein'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="northernireland-sdlp">SDLP</label>
-                            <input class="inputnumbers" type="text" name="northernireland"
-                                   id="northernireland-sdlp" value=0
-                                   onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sdlp'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="northernireland-uup">UUP</label>
-                            <input class="inputnumbers" type="text" name="northernireland"
-                                   id="northernireland-uup" value=0
-                                   onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['uu'] = parseFloat(value)"/>
-                        </div>
-                        <div><label for="northernireland-all">All</label>
-                            <input class="inputnumbers" type="text" name="northernireland"
-                                   id="northernireland-all" value=0
-                                   onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['alliance'] = parseFloat(value)"/>
-                        </div>
-                        <div class="other-percentage"> Other <span id="othernorthernireland">100 </span></div>
-                    </form>
-                    <button class="submitbutton"
-                            onclick="analyseUserInput(northernirelandinput, 'northernireland')"/>
-                    Submit</button>
-                </div>
-                <button class="resetmap" onclick="resetInputs()"/>
-                Reset All </button>
-            </div>
-        </div>
-
-         -->
+<!-- -->
 </div>
 
 <footer>

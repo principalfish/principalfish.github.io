@@ -331,12 +331,11 @@ table#totalstable .total {
   top: 400px;
   left: 1015px;
   width: 260px; }
-
-#searchseats input {
-  margin-top: -10px;
-  width: 97%;
-  background: white;
-  border: 1px solid black; }
+  #searchforseat > input {
+    margin-top: -10px;
+    width: 97%;
+    background: white;
+    border: 1px solid black; }
 
 #filters {
   position: absolute;

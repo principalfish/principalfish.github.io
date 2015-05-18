@@ -164,7 +164,7 @@ function getVoteTotals(area){
 		});
 
 		$.each(areas, function(area){
-			oldturnout +=  previousTotalsVoteTotals[pageSetting.slice(0,4)][areas[area]]
+			oldturnout +=  previousTotalsVoteTotals[pageSetting.slice(0,4)][areas[area]];
 		})
 
 		var holdingArray = [];
@@ -187,8 +187,7 @@ function getVoteTotals(area){
 			var totalvotes = 0;
 			var votepercent = 0;
 			var oldvotetotal = 0;
-			var old_vote_percent
-
+			var old_vote_percent;
 
 			$.each(seatData, function(seat){
 
@@ -218,7 +217,7 @@ function getVoteTotals(area){
 			old_vote_percent =  parseFloat((100 * oldvotetotal / parseFloat(oldturnout)).toFixed(2));
 			var vote_percent_change = votepercent - old_vote_percent
 
-			change = seatssum - change;
+			change = seatssum - change;  
 
 			if (code == "other"){
 				otherSeatssum = seatssum;
@@ -238,7 +237,7 @@ function getVoteTotals(area){
 			}
 		});
 
-		var others = {"code": "other", "seats" : otherSeatssum, "change": 0, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
+		var others = {"code": "other", "seats" : otherSeatssum, "change": otherChange, "votes": otherTotalVotes, "votepercent" : otherVotePercent};
 		var totals = {"code": "total", "seats" : totalseats - otherSeatssum, "change": "", "votes": totalvotescast, "votepercent" : " "};
 
 		holdingArray.push(others);

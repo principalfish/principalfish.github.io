@@ -62,8 +62,14 @@ function getSeatInfo(data){
 		if (!(seat in seatData)){
 			seatData[seat] = data[seat];
 			totalElectorate += data[seat]["seat_info"]["electorate"];
+			var incumbent = seatData[seat]["seat_info"]["incumbent"];
+			if (incumbent == "independent" || incumbent == "speaker" || incumbent == "respect"){
+				seatData[seat]["seat_info"]["incumbent"] = "other"
+			}
 		}
-	})
+	});
+
+
 	loadmap();
 
 	areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);

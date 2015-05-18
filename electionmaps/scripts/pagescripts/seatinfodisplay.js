@@ -10,6 +10,7 @@ var gainFlairElement = "#information-gain .party-flair";
 function seatinfo(d){
 
 	var seatInfo = seatData[d.properties.name]["seat_info"];
+
 	$(partyFlairElement).removeClass(oldPartyClass);
   $(gainFlairElement).removeClass(oldIncumbentClass);
 	$("#information-seatname-span").text(d.properties.name);

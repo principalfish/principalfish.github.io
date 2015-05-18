@@ -94,7 +94,7 @@ var regions = {
     "northernireland" : ["northernireland"]
 };
 
-var parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others", "independent", "respect", "speaker"];
+var parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other", "others"];
 
 var previousTotals = {
    "eastmidlands":{

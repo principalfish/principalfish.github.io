@@ -100,8 +100,12 @@ body {
   height: 10px;
   margin-right: 5px;
   cursor: pointer;
-
 }
+
+.overflow {
+  overflow: auto;
+}
+
 
 
 /* End resued classes */
@@ -217,7 +221,7 @@ header {
   display: none;
   max-height: 720px;
   max-width: 1100px;
-  overflow: auto;
+
 
 
   #polltable {
@@ -240,7 +244,7 @@ header {
   top: 72px;
   max-height: 720px;
   max-width: 1100px;
-  overflow: auto;
+
   display: none;
 }
 
@@ -565,7 +569,7 @@ $userinput-fieldspacing: 5px;
   z-index : 500;
   left: $side-bar-width + 20;
   top: 45px;
-  overflow: auto;
+
   display: none;
   width: 550px;
 

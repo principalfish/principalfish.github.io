@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+	<title>UK 2015 Election Methodology</title>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/infopages.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/methodology.css"/>
+	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
+	<link rel="shortcut icon" href="/img/logo.png">
+</head>
+
+<body>
+	<script type="text/javascript" src="/election2015/scripts/dictionary.js"></script>
+	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/jquery.tablesorter.widgets.min.js"></script>
+
+		<div id="wrapper">
+			<div id="top">
+				<h2>UK Election Maps - Methodology </span></h2>
+				<script>
+				$(function(){
+					$("#menu").load("/menu.html")
+				});
+				</script>
+				<div id="menu">
+
+				</div>
+			</div>
+
+			<div id ="farleft">
+				<div class="projections">
+					<h3 class="notactive"><a href="/election2015/">Current Parliament</a></h3>
+					<h3 class="notactive"><a href="/election2015/2010parliament.html"> 2010 Parliament</a></h3>
+					<h3 class="notactive"><a href="/election2015/projection.html"> 2015 Projection</a></h3>
+
+				</div>
+
+				<div class ="projections" id="otherlinks">
+					<h3 class="currentpage">Methodology</h3>
+					<h3 class="notactive"><a href="/election2015/polls.html">Polls</a></h3>
+					<h3 class="notactive"><a href="/election2015/seats.html">Seat List </a></h3>
+					<h3 class="notactive"><a href="/election2015/trends.html">Trends</a></h3>
+					<h3 class="notactive"><a href="/election2015/articles/">Articles</a></h3>
+				</div>
+
+			</div>
+
+			<div id="methodology">
+
+				<h2> About the Map </h2>
+
+				<p>  The data for the map was originally OS data for UK constituencies in shapefile format and around 180Mb in size.
+				  QGIS, <a href="http://geojson.io">geojson.io</a>, and <a href="http://mapshaper.org">mapshaper</a> were used to transform
+					and simplify this data to a topojson file format of size 120kb.	This is rendered on the webpage using <a href="http://d3js.org">d3js</a>.</p>
+
+				<p>	Unfortunately no OS data for Northern Ireland constituencies could be found so they were drawn by hand on
+					top of a pre-existing	map of Ireland in QGIS. </p>
+
+				<p>	A series of python scripts takes poll/previous election data and outputs a csv file of all seats with 2010 winner, 2015 winner,
+					2015 majority	and a percentage for each party.
+					This file is loaded on the webpage and links with the topojson to colour the map, give information when seats are clicked and apply any filters.
+					</p>
+
+				<p> The vote totals table is a separate series of csv files updated by the same scripts. </p>
+
+				<h2> About the Prediction and Python Scripts</h2>
+
+				<h4> Poll Analysis </h4>
+
+				<p> I split polls regionally based on the EU constituencies of the UK - 9 in England plus Scotland, Wales and Northern Ireland</p>
+
+				<p> Polling data is written to a csv file. The polling analysis script reads the polling region name and looks it up in a polling dictionary.
+				"North England" for example will tell it to apply the poll to the EU constituencies "North East England", "North West England" and "Yorkshire and the Humber".</p>
+				<p> Pollsters have different definitions for some regions, especially "South" and "Midlands".
+					Figuring which region had which EU constituencies and was done by comparing sums of populations of the EU constituencies to the number of people polled. </p>
+				<p>The script looks up the party percent for the overall region in 2010.
+					It works out the difference implied by the poll and creates a separate poll for each EU constituency with party percentages of 2010% + difference. </p>
+
+				<p> After doing this for all polls, they are weighted proportional to the square root of (<sup>sample size</sup>&frasl;<sub>number of regions in polling region</sub>)
+					and multiplied by 0.8 <sup>number of days since poll</sup>. They lose 20% of their value per day. <p>
+				<p> They are then averaged per region and a set of 12 regional party polling averages is produced. </p>
+				<p> Seat specific polls are done in a separate script and lose 1.5% of their value per day.</p>
+
+				<h4>Example</h4>
+				<p>An Ashcroft poll has Con = 30%,  Lab = 40% in "North England" with a sample of 250 on March 16th. Today is March 21st</p>
+				<p>The polling dictionary has the reference:  "North England" : ["northeastengland", "northwestengland", "yorkshireandthehumber"]. </p>
+				<p>The overall percentages from 2010 are looked up for "North England" - say Con = 35%, Lab = 35%. (this is the sum of votes for each party in the 3 regions in "North England" / total of votes of 3 regions in "North England")</p>
+				<p>The differences of -5 Con and +5 Lab are applied to 2010 results for each EU constituency.</p>
+				<p>Say in North East England in 2010, Con = 30%, Lab = 45% would become Con = 25%, Lab = 50%.</p>
+				<p>And in North West England, Con = 35%, Lab = 40% becomes Con = 30%, Lab = 45%.</p>
+				<p>A separate poll is created for each EU constituency in "North England". </p>
+				<p>This poll is given a weight proportional to &radic;<span class="squareroot">250 &frasl; 3 </span>. 3 is number of EU constituencies in "North England".</p>
+				<p> This weight is multipled by 0.8 <sup>5</sup>. 5 is number of days since poll. </p>
+				<p> Once all polls in the file are read, split, analysed and weighted, these numbers are incorporated into the set of 12 overall regional polls.</p>
+
+
+
+
+				<h4> Seat Analysis </h4>
+
+				<p>For each party in each seat a series of formulae are applied. The general idea is that 2010 percentages are multiplied by a seat change factor to get projected percentages. </p>
+				<p>Firstly, the regional party polling averages from the polling script are altered relative to 2010 results and the number of days until the election.
+				This is the forecasting part of the model and assumes there will be a reversion to the status quo as we approach election day.
+				This effect is linearly proportional to the number of days left until the election.</p>
+				<p> The party regional relative change is calculated. This is (forecasted regional polling %) / (2010 regional %). </p>
+				<p> For the seat, how much the party polls in it relative to the region is calculated. </p>
+				<p> The new vote percent for each party in a seat is distributed around a mean of the regional relative change inversely proportional to how the seat is for the party relative to the region. </p>
+
+				<p> The upshot of this is that if a party is polling better in a region than in 2010, the seats they do better in in that region will see a smaller increase in the vote than the seats they did poorly in.</p>
+				<p> If a party is polling worse in a region than in 2010, the seats they did better in in that region will see a smaller decrease in the vote than the seats they did poorly in.</p>
+
+				<p> This produces a seat change factor - which is them multiplied by the old percentage to get the 2015 projected percentage. </p>
+
+				<p> After this, incumbency factors are applied. These are based off of the idea that incumbents tend to retain a percentage of the vote.
+				This is particularly true for the Lib Dems. <a href="http://nottspolitics.org/2013/01/25/how-incumbency-changed-the-outcome-of-the-2010-election/">See here</a>.</p>
+
+				<p> After doing all of these transformations, the numbers often don't add up to 100% so they are normalised. </p>
+
+				<p> Finally, seat specific polls are applied (only the most recent is used if there are multiple). If these are recent they tend to have quite an influence on the percentages.
+					The difference between the poll and the current projected percentage is multiplied by the poll weight and added to the current value.</p>
+
+				<p> Again, this can result in numbers not adding up to 100 so normalisation is done again. It is important to normalise before seat poll analysis since those numbers need to apply to accurate percentages.</p>
+
+				<p> This is done for every seat and final data is appended to various csvs which are used by the webpage. The nowcast is the projection without the reversion factor.</p>
+
+
+				<h4> Example </h4>
+				<p> Liberal Democrats in Berwick-upon-tweed in North East England. Mar 1 2015.</p>
+				<p> 2010 regional polling = 23.46%. Current regional polling = 7.59%.  2010 seat percentage = 43.72%.</p>
+				<p> Days to election = 66. Reversion factor = 0.004 * days to election = 0.26. </p>
+				<p> Forecasted regional polling % = current polling %  + reversion * (2010 % - current polling %)</p>
+				<p> = 7.59 + 0.26 * (23.46 - 7.59) = 11.78%. </p>
+				<p> Regional relative change = 11.78 / 23.46 = 0.50.</p>
+				<p> Seat relative to region = 43.72 / 23.46 = 1.86. This seat is a good one for the Liberal Democrats in the North East.</p>
+				<p> Seat change factor = 1 +  (region relative change - 1 )  /&radic;<span class="squareroot"> (seat relative to region)</span></p>
+				<p> = 1 + (0.50 - 1) /  &radic;<span class="squareroot">1.86</span> = 0.63</p>
+				<p> The Lib Dems retain 63% of their vote in this seat vs the 50% regionwide </p>
+				<p> New seat percentage = 2010 seat percentage * seat change factor </p>
+				<p> = 43.72 * 0.63 = 27.85%</p>
+				<p> I give the Liberal Democrats an incumbency bonus of 5% for this election (less than it has been historically)</p>
+				<p> Projected percentage = 32.85%</p>
+				<p> This is normalised to 33.27%.</p>
+				<p> There was a seat poll done in Berwick on Aug 28th 2014. In it, Liberal Democrats had a percentage of 30%.
+					Since this is quite an old poll it only has a weight of 0.06 on the day of writing. A reversion factor is applied and this becomes 33.62% </p>
+				<p> Final projected percentage = projected percentage - poll weight *  (projected percentage - poll percentage) </p>
+				<p> = 33.27 - 0.06 * (33.27 - 33.62) = 33.30% </p>
+
+
+				<h4> Possible Improvements </h4>
+				<p> Incumbency bonus is applied in a fairly broad manner. It would be better to apply it based on whether the same MP is standing or not.
+					Historical data could be used to help work out how incumbency bonuses change if incumbent MP are stepping down.
+					However, this may end up being far too specific to individual MPs/seats/historical situations and a broader approach could be better.</p>
+				<p> Reversion factor is an arbitrary number. Again, historical trends could be analysed to find a more accurate number to apply there.</p>
+
+
+
+
+
+			</div>
+			<div id="footer">
+				<p> Copyright 2015 principalfish.co.uk</p>
+			</div>
+
+
+		</div>
+
+
+
+
+</body>
+
+<footer>
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-58696407-1', 'auto');
+		ga('send', 'pageview');
+
+	</script>
+</footer>

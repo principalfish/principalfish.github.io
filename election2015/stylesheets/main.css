@@ -1,0 +1,411 @@
+#wrapper {
+	width: 1480px;
+
+}
+/* far left */
+
+#top {
+	width: 1452px;
+}
+
+#farleft {
+		border-right: 0;
+		height: 900px;
+}
+
+#farleft p {
+		text-align: left;
+}
+
+#farleft h2,h3{
+	letter-spacing: 1px;
+	font-weight: normal;
+}
+
+.projections {
+	height: 60px;
+	width: 100%;
+}
+
+.projections h3 {
+	text-align: center;
+	margin-right: -5px;
+	margin-left: -5px;
+	padding-left: 5px;
+	padding-right: 5px;
+
+}
+
+.projections a {
+	text-decoration: none;
+	color: #fff;
+}
+
+.projections a:hover {
+	color: orange;
+}
+
+#instructions {
+
+}
+
+
+.currentpage {
+	background: blue;
+	color: #FFFF00;
+	margin: 2px;
+}
+
+.notactive {
+	margin: 2px;
+	letter-spacing: 0px;
+	font-size: 0.75em;
+}
+
+#otherlinks {
+	border-top: 1px solid black;
+	padding-bottom: 25px;
+}
+
+#votesharebyparty, #swingfromto, #votesharechangebyparty {
+	margin-top: -20px;
+	padding-bottom: 10px;
+}
+
+#votesharebyparty h2, #swingfromto h2, #votesharechangebyparty h2{
+	margin-bottom: -10px;
+}
+
+#votesharebyparty select, #swingfromto select, #votesharechangebyparty select{
+	border: 1px solid black;
+	width: 100%;
+	text-align: left;
+	background: white;
+	color: black;
+}
+
+#swingfromto {
+	margin-top: -25px;
+}
+
+#searchforseat{
+	margin-top: -15px;
+}
+
+#searchforseat h2{
+	 margin-bottom: 5px;
+}
+
+#searchforseat input {
+	margin-top: -10px;
+	width: 97%;
+	background: white;
+	border: 1px solid black;
+}
+
+#filters {
+	height: auto;
+}
+
+#filters p, form {
+	margin-top: -6px;
+	font-size: 1.1em;
+}
+
+#filters button {
+	float: right;
+}
+
+#filters select {
+	border: 1px solid black;
+	width: 100%;
+	text-align: left;
+	background: white;
+	color: black;
+}
+
+#filters input {
+	border: 1px solid black;
+	margin-top: -5px;
+	width: 50px;
+	background-color: white;
+	color: black;
+}
+
+#filteredlist {
+}
+
+#filteredlist button{
+	width: 100%;
+}
+
+#filteredlisttable{
+	width: 100%;
+	max-height: 90%;
+	overflow: auto;
+}
+
+#filteredlisttable td{
+	padding-bottom: 1px;
+	padding-top: 1px;
+	border-bottom: 1px solid #3399FF;
+	width: 140px;
+	white-space: nowrap;
+	text-align: left;
+	cursor: pointer;
+
+}
+
+#filteredlisttable td:hover{
+	opacity: 0.5;
+}
+
+/* map */
+
+#left {
+	float: left;
+	width: 700px;
+	height: 900px;
+	border-bottom: 1px solid black;
+	border-right: 1px solid black;
+	border-left: 1px solid black;
+	display: block;
+	overflow: hidden;
+	/*position: relative;*/
+}
+
+#resetbutton {
+	position: absolute;
+	z-index: 1;
+	padding: 5px;
+
+
+}
+
+#resetmap {
+	font-size: 1.2em;
+}
+
+/* right */
+
+#right{
+	height: 900px;
+	float: left;
+	width: 600px;
+	border-right: 1px solid black;
+	border-bottom: 1px solid black;
+	background-color: #99CCFF;
+	border-radius: 0 0 10px 0;
+}
+
+#topright {
+	height: 40px;
+	width: 600px;
+	float: left;
+
+}
+
+/* info table */
+#information 	{
+	width: 100%;
+	height: 202px;
+	border-bottom: 1px solid black;
+	float: left;
+	border-top: 1px solid black;
+}
+
+#information-header{
+	float: left;
+}
+
+#information-bielection{
+	float: right;
+}
+
+#information table {
+	height: 200px;
+	font-size: 1.5em;
+
+}
+
+#information td {
+	width: auto;
+	padding-left: 3px;
+	padding-right: 3px;
+}
+
+#rightcolumninfotable {
+	text-align: right;
+	font-size:0.9em;
+}
+
+/* pie chart and votes */
+
+#charts {
+	height: 250px;
+	border-bottom: 1px solid black;
+}
+
+#information-pie {
+	float: left;
+	width: 250px;
+	height: 250px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
+}
+
+#information-chart {
+	float: right;
+	font-size: 1.25em;
+	margin-right: 5px;
+	margin-top : -10px;
+}
+
+#information-chart td{
+	border: 1px solid black;
+	padding: 2px;
+	padding-left: 3px;
+	padding-right: 3px;
+	text-align: center;
+}
+
+/* country totals*/
+
+#totals {
+	height: auto;
+}
+
+
+#totals h3{
+	color: black;
+}
+
+#totals table{
+	width: 600px;
+}
+
+#totalstable th{
+	color: black;
+	font-size: 0.9em;
+
+}
+
+table#totalstable thead tr .header {
+    background-image: url("/img/bg.gif");
+    background-repeat: no-repeat;
+    background-position: right center;
+    cursor: pointer;
+}
+
+table#totalstable thead tr .headerUp {
+    background-image: url("/img/asc.gif");
+}
+
+table#totalstable thead tr .headerDown {
+    background-image: url("/img/desc.gif");
+}
+
+
+/* map stylings */
+
+svg .boundaries {
+	 fill: none;
+	 stroke: darkgrey;
+	 stroke-linejoin: round;
+	 stroke-width: 0.4;
+}
+
+ .background {
+  fill: #99CCFF ;
+  pointer-events: all;
+}
+
+svg .map {
+	stroke: black;
+	stroke-width: 0.2;
+	stroke-linejoin: round;
+	cursor: pointer;
+	pointer-events: all;
+
+}
+
+.map:hover {
+	opacity: 0.5;
+	stroke: black;
+	stroke-width: 0.2;
+}
+
+svg .not_here{
+	cursor: pointer;
+}
+
+.not_here:hover {
+	opacity: 0.5;
+}
+
+#keyonmap {
+	position: absolute;
+	margin-top: 25px;
+	margin-left : 5px;
+	height: 150px;
+	width: 75px;
+	font-size: 1.2em;
+	padding: 2px;
+}
+
+/*
+.place {
+	pointer-events: all;
+}
+
+.place-label {
+	font-size: 0.4em;
+	fill: black;
+}
+*/
+
+/* party based stylings */
+
+.labour { background-color:#CC0000; color: white; fill: #CC0000; stroke: #CC0000;}
+.conservative {background-color: #0000FF; color: #FFFF00; fill: #0000FF; stroke: #0000FF; }
+.libdems {background-color: #FF9900; color:black; fill:#FF9900; stroke: #FF9900;}
+.snp { background-color: #FFFF00; color:#0000FF; fill: #FFFF00; stroke: #FFFF00;}
+.ukip { background-color: #660099; color:#99FF66; fill: #660099; stroke: #660099;}
+.green { background-color: #6AB023; color:black; fill: #6AB023; stroke: #6AB023;}
+.plaidcymru {background-color: #337147; color:black; fill: #337147; stroke: #337147;}
+.respect {background-color: #660000; color:white; fill: #660000; stroke: #660000;}
+.speaker {background-color: white; color:black ; fill: white; stroke: white;}
+.independent {background-color: grey; color:white; fill: grey; stroke: grey;}
+.dup {background-color: #D46A4C; color: black; fill:#D46A4C; stroke: #D46A4C;}
+.sdlp { background-color: #99FF66; color: black; fill: #99FF66; stroke: #99FF66;}
+.uu {background-color: #9999FF; color:black; fill: #9999FF; stroke: #9999FF;}
+.alliance {background-color: #F6CB2F; color: black; fill: #F6CB2F; stroke: #F6CB2F;}
+.sinnfein {background-color: #008800; color: black; fill: #008800; stroke: #008800;}
+.other1 {background-color: #666666 ; color:white; fill: #666666 ; stroke: #666666;}
+.other2 {background-color: #999999; color:white; fill: #999999; stroke: #999999;}
+.not_here {background-color: white; color:black; fill: white; stroke: black; stroke-width : 0.2; }
+.null {background-color: white; color: black;}
+.total {background-color: black; color: white; stroke: grey; }
+.other {background-color: #aaaaaa; color:white; fill: #aaaaaa ; stroke: #aaaaaa;}
+.others {background-color: #cccccc; color:black; fill: #cccccc; stroke: #cccccc;}
+
+
+/* pollster stylings */
+
+.yougov {background-color: red; color: white;}
+.survation {background-color: orange; color: black;}
+.tns {background-color: yellow; color: black;}
+.ashcroft {background-color: green; color: white;}
+.icm {background-color: blue; color: white;}
+.populus {background-color: purple; color: lightgreen;}
+.comres {background-color: brown; color: white;}
+.opinium {background-color: pink; color: black;}
+.lucidtalk {background-color: black; color: white;}
+.mori {background-color: grey; color: black;}
+.panelbase {background-color: white; color: black;}
+.bmg {background-color: lightblue; color: black;}

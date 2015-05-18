@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+	<title>UK 2015 Election Methodology</title>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/template.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/main.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/infopages.css"/>
+	<link type="text/css" rel="stylesheet" href="/election2015/stylesheets/theme.default.css"/>
+	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
+	<link rel="shortcut icon" href="/img/logo.png">
+
+	<style> /* set the CSS */
+
+</style>
+</head>
+
+<body>
+	<script type="text/javascript" src="/election2015/scripts/dictionary.js"></script>
+	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
+	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/papaparse.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/d3.min.js"></script>
+	<script type="text/javascript" src="/election2015/scripts/pagescripts/trends.js"></script>
+
+
+		<div id="wrapper">
+			<div id="top">
+				<h2>UK Election Maps - Trends </span></h2>
+				<script>
+				$(function(){
+					$("#menu").load("/menu.html")
+				});
+				</script>
+				<div id="menu">
+
+				</div>
+			</div>
+
+			<div id ="farleft">
+				<div class="projections">
+					<h3 class="notactive"><a href="/election2015/">Current Parliament</a></h3>
+					<h3 class="notactive"><a href="/election2015/2010parliament.html"> 2010 Parliament</a></h3>
+					<h3 class="notactive"><a href="/election2015/projection.html"> 2015 Projection</a></h3>
+
+				</div>
+
+				<div class ="projections" id="otherlinks">
+					<h3 class="notactive"><a href="/election2015/methodology.html">Methodology</a></h3>
+					<h3 class="notactive"><a href="/election2015/polls.html">Polls</a></h3>
+					<h3 class="notactive"><a href="/election2015/seats.html">Seat List </a></h3>
+					<h3 class="currentpage">Trends</h3>
+					<h3 class="notactive"><a href="/election2015/articles/">Articles</a></h3>
+				</div>
+
+				<div id="trendscheckbox">
+					<h3 style="width: 100%; text-align: center; font-weight: bold;">Select Parties </h3>
+					<p class="conservative"><input type="checkbox"  value="conservative" onchange="reDrawGraph(value)" checked> Conservative</p>
+					<p class="labour"><input type="checkbox"  value="labour" onchange="reDrawGraph(value)" checked> Labour</p>
+					<p class="libdems"><input type="checkbox"  value="libdems" onchange="reDrawGraph(value)" checked> Liberal Democrats</p>
+					<p class="ukip"><input type="checkbox"  value="ukip" onchange="reDrawGraph(value)" checked> UKIP</p>
+					<p class="green"><input type="checkbox"  value="green" onchange="reDrawGraph(value)" checked> Green</p>
+					<p class="snp"><input type="checkbox"  value="snp" onchange="reDrawGraph(value)" checked> SNP</p>
+					<p class="plaidcymru"><input type="checkbox"  value="plaidcymru" onchange="reDrawGraph(value)" checked> Plaid Cymru</p>
+					<p class="dup"><input type="checkbox"  value="dup" onchange="reDrawGraph(value)"> DUP</p>
+					<p class="sinnfein"><input type="checkbox"  value="sinnfein" onchange="reDrawGraph(value)"> Sinn Féin</p>
+					<p class="sdlp"><input type="checkbox"  value="sdlp" onchange="reDrawGraph(value)"> SDLP</p>
+					<p class="alliance"><input type="checkbox"  value="alliance" onchange="reDrawGraph(value)"> Alliance</p>
+					<p class="uu"><input type="checkbox"  value="uu" onchange="reDrawGraph(value)"> UUP</p>
+					<p class="other"><input type="checkbox"  value="other" onchange="reDrawGraph(value)"> Other</p>
+				</div>
+
+			</div>
+
+			<div id="trends">
+				<h3 style="font-weight: bold;"> Data from projection </h3>
+				<p id="trendsoptions">
+					<a href ="#" onclick="currentState = 'seats', drawGraph('seats')">Seat Totals</a>
+					&nbsp; &nbsp;
+					<a href ="#" onclick="currentState = 'percent', drawGraph('percent')">Percentages</a>
+
+				</p>
+
+
+				<div id="graph" class="chart">
+				</div>
+				<script>
+
+				  var svg = d3.select("#graph")
+				      .append("svg")
+				          .attr("width", width + margin.left + margin.right)
+				          .attr("height", height + margin.top + margin.bottom)
+				      .append("g")
+				          .attr("transform",
+				                "translate(" + margin.left + "," + margin.top + ")");
+
+
+				</script>
+
+			</div>
+
+			<div id="footer">
+				<p> Copyright 2015 principalfish.co.uk</p>
+			</div>
+
+
+		</div>
+
+
+
+
+</body>
+
+<footer>
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+		ga('create', 'UA-58696407-1', 'auto');
+		ga('send', 'pageview');
+
+	</script>
+</footer>

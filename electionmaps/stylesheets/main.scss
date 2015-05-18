@@ -443,6 +443,10 @@ table#totalstable {
   left: $side-bar-width + $map-container-width + $filters-width + 5;
   width: $filters-width;
 
+
+}
+
+#searchseats {
   input {
     margin-top: -10px;
     width: 97%;
@@ -450,6 +454,8 @@ table#totalstable {
     border: 1px solid black;
   }
 }
+
+
 
 #filters {
   position: absolute;

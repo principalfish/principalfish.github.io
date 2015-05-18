@@ -1299,12 +1299,6 @@ function loadTheMap(url){
 
 loadTheMap("2015parliament");
 
-$(function() {
-    // $("#userinput").draggable();
-		$("#methodology").draggable();
-		$("#seatlist").draggable();
-  });
-
 var previousSetting = "2015parliament"
 
 function alterTheUI(setting){

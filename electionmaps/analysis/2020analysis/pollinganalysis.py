@@ -1,18 +1,44 @@
-import csv
+import csv, json
 import math
 from pollingdictionary import pollingregions
 from datetime import date
 from collections import defaultdict
 
 parties = ["conservative", "labour", "libdems", "ukip", "snp", "plaidcymru", "green", "uu", "sdlp", "dup", "sinnfein", "alliance", "other"]
+regions = ["northernireland", "scotland", "yorkshireandthehumber", "wales", "northeastengland", "northwestengland", "southeastengland", "southwestengland", "london", "eastofengland", "eastmidlands", "westmidlands"]
 
 # POLLING COMBINATION SECTION
-previousregionaltotals = {}
+old_data = {}
+previous_regional_totals = {}
 
-with open("previoustotals.csv") as csvfile:
-    reader = csv.DictReader(csvfile, delimiter = "\t")
-    for row in reader:
-        previousregionaltotals[row["region"]] = row
+with open("oldinfo.json") as data_file:
+    data = json.load(data_file)
+    for seat in data:
+        old_data[seat] = data[seat]
+
+for region in regions:
+    turnout = 0
+    party_votes = {}
+
+    for party in parties:
+
+        party_total = 0
+
+        for seat in old_data:
+            if old_data[seat]["seat_info"]["area"] == region:
+                if party in old_data[seat]["party_info"]:
+                    turnout += old_data[seat]["party_info"][party]["total"]
+                    party_total += old_data[seat]["party_info"][party]["total"]
+                if party == "other":
+                    if "others" in old_data[seat]["party_info"]:
+                        party_total += old_data[seat]["party_info"]["others"]["total"]
+                        turnout += old_data[seat]["party_info"]["others"]["total"]
+
+        party_votes[party] = party_total
+
+
+    party_votes["turnout"] = turnout
+    previous_regional_totals[region] = party_votes
 
 # dict for each poll in csv
 totalpolling = defaultdict(list)
@@ -67,25 +93,21 @@ class Poll(object):
             sum = 0
             total = 0
             for region in pollingregions[self.region]:
-                sum += int(previousregionaltotals[region][party])
-                total +=  int(previousregionaltotals[region]["turnout2010"])
+                sum += int(previous_regional_totals[region][party])
+                total +=  int(previous_regional_totals[region]["turnout"])
 
 
             f[party] = 100 * sum / float(total)
 
-
         #print self.region, self.area, f
         partychange = {}
-
-
-
         # apply +/- for poll region to each previous regional percent, add to partyinfo
         for party in parties:
             partychange[party] = self.partyinfo[party][0] - f[party]
 
-            partypercent = 100 * int(previousregionaltotals[self.area][party]) / float(previousregionaltotals[self.area]["turnout2010"])
+            partypercent = 100 * int(previous_regional_totals[self.area][party]) / float(previous_regional_totals[self.area]["turnout"])
             partypercent += partychange[party]
-            self.partyinfo[party][1] = partypercent            
+            self.partyinfo[party][1] = partypercent
 
 
     #weight polls based on days since poll and sqrt of number polled.
@@ -149,6 +171,7 @@ today = date.today()
 # do work on each poll
 for region in totalpolling:
     for poll in totalpolling[region]:
+
         poll.getnewpercentages()
         poll.weightpolls()
 
@@ -158,7 +181,7 @@ for region in totalpolling:
         pass
 
 
-regionalpartytotals = defaultdict(list)
+regional_party_totals = defaultdict(list)
 # accumulate party percentages per region -
 for region in totalpolling:
     d = {}
@@ -170,17 +193,17 @@ for region in totalpolling:
 
         d[party] = sum
 
-    regionalpartytotals[region].append(d)
+    regional_party_totals[region].append(d)
 
 # normalise percentages to 100 (they are typically all in the 100s from all the polling)
-for area in regionalpartytotals:
+for area in regional_party_totals:
 
     sum = 0
     for party in parties:
-        sum += regionalpartytotals[area][0][party]
+        sum += regional_party_totals[area][0][party]
 
     normaliser = 100 / sum
 
-    for i in range(len(regionalpartytotals[area])):
-        for key, value in regionalpartytotals[area][i].items():
-            regionalpartytotals[area][i][key] = normaliser * value
+    for i in range(len(regional_party_totals[area])):
+        for key, value in regional_party_totals[area][i].items():
+            regional_party_totals[area][i][key] = normaliser * value

@@ -83,7 +83,21 @@ var previousTotalsVoteTotals = {
 						"southwestengland": 2773443,
 						"wales": 1441758,
 						"westmidlands": 2640572,
-						"yorkshireandthehumber": 2368363}
+						"yorkshireandthehumber": 2368363},
+
+	"2020" : {
+				"eastmidlands" : 2230402 ,
+				"northeastengland" : 1188183 ,
+				"northwestengland" : 3364055 ,
+				"southeastengland" : 4394357 ,
+				"scotland" : 2910465 ,
+				"westmidlands" : 2628943 ,
+				"london" : 3536291 ,
+				"eastofengland" : 2948622 ,
+				"southwestengland" : 2836213 ,
+				"wales" : 1498433 ,
+				"northernireland" : 718103 ,
+				"yorkshireandthehumber" : 2444143}
 };
 
 var regions = {

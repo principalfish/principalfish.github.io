@@ -124,7 +124,7 @@ class Seat(object):
                     new += 1
 
                 elif self.incumbent == "conservative" and party == "conservative":
-                    new += 4
+                    new += 2
 
                 elif self.incumbent == "snp" and party == "snp":
                     new += 0

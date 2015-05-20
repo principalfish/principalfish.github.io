@@ -127,7 +127,6 @@ function analyseUserInput(inputform, region){
 
 	alterMap(region);
 	}
-
 }
 
 function projection_getChange(percentages, region){
@@ -245,7 +244,7 @@ function projection_seatAnalysis(region, percentages, regionalRelativeChanges, p
 
 							if (oldSeatData[seat]["incumbent"] == party){
 								if (party == "conservative"){
-									newPercentage += 4;
+									newPercentage += 2;
 								}
 
 								if (party == "libdems"){

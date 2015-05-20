@@ -23,6 +23,7 @@
 	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/filters.js"></script>
 	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/choropleths.js"></script>
 	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/main.js"></script>
+	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/userinput.js"></script>
 
     <header>
         <h1>UK Election Maps - <span id="headertitle">2015 Parliament</span></h1>
@@ -42,10 +43,14 @@
 
 					<h3 id="nav2015parliament" class="currentpage"><a href="#" onclick="loadTheMap('2015parliament'); alterTheUI('2015parliament');"> 2015 Parliament</a> </h3>
 					<h3 id="nav2010parliament" class="notactive"><a href="#" onclick="loadTheMap('2010parliament'); alterTheUI('2010parliament');">2010 Parliament</a></h3>
+										<div class="divider"></div>
+					<h3 id="nav2020projection" class="notactive"><a href="#" onclick="loadTheMap('2020projection'); alterTheUI('2020projection');">2020 Projection</a></h3>
 					<h3 id="nav2015projection" class="notactive"><a href="#" onclick="loadTheMap('2015projection'); alterTheUI('2015projection');">2015 Projection</a></h3>
                     <div class="divider"></div>
+					<h3 id="navprojectionuserinput" style="display:none" class="notactive" onclick="showUserInput();"><a href="#">User Input</a></h3>
 					<h3 id="navseatlist" class="notactive" onclick="showSeatList('england');"><a href="#">Seat List </a></h3>
 					<h3 id="navprojectionmethodology" style="display:none" class="notactive" onclick="showMethodology();"><a href="#">Methodology</a></h3>
+
                 </nav>
 
 
@@ -104,6 +109,9 @@
 				</div>
 
 				<div id="methodology" class="dash-box">
+				</div>
+
+				<div id="userinput" class="dash-box">
 				</div>
 
 

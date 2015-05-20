@@ -59,16 +59,15 @@ function getData(url){
 function getSeatInfo(data){
 
   $.each(data, function(seat){
-		if (!(seat in seatData)){
+		// if (!(seat in seatData)){
 			seatData[seat] = data[seat];
 			totalElectorate += data[seat]["seat_info"]["electorate"];
 			var incumbent = seatData[seat]["seat_info"]["incumbent"];
 			if (incumbent == "independent" || incumbent == "speaker" || incumbent == "respect"){
 				seatData[seat]["seat_info"]["incumbent"] = "other"
 			}
-		}
+		// }
 	});
-
 
 	loadmap();
 
@@ -91,9 +90,8 @@ function getSeatInfo(data){
 		totalTurnout = 100;
 	}
 
-
-	totalTurnout = "Turnout : " + String(totalTurnout.toFixed(2)) + "%"
-	document.getElementById("totalturnout").innerHTML = totalTurnout
+	totalTurnout = "Turnout : " + String(totalTurnout.toFixed(2)) + "%";
+	document.getElementById("totalturnout").innerHTML = totalTurnout;
 
 }
 
@@ -121,20 +119,23 @@ function showMethodology(){
 	$("#methodology").css('z-index', currentZindex);
 }
 
-// function userInput(){
-//
-// 	$("#userinput").html("");
-// 	$(function(){
-// 			$("#userinput").load("userinput.html");
-// 	});
-// 	$("#userinput").show();
-// 	currentZindex += 1;
-// 	$("#userinput").css('z-index', currentZindex);
-// }
+function showUserInput(){
+	$("#userinput").html("");
+	$(function(){
+			$("#userinput").load("userinput.html");
+	});
+	$("#userinput").show();
+	$("#userinput").draggable();
+	currentZindex += 1;
+	$("#userinput").css('z-index', currentZindex);
+}
 
 function loadTheMap(url){
 	seatData = {};
+
 	seatsAfterFilter = [];
+	seatNames = [];
+	searchSeatData = [];
 	totalElectorate = 0;
 	$(".map").remove();
 	$(document).ready(function(){ getData("data/" + url + "/info.json").done(getSeatInfo)});
@@ -157,7 +158,6 @@ function alterTheUI(setting){
 	$(alterClass).attr("class", "notactive");
 	$(alterSelected).attr("class", "currentpage");
 
-
 	if (setting == "2015parliament") {
 		$("title").text("UK Election Maps - 2015 Parliament");
 		$("#headertitle").text("2015 Parliament");
@@ -167,11 +167,11 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
 		$("#navprojectionmethodology").hide();
-		// $("#navprojectionuserinput").hide();
+		$("#navprojectionuserinput").hide();
+		$("#userinput").hide();
 	}
 
 	if (setting == "2010parliament"){
-
 		$("title").text("UK Election Maps - 2010 Parliament");
 		$("#headertitle").text("2010 Parliament");
 		$("#dropdowngainslabel").hide();
@@ -180,11 +180,11 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").hide();
 		$("#navseatlist").hide();
 		$("#navprojectionmethodology").hide();
-		// $("#navprojectionuserinput").hide();
+		$("#navprojectionuserinput").hide();
+		$("#userinput").hide();
 	}
 
 	if (setting == "2015projection"){
-
 		$("title").text("UK Election Maps - 2015 Projection");
 		$("#headertitle").text("2015 Projection");
 		$("#dropdowngainslabel").show();
@@ -193,7 +193,23 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
 		$("#navprojectionmethodology").show();
-		// $("#navprojectionuserinput").show();
+		$("#navprojectionuserinput").show();
+		$("#userinput").hide();
+	}
+
+	if (setting == "2020projection"){
+		$("title").text("UK Election Maps - 2020 Projection");
+		$("#headertitle").text("2020 Projection");
+		$("#dropdowngainslabel").show();
+		$("#dropdowngains").show();
+		$("#swingfromto").show();
+		$("#votesharechangebyparty").show();
+		$("#navseatlist").show();
+		$("#navprojectionmethodology").show();
+		$("#navprojectionuserinput").show();
+
+		previousYear = String(parseInt(pageSetting.slice(0, 4) -5));
+		getData("data/" + previousYear + "parliament/info.json").done(getOldInfo);
 	}
 	previousSetting = setting;
 }

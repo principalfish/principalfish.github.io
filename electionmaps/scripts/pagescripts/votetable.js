@@ -164,7 +164,8 @@ function getVoteTotals(area){
 		});
 
 		$.each(areas, function(area){
-			oldturnout +=  previousTotalsVoteTotals[pageSetting.slice(0,4)][areas[area]];
+			year = String(parseInt(pageSetting.slice(0,4)) - 5)
+			oldturnout +=  previousTotalsByYearByParty[year][areas[area]]["turnout"];
 		})
 
 		var holdingArray = [];
@@ -217,7 +218,7 @@ function getVoteTotals(area){
 			old_vote_percent =  parseFloat((100 * oldvotetotal / parseFloat(oldturnout)).toFixed(2));
 			var vote_percent_change = votepercent - old_vote_percent
 
-			change = seatssum - change;  
+			change = seatssum - change;
 
 			if (code == "other"){
 				otherSeatssum = seatssum;

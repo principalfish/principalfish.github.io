@@ -17,7 +17,7 @@ party_map = {
      'uu': "UUP",
      'sdlp': "SDLP",
      'dup': "DUP",
-     'sinnfein': "Sinn Féin",
+     'sinnfein': "Sinn Fein",
      'alliance': "Alliance",
      'other' : "Others"
 }
@@ -266,7 +266,6 @@ def add_seat_polls(poll):
 
 for poll in seatpolling:
     add_seat_polls(poll)
-
 
 for seat in seats:
     seats[seat].get_new_percentages()

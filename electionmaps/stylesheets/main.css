@@ -185,8 +185,8 @@ header {
 #methodology {
   position: absolute;
   z-index: 500;
-  left: 170px;
-  top: 72px;
+  left: 155px;
+  top: 40px;
   max-height: 720px;
   max-width: 1100px;
   overflow: auto;

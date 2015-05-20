@@ -121,11 +121,12 @@ function analyseUserInput(inputform, region){
       northernirelandUserNumbers["other"] = 100 - northernirelandUserNumbers["dup"] - northernirelandUserNumbers["sdlp"] - northernirelandUserNumbers["sinnfein"] - northernirelandUserNumbers["uu"] - northernirelandUserNumbers["alliance"];
       var percentages = northernirelandUserNumbers;
     }
-	}
+
 
 	projection_getChange(percentages, region);
 
 	alterMap(region);
+	}
 
 }
 
@@ -343,5 +344,20 @@ function alterMap(region){
 }
 
 function resetInputs(){
+	$("#englandinput").get(0).reset()
+	$("#scotlandinput").get(0).reset()
+	$("#walesinput").get(0).reset()
+	$("#northernirelandinput").get(0).reset()
+	$("#otherengland").text("100")
+	$("#otherscotland").text("100")
+	$("#otherwales").text("100")
+	$("#othernorthernireland").text("100")
+
+	englandUserNumbers = {"conservative": 0, "labour" : 0, "libdems" :0, "ukip" : 0, "green": 0};
+	scotlandUserNumbers = {"conservative": 0, "labour" : 0, "libdems" :0, "ukip" : 0, "green": 0, "snp" : 0 };
+	walesUserNumbers = {"conservative": 0, "labour" : 0, "libdems" : 0, "ukip" : 0, "green": 0, "plaidcymru" : 0} ;
+	northernirelandUserNumbers = {"dup" : 0, "sinnfein": 0, "sdlp": 0, "uu": 0, "alliance" : 0} ;
+
+
 	loadTheMap(pageSetting);
 }

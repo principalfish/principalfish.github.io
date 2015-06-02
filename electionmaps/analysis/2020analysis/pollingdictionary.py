@@ -2,7 +2,6 @@ pollingregions = {
     "testengland": ["yorkshireandthehumber", "northeastengland", "northwestengland", "southeastengland", "southwestengland", "london", "eastofengland", "eastmidlands", "westmidlands"],
     "testscotland" : ["scotland"],
     "testwales" : ["wales"],
-    "null": [],
 
     "Great Britain": ["scotland", "yorkshireandthehumber", "wales", "northeastengland", "northwestengland", "southeastengland", "southwestengland", "london", "eastofengland", "eastmidlands", "westmidlands"],
 
@@ -24,19 +23,16 @@ pollingregions = {
     "Yorkshire and Humber" : ["yorkshireandthehumber"],
     "East of England" : ["eastofengland"],
 
-
     #ashcroft and populus
     "Wales and South West" : ["wales", "southwestengland"],
     "South East" : ["southeastengland", "london"],
     "North England" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
     "Midlands" : ["eastmidlands", "westmidlands", "eastofengland"],
     #and scotland
-	
-	"South" : ["southeastengland", "southwestengland"],
-	
-	
-    #survation
 
+	"South" : ["southeastengland", "southwestengland"],
+
+    #survation
     "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
     "SouthSurvation" : ["southeastengland", "southwestengland", "eastofengland"],
     # and east/west mid, wales, scotland
@@ -48,8 +44,6 @@ pollingregions = {
     #mori - need to subtract london from south because MORI are stupid
     "SouthMori" : ["southeastengland", "southwestengland"],
     "MidlandsMori" : {"wales", "eastmidlands", "westmidlands", "eastofengland"},
-
-
 
     # tns
     "East and West Midlands" : ["eastmidlands", "westmidlands"],

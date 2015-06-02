@@ -193,7 +193,7 @@ function alterTheUI(setting){
 		$("#votesharechangebyparty").show();
 		$("#navseatlist").show();
 		$("#navprojectionmethodology").show();
-		$("#navprojectionuserinput").show();
+		$("#navprojectionuserinput").hide();
 		$("#userinput").hide();
 	}
 

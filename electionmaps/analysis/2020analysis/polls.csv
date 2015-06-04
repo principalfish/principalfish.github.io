@@ -2,6 +2,17 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
+comres	regional		31/05/15	31	5	2015	Scotland	67	14	14	5	0	2	32		1								
+comres	regional		31/05/15	31	5	2015	North East England	30	11	12	0	5	1			0								
+comres	regional		31/05/15	31	5	2015	North West England	80	25	36	5	9	3			1								
+comres	regional		31/05/15	31	5	2015	Yorkshire and Humber	64	24	30	3	7	1			0								
+comres	regional		31/05/15	31	5	2015	West Midlands	66	28	15	3	11	4			4								
+comres	regional		31/05/15	31	5	2015	East Midlands	58	23	19	1	10	2			2								
+comres	regional		31/05/15	31	5	2015	Wales	34	5	15	1	6	1		5	0								
+comres	regional		31/05/15	31	5	2015	East of England	73	36	15	6	12	3			0								
+comres	regional		31/05/15	31	5	2015	London	94	38	37	9	1	7			2								
+comres	regional		31/05/15	31	5	2015	South East England	93	40	23	8	16	4			2								
+comres	regional		31/05/15	31	5	2015	South West England	65	33	14	10	4	4											
 yougov	percentage		26/05/15	26	5	2015	London	219	34	44	7	6	5			1								
 yougov	percentage		26/05/15	26	5	2015	Rest of South	555	49	21	9	15	6											
 yougov	percentage		26/05/15	26	5	2015	Midlands and Wales	366	46	31	5	16	2											

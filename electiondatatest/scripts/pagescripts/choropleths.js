@@ -132,9 +132,6 @@ function keyOnMap(value, max, min, colour, text_colour){
 	}
 }
 
-
-
-
 function swingKeyOnMap(max){
 	$("#keyonmap").html("");
 
@@ -265,7 +262,7 @@ function voteShareChange(){
 
 function partyMembers(){
 	var	max = 0;
-	var min = 100;
+	var min = 1000;
 	$.each(seatData, function(seat){
 
 			var members = parseFloat(seatData[seat]["seat_info"]["new_data"]["members"]);

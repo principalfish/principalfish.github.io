@@ -30,7 +30,7 @@
 
 				<div id="map">
 						<script>
-							var width = 700, // width and height of map
+							var width = 600, // width and height of map
 								height = 850,
 								active = d3.select(null);
 
@@ -74,6 +74,10 @@
 
 				<div id="resetbutton">
 						<button id="resetmap" onclick="reset()">Reset</button>
+				</div>
+
+				<div id="tabulateddata">
+						<button id="tabulateddatabutton" onclick="showSeatList('england')">View Tabulated Data</button>
 				</div>
 				<div id="keyonmap">
 
@@ -273,7 +277,7 @@
 
 					<div id="partymembers">
 
-						<p><a href="#" onclick="partyMembers()"> Party Members </a></p>
+						<button id="partymemberbutton" onclick="partyMembers()"> Party Members </button>
 
 					</div>
 
@@ -289,6 +293,11 @@
 					</div>
 
 
+
+
+				</div>
+
+				<div id="tabulateddata">
 
 
 				</div>

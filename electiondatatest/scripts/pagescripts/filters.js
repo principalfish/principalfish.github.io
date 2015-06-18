@@ -8,6 +8,7 @@ function filterMap(){
 		.attr("opacity", 1)
 
 	$("#keyonmap").html("");
+	$('#seat-information').hide()
 
 
 	var	party = filterStates[0].party;

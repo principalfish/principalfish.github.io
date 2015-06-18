@@ -42,7 +42,6 @@ function zoomToClickedFilteredSeat(d){
 
 	$("#seat-information").show();
 	seatinfo(d);
-	console.log("fdsa")
 	previousnode = id;
 }
 

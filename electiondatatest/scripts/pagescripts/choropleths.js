@@ -12,6 +12,7 @@ function voteShare(){
 			seatData[seat]["seat_info"]["current_colour"] = 1;
 		})
 		$(".map").remove()
+		$("#keyonmap").html("")
 		loadmap();
 	}
 
@@ -132,102 +133,6 @@ function keyOnMap(value, max, min, colour, text_colour){
 }
 
 
-function swingFromTo(){
-
-	$("#keyonmap").html("");
-
-	partyA = swingState[0];
-	partyB = swingState[1];
-
-	if (swingState[0] != "null" && swingState[1] != "null" && swingState[0] != swingState[1]){
-
-
-		var	max = 0;
-
-		$.each(seatData, function(seat){
-			if (partyA in seatData[seat]["party_info"] && partyB in seatData[seat]["party_info"]){
-				var percentage_changeA = seatData[seat]["party_info"][partyA]["change"];
-				var percentage_changeB = seatData[seat]["party_info"][partyB]["change"];
-				var swing = (percentage_changeB - percentage_changeA) / 2
-				if (Math.abs(swing) > max){
-
-					max = Math.abs(swing);
-				}
-			}
-		})
-
-		for (var i = 1; i < 651; i++){
-			var id_vote_share = "#i" + i;
-
-			var	seat_name = seatsFromIDs[id_vote_share];
-
-			var swing;
-
-			if (partyA in seatData[seat_name]["party_info"] && partyB in seatData[seat_name]["party_info"]){
-
-				var percentage_changeA = seatData[seat_name]["party_info"][partyA]["change"];
-				var percentage_changeB = seatData[seat_name]["party_info"][partyB]["change"];
-				swing = (percentage_changeB - percentage_changeA) / 2;
-			}
-
-			else {
-				swing = 0;
-			}
-
-			if (max == 0) {
-				d3.select(id_vote_share)
-					.style("fill", "none")
-					.attr("opacity", 0);
-			}
-
-			else if (swing >= 0){
-				d3.select(id_vote_share)
-				.style("fill", "blue")
-				.attr("opacity", function(d){
-					seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(swing) / max;
-					return swing / max ;
-				})
-			}
-
-			else {
-				d3.select(id_vote_share)
-				.style("fill", "red")
-				.attr("opacity", function(d){
-
-					seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(swing) / max;
-					return Math.abs(swing) / max ;
-				})
-			}
-		}
-		if (previousnode != undefined){
-			var last_seat = seatData[seatsFromIDs[previousnode]];
-
-			if (partyA in last_seat["party_info"] && partyB in last_seat["party_info"]){
-				swing = (last_seat["party_info"][partyB]["change"] - last_seat["party_info"][partyA]["change"] )/ 2;
-
-				previous_opacity = Math.abs(swing) / max;
-
-			}
-			else {
-				previous_opacity = 0;
-			}
-		}
-
-		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
-
-		swingKeyOnMap(max);
-	}
-
-	else {
-		$.each(seatData, function(seat){
-			seatData[seat]["seat_info"]["current_colour"] = 1;
-		})
-		$(".map").remove()
-		loadmap();
-	}
-
-
-}
 
 
 function swingKeyOnMap(max){
@@ -277,7 +182,8 @@ function voteShareChange(){
 		$.each(seatData, function(seat){
 			seatData[seat]["seat_info"]["current_colour"] = 1;
 		})
-		$(".map").remove()
+		$(".map").remove();
+		$("#keyonmap").html("");
 		loadmap();
 	}
 
@@ -306,33 +212,36 @@ function voteShareChange(){
 
 			var seat_name = seatsFromIDs[id_vote_share];
 
-			var change;
+			if (seat_name != undefined){
 
-			if (value in seatData[seat_name]["party_info"]){
-				change = seatData[seat_name]["party_info"][value]["change"]
+				var change;
+
+				if (value in seatData[seat_name]["party_info"]){
+					change = seatData[seat_name]["party_info"][value]["change"]
+					}
+				else  {
+					change = 0;
 				}
-			else  {
-				change = 0;
-			}
 
-			if (change >= 0){
-				d3.select(id_vote_share)
-					.style("fill", "blue")
-					.attr("opacity",function(d){
-						seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
-						return Math.abs(change) / max;
-					});
-			}
+				if (change >= 0){
+					d3.select(id_vote_share)
+						.style("fill", "blue")
+						.attr("opacity",function(d){
+							seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
+							return Math.abs(change) / max;
+						});
+				}
 
-			else {
-				d3.select(id_vote_share)
-					.style("fill", "red")
-					.attr("opacity",function(d){
-						seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
-						return Math.abs(change) / max;
-					});
-			}
+				else {
+					d3.select(id_vote_share)
+						.style("fill", "red")
+						.attr("opacity",function(d){
+							seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
+							return Math.abs(change) / max;
+						});
+				}
 
+			}
 		}
 		if (previousnode != undefined){
 
@@ -347,7 +256,101 @@ function voteShareChange(){
 
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
 
-		swingKeyOnMap(max);
+
 		colour = null;
+
+		swingKeyOnMap(max);
 	}
+}
+
+function partyMembers(){
+	var	max = 0;
+	var min = 1000;
+	$.each(seatData, function(seat){
+
+			var members = parseFloat(seatData[seat]["seat_info"]["new_data"]["members"]);
+			if (members > max){
+				max = members;
+				}
+			if (members < min){
+				min = members;
+				}
+
+		})
+
+	if (Math.abs(min) > max){
+		max = Math.abs(min);
+	}
+
+	for (var i = 1; i < 651; i++){
+		var id_vote_share = "#i" + i;
+
+		var seat_name = seatsFromIDs[id_vote_share];
+
+		if (seat_name != undefined){
+
+			var members = seatData[seat_name]["seat_info"]["new_data"]["members"];
+			d3.select(id_vote_share)
+				.style("fill", "red")
+				.attr("opacity",function(d){
+					seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(members) / max;
+					return Math.abs(members) / max;
+				});
+
+			}
+		}
+
+	if (previousnode != undefined){
+		var last_seat = seatData[seatsFromIDs[previousnode]];
+
+		previous_opacity = (parseFloat(last_seat["seat_info"]["new_data"]["members"]) / max );
+
+
+		}
+
+
+
+	flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
+
+	var colour = $(".labour").css("background-color")
+	partyMembersKey(max, min, colour);
+	colour = null;
+
+}
+
+function partyMembersKey(max, min, colour){
+
+	console.log(colour)
+	console.log(max, min)
+
+	var orig_color = colour;
+
+	$("#keyonmap").html("");
+
+	var vote_range = max - min;
+	var gap = vote_range / 5;
+	var opacities = {};
+
+	for (var i = 0; i < 6; i++){
+		var num = (min + gap * i);
+		var opacity = (num - min) / vote_range;
+		num = num.toFixed(0);
+
+		opacities[num] = opacity;
+	}
+
+	console.log(opacities)
+
+	$.each(opacities, function(num){
+		colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
+
+		$("#keyonmap").append("<div style=\" color:"
+		+ "white" + "; text-align: center; background-color: "
+		+ colour + "\">"
+		+ num + "</div>");
+
+		colour = orig_color;
+
+	});
+
 }

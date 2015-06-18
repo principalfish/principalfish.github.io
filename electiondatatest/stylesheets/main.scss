@@ -248,7 +248,7 @@ header {
 
 #map {
   float: left;
-  
+  margin-left: $margin-left;
   width: $map-container-width;
   height: $map-height;
   display: block;
@@ -259,7 +259,7 @@ header {
 #resetbutton {
   position: absolute;
   top: 5px;
-  left: ($side-bar-width + 5);
+  left: $margin-left + 5;
   z-index: 1;
 }
 
@@ -268,9 +268,9 @@ header {
 }
 
 #keyonmap {
-  left: ($side-bar-width + 5);
+  left: ($margin-left + 5);
   z-index: 1;
-  top: 30px;
+  top: 35px;
   position: absolute;
 	width: 75px;
 	font-size: 1.2em;
@@ -312,7 +312,7 @@ svg .map {
 #seat-information 	{
   display: none;
   position: absolute;
-  left: $side-bar-width + 5;
+  left: $margin-left + 5;
   top: $widget-margin-top + 505;
   width: $seat-info-width;
   float: left;
@@ -346,6 +346,11 @@ svg .map {
       display: inline-block;
     }
 
+  }
+
+  #information-social {
+      font-size: 110%;
+      font-weight: bold;
   }
 
   /* pie chart and votes */
@@ -382,6 +387,8 @@ svg .map {
     display: absolute;
     top: 340px;
   }
+
+
 }
 
 /* country totals*/
@@ -389,7 +396,7 @@ svg .map {
 #totals {
   position: absolute;
   width: $totals-info-width;
-  left: $side-bar-width + $map-container-width;
+  left: $map-container-width;
   height: auto;
   top: $widget-margin-top;
 }
@@ -437,8 +444,8 @@ table#totalstable {
 
 #searchforseat {
   position: absolute;
-  top: $widget-margin-top + 395;
-  left: $side-bar-width + $map-container-width + $filters-width + 5;
+  top: $widget-margin-top + 250;
+  left: $map-container-width + $filters-width + 5;
   width: $filters-width;
 
   > input {
@@ -451,8 +458,8 @@ table#totalstable {
 
 #filters {
   position: absolute;
-  left: $side-bar-width + $map-container-width;
-  top: $widget-margin-top + 395;
+  left: $map-container-width;
+  top: $widget-margin-top + 250;
   height: auto;
   width: $filters-width;
 
@@ -496,8 +503,8 @@ table#totalstable {
 
 .filteredlisttablecontainer {
   position: absolute;
-  left: $side-bar-width + $map-container-width + 265;
-  top: $widget-margin-top + 465;
+  left: $map-container-width + 265;
+  top: $widget-margin-top + 320;
   height: auto;
   width: $filters-width;
 
@@ -528,8 +535,8 @@ table#totalstable {
 
 #choropleths {
   position: absolute;
-  top: $widget-margin-top + 630;
-  left: $side-bar-width + $map-container-width;
+  top: $widget-margin-top + 485;
+  left:$map-container-width;
   width: $filters-width;
 
   select {
@@ -544,6 +551,10 @@ table#totalstable {
   label {
     width: 100%;
     display: block;
+  }
+
+  a {
+    color : purple;
   }
 }
 

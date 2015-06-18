@@ -2,35 +2,35 @@
 <meta charset="utf-8">
 <head>
 	<title>UK Election Maps</title>
-	<link type="text/css" rel="stylesheet" href="/electionmaps/stylesheets/main.css"/>
-	<link type="text/css" rel="stylesheet" href="/electionmaps/stylesheets/theme.default.css"/>
+	<link type="text/css" rel="stylesheet" href="/electiondatatest/stylesheets/main.css"/>
+	<link type="text/css" rel="stylesheet" href="/electiondatatest/stylesheets/theme.default.css"/>
 	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
 	<link rel="shortcut icon" href="/img/logo.png">
 </head>
 
 <body>
-	<script type="text/javascript" src="/electionmaps/scripts/d3.min.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/topojson.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/dictionary.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/d3.min.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/topojson.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/dictionary.js"></script>
 	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
 	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/jquery.tablesorter.min.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/jquery.tablesorter.widgets.min.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/jquery.tablesorter.min.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/jquery.tablesorter.widgets.min.js"></script>
 	<!-- SCRIPTS THAT RUN PAGE BELOW HERE -->
-	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/map.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/seatinfodisplay.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/votetable.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/filters.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/choropleths.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/main.js"></script>
-	<script type="text/javascript" src="/electionmaps/scripts/pagescripts/userinput.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/map.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/seatinfodisplay.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/votetable.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/filters.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/choropleths.js"></script>
+	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/main.js"></script>
+
 
     <div id="wrapper" class="projection">
 
 
 				<div id="map">
 						<script>
-							var width = 600, // width and height of map
+							var width = 700, // width and height of map
 								height = 850,
 								active = d3.select(null);
 
@@ -96,7 +96,8 @@
 						<div>
 								<div class="seat-summary">
 										<div id="information-region"></div>
-										<div></div>
+										<div id="information-members"></div>
+
 										<div id="information-party">
 												<div class="party-name"></div>
 												<div class="party-flair"></div>
@@ -105,13 +106,19 @@
 												<div class="party-name"></div>
 												<div class="party-flair"></div>
 										</div>
-										<div id="information-members"></div>
+
+										<div id="information-electorate"></div>
 										<div id="information-turnout"></div>
+
 								</div>
+								<div id="information-social"></div>
 								<div id="charts">
 										<div id="information-pie"></div>
 										<div id="information-chart"></div>
 										<div id="information-byelection"></div>
+								</div>
+
+								<div id="social">
 								</div>
 
 						</div>
@@ -127,11 +134,7 @@
                 <label for="selectareatotals"> Select Region</label>
                 <select id="selectareatotals" onchange="selectAreaInfo(value)">
                     <option value="country"></option>
-                    <option value="greatbritain">Great Britain</option>
                     <option value="england">England</option>
-                    <option value="scotland">Scotland</option>
-                    <option value="wales">Wales</option>
-                    <option value="northernireland">Northern Ireland</option>
                     <option value="eastofengland">East of England</option>
                     <option value="eastmidlands"> East Midlands</option>
                     <option value="london">London</option>
@@ -187,15 +190,7 @@
                             <option value="conservative">Conservative</option>
                             <option value="libdems">Liberal Democrats</option>
                             <option value="ukip">UKIP</option>
-                            <option value="snp">SNP</option>
-                            <option value="plaidcymru">Plaid Cymru</option>
                             <option value="green">Green</option>
-                            <option value="dup">DUP</option>
-                            <option value="sinnfein">Sinn Féin</option>
-                            <option value="sdlp">SDLP</option>
-                            <option value="alliance">Alliance</option>
-                            <option value="uu">UUP</option>
-                            <option value="other">Other</option>
                         </select>
 
                         <label id="dropdowngainslabel" for="dropdowngains">by gains/no change</label>
@@ -221,11 +216,12 @@
                             <option value="westmidlands">West Midlands</option>
                             <option value="yorkshireandthehumber">Yorkshire & Humber</option>
                         </select>
-                        <label>by majority percentage</label>
+
+                        <label>by party members</label>
 													<form id="majority">
                             <input type ="text" name="majoritylow" value=0 onchange="filterStates[3].majoritylow = parseFloat(value), filterMap()"/>
                             to
-                            <input type="text" name="majorityhigh" value=100 onchange="filterStates[4].majorityhigh = parseFloat(value), filterMap()"/>
+                            <input type="text" name="majorityhigh" value=547 onchange="filterStates[4].majorityhigh = parseFloat(value), filterMap()"/>
 													</form>
 
                         <div class="filter-buttons">
@@ -250,81 +246,38 @@
 					<h2>Choropleths</h2>
 
 					<div id="votesharebyparty">
-						<label for="votesharebypartyselect">Vote share: </label>
+						<label for="votesharebypartyselect">2015 Vote share: </label>
 						<select id="votesharebypartyselect" onchange ="partyVoteShare = value; voteShare()">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>
 								<option value="libdems">Liberal Democrats</option>
 								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
 								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
+
 							</select>
 					</div>
 
 					<div id="votesharechangebyparty">
 
-						<label for="votesharechangebypartyselect">Vote share +/-: </label>
+						<label for="votesharechangebypartyselect">2015 Vote share +/-: </label>
 						<select id="votesharechangebypartyselect" onchange ="partyVoteShareChange = value; voteShareChange()">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>
 								<option value="libdems">Liberal Democrats</option>
 								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
 								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
 						</select>
 					</div>
 
-					<div id="swingfromto">
+					<div id="partymembers">
 
-							<label for="swingfrom">Swing between: </label>
-							<select id="swingfrom" onchange ="swingState[0] = value; swingFromTo();">
-								<option value="null"></option>
-								<option value="labour">Labour</option>
-								<option value="conservative">Conservative</option>
-								<option value="libdems">Liberal Democrats</option>
-								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
-								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
-							</select>
+						<p><a href="#" onclick="partyMembers()"> Party Members </a></p>
 
-
-							<label for="swingto"> and </label>
-							<select id="swingto" onchange ="swingState[1] = value; swingFromTo();">
-								<option value="null"></option>
-								<option value="labour">Labour</option>
-								<option value="conservative">Conservative</option>
-								<option value="libdems">Liberal Democrats</option>
-								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
-								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
-						</select>
 					</div>
+
+
 
 				</div>
 

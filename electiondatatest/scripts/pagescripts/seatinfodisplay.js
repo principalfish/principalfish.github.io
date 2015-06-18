@@ -7,17 +7,20 @@ var partyFlairElement = "#information-party .party-flair";
 var gainNameElement = "#information-gain .party-name";
 var gainFlairElement = "#information-gain .party-flair";
 
+var task_party_map = {
+	"Labour" : "labour",
+	"Conservative" : "conservative",
+	"Lib-Dem" : "libdems",
+	"Other" : "other"
+};
+
 function seatinfo(d){
-	console.log("asda");
 
 	var seatInfo = seatData[d.properties.name]["seat_info"];
-	var newInfo = seatData[d.properties.name]["new_data"];
-	console.log(seatInfo);
-	console.log(newInfo);
 
 	$(partyFlairElement).removeClass(oldPartyClass);
   $(gainFlairElement).removeClass(oldIncumbentClass);
-	$("#information-seatname-span").text(d.properties.name);
+	$("#information-seatname-span").text(seatInfo["new_data"]["seat"] + " - " + seatInfo["new_data"]["code"]);
 	$("#information-region").text("Region: " + regionlist[seatInfo["area"]]);
 
 	$(partyNameElement).text("Party: " + partylist[seatInfo["winning_party"]]);
@@ -31,11 +34,17 @@ function seatinfo(d){
 		$(gainNameElement).text("");
     }
 
-	$("#information-members").text("Members: " + newInfo["members"]);
+	$("#information-members").text("Members: " + seatInfo["new_data"]["members"]);
 
-	var seatTurnout = (100 * seatInfo["turnout"] / seatInfo["electorate"]).toFixed(2) + "%";
+	$("#information-electorate").text("Electorate : " + seatInfo["new_data"]["Electorate"]);
+	$("#information-turnout").text("Turnout : " + seatInfo["new_data"]["turnout"] );
 
-	$("#information-turnout").text("Turnout : " + seatTurnout )
+	$("#information-social").text("Social Grades(%) - AB \xA0: " + seatInfo["new_data"]["ab"]
+																	+ "\xA0\xA0 C1 : " + seatInfo["new_data"]["c1"]
+																	+ "\xA0\xA0 C2 : " + seatInfo["new_data"]["c2"]
+																	+ "\xA0\xA0 DE : " + seatInfo["new_data"]["de"]
+
+																);
 
 	$("#information-pie").html(piechart(d));
 
@@ -49,42 +58,44 @@ function piechart(d){
 	$("#information-chart").html("<table></table>");
 
 	var data = [];
-	var relevant_party_info = seatData[d.properties.name]["party_info"];
+	var seatName = d.properties.name;
+	var relevant_party_info = seatData[seatName]["party_info"];
 
 	$.each(relevant_party_info, function(d){
-		votes = relevant_party_info[d]["percent"];
+		votes = parseInt(seatData[seatName]["seat_info"]["new_data"][d]);
 		if (votes > 0){
-			data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change"]});
+			data.push({party: d, votes: votes});
 		}
 	})
 
 	var filterdata = [];
 
+
+
 	$.each(data, function(i){
-		if (data[i].votes > 0 && data[i].party != "others")
+		if (data[i].votes > 0 && data[i].party != "others" && data[i].party != "other")
 			filterdata.push(data[i]);
 	});
+
 
 	filterdata.sort(function(a, b){
 			return b.votes - a.votes;
 	});
 
-	var keys = Object.keys(relevant_party_info);
 
-	if (keys.indexOf("others") != -1 && relevant_party_info["others"]["percent"] > 0){
-		filterdata.push({party: "others", votes: relevant_party_info["others"]["percent"], vote_change: relevant_party_info["others"]["change"]});
-	}
+	filterdata.push({"party" : "other", "votes" : parseInt(seatData[seatName]["seat_info"]["new_data"]["other"])});
+
 
 	var barchartdata = [];
 
 	$.each(filterdata, function(i){
-		if (filterdata[i].votes >= 3){
+		if (filterdata[i].votes >= 1000){
 			barchartdata.push(filterdata[i]);
 		}
 	});
 
 	var dataitems = barchartdata.length
-	var margin = {top: 10, right: 0, bottom: 10, left: 25};
+	var margin = {top: 10, right: 0, bottom: 10, left:47};
 
 	var width = 250 - margin.left - margin.right;
 	var height = 225 - margin.top - margin.bottom;
@@ -114,7 +125,7 @@ function piechart(d){
     .ticks(6);
 
 	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; })
-	y.domain([0, d3.max([60, (max_of_votes + (10 - max_of_votes % 10))])]);
+	y.domain([0, d3.max([60, (max_of_votes + (10 - max_of_votes % 10))]) + 2000]);
 
 	svg1.append("g")
       .attr("class", "x axis")
@@ -142,29 +153,10 @@ function piechart(d){
 
 
 	$.each(filterdata, function(i){
-		var plussign = "";
-		if (filterdata[i].vote_change > 0){
-			plussign = "+";
-		}
-
-		var vote_change;
-
-		if (filterdata[i].vote_change ==""){
-			vote_change = "";
-		}
-		else {
-			vote_change = parseFloat(filterdata[i].vote_change).toFixed(2);
-		}
 
 		var to_add = "<tr><td><div class= \" party-flair " + filterdata[i].party + "\"></div><td style=\"max-width: 170px;\">" +
-			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td>";
+			partylist[filterdata[i].party] + "</td><td>" + (parseFloat(filterdata[i].votes)) +  "</td><tr>";
 
-		if (pageSetting == "2010parliament"){
-			to_add += "</tr>";
-		}
-		else {
-			to_add += ("<td>" + plussign + vote_change +  "</td></tr>");
-		}
 
 		$("#information-chart table").append(to_add);
 	})

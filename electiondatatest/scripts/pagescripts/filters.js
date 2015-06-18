@@ -20,7 +20,7 @@ function filterMap(){
 	if (isNaN(majoritylow))
 		majoritylow = 0
 	if (isNaN(majorityhigh))
-		majorityhigh = 100
+		majorityhigh = 547
 
 	// reset seatsAfterFilter from any previous filters.
 	seatsAfterFilter = [];
@@ -86,13 +86,12 @@ function filterMap(){
 
 	g.selectAll("#regionfiltered")
 		.attr("style", function(d) {
-
-			if (parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) > majorityhigh )
+			if (parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) > majorityhigh )
 				return "opacity: 0.1"
 
 			})
 		.each(function(d) {
-			if (parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) <= majorityhigh )
+			if (parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) <= majorityhigh )
 				seatsAfterFilter.push(d);
 			});
 
@@ -115,7 +114,7 @@ function resetFilter(){
 	filterStates[1].gain = "null";
 	filterStates[2].region = "null";
 	filterStates[3].majoritylow = 0;
-	filterStates[4].majorityhigh = 100;
+	filterStates[4].majorityhigh = 547;
 
 	var previous_opacity = 1;
 	var current_colour = 1;
@@ -129,8 +128,7 @@ function resetFilter(){
 
 	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
 	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);
-	$("#swingfrom option:eq(0)").prop("selected", true);
-	$("#swingto option:eq(0)").prop("selected", true);
+	$("#partymembersselect option:eq(0)").prop("selected", true);
 
 
 	$("#dropdownparty option:eq(0)").prop("selected", true);

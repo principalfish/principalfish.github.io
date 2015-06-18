@@ -128,9 +128,9 @@ combined_info = {}
 for item in old_info:
     combined_info[item] = old_info[item]
     try:
-        combined_info[item]["new_data"] = task_info[item]
+        combined_info[item]["seat_info"]["new_data"] = task_info[item]
     except KeyError:
-        combined_info[item]["new_data"] = task_info[seat_dict[item]]
+        combined_info[item]["seat_info"]["new_data"] = task_info[seat_dict[item]]
 
 
 

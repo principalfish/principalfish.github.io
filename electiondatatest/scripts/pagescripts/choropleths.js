@@ -304,10 +304,7 @@ function partyMembers(){
 
 		previous_opacity = (parseFloat(last_seat["seat_info"]["new_data"]["members"]) / max );
 
-
 		}
-
-
 
 	flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
 
@@ -341,7 +338,7 @@ function partyMembersKey(max, min, colour){
 		$("#keyonmap").append("<div style=\" color:"
 		+ "white" + "; text-align: center; background-color: "
 		+ colour + "\">"
-		+ num + "%</div>");
+		+ num + "</div>");
 
 		colour = orig_color;
 
@@ -349,11 +346,9 @@ function partyMembersKey(max, min, colour){
 
 }
 
-
 function socialGrades(){
 
-	if (socialGrade == "null"){
-		console.log(value)
+	if (socialGrade == "null"){	
 		$.each(seatData, function(seat){
 			seatData[seat]["seat_info"]["current_colour"] = 1;
 		})
@@ -413,7 +408,37 @@ function socialGrades(){
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
 
 		var colour = $(".labour").css("background-color")
-		partyMembersKey(max, min, colour);
+		socialGradeKey(max, min, colour);
 		colour = null;
 	}
+}
+
+function socialGradeKey(max, min, colour){
+	var orig_color = colour;
+
+	$("#keyonmap").html("");
+
+	var vote_range = max - min;
+	var gap = vote_range / 5;
+	var opacities = {};
+
+	for (var i = 0; i < 6; i++){
+		var num = (min + gap * i);
+		var opacity = (num - min) / vote_range;
+		num = num.toFixed(1);
+
+		opacities[num] = opacity;
+	}
+
+	$.each(opacities, function(num){
+		colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
+
+		$("#keyonmap").append("<div style=\" color:"
+		+ "white" + "; text-align: center; background-color: "
+		+ colour + "\">"
+		+ num + "%</div>");
+
+		colour = orig_color;
+
+	});
 }

@@ -73,10 +73,10 @@ function horizontalBarChart(d){
 		console.log(d, i)
 		var x = current_width
 		$("#social-grades").append("<div style=\" position: absolute; float: left; margin-left: 30px; background-color :"
-										+ colours[count ] + "; color: white; font-size: 0.85em; text-align: center; padding-top: 4px; width :"
+										+ colours[count ] + "; color: white; font-size: 0.70em; text-align: center; padding-top: 5px; width :"
 										+ 6.5 * data[d] +
 										"px; height: 15px; left : " + current_width + "px; top: 87px;\">" +
-										d + " : " + i.toFixed(1) +  "%</div>");
+										d + ":" + i.toFixed(1) +  "%</div>");
 
 		current_width +=  6.5  * data[d]
 		count += 1

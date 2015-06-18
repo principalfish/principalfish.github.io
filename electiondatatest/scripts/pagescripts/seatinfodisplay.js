@@ -56,14 +56,14 @@ function seatinfo(d){
 
 function horizontalBarChart(d){
 	$("#information-social").empty();
-	$("#information-social").html("<div id=\"social-grades\">Social Grades  </p>")
+	$("#information-social").html("<div id=\"social-grades\">Social Grades </div>")
 	var ab = parseFloat(seatData[d.properties.name]["seat_info"].new_data.ab)
 	var c1 = parseFloat(seatData[d.properties.name]["seat_info"].new_data.c1)
 	var c2 = parseFloat(seatData[d.properties.name]["seat_info"].new_data.c2)
 	var de = parseFloat(seatData[d.properties.name]["seat_info"].new_data.de)
 
 	var data = {"AB" : ab, "C1" : c1, "C2" :  c2, "DE" :  de};
-	var colours = ["red", "green", "blue", "purple"]
+	var colours = ["#7CFC00", "#66CD00", "#78AB46", "#3B5323"]
 
 
 	var current_width = 85;
@@ -73,11 +73,12 @@ function horizontalBarChart(d){
 		console.log(d, i)
 		var x = current_width
 		$("#social-grades").append("<div style=\" position: absolute; float: left; margin-left: 30px; background-color :"
-										+ colours[count ] + "; color: white; font-size: 0.65em; text-align: center; padding-top: 4px; width :" + 4 * data[d] +
+										+ colours[count ] + "; color: white; font-size: 0.85em; text-align: center; padding-top: 4px; width :"
+										+ 6.5 * data[d] +
 										"px; height: 15px; left : " + current_width + "px; top: 87px;\">" +
-										d + ":" + i.toFixed(1) +  "%</div>");
+										d + " : " + i.toFixed(1) +  "%</div>");
 
-		current_width += 4 * data[d]
+		current_width +=  6.5  * data[d]
 		count += 1
 	});
 

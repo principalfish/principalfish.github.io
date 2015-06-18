@@ -63,15 +63,14 @@ function horizontalBarChart(d){
 	var de = parseFloat(seatData[d.properties.name]["seat_info"].new_data.de)
 
 	var data = {"AB" : ab, "C1" : c1, "C2" :  c2, "DE" :  de};
-	var colours = ["#EEDFCC", "#DEB887", "#C48E48", "#9C661F"]
-	var text_colours = ["black", "black", "white", "white"]
+	var colours = ["#CD7F32", "#BB6528", "#534B4F", "#4B3621"]
+	var text_colours = ["white", "white", "white", "white"]
 
 
 	var current_width = 85;
 
 	var count = 0
 	$.each(data, function(d, i){
-		console.log(d, i)
 		var x = current_width
 		$("#social-grades").append("<div style=\" position: absolute; float: left; margin-left: 30px; background-color :"
 										+ colours[count ] + "; color: "

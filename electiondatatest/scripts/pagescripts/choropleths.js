@@ -351,58 +351,72 @@ function partyMembersKey(max, min, colour){
 
 
 function socialGrades(){
-	var value = socialGrade;
-	var	max = 0;
-	var min = 100;
 
-	$.each(seatData, function(seat){
-
-			var percentage = parseFloat(seatData[seat]["seat_info"]["new_data"][value]);
-			if (percentage > max){
-				max = percentage;
-				}
-			if (percentage < min){
-				min = percentage;
-				}
-
-		});
-
-	if (Math.abs(min) > max){
-		max = Math.abs(min);
+	if (socialGrade == "null"){
+		console.log(value)
+		$.each(seatData, function(seat){
+			seatData[seat]["seat_info"]["current_colour"] = 1;
+		})
+		$(".map").remove();
+		$("#keyonmap").html("");
+		loadmap();
 	}
-	var range = max - min
 
-	for (var i = 1; i < 651; i++){
-		var id_vote_share = "#i" + i;
 
-		var seat_name = seatsFromIDs[id_vote_share];
+	else {
+		var value = socialGrade;
+		var	max = 0;
+		var min = 100;
 
-		if (seat_name != undefined){
+		$.each(seatData, function(seat){
 
-			var percentage = seatData[seat_name]["seat_info"]["new_data"][value];
-			d3.select(id_vote_share)
-				.style("fill", "red")
-				.attr("opacity",function(d){
-					seatData[seat_name]["seat_info"]["current_colour"] = (Math.abs(percentage) - min) / range;
-					return (Math.abs(percentage) - min) / range;
-				});
+				var percentage = parseFloat(seatData[seat]["seat_info"]["new_data"][value]);
+				if (percentage > max){
+					max = percentage;
+					}
+				if (percentage < min){
+					min = percentage;
+					}
+
+			});
+
+		if (Math.abs(min) > max){
+			max = Math.abs(min);
+		}
+		var range = max - min
+
+		for (var i = 1; i < 651; i++){
+			var id_vote_share = "#i" + i;
+
+			var seat_name = seatsFromIDs[id_vote_share];
+
+			if (seat_name != undefined){
+
+				var percentage = seatData[seat_name]["seat_info"]["new_data"][value];
+				d3.select(id_vote_share)
+					.style("fill", "red")
+					.attr("opacity",function(d){
+						seatData[seat_name]["seat_info"]["current_colour"] = (Math.abs(percentage) - min) / range;
+						return (Math.abs(percentage) - min) / range;
+					});
+
+				}
+			}
+
+		if (previousnode != undefined){
+			var last_seat = seatData[seatsFromIDs[previousnode]];
+
+			previous_opacity = (parseFloat(last_seat["seat_info"]["new_data"]["members"]) / max );
+
 
 			}
-		}
-
-	if (previousnode != undefined){
-		var last_seat = seatData[seatsFromIDs[previousnode]];
-
-		previous_opacity = (parseFloat(last_seat["seat_info"]["new_data"]["members"]) / max );
-
-
-		}
 
 
 
-	flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
+		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
 
-	var colour = $(".labour").css("background-color")
-	partyMembersKey(max, min, colour);
-	colour = null;
+		var colour = $(".labour").css("background-color")
+		partyMembersKey(max, min, colour);
+		colour = null;
+	}
 }

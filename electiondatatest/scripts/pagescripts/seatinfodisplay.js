@@ -82,120 +82,6 @@ function horizontalBarChart(d){
 		current_width +=  6.5  * data[d]
 		count += 1
 	});
-
-	// var margins = {
-	//     top: 0,
-	//     left: 0,
-	//     right: 10,
-	//     bottom: 0
-	// },
-	//
-	// width = 500 - margins.left - margins.right,
-	//     height = 15 - margins.top - margins.bottom,
-	//     dataset = [{
-	//         data: [{
-	//             social: '1',
-	//             count: ab
-	//         }],
-	//         name: 'AB'
-	//     }, {
-	//         data: [{
-	//             social: '1',
-	//             count: c1
-	//         }],
-	//         name: 'C1'
-	//     }
-	// 		, {
-	//         data: [{
-	//             social: '1',
-	//             count: c2
-	//         }],
-	//         name: 'C2'
-	//     }
-	// 		, {
-	//         data: [{
-	//             social: '1',
-	//             count: de
-	//         }],
-	//         name: 'DE'
-	//     }
-	//
-	//     ],
-	//     series = dataset.map(function (d) {
-	//         return d.name;
-	//     }),
-	//     dataset = dataset.map(function (d) {
-	//         return d.data.map(function (o, i) {
-	//             // Structure it so that your numeric
-	//             // axis (the stacked amount) is y
-	//             return {
-	//                 y: o.count,
-	//                 x: o.social
-	//             };
-	//         });
-	//     }),
-	//     stack = d3.layout.stack();
-	//
-	// stack(dataset);
-	//
-	// var dataset = dataset.map(function (group) {
-	//     return group.map(function (d) {
-	//         // Invert the x and y values, and y0 becomes x0
-	//         return {
-	//             x: d.y,
-	//             y: d.x,
-	//             x0: d.y0
-	//         };
-	//     });
-	// }),
-	//     svg = d3.select('#information-social')
-	//         .append('svg')
-	//         .attr('width', width + margins.left + margins.right)
-	//         .attr('height', height + margins.top + margins.bottom)
-	//         .append('g')
-	//         .attr('transform', 'translate(' + margins.left + ',' + margins.top + ')'),
-	//     xMax = d3.max(dataset, function (group) {
-	//         return d3.max(group, function (d) {
-	//             return d.x + d.x0;
-	//         });
-	//     }),
-	//     xScale = d3.scale.linear()
-	//         .domain([0, xMax])
-	//         .range([0, width]),
-	//     months = dataset[0].map(function (d) {
-	//         return d.y;
-	//     }),
-	//
-	//     yScale = d3.scale.ordinal()
-	//         .rangeRoundBands([0, height], .1),
-	//
-	//     colours = d3.scale.category10(),
-	//     groups = svg.selectAll('g')
-	//         .data(dataset)
-	//         .enter()
-	//         .append('g')
-	//         .style('fill', function (d, i) {
-	//         return colours(i);
-	//     }),
-	//     rects = groups.selectAll('rect')
-	//         .data(function (d) {
-	//         return d;
-	//     })
-	//         .enter()
-	//         .append('rect')
-	//         .attr('x', function (d) {
-	//         return xScale(d.x0);
-	//     })
-	//         .attr('y', function (d, i) {
-	//         return yScale(d.y);
-	//     })
-	//         .attr('height', function (d) {
-	//         return yScale.rangeBand();
-	//     })
-	//         .attr('width', function (d) {
-	//         return xScale(d.x);
-	//     })
-	// 				.text(function(d){return d});
 }
 
 function piechart(d){
@@ -300,8 +186,11 @@ function piechart(d){
 
 	$.each(filterdata, function(i){
 
-		var to_add = "<tr><td><div class= \" party-flair " + filterdata[i].party + "\"></div><td style=\"max-width: 170px;\">" +
+		if (parseFloat(filterdata[i].votes) > 0) {
+
+			var to_add = "<tr><td><div class= \" party-flair " + filterdata[i].party + "\"></div><td style=\"max-width: 170px;\">" +
 			partylist[filterdata[i].party] + "</td><td>" + (parseFloat(filterdata[i].votes)) +  "</td><tr>";
+			}
 
 
 		$("#information-chart table").append(to_add);

@@ -341,7 +341,7 @@ function partyMembersKey(max, min, colour){
 		$("#keyonmap").append("<div style=\" color:"
 		+ "white" + "; text-align: center; background-color: "
 		+ colour + "\">"
-		+ num + "</div>");
+		+ num + "%</div>");
 
 		colour = orig_color;
 

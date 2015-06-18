@@ -63,7 +63,7 @@ function horizontalBarChart(d){
 	var de = parseFloat(seatData[d.properties.name]["seat_info"].new_data.de)
 
 	var data = {"AB" : ab, "C1" : c1, "C2" :  c2, "DE" :  de};
-	var colours = ["#CD7F32", "#BB6528", "#534B4F", "#4B3621"]
+	var colours = ["#CD7F32", "#BB6528", "#79443B", "#4B3621"]
 	var text_colours = ["white", "white", "white", "white"]
 
 

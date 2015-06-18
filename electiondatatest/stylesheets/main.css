@@ -260,7 +260,7 @@ svg .map {
   /* pie chart and votes */ }
   #seat-information > div {
     padding-bottom: 0;
-    height: 300px; }
+    height: 400px; }
   #seat-information .seat-summary {
     overflow: hidden;
     font-size: 110%; }
@@ -387,7 +387,7 @@ table#totalstable .total {
     display: block;
     overflow-y: scroll;
     overflow-x: hidden;
-    max-height: 300px;
+    max-height: 298px;
     margin-bottom: 2px; }
     .filteredlisttablecontainer #filteredlisttable > div {
       cursor: pointer; }

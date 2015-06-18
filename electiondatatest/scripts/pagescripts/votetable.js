@@ -115,8 +115,8 @@ londonVoteTotals = [];
 
 //user eslect region vote totals
 function selectAreaInfo(value){
-	if (value == "country") {displayVoteTotals(nationalVoteTotals)};
-  if (value == "null") {displayVoteTotals(nationalVoteTotals)};
+	if (value == "country") {displayVoteTotals(englandVoteTotals)};
+  if (value == "null") {displayVoteTotals(englandVoteTotals)};
 	if (value == "england") {displayVoteTotals(englandVoteTotals)};
 	if (value == "scotland") {displayVoteTotals(scotlandVoteTotals)};
 	if (value == "eastofengland") {displayVoteTotals(eastofenglandVoteTotals)};

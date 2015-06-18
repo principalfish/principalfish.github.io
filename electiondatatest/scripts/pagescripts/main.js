@@ -83,7 +83,7 @@ function getSeatInfo(data){
 		getVoteTotals(areas[area]);
 	}
 
-	displayVoteTotals(nationalVoteTotals);
+	displayVoteTotals(englandVoteTotals);
 
 	var totalTurnout = 100 * nationalVoteTotals[nationalVoteTotals.length - 1].votes / totalElectorate ;
 

@@ -265,7 +265,7 @@ function voteShareChange(){
 
 function partyMembers(){
 	var	max = 0;
-	var min = 1000;
+	var min = 100;
 	$.each(seatData, function(seat){
 
 			var members = parseFloat(seatData[seat]["seat_info"]["new_data"]["members"]);
@@ -276,11 +276,13 @@ function partyMembers(){
 				min = members;
 				}
 
-		})
+		});
 
 	if (Math.abs(min) > max){
 		max = Math.abs(min);
 	}
+
+	var range = max - min
 
 	for (var i = 1; i < 651; i++){
 		var id_vote_share = "#i" + i;
@@ -293,8 +295,8 @@ function partyMembers(){
 			d3.select(id_vote_share)
 				.style("fill", "red")
 				.attr("opacity",function(d){
-					seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(members) / max;
-					return Math.abs(members) / max;
+					seatData[seat_name]["seat_info"]["current_colour"] = (Math.abs(members) - min) / range;
+					return (Math.abs(members) - min) / range;
 				});
 
 			}
@@ -320,9 +322,6 @@ function partyMembers(){
 
 function partyMembersKey(max, min, colour){
 
-	console.log(colour)
-	console.log(max, min)
-
 	var orig_color = colour;
 
 	$("#keyonmap").html("");
@@ -339,8 +338,6 @@ function partyMembersKey(max, min, colour){
 		opacities[num] = opacity;
 	}
 
-	console.log(opacities)
-
 	$.each(opacities, function(num){
 		colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
 
@@ -353,4 +350,62 @@ function partyMembersKey(max, min, colour){
 
 	});
 
+}
+
+
+function socialGrades(){
+	var value = socialGrade;
+	var	max = 0;
+	var min = 100;
+
+	$.each(seatData, function(seat){
+
+			var percentage = parseFloat(seatData[seat]["seat_info"]["new_data"][value]);
+			if (percentage > max){
+				max = percentage;
+				}
+			if (percentage < min){
+				min = percentage;
+				}
+
+		});
+
+	if (Math.abs(min) > max){
+		max = Math.abs(min);
+	}
+	var range = max - min
+
+	for (var i = 1; i < 651; i++){
+		var id_vote_share = "#i" + i;
+
+		var seat_name = seatsFromIDs[id_vote_share];
+
+		if (seat_name != undefined){
+
+			var percentage = seatData[seat_name]["seat_info"]["new_data"][value];
+			d3.select(id_vote_share)
+				.style("fill", "red")
+				.attr("opacity",function(d){
+					seatData[seat_name]["seat_info"]["current_colour"] = (Math.abs(percentage) - min) / range;
+					return (Math.abs(percentage) - min) / range;
+				});
+
+			}
+		}
+
+	if (previousnode != undefined){
+		var last_seat = seatData[seatsFromIDs[previousnode]];
+
+		previous_opacity = (parseFloat(last_seat["seat_info"]["new_data"]["members"]) / max );
+
+
+		}
+
+
+
+	flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
+
+	var colour = $(".labour").css("background-color")
+	partyMembersKey(max, min, colour);
+	colour = null;
 }

@@ -11,8 +11,9 @@ var totalElectorate = 0;
 
 var swingState = ["null", "null"];
 
-var partyVoteShare = "null"
-var partyVoteShareChange = "null"
+var partyVoteShare = "null";
+var partyVoteShareChange = "null";
+var socialGrade = "null";
 
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';

@@ -221,7 +221,7 @@
 													<form id="majority">
                             <input type ="text" name="majoritylow" value=0 onchange="filterStates[3].majoritylow = parseFloat(value), filterMap()"/>
                             to
-                            <input type="text" name="majorityhigh" value=547 onchange="filterStates[4].majorityhigh = parseFloat(value), filterMap()"/>
+                            <input type="text" name="majorityhigh" value=1000 onchange="filterStates[4].majorityhigh = parseFloat(value), filterMap()"/>
 													</form>
 
                         <div class="filter-buttons">
@@ -276,6 +276,18 @@
 						<p><a href="#" onclick="partyMembers()"> Party Members </a></p>
 
 					</div>
+
+					<div id="socialgrades">
+						<label for="socialgradesselect">Social Grade: </label>
+						<select id="socialgradesselect" onchange ="socialGrade = value; socialGrades()">
+								<option value="null"></option>
+								<option value="ab">AB</option>
+								<option value="c1">C1</option>
+								<option value="c2">C2</option>
+								<option value="de">DE</option>
+						</select>
+					</div>
+
 
 
 

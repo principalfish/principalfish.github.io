@@ -47,6 +47,8 @@ function zoomToClickedFilteredSeat(d){
 
 function flashSeat(previous, current, previous_opacity, current_colour, optional){
 
+	console.log(previous_opacity)
+
 	if (optional == undefined){
 		repeat();
 	}

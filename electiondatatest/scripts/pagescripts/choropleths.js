@@ -406,12 +406,9 @@ function socialGrades(){
 		if (previousnode != undefined){
 			var last_seat = seatData[seatsFromIDs[previousnode]];
 
-			previous_opacity = (parseFloat(last_seat["seat_info"]["new_data"]["members"]) / max );
-
+			previous_opacity = ((parseFloat(last_seat["seat_info"]["new_data"][value]) - min) / range );
 
 			}
-
-
 
 		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
 

@@ -131,6 +131,10 @@ function resetFilter(){
 	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);
 	$("#socialgradesselect option:eq(0)").prop("selected", true);
 
+	$.each(seatData, function(seat){
+		seatData[seat]["seat_info"]["current_colour"] = 1;
+	})
+
 
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);

@@ -348,7 +348,7 @@ function partyMembersKey(max, min, colour){
 
 function socialGrades(){
 
-	if (socialGrade == "null"){	
+	if (socialGrade == "null"){
 		$.each(seatData, function(seat){
 			seatData[seat]["seat_info"]["current_colour"] = 1;
 		})

@@ -261,11 +261,18 @@ header {
   z-index: 1;
 }
 
+
+
 #tabulateddatabutton {
   position: absolute;
   top: 5px;
   left: $margin-left + 5;
   z-index: 1;
+}
+
+#partymemberbutton {
+  position:relative;
+  left:25%;
 }
 
 #resetmap {
@@ -362,7 +369,7 @@ svg .map {
 
   #charts {
     overflow: hidden;
-  
+
     > div {
       @include box-sizing(border-box);
       width: 50%;

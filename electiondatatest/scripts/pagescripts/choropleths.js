@@ -18,7 +18,6 @@ function voteShare(){
 
 	else {
 
-
 		var	max = 0;
 		var min = 100;
 		$.each(seatData, function(seat){

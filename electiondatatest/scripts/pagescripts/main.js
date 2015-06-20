@@ -2,6 +2,7 @@
 var pageSetting = "2015parliament";
 var seatData = {}; //seatData contains all information display on page. filled on page load using getSeatInfo
 var seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
+var seatDataForChoropleth = {}; // for use with filters + choropleths
 var searchSeatData = []; // for use with search box
 var seatNames = []; // for use with search box
 var seatsFromIDs = {}; // for translating IDs to seats

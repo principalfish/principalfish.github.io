@@ -2,6 +2,7 @@
 // problem with cache of tablesorter not being cleared result in multiple tables being displayed
 // just rewriting the html as fix
 
+
 function filterMap(){
 
 	d3.selectAll(".map")
@@ -9,7 +10,6 @@ function filterMap(){
 
 	$("#keyonmap").html("");
 	$('#seat-information').hide()
-
 
 	var	party = filterStates[0].party;
 	var gains = filterStates[1].gain;
@@ -25,6 +25,7 @@ function filterMap(){
 
 	// reset seatsAfterFilter from any previous filters.
 	seatsAfterFilter = [];
+	seatDataForChoropleth = {};
 
 	g.selectAll(".map")
 		.attr("id", "filtertime")
@@ -92,8 +93,10 @@ function filterMap(){
 
 			})
 		.each(function(d) {
-			if (parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) <= majorityhigh )
+			if (parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) <= majorityhigh ){
 				seatsAfterFilter.push(d);
+				seatDataForChoropleth[d.properties.name] = seatData[d.properties.name];
+				}
 			});
 
 	g.selectAll(".map")
@@ -127,22 +130,25 @@ function resetFilter(){
 
 	filterMap();
 
-	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
-	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);
-	$("#socialgradesselect option:eq(0)").prop("selected", true);
-
 	$.each(seatData, function(seat){
 		seatData[seat]["seat_info"]["current_colour"] = 1;
 	})
 
+	$(seatTotalContainer).html(" ");
+	$(seatListContainer).html(" ");
+
+	resetDropDowns();
+}
+
+function resetDropDowns(){
+	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
+	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);
+	$("#socialgradesselect option:eq(0)").prop("selected", true);
 
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);
 	$("#dropdownregion option:eq(0)").prop("selected", true);
 	$("#majority").get(0).reset();
-
-	$(seatTotalContainer).html(" ");
-	$(seatListContainer).html(" ");
 }
 
 // using seatsAfterFilter, generates list of filtered seats

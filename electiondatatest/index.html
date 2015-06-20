@@ -24,9 +24,7 @@
 	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/choropleths.js"></script>
 	<script type="text/javascript" src="/electiondatatest/scripts/pagescripts/main.js"></script>
 
-
     <div id="wrapper" class="projection">
-
 
 				<div id="map">
 						<script>
@@ -251,7 +249,7 @@
 
 					<div id="votesharebyparty">
 						<label for="votesharebypartyselect">2015 Vote share: </label>
-						<select id="votesharebypartyselect" onchange ="partyVoteShare = value; voteShare()">
+						<select id="votesharebypartyselect" onchange ="partyVoteShare = value; choroplethInitiator(partyVoteShare, 'percent')">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>
@@ -265,7 +263,7 @@
 					<div id="votesharechangebyparty">
 
 						<label for="votesharechangebypartyselect">2015 Vote share +/-: </label>
-						<select id="votesharechangebypartyselect" onchange ="partyVoteShareChange = value; voteShareChange()">
+						<select id="votesharechangebypartyselect" onchange ="partyVoteShareChange = value; choroplethInitiator(partyVoteShareChange, 'change')">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>
@@ -277,13 +275,13 @@
 
 					<div id="partymembers">
 
-						<button id="partymemberbutton" onclick="partyMembers()"> Party Members </button>
+						<button id="partymemberbutton" onclick="choroplethInitiator('members', 'members')"> Party Members </button>
 
 					</div>
 
 					<div id="socialgrades">
 						<label for="socialgradesselect">Social Grade: </label>
-						<select id="socialgradesselect" onchange ="socialGrade = value; socialGrades()">
+						<select id="socialgradesselect" onchange ="socialGrade = value; choroplethInitiator(socialGrade, 'socialgrades')">
 								<option value="null"></option>
 								<option value="ab">AB</option>
 								<option value="c1">C1</option>

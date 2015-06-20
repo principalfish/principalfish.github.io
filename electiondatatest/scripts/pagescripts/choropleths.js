@@ -1,13 +1,8 @@
-// for voteshare
+// functions to generate choropleths + keys
 
-function voteShare(){
-	var value = partyVoteShare;
+function choroplethInitiator(value, type){
 
-	var relevant_class = "." + value;
-	var colour = $(relevant_class).css("background-color");
-	var text_colour = $(relevant_class).css("color");
-
-	if (value == "null"){
+  if (value == "null"){
 		$.each(seatData, function(seat){
 			seatData[seat]["seat_info"]["current_colour"] = 1;
 		})
@@ -16,428 +11,227 @@ function voteShare(){
 		loadmap();
 	}
 
-	else {
+  else {
 
-		var	max = 0;
-		var min = 100;
-		$.each(seatData, function(seat){
-			if (value in seatData[seat]["party_info"]){
-				var percentage = seatData[seat]["party_info"][value]["percent"];
-				if (percentage > 0){
-					if (percentage > max){
-						max = percentage;
-					}
-					if (percentage < min){
-						min = percentage;
-					}
-				}
-			}
-		})
+    maxMin = getChoroplethMaxMin(value, type);
+    console.log(maxMin)
+    var max = maxMin[0];
+    var min = maxMin[1];
 
-		if (min > 20){
-			min = 20;
-		}
+    generateChoropleth(value, type, max, min);
+  }
+}
+
+function getChoroplethMaxMin(value, type){
+  var values = [];
+
+  $.each(seatDataForChoropleth, function(seat){
+
+    var data;
+    if (type == "percent" || type == "change"){
+
+      if (value in seatDataForChoropleth[seat]["party_info"]){
+        data = seatDataForChoropleth[seat]["party_info"][value][type];
+        }
+      else {
+        data == undefined;
+      }
+    }
+
+    else if (type == "members"){
+      data = seatDataForChoropleth[seat]["seat_info"]["new_data"]["members"]
+    }
+
+    else if (type == "socialgrades"){
+      data = seatDataForChoropleth[seat]["seat_info"]["new_data"][value]
+    }
+    if (data != undefined){
+      values.push(data);
+      }
+
+  });
+
+  var max = Math.max.apply(Math, values);
+  var min = Math.min.apply(Math, values);
+
+  if (type == "change"){
+    var max = Math.max(Math.abs(max), Math.abs(min));
+    var min = -max;
+  }
+
+  if (type == "percent"){
 
 		if (max > 60){
 			max = 60;
 		}
+  }
 
-
-		for (var i = 0; i < 651; i++){
-			var id_vote_share = "#i" + i;
-
-			d3.select(id_vote_share)
-				.style("fill", colour)
-				.attr("opacity", function(d) {
-					var seat_name = seatsFromIDs[id_vote_share]
-					if (value in seatData[seat_name]["party_info"]){
-						var vote_share = seatData[seat_name]["party_info"][value]["percent"]
-					}
-					else {
-						var vote_share = 0
-					}
-
-					var vote_range = max - min;
-					vote_share = vote_share - min;
-					if (vote_share < 0) {
-						vote_share = 0
-					}
-
-					seatData[seat_name]["seat_info"]["current_colour"] = vote_share / vote_range
-
-					return vote_share / vote_range;
-
-				})
-		}
-
-		if (previousnode != undefined){
-			var last_seat = seatData[seatsFromIDs[previousnode]];
-			if (value in last_seat["party_info"] ){
-				previous_opacity = (last_seat["party_info"][value]["percent"] - min) / (max - min);
-				}
-
-			else {
-				previous_opacity = 0;
-				}
-		}
-
-		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
-
-	}
-	keyOnMap(value, max, min, colour, text_colour);
-	colour = null;
+  return [max, min];
 
 }
 
+var choroplethColour;
 
-function keyOnMap(value, max, min, colour, text_colour){
+function generateChoropleth(value, type, max, min){
+  var range = max - min;
 
-	var orig_color = colour;
+  var textColour;
 
-	$("#keyonmap").html("");
+  if (type == "percent"){
+    var relevant_class = "." + value;
+    choroplethColour = $(relevant_class).css("background-color");
+    textColour = $(relevant_class).css("color");
+  }
 
-	if (value == "null"){
+  else if (type == "change"){
+    choroplethColour = "rgb(0, 0, 255)";
+    textColour = "white";
+  }
+
+  else {
+    choroplethColour = "rgb(255, 0, 0)";
+    textColour = "white";
+  }
+
+  $.each(seatDataForChoropleth, function(seat){
+
+    var map_id = seatDataForChoropleth[seat]["seat_info"]["info_id"];
+    var seat = seatsFromIDs[map_id];
+
+    var styleInfo = getChoroplethOpacity(value, type, max, min, range, seatsFromIDs[map_id], choroplethColour);
+    var colour = styleInfo[0];
+    var opacity = styleInfo[1];
+
+    d3.select(map_id)
+      .style("fill", colour)
+      .attr("opacity", opacity);
+  });
+
+  keyOnMap(value, type, max, min, range, choroplethColour, textColour);
+}
+
+function getChoroplethOpacity(value, type, max, min, range, seat, choroplethColour){
+
+  var opacity;
+  var dataPoint;
+
+  //console.log(value, type, max, min, range, seat, choroplethColour)
+
+  if (type == "percent" || type == "change"){
+    if (value in seatDataForChoropleth[seat]["party_info"]){
+      dataPoint = seatDataForChoropleth[seat]["party_info"][value][type];
+    }
+    else {
+      return [null, 0]
+    }
+
+    // for vote change positive changes
+    if (type == "change" && dataPoint < 0){
+      choroplethColour = "red";
+      }
+
+    // for percent vote
+    if (type == "percent"){
+      opacity = (dataPoint - min) / range;
+      seatData[seat]["seat_info"]["current_colour"] = opacity;
+    }
+    // for change in vote percent
+    else if(type == "change"){
+      opacity = Math.abs(dataPoint / max);
+    }
+  }
+
+  else if (type == "members" || type== "socialgrades"){
+
+    dataPoint = seatDataForChoropleth[seat]["seat_info"]["new_data"][value];
+
+    opacity = (dataPoint - min) / range;
+  }
+
+  seatData[seat]["seat_info"]["current_colour"] = opacity;
+
+  return [choroplethColour, opacity];
+
+}
+
+function keyOnMap(value, type, max, min, range, choroplethColour, textColour){
+  console.log(value, type, max, min, range, choroplethColour, textColour);
+  $("#keyonmap").html("");
+
+  if (value == "null"){
 		null
 	}
 
-	else {
-
-		var vote_range = max - min;
-		var gap = vote_range / 5;
-		var opacities = {};
-
-		for (var i = 0; i < 6; i++){
-			var num = (min + gap * i);
-			var opacity = (num - min) / vote_range;
-			num = num.toFixed(1);
+  else {
+    var gap = range / 5;
+    var opacities = {};
 
-			if (num == 60.0){
-				num = num + "+";
-			}
-			opacities[num] = opacity;
-		}
+    for (var i = 0; i < 6; i++){
+      var num = (min + gap * i);
+      var opacity = (num - min) / range;
 
-		$.each(opacities, function(num){
-			colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
+      if (type == "change"){
+        num = (max - (max / 5) * i);
+        opacity = num / max
 
-			$("#keyonmap").append("<div style=\" color:"
-			+ text_colour + "; text-align: center; background-color: "
-			+ colour + "\">"
-			+ num + "%</div>");
+      }
 
-			colour = orig_color;
-
-		});
-	}
-}
-
-function swingKeyOnMap(max){
-	$("#keyonmap").html("");
-
-	var gap = max / 5;
-	var opacities = {};
-
-	for (var i = 0; i < 6; i++){
-		var num = (max - gap * i);
-
-		var opacity = (num) / max;
-		num = num.toFixed(1);
-
-		opacities[num] = opacity;
-	}
-
-
-	$.each(opacities, function(num){
-		$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(0, 0, 255, " + opacities[num] + "); color: white;\">+"
-		+ num + "%</div>");
-	})
-
-	var opacities = {};
-
-	for (var i = 1; i < 6; i++){
-		var num = (gap * i);
-
-		var opacity = (num) / max;
-		num = num.toFixed(1);
-
-		opacities[num] = opacity;
-	}
-
-	$.each(opacities, function(num){
-		$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
-		+ num + "%</div>");
-	})
-}
-
-function voteShareChange(){
-	var value = partyVoteShareChange;
-
-	var relevant_class = "." + value;
-
-	if (value == "null"){
-		$.each(seatData, function(seat){
-			seatData[seat]["seat_info"]["current_colour"] = 1;
-		})
-		$(".map").remove();
-		$("#keyonmap").html("");
-		loadmap();
-	}
-
-	else {
-
-		var	max = 0;
-		var min = 0;
-		$.each(seatData, function(seat){
-			if (value in seatData[seat]["party_info"]){
-				var percentage = seatData[seat]["party_info"][value]["change"];
-				if (percentage > max){
-					max = percentage;
-					}
-				if (percentage < min){
-					min = percentage;
-					}
-				}
-			})
-
-		if (Math.abs(min) > max){
-			max = Math.abs(min);
-		}
-
-		for (var i = 1; i < 651; i++){
-			var id_vote_share = "#i" + i;
+      if (["percent", "change", "socialgrades"].indexOf(type) > -1){
+        num = num.toFixed(1);
+      }
+      else {
+        num = num.toFixed(0);
+      }
 
-			var seat_name = seatsFromIDs[id_vote_share];
+      if (type == "percent" && num == 60.0){
+        num = num + "+";
+      }
 
-			if (seat_name != undefined){
+      opacities[num] = opacity;
 
-				var change;
+    }
 
-				if (value in seatData[seat_name]["party_info"]){
-					change = seatData[seat_name]["party_info"][value]["change"]
-					}
-				else  {
-					change = 0;
-				}
+    // % sign for some
+    var percentageSign;
+    if (["percent", "change", "socialgrades"].indexOf(type) > -1){
+      percentageSign = "%"
+    }
 
-				if (change >= 0){
-					d3.select(id_vote_share)
-						.style("fill", "blue")
-						.attr("opacity",function(d){
-							seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
-							return Math.abs(change) / max;
-						});
-				}
+    else {
+      percentageSign = ""
+    }
 
-				else {
-					d3.select(id_vote_share)
-						.style("fill", "red")
-						.attr("opacity",function(d){
-							seatData[seat_name]["seat_info"]["current_colour"] = Math.abs(change) / max;
-							return Math.abs(change) / max;
-						});
-				}
+    console.log(opacities);
+    $.each(opacities, function(num){
+      var colour = choroplethColour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
 
-			}
-		}
-		if (previousnode != undefined){
+      $("#keyonmap").append("<div style=\" color:"
+      + textColour + "; text-align: center; background-color: "
+      + colour + "\">"
+      + num + percentageSign + "</div>");
 
-			var last_seat = seatData[seatsFromIDs[previousnode]];
-			if (value in last_seat["party_info"]){
-				previous_opacity = (Math.abs(last_seat["party_info"][value]["change"]) / max);
-			}
-			else {
-				previous_opacity = 0;
-			}
-		}
+    });
 
-		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
+    if (type == "change"){
+      var opacities = {};
 
 
-		colour = null;
+    	for (var i = 1; i < 6; i++){
+    		var num = (max / 5 * i);
 
-		swingKeyOnMap(max);
-	}
-}
+    		var opacity = (num) / max;
+    		num = num.toFixed(1);
 
-function partyMembers(){
-	var	max = 0;
-	var min = 1000;
-	$.each(seatData, function(seat){
+    		opacities[num] = opacity;
+    	}
 
-			var members = parseFloat(seatData[seat]["seat_info"]["new_data"]["members"]);
-			if (members > max){
-				max = members;
-				}
-			if (members < min){
-				min = members;
-				}
+      console.log(opacities)
 
-		});
 
-	if (Math.abs(min) > max){
-		max = Math.abs(min);
-	}
-
-	var range = max - min
-
-	for (var i = 1; i < 651; i++){
-		var id_vote_share = "#i" + i;
-
-		var seat_name = seatsFromIDs[id_vote_share];
-
-		if (seat_name != undefined){
-
-			var members = seatData[seat_name]["seat_info"]["new_data"]["members"];
-			d3.select(id_vote_share)
-				.style("fill", "red")
-				.attr("opacity",function(d){
-					seatData[seat_name]["seat_info"]["current_colour"] = (Math.abs(members) - min) / range;
-					return (Math.abs(members) - min) / range;
-				});
-
-			}
-		}
-
-	if (previousnode != undefined){
-		var last_seat = seatData[seatsFromIDs[previousnode]];
-
-		previous_opacity = (parseFloat(last_seat["seat_info"]["new_data"]["members"]) / max );
-
-		}
-
-	flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
-
-	var colour = $(".labour").css("background-color")
-	partyMembersKey(max, min, colour);
-	colour = null;
-
-}
-
-function partyMembersKey(max, min, colour){
-
-	var orig_color = colour;
-
-	$("#keyonmap").html("");
-
-	var vote_range = max - min;
-	var gap = vote_range / 5;
-	var opacities = {};
-
-	for (var i = 0; i < 6; i++){
-		var num = (min + gap * i);
-		var opacity = (num - min) / vote_range;
-		num = num.toFixed(0);
-
-		opacities[num] = opacity;
-	}
-
-	$.each(opacities, function(num){
-		colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
-
-		$("#keyonmap").append("<div style=\" color:"
-		+ "white" + "; text-align: center; background-color: "
-		+ colour + "\">"
-		+ num + "</div>");
-
-		colour = orig_color;
-
-	});
-
-}
-
-function socialGrades(){
-
-	if (socialGrade == "null"){
-		$.each(seatData, function(seat){
-			seatData[seat]["seat_info"]["current_colour"] = 1;
-		})
-		$(".map").remove();
-		$("#keyonmap").html("");
-		loadmap();
-	}
-
-
-	else {
-		var value = socialGrade;
-		var	max = 0;
-		var min = 100;
-
-		$.each(seatData, function(seat){
-
-				var percentage = parseFloat(seatData[seat]["seat_info"]["new_data"][value]);
-				if (percentage > max){
-					max = percentage;
-					}
-				if (percentage < min){
-					min = percentage;
-					}
-
-			});
-
-		if (Math.abs(min) > max){
-			max = Math.abs(min);
-		}
-		var range = max - min
-
-		for (var i = 1; i < 651; i++){
-			var id_vote_share = "#i" + i;
-
-			var seat_name = seatsFromIDs[id_vote_share];
-
-			if (seat_name != undefined){
-
-				var percentage = seatData[seat_name]["seat_info"]["new_data"][value];
-				d3.select(id_vote_share)
-					.style("fill", "red")
-					.attr("opacity",function(d){
-						seatData[seat_name]["seat_info"]["current_colour"] = (Math.abs(percentage) - min) / range;
-						return (Math.abs(percentage) - min) / range;
-					});
-
-				}
-			}
-
-		if (previousnode != undefined){
-			var last_seat = seatData[seatsFromIDs[previousnode]];
-
-			previous_opacity = ((parseFloat(last_seat["seat_info"]["new_data"][value]) - min) / range );
-
-			}
-
-		flashSeat(d3.select(previousnode), current, previous_opacity, current_colour, "dontflash");
-
-		var colour = $(".labour").css("background-color")
-		socialGradeKey(max, min, colour);
-		colour = null;
-	}
-}
-
-function socialGradeKey(max, min, colour){
-	var orig_color = colour;
-
-	$("#keyonmap").html("");
-
-	var vote_range = max - min;
-	var gap = vote_range / 5;
-	var opacities = {};
-
-	for (var i = 0; i < 6; i++){
-		var num = (min + gap * i);
-		var opacity = (num - min) / vote_range;
-		num = num.toFixed(1);
-
-		opacities[num] = opacity;
-	}
-
-	$.each(opacities, function(num){
-		colour = colour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
-
-		$("#keyonmap").append("<div style=\" color:"
-		+ "white" + "; text-align: center; background-color: "
-		+ colour + "\">"
-		+ num + "%</div>");
-
-		colour = orig_color;
-
-	});
+    	$.each(opacities, function(num){
+    		$("#keyonmap").append("<div style=\"text-align: center; background-color: rgba(255, 0, 0, " + opacities[num] + "); color: white;\">-"
+    		+ num + "%</div>");
+    	});
+    }
+  }
 }

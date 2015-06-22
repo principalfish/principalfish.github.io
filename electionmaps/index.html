@@ -277,7 +277,7 @@
 
 					<div id="votesharebyparty">
 						<label for="votesharebypartyselect">Vote share: </label>
-						<select id="votesharebypartyselect" onchange ="partyVoteShare = value; voteShare()">
+						<select id="votesharebypartyselect" onchange ="partyVoteShare = value; choroplethInitiator(partyVoteShare, 'percent')">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>
@@ -297,7 +297,7 @@
 					<div id="votesharechangebyparty">
 
 						<label for="votesharechangebypartyselect">Vote share +/-: </label>
-						<select id="votesharechangebypartyselect" onchange ="partyVoteShareChange = value; voteShareChange()">
+						<select id="votesharechangebypartyselect" onchange ="partyVoteShareChange = value; choroplethInitiator(partyVoteShareChange, 'change')">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>
@@ -317,7 +317,7 @@
 					<div id="swingfromto">
 
 							<label for="swingfrom">Swing between: </label>
-							<select id="swingfrom" onchange ="swingState[0] = value; swingFromTo();">
+							<select id="swingfrom" onchange ="swingState[0] = value; choroplethInitiator(swingState, 'swing')">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>
@@ -335,7 +335,7 @@
 
 
 							<label for="swingto"> and </label>
-							<select id="swingto" onchange ="swingState[1] = value; swingFromTo();">
+							<select id="swingto" onchange ="swingState[1] = value; choroplethInitiator(swingState, 'swing')">
 								<option value="null"></option>
 								<option value="labour">Labour</option>
 								<option value="conservative">Conservative</option>

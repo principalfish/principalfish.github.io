@@ -8,7 +8,14 @@ function filterMap(){
 		.attr("opacity", 1)
 
 	$("#keyonmap").html("");
+	$('#seat-information').hide();
 
+	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
+	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);
+	$("#swingfrom option:eq(0)").prop("selected", true);
+	$("#swingto option:eq(0)").prop("selected", true);
+
+	swingState = ["null", "null"];
 
 	var	party = filterStates[0].party;
 	var gains = filterStates[1].gain;
@@ -24,6 +31,7 @@ function filterMap(){
 
 	// reset seatsAfterFilter from any previous filters.
 	seatsAfterFilter = [];
+	seatDataForChoropleth = {};
 
 	g.selectAll(".map")
 		.attr("id", "filtertime")
@@ -35,7 +43,7 @@ function filterMap(){
 		g.selectAll("#filtertime")
 			.attr("style", function(d){
 				if (party != seatData[d.properties.name]["seat_info"]["winning_party"])
-					return "opacity: 0.1";
+					return "opacity: 0.02";
 				})
 			.attr("id", function(d){
 				if (party == seatData[d.properties.name]["seat_info"]["winning_party"])
@@ -51,7 +59,7 @@ function filterMap(){
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
 					if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
-						return "opacity: 0.1";
+						return "opacity: 0.02";
 					})
 				.attr("id", function(d){
 					if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
@@ -62,7 +70,7 @@ function filterMap(){
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
 					if (seatData[d.properties.name]["party"] != "gain")
-						return "opacity: 0.1";
+						return "opacity: 0.02";
 					})
 				.attr("id", function(d){
 					if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
@@ -77,7 +85,7 @@ function filterMap(){
 		g.selectAll("#gainfiltered")
 			.attr("style", function(d){
 				if (region != seatData[d.properties.name]["seat_info"]["area"])
-					return "opacity: 0.1";
+					return "opacity: 0.02";
 			})
 			.attr("id", function(d){
 				if (region == seatData[d.properties.name]["seat_info"]["area"])
@@ -88,12 +96,13 @@ function filterMap(){
 		.attr("style", function(d) {
 
 			if (parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) < majoritylow || parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) > majorityhigh )
-				return "opacity: 0.1"
+				return "opacity: 0.02"
 
 			})
 		.each(function(d) {
 			if (parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) <= majorityhigh )
 				seatsAfterFilter.push(d);
+				seatDataForChoropleth[d.properties.name] = seatData[d.properties.name];
 			});
 
 	g.selectAll(".map")
@@ -126,6 +135,10 @@ function resetFilter(){
 	partyVoteShareChange = "null"
 
 	filterMap();
+
+	$.each(seatData, function(seat){
+		seatData[seat]["seat_info"]["current_colour"] = 1;
+	})
 
 	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
 	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);

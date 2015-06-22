@@ -9,7 +9,11 @@ function filterMap(){
 		.attr("opacity", 1)
 
 	$("#keyonmap").html("");
-	$('#seat-information').hide()
+	$('#seat-information').hide();
+
+	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
+	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);
+	$("#socialgradesselect option:eq(0)").prop("selected", true);
 
 	var	party = filterStates[0].party;
 	var gains = filterStates[1].gain;

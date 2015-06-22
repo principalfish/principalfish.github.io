@@ -14,7 +14,7 @@ function choroplethInitiator(value, type){
   else {
 
     maxMin = getChoroplethMaxMin(value, type);
-    console.log(maxMin)
+
     var max = maxMin[0];
     var min = maxMin[1];
 
@@ -155,7 +155,7 @@ function getChoroplethOpacity(value, type, max, min, range, seat, choroplethColo
 }
 
 function keyOnMap(value, type, max, min, range, choroplethColour, textColour){
-  console.log(value, type, max, min, range, choroplethColour, textColour);
+
   $("#keyonmap").html("");
 
   if (value == "null"){
@@ -201,7 +201,7 @@ function keyOnMap(value, type, max, min, range, choroplethColour, textColour){
       percentageSign = ""
     }
 
-    console.log(opacities);
+
     $.each(opacities, function(num){
       var colour = choroplethColour.replace(")", "," + opacities[num] +  ")").replace("rgb", "rgba")
 
@@ -223,9 +223,7 @@ function keyOnMap(value, type, max, min, range, choroplethColour, textColour){
     		num = num.toFixed(1);
 
     		opacities[num] = opacity;
-    	}
-
-      console.log(opacities)
+    	}    
 
 
     	$.each(opacities, function(num){

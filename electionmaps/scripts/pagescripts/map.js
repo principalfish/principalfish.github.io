@@ -133,12 +133,14 @@ function loadmap(){
 			.append("svg:title")
 				.text(function(d) { return d.properties.name})
 			.each(function(d){
-				if (d.properties.name in seatData){
-					seatsAfterFilter.push(d);
-					}
 				searchSeatData.push(d);
 				seatNames.push(d.properties.name);
 				seatsFromIDs["#i" + d.properties.info_id] = d.properties.name
+				seatData[d.properties.name]["seat_info"]["info_id"] = "#i" + d.properties.info_id;
+				if (d.properties.name in seatData){
+					seatsAfterFilter.push(d);
+					seatDataForChoropleth[d.properties.name] = seatData[d.properties.name]
+					}
 			});
 
 		g.append("path")

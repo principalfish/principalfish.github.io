@@ -220,6 +220,16 @@ header {
   font-size: 1.2em;
   padding: 2px; }
 
+#maptitle {
+  display: none;
+  left: 280px;
+  top: 5px;
+  z-index: 1;
+  position: absolute;
+  max-width: 400px; }
+  #maptitle h2 {
+    font-size: 1.1em; }
+
 /* map stylings */
 svg .boundaries {
   fill: none;

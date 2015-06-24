@@ -9,6 +9,7 @@ function filterMap(){
 
 	$("#keyonmap").html("");
 	$('#seat-information').hide();
+	$("#maptitle").hide();
 
 	$("#votesharebypartyselect option:eq(0)").prop("selected", true);
 	$("#votesharechangebypartyselect option:eq(0)").prop("selected", true);

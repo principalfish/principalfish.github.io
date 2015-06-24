@@ -58,8 +58,6 @@ function getChoroplethMaxMin(value, type){
 
   });
 
-
-
   var max = Math.max.apply(Math, values);
   var min = Math.min.apply(Math, values);
 
@@ -175,9 +173,28 @@ function getChoroplethOpacity(value, type, max, min, range, seat, choroplethColo
 
 }
 
+
 function keyOnMap(value, type, max, min, range, choroplethColour, textColour){
 
   $("#keyonmap").html("");
+
+  var title;
+
+  if (type == "percent"){
+    title = partylist[value] + " Vote Share";
+  }
+
+  if (type == "change"){
+    title = partylist[value] + " Vote Share Change";
+  }
+
+  if (type == "swing"){
+    title =  "Swing between " + partylist[value[0]] + " and " + partylist[value[1]];
+  }
+
+  $("#maptitletext").text(title);
+  $("#maptitle").show();
+
 
   if (value == "null"){
 		null

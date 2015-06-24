@@ -154,9 +154,38 @@ function getChoroplethOpacity(value, type, max, min, range, seat, choroplethColo
 
 }
 
+var socialGradeMap = {
+    "ab" : "AB",
+    "c1" : "C1",
+    "c2" : "C2",
+    "de" : "DE"
+};
+
+
 function keyOnMap(value, type, max, min, range, choroplethColour, textColour){
 
   $("#keyonmap").html("");
+
+  var title;
+
+  if (type == "percent"){
+    title = partylist[value] + " Vote Share";
+  }
+
+  if (type == "change"){
+    title = partylist[value] + " Vote Share Change";
+  }
+
+  if (type == "members"){
+    title =  "Party Member Distribution";
+  }
+
+  if (type == "socialgrades"){
+    title = "Social Grade Distribution : " + socialGradeMap[value];
+  }
+
+  $("#maptitletext").text(title);
+  $("#maptitle").show();
 
   if (value == "null"){
 		null

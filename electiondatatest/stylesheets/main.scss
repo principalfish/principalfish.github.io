@@ -261,8 +261,6 @@ header {
   z-index: 1;
 }
 
-
-
 #tabulateddatabutton {
   position: absolute;
   top: 5px;
@@ -287,6 +285,20 @@ header {
 	width: 75px;
 	font-size: 1.2em;
 	padding: 2px;
+}
+
+#maptitle {
+
+  display: none;
+  left : ($side-bar-width + 130);
+  top : 5px;
+  z-index : 1;
+  position: absolute;
+  max-width: 400px;
+
+  h2 {
+    font-size : 1.1em;
+  }
 }
 
 /* map stylings */

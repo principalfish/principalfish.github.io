@@ -12,7 +12,7 @@ function choroplethInitiator(value, type){
 		loadmap();
 	}
 
-  else {
+  else if (filteredSeatsTotal > 0){
 
 		if (type == "swing" && (swingState[0] == "null" || swingState[1] == "null")){
 			null

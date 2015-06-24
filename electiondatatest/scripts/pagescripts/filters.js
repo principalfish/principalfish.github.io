@@ -2,8 +2,11 @@
 // problem with cache of tablesorter not being cleared result in multiple tables being displayed
 // just rewriting the html as fix
 
+var filteredSeatsTotal = 533;
 
 function filterMap(){
+
+	filteredSeatsTotal = 0;
 
 	d3.selectAll(".map")
 		.attr("opacity", 1)
@@ -54,7 +57,8 @@ function filterMap(){
 				.attr("id", "gainfiltered")
 
 	else
-		if (gains == "gains")
+		if (gains == "gain")
+
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
 					if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
@@ -68,7 +72,7 @@ function filterMap(){
 		if (gains == "nochange")
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
-					if (seatData[d.properties.name]["party"] != "gain")
+					if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
 						return "opacity: 0.02";
 					})
 				.attr("id", function(d){
@@ -101,6 +105,7 @@ function filterMap(){
 			if (parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["new_data"]["members"]) <= majorityhigh ){
 				seatsAfterFilter.push(d);
 				seatDataForChoropleth[d.properties.name] = seatData[d.properties.name];
+				filteredSeatsTotal += 1;
 				}
 			});
 
@@ -179,7 +184,7 @@ function generateSeatList(){
 	$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length + "</p>");
 	$.each(seatsAfterFilter, function(i){
 
-		if (filterStates[1].gain == "gains" && filterStates[0].party != "null"){
+		if (filterStates[1].gain == "gain" && filterStates[0].party != "null"){
 						$(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
 	          + "<div class=\"party-flair " + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] + "\"></div>"
 	          + seatsAfterFilter[i].properties.name

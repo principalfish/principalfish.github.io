@@ -11,7 +11,7 @@ function choroplethInitiator(value, type){
 		loadmap();
 	}
 
-  else {
+  else if (filteredSeatsTotal > 0){
 
     maxMin = getChoroplethMaxMin(value, type);
 

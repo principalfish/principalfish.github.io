@@ -2,7 +2,11 @@
 // problem with cache of tablesorter not being cleared result in multiple tables being displayed
 // just rewriting the html as fix
 
+var filteredSeatsTotal = 650;
+
 function filterMap(){
+
+	filteredSeatsTotal = 0;
 
 	d3.selectAll(".map")
 		.attr("opacity", 1)
@@ -70,7 +74,7 @@ function filterMap(){
 		if (gains == "hold")
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
-					if (seatData[d.properties.name]["party"] != "gain")
+					if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
 						return "opacity: 0.02";
 					})
 				.attr("id", function(d){
@@ -104,6 +108,7 @@ function filterMap(){
 			if (parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) >= majoritylow && parseFloat(seatData[d.properties.name]["seat_info"]["maj_percent"]) <= majorityhigh )
 				seatsAfterFilter.push(d);
 				seatDataForChoropleth[d.properties.name] = seatData[d.properties.name];
+				filteredSeatsTotal += 1;
 			});
 
 	g.selectAll(".map")
@@ -174,7 +179,7 @@ function generateSeatList(){
 	$(seatTotalContainer).html(" ");
 	$(seatListContainer).html(" ");
 
-	$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length + "</p>");
+	$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length  + "</p>");
 	$.each(seatsAfterFilter, function(i){
 		if (filterStates[1].gain == "gain" && filterStates[0].party != "null"){
 						$(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"

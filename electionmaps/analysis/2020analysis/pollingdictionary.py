@@ -42,8 +42,7 @@ pollingregions = {
     # and midlands, north, wales, scotland
 
     #mori - need to subtract london from south because MORI are stupid
-    "SouthMori" : ["southeastengland", "southwestengland"],
-    "MidlandsMori" : {"wales", "eastmidlands", "westmidlands", "eastofengland"},
+    "SouthMori" : ["southeastengland", "southwestengland"],    
 
     # tns
     "East and West Midlands" : ["eastmidlands", "westmidlands"],

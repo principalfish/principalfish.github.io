@@ -40,6 +40,7 @@ function filterMap(){
 		g.selectAll("#filtertime")
 			.attr("id", "partyfiltered")
 	else
+
 		g.selectAll("#filtertime")
 			.attr("style", function(d){
 				if (party != seatData[d.properties.name]["seat_info"]["winning_party"])
@@ -53,7 +54,6 @@ function filterMap(){
 	if (gains == "null")
 			g.selectAll("#partyfiltered")
 				.attr("id", "gainfiltered")
-
 	else
 		if (gains == "gains")
 			g.selectAll("#partyfiltered")

@@ -55,7 +55,7 @@ function filterMap(){
 			g.selectAll("#partyfiltered")
 				.attr("id", "gainfiltered")
 	else
-		if (gains == "gains")
+		if (gains == "gain")
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
 					if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
@@ -66,7 +66,7 @@ function filterMap(){
 						return "gainfiltered"
 				});
 
-		if (gains == "nochange")
+		if (gains == "hold")
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
 					if (seatData[d.properties.name]["party"] != "gain")
@@ -116,7 +116,6 @@ function filterMap(){
 	$(seatListContainer).html(" ");
 
 	}
-
 // resets all filters and map to default state
 function resetFilter(){
 
@@ -131,8 +130,8 @@ function resetFilter(){
 
 	swingState = ["null", "null"];
 
-	partyVoteShare = "null"
-	partyVoteShareChange = "null"
+	partyVoteShare = "null";
+	partyVoteShareChange = "null";
 
 	filterMap();
 
@@ -145,7 +144,6 @@ function resetFilter(){
 	$("#swingfrom option:eq(0)").prop("selected", true);
 	$("#swingto option:eq(0)").prop("selected", true);
 
-
 	$("#dropdownparty option:eq(0)").prop("selected", true);
 	$("#dropdowngains option:eq(0)").prop("selected", true);
 	$("#dropdownregion option:eq(0)").prop("selected", true);
@@ -157,27 +155,38 @@ function resetFilter(){
 
 // using seatsAfterFilter, generates list of filtered seats
 function generateSeatList(){
-			$("#totalfilteredseats").html(" ");g
-			$("#filteredlisttable").html(" ");
 
-			$(seatTotalContainer).html(" ");
-			$(seatListContainer).html(" ");
-
-			$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length + "</p>");
-			$.each(seatsAfterFilter, function(i){
-
-			if (filterStates[1].gain == "gains" && filterStates[0].party != "null"){
-							$(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
-              + "<div class=\"party-flair " + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] + "\"></div>"
-              + seatsAfterFilter[i].properties.name
-              + "</div>")
-				}
-
-			else{
-          $(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
-          + '<div class=\"party-flair ' + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["winning_party"] + '\"></div>'
-          + seatsAfterFilter[i].properties.name
-          + "</div>");
-				}
+	seatsAfterFilter.sort(function(a, b){
+			var nameA = a.properties.name.toLowerCase(), nameB = b.properties.name.toLowerCase();
+			if (nameA < nameB){
+				return -1
+			}
+			if (nameA > nameB){
+				return 1
+			}
+			return 0
 		});
-	}
+
+	$("#totalfilteredseats").html(" ");
+	$("#filteredlisttable").html(" ");
+
+	$(seatTotalContainer).html(" ");
+	$(seatListContainer).html(" ");
+
+	$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length + "</p>");
+	$.each(seatsAfterFilter, function(i){
+		if (filterStates[1].gain == "gain" && filterStates[0].party != "null"){
+						$(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
+            + "<div class=\"party-flair " + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] + "\"></div>"
+            + seatsAfterFilter[i].properties.name
+            + "</div>")
+			}
+
+		else {
+        $(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
+        + '<div class=\"party-flair ' + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["winning_party"] + '\"></div>'
+        + seatsAfterFilter[i].properties.name
+        + "</div>");
+			}
+		});
+}

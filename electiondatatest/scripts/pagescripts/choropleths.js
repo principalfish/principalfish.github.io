@@ -223,7 +223,7 @@ function keyOnMap(value, type, max, min, range, choroplethColour, textColour){
     		num = num.toFixed(1);
 
     		opacities[num] = opacity;
-    	}    
+    	}
 
 
     	$.each(opacities, function(num){

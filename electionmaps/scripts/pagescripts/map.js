@@ -45,23 +45,24 @@ function zoomToClickedFilteredSeat(d){
 	previousnode = id;
 }
 
-function flashSeat(previous, current, previous_opacity, current_colour, optional){
+function flashSeat(previous, current, previous_opacity, current_colour){
 
-	if (optional == undefined){
-		repeat();
-	}
 	previous.transition()
 		.attr("opacity", previous_opacity);
+
+	repeat();
 	// flashes selected seat on map
 	function repeat(){
-		current
-			.transition()
-				.duration(1500)
-				.attr("opacity", 0.2)
-			.transition()
-				.duration(1500)
-				.attr("opacity", current_colour)
-			.each("end", repeat);
+		if (current != undefined){
+			current
+				.transition()
+					.duration(1500)
+					.attr("opacity", 0.02)
+				.transition()
+					.duration(1500)
+					.attr("opacity", current_colour)
+				.each("end", repeat);
+			}
 		}
 }
 

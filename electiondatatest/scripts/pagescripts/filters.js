@@ -129,8 +129,8 @@ function resetFilter(){
 
 	swingState = ["null", "null"];
 
-	partyVoteShare = "null"
-	partyVoteShareChange = "null"
+	partyVoteShare = "null";
+	partyVoteShareChange = "null";
 
 	filterMap();
 
@@ -157,27 +157,39 @@ function resetDropDowns(){
 
 // using seatsAfterFilter, generates list of filtered seats
 function generateSeatList(){
-			$("#totalfilteredseats").html(" ");g
-			$("#filteredlisttable").html(" ");
 
-			$(seatTotalContainer).html(" ");
-			$(seatListContainer).html(" ");
+	seatsAfterFilter.sort(function(a, b){
+		var nameA = a.properties.name.toLowerCase(), nameB = b.properties.name.toLowerCase();
+		if (nameA < nameB){
+			return -1
+		}
+		if (nameA > nameB){
+			return 1
+		}
+		return 0
+	});
 
-			$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length + "</p>");
-			$.each(seatsAfterFilter, function(i){
+	$("#totalfilteredseats").html(" ");
+	$("#filteredlisttable").html(" ");
 
-			if (filterStates[1].gain == "gains" && filterStates[0].party != "null"){
-							$(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
-              + "<div class=\"party-flair " + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] + "\"></div>"
-              + seatsAfterFilter[i].properties.name
-              + "</div>")
-				}
+	$(seatTotalContainer).html(" ");
+	$(seatListContainer).html(" ");
 
-			else{
-          $(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
-          + '<div class=\"party-flair ' + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["winning_party"] + '\"></div>'
-          + seatsAfterFilter[i].properties.name
-          + "</div>");
-				}
-		});
-	}
+	$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length + "</p>");
+	$.each(seatsAfterFilter, function(i){
+
+		if (filterStates[1].gain == "gains" && filterStates[0].party != "null"){
+						$(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
+	          + "<div class=\"party-flair " + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] + "\"></div>"
+	          + seatsAfterFilter[i].properties.name
+	          + "</div>")
+			}
+
+		else{
+	      $(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
+	      + '<div class=\"party-flair ' + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["winning_party"] + '\"></div>'
+	      + seatsAfterFilter[i].properties.name
+	      + "</div>");
+			}
+	});
+}

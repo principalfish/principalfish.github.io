@@ -40,18 +40,18 @@ regionlist["northernireland"] = "N. Ireland";
 
 var pollsters = {};
 
-pollsters["ashcroft"] = "Ashcroft"
-pollsters["yougov"] = "Yougov"
-pollsters["survation"] = "Survation"
-pollsters["tns"] = "TNS BRMB"
-pollsters["icm"] = "ICM"
-pollsters["populus"] = "Populus"
-pollsters["mori"] = "Ipsos Mori"
-pollsters["opinium"] = "Opinium"
-pollsters["comres"] = "Comres"
-pollsters["lucidtalk"] = "Lucidtalk"
-pollsters["panelbase"] = "Panelbase"
-pollsters["bmg"] = "BMG"
+pollsters["ashcroft"] = "Ashcroft";
+pollsters["yougov"] = "Yougov";
+pollsters["survation"] = "Survation";
+pollsters["tns"] = "TNS BRMB";
+pollsters["icm"] = "ICM";
+pollsters["populus"] = "Populus";
+pollsters["mori"] = "Ipsos Mori";
+pollsters["opinium"] = "Opinium";
+pollsters["comres"] = "Comres";
+pollsters["lucidtalk"] = "Lucidtalk";
+pollsters["panelbase"] = "Panelbase";
+pollsters["bmg"] = "BMG";
 
 
 var previousTotalsByYearByParty = {
@@ -409,10 +409,9 @@ var previousTotalsByYearByParty = {
                             'uu': 0}
                             }
 
-
 };
 
-previousTotalsByYearByParty["2005"] = previousTotalsByYearByParty["2010"]
+previousTotalsByYearByParty["2005"] = previousTotalsByYearByParty["2010"];
 
 var regions = {
     "england"  : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland", "southwestengland", "eastofengland",

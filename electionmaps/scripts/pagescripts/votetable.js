@@ -1,6 +1,6 @@
 function displayVoteTotals(data) {
 
-		$("#totalstable").remove()
+		$("#totalstable").remove();
 
 		var table_to_add = "<table id=\"totalstable\" class=\"tablesorter\"><thead><tr><th>Party</th>" +
 												"<th class=\"tablesorter-header\">Seats</th>";
@@ -8,15 +8,19 @@ function displayVoteTotals(data) {
 
 
 		if (pageSetting == "2010parliament"){
+
 			table_to_add += "<th class=\"tablesorter-header\">Votes</th><th class=\"tablesorter-header\">Vote %</th></tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
 			"</tfoot></table>";
+
 		}
 
 		else {
+
 			table_to_add += "<th class=\"tablesorter-header\">Change</th>" +
 			"<th class=\"tablesorter-header\">Votes</th><th class=\"tablesorter-header\">Vote %</th>" +
 			"	<th class=\"tablesorter-header\">% +/-</th></tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
 			"</tfoot></table>";
+
 		}
 
 		$("#totalstablediv").append(table_to_add);
@@ -27,21 +31,34 @@ function displayVoteTotals(data) {
 
 		$.each(data, function(i){
 
-				if (data[i].change > 0)
+				if (data[i].change > 0){
+
 					plussign1 = "+";
-				else
+				}
+
+				else{
+
 					plussign1 = "";
 
-				if (data[i].percentchange > 0)
+				}
+
+				if (data[i].percentchange > 0){
 					plussign2 = "+";
-				else
+				}
+				else {
 					plussign2 = "";
+				}
 
 			if (data[i].percentchange == undefined){
+
 			 	percentChange = "";
+
 			}
+
 			else {
+
 				percentChange = data[i].percentchange.toFixed(2);
+
 			}
 
 			if (i == data.length -1){
@@ -51,11 +68,15 @@ function displayVoteTotals(data) {
 					+ data[i].seats + "</td>";
 
 				if (pageSetting == "2010parliament"){
+
 					table_foot += "<td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td></td></tr>";
+
 				}
 
 				else {
+
 					table_foot += "<td></td><td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td></td><td></td></tr>";
+
 				}
 
 				$("#totalstablefoot").append(table_foot);
@@ -68,24 +89,29 @@ function displayVoteTotals(data) {
 				+ data[i].seats + "</td>";
 
 				if (pageSetting == "2010parliament"){
+
 					table_row += "<td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
 					+ data[i].votepercent.toFixed(2) + "</td></tr>";
+
 				}
 
 				else {
+
 					table_row += "<td style=\"text-align: right;\">"
 					+ plussign1 + data[i].change + "</td><td style=\"text-align: right;\">"
 					+ data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
 					+ data[i].votepercent.toFixed(2) + "</td><td>"
 					+ plussign2 + percentChange + "</td></tr>";
+
 				}
 
 				$("#totalstableinfo").append(table_row);
 			}
 
-		})
+		});
 
 		$("#totalstable").tablesorter({
+
 				sortInitialOrder: "desc",
 	      headers: {
 					0: {
@@ -137,18 +163,27 @@ function getVoteTotals(area){
     var areas = [];
 
     if (area == "all"){
+
       areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]).concat(regions["northernireland"]);
+
     }
 
     else if (area == "greatbritain"){
+
       areas = regions["england"].concat(regions["scotland"]).concat(regions["wales"]);
+
     }
 
     else if (area == "england"){
+
       areas = regions["england"];
+
     }
+
     else {
+
       areas.push(area);
+
     }
 
 		var totalvotescast = 0;
@@ -158,14 +193,17 @@ function getVoteTotals(area){
 		$.each(seatData, function(seat){
 
 			if (areas.indexOf(seatData[seat]["seat_info"]["area"]) != -1 ){
+
 				totalvotescast += parseInt(seatData[seat]["seat_info"]["turnout"]);
 
 			}
 		});
 
 		$.each(areas, function(area){
-			year = String(parseInt(pageSetting.slice(0,4)) - 5)
+
+			year = String(parseInt(pageSetting.slice(0,4)) - 5);
 			oldturnout +=  previousTotalsByYearByParty[year][areas[area]]["turnout"];
+
 		})
 
 		var holdingArray = [];
@@ -178,11 +216,16 @@ function getVoteTotals(area){
 		var otherVotePercent = 0;
 
 		$.each(parties, function(party){
-			info = {}
+
+			info = {};
 			var code = parties[party];
+
 			if (code == "other" || code == "others"){
+
 				code = "other"
+
 			}
+
 			var seatssum = 0;
 			var change = 0;
 			var totalvotes = 0;
@@ -195,20 +238,26 @@ function getVoteTotals(area){
 				if (areas.indexOf(seatData[seat]["seat_info"]["area"]) > -1){
 
 					if (seatData[seat]["seat_info"]["winning_party"] == code){
+
 						seatssum += 1;
 						totalseats += 1;
+
 					}
 
 
 					if (seatData[seat]["seat_info"]["incumbent"] == code){
+
 						change += 1;
+
 					}
 
-					parties_in_seat = Object.keys(seatData[seat]["party_info"])
+					parties_in_seat = Object.keys(seatData[seat]["party_info"]);
 
 					if (parties_in_seat.indexOf(parties[party]) != -1) {
+
 						totalvotes += seatData[seat]["party_info"][parties[party]]["total"];
-						oldvotetotal += seatData[seat]["party_info"][parties[party]]["old"]
+						oldvotetotal += seatData[seat]["party_info"][parties[party]]["old"];
+
 					}
 
 					}
@@ -216,18 +265,21 @@ function getVoteTotals(area){
 
 			votepercent =  parseFloat((100 * totalvotes / parseFloat(totalvotescast)).toFixed(2));
 			old_vote_percent =  parseFloat((100 * oldvotetotal / parseFloat(oldturnout)).toFixed(2));
-			var vote_percent_change = votepercent - old_vote_percent
+			var vote_percent_change = votepercent - old_vote_percent;
 
 			change = seatssum - change;
 
 			if (code == "other"){
+
 				otherSeatssum = seatssum;
 				otherChange = change;
 				otherTotalVotes +=totalvotes;
-				otherVotePercent += votepercent
+				otherVotePercent += votepercent;
+
 			}
 
 			else {
+
 				info["code"] = code;
 				info["seats"] = seatssum;
 				info["change"] = change;
@@ -235,6 +287,7 @@ function getVoteTotals(area){
 				info["votepercent"] = votepercent;
 				info["percentchange"] = vote_percent_change;
 				holdingArray.push(info);
+				
 			}
 		});
 

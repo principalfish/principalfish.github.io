@@ -20,11 +20,16 @@ function seatinfo(d){
     $(partyFlairElement).addClass(seatInfo["winning_party"]);
 
 	if (seatInfo["winning_party"] != seatInfo["incumbent"]) {
+
 		$(gainNameElement).text("Gain from " + partylist[seatInfo["incumbent"]]);
         $(gainFlairElement).addClass(seatInfo["incumbent"]);
+
     }
+
 	else {
+
 		$(gainNameElement).text("");
+
     }
 
 	$("#information-majority").text("Majority: " + seatInfo["maj_percent"]
@@ -32,7 +37,7 @@ function seatinfo(d){
 
 	var seatTurnout = (100 * seatInfo["turnout"] / seatInfo["electorate"]).toFixed(2) + "%";
 
-	$("#information-turnout").text("Turnout : " + seatTurnout )
+	$("#information-turnout").text("Turnout : " + seatTurnout );
 
 	$("#information-pie").html(piechart(d));
 
@@ -41,6 +46,7 @@ function seatinfo(d){
 }
 
 function piechart(d){
+
 	$("#information-pie").empty();
 	$("#information-chart").empty();
 	$("#information-chart").html("<table></table>");
@@ -49,38 +55,55 @@ function piechart(d){
 	var relevant_party_info = seatData[d.properties.name]["party_info"];
 
 	$.each(relevant_party_info, function(d){
+
 		votes = relevant_party_info[d]["percent"];
+
 		if (votes > 0){
+
 			data.push({party: d, votes: votes, vote_change: relevant_party_info[d]["change"]});
+
 		}
+
 	})
 
 	var filterdata = [];
 
 	$.each(data, function(i){
-		if (data[i].votes > 0 && data[i].party != "others")
+
+		if (data[i].votes > 0 && data[i].party != "others"){
+
 			filterdata.push(data[i]);
+		}
+
 	});
 
 	filterdata.sort(function(a, b){
+
 			return b.votes - a.votes;
+
 	});
 
 	var keys = Object.keys(relevant_party_info);
 
 	if (keys.indexOf("others") != -1 && relevant_party_info["others"]["percent"] > 0){
+
 		filterdata.push({party: "others", votes: relevant_party_info["others"]["percent"], vote_change: relevant_party_info["others"]["change"]});
+
 	}
 
 	var barchartdata = [];
 
 	$.each(filterdata, function(i){
+
 		if (filterdata[i].votes >= 3){
+
 			barchartdata.push(filterdata[i]);
+
 		}
+
 	});
 
-	var dataitems = barchartdata.length
+	var dataitems = barchartdata.length;
 	var margin = {top: 10, right: 0, bottom: 10, left: 25};
 
 	var width = 250 - margin.left - margin.right;
@@ -103,14 +126,14 @@ function piechart(d){
 	    .orient("bottom");
 
 	var y = d3.scale.linear()
-		.range([height, 0])
+		.range([height, 0]);
 
 	var yAxis = d3.svg.axis()
     .scale(y)
     .orient("left")
     .ticks(6);
 
-	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; })
+	var max_of_votes = d3.max(barchartdata, function(d) { return d.votes; });
 	y.domain([0, d3.max([60, (max_of_votes + (10 - max_of_votes % 10))])]);
 
 	svg1.append("g")
@@ -139,37 +162,56 @@ function piechart(d){
 
 
 	$.each(filterdata, function(i){
+
 		var plussign = "";
 		if (filterdata[i].vote_change > 0){
 			plussign = "+";
+
 		}
 
 		var vote_change;
 
 		if (filterdata[i].vote_change ==""){
+
 			vote_change = "";
+
 		}
+
 		else {
+
 			vote_change = parseFloat(filterdata[i].vote_change).toFixed(2);
+
 		}
 
 		var to_add = "<tr><td><div class= \" party-flair " + filterdata[i].party + "\"></div><td style=\"max-width: 170px;\">" +
 			seatData[d.properties.name]["party_info"][filterdata[i].party]["name"] + "</td><td>" + (parseFloat(filterdata[i].votes)).toFixed(2) +  "%</td>";
 
 		if (pageSetting == "2010parliament"){
+
 			to_add += "</tr>";
+
 		}
+
 		else {
+
 			to_add += ("<td>" + plussign + vote_change +  "</td></tr>");
+
 		}
 
 		$("#information-chart table").append(to_add);
-	})
+
+	});
 
 	if (seatData[d.properties.name]["seat_info"]["byelection"] != null){
+
 		$("#information-byelection").text("By-election since " + pageSetting.slice(0, 4));
+
 	}
+
 	else {
+
 		$("#information-byelection").text("");
+
 	}
+
 }

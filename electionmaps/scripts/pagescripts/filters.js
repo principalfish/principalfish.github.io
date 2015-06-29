@@ -9,7 +9,7 @@ function filterMap(){
 	filteredSeatsTotal = 0;
 
 	d3.selectAll(".map")
-		.attr("opacity", 1)
+		.attr("opacity", 1);
 
 	$("#keyonmap").html("");
 	$('#seat-information').hide();
@@ -25,26 +25,37 @@ function filterMap(){
 	var	party = filterStates[0].party;
 	var gains = filterStates[1].gain;
 	var region = filterStates[2].region;
-	var majoritylow = filterStates[3].majoritylow
-	var majorityhigh = filterStates[4].majorityhigh
+	var majoritylow = filterStates[3].majoritylow;
+	var majorityhigh = filterStates[4].majorityhigh;
 
 	// change nonsense user inputs
-	if (isNaN(majoritylow))
-		majoritylow = 0
-	if (isNaN(majorityhigh))
-		majorityhigh = 100
+	if (isNaN(majoritylow)){
+
+		majoritylow = 0;
+
+	}
+
+	if (isNaN(majorityhigh)){
+
+		majorityhigh = 100;
+
+	}
 
 	// reset seatsAfterFilter from any previous filters.
 	seatsAfterFilter = [];
 	seatDataForChoropleth = {};
 
 	g.selectAll(".map")
-		.attr("id", "filtertime")
+		.attr("id", "filtertime");
 
-	if (party == "null")
+	if (party == "null"){
+
 		g.selectAll("#filtertime")
-			.attr("id", "partyfiltered")
-	else
+			.attr("id", "partyfiltered");
+
+		}
+
+	else {
 
 		g.selectAll("#filtertime")
 			.attr("style", function(d){
@@ -56,11 +67,18 @@ function filterMap(){
 					return "partyfiltered"
 				});
 
-	if (gains == "null")
+		}
+
+	if (gains == "null"){
+
 			g.selectAll("#partyfiltered")
-				.attr("id", "gainfiltered")
-	else
-		if (gains == "gain")
+				.attr("id", "gainfiltered");
+		}
+
+	else {
+
+		if (gains == "gain"){
+
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
 					if (seatData[d.properties.name]["seat_info"]["change"] == "hold")
@@ -70,8 +88,10 @@ function filterMap(){
 					if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
 						return "gainfiltered"
 				});
+			}
 
-		if (gains == "hold")
+		if (gains == "hold"){
+
 			g.selectAll("#partyfiltered")
 				.attr("style", function(d) {
 					if (seatData[d.properties.name]["seat_info"]["change"] == "gain")
@@ -82,11 +102,16 @@ function filterMap(){
 						return "gainfiltered"
 				});
 
-	if (region == "null")
+			}
+		}
+
+	if (region == "null"){
+
 		g.selectAll("#gainfiltered")
-			.attr("id", "regionfiltered")
+			.attr("id", "regionfiltered");
+		}
 
-	else
+	else {
 		g.selectAll("#gainfiltered")
 			.attr("style", function(d){
 				if (region != seatData[d.properties.name]["seat_info"]["area"])
@@ -96,6 +121,7 @@ function filterMap(){
 				if (region == seatData[d.properties.name]["seat_info"]["area"])
 					return "regionfiltered"
 			});
+		}
 
 	g.selectAll("#regionfiltered")
 		.attr("style", function(d) {
@@ -165,12 +191,19 @@ function generateSeatList(){
 	seatsAfterFilter.sort(function(a, b){
 			var nameA = a.properties.name.toLowerCase(), nameB = b.properties.name.toLowerCase();
 			if (nameA < nameB){
-				return -1
+
+				return -1;
+
 			}
+
 			if (nameA > nameB){
-				return 1
+
+				return 1;
+
 			}
-			return 0
+
+			return 0;
+
 		});
 
 	$("#totalfilteredseats").html(" ");
@@ -180,19 +213,25 @@ function generateSeatList(){
 	$(seatListContainer).html(" ");
 
 	$(seatTotalContainer).append("<p>Total : " + seatsAfterFilter.length  + "</p>");
+
 	$.each(seatsAfterFilter, function(i){
+
 		if (filterStates[1].gain == "gain" && filterStates[0].party != "null"){
+
 						$(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
             + "<div class=\"party-flair " + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["incumbent"] + "\"></div>"
             + seatsAfterFilter[i].properties.name
-            + "</div>")
+            + "</div>");
+
 			}
 
 		else {
+
         $(seatListContainer).append("<div onclick=\"zoomToClickedFilteredSeat(seatsAfterFilter[" + i + "])\">"
         + '<div class=\"party-flair ' + seatData[seatsAfterFilter[i].properties.name]["seat_info"]["winning_party"] + '\"></div>'
         + seatsAfterFilter[i].properties.name
         + "</div>");
 			}
+
 		});
 }

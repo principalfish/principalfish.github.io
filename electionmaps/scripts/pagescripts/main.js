@@ -12,8 +12,8 @@ var totalElectorate = 0;
 
 var swingState = ["null", "null"];
 
-var partyVoteShare = "null"
-var partyVoteShareChange = "null"
+var partyVoteShare = "null";
+var partyVoteShareChange = "null";
 
 // for browsers
 var isFirefox = typeof InstallTrigger !== 'undefined';
@@ -22,18 +22,25 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode;
 var seatTotalContainer = "#totalfilteredseats";
 var seatListContainer = "#filteredlisttable";
 
-var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}]
+var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 100}];
 
-var previous_opacity ;
+var previous_opacity;
 var current_colour;
 
 // autocomplete search box, references array generated on page load
 
 function searchSeats(value){
+
 	$.each(searchSeatData, function(i){
-		if (searchSeatData[i].properties.name == value)
-			zoomToClickedFilteredSeat(searchSeatData[i])
+
+		if (searchSeatData[i].properties.name == value){
+
+			zoomToClickedFilteredSeat(searchSeatData[i]);
+
+		}
+
 	});
+
 };
 
 // autocoomplete function
@@ -60,12 +67,16 @@ function getData(url){
 function getSeatInfo(data){
 
   $.each(data, function(seat){
+
 		// if (!(seat in seatData)){
 			seatData[seat] = data[seat];
 			totalElectorate += data[seat]["seat_info"]["electorate"];
 			var incumbent = seatData[seat]["seat_info"]["incumbent"];
+
 			if (incumbent == "independent" || incumbent == "speaker" || incumbent == "respect"){
-				seatData[seat]["seat_info"]["incumbent"] = "other"
+
+				seatData[seat]["seat_info"]["incumbent"] = "other";
+
 			}
 		// }
 	});
@@ -80,7 +91,9 @@ function getSeatInfo(data){
 	getVoteTotals("england");
 
 	for (area in areas){
+
 		getVoteTotals(areas[area]);
+
 	}
 
 	displayVoteTotals(nationalVoteTotals);
@@ -88,7 +101,9 @@ function getSeatInfo(data){
 	var totalTurnout = 100 * nationalVoteTotals[nationalVoteTotals.length - 1].votes / totalElectorate ;
 
 	if (isNaN(totalTurnout)){
+
 		totalTurnout = 100;
+
 	}
 
 	totalTurnout = "Turnout : " + String(totalTurnout.toFixed(2)) + "%";
@@ -99,22 +114,27 @@ function getSeatInfo(data){
 var currentZindex = 2;
 
 function showSeatList(region){
-	$("#polltablebody").html("")
+	$("#polltablebody").html("");
+
 	$(function(){
-			$("#seatlist").load("seatlists/seatlist" + region + ".html")
+			$("#seatlist").load("seatlists/seatlist" + region + ".html");
 	});
 
 	$("#seatlist").show();
 	currentZindex += 1;
 	$("#seatlist").css('z-index', currentZindex);
+
 }
 
 
 function showMethodology(){
-	$("#methodology").html("")
+
+	$("#methodology").html("");
+
 	$(function(){
 			$("#methodology").load("methodology.html");
 	});
+
 	$("#methodology").show();
 	currentZindex += 1;
 	$("#methodology").css('z-index', currentZindex);
@@ -122,9 +142,11 @@ function showMethodology(){
 
 function showUserInput(){
 	$("#userinput").html("");
+
 	$(function(){
 			$("#userinput").load("userinput.html");
 	});
+
 	$("#userinput").show();
 	$("#userinput").draggable();
 	currentZindex += 1;
@@ -144,7 +166,7 @@ function loadTheMap(url){
 
 loadTheMap("2015parliament");
 
-var previousSetting = "2015parliament"
+var previousSetting = "2015parliament";
 
 function alterTheUI(setting){
 
@@ -160,6 +182,7 @@ function alterTheUI(setting){
 	$(alterSelected).attr("class", "currentpage");
 
 	if (setting == "2015parliament") {
+
 		$("title").text("UK Election Maps - 2015 Parliament");
 		$("#headertitle").text("2015 Parliament");
 		$("#dropdowngainslabel").show();
@@ -170,9 +193,11 @@ function alterTheUI(setting){
 		$("#navprojectionmethodology").hide();
 		$("#navprojectionuserinput").hide();
 		$("#userinput").hide();
+
 	}
 
 	if (setting == "2010parliament"){
+
 		$("title").text("UK Election Maps - 2010 Parliament");
 		$("#headertitle").text("2010 Parliament");
 		$("#dropdowngainslabel").hide();
@@ -183,9 +208,11 @@ function alterTheUI(setting){
 		$("#navprojectionmethodology").hide();
 		$("#navprojectionuserinput").hide();
 		$("#userinput").hide();
+
 	}
 
 	if (setting == "2015projection"){
+
 		$("title").text("UK Election Maps - 2015 Projection");
 		$("#headertitle").text("2015 Projection");
 		$("#dropdowngainslabel").show();
@@ -196,9 +223,11 @@ function alterTheUI(setting){
 		$("#navprojectionmethodology").show();
 		$("#navprojectionuserinput").hide();
 		$("#userinput").hide();
+
 	}
 
 	if (setting == "2020projection"){
+
 		$("title").text("UK Election Maps - 2020 Projection");
 		$("#headertitle").text("2020 Projection");
 		$("#dropdowngainslabel").show();
@@ -211,6 +240,8 @@ function alterTheUI(setting){
 
 		previousYear = String(parseInt(pageSetting.slice(0, 4) -5));
 		getData("data/" + previousYear + "parliament/info.json").done(getOldInfo);
+
 	}
+
 	previousSetting = setting;
 }

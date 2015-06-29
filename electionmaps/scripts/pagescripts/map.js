@@ -3,19 +3,26 @@ function zoomToClickedFilteredSeat(d){
 	var id = "#i" + d.properties.info_id;
 
 	if (previousnode != undefined){
+
 		var previous_seat = seatsFromIDs[previousnode];
 		previous_opacity = seatData[previous_seat]["seat_info"]["current_colour"];
+
 		}
 
 	if (previous_opacity == undefined){
+
 		previous_opacity = 1;
+
 	}
 
 	var current_seat = seatsFromIDs[id];
+
 	current_colour = seatData[current_seat]["seat_info"]["current_colour"];
 
 	if (current_colour == undefined){
+
 		current_colour = 1;
+
 	}
 
 	previous = d3.select(previousnode);
@@ -43,6 +50,7 @@ function zoomToClickedFilteredSeat(d){
 	$("#seat-information").show();
 	seatinfo(d);
 	previousnode = id;
+
 }
 
 function flashSeat(previous, current, previous_opacity, current_colour){
@@ -54,6 +62,7 @@ function flashSeat(previous, current, previous_opacity, current_colour){
 	// flashes selected seat on map
 	function repeat(){
 		if (current != undefined){
+
 			current
 				.transition()
 					.duration(1500)
@@ -62,12 +71,14 @@ function flashSeat(previous, current, previous_opacity, current_colour){
 					.duration(1500)
 					.attr("opacity", current_colour)
 				.each("end", repeat);
+
 			}
 		}
 }
 
 // stops users messing up zoom animation
 function disableZoom(){
+
 	svg.on("mousedown.zoom", null);
 	svg.on("mousemove.zoom", null);
 	svg.on("dblclick.zoom", null);
@@ -75,19 +86,27 @@ function disableZoom(){
 	svg.on("wheel.zoom", null);
 	svg.on("mousewheel.zoom", null);
 	svg.on("MozMousePixelScroll.zoom", null);
+
 }
 
 // reenables users ability to zoom pan etc
 function enableZoom(){
+
 	svg.call(zoom);
+
 }
 
 // reset button for map
 function reset() {
+
 	if ($("#seat-information").is(":visible")){
+
 		$("#seat-information").hide();
+
 		}
+
 	disableZoom();
+
 	svg.transition()
 		.duration(1500)
 		.call(zoom.translate([0, 0]).scale(1).event)
@@ -96,12 +115,20 @@ function reset() {
 
 // zoom function
 function zoomed() {
+
 	g.style("stroke-width", 1.5 / d3.event.scale + "px");
 	g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+
 }
 
 function stopped() {
-	if (d3.event.defaultPrevented) d3.event.stopPropagation();
+
+	if (d3.event.defaultPrevented) {
+
+		d3.event.stopPropagation();
+
+	}
+
 }
 
 
@@ -115,19 +142,25 @@ function loadmap(){
 			.data(topojson.feature(uk, uk.objects.map).features)
 			.enter().append("path")
 			.attr("class", function(d) {
-				seatname = d.properties.name
+				seatname = d.properties.name;
 
 				if (seatname in seatData){
-					seatParty = seatData[seatname]["seat_info"]["winning_party"]
-					return "map " + seatParty
+
+					seatParty = seatData[seatname]["seat_info"]["winning_party"];
+					return "map " + seatParty;
+
 				}
 				else {
-					return "not_here"
+
+					return "not_here";
+
 				}
 			})
 			.attr("opacity", 1)
 			.attr("id", function(d) {
-				return "i" + d.properties.info_id
+
+				return "i" + d.properties.info_id;
+
 				})
 			.attr("d", path)
 			.on("click", zoomToClickedFilteredSeat)

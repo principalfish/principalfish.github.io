@@ -3,6 +3,7 @@ var previousYear = String(parseInt(pageSetting.slice(0, 4) -5));
 
 
 function getOldInfo(data){
+
 	$.each(data, function(seat){
 
 		var to_add = {};
@@ -11,19 +12,26 @@ function getOldInfo(data){
 			var party = parties[i];
 
 			if (data[seat].party_info[party] != undefined){
+
 				if (party == "other" || party == "others"){
+
 					othersPercent += data[seat].party_info[party]["percent"];
+
 				}
+
 				else {
+
 					to_add[party] = data[seat].party_info[party]["percent"];
+
 				}
+
 			}
 		})
 
 		oldSeatData[seat] = to_add;
 		oldSeatData[seat]["other"] = othersPercent;
-		oldSeatData[seat]["area"] = 	data[seat].seat_info["area"]
-		oldSeatData[seat]["incumbent"] = 	data[seat].seat_info["winning_party"]
+		oldSeatData[seat]["area"] = 	data[seat].seat_info["area"];
+		oldSeatData[seat]["incumbent"] = 	data[seat].seat_info["winning_party"];
 
 	});
 
@@ -36,30 +44,39 @@ function userInputCheck(inputform, country){
   spanId = "#other" + country;
 
 	if (otherPercentage < 0) {
+
 		$(spanId).html("< 0");
+
 	}
 
 	else {
+
 		$(spanId).html(otherPercentage);
+
 	}
 };
 
 
 function sumFormPercentages(inputform){
+
   var $form = $(inputform);
   var $sumpercentages = $form.find(".inputnumbers");
 
-  var sum = 0
+  var sum = 0;
   $sumpercentages.each(function() {
+
     var value = Number($(this).val());
     if (isNaN(value)) {
+
       value = 0;
+
     }
+
     sum += value;
   });
 
-	var otherPercentage = 100 - sum
-	return otherPercentage
+	var otherPercentage = 100 - sum;
+	return otherPercentage;
 }
 
 var englandUserNumbers = {"conservative": 0, "labour" : 0, "libdems" : 0, "ukip" : 0, "green": 0};
@@ -82,31 +99,50 @@ function analyseUserInput(inputform, region){
     var userRegionalTotals = {};
 
     if (region == "england"){
+
       $.each(englandUserNumbers, function(party){
+
         if (isNaN(englandUserNumbers[party])){
+
           englandUserNumbers[party] = 0;
+
         }
+
       });
+
       englandUserNumbers["other"] = 100 - englandUserNumbers["labour"] - englandUserNumbers["conservative"] - englandUserNumbers["libdems"] - englandUserNumbers["ukip"] - englandUserNumbers["green"];
       var percentages = englandUserNumbers;
+
     }
 
     if (region == "scotland"){
+
       $.each(scotlandUserNumbers, function(party){
+
         if (isNaN(scotlandUserNumbers[party])){
+
           scotlandUserNumbers[party] = 0;
+
         }
+
       });
+
       scotlandUserNumbers["other"] = 100 - scotlandUserNumbers["labour"] - scotlandUserNumbers["conservative"] - scotlandUserNumbers["libdems"] - scotlandUserNumbers["ukip"] - scotlandUserNumbers["green"] - scotlandUserNumbers["snp"];
       var percentages = scotlandUserNumbers;
     }
 
     if (region == "wales"){
+
       $.each(walesUserNumbers, function(party){
+
         if (isNaN(walesUserNumbers[party])){
+
           walesUserNumbers[party] = 0;
+
         }
+
       });
+
       walesUserNumbers["other"] = 100 - walesUserNumbers["labour"] - walesUserNumbers["conservative"] - walesUserNumbers["libdems"] - walesUserNumbers["ukip"] - walesUserNumbers["green"] - walesUserNumbers["plaidcymru"];
 
       var percentages = walesUserNumbers;
@@ -114,14 +150,18 @@ function analyseUserInput(inputform, region){
 
     if (region == "northernireland"){
       $.each(northernirelandUserNumbers, function(party){
+
         if (isNaN(northernirelandUserNumbers[party])){
+
           northernirelandUserNumbers[party] = 0;
+
         }
+
       });
+
       northernirelandUserNumbers["other"] = 100 - northernirelandUserNumbers["dup"] - northernirelandUserNumbers["sdlp"] - northernirelandUserNumbers["sinnfein"] - northernirelandUserNumbers["uu"] - northernirelandUserNumbers["alliance"];
       var percentages = northernirelandUserNumbers;
     }
-
 
 	projection_getChange(percentages, region);
 
@@ -135,13 +175,16 @@ function projection_getChange(percentages, region){
 	var previousPercentages = {};
 
 	for (party in percentages){
+
 		var previousPartyTotal = previousTotalsByYearByParty[previousYear][region][party];
 		var previousRegionalTotal = previousTotalsByYearByParty[previousYear][region]["turnout"];
 		var previousPartyPercentage = 100 * parseFloat(previousPartyTotal) / previousRegionalTotal;
 		partyChange[party] = percentages[party] - previousPartyPercentage;
+
 	}
 
 	for (area in regions[region]){
+
 			var newPartyTotals = {};
 
 			sum = 0;
@@ -152,27 +195,32 @@ function projection_getChange(percentages, region){
 				var newPartyPercentage = oldPartyPercentage + partyChange[party];
 
 				if (newPartyPercentage <= 0){
-					newPartyPercentage = 0
+
+					newPartyPercentage = 0;
+
 					};
 
 				newPartyTotals[party] = newPartyPercentage;
+
 			};
 
 
-			var sum = 0
+			var sum = 0;
 
 			for (party in newPartyTotals){
-				sum += newPartyTotals[party]
+				sum += newPartyTotals[party];
 			};
 
 
-			var normalise = sum / 100
+			var normalise = sum / 100;
 
 			for (party in newPartyTotals){
-				newPartyTotals[party] /= normalise
+
+				newPartyTotals[party] /= normalise;
+
 			};
 
-			userRegionalTotals[regions[region][area]] = newPartyTotals
+			userRegionalTotals[regions[region][area]] = newPartyTotals;
 
 
 		};
@@ -195,9 +243,10 @@ function projection_getRegionalChange(region, percentages, userRegionalTotals){
 		for (party in percentages){
 
 			var oldPartyPercentage = 100 * previousTotalsByYearByParty[previousYear][regions[region][area]][party]  / parseFloat(previousTotalsByYearByParty[year][regions[region][area]]["turnout"]);
-			percentagesToAdd[party] = oldPartyPercentage
+			percentagesToAdd[party] = oldPartyPercentage;
 			var relativeChange = userRegionalTotals[regions[region][area]][party] / oldPartyPercentage;
 			relativeChangeComplete[party] = relativeChange;
+
 		}
 
 		previousPercentages[regions[region][area]] = percentagesToAdd;
@@ -228,55 +277,78 @@ function projection_seatAnalysis(region, percentages, regionalRelativeChanges, p
 						var seatRelativeToArea = previousSeatPercent / previousRegionalPercent;
 
 						if (seatRelativeToArea == 0) {
-							newSeatData[party] = 0
+
+							newSeatData[party] = 0;
+
 						}
 
 						else {
+
 							var distribute = regionalRelativeChanges[regions[region][area]][party] - 1;
 
 							var seatchange = 1 + (distribute / Math.sqrt(seatRelativeToArea));
 
 							if (seatchange < 0.15){
+
 								seatchange = 0.15;
+
 							}
 
-							var newPercentage = seatchange * oldSeatData[seat][party]
+							var newPercentage = seatchange * oldSeatData[seat][party];
 
 							if (oldSeatData[seat]["incumbent"] == party){
+
 								if (party == "conservative"){
+
 									newPercentage += 2;
+
 								}
 
 								if (party == "libdems"){
+
 									newPercentage += 4;
+
 								}
 
 								if (party == "ukip"){
+
 									newPercentage += 8;
+
 								}
 
 								if (party == "green"){
+
 									newPercentage += 8;
+
 								}
 
 								if (party == "labour"){
+
 									newPercentage += 1;
+
 								}
 
 								if (party == "snp"){
+
 									newPercentage += 0;
+
 								}
 
 								if (party == "plaidcymru"){
+
 									newPercentage += 4;
+
 								}
 
 							}
 
 							if (isNaN(newPercentage)){
+
 								newPercentage = 0;
+
 							}
 							newSeatData[party] = newPercentage;
+
 						}
 					}
 
@@ -316,11 +388,13 @@ function projection_seatAnalysis(region, percentages, regionalRelativeChanges, p
 
 					seatData[seat]["seat_info"]["change"] = change;
 					seatData[seat]["seat_info"]["winning_party"] = winningParty;
-					seatData[seat]["seat_info"]["maj"] = parseInt(majority * seatData[seat]["seat_info"]["turnout"] / 100)
+					seatData[seat]["seat_info"]["maj"] = parseInt(majority * seatData[seat]["seat_info"]["turnout"] / 100);
 					seatData[seat]["seat_info"]["maj_percent"] = parseFloat(majority.toFixed(2));
 
 					for (party in newSeatData){
+
 						if (newSeatData[party] > 0){
+
 							var partyChange = newSeatData[party] - oldSeatData[seat][party];
 							var newPartyPercent = newSeatData[party];
 							var newPartyTotal = newSeatData[party] * seatData[seat]["seat_info"]["turnout"] / 100 ;
@@ -328,7 +402,9 @@ function projection_seatAnalysis(region, percentages, regionalRelativeChanges, p
 							seatData[seat]["party_info"][party]["change"] = parseFloat(partyChange.toFixed(2));
 							seatData[seat]["party_info"][party]["percent"] = parseFloat(newPartyPercent.toFixed(2));
 							seatData[seat]["party_info"][party]["total"] = parseInt(newPartyTotal);
+
 						}
+
 					}
 				}
 		}
@@ -343,14 +419,14 @@ function alterMap(region){
 }
 
 function resetInputs(){
-	$("#englandinput").get(0).reset()
-	$("#scotlandinput").get(0).reset()
-	$("#walesinput").get(0).reset()
-	$("#northernirelandinput").get(0).reset()
-	$("#otherengland").text("100")
-	$("#otherscotland").text("100")
-	$("#otherwales").text("100")
-	$("#othernorthernireland").text("100")
+	$("#englandinput").get(0).reset();
+	$("#scotlandinput").get(0).reset();
+	$("#walesinput").get(0).reset();
+	$("#northernirelandinput").get(0).reset();
+	$("#otherengland").text("100");
+	$("#otherscotland").text("100");
+	$("#otherwales").text("100");
+	$("#othernorthernireland").text("100");
 
 	englandUserNumbers = {"conservative": 0, "labour" : 0, "libdems" :0, "ukip" : 0, "green": 0};
 	scotlandUserNumbers = {"conservative": 0, "labour" : 0, "libdems" :0, "ukip" : 0, "green": 0, "snp" : 0 };

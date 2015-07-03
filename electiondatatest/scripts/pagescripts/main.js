@@ -23,7 +23,7 @@ var isIE = /*@cc_on!@*/false || !!document.documentMode;
 var seatTotalContainer = "#totalfilteredseats";
 var seatListContainer = "#filteredlisttable";
 
-var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 547}]
+var filterStates = [{party: "null"}, {gain:"null"}, {region: "null"}, {majoritylow : 0}, {majorityhigh : 1000}]
 
 var previous_opacity ;
 var current_colour;

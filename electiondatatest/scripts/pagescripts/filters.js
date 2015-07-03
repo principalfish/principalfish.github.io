@@ -9,7 +9,7 @@ function filterMap(){
 	filteredSeatsTotal = 0;
 
 	d3.selectAll(".map")
-		.attr("opacity", 1)
+		.attr("opacity", 1);
 
 	$("#keyonmap").html("");
 	$('#seat-information').hide();
@@ -111,7 +111,7 @@ function filterMap(){
 
 	g.selectAll(".map")
 		.attr("id", function(d) {
-			return "i" + d.properties.info_id
+			return "i" + d.properties.info_id;
 		});
 
 
@@ -130,10 +130,8 @@ function resetFilter(){
 	filterStates[3].majoritylow = 0;
 	filterStates[4].majorityhigh = 1000;
 
-	var previous_opacity = 1;
-	var current_colour = 1;
-
-	swingState = ["null", "null"];
+	previous_opacity = 1;
+	current_colour = 1;
 
 	partyVoteShare = "null";
 	partyVoteShareChange = "null";

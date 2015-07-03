@@ -6,8 +6,8 @@ function choroplethInitiator(value, type){
 		$.each(seatData, function(seat){
 			seatData[seat]["seat_info"]["current_colour"] = 1;
 		})
-		$(".map").remove()
-		$("#keyonmap").html("")
+		$(".map").remove();
+		$("#keyonmap").html("");
 		loadmap();
 	}
 

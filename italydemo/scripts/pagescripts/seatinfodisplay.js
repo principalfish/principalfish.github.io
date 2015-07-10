@@ -110,11 +110,12 @@ function piechart(d){
       .attr("transform", "translate(0," + height + ")")
       .call(xAxis)
 		.append("text")
-      .attr("x", 175)
-			.attr("y", 25)
+      .attr("x", 225)
+			.attr("y", -height - 15)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
       .text("Age Distribution in Region");
+
 
 	svg1.append("g")
     .attr("class", "y axis")

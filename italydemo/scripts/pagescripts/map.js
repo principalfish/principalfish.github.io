@@ -4,9 +4,6 @@ var maxDensity = 2667;
 
 function loadmap(){
   d3.json("data/map.topojson", function(italy) {
-
-
-
     g.selectAll("path")
         .data(topojson.feature(italy, italy.objects.italy).features)
       .enter().append("path")

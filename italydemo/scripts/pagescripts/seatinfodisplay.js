@@ -8,8 +8,6 @@ function seatinfo(d){
 
 	var relevantData = regionData[d.properties.NAME]
 
-	console.log(relevantData["NAME"])
-
 	$("#information-region-span").text(relevantData["NAME"]);
 	$("#region-population").text("Population: " + relevantData["POPULATION"]);
 	$("#region-density").text("Density: " + relevantData["POP_DENSIT"] + " people per square kilometre")
@@ -30,8 +28,8 @@ function horizontalBarChart(data){
 	var total = males + females;
 
 	var data = {"&#9794" : (100 * males / total).toFixed(1), "&#9792" : (100 * females / total).toFixed(1)};
-	var colours = ["#CD7F32", "#BB6528"]
-	var text_colours = ["white", "white"]
+	var colours = ["lightgreen", "darkgreen"]
+	var text_colours = ["black", "white"]
 	var text = ["&#9794", "&#9792"]
 
 	var current_width = 0;
@@ -61,8 +59,6 @@ function piechart(d){
 	barchartdata.push({ageRange : "30 to 44", total : d["AGE_30_44"] });
 	barchartdata.push({ageRange : "45 to 59", total : d["AGE_45_59"] });
 	barchartdata.push({ageRange : "60 plus", total : d["AGE_60_"] });
-
-	console.log(barchartdata)
 
 	var dataitems = barchartdata.length
 	var margin = {top: 40, right: 0, bottom: 40, left:70};
@@ -99,6 +95,9 @@ function piechart(d){
 
 	var round = 25000;
 
+	var count = 0
+	var colours = ["#ffcccc", "#ff9999","#ff6666","#ff3232","#ff0000"]
+
 	var max_of_votes = d3.max(barchartdata, function(d) { return d.total; })
 	var maxY = round * Math.round(max_of_votes / round) + 25000;
 
@@ -129,7 +128,7 @@ function piechart(d){
       .attr("width", barwidth)
 			.attr("y", height)
       .attr("height", 0)
-			.style("fill", "darkgreen")
+			.style("fill", function(){ count += 1; return colours[count - 1];})
 		.transition()
       .delay(function(d, i) { return i * animationdelay / 2; })
       .duration(animationdelay)

@@ -1,0 +1,187 @@
+/* elements */
+button {
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  background-clip: padding-box;
+  background-color: #203040;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  padding: 5px 12px; }
+
+table {
+  border-spacing: 0px !important;
+  border-collapse: collapse !important;
+  /*
+  tr:nth-child(2n) td {
+    background-color: #f1f1f1;
+  }
+
+  tr:nth-child(2n-1) {
+    background-color: #e8e8e8;
+  }
+  */ }
+  table td {
+    padding: 3px; }
+  table tr {
+    border-bottom: 1px dotted #cbcbcb; }
+
+/* elements end */
+body {
+  background: darkgrey;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  height: 100%;
+  width: 100%;
+  margin: 5px 0 0 0; }
+  body a {
+    text-decoration: none; }
+  body a:hover {
+    color: #be5e00; }
+
+/* Reused classes */
+.dash-box h2 {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-border-top-right-radius: 3px;
+  -moz-border-top-right-radius: 3px;
+  border-top-right-radius: 3px;
+  -webkit-border-top-left-radius: 3px;
+  -moz-border-top-left-radius: 3px;
+  border-top-left-radius: 3px;
+  background-clip: padding-box;
+  background-color: #293b51;
+  color: white;
+  height: 30px;
+  line-height: 30px;
+  margin: 0;
+  padding: 0 20px 0 20px;
+  display: block; }
+.dash-box h3 {
+  margin: 0; }
+.dash-box > div {
+  -webkit-border-bottom-right-radius: 3px;
+  -moz-border-bottom-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  -webkit-border-bottom-left-radius: 3px;
+  -moz-border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  background-clip: padding-box;
+  background-color: #f4f4f6;
+  padding: 5px 20px;
+  border: 1px solid rgba(171, 171, 171, 0.85);
+  border-top: none; }
+
+.party-flair {
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  background-clip: padding-box;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px; }
+
+.closebox {
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  background-clip: padding-box;
+  display: inline-block;
+  float: right;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  cursor: pointer; }
+
+/* map */
+#map {
+  float: left;
+  margin-left: 25px;
+  width: 850px;
+  height: 850px;
+  display: block;
+  overflow: hidden;
+  /*position: relative;*/ }
+
+#resetbutton {
+  position: absolute;
+  top: 35px;
+  left: 30px;
+  z-index: 1; }
+
+#resetmap {
+  font-size: 1.2em; }
+
+/* map stylings */
+svg .boundaries {
+  fill: none;
+  stroke: darkgrey;
+  stroke-linejoin: round;
+  stroke-width: 0.4; }
+
+.background {
+  fill: none;
+  pointer-events: all; }
+
+svg .map {
+  stroke: black;
+  stroke-width: 0.2;
+  stroke-linejoin: round;
+  cursor: pointer;
+  pointer-events: all;
+  fill: none; }
+
+.map:hover {
+  opacity: 0.5;
+  stroke: black;
+  stroke-width: 0.2; }
+
+/* info table */
+#seat-information {
+  display: none;
+  position: absolute;
+  left: 30px;
+  top: 510px;
+  width: 790px;
+  float: left;
+  font-weight: bold;
+  /* pie chart and votes */ }
+  #seat-information > div {
+    padding-bottom: 0;
+    height: 300px; }
+  #seat-information .seat-summary {
+    overflow: hidden;
+    font-size: 110%; }
+    #seat-information .seat-summary > div {
+      overflow: hidden;
+      float: left;
+      margin-bottom: 3px;
+      font-weight: bold; }
+  #seat-information #charts {
+    overflow: hidden; }
+    #seat-information #charts > div {
+      -webkit-box-sizing: border-box;
+      -moz-box-sizing: border-box;
+      box-sizing: border-box;
+      width: 50%;
+      float: left;
+      height: auto;
+      font-weight: bold; }
+    #seat-information #charts #information-chart {
+      right: 0;
+      margin-top: 40px; }
+      #seat-information #charts #information-chart > * {
+        width: 100%; }
+    #seat-information #charts .axis path,
+    #seat-information #charts .axis line {
+      fill: none;
+      stroke: black;
+      shape-rendering: crispEdges; }
+    #seat-information #charts .x.axis path {
+      display: none; }
+
+/*# sourceMappingURL=main.css.map */

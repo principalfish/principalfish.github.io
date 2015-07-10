@@ -1,0 +1,225 @@
+@import 'include';
+
+/* elements */
+
+button {
+  @include border-radius(2px);
+  background-color: $dark-blue;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  border:none;
+  padding: 5px 12px;
+}
+
+table {
+
+  border-spacing: 0px!important;
+  border-collapse: collapse!important;
+
+  td {
+    padding: 3px;
+  }
+
+  tr {
+    border-bottom: 1px dotted #cbcbcb;
+  }
+  /*
+  tr:nth-child(2n) td {
+    background-color: #f1f1f1;
+  }
+
+  tr:nth-child(2n-1) {
+    background-color: #e8e8e8;
+  }
+  */
+}
+/* elements end */
+
+body {
+  background: $background;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  height: 100%;
+  width: 100%;
+  margin: 5px 0 0 0;
+
+  a {
+    text-decoration: none;
+  }
+
+  a:hover {
+    color: #be5e00;
+  }
+}
+
+/* Reused classes */
+
+.dash-box {
+
+  h2 {
+    @include box-sizing(border-box);
+    @include border-radius-top(3px);
+    background-color: $lighter-blue;
+    color: white;
+    height: 30px;
+    line-height: 30px;
+    margin: 0;
+    padding:0 20px 0 20px;
+    display: block;
+  }
+
+  h3 {
+    margin: 0;
+  }
+
+  > div {
+    @include border-radius-bottom(3px);
+    background-color: $dash-box-background;
+    padding: 5px 20px;
+    border: 1px solid rgba(171, 171, 171, 0.85);
+    border-top: none;
+  }
+}
+
+.party-flair {
+  @include border-radius(2px);
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+}
+
+.closebox {
+  @include border-radius(2px);
+  display: inline-block;
+  float: right;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  cursor: pointer;
+
+}
+
+/* map */
+
+#map {
+  float: left;
+  margin-left : $margin-left;
+  width: $map-container-width;
+  height: $map-height;
+  display: block;
+  overflow: hidden;
+  /*position: relative;*/
+}
+
+#resetbutton {
+  position: absolute;
+  top: 35px;
+  left: $margin-left + 5;
+  z-index: 1;
+}
+
+
+
+#resetmap {
+  font-size: 1.2em;
+}
+
+
+
+/* map stylings */
+svg .boundaries {
+	 fill: none;
+	 stroke: darkgrey;
+	 stroke-linejoin: round;
+	 stroke-width: 0.4;
+}
+
+ .background {
+  fill: none ;
+  pointer-events: all;
+}
+
+svg .map {
+	stroke: black;
+	stroke-width: 0.2;
+	stroke-linejoin: round;
+	cursor: pointer;
+	pointer-events: all;
+  fill: none;
+
+}
+
+.map:hover {
+	opacity: 0.5;
+	stroke: black;
+	stroke-width: 0.2;
+}
+
+
+/* info table */
+#seat-information 	{
+  display: none;
+  position: absolute;
+  left: $margin-left + 5;
+  top: $widget-margin-top + 505;
+  width: $seat-info-width;
+  float: left;
+  font-weight: bold;
+
+  > div {
+    padding-bottom: 0;
+    height: 300px;
+  }
+
+  .seat-summary {
+
+    overflow: hidden;
+    font-size: 110%;
+
+    > div {
+      overflow: hidden;
+      float: left;
+      margin-bottom: 3px;
+      font-weight: bold;
+    }
+
+
+  }
+
+  /* pie chart and votes */
+
+  #charts {
+    overflow: hidden;
+
+    > div {
+      @include box-sizing(border-box);
+      width: 50%;
+      float: left;
+      height: auto;
+      font-weight: bold;
+    }
+
+    #information-chart {
+      right: 0;
+      margin-top: 40px;
+      > * {
+        width: 100%;
+      }
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: black;
+      shape-rendering: crispEdges;
+    }
+
+    .x.axis path {
+      display: none;
+    }
+
+  }
+
+}

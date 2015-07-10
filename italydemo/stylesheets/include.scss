@@ -1,0 +1,60 @@
+// Colours
+$background: darkgrey;
+$dash-box-background : #f4f4f6;
+$dark-blue: #203040;
+$lighter-blue: #293b51;
+
+// dimensions
+$map-height: 850px;
+$map-container-width: 850px;
+$projections-nav-item-height: 35px;
+$filters-width: 260px;
+$seat-info-width: 790px;
+$totals-info-width : 525px;
+$widget-margin-top: 5px;
+$margin-left : 25px;
+
+// mixins
+
+@mixin border-radius($radius) {
+  -webkit-border-radius: $radius;
+  -moz-border-radius: $radius;
+  border-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-top($radius) {
+  -webkit-border-top-right-radius: $radius;
+  -moz-border-top-right-radius: $radius;
+  border-top-right-radius: $radius;
+  -webkit-border-top-left-radius: $radius;
+  -moz-border-top-left-radius: $radius;
+  border-top-left-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-bottom($radius) {
+  -webkit-border-bottom-right-radius: $radius;
+  -moz-border-bottom-right-radius: $radius;
+  border-bottom-right-radius: $radius;
+  -webkit-border-bottom-left-radius: $radius;
+  -moz-border-bottom-left-radius: $radius;
+  border-bottom-right-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-left($radius) {
+  -webkit-border-top-left-radius: $radius;
+  -moz-border-top-left-radius: $radius;
+  border-top-left-radius: $radius;
+  -webkit-border-bottom-left-radius: $radius;
+  -moz-border-bottom-left-radius: $radius;
+  border-bottom-left-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin box-sizing($box-model){
+  -webkit-box-sizing: $box-model;
+  -moz-box-sizing: $box-model;
+  box-sizing: $box-model;
+}

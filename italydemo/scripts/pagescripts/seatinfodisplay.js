@@ -28,9 +28,8 @@ function horizontalBarChart(data){
 	var total = males + females;
 
 	var data = {"&#9794" : (100 * males / total).toFixed(1), "&#9792" : (100 * females / total).toFixed(1)};
-	var colours = ["lightgreen", "darkgreen"]
-	var text_colours = ["black", "white"]
-	var text = ["&#9794", "&#9792"]
+	var colours = ["darkgreen", "darkblue"];
+	var text_colours = ["white", "white"];
 
 	var current_width = 0;
 	var count = 0

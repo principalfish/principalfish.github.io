@@ -129,7 +129,7 @@ svg .boundaries {
 
 svg .map {
   stroke: black;
-  stroke-width: 0.2;
+  stroke-width: 0.5;
   stroke-linejoin: round;
   cursor: pointer;
   pointer-events: all;

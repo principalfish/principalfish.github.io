@@ -13,8 +13,8 @@ function loadmap(){
         .style("fill", "lightgreen")
         .style("opacity", function(d) { return d.properties.POP_DENSIT / 1200;})
         .on("click", clicked);
-  });
 
+  });
 
 }
 

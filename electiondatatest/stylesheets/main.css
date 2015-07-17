@@ -97,101 +97,6 @@ body {
   margin-right: 5px;
   cursor: pointer; }
 
-/* End resued classes */
-#wrapper {
-  position: relative;
-  width: 1800px;
-  height: auto;
-  display: block;
-  overflow: hidden; }
-
-header {
-  width: 100%;
-  height: 60px;
-  background-color: #fff; }
-  header h1 {
-    color: black;
-    letter-spacing: 3px;
-    font-size: 2.4em;
-    font-weight: normal;
-    position: relative;
-    margin: 0px;
-    top: 15px;
-    display: block;
-    float: left;
-    background: url(/img/logo.png) no-repeat;
-    padding-left: 50px;
-    margin-left: 20px; }
-  header h2 a {
-    color: white;
-    text-decoration: none; }
-  header h2 a:hover {
-    color: #FF5938; }
-
-.projections {
-  position: absolute;
-  background-color: #293b51;
-  float: left;
-  height: 100%;
-  display: block;
-  color: #fff;
-  border-right: 0;
-  width: 150px; }
-  .projections a {
-    text-decoration: none;
-    letter-spacing: 1px; }
-  .projections a:hover {
-    color: orange; }
-  .projections p {
-    width: 100%;
-    vertical-align: middle;
-    text-align: center; }
-  .projections h2, .projections h3 {
-    letter-spacing: 1px;
-    font-weight: normal; }
-  .projections .divider {
-    border-top: 1px solid rgba(0, 0, 0, 0.23);
-    margin: 2px 10px 2px 10px; }
-  .projections h3 {
-    height: 35px;
-    line-height: 35px;
-    text-align: center;
-    margin: 0; }
-  .projections a {
-    text-decoration: none; }
-  .projections .currentpage {
-    background: #203040;
-    color: #FFF; }
-  .projections a:visited {
-    color: rgba(244, 244, 244, 0.61); }
-  .projections .notactive {
-    letter-spacing: 0px; }
-    .projections .notactive a {
-      color: rgba(244, 244, 244, 0.61); }
-
-#seatlist {
-  position: absolute;
-  left: 30px;
-  top: 65px;
-  display: none;
-  max-height: 720px;
-  max-width: 1300px;
-  overflow: auto; }
-  #seatlist #polltable > td, #seatlist #polltable th {
-    text-align: center; }
-  #seatlist .tablesorter, #seatlist .tablesorter .tablesorter-filter {
-    width: 100%; }
-
-#methodology {
-  position: absolute;
-  z-index: 500;
-  left: 155px;
-  top: 40px;
-  max-height: 720px;
-  width: 1100px;
-  overflow: auto;
-  display: none; }
-
 /* map */
 #map {
   float: left;
@@ -214,10 +119,6 @@ header {
   left: 30px;
   z-index: 1; }
 
-#partymemberbutton {
-  position: relative;
-  left: 25%; }
-
 #resetmap {
   font-size: 1.2em; }
 
@@ -232,13 +133,26 @@ header {
 
 #maptitle {
   display: none;
-  left: 280px;
+  left: 275px;
   top: 5px;
   z-index: 1;
   position: absolute;
   max-width: 400px; }
   #maptitle h2 {
     font-size: 1.1em; }
+
+#seatlist {
+  position: absolute;
+  left: 30px;
+  top: 65px;
+  display: none;
+  max-height: 720px;
+  max-width: 1300px;
+  overflow: auto; }
+  #seatlist #polltable > td, #seatlist #polltable th {
+    text-align: center; }
+  #seatlist .tablesorter, #seatlist .tablesorter .tablesorter-filter {
+    width: 100%; }
 
 /* map stylings */
 svg .boundaries {
@@ -274,7 +188,7 @@ svg .map {
   /* pie chart and votes */ }
   #seat-information > div {
     padding-bottom: 0;
-    height: 400px; }
+    height: 300px; }
   #seat-information .seat-summary {
     overflow: hidden;
     font-size: 110%; }
@@ -288,9 +202,6 @@ svg .map {
       clear: left; }
     #seat-information .seat-summary .party-name {
       display: inline-block; }
-  #seat-information #information-social {
-    font-size: 110%;
-    font-weight: bold; }
   #seat-information #charts {
     overflow: hidden; }
     #seat-information #charts > div {
@@ -314,6 +225,9 @@ svg .map {
   #seat-information #information-byelection {
     display: absolute;
     top: 340px; }
+  #seat-information #information-social {
+    font-size: 110%;
+    font-weight: bold; }
 
 /* country totals*/
 #totals {
@@ -351,7 +265,7 @@ table#totalstable .total {
 
 #searchforseat {
   position: absolute;
-  top: 255px;
+  top: 245px;
   left: 1115px;
   width: 260px; }
   #searchforseat > input {
@@ -363,7 +277,7 @@ table#totalstable .total {
 #filters {
   position: absolute;
   left: 850px;
-  top: 255px;
+  top: 245px;
   height: auto;
   width: 260px; }
   #filters label {
@@ -392,7 +306,7 @@ table#totalstable .total {
 .filteredlisttablecontainer {
   position: absolute;
   left: 1115px;
-  top: 325px;
+  top: 315px;
   height: auto;
   width: 260px; }
   .filteredlisttablecontainer > div {
@@ -401,7 +315,7 @@ table#totalstable .total {
     display: block;
     overflow-y: scroll;
     overflow-x: hidden;
-    max-height: 298px;
+    max-height: 300px;
     margin-bottom: 2px; }
     .filteredlisttablecontainer #filteredlisttable > div {
       cursor: pointer; }
@@ -410,7 +324,7 @@ table#totalstable .total {
 
 #choropleths {
   position: absolute;
-  top: 490px;
+  top: 483px;
   left: 850px;
   width: 260px; }
   #choropleths select {
@@ -423,60 +337,10 @@ table#totalstable .total {
   #choropleths label {
     width: 100%;
     display: block; }
-  #choropleths a {
-    color: purple; }
 
 #information-bielection {
   float: right;
   margin-bottom: 8px; }
-
-/* Input your own percentages */
-#userinput {
-  position: absolute;
-  z-index: 500;
-  left: 170px;
-  top: 45px;
-  overflow: auto;
-  display: none;
-  width: 550px; }
-  #userinput .country-container {
-    overflow: hidden;
-    width: 50%;
-    float: left;
-    margin-bottom: 10px; }
-  #userinput form {
-    margin-bottom: 5px;
-    overflow: hidden;
-    display: block; }
-  #userinput form div {
-    float: left;
-    margin-right: 5px; }
-    #userinput form div label {
-      font-size: 11px; }
-    #userinput form div input {
-      display: block; }
-  #userinput .submitbutton {
-    clear: left;
-    float: left;
-    display: block; }
-  #userinput .other-percentage {
-    float: left; }
-    #userinput .other-percentage span {
-      display: block;
-      margin-top: 3px;
-      clear: left; }
-  #userinput .inputnumbers {
-    width: 22px; }
-  #userinput .inputsubmit {
-    margin-top: -3px;
-    margin-left: 2px;
-    font-size: 0.95em;
-    width: 95%;
-    padding: 1px; }
-  #userinput .resetmap {
-    margin-left: auto;
-    margin-right: auto;
-    display: block; }
 
 /* party based stylings */
 .labour {
@@ -598,49 +462,5 @@ table#totalstable .total {
   color: white;
   fill: #666666;
   stroke: #666666; }
-
-/* pollster stylings */
-.yougov {
-  background-color: red;
-  color: white; }
-
-.survation {
-  background-color: orange;
-  color: black; }
-
-.tns {
-  background-color: yellow;
-  color: black; }
-
-.ashcroft {
-  background-color: green;
-  color: white; }
-
-.icm {
-  background-color: blue;
-  color: white; }
-
-.populus {
-  background-color: purple;
-  color: lightgreen; }
-
-.comres {
-  background-color: brown;
-  color: white; }
-
-.opinium {
-  background-color: pink;
-  color: black; }
-
-.lucidtalk {
-  background-color: black;
-  color: white; }
-
-.mori {
-  background-color: grey;
-  color: black; }
-
-footer {
-  clear: both; }
 
 /*# sourceMappingURL=main.css.map */

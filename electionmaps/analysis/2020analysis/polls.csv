@@ -2,6 +2,33 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
+comresDM	regional		23/08/15	23	8	2015	Wales	27	11	10	1	2	2		1									
+comresDM	regional		23/08/15	23	8	2015	Scotland	49	8	10	2	2	3	24										
+comresDM	regional		23/08/15	23	8	2015	North	131	51	48	9	13	6											
+comresDM	regional		23/08/15	23	8	2015	Midlands	128	58	36	12	12	7			3								
+comresDM	regional		23/08/15	23	8	2015	SouthICM	184	86	43	15	18	12			3								
+comres	regional		13/08/15	13	8	2015	Scotland	119	27	17	8	5	4	57		9								
+comres	regional		13/08/15	13	8	2015	North East England	43	15	21	3	4	0			0								
+comres	regional		13/08/15	13	8	2015	North West England	146	57	48	12	25	2			1								
+comres	regional		13/08/15	13	8	2015	Yorkshire and Humber	102	40	39	5	13	5			1								
+comres	regional		13/08/15	13	8	2015	West Midlands	104	40	37	13	12	0			0								
+comres	regional		13/08/15	13	8	2015	East Midlands	90	35	28	9	12	6			1								
+comres	regional		13/08/15	13	8	2015	Wales	60	22	20	3	9	2		4	0								
+comres	regional		13/08/15	13	8	2015	East of England	117	53	23	11	26	4			0								
+comres	regional		13/08/15	13	8	2015	London	166	72	61	11	16	4			2								
+comres	regional		13/08/15	13	8	2015	South East England	181	90	40	12	30	7			2								
+comres	regional		13/08/15	13	8	2015	South West England	117	47	32	13	14	11											
+survation	regional		13/08/15	13	8	2015	London	101	35	41	6	19	1											
+survation	regional		13/08/15	13	8	2015	East and West Midlands	143	82	33	1	24	3											
+survation	regional		13/08/15	13	8	2015	North	196	58	95	10	27	6											
+survation	regional		13/08/15	13	8	2015	SouthSurvation	284	115	79	26	54	9			1								
+survation	regional		13/08/15	13	8	2015	Scotland	97	24	21	5	1	2	44										
+survation	regional		13/08/15	13	8	2015	Wales	37	16	12	2	2			4									
+icm	regional		09/08/15	9	8	2015	Scotland	56	8	10	4	0	0	33		0								
+icm	regional		09/08/15	9	8	2015	Wales	34	10	14	2	1	1		5	0								
+icm	regional		09/08/15	9	8	2015	North	159	52	77	14	13	2			0								
+icm	regional		09/08/15	9	8	2015	Midlands	147	70	40	9	19	7			2								
+icm	regional		09/08/15	9	8	2015	SouthICM	239	111	66	18	26	13			5								
 comres	regional		26/07/15	26	7	2015	Scotland	53	10	8	2	1	1	29		2								
 comres	regional		26/07/15	26	7	2015	North East England	19	7	7	1	4	0			0								
 comres	regional		26/07/15	26	7	2015	North West England	65	19	29	2	9	4			2								

@@ -104,3 +104,7 @@ body a {
 	text-decoration: none;
 	decoration: none;
 }
+
+.btn:hover {
+	opacity : 0.75;
+}

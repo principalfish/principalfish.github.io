@@ -11,9 +11,7 @@ body a {
 	text-decoration: none;
 }
 
-body a:hover {
-	color: #be5e00;
-}
+
 
 #wrapper {
 	margin-left: auto;
@@ -76,43 +74,42 @@ body a:hover {
 }
 
 .btn {
-  background: darkgrey;
-  background-image: -webkit-linear-gradient(top, darkgrey, #383638);
-  background-image: -moz-linear-gradient(top, darkgrey, #383638);
-  background-image: -ms-linear-gradient(top, darkgrey, #383638);
-  background-image: -o-linear-gradient(top, darkgrey, #383638);
-  background-image: linear-gradient(to bottom, darkgrey, #383638);
   -webkit-border-radius: 28;
   -moz-border-radius: 28;
   border-radius: 28px;
   font-family: Arial;
-
-  color: white;
-  font-size: 30px;
+  color: black;
+  font-size: 50px;
   padding: 10px 20px 10px 20px;
   text-decoration: none;
   font-align: center;
   width : 400px;
-  margin-left : 250px;
+  margin-left : 300px;
 }
 
-.btnlink {
-	color: white;
+#ukelectionbutton {
+	background: url('/img/ukelection.png') no-repeat;
+}
+
+.btn a {
+	color: black;
+
 	text-decoration: none;
 	decoration: none;
 }
-.btnlink a.visited  {
+
+.btn a.visited  {
+	color: white;
 	text-decoration: none;
 	decoration: none;
 }
 
 .btn:hover {
-  background: #fccc3c;
-  background-image: -webkit-linear-gradient(top, #fccc3c, #dbab1c);
-  background-image: -moz-linear-gradient(top, #fccc3c, #dbab1c);
-  background-image: -ms-linear-gradient(top, #fccc3c, #dbab1c);
-  background-image: -o-linear-gradient(top, #fccc3c, #dbab1c);
-  background-image: linear-gradient(to bottom, #fccc3c, #dbab1c);
-  text-decoration: none;
-	cursor: pointer;
+	opacity : 0.55;
+}
+
+
+.buttonoverlay {
+	background: lightgrey;
+	opacity: 0.6;
 }

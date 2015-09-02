@@ -13,77 +13,13 @@ nav ul {
 nav li {
   display: block;
   float: left;
-}
-
-nav li a {
-  display: block;
   padding: 35px 20px 0px 20px;
   text-decoration: none;
-
-}
-
-nav li a {
   letter-spacing: 1px;
   color: black;
+
 }
 
 nav li a:hover {
   color: orange;
 }
-/*
-
-nav ul li ul {
-  display: none;
-}
-
-nav ul li:hover > ul {
-  display: inline-table;
-  position: absolute;
-  z-index:100;
-  float: left;
-
-}
-
-nav ul:after {
-  content:"";
-  clear: both;
-}
-
-nav ul ul {
-  background: #3399FF;
-  border-radius: 0px;
-  padding: 0;
-
-}*/
-
-/*nav ul ul li {
-  float: none;
-  border-top: 1px solid black;
-  border-left: 1px solid black;
-  border-right: 1px solid black;
-  position: relative;
-
-
-}
-
-nav ul ul li a {
-  padding: 10px;
-  color: black;
-}
-
-
-nav ul ul ul {
-  position: absolute;
-  left: 100%;
-  top:0;
-}*/
-
-/*
-#first {
-  margin-top:6px;
-}
-
-#last {
-  border-bottom : 1px solid black;
-
-}*/

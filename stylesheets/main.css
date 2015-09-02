@@ -74,13 +74,11 @@ body a {
 }
 
 .btn {
-
   -webkit-border-radius: 28;
   -moz-border-radius: 28;
   border-radius: 28px;
   font-family: Arial;
-
-  color: white;
+  color: black;
   font-size: 50px;
   padding: 10px 20px 10px 20px;
   text-decoration: none;
@@ -94,7 +92,8 @@ body a {
 }
 
 .btn a {
-	color: white;
+	color: black;
+
 	text-decoration: none;
 	decoration: none;
 }
@@ -106,5 +105,11 @@ body a {
 }
 
 .btn:hover {
-	opacity : 0.75;
+	opacity : 0.55;
+}
+
+
+.buttonoverlay {
+	background: lightgrey;
+	opacity: 0.6;
 }

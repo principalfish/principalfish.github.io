@@ -12,4 +12,5 @@ package.json
 /electionmaps/gruntfile.js
 /electionmaps/package.json
 
-/election2016/
+/election2016/node_modules/
+/election2016/.sass-cache

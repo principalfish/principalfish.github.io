@@ -1,0 +1,2 @@
+-object literal on basic website and apply to code as go
+- get data in db format - mysql, not json

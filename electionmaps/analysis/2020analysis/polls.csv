@@ -2,6 +2,11 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
+comresDM	regional		22/11/15	22	11	2015	Wales	25	8	8	1	2	0		5	1								
+comresDM	regional		22/11/15	22	11	2015	Scotland	50	12	11	2	1	1	20		2								
+comresDM	regional		22/11/15	22	11	2015	North	117	49	39	7	16	3			2								
+comresDM	regional		22/11/15	22	11	2015	Midlands	144	67	38	13	17	3			6								
+comresDM	regional		22/11/15	22	11	2015	SouthICM	170	68	52	17	18	9			6								
 comres	regional		20/11/15	20	11	2015	Scotland	115	19	16	8	6	4	62										
 comres	regional		20/11/15	20	11	2015	North East England	50	21	22	1	6	0											
 comres	regional		20/11/15	20	11	2015	North West England	150	63	56	8	15	7											

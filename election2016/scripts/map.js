@@ -87,9 +87,7 @@ function disableZoom(){
 
 // reenables users ability to zoom pan etc
 function enableZoom(){
-
 	svg.call(zoom);
-
 }
 
 function getData(url){

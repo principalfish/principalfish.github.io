@@ -1,2 +1,4 @@
 -object literal on basic website and apply to code as go
 - get data in db format - mysql, not json
+
+https://www.youtube.com/watch?v=m-NYyst_tiY&ab_channel=LearnCode.academy

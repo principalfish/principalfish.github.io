@@ -1,122 +1,164 @@
-var states = [];
-var stateData = {};
+//map object
+var map = {
+  width: 960,
+  height: 500,
+  active : d3.select(null),
 
-function loadmap(){
-  d3.json("data/map.topojson", function(error, us) {
-    if (error) throw error;
+  projection : function(){
+      return d3.geo.albersUsa()
+    .scale(1000)
+    .translate([this.width / 2, this.height / 2]);
+  },
 
-    g.selectAll(".map")
-        .data(topojson.feature(us, us.objects.collection).features)
+  zoom : function(){
+      return d3.behavior.zoom()
+        .translate([0, 0])
+        .scale(1)
+        .scaleExtent([1, 8])
+        .on("zoom", this.zoomed);
+  },
 
-      .enter().append("path")
-        .attr("d", path)
-        .attr("class", "state")
-        .each(function(d){
-          states.push(d.properties.name)
-        })
+  path : function(){
+      return d3.geo.path()
+        .projection(this.projection());
+  },
 
-        .on("click", clicked);
+  // stops users messing up zoom animation
+  disableZoom: function(){
+  	svg.on("mousedown.zoom", null);
+  	svg.on("mousemove.zoom", null);
+  	svg.on("dblclick.zoom", null);
+  	svg.on("touchstart.zoom", null);
+  	svg.on("wheel.zoom", null);
+  	svg.on("mousewheel.zoom", null);
+  	svg.on("MozMousePixelScroll.zoom", null);
+  },
 
-    g.append("path")
-        .datum(topojson.mesh(us, us.objects.collection, function(a, b) { return a !== b; }))
-        .attr("class", "boundaries")
-        .attr("d", path);
-  });
-}
+  // reenables users ability to zoom pan etc
+  enableZoom : function(){
+    return svg.call(map.zoom());
+  },
 
+  // If the drag behavior prevents the default click,
+  // also stop propagation so we don’t click-to-zoom.
+  stopped: function() {
+    if (d3.event.defaultPrevented) d3.event.stopPropagation();
+  },
 
-function clicked(d) {
-  if (active.node() === this) return reset();
-  active.classed("active", false);
-  active = d3.select(this).classed("active", true);
+  zoomed: function() {
+    g.style("stroke-width", 1.5 / d3.event.scale + "px");
+    g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+  },
 
-  $("#text").text(d.properties.name)
+  reset: function() {
 
-  var bounds = path.bounds(d),
-		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
-		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
-		x = (bounds[0][0] + bounds[1][0]) / 2,
-		y = (bounds[0][1] + bounds[1][1]) / 2,
+    map.active.classed("active", false);
+    map.active = d3.select(null);
 
-		scale = .075 / Math.max(dx /  width,  dy / height),
-		translate = [width / 2 - scale * x, height / 2 - scale * y];
+    map.disableZoom();
 
-	disableZoom();
+  	svg.transition()
+  		.duration(1500)
+  		.call(map.zoom().translate([0, 0]).scale(1).event)
+  		.each("end", map.enableZoom);
+    },
 
-  svg.transition()
-    .duration(1500)
-    .call(zoom.translate(translate).scale(scale).event)
-    .each("end", enableZoom);
-}
+  clicked : function(d) {
+    if (map.active.node() === this) return map.reset();
+    map.active.classed("active", false);
+    map.active = d3.select(this).classed("active", true);
 
-function reset() {
-  active.classed("active", false);
-  active = d3.select(null);
+    $("#text").text(d.properties.name)
 
-  disableZoom();
+    var bounds = map.path().bounds(d),
+  		dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
+  		dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
+  		x = (bounds[0][0] + bounds[1][0]) / 2,
+  		y = (bounds[0][1] + bounds[1][1]) / 2,
 
-	svg.transition()
-		.duration(1500)
-		.call(zoom.translate([0, 0]).scale(1).event)
-		.each("end", enableZoom);
+  		scale = .075 / Math.max(dx /  map.width,  dy / map.height),
+  		translate = [map.width / 2 - scale * x, map.height / 2 - scale * y];
+
+  	map.disableZoom();
+
+    svg.transition()
+      .duration(1500)
+      .call(map.zoom().translate(translate).scale(scale).event)
+      .each("end", map.enableZoom);
   }
+};
 
-function zoomed() {
-  g.style("stroke-width", 1.5 / d3.event.scale + "px");
-  g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-}
+var pageData = {
+  states : [],
+  stateData: {},
 
-// If the drag behavior prevents the default click,
-// also stop propagation so we don’t click-to-zoom.
-function stopped() {
-  if (d3.event.defaultPrevented) d3.event.stopPropagation();
-}
+  loadmap : function(){
 
-// stops users messing up zoom animation
-function disableZoom(){
+    d3.json("data/map.topojson", function(error, us) {
+      if (error) throw error;
 
-	svg.on("mousedown.zoom", null);
-	svg.on("mousemove.zoom", null);
-	svg.on("dblclick.zoom", null);
-	svg.on("touchstart.zoom", null);
-	svg.on("wheel.zoom", null);
-	svg.on("mousewheel.zoom", null);
-	svg.on("MozMousePixelScroll.zoom", null);
+      g.selectAll(".map")
+          .data(topojson.feature(us, us.objects.collection).features)
 
-}
+        .enter().append("path")
+          .attr("d", map.path())
+          .attr("class", "state")
+          .each(function(d){
+            (pageData.states).push(d.properties.name)
+          })
 
-// reenables users ability to zoom pan etc
-function enableZoom(){
-	svg.call(zoom);
-}
+          .on("click", map.clicked);
 
-function getData(url){
+      g.append("path")
+          .datum(topojson.mesh(us, us.objects.collection, function(a, b) { return a !== b; }))
+          .attr("class", "boundaries")
+          .attr("d", map.path());
+    });
+  },
 
-	return $.ajax({
-		cache: true,
-		dataType: "json",
-  	url: url,
-		type: "GET",
-	});
-}
+  getData: function(url){
 
+  	return $.ajax({
+  		cache: true,
+  		dataType: "json",
+    	url: url,
+  		type: "GET",
+  	});
+  },
 
-function getSeatInfo(data){
+  getSeatInfo: function(data){
 
-  $.each(data, function(seat){
-		stateData[seat] = data[seat];
+    $.each(data, function(seat){
+  		pageData.stateData[seat] = data[seat];
 
-	});
+  	});
 
-	loadmap();
-}
+  	pageData.loadmap();
+  },
 
-function loadTheMap(url){
-	stateData = {};
+  loadTheMap: function(url){
+  	pageData.stateData = {};
 
-	$(".map").remove();
-	$(document).ready(function(){ getData("data/" + "info.json").done(getSeatInfo)});
+  	$(document).ready(function(){ pageData.getData("data/" + "info.json").done(pageData.getSeatInfo)});
 
-}
+  }
+};
 
-loadTheMap();
+var svg = d3.select("#map").append("svg")
+    .attr("width", map.width)
+    .attr("height", map.height)
+    .on("click", map.stopped, true);
+
+svg.append("rect")
+    .attr("class", "background")
+    .attr("width", map.width)
+    .attr("height", map.height)
+    .on("click", map.reset);
+
+var g = svg.append("g");
+
+svg
+    .call(map.zoom()) // delete this line to disable free zooming
+    .call(map.zoom().event);
+
+pageData.loadTheMap();

@@ -2,22 +2,22 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
-icm	regional		12/09/16	12	9	2016	Scotland	127	28	14	8	4	6	66		0								
-icm	regional		12/09/16	12	9	2016	Wales	80	24	25	11	7	3		10	1								
-icm	regional		12/09/16	12	9	2016	North	499	176	161	27	53	13			4								
-icm	regional		12/09/16	12	9	2016	Midlands	440	173	134	35	67	19			2								
-icm	regional		12/09/16	12	9	2016	SouthICM	475	231	89	56	74	22			3								
-yougov	percentage		05/09/16	5	9	2016	London	194	31	45	14	6	3			1								
-yougov	percentage		05/09/16	5	9	2016	Rest of South	537	51	21	9	15	4			1								
-yougov	percentage		05/09/16	5	9	2016	Midlands and Wales	347	45	26	7	12	3		6									
-yougov	percentage		05/09/16	5	9	2016	North England	389	33	41	3	20	3											
-yougov	percentage		05/09/16	5	9	2016	Scotland	149	21	23	3	1	1	51										
-mori	regional		25/01/16	25	1	2016	North	152	52	55	17	18	6			4								
-mori	regional		25/01/16	25	1	2016	Midlands	151	70	44	9	22	6											
-mori	regional		25/01/16	25	1	2016	Wales	32	9	15	2	2	3		1									
-mori	regional		25/01/16	25	1	2016	SouthMori	149	72	36	15	11	12			3								
-mori	regional		25/01/16	25	1	2016	London	82	27	36	3	15	1											
-mori	regional		25/01/16	25	1	2016	Scotland	64	22	11		3		28										
+icm	regional		30/10/16	30	10	2016	Scotland	129	38	22	6	2	6	56		0								
+icm	regional		30/10/16	30	10	2016	Wales	76	24	27	5	8	7		4	1								
+icm	regional		30/10/16	30	10	2016	North	489	195	154	26	41	18			0								
+icm	regional		30/10/16	30	10	2016	Midlands	440	186	115	35	74	25			1								
+icm	regional		30/10/16	30	10	2016	SouthICM	505	243	114	59	54	32			3								
+yougov	percentage		01/11/16	1	11	2016	London	199	35	36	13	9	7			0								
+yougov	percentage		01/11/16	1	11	2016	Rest of South	549	51	20	11	12	4			1								
+yougov	percentage		01/11/16	1	11	2016	Midlands and Wales	356	41	32	8	13	2		3	1								
+yougov	percentage		01/11/16	1	11	2016	North England	399	39	36	9	12	3			0								
+yougov	percentage		01/11/16	1	11	2016	Scotland	152	20	15	8	5	4	47		0								
+mori	regional		17/10/16	17	10	2016	North	145	67	54	7	12	4			2								
+mori	regional		17/10/16	17	10	2016	Midlands	161	90	45	7	11	7											
+mori	regional		17/10/16	17	10	2016	Wales	38	16	14	0	3	0		5									
+mori	regional		17/10/16	17	10	2016	SouthMori	144	79	26	18	12	8			1								
+mori	regional		17/10/16	17	10	2016	London	79	31	29	10	1	7											
+mori	regional		17/10/16	17	10	2016	Scotland	58	13	14	2			29										
 survation	regional		17/01/16	17	1	2016	London	98	35	37	8	17	1			0								
 survation	regional		17/01/16	17	1	2016	East and West Midlands	139	61	43	6	27	1			0								
 survation	regional		17/01/16	17	1	2016	North	200	63	80	8	41	7			1								

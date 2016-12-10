@@ -13,7 +13,15 @@ function seatinfo(d){
 
 	$(partyFlairElement).removeClass(oldPartyClass);
   $(gainFlairElement).removeClass(oldIncumbentClass);
-	$("#information-seatname-span").text(d.properties.name);
+
+	seatTitle = d.properties.name;
+
+	if (seatData[d.properties.name].seat_info.by_election != undefined) {
+		seatTitle += "*";
+	}
+
+	$("#information-seatname-span").text(seatTitle);
+
 	$("#information-region").text("Region: " + regionlist[seatInfo["area"]]);
 
 	$(partyNameElement).text("Party: " + partylist[seatInfo["winning_party"]]);
@@ -205,6 +213,12 @@ function piechart(d){
 	if (seatData[d.properties.name]["seat_info"]["byelection"] != null){
 
 		$("#information-byelection").text("By-election since " + pageSetting.slice(0, 4));
+
+	}
+
+	if (seatData[d.properties.name]["seat_info"]["by_election"] != null){
+
+		$("#information-byelection").text("*By-election on " + seatData[d.properties.name]["seat_info"]["by_election"]);
 
 	}
 

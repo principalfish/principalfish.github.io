@@ -1,5 +1,5 @@
 // empty arrays for various data
-var pageSetting = "2015parliament";
+var pageSetting = "2016parliament";
 var seatData = {}; //seatData contains all information display on page. filled on page load using getSeatInfo
 var seatsAfterFilter = []; // for use with user inputs in filters - changing map opacity + generating seat list at end
 var seatDataForChoropleth = {}; // for use with filters + choropleths
@@ -164,9 +164,9 @@ function loadTheMap(url){
 	$(document).ready(function(){ getData("data/" + url + "/info.json").done(getSeatInfo)});
 }
 
-loadTheMap("2015parliament");
+loadTheMap("2016parliament");
 
-var previousSetting = "2015parliament";
+var previousSetting = "2016parliament";
 
 function alterTheUI(setting){
 
@@ -180,6 +180,23 @@ function alterTheUI(setting){
 
 	$(alterClass).attr("class", "notactive");
 	$(alterSelected).attr("class", "currentpage");
+
+	if (setting == "2016parliament") {
+
+
+
+		$("title").text("UK Election Maps - Current Parliament");
+		$("#headertitle").text("Current Parliament");
+		$("#dropdowngainslabel").show();
+		$("#dropdowngains").show();
+		$("#swingfromto").show();
+		$("#votesharechangebyparty").show();
+		$("#navseatlist").show();
+		$("#navprojectionmethodology").hide();
+		$("#navprojectionuserinput").hide();
+		$("#userinput").hide();
+
+	}
 
 	if (setting == "2015parliament") {
 

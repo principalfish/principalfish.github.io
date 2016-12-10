@@ -413,6 +413,8 @@ var previousTotalsByYearByParty = {
 
 previousTotalsByYearByParty["2005"] = previousTotalsByYearByParty["2010"];
 
+
+
 var regions = {
     "england"  : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland", "southwestengland", "eastofengland",
                   "eastmidlands", "westmidlands", "london"],

@@ -6,13 +6,16 @@ function displayVoteTotals(data) {
 												"<th class=\"tablesorter-header\">Seats</th>";
 
 
+		simpleTables = ["2010parliament", "2016parliament"];
 
-		if (pageSetting == "2010parliament"){
+		if (simpleTables.indexOf(pageSetting) >= 0 ){
+
 
 			table_to_add += "<th class=\"tablesorter-header\">Votes</th><th class=\"tablesorter-header\">Vote %</th></tr></thead><tbody id=\"totalstableinfo\"></tbody><tfoot id=\"totalstablefoot\">" +
 			"</tfoot></table>";
 
 		}
+
 
 		else {
 
@@ -67,7 +70,7 @@ function displayVoteTotals(data) {
 				+ partylist[data[i].code] + "</td><td style=\"text-align: right;\">"
 					+ data[i].seats + "</td>";
 
-				if (pageSetting == "2010parliament"){
+				if (simpleTables.indexOf(pageSetting) >= 0 ){
 
 					table_foot += "<td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td></td></tr>";
 
@@ -88,12 +91,13 @@ function displayVoteTotals(data) {
 				+ partylist[data[i].code] + "</td><td style=\"text-align: right;\">"
 				+ data[i].seats + "</td>";
 
-				if (pageSetting == "2010parliament"){
+				if (simpleTables.indexOf(pageSetting) >= 0 ){
 
 					table_row += "<td style=\"text-align: right;\">" + data[i].votes.toLocaleString() + "</td><td style=\"text-align: center;\">"
 					+ data[i].votepercent.toFixed(2) + "</td></tr>";
 
 				}
+
 
 				else {
 
@@ -160,6 +164,9 @@ function selectAreaInfo(value){
 }
 
 function getVoteTotals(area){
+
+
+
     var areas = [];
 
     if (area == "all"){
@@ -197,14 +204,28 @@ function getVoteTotals(area){
 				totalvotescast += parseInt(seatData[seat]["seat_info"]["turnout"]);
 
 			}
-		});
+		});	
 
 		$.each(areas, function(area){
 
-			year = String(parseInt(pageSetting.slice(0,4)) - 5);
+			year = String(parseInt(pageSetting.slice(0,4)));
+
+			yearRelative = {
+				"2020" : "2015",
+				"2016" : "2015",
+				"2015" : "2010",
+				"2010" : "2005"
+			};
+
+			year = yearRelative[year]
+
+
 			oldturnout +=  previousTotalsByYearByParty[year][areas[area]]["turnout"];
 
+
 		})
+
+
 
 		var holdingArray = [];
 		var totalseats = 0;
@@ -287,7 +308,7 @@ function getVoteTotals(area){
 				info["votepercent"] = votepercent;
 				info["percentchange"] = vote_percent_change;
 				holdingArray.push(info);
-				
+
 			}
 		});
 

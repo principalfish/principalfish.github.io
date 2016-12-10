@@ -1,6 +1,6 @@
 import json
 
-json_data = open("info.json").read()
+json_data = open("2015info.json").read()
 data = json.loads(json_data)
 
 by_elections = {
@@ -156,7 +156,7 @@ by_elections = {
 
     "Sleaford and North Hykeham" : {
             "seat_info" : {
-                    'area': '"eastmidlands"',
+                    "area": "eastmidlands",
                     "change" : "hold",
                     "electorate" : 88660,
                     "incumbent" : "conservative",

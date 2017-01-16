@@ -2,16 +2,25 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
-icm	regional		27/11/16	27	11	2016	Scotland	137	34	23	4	4	3	70		0								
-icm	regional		27/11/16	27	11	2016	Wales	84	25	29	8	15	3		2	1								
-icm	regional		27/11/16	27	11	2016	North	374	151	129	29	55	10			0								
-icm	regional		27/11/16	27	11	2016	Midlands	453	168	90	33	66	9			4								
-icm	regional		27/11/16	27	11	2016	SouthICM	496	231	110	59	72	21			4								
-yougov	percentage		05/12/16	5	12	2016	London	200	37	42	10	6	5			1								
-yougov	percentage		05/12/16	5	12	2016	Rest of South	553	52	16	14	13	4			0								
-yougov	percentage		05/12/16	5	12	2016	Midlands and Wales	358	44	21	9	17	5		3	1								
-yougov	percentage		05/12/16	5	12	2016	North England	402	34	39	10	12	3			1								
-yougov	percentage		05/12/16	5	12	2016	Scotland	153	26	12	6	5	2	50										
+yougov	percentage		10/01/17	10	1	2017	London	199	37	44	11	5	3			1								
+yougov	percentage		10/01/17	10	1	2017	Rest of South	551	47	21	12	16	4			1								
+yougov	percentage		10/01/17	10	1	2017	Midlands and Wales	357	41	25	12	15	3		4	1								
+yougov	percentage		10/01/17	10	1	2017	North England	400	36	33	9	16	5			1								
+yougov	percentage		10/01/17	10	1	2017	Scotland	153	19	21	8	3	2	47										
+survation	regional		13/01/17	13	1	2017	London	112	39	44	16	11	2			1								
+survation	regional		13/01/17	13	1	2017	East and West Midlands	144	69	39	13	22	1											
+survation	regional		13/01/17	13	1	2017	North	219	78	79	28	27	4			3								
+survation	regional		13/01/17	13	1	2017	SouthSurvation	286	139	69	25	45	7											
+survation	regional		13/01/17	13	1	2017	Scotland	89	16	23	6	1	2	41		1								
+survation	regional		13/01/17	13	1	2017	Wales	46	16	11	6	5	1		6									
+icm	regional		08/01/17	8	1	2017	Scotland	121	30	20	6	7	4	54										
+icm	regional		08/01/17	8	1	2017	Wales	68	22	20	4	14	4											
+icm	regional		08/01/17	8	1	2017	North	349	139	129	35	37	8			1								
+icm	regional		08/01/17	8	1	2017	Midlands	354	158	91	27	57	21			1								
+icm	regional		08/01/17	8	1	2017	SouthICM	469	232	113	50	46	26			3								
+opinium	regional		12/01/17	12	1	2017	England	964	380	306	71	150	47			10								
+opinium	regional		12/01/17	12	1	2017	Scotland	114	31	13	5	5	2	56		1								
+opinium	regional		12/01/17	12	1	2017	Wales	69	23	21	6	8	3		8	0								
 mori	regional		17/10/16	17	10	2016	North	145	67	54	7	12	4			2								
 mori	regional		17/10/16	17	10	2016	Midlands	161	90	45	7	11	7											
 mori	regional		17/10/16	17	10	2016	Wales	38	16	14	0	3	0		5									
@@ -35,9 +44,6 @@ comres	regional		14/01/16	14	1	2016	East of England	123	65	25	9	22	2
 comres	regional		14/01/16	14	1	2016	London	160	59	59	9	27	5			1								
 comres	regional		14/01/16	14	1	2016	South East England	182	83	40	14	35	9			1								
 comres	regional		14/01/16	14	1	2016	South West England	107	45	26	12	19	3			2								
-opinium	regional		18/12/15	18	12	2015	England	999	403	316	55	173	47			8								
-opinium	regional		18/12/15	18	12	2015	Scotland	102	16	11	3	7	4	67		0								
-opinium	regional		18/12/15	18	12	2015	Wales	61	21	20			2		7	1								
 comresDM	regional		13/12/15	13	12	2015	Wales	25	9	10	2	2			2	1								
 comresDM	regional		13/12/15	13	12	2015	Scotland	54	10	17	3			23		1								
 comresDM	regional		13/12/15	13	12	2015	North	129	41	68	4	16	8			1								

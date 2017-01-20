@@ -1,0 +1,475 @@
+
+<h2> Input your own percentages<div class="closebox" onclick="$('#userinput').hide()">X</div></h2>
+
+<div>
+    <div class="country-container">
+        <h3>England</h3>
+
+        <form id="englandinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="england" id="england-con" value=0
+                       onchange="userInputCheck(englandinput, name), englandUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="england" id="england-lab" value=0
+                       onchange="userInputCheck(englandinput, name), englandUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="england" id="england-lib" value=0
+                       onchange="userInputCheck(englandinput, name), englandUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="england" id="england-ukip" value=0
+                       onchange="userInputCheck(englandinput, name), englandUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="england" id="england-grn" value=0
+                       onchange="userInputCheck(englandinput, name), englandUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="otherengland"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(englandinput, 'england')">Submit</button>
+
+    </div>
+
+
+    <div class="country-container">
+        <h3>Scotland</h3>
+
+        <form id="scotlandinput">
+            <div>
+                <label for="scotland-con">Con</label>
+                <input class="inputnumbers" type="text" name="scotland" id="scotland-con" value=0
+                       onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="scotland-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="scotland" id="scotland-lab"
+                       value=0
+                       onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="scotland-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="scotland" id="scotland-lib"
+                       value=0
+                       onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div><label for="scotland-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="scotland" id="scotland-ukip" value=0
+                       onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="scotland-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="scotland" id="scotland-grn"
+                       value=0
+                       onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div><label for="scotland-snp">SNP</label>
+                <input class="inputnumbers" type="text" name="scotland" id="scotland-snp"
+                       value=0
+                       onchange="userInputCheck(scotlandinput, name), scotlandUserNumbers['snp'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage"> Other <span id="otherscotland">100 </span></div>
+
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(scotlandinput, 'scotland')">Submit</button>
+
+
+    </div>
+
+    <div class="country-container">
+        <h3>Wales</h3>
+
+        <form id="walesinput">
+
+            <div>
+                <label for="wales-con">Con</label>
+                <input class="inputnumbers" type="text" name="wales" id="wales-con" value=0
+                       onchange="userInputCheck(walesinput, name), walesUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="wales-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="wales" id="wales-lab" value=0
+                       onchange="userInputCheck(walesinput, name), walesUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div><label for="wales-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="wales" id="wales-lib" value=0
+                       onchange="userInputCheck(walesinput, name), walesUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div><label for="wales-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="wales" id="wales-ukip" value=0
+                       onchange="userInputCheck(walesinput, name), walesUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div><label for="wales-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="wales" id="wales-grn" value=0
+                       onchange="userInputCheck(walesinput, name), walesUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div><label for="wales-pc">PC</label>
+                <input class="inputnumbers" type="text" name="wales" id="wales-pc" value=0
+                       onchange="userInputCheck(walesinput, name), walesUserNumbers['plaidcymru'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage"> Other <span id="otherwales">100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(walesinput, 'wales')">Submit</button>
+
+    </div>
+
+
+    <div class="country-container">
+        <h3>Northern Ireland</h3>
+
+        <form id="northernirelandinput">
+            <div>
+                <label for="northernireland-dup">DUP</label>
+                <input class="inputnumbers" type="text" name="northernireland"
+                       id="northernireland-dup" value=0
+                       onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['dup'] = parseFloat(value)"/>
+            </div>
+            <div><label for="northernireland-sf">SF</label>
+                <input class="inputnumbers" type="text" name="northernireland"
+                       id="northernireland-sf" value=0
+                       onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sinnfein'] = parseFloat(value)"/>
+            </div>
+            <div><label for="northernireland-sdlp">SDLP</label>
+                <input class="inputnumbers" type="text" name="northernireland"
+                       id="northernireland-sdlp" value=0
+                       onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['sdlp'] = parseFloat(value)"/>
+            </div>
+            <div><label for="northernireland-uup">UUP</label>
+                <input class="inputnumbers" type="text" name="northernireland"
+                       id="northernireland-uup" value=0
+                       onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['uu'] = parseFloat(value)"/>
+            </div>
+            <div><label for="northernireland-all">All</label>
+                <input class="inputnumbers" type="text" name="northernireland"
+                       id="northernireland-all" value=0
+                       onchange="userInputCheck(northernirelandinput, name), northernirelandUserNumbers['alliance'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage"> Other <span id="othernorthernireland">100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(northernirelandinput, 'northernireland')">Submit</button>
+    </div>
+
+    <div class="country-container">
+        <h3>North East England</h3>
+
+        <form id="northeastenglandinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="northeastengland" id="england-con" value=0
+                       onchange="userInputCheck(northeastenglandinput, name), northeastenglandUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="northeastengland" id="england-lab" value=0
+                       onchange="userInputCheck(northeastenglandinput, name), northeastenglandUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="northeastengland" id="england-lib" value=0
+                       onchange="userInputCheck(northeastenglandinput, name), northeastenglandUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="northeastengland" id="england-ukip" value=0
+                       onchange="userInputCheck(northeastenglandinput, name), northeastenglandUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="northeastengland" id="england-grn" value=0
+                       onchange="userInputCheck(northeastenglandinput, name), northeastenglandUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="othernortheastengland"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(northeastenglandinput, 'northeastengland')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>North West England</h3>
+
+        <form id="northwestenglandinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="northwestengland" id="england-con" value=0
+                       onchange="userInputCheck(northwestenglandinput, name), northwestenglandUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="northwestengland" id="england-lab" value=0
+                       onchange="userInputCheck(northwestenglandinput, name), northwestenglandUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="northwestengland" id="england-lib" value=0
+                       onchange="userInputCheck(northwestenglandinput, name), northwestenglandUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="northwestengland" id="england-ukip" value=0
+                       onchange="userInputCheck(northwestenglandinput, name), northwestenglandUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="northwestengland" id="england-grn" value=0
+                       onchange="userInputCheck(northwestenglandinput, name), northwestenglandUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="othernorthwestengland"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(northwestenglandinput, 'northwestengland')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>Yorks and Humber</h3>
+
+        <form id="yorkshireandthehumberinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="yorkshireandthehumber" id="england-con" value=0
+                       onchange="userInputCheck(yorkshireandthehumberinput, name), yorkshireandthehumberUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="yorkshireandthehumber" id="england-lab" value=0
+                       onchange="userInputCheck(yorkshireandthehumberinput, name), yorkshireandthehumberUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="yorkshireandthehumber" id="england-lib" value=0
+                       onchange="userInputCheck(yorkshireandthehumberinput, name), yorkshireandthehumberUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="yorkshireandthehumber" id="england-ukip" value=0
+                       onchange="userInputCheck(yorkshireandthehumberinput, name), yorkshireandthehumberUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="yorkshireandthehumber" id="england-grn" value=0
+                       onchange="userInputCheck(yorkshireandthehumberinput, name), yorkshireandthehumberUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="otheryorkshireandthehumber"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(yorkshireandthehumberinput, 'yorkshireandthehumber')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>South East England</h3>
+
+        <form id="southeastenglandinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="southeastengland" id="england-con" value=0
+                       onchange="userInputCheck(southeastenglandinput, name), southeastenglandUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="southeastengland" id="england-lab" value=0
+                       onchange="userInputCheck(southeastenglandinput, name), southeastenglandUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="southeastengland" id="england-lib" value=0
+                       onchange="userInputCheck(southeastenglandinput, name), southeastenglandUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="southeastengland" id="england-ukip" value=0
+                       onchange="userInputCheck(southeastenglandinput, name), southeastenglandUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="southeastengland" id="england-grn" value=0
+                       onchange="userInputCheck(southeastenglandinput, name), southeastenglandUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="othersoutheastengland"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(southeastenglandinput, 'southeastengland')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>South West England</h3>
+
+        <form id="southwestenglandinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="southwestengland" id="england-con" value=0
+                       onchange="userInputCheck(southwestenglandinput, name), southwestenglandUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="southwestengland" id="england-lab" value=0
+                       onchange="userInputCheck(southwestenglandinput, name), southwestenglandUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="southwestengland" id="england-lib" value=0
+                       onchange="userInputCheck(southwestenglandinput, name), southwestenglandUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="southwestengland" id="england-ukip" value=0
+                       onchange="userInputCheck(southwestenglandinput, name), southwestenglandUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="southwestengland" id="england-grn" value=0
+                       onchange="userInputCheck(southwestenglandinput, name), southwestenglandUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="othersouthwestengland"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(southwestenglandinput, 'southwestengland')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>East of England</h3>
+
+        <form id="eastofenglandinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="eastofengland" id="england-con" value=0
+                       onchange="userInputCheck(eastofenglandinput, name), eastofenglandUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="eastofengland" id="england-lab" value=0
+                       onchange="userInputCheck(eastofenglandinput, name), eastofenglandUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="eastofengland" id="england-lib" value=0
+                       onchange="userInputCheck(eastofenglandinput, name), eastofenglandUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="eastofengland" id="england-ukip" value=0
+                       onchange="userInputCheck(eastofenglandinput, name), eastofenglandUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="eastofengland" id="england-grn" value=0
+                       onchange="userInputCheck(eastofenglandinput, name), eastofenglandUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="othereastofengland"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(eastofenglandinput, 'eastofengland')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>East Midlands</h3>
+
+        <form id="eastmidlandsinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="eastmidlands" id="england-con" value=0
+                       onchange="userInputCheck(eastmidlandsinput, name), eastmidlandsUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="eastmidlands" id="england-lab" value=0
+                       onchange="userInputCheck(eastmidlandsinput, name), eastmidlandsUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="eastmidlands" id="england-lib" value=0
+                       onchange="userInputCheck(eastmidlandsinput, name), eastmidlandsUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="eastmidlands" id="england-ukip" value=0
+                       onchange="userInputCheck(eastmidlandsinput, name), eastmidlandsUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="eastmidlands" id="england-grn" value=0
+                       onchange="userInputCheck(eastmidlandsinput, name), eastmidlandsUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="othereastmidlands"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(eastmidlandsinput, 'eastmidlands')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>West Midlands</h3>
+
+        <form id="westmidlandsinput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="westmidlands" id="england-con" value=0
+                       onchange="userInputCheck(westmidlandsinput, name), westmidlandsUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="westmidlands" id="england-lab" value=0
+                       onchange="userInputCheck(westmidlandsinput, name), westmidlandsUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="westmidlands" id="england-lib" value=0
+                       onchange="userInputCheck(westmidlandsinput, name), westmidlandsUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="westmidlands" id="england-ukip" value=0
+                       onchange="userInputCheck(westmidlandsinput, name), westmidlandsUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="westmidlands" id="england-grn" value=0
+                       onchange="userInputCheck(westmidlandsinput, name), westmidlandsUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="otherwestmidlands"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(westmidlandsinput, 'westmidlands')">Submit</button>
+
+    </div>
+
+    <div class="country-container">
+        <h3>London</h3>
+
+        <form id="londoninput">
+            <div>
+                <label for="england-con">Con</label>
+                <input class="inputnumbers" type="text" name="london" id="england-con" value=0
+                       onchange="userInputCheck(londoninput, name), londonUserNumbers['conservative'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lab">Lab</label>
+                <input class="inputnumbers" type="text" name="london" id="england-lab" value=0
+                       onchange="userInputCheck(londoninput, name), londonUserNumbers['labour'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-lib">Lib</label>
+                <input class="inputnumbers" type="text" name="london" id="england-lib" value=0
+                       onchange="userInputCheck(londoninput, name), londonUserNumbers['libdems'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-ukip">UKIP</label>
+                <input class="inputnumbers" type="text" name="london" id="england-ukip" value=0
+                       onchange="userInputCheck(londoninput, name), londonUserNumbers['ukip'] = parseFloat(value)"/>
+            </div>
+            <div>
+                <label for="england-grn">Grn</label>
+                <input class="inputnumbers" type="text" name="london" id="england-grn" value=0
+                       onchange="userInputCheck(londoninput, name), londonUserNumbers['green'] = parseFloat(value)"/>
+            </div>
+            <div class="other-percentage">Other <span id="otherlondon"> 100 </span></div>
+        </form>
+        <button class="submitbutton" onclick="analyseUserInput(londoninput, 'london')">Submit</button>
+
+    </div>
+
+
+    <button class="resetmap" onclick="resetInputs()"> Reset All </button>
+</div>

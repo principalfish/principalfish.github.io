@@ -588,6 +588,13 @@ $userinput-fieldspacing: 5px;
     margin-bottom: 10px;
   }
 
+  .country-container-full-width {
+    overflow: hidden;
+    width: 100%;
+    float: right;
+    margin-bottom: 10px;
+  }
+
   form {
     margin-bottom: 5px;
     overflow: hidden;

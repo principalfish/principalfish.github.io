@@ -2,6 +2,17 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
+icm	regional		08/01/17	8	1	2017	Scotland	124	30	19	9	5	2	58										
+icm	regional		08/01/17	8	1	2017	Wales	80	18	26	10	13	5		8									
+icm	regional		08/01/17	8	1	2017	North	368	156	140	24	38	12											
+icm	regional		08/01/17	8	1	2017	Midlands	368	171	77	30	65	25											
+icm	regional		08/01/17	8	1	2017	SouthICM	478	223	96	65	62	30			3								
+mori	regional		16/01/17	16	1	2017	North	167	73	66	13	10	4			1								
+mori	regional		16/01/17	16	1	2017	Midlands	183	80	63	15	16	8			0								
+mori	regional		16/01/17	16	1	2017	Wales	31	13	7	3	2	1		4	1								
+mori	regional		16/01/17	16	1	2017	SouthMori	171	91	38	26	11	6			1								
+mori	regional		16/01/17	16	1	2017	London	94	33	31	20	1	8											
+mori	regional		16/01/17	16	1	2017	Scotland	60	17	15	2	2	2	22										
 yougov	percentage		18/01/17	18	1	2017	London	198	41	35	11	7	5											
 yougov	percentage		18/01/17	18	1	2017	Rest of South	549	52	18	13	13	4											
 yougov	percentage		18/01/17	18	1	2017	Midlands and Wales	356	41	25	10	15	4		4	1								
@@ -32,12 +43,6 @@ mori	regional		17/10/16	17	10	2016	Wales	38	16	14	0	3	0		5
 mori	regional		17/10/16	17	10	2016	SouthMori	144	79	26	18	12	8			1								
 mori	regional		17/10/16	17	10	2016	London	79	31	29	10	1	7											
 mori	regional		17/10/16	17	10	2016	Scotland	58	13	14	2			29										
-survation	regional		17/01/16	17	1	2016	London	98	35	37	8	17	1			0								
-survation	regional		17/01/16	17	1	2016	East and West Midlands	139	61	43	6	27	1			0								
-survation	regional		17/01/16	17	1	2016	North	200	63	80	8	41	7			1								
-survation	regional		17/01/16	17	1	2016	SouthSurvation	253	118	59	21	39	11			4								
-survation	regional		17/01/16	17	1	2016	Scotland	68	16	6	3	5		38										
-survation	regional		17/01/16	17	1	2016	Wales	49	17	15	6	5			6									
 comres	regional		14/01/16	14	1	2016	Scotland	115	22	12	15	9	3	54		0								
 comres	regional		14/01/16	14	1	2016	North East England	46	17	18	2	6	2			0								
 comres	regional		14/01/16	14	1	2016	North West England	132	47	61	3	15	4			1								

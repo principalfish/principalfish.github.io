@@ -2,11 +2,16 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
-icm	regional		08/01/17	8	1	2017	Scotland	124	30	19	9	5	2	58										
-icm	regional		08/01/17	8	1	2017	Wales	80	18	26	10	13	5		8									
-icm	regional		08/01/17	8	1	2017	North	368	156	140	24	38	12											
-icm	regional		08/01/17	8	1	2017	Midlands	368	171	77	30	65	25											
-icm	regional		08/01/17	8	1	2017	SouthICM	478	223	96	65	62	30			3								
+yougov	percentage		24/01/17	24	1	2017	London	197	42	22	20	11	2			3								
+yougov	percentage		24/01/17	24	1	2017	Rest of South	545	51	18	10	15	5											
+yougov	percentage		24/01/17	24	1	2017	Midlands and Wales	353	37	29	10	15	4		5									
+yougov	percentage		24/01/17	24	1	2017	North England	396	24	36	8	17	3											
+yougov	percentage		24/01/17	24	1	2017	Scotland	151	21	14	6	3	6	50										
+icm	regional		24/01/17	24	1	2017	Scotland	124	30	19	9	5	2	58										
+icm	regional		24/01/17	24	1	2017	Wales	80	18	26	10	13	5		8									
+icm	regional		24/01/17	24	1	2017	North	368	156	140	24	38	12											
+icm	regional		24/01/17	24	1	2017	Midlands	368	171	77	30	65	25											
+icm	regional		24/01/17	24	1	2017	SouthICM	478	223	96	65	62	30			3								
 mori	regional		16/01/17	16	1	2017	North	167	73	66	13	10	4			1								
 mori	regional		16/01/17	16	1	2017	Midlands	183	80	63	15	16	8			0								
 mori	regional		16/01/17	16	1	2017	Wales	31	13	7	3	2	1		4	1								

@@ -2,6 +2,54 @@ pollster	type	pollsterweight	date	day	month	year	region	total	conservative	labou
 me	regional		9/05/2015	9	5	2015	null	10001	4086	3163	821	1412	420			99								
 me	regional		9/05/2015	9	5	2015	null	10001	1492	2430	755	162	135	4997		30								
 me	regional		9/05/2015	9	5	2015	null	10001	2724	3687	653	1364	256		1213	104								
+yougov	percentage		22/02/17	22	2	2017	London	247	46	30	16	4	4											
+yougov	percentage		22/02/17	22	2	2017	Rest of South	684	50	18	14	14	4											
+yougov	percentage		22/02/17	22	2	2017	Midlands and Wales	443	37	27	9	19	3		4	2								
+yougov	percentage		22/02/17	22	2	2017	North England	496	38	36	9	13	2			1								
+yougov	percentage		22/02/17	22	2	2017	Scotland	190	23	11	5	6	2	49		3								
+icm	regional		19/02/17	19	2	2017	Scotland	144	45	28	7	4	4	55										
+icm	regional		19/02/17	19	2	2017	Wales	75	21	26	1	20			6	1								
+icm	regional		19/02/17	19	2	2017	North	345	144	113	23	48	17			1								
+icm	regional		19/02/17	19	2	2017	Midlands	361	165	84	30	66	14			2								
+icm	regional		19/02/17	19	2	2017	SouthICM	463	246	94	42	53	27			1								
+opinium	regional		16/02/17	16	2	2017	England	953	412	267	85	141	39			8								
+opinium	regional		16/02/17	16	2	2017	Scotland	110	26	19	4	4	3	53		1								
+opinium	regional		16/02/17	16	2	2017	Wales	62	17	22	4	8	1		10	0								
+mori	regional		13/02/17	13	2	2017	North	150	59	52	22	13	2			1								
+mori	regional		13/02/17	13	2	2017	Midlands	163	68	51	17	23	3											
+mori	regional		13/02/17	13	2	2017	Wales	24	6	9	2	0	1		7									
+mori	regional		13/02/17	13	2	2017	SouthMori	153	79	28	23	10	14											
+mori	regional		13/02/17	13	2	2017	London	91	24	34	21	8	4											
+mori	regional		13/02/17	13	2	2017	Scotland	67	21	12	1	2	1	28		1								
+comres	regional		10/02/17	10	2	2017	Scotland	111	25	11	7	4	2	62		0								
+comres	regional		10/02/17	10	2	2017	North East England	47	13	21	5	5	3			1								
+comres	regional		10/02/17	10	2	2017	North West England	137	61	51	10	11	1			2								
+comres	regional		10/02/17	10	2	2017	Yorkshire and Humber	100	35	29	16	15	5			1								
+comres	regional		10/02/17	10	2	2017	West Midlands	113	54	30	7	16	3			2								
+comres	regional		10/02/17	10	2	2017	East Midlands	79	37	19	8	8	7			0								
+comres	regional		10/02/17	10	2	2017	Wales	64	15	15	5	9	4		15	1								
+comres	regional		10/02/17	10	2	2017	East of England	125	56	33	19	17	1			0								
+comres	regional		10/02/17	10	2	2017	London	158	58	57	26	12	5			0								
+comres	regional		10/02/17	10	2	2017	South East England	182	91	37	24	20	7			2								
+comres	regional		10/02/17	10	2	2017	South West England	103	54	17	11	14	7			0								
+yougov	percentage		06/02/17	6	2	2017	London	204	33	36	13	9	6			3								
+yougov	percentage		06/02/17	6	2	2017	Rest of South	566	50	17	14	14	4			0								
+yougov	percentage		06/02/17	6	2	2017	Midlands and Wales	366	37	25	11	18	4		4	0								
+yougov	percentage		06/02/17	6	2	2017	North England	411	36	31	8	19	5			0								
+yougov	percentage		06/02/17	6	2	2017	Scotland	157	23	14	5	2	2	54		1								
+icm	regional		05/02/17	5	2	2017	Scotland	139	34	16	12	1	4	71		0								
+icm	regional		05/02/17	5	2	2017	Wales	86	23	29	7	14	3		10	0								
+icm	regional		05/02/17	5	2	2017	North	356	127	140	34	36	9			1								
+icm	regional		05/02/17	5	2	2017	Midlands	377	195	77	33	53	18			0								
+icm	regional		05/02/17	5	2	2017	SouthICM	449	211	102	52	62	19			3								
+opinium	regional		03/02/17	3	2	2017	England	981	383	311	74	151	49			7								
+opinium	regional		03/02/17	3	2	2017	Scotland	128	28	21	5	5	5	57										
+opinium	regional		03/02/17	3	2	2017	Wales	79	12	20	9	7	1		10									
+yougov	percentage		31/01/17	31	1	2017	London	205	40	30	14	10	5			0								
+yougov	percentage		31/01/17	31	1	2017	Rest of South	566	49	17	13	15	4			1								
+yougov	percentage		31/01/17	31	1	2017	Midlands and Wales	367	43	26	8	13	5			2								
+yougov	percentage		31/01/17	31	1	2017	North England	411	33	39	9	14	4		3	0								
+yougov	percentage		31/01/17	31	1	2017	Scotland	157	24	16	6	2	4	47		1								
 yougov	percentage		24/01/17	24	1	2017	London	197	42	22	20	11	2			3								
 yougov	percentage		24/01/17	24	1	2017	Rest of South	545	51	18	10	15	5											
 yougov	percentage		24/01/17	24	1	2017	Midlands and Wales	353	37	29	10	15	4		5									

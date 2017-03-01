@@ -848,6 +848,8 @@ function pageLoadEssentials(){
 	//show and hide various divs on load
 	uiAttr.pageLoadDiv();
 
+
+
 	// if setting not currentParliament remove instructions
 	if (currentMap != currentParliament){
 		$("#instructions").remove();
@@ -885,8 +887,9 @@ function searchSeats(value){
 };
 
 
-function pageSetting(mapurl, dataurl, previous, election, predict){
+function pageSetting(name, mapurl, dataurl, previous, election, predict){
 
+	this.name = name;
 	this.mapurl = mapurl;
 	this.dataurl = dataurl;
 	this.previous = previous;
@@ -912,11 +915,11 @@ var dataurls =  {
 	e2010 : "houseofcommons/2010election.json"
 }
 
-var currentParliament = new pageSetting(dataurls.map650, dataurls.current, dataurls.e2015, false, false);
-var election2015 = new pageSetting(dataurls.map650, dataurls.e2015, dataurls.e2010, true, false);
-var election2010 = new pageSetting(dataurls.map650, dataurls.e2010, dataurls.e2010, false, false); // no 2005 data to compare atm
-var prediction = new pageSetting(dataurls.map650, dataurls.predict, dataurls.e2015, true, false);
-var predictit = new pageSetting(dataurls.map650, dataurls.e2015, dataurls.e2015, true, true);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false);
+var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false);
+var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false); // no 2005 data to compare atm
+var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true);
 
 function initialization(setting){
 
@@ -1244,7 +1247,7 @@ function activeSeat(seat){
 
   pageLoadDiv : function(){
     $.each(uiAttr.buttonToDiv, function(button, div){
-      if (button == "votetotalsbutton"){
+      if (button == "votetotalsbutton" || button == "filtersbutton"){
         uiAttr.showDiv(button);
       } else if (button == "predictbutton" && currentMap.predict == true){
         $("#predictbutton").removeClass("hidden").addClass("mapbuttonactive");
@@ -1802,8 +1805,10 @@ function activeSeat(seat){
   display: function(){
     // reset div
     $("#votetotals-table-data").empty();
-    // display turnout
-    $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
+    // display turnout for all but current parliament
+    if (currentMap.name != "current" && currentMap.name != "prediction" && currentMap.name != "predictit"){
+      $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
+    }
 
     var divider = "</div><div>";
 

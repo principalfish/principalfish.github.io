@@ -1275,7 +1275,7 @@ function activeSeat(seat){
     // remove england data
     delete userInput.inputs["england"]
 
-    $("#userinput").css("top", "405px");
+    $("#userinput").css("top", "400px");
 
     $("#userinput-england").addClass("hidden");
     $("#userinput-england input").each(function(){

@@ -14,3 +14,4 @@ package.json
 /stylesheets/electionmaps/electionmaps.css.map
 /stylesheets/sass/
 /stylesheets/index.css.map
+electionmaps/main.js

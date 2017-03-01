@@ -1275,7 +1275,7 @@ function activeSeat(seat){
     // remove england data
     delete userInput.inputs["england"]
 
-    $("#userinput").css("top", "400px");
+    $("#userinput").css("top", "405px");
 
     $("#userinput-england").addClass("hidden");
     $("#userinput-england input").each(function(){
@@ -1290,7 +1290,7 @@ function activeSeat(seat){
   },
 
   hideAdvanced : function(){
-    $("#userinput").css("top", "572px");
+    $("#userinput").css("top", "577px");
     // remove old data for england regions
     $.each(userInput.advancedDivs, function(i, div){
       delete userInput.inputs[div]

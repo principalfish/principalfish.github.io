@@ -829,6 +829,12 @@ function pageLoadEssentials(){
 	// reset filters.state - also get and show vote totals
 	filters.reset();
 
+	// reset user inputs
+	$("#userinput-table input").each(function(){
+		this.value = 0;
+	});
+	userInput.inputs = {};
+
 	// populate seat search	// autocomplete function
 	var seatList = Object.keys(currentMap.seatData);
 	seatList.sort();
@@ -847,8 +853,6 @@ function pageLoadEssentials(){
 
 	//show and hide various divs on load
 	uiAttr.pageLoadDiv();
-
-
 
 	// if setting not currentParliament remove instructions
 	if (currentMap != currentParliament){
@@ -1203,10 +1207,12 @@ function activeSeat(seat){
 
     var i = uiAttr.zIndexTracker.indexOf(id);
     $("#" + id).removeClass("mapbuttonactive");
-    uiAttr.zIndexTracker.splice(i, 1);
+
+    if (i != -1){
+      uiAttr.zIndexTracker.splice(i, 1);
+    }
 
     $(uiAttr.buttonToDiv[id]).hide();
-
     uiAttr.zIndexShuffle();
   },
 
@@ -1227,6 +1233,7 @@ function activeSeat(seat){
   zIndexCheck : function(id){
     if (uiAttr.zIndexTracker.indexOf(id) == -1 ){
       uiAttr.zIndexTracker.push(id);
+
     } else {
       var fromIndex = uiAttr.zIndexTracker.indexOf(id);
       var toIndex = uiAttr.zIndexTracker.length - 1;
@@ -1247,7 +1254,7 @@ function activeSeat(seat){
 
   pageLoadDiv : function(){
     $.each(uiAttr.buttonToDiv, function(button, div){
-      if (button == "votetotalsbutton" || button == "filtersbutton"){
+      if (button == "votetotalsbutton" || button == "filtersbutton" ){
         uiAttr.showDiv(button);
       } else if (button == "predictbutton" && currentMap.predict == true){
         $("#predictbutton").removeClass("hidden").addClass("mapbuttonactive");
@@ -1256,8 +1263,7 @@ function activeSeat(seat){
         uiAttr.hideDiv(button);
       }
     });
-    $("#votetotals").trigger("click"); 	 // set to back
-  	$("#userinput").trigger("click");
+
   }
 }
 ;var userInput = {
@@ -1268,6 +1274,8 @@ function activeSeat(seat){
   showAdvanced : function(){
     // remove england data
     delete userInput.inputs["england"]
+
+    $("#userinput").css("top", "400px");
 
     $("#userinput-england").addClass("hidden");
     $("#userinput-england input").each(function(){
@@ -1282,6 +1290,7 @@ function activeSeat(seat){
   },
 
   hideAdvanced : function(){
+    $("#userinput").css("top", "572px");
     // remove old data for england regions
     $.each(userInput.advancedDivs, function(i, div){
       delete userInput.inputs[div]
@@ -1619,10 +1628,8 @@ function activeSeat(seat){
   },
 
   reset : function(){
-    $("#userinput-table input").each(function(){
-      this.value = 0;
-    });
-    userInput.inputs = {};
+
+    // inputs reset in pageLoad
     currentMap.seatData = jQuery.extend(true, {}, userInput.seatDataCopy);
 
     $(".map").remove();

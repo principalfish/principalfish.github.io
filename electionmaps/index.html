@@ -1,373 +1,552 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <head>
-	<title>UK Election Maps</title>
-	<link type="text/css" rel="stylesheet" href="/electionmaps/stylesheets/main.css"/>
-	<link type="text/css" rel="stylesheet" href="/electionmaps/stylesheets/theme.default.css"/>
-	<link rel="stylesheet" href="/scripts/jqueryui/jquery-ui.structure.css"/>
+	<title>Current Parliament</title>
 	<link rel="shortcut icon" href="/img/logo.png">
+	<link type="text/css" rel="stylesheet" href="/stylesheets/jquery-ui.structure.css"/>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/electionmaps.min.css"/>
+	<script type="text/javascript" src="/libraries/d3.min.js"></script>
+	<script type="text/javascript" src="/libraries/topojson.js"></script>
+	<script type="text/javascript" src="/libraries/jquery.min.js"></script>
+	<script type="text/javascript" src="/libraries/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="main.min.js"></script>
 </head>
 
 <body>
-	<script type="text/javascript" src="/scripts/d3.min.js"></script>
-	<script type="text/javascript" src="/scripts/topojson.js"></script>
-	<script type="text/javascript" src="/scripts/jquery-2.1.3.min.js"></script>
-	<script type="text/javascript" src="/scripts/jqueryui/jquery-ui.min.js"></script>
-	<script type="text/javascript" src="/scripts/jquery.tablesorter.min.js"></script>
-	<script type="text/javascript" src="/scripts/jquery.tablesorter.widgets.min.js"></script>
-	<!-- SCRIPTS THAT RUN PAGE BELOW HERE -->
-	<script type="text/javascript" src="main.js"></script>
 
-    <header>
-        <h1>UK Election Maps - <span id="headertitle">Current Parliament</span></h1>
-        <script>
-            $(function(){
-                $("#menu").load("/menu.html")
-            });
-        </script>
-        <div id="menu">
+	<header>
+		<h2>UK Election Maps - <span id=pagetitle>Current Parliament</span> </h2>
+    <nav>
+        <ul>
+          mail : principalfish@gmail.com
+        </ul>
+    </nav>
+	</header>
 
-        </div>
-    </header>
+	<nav id="projections">
+			<h3 class="navbaractive"><a href="javascript:;" onclick="uiAttr.changeNavBar(this); initialization(currentParliament);"> Current Parliament </a> </h3>
+				<div class="divider"></div>
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(prediction)"> 2020 Prediction </a> </h3>
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(predictit)"> Predict 2020 </a> </h3>
+			<div class="divider"></div>
+				<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2015);"> 2015 Election</a> </h3>
+				<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2010);"> 2010 Election</a> </h3>
+			<div class="divider"></div>
+			<!-- <h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)"> 600 Seat Map </a> </h3> -->
+			<!-- <h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)"> Predict 600 seats </a> </h3> -->
 
-    <div id="wrapper" class="projection">
+			<!-- <h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Local Councils</a> </h3>
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Scottish Local</a> </h3>
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Brexit by Seat</a> </h3>
 
-				<nav class="projections">
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Poll Tracker</a> </h3> -->
 
-					<h3 id="nav2016parliament" class="currentpage"><a href="#" onclick="loadTheMap('2016parliament'); alterTheUI('2016parliament');"> Current Parliament</a> </h3>
-					<h3 id="nav2015parliament" class="notactive"><a href="#" onclick="loadTheMap('2015parliament'); alterTheUI('2015parliament');"> 2015 Election</a> </h3>
-					<h3 id="nav2010parliament" class="notactive"><a href="#" onclick="loadTheMap('2010parliament'); alterTheUI('2010parliament');">2010 Election</a></h3>
-										<div class="divider"></div>
-					<h3 id="nav2020projection" class="notactive"><a href="#" onclick="loadTheMap('2020projection'); alterTheUI('2020projection');">2020 Projection</a></h3>
-					<h3 id="nav2015projection" class="notactive"><a href="#" onclick="loadTheMap('2015projection'); alterTheUI('2015projection');">2015 Projection</a></h3>
-                    <div class="divider"></div>
-					<h3 id="navprojectionuserinput" style="display:none" class="notactive" onclick="showUserInput();"><a href="#">User Input</a></h3>
-					<h3 id="navseatlist" class="notactive" onclick="showSeatList('england');"><a href="#">Seat List </a></h3>
-					<h3 id="navprojectionmethodology" style="display:none" class="notactive" onclick="showMethodology();"><a href="#">Methodology</a></h3>
+			<p id="copyright"> Copyright 2017 principalfish.co.uk</p>
+	</nav>
 
-                </nav>
+	<div id="wrapper">
+
+		<div id="map">
+
+				<script>
+				var svg = d3.select("#map").append("svg")
+				  .attr("width",  mapAttr.width)
+				  .attr("height",  mapAttr.height)
+				  .on("click", mapAttr.stopped, true);
+
+				svg.append("rect")
+					.attr("class", "background")
+					.attr("width",  mapAttr.width)
+					.attr("height",  mapAttr.height)
+					.on("click", mapAttr.reset);
+
+				var g = svg.append("g");
+
+				svg
+					.call(zoom);
+
+			</script>
+		</div>
+
+		<div id="instructions" class="dash-box">
+
+			<h2><div class="closebox" onclick="$('#instructions').hide()">X</div></h2>
+			<div>
+
+				  <li>Most elements are clickable, draggable, zoomable.</li>
+					<li>Tables are sortable.</li>
+					<li>The map is filterable via the filters tab.</li>
+				  <li>For a detailed seat list, go filters > generate list > show more.</li>
+					<li>Click the links on the left for different maps.</li>
+				  <li>Any suggestions, requests or bugs email principalfish@gmail.com. </li>
+
+			</div>
+		</div>
+
+		<div id="resetbutton">
+				<button id="resetmap" onclick="mapAttr.reset()">Reset</button>
+		</div>
+
+		<div id="keyonmap">
+
+		</div>
+
+    <div id="searchforseat">
+        <input type="text" value="seat search" onclick="this.select()" id="searchseats" class="searchinput"/>
+    </div>
+
+		<!-- buttons for toggling divs -->
+		<div id="votetotalsbutton" class="mapbutton mapbuttonactive" onclick="uiAttr.clickMapButton(this)">
+				<button onclick="">Vote Totals</button>
+		</div>
+
+		<div id="filtersbutton" class="mapbutton" onclick="uiAttr.clickMapButton(this)">
+				<button onclick="">Filters</button>
+		</div>
+
+		<div id="choroplethsbutton" class="mapbutton" onclick="uiAttr.clickMapButton(this)">
+				<button onclick="">Choropleths</button>
+		</div>
+
+		<div id="predictbutton" class="mapbutton hidden" onclick="uiAttr.clickMapButton(this)">
+				<button onclick="">Predict it</button>
+		</div>
 
 
-				<div id="map">
-						<script>
-							var width = 600, // width and height of map
-								height = 850,
-								active = d3.select(null);
+		<!-- initially hidden divs -->
+		<div id="seat-information" class="dash-box hidden">
 
-							var projection = d3.geo.albers() // variables to change default map position
-								.center([-0.5, 54.6]) //centers vertically and horizontally
-								.rotate([2.25, 0])
-								.parallels([51, 60])
-								.scale(5300)
-								.translate([width / 2, height / 2]);
+					<h2><span id="information-seatname-span"></span><div class="closebox" onclick="uiAttr.hideDiv('seat-information')">X</div></h2>
+					<div>
+							<div id="seat-summary">
 
-							var zoom = d3.behavior.zoom()
-								.translate([0, 0])
-								.scale(1)
-								.scaleExtent([1, 10]) // change depth of potential zoom
-								.on("zoom", zoomed); // starts zoom function
+								<div id="information-party">
+										<div class="party-name"></div>
+										<div class="party-flair"></div>
+								</div>
 
-							var path = d3.geo.path()
-								.projection(projection);
+								<div id="information-gain">
+										<div class="party-name"></div>
+										<div class="party-flair"></div>
+								</div>
 
-							var svg = d3.select("#map").append("svg")
-								.attr("width", width)
-								.attr("height", height)
-								.on("click", stopped, true);
+								<div id="information-region"></div>
+								<div id="information-majority"></div>
+								<div></div>
+								<div id="information-turnout"></div>
+							</div>
 
-							svg.append("rect")
-								.attr("class", "background")
-								.attr("width", width)
-								.attr("height", height)
-								.on("click", reset);
+							<div id="charts">
+									<div id="information-bar"></div>
+									<div id="information-chart"></div>
+									<div id="information-byelection"></div>
+							</div>
+					</div>
+		</div>
 
-							var g = svg.append("g");
-
-							var previousnode, current;
-
-							svg
-								.call(zoom)
-								.call(zoom.event);
-
-					</script>
+		<div id="votetotals" class="dash-box popupdiv hidden">
+      <h2>Vote Totals : <span id="votetotalsarea"></span><div class="closebox" onclick="uiAttr.hideDiv('votetotalsbutton')">X</div></h2>
+			<div>
+				<div id=votetotals-head>
+					<label for="selectareatotals"> Select Region</label>
+								<select id="selectareatotals" selected="selected" onchange="voteTotals.calculate(value)">
+										<option value="null" selected>	</option>
+										<option value="unitedkingdom">United Kingdom</option>
+										<option value="greatbritain">Great Britain</option>
+										<option value="england">England</option>
+										<option value="scotland">Scotland</option>
+										<option value="wales">Wales</option>
+										<option value="northernireland">Northern Ireland</option>
+										<option value="eastofengland">East of England</option>
+										<option value="eastmidlands"> East Midlands</option>
+										<option value="london">London</option>
+										<option value="northeastengland">North East England</option>
+										<option value="northwestengland">North West England</option>
+										<option value="southeastengland">South East England</option>
+										<option value="southwestengland">South West England</option>
+										<option value="westmidlands">West Midlands</option>
+										<option value="yorkshireandthehumber">Yorkshire & Humber</option>
+								</select>
+								<div id="votetotals-turnout">Turnout</div>
 				</div>
 
-				<div id="resetbutton">
-						<button id="resetmap" onclick="reset()">Reset</button>
+				<div id="votetotals-table">
+						<div id=votetotals-table-titles>
+							<div>
+								<div>Party</div>
+								<div id="votetotals-sortseats" onclick="voteTotals.tableSortHandler('seats')">Seats</div>
+								<div>&#177;</div>
+								<div id="votetotals-sortvotes" class="sort-active" onclick="voteTotals.tableSortHandler('votes')">Votes</div>
+								<div id="votetotals-sortvotePercent" onclick="voteTotals.tableSortHandler('votePercent')">Vote %</div>
+								<div id="votetotals-sortvotePercentChange" onclick="voteTotals.tableSortHandler('votePercentChange')">&#177;</div>
+							</div>
+						</div>
+					<div id="votetotals-table-data"></div>
 				</div>
-				<div id="keyonmap">
+			</div>
+		</div>
+
+		<div id ="filters" class="dash-box popupdiv hidden">
+      <h2>Filters<div class="closebox" onclick="uiAttr.hideDiv('filtersbutton')">X</div></h2>
+			<div>
+				<div class="filter-select">
+					<select id="filter-current" onchange="filters.selectHandle(this.id, value)">
+            <option selected value="null">by party...</option>
+            <option value="labour">Labour</option>
+            <option value="conservative">Conservative</option>
+            <option value="libdems">Lib Dems</option>
+            <option value="ukip">UKIP</option>
+            <option value="snp">SNP</option>
+            <option value="plaidcymru">Plaid Cymru</option>
+            <option value="green">Green</option>
+            <option value="dup">DUP</option>
+            <option value="sinnfein">Sinn Féin</option>
+            <option value="sdlp">SDLP</option>
+            <option value="alliance">Alliance</option>
+            <option value="uu">UUP</option>
+            <option value="other">Other</option>
+					 </select>
+				</div>
+
+				<div class="filter-select">
+					<select id="filter-region" onchange="filters.selectHandle(this.id, value), voteTotals.calculate(value)">
+						<option selected value="null"> by region...</option>
+						<option value="england">England</option>
+						<option value="scotland">Scotland</option>
+						<option value="wales">Wales</option>
+						<option value="northernireland">Northern Ireland</option>
+						<option value="eastofengland">East of England</option>
+						<option value="eastmidlands"> East Midlands </option>
+						<option value="london">London</option>
+						<option value="northeastengland">North East England</option>
+						<option value="northwestengland">North West England</option>
+						<option value="southeastengland">South East England</option>
+						<option value="southwestengland">South West England</option>
+						<option value="westmidlands">West Midlands</option>
+						<option value="yorkshireandthehumber">Yorkshire & Humber</option>
+					</select>
+				</div>
+
+				<div class="filter-select">
+					<form id="filter-majority">
+						Majority
+						<input type ="text" name="low" value=0 onchange="filters.majority(this.name, value)"/>
+						to
+						<input type="text" name="high" value=100 onchange="filters.majority(this.name, value)"/>
+					</form>
+				</div>
+
+				<div class="filter-select">
+					<button id="filter-byElection" onclick="filters.byElection(this.className)">By-Elections</button>
+				</div>
+
+				<div id="seatlistbutton" class="filter-select" onclick="uiAttr.clickMapButton(this), filters.getSeatlist()">
+						<button>Generate List</button>
+				</div>
+
+				<div class="filter-select">
+					<button id="filter-reset" onclick="filters.reset()">Reset</button>
+				</div>
+			</div>
+		</div>
+
+		<div id="choropleths" class="dash-box popupdiv hidden">
+				<h2>Choropleths<div class="closebox" onclick="uiAttr.hideDiv('choroplethsbutton')">X</div></h2>
+				<div>
+					<div class="filter-select">
+						<select id="choro-voteshare" onchange = "choro.handle(this.id, value)">
+							<option selected value="null"> vote share...</option>
+							<option value="labour">Labour</option>
+							<option value="conservative">Conservative</option>
+							<option value="libdems">Lib Dems</option>
+							<option value="ukip">UKIP</option>
+							<option value="snp">SNP</option>
+							<option value="plaidcymru">Plaid Cymru</option>
+							<option value="green">Green</option>
+							<option value="dup">DUP</option>
+							<option value="sinnfein">Sinn Féin</option>
+							<option value="sdlp">SDLP</option>
+							<option value="alliance">Alliance</option>
+							<option value="uu">UUP</option>
+						</select>
+					</div>
+
+					<div class="filter-select">
+						<select id="choro-votesharechange" onchange = "choro.handle(this.id, value)">
+							<option selected value="null"> vote share change...</option>
+							<option value="labour">Labour</option>
+							<option value="conservative">Conservative</option>
+							<option value="libdems">Lib Dems</option>
+							<option value="ukip">UKIP</option>
+							<option value="snp">SNP</option>
+							<option value="plaidcymru">Plaid Cymru</option>
+							<option value="green">Green</option>
+							<option value="dup">DUP</option>
+							<option value="sinnfein">Sinn Féin</option>
+							<option value="sdlp">SDLP</option>
+							<option value="alliance">Alliance</option>
+							<option value="uu">UUP</option>
+						</select>
+					</div>
+				</div>
+		</div>
+
+		<div id="seatlist" class="dash-box popupdiv hidden">
+				<h2>Seats<div class="closebox" onclick="uiAttr.hideDiv('seatlistbutton')">X</div></h2>
+				<div>
+					<div>Total:
+						<span id="seatlist-total"></span>
+						<a href="javascript:;" class="" id="seatlist-extend" onclick="uiAttr.clickMapButton(this), filters.extendedList()">Show more</a>
+					</div>
+
+					<div id="seatlist-container"></div>
+				</div>
+		</div>
+
+		<div id="seatlist-extended" class="dash-box popupdiv hidden">
+			<h2>Seat List - Extended<div class="closebox" onclick="uiAttr.hideDiv('seatlist-extend')">X</div></h2>
+			<div>
+				<div id="seatlist-extended-titles">
+					<div>
+						<div id="seatlist-sortname" class="sort-active" onclick="filters.tableSort(this.id)">Seat</div>
+						<div id="seatlist-sortcurrent" onclick="filters.tableSort(this.id)">Party</div>
+						<div id="seatlist-sortmajority" onclick="filters.tableSort(this.id)">Majority</div>
+						<div id="seatlist-sortcon" onclick="filters.tableSort(this.id)">Con</div>
+						<div id="seatlist-sortlab" onclick="filters.tableSort(this.id)">Lab</div>
+						<div id="seatlist-sortlib" onclick="filters.tableSort(this.id)">Lib</div>
+						<div id="seatlist-sortukip" onclick="filters.tableSort(this.id)">UKIP</div>
+						<div id="seatlist-sortgreen" onclick="filters.tableSort(this.id)">Green</div>
+						<div id="seatlist-sortnat" onclick="filters.tableSort(this.id)">NAT</div>
+						<div id="seatlist-sortoth" onclick="filters.tableSort(this.id)">Oth</div>
+					</div>
+				</div>
+
+				<div id="seatlist-extended-data">
 
 				</div>
 
-				<div id="maptitle" class="dash-box">
-					<h2 id="maptitletext"></h2>
-				</div>
+			</div>
+		</div>
 
-				<div id="seatlist" class="dash-box">
-				</div>
+		<div id="userinput" class="dash-box popupdiv hidden">
+			 <h2> User Input<div class="closebox" onclick="uiAttr.hideDiv('predictbutton')">X</div></h2>
+			 <div>
+				 <div id="userinput-table">
+						<div>
+						 	<div></div>
+							<div><div class="party-flair conservative"></div></div>
+							<div><div class="party-flair labour"></div></div>
+							<div><div class="party-flair libdems"></div></div>
+							<div><div class="party-flair ukip"></div></div>
+							<div><div class="party-flair green"></div></div>
+							<div></div>
+							<div><div class="party-flair other"></div></div>
+						</div>
 
-				<div id="methodology" class="dash-box">
-				</div>
+						<div id="userinput-england">
+						 	<div>England</div>
+							<div><input value=0 type="text" onchange="userInput.check('england', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('england', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('england', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('england', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('england', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-england-other>100</span></div>
+						</div>
 
-				<div id="userinput" class="dash-box">
-				</div>
+						<div id="userinput-show" class="">
 
-				<div id="seat-information" class="dash-box">
-						<h2 id="information-seatname"><span id="information-seatname-span"></span><div class="closebox" onclick="$('#seat-information').hide()">X</div></h2>
+							<a href="javascript:;" onclick="userInput.showAdvanced()">Show More</a>
+						</div>
+
+						<div id="userinput-eastofengland" class="hidden">
+						 	<div>E. England</div>
+							<div><input value=0 type="text" onchange="userInput.check('eastofengland', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastofengland', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastofengland', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastofengland', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastofengland', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-eastofengland-other>100</span></div>
+						</div>
+
+						<div id="userinput-eastmidlands" class="hidden">
+						 	<div>E. Midlands</div>
+							<div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-eastmidlands-other>100</span></div>
+						</div>
+
+						<div id="userinput-london" class="hidden">
+						 	<div>London</div>
+							<div><input value=0 type="text" onchange="userInput.check('london', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('london', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('london', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('london', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('london', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-london-other>100</span></div>
+						</div>
+
+						<div id="userinput-northeastengland" class="hidden">
+						 	<div>N.E. England</div>
+							<div><input value=0 type="text" onchange="userInput.check('northeastengland', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northeastengland', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northeastengland', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northeastengland', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northeastengland', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-northeastengland-other>100</span></div>
+						</div>
+
+						<div id="userinput-northwestengland" class="hidden">
+						 	<div>N.W. England</div>
+							<div><input value=0 type="text" onchange="userInput.check('northwestengland', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northwestengland', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northwestengland', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northwestengland', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('northwestengland', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-northwestengland-other>100</span></div>
+						</div>
+
+						<div id="userinput-southeastengland" class="hidden">
+						 	<div>S.E. England</div>
+							<div><input value=0 type="text" onchange="userInput.check('southeastengland', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southeastengland', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southeastengland', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southeastengland', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southeastengland', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-southeastengland-other>100</span></div>
+						</div>
+
+						<div id="userinput-southwestengland" class="hidden">
+						 	<div>S.W. England</div>
+							<div><input value=0 type="text" onchange="userInput.check('southwestengland', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southwestengland', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southwestengland', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southwestengland', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('southwestengland', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-southwestengland-other>100</span></div>
+						</div>
+
+						<div id="userinput-westmidlands" class="hidden">
+						 	<div>W. Midlands</div>
+							<div><input value=0 type="text" onchange="userInput.check('westmidlands', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('westmidlands', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('westmidlands', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('westmidlands', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('westmidlands', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-westmidlands-other>100</span></div>
+						</div>
+
+						<div id="userinput-yorkshireandthehumber" class="hidden">
+						 	<div>Yorks & Humber</div>
+							<div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'green', value)"/></div>
+							<div></div>
+							<div><span id=userinput-yorkshireandthehumber-other>100</span></div>
+						</div>
+
+
+						<div id="userinput-hide" class="hidden">
+							<a href="javascript:;" onclick="userInput.hideAdvanced()">Show Less</a>
+						</div>
 
 
 						<div>
-								<div class="seat-summary">
-										<div id="information-region"></div>
-										<div></div>
-										<div id="information-party">
-												<div class="party-name"></div>
-												<div class="party-flair"></div>
-										</div>
-										<div id="information-gain">
-												<div class="party-name"></div>
-												<div class="party-flair"></div>
-										</div>
-										<div id="information-majority"></div>
-										<div id="information-turnout"></div>
-								</div>
-								<div id="charts">
-										<div id="information-pie"></div>
-										<div id="information-chart"></div>
-										<div id="information-byelection"></div>
-								</div>
-
+						 <div></div>
+						 <div><div class="party-flair conservative"></div></div>
+						 <div><div class="party-flair labour"></div></div>
+						 <div><div class="party-flair libdems"></div></div>
+						 <div><div class="party-flair ukip"></div></div>
+						 <div><div class="party-flair green"></div></div>
+						 <div><div class="party-flair snp"></div></div>
+						 <div><div class="party-flair other"></div></div>
 						</div>
 
+						<div  id="userinput-scotland">
+								<div>Scotland</div>
+								<div><input value=0 type="text" onchange="userInput.check('scotland', 'conservative', value)"/></div>
+								<div><input value=0 type="text" onchange="userInput.check('scotland', 'labour', value)"/></div>
+								<div><input value=0 type="text" onchange="userInput.check('scotland', 'libdems', value)"/></div>
+								<div><input value=0 type="text" onchange="userInput.check('scotland', 'ukip', value)"/></div>
+								<div><input value=0 type="text" onchange="userInput.check('scotland', 'green', value)"/></div>
+								<div><input value=0 type="text" onchange="userInput.check('scotland', 'snp', value)"/></div>
+								<div><span id=userinput-scotland-other>100</span></div>
+						</div>
+
+						<div>
+							<div></div>
+							<div><div class="party-flair conservative"></div></div>
+							<div><div class="party-flair labour"></div></div>
+							<div><div class="party-flair libdems"></div></div>
+							<div><div class="party-flair ukip"></div></div>
+							<div><div class="party-flair green"></div></div>
+							<div><div class="party-flair plaidcymru"></div></div>
+							<div><div class="party-flair other"></div></div>
+						</div>
+
+						<div id="userinput-wales">
+							<div>Wales</div>
+							<div><input value=0 type="text" onchange="userInput.check('wales', 'conservative', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('wales', 'labour', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('wales', 'libdems', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('wales', 'ukip', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('wales', 'green', value)"/></div>
+							<div><input value=0 type="text" onchange="userInput.check('wales', 'plaidcymru', value)"/></div>
+							<div><span id=userinput-wales-other>100</span></div>
+						</div>
+
+						<div>
+						 <div></div>
+						 <div><div class="party-flair dup"></div></div>
+						 <div><div class="party-flair sinnfein"></div></div>
+						 <div><div class="party-flair uu"></div></div>
+						 <div><div class="party-flair sdlp"></div></div>
+						 <div><div class="party-flair alliance"></div></div>
+						 <div></div>
+						 <div><div class="party-flair other"></div></div>
+						</div>
+
+						<div id="userinput-northernireland">
+						 <div>N.I</div>
+						 <div><input value=0 type="text" onchange="userInput.check('northernireland', 'dup', value)"/></div>
+						 <div><input value=0 type="text" onchange="userInput.check('northernireland', 'sinnfein', value)"/></div>
+						 <div><input value=0 type="text" onchange="userInput.check('northernireland', 'uu', value)"/></div>
+						 <div><input value=0 type="text" onchange="userInput.check('northernireland', 'sdlp', value)"/></div>
+						 <div><input value=0 type="text" onchange="userInput.check('northernireland', 'alliance', value)"/></div>
+						 <div></div>
+						 <div><span id=userinput-northernireland-other>100</span></div>
+						</div>
 				</div>
 
-				<div id="totals" class="dash-box">
+				 <div id="userinput-submit">
+					 <button onclick="userInput.handle()">Submit</button>
+					 <button onclick="userInput.reset()">Reset</button>
+				 </div>
+			 </div>
+		</div>
 
-            <h2>Totals</h2>
-
-            <div id="totalstablediv">
-
-                <label for="selectareatotals"> Select Region</label>
-                <select id="selectareatotals" onchange="selectAreaInfo(value)">
-                    <option value="country"></option>
-                    <option value="greatbritain">Great Britain</option>
-                    <option value="england">England</option>
-                    <option value="scotland">Scotland</option>
-                    <option value="wales">Wales</option>
-                    <option value="northernireland">Northern Ireland</option>
-                    <option value="eastofengland">East of England</option>
-                    <option value="eastmidlands"> East Midlands</option>
-                    <option value="london">London</option>
-                    <option value="northeastengland">North East England</option>
-                    <option value="northwestengland">North West England</option>
-                    <option value="southeastengland">South East England</option>
-                    <option value="southwestengland">South West England</option>
-                    <option value="westmidlands">West Midlands</option>
-                    <option value="yorkshireandthehumber">Yorkshire & Humber</option>
-                </select>
-
-								<div id="totalturnout">Turnout</div>
-
-
-                <table id="totalstable" class="tablesorter">
-                    <thead>
-                    <tr>
-                        <th>Party</th>
-                        <th class="tablesorter-header">Seats</th>
-                        <th class="tablesorter-header">Change</th>
-                        <th class="tablesorter-header">Votes</th>
-												<th class="tablesorter-header">Vote %</th>
-                        <th class="tablesorter-header">% +/-</th>
-                    </tr>
-
-                    </thead>
-
-                    <tbody id="totalstableinfo"></tbody>
-                    <tfoot id="totalstablefoot"></tfoot>
-
-                </table>
-            </div>
-        </div>
-
-				<div id="searchforseat" class="dash-box">
-            <h2>Seat Search</h2>
-            <div>
-                <input type="text" id="searchseats" class="searchinput"/>
-            </div>
-				</div>
-
-
-
-			<div id="filters" class="dash-box">
-
-					<h2>Filters</h2>
-
-                    <div>
-                        <label for="dropdownparty">by party</label>
-                        <select id="dropdownparty" onchange="filterStates[0].party = value, filterMap()">
-                            <option value="null"></option>
-                            <option value="labour">Labour</option>
-                            <option value="conservative">Conservative</option>
-                            <option value="libdems">Liberal Democrats</option>
-                            <option value="ukip">UKIP</option>
-                            <option value="snp">SNP</option>
-                            <option value="plaidcymru">Plaid Cymru</option>
-                            <option value="green">Green</option>
-                            <option value="dup">DUP</option>
-                            <option value="sinnfein">Sinn Féin</option>
-                            <option value="sdlp">SDLP</option>
-                            <option value="alliance">Alliance</option>
-                            <option value="uu">UUP</option>
-                            <option value="other">Other</option>
-                        </select>
-
-                        <label id="dropdowngainslabel" for="dropdowngains">by gains/no change</label>
-                        <select id="dropdowngains" onchange="filterStates[1].gain = value, filterMap()">
-                            <option value="null"></option>
-                            <option value="gain">Gains</option>
-                            <option value="hold">No Change</option>
-                        </select>
-
-                        <label for="dropdownregion">by region</label>
-                        <select id="dropdownregion" onchange="filterStates[2].region = value, filterMap(), selectAreaInfo(value)">
-                            <option value="null"></option>
-                            <option value="eastofengland">East of England</option>
-                            <option value="eastmidlands"> East Midlands </option>
-                            <option value="london">London</option>
-                            <option value="northeastengland">North East England</option>
-                            <option value="northwestengland">North West England</option>
-                            <option value="northernireland">Northern Ireland</option>
-                            <option value="scotland">Scotland</option>
-                            <option value="southeastengland">South East England</option>
-                            <option value="southwestengland">South West England</option>
-                            <option value="wales">Wales</option>
-                            <option value="westmidlands">West Midlands</option>
-                            <option value="yorkshireandthehumber">Yorkshire & Humber</option>
-                        </select>
-                        <label>by majority percentage</label>
-													<form id="majority">
-                            <input type ="text" name="majoritylow" value=0 onchange="filterStates[3].majoritylow = parseFloat(value), filterMap()"/>
-                            to
-                            <input type="text" name="majorityhigh" value=100 onchange="filterStates[4].majorityhigh = parseFloat(value), filterMap()"/>
-													</form>
-
-                        <div class="filter-buttons">
-                            <button id="filtertolist" onclick="generateSeatList()">Generate seat list</button>
-                            <button id="filterbutton" onclick="resetFilter()">Reset</button>
-                        </div>
-
-                        </div>
-				</div>
-
-
-				<div class="filteredlisttablecontainer dash-box">
-                    <h2>Seats</h2>
-                    <div>
-                        <div id="totalfilteredseats"></div>
-                        <div id="filteredlisttable"></div>
-                    </div>
-                </div>
-
-
-				<div id="choropleths" class="dash-box">
-					<h2>Choropleths</h2>
-
-					<div id="votesharebyparty">
-						<label for="votesharebypartyselect">Vote share: </label>
-						<select id="votesharebypartyselect" onchange ="partyVoteShare = value; choroplethInitiator(partyVoteShare, 'percent')">
-								<option value="null"></option>
-								<option value="labour">Labour</option>
-								<option value="conservative">Conservative</option>
-								<option value="libdems">Liberal Democrats</option>
-								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
-								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
-							</select>
-					</div>
-
-					<div id="votesharechangebyparty">
-
-						<label for="votesharechangebypartyselect">Vote share +/-: </label>
-						<select id="votesharechangebypartyselect" onchange ="partyVoteShareChange = value; choroplethInitiator(partyVoteShareChange, 'change')">
-								<option value="null"></option>
-								<option value="labour">Labour</option>
-								<option value="conservative">Conservative</option>
-								<option value="libdems">Liberal Democrats</option>
-								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
-								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
-						</select>
-					</div>
-
-					<div id="swingfromto">
-
-							<label for="swingfrom">Swing between: </label>
-							<select id="swingfrom" onchange ="swingState[0] = value; choroplethInitiator(swingState, 'swing')">
-								<option value="null"></option>
-								<option value="labour">Labour</option>
-								<option value="conservative">Conservative</option>
-								<option value="libdems">Liberal Democrats</option>
-								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
-								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
-							</select>
-
-
-							<label for="swingto"> and </label>
-							<select id="swingto" onchange ="swingState[1] = value; choroplethInitiator(swingState, 'swing')">
-								<option value="null"></option>
-								<option value="labour">Labour</option>
-								<option value="conservative">Conservative</option>
-								<option value="libdems">Liberal Democrats</option>
-								<option value="ukip">UKIP</option>
-								<option value="snp">SNP</option>
-								<option value="plaidcymru">Plaid Cymru</option>
-								<option value="green">Green</option>
-								<option value="dup">DUP</option>
-								<option value="sinnfein">Sinn Féin</option>
-								<option value="sdlp">SDLP</option>
-								<option value="alliance">Alliance</option>
-								<option value="uu">UUP</option>
-						</select>
-					</div>
-
-				</div>
-
-
-
-<!-- -->
-</div>
-
-<footer>
-    <p>Copyright 2015 principalfish.co.uk</p>
-	<script>
-		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-		(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-		m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-		ga('create', 'UA-58696407-1', 'auto');
-		ga('send', 'pageview');
-
-	</script>
-</footer>
-
+	</div>
 </body>
+
+
+<!-- <script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-58696407-1', 'auto');
+	ga('send', 'pageview');
+</script>

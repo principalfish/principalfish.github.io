@@ -1,3 +1,1861 @@
-/*! principalfish.github.io 21-02-2017 */
-function choroplethInitiator(a,b){if("null"==a)$.each(seatData,function(a){seatData[a].seat_info.current_colour=1}),$(".map").remove(),$("#keyonmap").html(""),loadmap();else if(filteredSeatsTotal>0)if("swing"!=b||"null"!=swingState[0]&&"null"!=swingState[1]){maxMin=getChoroplethMaxMin(a,b);var c=maxMin[0],d=maxMin[1];generateChoropleth(a,b,c,d)}else;}function getChoroplethMaxMin(a,b){var c=[];$.each(seatDataForChoropleth,function(d){var e;"percent"==b||"change"==b?a in seatDataForChoropleth[d].party_info&&(e=seatDataForChoropleth[d].party_info[a][b]):"swing"==b&&a[0]in seatDataForChoropleth[d].party_info&&a[1]in seatDataForChoropleth[d].party_info&&(e=(seatDataForChoropleth[d].party_info[a[1]].change-seatDataForChoropleth[d].party_info[a[0]].change)/2),void 0!=e&&c.push(e)});var d=Math.max.apply(Math,c),e=Math.min.apply(Math,c);if("change"==b||"swing"==b)var d=Math.max(Math.abs(d),Math.abs(e)),e=-d;return"percent"==b&&d>60&&(d=60),[d,e]}function generateChoropleth(a,b,c,d){var e,f=c-d;if("percent"==b){var g="."+a;choroplethColour=$(g).css("background-color"),e=$(g).css("color")}else"change"==b||"swing"==b?(choroplethColour="rgb(0, 0, 255)",e="white"):(choroplethColour="rgb(255, 0, 0)",e="white");$.each(seatDataForChoropleth,function(e){var g=seatDataForChoropleth[e].seat_info.info_id,e=seatsFromIDs[g],h=getChoroplethOpacity(a,b,c,d,f,seatsFromIDs[g],choroplethColour),i=h[0],j=h[1];d3.select(g).style("fill",i).attr("opacity",j)}),keyOnMap(a,b,c,d,f,choroplethColour,e)}function getChoroplethOpacity(a,b,c,d,e,f,g){var h,i;if("percent"==b||"change"==b){if(!(a in seatDataForChoropleth[f].party_info))return[null,0];i=seatDataForChoropleth[f].party_info[a][b],"change"==b&&0>i&&(g="red"),"percent"==b?(h=(i-d)/e,seatData[f].seat_info.current_colour=h):"change"==b&&(h=Math.abs(i/c))}else if("swing"==b){if(!(a[0]in seatDataForChoropleth[f].party_info&&a[1]in seatDataForChoropleth[f].party_info))return[null,0];i=(seatDataForChoropleth[f].party_info[a[1]].change-seatDataForChoropleth[f].party_info[a[0]].change)/2,"swing"==b&&0>i&&(g="red"),h=Math.abs(i/c)}return seatData[f].seat_info.current_colour=h,[g,h]}function keyOnMap(a,b,c,d,e,f,g){$("#keyonmap").html("");var h;if("percent"==b&&(h=partylist[a]+" Vote Share"),"change"==b&&(h=partylist[a]+" Vote Share Change"),"swing"==b&&(h="Swing between "+partylist[a[0]]+" and "+partylist[a[1]]),$("#maptitletext").text(h),$("#maptitle").show(),"null"==a);else{for(var i=e/5,j={},k=0;6>k;k++){var l=d+i*k,m=(l-d)/e;("change"==b||"swing"==b)&&(l=c-c/5*k,m=l/c),l=["percent","change","swing"].indexOf(b)>-1?l.toFixed(1):l.toFixed(0),"percent"==b&&60==l&&(l+="+"),j[l]=m}var n;if(n=["percent","change","swing"].indexOf(b)>-1?"%":"",$.each(j,function(a){var b=f.replace(")",","+j[a]+")").replace("rgb","rgba");$("#keyonmap").append('<div style=" color:'+g+"; text-align: center; background-color: "+b+'">'+a+n+"</div>")}),"change"==b||"swing"==b){for(var j={},k=1;6>k;k++){var l=c/5*k,m=l/c;l=l.toFixed(1),j[l]=m}$.each(j,function(a){$("#keyonmap").append('<div style="text-align: center; background-color: rgba(255, 0, 0, '+j[a]+'); color: white;">-'+a+"%</div>")})}}}function filterMap(){filteredSeatsTotal=0,d3.selectAll(".map").attr("opacity",1),$("#keyonmap").html(""),$("#seat-information").hide(),$("#maptitle").hide(),$("#votesharebypartyselect option:eq(0)").prop("selected",!0),$("#votesharechangebypartyselect option:eq(0)").prop("selected",!0),$("#swingfrom option:eq(0)").prop("selected",!0),$("#swingto option:eq(0)").prop("selected",!0),swingState=["null","null"];var a=filterStates[0].party,b=filterStates[1].gain,c=filterStates[2].region,d=filterStates[3].majoritylow,e=filterStates[4].majorityhigh;isNaN(d)&&(d=0),isNaN(e)&&(e=100),seatsAfterFilter=[],seatDataForChoropleth={},g.selectAll(".map").attr("id","filtertime"),"null"==a?g.selectAll("#filtertime").attr("id","partyfiltered"):g.selectAll("#filtertime").attr("style",function(b){return a!=seatData[b.properties.name].seat_info.winning_party?"opacity: 0.02":void 0}).attr("id",function(b){return a==seatData[b.properties.name].seat_info.winning_party?"partyfiltered":void 0}),"null"==b?g.selectAll("#partyfiltered").attr("id","gainfiltered"):("gain"==b&&g.selectAll("#partyfiltered").attr("style",function(a){return"hold"==seatData[a.properties.name].seat_info.change?"opacity: 0.02":void 0}).attr("id",function(a){return"gain"==seatData[a.properties.name].seat_info.change?"gainfiltered":void 0}),"hold"==b&&g.selectAll("#partyfiltered").attr("style",function(a){return"gain"==seatData[a.properties.name].seat_info.change?"opacity: 0.02":void 0}).attr("id",function(a){return"hold"==seatData[a.properties.name].seat_info.change?"gainfiltered":void 0})),"null"==c?g.selectAll("#gainfiltered").attr("id","regionfiltered"):g.selectAll("#gainfiltered").attr("style",function(a){return c!=seatData[a.properties.name].seat_info.area?"opacity: 0.02":void 0}).attr("id",function(a){return c==seatData[a.properties.name].seat_info.area?"regionfiltered":void 0}),g.selectAll("#regionfiltered").attr("style",function(a){return parseFloat(seatData[a.properties.name].seat_info.maj_percent)<d||parseFloat(seatData[a.properties.name].seat_info.maj_percent)>e?"opacity: 0.02":void 0}).each(function(a){parseFloat(seatData[a.properties.name].seat_info.maj_percent)>=d&&parseFloat(seatData[a.properties.name].seat_info.maj_percent)<=e&&seatsAfterFilter.push(a),seatDataForChoropleth[a.properties.name]=seatData[a.properties.name],filteredSeatsTotal+=1}),g.selectAll(".map").attr("id",function(a){return"i"+a.properties.info_id}),generateSeatList(),$(seatTotalContainer).html(" "),$(seatListContainer).html(" ")}function resetFilter(){filterStates[0].party="null",filterStates[1].gain="null",filterStates[2].region="null",filterStates[3].majoritylow=0,filterStates[4].majorityhigh=100;swingState=["null","null"],partyVoteShare="null",partyVoteShareChange="null",filterMap(),$.each(seatData,function(a){seatData[a].seat_info.current_colour=1}),$("#votesharebypartyselect option:eq(0)").prop("selected",!0),$("#votesharechangebypartyselect option:eq(0)").prop("selected",!0),$("#swingfrom option:eq(0)").prop("selected",!0),$("#swingto option:eq(0)").prop("selected",!0),$("#dropdownparty option:eq(0)").prop("selected",!0),$("#dropdowngains option:eq(0)").prop("selected",!0),$("#dropdownregion option:eq(0)").prop("selected",!0),$("#majority").get(0).reset(),$(seatTotalContainer).html(" "),$(seatListContainer).html(" ")}function generateSeatList(){seatsAfterFilter.sort(function(a,b){var c=a.properties.name.toLowerCase(),d=b.properties.name.toLowerCase();return d>c?-1:c>d?1:0}),$("#totalfilteredseats").html(" "),$("#filteredlisttable").html(" "),$(seatTotalContainer).html(" "),$(seatListContainer).html(" "),$(seatTotalContainer).append("<p>Total : "+seatsAfterFilter.length+"</p>"),$.each(seatsAfterFilter,function(a){"gain"==filterStates[1].gain&&"null"!=filterStates[0].party?$(seatListContainer).append('<div onclick="zoomToClickedFilteredSeat(seatsAfterFilter['+a+'])"><div class="party-flair '+seatData[seatsAfterFilter[a].properties.name].seat_info.incumbent+'"></div>'+seatsAfterFilter[a].properties.name+"</div>"):$(seatListContainer).append('<div onclick="zoomToClickedFilteredSeat(seatsAfterFilter['+a+'])"><div class="party-flair '+seatData[seatsAfterFilter[a].properties.name].seat_info.winning_party+'"></div>'+seatsAfterFilter[a].properties.name+"</div>")})}function searchSeats(a){$.each(searchSeatData,function(b){searchSeatData[b].properties.name==a&&zoomToClickedFilteredSeat(searchSeatData[b])})}function getData(a){return $.ajax({cache:!0,dataType:"json",url:a,type:"GET"})}function getSeatInfo(a){$.each(a,function(b){seatData[b]=a[b],totalElectorate+=a[b].seat_info.electorate;var c=seatData[b].seat_info.incumbent;("independent"==c||"speaker"==c||"respect"==c)&&(seatData[b].seat_info.incumbent="other")}),loadmap(),areas=regions.england.concat(regions.scotland).concat(regions.wales).concat(regions.northernireland),getVoteTotals("all"),getVoteTotals("greatbritain"),getVoteTotals("england");for(area in areas)getVoteTotals(areas[area]);displayVoteTotals(nationalVoteTotals);var b=100*nationalVoteTotals[nationalVoteTotals.length-1].votes/totalElectorate;isNaN(b)&&(b=100),b="Turnout : "+String(b.toFixed(2))+"%",document.getElementById("totalturnout").innerHTML=b}function showSeatList(a){$("#polltablebody").html(""),$(function(){$("#seatlist").load("seatlists/seatlist"+a+".html")}),$("#seatlist").show(),currentZindex+=1,$("#seatlist").css("z-index",currentZindex)}function showMethodology(){$("#methodology").html(""),$(function(){$("#methodology").load("methodology.html")}),$("#methodology").show(),currentZindex+=1,$("#methodology").css("z-index",currentZindex)}function showUserInput(){$("#userinput").html(""),$(function(){$("#userinput").load("userinput.html")}),$("#userinput").show(),$("#userinput").draggable(),currentZindex+=1,$("#userinput").css("z-index",currentZindex)}function loadTheMap(a){seatData={},seatsAfterFilter=[],seatNames=[],searchSeatData=[],totalElectorate=0,$(".map").remove(),$(document).ready(function(){getData("data/"+a+"/info.json").done(getSeatInfo)})}function alterTheUI(a){pageSetting=a,resetFilter(),$("#selectareatotals option:eq(0)").prop("selected",!0);var b="#nav"+previousSetting,c="#nav"+pageSetting;$(b).attr("class","notactive"),$(c).attr("class","currentpage"),"2016parliament"==a&&($("title").text("UK Election Maps - Current Parliament"),$("#headertitle").text("Current Parliament"),$("#dropdowngainslabel").show(),$("#dropdowngains").show(),$("#swingfromto").show(),$("#votesharechangebyparty").show(),$("#navseatlist").show(),$("#navprojectionmethodology").hide(),$("#navprojectionuserinput").hide(),$("#userinput").hide()),"2015parliament"==a&&($("title").text("UK Election Maps - 2015 Parliament"),$("#headertitle").text("2015 Parliament"),$("#dropdowngainslabel").show(),$("#dropdowngains").show(),$("#swingfromto").show(),$("#votesharechangebyparty").show(),$("#navseatlist").show(),$("#navprojectionmethodology").hide(),$("#navprojectionuserinput").hide(),$("#userinput").hide()),"2010parliament"==a&&($("title").text("UK Election Maps - 2010 Parliament"),$("#headertitle").text("2010 Parliament"),$("#dropdowngainslabel").hide(),$("#dropdowngains").hide(),$("#swingfromto").hide(),$("#votesharechangebyparty").hide(),$("#navseatlist").hide(),$("#navprojectionmethodology").hide(),$("#navprojectionuserinput").hide(),$("#userinput").hide()),"2015projection"==a&&($("title").text("UK Election Maps - 2015 Projection"),$("#headertitle").text("2015 Projection"),$("#dropdowngainslabel").show(),$("#dropdowngains").show(),$("#swingfromto").show(),$("#votesharechangebyparty").show(),$("#navseatlist").show(),$("#navprojectionmethodology").show(),$("#navprojectionuserinput").hide(),$("#userinput").hide()),"2020projection"==a&&($("title").text("UK Election Maps - 2020 Projection"),$("#headertitle").text("2020 Projection"),$("#dropdowngainslabel").show(),$("#dropdowngains").show(),$("#swingfromto").show(),$("#votesharechangebyparty").show(),$("#navseatlist").show(),$("#navprojectionmethodology").show(),$("#navprojectionuserinput").show(),previousYear=String(parseInt(pageSetting.slice(0,4)-5)),getData("data/"+previousYear+"parliament/info.json").done(getOldInfo)),previousSetting=a}function zoomToClickedFilteredSeat(a){var b="#i"+a.properties.info_id;if(void 0!=previousnode){var c=seatsFromIDs[previousnode];previous_opacity=seatData[c].seat_info.current_colour}void 0==previous_opacity&&(previous_opacity=1);var d=seatsFromIDs[b];current_colour=seatData[d].seat_info.current_colour,void 0==current_colour&&(current_colour=1),previous=d3.select(previousnode),current=d3.select(b),flashSeat(previous,current,previous_opacity,current_colour);var e=path.bounds(a),f=Math.pow(e[1][0]-e[0][0],.5),g=Math.pow(e[1][1]-e[0][1],.5),h=(e[0][0]+e[1][0])/2,i=(e[0][1]+e[1][1])/2,j=.025/Math.max(f/width,g/height),k=[width/2-j*h,height/3-j*i];disableZoom(),svg.transition().duration(1500).call(zoom.translate(k).scale(j).event).each("end",enableZoom),$("#seat-information").show(),seatinfo(a),previousnode=b}function flashSeat(a,b,c,d){function e(){void 0!=b&&b.transition().duration(1500).attr("opacity",.02).transition().duration(1500).attr("opacity",d).each("end",e)}a.transition().attr("opacity",c),e()}function disableZoom(){svg.on("mousedown.zoom",null),svg.on("mousemove.zoom",null),svg.on("dblclick.zoom",null),svg.on("touchstart.zoom",null),svg.on("wheel.zoom",null),svg.on("mousewheel.zoom",null),svg.on("MozMousePixelScroll.zoom",null)}function enableZoom(){svg.call(zoom)}function reset(){$("#seat-information").is(":visible")&&$("#seat-information").hide(),disableZoom(),svg.transition().duration(1500).call(zoom.translate([0,0]).scale(1).event).each("end",enableZoom)}function zoomed(){g.style("stroke-width",1.5/d3.event.scale+"px"),g.attr("transform","translate("+d3.event.translate+")scale("+d3.event.scale+")")}function stopped(){d3.event.defaultPrevented&&d3.event.stopPropagation()}function loadmap(){d3.json("data/map.json",function(a,b){return a?console.error(a):(g.selectAll(".map").data(topojson.feature(b,b.objects.map).features).enter().append("path").attr("class",function(a){return seatname=a.properties.name,seatname in seatData?(seatParty=seatData[seatname].seat_info.winning_party,"map "+seatParty):"not_here"}).attr("opacity",1).attr("id",function(a){return"i"+a.properties.info_id}).attr("d",path).on("click",zoomToClickedFilteredSeat).append("svg:title").text(function(a){return a.properties.name}).each(function(a){searchSeatData.push(a),seatNames.push(a.properties.name),seatsFromIDs["#i"+a.properties.info_id]=a.properties.name,seatData[a.properties.name].seat_info.info_id="#i"+a.properties.info_id,a.properties.name in seatData&&(seatsAfterFilter.push(a),seatDataForChoropleth[a.properties.name]=seatData[a.properties.name])}),void g.append("path").datum(topojson.mesh(b,b.objects.map,function(a,b){return seatData[a.properties.name].seat_info.area!=seatData[b.properties.name].seat_info.area&&a!=b})).attr("d",path).attr("class","boundaries"))})}function seatinfo(a){var b=seatData[a.properties.name].seat_info;$(partyFlairElement).removeClass(oldPartyClass),$(gainFlairElement).removeClass(oldIncumbentClass),seatTitle=a.properties.name,void 0!=seatData[a.properties.name].seat_info.by_election&&(seatTitle+="*"),$("#information-seatname-span").text(seatTitle),$("#information-region").text("Region: "+regionlist[b.area]),$(partyNameElement).text("Party: "+partylist[b.winning_party]),$(partyFlairElement).addClass(b.winning_party),b.winning_party!=b.incumbent?($(gainNameElement).text("Gain from "+partylist[b.incumbent]),$(gainFlairElement).addClass(b.incumbent)):$(gainNameElement).text(""),$("#information-majority").text("Majority: "+b.maj_percent+" % = "+b.maj);var c=(100*b.turnout/b.electorate).toFixed(2)+"%";$("#information-turnout").text("Turnout : "+c),$("#information-pie").html(piechart(a)),oldPartyClass=b.winning_party,oldIncumbentClass=b.incumbent}function piechart(a){$("#information-pie").empty(),$("#information-chart").empty(),$("#information-chart").html("<table></table>");var b=[],c=seatData[a.properties.name].party_info;$.each(c,function(a){votes=c[a].percent,votes>0&&b.push({party:a,votes:votes,vote_change:c[a].change})});var d=[];$.each(b,function(a){b[a].votes>0&&"others"!=b[a].party&&d.push(b[a])}),d.sort(function(a,b){return b.votes-a.votes});var e=Object.keys(c);-1!=e.indexOf("others")&&c.others.percent>0&&d.push({party:"others",votes:c.others.percent,vote_change:c.others.change});var f=[];$.each(d,function(a){d[a].votes>=3&&f.push(d[a])});var g=f.length,h={top:10,right:0,bottom:10,left:25},i=250-h.left-h.right,j=225-h.top-h.bottom,k=2,l=d3.min([60,i/g-k]),m=250,n=d3.select("#information-pie").append("svg").attr("width",i+h.left+h.right).attr("height",j+h.top+h.bottom).append("g").attr("transform","translate("+h.left+","+h.top+")"),o=d3.scale.ordinal().range([0,g*(l+2)]),p=d3.svg.axis().scale(o).orient("bottom"),q=d3.scale.linear().range([j,0]),r=d3.svg.axis().scale(q).orient("left").ticks(6),s=d3.max(f,function(a){return a.votes});q.domain([0,d3.max([60,s+(10-s%10)])]),n.append("g").attr("class","x axis").attr("transform","translate(0,"+j+")").call(p),n.append("g").attr("class","y axis").call(r),n.selectAll("rect").data(f).enter().append("rect").attr("x",function(a,b){return k*(b+1)+l*b}).attr("width",l).attr("y",j).attr("height",0).attr("class",function(a){return a.party}).transition().delay(function(a,b){return b*m/2}).duration(m).attr("y",function(a){return q(a.votes)}).attr("height",function(a){return j-q(a.votes)}),$.each(d,function(b){var c="";d[b].vote_change>0&&(c="+");var e;e=""==d[b].vote_change?"":parseFloat(d[b].vote_change).toFixed(2);var f='<tr><td><div class= " party-flair '+d[b].party+'"></div><td style="max-width: 170px;">'+seatData[a.properties.name].party_info[d[b].party].name+"</td><td>"+parseFloat(d[b].votes).toFixed(2)+"%</td>";f+="2010parliament"==pageSetting?"</tr>":"<td>"+c+e+"</td></tr>",$("#information-chart table").append(f)}),null!=seatData[a.properties.name].seat_info.byelection&&$("#information-byelection").text("By-election since "+pageSetting.slice(0,4)),null!=seatData[a.properties.name].seat_info.by_election?$("#information-byelection").text("*By-election on "+seatData[a.properties.name].seat_info.by_election):$("#information-byelection").text("")}function getOldInfo(a){$.each(a,function(b){var c={},d=0;$.each(parties,function(e){var f=parties[e];void 0!=a[b].party_info[f]&&("other"==f||"others"==f?d+=a[b].party_info[f].percent:c[f]=a[b].party_info[f].percent)}),oldSeatData[b]=c,oldSeatData[b].other=d,oldSeatData[b].area=a[b].seat_info.area,oldSeatData[b].incumbent=a[b].seat_info.winning_party})}function userInputCheck(a,b){var c=sumFormPercentages(a).toFixed(0);spanId="#other"+b,0>c?$(spanId).html("< 0"):$(spanId).html(c)}function sumFormPercentages(a){var b=$(a),c=b.find(".inputnumbers"),d=0;c.each(function(){var a=Number($(this).val());isNaN(a)&&(a=0),d+=a});var e=100-d;return e}function analyseUserInput(a,b){var c=sumFormPercentages(a);if(0>c)alert("Percentages add up to more than 100, try again.");else{if("england"==b){$.each(englandUserNumbers,function(a){isNaN(englandUserNumbers[a])&&(englandUserNumbers[a]=0)}),englandUserNumbers.other=100-englandUserNumbers.labour-englandUserNumbers.conservative-englandUserNumbers.libdems-englandUserNumbers.ukip-englandUserNumbers.green;var d=englandUserNumbers}if("scotland"==b){$.each(scotlandUserNumbers,function(a){isNaN(scotlandUserNumbers[a])&&(scotlandUserNumbers[a]=0)}),scotlandUserNumbers.other=100-scotlandUserNumbers.labour-scotlandUserNumbers.conservative-scotlandUserNumbers.libdems-scotlandUserNumbers.ukip-scotlandUserNumbers.green-scotlandUserNumbers.snp;var d=scotlandUserNumbers}if("wales"==b){$.each(walesUserNumbers,function(a){isNaN(walesUserNumbers[a])&&(walesUserNumbers[a]=0)}),walesUserNumbers.other=100-walesUserNumbers.labour-walesUserNumbers.conservative-walesUserNumbers.libdems-walesUserNumbers.ukip-walesUserNumbers.green-walesUserNumbers.plaidcymru;var d=walesUserNumbers}if("northernireland"==b){$.each(northernirelandUserNumbers,function(a){isNaN(northernirelandUserNumbers[a])&&(northernirelandUserNumbers[a]=0)}),northernirelandUserNumbers.other=100-northernirelandUserNumbers.dup-northernirelandUserNumbers.sdlp-northernirelandUserNumbers.sinnfein-northernirelandUserNumbers.uu-northernirelandUserNumbers.alliance;var d=northernirelandUserNumbers}projection_getChange(d,b),alterMap(b)}}function projection_getChange(a,b){var c={},d={};for(party in a){var e=previousTotalsByYearByParty[previousYear][b][party],f=previousTotalsByYearByParty[previousYear][b].turnout,g=100*parseFloat(e)/f;c[party]=a[party]-g}for(area in regions[b]){var h={};k=0;for(party in a){var i=100*previousTotalsByYearByParty[previousYear][regions[b][area]][party]/parseFloat(previousTotalsByYearByParty[year][regions[b][area]].turnout),j=i+c[party];0>=j&&(j=0),h[party]=j}var k=0;for(party in h)k+=h[party];var l=k/100;for(party in h)h[party]/=l;d[regions[b][area]]=h}projection_getRegionalChange(b,a,d)}function projection_getRegionalChange(a,b,c){var d={},e={};for(area in regions[a]){var f={},g={};for(party in b){var h=100*previousTotalsByYearByParty[previousYear][regions[a][area]][party]/parseFloat(previousTotalsByYearByParty[year][regions[a][area]].turnout);g[party]=h;var i=c[regions[a][area]][party]/h;f[party]=i}e[regions[a][area]]=g,d[regions[a][area]]=f}projection_seatAnalysis(a,b,d,e)}function projection_seatAnalysis(a,b,c,d){for(area in regions[a])for(seat in seatData)if(oldSeatData[seat].area==regions[a][area]){var e={};for(party in b){var f=oldSeatData[seat][party],g=d[regions[a][area]][party],h=f/g;if(0==h)e[party]=0;else{var i=c[regions[a][area]][party]-1,j=1+i/Math.sqrt(h);.15>j&&(j=.15);var k=j*oldSeatData[seat][party];oldSeatData[seat].incumbent==party&&("conservative"==party&&(k+=2),"libdems"==party&&(k+=4),"ukip"==party&&(k+=8),"green"==party&&(k+=8),"labour"==party&&(k+=1),"snp"==party&&(k+=0),"plaidcymru"==party&&(k+=4)),isNaN(k)&&(k=0),e[party]=k}}var l=0;for(party in e)l+=e[party];var m=l/100;for(party in e)e[party]/=m;var n=[];for(party in e)n.push([party,e[party]]);n.sort(function(a,b){return a[1]-b[1]});var o,p=n.pop(),q=n.pop(),r=p[0],s=p[1]-q[1];o=p==seatData[seat].incumbent?"hold":"gain",seatData[seat].seat_info.change=o,seatData[seat].seat_info.winning_party=r,seatData[seat].seat_info.maj=parseInt(s*seatData[seat].seat_info.turnout/100),seatData[seat].seat_info.maj_percent=parseFloat(s.toFixed(2));for(party in e)if(e[party]>0){var t=e[party]-oldSeatData[seat][party],u=e[party],v=e[party]*seatData[seat].seat_info.turnout/100;seatData[seat].party_info[party].change=parseFloat(t.toFixed(2)),seatData[seat].party_info[party].percent=parseFloat(u.toFixed(2)),seatData[seat].party_info[party].total=parseInt(v)}}}function alterMap(a){seatsAfterFilter=[],totalElectorate=0,$(".map").remove(),getSeatInfo(seatData)}function resetInputs(){$("#englandinput").get(0).reset(),$("#scotlandinput").get(0).reset(),$("#walesinput").get(0).reset(),$("#northernirelandinput").get(0).reset(),$("#otherengland").text("100"),$("#otherscotland").text("100"),$("#otherwales").text("100"),$("#othernorthernireland").text("100"),englandUserNumbers={conservative:0,labour:0,libdems:0,ukip:0,green:0},scotlandUserNumbers={conservative:0,labour:0,libdems:0,ukip:0,green:0,snp:0},walesUserNumbers={conservative:0,labour:0,libdems:0,ukip:0,green:0,plaidcymru:0},northernirelandUserNumbers={dup:0,sinnfein:0,sdlp:0,uu:0,alliance:0},loadTheMap(pageSetting)}function displayVoteTotals(a){$("#totalstable").remove();var b='<table id="totalstable" class="tablesorter"><thead><tr><th>Party</th><th class="tablesorter-header">Seats</th>';simpleTables=["2010parliament","2016parliament"],b+=simpleTables.indexOf(pageSetting)>=0?'<th class="tablesorter-header">Votes</th><th class="tablesorter-header">Vote %</th></tr></thead><tbody id="totalstableinfo"></tbody><tfoot id="totalstablefoot"></tfoot></table>':'<th class="tablesorter-header">Change</th><th class="tablesorter-header">Votes</th><th class="tablesorter-header">Vote %</th>	<th class="tablesorter-header">% +/-</th></tr></thead><tbody id="totalstableinfo"></tbody><tfoot id="totalstablefoot"></tfoot></table>',$("#totalstablediv").append(b);var c,d,e;$.each(a,function(b){if(d=a[b].change>0?"+":"",e=a[b].percentchange>0?"+":"",c=void 0==a[b].percentchange?"":a[b].percentchange.toFixed(2),b==a.length-1){var f='<tr style="text-align: center;" class="'+a[b].code+'"><td style="text-align: left;">'+partylist[a[b].code]+'</td><td style="text-align: right;">'+a[b].seats+"</td>";f+=simpleTables.indexOf(pageSetting)>=0?'<td style="text-align: right;">'+a[b].votes.toLocaleString()+"</td><td></td></tr>":'<td></td><td style="text-align: right;">'+a[b].votes.toLocaleString()+"</td><td></td><td></td></tr>",$("#totalstablefoot").append(f)}else if(a[b].votes>0){var g='<tr><td><div class="party-flair '+a[b].code+'"></div>'+partylist[a[b].code]+'</td><td style="text-align: right;">'+a[b].seats+"</td>";g+=simpleTables.indexOf(pageSetting)>=0?'<td style="text-align: right;">'+a[b].votes.toLocaleString()+'</td><td style="text-align: center;">'+a[b].votepercent.toFixed(2)+"</td></tr>":'<td style="text-align: right;">'+d+a[b].change+'</td><td style="text-align: right;">'+a[b].votes.toLocaleString()+'</td><td style="text-align: center;">'+a[b].votepercent.toFixed(2)+"</td><td>"+e+c+"</td></tr>",$("#totalstableinfo").append(g)}}),$("#totalstable").tablesorter({sortInitialOrder:"desc",headers:{0:{sorter:!1}},sortList:[[3,1]]})}function selectAreaInfo(a){"country"==a&&displayVoteTotals(nationalVoteTotals),"null"==a&&displayVoteTotals(nationalVoteTotals),"england"==a&&displayVoteTotals(englandVoteTotals),"scotland"==a&&displayVoteTotals(scotlandVoteTotals),"eastofengland"==a&&displayVoteTotals(eastofenglandVoteTotals),"northeastengland"==a&&displayVoteTotals(northeastenglandVoteTotals),"northwestengland"==a&&displayVoteTotals(northwestenglandVoteTotals),"southwestengland"==a&&displayVoteTotals(southwestenglandVoteTotals),"southeastengland"==a&&displayVoteTotals(southeastenglandVoteTotals),"london"==a&&displayVoteTotals(londonVoteTotals),"wales"==a&&displayVoteTotals(walesVoteTotals),"northernireland"==a&&displayVoteTotals(northernirelandVoteTotals),"yorkshireandthehumber"==a&&displayVoteTotals(yorkshireandthehumberVoteTotals),"eastmidlands"==a&&displayVoteTotals(eastmidlandsVoteTotals),"westmidlands"==a&&displayVoteTotals(westmidlandsVoteTotals),"greatbritain"==a&&displayVoteTotals(greatbritainVoteTotals)}function getVoteTotals(a){var b=[];"all"==a?b=regions.england.concat(regions.scotland).concat(regions.wales).concat(regions.northernireland):"greatbritain"==a?b=regions.england.concat(regions.scotland).concat(regions.wales):"england"==a?b=regions.england:b.push(a);var c=0,d=0;$.each(seatData,function(a){-1!=b.indexOf(seatData[a].seat_info.area)&&(c+=parseInt(seatData[a].seat_info.turnout))}),$.each(b,function(a){year=String(parseInt(pageSetting.slice(0,4))),yearRelative={2020:"2015",2016:"2015",2015:"2010",2010:"2005"},year=yearRelative[year],d+=previousTotalsByYearByParty[year][b[a]].turnout});var e=[],f=0,g=0,h=0,i=0,j=0;$.each(parties,function(a){info={};var k=parties[a];("other"==k||"others"==k)&&(k="other");var l,m=0,n=0,o=0,p=0,q=0;$.each(seatData,function(c){b.indexOf(seatData[c].seat_info.area)>-1&&(seatData[c].seat_info.winning_party==k&&(m+=1,f+=1),seatData[c].seat_info.incumbent==k&&(n+=1),parties_in_seat=Object.keys(seatData[c].party_info),-1!=parties_in_seat.indexOf(parties[a])&&(o+=seatData[c].party_info[parties[a]].total,q+=seatData[c].party_info[parties[a]].old))}),p=parseFloat((100*o/parseFloat(c)).toFixed(2)),l=parseFloat((100*q/parseFloat(d)).toFixed(2));var r=p-l;n=m-n,"other"==k?(g=m,h=n,i+=o,j+=p):(info.code=k,info.seats=m,info.change=n,info.votes=o,info.votepercent=p,info.percentchange=r,e.push(info))});var k={code:"other",seats:g,change:h,votes:i,votepercent:j},l={code:"total",seats:f-g,change:"",votes:c,votepercent:" "};e.push(k),e.push(l),alterTable(a,e)}function alterTable(a,b){"all"==a&&(nationalVoteTotals=b),"greatbritain"==a&&(greatbritainVoteTotals=b),"england"==a&&(englandVoteTotals=b),"scotland"==a&&(scotlandVoteTotals=b),"wales"==a&&(walesVoteTotals=b),"northernireland"==a&&(northernirelandVoteTotals=b),"northeastengland"==a&&(northeastenglandVoteTotals=b),"northwestengland"==a&&(northwestenglandVoteTotals=b),"westmidlands"==a&&(westmidlandsVoteTotals=b),"eastmidlands"==a&&(eastmidlandsVoteTotals=b),"yorkshireandthehumber"==a&&(yorkshireandthehumberVoteTotals=b),"eastofengland"==a&&(eastofenglandVoteTotals=b),"southeastengland"==a&&(southeastenglandVoteTotals=b),"southwestengland"==a&&(southwestenglandVoteTotals=b),"london"==a&&(londonVoteTotals=b)}var choroplethColour,partylist={};partylist.labour="Labour",partylist.conservative="Conservative",partylist.libdems="Liberal Democrats",partylist.snp="SNP",partylist.ukip="UKIP",partylist.plaidcymru="Plaid Cymru",partylist.green="Green",partylist.respect="Respect",partylist.speaker="Speaker",partylist.independent="Independent",partylist.uu="UUP",partylist.sinnfein="Sinn Féin",partylist.sdlp="SDLP",partylist.dup="DUP",partylist.alliance="Alliance",partylist.other1="Other",partylist.other2="Others",partylist.other="Other",partylist.others="Others",partylist.total="Total";var regionlist={};regionlist.london="London",regionlist.southeastengland="S.E. England",regionlist.southwestengland="S. W. England",regionlist.westmidlands="W. Midlands",regionlist.northwestengland="N. W. England",regionlist.northeastengland="N. E. England",regionlist.yorkshireandthehumber="Yorks & Humber",regionlist.eastmidlands="E. Midlands",regionlist.eastofengland="E. England",regionlist.scotland="Scotland",regionlist.wales="Wales",regionlist.northernireland="N. Ireland";var pollsters={};pollsters.ashcroft="Ashcroft",pollsters.yougov="Yougov",pollsters.survation="Survation",pollsters.tns="TNS BRMB",pollsters.icm="ICM",pollsters.populus="Populus",pollsters.mori="Ipsos Mori",pollsters.opinium="Opinium",pollsters.comres="Comres",pollsters.lucidtalk="Lucidtalk",pollsters.panelbase="Panelbase",pollsters.bmg="BMG";var previousTotalsByYearByParty={2010:{eastmidlands:{alliance:0,conservative:887467,dup:0,green:13102,labour:651841,libdems:442784,other:99151,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2180460,ukip:86115,uu:0},eastofengland:{alliance:0,conservative:1342522,dup:0,green:42830,labour:557739,libdems:687838,other:83619,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2859038,ukip:144490,uu:0},london:{alliance:0,conservative:1156068,dup:0,green:54349,labour:1224041,libdems:739932,other:90628,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:3325263,ukip:60245,uu:0},northeastengland:{alliance:0,conservative:272098,dup:0,green:3787,labour:506611,libdems:270641,other:69479,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:1161554,ukip:38938,uu:0},northernireland:{alliance:42378,conservative:0,dup:161297,green:3542,labour:0,libdems:0,other:8772,plaidcymru:0,sdlp:109449,sinnfein:161536,snp:0,turnout:584212,ukip:0,uu:97238},northwestengland:{alliance:0,conservative:1011560,dup:0,green:18931,labour:1269322,libdems:678854,other:106561,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:3202158,ukip:116930,uu:0},scotland:{alliance:0,conservative:411187,dup:0,green:0,labour:1029653,libdems:461091,other:43267,plaidcymru:0,sdlp:0,sinnfein:0,snp:494089,turnout:2456365,ukip:17078,uu:0},southeastengland:{alliance:0,conservative:2120695,dup:0,green:63082,labour:689564,libdems:1105711,other:81439,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:4264256,ukip:203765,uu:0},southwestengland:{alliance:0,conservative:1187637,dup:0,green:31517,labour:426910,libdems:962954,other:40450,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2773443,ukip:123975,uu:0},wales:{alliance:0,conservative:374036,dup:0,green:6539,labour:523533,libdems:287392,other:42679,plaidcymru:165397,sdlp:0,sinnfein:0,snp:0,turnout:1435300,ukip:35724,uu:0},westmidlands:{alliance:0,conservative:1044081,dup:0,green:14996,labour:808101,libdems:540280,other:99039,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2612182,ukip:105685,uu:0},yorkshireandthehumber:{alliance:0,conservative:770659,dup:0,green:20365,labour:806799,libdems:537586,other:134549,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2342263,ukip:72305,uu:0}},2015:{eastmidlands:{alliance:0,conservative:969379,dup:0,green:66239,labour:705767,libdems:124039,other:13201,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2230402,ukip:351777,uu:0},eastofengland:{alliance:0,conservative:1445946,dup:0,green:116274,labour:649320,libdems:243191,other:15374,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2948622,ukip:478517,uu:0},london:{alliance:0,conservative:1233378,dup:0,green:171652,labour:1545110,libdems:272544,other:26626,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:3536291,ukip:286981,uu:0},northeastengland:{alliance:0,conservative:300883,dup:0,
-green:43051,labour:557100,libdems:77125,other:11201,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:1188183,ukip:198823,uu:0},northernireland:{alliance:61556,conservative:9055,dup:184260,green:6822,labour:0,libdems:0,other:29421,plaidcymru:0,sdlp:99809,sinnfein:176232,snp:0,turnout:700414,ukip:18324,uu:114935},northwestengland:{alliance:0,conservative:1050124,dup:0,green:107889,labour:1502047,libdems:219998,other:24926,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:3364055,ukip:459071,uu:0},scotland:{alliance:0,conservative:434097,dup:0,green:39205,labour:707147,libdems:219675,other:8827,plaidcymru:0,sdlp:0,sinnfein:0,snp:1454436,turnout:2910465,ukip:47078,uu:0},southeastengland:{alliance:0,conservative:2234356,dup:0,green:227883,labour:804774,libdems:413586,other:32182,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:4359740,ukip:646959,uu:0},southwestengland:{alliance:0,conservative:1319967,dup:0,green:168130,labour:501684,libdems:428873,other:19873,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2823073,ukip:384546,uu:0},wales:{alliance:0,conservative:408213,dup:0,green:38344,labour:552473,libdems:97783,other:15566,plaidcymru:181694,sdlp:0,sinnfein:0,snp:0,turnout:1498433,ukip:204360,uu:0},westmidlands:{alliance:0,conservative:1098113,dup:0,green:85653,labour:865067,libdems:145009,other:22331,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2628943,ukip:412770,uu:0},yorkshireandthehumber:{alliance:0,conservative:796792,dup:0,green:86471,labour:956837,libdems:174065,other:38055,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:2444143,ukip:391923,uu:0},england:{alliance:0,conservative:10448938,dup:0,green:1073242,labour:8087706,libdems:2098430,other:203769,plaidcymru:0,sdlp:0,sinnfein:0,snp:0,turnout:25523452,ukip:3611367,uu:0}}};previousTotalsByYearByParty[2005]=previousTotalsByYearByParty[2010];var regions={england:["northeastengland","northwestengland","yorkshireandthehumber","southeastengland","southwestengland","eastofengland","eastmidlands","westmidlands","london"],scotland:["scotland"],wales:["wales"],northernireland:["northernireland"]},parties=["conservative","labour","libdems","ukip","snp","plaidcymru","green","uu","sdlp","dup","sinnfein","alliance","other","others"],filteredSeatsTotal=650,pageSetting="2016parliament",seatData={},seatsAfterFilter=[],seatDataForChoropleth={},searchSeatData=[],seatNames=[],seatsFromIDs={},currentSeats=[],totalElectorate=0,swingState=["null","null"],partyVoteShare="null",partyVoteShareChange="null",isFirefox="undefined"!=typeof InstallTrigger,isIE=!1||!!document.documentMode,seatTotalContainer="#totalfilteredseats",seatListContainer="#filteredlisttable",filterStates=[{party:"null"},{gain:"null"},{region:"null"},{majoritylow:0},{majorityhigh:100}],previous_opacity,current_colour;$(function(){$("#searchseats").autocomplete({source:seatNames,select:function(a,b){searchSeats(b.item.label)}})});var currentZindex=2;loadTheMap("2016parliament");var previousSetting="2016parliament",oldPartyClass=null,oldIncumbentClass=null,partyNameElement="#information-party .party-name",partyFlairElement="#information-party .party-flair",gainNameElement="#information-gain .party-name",gainFlairElement="#information-gain .party-flair",oldSeatData={},previousYear=String(parseInt(pageSetting.slice(0,4)-5)),englandUserNumbers={conservative:0,labour:0,libdems:0,ukip:0,green:0},scotlandUserNumbers={conservative:0,labour:0,libdems:0,ukip:0,green:0,snp:0},walesUserNumbers={conservative:0,labour:0,libdems:0,ukip:0,green:0,plaidcymru:0},northernirelandUserNumbers={dup:0,sinnfein:0,sdlp:0,uu:0,alliance:0};nationalVoteTotals=[],greatbritainVoteTotals=[],englandVoteTotals=[],scotlandVoteTotals=[],walesVoteTotals=[],northernirelandVoteTotals=[],northeastenglandVoteTotals=[],northwestenglandVoteTotals=[],westmidlandsVoteTotals=[],eastmidlandsVoteTotals=[],yorkshireandthehumberVoteTotals=[],eastofenglandVoteTotals=[],southeastenglandVoteTotals=[],southwestenglandVoteTotals=[],londonVoteTotals=[];
+var choro = {
+
+  choroTypes : ["choro-voteshare", "choro-votesharechange", "swing"],
+
+  handle: function(parameter, value){
+    // reset choro selects not being used
+    $.each(choro.choroTypes, function(i, choroType){
+      if (choroType != parameter){
+        $("#" + choroType + " option:eq(0)").prop("selected", true);
+      }
+    })
+
+    parameter = parameter.slice(6);
+
+    // for vote share change and swing attribute new class to each map obj
+    if (value != "null"){
+      var max = choro.minmax(parameter, value)
+      choro.opacities(max, parameter, value);
+      choro.applyClass(parameter, value);
+      filters.display(); // reuse function to change opacities for map elements
+      choro.keyOnMap(max, parameter, value);
+    } else {
+      // if null reset classses
+      // sent code to filtres.filter so it triggers on filter change
+      filters.filter();
+    }
+  },
+
+  minmax : function(parameter, value){
+    var max = 0;
+
+    // for vote share parameter
+    $.each(currentMap.seatData, function(seat, data){
+      if (data.filtered == true){
+
+
+        if (parameter == "voteshare"){
+          // vote share choro
+          if (value in data.partyInfo){
+            if (data.partyInfo[value].total / data.seatInfo.turnout > max){
+              max = data.partyInfo[value].total / data.seatInfo.turnout;
+            }
+          }
+        } else if (parameter == "votesharechange"){
+          // vote share change choro
+          var current = 0;
+          var previous = 0;
+
+          if (value in data.partyInfo){
+            current = data.partyInfo[value].total / data.seatInfo.turnout;
+          }
+          if (value in currentMap.previousSeatData[seat].partyInfo){
+            previous = currentMap.previousSeatData[seat].partyInfo[value].total / currentMap.previousSeatData[seat].seatInfo.turnout;
+          }
+          var difference = current - previous;
+          if (Math.abs(difference) > max){
+            max = Math.abs(difference);
+          }
+        }
+
+      }
+    });
+
+    if (max > 0.6){
+      max = 0.6;
+    }
+
+    return max;
+  },
+
+  opacities: function(max, parameter, value){
+    $.each(currentMap.seatData, function(seat, data){
+
+      var opacity = 0; // default for filtered seats
+      if (data.filtered == true && max != 0){
+        if (parameter == "voteshare"){
+          if (value in data.partyInfo){
+            opacity = data.partyInfo[value].total / (data.seatInfo.turnout * max);
+          }
+        } else if (parameter == "votesharechange"){
+          var current = 0;
+          var previous = 0;
+          if (value in data.partyInfo){
+            current = data.partyInfo[value].total / data.seatInfo.turnout;
+          }
+          if (value in currentMap.previousSeatData[seat].partyInfo){
+            previous = currentMap.previousSeatData[seat].partyInfo[value].total / currentMap.previousSeatData[seat].seatInfo.turnout;
+          }
+          var difference = current - previous;
+
+          opacity = difference / max;
+        }
+      }
+
+      if (opacity > 1){
+        opacity = 1;
+      }
+
+      filters.opacities[seat] = opacity;
+      data.mapSelect.opacity = opacity;
+    });
+  },
+
+  applyClass : function(parameter, value){
+    // voteshare
+    if (parameter == "voteshare"){
+      $.each(currentMap.seatData, function(seat, data){
+        $("#i" + data.mapSelect.properties.info_id).removeClass()
+        $("#i" + data.mapSelect.properties.info_id).addClass("map " + value)
+      });
+    }
+    // vote share change
+    else if (parameter == "votesharechange"){
+      $.each(currentMap.seatData, function(seat, data){
+        $("#i" + data.mapSelect.properties.info_id).removeClass()
+
+        if (filters.opacities[seat] < 0){
+          $("#i" + data.mapSelect.properties.info_id).addClass("map choro-minus");
+          filters.opacities[seat] = Math.abs(filters.opacities[seat]);
+          data.mapSelect.opacity = Math.abs(data.mapSelect.opacity);
+
+        } else {
+          $("#i" + data.mapSelect.properties.info_id).addClass("map choro-plus");
+        }
+
+      });
+    }
+
+  },
+
+  keyOnMap: function(max, parameter, val){
+    $("#keyonmap").empty();
+    $("#keyonmap").show();
+
+    var colour;
+    if (parameter == "voteshare"){
+      colour = $("." + val).css("background-color");
+
+    } else if (parameter == "votesharechange"){
+      // set to blue
+      colour = "rgb(0, 0, 255)";
+      // set val to "blue"
+      val = "choro-plus"
+    }
+
+    var increment = 100 * (max) / 5;
+
+    // add key twice including negative for vote share
+    if (parameter == "votesharechange"){
+      for (var i=5; i > 0; i--){
+        var background = "rgba(255, 0, 0, " + i * 0.2 + ")";
+
+        var toAdd = "<div class='choro-minus' style='background-color: " + background + "'>-"
+                    + (i * increment).toFixed(1) + "%";
+
+        if (max == 0.6 && i == 5){
+          toAdd += "+";
+        }
+
+        toAdd += "</div>";
+
+        $("#keyonmap").append(toAdd);
+      }
+    }
+
+    for (var i=0; i < 6; i++){
+
+      var background = colour.replace(")", "," + i * 0.2 +  ")").replace("rgb", "rgba");
+
+      var toAdd = "<div class='" + val + "' style='background-color:" + background + "'>" +
+      (i * increment).toFixed(1) + "%";
+
+      if (max == 0.6 && i == 5){
+        toAdd += "+"
+      }
+      toAdd += "</div>";
+
+      $("#keyonmap").append(toAdd);
+    }
+  },
+
+  reset: function(){
+    $("#keyonmap").hide();
+    $.each(currentMap.seatData, function(seat, data){
+
+      $("#i" + data.mapSelect.properties.info_id).removeClass();
+      $("#i" + data.mapSelect.properties.info_id).addClass("map " + data.seatInfo.current);
+    });
+    //reset choropleths selects
+    $("#choro-voteshare option:eq(0)").prop("selected", true);
+    $("#choro-votesharechange option:eq(0)").prop("selected", true);
+  }
+
+};
+;var partylist = {};
+
+partylist["labour"] = "Labour";
+partylist["conservative"] = "Conservative";
+partylist["libdems"] = "Lib Dems";
+partylist["snp"] = "SNP";
+partylist["ukip"] = "UKIP";
+partylist["plaidcymru"] = "Plaid Cymru";
+partylist["green"] = "Green";
+partylist["uu"] = "UUP";
+partylist["sinnfein"] = "Sinn Féin";
+partylist["sdlp"] = "SDLP";
+partylist["dup"] = "DUP";
+partylist["alliance"] = "Alliance";
+partylist["other"] = "Other";
+partylist["others"] = "Others";
+
+
+var partyMap = [
+  ["conservative"],
+  ["labour"],
+  ["libdems"],
+  ["ukip"],
+  ["green"],
+  ["snp", "plaidcymru", "uu", "dup", "alliance", "sdlp", "sinnfein"],
+  ["other"]
+]; // ORDER FOR EXTENDED SEAT LIST
+
+var partyToRegion = {
+  "scotland" : ["conservative", "labour", "libdems", "ukip", "green", "snp", "other", "others"],
+  "wales" : ["conservative", "labour", "libdems", "ukip", "green", "plaidcymru", "other", "others"],
+  "northernireland" : ["dup", "sinnfein", "uu", "sdlp", "alliance", "other", "others"],
+  "default" : ["conservative", "labour", "libdems", "ukip", "green", "other", "others"]
+};
+
+
+var regionlist = {};
+
+regionlist["london"] = "London";
+regionlist["southeastengland"] = "S.E. England";
+regionlist["southwestengland"] = "S. W. England";
+regionlist["westmidlands"] = "W. Midlands";
+regionlist["northwestengland"] = "N. W. England";
+regionlist["northeastengland"] = "N. E. England";
+regionlist["yorkshireandthehumber"] = "Yorks & Humber";
+regionlist["eastmidlands"] = "E. Midlands";
+regionlist["eastofengland"] = "E. England";
+regionlist["scotland"] = "Scotland";
+regionlist["wales"] = "Wales";
+regionlist["northernireland"] = "N. Ireland";
+regionlist["unitedkingdom"] = "United Kingdom";
+regionlist["greatbritain"] = "Great Britain"
+regionlist["england"] = "England";
+
+var regionMap = {
+  "unitedkingdom" : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland",
+                "southwestengland", "eastofengland", "eastmidlands", "westmidlands", "london",
+              "scotland", "wales", "northernireland"],
+
+  "greatbritain" : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland",
+                "southwestengland", "eastofengland", "eastmidlands", "westmidlands", "london",
+              "scotland", "wales"],
+
+  "england"  : ["northeastengland", "northwestengland", "yorkshireandthehumber", "southeastengland",
+                "southwestengland", "eastofengland", "eastmidlands", "westmidlands", "london"]
+
+};
+;var filters = {
+  state : {
+    "majority" : [0, 100]
+  },
+
+  selectHandle : function(parameter, criteria){
+
+    parameter = parameter.substring(7); // trim filter- off of parameters
+
+
+    if (criteria == "null"){
+      delete filters.state[parameter]
+    } else {
+      if (parameter == "region" && criteria == "england"){
+        filters.state["region"] = regionMap["england"]
+      } else {
+        filters.state[parameter] = criteria;
+      }
+    }
+
+    filters.filter();
+  },
+
+  // check box handler - byElections
+  byElection : function(buttonClass){
+
+    if (currentMap.election == false){
+      // show by-election
+      if (buttonClass == ""){
+        $("#filter-byElection").addClass("filter-button-active")
+        filters.state["byElection"] = true;
+
+      } else if (buttonClass == "filter-button-active"){
+        $("#filter-byElection").removeClass("filter-button-active")
+        delete filters.state["byElection"]
+      }
+    }
+
+    if (currentMap.election == true ){
+      // show gains
+      if (buttonClass == ""){
+        $("#filter-byElection").addClass("filter-button-active")
+        filters.state["gains"] = true;
+
+      } else if (buttonClass == "filter-button-active"){
+        $("#filter-byElection").removeClass("filter-button-active")
+        delete filters.state["gains"]
+      }
+    }
+
+    filters.filter()
+  },
+
+  majority : function(parameter, value){
+    if (parameter == "low"){
+      filters.state.majority[0] = value;
+    } else if (parameter == "high"){
+      filters.state.majority[1] = value;
+    }
+    filters.filter()
+  },
+
+  opacities : {},
+
+  filter : function(){
+    // reset choropleths
+    choro.reset();
+
+    $.each(currentMap.seatData, function(seat, data){
+      var meetsCriteria = true
+
+      $.each(filters.state, function(parameter, criteria){
+        if (parameter == "majority"){
+          var majority = (100 * data.seatInfo.majority / data.seatInfo.turnout)
+
+          if (majority < filters.state["majority"][0] || majority > filters.state["majority"][1] ){
+            meetsCriteria = false;
+          }
+
+        } else if (parameter == "byElection"){
+          if (data.seatInfo["byElection"] == undefined){
+            meetsCriteria = false;
+          }
+
+        } else if (parameter == "gains"){
+          if (data.seatInfo.current == currentMap.previousSeatData[seat].seatInfo.current){
+            meetsCriteria = false;
+          }
+
+        } else {
+          //if (data.seatInfo[parameter] != criteria){ // TO DO CHECK NOT BROKEN
+          if (criteria.indexOf(data.seatInfo[parameter]) == - 1){
+
+            meetsCriteria = false;
+          }
+        }
+      });
+
+      if (meetsCriteria == true){
+        filters.opacities[seat] = 1;
+        data.filtered = true;
+      } else {
+        filters.opacities[seat] = 0.05;
+        data.filtered = false;
+      }
+    })
+
+    filters.display();
+    //filters.getSeatlist();
+  },
+
+  display: function(){
+    $.each(filters.opacities, function(seat, opacity){
+      var mapSelect = currentMap.seatData[seat].mapSelect;
+      mapSelect.opacity = opacity;
+      d3.select("#i" + mapSelect.properties.info_id).attr("opacity", opacity)
+    });
+  },
+
+  reset : function(){
+    filters.state = {"majority" : [0, 100]}; // reset filters state
+    // reset ui
+    $("#filter-current option:eq(0)").prop("selected", true);
+  	$("#filter-region option:eq(0)").prop("selected", true);
+  	$(".filter-button-active").removeClass("filter-button-active")
+  	$("#filter-majority").get(0).reset();
+
+    // reset vote totals table select
+    $("#selectareatotals option:eq(0)").prop("selected", true);
+
+    // display default vote totals
+    voteTotals.calculate("unitedkingdom");
+    // hide vote totals divs
+    uiAttr.hideDiv("seatlistbutton");
+    uiAttr.hideDiv("seatlist-extend");
+
+    // reset extended seat list sort  state css class
+    $("#seatlist-sort" + filters.activeSort).removeClass("sort-active");
+    filters.activeSort = "name";
+    $("#seatlist-sortname").addClass("sort-active");
+
+    // reset map
+    filters.filter();
+  },
+
+  filteredList : [],
+
+  getSeatlist : function(){
+    // empty old container div
+    $("#seatlist-container").empty()
+    // hide extended if vis
+    uiAttr.hideDiv("seatlist-extend");
+
+    filters.filteredList = [];
+
+    $.each(currentMap.seatData, function(seat, data){
+      if (data.filtered == true){
+        filters.filteredList.push(new seatExtended(seat, data));
+      }
+    });
+
+    // set and reset sortstate
+    filters.sortState = {
+        "name" : "asc",
+        "current" : "asc",
+        "majority" : "desc",
+        "con" : "desc",
+        "lab" : "desc",
+        "lib" : "desc",
+        "ukip" : "desc",
+        "green" : "desc",
+        "nat" : "desc",
+        "oth" : "desc"
+    };
+
+    filters.reorder("name", "asc", "simple");
+  },
+
+  activeSort : "name",
+
+  sortState : {},
+
+  tableSort: function(parameter){
+    parameter = parameter.slice(13);
+    // remove from old table header
+    $("#seatlist-sort" + filters.activeSort).removeClass("sort-active")
+    filters.activeSort = parameter;
+
+    $("#seatlist-sort" + filters.activeSort).addClass("sort-active");
+
+    filters.reorder(parameter, filters.sortState[parameter], "extended");
+
+    if (filters.sortState[parameter] == "desc"){
+      filters.sortState[parameter] = "asc";
+    } else if (filters.sortState[parameter] == "asc"){
+      filters.sortState[parameter] = "desc";
+    }
+  },
+
+  reorder : function(parameter, sorttype, display){
+    // sort works both alphabetically and numerically
+    if (sorttype == "asc"){
+      filters.filteredList.sort(function(a, b){
+        if (a[parameter] < b[parameter]){
+          return -1;
+        }
+        if (a[parameter] > b[parameter]){
+          return 1;
+        }
+        return 0
+      })
+    }
+    if (sorttype == "desc"){
+      filters.filteredList.sort(function(a, b){
+        if (a[parameter] < b[parameter]){
+          return 1;
+        }
+        if (a[parameter] > b[parameter]){
+          return -1;
+        }
+        return 0;
+      })
+    }
+
+    if (display == "simple"){
+      filters.simpleList();
+    }
+    if (display == "extended"){
+      filters.extendedList();
+    }
+  },
+
+  simpleList : function(){
+    uiAttr.hideDiv("seatlist-extend");
+
+    $("#seatlist-total").text(filters.filteredList.length);
+    $.each(filters.filteredList, function(i, seat){
+      var toAdd = "<div class='extended-seat' onclick='mapAttr.clicked(currentMap.seatData[\""
+      + seat.name + "\"].mapSelect)'><div class='party-flair "
+      + seat.current + "'></div>" + seat.name + "</div>";
+
+      $("#seatlist-container").append(toAdd);
+    });
+  },
+
+  extendedList : function(){
+    $("#seatlist-extended-data").empty();
+    uiAttr.hideDiv("seatlistbutton");
+
+    $.each(filters.filteredList, function(i, seat){
+      var seatName = seat.name;
+      var party = "<div style='margin-left: 10px' class='party-flair " + seat.current + "'></div>";
+
+
+      var previous = currentMap.previousSeatData[seat.name].seatInfo.current;
+      if (previous != seat.current){
+        party += " <span style='font-weight: bold'>GAIN</span>"; // <div class='party-flair " + previous + "'></div>
+        //seatName += " <span style='font-weight: bold'> - GAIN";
+      }
+
+      var divider = "</div><div>";
+      var toAdd = "<div><div class='extended-seat' onclick='mapAttr.clicked(currentMap.seatData[\""
+      + seat.name + "\"].mapSelect)'>" + seatName + divider + party + divider + seat.majority.toFixed(2);
+
+      // array of vote totals
+      var votes = [seat.con, seat.lab, seat.lib, seat.ukip, seat.green, seat.nat, seat.oth];
+
+      $.each(partyMap, function(i, parties){
+
+        // returns color green or red for rtable
+        var change = filters.getChange(seat.name, partyMap[i], votes[i]);
+
+        if (parties.indexOf(seat.current) != -1){
+          toAdd += "</div><div style='font-weight: bold;" + change + "'>" + votes[i];
+
+        } else {
+          toAdd += "</div><div style='" + change + "'>" + votes[i];
+        }
+      })
+
+      toAdd += "</div></div>";
+
+      $("#seatlist-extended-data").append(toAdd);
+
+    });
+  },
+
+  getChange: function(seat, parties, current){
+
+
+    var previous = 0;
+
+    $.each(parties, function(i, party){
+      if (party in currentMap.previousSeatData[seat].partyInfo){
+        previous += currentMap.previousSeatData[seat].partyInfo[party].total;
+      }
+
+    });
+
+    previous = (100 * previous / currentMap.previousSeatData[seat].seatInfo.turnout).toFixed(2);
+
+    if (current > previous){
+      return "color: green";
+    } else if (previous > current){
+      return "color: red";
+    } else {
+      return "";
+    }
+  }
+
+};
+
+function seatExtended(seat, data){
+  this.name = seat;
+  this.current = data.seatInfo.current;
+  this.majority = parseFloat((100 * data.seatInfo.majority / data.seatInfo.turnout).toFixed(2));
+
+  var con = lab = lib = ukip = green = oth = "";
+  var nat = 0; // only one with more than one potentially
+
+  $.each(data.partyInfo, function(party, info){
+
+    if (party == "conservative"){
+      con = parseFloat((100 * info.total / data.seatInfo.turnout).toFixed(2));
+      }
+    if (party == "labour"){
+      lab = parseFloat((100 * info.total / data.seatInfo.turnout).toFixed(2));
+      }
+    if (party == "libdems"){
+      lib = parseFloat((100 * info.total / data.seatInfo.turnout).toFixed(2));
+      }
+    if (party == "ukip"){
+      ukip = parseFloat((100 * info.total / data.seatInfo.turnout).toFixed(2));
+      }
+    if (party == "green"){
+      green = parseFloat((100 * info.total / data.seatInfo.turnout).toFixed(2));
+      }
+    if (party == "other"){
+
+      oth = parseFloat((100 * info.total / data.seatInfo.turnout).toFixed(2));
+      }
+    if (partyMap[5].indexOf(party) != -1 ){
+      nat += info.total;
+      }
+    }
+  );
+
+  this.con = con;
+  this.lab = lab;
+  this.lib = lib;
+  this.ukip = ukip;
+  this.green = green;
+  this.oth = oth;
+
+  if (nat == 0){
+    this.nat = "";
+  } else {
+    this.nat = parseFloat((100 * nat / data.seatInfo.turnout).toFixed(2));
+  }
+
+}
+;var mapAttr = {
+  "width" : 600,
+  "height" : 875,
+  "active" : d3.select(null),
+
+	// nodes for various  map ui changes (flash seat/choropleths etc)
+	"activeNode" : null,
+	//when map clicked on function
+	clicked : function(d){
+
+		mapAttr.activeNode = d;
+
+		// flash seat on click
+		mapAttr.flashSeat(d);
+
+		var bounds = path.bounds(d),
+			dx = Math.pow((bounds[1][0] - bounds[0][0]), 0.5),
+			dy = Math.pow((bounds[1][1] - bounds[0][1]), 0.5),
+			x = (bounds[0][0] + bounds[1][0]) / 2,
+			y = (bounds[0][1] + bounds[1][1]) / 2,
+
+			scale = .05 / Math.max(dx /  mapAttr.width,  dy /  mapAttr.height),
+			translate = [ mapAttr.width / 2 - scale * x,  mapAttr.height / 2 - scale * y];
+
+		mapAttr.disableZoom();
+
+		svg.transition()
+				.duration(1500)
+				.call(zoom.transform, d3.zoomIdentity.translate(translate[0],translate[1]).scale(scale))
+				.on("end", mapAttr.enableZoom);
+
+    uiAttr.showDiv("seat-information")
+		seatInfoTable.display(d.properties.name);
+	},
+
+	// flash seat on click - reset previous
+	flashSeat: function(node){
+
+		var mapID = "#i" + node.properties.info_id;
+		current = d3.select(mapID);
+
+		//var opacity = $(mapID).css("opacity");
+
+		repeat();
+
+		function repeat(){
+			current
+				.transition()
+					.duration(1500)
+					.attr("opacity", 0.02)
+				.transition()
+					.duration(1500)
+					.attr("opacity", node.opacity)
+				.on("end", repeat);
+		}
+
+	},
+
+	//stops users messing up zoom animations
+	disableZoom : function(){
+
+		svg.on("mousedown.zoom", null);
+		svg.on("mousemove.zoom", null);
+		svg.on("dblclick.zoom", null);
+		svg.on("touchstart.zoom", null);
+		svg.on("wheel.zoom", null);
+		svg.on("mousewheel.zoom", null);
+		svg.on("MozMousePixelScroll.zoom", null);
+
+	},
+
+	// reenables users ability to zoom pan etc
+	enableZoom : function(){
+		svg.call(zoom);
+	},
+
+	// reset button for map
+	reset : function() {
+
+		//stop previous seat flashing
+		if (mapAttr.activeNode != null){
+			d3.select("#i" + mapAttr.activeNode.properties.info_id)
+			.transition()
+			.attr("opacity", mapAttr.activeNode.opacity);
+		}
+
+		mapAttr.activeNode = null;
+
+		mapAttr.disableZoom();
+
+		svg.transition()
+			.duration(1500)
+			.call(zoom.transform, d3.zoomIdentity)
+			.on("end", function(){mapAttr.enableZoom()});
+	},
+
+	// zoom function
+	zoomed : function() {
+		g.style("stroke-width", 1.5 / d3.event.scale + "px");
+		g.attr("transform", d3.event.transform);
+	},
+
+	stopped : function() {
+		if (d3.event.defaultPrevented) {
+			d3.event.stopPropagation();
+		}
+	},
+
+	// load + colour map at page load
+	loadmap : function(setting){
+    
+		// d3.json(setting.mapurl, function(error, uk) {
+		// 	if (error) return console.error(error);
+
+
+			g.selectAll(".map")
+				.data(topojson.feature(setting.polygons, setting.polygons.objects.map).features)
+				.enter().append("path")
+				.attr("class", function(d){
+					var seatClass = "map " + setting.seatData[d.properties.name]["seatInfo"]["current"];
+					return seatClass
+				})
+				.attr("opacity", 1)
+				.attr("id", function(d) {
+					return "i" + d.properties.info_id;
+					})
+				.attr("d", path)
+				.on("click", mapAttr.clicked)
+				.append("svg:title")
+					.text(function(d) { return d.properties.name})
+				.each(function(d){
+          // for finding seat from various search features
+					setting.seatData[d.properties.name]["mapSelect"] = d;
+					// set current opacity - for flashseat and choropleths //
+					setting.seatData[d.properties.name]["mapSelect"]["opacity"]	= 1;
+          // set opacity = 1 for filters
+          filters.opacities[d.properties.name] = 1;
+					// lset filtreed to true
+					setting.seatData[d.properties.name].filtered = true;
+          // get turnout
+					var turnout = 0;
+					for (var party in setting.seatData[d.properties.name].partyInfo){
+						turnout += setting.seatData[d.properties.name].partyInfo[party].total;
+					}
+					setting.seatData[d.properties.name].seatInfo.turnout = turnout;
+
+          // get previous turnout
+          var previousTurnout = 0;
+
+          for (var party in setting.previousSeatData[d.properties.name].partyInfo){
+						previousTurnout += setting.previousSeatData[d.properties.name].partyInfo[party].total;
+					}
+					setting.previousSeatData[d.properties.name].seatInfo.turnout = previousTurnout;
+
+
+				});
+
+			g.append("path")
+				.datum(topojson.mesh(setting.polygons, setting.polygons.objects.map, function(a, b){
+					return a.properties.region != b.properties.region && a != b; }))
+				.attr("d", path)
+				.attr("class", "boundaries");
+		// });
+	}
+
+}
+
+var projection = d3.geoAlbers() // variables to change default map position
+	.center([-0.5, 54.4]) //centers vertically and horizontally
+	.rotate([2.25, 0])
+	.parallels([51, 60])
+	.scale(5300)
+	.translate([mapAttr.width / 2, mapAttr.height / 2])
+
+
+var path = d3.geoPath().projection(projection);
+
+var zoom = d3.zoom()
+  .scaleExtent([1, 8])
+  .on("zoom", mapAttr.zoomed);
+;function getData(setting){
+
+	$.when(
+		$.getJSON(setting.mapurl, function(data){
+			setting.polygons = data;
+		}),
+		$.getJSON(setting.dataurl, function(data){
+			setting.seatData = data;
+			currentMap = setting;
+			//mapAttr.loadmap(currentMap);
+		}),
+		$.getJSON(setting.previous,function(data){
+			setting.previousSeatData = data;
+		})
+
+	).then(function(){
+
+		pageLoadEssentials();
+	})
+};
+
+function pageLoadEssentials(){
+	// function does all the random crap that needs changing / resetting on pageload
+
+	// laod the map
+	mapAttr.loadmap(currentMap);
+	// reset filters.state - also get and show vote totals
+	filters.reset();
+
+	// populate seat search	// autocomplete function
+	var seatList = Object.keys(currentMap.seatData);
+	seatList.sort();
+
+	$(function(){
+		$("#searchseats").autocomplete({
+			source: seatList,
+			select: function(event, ui){
+				searchSeats(ui.item.label);
+			}
+		});
+	});
+
+	// re-hide predict button on page change
+	$("#predictbutton").addClass("hidden");
+
+	//show and hide various divs on load
+	uiAttr.pageLoadDiv();
+
+	// if setting not currentParliament remove instructions
+	if (currentMap != currentParliament){
+		$("#instructions").remove();
+	}
+	// hide instructions
+	setTimeout(function(){$("#instructions").remove();}, 20000);
+
+
+	// election/prediction map differences to parliament maps
+	if (currentMap.election == true){
+		// change by election button text to gain
+		$("#filter-byElection").text("Gains");
+	} else if (currentMap.election == false){
+		$("#filter-byElection").text("By-Elections");
+	}
+
+	if (currentMap.predict == true){
+		userInput.seatDataCopy = jQuery.extend(true, {}, currentMap.seatData);
+	}
+
+	// firefox css nonsense
+	if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
+		$("div").css("font-size", "98%");
+		$("select").css("font-size", "98%")
+		// check this TO DO
+	}
+
+	// if prediction show prediction button and div
+
+};
+
+// various page interaction functions
+function searchSeats(value){
+	mapAttr.clicked(currentMap.seatData[value].mapSelect);
+};
+
+
+function pageSetting(mapurl, dataurl, previous, election, predict){
+
+	this.mapurl = mapurl;
+	this.dataurl = dataurl;
+	this.previous = previous;
+	this.election = election;
+
+	this.seatData = {};
+	this.previousSeatData = {};
+	this.polygons = {};
+	this.predict = predict;
+
+}
+
+var currentMap;
+
+var dataurls =  {
+	// maps
+	map650 : "650map.json",
+
+	//parliaments
+	predict : "houseofcommons/prediction.json",
+	current : "houseofcommons/current.json",
+	e2015 : "houseofcommons/2015election.json",
+	e2010 : "houseofcommons/2010election.json"
+}
+
+var currentParliament = new pageSetting(dataurls.map650, dataurls.current, dataurls.e2015, false, false);
+var election2015 = new pageSetting(dataurls.map650, dataurls.e2015, dataurls.e2010, true, false);
+var election2010 = new pageSetting(dataurls.map650, dataurls.e2010, dataurls.e2010, false, false); // no 2005 data to compare atm
+var prediction = new pageSetting(dataurls.map650, dataurls.predict, dataurls.e2015, true, false);
+var predictit = new pageSetting(dataurls.map650, dataurls.e2015, dataurls.e2015, true, true);
+
+function initialization(setting){
+
+	$(".map").remove();
+
+	$(document).ready(function(){
+		getData(setting);
+	});
+}
+
+initialization(currentParliament);
+;var seatInfoTable = {
+  // previous display state of table
+  party : null,
+  gain : null,
+
+  display : function(seat){
+
+    var activeSeatData = new activeSeat(seat);
+
+    seatInfoTable.seatInfo(activeSeatData); // draw tables with data
+    seatInfoTable.voteTable(activeSeatData.votes); // draw table - do first since votes altered
+    seatInfoTable.barChart(activeSeatData.votes); // draw bar chart with data
+  },
+
+  seatInfo : function(data){
+
+    // clean old divs
+    $("#information-party .party-flair").removeClass(seatInfoTable.party);
+    $("#information-gain .party-flair").removeClass(seatInfoTable.gain);
+
+    if (data.byElection != undefined){
+      data.name += "*";
+      $("#information-byelection").text("*By-election on " + data.byElection);
+    } else {
+      $("#information-byelection").text("");
+    }
+
+    $("#information-seatname-span").text(data.name);
+    $("#information-region").text(regionlist[data.region]);
+
+    $("#information-party .party-name").text(partylist[data.current]);
+    $("#information-party .party-flair").addClass(data.current);
+
+    if (data.current != data.previous){
+      $("#information-gain .party-name").text("FROM " + partylist[data.previous]); //
+      $("#information-gain .party-flair").addClass(data.previous);
+    } else {
+      $("#information-gain .party-name").text("");
+    }
+
+    var majorityPercentage = (100 * data.majority / data.turnout).toFixed(2);
+    $("#information-majority").text("Majority: " + majorityPercentage + "% = " + data.majority);
+
+    var turnoutPercentage = (100 * data.turnout / data.electorate).toFixed(2);
+    $("#information-turnout").text("Turnout : " + data.turnout + " = " + turnoutPercentage + "%" );
+
+    // set for next time
+    seatInfoTable.party = data.current;
+    seatInfoTable.gain = data.previous;
+  },
+
+  barChart : function(votes){
+    $("#information-bar").empty();
+
+    var relevantVotes = []
+    // trim the fat
+    for (var i=0; i < votes.length; i++){
+        if (votes[i].totalPercentage > 5){
+          relevantVotes.push(votes[i])
+        }
+    }
+
+    votes = relevantVotes;
+
+    var dataitems = votes.length;
+    var margin = {top: 10, right: 0, bottom: 10, left: 25};
+
+  	var width = 200 - margin.left - margin.right;
+  	var height = 200 - margin.top - margin.bottom;
+  	var bargap = 2;
+  	var barwidth = d3.min([60, (width / dataitems) - bargap]);
+  	var animationdelay = 250;
+
+    var svg1 = d3.select("#information-bar")
+    		.append("svg")
+    			.attr("width", width + margin.left + margin.right)
+    			.attr("height", height + margin.top + margin.bottom)
+    		.append("g")
+        	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  	var x = d3.scaleOrdinal().range([0, dataitems * (barwidth + 2)]);
+
+  	var xAxis = d3.axisBottom()
+  	    .scale(x);
+
+  	var y = d3.scaleLinear()
+  		.range([height, 0]);
+
+  	var yAxis = d3.axisLeft()
+      .scale(y)
+      .ticks(6);
+
+  	var max_of_votes = d3.max(votes, function(d) { return d.totalPercentage / 1 ; });
+
+  	y.domain([0, d3.max([60, (max_of_votes + (10 - max_of_votes % 10))])]);
+
+    svg1.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  	svg1.append("g")
+      .attr("class", "y axis")
+      .call(yAxis);
+
+  	svg1.selectAll("rect")
+  		.data(votes)
+  		.enter()
+  		.append("rect")
+        .attr("x", function(d, i) { return bargap * (i + 1) + barwidth * (i); })
+        .attr("width", barwidth)
+  			.attr("y", height)
+        .attr("height", 0)
+  			.attr("class", function(d) { return d.party;})
+  		.transition()
+        .delay(function(d, i) { return i * animationdelay / 2; })
+        .duration(animationdelay)
+        .attr("y", function(d) { return y(d.totalPercentage); })
+        .attr("height", function(d) { return height - y(d.totalPercentage ); });
+  },
+
+  voteTable : function(votes){
+    $("#information-chart").empty();
+
+    // see if any changes
+    for (var i=0; i < votes.length; i++){
+
+      // add divs - styled in electionmap.scss
+      var toAdd = "<div class='party-info-table'>";
+      // add party-block
+      toAdd += "<div class='party-flair " + votes[i].party + "'></div>"
+      // add mp name
+      toAdd += "<div>" + votes[i].name + "</div>"
+
+      // add vote percentage     // if change add change
+
+      var voteChange = "";
+      var voteChangeColour;
+      if (votes[i].change != 0){
+        voteChange = "(" + votes[i].change + ")";
+
+        if (votes[i].change > 0) {
+          voteChangeColour = "green";
+        } else {
+          voteChangeColour = "red";
+        }
+        voteChange = "<span style='color: " + voteChangeColour + ";'>" + voteChange + "</span>"
+
+      }
+
+      toAdd += "<div>" + votes[i].totalPercentage + "% " + voteChange + "</div>";
+    //  toAdd += "<div>" + voteChange + "</div>";
+      // complete divs
+      toAdd += "</div>";
+
+      $("#information-chart").append(toAdd);
+    }
+  }
+};
+
+function activeSeat(seat){
+  this.name = seat;
+
+  var seatInfo = currentMap.seatData[seat]["seatInfo"];
+  var partyInfo = currentMap.seatData[seat]["partyInfo"];
+
+  this.region = seatInfo.region;
+
+  this.current = seatInfo.current;
+  this.previous = currentMap.previousSeatData[seat].seatInfo.current
+
+  this.electorate = seatInfo.electorate;
+
+  this.turnout = (seatInfo.turnout.toFixed(0)) / 1;
+
+  this.majority = seatInfo.majority;
+  //  this.turnoutPercentage = seatInfo.percentage_turnout; = turnout / electorate x 100
+  // this.majorityPercent = seatInfo.maj_percent; = majority / turnout
+
+  this.byElection = seatInfo.byElection;
+
+  this.votes = [];
+
+  var previousPartyInfo = currentMap.previousSeatData[seat]["partyInfo"];
+
+  var previousTurnout = 0;
+  $.each(previousPartyInfo, function(party, info){
+    previousTurnout += info.total;
+  });
+
+  for (var party in partyInfo){
+    if (partyInfo[party].total > 0){
+      // get previous total if it exists
+      var previousTotalPercentage;
+      if (party in previousPartyInfo){
+        var previousTotal = previousPartyInfo[party].total;
+        previousTotalPercentage =  (100 * previousTotal /  previousTurnout).toFixed(2)
+      } else {
+        previousTotalPercentage = 0;
+      }
+
+      partyData = partyInfo[party];
+      var totalPercentage = (100 * partyData.total / this.turnout).toFixed(2);
+
+      this.votes.push({
+        "party" : party,
+        "name" : partyData.name,
+      //  "percentage" : partyData.percent, = total / turnout
+        "totalPercentage" : totalPercentage,
+        "previousTotalPercentage" : previousTotalPercentage,
+        "change" : (totalPercentage - previousTotalPercentage).toFixed(2)
+      });
+    }
+  }
+
+    // sort vote totals
+  this.votes.sort(function(a, b){
+    return b.totalPercentage - a.totalPercentage;
+  });
+
+}
+;var uiAttr = {
+  changeNavBar : function(elem){
+    // change navbar state
+    $(".navbaractive").removeClass("navbaractive");
+    $(elem.parentNode).addClass("navbaractive")
+
+      // change pagetitle;
+    var text = $(elem).text();
+
+    $("#pagetitle").html(text);
+    document.title = text;
+  },
+
+  clickMapButton : function(div){
+    var divClass = $(div).attr("class");
+    var divID = $(div).attr("id");
+
+    if (divClass.indexOf("mapbuttonactive") == -1){
+
+      $(div).addClass("mapbuttonactive");
+      uiAttr.showDiv(divID);
+    } else {
+
+      uiAttr.hideDiv(divID);
+    }
+  },
+
+  showDiv: function(id){
+
+    // check z indexes
+    uiAttr.zIndexCheck(id)
+
+    // make div visible and draggable by h2
+    // on mousedown change z-index - bring to front
+    $(uiAttr.buttonToDiv[id]).show();
+    $(uiAttr.buttonToDiv[id]).mousedown(function(){
+      uiAttr.zIndexCheck(id);
+      uiAttr.zIndexShuffle();
+    }).draggable({
+      handle: "h2",
+      containment: "#wrapper"
+    });
+
+    //alter z index
+    uiAttr.zIndexShuffle();
+  },
+
+  hideDiv: function(id){
+
+    var i = uiAttr.zIndexTracker.indexOf(id);
+    $("#" + id).removeClass("mapbuttonactive");
+    uiAttr.zIndexTracker.splice(i, 1);
+
+    $(uiAttr.buttonToDiv[id]).hide();
+
+    uiAttr.zIndexShuffle();
+  },
+
+  // map buttons to divs
+  buttonToDiv : {
+    "seat-information" : "#seat-information",
+    "votetotalsbutton" : "#votetotals",
+    "filtersbutton" : "#filters",
+    "choroplethsbutton" : "#choropleths",
+    "seatlistbutton" : "#seatlist",
+    "seatlist-extend" : "#seatlist-extended",
+    "predictbutton" : "#userinput"
+  },
+
+  //store  and reorder z indexes of hidden divs
+  zIndexTracker : [],
+
+  zIndexCheck : function(id){
+    if (uiAttr.zIndexTracker.indexOf(id) == -1 ){
+      uiAttr.zIndexTracker.push(id);
+    } else {
+      var fromIndex = uiAttr.zIndexTracker.indexOf(id);
+      var toIndex = uiAttr.zIndexTracker.length - 1;
+
+      uiAttr.zIndexTracker.splice(fromIndex, 1);
+      uiAttr.zIndexTracker.splice(toIndex, 0, id);
+    }
+  },
+
+  zIndexShuffle: function(){
+
+    var zIndices =  uiAttr.zIndexTracker;
+
+    for (var i = 0; i < zIndices.length; i++){
+      $(uiAttr.buttonToDiv[zIndices[i]]).css("z-index", i + 1);
+    }
+  },
+
+  pageLoadDiv : function(){
+    $.each(uiAttr.buttonToDiv, function(button, div){
+      if (button == "votetotalsbutton"){
+        uiAttr.showDiv(button);
+      } else if (button == "predictbutton" && currentMap.predict == true){
+        $("#predictbutton").removeClass("hidden").addClass("mapbuttonactive");
+        uiAttr.showDiv(button);
+      } else {
+        uiAttr.hideDiv(button);
+      }
+    });
+    $("#votetotals").trigger("click"); 	 // set to back
+  	$("#userinput").trigger("click");
+  }
+}
+;var userInput = {
+  seatDataCopy : {},
+
+  advancedDivs : regionMap["england"],
+
+  showAdvanced : function(){
+    // remove england data
+    delete userInput.inputs["england"]
+
+    $("#userinput-england").addClass("hidden");
+    $("#userinput-england input").each(function(){
+      this.value = 0;
+    });
+    $("#userinput-show").addClass("hidden");
+    $("#userinput-hide").removeClass("hidden");
+
+    $.each(userInput.advancedDivs, function(i, div){
+      $("#userinput-" + div).removeClass("hidden")
+    });
+  },
+
+  hideAdvanced : function(){
+    // remove old data for england regions
+    $.each(userInput.advancedDivs, function(i, div){
+      delete userInput.inputs[div]
+    })
+
+    $("#userinput-england").removeClass("hidden");
+    $("#userinput-show").removeClass("hidden");
+    $("#userinput-hide").addClass("hidden");
+
+    $.each(userInput.advancedDivs, function(i, div){
+      $("#userinput-" + div).addClass("hidden")
+      $("#userinput-" + div + " input").each(function(){
+        this.value = 0;
+      });
+    });
+  },
+
+  inputs : {},
+
+  over100 : false,
+
+  check : function(region, party, value){
+
+    if (!(region in userInput.inputs)){
+      userInput.inputs[region] = {};
+    }
+
+    if (value == "" || value < 0){
+      value = 0;
+    }
+
+    userInput.inputs[region][party] = parseInt(value);
+
+    var checkSum = 0;
+
+    var maxVal = 0;
+    $.each(userInput.inputs[region], function(key, val){
+      checkSum += val
+      if (val > maxVal){
+        maxVal = val;
+      }
+    });
+    // if all values 0, delete obj
+    if (maxVal == 0){
+      delete userInput.inputs[region]
+    }
+
+    if (checkSum > 100){
+      $("#userinput-" + region + "-other").text("<0");
+      userInput.over100 = true;
+    } else {
+      $("#userinput-" + region + "-other").text(100 - checkSum);
+      userInput.over100 = false;
+
+    }
+  },
+
+  handle : function(){
+    if (userInput.over100 == true){
+        alert("Some percentages add up to more than 100!");
+    } else {
+
+      $.each(userInput.inputs, function(region, data){
+        var otherPercentage = 0;
+        // add parties = 0 if not there;
+        if (region == "scotland"){
+          var parties = partyToRegion["scotland"];
+          for (var i=0; i < parties.length; i++ ){
+            if (!(parties[i] in data)){
+              data[parties[i]] = 0;
+            }
+            otherPercentage += data[parties[i]];
+          }
+        } else if (region == "wales"){
+          var parties = partyToRegion["wales"];
+          for (var i=0; i < parties.length; i++ ){
+            if (!(parties[i] in data)){
+              data[parties[i]] = 0;
+            }
+            otherPercentage += data[parties[i]];
+          }
+        } else if (region == "northernireland"){
+          var parties = partyToRegion["northernireland"];
+          for (var i=0; i < parties.length; i++ ){
+            if (!(parties[i] in data)){
+              data[parties[i]] = 0;
+            }
+            otherPercentage += data[parties[i]];
+          }
+        } else {
+          var parties = partyToRegion["default"];
+          for (var i=0; i < parties.length; i++ ){
+            if (!(parties[i] in data)){
+              data[parties[i]] = 0;
+            }
+            otherPercentage += data[parties[i]];
+          }
+        }
+        otherPercentage = 100 - otherPercentage;
+        data["other"] = otherPercentage;
+
+        delete data["others"];
+
+        userInput.calculate(region, data);
+        delete data["other"];
+      })
+
+      // re do map and vote totals
+      $(".map").remove(); //
+      mapAttr.loadmap(currentMap);
+      filters.reset();
+
+      uiAttr.pageLoadDiv();
+    }
+  },
+
+  calculate : function(region, data){
+
+
+    var old = userInput.getOldTotals(region);
+    var overall = old[0];
+    var regional = old[1];
+
+    var relativeChange = userInput.getUserChange(data, overall, regional);
+
+    userInput.seatAnalysis(relativeChange, regional);
+  },
+
+  getOldTotals: function(region){
+    if (region in regionMap){
+      var regions = regionMap[region];
+    } else {
+      var regions = [region];
+    }
+
+    var partiesInRegion;
+    if (["scotland", "wales", "northernireland"].indexOf(region) != -1){
+      partiesInRegion = partyToRegion[region];
+    } else {
+      partiesInRegion = partyToRegion["default"];
+    }
+
+    var total = 0;
+    var overallTotals = {};
+    var regionalTotals = {
+      "totals" : {}
+    };
+
+    for (var i=0; i < regions.length; i++){
+      regionalTotals[regions[i]] = {};
+      regionalTotals["totals"][regions[i]] = 0;
+    }
+
+    for (var i=0; i < partiesInRegion.length; i++){
+      overallTotals[partiesInRegion[i]] = 0;
+      for (var j=0; j < regions.length; j++){
+        regionalTotals[regions[j]][partiesInRegion[i]] = 0;
+      }
+    }
+
+    $.each(currentMap.previousSeatData, function(seat, data){
+      $.each(partiesInRegion, function(i, party){
+        if (regions.indexOf(data.seatInfo.region) != -1){
+          if (party in data.partyInfo){
+            total += data.partyInfo[party].total;
+            overallTotals[party] += data.partyInfo[party].total;
+            regionalTotals[data.seatInfo.region][party] += data.partyInfo[party].total;
+            regionalTotals["totals"][data.seatInfo.region] += data.partyInfo[party].total;
+          }
+        }
+      });
+    })
+
+    $.each(overallTotals, function(party, votes){
+      overallTotals[party] = (100 * votes / total);
+    })
+
+    // com,bine other and others
+    overallTotals["other"] += overallTotals["others"];
+    delete overallTotals["others"];
+
+    // get percentages and remove others
+    $.each(regionalTotals, function(region, data){
+      if (region != "totals"){
+        $.each(partiesInRegion, function(i, party){
+          regionalTotals[region][party] /= regionalTotals["totals"][region] * 0.01;
+        })
+      }
+      regionalTotals[region]["other"] += regionalTotals[region]["others"];
+      delete regionalTotals[region]["others"];
+    });
+
+    delete regionalTotals["totals"];
+
+    return [overallTotals, regionalTotals];
+  },
+
+  getUserChange: function(userinput, overall, regional){
+
+    var newTotals = {};
+    $.each(regional, function(region, totals){
+      var partyNew = {};
+      $.each(userinput, function(party, percentage){
+        partyNew[party] = regional[region][party] + (userinput[party] - overall[party]);
+        if (partyNew[party] < 0){
+          partyNew[party] = 0;
+        }
+      });
+
+      var sum = 0;
+      // normalise
+      $.each(partyNew, function(party, percentage){
+        sum += percentage;
+      })
+
+      var normalise = sum / 100 ;
+      $.each(partyNew, function(party, percentage){
+        partyNew[party] = percentage / normalise;
+      });
+
+      newTotals[region] = partyNew;
+    });
+
+    $.each(regional, function(region, totals){
+      $.each(userinput, function(party, percentage){
+        newTotals[region][party] = newTotals[region][party] / regional[region][party]
+      });
+    });
+
+    return newTotals;
+
+  },
+
+  seatAnalysis: function(relativeChange, regional){
+
+    $.each(currentMap.seatData, function(seat, data){
+      if (data.seatInfo.region in regional){
+        var newSeatData = {};
+        $.each(relativeChange[data.seatInfo.region], function(party, changes){
+
+          var previous = 0;
+          if (party in currentMap.previousSeatData[seat].partyInfo){
+            previous = 100 * currentMap.previousSeatData[seat].partyInfo[party].total / currentMap.previousSeatData[seat].seatInfo.turnout;
+          }
+
+          var previousRegional = regional[data.seatInfo.region][party];
+
+          if (party == "other"){
+            previous += 100 * currentMap.previousSeatData[seat].partyInfo["others"].total / currentMap.previousSeatData[seat].seatInfo.turnout;
+          }
+          var seatRelative = previous / previousRegional;
+
+          if (seatRelative == 0){
+            newSeatData[party] = 0;
+          } else {
+            var distribute = relativeChange[data.seatInfo.region][party] - 1;
+
+            var seatChange = 1 + (distribute / Math.sqrt(seatRelative));
+
+            if (seatChange < 0.15){
+              seatChange = 0.15;
+            }
+
+            var newPercentage = seatChange * previous;
+
+            //incumbency boost
+            var incumbencyBoost = {"conservative" : 1, "labour" : 1, "libdems" : 4,
+            "ukip" : 4, "green" : 8, "snp" : 1, "plaidcymru" : 4, "other" : 0,
+            "dup" : 0, "uu" : 0, "sinnfein" : 0, "alliance" : 0, "sdlp" : 0 };
+            if (currentMap.previousSeatData[seat].seatInfo.current == party){
+              newPercentage += incumbencyBoost[party];
+            }
+
+            if (isNaN(newPercentage)){
+              newPercentage = 0;
+            }
+
+            newSeatData[party] = newPercentage;
+
+          }
+        });
+
+
+        var sum = 0;
+        for (var party in newSeatData){
+          sum += newSeatData[party];
+        }
+
+        var normaliser = sum / 100;
+        for (var party in newSeatData){
+          newSeatData[party] /= normaliser
+        }
+
+
+        var sortable = [];
+
+				for (var party in newSeatData) {
+					sortable.push([party, newSeatData[party]]);
+				}
+				sortable.sort(function(a, b) {return a[1] - b[1]});
+
+				var maxParty = sortable.pop();
+				var secondMaxParty = sortable.pop();
+
+				var current = maxParty[0];
+				var majority = maxParty[1] - secondMaxParty[1];
+
+        var toAdd = {
+          "seatInfo" : {
+              "current" : current,
+              "majority" : parseInt(majority * data.seatInfo.turnout / 100),
+              "electorate" : data.seatInfo.electorate,
+              "turnout" : data.seatInfo.turnout,
+              "region" : data.seatInfo.region
+          },
+
+          "partyInfo" : {}
+        };
+
+        $.each(newSeatData, function(party, total){
+          if (total > 0){
+            toAdd["partyInfo"][party] = {
+              "total" : total * data.seatInfo.turnout / 100,
+              "name" : partylist[party]
+            }
+          }
+        });
+
+        currentMap.seatData[seat].seatInfo = toAdd["seatInfo"];
+        currentMap.seatData[seat].partyInfo = toAdd["partyInfo"];
+
+      }
+    });
+
+  },
+
+  reset : function(){
+    $("#userinput-table input").each(function(){
+      this.value = 0;
+    });
+    userInput.inputs = {};
+    currentMap.seatData = jQuery.extend(true, {}, userInput.seatDataCopy);
+
+    $(".map").remove();
+    pageLoadEssentials();
+  }
+
+};
+;var voteTotals = {
+
+  data : [],
+  totals : {},
+
+  electorate : {},
+  turnout : null,
+
+  calculate : function(region){
+
+    if (region == "null"){
+      region = "unitedkingdom"
+    }
+
+    // reset
+    voteTotals.data =[];
+    voteTotals.electorate = 0;
+
+    if (region in regionMap){
+      var regions = regionMap[region];
+    } else {
+      var regions = region;
+    }
+    // get seats in regions selected
+    var relevantSeats = [];
+
+    for (var seat in currentMap.seatData){
+      if (regions.indexOf(currentMap.seatData[seat].seatInfo.region) != -1 ){
+        relevantSeats.push(seat);
+        voteTotals.electorate += currentMap.seatData[seat].seatInfo.electorate;
+      }
+    }
+
+    //totals object to add at end
+    var totals = {
+      "name" : "total",
+      "seats" : relevantSeats.length,
+      "change" : null,
+      "votes" : 0,
+      "oldvotes" :0,
+      "votePercent" : null,
+      "votePercentChange" : null
+    }
+
+    var partyTotals = {};
+    // party, seats, seat change, votes, vote %, vote % change
+    $.each(partylist, function(party, value){
+
+      var toAdd = {
+        "party" : party,
+        "name" : value,
+        "seats" : 0,
+        "change" : 0,
+        "votes" : 0,
+        "oldvotes" : 0,
+        "votePercent" : null,
+        "votePercentChange" : null
+      };
+
+      $.each(relevantSeats, function(i, seat){
+
+        // seats
+        if (currentMap.seatData[seat].seatInfo.current == party){
+          toAdd["seats"] += 1
+        }
+        //change
+        if (currentMap.previousSeatData[seat].seatInfo.current == party){
+          toAdd["change"] += 1
+        }
+
+        // vote totals
+        if (party in currentMap.seatData[seat].partyInfo){
+          totals["votes"] += currentMap.seatData[seat].partyInfo[party].total;
+          toAdd["votes"] += currentMap.seatData[seat].partyInfo[party].total;
+        }
+        // get previous votes for change
+        if (currentMap.election == true){
+            if (party in currentMap.previousSeatData[seat].partyInfo){
+              totals["oldvotes"] += currentMap.previousSeatData[seat].partyInfo[party].total;
+              toAdd["oldvotes"] += currentMap.previousSeatData[seat].partyInfo[party].total;
+            }
+        }
+
+      });
+
+      toAdd["change"] = toAdd["seats"] - toAdd["change"];
+
+      partyTotals[party] = toAdd;
+    });
+
+    voteTotals.totals = totals;
+
+    // vote percentage
+    $.each(partylist, function(party, value){
+      partyTotals[party].votePercent = (100 * partyTotals[party].votes / totals.votes).toFixed(2) / 1;
+      // for election maps show change from previous election (or state pre election?)
+      if (currentMap.election == true){
+        var oldPercent =  (100 * partyTotals[party].oldvotes / totals.oldvotes).toFixed(2) / 1 ;
+        partyTotals[party].votePercentChange = (partyTotals[party].votePercent - oldPercent).toFixed(2) / 1;
+      }
+    });
+
+    //set turnout
+    voteTotals.turnout = (100 * totals.votes / voteTotals.electorate).toFixed(2) / 1;
+
+    // combine other and others
+    Object.keys(partyTotals["other"]).forEach(function(key){
+      if (key != "name" && key != "party"){
+
+        partyTotals["other"][key] += partyTotals["others"][key]
+      }
+    });
+    // round others vote percent change
+    partyTotals["other"].votePercentChange = (partyTotals["other"].votePercentChange.toFixed(2) / 1);
+    // remove others
+    delete partyTotals["others"];
+
+    // add party totals to data array - filter irrelevance
+    $.each(partyTotals, function(party, votedata){
+      if (votedata.votes > 0){
+        voteTotals.data.push(votedata);
+      }
+    })
+    // set div title span
+    $("#votetotalsarea").text(regionlist[region]);
+
+    // reset sort state
+    voteTotals.sortState = {
+        "votes" : "desc",
+        "seats" : "desc",
+        "votePercent" : "desc",
+        "votePercentChange" : "desc"
+      };
+
+    voteTotals.tableSortHandler("votes");
+  },
+
+  reorder : function(parameter, sorttype){
+    if (sorttype == "asc"){
+      voteTotals.data.sort(function(a, b){
+        return a[parameter] - b[parameter];
+      });
+    } else if (sorttype == "desc"){
+      voteTotals.data.sort(function(a, b){
+        return b[parameter] - a[parameter];
+      });
+    }
+    //display
+    voteTotals.display();
+  },
+
+  activeSort : "votes",
+
+  sortState : {},
+
+  tableSortHandler: function(parameter){
+    // remove class from old parameter
+    $("#votetotals-sort" + voteTotals.activeSort).removeClass("sort-active");
+
+    voteTotals.activeSort = parameter;
+    voteTotals.reorder(voteTotals.activeSort, voteTotals.sortState[voteTotals.activeSort]);
+    // UI CHANGE
+    $("#votetotals-sort" + parameter).addClass("sort-active");
+
+    // swap asc and desc
+    if (voteTotals.sortState[parameter] == "desc"){
+      voteTotals.sortState[parameter] = "asc";
+    } else if (voteTotals.sortState[parameter] == "asc"){
+      voteTotals.sortState[parameter] = "desc";
+    }
+  },
+
+  display: function(){
+    // reset div
+    $("#votetotals-table-data").empty();
+    // display turnout
+    $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
+
+    var divider = "</div><div>";
+
+    $.each(voteTotals.data, function(i, totals){
+      var party = totals.party;
+      var name = "<div class='party-flair " + party + "'></div>" + totals.name;
+      var seats = totals.seats;
+      var change = totals.change;
+      var votes = parseInt(totals.votes);
+
+      var percent = totals.votePercent.toFixed(2);
+      var percentChange = totals.votePercentChange;
+
+      // colourise seat change
+      var changeDiv = divider;
+      if (change > 0){
+        changeDiv = "</div><div style='color: green'>"
+        change = "+" + change;
+      } else if (change < 0){
+        changeDiv = "</div><div style='color: red'>"
+      }
+
+      //colourise vot change
+      var percentChangeDiv;
+      if (percentChange >= 0){
+        percentChangeDiv = "</div><div style='color: green'>" + percentChange;
+      } else if (percentChange < 0){
+        percentChangeDiv = "</div><div style='color: red'>" + percentChange;
+      }
+
+      var toAdd = "<div><div>" + name + divider + seats + changeDiv + change + divider +
+                votes.toLocaleString() + divider + percent + percentChangeDiv + "</div></div>";
+
+      $("#votetotals-table-data").append(toAdd);
+    });
+
+    // add totals
+    var totalsDivider = "</div><div class='lastrow'>";
+
+    $("#votetotals-table-data").append("<div><div class='lastrow'>Totals"
+      + totalsDivider + voteTotals.totals.seats + totalsDivider +  "&nbsp;" + totalsDivider
+      + voteTotals.totals.votes.toLocaleString() + totalsDivider + "&nbsp;" + totalsDivider +
+      "&nbsp;" + "</div></div>"
+    );
+
+    //display/hide vote total percentchange dependent on page setting
+    var percentChangeDisplay = {
+      true : "block",
+      false : "none"
+    };
+
+    $("#votetotals-table-titles > div > div:nth-child(6)").css("display",  percentChangeDisplay[currentMap.election]);
+    $("#votetotals-table-data > div > div:nth-child(6)").css("display",  percentChangeDisplay[currentMap.election]);
+  }
+};

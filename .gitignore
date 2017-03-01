@@ -1,16 +1,16 @@
 
 /node_modules/
+/.sass-cache/
+
 Gruntfile.js
 package.json
-/.sass-cache/
-/template.html
 
-/electiondatatest/election_data
+/electionmaps/main.js
+/libraries/d3.js
 
-/electionmaps/node_modules
-/electionmaps/.sass-cache
-/electionmaps/gruntfile.js
-/electionmaps/package.json
+/scripts/
 
-/election2016/node_modules/
-/election2016/.sass-cache
+/stylesheets/electionmaps/electionmaps.css
+/stylesheets/electionmaps/electionmaps.css.map
+/stylesheets/sass/
+/stylesheets/index.css.map

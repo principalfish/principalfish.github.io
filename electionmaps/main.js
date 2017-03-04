@@ -372,6 +372,7 @@ var regionMap = {
 
   display: function(){
     $.each(filters.opacities, function(seat, opacity){
+
       var mapSelect = currentMap.seatData[seat].mapSelect;
       mapSelect.opacity = opacity;
       d3.select("#i" + mapSelect.properties.info_id).attr("opacity", opacity)
@@ -730,16 +731,23 @@ function seatExtended(seat, data){
 
 	// load + colour map at page load
 	loadmap : function(setting){
-    
+
+
 		// d3.json(setting.mapurl, function(error, uk) {
 		// 	if (error) return console.error(error);
-
 
 			g.selectAll(".map")
 				.data(topojson.feature(setting.polygons, setting.polygons.objects.map).features)
 				.enter().append("path")
 				.attr("class", function(d){
-					var seatClass = "map " + setting.seatData[d.properties.name]["seatInfo"]["current"];
+					var seatClass;
+					if (d.properties.name in setting.seatData){
+						 seatClass = "map " + setting.seatData[d.properties.name]["seatInfo"]["current"];
+					} else {
+						seatClass = "map null"
+					}
+
+
 					return seatClass
 				})
 				.attr("opacity", 1)
@@ -751,30 +759,30 @@ function seatExtended(seat, data){
 				.append("svg:title")
 					.text(function(d) { return d.properties.name})
 				.each(function(d){
-          // for finding seat from various search features
-					setting.seatData[d.properties.name]["mapSelect"] = d;
-					// set current opacity - for flashseat and choropleths //
-					setting.seatData[d.properties.name]["mapSelect"]["opacity"]	= 1;
-          // set opacity = 1 for filters
-          filters.opacities[d.properties.name] = 1;
-					// lset filtreed to true
-					setting.seatData[d.properties.name].filtered = true;
-          // get turnout
-					var turnout = 0;
-					for (var party in setting.seatData[d.properties.name].partyInfo){
-						turnout += setting.seatData[d.properties.name].partyInfo[party].total;
+					if (d.properties.name in currentMap.seatData){
+						// for finding seat from various search features
+						setting.seatData[d.properties.name]["mapSelect"] = d;
+						// set current opacity - for flashseat and choropleths //
+						setting.seatData[d.properties.name]["mapSelect"]["opacity"]	= 1;
+						// set opacity = 1 for filters
+						filters.opacities[d.properties.name] = 1;
+						// lset filtreed to true
+						setting.seatData[d.properties.name].filtered = true;
+						// get turnout
+						var turnout = 0;
+						for (var party in setting.seatData[d.properties.name].partyInfo){
+							turnout += setting.seatData[d.properties.name].partyInfo[party].total;
+						}
+						setting.seatData[d.properties.name].seatInfo.turnout = turnout;
+
+						// get previous turnout
+						var previousTurnout = 0;
+
+						for (var party in setting.previousSeatData[d.properties.name].partyInfo){
+							previousTurnout += setting.previousSeatData[d.properties.name].partyInfo[party].total;
+						}
+						setting.previousSeatData[d.properties.name].seatInfo.turnout = previousTurnout;
 					}
-					setting.seatData[d.properties.name].seatInfo.turnout = turnout;
-
-          // get previous turnout
-          var previousTurnout = 0;
-
-          for (var party in setting.previousSeatData[d.properties.name].partyInfo){
-						previousTurnout += setting.previousSeatData[d.properties.name].partyInfo[party].total;
-					}
-					setting.previousSeatData[d.properties.name].seatInfo.turnout = previousTurnout;
-
-
 				});
 
 			g.append("path")
@@ -827,6 +835,7 @@ function pageLoadEssentials(){
 	// laod the map
 	mapAttr.loadmap(currentMap);
 	// reset filters.state - also get and show vote totals
+	filters.opacities = {};
 	filters.reset();
 
 	// reset user inputs
@@ -869,9 +878,20 @@ function pageLoadEssentials(){
 	} else if (currentMap.election == false){
 		$("#filter-byElection").text("By-Elections");
 	}
+	if (currentMap.name == "election2010" || currentMap.name == "2015-600seat"){
+		$("#filter-byElection").hide();
+	} else {
+		$("#filter-byElection").show();
+	}
 
 	if (currentMap.predict == true){
 		userInput.seatDataCopy = jQuery.extend(true, {}, currentMap.seatData);
+	}
+
+	if (currentMap.name == "2015-600seat"){
+		$("#seat-600 ").show();
+	} else {
+		$("#seat-600 ").hide();
 	}
 
 	// firefox css nonsense
@@ -911,12 +931,14 @@ var currentMap;
 var dataurls =  {
 	// maps
 	map650 : "650map.json",
+	map600 : "600map.json",
 
 	//parliaments
 	predict : "houseofcommons/prediction.json",
 	current : "houseofcommons/current.json",
 	e2015 : "houseofcommons/2015election.json",
-	e2010 : "houseofcommons/2010election.json"
+	e2010 : "houseofcommons/2010election.json",
+	e2015_600 : "houseofcommons/2015election_600seat.json"
 }
 
 var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false);
@@ -924,6 +946,7 @@ var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e20
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false);
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true);
+var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, true, false);
 
 function initialization(setting){
 

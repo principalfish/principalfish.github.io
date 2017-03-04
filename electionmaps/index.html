@@ -32,11 +32,11 @@
 				<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2015);"> 2015 Election</a> </h3>
 				<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2010);"> 2010 Election</a> </h3>
 			<div class="divider"></div>
-			<!-- <h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)"> 600 Seat Map </a> </h3> -->
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2015_600seat); "> 600 Seat Map </a> </h3>
 			<!-- <h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)"> Predict 600 seats </a> </h3> -->
 
 			<!-- <h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Local Councils</a> </h3>
-			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Scottish Local</a> </h3>
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Scottish Parliament</a> </h3>
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Brexit by Seat</a> </h3>
 
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Poll Tracker</a> </h3> -->
@@ -538,6 +538,21 @@
 			 </div>
 		</div>
 
+		<div id="seat-600"  class="dash-box popupdiv hidden" >
+			<h2> 600 Seat Map (work in progress)<div class="closebox" onclick="uiAttr.hideDiv('#600seat')">X</div></h2>
+			<div>
+				<p>
+					I will be filling this in region by region over the next few weeks. While data is
+					missing it may be a little buggy although it shouldn't affect the other maps.
+				</p>
+				<p>
+					Since ward by ward election results aren't publicly available, to estimate them I have
+					been using local council results, scaling the turnout to the general election and
+					re-proportioning discrepancies between the two. This makes anything shown here an
+					educated guess.
+				</p>
+			</div>
+		</div>
 	</div>
 </body>
 

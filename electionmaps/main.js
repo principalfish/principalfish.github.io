@@ -259,6 +259,22 @@ var regionMap = {
                 "southwestengland", "eastofengland", "eastmidlands", "westmidlands", "london"]
 
 };
+
+// for use with 600 seat map change
+var seatsPerRegion2015 = {
+  "northeastengland" : {"labour" : 26, "conservative" : 3},
+  "northwestengland" : {},
+  "yorkshireandthehumber" : {},
+  "southeastengland" : {},
+  "southwestengland" : {},
+  "eastofengland" : {},
+  "eastmidlands" : {},
+  "westmidlands" : {},
+  "london" : {},
+  "scotland" : {},
+  "wales" : {},
+  "northernireland"  : {}
+}
 ;var filters = {
   state : {
     "majority" : [0, 100]
@@ -918,12 +934,11 @@ function pageSetting(name, mapurl, dataurl, previous, election, predict){
 	this.dataurl = dataurl;
 	this.previous = previous;
 	this.election = election;
+	this.predict = predict;
 
 	this.seatData = {};
 	this.previousSeatData = {};
 	this.polygons = {};
-	this.predict = predict;
-
 }
 
 var currentMap;
@@ -1681,7 +1696,7 @@ function activeSeat(seat){
     if (region in regionMap){
       var regions = regionMap[region];
     } else {
-      var regions = region;
+      var regions = [region];
     }
     // get seats in regions selected
     var relevantSeats = [];
@@ -1746,6 +1761,19 @@ function activeSeat(seat){
       });
 
       toAdd["change"] = toAdd["seats"] - toAdd["change"];
+
+
+      // for change from 2015 in 600 seat map
+      if (currentMap.name == "2015-600seat"){
+        var previousSeatTotal = 0;
+        $.each(regions, function(i, region){
+          if (party in seatsPerRegion2015[region]){
+            previousSeatTotal += seatsPerRegion2015[region][party];
+          }
+
+        })
+        toAdd["change"] = toAdd["seats"] - previousSeatTotal;
+      }
 
       partyTotals[party] = toAdd;
     });
@@ -1836,8 +1864,10 @@ function activeSeat(seat){
     // reset div
     $("#votetotals-table-data").empty();
     // display turnout for all but current parliament
-    if (currentMap.name != "current" && currentMap.name != "prediction" && currentMap.name != "predictit"){
+    if (currentMap.name == "election2015" || currentMap.name == "election2010"){
       $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
+    } else {
+        $("#votetotals-turnout").text(" ");
     }
 
     var divider = "</div><div>";

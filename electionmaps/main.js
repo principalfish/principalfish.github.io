@@ -263,7 +263,7 @@ var regionMap = {
 // for use with 600 seat map change
 var seatsPerRegion2015 = {
   "northeastengland" : {"labour" : 26, "conservative" : 3},
-  "northwestengland" : {},
+  "northwestengland" : {"labour" : 51, "conservative" : 22, "libdems" : 2},
   "yorkshireandthehumber" : {},
   "southeastengland" : {},
   "southwestengland" : {},
@@ -1880,8 +1880,10 @@ function activeSeat(seat){
       var votes = parseInt(totals.votes);
 
       var percent = totals.votePercent.toFixed(2);
-      var percentChange = totals.votePercentChange;
-
+      var percentChange = null;
+      if (totals.votePercentChange != null) {
+        var percentChange = totals.votePercentChange.toFixed(2);
+      } 
       // colourise seat change
       var changeDiv = divider;
       if (change > 0){
@@ -1893,11 +1895,14 @@ function activeSeat(seat){
 
       //colourise vot change
       var percentChangeDiv;
+
+
       if (percentChange >= 0){
         percentChangeDiv = "</div><div style='color: green'>" + percentChange;
       } else if (percentChange < 0){
         percentChangeDiv = "</div><div style='color: red'>" + percentChange;
       }
+
 
       var toAdd = "<div><div>" + name + divider + seats + changeDiv + change + divider +
                 votes.toLocaleString() + divider + percent + percentChangeDiv + "</div></div>";

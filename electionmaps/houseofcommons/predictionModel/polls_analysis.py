@@ -178,7 +178,7 @@ for poll, data in polls.iteritems():
                     regional_averages[region][party] += (data["weight"] * (previous_region_percentage + numbers[party])) # add poll region and weight it
 
 # normalise regional averages
-print previous_regional_totals
+#print previous_regional_totals
 
 for region, data in regional_averages.iteritems():
 

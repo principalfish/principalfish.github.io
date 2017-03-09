@@ -264,7 +264,7 @@ var regionMap = {
 var seatsPerRegion2015 = {
   "northeastengland" : {"labour" : 26, "conservative" : 3},
   "northwestengland" : {"labour" : 51, "conservative" : 22, "libdems" : 2},
-  "yorkshireandthehumber" : {},
+  "yorkshireandthehumber" : {"labour" : 33, "conservative" : 19, "libdems" : 2},
   "southeastengland" : {},
   "southwestengland" : {},
   "eastofengland" : {},
@@ -904,7 +904,7 @@ function pageLoadEssentials(){
 		userInput.seatDataCopy = jQuery.extend(true, {}, currentMap.seatData);
 	}
 
-	if (currentMap.name == "2015-600seat"){
+	if (currentMap.name == "2015-600seat" || currentMap.name == "prediction-600seat"){
 		$("#seat-600 ").show();
 	} else {
 		$("#seat-600 ").hide();
@@ -953,7 +953,8 @@ var dataurls =  {
 	current : "houseofcommons/current.json",
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
-	e2015_600 : "houseofcommons/2015election_600seat.json"
+	e2015_600 : "houseofcommons/2015election_600seat.json",
+	predict_600 : "houseofcommons/prediction_600seat.json"
 }
 
 var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false);
@@ -961,8 +962,8 @@ var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e20
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false);
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true);
-var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false);
-
+var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false); // nodata to compare
+var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false)
 function initialization(setting){
 
 	$(".map").remove();
@@ -1262,7 +1263,8 @@ function activeSeat(seat){
     "choroplethsbutton" : "#choropleths",
     "seatlistbutton" : "#seatlist",
     "seatlist-extend" : "#seatlist-extended",
-    "predictbutton" : "#userinput"
+    "predictbutton" : "#userinput",
+    "seat-600" : "#seat-600"
   },
 
   //store  and reorder z indexes of hidden divs
@@ -1883,7 +1885,7 @@ function activeSeat(seat){
       var percentChange = null;
       if (totals.votePercentChange != null) {
         var percentChange = totals.votePercentChange.toFixed(2);
-      } 
+      }
       // colourise seat change
       var changeDiv = divider;
       if (change > 0){

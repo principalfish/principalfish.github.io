@@ -1,0 +1,14 @@
+N.E. England : 2.597m = 3.97% / 4.09%
+N.W. England : 7.052m = 10.79% / 11.12%
+Yorks Humber : 5.284m = 8.09% / 8.33%
+E. Midlands : 6.034m = 9.24% / 9.51%
+W. Midlands : 5.602m = 8.58% / 8.83%
+E. England : 5.847m = 8.95% / 9.22%
+London : 8.665m = 13.27% / 13.66%
+S.E England : 8.635m = 13.22% / 13.61%
+S.W. England : 5.289m = 8.10% / 8.34%
+Wales : 3.063m = 4.69% / 4.83%
+Scotland : 5.373m = 8.23% / 8.47%
+N.I : 1.869m = 2.86%
+
+Total : 65.31m / 63.44m (w/o ni)

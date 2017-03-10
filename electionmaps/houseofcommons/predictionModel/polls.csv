@@ -1,8 +1,13 @@
 code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu
 1000	me	9	5	2015	Northern Ireland	10000	126			255	95			656	1390	2454	857	2566	1601
-1001	me	9	5	2015	England	10001	4086	3163	821	1412	420			99					
+1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
 1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
 1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					
+8	yougov	9	3	2017	London	192	32	40	11	10	4			3					
+8	yougov	9	3	2017	Rest of South	531	56	14	14	12	3			1					
+8	yougov	9	3	2017	Midlands and Wales	344	46	26	7	12	2		5	1					
+8	yougov	9	3	2017	North England	385	42	34	9	13	2			0					
+8	yougov	9	3	2017	Scotland	147	19	25	3	3	2	48		1					
 7	icm	5	3	2017	Scotland	131	40	22	8	2	6	55		0					
 7	icm	5	3	2017	Wales	80	29	19	1	10	8		12	0					
 7	icm	5	3	2017	North	498	207	138	32	44	20	55		2					

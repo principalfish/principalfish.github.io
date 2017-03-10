@@ -268,7 +268,7 @@ var seatsPerRegion2015 = {
   "southeastengland" : {},
   "southwestengland" : {},
   "eastofengland" : {},
-  "eastmidlands" : {},
+  "eastmidlands" : {"conservative" : 32, "labour" : 14},
   "westmidlands" : {},
   "london" : {},
   "scotland" : {},

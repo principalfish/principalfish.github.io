@@ -115,6 +115,8 @@ def get_new_data(seat, data):
         data["seatInfo"]["current"] = current_max
         data["seatInfo"]["majority"] =  sorted(votes_array)[-1] - sorted(votes_array)[-2]
 
+        data["partyInfo"]["others"] = data["partyInfo"]["other"]
+        del data["partyInfo"]["other"]
 
 for seat, data in seat_data.iteritems():
     get_new_data(seat, data)

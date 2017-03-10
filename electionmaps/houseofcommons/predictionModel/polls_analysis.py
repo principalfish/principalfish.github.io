@@ -132,8 +132,8 @@ def weight_poll(data):
     weight *= math.pow(degrade_factor, days_past)
 
     #testing
-    # if data["company"] == "me":
-    #     weight = 0
+    if data["company"] == "me":
+        weight = 10000000
 
     return weight
 
@@ -152,6 +152,7 @@ for region in regions:
 #get change for each polling region relative to 2015
 for poll, data in polls.iteritems():
     if poll != "1001": # my test poll nullified
+        #print data["company"]
         for area, numbers in data["regions"].iteritems():
             regions_in_poll_area = polling_regions[data["company"]][area]
             for party in numbers:

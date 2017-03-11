@@ -270,7 +270,7 @@ var seatsPerRegion2015 = {
   "eastofengland" : {},
   "eastmidlands" : {"conservative" : 32, "labour" : 14},
   "westmidlands" : {},
-  "london" : {},
+  "london" : {"labour" : 45, "conservative" : 27, "libdems" : 1},
   "scotland" : {},
   "wales" : {},
   "northernireland"  : {}

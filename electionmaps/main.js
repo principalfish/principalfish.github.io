@@ -269,7 +269,7 @@ var seatsPerRegion2015 = {
   "southwestengland" : {},
   "eastofengland" : {},
   "eastmidlands" : {"conservative" : 32, "labour" : 14},
-  "westmidlands" : {},
+  "westmidlands" : {"conservative" : 34, "labour" : 25},
   "london" : {"labour" : 45, "conservative" : 27, "libdems" : 1},
   "scotland" : {},
   "wales" : {},
@@ -964,6 +964,7 @@ var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true);
 var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false)
+
 function initialization(setting){
 
 	$(".map").remove();

@@ -265,7 +265,7 @@ var seatsPerRegion2015 = {
   "northeastengland" : {"labour" : 26, "conservative" : 3},
   "northwestengland" : {"labour" : 51, "conservative" : 22, "libdems" : 2},
   "yorkshireandthehumber" : {"labour" : 33, "conservative" : 19, "libdems" : 2},
-  "southeastengland" : {},
+  "southeastengland" : {"conservative" : 78, "labour" : 4 ,"green" : 1, "others" : 1},
   "southwestengland" : {},
   "eastofengland" : {},
   "eastmidlands" : {"conservative" : 32, "labour" : 14},
@@ -776,6 +776,7 @@ function seatExtended(seat, data){
 					.text(function(d) { return d.properties.name})
 				.each(function(d){
 					if (d.properties.name in currentMap.seatData){
+    
 						// for finding seat from various search features
 						setting.seatData[d.properties.name]["mapSelect"] = d;
 						// set current opacity - for flashseat and choropleths //
@@ -973,8 +974,6 @@ function initialization(setting){
 		getData(setting);
 	});
 }
-
-initialization(currentParliament);
 ;var seatInfoTable = {
   // previous display state of table
   party : null,

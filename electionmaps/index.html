@@ -35,13 +35,13 @@
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2015_600seat); ">600 seat - 2015</a> </h3>
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(prediction_600seat);">600 seat - 2020</a> </h3>
 
-			<!-- <h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Local Councils</a> </h3>
+			<!--
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Scottish Parliament</a> </h3>
-			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Brexit by Seat</a> </h3>
+			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Welsh Parliament</a> </h3>
+			 -->
 
-			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Poll Tracker</a> </h3> -->
-
-			<p id="copyright"> Copyright 2017 principalfish.co.uk</p>
+			<p id="copyright">Contains OS data © Crown copyright and database right (2017).
+				<br> Copyright 2017 principalfish.co.uk</p>
 	</nav>
 
 	<div id="wrapper">
@@ -64,6 +64,8 @@
 
 				svg
 					.call(zoom);
+
+				initialization(currentParliament);
 
 			</script>
 		</div>

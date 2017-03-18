@@ -267,7 +267,7 @@ var seatsPerRegion2015 = {
   "yorkshireandthehumber" : {"labour" : 33, "conservative" : 19, "libdems" : 2},
   "southeastengland" : {"conservative" : 78, "labour" : 4 ,"green" : 1, "others" : 1},
   "southwestengland" : {"conservative" : 51, "labour" : 4},
-  "eastofengland" : {},
+  "eastofengland" : {"conservative" : 52, "labour" : 4, "libdems" : 1, "ukip" : 1},
   "eastmidlands" : {"conservative" : 32, "labour" : 14},
   "westmidlands" : {"conservative" : 34, "labour" : 25},
   "london" : {"labour" : 45, "conservative" : 27, "libdems" : 1},

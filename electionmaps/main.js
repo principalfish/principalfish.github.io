@@ -273,7 +273,7 @@ var seatsPerRegion2015 = {
   "london" : {"labour" : 45, "conservative" : 27, "libdems" : 1},
   "scotland" : {"snp" : 56, "conservative" : 1, "labour" : 1, "libdems" : 1},
   "wales" : {"labour" : 25, "conservative" : 11, "libdems" : 1, "plaidcymru" : 3},
-  "northernireland"  : {}
+  "northernireland"  : {"uu" : 2, "dup" : 8, "sdlp" : 3, "alliance" : 0, "sinnfein" : 4, "others" : 1}
 }
 ;var filters = {
   state : {
@@ -762,8 +762,6 @@ function seatExtended(seat, data){
 					} else {
 						seatClass = "map null"
 					}
-
-
 					return seatClass
 				})
 				.attr("opacity", 1)
@@ -776,7 +774,7 @@ function seatExtended(seat, data){
 					.text(function(d) { return d.properties.name})
 				.each(function(d){
 					if (d.properties.name in currentMap.seatData){
-    
+
 						// for finding seat from various search features
 						setting.seatData[d.properties.name]["mapSelect"] = d;
 						// set current opacity - for flashseat and choropleths //

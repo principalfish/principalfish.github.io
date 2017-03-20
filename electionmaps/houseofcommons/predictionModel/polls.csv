@@ -3,6 +3,11 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
 1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
 1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					
+13	icm	19	3	2017	Scotland	133	40	16	3	5	7	62		0					
+13	icm	19	3	2017	Wales	87	33	23	3	8	4		14	2					
+13	icm	19	3	2017	North	484	179	140	40	42	17			2					
+13	icm	19	3	2017	Midlands	467	247	109	29	49	17			2					
+13	icm	19	3	2017	South	453	223	102	56	53	14			4					
 12	comres	17	3	2017	Scotland	116	24	10	16	2	4	61		0					
 12	comres	17	3	2017	North East England	48	19	13	6	5	4			0					
 12	comres	17	3	2017	North West England	134	54	46	17	13	3			1					

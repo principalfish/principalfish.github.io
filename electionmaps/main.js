@@ -273,7 +273,7 @@ var seatsPerRegion2015 = {
   "london" : {"labour" : 45, "conservative" : 27, "libdems" : 1},
   "scotland" : {"snp" : 56, "conservative" : 1, "labour" : 1, "libdems" : 1},
   "wales" : {"labour" : 25, "conservative" : 11, "libdems" : 1, "plaidcymru" : 3},
-  "northernireland"  : {"uu" : 2, "dup" : 8, "sdlp" : 3, "alliance" : 0, "sinnfein" : 4, "others" : 1}
+  "northernireland"  : {"uu" : 2, "dup" : 8, "sdlp" : 3,  "sinnfein" : 4, "others" : 1}
 }
 ;var filters = {
   state : {

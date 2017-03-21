@@ -5,6 +5,7 @@
 	<link rel="shortcut icon" href="/imgs/logo.png">
 	<link type="text/css" rel="stylesheet" href="/stylesheets/jquery-ui.structure.css"/>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/electionmaps.min.css"/>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/navbar.min.css"/>
 	<script type="text/javascript" src="/libraries/d3.min.js"></script>
 	<script type="text/javascript" src="/libraries/topojson.js"></script>
 	<script type="text/javascript" src="/libraries/jquery.min.js"></script>
@@ -24,16 +25,18 @@
 	</header>
 
 	<nav id="projections">
-			<h3 class="navbaractive"><a href="javascript:;" onclick="uiAttr.changeNavBar(this); initialization(currentParliament);"> Current Parliament </a> </h3>
+			<h3 id="nav-current"><a href="/electionmaps/"> Current Parliament </a> </h3>
+			<!-- <h3><a href="byelections">By-Elections</a></h3> -->
 				<div class="divider"></div>
-			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(prediction)"> 2020 Prediction </a> </h3>
-			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(predictit)"> Predict 2020 </a> </h3>
+			<h3 id="nav-prediction"><a href="?map=prediction"> 2020 Prediction </a> </h3>
+			<h3 id="nav-predictit"><a href="?map=predictit"> Predict 2020 </a> </h3>
+
 			<div class="divider"></div>
-				<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2015);"> 2015 Election</a> </h3>
-				<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2010);"> 2010 Election</a> </h3>
+				<h3 id="nav-election2015"><a href="?map=election2015"> 2015 Election</a> </h3>
+				<h3 id="nav-election2010"><a href="?map=election2010"> 2010 Election</a> </h3>
 			<div class="divider"></div>
-			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(election2015_600seat); ">600 seat - 2015</a> </h3>
-			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this); initialization(prediction_600seat);">600 seat - 2020</a> </h3>
+			<h3 id="nav-election2015_600seat"><a href="?map=election2015_600seat">600 seat - 2015</a> </h3>
+			<h3 id="nav-prediction_600seat"><a href="?map=prediction_600seat">600 seat - 2020</a> </h3>
 
 			<!--
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Scottish Parliament</a> </h3>
@@ -65,7 +68,7 @@
 				svg
 					.call(zoom);
 
-				initialization(currentParliament);
+				initialization();
 
 			</script>
 		</div>
@@ -541,15 +544,11 @@
 		</div>
 
 		<div id="seat-600"  class="dash-box popupdiv hidden" >
-			<h2> 600 Seat Maps (work in progress)<div class="closebox" onclick="uiAttr.hideDiv('seat-600')">X</div></h2>
+			<h2> 600 Seat Maps<div class="closebox" onclick="uiAttr.hideDiv('seat-600')">X</div></h2>
 			<div>
 				<p>
 					This map attempts to show how the 2015 election would have gone under the proposed boundary
 					changes.
-				</p>
-				<p>
-					I will be filling this in region by region over the next few weeks. While data is
-					missing it may be a little buggy although it shouldn't affect the other maps.
 				</p>
 				<p>
 					Since ward by ward election results aren't publicly available, to estimate them I have

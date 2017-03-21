@@ -839,7 +839,6 @@ var zoom = d3.zoom()
 		})
 
 	).then(function(){
-
 		pageLoadEssentials();
 	})
 };
@@ -883,7 +882,7 @@ function pageLoadEssentials(){
 		$("#instructions").remove();
 	}
 	// hide instructions
-	setTimeout(function(){$("#instructions").remove();}, 20000);
+	//setTimeout(function(){$("#instructions").remove();}, 20000);
 
 
 	// election/prediction map differences to parliament maps
@@ -964,7 +963,12 @@ var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, da
 var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false)
 
-function initialization(setting){
+function initialization(){
+
+	var name = getParameterByName("map", url);
+	var setting = urlParamMap[name];
+
+	uiAttr.changeNavBar(setting.name);
 
 	$(".map").remove();
 
@@ -972,6 +976,30 @@ function initialization(setting){
 		getData(setting);
 	});
 }
+
+function getParameterByName(name, url) {
+    if (!url) {
+      url = window.location.href;
+    }
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+var url = window.location.href;
+
+var urlParamMap = {
+	null : currentParliament,
+	"prediction" : prediction,
+	"predictit" : predictit,
+	"election2015" : election2015,
+	"election2010" : election2010,
+	"election2015_600seat" : election2015_600seat,
+	"prediction_600seat" : prediction_600seat
+};
 ;var seatInfoTable = {
   // previous display state of table
   party : null,
@@ -1195,12 +1223,13 @@ function activeSeat(seat){
 }
 ;var uiAttr = {
   changeNavBar : function(elem){
-    // change navbar state
     $(".navbaractive").removeClass("navbaractive");
-    $(elem.parentNode).addClass("navbaractive")
 
+    var id = "#nav-" + elem;
+
+    $(id).addClass("navbaractive");
       // change pagetitle;
-    var text = $(elem).text();
+    var text = $(id).text();
 
     $("#pagetitle").html(text);
     document.title = text;

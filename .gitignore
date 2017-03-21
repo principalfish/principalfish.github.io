@@ -5,13 +5,20 @@
 Gruntfile.js
 package.json
 
-/electionmaps/main.js
+
 /libraries/d3.js
 
 /scripts/
 
 /stylesheets/electionmaps/electionmaps.css
 /stylesheets/electionmaps/electionmaps.css.map
+/stylesheets/electionmaps/navbar.css.map
+/stylesheets/electionmaps/navbar.css
+/stylesheets/electionmaps/byelections/byelections.css
+/stylesheets/electionmaps/byelections/byelections.css.map
+
 /stylesheets/sass/
 /stylesheets/index.css.map
-electionmaps/main.js
+
+
+*.bat

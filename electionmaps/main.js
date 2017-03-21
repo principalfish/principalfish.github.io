@@ -967,6 +967,7 @@ function initialization(){
 
 	var name = getParameterByName("map", url);
 	var setting = urlParamMap[name];
+	console.log(setting)
 
 	uiAttr.changeNavBar(setting.name);
 

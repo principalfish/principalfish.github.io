@@ -15,8 +15,16 @@ package.json
 /stylesheets/electionmaps/navbar.css.map
 /stylesheets/electionmaps/navbar.css
 
+/stylesheets/electionmaps/polltracker/polls.css.map
+/stylesheets/electionmaps/polltracker/polls.css
+
 /stylesheets/sass/
 /stylesheets/index.css.map
+
+/electionmaps/polltracker.js
+
+/electionmaps/polltracker/polls.py
+/electionmaps/polltracker/polltracker.csv
 
 
 *.bat

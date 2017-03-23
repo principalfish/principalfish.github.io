@@ -3,6 +3,11 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
 1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
 1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					
+14	yougov	21	3	2017	London	195	31	43	14	7	4			1					
+14	yougov	21	3	2017	Rest of South	540	52	17	14	12	5			1					
+14	yougov	21	3	2017	Midlands and Wales	350	47	25	7	13	2		2	2					
+14	yougov	21	3	2017	North England	392	36	32	12	16	3			1					
+14	yougov	21	3	2017	Scotland	150	19	18	4	3	2	54		0					
 13	icm	19	3	2017	Scotland	133	40	16	3	5	7	62		0					
 13	icm	19	3	2017	Wales	87	33	23	3	8	4		14	2					
 13	icm	19	3	2017	North	484	179	140	40	42	17			2					

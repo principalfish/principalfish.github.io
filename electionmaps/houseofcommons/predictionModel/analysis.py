@@ -124,10 +124,8 @@ for seat, data in seat_data.iteritems():
 with open("../prediction.json", "w") as output:
     json.dump(seat_data, output)
 
-#for displaying polls on scatterplot
 
-
-# for displaying mdoel on scatterplot
+# for displaying mdoel and polls on scatterplot
 last_date = datetime.datetime(2015, 5, 1)
 for code in polls:
     if polls[code]["date"] > last_date:
@@ -155,6 +153,16 @@ for seat, data in seat_data.iteritems():
 
 with open("../../polltracker/scatter.json") as  scatter_input:
     scatter_data = json.load(scatter_input)
+
+duplicate_dates = []
+for i in range(len(scatter_data["models"])):
+    print scatter_data["models"][i]["date"]
+    if scatter_data["models"][i]["date"] == date_code:
+        duplicate_dates.append(i)
+
+for i in range(len(duplicate_dates), 0, -1):
+    del scatter_data["models"][duplicate_dates[i-1]]
+
 
 scatter_data["models"].append(seat_totals)
 scatter_data["polls"] = polls_for_scatterplot["polls"]

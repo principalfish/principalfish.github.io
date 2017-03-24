@@ -60,6 +60,7 @@ with open("polls.csv", "rb") as polls_file:
                 "regions" : {}
             }
 
+
         region_to_add = {}
         for party in parties:
             if row[party] != "":
@@ -210,11 +211,10 @@ for poll, data in polls.iteritems():
         polls_for_scatterplot["polls"].append(scatterplot(data))
 
     poll_maths(data)
-
-
     data["weight"] = weight_poll(data)
 
 #sort polls for scatterplot by date
+
 polls_for_scatterplot["polls"].sort(key=lambda x: x["dateobj"])
 
 for poll in polls_for_scatterplot["polls"]:

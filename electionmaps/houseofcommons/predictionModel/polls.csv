@@ -72,11 +72,11 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 9	comres	26	7	2015	London	66	25	22	9	3	4			3					
 9	comres	26	7	2015	South East England	74	40	17	6	8	3			2					
 9	comres	26	7	2015	South West England	53	25	10	7	6	3			2					
-10	icm2	12	7	2015	Scotland	65	13	22	1	0	0	27		2					
-10	icm2	12	7	2015	Wales	32	9	11	1	5	1		5	0					
-10	icm2	12	7	2015	North	165	53	71	11	28	3			0					
-10	icm2	12	7	2015	Midlands	163	74	52	4	24	8			0					
-10	icm2	12	7	2015	South	232	101	68	25	24	13			1					
+10	icm2	9	8	2015	Scotland	65	13	22	1	0	0	27		2					
+10	icm2	9	8	2015	Wales	32	9	11	1	5	1		5	0					
+10	icm2	9	8	2015	North	165	53	71	11	28	3			0					
+10	icm2	9	8	2015	Midlands	163	74	52	4	24	8			0					
+10	icm2	9	8	2015	South	232	101	68	25	24	13			1					
 11	survation	13	8	2015	London	101	35	41	6	19	1								
 11	survation	13	8	2015	Midlands	143	82	33	1	24	3								
 11	survation	13	8	2015	North	196	58	95	10	27	6								

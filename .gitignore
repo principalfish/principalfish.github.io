@@ -23,8 +23,6 @@ package.json
 
 /electionmaps/polltracker.js
 
-/electionmaps/polltracker/polls.py
-/electionmaps/polltracker/polltracker.csv
 
 
 *.bat

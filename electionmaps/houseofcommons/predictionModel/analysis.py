@@ -1,5 +1,5 @@
-import os, json, math
-from polls_analysis import regional_averages, previous_regional_totals, parties, regions
+import os, json, math, datetime
+from polls_analysis import regional_averages, previous_regional_totals, parties, regions, polls, polls_for_scatterplot
 
 party_map = {
      'conservative': "Conservative",
@@ -121,6 +121,43 @@ def get_new_data(seat, data):
 for seat, data in seat_data.iteritems():
     get_new_data(seat, data)
 
-
 with open("../prediction.json", "w") as output:
     json.dump(seat_data, output)
+
+#for displaying polls on scatterplot
+
+
+# for displaying mdoel on scatterplot
+last_date = datetime.datetime(2015, 5, 1)
+for code in polls:
+    if polls[code]["date"] > last_date:
+        last_date = polls[code]["date"]
+
+date_code = '{:%m/%d/%Y}'.format(last_date)
+
+seat_totals = {
+    "date" : date_code,
+    "labour" : 0,
+    "conservative" : 0,
+    "libdems" : 0,
+    "snp" : 0,
+    "ukip" : 0,
+    "green" : 0,
+    "others" : 0
+}
+
+for seat, data in seat_data.iteritems():
+    winner = data["seatInfo"]["current"]
+    if winner in seat_totals:
+        seat_totals[winner] += 1
+    else:
+        seat_totals["others"] += 1
+
+with open("../../polltracker/scatter.json") as  scatter_input:
+    scatter_data = json.load(scatter_input)
+
+scatter_data["models"].append(seat_totals)
+scatter_data["polls"] = polls_for_scatterplot["polls"]
+
+with open("../../polltracker/scatter.json", "w") as scatter_json:
+    json.dump(scatter_data, scatter_json)

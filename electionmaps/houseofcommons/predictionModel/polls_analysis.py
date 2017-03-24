@@ -41,7 +41,6 @@ def get_old_totals(region):
 
         party_votes[party] = party_total
 
-
     party_votes["turnout"] = turnout
     previous_regional_totals[region] = party_votes
 
@@ -71,13 +70,14 @@ with open("polls.csv", "rb") as polls_file:
 
         polls[code]["regions"][row["region"]] = region_to_add
 
+
     polls_file.close()
 
-
-
 #manipulate specific polls based on company
+
 def poll_maths(poll):
     company = poll["company"]
+
     if company == "icm":
         for region, numbers in poll["regions"].iteritems():
             if region == "North":
@@ -102,7 +102,7 @@ def poll_maths(poll):
         del poll["regions"]["England"]
 
         #convert to decimal percentaegs
-    if company in ["me", "icm", "opinium", "mori", "comres"]:
+    if company in ["general", "me", "icm", "icm2", "opinium", "mori", "comres", "comresdm", "survation"]:
         for region, numbers in poll["regions"].iteritems():
             for party in numbers:
                 if party != "total":
@@ -115,11 +115,10 @@ def poll_maths(poll):
                 if party != "total":
                     numbers[party] /= float(100)
 
+
     # delete total from polls
     for region, numbers in poll["regions"].iteritems():
         del numbers["total"]
-
-
 
 def weight_poll(data):
     today = datetime.today()
@@ -137,12 +136,89 @@ def weight_poll(data):
 
     return weight
 
+polls_for_scatterplot = {"polls" : []}
+
+def scatterplot(data):
+
+    to_add = {
+        "dateobj" : data["date"],
+        "date" : [],
+        "company" : None,
+        "labour" : 0,
+        "conservative" : 0,
+        "libdems" : 0,
+        "snp" : 0,
+        "ukip" : 0,
+        "green" : 0,
+        "others" : 0
+    }
+
+    to_add["date"].append(data["date"].day)
+    to_add["date"].append(data["date"].month)
+    to_add["date"].append(data["date"].year)
+
+
+    companies = ["yougov", "icm", "mori", "opinium", "comres", "icm2", "comresdm"]
+
+    if data["company"] in companies:
+        to_add["company"] = data["company"]
+    else:
+        to_add["company"] = "others"
+
+    total = 0
+    for region, numbers in data["regions"].iteritems():
+
+        if (data["company"] != "mori" or region != "England") and (data["company"] != "icm" or region not in ["Wales", "Scotland"]):
+
+            for party, votes in numbers.iteritems():
+                if party != "total":
+
+                    if data["company"] == "yougov":
+                        if party in to_add:
+                            to_add[party] += votes * numbers["total"] / 100
+                        else:
+                            to_add["others"] += votes * numbers["total"] / 100
+                        total += votes * numbers["total"] / 100
+
+                    else:
+
+
+                        if party in to_add:
+                            to_add[party] += votes
+                        else:
+                            to_add["others"] += votes
+
+                        total += votes
+
+
+    for party in to_add:
+        if party != "date" and party != "company" and party !="dateobj":
+            to_add[party] /= (float(total) / 100)
+            to_add[party] = round(to_add[party], 1)
+
+    if to_add["company"] == "icm2":
+        to_add["company"] = "icm"
+    if to_add["company"] == "comresdm":
+        to_add["company"] = "comres"
+    #print to_add["company"], "\n", to_add, "\n"
+    return to_add
+
 #alter polls per company, get weight
 for poll, data in polls.iteritems():
+
+    if data["company"] != "me":
+        polls_for_scatterplot["polls"].append(scatterplot(data))
+
     poll_maths(data)
+
+
     data["weight"] = weight_poll(data)
 
-#print polls["7"]
+#sort polls for scatterplot by date
+polls_for_scatterplot["polls"].sort(key=lambda x: x["dateobj"])
+
+for poll in polls_for_scatterplot["polls"]:
+    del poll["dateobj"]
 
 regional_averages = {} # obj to export to analysis
 #set up object

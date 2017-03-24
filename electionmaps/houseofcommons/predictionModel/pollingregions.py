@@ -7,7 +7,21 @@ polling_regions = {
         "Wales" : ["wales"]
     },
 
+    "general" : {
+        "All" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland",
+            "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london",
+            "scotland", "wales"]
+    },
+
     "icm" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+        "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
+        "Midlands" : ["eastmidlands", "westmidlands", "eastofengland"],
+        "South":   ["southeastengland", "southwestengland", "london"]
+    },
+
+    "icm2" : {
         "Scotland" : ["scotland"],
         "Wales" : ["wales"],
         "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
@@ -52,6 +66,24 @@ polling_regions = {
         "North West England" : ["northwestengland"],
         "Yorkshire and Humber" : ["yorkshireandthehumber"],
         "East of England" : ["eastofengland"]
+    },
+
+    "comresdm" : {
+        "Wales" : ["wales"],
+        "Scotland" : ["scotland"],
+        "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
+        "Midlands": ["eastmidlands", "westmidlands", "eastofengland"],
+        "South" : ["southeastengland", "southwestengland", "london"]
+    },
+
+    "survation" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+        "Midlands" : ["eastmidlands", "westmidlands"],
+        "London" : ["london"],
+        "South" : ["southeastengland", "southwestengland", "eastofengland"],
+        "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"]
+
     }
 
 }

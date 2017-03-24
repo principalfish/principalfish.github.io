@@ -3,7 +3,7 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
 1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
 1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					
-0	general	7	5	2015	All	1000	378	312	81	129	38	49	6	9					
+1001	me	7	5	2015	All	1000	378	312	81	129	38	49	6	9					
 1	survation	9	5	2015	London	115	43	45	7	17	3								
 1	survation	9	5	2015	Midlands	157	73	49	10	20	4								
 1	survation	9	5	2015	North	199	76	82	6	26	8								

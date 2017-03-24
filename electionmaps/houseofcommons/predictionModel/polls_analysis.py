@@ -103,7 +103,7 @@ def poll_maths(poll):
         del poll["regions"]["England"]
 
         #convert to decimal percentaegs
-    if company in ["general", "me", "icm", "icm2", "opinium", "mori", "comres", "comresdm", "survation"]:
+    if company in ["general", "me", "icm", "icm2", "opinium", "mori", "comres", "comresdm", "survation", "bmg"]:
         for region, numbers in poll["regions"].iteritems():
             for party in numbers:
                 if party != "total":

@@ -76,6 +76,21 @@ polling_regions = {
         "South" : ["southeastengland", "southwestengland", "london"]
     },
 
+    "bmg" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East England" : ["southeastengland"],
+        "South West England" : ["southwestengland"],
+        "London" : ["london"],
+        "North East England" : ["northeastengland"],
+        "North West England" : ["northwestengland"],
+        "Yorkshire and Humber" : ["yorkshireandthehumber"],
+        "East of England" : ["eastofengland"]
+    },
+
     "survation" : {
         "Scotland" : ["scotland"],
         "Wales" : ["wales"],

@@ -183,3 +183,140 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 27	comresdm	25	10	2015	North	121	37	50	7	13	6			9					
 27	comresdm	25	10	2015	Midlands	137	58	48	9	13	3			4					
 27	comresdm	25	10	2015	South	204	90	60	19	23	8			4					
+28	bmg	27	10	2015	Scotland	115	22	27	9	4	0	52		2					
+28	bmg	27	10	2015	Wales	52	12	20	2	7	4		7	1					
+28	bmg	27	10	2015	East Midlands	86	37	26	5	16	2			0					
+28	bmg	27	10	2015	East of England	127	43	47	6	22	8			1					
+28	bmg	27	10	2015	London	151	68	56	6	14	7			1					
+28	bmg	27	10	2015	North East England	41	12	14	3	8	3			1					
+28	bmg	27	10	2015	North West England	125	39	54	3	23	5			1					
+28	bmg	27	10	2015	South East England	163	84	31	10	28	8			3					
+28	bmg	27	10	2015	South West England	112	49	29	11	17	5			1					
+28	bmg	27	10	2015	West Midlands	108	45	34	4	16	7			1					
+28	bmg	27	10	2015	Yorkshire and Humber	96	31	33	8	21	3			1					
+29	survation	11	11	2015	London	221	77	86	20	29	8			1					
+29	survation	11	11	2015	Midlands	257	125	72	13	40	6			0					
+29	survation	11	11	2015	North	364	120	147	27	63	5			2					
+29	survation	11	11	2015	South	519	228	127	41	97	17			5					
+29	survation	11	11	2015	Scotland	165	30	26	7	8	5	85							
+29	survation	11	11	2015	Wales	94	20	34	11	16	4		9						
+30	icm2	15	11	2015	Scotland	68	10	12	4	1	3	38		0					
+30	icm2	15	11	2015	Wales	31	13	11	1	6	0			0					
+30	icm2	15	11	2015	North	169	43	80	11	25	7			3					
+30	icm2	15	11	2015	Midlands	187	74	59	11	36	4			3					
+30	icm2	15	11	2015	South	277	107	102	23	28	13			4					
+31	bmg	17	11	2015	Scotland	133	38	18	11	5	5	55							
+31	bmg	17	11	2015	Wales	69	24	23	3	7	4		7						
+31	bmg	17	11	2015	East Midlands	116	42	38	5	18	6			2					
+31	bmg	17	11	2015	East of England	141	62	41	6	23	8			1					
+31	bmg	17	11	2015	London	150	41	54	15	27	7			4					
+31	bmg	17	11	2015	North East England	46	18	17	2	4	2			3					
+31	bmg	17	11	2015	North West England	138	43	55	12	16	5			2					
+31	bmg	17	11	2015	South East England	177	84	30	16	32	10			1					
+31	bmg	17	11	2015	South West England	120	48	29	8	24	6			2					
+31	bmg	17	11	2015	West Midlands	117	47	36	5	16	3			2					
+31	bmg	17	11	2015	Yorkshire and Humber	127	35	42	13	27	3			1					
+32	survation	17	11	2015	London	162	71	48	12	24	5			1					
+32	survation	17	11	2015	Midlands	205	85	68	8	33	8			4					
+32	survation	17	11	2015	North	299	97	126	16	50	8			2					
+32	survation	17	11	2015	South	418	181	108	30	89	9			1					
+32	survation	17	11	2015	Scotland	120	25	20	5	3	0	66		1					
+32	survation	17	11	2015	Wales	68	19	20	3	8	2		15						
+33	mori	17	11	2015	North	147	53	59	15	10	9			1					
+33	mori	17	11	2015	Midlands	190	97	58	12	15	6		2	0					
+33	mori	17	11	2015	Wales	0	0	0	0	0	0	0	0	0					
+33	mori	17	11	2015	South	242	96	89	20	19	12			0					
+33	mori	17	11	2015	London	100	39	45	6	2	3			0					
+33	mori	17	11	2015	England	543	235	188	46	43	25			1					
+33	mori	17	11	2015	Scotland	59	15	9	1	3		31		0					
+34	comres	20	11	2015	Scotland	115	19	16	8	6	4	62							
+34	comres	20	11	2015	North East England	50	21	22	1	6	0								
+34	comres	20	11	2015	North West England	150	63	56	8	15	7								
+34	comres	20	11	2015	Yorkshire and Humber	106	45	33	5	18	4			1					
+34	comres	20	11	2015	West Midlands	109	46	28	8	24	2								
+34	comres	20	11	2015	East Midlands	97	47	26	4	17	4								
+34	comres	20	11	2015	Wales	57	18	22	1	9	1		4						
+34	comres	20	11	2015	East of England	123	52	25	18	26	2								
+34	comres	20	11	2015	London	167	66	61	13	22	4			1					
+34	comres	20	11	2015	South East England	191	104	34	16	29	6			1					
+34	comres	20	11	2015	South West England	116	53	26	11	17	8								
+35	comresdm	22	11	2015	Wales	25	8	8	1	2	0		5	1					
+35	comresdm	22	11	2015	Scotland	50	12	11	2	1	1	20		2					
+35	comresdm	22	11	2015	North	117	49	39	7	16	3			2					
+35	comresdm	22	11	2015	Midlands	144	67	38	13	17	3			6					
+35	comresdm	22	11	2015	South	170	68	52	17	18	9			6					
+36	yougov	24	11	2015	London	552	38	36	7	13	4			1					
+36	yougov	24	11	2015	Rest of South	1403	43	24	7	19	4			1					
+36	yougov	24	11	2015	Midlands and Wales	920	40	27	6	22	2		2	1					
+36	yougov	24	11	2015	North England	1060	34	39	6	17	3			1					
+36	yougov	24	11	2015	Scotland	378	24	17	3	6	2	48							
+37	yougov	1	12	2015	London	212	38	37	6	14	4			0					
+37	yougov	1	12	2015	Rest of South	539	48	24	7	18	2			1					
+37	yougov	1	12	2015	Midlands and Wales	355	42	33	5	16	2		2	0					
+37	yougov	1	12	2015	North England	408	41	32	5	17	4			1					
+37	yougov	1	12	2015	Scotland	144	20	24	4	8	2	41		0					
+38	comres	11	12	2015	Scotland	156	26	17	12	8	4	54							
+38	comres	11	12	2015	North East England	77	16	20	3	7	4								
+38	comres	11	12	2015	North West England	165	55	53	10	22	3								
+38	comres	11	12	2015	Yorkshire and Humber	176	42	39	4	24	4								
+38	comres	11	12	2015	West Midlands	121	43	23	6	22	3			2					
+38	comres	11	12	2015	East Midlands	132	44	24	7	16	5								
+38	comres	11	12	2015	Wales	99	19	19	3	10	1		5						
+38	comres	11	12	2015	East of England	184	60	26	9	21	2								
+38	comres	11	12	2015	London	250	67	69	9	22	4			1					
+38	comres	11	12	2015	South East England	290	85	42	17	33	5								
+38	comres	11	12	2015	South West England	127	53	28	7	13	2			1					
+39	comresdm	13	12	2015	Wales	25	9	10	2	2			2	1					
+39	comresdm	13	12	2015	Scotland	54	10	17	3			23		1					
+39	comresdm	13	12	2015	North	129	41	68	4	16	8			1					
+39	comresdm	13	12	2015	Midlands	151	70	35	14	23	5			4					
+39	comresdm	13	12	2015	South	194	76	65	16	19	12			6					
+40	mori	14	12	2015	North	154	57	63	10	16	8			1					
+40	mori	14	12	2015	Midlands	185	76	43	15	25	12		14	2					
+40	mori	14	12	2015	Wales	0	0	0	0	0	0			0					
+40	mori	14	12	2015	South	231	100	72	29	17	14			0					
+40	mori	14	12	2015	London	81	30	31	9	4	7			0					
+40	mori	14	12	2015	England	539	228	172	52	51	33			3					
+40	mori	14	12	2015	Scotland	65	8	18	4	1	2	32		1					
+41	opinium	18	12	2015	England	999	403	316	55	173	47			8					
+41	opinium	18	12	2015	Scotland	102	16	11	3	7	4	67		0					
+41	opinium	18	12	2015	Wales	61	21	20			2		7	1					
+42	yougov	18	12	2015	London	205	42	33	6	16	1			2					
+42	yougov	18	12	2015	Rest of South	519	45	23	6	20	4			0					
+42	yougov	18	12	2015	Midlands and Wales	342	38	32	7	17	3		2	1					
+42	yougov	18	12	2015	North England	393	38	38	5	17	2								
+42	yougov	18	12	2015	Scotland	139	20	17	3	5	3	52							
+43	icm2	20	12	2015	Scotland	51	10	9	2	0	1	26		2					
+43	icm2	20	12	2015	Wales	30	11	14		2	1		3	0					
+43	icm2	20	12	2015	North	153	52	63	13	22	3			0					
+43	icm2	20	12	2015	Midlands	161	59	63	7	20	7			5					
+43	icm2	20	12	2015	South	201	95	55	18	22	8			4					
+44	comres	14	1	2016	Scotland	115	22	12	15	9	3	54		0					
+44	comres	14	1	2016	North East England	46	17	18	2	6	2			0					
+44	comres	14	1	2016	North West England	132	47	61	3	15	4			1					
+44	comres	14	1	2016	Yorkshire and Humber	101	36	39	3	20	2								
+44	comres	14	1	2016	West Midlands	106	48	30	6	18	4								
+44	comres	14	1	2016	East Midlands	90	39	25	5	17	4								
+44	comres	14	1	2016	Wales	52	19	19	3	4	1		6						
+44	comres	14	1	2016	East of England	123	65	25	9	22	2								
+44	comres	14	1	2016	London	160	59	59	9	27	5			1					
+44	comres	14	1	2016	South East England	182	83	40	14	35	9			1					
+44	comres	14	1	2016	South West England	107	45	26	12	19	3			2					
+45	survation	17	1	2016	London	98	35	37	8	17	1			0					
+45	survation	17	1	2016	Midlands	139	61	43	6	27	1			0					
+45	survation	17	1	2016	North	200	63	80	8	41	7			1					
+45	survation	17	1	2016	South	253	118	59	21	39	11			4					
+45	survation	17	1	2016	Scotland	68	16	6	3	5		38							
+45	survation	17	1	2016	Wales	49	17	15	6	5			6						
+46	icm2	17	1	2016	Scotland	50	10	12	4	3		21							
+46	icm2	17	1	2016	Wales	33	5	14	1	6			7						
+46	icm2	17	1	2016	North	150	56	68	12	12	3								
+46	icm2	17	1	2016	Midlands	168	77	50	9	25	5			2					
+46	icm2	17	1	2016	South	214	93	83	10	20	4			1					
+47	mori	25	1	2016	North	152	52	55	17	18	6			4					
+47	mori	25	1	2016	Midlands	184	79	59	11	24	9		1	3					
+47	mori	25	1	2016	Wales	0	0	0	0	0	0								
+47	mori	25	1	2016	South	231	99	72	18	26	13								
+47	mori	25	1	2016	London	82	27	36	3	15	1								
+47	mori	25	1	2016	England	534	221	171	44	66	25			7					
+47	mori	25	1	2016	Scotland	55	22	11		3		28							

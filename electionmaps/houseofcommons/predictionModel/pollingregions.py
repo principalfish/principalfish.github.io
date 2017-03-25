@@ -53,7 +53,7 @@ polling_regions = {
     "opiniummissing" : {
         "All" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland",
             "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london",
-            "scotland", "wales"]    
+            "scotland", "wales"]
     },
 
     "mori" : {
@@ -111,6 +111,21 @@ polling_regions = {
         "South" : ["southeastengland", "southwestengland", "eastofengland"],
         "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"]
 
+    },
+
+    "ashcroft" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East England" : ["southeastengland"],
+        "South West England" : ["southwestengland"],
+        "London" : ["london"],
+        "North East" : ["northeastengland"],
+        "North West" : ["northwestengland"],
+        "Yorkshire and Humber" : ["yorkshireandthehumber"],
+        "East of England" : ["eastofengland"]
     }
 
 }

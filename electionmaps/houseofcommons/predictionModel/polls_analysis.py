@@ -103,7 +103,11 @@ def poll_maths(poll):
         del poll["regions"]["England"]
 
         #convert to decimal percentaegs
-    if company in ["general", "me", "icm", "icm2", "opinium", "mori", "comres", "comresdm", "survation", "bmg", "icmmissing", "opiniummissing"]:
+    raw_num_comps = ["general", "me", "icm", "icm2", "opinium",
+                    "mori", "comres", "comresdm", "survation",
+                    "bmg", "icmmissing", "opiniummissing", "ashcroft"]
+
+    if company in raw_num_comps:
         for region, numbers in poll["regions"].iteritems():
             for party in numbers:
                 if party != "total":
@@ -128,7 +132,7 @@ def weight_poll(data):
     weight = 1
 
     # alter closer to election  when more polls
-    degrade_factor = 0.98 #per day
+    degrade_factor = 0.95 #per day
     weight *= math.pow(degrade_factor, days_past)
 
     #testing

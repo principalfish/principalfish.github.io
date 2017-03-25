@@ -78,7 +78,7 @@ var filter = {
         .data([modelData[party]])
         .attr("class", "modelline " + party)
         .attr("d", modelline)
-        .style("stroke-dasharray", "5, 5")
+        .style("stroke-dasharray", "10, 5")
     }
 
 

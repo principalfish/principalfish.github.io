@@ -320,3 +320,99 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 47	mori	25	1	2016	London	82	27	36	3	15	1								
 47	mori	25	1	2016	England	534	221	171	44	66	25			7					
 47	mori	25	1	2016	Scotland	55	22	11		3		28							
+48	yougov	28	1	2016	London	222	39	34	8	14	4			1					
+48	yougov	28	1	2016	Rest of South	564	42	26	6	22	2			0					
+48	yougov	28	1	2016	Midlands and Wales	371	44	27	6	19	2		2	0					
+48	yougov	28	1	2016	North England	427	37	37	5	15	6			1					
+48	yougov	28	1	2016	Scotland	151	20	23	7	5	2	41		2					
+49	yougov	4	2	2016	London	214	41	35	8	11	3								
+49	yougov	4	2	2016	Rest of South	544	46	22	9	20	3								
+49	yougov	4	2	2016	Midlands and Wales	358	36	30	5	23	3		2						
+49	yougov	4	2	2016	North England	412	35	37	5	21	1								
+49	yougov	4	2	2016	Scotland	146	25	28	2	3		42							
+50	comres	12	2	2016	Scotland	114	28	16	3	6	3	58		0					
+50	comres	12	2	2016	North East England	52	13	21	2	13	3			0					
+50	comres	12	2	2016	North West England	138	41	59	9	24	5			0					
+50	comres	12	2	2016	Yorkshire and Humber	100	37	35	7	19	1			1					
+50	comres	12	2	2016	West Midlands	112	47	34	12	16	3			2					
+50	comres	12	2	2016	East Midlands	88	39	27	6	14	2			0					
+50	comres	12	2	2016	Wales	55	20	13	5	8	0		9	0					
+50	comres	12	2	2016	East of England	126	62	31	17	15	0			0					
+50	comres	12	2	2016	London	163	74	43	16	16	11			3					
+50	comres	12	2	2016	South East England	174	84	31	14	37	7			1					
+50	comres	12	2	2016	South West England	107	55	18	14	16	4			0					
+51	icmmissing	14	2	2016	All	100	39	32	7	11	4	4		3					
+52	mori	16	2	2016	North	138	55	49	9	19	5			0					
+52	mori	16	2	2016	Midlands	170	66	54	8	28	6		4	2					
+52	mori	16	2	2016	Wales	0	0	0	0	0	0			0					
+52	mori	16	2	2016	South	217	101	74	14	20	6			2					
+52	mori	16	2	2016	London	88	37	40	6	3	2			1					
+52	mori	16	2	2016	England	502	218	165	32	64	17			4					
+52	mori	16	2	2016	Scotland	66	8	16	4	2	0	36							
+53	comresdm	22	2	2016	Wales	20	6	6	0	7	1		1	0					
+53	comresdm	22	2	2016	Scotland	53	14	10	4	2	2	22		0					
+53	comresdm	22	2	2016	North	136	43	53	7	21	6			6					
+53	comresdm	22	2	2016	Midlands	153	64	46	13	21	4			5					
+53	comresdm	22	2	2016	South	201	90	62	19	16	7			6					
+54	bmg	23	2	2016	Scotland	118	21	14	6	8	5	64							
+54	bmg	23	2	2016	Wales	52	12	17	2	9	2		9						
+54	bmg	23	2	2016	East Midlands	78	35	27	3	11	3			0					
+54	bmg	23	2	2016	East of England	121	58	30	4	23	7			0					
+54	bmg	23	2	2016	London	142	54	43	10	27	6			2					
+54	bmg	23	2	2016	North East England	39	11	22	0	7	0			1					
+54	bmg	23	2	2016	North West England	130	52	55	4	13	6			1					
+54	bmg	23	2	2016	South East England	167	82	40	11	24	9			2					
+54	bmg	23	2	2016	South West England	111	45	26	15	20	5			0					
+54	bmg	23	2	2016	West Midlands	99	34	32	5	22	6			0					
+54	bmg	23	2	2016	Yorkshire and Humber	84	25	37	5	15	3			0					
+55	yougov	23	2	2016	London	415	33	44	4	14	3			0					
+55	yougov	23	2	2016	Rest of South	1168	48	21	9	19	3			0					
+55	yougov	23	2	2016	Midlands and Wales	747	38	32	6	18	3		2	1					
+55	yougov	23	2	2016	North England	839	33	41	5	18	3								
+55	yougov	23	2	2016	Scotland	322	20	19	3	4	4	49							
+56	comres	10	3	2016	Scotland	116	16	21	7	10	7	54		1					
+56	comres	10	3	2016	North East England	49	21	19	1	5	3								
+56	comres	10	3	2016	North West England	128	45	50	9	21	5								
+56	comres	10	3	2016	Yorkshire and Humber	111	40	37	16	15	1								
+56	comres	10	3	2016	West Midlands	119	57	37	4	18	2								
+56	comres	10	3	2016	East Midlands	95	40	27	6	18	4								
+56	comres	10	3	2016	Wales	52	17	18	2	8	2		5	1					
+56	comres	10	3	2016	East of England	118	48	28	7	29	5								
+56	comres	10	3	2016	London	178	68	63	16	23	7								
+56	comres	10	3	2016	South East England	181	79	45	12	36	8			1					
+56	comres	10	3	2016	South West England	116	53	18	16	24	6								
+57	icmmissing	13	3	2016	All	100	36	36	8	11	3	3		1					
+58	yougov	17	3	2016	London	202	29	48	8	12	2			1					
+58	yougov	17	3	2016	Rest of South	561	43	26	7	19	4			1					
+58	yougov	17	3	2016	Midlands and Wales	363	35	34	4	20	4		3	1					
+58	yougov	17	3	2016	North England	408	29	45	6	16	4			0					
+58	yougov	17	3	2016	Scotland	156	15	21	7	4	3	47		2					
+59	comresdm	20	3	2016	Wales	27	8	9	3	5	0		4	0					
+59	comresdm	20	3	2016	Scotland	57	19	10	3	0	0	25		0					
+59	comresdm	20	3	2016	North	127	41	58	9	9	7			2					
+59	comresdm	20	3	2016	Midlands	138	53	45	13	18	5			4					
+59	comresdm	20	3	2016	South	212	84	77	15	20	12			3					
+60	mori	22	3	2016	North	211	64	95	18	29	2			0					
+60	mori	22	3	2016	Midlands	243	98	75	20	26	14		9	0					
+60	mori	22	3	2016	Wales	0	0	0	0	0	0			0					
+60	mori	22	3	2016	South	308	117	108	31	43	6			1					
+60	mori	22	3	2016	London	115	40	52	7	13	1			1					
+60	mori	22	3	2016	England	717	267	267	67	92	20			1					
+60	mori	22	3	2016	Scotland	73	16	14	4	1	2	33		2					
+61	bmg	31	3	2016	Scotland	111	17	19	6	6	4	59							
+61	bmg	31	3	2016	Wales	69	18	30	1	10	2		7						
+61	bmg	31	3	2016	East Midlands	91	31	32	6	19	4			0					
+61	bmg	31	3	2016	East of England	109	43	30	8	17	9			1					
+61	bmg	31	3	2016	London	152	68	50	13	13	8			1					
+61	bmg	31	3	2016	North East England	46	13	19	3	9	2			1					
+61	bmg	31	3	2016	North West England	128	39	50	10	25	3			2					
+61	bmg	31	3	2016	South East England	173	78	45	8	32	7			2					
+61	bmg	31	3	2016	South West England	109	45	29	9	21	5			0					
+61	bmg	31	3	2016	West Midlands	86	30	22	5	25	4			0					
+61	bmg	31	3	2016	Yorkshire and Humber	102	42	35	6	15	4			0					
+62	opiniummissing	1	4	2016	All	100	33	32	5	17	4	6	1	2					
+63	yougov	12	4	2016	London	203	31	45	7	11	5			1					
+63	yougov	12	4	2016	Rest of South	562	39	27	11	20	3			1					
+63	yougov	12	4	2016	Midlands and Wales	364	31	32	10	20	3		4	0					
+63	yougov	12	4	2016	North England	408	28	46	6	17	2			0					
+63	yougov	12	4	2016	Scotland	156	13	18	4	7	3	55		0					

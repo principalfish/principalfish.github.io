@@ -29,6 +29,12 @@ polling_regions = {
         "South":   ["southeastengland", "southwestengland", "london"]
     },
 
+    "icmmissing" : {
+        "All" :  ["northeastengland", "northwestengland", "southeastengland", "southwestengland",
+            "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london",
+            "scotland", "wales"]
+                },
+
     "yougov" : {
         "London" : ["london"],
         "Rest of South" : ["southwestengland", "southeastengland", "eastofengland"],
@@ -42,6 +48,12 @@ polling_regions = {
             "eastmidlands", "westmidlands", "london"],
         "Scotland" : ["scotland"],
         "Wales" : ["wales"]
+    },
+
+    "opiniummissing" : {
+        "All" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland",
+            "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london",
+            "scotland", "wales"]    
     },
 
     "mori" : {

@@ -103,7 +103,7 @@ def poll_maths(poll):
         del poll["regions"]["England"]
 
         #convert to decimal percentaegs
-    if company in ["general", "me", "icm", "icm2", "opinium", "mori", "comres", "comresdm", "survation", "bmg"]:
+    if company in ["general", "me", "icm", "icm2", "opinium", "mori", "comres", "comresdm", "survation", "bmg", "icmmissing", "opiniummissing"]:
         for region, numbers in poll["regions"].iteritems():
             for party in numbers:
                 if party != "total":
@@ -159,7 +159,8 @@ def scatterplot(data):
     to_add["date"].append(data["date"].year)
 
 
-    companies = ["yougov", "icm", "mori", "opinium", "comres", "icm2", "comresdm"]
+    companies = ["yougov", "icm", "mori", "opinium", "comres", "icm2",
+                "comresdm", "icmmissing", "opiniummissing"]
 
     if data["company"] in companies:
         to_add["company"] = data["company"]
@@ -197,10 +198,13 @@ def scatterplot(data):
             to_add[party] /= (float(total) / 100)
             to_add[party] = round(to_add[party], 1)
 
-    if to_add["company"] == "icm2":
+    if to_add["company"] == "icm2" or to_add["company"] == "icmmissing":
         to_add["company"] = "icm"
     if to_add["company"] == "comresdm":
         to_add["company"] = "comres"
+    if to_add["company"] == "opiniummissing":
+        to_add["company"] = "opinium"
+
     #print to_add["company"], "\n", to_add, "\n"
     return to_add
 

@@ -4,7 +4,7 @@ var choro = {
 
     $("#keyonmap").show();
 
-    var increment = 2
+    var increment = 3
 
     // add key twice including negative for vote share
 
@@ -161,7 +161,7 @@ var regionMap = {
 
       if (meetsCriteria == true){
         var current = currentMap.seatData[seat]["current"];
-        filters.opacities[seat] = 10 * ((currentMap.seatData[seat][current] / 100) - 0.5) ;
+        filters.opacities[seat] = (20/3) * ((currentMap.seatData[seat][current] / 100) - 0.5) ;
         data.filtered = true;
       } else {
         filters.opacities[seat] = 0.03;
@@ -343,7 +343,7 @@ var regionMap = {
 				.attr("opacity", function(d) {
 					if (d.properties.name in currentMap.seatData){
 						var current = setting.seatData[d.properties.name]["current"];
-						var opacity = 10 * ((setting.seatData[d.properties.name][current] / 100) - 0.5) ;
+						var opacity = (20/3) * ((setting.seatData[d.properties.name][current] / 100) - 0.5) ;
 
 						// for finding seat from various search features
 						setting.seatData[d.properties.name]["mapSelect"] = d;

@@ -1,0 +1,75 @@
+.hidden {
+  display: none; }
+
+.dash-box h2 {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-border-top-right-radius: 3px;
+  -moz-border-top-right-radius: 3px;
+  border-top-right-radius: 3px;
+  -webkit-border-top-left-radius: 3px;
+  -moz-border-top-left-radius: 3px;
+  border-top-left-radius: 3px;
+  background-clip: padding-box;
+  background-color: #293b51;
+  color: white;
+  height: 30px;
+  line-height: 30px;
+  margin: 0;
+  padding: 0 20px 0 20px;
+  display: block;
+  cursor: pointer; }
+.dash-box > div {
+  -webkit-border-bottom-right-radius: 3px;
+  -moz-border-bottom-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  -webkit-border-bottom-left-radius: 3px;
+  -moz-border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  background-clip: padding-box;
+  background-color: #f4f4f6;
+  padding: 5px 15px;
+  border: 1px solid rgba(171, 171, 171, 0.85);
+  border-top: none; }
+
+.party-flair {
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
+  background-clip: padding-box;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px; }
+
+.closebox {
+  display: inline-block;
+  float: right;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  cursor: pointer; }
+
+button {
+  -webkit-border-radius: 3px;
+  -moz-border-radius: 3px;
+  border-radius: 3px;
+  background-clip: padding-box;
+  background-color: #203040;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  padding: 5px 12px;
+  font-size: 1.2em; }
+
+button:focus {
+  outline: none; }
+
+#brexitvotes {
+  left: 605px;
+  top: 5px;
+  width: 420px; }
+
+/*# sourceMappingURL=brexit.css.map */

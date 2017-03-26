@@ -179,7 +179,7 @@ var regionMap = {
       var mapSelect = currentMap.seatData[seat].mapSelect;
       mapSelect.opacity = opacity;
       d3.select("#i" + mapSelect.properties.info_id).attr("fill-opacity", opacity);
-      //d3.select("#i" + mapSelect.properties.info_id).style("stroke-opacity", 1);
+    
     });
 
     // for table
@@ -265,10 +265,10 @@ var regionMap = {
 			current
 				.transition()
 					.duration(1500)
-					.attr("opacity", 0.02)
+					.attr("fill-opacity", 0.02)
 				.transition()
 					.duration(1500)
-					.attr("opacity", node.opacity)
+					.attr("fill-opacity", node.opacity)
 				.on("end", repeat);
 		}
 
@@ -299,7 +299,7 @@ var regionMap = {
 		if (mapAttr.activeNode != null){
 			d3.select("#i" + mapAttr.activeNode.properties.info_id)
 			.transition()
-			.attr("opacity", mapAttr.activeNode.opacity);
+			.attr("fill-opacity", mapAttr.activeNode.opacity);
 		}
 
 		mapAttr.activeNode = null;

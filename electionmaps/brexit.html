@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+	<title>Brexit by Seat</title>
+	<link rel="shortcut icon" href="/imgs/logo.png">
+	<link type="text/css" rel="stylesheet" href="/stylesheets/jquery-ui.structure.css"/>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/electionmaps.min.css"/>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/navbar.min.css"/>
+	<script type="text/javascript" src="/libraries/d3.min.js"></script>
+	<script type="text/javascript" src="/libraries/jquery.min.js"></script>
+	<script type="text/javascript" src="/libraries/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="/libraries/topojson.js"></script>
+
+
+	<script type="text/javascript" src="brexit/brexit.js"></script>
+</head>
+
+<body>
+
+	<header>
+		<h2>UK Election Maps - <span id=pagetitle>Brexit By Seat</span> </h2>
+    <nav>
+        <ul>
+          mail : principalfish@gmail.com
+        </ul>
+    </nav>
+	</header>
+
+	<nav id="projections">
+			<h3 id="nav-current"><a href="/electionmaps/"> Current Parliament </a> </h3>
+			<h3><a href="/electionmaps/polltracker.html">Poll Tracker</a></h3>
+				<div class="divider"></div>
+			<h3 id="nav-prediction"><a href="/electionmaps/?map=prediction"> 2020 Prediction </a> </h3>
+			<h3 id="nav-predictit"><a href="/electionmaps/?map=predictit"> Predict 2020 </a> </h3>
+			<div class="divider"></div>
+			<h3 id="nav-election2015"><a href="/electionmaps/?map=election2015"> 2015 Election</a> </h3>
+			<h3 id="nav-election2010"><a href="/electionmaps/?map=election2010"> 2010 Election</a> </h3>
+			<div class="divider"></div>
+			<h3 id="nav-2015-600seat"><a href="/electionmaps/?map=election2015_600seat">600 seat - 2015</a> </h3>
+			<h3 id="nav-prediction-600seat"><a href="/electionmaps/?map=prediction_600seat">600 seat - 2020</a> </h3>
+			<div class="divider"></div>
+			<h3 class="navbaractive" id="nav-brexit"><a href="/electionmaps/brexit.html">Brexit by Seat</a></h3>
+
+			<p id="copyright">Copyright 2017 principalfish.co.uk</p>
+	</nav>
+  <div id="wrapper">
+		<div id="map">
+			<script>
+				var svg = d3.select("#map").append("svg")
+					.attr("width",  mapAttr.width)
+					.attr("height",  mapAttr.height)
+					.on("click", mapAttr.stopped, true);
+
+				svg.append("rect")
+					.attr("class", "background")
+					.attr("width",  mapAttr.width)
+					.attr("height",  mapAttr.height)
+					.on("click", mapAttr.reset);
+
+				var g = svg.append("g");
+
+				svg
+					.call(zoom);
+
+				initialization();
+
+			</script>
+		</div>
+
+		<div id="instructions" class="dash-box">
+
+			<h2><div class="closebox" onclick="$('#instructions').hide()">X</div></h2>
+			<div>
+					<p>
+						Probable leave/remain voting percentages by constituency in the EU Referendum 2016.
+					</p>
+					<p>
+						With thanks to Chris Hanretty for the data. More info <a href="https://medium.com/@chrishanretty/final-estimates-of-the-leave-vote-or-areal-interpolation-and-the-uks-referendum-on-eu-membership-5490b6cab878#.4u4zxiklb">here</a>
+					</p>
+
+				  <p>“Areal interpolation and the UK’s referendum on EU membership”, Chris Hanretty,
+						Journal Of Elections, Public Opinion And Parties, Online Early Access,
+						<a href="http://dx.doi.org/10.1080/17457289.2017.1287081">Link</a></p>
+
+			</div>
+		</div>
+
+		<div id="resetbutton">
+				<button id="resetmap" onclick="mapAttr.reset()">Reset</button>
+		</div>
+
+		<div id="keyonmap">
+
+		</div>
+
+    <div id="searchforseat">
+        <input type="text" value="seat search" onclick="this.select()" id="searchseats" class="searchinput"/>
+    </div>
+
+		<!-- buttons for toggling divs -->
+		<div id="votetotalsbutton" class="mapbutton mapbuttonactive" onclick="uiAttr.clickMapButton(this)">
+				<button onclick="">Vote Totals</button>
+		</div>
+
+		<div id="filtersbutton" class="mapbutton mapbuttonactive" onclick="uiAttr.clickMapButton(this)">
+				<button onclick="">Filters</button>
+		</div>
+
+		<div id="seat-information" class="dash-box hidden">
+
+					<h2><span id="information-seatname-span"></span><div class="closebox" onclick="uiAttr.hideDiv('seat-information')">X</div></h2>
+					<div>
+							<div id="seat-summary">
+
+								<div id="information-party">
+										<div class="party-name"></div>
+										<div class="party-flair"></div>
+								</div>
+
+								<div id="information-gain">
+
+								</div>
+
+								<div id="information-region"></div>
+								<div id="information-majority"></div>
+								<div></div>
+								<div id="information-turnout"></div>
+							</div>
+
+							<div id="charts">
+									<div id="information-bar"></div>
+									<div id="information-chart"></div>
+
+							</div>
+					</div>
+		</div>
+
+  </div>
+
+</body>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-58696407-1', 'auto');
+	ga('send', 'pageview');
+</script>

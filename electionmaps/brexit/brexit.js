@@ -161,7 +161,7 @@ var regionMap = {
 
       if (meetsCriteria == true){
         var current = currentMap.seatData[seat]["current"];
-        filters.opacities[seat] = (20/3) * ((currentMap.seatData[seat][current] / 100) - 0.5) ;
+        filters.opacities[seat] = (20 / 3) * ((currentMap.seatData[seat][current] / 100) - 0.5) ;
         data.filtered = true;
       } else {
         filters.opacities[seat] = 0.03;
@@ -178,8 +178,9 @@ var regionMap = {
 
       var mapSelect = currentMap.seatData[seat].mapSelect;
       mapSelect.opacity = opacity;
-      d3.select("#i" + mapSelect.properties.info_id).attr("fill-opacity", opacity);
-    
+      d3.select("#i" + mapSelect.properties.info_id).attr("opacity", opacity);
+  
+
     });
 
     // for table
@@ -265,10 +266,10 @@ var regionMap = {
 			current
 				.transition()
 					.duration(1500)
-					.attr("fill-opacity", 0.02)
+					.attr("opacity", 0.02)
 				.transition()
 					.duration(1500)
-					.attr("fill-opacity", node.opacity)
+					.attr("opacity", node.opacity)
 				.on("end", repeat);
 		}
 
@@ -299,7 +300,7 @@ var regionMap = {
 		if (mapAttr.activeNode != null){
 			d3.select("#i" + mapAttr.activeNode.properties.info_id)
 			.transition()
-			.attr("fill-opacity", mapAttr.activeNode.opacity);
+			.attr("opacity", mapAttr.activeNode.opacity);
 		}
 
 		mapAttr.activeNode = null;
@@ -352,7 +353,7 @@ var regionMap = {
 						setting.seatData[d.properties.name]["mapSelect"]["opacity"]	= opacity;
 						// // set opacity = 1 for filters
 						// filters.opacities[d.properties.name] = 1;
-						// return opacity
+						return opacity
 					}
 					else {
 						return 0;

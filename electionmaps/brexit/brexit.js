@@ -611,7 +611,7 @@ function initialization(){
       // add mp name
       toAdd += "<div>" + partylist[votes[i].party] + "</div>"
 
-      toAdd += "<div>" + votes[i].percent + "%</div>";
+      toAdd += "<div>" + votes[i].percent.toFixed(2) + "%</div>";
 
       toAdd += "</div>";
 

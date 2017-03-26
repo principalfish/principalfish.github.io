@@ -1321,7 +1321,7 @@ function activeSeat(seat){
 
   pageLoadDiv : function(){
     $.each(uiAttr.buttonToDiv, function(button, div){
-      if (button == "votetotalsbutton" || button == "filtersbutton" ){
+      if (button == "votetotalsbutton" || button == "filtersbutton" || button == "choroplethsbutton" ){
         uiAttr.showDiv(button);
       } else if (button == "predictbutton" && currentMap.predict == true){
         $("#predictbutton").removeClass("hidden").addClass("mapbuttonactive");

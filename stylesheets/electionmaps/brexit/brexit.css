@@ -80,10 +80,10 @@ button:focus {
       float: left; }
       #brexitvotes #brexitvotes-titles > div > div {
         float: left;
-        padding: 2px 1px;
-        cursor: pointer; }
+        padding: 2px 1px; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(1) {
-        width: 160px; }
+        width: 160px;
+        cursor: pointer; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(2) {
         text-align: center;
         padding-left: 10px;
@@ -92,9 +92,11 @@ button:focus {
         text-align: center;
         width: 50px; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(4) {
-        width: 40px; }
+        width: 40px;
+        cursor: pointer; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(5) {
-        width: 40px; }
+        width: 40px;
+        cursor: pointer; }
       #brexitvotes #brexitvotes-titles > div .sort-active {
         background: #203040;
         color: white; }

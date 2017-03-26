@@ -734,9 +734,7 @@ function initialization(){
 ;voteTotals = {
   display : function(seatlist){
     voteTotals.sortState = {
-        "name" : "asc",
-        "current" : "asc",
-        "winner2015" : "asc",
+        "name" : "asc", 
         "leave" : "desc",
         "remain" : "desc"
     };

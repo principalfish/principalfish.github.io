@@ -119,8 +119,6 @@ var regionMap = {
     filters.filter();
   },
 
-
-
   leave : function(parameter, value){
     if (parameter == "low"){
       filters.state.leave[0] = value;
@@ -166,13 +164,13 @@ var regionMap = {
         filters.opacities[seat] = 10 * ((currentMap.seatData[seat][current] / 100) - 0.5) ;
         data.filtered = true;
       } else {
-        filters.opacities[seat] = 0.00;
+        filters.opacities[seat] = 0.03;
         data.filtered = false;
       }
     })
 
     filters.display();
-    //filters.getSeatlist();
+
   },
 
   display: function(){
@@ -182,6 +180,22 @@ var regionMap = {
       mapSelect.opacity = opacity;
       d3.select("#i" + mapSelect.properties.info_id).attr("opacity", opacity)
     });
+
+    // for table
+    filters.filteredList = [];
+    $.each(currentMap.seatData, function(seat, data){
+      if (data.filtered == true){
+        currentMap.seatData[seat]["name"] = seat
+        filters.filteredList.push(currentMap.seatData[seat]);
+
+      }
+    });
+
+    $("#seatlist-sort" + voteTotals.activeSort).removeClass("sort-active");
+    voteTotals.activeSort = "leave";
+    $("#seatlist-sortleave").addClass("sort-active");
+
+    voteTotals.display(filters.filteredList);
   },
 
   reset : function(){
@@ -406,11 +420,10 @@ function pageLoadEssentials(){
 	mapAttr.loadmap(currentMap);
 	// reset filters.state - also get and show vote totals
 	filters.opacities = {};
-	// filters.reset();
+	filters.reset();
 
 	//key on map
 	choro.keyOnMap();
-
 
 	// populate seat search	// autocomplete function
 	var seatList = Object.keys(currentMap.seatData);
@@ -428,8 +441,6 @@ function pageLoadEssentials(){
 
 	//show and hide various divs on load
 	uiAttr.pageLoadDiv();
-
-
 
 	// firefox css nonsense
 	if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
@@ -513,7 +524,7 @@ function initialization(){
 
     $("#information-seatname-span").text(seat);
     $("#information-region").text(regionlist[data.region]);
-    console.log(data.winner2015)
+
     $("#information-party .party-name").text(partylist[data.winner2015]);
     $("#information-party .party-flair").addClass(data.winner2015);
 
@@ -599,8 +610,6 @@ function initialization(){
       toAdd += "<div class='party-flair " + votes[i].party + "'></div>"
       // add mp name
       toAdd += "<div>" + partylist[votes[i].party] + "</div>"
-
-
 
       toAdd += "<div>" + votes[i].percent + "%</div>";
 
@@ -722,4 +731,115 @@ function initialization(){
 
   }
 }
-;
+;voteTotals = {
+  display : function(seatlist){
+    voteTotals.sortState = {
+        "name" : "asc",
+        "current" : "asc",
+        "winner2015" : "asc",
+        "leave" : "desc",
+        "remain" : "desc"
+    };
+
+    voteTotals.reorder("leave", "desc");
+
+
+  },
+
+  activeSort : "leave",
+
+  sortState : {},
+
+  tableSort: function(parameter){
+    parameter = parameter.slice(13);
+
+    //remove from old table header
+    $("#seatlist-sort" + voteTotals.activeSort).removeClass("sort-active")
+    voteTotals.activeSort = parameter;
+
+    $("#seatlist-sort" + voteTotals.activeSort).addClass("sort-active");
+
+    voteTotals.reorder(parameter, voteTotals.sortState[parameter]);
+
+    if (voteTotals.sortState[parameter] == "desc"){
+      voteTotals.sortState[parameter] = "asc";
+    } else if (voteTotals.sortState[parameter] == "asc"){
+      voteTotals.sortState[parameter] = "desc";
+    }
+  },
+
+  reorder : function(parameter, sorttype){
+    // sort works both alphabetically and numerically
+    if (sorttype == "asc"){
+      filters.filteredList.sort(function(a, b){
+        if (a[parameter] < b[parameter]){
+          return -1;
+        }
+        if (a[parameter] > b[parameter]){
+          return 1;
+        }
+        return 0
+      })
+    }
+    if (sorttype == "desc"){
+      filters.filteredList.sort(function(a, b){
+        if (a[parameter] < b[parameter]){
+          return 1;
+        }
+        if (a[parameter] > b[parameter]){
+          return -1;
+        }
+        return 0;
+      })
+    }
+
+    voteTotals.extendedList();
+  },
+
+  seatTotals: function(){
+      $("#brexitvotes-seatnumbers").empty();
+      var totalSeats = filters.filteredList.length;
+      var remainSeats = 0;
+      var leaveSeats = 0;
+
+      $.each(filters.filteredList, function(seat, data){
+        if (data.current == "leave"){
+          leaveSeats += 1;
+        } else {
+          remainSeats += 1;
+        }
+
+      });
+
+      var toAdd = "<p>Total : " + totalSeats + " Remain: " + remainSeats + " Leave: " + leaveSeats + "</p>"
+
+
+      $("#brexitvotes-seatnumbers").append(toAdd);
+
+  },
+
+  extendedList : function(){
+    voteTotals.seatTotals();
+
+    $("#brexitvotes-data").empty();
+
+    $.each(filters.filteredList, function(i, seat){
+
+      var seatName = seat.name;
+
+      var party = "<div style='margin-left: 10px' class='party-flair " + seat.current + "'></div>";
+      var winner2015 = "<div style='margin-left: 10px' class='party-flair " + seat.winner2015 + "'></div>"
+      var leave = "<div style='margin-left: 10px'>" + seat.leave.toFixed(2) + "</div>"
+      var remain = "<div style='margin-left: 10px'>" + seat.remain.toFixed(2) + "</div>"
+      var divider = "</div><div>";
+
+      var toAdd = "<div><div class='extended-seat' onclick='mapAttr.clicked(currentMap.seatData[\""
+      + seat.name + "\"].mapSelect)'>" + seatName + divider + party + divider + winner2015 + divider + leave + divider
+      + remain + "</div></div>";
+
+      $("#brexitvotes-data").append(toAdd);
+
+    });
+  }
+
+};

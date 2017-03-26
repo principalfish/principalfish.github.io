@@ -136,11 +136,29 @@
 		</div>
 
 		<div id="brexitvotes" class="dash-box popupdiv hidden">
-      <h2>Table of Seats <div class="closebox" onclick="uiAttr.hideDiv('brexitvotebutton')">X</div></h2>
+      <h2>Table of Seats <div class="closebox" onclick="uiAttr.hideDiv('brexitvotesbutton')">X</div></h2>
 			<div>
-				<p>
-					 yes
-				</p>
+				<div id="brexitvotes-seatnumbers">
+
+				</div>
+				<div>
+
+					<div id="brexitvotes-titles">
+						<div>
+							<div id="seatlist-sortname" onclick="voteTotals.tableSort(this.id)">Seat</div>
+							<div id="seatlist-sortcurrent" onclick="voteTotals.tableSort(this.id)">Winner</div>
+							<div id="seatlist-sortwinner2015" onclick="voteTotals.tableSort(this.id)">Party</div>
+							<div id="seatlist-sortleave"  class="sort-active" onclick="voteTotals.tableSort(this.id)">Leave</div>
+							<div id="seatlist-sortremain" onclick="voteTotals.tableSort(this.id)">Remain</div>
+
+						</div>
+					</div>
+
+					<div id="brexitvotes-data">
+
+					</div>
+
+				</div>
 			</div>
   	</div>
 

@@ -1,6 +1,7 @@
-import csv, json, os.path, math
+import csv, json, os.path, math, sys
 from pollingregions import polling_regions
 from datetime import datetime, date
+
 
 parties = ["conservative", "labour", "libdems",	"ukip", "green", "snp",
             "plaidcymru", "other", "sdlp", "sinnfein", "alliance", "dup", "uu"]

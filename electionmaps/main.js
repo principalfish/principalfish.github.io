@@ -1159,6 +1159,7 @@ var urlParamMap = {
 
       }
 
+
       toAdd += "<div>" + votes[i].totalPercentage + "% " + voteChange + "</div>";
     //  toAdd += "<div>" + voteChange + "</div>";
       // complete divs
@@ -1205,13 +1206,21 @@ function activeSeat(seat){
       var previousTotalPercentage;
       if (party in previousPartyInfo){
         var previousTotal = previousPartyInfo[party].total;
-        previousTotalPercentage =  (100 * previousTotal /  previousTurnout).toFixed(2)
+
+        previousTotalPercentage =  (100 * previousTotal /  previousTurnout).toFixed(2);
+
       } else {
         previousTotalPercentage = 0;
       }
 
+
+
       partyData = partyInfo[party];
       var totalPercentage = (100 * partyData.total / this.turnout).toFixed(2);
+      var change = (totalPercentage - previousTotalPercentage).toFixed(2);
+      if (party == "other" || party == "others"){
+        var change = "0";
+      }
 
       this.votes.push({
         "party" : party,
@@ -1219,7 +1228,7 @@ function activeSeat(seat){
       //  "percentage" : partyData.percent, = total / turnout
         "totalPercentage" : totalPercentage,
         "previousTotalPercentage" : previousTotalPercentage,
-        "change" : (totalPercentage - previousTotalPercentage).toFixed(2)
+        "change" : change
       });
     }
   }
@@ -1592,7 +1601,8 @@ function activeSeat(seat){
 
     $.each(regional, function(region, totals){
       $.each(userinput, function(party, percentage){
-        newTotals[region][party] = newTotals[region][party] / regional[region][party]
+        // newTotals[region][party] = newTotals[region][party] / regional[region][party] RELATIVE
+        newTotals[region][party] = newTotals[region][party] - regional[region][party];
       });
     });
 
@@ -1602,51 +1612,67 @@ function activeSeat(seat){
 
   seatAnalysis: function(relativeChange, regional){
 
+
     $.each(currentMap.seatData, function(seat, data){
       if (data.seatInfo.region in regional){
         var newSeatData = {};
         $.each(relativeChange[data.seatInfo.region], function(party, changes){
 
           var previous = 0;
+
           if (party in currentMap.previousSeatData[seat].partyInfo){
             previous = 100 * currentMap.previousSeatData[seat].partyInfo[party].total / currentMap.previousSeatData[seat].seatInfo.turnout;
           }
 
-          var previousRegional = regional[data.seatInfo.region][party];
+          //var previousRegional = regional[data.seatInfo.region][party];
 
           if (party == "other"){
             previous += 100 * currentMap.previousSeatData[seat].partyInfo["others"].total / currentMap.previousSeatData[seat].seatInfo.turnout;
           }
-          var seatRelative = previous / previousRegional;
 
-          if (seatRelative == 0){
-            newSeatData[party] = 0;
-          } else {
-            var distribute = relativeChange[data.seatInfo.region][party] - 1;
+          //var seatRelative = previous / previousRegional;
 
-            var seatChange = 1 + (distribute / Math.sqrt(seatRelative));
+          // if (seatRelative == 0){
+          //   newSeatData[party] = 0;
+          // } else {
+          //   var distribute = relativeChange[data.seatInfo.region][party] - 1;
+          //
+          //   var seatChange = 1 + (distribute / Math.sqrt(seatRelative));
+          //
+          //   if (seatChange < 0.15){
+          //     seatChange = 0.15;
+          //   }
+          //
+          //   var newPercentage = seatChange * previous;
+          //
+          //   //incumbency boost
+          //   var incumbencyBoost = {"conservative" : 1, "labour" : 1, "libdems" : 4,
+          //   "ukip" : 4, "green" : 8, "snp" : 1, "plaidcymru" : 4, "other" : 0,
+          //   "dup" : 0, "uu" : 0, "sinnfein" : 0, "alliance" : 0, "sdlp" : 0 };
+          //   if (currentMap.previousSeatData[seat].seatInfo.current == party){
+          //     newPercentage += incumbencyBoost[party];
+          //   }
+          //
+          //   if (isNaN(newPercentage)){
+          //     newPercentage = 0;
+          //   }
+          //
+          //   newSeatData[party] = newPercentage;
+          //
+          // }
 
-            if (seatChange < 0.15){
-              seatChange = 0.15;
-            }
 
-            var newPercentage = seatChange * previous;
-
-            //incumbency boost
-            var incumbencyBoost = {"conservative" : 1, "labour" : 1, "libdems" : 4,
-            "ukip" : 4, "green" : 8, "snp" : 1, "plaidcymru" : 4, "other" : 0,
-            "dup" : 0, "uu" : 0, "sinnfein" : 0, "alliance" : 0, "sdlp" : 0 };
-            if (currentMap.previousSeatData[seat].seatInfo.current == party){
-              newPercentage += incumbencyBoost[party];
-            }
-
-            if (isNaN(newPercentage)){
-              newPercentage = 0;
-            }
-
-            newSeatData[party] = newPercentage;
-
+          var seatChange = relativeChange[data.seatInfo.region][party];
+          var newPercentage = previous + seatChange;
+          if (newPercentage < 0.1 * previous){
+            newPercentage = 0.1 * previous;
           }
+
+          if (previous == 0){
+            newPercentage = 0;
+          }
+
+          newSeatData[party] = newPercentage;
         });
 
 

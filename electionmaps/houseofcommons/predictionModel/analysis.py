@@ -1,6 +1,9 @@
-import os, json, math, datetime
+import os, json, math, datetime, sys, csv
+from datetime import datetime, date
 from polls_analysis import regional_averages, previous_regional_totals, parties, regions, polls, polls_for_scatterplot
 
+
+#### BREAK HERE #####
 party_map = {
      'conservative': "Conservative",
      'labour': "Labour",
@@ -56,6 +59,17 @@ for region, data in previous_regional_percentages.iteritems():
         if data[party] != 0:
             regional_relative_changes[region][party] = regional_averages[region][party] / previous_regional_percentages[region][party]
 
+
+regional_numerical_changes = {}
+
+for region, data in previous_regional_percentages.iteritems():
+    regional_numerical_changes[region] = {}
+    for party in data:
+        if data[party] != 0:
+            regional_numerical_changes[region][party] = regional_averages[region][party] - previous_regional_percentages[region][party]
+
+
+
 def get_new_data(seat, data):
 
     # if seat == "Berwick-upon-Tweed":
@@ -76,26 +90,41 @@ def get_new_data(seat, data):
             seat_relative = percentage_vote / previous_regional_percentages[region][party]
             #print party, percentage_vote, seat_relative
 
-            new = 0
+            #new = 0
+            #
+            # if seat_relative != 0:
+            #     distribute = regional_relative_changes[region][party] - 1
+            #     seat_change = 1 + distribute / math.pow(seat_relative, 0.5)
+            #
+            #     if seat_change < 0.15:
+            #         seat_change = 0.15
+            #
+            #     new = seat_change * data["partyInfo"][party]["total"] / float(turnout)
+            #
+            #     incumbencies = {"libdems" : 0.04, "ukip" : 0.03, "conservative" : 0.02, "labour" : 0.02, "green" : 0.03, "snp": 0.04, "plaidcymru" : 0.04}
+            #
+            #     if party == data["seatInfo"]["current"]:
+            #         if party in incumbencies:
+            #             new += incumbencies[party]
+            #
+            #     if new > max:
+            #         max = new
+            #         current_max = party
 
-            if seat_relative != 0:
-                distribute = regional_relative_changes[region][party] - 1
-                seat_change = 1 + distribute / math.pow(seat_relative, 0.5)
+            #print seat, percentage_vote, regional_numerical_changes[region][party]
 
-                if seat_change < 0.15:
-                    seat_change = 0.15
+            new = regional_numerical_changes[region][party] + percentage_vote
 
-                new = seat_change * data["partyInfo"][party]["total"] / float(turnout)
+            if new > max:
+                max = new
+                current_max = party
 
-                incumbencies = {"libdems" : 0.04, "ukip" : 0.03, "conservative" : 0.02, "labour" : 0.02, "green" : 0.03, "snp": 0.04, "plaidcymru" : 0.04}
+            if new < 0.1 * percentage_vote :
 
-                if party == data["seatInfo"]["current"]:
-                    if party in incumbencies:
-                        new += incumbencies[party]
+                new = 0.1 * percentage_vote
 
-                if new > max:
-                    max = new
-                    current_max = party
+            if percentage_vote == 0:
+                new = 0
 
             new_percentages[party] = new
 
@@ -126,7 +155,7 @@ with open("../prediction.json", "w") as output:
 
 
 # for displaying mdoel and polls on scatterplot
-last_date = datetime.datetime(2015, 5, 1)
+last_date = datetime(2015, 5, 1)
 for code in polls:
     if polls[code]["date"] > last_date:
         last_date = polls[code]["date"]

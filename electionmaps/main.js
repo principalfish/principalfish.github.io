@@ -477,28 +477,37 @@ var seatsPerRegion2015 = {
 
   reorder : function(parameter, sorttype, display){
     // sort works both alphabetically and numerically
+    var sortArray = filters.filteredList.map(function(data, ind){
+      return {ind:ind, data:data}
+    });
+
+    // sort works both alphabetically and numerically
     if (sorttype == "asc"){
-      filters.filteredList.sort(function(a, b){
-        if (a[parameter] < b[parameter]){
+      sortArray.sort(function(a, b){
+        if (a.data[parameter] < b.data[parameter]){
           return -1;
         }
-        if (a[parameter] > b[parameter]){
+        if (a.data[parameter] > b.data[parameter]){
           return 1;
         }
-        return 0
+        return a.ind - b.ind;
       })
     }
     if (sorttype == "desc"){
-      filters.filteredList.sort(function(a, b){
-        if (a[parameter] < b[parameter]){
+      sortArray.sort(function(a, b){
+        if (a.data[parameter] < b.data[parameter]){
           return 1;
         }
-        if (a[parameter] > b[parameter]){
+        if (a.data[parameter] > b.data[parameter]){
           return -1;
         }
-        return 0;
+        return a.ind - b.ind;
       })
     }
+
+    filters.filteredList = sortArray.map(function(val){
+      return val.data;
+    });
 
     if (display == "simple"){
       filters.simpleList();

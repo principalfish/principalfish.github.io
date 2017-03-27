@@ -818,7 +818,9 @@ function initialization(){
 
       });
 
-      var toAdd = "<p style='font-weight: bold'>Total : " + totalSeats + " Remain: " + remainSeats + " Leave: " + leaveSeats + "</p>"
+      var toAdd = "<p style='font-weight: bold'>Total : " + totalSeats + " &nbsp;Remain " +
+      "<span class='party-flair remain'></span>"
+      + ": " + remainSeats + "&nbsp; Leave " + "<span class='party-flair leave'></span>" + ": " + leaveSeats + "</p>"
 
 
       $("#brexitvotes-seatnumbers").append(toAdd);

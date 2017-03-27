@@ -85,15 +85,15 @@ button:focus {
         width: 160px;
         cursor: pointer; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(2) {
-        width: 90px;
+        width: 105px;
         cursor: pointer; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(3) {
         text-align: center;
         padding-left: 10px;
-        width: 55px; }
+        width: 35px; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(4) {
         text-align: center;
-        width: 50px; }
+        width: 35px; }
       #brexitvotes #brexitvotes-titles > div > div:nth-child(5) {
         width: 40px;
         cursor: pointer; }
@@ -119,13 +119,13 @@ button:focus {
         width: 160px;
         text-align: left; }
       #brexitvotes #brexitvotes-data > div > div:nth-child(2) {
-        width: 90px;
+        width: 105px;
         text-align: left; }
       #brexitvotes #brexitvotes-data > div > div:nth-child(3) {
-        width: 65px;
+        width: 45px;
         text-align: center; }
       #brexitvotes #brexitvotes-data > div > div:nth-child(4) {
-        width: 50px; }
+        width: 35px; }
       #brexitvotes #brexitvotes-data > div > div:nth-child(5) {
         width: 40px; }
       #brexitvotes #brexitvotes-data > div > div:nth-child(6) {

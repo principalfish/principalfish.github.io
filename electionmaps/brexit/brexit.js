@@ -164,7 +164,7 @@ var regionMap = {
         filters.opacities[seat] = (20 / 3) * ((currentMap.seatData[seat][current] / 100) - 0.5) ;
         data.filtered = true;
       } else {
-        filters.opacities[seat] = 0.03;
+        filters.opacities[seat] = 0;
         data.filtered = false;
       }
     })
@@ -178,8 +178,12 @@ var regionMap = {
 
       var mapSelect = currentMap.seatData[seat].mapSelect;
       mapSelect.opacity = opacity;
-      d3.select("#i" + mapSelect.properties.info_id).attr("opacity", opacity);
-  
+      d3.select("#i" + mapSelect.properties.info_id).attr("opacity", null);
+      d3.select("#i" + mapSelect.properties.info_id).attr("fill-opacity", opacity);
+      if (opacity == 0){
+        d3.select("#i" + mapSelect.properties.info_id).attr("opacity", 0.02);
+      }
+
 
     });
 
@@ -258,7 +262,7 @@ var regionMap = {
 		var mapID = "#i" + node.properties.info_id;
 		current = d3.select(mapID);
 
-		//var opacity = $(mapID).css("opacity");
+		//var opacity = $(mapID).css("fill-opacity");
 
 		repeat();
 
@@ -266,10 +270,10 @@ var regionMap = {
 			current
 				.transition()
 					.duration(1500)
-					.attr("opacity", 0.02)
+					.attr("fill-opacity", 0.02)
 				.transition()
 					.duration(1500)
-					.attr("opacity", node.opacity)
+					.attr("fill-opacity", node.opacity)
 				.on("end", repeat);
 		}
 
@@ -300,7 +304,7 @@ var regionMap = {
 		if (mapAttr.activeNode != null){
 			d3.select("#i" + mapAttr.activeNode.properties.info_id)
 			.transition()
-			.attr("opacity", mapAttr.activeNode.opacity);
+			.attr("fill-opacity", mapAttr.activeNode.opacity);
 		}
 
 		mapAttr.activeNode = null;
@@ -342,7 +346,7 @@ var regionMap = {
 					}
 					return seatClass
 				})
-				.attr("opacity", function(d) {
+				.attr("fill-opacity", function(d) {
 					if (d.properties.name in currentMap.seatData){
 						var current = setting.seatData[d.properties.name]["current"];
 						var opacity = (20 / 3) * ((setting.seatData[d.properties.name][current] / 100) - 0.5) ;
@@ -374,6 +378,7 @@ var regionMap = {
 
 					}
 				});
+
 
 			g.append("path")
 				.datum(topojson.mesh(setting.polygons, setting.polygons.objects.map, function(a, b){

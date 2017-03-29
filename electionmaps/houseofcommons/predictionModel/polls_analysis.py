@@ -106,7 +106,7 @@ def poll_maths(poll):
         #convert to decimal percentaegs
     raw_num_comps = ["general", "me", "icm", "icm2", "opinium",
                     "mori", "comres", "comresdm", "survation",
-                    "bmg", "icmmissing", "opiniummissing", "ashcroft"]
+                    "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk"]
 
     if company in raw_num_comps:
         for region, numbers in poll["regions"].iteritems():

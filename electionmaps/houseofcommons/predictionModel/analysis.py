@@ -4,8 +4,8 @@ from datetime import datetime, date
 from pollingregions import polling_regions
 
 
-poll_limit = int(sys.argv[1]) + 1
-
+#poll_limit = int(sys.argv[1]) + 1
+poll_limit = 500
 
 parties = ["conservative", "labour", "libdems",	"ukip", "green", "snp",
             "plaidcymru", "other", "sdlp", "sinnfein", "alliance", "dup", "uu"]
@@ -114,7 +114,7 @@ def poll_maths(poll):
         #convert to decimal percentaegs
     raw_num_comps = ["general", "me", "icm", "icm2", "opinium",
                     "mori", "comres", "comresdm", "survation",
-                    "bmg", "icmmissing", "opiniummissing", "ashcroft"]
+                    "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk"]
 
     if company in raw_num_comps:
         for region, numbers in poll["regions"].iteritems():

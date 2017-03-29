@@ -1,0 +1,58 @@
+@import "../core";
+@import "../parties";
+@import "../electionmapscore";
+
+#wrapper {
+    position: relative;
+    left : $side-bar-width;
+}
+
+#plot {
+
+}
+
+#filters {
+  position: absolute;
+  left: 1020px;
+  top : 5px;
+  width: 150px;
+}
+
+#key {
+  position: absolute;
+  left: 1020px;
+  top : 350px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+#about {
+  position: absolute;
+  left: 10px;
+  top: 800px;
+}
+
+.line {
+  fill: none;
+  stroke-width: 3px;
+}
+
+.modelline {
+  fill: none;
+  stroke-width: 3px;
+}
+
+.majorityline {
+  stroke: black;
+  stroke-width : 2px;
+}
+
+.grid line {
+  stroke: lightgrey;
+  stroke-opacity: 0.5;
+  shape-rendering: crispEdges;
+}
+
+.grid path {
+  stroke-width: 0;
+}

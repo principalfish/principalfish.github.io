@@ -1,0 +1,118 @@
+// @import "electionmapscore";
+
+#map {
+  float: left;
+  margin-left: 0;
+  width: $map-container-width;
+  height: $map-height;
+  display: block;
+  overflow: hidden;
+  /*position: relative;*/
+}
+
+
+/* map stylings */
+svg .boundaries {
+	 fill: none;
+	 stroke: darkgrey;
+	 stroke-linejoin: round;
+	 stroke-width: 0.6;
+}
+
+ .background {
+  fill: none ;
+  pointer-events: all;
+}
+
+svg .map {
+	stroke: black;
+	stroke-width: 0.2;
+	stroke-linejoin: round;
+  stroke-opacity: 1;
+	cursor: pointer;
+	pointer-events: all;
+}
+
+.map:hover {
+
+	opacity: 0.5;
+	stroke: black;
+	stroke-width: 0.2;
+}
+
+// reset map button
+
+#resetbutton {
+  position: absolute;
+  top: $widget-margin-top;
+  left: 5px;
+  z-index: 1;
+
+  > button:focus {
+      outline: none;
+  }
+}
+
+// #seatlistbutton {
+//   position: absolute;
+//   top: $widget-margin-top;
+//   left: 72px;
+//   z-index: 1;
+// }
+
+#searchforseat {
+  position: absolute;
+  top : $widget-margin-top;
+  left : $map-container-width - $seat-search-width - 5;
+  width : $seat-search-width;
+
+  > input {
+    width : 100%;
+    background-color: white;
+    border: 1px solid black;
+    color: #696969;
+    text-align: center;
+  }
+}
+
+//buttoms at bottom
+
+.mapbutton {
+  position: absolute;
+  top: $map-height - 25;
+  z-index: 1;
+  border-bottom: 25px solid $dark-blue;
+  border-left: $map-button-side-padding solid transparent;
+  border-right: $map-button-side-padding solid transparent;
+  height: 0px;
+  width: $map-button-width;
+  text-align: center;
+  cursor: pointer;
+}
+
+.mapbutton.mapbuttonactive {
+  border-bottom: 25px solid green;
+}
+
+.mapbuttonactive {
+  > button{
+    background-color: green;
+    color: white;
+  }
+}
+
+#votetotalsbutton {
+  left : 0;
+}
+
+#filtersbutton {
+  left : $map-button-div-width;
+}
+
+#choroplethsbutton {
+  left : 2 * $map-button-div-width;
+}
+
+#predictbutton {
+  left : 3 * $map-button-div-width
+}

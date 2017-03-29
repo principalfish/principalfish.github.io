@@ -1,0 +1,143 @@
+//colours
+$lighter-blue: #293b51;
+$dark-blue : #203040;
+
+// various div backgroud colour
+$dash-box-background : #f4f4f6;
+
+//dimensions of side bar
+$side-bar-width : 150px;
+$side-bar-height: 875px;
+$projections-nav-item-height : 35px;
+
+// map dimensions
+$map-container-width : 600px;
+$map-height : 875px;
+
+$widget-margin-top: 5px;
+
+// dimensions for various divs
+$seat-info-width: 520px;
+$seat-search-width : 150px;
+$popup-div-width : 500px;
+$totals-div-width : 420px;
+$seatlist-width : 250px;
+$seatlist-extended-width : 625px;
+
+// positioning for hidden div elements
+$map-button-width : 125px;
+$map-button-side-padding : 6px;
+$map-button-div-width : $map-button-width + 2 * $map-button-side-padding;
+
+
+@mixin border-radius($radius) {
+  -webkit-border-radius: $radius;
+  -moz-border-radius: $radius;
+  border-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-top($radius) {
+  -webkit-border-top-right-radius: $radius;
+  -moz-border-top-right-radius: $radius;
+  border-top-right-radius: $radius;
+  -webkit-border-top-left-radius: $radius;
+  -moz-border-top-left-radius: $radius;
+  border-top-left-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-bottom($radius) {
+  -webkit-border-bottom-right-radius: $radius;
+  -moz-border-bottom-right-radius: $radius;
+  border-bottom-right-radius: $radius;
+  -webkit-border-bottom-left-radius: $radius;
+  -moz-border-bottom-left-radius: $radius;
+  border-bottom-right-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-left($radius) {
+  -webkit-border-top-left-radius: $radius;
+  -moz-border-top-left-radius: $radius;
+  border-top-left-radius: $radius;
+  -webkit-border-bottom-left-radius: $radius;
+  -moz-border-bottom-left-radius: $radius;
+  border-bottom-left-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin box-sizing($box-model){
+  -webkit-box-sizing: $box-model;
+  -moz-box-sizing: $box-model;
+  box-sizing: $box-model;
+}
+
+//
+.hidden {
+  display: none;
+}
+
+// general pop up box stylin'
+.dash-box {
+
+  h2 {
+    @include box-sizing(border-box);
+    @include border-radius-top(3px);
+    background-color: $lighter-blue;
+    color: white;
+    height: 30px;
+    line-height: 30px;
+    margin: 0;
+    padding:0 20px 0 20px;
+    display: block;
+    cursor: pointer;
+  }
+
+  // h3 {
+  //   margin: 0;
+  // }
+
+  > div {
+    @include border-radius-bottom(3px);
+    background-color: $dash-box-background;
+    padding: 5px 15px;
+    border: 1px solid rgba(171, 171, 171, 0.85);
+    border-top: none;
+  }
+}
+
+.party-flair {
+  @include border-radius(2px);
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+}
+
+.closebox {
+  //@include border-radius(2px);
+  display: inline-block;
+  float: right;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  cursor: pointer;
+
+}
+
+// button styling
+button {
+  @include border-radius(3px);
+  background-color: $dark-blue;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  border:none;
+  padding: 5px 12px;
+  font-size: 1.2em;
+}
+
+button:focus {
+  outline: none;
+}

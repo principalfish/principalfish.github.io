@@ -2,27 +2,7 @@
 /node_modules/
 /.sass-cache/
 
-Gruntfile.js
-package.json
-
-
 /libraries/d3.js
-
-/scripts/
-
-/stylesheets/electionmaps/electionmaps.css
-/stylesheets/electionmaps/electionmaps.css.map
-/stylesheets/electionmaps/navbar.css.map
-/stylesheets/electionmaps/navbar.css
-
-/stylesheets/electionmaps/polltracker/polls.css.map
-/stylesheets/electionmaps/polltracker/polls.css
-
-/stylesheets/sass/
-/stylesheets/index.css.map
-
-/electionmaps/polltracker.js
-
 
 
 *.bat

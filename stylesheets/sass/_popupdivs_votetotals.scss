@@ -1,0 +1,103 @@
+// @import 'electionmapscore';
+
+#votetotals {
+  left: $map-container-width + 5;
+  top: $widget-margin-top ;
+  width : $totals-div-width;
+
+  > div {
+    > div {
+      padding-bottom: 3px;
+    }
+  }
+
+  #votetotals-turnout {
+    float: right;
+  }
+
+  #votetotals-table {
+    overflow: hidden;
+
+    #votetotals-table-titles {
+      font-weight: bold;
+      font-size : 90%;
+      text-align: center;
+
+      > div {
+
+        > div {
+          float: left;
+          padding: 2px 1px;
+        }
+
+        > div:nth-child(1){
+          width: 90px;
+        }
+        > div:nth-child(2){
+          width: 50px;
+          cursor: pointer;
+        }
+        > div:nth-child(3){
+          width: 50px;
+        }
+        > div:nth-child(4){
+          width: 80px;
+          cursor: pointer;
+        }
+        > div:nth-child(5){
+          width: 50px;
+          cursor: pointer;
+        }
+        > div:nth-child(6){
+          width: 50px;
+          cursor: pointer;
+        }
+      }
+
+    }
+
+    #votetotals-table-data {
+      > div {
+        float: left;
+        border-top: 1px dotted #cbcbcb;
+        width: 100%;
+
+        >div {
+          float : left;
+          padding: 2px 1px;
+        }
+
+        > div:nth-child(1){
+          width: 90px;
+          text-align : left;
+        }
+        > div:nth-child(2){
+          width: 50px;
+          text-align: center;
+        }
+        > div:nth-child(3){
+          width: 50px;
+          text-align: center;
+        }
+        > div:nth-child(4){
+          width: 80px;
+          text-align: right;
+        }
+        > div:nth-child(5){
+          width: 50px;
+          text-align: center;
+        }
+        > div:nth-child(6){
+          width: 50px;
+          text-align: center;
+        }
+      }
+
+      // totals row
+      .lastrow {
+        background-color : $dark-blue;
+        color : white;
+      }
+    }
+  }
+}

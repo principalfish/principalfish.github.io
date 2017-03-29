@@ -1,0 +1,104 @@
+@import "../electionmapscore";
+
+#brexitvotes {
+
+  left: $map-container-width + 5;
+  top: $widget-margin-top ;
+  width : 520px;
+
+  #brexitvotes-titles {
+    font-weight: bold;
+    font-size : 90%;
+    text-align: center;
+    width: 100%;
+
+    > div {
+      float: left;
+
+      > div {
+        float: left;
+        padding: 2px 1px;
+      }
+
+      > div:nth-child(1){
+        width: 160px;
+        cursor:pointer;
+      }
+      > div:nth-child(2){
+        width: 105px;
+        cursor:pointer;
+      }
+      > div:nth-child(3){
+        text-align: center;
+        padding-left: 10px;
+        width: 35px;
+      }
+      
+      > div:nth-child(4){
+        text-align: center;
+        width: 35px;
+      }
+      > div:nth-child(5){
+        width: 40px;
+        cursor:pointer;
+      }
+      > div:nth-child(6){
+        width: 40px;
+        cursor:pointer;
+      }
+
+      .sort-active {
+        background: $dark-blue;
+        color: white;
+      }
+    }
+  }
+
+  #brexitvotes-data {
+    overflow-y: scroll;
+    max-height: 250px;
+    width: 100%;
+
+    > div {
+      float: left;
+      border-top: 1px dotted #cbcbcb;
+      width: 100%;
+
+      >div {
+        float : left;
+        padding: 2px 1px;
+        text-align: center;
+      }
+
+      > div:nth-child(1){
+        width: 160px;
+        text-align: left;
+      }
+      > div:nth-child(2){
+        width: 105px;
+        text-align: left;
+      }
+      > div:nth-child(3){
+        width: 45px;
+        text-align : center;
+      }
+      > div:nth-child(4){
+        width: 35px;
+
+        //text-align: center;
+      }
+      > div:nth-child(5){
+        width: 40px;
+      }
+      > div:nth-child(6){
+        width: 40px;
+      }
+
+    }
+  }
+}
+
+//
+// .map:hover {
+//   fill-opacity: 0.5;
+// }

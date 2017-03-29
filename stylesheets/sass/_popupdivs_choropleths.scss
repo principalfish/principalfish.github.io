@@ -1,0 +1,32 @@
+// @import 'electionmapscore';
+
+#choropleths {
+  left: $map-container-width + 250;
+  top: $widget-margin-top + 353;
+  width: 175px;
+}
+
+#keyonmap {
+  left: 5px;
+  top: 35px;
+  position: absolute;
+  display: none;
+  width : 75px;
+  padding : 2px;
+  font-size : 1.2em;
+  text-align: center;
+}
+
+.key-colour {
+  color : black;
+}
+
+.choro-select {
+  margin: 0 auto;
+  width: 95%;
+
+  > select {
+    width: 100%;
+    margin: 5px 0px;
+  }
+}

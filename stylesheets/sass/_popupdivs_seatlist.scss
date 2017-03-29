@@ -1,0 +1,149 @@
+// @import 'electionmapscore';
+
+.extended-seat{
+  cursor: pointer;
+  overflow-x: visible;
+}
+.extended-seat:hover {
+  opacity: 0.5;
+}
+
+#seatlist {
+  left: $map-container-width + $totals-div-width + 10;
+  top: $widget-margin-top;
+  width: $seatlist-width;
+
+  #seatlist-extend {
+    float : right;
+  }
+
+  #seatlist-container {
+    padding-top: 5px;
+    overflow-y: scroll;
+    max-height: 286px;
+    margin-bottom: 2px;
+
+    > div {
+      cursor: pointer;
+      overflow-x: visible;
+    }
+
+    > div:hover {
+      opacity: 0.5;
+    }
+  }
+}
+
+#seatlist-extended {
+  left: $map-container-width + 5px;
+  top: $widget-margin-top;
+  width: $seatlist-extended-width;
+
+  #seatlist-extended-titles {
+
+    font-weight: bold;
+    font-size : 90%;
+    text-align: center;
+    width: 100%;
+
+    > div {
+      float: left;
+
+      > div {
+        float: left;
+        padding: 2px 1px;
+        cursor:pointer;
+      }
+
+      > div:nth-child(1){
+        width: 160px;
+      }
+      > div:nth-child(2){
+        text-align: left;
+        padding-left: 10px;
+        width: 55px;
+      }
+      > div:nth-child(3){
+        width: 50px;
+      }
+      > div:nth-child(4){
+        width: 40px;
+      }
+      > div:nth-child(5){
+        width: 40px;
+      }
+      > div:nth-child(6){
+        width: 40px;
+      }
+      > div:nth-child(7){
+        width: 40px;
+      }
+      > div:nth-child(8){
+        width: 40px;
+      }
+      > div:nth-child(9){
+        width: 40px;
+      }
+      > div:nth-child(10){
+        width: 40px;
+      }
+      .sort-active {
+        background: $dark-blue;
+        color: white;
+      }
+    }
+  }
+
+  #seatlist-extended-data {
+    overflow-y: scroll;
+    max-height: 290px;
+    width: 100%;
+
+    > div {
+      float: left;
+      border-top: 1px dotted #cbcbcb;
+      width: 100%;
+
+      >div {
+        float : left;
+        padding: 2px 1px;
+        text-align: center;
+      }
+
+      > div:nth-child(1){
+        width: 160px;
+        text-align: left;
+      }
+      > div:nth-child(2){
+        width: 65px;
+        text-align : left;
+      }
+      > div:nth-child(3){
+        width: 50px;
+
+        //text-align: center;
+      }
+      > div:nth-child(4){
+        width: 40px;
+      }
+      > div:nth-child(5){
+        width: 40px;
+      }
+      > div:nth-child(6){
+        width: 40px;
+      }
+      > div:nth-child(7){
+        width: 40px;
+      }
+      > div:nth-child(8){
+        width: 40px;
+      }
+      > div:nth-child(9){
+        width: 40px;
+      }
+      > div:nth-child(10){
+        width: 40px;
+      }
+    }
+  }
+}

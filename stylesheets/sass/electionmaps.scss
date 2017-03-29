@@ -1,0 +1,30 @@
+@import "core";
+@import "electionmapscore";
+@import "parties";
+@import "map";
+@import "popupdivs";
+
+#wrapper {
+  position: relative;
+  width: 1500px;
+  left : $side-bar-width;
+  height: auto;
+  display: block;
+  overflow: hidden;
+}
+
+#instructions {
+  width: auto;
+  max-width: 420px;
+  left : $map-container-width + 5;
+  top: 577px;
+  height: auto;
+  position: absolute;
+}
+
+#seat-600 {
+  width: 400px;
+  left : $map-container-width + 5;
+  top: 577px;
+  height: auto;
+}

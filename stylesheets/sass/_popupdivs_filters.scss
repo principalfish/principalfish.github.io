@@ -1,0 +1,34 @@
+// @import 'electionmapscore';
+
+#filters {
+  left: $map-container-width + 5;
+  top: $widget-margin-top + 353;
+  width: 240px;
+}
+
+.filter-select {
+
+  margin: 0 auto;
+  width: 75%;
+
+  > select {
+    width: 100%;
+    margin: 5px 0px;
+  }
+
+  button {
+    width: 100%;
+    font-size : 100%;
+    margin: 2px 0px;
+    letter-spacing : 1px;
+  }
+
+  input {
+    width: 30px;
+    margin: 2px 0px;
+  }
+
+  .filter-button-active {
+    background-color: green;
+  }
+}

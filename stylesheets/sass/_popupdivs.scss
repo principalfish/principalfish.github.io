@@ -1,0 +1,20 @@
+// @import "electionmapscore";
+
+@import "popupdivs_seatinfo";
+@import "popupdivs_filters";
+@import "popupdivs_votetotals";
+@import "popupdivs_seatlist";
+@import "popupdivs_choropleths";
+@import "popupdivs_userinput";
+
+.popupdiv {
+  position: absolute;
+  height: auto;
+  //width: $popup-div-width;
+}
+
+// table headers -sortable
+.sort-active {
+  background: $dark-blue;
+  color: white;
+}

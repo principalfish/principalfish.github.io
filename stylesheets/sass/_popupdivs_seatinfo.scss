@@ -1,0 +1,105 @@
+// @import 'electionmapscore';
+
+#seat-information {
+  display: none;
+  position: absolute;
+  left: $map-container-width + 5;
+  top: $widget-margin-top + 572;
+  width: $seat-info-width;
+  float: left;
+
+  > div {
+    padding-bottom: 0;
+    height: 250px;
+  }
+
+  #seat-summary {
+
+    overflow: hidden;
+    font-size: 110%;
+
+    > div {
+      overflow: hidden;
+      float: left;
+      margin-bottom: 3px;
+      font-weight: bold;
+    }
+
+    > div:nth-child(3n - 2) {
+      width : 160px;
+    }
+
+    > div:nth-child(3n - 1){
+      width: 165px;
+    }
+
+    > div:nth-child(3n){
+      width: 160px;
+      text-align: right;
+    }
+
+    .party-name {
+      display: inline-block;
+    }
+  }
+
+  /* bar chart and votes */
+
+  #charts {
+    overflow: hidden;
+
+    > div {
+      @include box-sizing(border-box);
+      width: 50%;
+      float: left;
+      height: auto;
+      font-weight: bold;
+    }
+
+    #information-chart {
+      right: 0;
+      margin-top: 10px;
+      > * {
+        width: 100%;
+      }
+
+      > div {
+        overflow: hidden;
+        float: left;
+        padding-bottom : 3px;
+        padding-top: 3px;
+        font-weight: bold;
+        border-bottom: 1px dotted #cbcbcb;
+        display : inline
+      }
+
+      .party-info-table {
+
+        > div:nth-child(1) {
+          margin-right: 6px;
+          float: left;
+        }
+
+        > div:nth-child(2) {
+          width: 52%;
+          float: left;
+          overflow: hidden;
+          white-space:nowrap;
+        }
+
+        > div:nth-child(3){
+          width: 40%;
+          float : left;
+          text-align: right;
+        }
+      }
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: black;
+      shape-rendering: crispEdges;
+    }
+  }
+}

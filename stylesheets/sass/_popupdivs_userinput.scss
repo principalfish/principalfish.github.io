@@ -1,0 +1,57 @@
+// @import 'electionmapscore';
+
+
+#userinput {
+  left : $map-container-width + 5;
+  top: 577px;
+  width: $totals-div-width;
+
+  input {
+    width: 30px;
+    height: 16px;
+  }
+
+  #userinput-table {
+
+    > div {
+      padding: 2px 0px;
+
+      width: auto;
+
+      > div {
+        text-align : center;
+        display: inline-block;
+      }
+
+      > div:nth-child(8n-7){
+        width: 90px;
+        text-align : left;
+      }
+      > div:nth-child(8n-6){
+        width: 35px;
+      }
+      > div:nth-child(8n-5){
+        width: 35px;
+      }
+      > div:nth-child(8n-4){
+        width: 35px;
+      }
+      > div:nth-child(8n-3){
+        width: 35px;
+      }
+      > div:nth-child(8n-2){
+        width: 35px;
+      }
+      > div:nth-child(8n-1){
+        width: 35px;
+      }
+      > div:nth-child(8n){
+        width: 35px;
+      }
+    }
+  }
+
+  #userinput-submit {
+    padding-top: 5px;
+  }
+}

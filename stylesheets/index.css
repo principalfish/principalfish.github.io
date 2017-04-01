@@ -48,15 +48,26 @@ nav {
   clear: both; }
 
 #wrapper {
-  margin-left: auto;
-  margin-right: auto;
-  width: 1000px;
+  float: left;
+  position: relative;
+  left: 150px;
   height: auto;
   display: block;
-  padding-top: 15px;
-  overflow-y: auto; }
+  width: 500px; }
 
 /* banner stuff */
+#about {
+  margin-left: 15px;
+  font-size: 1.4em; }
+
+#me {
+  left: 550px;
+  top: 10px;
+  position: absolute; }
+  #me img {
+    height: 500px;
+    width: 500px; }
+
 .btn {
   -webkit-border-radius: 28;
   -moz-border-radius: 28;
@@ -79,8 +90,5 @@ nav {
     decoration: none; }
   .btn :hover {
     opacity: 0.55; }
-
-#ukelectionbutton {
-  background: url("/imgs/ukelection.png") no-repeat; }
 
 /*# sourceMappingURL=index.css.map */

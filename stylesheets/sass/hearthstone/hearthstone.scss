@@ -1,0 +1,151 @@
+@import "../core";
+@import "button";
+
+#wrapper {
+  float: left;
+  position: relative;
+  left: 150px;
+  height: auto;
+  display: block;
+}
+
+#filters {
+  position: absolute;
+  width: 500px;
+  height: 875px;
+  left: 5px;
+}
+
+.filter-title {
+  font-size: 1.2em;
+}
+
+#filters-class {
+  > button {
+
+  }
+
+  #filters-class-neutral {
+    margin-right: 300px;
+  }
+
+}
+
+#display {
+  position: absolute;
+  left: 500px;
+  top: 5px;
+  background-color: #708090;
+  color : white;
+  padding: 2px 2px 2px 2px;
+  width: 575px;
+  max-height: 875px;
+
+  #display-info {
+    font-size: 1.2em;
+  }
+
+  #display-table-headers {
+
+
+    > div {
+
+      width : 100%;
+      float: left;
+      text-align: center;
+      cursor:pointer;
+
+
+      > div {
+        float: left;
+        padding: 2px 5px 2px 0px;
+      }
+
+      >div:nth-child(1){
+        width: 150px;
+      }
+
+      >div:nth-child(2){
+        width: 70px;
+      }
+
+      >div:nth-child(3){
+        width: 70px;
+      }
+
+      >div:nth-child(4){
+        width: 80px;
+      }
+
+      >div:nth-child(5){
+        width: 100px;
+      }
+
+      >div:nth-child(6){
+
+      }
+    }
+  }
+
+  #display-table-data {
+    max-height: 825px;
+    overflow-y : scroll;
+    overflow-x : hidden;
+    float: left;
+
+    > div {
+
+      width : 100%;
+      float: left;
+      padding: 2px 0px 2px 5px;
+      border-top: 1px dotted black;
+
+      > div {
+        float: left;
+        padding: 2px 5px 2px 0px;
+        text-align: center;
+      }
+
+      >div:nth-child(1){
+        width: 150px;
+      }
+
+      >div:nth-child(2){
+        width: 70px;
+      }
+
+      >div:nth-child(3){
+        width: 70px;
+      }
+
+      >div:nth-child(4){
+        width: 80px;
+      }
+
+      >div:nth-child(5){
+        width: 100px;
+      }
+
+      >div:nth-child(6){
+
+      }
+    }
+  }
+}
+
+.sort-active {
+  background-color: #203040;
+  color: white;
+}
+
+// classes
+.neutral {background-color: lightgrey; color: black;}
+.druid {background-color: brown; color: white;}
+.hunter {background-color: green; color: white;}
+.mage {background-color: lightblue; color: black;}
+.paladin {background-color: gold; color: black;}
+.priest {background-color: white; color: black;}
+.rogue {background-color: black; color: white;}
+.shaman {background-color: darkblue; color: white;}
+.warlock {background-color: purple; color: white;}
+.warrior {background-color: red; color: white;}

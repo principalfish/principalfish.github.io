@@ -6,10 +6,11 @@ module.exports = function(grunt) {
 			dist: {
 				files: {
 					'stylesheets/index.css' : 'stylesheets/sass/index.scss',
-					'stylesheets/electionmaps/electionmaps.css' : 'stylesheets/sass/electionmaps.scss',
-					'stylesheets/electionmaps/navbar.css' : "stylesheets/sass/navbar.scss",
-					'stylesheets/electionmaps/polltracker/polls.css' : "stylesheets/sass/polltracker/polltracker.scss",
-					'stylesheets/electionmaps/brexit/brexit.css' : "stylesheets/sass/brexit/brexit.scss"
+					'stylesheets/electionmaps/electionmaps.css' : 'stylesheets/sass/electionmaps/electionmaps.scss',
+					'stylesheets/electionmaps/navbar.css' : "stylesheets/sass/electionmaps/navbar.scss",
+					'stylesheets/electionmaps/polltracker/polls.css' : "stylesheets/sass/electionmaps/polltracker/polltracker.scss",
+					'stylesheets/electionmaps/brexit/brexit.css' : "stylesheets/sass/electionmaps/brexit/brexit.scss",
+					"stylesheets/hearthstone/main.css" : "stylesheets/sass/hearthstone/hearthstone.scss"
 				}
 			}
 		},
@@ -30,20 +31,25 @@ module.exports = function(grunt) {
 				separator: ';'
 			  },
 
-				dist1: {
+				electionmapsmain: {
 					// the files to concatenate
 					src: ['scripts/electionmaps/*.js'],
 					// the location of the resulting JS file
 					dest: 'electionmaps/main.js'
 			  },
-				dist2: {
+				electionmapspolltracker: {
 					src : ["scripts/electionmaps/polltracker/*.js"],
 					dest : "electionmaps/polltracker/polltracker.js"
  				}	,
 
-				dist3 : {
+				electionmapsbrexit : {
 					src : ["scripts/electionmaps/brexit/*js"],
 					dest : "electionmaps/brexit/brexit.js"
+				},
+
+				hearthstone : {
+					src : ["scripts/hearthstone/*.js"],
+					dest : "hearthstone/main.js"
 				}
 
 		},
@@ -57,27 +63,32 @@ module.exports = function(grunt) {
 				files: {
 				  "electionmaps/main.min.js": ["electionmaps/main.js"],
 					"electionmaps/polltracker/polltracker.min.js": ["electionmaps/polltracker/polltracker.js"],
-					"electionmaps/brexit/brexit.min.js" : ["electionmaps/brexit/brexit.js"]
+					"electionmaps/brexit/brexit.min.js" : ["electionmaps/brexit/brexit.js"],
+					"hearthstone/main.min.js" : ["hearthstone/main.js"]
 				}
 		  }
 		},
 
 		cssmin: {
-		  my_target: {
+		  electionmapsmain: {
 		    src: 'stylesheets/electionmaps/electionmaps.css',
 		    dest: 'stylesheets/electionmaps/electionmaps.min.css'
 		  },
-			my_target2:{
+			navbar:{
 				src : "stylesheets/electionmaps/navbar.css",
 				dest: "stylesheets/electionmaps/navbar.min.css"
 			},
-			my_target3 : {
+			electionmapspolltracker : {
 				src : "stylesheets/electionmaps/polltracker/polls.css",
 				dest : "stylesheets/electionmaps/polltracker/polls.min.css"
 			},
-			my_target4 : {
+			electionmapsbrexit : {
 				src : "stylesheets/electionmaps/brexit/brexit.css",
 				dest : "stylesheets/electionmaps/brexit/brexit.min.css"
+			},
+			hearthstone : {
+				src : "stylesheets/hearthstone/main.css",
+				dest : "stylesheets/hearthstone/main.min.css"
 			}
 		}
 

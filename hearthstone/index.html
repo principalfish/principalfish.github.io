@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+	<title>Hearthstone Cards</title>
+	<link rel="shortcut icon" href="/imgs/logo.png">
+	<link type="text/css" rel="stylesheet" href="/stylesheets/hearthstone/main.min.css"/>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/navbar.css"/>
+	<script type="text/javascript" src="/libraries/jquery.min.js"></script>
+	<script type="text/javascript" src="main.js"></script>
+</head>
+
+<body>
+	<header>
+		<h2> Hearthstone Card Search </h2>
+		<nav>
+				<ul>
+					<a href="/" class=>Home</a>
+				</ul>
+
+		    <ul>
+		      mail : principalfish@gmail.com
+		    </ul>
+		</nav>
+	</header>
+
+	<nav id="projections">
+			<h3 id="nav-current"><a href="/">Home</a></h3>
+			<h3><a href="/electionmaps/">UK Election Maps</a></h3>
+			<h3 class="navbaractive"><a href="/hearthstone/">Hearthstone</a></h3>
+
+
+			<p id="copyright"> Copyright 2017 principalfish.co.uk</p>
+	</nav>
+
+
+	<div id="wrapper">
+		<div id="filters">
+			<div id ="filters-class">
+				<p class="filter-title">
+					Filter By Class
+				</p>
+
+				<button id="filters-class-neutral" class="neutral btn selected"
+								onclick="filters.handle(this.id)">
+							Neutral
+							<!-- <span class="checkmark neutral">
+
+							</span> -->
+				</button>
+
+				<button id="filters-class-druid"  class="druid btn selected"
+								onclick="filters.handle(this.id)">
+							Druid
+
+				</button>
+
+				<button id="filters-class-hunter"  class="hunter btn selected"
+								onclick="filters.handle(this.id)">
+							Hunter
+				</button>
+
+				<button id="filters-class-mage"  class="mage btn selected"
+								onclick="filters.handle(this.id)">
+							Mage
+				</button>
+
+				<button id="filters-class-paladin"  class="paladin btn selected"
+								onclick="filters.handle(this.id)">
+							Paladin
+				</button>
+
+				<button id="filters-class-priest"  class="priest btn selected"
+								onclick="filters.handle(this.id)">
+							Priest
+				</button>
+
+				<button id="filters-class-rogue"  class="rogue btn selected"
+								onclick="filters.handle(this.id)">
+							Rogue
+				</button>
+
+				<button id="filters-class-shaman"  class="shaman btn selected"
+								onclick="filters.handle(this.id)">
+							Shaman
+				</button>
+
+				<button id="filters-class-warlock"  class="warlock btn selected"
+								onclick="filters.handle(this.id)">
+							Warlock
+				</button>
+
+				<button id="filters-class-warrior"  class="warrior btn selected"
+								onclick="filters.handle(this.id)">
+							Warrior
+				</button>
+
+			</div>
+
+			<div id="filters-type">
+				<p class="filter-title">
+					Filter by Type
+				</p>
+
+				<button id="filters-type-minion" class="minion btn selected"
+								onclick="filters.handle(this.id)">
+							Minion
+				</button>
+
+				<button id="filters-type-spell" class="spell btn selected"
+								onclick="filters.handle(this.id)">
+							Spell
+				</button>
+
+				<button id="filters-type-weapon" class="weapon btn selected"
+								onclick="filters.handle(this.id)">
+							Weapon
+				</button>
+
+
+			</div>
+
+
+		</div>
+
+<!--
+			attack,
+			card class,
+			cost,
+			id,
+			durability,
+			flavor,
+			health,
+			mechanics,
+			multiclassgroup,
+			name,
+			overload,
+			rarity,
+			referenced tags,
+			set,
+			spell damage,
+			type
+	 -->
+
+	 <div id="display">
+		 <p id="display-info">
+			Total Cards Filtered : <span id="display-cardstotal"></span>
+			<!-- Click a card to see more info. -->
+		 </p>
+
+		 <div id="display-table-headers">
+			 <div>
+				<div id="display-name" class="sort-active" onclick="sort.sortTable(this.id)">Name</div>
+				<div id="display-cardClass" onclick="sort.sortTable(this.id)">Class</div>
+				<div id="display-type" onclick="sort.sortTable(this.id)">Type</div>
+				<div id="display-rarity" onclick="sort.sortTable(this.id)">Rarity</div>
+				<div id="display-set" onclick="sort.sortTable(this.id)">Set</div>
+				<div id="display-cost" onclick="sort.sortTable(this.id)">Mana</div>
+			 </div>
+
+		 </div>
+
+		 <div id="display-table-data">
+
+		 </div>
+	 </div>
+	</div>
+
+
+</body>
+
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-58696407-1', 'auto');
+	ga('send', 'pageview');
+</script>

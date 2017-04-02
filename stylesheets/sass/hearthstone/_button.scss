@@ -1,0 +1,65 @@
+.btn {
+  width: 150px;
+
+  text-align: center;
+  font-family: Arial;
+  font-size: 20px;
+  border: solid #1f628d 1px;
+  text-decoration: none;
+  margin: 0 -2px 0 -2px;
+  border-radius: 0px;
+  -moz-border-radius: 0px;
+  -webkit-border-radius: 0px;
+}
+
+.btn:hover {
+  opacity: 0.5;
+  text-decoration: none;
+}
+
+.selected {
+  opacity: 1;
+}
+
+.not-selected {
+  opacity: 0.3;
+}
+
+
+
+.checkmark {
+    display:inline-block;
+    width: 18px;
+    height: 18px;
+    background-color: black;
+    filter: invert(100%);
+    -webkit-filter: invert(100%);
+    border-radius:50%;
+    -ms-transform: rotate(45deg); /* IE 9 */
+    -webkit-transform: rotate(45deg); /* Chrome, Safari, Opera */
+    transform: rotate(45deg);
+}
+
+.checkmark:before{
+    content:"";
+    position: absolute;
+    width:3px;
+    height:9px;
+    background-color: black;
+    filter: invert(100%);
+    -webkit-filter: invert(100%);
+    left:9px;
+    top:4px;
+}
+
+.checkmark:after{
+    content:"";
+    position: absolute;
+    width:3px;
+    height:3px;
+    background-color: black;
+    filter: invert(100%);
+    -webkit-filter: invert(100%);
+    left:6px;
+    top:10px;
+}

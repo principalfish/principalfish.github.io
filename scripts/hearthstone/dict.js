@@ -48,7 +48,15 @@ var dict = {
     "KARA" : "Karazhan",
     "CORE" : "Core",
     "LOE" : "Explorers",
-    "GVG" : "Goblins/Gnomes"
+    "GVG" : "Goblins/Gnomes",
+    "NAXX" : "Naxxramas",
+    "REWARD" : "Reward"
 
+  },
+
+  mode : {
+    "standard" : ["EXPERT1", "OG", "GANGS", "KARA", "CORE"],
+    "wild" : ["BRM", "TGT", "LOE", "GVG", "NAXX"]
   }
+
 }

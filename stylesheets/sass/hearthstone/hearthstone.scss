@@ -1,6 +1,7 @@
 @import "../core";
 @import "button";
 
+
 #wrapper {
   float: left;
   position: relative;
@@ -11,7 +12,7 @@
 
 #filters {
   position: absolute;
-  width: 500px;
+  width: 520px;
   height: 875px;
   left: 5px;
 }
@@ -31,15 +32,31 @@
 
 }
 
-#display {
+#card {
   position: absolute;
-  left: 500px;
+  width: 585px;
+  top: 455px;
+  left: 520px;
+
+  img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+#display {
+  @include box-sizing(border-box);
+  @include border-radius-top(4px);
+  @include border-radius-bottom(4px);
+  position: absolute;
+  left: 520px;
   top: 5px;
-  background-color: #708090;
-  color : white;
+  background-color: #f4f4f6;
+  color : black;
   padding: 2px 2px 2px 2px;
-  width: 575px;
-  max-height: 875px;
+  width: 585px;
+  max-height: 475px;
 
   #display-info {
     font-size: 1.2em;
@@ -82,16 +99,20 @@
       }
 
       >div:nth-child(6){
-
+        width: 60px;
       }
     }
   }
 
   #display-table-data {
-    max-height: 825px;
+    max-height: 400px;
     overflow-y : scroll;
     overflow-x : hidden;
     float: left;
+
+    :hover {
+      opacity: 0.5;
+    }
 
     > div {
 
@@ -127,10 +148,14 @@
       }
 
       >div:nth-child(6){
-
+        width: 60px;
       }
     }
   }
+}
+
+.card-row {
+  cursor: pointer;
 }
 
 .sort-active {
@@ -139,13 +164,19 @@
 }
 
 // classes
-.neutral {background-color: lightgrey; color: black;}
-.druid {background-color: brown; color: white;}
-.hunter {background-color: green; color: white;}
-.mage {background-color: lightblue; color: black;}
-.paladin {background-color: gold; color: black;}
-.priest {background-color: white; color: black;}
-.rogue {background-color: black; color: white;}
-.shaman {background-color: darkblue; color: white;}
-.warlock {background-color: purple; color: white;}
-.warrior {background-color: red; color: white;}
+.neutral {background-color: #736152; color: white;}
+.druid {background-color: #3B2A18; color: white;}
+.hunter {background-color: #102F0F; color: white;}
+.mage {background-color: #2E5F99; color: white;}
+.paladin {background-color: #794A14; color: white;}
+.priest {background-color: #7C777B; color: white;}
+.rogue {background-color: #141011; color: white;}
+.shaman {background-color: #18204F; color: white;}
+.warlock {background-color: #321943; color: white;}
+.warrior {background-color: #3E0B12; color: white;}
+
+.free {background-color: white; color: black;}
+.common {background-color: #FCFFFF; color: black;}
+.rare {background-color: #3D76C5; color: white;}
+.epic {background-color: #E84AFF; color: white;}
+.legendary {background-color: #FFC515; color: black;}

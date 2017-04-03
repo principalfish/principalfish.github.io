@@ -48,10 +48,10 @@ nav {
   clear: both; }
 
 .btn {
-  width: 150px;
+  width: 100px;
   text-align: center;
   font-family: Arial;
-  font-size: 20px;
+  font-size: 16px;
   border: solid #1f628d 1px;
   text-decoration: none;
   margin: 0 -2px 0 -2px;
@@ -69,41 +69,42 @@ nav {
 .not-selected {
   opacity: 0.3; }
 
-.checkmark {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  background-color: black;
-  filter: invert(100%);
-  -webkit-filter: invert(100%);
-  border-radius: 50%;
-  -ms-transform: rotate(45deg);
-  /* IE 9 */
-  -webkit-transform: rotate(45deg);
-  /* Chrome, Safari, Opera */
-  transform: rotate(45deg); }
+.cost {
+  width: 62px;
+  background-color: #3870D1;
+  color: white; }
 
-.checkmark:before {
-  content: "";
-  position: absolute;
-  width: 3px;
-  height: 9px;
-  background-color: black;
-  filter: invert(100%);
-  -webkit-filter: invert(100%);
-  left: 9px;
-  top: 4px; }
+.btn2 {
+  width: 125px;
+  text-align: center;
+  font-family: Arial;
+  font-size: 16px;
+  border: solid #1f628d 1px;
+  text-decoration: none;
+  margin: 5px -2px 5px -2px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-border-top-right-radius: 4px;
+  -moz-border-top-right-radius: 4px;
+  border-top-right-radius: 4px;
+  -webkit-border-top-left-radius: 4px;
+  -moz-border-top-left-radius: 4px;
+  border-top-left-radius: 4px;
+  background-clip: padding-box;
+  -webkit-border-bottom-right-radius: 4px;
+  -moz-border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  -webkit-border-bottom-left-radius: 4px;
+  -moz-border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  background-clip: padding-box; }
 
-.checkmark:after {
-  content: "";
-  position: absolute;
-  width: 3px;
-  height: 3px;
-  background-color: black;
-  filter: invert(100%);
-  -webkit-filter: invert(100%);
-  left: 6px;
-  top: 10px; }
+select {
+  width: 200px;
+  height: 30px;
+  font-size: 1.6em;
+  vertical-align: top; }
 
 #wrapper {
   float: left;
@@ -114,7 +115,7 @@ nav {
 
 #filters {
   position: absolute;
-  width: 500px;
+  width: 520px;
   height: 875px;
   left: 5px; }
 
@@ -124,15 +125,42 @@ nav {
 #filters-class #filters-class-neutral {
   margin-right: 300px; }
 
-#display {
+#card {
   position: absolute;
-  left: 500px;
+  width: 585px;
+  top: 455px;
+  left: 520px; }
+  #card img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto; }
+
+#display {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-border-top-right-radius: 4px;
+  -moz-border-top-right-radius: 4px;
+  border-top-right-radius: 4px;
+  -webkit-border-top-left-radius: 4px;
+  -moz-border-top-left-radius: 4px;
+  border-top-left-radius: 4px;
+  background-clip: padding-box;
+  -webkit-border-bottom-right-radius: 4px;
+  -moz-border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  -webkit-border-bottom-left-radius: 4px;
+  -moz-border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+  background-clip: padding-box;
+  position: absolute;
+  left: 520px;
   top: 5px;
-  background-color: #708090;
-  color: white;
+  background-color: #f4f4f6;
+  color: black;
   padding: 2px 2px 2px 2px;
-  width: 575px;
-  max-height: 875px; }
+  width: 585px;
+  max-height: 475px; }
   #display #display-info {
     font-size: 1.2em; }
   #display #display-table-headers > div {
@@ -153,11 +181,15 @@ nav {
       width: 80px; }
     #display #display-table-headers > div > div:nth-child(5) {
       width: 100px; }
+    #display #display-table-headers > div > div:nth-child(6) {
+      width: 60px; }
   #display #display-table-data {
-    max-height: 825px;
+    max-height: 400px;
     overflow-y: scroll;
     overflow-x: hidden;
     float: left; }
+    #display #display-table-data :hover {
+      opacity: 0.5; }
     #display #display-table-data > div {
       width: 100%;
       float: left;
@@ -177,49 +209,74 @@ nav {
         width: 80px; }
       #display #display-table-data > div > div:nth-child(5) {
         width: 100px; }
+      #display #display-table-data > div > div:nth-child(6) {
+        width: 60px; }
+
+.card-row {
+  cursor: pointer; }
 
 .sort-active {
   background-color: #203040;
   color: white; }
 
 .neutral {
-  background-color: lightgrey;
-  color: black; }
+  background-color: #736152;
+  color: white; }
 
 .druid {
-  background-color: brown;
+  background-color: #3B2A18;
   color: white; }
 
 .hunter {
-  background-color: green;
+  background-color: #102F0F;
   color: white; }
 
 .mage {
-  background-color: lightblue;
-  color: black; }
+  background-color: #2E5F99;
+  color: white; }
 
 .paladin {
-  background-color: gold;
-  color: black; }
+  background-color: #794A14;
+  color: white; }
 
 .priest {
-  background-color: white;
-  color: black; }
+  background-color: #7C777B;
+  color: white; }
 
 .rogue {
-  background-color: black;
+  background-color: #141011;
   color: white; }
 
 .shaman {
-  background-color: darkblue;
+  background-color: #18204F;
   color: white; }
 
 .warlock {
-  background-color: purple;
+  background-color: #321943;
   color: white; }
 
 .warrior {
-  background-color: red;
+  background-color: #3E0B12;
   color: white; }
+
+.free {
+  background-color: white;
+  color: black; }
+
+.common {
+  background-color: #FCFFFF;
+  color: black; }
+
+.rare {
+  background-color: #3D76C5;
+  color: white; }
+
+.epic {
+  background-color: #E84AFF;
+  color: white; }
+
+.legendary {
+  background-color: #FFC515;
+  color: black; }
 
 /*# sourceMappingURL=main.css.map */

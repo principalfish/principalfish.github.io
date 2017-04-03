@@ -11,7 +11,7 @@
 
 <body>
 	<header>
-		<h2> Hearthstone Card Search </h2>
+		<h2> Hearthstone Cards</h2>
 		<nav>
 				<ul>
 					<a href="/" class=>Home</a>
@@ -35,61 +35,81 @@
 
 	<div id="wrapper">
 		<div id="filters">
+			<div id="filters-select">
+				<button id="filters-select-button" class="btn2"
+								onclick="filters.selectAll()">
+							Deselect All
+
+				</button>
+			</div>
+
 			<div id ="filters-class">
+				<p class="filter-title">
+					Filter by Game Mode
+				</p>
+
+				<button id="filters-mode-standard" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Standard
+
+				</button>
+
+				<button id="filters-mode-wild"  class="btn not-selected"
+								onclick="filters.handle(this.id)">
+							Wild Only
+				</button>
+
 				<p class="filter-title">
 					Filter By Class
 				</p>
 
-				<button id="filters-class-neutral" class="neutral btn selected"
+				<button id="filters-cardClass-neutral" class="neutral btn selected"
 								onclick="filters.handle(this.id)">
 							Neutral
-							<!-- <span class="checkmark neutral">
 
-							</span> -->
 				</button>
 
-				<button id="filters-class-druid"  class="druid btn selected"
+				<button id="filters-cardClass-druid"  class="druid btn selected"
 								onclick="filters.handle(this.id)">
 							Druid
-
 				</button>
 
-				<button id="filters-class-hunter"  class="hunter btn selected"
+				<button id="filters-cardClass-hunter"  class="hunter btn selected"
 								onclick="filters.handle(this.id)">
 							Hunter
 				</button>
 
-				<button id="filters-class-mage"  class="mage btn selected"
+				<button id="filters-cardClass-mage"  class="mage btn selected"
 								onclick="filters.handle(this.id)">
 							Mage
 				</button>
 
-				<button id="filters-class-paladin"  class="paladin btn selected"
+				<button id="filters-cardClass-paladin"  class="paladin btn selected"
 								onclick="filters.handle(this.id)">
 							Paladin
 				</button>
 
-				<button id="filters-class-priest"  class="priest btn selected"
+				<button id="filters-cardClass-priest"  class="priest btn selected"
 								onclick="filters.handle(this.id)">
 							Priest
 				</button>
 
-				<button id="filters-class-rogue"  class="rogue btn selected"
+				<button id="filters-cardClass-rogue"  class="rogue btn selected"
 								onclick="filters.handle(this.id)">
 							Rogue
 				</button>
 
-				<button id="filters-class-shaman"  class="shaman btn selected"
+				<button id="filters-cardClass-shaman"  class="shaman btn selected"
 								onclick="filters.handle(this.id)">
 							Shaman
 				</button>
 
-				<button id="filters-class-warlock"  class="warlock btn selected"
+				<button id="filters-cardClass-warlock"  class="warlock btn selected"
 								onclick="filters.handle(this.id)">
 							Warlock
 				</button>
 
-				<button id="filters-class-warrior"  class="warrior btn selected"
+				<button id="filters-cardClass-warrior"  class="warrior btn selected"
 								onclick="filters.handle(this.id)">
 							Warrior
 				</button>
@@ -101,20 +121,167 @@
 					Filter by Type
 				</p>
 
-				<button id="filters-type-minion" class="minion btn selected"
+				<button id="filters-type-minion" class="btn selected"
 								onclick="filters.handle(this.id)">
 							Minion
 				</button>
 
-				<button id="filters-type-spell" class="spell btn selected"
+				<button id="filters-type-spell" class="btn selected"
 								onclick="filters.handle(this.id)">
 							Spell
 				</button>
 
-				<button id="filters-type-weapon" class="weapon btn selected"
+				<button id="filters-type-weapon" class="btn selected"
 								onclick="filters.handle(this.id)">
 							Weapon
 				</button>
+			</div>
+
+			<div id="filters-rarity">
+				<p class="filter-title">
+					Filter by Rarity
+				</p>
+
+				<button id="filters-rarity-free" class="free btn selected"
+								onclick="filters.handle(this.id)">
+							Free
+				</button>
+
+				<button id="filters-rarity-common" class="common btn selected"
+								onclick="filters.handle(this.id)">
+							Common
+				</button>
+
+
+				<button id="filters-rarity-rare" class="rare btn selected"
+								onclick="filters.handle(this.id)">
+							Rare
+				</button>
+
+				<button id="filters-rarity-epic" class="epic btn selected"
+								onclick="filters.handle(this.id)">
+							Epic
+				</button>
+
+				<button id="filters-rarity-legendary" class="legendary btn selected"
+								onclick="filters.handle(this.id)">
+							Legendary
+				</button>
+			</div>
+
+			<div id="filter-tribe">
+				<p class="filter-title">
+					Filter by Tribe
+				</p>
+				<button id="filters-race-" class="btn selected"
+								onclick="filters.handle(this.id)">
+							No Tribe
+				</button>
+				<button id="filters-race-beast" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Beast
+				</button>
+				<button id="filters-race-mechanical" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Mech
+				</button>
+				<button id="filters-race-dragon" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Dragon
+				</button>
+				<button id="filters-race-demon" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Demon
+				</button>
+				<button id="filters-race-murloc" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Murloc
+				</button>
+				<button id="filters-race-pirate" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Pirate
+				</button>
+				<button id="filters-race-totem" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Totem
+				</button>
+				<button id="filters-race-elemental" class="btn selected"
+								onclick="filters.handle(this.id)">
+							Elemental
+				</button>
+
+
+
+			</div>
+
+			<div id="filter-cost">
+				<p class="filter-title">
+					Filter by Cost
+				</p>
+				<button id="filters-cost-0" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							0
+				</button>
+				<button id="filters-cost-1" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							1
+				</button>
+				<button id="filters-cost-2" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							2
+				</button>
+				<button id="filters-cost-3" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							3
+				</button>
+				<button id="filters-cost-4" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							4
+				</button>
+				<button id="filters-cost-5" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							5
+				</button>
+				<button id="filters-cost-6" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							6
+				</button>
+				<button id="filters-cost-7plus" class="cost btn selected"
+								onclick="filters.handle(this.id)">
+							7+
+				</button>
+
+			</div>
+
+			<div id ="filter-mechanic">
+				<p class=filter-title>
+					Filter by Mechanic
+				</p>
+
+				<select id="filter-mechanic-select" dropupAuto="false" onchange = "filters.selectHandle(value)">
+					<option selected value="null">None</option>
+					<option value="BATTLECRY">Battlecry</option>
+					<option value="DEATHRATTLE">Deathrattle</option>
+					<option value="CHARGE">Charge</option>
+					<option value="TAUNT">Taunt</option>
+					<option value="STEALTH">Stealth</option>
+					<option value="DIVINE_SHIELD">Divine Shield</option>
+					<option value="WINDFURY">Windfury</option>
+					<option value="ENRAGED">Enrage</option>
+					<option value ="POISONOUS">Poisonous</option>
+					<option value="SILENCE">Silence</option>
+					<option value="SPELLDAMAGE">Spell Damage</option>
+					<option value="UNTARGETABLE">Can't be Targeted</option>
+					<option value="INSPIRE">Inspire</option>
+					<option value="DISCOVER">Discover</option>
+					<option value="FREEZE">Freeze</option>
+					<option value="SECRET">Secret</option>
+					<option value="OVERLOAD">Overload</option>
+					<option value="COMBO">Combo</option>
+					<option value="CHOOSE_ONE">Choose One</option>
+					<option value="JADE_GOLEM">Jade Golem</option>
+
+				</select>
 
 
 			</div>
@@ -122,29 +289,15 @@
 
 		</div>
 
-<!--
-			attack,
-			card class,
-			cost,
-			id,
-			durability,
-			flavor,
-			health,
-			mechanics,
-			multiclassgroup,
-			name,
-			overload,
-			rarity,
-			referenced tags,
-			set,
-			spell damage,
-			type
-	 -->
+
+	 <div id="card">
+
+	 </div>
 
 	 <div id="display">
 		 <p id="display-info">
 			Total Cards Filtered : <span id="display-cardstotal"></span>
-			<!-- Click a card to see more info. -->
+			Click a row to see the card.
 		 </p>
 
 		 <div id="display-table-headers">

@@ -1,9 +1,53 @@
+@mixin border-radius($radius) {
+  -webkit-border-radius: $radius;
+  -moz-border-radius: $radius;
+  border-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-top($radius) {
+  -webkit-border-top-right-radius: $radius;
+  -moz-border-top-right-radius: $radius;
+  border-top-right-radius: $radius;
+  -webkit-border-top-left-radius: $radius;
+  -moz-border-top-left-radius: $radius;
+  border-top-left-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-bottom($radius) {
+  -webkit-border-bottom-right-radius: $radius;
+  -moz-border-bottom-right-radius: $radius;
+  border-bottom-right-radius: $radius;
+  -webkit-border-bottom-left-radius: $radius;
+  -moz-border-bottom-left-radius: $radius;
+  border-bottom-right-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin border-radius-left($radius) {
+  -webkit-border-top-left-radius: $radius;
+  -moz-border-top-left-radius: $radius;
+  border-top-left-radius: $radius;
+  -webkit-border-bottom-left-radius: $radius;
+  -moz-border-bottom-left-radius: $radius;
+  border-bottom-left-radius: $radius;
+  background-clip: padding-box;
+}
+
+@mixin box-sizing($box-model){
+  -webkit-box-sizing: $box-model;
+  -moz-box-sizing: $box-model;
+  box-sizing: $box-model;
+}
+
+
 .btn {
-  width: 150px;
+  width: 100px;
 
   text-align: center;
   font-family: Arial;
-  font-size: 20px;
+  font-size: 16px;
   border: solid #1f628d 1px;
   text-decoration: none;
   margin: 0 -2px 0 -2px;
@@ -25,41 +69,31 @@
   opacity: 0.3;
 }
 
+.cost {
+  width: 62px;
+  background-color: #3870D1;
+  color: white;
 
-
-.checkmark {
-    display:inline-block;
-    width: 18px;
-    height: 18px;
-    background-color: black;
-    filter: invert(100%);
-    -webkit-filter: invert(100%);
-    border-radius:50%;
-    -ms-transform: rotate(45deg); /* IE 9 */
-    -webkit-transform: rotate(45deg); /* Chrome, Safari, Opera */
-    transform: rotate(45deg);
 }
 
-.checkmark:before{
-    content:"";
-    position: absolute;
-    width:3px;
-    height:9px;
-    background-color: black;
-    filter: invert(100%);
-    -webkit-filter: invert(100%);
-    left:9px;
-    top:4px;
+.btn2 {
+  width: 125px;
+  text-align: center;
+  font-family: Arial;
+  font-size: 16px;
+  border: solid #1f628d 1px;
+  text-decoration: none;
+  margin: 5px -2px 5px -2px;
+
+  @include box-sizing(border-box);
+  @include border-radius-top(4px);
+  @include border-radius-bottom(4px);
+
 }
 
-.checkmark:after{
-    content:"";
-    position: absolute;
-    width:3px;
-    height:3px;
-    background-color: black;
-    filter: invert(100%);
-    -webkit-filter: invert(100%);
-    left:6px;
-    top:10px;
+select {
+  width: 200px;
+  height: 30px;
+  font-size: 1.6em;
+  vertical-align: top;
 }

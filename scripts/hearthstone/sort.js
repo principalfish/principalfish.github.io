@@ -8,7 +8,7 @@ var sort = {
     "type" : "desc" ,
     "rarity" : "desc",
     "set" : "desc",
-    "cost" : "desc"
+    "cost" : "asc"
   },
 
   resetSort : function(){

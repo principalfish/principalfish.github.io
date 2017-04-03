@@ -140,6 +140,7 @@ var filters = {
         })
 
         sort.sortData("name", "asc");
+        sort.changeHeader("display-name");
         filters.writeTable();
     },
 
@@ -163,7 +164,10 @@ var filters = {
                         divider + data.cost + "</div></div>";
               $("#display-table-data").append(toAdd);
 
-      })
+      });
+
+
+
 
     },
 

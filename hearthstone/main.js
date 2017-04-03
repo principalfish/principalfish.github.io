@@ -202,6 +202,7 @@ var dict = {
         })
 
         sort.sortData("name", "asc");
+        sort.changeHeader("display-name");
         filters.writeTable();
     },
 
@@ -225,7 +226,10 @@ var dict = {
                         divider + data.cost + "</div></div>";
               $("#display-table-data").append(toAdd);
 
-      })
+      });
+
+
+
 
     },
 

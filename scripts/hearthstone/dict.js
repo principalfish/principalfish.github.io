@@ -50,12 +50,14 @@ var dict = {
     "LOE" : "Explorers",
     "GVG" : "Goblins/Gnomes",
     "NAXX" : "Naxxramas",
-    "REWARD" : "Reward"
+    "REWARD" : "Reward",
+    "UNGORO" : "Ungoro",
+    "HOF" : "Hall of Fame"
 
   },
 
   mode : {
-    "standard" : ["EXPERT1", "OG", "GANGS", "KARA", "CORE"],
+    "standard" : ["EXPERT1", "OG", "GANGS", "KARA", "CORE", "UNGORO"],
     "wild" : ["BRM", "TGT", "LOE", "GVG", "NAXX"]
   }
 

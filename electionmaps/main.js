@@ -900,7 +900,7 @@ function pageLoadEssentials(){
 		var lastUpdated = new Date(document.lastModified).toLocaleString();
 
 		//var formatted = $.datepicker.formatDate("M d, yy", lastUpdated);
-		$("#lastupdated").text(lastUpdated);
+		$("#lastupdated").text(lastUpdated + " (ICM poll)");
 
 	}
 	// hide instructions

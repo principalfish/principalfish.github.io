@@ -29,20 +29,24 @@
 	</header>
 
 	<nav id="projections">
-			<h3 id="nav-current"><a href="/electionmaps/"> Current Parliament </a> </h3>
-			<h3><a href="/electionmaps/polltracker.html">Poll Tracker</a></h3>
+		<h3 id="nav-prediction"><a href="/electionmaps/"> 2017 Prediction </a> </h3>
+		<h3 id="nav-predictit"><a href="?map=predictit"> Predict 2017 </a> </h3>
 				<div class="divider"></div>
-			<h3 id="nav-prediction"><a href="?map=prediction"> 2020 Prediction </a> </h3>
-			<h3 id="nav-predictit"><a href="?map=predictit"> Predict 2020 </a> </h3>
+		<h3><a href="/electionmaps/polltracker.html">Poll Tracker</a></h3>
+		<h3 id="nav-brexit"><a href="/electionmaps/brexit.html">Brexit by Seat</a></h3>
 
-			<div class="divider"></div>
+		<div class="divider"></div>
+			<h3 id="nav-current"><a href="?map=current"> Current Parliament </a> </h3>
+
+				<div class="divider"></div>
+
 				<h3 id="nav-election2015"><a href="?map=election2015"> 2015 Election</a> </h3>
 				<h3 id="nav-election2010"><a href="?map=election2010"> 2010 Election</a> </h3>
 			<div class="divider"></div>
 			<h3 id="nav-2015-600seat"><a href="?map=election2015_600seat">600 seat - 2015</a> </h3>
 			<h3 id="nav-prediction-600seat"><a href="?map=prediction_600seat">600 seat - 2020</a> </h3>
 			<div class="divider"></div>
-			<h3 id="nav-brexit"><a href="/electionmaps/brexit.html">Brexit by Seat</a></h3>
+
 
 			<!--
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Scottish Parliament</a> </h3>
@@ -84,12 +88,30 @@
 			<h2><div class="closebox" onclick="$('#instructions').hide()">X</div></h2>
 			<div>
 
-				  <li>Most elements are clickable, draggable, zoomable.</li>
-					<li>Tables are sortable.</li>
-					<li>The map is filterable via the filters tab.</li>
-				  <li>For a detailed seat list, go filters > generate list > show more.</li>
-					<li>Click the links on the left for different maps.</li>
-				  <li>Any suggestions, requests or bugs email principalfish@gmail.com. </li>
+					<li>
+						Most elements on the page are interactive in some way
+					</li>
+					<li>
+						Try clicking, dragging, zooming, sorting
+					</li>
+
+				  <li>Prediction is calculated using regional uniform swing based on an average of polls weighted by recency</li>
+
+					<li>
+						More to follow in the coming days
+					</li>
+
+					<li>
+						Days to election : <span style='font-weight:bold' id="daysto"></span>
+					</li>
+
+					<li>
+						Last Updated :  <span style='font-weight:bold' id="lastupdated"></span>
+					</li>
+
+					<li>
+						Bug reports welcomed at principalfish@gmail.com
+					</li>
 
 			</div>
 		</div>

@@ -887,8 +887,21 @@ function pageLoadEssentials(){
 	uiAttr.pageLoadDiv();
 
 	// if setting not currentParliament remove instructions
-	if (currentMap != currentParliament){
+	if (currentMap != prediction){
 		$("#instructions").remove();
+	} else {
+		var oneDay = 24 * 60 * 60 * 1000;
+		var election = new Date(2017, 5, 8);
+		var today = new Date();
+		var diffDays = Math.round(Math.abs((election.getTime() - today.getTime())/(oneDay)));
+
+		$("#daysto").text(diffDays);
+
+		var lastUpdated = new Date(document.lastModified).toLocaleString();
+
+		//var formatted = $.datepicker.formatDate("M d, yy", lastUpdated);
+		$("#lastupdated").text(lastUpdated);
+
 	}
 	// hide instructions
 	//setTimeout(function(){$("#instructions").remove();}, 20000);
@@ -1001,8 +1014,8 @@ function getParameterByName(name, url) {
 var url = window.location.href;
 
 var urlParamMap = {
-	null : currentParliament,
-	"prediction" : prediction,
+	"current" : currentParliament,
+	null : prediction,
 	"predictit" : predictit,
 	"election2015" : election2015,
 	"election2010" : election2010,

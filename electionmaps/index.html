@@ -31,14 +31,13 @@
 	<nav id="projections">
 		<h3 id="nav-prediction"><a href="/electionmaps/"> 2017 Prediction </a> </h3>
 		<h3 id="nav-predictit"><a href="?map=predictit"> Predict 2017 </a> </h3>
+		<h3 id="nav-current"><a href="?map=current"> Current Parliament </a> </h3>
 				<div class="divider"></div>
+
 		<h3><a href="/electionmaps/polltracker.html">Poll Tracker</a></h3>
 		<h3 id="nav-brexit"><a href="/electionmaps/brexit.html">Brexit by Seat</a></h3>
 
 		<div class="divider"></div>
-			<h3 id="nav-current"><a href="?map=current"> Current Parliament </a> </h3>
-
-				<div class="divider"></div>
 
 				<h3 id="nav-election2015"><a href="?map=election2015"> 2015 Election</a> </h3>
 				<h3 id="nav-election2010"><a href="?map=election2010"> 2010 Election</a> </h3>
@@ -46,8 +45,6 @@
 			<h3 id="nav-2015-600seat"><a href="?map=election2015_600seat">600 seat - 2015</a> </h3>
 			<h3 id="nav-prediction-600seat"><a href="?map=prediction_600seat">600 seat - 2020</a> </h3>
 			<div class="divider"></div>
-
-
 			<!--
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Scottish Parliament</a> </h3>
 			<h3><a href="javascript:;"	onclick="uiAttr.changeNavBar(this)">Welsh Parliament</a> </h3>
@@ -98,7 +95,7 @@
 				  <li>Prediction is calculated using regional uniform swing based on an average of polls weighted by recency</li>
 
 					<li>
-						More to follow in the coming days
+						Added: Battleground. Next: Deep Linking.
 					</li>
 
 					<li>
@@ -107,6 +104,7 @@
 
 					<li>
 						Last Updated :  <span style='font-weight:bold' id="lastupdated"></span>
+														<span style='font-weight:bold' id="lastpollster"></span>
 					</li>
 
 					<li>
@@ -118,6 +116,10 @@
 
 		<div id="resetbutton">
 				<button id="resetmap" onclick="mapAttr.reset()">Reset</button>
+		</div>
+
+		<div id="battlegrounds">
+				<button id="battlegroundsmap" onclick="uiAttr.showDiv('battlegrounds')">Battlegrounds - <span style="color: red"> NEW !</span></button>
 		</div>
 
 		<div id="keyonmap">
@@ -139,6 +141,10 @@
 
 		<div id="choroplethsbutton" class="mapbutton mapbuttonactive" onclick="uiAttr.clickMapButton(this)">
 				<button onclick="">Choropleths</button>
+		</div>
+
+		<div id="seatlistbutton" class="mapbutton mapbuttonactive" onclick="uiAttr.clickMapButton(this)">
+				<button onclick="">Seat List</button>
 		</div>
 
 		<div id="predictbutton" class="mapbutton hidden" onclick="uiAttr.clickMapButton(this)">
@@ -273,10 +279,6 @@
 					<button id="filter-byElection" onclick="filters.byElection(this.className)">By-Elections</button>
 				</div>
 
-				<div id="seatlistbutton" class="filter-select" onclick="uiAttr.clickMapButton(this), filters.getSeatlist()">
-						<button>Generate List</button>
-				</div>
-
 				<div class="filter-select">
 					<button id="filter-reset" onclick="filters.reset()">Reset</button>
 				</div>
@@ -337,7 +339,7 @@
 		</div>
 
 		<div id="seatlist-extended" class="dash-box popupdiv hidden">
-			<h2>Seat List - Extended<div class="closebox" onclick="uiAttr.hideDiv('seatlist-extend')">X</div></h2>
+			<h2>Seat List - Extended<div class="closebox" onclick="uiAttr.hideDiv('seatlist-extend'), uiAttr.clickMapButton('#seatlistbutton')">X</div></h2>
 			<div>
 				<div id="seatlist-extended-titles">
 					<div>
@@ -582,6 +584,59 @@
 					Since ward by ward election results aren't publicly available, to estimate them I have
 					been using local council results, scaling the turnout to the general election and
 					redistributing discrepancies between the two.
+				</p>
+
+			</div>
+		</div>
+
+		<div id="battlegroundsselect"  class="dash-box popupdiv hidden" >
+			<h2> Battlegrounds<div class="closebox" onclick="uiAttr.hideDiv('battlegrounds')">X</div></h2>
+			<div>
+
+				<select id="battlegrounds-incumbent" onchange="battleground.handle(this.id, value)">
+					<option value="null" selected>2015 Incumbent</option>
+					<option value="conservative">Conservative</option>
+					<option value="labour">Labour</option>
+					<option value="libdems">Lib Dems</option>
+					<option value="ukip">UKIP</option>
+					<option value="green">Green</option>
+					<option value="snp">SNP</option>
+					<option value="plaidcymru">Plaid Cymru</option>
+					<option value="dup">DUP</option>
+					<option value="sinnfein">Sinn Fein</option>
+					<option value="sdlp">SDLP</option>
+					<option value="uu">UUP</option>
+					<option value="alliance">Alliance</option>
+				</select>
+
+				<select id="battlegrounds-challenger" onchange="battleground.handle(this.id, value)">
+					<option value="null" selected>Challenger</option>
+					<option value="conservative">Conservative</option>
+					<option value="labour">Labour</option>
+					<option value="libdems">Lib Dems</option>
+					<option value="ukip">UKIP</option>
+					<option value="green">Green</option>
+					<option value="snp">SNP</option>
+					<option value="plaidcymru">Plaid Cymru</option>
+					<option value="dup">DUP</option>
+					<option value="sinnfein">Sinn Fein</option>
+					<option value="sdlp">SDLP</option>
+					<option value="uu">UUP</option>
+					<option value="alliance">Alliance</option>
+				</select>
+
+				<form id="battleground-gap">
+					%lead
+					<input type ="text" name="battlegrounds-low" value=0 onchange="battleground.handle(this.name, value)"/>
+					to
+					<input type="text" name="battlegrounds-high" value=10 onchange="battleground.handle(this.name, value)"/>
+				</form>
+
+				<p>
+						NB - this returns results based off of the 2015 election.
+				</p>
+				<p>
+						This does not currently work in tandem with filters.
 				</p>
 
 			</div>

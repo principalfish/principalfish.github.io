@@ -10,6 +10,7 @@ var choro = {
       }
     })
 
+
     parameter = parameter.slice(6);
 
     // for vote share change and swing attribute new class to each map obj

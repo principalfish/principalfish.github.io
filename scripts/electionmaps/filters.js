@@ -67,7 +67,7 @@ var filters = {
     choro.reset();
 
     $.each(currentMap.seatData, function(seat, data){
-      var meetsCriteria = true
+      var meetsCriteria = true;
 
       $.each(filters.state, function(parameter, criteria){
         if (parameter == "majority"){
@@ -96,6 +96,7 @@ var filters = {
         }
       });
 
+
       if (meetsCriteria == true){
         filters.opacities[seat] = 1;
         data.filtered = true;
@@ -116,6 +117,7 @@ var filters = {
       mapSelect.opacity = opacity;
       d3.select("#i" + mapSelect.properties.info_id).attr("opacity", opacity)
     });
+    filters.getSeatlist()
   },
 
   reset : function(){
@@ -131,9 +133,6 @@ var filters = {
 
     // display default vote totals
     voteTotals.calculate("unitedkingdom");
-    // hide vote totals divs
-    uiAttr.hideDiv("seatlistbutton");
-    uiAttr.hideDiv("seatlist-extend");
 
     // reset extended seat list sort  state css class
     $("#seatlist-sort" + filters.activeSort).removeClass("sort-active");
@@ -241,7 +240,7 @@ var filters = {
   },
 
   simpleList : function(){
-    uiAttr.hideDiv("seatlist-extend");
+  
 
     $("#seatlist-total").text(filters.filteredList.length);
     $.each(filters.filteredList, function(i, seat){

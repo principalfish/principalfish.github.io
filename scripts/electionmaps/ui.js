@@ -46,7 +46,7 @@ var uiAttr = {
     uiAttr.zIndexShuffle();
   },
 
-  hideDiv: function(id){
+  hideDiv: function(id){ 
 
     var i = uiAttr.zIndexTracker.indexOf(id);
     $("#" + id).removeClass("mapbuttonactive");
@@ -68,7 +68,8 @@ var uiAttr = {
     "seatlistbutton" : "#seatlist",
     "seatlist-extend" : "#seatlist-extended",
     "predictbutton" : "#userinput",
-    "seat-600" : "#seat-600"
+    "seat-600" : "#seat-600",
+    "battlegrounds" : "#battlegroundsselect"
   },
 
   //store  and reorder z indexes of hidden divs
@@ -98,12 +99,13 @@ var uiAttr = {
 
   pageLoadDiv : function(){
     $.each(uiAttr.buttonToDiv, function(button, div){
-      if (button == "votetotalsbutton" || button == "filtersbutton" || button == "choroplethsbutton" ){
+      if (button == "votetotalsbutton" || button == "filtersbutton" || button == "choroplethsbutton" || button == "seatlistbutton"){
         uiAttr.showDiv(button);
       } else if (button == "predictbutton" && currentMap.predict == true){
         $("#predictbutton").removeClass("hidden").addClass("mapbuttonactive");
         uiAttr.showDiv(button);
       } else {
+
         uiAttr.hideDiv(button);
       }
     });

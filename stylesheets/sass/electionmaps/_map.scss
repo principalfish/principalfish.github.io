@@ -53,6 +53,17 @@ svg .map {
   }
 }
 
+#battlegrounds {
+  position: absolute;
+  top: $widget-margin-top;
+  left: 75px;
+  z-index: 1;
+
+  > button:focus {
+      outline: none;
+  }
+}
+
 // #seatlistbutton {
 //   position: absolute;
 //   top: $widget-margin-top;
@@ -113,6 +124,10 @@ svg .map {
   left : 2 * $map-button-div-width;
 }
 
+#seatlistbutton {
+  left : 3 * $map-button-div-width;
+}
+
 #predictbutton {
-  left : 3 * $map-button-div-width
+  left : 4 * $map-button-div-width
 }

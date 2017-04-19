@@ -302,6 +302,14 @@ svg .map {
   #resetbutton > button:focus {
     outline: none; }
 
+#battlegrounds {
+  position: absolute;
+  top: 5px;
+  left: 75px;
+  z-index: 1; }
+  #battlegrounds > button:focus {
+    outline: none; }
+
 #searchforseat {
   position: absolute;
   top: 5px;
@@ -322,7 +330,7 @@ svg .map {
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   height: 0px;
-  width: 125px;
+  width: 100px;
   text-align: center;
   cursor: pointer; }
 
@@ -337,13 +345,16 @@ svg .map {
   left: 0; }
 
 #filtersbutton {
-  left: 137px; }
+  left: 112px; }
 
 #choroplethsbutton {
-  left: 274px; }
+  left: 224px; }
+
+#seatlistbutton {
+  left: 336px; }
 
 #predictbutton {
-  left: 411px; }
+  left: 448px; }
 
 #seat-information {
   display: none;
@@ -654,6 +665,18 @@ svg .map {
       width: 35px; }
   #userinput #userinput-submit {
     padding-top: 5px; }
+
+#battlegroundsselect {
+  width: 200px;
+  top: 40px;
+  left: 400px; }
+  #battlegroundsselect select {
+    width: 90%;
+    display: inline-block;
+    margin-top: 10px; }
+  #battlegroundsselect input {
+    width: 35px;
+    margin-top: 10px; }
 
 .popupdiv {
   position: absolute;

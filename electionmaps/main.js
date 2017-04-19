@@ -1,4 +1,88 @@
-var choro = {
+var battleground = {
+  incumbent : null,
+  challenger : null,
+  low : 0,
+  high : 10,
+
+  handle : function(id, value){
+    id = id.substring(14)
+
+    if (id == "incumbent"){
+      battleground.incumbent = value;
+    } else if (id == "challenger"){
+      battleground.challenger = value
+    } else if (id == "low") {
+      if (!(isNaN(parseFloat(value)))){
+          if (parseFloat(value) < 0){
+            value = 0;
+          }
+          battleground.low = parseFloat(value);
+      }
+    } else if (id == "high"){
+      if (!(isNaN(parseFloat(value)))){
+        if (parseFloat(value) > 100){
+          value = 100;
+        }
+          battleground.high = parseFloat(value);
+      }
+    }
+
+    battleground.check();
+  },
+
+  check : function(){
+    if (battleground.incumbent != null && battleground.challenger != null){
+      if (battleground.incumbent != battleground.challenger){
+          filters.reset();
+          battleground.filter();
+      }
+    }
+  },
+
+  filter : function(){
+
+    if (currentMap.name == "2015election"){
+      var dataSet = currentMap.seatData;
+    }  else {
+      var dataSet = currentMap.previousSeatData;
+    }
+
+    $.each(currentMap.seatData, function(seat, data){
+      if (dataSet[seat].seatInfo.current != battleground.incumbent){
+        data.filtered = false;
+
+      }  else {
+        var incumbent = dataSet[seat].seatInfo.current;
+
+        if (battleground.challenger in dataSet[seat].partyInfo){
+          var incumbentVotes = dataSet[seat].partyInfo[incumbent].total;
+          var challengerVotes = dataSet[seat].partyInfo[battleground.challenger].total;
+          var totalVotes = dataSet[seat].seatInfo.turnout;
+          var lead = 100 * ((incumbentVotes / totalVotes) - (challengerVotes / totalVotes));
+
+          if (battleground.low <= lead  && lead <= battleground.high){
+
+            data.filtered = true;
+          } else {
+            data.filtered = false;
+          }
+        } else {
+          data.filtered = false;
+        }
+      }
+
+      if (data.filtered == false) {
+          filters.opacities[seat] = 0.05;
+      } else {
+        filters.opacities[seat] = 1;
+      }
+
+    });
+    filters.display();
+  }
+
+};
+;var choro = {
 
   choroTypes : ["choro-voteshare", "choro-votesharechange", "swing"],
 
@@ -9,6 +93,7 @@ var choro = {
         $("#" + choroType + " option:eq(0)").prop("selected", true);
       }
     })
+
 
     parameter = parameter.slice(6);
 
@@ -344,7 +429,7 @@ var seatsPerRegion2015 = {
     choro.reset();
 
     $.each(currentMap.seatData, function(seat, data){
-      var meetsCriteria = true
+      var meetsCriteria = true;
 
       $.each(filters.state, function(parameter, criteria){
         if (parameter == "majority"){
@@ -373,6 +458,7 @@ var seatsPerRegion2015 = {
         }
       });
 
+
       if (meetsCriteria == true){
         filters.opacities[seat] = 1;
         data.filtered = true;
@@ -393,6 +479,7 @@ var seatsPerRegion2015 = {
       mapSelect.opacity = opacity;
       d3.select("#i" + mapSelect.properties.info_id).attr("opacity", opacity)
     });
+    filters.getSeatlist()
   },
 
   reset : function(){
@@ -408,9 +495,6 @@ var seatsPerRegion2015 = {
 
     // display default vote totals
     voteTotals.calculate("unitedkingdom");
-    // hide vote totals divs
-    uiAttr.hideDiv("seatlistbutton");
-    uiAttr.hideDiv("seatlist-extend");
 
     // reset extended seat list sort  state css class
     $("#seatlist-sort" + filters.activeSort).removeClass("sort-active");
@@ -518,7 +602,7 @@ var seatsPerRegion2015 = {
   },
 
   simpleList : function(){
-    uiAttr.hideDiv("seatlist-extend");
+  
 
     $("#seatlist-total").text(filters.filteredList.length);
     $.each(filters.filteredList, function(i, seat){
@@ -860,6 +944,7 @@ function pageLoadEssentials(){
 	// reset filters.state - also get and show vote totals
 	filters.opacities = {};
 	filters.reset();
+	params.checkParams();
 
 	// reset user inputs
 	$("#userinput-table input").each(function(){
@@ -899,9 +984,13 @@ function pageLoadEssentials(){
 
 		var lastUpdated = new Date(document.lastModified).toLocaleString();
 
-		//var formatted = $.datepicker.formatDate("M d, yy", lastUpdated);
-		$("#lastupdated").text(lastUpdated + " (ICM poll)");
 
+		//var formatted = $.datepicker.formatDate("M d, yy", lastUpdated);
+		$("#lastupdated").text(lastUpdated);
+
+		$(function(){
+			$("#lastpollster").load("lastpollster.html");
+		});
 	}
 	// hide instructions
 	//setTimeout(function(){$("#instructions").remove();}, 20000);
@@ -930,6 +1019,11 @@ function pageLoadEssentials(){
 		$("#seat-600 ").hide();
 	}
 
+	// battlegrounds
+	if (currentMap.battlegrounds == false){
+		$("#battlegrounds").hide();
+	}
+
 	// firefox css nonsense
 	if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
 		$("div").css("font-size", "98%");
@@ -947,7 +1041,7 @@ function searchSeats(value){
 };
 
 
-function pageSetting(name, mapurl, dataurl, previous, election, predict){
+function pageSetting(name, mapurl, dataurl, previous, election, predict, battlegrounds){
 
 	this.name = name;
 	this.mapurl = mapurl;
@@ -955,6 +1049,7 @@ function pageSetting(name, mapurl, dataurl, previous, election, predict){
 	this.previous = previous;
 	this.election = election;
 	this.predict = predict;
+	this.battlegrounds = battlegrounds;
 
 	this.seatData = {};
 	this.previousSeatData = {};
@@ -977,13 +1072,13 @@ var dataurls =  {
 	predict_600 : "houseofcommons/prediction_600seat.json"
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false);
-var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false);
-var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false); // no 2005 data to compare atm
-var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true);
-var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false); // nodata to compare
-var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false)
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true);
+var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, true);
+var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false); // no 2005 data to compare atm
+var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false, true);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true);
+var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false); // nodata to compare
+var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false);
 
 function initialization(){
 
@@ -997,6 +1092,8 @@ function initialization(){
 	$(document).ready(function(){
 		getData(setting);
 	});
+
+
 }
 
 function getParameterByName(name, url) {
@@ -1022,6 +1119,42 @@ var urlParamMap = {
 	"election2015_600seat" : election2015_600seat,
 	"prediction_600seat" : prediction_600seat
 };
+;var params = {
+
+  possibleParams : ["incumbent", "region", "majority"],
+
+  checkParams : function(){
+
+   var parameterInput = false;
+   $.each(params.possibleParams, function(i, param){
+
+     var input = getParameterByName(param, url);
+
+     if (input != null){
+       if (param == "incumbent"){
+         filters.state["current"] = input
+
+       }
+
+       if (param == "region"){
+         filters.state["region"] = input
+       }
+
+       if (param == "majority"){
+         filters.state["majority"][1] = input
+       }
+       parameterInput = true;
+     }
+
+
+   });
+
+
+   if (parameterInput == true){
+      filters.filter()
+   }
+  }
+}
 ;var seatInfoTable = {
   // previous display state of table
   party : null,
@@ -1300,7 +1433,7 @@ function activeSeat(seat){
     uiAttr.zIndexShuffle();
   },
 
-  hideDiv: function(id){
+  hideDiv: function(id){ 
 
     var i = uiAttr.zIndexTracker.indexOf(id);
     $("#" + id).removeClass("mapbuttonactive");
@@ -1322,7 +1455,8 @@ function activeSeat(seat){
     "seatlistbutton" : "#seatlist",
     "seatlist-extend" : "#seatlist-extended",
     "predictbutton" : "#userinput",
-    "seat-600" : "#seat-600"
+    "seat-600" : "#seat-600",
+    "battlegrounds" : "#battlegroundsselect"
   },
 
   //store  and reorder z indexes of hidden divs
@@ -1352,12 +1486,13 @@ function activeSeat(seat){
 
   pageLoadDiv : function(){
     $.each(uiAttr.buttonToDiv, function(button, div){
-      if (button == "votetotalsbutton" || button == "filtersbutton" || button == "choroplethsbutton" ){
+      if (button == "votetotalsbutton" || button == "filtersbutton" || button == "choroplethsbutton" || button == "seatlistbutton"){
         uiAttr.showDiv(button);
       } else if (button == "predictbutton" && currentMap.predict == true){
         $("#predictbutton").removeClass("hidden").addClass("mapbuttonactive");
         uiAttr.showDiv(button);
       } else {
+
         uiAttr.hideDiv(button);
       }
     });

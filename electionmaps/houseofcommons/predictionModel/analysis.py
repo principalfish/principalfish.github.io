@@ -154,3 +154,15 @@ def dump_scatter_data():
 
 if arguments[1] == "650":
     dump_scatter_data()
+
+# dump last pollster
+max = 0
+for poll in polls:
+    if int(poll) > max and poll not in ["1001", "1000"]:
+        max = int(poll)
+
+last = str(max)
+last_pollster = "(" + polls[last].company.upper() + " poll)"
+
+with open("../../lastpollster.html", "w") as pollster_html:
+    pollster_html.write(last_pollster)

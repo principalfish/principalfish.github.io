@@ -2,16 +2,19 @@ var params = {
 
   possibleFilterParams : ["incumbent", "region", "majlow", "majhigh", "gains", "byelection"],
 
-  possibleBattlegroundParams : ["b-incumbent", "b-challenger", "b-region", "b-majlow", "b-majhigh"],
+  possibleBattlegroundParams : ["incumbent", "challenger", "region", "majlow", "majhigh"],
 
   checkParams : function(){
 
-    var filterParams = params.filters();
-
-    if (!(filterParams)){
-      params.battleground();
+    var filters = getParameterByName("filters", url)
+    if (filters == "yes" || filters == "true"){
+      params.filters();
+    } else {
+      var battle = getParameterByName("battlegrounds", url)
+      if (battle == "yes" || battle == "true"){
+        params.battleground();
+      }
     }
-
   },
 
   filters : function(){
@@ -51,10 +54,10 @@ var params = {
       var parameterInput = false;
       $.each(params.possibleBattlegroundParams, function(i, param){
         var input = getParameterByName(param, url);
-        
+
         if (input != null){
           parameterInput = true;
-          battleground.handle("battlegrounds-" + param.substring(2), input);
+          battleground.handle("battlegrounds-" + param, input);
         }
       });
     }

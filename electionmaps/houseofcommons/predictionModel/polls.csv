@@ -1,5 +1,5 @@
 code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu
-1000	me	9	5	2015	Northern Ireland	10000	300			200				656	1390	2454	857	2566	1601
+1000	me	9	5	2015	Northern Ireland	1004	3			2	23			77	119	279	91	281	129
 1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
 1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
 1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					

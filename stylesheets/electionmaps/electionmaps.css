@@ -17,8 +17,8 @@ header {
   background-color: white; }
   header h2 {
     color: black;
-    letter-spacing: 3px;
-    font-size: 2.4em;
+    letter-spacing: 2px;
+    font-size: 1.9em;
     font-weight: normal;
     position: relative;
     margin: 0px;
@@ -696,12 +696,12 @@ svg .map {
 
 #instructions {
   width: auto;
-  max-width: 500px;
+  max-width: 525px;
   left: 605px;
   top: 577px;
   height: auto;
   position: absolute;
-  font-size: 1.2em; }
+  font-size: 1.1em; }
   #instructions li {
     padding-top: 2px;
     padding-bottom: 2px; }

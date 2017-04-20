@@ -1004,7 +1004,7 @@ function pageLoadEssentials(){
 		$("#instructions").remove();
 	} else {
 		var oneDay = 24 * 60 * 60 * 1000;
-		var election = new Date(2017, 5, 8);
+		var election = new Date(2017, 5, 8, 22, 0, 0);
 		var today = new Date();
 		var diffDays = Math.round(Math.abs((election.getTime() - today.getTime())/(oneDay)));
 

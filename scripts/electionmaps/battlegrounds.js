@@ -1,11 +1,12 @@
 var battleground = {
+  active: false,
   incumbent : "null",
   challenger : "null",
   region: "null",
   low : 0,
   high : 10,
 
-  handle : function(id, value){
+  handle : function(id, value){   
 
     id = id.substring(14)
 

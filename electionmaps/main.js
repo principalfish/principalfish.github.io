@@ -1,11 +1,12 @@
 var battleground = {
+  active: false,
   incumbent : "null",
   challenger : "null",
   region: "null",
   low : 0,
   high : 10,
 
-  handle : function(id, value){
+  handle : function(id, value){   
 
     id = id.substring(14)
 
@@ -1459,6 +1460,9 @@ function activeSeat(seat){
     // check z indexes
     uiAttr.zIndexCheck(id)
 
+    if (id == "battlegrounds"){
+      battleground.active = true;
+    }
     // make div visible and draggable by h2
     // on mousedown change z-index - bring to front
     $(uiAttr.buttonToDiv[id]).show();
@@ -1474,10 +1478,14 @@ function activeSeat(seat){
     uiAttr.zIndexShuffle();
   },
 
-  hideDiv: function(id){ 
+  hideDiv: function(id){
 
     var i = uiAttr.zIndexTracker.indexOf(id);
     $("#" + id).removeClass("mapbuttonactive");
+
+    if (id == "battlegrounds"){
+      battleground.active = false;
+    }
 
     if (i != -1){
       uiAttr.zIndexTracker.splice(i, 1);
@@ -1525,13 +1533,15 @@ function activeSeat(seat){
     }
   },
 
-  pageLoadDiv : function(){
+  pageLoadDiv : function(param){
     $.each(uiAttr.buttonToDiv, function(button, div){
       if (button == "votetotalsbutton" || button == "filtersbutton" || button == "choroplethsbutton" || button == "seatlistbutton"){
         uiAttr.showDiv(button);
       } else if (button == "predictbutton" && currentMap.predict == true){
         $("#predictbutton").removeClass("hidden").addClass("mapbuttonactive");
         uiAttr.showDiv(button);
+      } else if (battleground.active){
+        uiAttr.showDiv("battlegroundsbutton")
       } else {
 
         uiAttr.hideDiv(button);

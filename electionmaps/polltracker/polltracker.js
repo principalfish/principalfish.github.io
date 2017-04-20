@@ -25,9 +25,9 @@ var filter = {
 
   drawGridlines: function(){
 
-    var yMax = 60;
+    var yMax = 65;
 
-    x.domain([new Date(2015, 4, 6), Date.now()]);
+    x.domain([new Date(2015, 4, 6), new Date(2017, 5, 8)]);
     y.domain([0, yMax]);
     y2.domain([0, 650 * yMax / 100]);
 

@@ -162,7 +162,9 @@ for poll in polls:
         max = int(poll)
 
 last = str(max)
-last_pollster = "(" + polls[last].company.upper() + " poll)"
+
+last_updated = datetime.now().strftime("%I:%M%p on %B %d, %Y")
+last_pollster = last_updated + " (" + polls[last].company + " poll)"
 
 with open("../../lastpollster.html", "w") as pollster_html:
     pollster_html.write(last_pollster)

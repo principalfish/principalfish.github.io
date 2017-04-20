@@ -64,12 +64,6 @@ function pageLoadEssentials(){
 
 		$("#daysto").text(diffDays);
 
-		var lastUpdated = new Date(document.lastModified).toLocaleString();
-
-
-		//var formatted = $.datepicker.formatDate("M d, yy", lastUpdated);
-		$("#lastupdated").text(lastUpdated);
-
 		$(function(){
 			$("#lastpollster").load("lastpollster.html");
 		});
@@ -174,8 +168,6 @@ function initialization(){
 	$(document).ready(function(){
 		getData(setting);
 	});
-
-
 }
 
 function getParameterByName(name, url) {

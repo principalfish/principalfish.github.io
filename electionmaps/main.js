@@ -1130,8 +1130,9 @@ function getParameterByName(name, url) {
 var url = window.location.href;
 
 var urlParamMap = {
-	"current" : currentParliament,
 	null : prediction,
+	"current" : currentParliament,
+	"prediction" : prediction,
 	"predictit" : predictit,
 	"election2015" : election2015,
 	"election2010" : election2010,
@@ -1146,12 +1147,12 @@ var urlParamMap = {
 
   checkParams : function(){
 
-    var filters = getParameterByName("filters", url)
-    if (filters == "yes" || filters == "true"){
+    var urlFilters = getParameterByName("filters", url);
+    if (urlFilters == "yes" || urlFilters == "true"){
       params.filters();
     } else {
-      var battle = getParameterByName("battlegrounds", url)
-      if (battle == "yes" || battle == "true"){
+      var urlBattle = getParameterByName("battlegrounds", url)
+      if (urlBattle == "yes" || urlBattle == "true"){
         params.battleground();
       }
     }
@@ -1173,7 +1174,7 @@ var urlParamMap = {
         }  else if (param == "majhigh"){
           filters.majority("high", input);
         }  else if (param == "gains" || param =="byelection"){
-          if (input == "yes"){
+          if (input == "yes" || input == "true"){
             filters.byElection("");
           }
         }

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+	<title>URL Parameters</title>
+	<link rel="shortcut icon" href="/imgs/logo.png">
+	<link type="text/css" rel="stylesheet" href="/stylesheets/jquery-ui.structure.css"/>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/electionmaps.min.css"/>
+	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/navbar.min.css"/>
+	<style>
+		p {
+			font-size: 1.1em;
+		}
+
+		#wrapper {
+			padding-left: 10px;
+			height: 950px;
+		}
+
+		.important {
+			font-weight: bold;
+		}
+
+		#maps {
+			position: relative;
+			height: 350px;
+			width: 300px;
+		}
+
+		#types {
+			top: 240px;
+			left: 325px;
+			position: absolute;
+			height: 150px;
+			width: 350px;
+		}
+
+		#specifics {
+			top: 240px;
+			left: 700px;
+			position: absolute;
+			width: auto;
+		}
+
+		#parties {
+
+			position: absolute;
+			top: 475px;
+			width: 200px;
+
+		}
+
+		#regions {
+
+			position: absolute;
+			top : 475px;
+			left: 325px;
+			width: 350px;
+		}
+	</style>
+</head>
+
+<body>
+
+	<header>
+		<h2>UK Election Maps - <span id=pagetitle>URL Parameter</span> </h2>
+    <nav>
+				<ul>
+					<a href="/" class=>Home</a>
+				</ul>
+
+				<ul>
+					mail : principalfish@gmail.com
+				</ul>
+    </nav>
+	</header>
+
+	<nav id="projections">
+		<h3 id="nav-prediction"><a href="/electionmaps/"> 2017 Prediction </a> </h3>
+		<h3 id="nav-predictit"><a href="/electionmaps/?map=predictit"> Predict 2017 </a> </h3>
+		<h3 id="nav-current"><a href="/electionmaps/?map=current"> Current Parliament </a> </h3>
+
+				<div class="divider"></div>
+		<h3><a href="/electionmaps/polltracker.html" >Poll Tracker</a></h3>
+		<h3 id="nav-brexit"><a href="/electionmaps/brexit.html">Brexit by Seat</a></h3>
+
+		<div class="divider"></div>
+
+
+
+				<h3 id="nav-election2015"><a href="/electionmaps/?map=election2015"> 2015 Election</a> </h3>
+				<h3 id="nav-election2010"><a href="/electionmaps/?map=election2010"> 2010 Election</a> </h3>
+			<div class="divider"></div>
+			<h3 id="nav-2015-600seat"><a href="/electionmaps/?map=election2015_600seat">600 seat - 2015</a> </h3>
+			<h3 id="nav-prediction-600seat"><a href="/electionmaps/?map=prediction_600seat">600 seat - 2020</a> </h3>
+			<div class="divider"></div>
+			<h3 id="nav-urlparams" class="navbaractive"><a href="/electionmaps/urlparams.html">URL Parameters</a> </h3>
+
+			<p id="copyright"><br/>
+				Copyright 2017 principalfish.co.uk</p>
+	</nav>
+
+	<div id="wrapper" style="padding-left : 10px;">
+
+
+		<h2>URL Parameter Details</h2>
+		<p>
+			You can add URL Parameters to create and link to more specific maps.
+			The first parameter must be preceded by a ? and any others must be separated by an &amp;.
+		</p>
+
+		<p>
+			eg - <a href="/electionmaps/?map=prediction&filters=true&incumbent=conservative&region=wales">
+				http://principalfish.co.uk/electionmaps/?map=prediction&amp;filters=true&amp;incumbent=conservative&amp;region=wales</a>
+			will only show Conservative seats in Wales on the Predicted 2017 map.
+		</p>
+
+		<p>
+			eg - <a href="/electionmaps/?map=election2015&battlegrounds=true&incumbent=labour&challenger=conservative&majlow=5&majhigh=10">
+				http://principalfish.co.uk/electionmaps/?map=election2015&battlegrounds=true&incumbent=labour&challenger=conservative&majlow=5&majhigh=10</a>
+				will only show Labour held seats where Labour beat the Conservatives by between 5 and 10% in 2015.
+
+		</p>
+
+		<p class="important">IMPORTANT - a map must be selected and ONLY ONE of filters or battlegrounds.</p>
+
+
+		<h2>Full Details</h2>
+		<div id="maps">
+			<h3>Maps - one at a time!</h3>
+			<p>map=prediction : 2017 Prediction</p>
+			<p>map=predictit : Predict 2017</p>
+			<p>map=current : Current Parliament </p>
+			<p>map=election2015 : 2015 Election</p>
+			<p>map=election2010 : 2010 Election</p>
+			<p>map=election2015_600seat : 600 seat-2015</p>
+			<p>map=prediction_600seat : 600 seat-2020</p>
+		</div>
+
+		<div id="types" >
+			<h3>Types - select one or nothing works</h3>
+			<p>filters=yes or true : Filters</p>
+			<p>battlegrounds=yes or true : Battlegrounds</p>
+			<p class="important">If filters is active, battlegrounds will not be applied.</p>
+			<p class="important">Battlegrounds works on 2017 Prediction, Predict 2017, Current Parliament, 2015 Election.</p>
+			<p class="important">Neither will work on Brexit by Seat.</p>
+
+		</div>
+
+		<div id="specifics">
+			<h3>Specifics</h3>
+			<p>incumbent=party : see party codes below</p>
+			<p>challenger=party : see party codes below (only for Battlegrounds - must be active)</p>
+			<p>region=region : see region codes below</p>
+			<p>majlow=integer : Majority/lead low bound </p>
+			<p>majhigh=integer : Majority/lead high bound </p>
+			<p>gains=yes or true : Gained seats (only on filters on Election Maps/Prediction) </p>
+			<p>byelection=yes or true : By-elections (only on filters on Current Parliament) </p>
+
+		</div>
+
+		<div id="parties">
+			<h3>Party Codes</h3>
+			<p>conservative : Conservative</p>
+			<p>labour : Labour</p>
+			<p>libdems : Lib Dems</p>
+			<p>ukip : UKIP</p>
+			<p>green : Green</p>
+			<p>snp : SNP</p>
+			<p>plaidcymru : Plaid Cymru</p>
+			<p>dup : DUP</p>
+			<p>sinnfein : Sinn Fein</p>
+			<p>sdlp : SDLP</p>
+			<p>uu : UUP</p>
+			<p>alliance : Alliance</p>
+		</div>
+
+		<div id="regions">
+			<h3>Region Codes</h3>
+			<p>england : England</p>
+			<p>scotland : Scotland</p>
+			<p>wales : Wales</p>
+			<p>northernireland : Northern Ireland</p>
+			<p>eastofengland : East of England</p>
+			<p>eastmidlands :  East Midlands</p>
+			<p>london : London</p>
+			<p>northeastengland : North East England</p>
+			<p>northwestengland : North West England</p>
+			<p>southeastengland : South East England</p>
+			<p>southwestengland : South West England</p>
+			<p>westmidlands : West Midlands</p>
+			<p>yorkshireandthehumber : Yorkshire & Humber</p>
+		</div>
+
+
+
+
+
+
+
+	</div>
+
+
+</body>
+
+<script>
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-58696407-1', 'auto');
+	ga('send', 'pageview');
+</script>

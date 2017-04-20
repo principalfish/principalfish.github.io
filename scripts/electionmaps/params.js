@@ -6,12 +6,12 @@ var params = {
 
   checkParams : function(){
 
-    var filters = getParameterByName("filters", url)
-    if (filters == "yes" || filters == "true"){
+    var urlFilters = getParameterByName("filters", url);
+    if (urlFilters == "yes" || urlFilters == "true"){
       params.filters();
     } else {
-      var battle = getParameterByName("battlegrounds", url)
-      if (battle == "yes" || battle == "true"){
+      var urlBattle = getParameterByName("battlegrounds", url)
+      if (urlBattle == "yes" || urlBattle == "true"){
         params.battleground();
       }
     }
@@ -33,7 +33,7 @@ var params = {
         }  else if (param == "majhigh"){
           filters.majority("high", input);
         }  else if (param == "gains" || param =="byelection"){
-          if (input == "yes"){
+          if (input == "yes" || input == "true"){
             filters.byElection("");
           }
         }

@@ -1,24 +1,34 @@
 var battleground = {
-  incumbent : null,
-  challenger : null,
+  incumbent : "null",
+  challenger : "null",
+  region: "null",
   low : 0,
   high : 10,
 
   handle : function(id, value){
+    
     id = id.substring(14)
 
     if (id == "incumbent"){
       battleground.incumbent = value;
     } else if (id == "challenger"){
       battleground.challenger = value
-    } else if (id == "low") {
+    } else if (id =="region"){
+      if (value == "null"){
+        battleground.region = "null";
+      } else if (value == "england"){
+        battleground.region = regionMap["england"];
+      } else {
+          battleground.region = [value];
+      }
+    } else if (id == "majlow") {
       if (!(isNaN(parseFloat(value)))){
           if (parseFloat(value) < 0){
             value = 0;
           }
           battleground.low = parseFloat(value);
       }
-    } else if (id == "high"){
+    } else if (id == "majhigh"){
       if (!(isNaN(parseFloat(value)))){
         if (parseFloat(value) > 100){
           value = 100;
@@ -31,11 +41,14 @@ var battleground = {
   },
 
   check : function(){
-    if (battleground.incumbent != null && battleground.challenger != null){
+
+    if (battleground.incumbent != "null" && battleground.challenger != "null"){
+      filters.reset();
       if (battleground.incumbent != battleground.challenger){
-          filters.reset();
           battleground.filter();
       }
+    } else {
+      filters.reset();
     }
   },
 
@@ -51,7 +64,8 @@ var battleground = {
       if (dataSet[seat].seatInfo.current != battleground.incumbent){
         data.filtered = false;
 
-      }  else {
+      } else {
+
         var incumbent = dataSet[seat].seatInfo.current;
 
         if (battleground.challenger in dataSet[seat].partyInfo){
@@ -71,6 +85,13 @@ var battleground = {
         }
       }
 
+      if (battleground.region != "null"){
+        var region = dataSet[seat].seatInfo.region
+        if (battleground.region.indexOf(region) == -1){
+          data.filtered = false
+        }
+      }
+
       if (data.filtered == false) {
           filters.opacities[seat] = 0.05;
       } else {
@@ -80,7 +101,6 @@ var battleground = {
     });
     filters.display();
   }
-
 };
 ;var choro = {
 
@@ -374,12 +394,11 @@ var seatsPerRegion2015 = {
       delete filters.state[parameter]
     } else {
       if (parameter == "region" && criteria == "england"){
-        filters.state["region"] = regionMap["england"]
+        filters.state["region"] = regionMap["england"];
       } else {
         filters.state[parameter] = criteria;
       }
     }
-
     filters.filter();
   },
 
@@ -602,7 +621,7 @@ var seatsPerRegion2015 = {
   },
 
   simpleList : function(){
-  
+
 
     $("#seatlist-total").text(filters.filteredList.length);
     $.each(filters.filteredList, function(i, seat){
@@ -1121,38 +1140,64 @@ var urlParamMap = {
 };
 ;var params = {
 
-  possibleParams : ["incumbent", "region", "majority"],
+  possibleFilterParams : ["incumbent", "region", "majlow", "majhigh", "gains", "byelection"],
+
+  possibleBattlegroundParams : ["b-incumbent", "b-challenger", "b-region", "b-majlow", "b-majhigh"],
 
   checkParams : function(){
 
-   var parameterInput = false;
-   $.each(params.possibleParams, function(i, param){
+    var filterParams = params.filters();
 
-     var input = getParameterByName(param, url);
+    if (!(filterParams)){
+      params.battleground();
+    }
 
-     if (input != null){
-       if (param == "incumbent"){
-         filters.state["current"] = input
+  },
 
-       }
+  filters : function(){
+    var parameterInput = false;
+    $.each(params.possibleFilterParams, function(i, param){
+      var input = getParameterByName(param, url);
 
-       if (param == "region"){
-         filters.state["region"] = input
-       }
+      if (input != null){
+        input = input.toLowerCase();
+        if (param == "incumbent"){
+          filters.selectHandle("filter-current", input);
+        } else if (param == "region"){
+          filters.selectHandle("filter-region", input);
+        }  else if (param == "majlow"){
+          filters.majority("low", input);
+        }  else if (param == "majhigh"){
+          filters.majority("high", input);
+        }  else if (param == "gains" || param =="byelection"){
+          if (input == "yes"){
+            filters.byElection("");
+          }
+        }
+        parameterInput = true;
+      }
+    })
 
-       if (param == "majority"){
-         filters.state["majority"][1] = input
-       }
-       parameterInput = true;
-     }
+    if (parameterInput == true){
+      return true;
+    } else {
+      return false;
+    }
 
+  },
 
-   });
-
-
-   if (parameterInput == true){
-      filters.filter()
-   }
+  battleground: function(){
+    if (currentMap.battlegrounds == true){
+      var parameterInput = false;
+      $.each(params.possibleBattlegroundParams, function(i, param){
+        var input = getParameterByName(param, url);
+        
+        if (input != null){
+          parameterInput = true;
+          battleground.handle("battlegrounds-" + param.substring(2), input);
+        }
+      });
+    }
   }
 }
 ;var seatInfoTable = {

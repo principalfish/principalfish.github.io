@@ -12,12 +12,11 @@ var filters = {
       delete filters.state[parameter]
     } else {
       if (parameter == "region" && criteria == "england"){
-        filters.state["region"] = regionMap["england"]
+        filters.state["region"] = regionMap["england"];
       } else {
         filters.state[parameter] = criteria;
       }
     }
-
     filters.filter();
   },
 
@@ -240,7 +239,7 @@ var filters = {
   },
 
   simpleList : function(){
-  
+
 
     $("#seatlist-total").text(filters.filteredList.length);
     $.each(filters.filteredList, function(i, seat){

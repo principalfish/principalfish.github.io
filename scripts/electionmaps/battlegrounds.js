@@ -1,24 +1,34 @@
 var battleground = {
-  incumbent : null,
-  challenger : null,
+  incumbent : "null",
+  challenger : "null",
+  region: "null",
   low : 0,
   high : 10,
 
   handle : function(id, value){
+    
     id = id.substring(14)
 
     if (id == "incumbent"){
       battleground.incumbent = value;
     } else if (id == "challenger"){
       battleground.challenger = value
-    } else if (id == "low") {
+    } else if (id =="region"){
+      if (value == "null"){
+        battleground.region = "null";
+      } else if (value == "england"){
+        battleground.region = regionMap["england"];
+      } else {
+          battleground.region = [value];
+      }
+    } else if (id == "majlow") {
       if (!(isNaN(parseFloat(value)))){
           if (parseFloat(value) < 0){
             value = 0;
           }
           battleground.low = parseFloat(value);
       }
-    } else if (id == "high"){
+    } else if (id == "majhigh"){
       if (!(isNaN(parseFloat(value)))){
         if (parseFloat(value) > 100){
           value = 100;
@@ -31,11 +41,14 @@ var battleground = {
   },
 
   check : function(){
-    if (battleground.incumbent != null && battleground.challenger != null){
+
+    if (battleground.incumbent != "null" && battleground.challenger != "null"){
+      filters.reset();
       if (battleground.incumbent != battleground.challenger){
-          filters.reset();
           battleground.filter();
       }
+    } else {
+      filters.reset();
     }
   },
 
@@ -51,7 +64,8 @@ var battleground = {
       if (dataSet[seat].seatInfo.current != battleground.incumbent){
         data.filtered = false;
 
-      }  else {
+      } else {
+
         var incumbent = dataSet[seat].seatInfo.current;
 
         if (battleground.challenger in dataSet[seat].partyInfo){
@@ -71,6 +85,13 @@ var battleground = {
         }
       }
 
+      if (battleground.region != "null"){
+        var region = dataSet[seat].seatInfo.region
+        if (battleground.region.indexOf(region) == -1){
+          data.filtered = false
+        }
+      }
+
       if (data.filtered == false) {
           filters.opacities[seat] = 0.05;
       } else {
@@ -80,5 +101,4 @@ var battleground = {
     });
     filters.display();
   }
-
 };

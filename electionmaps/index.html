@@ -92,10 +92,10 @@
 						Try clicking, dragging, zooming, sorting
 					</li>
 
-				  <li>Prediction is calculated using regional uniform swing based on an average of polls weighted by recency</li>
+				  <li>Prediction is calculated using regional uniform swing based on polls</li>
 
 					<li>
-						Added: Battleground. Next: Deep Linking.
+						Added: Battlegrounds. Next: URL Parameters.
 					</li>
 
 					<li>
@@ -625,11 +625,29 @@
 					<option value="alliance">Alliance</option>
 				</select>
 
+				<select id="battlegrounds-region" onchange="battleground.handle(this.id, value)">
+						<option value="null" selected>United Kingdom</option>
+						<option value="england">England</option>
+						<option value="scotland">Scotland</option>
+						<option value="wales">Wales</option>
+						<option value="northernireland">Northern Ireland</option>
+						<option value="eastofengland">East of England</option>
+						<option value="eastmidlands"> East Midlands</option>
+						<option value="london">London</option>
+						<option value="northeastengland">North East England</option>
+						<option value="northwestengland">North West England</option>
+						<option value="southeastengland">South East England</option>
+						<option value="southwestengland">South West England</option>
+						<option value="westmidlands">West Midlands</option>
+						<option value="yorkshireandthehumber">Yorkshire & Humber</option>
+					</select>
+				</select>
+
 				<form id="battleground-gap">
 					%lead
-					<input type ="text" name="battlegrounds-low" value=0 onchange="battleground.handle(this.name, value)"/>
+					<input type ="text" name="battlegrounds-majlow" value=0 onchange="battleground.handle(this.name, value)"/>
 					to
-					<input type="text" name="battlegrounds-high" value=10 onchange="battleground.handle(this.name, value)"/>
+					<input type="text" name="battlegrounds-majhigh" value=10 onchange="battleground.handle(this.name, value)"/>
 				</form>
 
 				<p>

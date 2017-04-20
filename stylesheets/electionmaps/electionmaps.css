@@ -668,7 +668,7 @@ svg .map {
 
 #battlegroundsselect {
   width: 200px;
-  top: 40px;
+  top: 75px;
   left: 400px; }
   #battlegroundsselect select {
     width: 90%;
@@ -696,11 +696,15 @@ svg .map {
 
 #instructions {
   width: auto;
-  max-width: 420px;
+  max-width: 500px;
   left: 605px;
   top: 577px;
   height: auto;
-  position: absolute; }
+  position: absolute;
+  font-size: 1.2em; }
+  #instructions li {
+    padding-top: 2px;
+    padding-bottom: 2px; }
 
 #seat-600 {
   width: 400px;

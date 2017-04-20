@@ -1,36 +1,62 @@
 var params = {
 
-  possibleParams : ["incumbent", "region", "majority"],
+  possibleFilterParams : ["incumbent", "region", "majlow", "majhigh", "gains", "byelection"],
+
+  possibleBattlegroundParams : ["b-incumbent", "b-challenger", "b-region", "b-majlow", "b-majhigh"],
 
   checkParams : function(){
 
-   var parameterInput = false;
-   $.each(params.possibleParams, function(i, param){
+    var filterParams = params.filters();
 
-     var input = getParameterByName(param, url);
+    if (!(filterParams)){
+      params.battleground();
+    }
 
-     if (input != null){
-       if (param == "incumbent"){
-         filters.state["current"] = input
+  },
 
-       }
+  filters : function(){
+    var parameterInput = false;
+    $.each(params.possibleFilterParams, function(i, param){
+      var input = getParameterByName(param, url);
 
-       if (param == "region"){
-         filters.state["region"] = input
-       }
+      if (input != null){
+        input = input.toLowerCase();
+        if (param == "incumbent"){
+          filters.selectHandle("filter-current", input);
+        } else if (param == "region"){
+          filters.selectHandle("filter-region", input);
+        }  else if (param == "majlow"){
+          filters.majority("low", input);
+        }  else if (param == "majhigh"){
+          filters.majority("high", input);
+        }  else if (param == "gains" || param =="byelection"){
+          if (input == "yes"){
+            filters.byElection("");
+          }
+        }
+        parameterInput = true;
+      }
+    })
 
-       if (param == "majority"){
-         filters.state["majority"][1] = input
-       }
-       parameterInput = true;
-     }
+    if (parameterInput == true){
+      return true;
+    } else {
+      return false;
+    }
 
+  },
 
-   });
-
-
-   if (parameterInput == true){
-      filters.filter()
-   }
+  battleground: function(){
+    if (currentMap.battlegrounds == true){
+      var parameterInput = false;
+      $.each(params.possibleBattlegroundParams, function(i, param){
+        var input = getParameterByName(param, url);
+        
+        if (input != null){
+          parameterInput = true;
+          battleground.handle("battlegrounds-" + param.substring(2), input);
+        }
+      });
+    }
   }
 }

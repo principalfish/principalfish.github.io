@@ -6,7 +6,7 @@ var battleground = {
   high : 10,
 
   handle : function(id, value){
-    
+
     id = id.substring(14)
 
     if (id == "incumbent"){
@@ -54,7 +54,7 @@ var battleground = {
 
   filter : function(){
 
-    if (currentMap.name == "2015election"){
+    if (currentMap.name == "election2015"){
       var dataSet = currentMap.seatData;
     }  else {
       var dataSet = currentMap.previousSeatData;

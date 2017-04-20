@@ -250,5 +250,31 @@ var voteTotals = {
 
     $("#votetotals-table-titles > div > div:nth-child(6)").css("display",  percentChangeDisplay[currentMap.election]);
     $("#votetotals-table-data > div > div:nth-child(6)").css("display",  percentChangeDisplay[currentMap.election]);
+  },
+
+  getMajority : function(){
+    var max = 0;
+    var leader = null;
+    $.each(voteTotals.data, function(i, data){
+      if (data.seats > max){
+        max = data.seats;
+        leader = data.name;
+      }
+    });
+    var seats;
+    if (currentMap.mapurl == "650map.json"){
+      seats = 650 ;
+    } else if (currentMap.mapurl == "600map.json"){
+      seats = 600;
+    }
+
+    var majorityThreshold =  (seats / 2 )  + 1;
+
+    if (max > majorityThreshold ){
+      var majorityNum = (max - majorityThreshold + 1) * 2;
+      $("#majoritytitle").text(leader + " Majority: " + majorityNum);
+    } else {
+      $("#majoritytitle").text("Hung Parliament");
+    }
   }
 };

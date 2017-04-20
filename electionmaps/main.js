@@ -515,6 +515,14 @@ var seatsPerRegion2015 = {
 
     // display default vote totals
     voteTotals.calculate("unitedkingdom");
+    // add majority to  navbar
+    voteTotals.getMajority();
+
+    // reset battlegrounds
+    // $("#battlegrounds-incumbent option:eq(0)").prop("selected", true);
+    // $("#battlegrounds-challenger option:eq(0)").prop("selected", true);
+    // $("#battlegrounds-region option:eq(0)").prop("selected", true);
+    // $("#battleground-gap").get(0).reset();
 
     // reset extended seat list sort  state css class
     $("#seatlist-sort" + filters.activeSort).removeClass("sort-active");
@@ -1435,7 +1443,7 @@ function activeSeat(seat){
 
     $(id).addClass("navbaractive");
       // change pagetitle;
-    var text = $(id).text();
+    var text = $(id).text();  
 
     $("#pagetitle").html(text);
     document.title = text;
@@ -2190,5 +2198,31 @@ function activeSeat(seat){
 
     $("#votetotals-table-titles > div > div:nth-child(6)").css("display",  percentChangeDisplay[currentMap.election]);
     $("#votetotals-table-data > div > div:nth-child(6)").css("display",  percentChangeDisplay[currentMap.election]);
+  },
+
+  getMajority : function(){
+    var max = 0;
+    var leader = null;
+    $.each(voteTotals.data, function(i, data){
+      if (data.seats > max){
+        max = data.seats;
+        leader = data.name;
+      }
+    });
+    var seats;
+    if (currentMap.mapurl == "650map.json"){
+      seats = 650 ;
+    } else if (currentMap.mapurl == "600map.json"){
+      seats = 600;
+    }
+
+    var majorityThreshold =  (seats / 2 )  + 1;
+
+    if (max > majorityThreshold ){
+      var majorityNum = (max - majorityThreshold + 1) * 2;
+      $("#majoritytitle").text(leader + " Majority: " + majorityNum);
+    } else {
+      $("#majoritytitle").text("Hung Parliament");
+    }
   }
 };

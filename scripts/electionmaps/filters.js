@@ -132,6 +132,14 @@ var filters = {
 
     // display default vote totals
     voteTotals.calculate("unitedkingdom");
+    // add majority to  navbar
+    voteTotals.getMajority();
+
+    // reset battlegrounds
+    // $("#battlegrounds-incumbent option:eq(0)").prop("selected", true);
+    // $("#battlegrounds-challenger option:eq(0)").prop("selected", true);
+    // $("#battlegrounds-region option:eq(0)").prop("selected", true);
+    // $("#battleground-gap").get(0).reset();
 
     // reset extended seat list sort  state css class
     $("#seatlist-sort" + filters.activeSort).removeClass("sort-active");

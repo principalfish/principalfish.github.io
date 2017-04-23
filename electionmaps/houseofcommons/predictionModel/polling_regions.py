@@ -145,6 +145,10 @@ polling_regions = {
 
     "survationscotland" : {
         "Scotland" : ["scotland"]
+    },
+
+    "panelbasescotland" : {
+        "Scotland" : ["scotland"]
     }
 
 }

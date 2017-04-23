@@ -141,6 +141,10 @@ polling_regions = {
         "North West" : ["northwestengland"],
         "Yorkshire and Humber" : ["yorkshireandthehumber"],
         "East of England" : ["eastofengland"]
+    },
+
+    "survationscotland" : {
+        "Scotland" : ["scotland"]
     }
 
 }

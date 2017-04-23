@@ -23,6 +23,24 @@ party_map = {
      'other' : "Others"
 }
 
+pollster_weights = {
+    "me" : 10000,
+    "ashcroft" : 1,
+    "icm" : 1.25,
+    "icm2" : 1.25,
+    "icmmissing" : 1.25,
+    "mori" : 1.25,
+    "survation" : 0.8,
+    "survationscotland" : 1.5,
+    "yougov" : 1,
+    "comres" : 1,
+    "comresdm" : 1,
+    "opinium" : 1,
+    "opiniummissing" : 1,
+    "bmg" : 0.75,
+    "gfk" : 1
+}
+
 class Seat(object):
 
     def __init__(self, data):
@@ -103,7 +121,7 @@ class Seat(object):
 
         votes_array = []
         normaliser = 1 / sum
-    
+
         for party, total in new_percentages.iteritems():
             new_percentages[party] *= normaliser
             votes = int(round(new_percentages[party] * turnout))
@@ -196,7 +214,7 @@ class Poll(object):
         self.company = company
         self.date = datetime(int(year), int(month), int(day))
         self.regions = {}
-        self.weight = 1
+        self.weight = pollster_weights[self.company]
 
 
     def add_row(self, row):
@@ -263,10 +281,10 @@ class Poll(object):
         today = datetime.today()
         days_past = (today - self.date).days
 
-        weight = 1
+        weight = pollster_weights[self.company]
 
         # alter closer to election  when more polls
-        degrade_factor = 0.98 #per day
+        degrade_factor = 0.97 #per day
         weight *= math.pow(degrade_factor, days_past)
 
         #testing

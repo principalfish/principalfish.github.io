@@ -966,14 +966,25 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 166	opinium	20	4	2017	England	951	448	264	104	98	33			4					
 166	opinium	20	4	2017	Scotland	117	37	17	9	2	2	50							
 166	opinium	20	4	2017	Wales	55	17	15	7	7	1		8						
-167	comres	22	4	2017	Scotland	113	43	11	10	1	1	48		0					
-167	comres	22	4	2017	North East England	50	16	22	6	6	0			0					
-167	comres	22	4	2017	North West England	141	59	48	7	7	2			0					
-167	comres	22	4	2017	Yorkshire and Humber	101	48	35	10	10	1			1					
-167	comres	22	4	2017	West Midlands	115	57	32	6	9	1			1					
-167	comres	22	4	2017	East Midlands	84	47	17	5	8	4			0					
-167	comres	22	4	2017	Wales	66	33	16	8	3	4		5	0					
-167	comres	22	4	2017	East of England	128	65	25	4	10	3			2					
-167	comres	22	4	2017	London	172	75	55	22	12	7			0					
-167	comres	22	4	2017	South East England	180	99	26	23	17	8			0					
-167	comres	22	4	2017	South West England	110	55	26	30	4	2			1					
+167	comres	20	4	2017	Scotland	113	43	11	10	1	1	48		0					
+167	comres	20	4	2017	North East England	50	16	22	6	6	0			0					
+167	comres	20	4	2017	North West England	141	59	48	7	7	2			0					
+167	comres	20	4	2017	Yorkshire and Humber	101	48	35	10	10	1			1					
+167	comres	20	4	2017	West Midlands	115	57	32	6	9	1			1					
+167	comres	20	4	2017	East Midlands	84	47	17	5	8	4			0					
+167	comres	20	4	2017	Wales	66	33	16	8	3	4		5	0					
+167	comres	20	4	2017	East of England	128	65	25	4	10	3			2					
+167	comres	20	4	2017	London	172	75	55	22	12	7			0					
+167	comres	20	4	2017	South East England	180	99	26	23	17	8			0					
+167	comres	20	4	2017	South West England	110	55	26	30	4	2			1					
+168	yougov	21	4	2017	London	191	42	33	19	3	3			0					
+168	yougov	21	4	2017	Rest of South	528	59	17	15	6	2			1					
+168	yougov	21	4	2017	Midlands and Wales	342	50	23	11	6	5		5	1					
+168	yougov	21	4	2017	North England	383	44	38	7	7	3			0					
+168	yougov	21	4	2017	Scotland	146	27	15	6	0	3	49		0					
+169	survation	22	4	2017	London	224	70	71	45	33	5			0					
+169	survation	22	4	2017	Midlands	262	121	77	20	38	3			2					
+169	survation	22	4	2017	North	371	156	149	31	30	3			3					
+169	survation	22	4	2017	South	525	243	124	66	71	18			2					
+169	survation	22	4	2017	Scotland	163	31	33	12	11	2	73		1					
+169	survation	22	4	2017	Wales	79	33	21	6	3	6		10	0					

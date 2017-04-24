@@ -48,7 +48,7 @@ polls_for_scatterplot = []
 #configure, weight and log polls
 for poll, data in polls.iteritems():
     # do first since delete total later on
-    if data.company != "me" and data.company not in ["survationscotland", "panelbasescotland"]:
+    if data.company != "me" and data.company not in ["survationscotland", "panelbasescotland", "yougovwales"]:
         polls_for_scatterplot.append(data.scatterplot())
 
     # turn all to decimals and fix some companies data

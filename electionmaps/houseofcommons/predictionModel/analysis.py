@@ -45,10 +45,11 @@ with open("polls.csv", "rb") as polls_file:
     polls_file.close()
 
 polls_for_scatterplot = []
+exclude_for_scatter = ["yougovscotland", "survationscotland", "panelbasescotland", "yougovwales"]
 #configure, weight and log polls
 for poll, data in polls.iteritems():
     # do first since delete total later on
-    if data.company != "me" and data.company not in ["survationscotland", "panelbasescotland", "yougovwales"]:
+    if data.company != "me" and data.company not in exclude_for_scatter:
         polls_for_scatterplot.append(data.scatterplot())
 
     # turn all to decimals and fix some companies data
@@ -103,6 +104,8 @@ for seat, data in seats.iteritems():
 with open("../" + model_map[arguments[1]][1], "w") as output:
     json.dump(to_dump, output)
 
+
+#below here non model stuff
 #generate data for scatter
 def dump_scatter_data():
     # for displaying model and polls on scatterplot
@@ -164,7 +167,7 @@ for poll in polls:
 last = str(max)
 
 last_updated = datetime.now().strftime("%I:%M%p on %B %d, %Y")
-last_pollster = last_updated + " (" + polls[last].company + " poll)"
+last_pollster = last_updated + " (" + polls[last].company + ")"
 
 with open("../../lastpollster.html", "w") as pollster_html:
     pollster_html.write(last_pollster)

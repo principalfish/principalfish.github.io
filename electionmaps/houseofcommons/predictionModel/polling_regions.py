@@ -154,6 +154,10 @@ polling_regions = {
 
     "yougovwales" : {
         "Wales" : ["wales"]
+    },
+
+    "yougovscotland" : {
+        "Scotland" : ["scotland"]
     }
 
 }

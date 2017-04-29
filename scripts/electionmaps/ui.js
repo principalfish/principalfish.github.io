@@ -12,8 +12,6 @@ var uiAttr = {
 
     document.title = text;
 
-    console.log(elem)
-
     if (elem == "hodgesrule"){
       document.title = "UK Parliament";
     }

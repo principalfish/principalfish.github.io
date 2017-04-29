@@ -145,7 +145,8 @@ var dataurls =  {
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
 	e2015_600 : "houseofcommons/2015election_600seat.json",
-	predict_600 : "houseofcommons/prediction_600seat.json"
+	predict_600 : "houseofcommons/prediction_600seat.json",
+	hodgesrule : "houseofcommons/hodgesrule.json"
 }
 
 var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true);
@@ -155,6 +156,7 @@ var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true);
 var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false);
+var hodgesrule = new pageSetting("hodgesrule", dataurls.map650, dataurls.hodgesrule, dataurls.e2015, true, false, true);
 
 function initialization(){
 
@@ -192,5 +194,6 @@ var urlParamMap = {
 	"election2015" : election2015,
 	"election2010" : election2010,
 	"election2015_600seat" : election2015_600seat,
-	"prediction_600seat" : prediction_600seat
+	"prediction_600seat" : prediction_600seat,
+	"hodgesrule" : hodgesrule
 };

@@ -87,9 +87,9 @@ var filters = {
           }
 
         } else {
+
           //if (data.seatInfo[parameter] != criteria){ // TO DO CHECK NOT BROKEN
           if (criteria.indexOf(data.seatInfo[parameter]) == - 1){
-
             meetsCriteria = false;
           }
         }

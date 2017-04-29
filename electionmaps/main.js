@@ -1000,7 +1000,7 @@ function pageLoadEssentials(){
 	uiAttr.pageLoadDiv();
 
 	// if setting not currentParliament remove instructions
-	if (currentMap != prediction){
+	if (currentMap != prediction && currentMap != hodgesrule){
 		$("#instructions").remove();
 	} else {
 		var oneDay = 24 * 60 * 60 * 1000;
@@ -1446,10 +1446,17 @@ function activeSeat(seat){
 
     $(id).addClass("navbaractive");
       // change pagetitle;
-    var text = $(id).text();  
+    var text = $(id).text();
 
     $("#pagetitle").html(text);
+
     document.title = text;
+
+    console.log(elem)
+
+    if (elem == "hodgesrule"){
+      document.title = "UK Parliament";
+    }
   },
 
   clickMapButton : function(div){
@@ -1461,7 +1468,6 @@ function activeSeat(seat){
       $(div).addClass("mapbuttonactive");
       uiAttr.showDiv(divID);
     } else {
-
       uiAttr.hideDiv(divID);
     }
   },

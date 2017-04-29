@@ -54,7 +54,7 @@ function pageLoadEssentials(){
 	uiAttr.pageLoadDiv();
 
 	// if setting not currentParliament remove instructions
-	if (currentMap != prediction){
+	if (currentMap != prediction && currentMap != hodgesrule){
 		$("#instructions").remove();
 	} else {
 		var oneDay = 24 * 60 * 60 * 1000;

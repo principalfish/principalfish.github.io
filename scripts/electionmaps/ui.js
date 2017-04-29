@@ -6,10 +6,17 @@ var uiAttr = {
 
     $(id).addClass("navbaractive");
       // change pagetitle;
-    var text = $(id).text();  
+    var text = $(id).text();
 
     $("#pagetitle").html(text);
+
     document.title = text;
+
+    console.log(elem)
+
+    if (elem == "hodgesrule"){
+      document.title = "UK Parliament";
+    }
   },
 
   clickMapButton : function(div){
@@ -21,7 +28,6 @@ var uiAttr = {
       $(div).addClass("mapbuttonactive");
       uiAttr.showDiv(divID);
     } else {
-
       uiAttr.hideDiv(divID);
     }
   },

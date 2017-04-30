@@ -6,6 +6,7 @@
 	<link type="text/css" rel="stylesheet" href="/stylesheets/jquery-ui.structure.css"/>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/polltracker/polls.min.css"/>
 	<link type="text/css" rel="stylesheet" href="/stylesheets/electionmaps/navbar.min.css"/>
+
 	<script type="text/javascript" src="/libraries/d3.min.js"></script>
 	<script type="text/javascript" src="/libraries/jquery.min.js"></script>
 	<script type="text/javascript" src="/libraries/jquery-ui.min.js"></script>
@@ -88,7 +89,18 @@
 				<input type="checkbox" onclick= "filter.company(this.value)" value="mori" checked>Ipsos MORI<br>
 				<input type="checkbox" onclick= "filter.company(this.value)" value="others" checked>Others<br>
 
+				<p class="polldateinput">Enter Start Date:
+					<input type ="date" id ="dateselect-start" value="2015-05-06" onchange="filter.date(value, id)">
+				</p>
+
+				<p class="polldateinput">Enter End Date:
+					<input type ="date" id ="dateselect-end" value="2017-06-08" onchange="filter.date(value, id)">
+
+				</p>
+
 			</div>
+
+
 		</div>
 
 		<div id ="key" class="dash-box">

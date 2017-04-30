@@ -269,7 +269,7 @@ button:focus {
   position: absolute;
   left: 1020px;
   top: 5px;
-  width: 150px; }
+  width: 170px; }
 
 #key {
   position: absolute;
@@ -302,5 +302,8 @@ button:focus {
 
 .grid path {
   stroke-width: 0; }
+
+.polldateinput input {
+  width: 135px; }
 
 /*# sourceMappingURL=polls.css.map */

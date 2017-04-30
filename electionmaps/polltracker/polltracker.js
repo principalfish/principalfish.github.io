@@ -3,6 +3,33 @@ var filter = {
   modelDisplay : true,
   movingDisplay: true,
 
+  datestart : new Date(2015, 4, 6),
+  dateend : new Date(2017, 5, 8),
+
+  date : function(value, id){
+
+    if (id == "dateselect-start"){
+      filter.datestart = new Date(value);
+    }
+
+    if (id == "dateselect-end"){
+      filter.dateend = new Date(value);
+    }
+
+    var defStart = new Date(2015, 4, 6);
+    var defEnd =  new Date(2017, 5, 8);
+
+    if (filter.datestart <= defStart || filter.datestart == "Invalid Date"){
+      filter.datestart = defStart;
+    }
+
+    if (filter.dateend >= defEnd || filter.dateend == "Invalid Date"){
+      filter.dateend = defEnd;
+    }
+
+    filter.redraw();
+  },
+
   company : function(value){
     if (companies.indexOf(value) == -1){
       companies.push(value);
@@ -27,7 +54,7 @@ var filter = {
 
     var yMax = 65;
 
-    x.domain([new Date(2015, 4, 6), new Date(2017, 5, 8)]);
+    x.domain([filter.datestart, filter.dateend]);
     y.domain([0, yMax]);
     y2.domain([0, 650 * yMax / 100]);
 
@@ -77,8 +104,9 @@ var filter = {
 
 
     if (filter.modelDisplay == true){
+
       svg.append("path")
-        .data([modelData[party]])
+        .data([modelDataDisplay[party]])
         .attr("class", "modelline " + party)
         .attr("d", modelline)
         .style("stroke-dasharray", "10, 5")
@@ -97,10 +125,14 @@ var filter = {
 
   drawAxes : function(){
 
-    var date1 = new Date(2015, 4, 6).getTime()
-    var date2 = Date.now()
+    var date1 = filter.datestart;
+    var date2 = filter.dateend;
 
     var months = Math.floor((date2 - date1) / (1000 * 60 * 60 * 24 * 365 / 12))
+
+    if (months > 25){
+      months = 25;
+    }
 
     svg.append("g")
         .attr("transform", "translate(0," + height + ")")
@@ -152,7 +184,7 @@ var filter = {
 
     // draw majority line
     if (filter.modelDisplay == true){
-      var majData =
+
       svg.append("path")
         .data([[{"date" : date1, "seats" : 326}, {"date" : date2, "seats" : 326}]])
         .attr("class", "majorityline")
@@ -212,6 +244,10 @@ var modelData = {
 	"others" : []
 }
 
+var modelDataDisplay = {
+
+}
+
 var companies = []
 
 function getData(){
@@ -246,9 +282,7 @@ function getData(){
 							})
 						}
 					})
-
 			});
-
 		})
 
 	).then(function(){
@@ -258,17 +292,26 @@ function getData(){
 
 function pageLoad(){
 
-	// var max = 0;
-	// $.each(pollData, function(party, data){
-	// 	$.each(data, function(i){
-	// 		if (data[i].percentage > max){
-	// 			max = data[i].percentage;
-	// 		}
-	// 	})
-	// })
-	//
-	// max = 10 * Math.ceil(max / 10);
 	plot.drawGridlines();
+
+	// general model data for display
+	$.each(modelData, function(party, data){
+		var modelInDates = [];
+
+		for (var i=0; i < data.length; i++){
+
+			if (inDateRange(data[i].date)){				
+				var toAdd = {
+					"date" : data[i].date,
+					"seats" : data[i].seats
+				}
+
+				modelInDates.push(toAdd);
+			}
+		}
+
+		modelDataDisplay[party] = modelInDates;
+	})
 
 	$.each(pollData, function(party, data){
 
@@ -278,7 +321,7 @@ function pageLoad(){
 
 		for (var i=0; i < data.length; i++){
 
-			if (companies.indexOf(data[i].company) != -1){
+			if (companies.indexOf(data[i].company) != -1 && inDateRange(data[i].date)){
 				var to_add = {
 					"company" : data[i].company,
 					"percentage" : data[i].percentage,
@@ -304,7 +347,13 @@ function pageLoad(){
 		plot.draw(toDraw, party);
 	});
 
+
 	plot.drawAxes();
+}
+
+function inDateRange(date){
+	var inRange = date >= filter.datestart && date <= filter.dateend;
+	return inRange;
 }
 
 $(document).ready(function(){

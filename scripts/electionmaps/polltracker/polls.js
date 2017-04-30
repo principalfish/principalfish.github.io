@@ -18,6 +18,10 @@ var modelData = {
 	"others" : []
 }
 
+var modelDataDisplay = {
+
+}
+
 var companies = []
 
 function getData(){
@@ -52,9 +56,7 @@ function getData(){
 							})
 						}
 					})
-
 			});
-
 		})
 
 	).then(function(){
@@ -64,17 +66,26 @@ function getData(){
 
 function pageLoad(){
 
-	// var max = 0;
-	// $.each(pollData, function(party, data){
-	// 	$.each(data, function(i){
-	// 		if (data[i].percentage > max){
-	// 			max = data[i].percentage;
-	// 		}
-	// 	})
-	// })
-	//
-	// max = 10 * Math.ceil(max / 10);
 	plot.drawGridlines();
+
+	// general model data for display
+	$.each(modelData, function(party, data){
+		var modelInDates = [];
+
+		for (var i=0; i < data.length; i++){
+
+			if (inDateRange(data[i].date)){				
+				var toAdd = {
+					"date" : data[i].date,
+					"seats" : data[i].seats
+				}
+
+				modelInDates.push(toAdd);
+			}
+		}
+
+		modelDataDisplay[party] = modelInDates;
+	})
 
 	$.each(pollData, function(party, data){
 
@@ -84,7 +95,7 @@ function pageLoad(){
 
 		for (var i=0; i < data.length; i++){
 
-			if (companies.indexOf(data[i].company) != -1){
+			if (companies.indexOf(data[i].company) != -1 && inDateRange(data[i].date)){
 				var to_add = {
 					"company" : data[i].company,
 					"percentage" : data[i].percentage,
@@ -110,7 +121,13 @@ function pageLoad(){
 		plot.draw(toDraw, party);
 	});
 
+
 	plot.drawAxes();
+}
+
+function inDateRange(date){
+	var inRange = date >= filter.datestart && date <= filter.dateend;
+	return inRange;
 }
 
 $(document).ready(function(){

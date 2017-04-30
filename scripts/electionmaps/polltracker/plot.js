@@ -4,7 +4,7 @@ var plot = {
 
     var yMax = 65;
 
-    x.domain([new Date(2015, 4, 6), new Date(2017, 5, 8)]);
+    x.domain([filter.datestart, filter.dateend]);
     y.domain([0, yMax]);
     y2.domain([0, 650 * yMax / 100]);
 
@@ -54,8 +54,9 @@ var plot = {
 
 
     if (filter.modelDisplay == true){
+
       svg.append("path")
-        .data([modelData[party]])
+        .data([modelDataDisplay[party]])
         .attr("class", "modelline " + party)
         .attr("d", modelline)
         .style("stroke-dasharray", "10, 5")
@@ -74,10 +75,14 @@ var plot = {
 
   drawAxes : function(){
 
-    var date1 = new Date(2015, 4, 6).getTime()
-    var date2 = Date.now()
+    var date1 = filter.datestart;
+    var date2 = filter.dateend;
 
     var months = Math.floor((date2 - date1) / (1000 * 60 * 60 * 24 * 365 / 12))
+
+    if (months > 25){
+      months = 25;
+    }
 
     svg.append("g")
         .attr("transform", "translate(0," + height + ")")
@@ -129,7 +134,7 @@ var plot = {
 
     // draw majority line
     if (filter.modelDisplay == true){
-      var majData =
+
       svg.append("path")
         .data([[{"date" : date1, "seats" : 326}, {"date" : date2, "seats" : 326}]])
         .attr("class", "majorityline")

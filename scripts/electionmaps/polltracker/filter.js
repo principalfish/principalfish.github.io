@@ -45,6 +45,4 @@ var filter = {
     $("#plot g").empty()
     pageLoad();
   }
-
-
 }

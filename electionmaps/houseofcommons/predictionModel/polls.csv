@@ -1,5 +1,5 @@
 code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu
-1000	me	9	5	2015	Northern Ireland	1004	3			2	23			77	119	279	91	281	129
+1001	me	3	3	2017	Northern Ireland	1004	3			2	23			77	119	279	91	281	129
 1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
 1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
 1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					
@@ -1032,3 +1032,4 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 181	icm	2	5	2017	North	491	208	143	32	36	18	51		4					
 181	icm	2	5	2017	Midlands	449	229	125	35	43	10		5	2					
 181	icm	2	5	2017	South	476	246	111	62	37	18			1					
+182	lucidtalk	29	4	2017	Norn Iron	100	1			1	2			2	12	28	10	29	15

@@ -158,6 +158,10 @@ polling_regions = {
 
     "yougovscotland" : {
         "Scotland" : ["scotland"]
+    },
+
+    "lucidtalk" : {
+        "Norn Iron" : ["northernireland"]
     }
 
 }

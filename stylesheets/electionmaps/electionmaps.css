@@ -282,7 +282,7 @@ svg .boundaries {
   pointer-events: all; }
 
 svg .map {
-  stroke: black;
+  stroke: purple;
   stroke-width: 0.2;
   stroke-linejoin: round;
   stroke-opacity: 1;

@@ -162,6 +162,21 @@ polling_regions = {
 
     "lucidtalk" : {
         "Norn Iron" : ["northernireland"]
+    },
+
+    "panelbase" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East" : ["southeastengland"],
+        "South West" : ["southwestengland"],
+        "London" : ["london"],
+        "North East" : ["northeastengland"],
+        "North West" : ["northwestengland"],
+        "Yorkshire" : ["yorkshireandthehumber"],
+        "East Anglia" : ["eastofengland"]
     }
 
 }

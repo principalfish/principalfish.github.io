@@ -42,7 +42,8 @@ pollster_weights = {
     "panelbasescotland" : 2.5,
     "yougovwales" : 4,
     "yougovscotland" : 4,
-    "lucidtalk" : 1
+    "lucidtalk" : 1,
+    "panelbase" : 1
 }
 
 class Seat(object):
@@ -262,7 +263,7 @@ class Poll(object):
         raw_num_comps = ["general", "me", "icm", "icm2", "opinium",
                         "mori", "comres", "comresdm", "survation",
                         "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk", "survationscotland",
-                        "panelbasescotland", "yougovwales", "yougovscotland", "lucidtalk"]
+                        "panelbasescotland", "yougovwales", "yougovscotland", "lucidtalk", "panelbase"]
 
         if self.company in raw_num_comps:
             for region, numbers in self.regions.iteritems():

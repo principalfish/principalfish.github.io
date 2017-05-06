@@ -1044,8 +1044,11 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 183	panelbase	2	5	2017	Wales	100	48	33	4	3	3		9						
 183	panelbase	2	5	2017	West Midlands	100	53	33	4	5	3			1					
 183	panelbase	2	5	2017	Yorkshire	100	40	47	5	7	1								
-184	yougov	3	4	2017	London	248	38	39	15	4	4			0					
-184	yougov	3	4	2017	Rest of South	686	56	21	12	7	3			1					
-184	yougov	3	4	2017	Midlands and Wales	444	49	29	9	7	2		2	2					
-184	yougov	3	4	2017	North England	498	43	43	7	5	1			0					
-184	yougov	3	4	2017	Scotland	190	37	15	6		1	40		0					
+184	yougov	3	5	2017	London	248	38	39	15	4	4			0					
+184	yougov	3	5	2017	Rest of South	686	56	21	12	7	3			1					
+184	yougov	3	5	2017	Midlands and Wales	444	49	29	9	7	2		2	2					
+184	yougov	3	5	2017	North England	498	43	43	7	5	1			0					
+184	yougov	3	5	2017	Scotland	190	37	15	6		1	40		0					
+185	opinium	3	5	2017	England	1057	500	338	105	86	22			6					
+185	opinium	3	5	2017	Scotland	134	44	17	7	1	7	56		2					
+185	opinium	3	5	2017	Wales	56	29	14	3	5			4	1					

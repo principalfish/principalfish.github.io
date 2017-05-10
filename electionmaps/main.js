@@ -493,6 +493,7 @@ var seatsPerRegion2015 = {
     })
 
     filters.display();
+    filters.changeSnpBorders();
     //filters.getSeatlist();
   },
 
@@ -535,12 +536,11 @@ var seatsPerRegion2015 = {
 
     // reset map
     filters.filter();
-    filters.changeSnpBorders();
+
 
   },
 
   changeSnpBorders : function(){
-    console.log("here")
     // if snp colour, make boundaries black
     $(".map").each(function(i, obj){
       var className = $(obj).attr("class");

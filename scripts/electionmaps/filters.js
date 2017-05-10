@@ -106,6 +106,7 @@ var filters = {
     })
 
     filters.display();
+    filters.changeSnpBorders();
     //filters.getSeatlist();
   },
 
@@ -148,12 +149,11 @@ var filters = {
 
     // reset map
     filters.filter();
-    filters.changeSnpBorders();
+
 
   },
 
   changeSnpBorders : function(){
-    console.log("here")
     // if snp colour, make boundaries black
     $(".map").each(function(i, obj){
       var className = $(obj).attr("class");

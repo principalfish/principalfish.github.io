@@ -340,7 +340,7 @@ var regionMap = {
 				.attr("class", function(d){
 					var seatClass;
 					if (d.properties.name in setting.seatData){
-						 seatClass = "map " + setting.seatData[d.properties.name]["current"];
+						 seatClass = "mapdark " + setting.seatData[d.properties.name]["current"];
 					} else {
 						seatClass = "map null"
 					}

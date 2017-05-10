@@ -177,6 +177,10 @@ polling_regions = {
         "North West" : ["northwestengland"],
         "Yorkshire" : ["yorkshireandthehumber"],
         "East Anglia" : ["eastofengland"]
+    },
+
+    "yougovlondon" : {
+        "London" : ["london"]
     }
 
 }

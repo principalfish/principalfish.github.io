@@ -47,7 +47,7 @@ with open("polls.csv", "rb") as polls_file:
 polls_for_scatterplot = []
 exclude_for_scatter = ["yougovscotland", "survationscotland",
                         "panelbasescotland", "yougovwales",
-                        "lucidtalk"]
+                        "lucidtalk", "yougovlondon"]
 #configure, weight and log polls
 for poll, data in polls.iteritems():
     # do first since delete total later on

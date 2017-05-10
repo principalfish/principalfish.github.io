@@ -123,6 +123,7 @@ var battleground = {
       var max = choro.minmax(parameter, value)
       choro.opacities(max, parameter, value);
       choro.applyClass(parameter, value);
+      filters.changeSnpBorders();
       filters.display(); // reuse function to change opacities for map elements
       choro.keyOnMap(max, parameter, value);
     } else {
@@ -208,6 +209,7 @@ var battleground = {
   },
 
   applyClass : function(parameter, value){
+
     // voteshare
     if (parameter == "voteshare"){
       $.each(currentMap.seatData, function(seat, data){
@@ -287,9 +289,11 @@ var battleground = {
 
   reset: function(){
     $("#keyonmap").hide();
+
     $.each(currentMap.seatData, function(seat, data){
 
       $("#i" + data.mapSelect.properties.info_id).removeClass();
+
       $("#i" + data.mapSelect.properties.info_id).addClass("map " + data.seatInfo.current);
     });
     //reset choropleths selects
@@ -531,7 +535,23 @@ var seatsPerRegion2015 = {
 
     // reset map
     filters.filter();
+    filters.changeSnpBorders();
+
   },
+
+  changeSnpBorders : function(){
+    console.log("here")
+    // if snp colour, make boundaries black
+    $(".map").each(function(i, obj){
+      var className = $(obj).attr("class");
+      if (className == "map snp"){
+        $(obj).removeClass("map");
+        $(obj).addClass("mapdark");
+      }
+
+    })
+  },
+
 
   filteredList : [],
 
@@ -878,10 +898,13 @@ function seatExtended(seat, data){
 				.enter().append("path")
 				.attr("class", function(d){
 					var seatClass;
-					if (d.properties.name in setting.seatData){
-						 seatClass = "map " + setting.seatData[d.properties.name]["seatInfo"]["current"];
+					var seatCurrent = setting.seatData[d.properties.name]["seatInfo"]["current"];
+					if (d.properties.name in setting.seatData && seatCurrent == "snp"){
+						seatClass = "mapdark snp";
+					} else if (d.properties.name in setting.seatData){
+						 seatClass = "map " + seatCurrent;
 					} else {
-						seatClass = "map null"
+						seatClass = "null"
 					}
 					return seatClass
 				})

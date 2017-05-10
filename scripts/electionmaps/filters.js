@@ -148,7 +148,23 @@ var filters = {
 
     // reset map
     filters.filter();
+    filters.changeSnpBorders();
+
   },
+
+  changeSnpBorders : function(){
+    console.log("here")
+    // if snp colour, make boundaries black
+    $(".map").each(function(i, obj){
+      var className = $(obj).attr("class");
+      if (className == "map snp"){
+        $(obj).removeClass("map");
+        $(obj).addClass("mapdark");
+      }
+
+    })
+  },
+
 
   filteredList : [],
 

@@ -31,7 +31,7 @@ pollster_weights = {
     "icmmissing" : 1.25,
     "mori" : 1.25,
     "survation" : 0.8,
-    "survationscotland" : 2.5,
+    "survationscotland" : 3,
     "yougov" : 1,
     "comres" : 1,
     "comresdm" : 1,
@@ -39,11 +39,12 @@ pollster_weights = {
     "opiniummissing" : 1,
     "bmg" : 0.75,
     "gfk" : 1,
-    "panelbasescotland" : 2.5,
-    "yougovwales" : 4,
-    "yougovscotland" : 4,
+    "panelbasescotland" : 3,
+    "yougovwales" : 6,
+    "yougovscotland" : 6,
     "lucidtalk" : 1,
-    "panelbase" : 1
+    "panelbase" : 1,
+    "yougovlondon" : 6
 }
 
 class Seat(object):
@@ -263,7 +264,7 @@ class Poll(object):
         raw_num_comps = ["general", "me", "icm", "icm2", "opinium",
                         "mori", "comres", "comresdm", "survation",
                         "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk", "survationscotland",
-                        "panelbasescotland", "yougovwales", "yougovscotland", "lucidtalk", "panelbase"]
+                        "panelbasescotland", "yougovwales", "yougovscotland", "lucidtalk", "panelbase", "yougovlondon"]
 
         if self.company in raw_num_comps:
             for region, numbers in self.regions.iteritems():

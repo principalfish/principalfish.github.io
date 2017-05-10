@@ -118,10 +118,13 @@ var mapAttr = {
 				.enter().append("path")
 				.attr("class", function(d){
 					var seatClass;
-					if (d.properties.name in setting.seatData){
-						 seatClass = "map " + setting.seatData[d.properties.name]["seatInfo"]["current"];
+					var seatCurrent = setting.seatData[d.properties.name]["seatInfo"]["current"];
+					if (d.properties.name in setting.seatData && seatCurrent == "snp"){
+						seatClass = "mapdark snp";
+					} else if (d.properties.name in setting.seatData){
+						 seatClass = "map " + seatCurrent;
 					} else {
-						seatClass = "map null"
+						seatClass = "null"
 					}
 					return seatClass
 				})

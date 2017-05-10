@@ -18,6 +18,7 @@ var choro = {
       var max = choro.minmax(parameter, value)
       choro.opacities(max, parameter, value);
       choro.applyClass(parameter, value);
+      filters.changeSnpBorders();
       filters.display(); // reuse function to change opacities for map elements
       choro.keyOnMap(max, parameter, value);
     } else {
@@ -103,6 +104,7 @@ var choro = {
   },
 
   applyClass : function(parameter, value){
+
     // voteshare
     if (parameter == "voteshare"){
       $.each(currentMap.seatData, function(seat, data){
@@ -182,9 +184,11 @@ var choro = {
 
   reset: function(){
     $("#keyonmap").hide();
+
     $.each(currentMap.seatData, function(seat, data){
 
       $("#i" + data.mapSelect.properties.info_id).removeClass();
+
       $("#i" + data.mapSelect.properties.info_id).addClass("map " + data.seatInfo.current);
     });
     //reset choropleths selects

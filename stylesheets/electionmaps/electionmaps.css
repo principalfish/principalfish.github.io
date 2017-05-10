@@ -283,7 +283,7 @@ svg .boundaries {
 
 svg .map {
   stroke: white;
-  stroke-width: 0.1;
+  stroke-width: 0.2;
   stroke-linejoin: round;
   stroke-opacity: 1;
   cursor: pointer;
@@ -291,7 +291,7 @@ svg .map {
 
 svg .mapdark {
   stroke: black;
-  stroke-width: 0.1;
+  stroke-width: 0.2;
   stroke-linejoin: round;
   stroke-opacity: 1;
   cursor: pointer;

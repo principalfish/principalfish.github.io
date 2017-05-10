@@ -541,10 +541,11 @@ var seatsPerRegion2015 = {
   },
 
   changeSnpBorders : function(){
-    // if snp colour, make boundaries black
+    // if snp or LD colour, make boundaries black
     $(".map").each(function(i, obj){
       var className = $(obj).attr("class");
-      if (className == "map snp"){
+      var darkClasses = ["map snp", "map libdems", "map green", "map sdlp"]
+      if (darkClasses.indexOf(className) != -1 ){
         $(obj).removeClass("map");
         $(obj).addClass("mapdark");
       }

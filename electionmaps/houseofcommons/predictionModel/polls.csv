@@ -1075,3 +1075,14 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 190	survation	6	5	2017	Scotland	71	15	14	3			38		0					
 190	survation	6	5	2017	Wales	42	15	17					8	1					
 191	yougovlondon	2	5	2017	London	100	36	41	14	6	3			1					
+192	panelbase	9	5	2017	East Anglia	100	50	30	14	6	0								
+192	panelbase	9	5	2017	East Midlands	100	56	28	3	7	5								
+192	panelbase	9	5	2017	London	100	48	38	10	3	1								
+192	panelbase	9	5	2017	North East	100	42	47	5	5	0								
+192	panelbase	9	5	2017	North West	100	40	39	11	8	1			2					
+192	panelbase	9	5	2017	Scotland	100	42	11	3	1	1	42							
+192	panelbase	9	5	2017	South East	100	59	22	11	5	3								
+192	panelbase	9	5	2017	South West	100	54	25	14	3	4								
+192	panelbase	9	5	2017	Wales	100	50	29	2	0	3		16						
+192	panelbase	9	5	2017	West Midlands	100	47	39	3	7	4								
+192	panelbase	9	5	2017	Yorkshire	100	37	41	9	8	3			2					

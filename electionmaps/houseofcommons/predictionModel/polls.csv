@@ -1091,3 +1091,17 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 193	yougov	10	5	2017	Midlands and Wales	355	48	32	5	7	2		2	3					
 193	yougov	10	5	2017	North England	398	43	44	7	4	2								
 193	yougov	10	5	2017	Scotland	152	26	14	11	2	1	46							
+194	opinium	10	5	2017	England	988	494	333	87	52	20			2					
+194	opinium	10	5	2017	Scotland	122	38	21	3	1	5	53		1					
+194	opinium	10	5	2017	Wales	52	16	22	2	3	1		8						
+195	comres	12	5	2017	Scotland	111	34	14	12	2	4	45							
+195	comres	12	5	2017	North East England	51	27	21	1	2	1								
+195	comres	12	5	2017	North West England	134	62	57	7	6	2								
+195	comres	12	5	2017	Yorkshire and Humber	100	47	37	6	7	3								
+195	comres	12	5	2017	West Midlands	103	52	33	9	6	1			2					
+195	comres	12	5	2017	East Midlands	90	50	23	5	9	2			1					
+195	comres	12	5	2017	Wales	61	26	18	6	1	2		8						
+195	comres	12	5	2017	East of England	123	67	25	20	6	4			2					
+195	comres	12	5	2017	London	161	65	62	21	5	7			1					
+195	comres	12	5	2017	South East England	179	97	44	21	11	6								
+195	comres	12	5	2017	South West England	109	56	28	13	7	5			1					

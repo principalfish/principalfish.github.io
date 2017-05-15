@@ -1,0 +1,68 @@
+<h2> Battlegrounds<div class="closebox" onclick="uiAttr.hideDiv('battlegrounds')">X</div></h2>
+<div>
+
+  <select id="battlegrounds-incumbent" onchange="battleground.handle(this.id, value)">
+    <option value="null" selected>2015 Incumbent</option>
+    <option value="conservative">Conservative</option>
+    <option value="labour">Labour</option>
+    <option value="libdems">Lib Dems</option>
+    <option value="ukip">UKIP</option>
+    <option value="green">Green</option>
+    <option value="snp">SNP</option>
+    <option value="plaidcymru">Plaid Cymru</option>
+    <option value="dup">DUP</option>
+    <option value="sinnfein">Sinn Fein</option>
+    <option value="sdlp">SDLP</option>
+    <option value="uu">UUP</option>
+    <option value="alliance">Alliance</option>
+  </select>
+
+  <select id="battlegrounds-challenger" onchange="battleground.handle(this.id, value)">
+    <option value="null" selected>Challenger</option>
+    <option value="conservative">Conservative</option>
+    <option value="labour">Labour</option>
+    <option value="libdems">Lib Dems</option>
+    <option value="ukip">UKIP</option>
+    <option value="green">Green</option>
+    <option value="snp">SNP</option>
+    <option value="plaidcymru">Plaid Cymru</option>
+    <option value="dup">DUP</option>
+    <option value="sinnfein">Sinn Fein</option>
+    <option value="sdlp">SDLP</option>
+    <option value="uu">UUP</option>
+    <option value="alliance">Alliance</option>
+  </select>
+
+  <select id="battlegrounds-region" onchange="battleground.handle(this.id, value)">
+      <option value="null" selected>United Kingdom</option>
+      <option value="england">England</option>
+      <option value="scotland">Scotland</option>
+      <option value="wales">Wales</option>
+      <option value="northernireland">Northern Ireland</option>
+      <option value="eastofengland">East of England</option>
+      <option value="eastmidlands"> East Midlands</option>
+      <option value="london">London</option>
+      <option value="northeastengland">North East England</option>
+      <option value="northwestengland">North West England</option>
+      <option value="southeastengland">South East England</option>
+      <option value="southwestengland">South West England</option>
+      <option value="westmidlands">West Midlands</option>
+      <option value="yorkshireandthehumber">Yorkshire & Humber</option>
+    </select>
+  </select>
+
+  <form id="battleground-gap">
+    %lead
+    <input type ="text" name="battlegrounds-majlow" value=0 onchange="battleground.handle(this.name, value)"/>
+    to
+    <input type="text" name="battlegrounds-majhigh" value=10 onchange="battleground.handle(this.name, value)"/>
+  </form>
+
+  <p>
+      NB - this returns results based off of the 2015 election.
+  </p>
+  <p>
+      This does not currently work in tandem with filters.
+  </p>
+
+</div>

@@ -1,0 +1,207 @@
+<h2> User Input (uniform swing)<div class="closebox" onclick="uiAttr.hideDiv('predictbutton')">X</div></h2>
+<div>
+  <div id="userinput-table">
+     <div>
+       <div></div>
+       <div><div class="party-flair conservative"></div></div>
+       <div><div class="party-flair labour"></div></div>
+       <div><div class="party-flair libdems"></div></div>
+       <div><div class="party-flair ukip"></div></div>
+       <div><div class="party-flair green"></div></div>
+       <div></div>
+       <div><div class="party-flair other"></div></div>
+     </div>
+
+     <div id="userinput-england">
+       <div>England</div>
+       <div><input value=0 type="text" onchange="userInput.check('england', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('england', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('england', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('england', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('england', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-england-other>100</span></div>
+     </div>
+
+     <div id="userinput-show" class="">
+
+       <a href="javascript:;" onclick="userInput.showAdvanced()">Show More</a>
+     </div>
+
+     <div id="userinput-eastofengland" class="hidden">
+       <div>E. England</div>
+       <div><input value=0 type="text" onchange="userInput.check('eastofengland', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastofengland', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastofengland', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastofengland', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastofengland', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-eastofengland-other>100</span></div>
+     </div>
+
+     <div id="userinput-eastmidlands" class="hidden">
+       <div>E. Midlands</div>
+       <div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('eastmidlands', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-eastmidlands-other>100</span></div>
+     </div>
+
+     <div id="userinput-london" class="hidden">
+       <div>London</div>
+       <div><input value=0 type="text" onchange="userInput.check('london', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('london', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('london', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('london', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('london', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-london-other>100</span></div>
+     </div>
+
+     <div id="userinput-northeastengland" class="hidden">
+       <div>N.E. England</div>
+       <div><input value=0 type="text" onchange="userInput.check('northeastengland', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northeastengland', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northeastengland', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northeastengland', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northeastengland', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-northeastengland-other>100</span></div>
+     </div>
+
+     <div id="userinput-northwestengland" class="hidden">
+       <div>N.W. England</div>
+       <div><input value=0 type="text" onchange="userInput.check('northwestengland', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northwestengland', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northwestengland', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northwestengland', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('northwestengland', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-northwestengland-other>100</span></div>
+     </div>
+
+     <div id="userinput-southeastengland" class="hidden">
+       <div>S.E. England</div>
+       <div><input value=0 type="text" onchange="userInput.check('southeastengland', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southeastengland', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southeastengland', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southeastengland', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southeastengland', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-southeastengland-other>100</span></div>
+     </div>
+
+     <div id="userinput-southwestengland" class="hidden">
+       <div>S.W. England</div>
+       <div><input value=0 type="text" onchange="userInput.check('southwestengland', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southwestengland', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southwestengland', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southwestengland', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('southwestengland', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-southwestengland-other>100</span></div>
+     </div>
+
+     <div id="userinput-westmidlands" class="hidden">
+       <div>W. Midlands</div>
+       <div><input value=0 type="text" onchange="userInput.check('westmidlands', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('westmidlands', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('westmidlands', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('westmidlands', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('westmidlands', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-westmidlands-other>100</span></div>
+     </div>
+
+     <div id="userinput-yorkshireandthehumber" class="hidden">
+       <div>Yorks & Humber</div>
+       <div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('yorkshireandthehumber', 'green', value)"/></div>
+       <div></div>
+       <div><span id=userinput-yorkshireandthehumber-other>100</span></div>
+     </div>
+
+
+     <div id="userinput-hide" class="hidden">
+       <a href="javascript:;" onclick="userInput.hideAdvanced()">Show Less</a>
+     </div>
+
+
+     <div>
+      <div></div>
+      <div><div class="party-flair conservative"></div></div>
+      <div><div class="party-flair labour"></div></div>
+      <div><div class="party-flair libdems"></div></div>
+      <div><div class="party-flair ukip"></div></div>
+      <div><div class="party-flair green"></div></div>
+      <div><div class="party-flair snp"></div></div>
+      <div><div class="party-flair other"></div></div>
+     </div>
+
+     <div  id="userinput-scotland">
+         <div>Scotland</div>
+         <div><input value=0 type="text" onchange="userInput.check('scotland', 'conservative', value)"/></div>
+         <div><input value=0 type="text" onchange="userInput.check('scotland', 'labour', value)"/></div>
+         <div><input value=0 type="text" onchange="userInput.check('scotland', 'libdems', value)"/></div>
+         <div><input value=0 type="text" onchange="userInput.check('scotland', 'ukip', value)"/></div>
+         <div><input value=0 type="text" onchange="userInput.check('scotland', 'green', value)"/></div>
+         <div><input value=0 type="text" onchange="userInput.check('scotland', 'snp', value)"/></div>
+         <div><span id=userinput-scotland-other>100</span></div>
+     </div>
+
+     <div>
+       <div></div>
+       <div><div class="party-flair conservative"></div></div>
+       <div><div class="party-flair labour"></div></div>
+       <div><div class="party-flair libdems"></div></div>
+       <div><div class="party-flair ukip"></div></div>
+       <div><div class="party-flair green"></div></div>
+       <div><div class="party-flair plaidcymru"></div></div>
+       <div><div class="party-flair other"></div></div>
+     </div>
+
+     <div id="userinput-wales">
+       <div>Wales</div>
+       <div><input value=0 type="text" onchange="userInput.check('wales', 'conservative', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('wales', 'labour', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('wales', 'libdems', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('wales', 'ukip', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('wales', 'green', value)"/></div>
+       <div><input value=0 type="text" onchange="userInput.check('wales', 'plaidcymru', value)"/></div>
+       <div><span id=userinput-wales-other>100</span></div>
+     </div>
+
+     <div>
+      <div></div>
+      <div><div class="party-flair dup"></div></div>
+      <div><div class="party-flair sinnfein"></div></div>
+      <div><div class="party-flair uu"></div></div>
+      <div><div class="party-flair sdlp"></div></div>
+      <div><div class="party-flair alliance"></div></div>
+      <div></div>
+      <div><div class="party-flair other"></div></div>
+     </div>
+
+     <div id="userinput-northernireland">
+      <div>N.I</div>
+      <div><input value=0 type="text" onchange="userInput.check('northernireland', 'dup', value)"/></div>
+      <div><input value=0 type="text" onchange="userInput.check('northernireland', 'sinnfein', value)"/></div>
+      <div><input value=0 type="text" onchange="userInput.check('northernireland', 'uu', value)"/></div>
+      <div><input value=0 type="text" onchange="userInput.check('northernireland', 'sdlp', value)"/></div>
+      <div><input value=0 type="text" onchange="userInput.check('northernireland', 'alliance', value)"/></div>
+      <div></div>
+      <div><span id=userinput-northernireland-other>100</span></div>
+     </div>
+ </div>
+
+  <div id="userinput-submit">
+    <button onclick="userInput.handle()">Submit</button>
+    <button onclick="userInput.reset()">Reset</button>
+  </div>
+</div>

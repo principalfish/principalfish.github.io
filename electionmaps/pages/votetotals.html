@@ -1,0 +1,39 @@
+<h2>Vote Totals : <span id="votetotalsarea"></span><div class="closebox" onclick="uiAttr.hideDiv('votetotalsbutton')">X</div></h2>
+<div>
+  <div id=votetotals-head>
+    <label for="selectareatotals"> Select Region</label>
+          <select id="selectareatotals" selected="selected" onchange="voteTotals.calculate(value)">
+              <option value="null" selected>	</option>
+              <option value="unitedkingdom">United Kingdom</option>
+              <option value="greatbritain">Great Britain</option>
+              <option value="england">England</option>
+              <option value="scotland">Scotland</option>
+              <option value="wales">Wales</option>
+              <option value="northernireland">Northern Ireland</option>
+              <option value="eastofengland">East of England</option>
+              <option value="eastmidlands"> East Midlands</option>
+              <option value="london">London</option>
+              <option value="northeastengland">North East England</option>
+              <option value="northwestengland">North West England</option>
+              <option value="southeastengland">South East England</option>
+              <option value="southwestengland">South West England</option>
+              <option value="westmidlands">West Midlands</option>
+              <option value="yorkshireandthehumber">Yorkshire & Humber</option>
+          </select>
+          <div id="votetotals-turnout"></div>
+  </div>
+
+  <div id="votetotals-table">
+      <div id=votetotals-table-titles>
+        <div>
+          <div>Party</div>
+          <div id="votetotals-sortseats" onclick="voteTotals.tableSortHandler('seats')">Seats</div>
+          <div>&#177;</div>
+          <div id="votetotals-sortvotes" class="sort-active" onclick="voteTotals.tableSortHandler('votes')">Votes</div>
+          <div id="votetotals-sortvotePercent" onclick="voteTotals.tableSortHandler('votePercent')">Vote %</div>
+          <div id="votetotals-sortvotePercentChange" onclick="voteTotals.tableSortHandler('votePercentChange')">&#177;</div>
+        </div>
+      </div>
+    <div id="votetotals-table-data"></div>
+  </div>
+</div>

@@ -1,0 +1,57 @@
+<h2>Filters<div class="closebox" onclick="uiAttr.hideDiv('filtersbutton')">X</div></h2>
+<div>
+  <div class="filter-select">
+    <select id="filter-current" onchange="filters.selectHandle(this.id, value)">
+      <option selected value="null">by party...</option>
+      <option value="labour">Labour</option>
+      <option value="conservative">Conservative</option>
+      <option value="libdems">Lib Dems</option>
+      <option value="ukip">UKIP</option>
+      <option value="snp">SNP</option>
+      <option value="plaidcymru">Plaid Cymru</option>
+      <option value="green">Green</option>
+      <option value="dup">DUP</option>
+      <option value="sinnfein">Sinn Féin</option>
+      <option value="sdlp">SDLP</option>
+      <option value="alliance">Alliance</option>
+      <option value="uu">UUP</option>
+      <option value="other">Other</option>
+     </select>
+  </div>
+
+  <div class="filter-select">
+    <select id="filter-region" onchange="filters.selectHandle(this.id, value), voteTotals.calculate(value)">
+      <option selected value="null"> by region...</option>
+      <option value="england">England</option>
+      <option value="scotland">Scotland</option>
+      <option value="wales">Wales</option>
+      <option value="northernireland">Northern Ireland</option>
+      <option value="eastofengland">East of England</option>
+      <option value="eastmidlands"> East Midlands </option>
+      <option value="london">London</option>
+      <option value="northeastengland">North East England</option>
+      <option value="northwestengland">North West England</option>
+      <option value="southeastengland">South East England</option>
+      <option value="southwestengland">South West England</option>
+      <option value="westmidlands">West Midlands</option>
+      <option value="yorkshireandthehumber">Yorkshire & Humber</option>
+    </select>
+  </div>
+
+  <div class="filter-select">
+    <form id="filter-majority">
+      Majority
+      <input type ="text" name="low" value=0 onchange="filters.majority(this.name, value)"/>
+      to
+      <input type="text" name="high" value=100 onchange="filters.majority(this.name, value)"/>
+    </form>
+  </div>
+
+  <div class="filter-select">
+    <button id="filter-byElection" onclick="filters.byElection(this.className)">By-Elections</button>
+  </div>
+
+  <div class="filter-select">
+    <button id="filter-reset" onclick="filters.reset()">Reset</button>
+  </div>
+</div>

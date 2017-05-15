@@ -1110,3 +1110,9 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 196	yougov	12	5	2017	Midlands and Wales	350	52	31	6	4	3		2	1					
 196	yougov	12	5	2017	North England	393	45	43	6	4	1			1					
 196	yougov	12	5	2017	Scotland	150	33	15	5		4	41		2					
+197	survation	13	5	2017	London	101	35	45	11	5	4			2					
+197	survation	13	5	2017	Midlands	121	78	33	6	3	1			0					
+197	survation	13	5	2017	North	177	83	74	11	5	3			1					
+197	survation	13	5	2017	South	252	136	54	34	15	9			4					
+197	survation	13	5	2017	Scotland	70	22	13	0		1	33		2					
+197	survation	13	5	2017	Wales	44	19	14	3		1		7						

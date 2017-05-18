@@ -1137,3 +1137,10 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 200	yougov	17	5	2017	Midlands and Wales	400	46	34	6	7	2		4	0					
 200	yougov	17	5	2017	North England	449	43	46	4	5	1			1					
 200	yougov	17	5	2017	Scotland	171	28	22	6	1	1	43		0					
+201	mori	17	5	2017	North	238	78	77	9	2	5								
+201	mori	17	5	2017	Midlands	171	126	76	14	2	10		1	1					
+201	mori	17	5	2017	Wales	230													
+201	mori	17	5	2017	South	264	125	93	28	13	4			1					
+201	mori	17	5	2017	London	97	38	47	2	8	1								
+201	mori	17	5	2017	England	626	317	224	49	16	19			1					
+201	mori	17	5	2017	Scotland	67	31	7	2			27							

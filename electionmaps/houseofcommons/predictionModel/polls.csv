@@ -1145,3 +1145,6 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 201	mori	17	5	2017	England	626	317	224	49	16	19			1					
 201	mori	17	5	2017	Scotland	67	31	7	2			27							
 202	yougovscotland	18	5	2017	Scotland	100	29	19	6	1	2	42		1					
+203	opinium	16	5	2017	England	1005	486	344	83	60	25			7					
+203	opinium	16	5	2017	Scotland	120	34	21	6	2	0	56		1					
+203	opinium	16	5	2017	Wales	61	26	26	3	2	0		4						

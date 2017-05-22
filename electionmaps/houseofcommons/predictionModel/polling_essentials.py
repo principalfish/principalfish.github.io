@@ -40,8 +40,8 @@ pollster_weights = {
     "bmg" : 0.75,
     "gfk" : 1,
     "panelbasescotland" : 3,
-    "yougovwales" : 6,
-    "yougovscotland" : 6,
+    "yougovwales" : 8,
+    "yougovscotland" : 8,
     "lucidtalk" : 1,
     "panelbase" : 1,
     "yougovlondon" : 6
@@ -147,7 +147,7 @@ class Seat(object):
         }
 
     def check_standing(self, seat_data):
-    
+
         if "ukip" not in seat_data:
             if "ukip" in self.output["partyInfo"]:
                 self.output["partyInfo"]["ukip"]["standing"] = 0
@@ -165,6 +165,7 @@ class RegionalTotals(object):
         self.new_totals = {}
         self.relative = {}
         self.numerical = {}
+        self.total_weight = 0
 
     #numerical totals per region, combine other and others
     def get_regional_totals(self, data_set):
@@ -191,10 +192,12 @@ class RegionalTotals(object):
         return party_votes
 
     def normalise(self):
+
         # sometimes parties dip below 0
         for party in self.new_totals:
             if self.new_totals[party] < 0:
                 self.new_totals[party] = 0
+
 
         sum = 0
         for party in self.new_totals:
@@ -230,8 +233,7 @@ class Poll(object):
         self.date = datetime(int(year), int(month), int(day))
         self.regions = {}
         self.weight = pollster_weights[self.company]
-
-
+        
     def add_row(self, row):
         to_add = {}
         for party in parties:

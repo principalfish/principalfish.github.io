@@ -79,6 +79,7 @@ for poll, data in polls.iteritems():
 
                 previous_area_percentage = previous_turnout / float(previous_total)
                 #alter poll to show change
+
                 numbers[party] -= previous_area_percentage
 
             for region in regions_in_poll_area:
@@ -90,8 +91,10 @@ for poll, data in polls.iteritems():
 
 
 #END POLL ANALYSIS
+
 #START SEAT ANALYSIS
 for region, data in regional.iteritems():
+
     data.normalise()
     data.get_old_percentages()
     data.get_relative_change()

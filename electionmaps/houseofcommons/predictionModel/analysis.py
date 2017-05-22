@@ -98,9 +98,47 @@ for region, data in regional.iteritems():
     data.get_numerical_change()
 
 to_dump = {}
+
+# for redistr - check if standing
+
+with open("candidates.json", "r") as candidate_json:
+    candidates = json.load(candidate_json)
+diff_names = {u'Birmingham, Edgbaston' : "Birmingham Edgbaston",
+ u'Birmingham, Erdington' : 'Birmingham Erdington' ,
+ u'Birmingham, Hall Green' : u'Birmingham Hall Green',
+ u'Birmingham, Hodge Hill' : 'Birmingham Hodge Hill',
+ u'Birmingham, Ladywood' : 'Birmingham Ladywood',
+ u'Birmingham, Northfield' : 'Birmingham Northfield',
+ u'Birmingham, Perry Barr' : 'Birmingham Perry Barr',
+ u'Birmingham, Selly Oak' : 'Birmingham Selly Oak',
+ u'Birmingham, Yardley': 'Birmingham Yardley',
+ u'Brighton, Kemptown' : 'Brighton Kemptown',
+ u'Brighton, Pavilion' : 'Brighton Pavilion',
+ u'Bury St Edmunds': 'Bury St. Edmunds',
+ u'Holborn and St Pancras' : 'Holborn and St. Pancras',
+ u'Plymouth, Moor View' : 'Plymouth Moor View',
+ u'Sheffield, Brightside and Hillsborough' : 'Sheffield Brightside and Hillsborough',
+ u'Sheffield, Hallam' : 'Sheffield Hallam',
+ u'Sheffield, Heeley' : 'Sheffield Heeley',
+ u'Southampton, Itchen' : 'Southampton Itchen',
+ u'Southampton, Test' : 'Southampton Test',
+ u'St Albans' : 'St. Albans',
+ u'St Austell and Newquay' : 'St. Austell and Newquay',
+ u'St Helens North' : 'St. Helens North',
+ u'St Helens South and Whiston' : 'St. Helens South and Whiston',
+ u'St Ives' : "St. Ives",
+ u'Ynys M\xf4n' : "Ynys Mon"}
+
+for key, value in diff_names.iteritems():
+    candidates[value] = candidates.pop(key)
+
 for seat, data in seats.iteritems():
     data.get_new_data(regional[data.region].numerical)
     data.generate_output()
+
+    #check if standing
+    if arguments[1] == "650":
+        data.check_standing(candidates[seat])
     to_dump[seat] = data.output
 
 with open("../" + model_map[arguments[1]][1], "w") as output:

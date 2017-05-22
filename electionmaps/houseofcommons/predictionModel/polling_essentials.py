@@ -146,6 +146,15 @@ class Seat(object):
             "partyInfo" : self.new_partyInfo
         }
 
+    def check_standing(self, seat_data):
+    
+        if "ukip" not in seat_data:
+            if "ukip" in self.output["partyInfo"]:
+                self.output["partyInfo"]["ukip"]["standing"] = 0
+
+        if "green" not in seat_data:
+            if "green" in self.output["partyInfo"]:
+                self.output["partyInfo"]["green"]["standing"] = 0
 
 class RegionalTotals(object):
 

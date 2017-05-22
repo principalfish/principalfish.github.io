@@ -50,7 +50,7 @@ var redistribute = {
       alert("Percentages add up to more than 100!");
     }
     else {
-      this.reset()
+      this.reset();
       $.each(this.values, function(partyFrom, values){
         if (redistribute[partyFrom] == true){
           $.each(currentMap.seatData, function(seat, data){

@@ -374,11 +374,14 @@ var userInput = {
       }
     });
 
+    currentMap.seatDataBackup = jQuery.extend(true, {}, currentMap.seatData);
+    redistribute.resetInputs();
   },
 
   reset : function(){
 
     // inputs reset in pageLoad
+    redistribute.resetInputs();
     currentMap.seatData = jQuery.extend(true, {}, userInput.seatDataCopy);
 
     $(".map").remove();

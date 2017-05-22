@@ -318,6 +318,14 @@ svg .mapdark {
   #battlegrounds > button:focus {
     outline: none; }
 
+#redistribute {
+  position: absolute;
+  top: 5px;
+  left: 195px;
+  z-index: 1; }
+  #redistribute > button:focus {
+    outline: none; }
+
 #searchforseat {
   position: absolute;
   top: 5px;
@@ -674,17 +682,41 @@ svg .mapdark {
   #userinput #userinput-submit {
     padding-top: 5px; }
 
-#battlegroundsselect {
+#battlegroundsselect, #redistributeselect {
   width: 200px;
   top: 75px;
   left: 400px; }
-  #battlegroundsselect select {
+  #battlegroundsselect select, #redistributeselect select {
     width: 90%;
     display: inline-block;
     margin-top: 10px; }
-  #battlegroundsselect input {
+  #battlegroundsselect input, #redistributeselect input {
     width: 35px;
     margin-top: 10px; }
+
+#redistributeselect {
+  left: 350px;
+  width: 250px; }
+  #redistributeselect input {
+    width: 30px;
+    height: 16px; }
+  #redistributeselect #redist-table {
+    padding-bottom: 5px; }
+    #redistributeselect #redist-table > div {
+      width: auto; }
+      #redistributeselect #redist-table > div > div {
+        text-align: center;
+        display: inline-block; }
+      #redistributeselect #redist-table > div > div:nth-child(5n-4) {
+        width: 35px; }
+      #redistributeselect #redist-table > div > div:nth-child(5n-3) {
+        width: 35px; }
+      #redistributeselect #redist-table > div > div:nth-child(5n-2) {
+        width: 35px; }
+      #redistributeselect #redist-table > div > div:nth-child(5n-1) {
+        width: 35px; }
+      #redistributeselect #redist-table > div > div:nth-child(5n) {
+        width: 35px; }
 
 .popupdiv {
   position: absolute;

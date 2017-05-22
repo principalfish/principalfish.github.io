@@ -84,7 +84,7 @@ var filters = {
         } else if (parameter == "gains"){
           if (data.seatInfo.current == currentMap.previousSeatData[seat].seatInfo.current){
             meetsCriteria = false;
-          }
+          } 
 
         } else {
 
@@ -96,6 +96,7 @@ var filters = {
       });
 
 
+
       if (meetsCriteria == true){
         filters.opacities[seat] = 1;
         data.filtered = true;
@@ -105,8 +106,9 @@ var filters = {
       }
     })
 
-    filters.display();
     filters.changeSnpBorders();
+    filters.display();
+
     //filters.getSeatlist();
   },
 
@@ -159,7 +161,6 @@ var filters = {
       var className = $(obj).attr("class");
       var darkClasses = ["map snp", "map libdems", "map green", "map sdlp"]
       if (darkClasses.indexOf(className) != -1 ){
-        $(obj).removeClass("map");
         $(obj).addClass("mapdark");
       }
 

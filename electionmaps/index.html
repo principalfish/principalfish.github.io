@@ -69,6 +69,11 @@
 				<button id="battlegroundsmap" onclick="uiAttr.showDiv('battlegrounds')">Battlegrounds</button>
 		</div>
 
+		<div id="redistribute">
+				<button id="redistributemap" onclick="uiAttr.showDiv('redistribute')">Redistribute - <span style="color: red">NEW!</span></button>
+		</div>
+
+
 		<div id="keyonmap">
 
 		</div>
@@ -95,7 +100,7 @@
 		</div>
 
 		<div id="predictbutton" class="mapbutton hidden" onclick="uiAttr.clickMapButton(this)">
-				<button onclick="">Predict it</button>
+				<button onclick="">Predict</button>
 		</div>
 
 
@@ -138,6 +143,12 @@
 		<div id="battlegroundsselect"  class="dash-box popupdiv hidden" >
 			<script>$("#battlegroundsselect").load("pages/battlegrounds.html")</script>
 		</div>
+
+		<div id="redistributeselect"  class="dash-box popupdiv hidden" >
+			<script>$("#redistributeselect").load("pages/redistribute.html")</script>
+		</div>
+
+
 	</div>
 </body>
 

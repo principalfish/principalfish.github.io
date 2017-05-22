@@ -73,6 +73,19 @@ svg .mapdark {
   }
 }
 
+
+#redistribute {
+  position: absolute;
+  top: $widget-margin-top;
+  left: 195px;
+  z-index: 1;
+
+  > button:focus {
+      outline: none;
+  }
+}
+
+
 // #seatlistbutton {
 //   position: absolute;
 //   top: $widget-margin-top;

@@ -38,6 +38,9 @@ var uiAttr = {
     if (id == "battlegrounds"){
       battleground.active = true;
     }
+     if (id == "redistribute"){
+       redistribute.active = true;
+     }
     // make div visible and draggable by h2
     // on mousedown change z-index - bring to front
     $(uiAttr.buttonToDiv[id]).show();
@@ -62,6 +65,10 @@ var uiAttr = {
       battleground.active = false;
     }
 
+    if (id == "redistribute"){
+      redistribute.active = false;
+    }
+
     if (i != -1){
       uiAttr.zIndexTracker.splice(i, 1);
     }
@@ -80,7 +87,8 @@ var uiAttr = {
     "seatlist-extend" : "#seatlist-extended",
     "predictbutton" : "#userinput",
     "seat-600" : "#seat-600",
-    "battlegrounds" : "#battlegroundsselect"
+    "battlegrounds" : "#battlegroundsselect",
+    "redistribute" : "#redistributeselect"
   },
 
   //store  and reorder z indexes of hidden divs
@@ -117,8 +125,11 @@ var uiAttr = {
         uiAttr.showDiv(button);
       } else if (battleground.active){
         uiAttr.showDiv("battlegroundsbutton")
-      } else {
+      } else if (redistribute.active){
+        uiAttr.showDiv("redistributebutton")
 
+      }
+      else {
         uiAttr.hideDiv(button);
       }
     });

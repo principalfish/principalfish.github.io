@@ -85,6 +85,9 @@ function pageLoadEssentials(){
 		$("#filter-byElection").show();
 	}
 
+	// for reset redist
+	currentMap.seatDataBackup = jQuery.extend(true, {}, currentMap.seatData);
+
 	if (currentMap.predict == true){
 		userInput.seatDataCopy = jQuery.extend(true, {}, currentMap.seatData);
 	}
@@ -98,6 +101,10 @@ function pageLoadEssentials(){
 	// battlegrounds
 	if (currentMap.battlegrounds == false){
 		$("#battlegrounds").hide();
+	}
+
+	if (currentMap.redistribute == false){
+		$("#redistribute").hide();
 	}
 
 	// firefox css nonsense
@@ -117,7 +124,7 @@ function searchSeats(value){
 };
 
 
-function pageSetting(name, mapurl, dataurl, previous, election, predict, battlegrounds){
+function pageSetting(name, mapurl, dataurl, previous, election, predict, battlegrounds, redistribute){
 
 	this.name = name;
 	this.mapurl = mapurl;
@@ -126,6 +133,7 @@ function pageSetting(name, mapurl, dataurl, previous, election, predict, battleg
 	this.election = election;
 	this.predict = predict;
 	this.battlegrounds = battlegrounds;
+	this.redistribute = redistribute;
 
 	this.seatData = {};
 	this.previousSeatData = {};
@@ -149,14 +157,14 @@ var dataurls =  {
 	hodgesrule : "houseofcommons/hodgesrule.json"
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true);
-var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, true);
-var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false); // no 2005 data to compare atm
-var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false, true);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true);
-var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false); // nodata to compare
-var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false);
-var hodgesrule = new pageSetting("hodgesrule", dataurls.map650, dataurls.hodgesrule, dataurls.e2015, true, false, true);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true, false);
+var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, true, false);
+var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
+var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false, true, true);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true, true);
+var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false, false); // nodata to compare
+var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false, false);
+var hodgesrule = new pageSetting("hodgesrule", dataurls.map650, dataurls.hodgesrule, dataurls.e2015, true, false, true, false);
 
 function initialization(){
 

@@ -471,7 +471,7 @@ var seatsPerRegion2015 = {
         } else if (parameter == "gains"){
           if (data.seatInfo.current == currentMap.previousSeatData[seat].seatInfo.current){
             meetsCriteria = false;
-          }
+          } 
 
         } else {
 
@@ -483,6 +483,7 @@ var seatsPerRegion2015 = {
       });
 
 
+
       if (meetsCriteria == true){
         filters.opacities[seat] = 1;
         data.filtered = true;
@@ -492,8 +493,9 @@ var seatsPerRegion2015 = {
       }
     })
 
-    filters.display();
     filters.changeSnpBorders();
+    filters.display();
+
     //filters.getSeatlist();
   },
 
@@ -546,7 +548,6 @@ var seatsPerRegion2015 = {
       var className = $(obj).attr("class");
       var darkClasses = ["map snp", "map libdems", "map green", "map sdlp"]
       if (darkClasses.indexOf(className) != -1 ){
-        $(obj).removeClass("map");
         $(obj).addClass("mapdark");
       }
 
@@ -1055,6 +1056,9 @@ function pageLoadEssentials(){
 		$("#filter-byElection").show();
 	}
 
+	// for reset redist
+	currentMap.seatDataBackup = jQuery.extend(true, {}, currentMap.seatData);
+
 	if (currentMap.predict == true){
 		userInput.seatDataCopy = jQuery.extend(true, {}, currentMap.seatData);
 	}
@@ -1068,6 +1072,10 @@ function pageLoadEssentials(){
 	// battlegrounds
 	if (currentMap.battlegrounds == false){
 		$("#battlegrounds").hide();
+	}
+
+	if (currentMap.redistribute == false){
+		$("#redistribute").hide();
 	}
 
 	// firefox css nonsense
@@ -1087,7 +1095,7 @@ function searchSeats(value){
 };
 
 
-function pageSetting(name, mapurl, dataurl, previous, election, predict, battlegrounds){
+function pageSetting(name, mapurl, dataurl, previous, election, predict, battlegrounds, redistribute){
 
 	this.name = name;
 	this.mapurl = mapurl;
@@ -1096,6 +1104,7 @@ function pageSetting(name, mapurl, dataurl, previous, election, predict, battleg
 	this.election = election;
 	this.predict = predict;
 	this.battlegrounds = battlegrounds;
+	this.redistribute = redistribute;
 
 	this.seatData = {};
 	this.previousSeatData = {};
@@ -1119,14 +1128,14 @@ var dataurls =  {
 	hodgesrule : "houseofcommons/hodgesrule.json"
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true);
-var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, true);
-var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false); // no 2005 data to compare atm
-var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false, true);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true);
-var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false); // nodata to compare
-var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false);
-var hodgesrule = new pageSetting("hodgesrule", dataurls.map650, dataurls.hodgesrule, dataurls.e2015, true, false, true);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true, false);
+var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, true, false);
+var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
+var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false, true, true);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true, true);
+var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false, false); // nodata to compare
+var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false, false);
+var hodgesrule = new pageSetting("hodgesrule", dataurls.map650, dataurls.hodgesrule, dataurls.e2015, true, false, true, false);
 
 function initialization(){
 
@@ -1230,6 +1239,131 @@ var urlParamMap = {
         }
       });
     }
+  }
+}
+;var redistribute = {
+  active: false,
+
+  validInput : true,
+
+  ukip: false,
+  green : false,
+
+  values : {
+
+    "ukip" : {"conservative" : 0, "labour" : 0, "libdems" : 0, "notVoting" : 100},
+    "green" : {"conservative" : 0, "labour" : 0, "libdems" : 0, "notVoting" : 100}
+  },
+
+  check  : function(partyFrom, partyTo, value){
+
+    valueInt = parseInt(value);
+
+    if (Number.isInteger(valueInt)){
+      this.values[partyFrom][partyTo] = valueInt;
+    } else {
+      this.values[partyFrom][partyTo] = 0;
+    }
+
+    var notVoting = this.values[partyFrom].notVoting;
+    var sumUserInput = this.values[partyFrom].conservative + this.values[partyFrom].labour + this.values[partyFrom].libdems;
+    this.values[partyFrom].notVoting = 100 - sumUserInput;
+
+    var notVotingSpan =   this.values[partyFrom].notVoting
+
+    this.validInput = true;
+
+    if (notVotingSpan < 0){
+      notVotingSpan = "<0";
+      this.validInput = false;
+    }
+
+    $("#redist-" + partyFrom + "-notvoting" ).text(notVotingSpan);
+
+    if (this.values[partyFrom].notVoting != 100){
+      this[partyFrom] = true;
+    } else {
+      this[partyFrom] = false;
+    }
+
+  },
+
+  handle : function(){
+    if (!(this.validInput)){
+      alert("Percentages add up to more than 100!");
+    }
+    else {
+      this.reset()
+      $.each(this.values, function(partyFrom, values){
+        if (redistribute[partyFrom] == true){
+          $.each(currentMap.seatData, function(seat, data){
+
+            if (partyFrom in data.partyInfo){
+
+              if (data.partyInfo[partyFrom].standing == 0){
+
+                redistribute.calculate(data, partyFrom, values)
+              }
+            }
+          })
+        }
+      })
+      filters.reset();
+    }
+  },
+
+  calculate : function(data, partyFrom, values){
+
+    var currentVote = data.partyInfo[partyFrom].total;
+    data.seatInfo.turnout -= (currentVote * values.notVoting / 100);
+
+    $.each(values, function(party, voteAdded){
+      if (party in data.partyInfo){
+        data.partyInfo[party].total += voteAdded * currentVote / 100;
+      }
+    });
+
+    delete data.partyInfo[partyFrom];
+    // recalculate majority + current
+    var maxParty = null;
+    var maxVotes = 0 ;
+    var votes = []
+    $.each(data.partyInfo, function(party, data){
+      votes.push(data.total);
+      if (data.total > maxVotes){
+        maxVotes = data.total;
+        maxParty = party ;
+      }
+    });
+
+    votes.sort(function(a, b){
+      return b > a;
+    })
+
+    data.seatInfo.current = maxParty;
+    data.seatInfo.majority = votes[0] - votes[1]
+
+  },
+
+  reset : function(){
+    currentMap.seatData = jQuery.extend(true, {}, currentMap.seatDataBackup);
+    filters.reset();
+  },
+
+  resetInputs : function(){
+    $("#redist-table").find("input:text").val(0);
+    $("#redist-ukip-notvoting").text("100");
+    $("#redist-green-notvoting").text("100");
+
+    this.green = false;
+    this.ukip = false;
+
+    this.values = {
+      "ukip" : {"conservative" : 0, "labour" : 0, "libdems" : 0, "notVoting" : 100},
+      "green" : {"conservative" : 0, "labour" : 0, "libdems" : 0, "notVoting" : 100}
+    }
+
+    this.reset()
   }
 }
 ;var seatInfoTable = {
@@ -1502,6 +1636,9 @@ function activeSeat(seat){
     if (id == "battlegrounds"){
       battleground.active = true;
     }
+     if (id == "redistribute"){
+       redistribute.active = true;
+     }
     // make div visible and draggable by h2
     // on mousedown change z-index - bring to front
     $(uiAttr.buttonToDiv[id]).show();
@@ -1526,6 +1663,10 @@ function activeSeat(seat){
       battleground.active = false;
     }
 
+    if (id == "redistribute"){
+      redistribute.active = false;
+    }
+
     if (i != -1){
       uiAttr.zIndexTracker.splice(i, 1);
     }
@@ -1544,7 +1685,8 @@ function activeSeat(seat){
     "seatlist-extend" : "#seatlist-extended",
     "predictbutton" : "#userinput",
     "seat-600" : "#seat-600",
-    "battlegrounds" : "#battlegroundsselect"
+    "battlegrounds" : "#battlegroundsselect",
+    "redistribute" : "#redistributeselect"
   },
 
   //store  and reorder z indexes of hidden divs
@@ -1581,8 +1723,11 @@ function activeSeat(seat){
         uiAttr.showDiv(button);
       } else if (battleground.active){
         uiAttr.showDiv("battlegroundsbutton")
-      } else {
+      } else if (redistribute.active){
+        uiAttr.showDiv("redistributebutton")
 
+      }
+      else {
         uiAttr.hideDiv(button);
       }
     });
@@ -1965,11 +2110,14 @@ function activeSeat(seat){
       }
     });
 
+    currentMap.seatDataBackup = jQuery.extend(true, {}, currentMap.seatData);
+    redistribute.resetInputs();
   },
 
   reset : function(){
 
     // inputs reset in pageLoad
+    redistribute.resetInputs();
     currentMap.seatData = jQuery.extend(true, {}, userInput.seatDataCopy);
 
     $(".map").remove();

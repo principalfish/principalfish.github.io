@@ -14,3 +14,47 @@
     margin-top: 10px;
   }
 }
+
+
+// and redistribute
+
+#redistributeselect {
+  @extend #battlegroundsselect;
+
+  left: 350px;
+  width: 250px;
+
+  input {
+    width: 30px;
+    height: 16px;
+  }
+
+  #redist-table {
+    padding-bottom: 5px;
+    > div {
+      width: auto;
+
+      > div {
+        text-align : center;
+        display: inline-block;
+      }
+
+      > div:nth-child(5n-4){
+        width: 35px;
+      }
+      > div:nth-child(5n-3){
+        width: 35px;
+      }
+      > div:nth-child(5n-2){
+        width: 35px;
+      }
+      > div:nth-child(5n-1){
+        width: 35px;
+      }
+      > div:nth-child(5n){
+        width: 35px;
+      }
+    }
+  }
+
+}

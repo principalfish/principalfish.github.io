@@ -73,10 +73,12 @@ var redistribute = {
 
     var currentVote = data.partyInfo[partyFrom].total;
     data.seatInfo.turnout -= (currentVote * values.notVoting / 100);
+    data.seatInfo.turnout = Math.round(data.seatInfo.turnout);
 
     $.each(values, function(party, voteAdded){
       if (party in data.partyInfo){
         data.partyInfo[party].total += voteAdded * currentVote / 100;
+        data.partyInfo[party].total = Math.round(data.partyInfo[party].total);
       }
     });
 

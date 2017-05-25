@@ -31,7 +31,7 @@ for region in regions:
 # get polls from csv
 
 with open("polls.csv", "rb") as polls_file:
-    poll_data = csv.DictReader(polls_file, delimiter = "\t")
+    poll_data = csv.DictReader(polls_file, delimiter = ",")
     poll_codes = []
     poll_rows = []
     for row in poll_data:

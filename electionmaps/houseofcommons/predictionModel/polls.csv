@@ -1,1173 +1,1178 @@
-code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu
-1001	me	3	3	2017	Northern Ireland	1004	3			2	23			77	119	279	91	281	129
-1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
-1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
-1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					
-1001	me	7	5	2015	All	1000	378	312	81	129	38	49	6	9					
-1	survation	9	5	2015	London	115	43	45	7	17	3								
-1	survation	9	5	2015	Midlands	157	73	49	10	20	4								
-1	survation	9	5	2015	North	199	76	82	6	26	8								
-1	survation	9	5	2015	South	313	157	76	23	40	11			6					
-1	survation	9	5	2015	Scotland	75	10	9	2	3	1	49							
-1	survation	9	5	2015	Wales	52	11	21	8	2	3		7						
-2	yougov	26	5	2015	London	219	34	44	7	6	5			1					
-2	yougov	26	5	2015	Rest of South	555	49	21	9	15	6								
-2	yougov	26	5	2015	Midlands and Wales	366	46	31	5	16	2								
-2	yougov	26	5	2015	North England	420	38	38	6	16	2								
-2	yougov	26	5	2015	Scotland	149	15	20	5	3	1	56							
-3	comres	31	5	2015	Scotland	51	11	8	5	0	2	24		1					
-3	comres	31	5	2015	North East England	23	11	8	0	3	1			0					
-3	comres	31	5	2015	North West England	57	20	23	5	6	3			1					
-3	comres	31	5	2015	Yorkshire and Humber	48	18	22	2	5	1			1					
-3	comres	31	5	2015	West Midlands	45	20	9	2	8	4			2					
-3	comres	31	5	2015	East Midlands	46	19	16	1	7	1			0					
-3	comres	31	5	2015	Wales	22	4	10	1	2	1		4	0					
-3	comres	31	5	2015	East of England	56	29	11	6	8	2			0					
-3	comres	31	5	2015	London	66	27	25	8	1	4			1					
-3	comres	31	5	2015	South East England	75	35	15	7	10	3			3					
-3	comres	31	5	2015	South West England	45	23	7	8	2	4			0					
-4	icm2	14	6	2015	Scotland	66	15	11	3	0	5	32		0					
-4	icm2	14	6	2015	Wales	26	5	9	2	5	1		3	0					
-4	icm2	14	6	2015	North	151	47	65	11	20	7			1					
-4	icm2	14	6	2015	Midlands	169	77	47	8	26	10			1					
-4	icm2	14	6	2015	South	247	101	70	28	32	13			2					
-5	mori	16	6	2015	North	169	77	61	16	3	10			0					
-5	mori	16	6	2015	Midlands	212	77	62	18	26	14		14	1					
-5	mori	16	6	2015	Wales	0	0	0	0	0	0			0					
-5	mori	16	6	2015	South	246	108	69	26	24	18			0					
-5	mori	16	6	2015	London	84	33	36	9	3	3			0					
-5	mori	16	6	2015	England	593	255	183	60	52	39								
-5	mori	16	6	2015	Scotland	65	11	14	3	1		36							
-6	comres	28	6	2015	Scotland	51	14	7	2	1	1	26		0					
-6	comres	28	6	2015	North East England	25	8	7	4	4	1			0					
-6	comres	28	6	2015	North West England	54	21	23	4	4	1			1					
-6	comres	28	6	2015	Yorkshire and Humber	45	16	19	2	4	1			1					
-6	comres	28	6	2015	West Midlands	51	20	13	5	9	3			2					
-6	comres	28	6	2015	East Midlands	36	17	9	4	4	1			0					
-6	comres	28	6	2015	Wales	26	7	7	3	3	2		4	0					
-6	comres	28	6	2015	East of England	56	24	12	4	11	3			2					
-6	comres	28	6	2015	London	67	17	24	5	8	11			2					
-6	comres	28	6	2015	South East England	70	34	16	7	6	4			3					
-6	comres	28	6	2015	South West England	45	29	5	5	5	2								
-7	icm2	12	7	2015	Scotland	65	13	22	1	0	0	27		2					
-7	icm2	12	7	2015	Wales	32	9	11	1	5	1		5	0					
-7	icm2	12	7	2015	North	165	53	71	11	28	3			0					
-7	icm2	12	7	2015	Midlands	163	74	52	4	24	8			0					
-7	icm2	12	7	2015	South	232	101	68	25	24	13			1					
-8	mori	20	7	2015	North	160	51	66	11	22	10			0					
-8	mori	20	7	2015	Midlands	206	73	65	25	18	20		4	2					
-8	mori	20	7	2015	Wales	0	0	0	0	0	0			0					
-8	mori	20	7	2015	South	226	101	65	25	17	16			1					
-8	mori	20	7	2015	London	82	32	23	9	5	4			0					
-8	mori	20	7	2015	England	559	215	180	58	56	44			3					
-8	mori	20	7	2015	Scotland	63	17	8	6		4	28		0					
-9	comres	26	7	2015	Scotland	53	10	8	2	1	1	29		2					
-9	comres	26	7	2015	North East England	19	7	7	1	4	0			0					
-9	comres	26	7	2015	North West England	65	19	29	2	9	4			2					
-9	comres	26	7	2015	Yorkshire and Humber	51	15	21	3	6	4			1					
-9	comres	26	7	2015	West Midlands	51	22	15	2	7	4			2					
-9	comres	26	7	2015	East Midlands	40	21	15	1	3	1			0					
-9	comres	26	7	2015	Wales	27	8	5	2	3	2		7	1					
-9	comres	26	7	2015	East of England	62	34	12	5	8	3			0					
-9	comres	26	7	2015	London	66	25	22	9	3	4			3					
-9	comres	26	7	2015	South East England	74	40	17	6	8	3			2					
-9	comres	26	7	2015	South West England	53	25	10	7	6	3			2					
-10	icm2	9	8	2015	Scotland	65	13	22	1	0	0	27		2					
-10	icm2	9	8	2015	Wales	32	9	11	1	5	1		5	0					
-10	icm2	9	8	2015	North	165	53	71	11	28	3			0					
-10	icm2	9	8	2015	Midlands	163	74	52	4	24	8			0					
-10	icm2	9	8	2015	South	232	101	68	25	24	13			1					
-11	survation	13	8	2015	London	101	35	41	6	19	1								
-11	survation	13	8	2015	Midlands	143	82	33	1	24	3								
-11	survation	13	8	2015	North	196	58	95	10	27	6								
-11	survation	13	8	2015	South	284	115	79	26	54	9			1					
-11	survation	13	8	2015	Scotland	97	24	21	5	1	2	44							
-11	survation	13	8	2015	Wales	37	16	12	2	2			4						
-12	comres	13	8	2015	Scotland	119	27	17	8	5	4	57		9					
-12	comres	13	8	2015	North East England	43	15	21	3	4	0			0					
-12	comres	13	8	2015	North West England	146	57	48	12	25	2			1					
-12	comres	13	8	2015	Yorkshire and Humber	102	40	39	5	13	5			1					
-12	comres	13	8	2015	West Midlands	104	40	37	13	12	0			0					
-12	comres	13	8	2015	East Midlands	90	35	28	9	12	6			1					
-12	comres	13	8	2015	Wales	60	22	20	3	9	2		4	0					
-12	comres	13	8	2015	East of England	117	53	23	11	26	4			0					
-12	comres	13	8	2015	London	166	72	61	11	16	4			2					
-12	comres	13	8	2015	South East England	181	90	40	12	30	7			2					
-12	comres	13	8	2015	South West England	117	47	32	13	14	11								
-13	comresdm	23	8	2015	Wales	27	11	10	1	2	2		1						
-13	comresdm	23	8	2015	Scotland	49	8	10	2	2	3	24							
-13	comresdm	23	8	2015	North	131	51	48	9	13	6								
-13	comresdm	23	8	2015	Midlands	128	58	36	12	12	7			3					
-13	comresdm	23	8	2015	South	184	86	43	15	18	12			3					
-14	survation	4	9	2015	London	111	55	31	10	11	4								
-14	survation	4	9	2015	Midlands	148	57	51	5	27	6			2					
-14	survation	4	9	2015	North	199	60	93	7	29	8			2					
-14	survation	4	9	2015	South	271	129	68	21	39	10			2					
-14	survation	4	9	2015	Scotland	81	10	13	3	5	4	45							
-14	survation	4	9	2015	Wales	39	10	15	2	3			8						
-15	icm2	13	9	2015	Scotland	57	9	8	3	1	2	35		0					
-15	icm2	13	9	2015	Wales	31	3	8	4	9	0		7	0					
-15	icm2	13	9	2015	North	136	46	60	9	19	2			0					
-15	icm2	13	9	2015	Midlands	171	75	58	12	22	4			0					
-15	icm2	13	9	2015	South	232	95	67	21	34	11			4					
-16	comres	17	9	2015	Scotland	113	26	20	4	5	3	55		0					
-16	comres	17	9	2015	North East England	50	22	19	1	6	1			0					
-16	comres	17	9	2015	North West England	136	55	54	7	16	3			0					
-16	comres	17	9	2015	Yorkshire and Humber	96	39	29	6	18	4			1					
-16	comres	17	9	2015	West Midlands	107	53	30	5	17	2			0					
-16	comres	17	9	2015	East Midlands	88	39	24	7	16	3			0					
-16	comres	17	9	2015	Wales	58	19	18	4	10	1		6	0					
-16	comres	17	9	2015	East of England	129	60	34	9	21	3			2					
-16	comres	17	9	2015	London	170	75	62	13	14	4			1					
-16	comres	17	9	2015	South East England	169	75	44	16	24	8			1					
-16	comres	17	9	2015	South West England	106	48	32	8	15	3			1					
-17	opinium	18	9	2015	England	1307	512	405	85	184	48			15					
-17	opinium	18	9	2015	Scotland	125	24	32	4	7	4	76		0					
-17	opinium	18	9	2015	Wales	58	13	28	5	11	3		8	0					
-18	yougov	18	9	2015	London	205	44	32	6	14	4			0					
-18	yougov	18	9	2015	Rest of South	520	49	21	6	19	4			0					
-18	yougov	18	9	2015	Midlands and Wales	343	37	32	6	18	1		3	2					
-18	yougov	18	9	2015	North England	394	33	42	7	15	2			1					
-18	yougov	18	9	2015	Scotland	139	21	28	3	2	2	44		0					
-19	mori	23	9	2015	North	189	65	80	26	10	5			4					
-19	mori	23	9	2015	Midlands	202	84	69	17	19	11			0					
-19	mori	23	9	2015	Wales	0	0	0	0	0	0	0	0	0					
-19	mori	23	9	2015	South	186	95	39	21	48	29			1					
-19	mori	23	9	2015	London	106	45	47	4	5	3								
-19	mori	23	9	2015	England	683	289	235	68	53	32			6					
-19	mori	23	9	2015	Scotland	75	17	14	3			40		1					
-20	survation	23	9	2015	London	104	51	27	13	10	2			1					
-20	survation	23	9	2015	Midlands	135	60	52	5	18	1			0					
-20	survation	23	9	2015	North	193	55	92	11	30	3			2					
-20	survation	23	9	2015	South	287	132	72	28	39	11			5					
-20	survation	23	9	2015	Scotland	74	12	9	7	3	3	41		0					
-20	survation	23	9	2015	Wales	45	5	18	8	9	1		3	0					
-21	comresdm	28	9	2015	Wales	26	8	9	3	2	0		4	0					
-21	comresdm	28	9	2015	Scotland	50	10	9	2	3	3	22		0					
-21	comresdm	28	9	2015	North	138	46	53	12	21	2			2					
-21	comresdm	28	9	2015	Midlands	145	68	43	10	17	4			3					
-21	comresdm	28	9	2015	South	200	85	54	22	24	11			4					
-22	yougov	29	9	2015	London	264	35	36	10	16	2			1					
-22	yougov	29	9	2015	Rest of South	671	42	28	7	20	2			0					
-22	yougov	29	9	2015	Midlands and Wales	442	37	30	6	19	3		3	1					
-22	yougov	29	9	2015	North England	508	35	39	7	16	2			1					
-22	yougov	29	9	2015	Scotland	180	26	17	3	5	1	47		1					
-23	icm2	11	10	2015	Scotland	52	9	11	1	1	1	28		1					
-23	icm2	11	10	2015	Wales	29	5	15	1	1	1		3	1					
-23	icm2	11	10	2015	North	146	44	77	10	10	2			2					
-23	icm2	11	10	2015	Midlands	161	72	40	10	27	9			4					
-23	icm2	11	10	2015	South	235	106	71	18	29	8			4					
-24	comres	16	10	2015	Scotland	153	26	28	9	3	3	84		0					
-24	comres	16	10	2015	North East England	64	19	27	4	13	1			0					
-24	comres	16	10	2015	North West England	190	56	97	8	21	7			1					
-24	comres	16	10	2015	Yorkshire and Humber	147	63	54	7	18	3			2					
-24	comres	16	10	2015	West Midlands	146	56	49	7	25	8			1					
-24	comres	16	10	2015	East Midlands	130	64	34	6	19	7			0					
-24	comres	16	10	2015	Wales	87	26	33	6	9	4		9	0					
-24	comres	16	10	2015	East of England	161	80	36	6	34	4			1					
-24	comres	16	10	2015	London	218	80	87	11	29	10			1					
-24	comres	16	10	2015	South East England	245	114	56	20	49	4			2					
-24	comres	16	10	2015	South West England	140	55	39	20	17	7			2					
-25	opinium	16	10	2015	England	947	379	311	49	162	38			8					
-25	opinium	16	10	2015	Scotland	116	19	22	2	2	2	68		0					
-25	opinium	16	10	2015	Wales	63	15	27	0	8	2		9	1					
-26	mori	19	10	2015	North	162	44	72	19	20	6			2					
-26	mori	19	10	2015	Midlands	183	72	57	22	22				5					
-26	mori	19	10	2015	Wales	0	0	0	0	0	0	0	5	0					
-26	mori	19	10	2015	South	228	92	69	19	34	11			2					
-26	mori	19	10	2015	London	84	28	37	1	15	3			0					
-26	mori	19	10	2015	England	539	197	185	58	74	18			8					
-26	mori	19	10	2015	Scotland	63	19	8	1	1	2	32		1					
-27	comresdm	25	10	2015	Wales	27	7	10	2	5	0		3	1					
-27	comresdm	25	10	2015	Scotland	53	13	12	4	1	2	18		2					
-27	comresdm	25	10	2015	North	121	37	50	7	13	6			9					
-27	comresdm	25	10	2015	Midlands	137	58	48	9	13	3			4					
-27	comresdm	25	10	2015	South	204	90	60	19	23	8			4					
-28	bmg	27	10	2015	Scotland	115	22	27	9	4	0	52		2					
-28	bmg	27	10	2015	Wales	52	12	20	2	7	4		7	1					
-28	bmg	27	10	2015	East Midlands	86	37	26	5	16	2			0					
-28	bmg	27	10	2015	East of England	127	43	47	6	22	8			1					
-28	bmg	27	10	2015	London	151	68	56	6	14	7			1					
-28	bmg	27	10	2015	North East England	41	12	14	3	8	3			1					
-28	bmg	27	10	2015	North West England	125	39	54	3	23	5			1					
-28	bmg	27	10	2015	South East England	163	84	31	10	28	8			3					
-28	bmg	27	10	2015	South West England	112	49	29	11	17	5			1					
-28	bmg	27	10	2015	West Midlands	108	45	34	4	16	7			1					
-28	bmg	27	10	2015	Yorkshire and Humber	96	31	33	8	21	3			1					
-29	survation	11	11	2015	London	221	77	86	20	29	8			1					
-29	survation	11	11	2015	Midlands	257	125	72	13	40	6			0					
-29	survation	11	11	2015	North	364	120	147	27	63	5			2					
-29	survation	11	11	2015	South	519	228	127	41	97	17			5					
-29	survation	11	11	2015	Scotland	165	30	26	7	8	5	85							
-29	survation	11	11	2015	Wales	94	20	34	11	16	4		9						
-30	icm2	15	11	2015	Scotland	68	10	12	4	1	3	38		0					
-30	icm2	15	11	2015	Wales	31	13	11	1	6	0			0					
-30	icm2	15	11	2015	North	169	43	80	11	25	7			3					
-30	icm2	15	11	2015	Midlands	187	74	59	11	36	4			3					
-30	icm2	15	11	2015	South	277	107	102	23	28	13			4					
-31	bmg	17	11	2015	Scotland	133	38	18	11	5	5	55							
-31	bmg	17	11	2015	Wales	69	24	23	3	7	4		7						
-31	bmg	17	11	2015	East Midlands	116	42	38	5	18	6			2					
-31	bmg	17	11	2015	East of England	141	62	41	6	23	8			1					
-31	bmg	17	11	2015	London	150	41	54	15	27	7			4					
-31	bmg	17	11	2015	North East England	46	18	17	2	4	2			3					
-31	bmg	17	11	2015	North West England	138	43	55	12	16	5			2					
-31	bmg	17	11	2015	South East England	177	84	30	16	32	10			1					
-31	bmg	17	11	2015	South West England	120	48	29	8	24	6			2					
-31	bmg	17	11	2015	West Midlands	117	47	36	5	16	3			2					
-31	bmg	17	11	2015	Yorkshire and Humber	127	35	42	13	27	3			1					
-32	survation	17	11	2015	London	162	71	48	12	24	5			1					
-32	survation	17	11	2015	Midlands	205	85	68	8	33	8			4					
-32	survation	17	11	2015	North	299	97	126	16	50	8			2					
-32	survation	17	11	2015	South	418	181	108	30	89	9			1					
-32	survation	17	11	2015	Scotland	120	25	20	5	3	0	66		1					
-32	survation	17	11	2015	Wales	68	19	20	3	8	2		15						
-33	mori	17	11	2015	North	147	53	59	15	10	9			1					
-33	mori	17	11	2015	Midlands	190	97	58	12	15	6		2	0					
-33	mori	17	11	2015	Wales	0	0	0	0	0	0	0	0	0					
-33	mori	17	11	2015	South	242	96	89	20	19	12			0					
-33	mori	17	11	2015	London	100	39	45	6	2	3			0					
-33	mori	17	11	2015	England	543	235	188	46	43	25			1					
-33	mori	17	11	2015	Scotland	59	15	9	1	3		31		0					
-34	comres	20	11	2015	Scotland	115	19	16	8	6	4	62							
-34	comres	20	11	2015	North East England	50	21	22	1	6	0								
-34	comres	20	11	2015	North West England	150	63	56	8	15	7								
-34	comres	20	11	2015	Yorkshire and Humber	106	45	33	5	18	4			1					
-34	comres	20	11	2015	West Midlands	109	46	28	8	24	2								
-34	comres	20	11	2015	East Midlands	97	47	26	4	17	4								
-34	comres	20	11	2015	Wales	57	18	22	1	9	1		4						
-34	comres	20	11	2015	East of England	123	52	25	18	26	2								
-34	comres	20	11	2015	London	167	66	61	13	22	4			1					
-34	comres	20	11	2015	South East England	191	104	34	16	29	6			1					
-34	comres	20	11	2015	South West England	116	53	26	11	17	8								
-35	comresdm	22	11	2015	Wales	25	8	8	1	2	0		5	1					
-35	comresdm	22	11	2015	Scotland	50	12	11	2	1	1	20		2					
-35	comresdm	22	11	2015	North	117	49	39	7	16	3			2					
-35	comresdm	22	11	2015	Midlands	144	67	38	13	17	3			6					
-35	comresdm	22	11	2015	South	170	68	52	17	18	9			6					
-36	yougov	24	11	2015	London	552	38	36	7	13	4			1					
-36	yougov	24	11	2015	Rest of South	1403	43	24	7	19	4			1					
-36	yougov	24	11	2015	Midlands and Wales	920	40	27	6	22	2		2	1					
-36	yougov	24	11	2015	North England	1060	34	39	6	17	3			1					
-36	yougov	24	11	2015	Scotland	378	24	17	3	6	2	48							
-37	yougov	1	12	2015	London	212	38	37	6	14	4			0					
-37	yougov	1	12	2015	Rest of South	539	48	24	7	18	2			1					
-37	yougov	1	12	2015	Midlands and Wales	355	42	33	5	16	2		2	0					
-37	yougov	1	12	2015	North England	408	41	32	5	17	4			1					
-37	yougov	1	12	2015	Scotland	144	20	24	4	8	2	41		0					
-38	comres	11	12	2015	Scotland	156	26	17	12	8	4	54							
-38	comres	11	12	2015	North East England	77	16	20	3	7	4								
-38	comres	11	12	2015	North West England	165	55	53	10	22	3								
-38	comres	11	12	2015	Yorkshire and Humber	176	42	39	4	24	4								
-38	comres	11	12	2015	West Midlands	121	43	23	6	22	3			2					
-38	comres	11	12	2015	East Midlands	132	44	24	7	16	5								
-38	comres	11	12	2015	Wales	99	19	19	3	10	1		5						
-38	comres	11	12	2015	East of England	184	60	26	9	21	2								
-38	comres	11	12	2015	London	250	67	69	9	22	4			1					
-38	comres	11	12	2015	South East England	290	85	42	17	33	5								
-38	comres	11	12	2015	South West England	127	53	28	7	13	2			1					
-39	comresdm	13	12	2015	Wales	25	9	10	2	2			2	1					
-39	comresdm	13	12	2015	Scotland	54	10	17	3			23		1					
-39	comresdm	13	12	2015	North	129	41	68	4	16	8			1					
-39	comresdm	13	12	2015	Midlands	151	70	35	14	23	5			4					
-39	comresdm	13	12	2015	South	194	76	65	16	19	12			6					
-40	mori	14	12	2015	North	154	57	63	10	16	8			1					
-40	mori	14	12	2015	Midlands	185	76	43	15	25	12		14	2					
-40	mori	14	12	2015	Wales	0	0	0	0	0	0			0					
-40	mori	14	12	2015	South	231	100	72	29	17	14			0					
-40	mori	14	12	2015	London	81	30	31	9	4	7			0					
-40	mori	14	12	2015	England	539	228	172	52	51	33			3					
-40	mori	14	12	2015	Scotland	65	8	18	4	1	2	32		1					
-41	opinium	18	12	2015	England	999	403	316	55	173	47			8					
-41	opinium	18	12	2015	Scotland	102	16	11	3	7	4	67		0					
-41	opinium	18	12	2015	Wales	61	21	20			2		7	1					
-42	yougov	18	12	2015	London	205	42	33	6	16	1			2					
-42	yougov	18	12	2015	Rest of South	519	45	23	6	20	4			0					
-42	yougov	18	12	2015	Midlands and Wales	342	38	32	7	17	3		2	1					
-42	yougov	18	12	2015	North England	393	38	38	5	17	2								
-42	yougov	18	12	2015	Scotland	139	20	17	3	5	3	52							
-43	icm2	20	12	2015	Scotland	51	10	9	2	0	1	26		2					
-43	icm2	20	12	2015	Wales	30	11	14		2	1		3	0					
-43	icm2	20	12	2015	North	153	52	63	13	22	3			0					
-43	icm2	20	12	2015	Midlands	161	59	63	7	20	7			5					
-43	icm2	20	12	2015	South	201	95	55	18	22	8			4					
-44	comres	14	1	2016	Scotland	115	22	12	15	9	3	54		0					
-44	comres	14	1	2016	North East England	46	17	18	2	6	2			0					
-44	comres	14	1	2016	North West England	132	47	61	3	15	4			1					
-44	comres	14	1	2016	Yorkshire and Humber	101	36	39	3	20	2								
-44	comres	14	1	2016	West Midlands	106	48	30	6	18	4								
-44	comres	14	1	2016	East Midlands	90	39	25	5	17	4								
-44	comres	14	1	2016	Wales	52	19	19	3	4	1		6						
-44	comres	14	1	2016	East of England	123	65	25	9	22	2								
-44	comres	14	1	2016	London	160	59	59	9	27	5			1					
-44	comres	14	1	2016	South East England	182	83	40	14	35	9			1					
-44	comres	14	1	2016	South West England	107	45	26	12	19	3			2					
-45	survation	17	1	2016	London	98	35	37	8	17	1			0					
-45	survation	17	1	2016	Midlands	139	61	43	6	27	1			0					
-45	survation	17	1	2016	North	200	63	80	8	41	7			1					
-45	survation	17	1	2016	South	253	118	59	21	39	11			4					
-45	survation	17	1	2016	Scotland	68	16	6	3	5		38							
-45	survation	17	1	2016	Wales	49	17	15	6	5			6						
-46	icm2	17	1	2016	Scotland	50	10	12	4	3		21							
-46	icm2	17	1	2016	Wales	33	5	14	1	6			7						
-46	icm2	17	1	2016	North	150	56	68	12	12	3								
-46	icm2	17	1	2016	Midlands	168	77	50	9	25	5			2					
-46	icm2	17	1	2016	South	214	93	83	10	20	4			1					
-47	mori	25	1	2016	North	152	52	55	17	18	6			4					
-47	mori	25	1	2016	Midlands	184	79	59	11	24	9		1	3					
-47	mori	25	1	2016	Wales	0	0	0	0	0	0								
-47	mori	25	1	2016	South	231	99	72	18	26	13								
-47	mori	25	1	2016	London	82	27	36	3	15	1								
-47	mori	25	1	2016	England	534	221	171	44	66	25			7					
-47	mori	25	1	2016	Scotland	55	22	11		3		28							
-48	yougov	28	1	2016	London	222	39	34	8	14	4			1					
-48	yougov	28	1	2016	Rest of South	564	42	26	6	22	2			0					
-48	yougov	28	1	2016	Midlands and Wales	371	44	27	6	19	2		2	0					
-48	yougov	28	1	2016	North England	427	37	37	5	15	6			1					
-48	yougov	28	1	2016	Scotland	151	20	23	7	5	2	41		2					
-49	yougov	4	2	2016	London	214	41	35	8	11	3								
-49	yougov	4	2	2016	Rest of South	544	46	22	9	20	3								
-49	yougov	4	2	2016	Midlands and Wales	358	36	30	5	23	3		2						
-49	yougov	4	2	2016	North England	412	35	37	5	21	1								
-49	yougov	4	2	2016	Scotland	146	25	28	2	3		42							
-50	comres	12	2	2016	Scotland	114	28	16	3	6	3	58		0					
-50	comres	12	2	2016	North East England	52	13	21	2	13	3			0					
-50	comres	12	2	2016	North West England	138	41	59	9	24	5			0					
-50	comres	12	2	2016	Yorkshire and Humber	100	37	35	7	19	1			1					
-50	comres	12	2	2016	West Midlands	112	47	34	12	16	3			2					
-50	comres	12	2	2016	East Midlands	88	39	27	6	14	2			0					
-50	comres	12	2	2016	Wales	55	20	13	5	8	0		9	0					
-50	comres	12	2	2016	East of England	126	62	31	17	15	0			0					
-50	comres	12	2	2016	London	163	74	43	16	16	11			3					
-50	comres	12	2	2016	South East England	174	84	31	14	37	7			1					
-50	comres	12	2	2016	South West England	107	55	18	14	16	4			0					
-51	icmmissing	14	2	2016	All	100	39	32	7	11	4	4		3					
-52	mori	16	2	2016	North	138	55	49	9	19	5			0					
-52	mori	16	2	2016	Midlands	170	66	54	8	28	6		4	2					
-52	mori	16	2	2016	Wales	0	0	0	0	0	0			0					
-52	mori	16	2	2016	South	217	101	74	14	20	6			2					
-52	mori	16	2	2016	London	88	37	40	6	3	2			1					
-52	mori	16	2	2016	England	502	218	165	32	64	17			4					
-52	mori	16	2	2016	Scotland	66	8	16	4	2	0	36							
-53	comresdm	22	2	2016	Wales	20	6	6	0	7	1		1	0					
-53	comresdm	22	2	2016	Scotland	53	14	10	4	2	2	22		0					
-53	comresdm	22	2	2016	North	136	43	53	7	21	6			6					
-53	comresdm	22	2	2016	Midlands	153	64	46	13	21	4			5					
-53	comresdm	22	2	2016	South	201	90	62	19	16	7			6					
-54	bmg	23	2	2016	Scotland	118	21	14	6	8	5	64							
-54	bmg	23	2	2016	Wales	52	12	17	2	9	2		9						
-54	bmg	23	2	2016	East Midlands	78	35	27	3	11	3			0					
-54	bmg	23	2	2016	East of England	121	58	30	4	23	7			0					
-54	bmg	23	2	2016	London	142	54	43	10	27	6			2					
-54	bmg	23	2	2016	North East England	39	11	22	0	7	0			1					
-54	bmg	23	2	2016	North West England	130	52	55	4	13	6			1					
-54	bmg	23	2	2016	South East England	167	82	40	11	24	9			2					
-54	bmg	23	2	2016	South West England	111	45	26	15	20	5			0					
-54	bmg	23	2	2016	West Midlands	99	34	32	5	22	6			0					
-54	bmg	23	2	2016	Yorkshire and Humber	84	25	37	5	15	3			0					
-55	yougov	23	2	2016	London	415	33	44	4	14	3			0					
-55	yougov	23	2	2016	Rest of South	1168	48	21	9	19	3			0					
-55	yougov	23	2	2016	Midlands and Wales	747	38	32	6	18	3		2	1					
-55	yougov	23	2	2016	North England	839	33	41	5	18	3								
-55	yougov	23	2	2016	Scotland	322	20	19	3	4	4	49							
-56	comres	10	3	2016	Scotland	116	16	21	7	10	7	54		1					
-56	comres	10	3	2016	North East England	49	21	19	1	5	3								
-56	comres	10	3	2016	North West England	128	45	50	9	21	5								
-56	comres	10	3	2016	Yorkshire and Humber	111	40	37	16	15	1								
-56	comres	10	3	2016	West Midlands	119	57	37	4	18	2								
-56	comres	10	3	2016	East Midlands	95	40	27	6	18	4								
-56	comres	10	3	2016	Wales	52	17	18	2	8	2		5	1					
-56	comres	10	3	2016	East of England	118	48	28	7	29	5								
-56	comres	10	3	2016	London	178	68	63	16	23	7								
-56	comres	10	3	2016	South East England	181	79	45	12	36	8			1					
-56	comres	10	3	2016	South West England	116	53	18	16	24	6								
-57	icmmissing	13	3	2016	All	100	36	36	8	11	3	3		1					
-58	yougov	17	3	2016	London	202	29	48	8	12	2			1					
-58	yougov	17	3	2016	Rest of South	561	43	26	7	19	4			1					
-58	yougov	17	3	2016	Midlands and Wales	363	35	34	4	20	4		3	1					
-58	yougov	17	3	2016	North England	408	29	45	6	16	4			0					
-58	yougov	17	3	2016	Scotland	156	15	21	7	4	3	47		2					
-59	comresdm	20	3	2016	Wales	27	8	9	3	5	0		4	0					
-59	comresdm	20	3	2016	Scotland	57	19	10	3	0	0	25		0					
-59	comresdm	20	3	2016	North	127	41	58	9	9	7			2					
-59	comresdm	20	3	2016	Midlands	138	53	45	13	18	5			4					
-59	comresdm	20	3	2016	South	212	84	77	15	20	12			3					
-60	mori	22	3	2016	North	211	64	95	18	29	2			0					
-60	mori	22	3	2016	Midlands	243	98	75	20	26	14		9	0					
-60	mori	22	3	2016	Wales	0	0	0	0	0	0			0					
-60	mori	22	3	2016	South	308	117	108	31	43	6			1					
-60	mori	22	3	2016	London	115	40	52	7	13	1			1					
-60	mori	22	3	2016	England	717	267	267	67	92	20			1					
-60	mori	22	3	2016	Scotland	73	16	14	4	1	2	33		2					
-61	bmg	31	3	2016	Scotland	111	17	19	6	6	4	59							
-61	bmg	31	3	2016	Wales	69	18	30	1	10	2		7						
-61	bmg	31	3	2016	East Midlands	91	31	32	6	19	4			0					
-61	bmg	31	3	2016	East of England	109	43	30	8	17	9			1					
-61	bmg	31	3	2016	London	152	68	50	13	13	8			1					
-61	bmg	31	3	2016	North East England	46	13	19	3	9	2			1					
-61	bmg	31	3	2016	North West England	128	39	50	10	25	3			2					
-61	bmg	31	3	2016	South East England	173	78	45	8	32	7			2					
-61	bmg	31	3	2016	South West England	109	45	29	9	21	5			0					
-61	bmg	31	3	2016	West Midlands	86	30	22	5	25	4			0					
-61	bmg	31	3	2016	Yorkshire and Humber	102	42	35	6	15	4			0					
-62	opiniummissing	1	4	2016	All	100	33	32	5	17	4	6	1	2					
-63	yougov	12	4	2016	London	203	31	45	7	11	5			1					
-63	yougov	12	4	2016	Rest of South	562	39	27	11	20	3			1					
-63	yougov	12	4	2016	Midlands and Wales	364	31	32	10	20	3		4	0					
-63	yougov	12	4	2016	North England	408	28	46	6	17	2			0					
-63	yougov	12	4	2016	Scotland	156	13	18	4	7	3	55		0					
-64	comres	16	4	2016	Scotland	118	29	18	6	5	2	58		0					
-64	comres	16	4	2016	North East England	49	12	23	3	9	1			0					
-64	comres	16	4	2016	North West England	146	52	55	10	25	3			1					
-64	comres	16	4	2016	Yorkshire and Humber	111	36	39	6	24	5			0					
-64	comres	16	4	2016	West Midlands	103	32	34	8	23	5			1					
-64	comres	16	4	2016	East Midlands	92	41	27	7	13	2			0					
-64	comres	16	4	2016	Wales	59	18	17	5	10	4		5	0					
-64	comres	16	4	2016	East of England	113	42	30	9	23	7			1					
-64	comres	16	4	2016	London	164	58	61	16	22	7			1					
-64	comres	16	4	2016	South East England	180	78	34	18	39	9			3					
-64	comres	16	4	2016	South West England	108	40	36	14	12	6			0					
-65	icm	17	4	2016	Scotland	130	31	24	8	7	4	56		0					
-65	icm	17	4	2016	Wales	77	14	27	9	11	5		9	1					
-65	icm	17	4	2016	North	501	146	179	21	79	19			1					
-65	icm	17	4	2016	Midlands	456	154	139	34	95	20			3					
-65	icm	17	4	2016	South	490	210	132	48	75	23			2					
-66	mori	18	4	2016	North	149	53	62	5	22	6			1					
-66	mori	18	4	2016	Midlands	189	73	63	11	28	8		5	1					
-66	mori	18	4	2016	Wales	0	0	0	0	0	0			0					
-66	mori	18	4	2016	South	237	101	88	21	20	6			0					
-66	mori	18	4	2016	London	84	26	51	2	2	2			0					
-66	mori	18	4	2016	England	542	222	199	33	66	21			2					
-66	mori	18	4	2016	Scotland	74	22	13	1		2	36		0					
-67	bmg	27	4	2016	Scotland	109	16	26	3	3	4	56							
-67	bmg	27	4	2016	Wales	53	13	22	1	4	3		9						
-67	bmg	27	4	2016	East Midlands	90	39	27	4	13	6			0					
-67	bmg	27	4	2016	East of England	110	46	23	10	23	7			0					
-67	bmg	27	4	2016	London	145	57	52	4	22	7			3					
-67	bmg	27	4	2016	North East England	51	14	21	1	12	3			0					
-67	bmg	27	4	2016	North West England	140	36	63	12	27	2			0					
-67	bmg	27	4	2016	South East England	184	76	45	7	46	8			3					
-67	bmg	27	4	2016	South West England	100	41	25	5	19	8			1					
-67	bmg	27	4	2016	West Midlands	107	32	34	11	27	3			0					
-67	bmg	27	4	2016	Yorkshire and Humber	104	25	48	6	18	5			0					
-68	yougov	27	4	2016	London	198	30	46	6	13	3								
-68	yougov	27	4	2016	Rest of South	548	41	25	8	22	4								
-68	yougov	27	4	2016	Midlands and Wales	355	20	36	5	22	3		4	1					
-68	yougov	27	4	2016	North England	398	24	43	4	25	4								
-68	yougov	27	4	2016	Scotland	152	13	17	3	6	2	58							
-69	opiniummissing	29	4	2016	All	100	38	30	5	15	5	5	1	1					
-70	comres	12	5	2016	Scotland	128	29	15	8	6	3	66		1					
-70	comres	12	5	2016	North East England	60	17	28	3	12	0								
-70	comres	12	5	2016	North West England	160	44	69	13	31	3								
-70	comres	12	5	2016	Yorkshire and Humber	110	30	51	5	21	2								
-70	comres	12	5	2016	West Midlands	117	45	33	8	29	4								
-70	comres	12	5	2016	East Midlands	107	42	26	13	21	2			1					
-70	comres	12	5	2016	Wales	61	20	17	8	8	1		5	0					
-70	comres	12	5	2016	East of England	132	61	31	9	24	6			1					
-70	comres	12	5	2016	London	210	86	72	13	27	11								
-70	comres	12	5	2016	South East England	198	88	44	13	40	12								
-70	comres	12	5	2016	South West England	120	36	36	18	24	6								
-71	icm	15	5	2016	Scotland	151	28	24	8	8	4	80							
-71	icm	15	5	2016	Wales	83	23	27	5	20	3		6						
-71	icm	15	5	2016	North	527	131	194	26	71	21	80		3					
-71	icm	15	5	2016	Midlands	454	158	135	20	11	21		6	3					
-71	icm	15	5	2016	South	517	200	144	49	97	26			1					
-72	mori	16	5	2016	North	130	37	64	12	16	1			0					
-72	mori	16	5	2016	Midlands	180	77	60	5	18	12		8	0					
-72	mori	16	5	2016	Wales	0	0	0	0	0	0			0					
-72	mori	16	5	2016	South	222	82	68	27	22	18			5					
-72	mori	16	5	2016	London	77	28	35	4	5	5			1					
-72	mori	16	5	2016	England	499	182	185	43	53	30			5					
-72	mori	16	5	2016	Scotland	64	16	10	1	1	1	31		3					
-73	opiniummissing	19	5	2016	All	100	35	30	5	18	5	6	1	1					
-74	icm	30	5	2016	Scotland	146	37	21	9	5	5	69		0					
-74	icm	30	5	2016	Wales	86	17	36	3	18	2		10	0					
-74	icm	30	5	2016	North	523	155	181	26	68	24	69		0					
-74	icm	30	5	2016	Midlands	462	150	154	31	104	13		10	0					
-74	icm	30	5	2016	South	555	228	151	42	96	30			7					
-75	opiniummissing	3	6	2016	All	100	34	30	6	18	4	6	0	2					
-76	opiniummissing	10	6	2016	All	100	35	32	4	18	4	5	0	1					
-77	mori	14	6	2016	North	165	43	85	9	18	9			0					
-77	mori	14	6	2016	Midlands	227	86	67	24	30	6		12	2					
-77	mori	14	6	2016	Wales	0	0	0	0	0	0	0	0	0					
-77	mori	14	6	2016	South	274	120	80	29	27	14			3					
-77	mori	14	6	2016	London	105	42	42	7	10	3			0					
-77	mori	14	6	2016	England	631	244	223	58	72	29			3					
-77	mori	14	6	2016	Scotland	78	11	19	1	2	3	40		2					
-78	comres	16	6	2016	Scotland	111	19	9	10	9	5	59		1					
-78	comres	16	6	2016	North East England	53	13	24	3	10	1			1					
-78	comres	16	6	2016	North West England	148	50	67	7	19	4			1					
-78	comres	16	6	2016	Yorkshire and Humber	99	31	30	8	25	5								
-78	comres	16	6	2016	West Midlands	112	50	32	3	24	2								
-78	comres	16	6	2016	East Midlands	92	38	25	4	20	4								
-78	comres	16	6	2016	Wales	55	18	15	4	8	2		7						
-78	comres	16	6	2016	East of England	122	47	25	13	31	5								
-78	comres	16	6	2016	London	179	79	77	13	19	11								
-78	comres	16	6	2016	South East England	181	70	39	21	45	6			1					
-78	comres	16	6	2016	South West England	105	35	29	9	25	6			1					
-79	opiniummissing	17	6	2016	All	100	34	30	6	18	4	6	0	1					
-80	opiniummissing	22	6	2016	All	100	34	30	6	19	4	6	0	2					
-81	survation	25	6	2016	London	123	31	43	13	14	8								
-81	survation	25	6	2016	Midlands	162	52	46	12	19	0								
-81	survation	25	6	2016	North	231	61	74	11	36	7								
-81	survation	25	6	2016	South	313	92	58	23	47	15								
-81	survation	25	6	2016	Scotland	80	9	15	4	3	0	34							
-81	survation	25	6	2016	Wales	54	7	17	7	9	1		3						
-82	icm	26	6	2016	Scotland	129	27	20	4	4	4	70		0					
-82	icm	26	6	2016	Wales	84	23	23	7	17	1		11	1					
-82	icm	26	6	2016	North	484	142	184	22	53	22	70		2					
-82	icm	26	6	2016	Midlands	438	152	138	27	89	19		11	2					
-82	icm	26	6	2016	South	491	192	152	42	75	27			2					
-83	opiniummissing	30	6	2016	All	100	34	29	7	17	4	5	0	2					
-84	icm	3	7	2016	Scotland	136	25	20	4	6	5	76		0					
-84	icm	3	7	2016	Wales	78	20	27	9	12	2		8	1					
-84	icm	3	7	2016	North	492	146	159	35	57	19	76		1					
-84	icm	3	7	2016	Midlands	431	162	129	30	85	14		8	2					
-84	icm	3	7	2016	South	481	198	128	48	78	23			6					
-85	survation	5	7	2016	London	84	31	35	4	13	2								
-85	survation	5	7	2016	Midlands	115	40	45	9	19	1								
-85	survation	5	7	2016	North	152	55	64	18	12	3								
-85	survation	5	7	2016	South	196	77	49	21	26	22			2					
-85	survation	5	7	2016	Scotland	70	17	9	3	0	2	38							
-85	survation	5	7	2016	Wales	34	10	9	3	5	2		5						
-86	icm	10	7	2016	Scotland	137	26	20	7	5	10	70		0					
-86	icm	10	7	2016	Wales	74	25	16	5	16	3		8	0					
-86	icm	10	7	2016	North	508	154	174	34	52	19	70	0	4					
-86	icm	10	7	2016	Midlands	407	157	114	28	81	18		8	1					
-86	icm	10	7	2016	South	476	200	126	46	85	16			3					
-87	mori	11	7	2016	North	152	50	69	14	11	5			1					
-87	mori	11	7	2016	Midlands	206	74	77	14	23	7		8	1					
-87	mori	11	7	2016	Wales	0	0	0	0	0	0			0					
-87	mori	11	7	2016	South	222	88	66	39	13	15			1					
-87	mori	11	7	2016	London	77	28	31	10	1	6								
-87	mori	11	7	2016	England	542	201	200	63	46	27			3					
-87	mori	11	7	2016	Scotland	59	16	13	1	2		28							
-88	icm	15	7	2016	Scotland	134	27	27	4	8	3	66		0					
-88	icm	15	7	2016	Wales	80	16	25	10	15	1		13	1					
-88	icm	15	7	2016	North	503	157	174	26	58	19	66		3					
-88	icm	15	7	2016	Midlands	454	188	124	31	80	15		13	4					
-88	icm	15	7	2016	South	536	235	128	70	75	25			4					
-89	yougov	18	7	2016	London	227	39	38	13	7	2			1					
-89	yougov	18	7	2016	Rest of South	628	48	24	10	13	3			2					
-89	yougov	18	7	2016	Midlands and Wales	407	44	27	6	15	4		3	1					
-89	yougov	18	7	2016	North England	456	32	42	10	12	2			1					
-89	yougov	18	7	2016	Scotland	174	24	13	5	4	2	51		1					
-90	opiniummissing	22	7	2016	All	100	37	31	6	15	6	4	0	1					
-91	icm	24	7	2016	Scotland	133	27	29	7	2	4	64							
-91	icm	24	7	2016	Wales	79	24	17	9	14	6	0	9						
-91	icm	24	7	2016	North	500	190	149	26	57	14	64		1					
-91	icm	24	7	2016	Midlands	442	200	93	35	82	22	0	9	1					
-91	icm	24	7	2016	South	471	222	122	42	56	28			1					
-92	yougov	26	7	2016	London	202	37	38	9	8	8			0					
-92	yougov	26	7	2016	Rest of South	558	52	20	9	14	3			1					
-92	yougov	26	7	2016	Midlands and Wales	361	37	29	8	7	2		4	3					
-92	yougov	26	7	2016	North England	405	33	40	7	16	4			0					
-92	yougov	26	7	2016	Scotland	155	23	11	3	6	4	53		0					
-93	yougov	2	8	2016	London	207	37	40	12	8	3			0					
-93	yougov	2	8	2016	Rest of South	572	51	20	9	15	4			0					
-93	yougov	2	8	2016	Midlands and Wales	370	45	29	6	15	1		3	2					
-93	yougov	2	8	2016	North England	415	38	40	6	13	2			0					
-93	yougov	2	8	2016	Scotland	158	25	13	5	3	4	50		0					
-94	yougov	9	8	2016	London	203	35	42	12	5	4			1					
-94	yougov	9	8	2016	Rest of South	562	49	23	11	13	4			0					
-94	yougov	9	8	2016	Midlands and Wales	364	41	33	5	15	4		2	1					
-94	yougov	9	8	2016	North England	408	32	42	6	17	2			0					
-94	yougov	9	8	2016	Scotland	156	18	16	6	6	4	51		0					
-95	icm	15	8	2016	Scotland	132	31	24	6	4	4	63		0					
-95	icm	15	8	2016	Wales	76	26	24	2	8			15	0					
-95	icm	15	8	2016	North	493	163	158	31	55	19	63		4					
-95	icm	15	8	2016	Midlands	414	178	103	20	76	17		15	5					
-95	icm	15	8	2016	South	478	221	108	53	66	25			4					
-96	mori	15	8	2016	North	198	79	87	12	14	4			1					
-96	mori	15	8	2016	Midlands	271	121	88	15	32	9		2	4					
-96	mori	15	8	2016	Wales	0		0						0					
-96	mori	15	8	2016	South	324	143	123	30	11	17			0					
-96	mori	15	8	2016	London	123	53	45	12	6	7			0					
-96	mori	15	8	2016	England	744	327	277	52	55	28			6					
-96	mori	15	8	2016	Scotland	63	11	11	2		3	36		1					
-97	yougov	17	8	2016	London	201	33	38	12	9	6			3					
-97	yougov	17	8	2016	Rest of South	557	47	26	11	12	4			0					
-97	yougov	17	8	2016	Midlands and Wales	361	41	29	9	15	3		3	1					
-97	yougov	17	8	2016	North England	404	31	40	6	18	3			0					
-97	yougov	17	8	2016	Scotland	154	23	16	3	2	4	53		0					
-98	ashcroft	22	8	2016	Scotland	498	106	73	25	15	12	267		1					
-98	ashcroft	22	8	2016	North East	241	73	105	13	43	7			0					
-98	ashcroft	22	8	2016	North West	620	228	265	38	73	14			3					
-98	ashcroft	22	8	2016	Yorkshire and Humber	457	167	182	32	64	9			3					
-98	ashcroft	22	8	2016	West Midlands	468	202	165	27	65	6			3					
-98	ashcroft	22	8	2016	East Midlands	395	189	109	16	61	18			2					
-98	ashcroft	22	8	2016	Wales	282	92	91	17	38	4		38	1					
-98	ashcroft	22	8	2016	East of England	475	215	113	34	93	17			3					
-98	ashcroft	22	8	2016	London	661	262	267	46	52	25			9					
-98	ashcroft	22	8	2016	South East England	683	341	147	57	108	26			4					
-98	ashcroft	22	8	2016	South West England	473	202	127	53	65	22			5					
-99	yougov	23	8	2016	London	199	36	42	8	9	5			1					
-99	yougov	23	8	2016	Rest of South	551	53	19	9	15	4			0					
-99	yougov	23	8	2016	Midlands and Wales	357	37	34	5	14	3		4	2					
-99	yougov	23	8	2016	North England	400	31	40	10	17	2			0					
-99	yougov	23	8	2016	Scotland	153	25	12	4	2	5	50		1					
-100	icm	28	8	2016	Scotland	136	27	24	8	4	7	67		0					
-100	icm	28	8	2016	Wales	78	23	26	2	14	1		11	0					
-100	icm	28	8	2016	North	494	172	156	37	45	13	67		4					
-100	icm	28	8	2016	Midlands	439	190	112	34	68	23		11	1					
-100	icm	28	8	2016	South	492	227	118	52	73	21			1					
-101	yougov	31	8	2016	London	202	31	50	8	9	1			0					
-101	yougov	31	8	2016	Rest of South	560	50	23	7	16	4			0					
-101	yougov	31	8	2016	Midlands and Wales	363	37	31	7	18	2		2	1					
-101	yougov	31	8	2016	North England	407	31	41	7	16	5			0					
-101	yougov	31	8	2016	Scotland	155	25	11	5	4	4	51		1					
-102	yougov	5	9	2016	London	194	31	45	14	6	3			1					
-102	yougov	5	9	2016	Rest of South	537	51	21	9	15	4			1					
-102	yougov	5	9	2016	Midlands and Wales	347	45	26	7	12	3		6						
-102	yougov	5	9	2016	North England	389	33	41	3	20	3								
-102	yougov	5	9	2016	Scotland	149	21	23	3	1	1	51							
-103	icm	11	9	2016	Scotland	127	28	14	8	4	6	66		0					
-103	icm	11	9	2016	Wales	80	24	25	11	7	3		10	1					
-103	icm	11	9	2016	North	499	176	161	27	53	13	66		4					
-103	icm	11	9	2016	Midlands	440	173	134	35	67	19		10	2					
-103	icm	11	9	2016	South	475	231	89	56	74	22			3					
-104	mori	14	9	2016	North	159	43	83	6	21	1			5					
-104	mori	14	9	2016	Midlands	177	75	59	11	17	10		2	2					
-104	mori	14	9	2016	Wales	0	0	0	0	0	0			0					
-104	mori	14	9	2016	South	237	117	67	22	13	18			1					
-104	mori	14	9	2016	London	85	36	32	4	1	13			0					
-104	mori	14	9	2016	England	540	224	192	39	51	26			8					
-104	mori	14	9	2016	Scotland	62	22	7	2	3	1	27							
-105	yougov	14	9	2016	London	208	39	41	5	12	3								
-105	yougov	14	9	2016	Rest of South	575	47	25	9	14	5								
-105	yougov	14	9	2016	Midlands and Wales	372	41	31	7	14	3		3						
-105	yougov	14	9	2016	North England	417	31	42	6	17	3								
-105	yougov	14	9	2016	Scotland	159	21	12	7	6	3	51							
-106	yougov	21	9	2016	London	394	36	40	12	8	4								
-106	yougov	21	9	2016	Rest of South	1091	49	23	10	13	4			1					
-106	yougov	21	9	2016	Midlands and Wales	706	38	31	7	16	4		2	1					
-106	yougov	21	9	2016	North England	792	35	39	7	16	2			1					
-106	yougov	21	9	2016	Scotland	302	23	17	3	3	2	52							
-107	bmg	23	9	2016	Scotland	166	44	23	6	3	9	77		3					
-107	bmg	23	9	2016	Wales	93	25	27	7	9	6		20						
-107	bmg	23	9	2016	East Midlands	128	60	32	13	18	6			0					
-107	bmg	23	9	2016	East of England	166	67	45	18	29	5			2					
-107	bmg	23	9	2016	London	197	86	56	22	18	13			3					
-107	bmg	23	9	2016	North East England	74	13	38	4	15	3			0					
-107	bmg	23	9	2016	North West England	177	62	64	16	21	10			5					
-107	bmg	23	9	2016	South East England	228	100	66	19	27	12			4					
-107	bmg	23	9	2016	South West England	161	85	32	13	20	9			3					
-107	bmg	23	9	2016	West Midlands	164	64	45	10	31	11			3					
-107	bmg	23	9	2016	Yorkshire and Humber	140	48	47	11	26	7			1					
-108	icm	23	9	2016	Scotland	130	22	20	6	5	3	74		0					
-108	icm	23	9	2016	Wales	86	28	26	6	14	5		7	1					
-108	icm	23	9	2016	North	466	139	149	37	52	12	74		4					
-108	icm	23	9	2016	Midlands	444	191	110	27	87	20		7	1					
-108	icm	23	9	2016	South	488	237	107	39	75	26			4					
-109	yougov	29	9	2016	London	199	37	40	9	11	3			0					
-109	yougov	29	9	2016	Rest of South	550	49	23	10	14	3			0					
-109	yougov	29	9	2016	Midlands and Wales	356	42	32	8	13	2		3	1					
-109	yougov	29	9	2016	North England	400	30	40	8	18	3								
-109	yougov	29	9	2016	Scotland	153	21	14	6	4	1	54							
-110	icm	9	10	2016	Scotland	124	31	18	6	4	7	57		0					
-110	icm	9	10	2016	Wales	80	19	30	3	12	5		9	2					
-110	icm	9	10	2016	North	469	183	125	37	44	21	57		2					
-110	icm	9	10	2016	Midlands	416	197	99	25	57	25		9	4					
-110	icm	9	10	2016	South	490	242	105	53	47	41			2					
-111	yougov	12	10	2016	London	200	29	40	12	15	4								
-111	yougov	12	10	2016	Rest of South	554	52	20	11	12	4								
-111	yougov	12	10	2016	Midlands and Wales	359	48	31	6	9	3		3						
-111	yougov	12	10	2016	North England	402	37	38	9	14	1								
-111	yougov	12	10	2016	Scotland	154	24	12	5	2	5	50		1					
-112	mori	17	10	2016	North	145	67	54	7	12	4			2					
-112	mori	17	10	2016	Midlands	199	106	59	7	14	7		5	2					
-112	mori	17	10	2016	Wales	0	0	0	0	0	0			0					
-112	mori	17	10	2016	South	223	110	55	28	13	15			1					
-112	mori	17	10	2016	London	79	31	29	10	1	7			0					
-112	mori	17	10	2016	England	529	267	154	42	36	26			4					
-112	mori	17	10	2016	Scotland	58	13	14	2			29		0					
-113	yougov	20	10	2016	London	193	28	39	13	11	6			3					
-113	yougov	20	10	2016	Rest of South	534	53	19	10	14	4			1					
-113	yougov	20	10	2016	Midlands and Wales	346	46	25	6	12	7		3	2					
-113	yougov	20	10	2016	North England	388	39	37	6	13	4								
-113	yougov	20	10	2016	Scotland	148	22	14	8	2	6	48							
-114	yougov	25	10	2016	London	199	33	37	13	12	4			1					
-114	yougov	25	10	2016	Rest of South	549	51	18	13	13	4			2					
-114	yougov	25	10	2016	Midlands and Wales	356	41	29	11	13	3		2	1					
-114	yougov	25	10	2016	North England	399	35	40	10	12	3			1					
-114	yougov	25	10	2016	Scotland	152	25	14	4	2	1	55		0					
-115	icm	30	10	2016	Scotland	129	38	22	6	2	6	56		0					
-115	icm	30	10	2016	Wales	76	24	27	5	8	7		4	1					
-115	icm	30	10	2016	North	489	195	154	26	41	18	56		0					
-115	icm	30	10	2016	Midlands	440	186	115	35	74	25		4	1					
-115	icm	30	10	2016	South	505	243	114	59	54	32			3					
-116	yougov	1	11	2016	London	199	35	36	13	9	7			0					
-116	yougov	1	11	2016	Rest of South	549	51	20	11	12	4			1					
-116	yougov	1	11	2016	Midlands and Wales	356	41	32	8	13	2		3	1					
-116	yougov	1	11	2016	North England	399	39	36	9	12	3								
-116	yougov	1	11	2016	Scotland	152	20	15	8	5	4	47							
-117	opinium	4	11	2016	England	1273	525	409	96	176	56			11					
-117	opinium	4	11	2016	Scotland	145	28	25	4	8	2	78							
-117	opinium	4	11	2016	Wales	73	17	31	4	13	4		4						
-118	mori	14	11	2016	North	158	57	76	14	5	5			0					
-118	mori	14	11	2016	Midlands	201	86	64	13	21	10		4	2					
-118	mori	14	11	2016	Wales	0				0	0			0					
-118	mori	14	11	2016	South	256	113	70	39	16	6			0					
-118	mori	14	11	2016	London	91	28	44	13	0	5			0					
-118	mori	14	11	2016	England	570	246	196	63	42	21			2					
-118	mori	14	11	2016	Scotland	65	24	11	3	1		24		1					
-119	yougov	15	11	2016	London	206	44	36	11	3	6								
-119	yougov	15	11	2016	Rest of South	570	50	20	11	14	4			1					
-119	yougov	15	11	2016	Midlands and Wales	369	45	26	6	14	4		4	1					
-119	yougov	15	11	2016	North England	414	37	39	8	12	3								
-119	yougov	15	11	2016	Scotland	158	20	21	4	2	1	52							
-120	opiniummissing	18	11	2016	All	100	41	29	7	12	3	6		2					
-121	icm	20	11	2016	Scotland	150	41	20	10	3	3	72		0					
-121	icm	20	11	2016	Wales	78	19	22	6	18	2		11	1					
-121	icm	20	11	2016	North	510	208	142	27	45	14	72		3					
-121	icm	20	11	2016	Midlands	447	168	136	45	73	11		11	3					
-121	icm	20	11	2016	South	493	254	113	56	49	17			4					
-122	yougov	22	11	2016	London	203	33	44	6	10	7								
-122	yougov	22	11	2016	Rest of South	562	51	21	11	13	4								
-122	yougov	22	11	2016	Midlands and Wales	364	44	23	8	17	3		4						
-122	yougov	22	11	2016	North England	408	34	41	7	14	3			1					
-122	yougov	22	11	2016	Scotland	156	22	15	9	2	2	49		1					
-123	icm	27	11	2016	Scotland	127	39	24	6	4	3	52		0					
-123	icm	27	11	2016	Wales	65	20	23	4	5	0		11	1					
-123	icm	27	11	2016	North	482	202	153	22	41	11	52		1					
-123	icm	27	11	2016	Midlands	416	164	124	39	65	9		11	4					
-123	icm	27	11	2016	South	457	223	108	38	45	30								
-122	yougov	29	11	2016	London	195	36	35	13	8	7			0					
-124	yougov	29	11	2016	Rest of South	539	49	21	11	14	4			1					
-124	yougov	29	11	2016	Midlands and Wales	349	40	27	6	18	3		4	0					
-124	yougov	29	11	2016	North England	391	33	38	8	18	2			0					
-124	yougov	29	11	2016	Scotland	149	20	18	5	2	3	50		2					
-125	yougov	5	12	2016	London	200	37	42	10	6	5			1					
-125	yougov	5	12	2016	Rest of South	553	52	16	14	13	4			0					
-125	yougov	5	12	2016	Midlands and Wales	358	44	21	9	17	5		3	1					
-125	yougov	5	12	2016	North England	402	34	39	10	12	3			1					
-125	yougov	5	12	2016	Scotland	153	26	12	6	5	2	50							
-126	icm	11	12	2016	Scotland	137	34	23	4	4	3	70		0					
-126	icm	11	12	2016	Wales	84	25	29	8	15	3		2	1					
-126	icm	11	12	2016	North	511	185	152	33	59	13	70		0					
-126	icm	11	12	2016	Midlands	453	193	119	41	81	12		2	5					
-126	icm	11	12	2016	South	496	231	110	59	72	21			4					
-127	mori	12	12	2016	North	144	54	53	18	14	5			0					
-127	mori	12	12	2016	Midlands	187	87	51	22	19	6		4	0					
-127	mori	12	12	2016	Wales	0				0	0			0					
-127	mori	12	12	2016	South	239	91	71	43	23	10			2					
-127	mori	12	12	2016	London	78	23	36	10	6	3			0					
-127	mori	12	12	2016	England	547	227	165	79	55	20			2					
-127	mori	12	12	2016	Scotland	59	18	9	6	1	1	21		3					
-128	opinium	16	12	2016	England	1284	511	429	86	187	57			14					
-128	opinium	16	12	2016	Scotland	142	27	24	5	6	4	76							
-128	opinium	16	12	2016	Wales	74	21	23	6	14	1		9						
-129	yougov	19	12	2016	London	191	29	40	11	10	8			3					
-129	yougov	19	12	2016	Rest of South	530	51	15	15	14	5			0					
-129	yougov	19	12	2016	Midlands and Wales	343	39	26	11	17	2		4	1					
-129	yougov	19	12	2016	North England	384	33	34	12	16	2			2					
-129	yougov	19	12	2016	Scotland	147	25	12	6	4	3	51		1					
-130	yougov	4	1	2017	London	209	38	34	13	10	5								
-130	yougov	4	1	2017	Rest of South	578	50	18	13	16	4								
-130	yougov	4	1	2017	Midlands and Wales	374	40	28	8	17	2		4						
-130	yougov	4	1	2017	North England	419	32	38	8	17	4			1					
-130	yougov	4	1	2017	Scotland	160	20	16	8	2	3	51							
-131	icm	8	1	2017	Scotland	121	30	20	6	7	4	54		0					
-131	icm	8	1	2017	Wales	68	22	20	4	14	4		4						
-131	icm	8	1	2017	North	470	169	149	41	44	12	54		1					
-131	icm	8	1	2017	Midlands	422	180	111	31	71	25		4	1					
-131	icm	8	1	2017	South	469	232	113	50	46	26			3					
-132	yougov	10	1	2017	London	199	37	44	11	5	3			1					
-132	yougov	10	1	2017	Rest of South	551	47	21	12	16	4			1					
-132	yougov	10	1	2017	Midlands and Wales	357	41	25	12	15	3		4	1					
-132	yougov	10	1	2017	North England	400	36	33	9	16	5			1					
-132	yougov	10	1	2017	Scotland	153	19	21	8	3	2	47		0					
-133	opinium	12	1	2017	England	964	380	306	71	150	47			10					
-133	opinium	12	1	2017	Scotland	113	31	13	5	5	2	56		1					
-133	opinium	12	1	2017	Wales	69	23	21	6	8	3		8						
-134	survation	13	1	2017	London	112	39	44	16	11	2			1					
-134	survation	13	1	2017	Midlands	144	69	39	13	22	1								
-134	survation	13	1	2017	North	219	78	79	28	27	4			3					
-134	survation	13	1	2017	South	296	139	69	25	45	7								
-134	survation	13	1	2017	Scotland	89	16	23	6	1	2	41		1					
-134	survation	13	1	2017	Wales	46	16	11	6	5	1		6						
-135	mori	16	1	2017	North	167	73	66	13	10	4			1					
-135	mori	16	1	2017	Midlands	214	93	70	18	18	9		4	1					
-135	mori	16	1	2017	Wales	0	0	0	0		0			0					
-135	mori	16	1	2017	South	265	124	69	46	12	14			1					
-135	mori	16	1	2017	London	94	33	31	20	1	8								
-135	mori	16	1	2017	England	615	277	198	74	38	26			2					
-135	mori	16	1	2017	Scotland	60	17	15	2	2	2	22							
-136	yougov	18	1	2017	London	198	41	35	11	7	5								
-136	yougov	18	1	2017	Rest of South	549	52	18	13	13	4								
-136	yougov	18	1	2017	Midlands and Wales	356	41	25	10	15	4		4	1					
-136	yougov	18	1	2017	North England	399	37	34	9	16	2								
-136	yougov	18	1	2017	Scotland	152	26	19	11	1	2	41							
-137	icm	22	1	2017	Scotland	124	30	19	9	5	2	58							
-137	icm	22	1	2017	Wales	80	18	26	10	13	5		8						
-137	icm	22	1	2017	North	492	186	159	33	43	14	58							
-137	icm	22	1	2017	Midlands	448	189	103	40	78	30		8						
-137	icm	22	1	2017	South	478	223	96	65	62	30			3					
-138	yougov	24	1	2017	London	197	42	22	20	11	2			3					
-138	yougov	24	1	2017	Rest of South	545	51	18	10	15	5								
-138	yougov	24	1	2017	Midlands and Wales	353	37	29	10	15	4		5						
-138	yougov	24	1	2017	North England	396	34	36	8	17	3								
-138	yougov	24	1	2017	Scotland	151	21	14	6	3	6	50							
-139	yougov	31	1	2017	London	205	40	30	14	10	5								
-139	yougov	31	1	2017	Rest of South	566	49	17	13	15	4			1					
-139	yougov	31	1	2017	Midlands and Wales	367	43	26	8	13	5		3	2					
-139	yougov	31	1	2017	North England	411	33	39	9	14	4			0					
-139	yougov	31	1	2017	Scotland	157	24	16	6	2	4	47		1					
-140	opinium	1	2	2017	England	1311	506	412	107	206	60			20					
-140	opinium	1	2	2017	Scotland	152	32	31	5	7	7	69		1					
-140	opinium	1	2	2017	Wales	69	13	22	10	10	3		11						
-141	icm	5	2	2017	Scotland	139	34	16	12	1	4	71							
-141	icm	5	2	2017	Wales	86	23	29	7	14	3		10						
-141	icm	5	2	2017	North	495	171	156	46	37	13	71		1					
-141	icm	5	2	2017	Midlands	463	218	106	40	67	21		10						
-141	icm	5	2	2017	South	449	211	102	52	62	19			3					
-142	yougov	6	2	2017	London	204	33	36	13	9	6			3					
-142	yougov	6	2	2017	Rest of South	566	50	17	14	14	4								
-142	yougov	6	2	2017	Midlands and Wales	366	37	25	11	18	4		4						
-142	yougov	6	2	2017	North England	411	36	31	8	19	5								
-142	yougov	6	2	2017	Scotland	157	23	14	5	2	2	54		1					
-143	comres	10	2	2017	Scotland	111	25	11	7	4	2	62		0					
-143	comres	10	2	2017	North East England	47	13	21	5	5	3			1					
-143	comres	10	2	2017	North West England	137	61	51	10	11	1			2					
-143	comres	10	2	2017	Yorkshire and Humber	100	35	29	16	15	5			1					
-143	comres	10	2	2017	West Midlands	113	54	30	7	16	3			2					
-143	comres	10	2	2017	East Midlands	79	37	19	8	8	7			0					
-143	comres	10	2	2017	Wales	64	15	15	5	9	4		15	1					
-143	comres	10	2	2017	East of England	125	56	33	19	17	1			0					
-143	comres	10	2	2017	London	158	58	57	26	12	5			0					
-143	comres	10	2	2017	South East England	182	91	37	24	20	7			2					
-143	comres	10	2	2017	South West England	103	54	17	11	14	7			0					
-144	mori	13	2	2017	North	150	59	52	22	13	2								
-144	mori	13	2	2017	Midlands	187	74	60	19	23	4		7						
-144	mori	13	2	2017	Wales	0	0	0	0	0	0		0						
-144	mori	13	2	2017	South	244	103	62	44	18	18								
-144	mori	13	2	2017	London	91	24	34	21	8	4								
-144	mori	13	2	2017	England	557	230	165	83	54	23		0						
-144	mori	13	2	2017	Scotland	67	21	12	1	2	1	28		1					
-145	opinium	16	2	2017	England	953	412	267	85	141	39			8					
-145	opinium	16	2	2017	Scotland	110	26	19	4	4	3	53		1					
-145	opinium	16	2	2017	Wales	62	17	22	4	8	1		10	0					
-146	icm	19	2	2017	Scotland	144	45	28	7	4	4	55							
-146	icm	19	2	2017	Wales	75	21	26	1	20			6	1					
-146	icm	19	2	2017	North	489	189	141	30	52	21	55		1					
-146	icm	19	2	2017	Midlands	436	186	110	31	86	14		6	2					
-146	icm	19	2	2017	South	463	246	94	42	53	27			1					
-147	yougov	22	2	2017	London	247	46	30	16	4	4								
-147	yougov	22	2	2017	Rest of South	684	50	18	14	14	4								
-147	yougov	22	2	2017	Midlands and Wales	443	37	27	9	19	3		4	2					
-147	yougov	22	2	2017	North England	496	38	36	9	13	2			1					
-147	yougov	22	2	2017	Scotland	190	23	11	5	6	2	49		3					
-148	yougov	28	2	2017	London	200	37	30	23	6	2			1					
-148	yougov	28	2	2017	Rest of South	553	51	21	10	12	5			0					
-148	yougov	28	2	2017	Midlands and Wales	358	43	24	8	17	2		4	1					
-148	yougov	28	2	2017	North England	402	39	32	10	14	5			0					
-148	yougov	28	2	2017	Scotland	153	21	16	10	2	7	44		1					
-149	icm	5	3	2017	Scotland	131	40	22	8	2	6	55		0					
-149	icm	5	3	2017	Wales	80	29	19	1	10	8		12	0					
-149	icm	5	3	2017	North	498	207	138	32	44	20	55		2					
-149	icm	5	3	2017	Midlands	451	204	125	35	46	27		12	1					
-149	icm	5	3	2017	South	480	236	110	51	56	23			5					
-150	yougov	9	3	2017	London	192	32	40	11	10	4			3					
-150	yougov	9	3	2017	Rest of South	531	56	14	14	12	3			1					
-150	yougov	9	3	2017	Midlands and Wales	344	46	26	7	12	2		5	1					
-150	yougov	9	3	2017	North England	385	42	34	9	13	2			0					
-150	yougov	9	3	2017	Scotland	147	19	25	3	3	2	48		1					
-151	yougov	14	3	2017	London	196	34	35	19	7	6			0					
-151	yougov	14	3	2017	Rest of South	541	55	19	11	10	4			1					
-151	yougov	14	3	2017	Midlands and Wales	351	47	31	7	8	3		4	0					
-151	yougov	14	3	2017	North England	393	38	37	8	13	2			1					
-151	yougov	14	3	2017	Scotland	150	31	18	8	1	5	37		0					
-152	mori	14	3	2017	North	148	54	70	9	8	8								
-152	mori	14	3	2017	Midlands	194	96	57	13	20	3		5						
-152	mori	14	3	2017	Wales	0	0	0	0	0	0	0	0	0					
-152	mori	14	3	2017	South	224	101	57	46	9	12								
-152	mori	14	3	2017	London	80	22	27	22	6	2								
-152	mori	14	3	2017	England	531	235	173	65	36	22								
-152	mori	14	3	2017	Scotland	57	17	4	11		2	22		1					
-153	opinium	17	3	2017	England	980	424	287	84	140	39			6					
-153	opinium	17	3	2017	Scotland	121	32	16	4	3	1	64		1					
-153	opinium	17	3	2017	Wales	51	13	18	2	8	1		8	1					
-154	comres	17	3	2017	Scotland	116	24	10	16	2	4	61		0					
-154	comres	17	3	2017	North East England	48	19	13	6	5	4			0					
-154	comres	17	3	2017	North West England	134	54	46	17	13	3			1					
-154	comres	17	3	2017	Yorkshire and Humber	99	41	27	13	16	2			0					
-154	comres	17	3	2017	West Midlands	106	50	29	5	16	5			0					
-154	comres	17	3	2017	East Midlands	94	44	23	11	10	3			3					
-154	comres	17	3	2017	Wales	57	19	15	5	5	3		9	1					
-154	comres	17	3	2017	East of England	121	50	28	19	20	5			0					
-154	comres	17	3	2017	London	175	59	70	24	11	9			3					
-154	comres	17	3	2017	South East England	185	105	33	23	17	5			1					
-154	comres	17	3	2017	South West England	100	50	17	13	10	7			1					
-155	icm	19	3	2017	Scotland	133	40	16	3	5	7	62		0					
-155	icm	19	3	2017	Wales	87	33	23	3	8	4		14	2					
-155	icm	19	3	2017	North	484	179	140	40	42	17	62		2					
-155	icm	19	3	2017	Midlands	467	247	109	29	49	17		14	2					
-155	icm	19	3	2017	South	453	223	102	56	53	14			4					
-156	yougov	21	3	2017	London	195	31	43	14	7	4			1					
-156	yougov	21	3	2017	Rest of South	540	52	17	14	12	5			1					
-156	yougov	21	3	2017	Midlands and Wales	350	47	25	7	13	2		2	2					
-156	yougov	21	3	2017	North England	392	36	32	12	16	3			1					
-156	yougov	21	3	2017	Scotland	150	19	18	4	3	2	54		0					
-157	gfk	15	3	2017	Scotland	126	34	13	7	3	7	60		1					
-157	gfk	15	3	2017	North East	46	14	23	3	6	1			0					
-157	gfk	15	3	2017	Yorkshire and Humber	99	36	36	6	15	5			0					
-157	gfk	15	3	2017	North West	144	52	56	8	24	4								
-157	gfk	15	3	2017	East Midlands	79	43	19	3	11	3								
-157	gfk	15	3	2017	West Midlands	110	53	29	5	15	5			4					
-157	gfk	15	3	2017	East of England	121	60	27	7	20	8								
-157	gfk	15	3	2017	London	155	63	56	15	16	4			2					
-157	gfk	15	3	2017	South East	180	79	43	17	19	21			2					
-157	gfk	15	3	2017	South West	105	48	25	9	14	10								
-157	gfk	15	3	2017	Wales	53	14	17	4	4	6		5	3					
-158	yougov	27	3	2017	London	235	35	35	18	7	3			2					
-158	yougov	27	3	2017	Rest of South	650	54	17	15	9	4			0					
-158	yougov	27	3	2017	Midlands and Wales	421	42	25	9	16	4		3	1					
-158	yougov	27	3	2017	North England	472	38	36	8	12	4			2					
-158	yougov	27	3	2017	Scotland	180	28	18	4	3	1	45		0					
-159	icm	2	4	2017	Scotland	147	43	18	6	5	5	70		0					
-159	icm	2	4	2017	Wales	75	19	25	5	13	4		9	0					
-159	icm	2	4	2017	North	497	192	143	42	32	15	70		4					
-159	icm	2	4	2017	Midlands	441	195	102	43	69	18		9	4					
-159	icm	2	4	2017	South	480	243	95	66	56	19			1					
-160	yougov	6	4	2017	London	196	35	31	20	9	4			0					
-160	yougov	6	4	2017	Rest of South	548	53	18	11	13	4			1					
-160	yougov	6	4	2017	Midlands and Wales	355	43	25	8	13	3		6	2					
-160	yougov	6	4	2017	North England	398	40	35	9	13	1			0					
-160	yougov	6	4	2017	Scotland	152	23	13	8	1	1	53		1					
-161	opinium	11	4	2017	England	914	362	288	74	141	44			5					
-161	opinium	11	4	2017	Scotland	123	38	12	5	2	7	60							
-161	opinium	11	4	2017	Wales	59	21	20	3	8	1		6						
-162	comres	13	4	2017	Scotland	113	27	17	11	3	5	49		1					
-162	comres	13	4	2017	North East England	51	19	22	3	6	0			0					
-162	comres	13	4	2017	North West England	128	42	55	15	13	3			0					
-162	comres	13	4	2017	Yorkshire and Humber	103	46	27	14	10	4			1					
-162	comres	13	4	2017	West Midlands	106	57	21	9	11	7			1					
-162	comres	13	4	2017	East Midlands	83	46	17	5	10	3			1					
-162	comres	13	4	2017	Wales	59	25	14	4	4	1		11	0					
-162	comres	13	4	2017	East of England	112	61	20	12	14	5			1					
-162	comres	13	4	2017	London	170	73	57	25	11	4			0					
-162	comres	13	4	2017	South East England	176	102	25	20	20	7			3					
-162	comres	13	4	2017	South West England	107	53	24	18	6	6			1					
-163	yougov	13	4	2017	London	248	43	31	16	5	4			1					
-163	yougov	13	4	2017	Rest of South	687	55	16	14	9	4			1					
-163	yougov	13	4	2017	Midlands and Wales	445	44	26	9	13	4		4	1					
-163	yougov	13	4	2017	North England	499	37	34	11	14	4								
-163	yougov	13	4	2017	Scotland	190	26	13	10	3	5	44							
-164	icm	18	4	2017	Scotland	68	13	13	3	1	9	29		0					
-164	icm	18	4	2017	Wales	35	16	6	4	4	1		2	0					
-164	icm	18	4	2017	North	243	94	67	21	12	15	29		4					
-164	icm	18	4	2017	Midlands	211	111	48	24	18	8		2	0					
-164	icm	18	4	2017	South	225	118	40	34	24	9			1					
-165	yougov	19	4	2017	London	207	42	36	15	3	4			1					
-165	yougov	19	4	2017	Rest of South	573	58	15	16	8	3			0					
-165	yougov	19	4	2017	Midlands and Wales	371	50	28	8	9	1		2	1					
-165	yougov	19	4	2017	North England	416	45	32	11	9	2			0					
-165	yougov	19	4	2017	Scotland	159	29	15	5	1	0	49		0					
-166	opinium	20	4	2017	England	951	448	264	104	98	33			4					
-166	opinium	20	4	2017	Scotland	117	37	17	9	2	2	50							
-166	opinium	20	4	2017	Wales	55	17	15	7	7	1		8						
-167	comres	20	4	2017	Scotland	113	43	11	10	1	1	48		0					
-167	comres	20	4	2017	North East England	50	16	22	6	6	0			0					
-167	comres	20	4	2017	North West England	141	59	48	7	7	2			0					
-167	comres	20	4	2017	Yorkshire and Humber	101	48	35	10	10	1			1					
-167	comres	20	4	2017	West Midlands	115	57	32	6	9	1			1					
-167	comres	20	4	2017	East Midlands	84	47	17	5	8	4			0					
-167	comres	20	4	2017	Wales	66	33	16	8	3	4		5	0					
-167	comres	20	4	2017	East of England	128	65	25	4	10	3			2					
-167	comres	20	4	2017	London	172	75	55	22	12	7			0					
-167	comres	20	4	2017	South East England	180	99	26	23	17	8			0					
-167	comres	20	4	2017	South West England	110	55	26	30	4	2			1					
-168	yougov	21	4	2017	London	191	42	33	19	3	3			0					
-168	yougov	21	4	2017	Rest of South	528	59	17	15	6	2			1					
-168	yougov	21	4	2017	Midlands and Wales	342	50	23	11	6	5		5	1					
-168	yougov	21	4	2017	North England	383	44	38	7	7	3			0					
-168	yougov	21	4	2017	Scotland	146	27	15	6	0	3	49		0					
-169	survationscotland	21	4	2017	Scotland	793	221	141	70	9	9	342		1					
-174	icm	21	4	2017	Scotland	144	52	24	7	0	3	58		0					
-174	icm	21	4	2017	Wales	88	36	21	8	11	2		8	1					
-174	icm	21	4	2017	North	520	222	157	40	29	14	58		1					
-174	icm	21	4	2017	Midlands	481	242	105	50	58	17		8	1					
-174	icm	21	4	2017	South	490	272	111	57	28	19			3					
-170	survation	22	4	2017	London	224	70	71	45	33	5			0					
-170	survation	22	4	2017	Midlands	262	121	77	20	38	3			2					
-170	survation	22	4	2017	North	371	156	149	31	30	3			3					
-170	survation	22	4	2017	South	525	243	124	66	71	18			2					
-170	survation	22	4	2017	Scotland	163	31	33	12	11	2	73		1					
-170	survation	22	4	2017	Wales	79	33	21	6	3	6		10	0					
-171	panelbasescotland	22	4	2017	Scotland	100	33	13	5	2	2	44		1					
-172	icm	24	4	2017	Scotland	144	38	22	15	1	4	63		0					
-172	icm	24	4	2017	Wales	85	44	25	3	2	1		8	1					
-172	icm	24	4	2017	North	508	187	166	48	33	11	63		0					
-172	icm	24	4	2017	Midlands	478	282	99	39	34	14		8	2					
-172	icm	24	4	2017	South	488	260	114	64	31	16			3					
-173	yougovwales	24	4	2017	Wales	100	40	30	8	6	2		13	1					
-175	mori	25	4	2017	North	177	89	56	13	8	1			7					
-175	mori	25	4	2017	Midlands	194	114	38	22	3	5		13	0					
-175	mori	25	4	2017	Wales	0	0	0	0	0	0			0					
-175	mori	25	4	2017	South	262	114	73	53	14	2			4					
-175	mori	25	4	2017	London	93	26	37	21	2	1			2					
-175	mori	25	4	2017	England	600	306	161	85	26	7			11					
-175	mori	25	4	2017	Scotland	62	22	11	3		1	25							
-178	opinium	25	4	2017	England	1004	491	316	87	80	25			5					
-178	opinium	25	4	2017	Scotland	113	34	15	2	1	4	57		0					
-178	opinium	25	4	2017	Wales	58	24	17	3	6	1		7	0					
-176	yougov	26	4	2017	London	191	36	36	16	6	5	45		1					
-176	yougov	26	4	2017	Rest of South	528	57	20	11	7	4			0					
-176	yougov	26	4	2017	Midlands and Wales	342	45	31	9	11	2		2	1					
-176	yougov	26	4	2017	North England	383	41	42	7	7	2			0					
-176	yougov	26	4	2017	Scotland	146	25	19	8	2	1			0					
-177	yougovscotland	27	4	2017	Scotland	100	28	18	7	2	3	41		1					
-179	yougov	28	4	2017	London	193	30	45	15	6	3			0					
-179	yougov	28	4	2017	Rest of South	535	51	22	16	7	2			1					
-179	yougov	28	4	2017	Midlands and Wales	347	49	29	7	8	3		4						
-179	yougov	28	4	2017	North England	388	41	43	8	6	2								
-179	yougov	28	4	2017	Scotland	148	32	25	5	0	2	36							
-180	icm	30	4	2017	Scotland	137	33	23	14	1	4	61							
-180	icm	30	4	2017	Wales	75	35	21	4	8	2		6						
-180	icm	30	4	2017	North	498	200	157	37	30	12	61							
-180	icm	30	4	2017	Midlands	430	216	109	32	53	13		6	1					
-180	icm	30	4	2017	South	472	265	99	55	27	24			2					
-181	icm	2	5	2017	Scotland	135	42	21	5	9	6	51		0					
-181	icm	2	5	2017	Wales	73	28	30	2	8			5	0					
-181	icm	2	5	2017	North	491	208	143	32	36	18	51		4					
-181	icm	2	5	2017	Midlands	449	229	125	35	43	10		5	2					
-181	icm	2	5	2017	South	476	246	111	62	37	18			1					
-182	lucidtalk	29	4	2017	Norn Iron	100	1			1	2			2	12	28	10	29	15
-183	panelbase	2	5	2017	East Anglia	100	48	24	13	12	3								
-183	panelbase	2	5	2017	East Midlands	100	58	26	8	6	2								
-183	panelbase	2	5	2017	London	100	50	31	15	2	2								
-183	panelbase	2	5	2017	North East	100	45	33	12	8	2								
-183	panelbase	2	5	2017	North West	100	37	43	11	7	1			1					
-183	panelbase	2	5	2017	Scotland	100	19	14	14	3	1	48							
-183	panelbase	2	5	2017	South East	100	63	20	8	5	2			2					
-183	panelbase	2	5	2017	South West	100	51	22	18	4	5								
-183	panelbase	2	5	2017	Wales	100	48	33	4	3	3		9						
-183	panelbase	2	5	2017	West Midlands	100	53	33	4	5	3			1					
-183	panelbase	2	5	2017	Yorkshire	100	40	47	5	7	1								
-184	yougov	3	5	2017	London	248	38	39	15	4	4			0					
-184	yougov	3	5	2017	Rest of South	686	56	21	12	7	3			1					
-184	yougov	3	5	2017	Midlands and Wales	444	49	29	9	7	2		2	2					
-184	yougov	3	5	2017	North England	498	43	43	7	5	1			0					
-184	yougov	3	5	2017	Scotland	190	37	15	6		1	40		0					
-185	opinium	3	5	2017	England	1057	500	338	105	86	22			6					
-185	opinium	3	5	2017	Scotland	134	44	17	7	1	7	56		2					
-185	opinium	3	5	2017	Wales	56	29	14	3	5			4	1					
-186	yougov	5	5	2017	London	197	44	35	14	4	2			0					
-186	yougov	5	5	2017	Rest of South	546	57	20	13	6	3			1					
-186	yougov	5	5	2017	Midlands and Wales	353	48	32	9	6	2		2	1					
-186	yougov	5	5	2017	North England	396	42	39	10	7	3			0					
-186	yougov	5	5	2017	Scotland	151	27	19	9	1	3	41		0					
-187	icm	5	5	2017	Scotland	145	39	26	9	2	6	62		1					
-187	icm	5	5	2017	Wales	77	34	32	1	3	1		6	0					
-187	icm	5	5	2017	North	528	215	168	40	23	14	62		5					
-187	icm	5	5	2017	Midlands	459	230	129	43	41	10		6	0					
-187	icm	5	5	2017	South	487	249	113	61	40	22			1					
-188	icm	7	5	2017	Scotland	133	46	18	3	0	6	59		1					
-188	icm	7	5	2017	Wales	73	32	24	6	7	3		2	0					
-188	icm	7	5	2017	North	536	233	167	36	22	12	59		6					
-188	icm	7	5	2017	Midlands	452	252	108	39	33	18		2	2					
-188	icm	7	5	2017	South	497	272	113	61	33	17			2					
-189	yougovwales	7	5	2017	Wales	100	41	35	7	4	1		11	1					
-190	survation	6	5	2017	London	101	35	52	8	3	3			1					
-190	survation	6	5	2017	Midlands	118	67	27	11	4	9			0					
-190	survation	6	5	2017	North	261	140	90	13	12	5			0					
-190	survation	6	5	2017	South	254	150	54	26	14	6			4					
-190	survation	6	5	2017	Scotland	71	15	14	3			38		0					
-190	survation	6	5	2017	Wales	42	15	17					8	1					
-191	yougovlondon	2	5	2017	London	100	36	41	14	6	3			1					
-192	panelbase	9	5	2017	East Anglia	100	50	30	14	6	0								
-192	panelbase	9	5	2017	East Midlands	100	56	28	3	7	5								
-192	panelbase	9	5	2017	London	100	48	38	10	3	1								
-192	panelbase	9	5	2017	North East	100	42	47	5	5	0								
-192	panelbase	9	5	2017	North West	100	40	39	11	8	1			2					
-192	panelbase	9	5	2017	Scotland	100	42	11	3	1	1	42							
-192	panelbase	9	5	2017	South East	100	59	22	11	5	3								
-192	panelbase	9	5	2017	South West	100	54	25	14	3	4								
-192	panelbase	9	5	2017	Wales	100	50	29	2	0	3		16						
-192	panelbase	9	5	2017	West Midlands	100	47	39	3	7	4								
-192	panelbase	9	5	2017	Yorkshire	100	37	41	9	8	3			2					
-193	yougov	10	5	2017	London	198	35	46	13	4	2			0					
-193	yougov	10	5	2017	Rest of South	548	57	20	15	5	2			0					
-193	yougov	10	5	2017	Midlands and Wales	355	48	32	5	7	2		2	3					
-193	yougov	10	5	2017	North England	398	43	44	7	4	2								
-193	yougov	10	5	2017	Scotland	152	26	14	11	2	1	46							
-194	opinium	10	5	2017	England	988	494	333	87	52	20			2					
-194	opinium	10	5	2017	Scotland	122	38	21	3	1	5	53		1					
-194	opinium	10	5	2017	Wales	52	16	22	2	3	1		8						
-195	comres	12	5	2017	Scotland	111	34	14	12	2	4	45							
-195	comres	12	5	2017	North East England	51	27	21	1	2	1								
-195	comres	12	5	2017	North West England	134	62	57	7	6	2								
-195	comres	12	5	2017	Yorkshire and Humber	100	47	37	6	7	3								
-195	comres	12	5	2017	West Midlands	103	52	33	9	6	1			2					
-195	comres	12	5	2017	East Midlands	90	50	23	5	9	2			1					
-195	comres	12	5	2017	Wales	61	26	18	6	1	2		8						
-195	comres	12	5	2017	East of England	123	67	25	20	6	4			2					
-195	comres	12	5	2017	London	161	65	62	21	5	7			1					
-195	comres	12	5	2017	South East England	179	97	44	21	11	6								
-195	comres	12	5	2017	South West England	109	56	28	13	7	5			1					
-196	yougov	12	5	2017	London	196	39	46	10	2	3			0					
-196	yougov	12	5	2017	Rest of South	541	58	22	14	3	2			1					
-196	yougov	12	5	2017	Midlands and Wales	350	52	31	6	4	3		2	1					
-196	yougov	12	5	2017	North England	393	45	43	6	4	1			1					
-196	yougov	12	5	2017	Scotland	150	33	15	5		4	41		2					
-197	survation	13	5	2017	London	101	35	45	11	5	4			2					
-197	survation	13	5	2017	Midlands	121	78	33	6	3	1			0					
-197	survation	13	5	2017	North	177	83	74	11	5	3			1					
-197	survation	13	5	2017	South	252	136	54	34	15	9			4					
-197	survation	13	5	2017	Scotland	70	22	13	0		1	33		2					
-197	survation	13	5	2017	Wales	44	19	14	3		1		7						
-198	icm	14	5	2017	Scotland	139	36	23	9	1	2	68		0					
-198	icm	14	5	2017	Wales	84	40	23	11	1	3		6	0					
-198	icm	14	5	2017	North	520	202	180	37	19	11	68		4					
-198	icm	14	5	2017	Midlands	456	245	111	43	32	15		6	4					
-198	icm	14	5	2017	South	483	268	107	64	25	17			1					
-199	panelbase	15	5	2017	East Anglia	100	56	25	9	4	6								
-199	panelbase	15	5	2017	East Midlands	100	60	28	1	9	2								
-199	panelbase	15	5	2017	London	100	38	50	9	1	2								
-199	panelbase	15	5	2017	North East	100	38	43	10	6	3								
-199	panelbase	15	5	2017	North West	100	45	45	4	3	4								
-199	panelbase	15	5	2017	Scotland	100	20	13	6	2	2	56		1					
-199	panelbase	15	5	2017	South East	100	59	24	7	7	2			1					
-199	panelbase	15	5	2017	South West	100	56	23	16	3	2								
-199	panelbase	15	5	2017	Wales	100	40	40	3	9	0		8						
-199	panelbase	15	5	2017	West Midlands	100	50	33	5	8	5								
-199	panelbase	15	5	2017	Yorkshire	100	42	43	4	10	1								
-200	yougov	17	5	2017	London	223	41	38	14	5	2			0					
-200	yougov	17	5	2017	Rest of South	618	54	23	11	7	3			1					
-200	yougov	17	5	2017	Midlands and Wales	400	46	34	6	7	2		4	0					
-200	yougov	17	5	2017	North England	449	43	46	4	5	1			1					
-200	yougov	17	5	2017	Scotland	171	28	22	6	1	1	43		0					
-201	mori	17	5	2017	North	238	78	77	9	2	5								
-201	mori	17	5	2017	Midlands	171	126	76	14	2	10		1	1					
-201	mori	17	5	2017	Wales	230													
-201	mori	17	5	2017	South	264	125	93	28	13	4			1					
-201	mori	17	5	2017	London	97	38	47	2	8	1								
-201	mori	17	5	2017	England	626	317	224	49	16	19			1					
-201	mori	17	5	2017	Scotland	67	31	7	2			27							
-202	yougovscotland	18	5	2017	Scotland	100	29	19	6	1	2	42		1					
-203	opinium	16	5	2017	England	1005	486	344	83	60	25			7					
-203	opinium	16	5	2017	Scotland	120	34	21	6	2	0	56		1					
-203	opinium	16	5	2017	Wales	61	26	26	3	2	0		4						
-204	yougov	19	5	2017	London	231	34	44	12	3	3			3					
-204	yougov	19	5	2017	Rest of South	639	56	24	13	3	3			1					
-204	yougov	19	5	2017	Midlands and Wales	414	48	37	7	4	1		3	1					
-204	yougov	19	5	2017	North England	464	36	50	7	5	1								
-204	yougov	19	5	2017	Scotland	177	28	22	5		1	44							
-205	survation	20	5	2017	London	103	50	35	14	2	2			3					
-205	survation	20	5	2017	Midlands	127	71	41	3	7	4			4					
-205	survation	20	5	2017	North	193	84	90	12	5	1			1					
-205	survation	20	5	2017	South	271	145	83	27	12	2			2					
-205	survation	20	5	2017	Scotland	80	22	21	8			30							
-205	survation	20	5	2017	Wales	37	15	17	2				3						
-206	survation	20	5	2017	London	101	40	47	7	2	3			2					
-206	survation	20	5	2017	Midlands	115	56	40	9	8	3			0					
-206	survation	20	5	2017	North	187	71	87	13	7	4			4					
-206	survation	20	5	2017	South	257	147	63	31	11	2			4					
-206	survation	20	5	2017	Scotland	65	17	14	7			27		10					
-206	survation	20	5	2017	Wales	42	13	21		2	1		5						
-207	icm	21	5	2017	Scotland	130	29	26	11	0	2	59		2					
-207	icm	21	5	2017	Wales	78	26	33	5	8	0		6	0					
-207	icm	21	5	2017	North	507	209	189	29	8	8	59		5					
-207	icm	21	5	2017	Midlands	460	238	148	38	24	3		6	4					
-207	icm	21	5	2017	South	478	243	135	52	17	23			8					
-208	yougovwales	21	5	2017	Wales	100	34	44	6	5	1		9	1					
+code,company,day,month,year,region,total,conservative,labour,libdems,ukip,green,snp,plaidcymru,other,sdlp,sinnfein,alliance,dup,uu
+1001,me,3,3,2017,Northern Ireland,1004,3,,,2,23,,,77,119,279,91,281,129
+1001,me,9,5,2015,England,10000,3600,2500,2500,1000,300,,,100,,,,,
+1001,me,9,5,2015,Scotland,10001,1492,2430,755,162,135,4997,,30,,,,,
+1001,me,9,5,2015,Wales,10001,2724,3687,653,1364,256,,1213,104,,,,,
+1001,me,7,5,2015,All,1000,378,312,81,129,38,49,6,9,,,,,
+1,survation,9,5,2015,London,115,43,45,7,17,3,,,,,,,,
+1,survation,9,5,2015,Midlands,157,73,49,10,20,4,,,,,,,,
+1,survation,9,5,2015,North,199,76,82,6,26,8,,,,,,,,
+1,survation,9,5,2015,South,313,157,76,23,40,11,,,6,,,,,
+1,survation,9,5,2015,Scotland,75,10,9,2,3,1,49,,,,,,,
+1,survation,9,5,2015,Wales,52,11,21,8,2,3,,7,,,,,,
+2,yougov,26,5,2015,London,219,34,44,7,6,5,,,1,,,,,
+2,yougov,26,5,2015,Rest of South,555,49,21,9,15,6,,,,,,,,
+2,yougov,26,5,2015,Midlands and Wales,366,46,31,5,16,2,,,,,,,,
+2,yougov,26,5,2015,North England,420,38,38,6,16,2,,,,,,,,
+2,yougov,26,5,2015,Scotland,149,15,20,5,3,1,56,,,,,,,
+3,comres,31,5,2015,Scotland,51,11,8,5,0,2,24,,1,,,,,
+3,comres,31,5,2015,North East England,23,11,8,0,3,1,,,0,,,,,
+3,comres,31,5,2015,North West England,57,20,23,5,6,3,,,1,,,,,
+3,comres,31,5,2015,Yorkshire and Humber,48,18,22,2,5,1,,,1,,,,,
+3,comres,31,5,2015,West Midlands,45,20,9,2,8,4,,,2,,,,,
+3,comres,31,5,2015,East Midlands,46,19,16,1,7,1,,,0,,,,,
+3,comres,31,5,2015,Wales,22,4,10,1,2,1,,4,0,,,,,
+3,comres,31,5,2015,East of England,56,29,11,6,8,2,,,0,,,,,
+3,comres,31,5,2015,London,66,27,25,8,1,4,,,1,,,,,
+3,comres,31,5,2015,South East England,75,35,15,7,10,3,,,3,,,,,
+3,comres,31,5,2015,South West England,45,23,7,8,2,4,,,0,,,,,
+4,icm2,14,6,2015,Scotland,66,15,11,3,0,5,32,,0,,,,,
+4,icm2,14,6,2015,Wales,26,5,9,2,5,1,,3,0,,,,,
+4,icm2,14,6,2015,North,151,47,65,11,20,7,,,1,,,,,
+4,icm2,14,6,2015,Midlands,169,77,47,8,26,10,,,1,,,,,
+4,icm2,14,6,2015,South,247,101,70,28,32,13,,,2,,,,,
+5,mori,16,6,2015,North,169,77,61,16,3,10,,,0,,,,,
+5,mori,16,6,2015,Midlands,212,77,62,18,26,14,,14,1,,,,,
+5,mori,16,6,2015,Wales,0,0,0,0,0,0,,,0,,,,,
+5,mori,16,6,2015,South,246,108,69,26,24,18,,,0,,,,,
+5,mori,16,6,2015,London,84,33,36,9,3,3,,,0,,,,,
+5,mori,16,6,2015,England,593,255,183,60,52,39,,,,,,,,
+5,mori,16,6,2015,Scotland,65,11,14,3,1,,36,,,,,,,
+6,comres,28,6,2015,Scotland,51,14,7,2,1,1,26,,0,,,,,
+6,comres,28,6,2015,North East England,25,8,7,4,4,1,,,0,,,,,
+6,comres,28,6,2015,North West England,54,21,23,4,4,1,,,1,,,,,
+6,comres,28,6,2015,Yorkshire and Humber,45,16,19,2,4,1,,,1,,,,,
+6,comres,28,6,2015,West Midlands,51,20,13,5,9,3,,,2,,,,,
+6,comres,28,6,2015,East Midlands,36,17,9,4,4,1,,,0,,,,,
+6,comres,28,6,2015,Wales,26,7,7,3,3,2,,4,0,,,,,
+6,comres,28,6,2015,East of England,56,24,12,4,11,3,,,2,,,,,
+6,comres,28,6,2015,London,67,17,24,5,8,11,,,2,,,,,
+6,comres,28,6,2015,South East England,70,34,16,7,6,4,,,3,,,,,
+6,comres,28,6,2015,South West England,45,29,5,5,5,2,,,,,,,,
+7,icm2,12,7,2015,Scotland,65,13,22,1,0,0,27,,2,,,,,
+7,icm2,12,7,2015,Wales,32,9,11,1,5,1,,5,0,,,,,
+7,icm2,12,7,2015,North,165,53,71,11,28,3,,,0,,,,,
+7,icm2,12,7,2015,Midlands,163,74,52,4,24,8,,,0,,,,,
+7,icm2,12,7,2015,South,232,101,68,25,24,13,,,1,,,,,
+8,mori,20,7,2015,North,160,51,66,11,22,10,,,0,,,,,
+8,mori,20,7,2015,Midlands,206,73,65,25,18,20,,4,2,,,,,
+8,mori,20,7,2015,Wales,0,0,0,0,0,0,,,0,,,,,
+8,mori,20,7,2015,South,226,101,65,25,17,16,,,1,,,,,
+8,mori,20,7,2015,London,82,32,23,9,5,4,,,0,,,,,
+8,mori,20,7,2015,England,559,215,180,58,56,44,,,3,,,,,
+8,mori,20,7,2015,Scotland,63,17,8,6,,4,28,,0,,,,,
+9,comres,26,7,2015,Scotland,53,10,8,2,1,1,29,,2,,,,,
+9,comres,26,7,2015,North East England,19,7,7,1,4,0,,,0,,,,,
+9,comres,26,7,2015,North West England,65,19,29,2,9,4,,,2,,,,,
+9,comres,26,7,2015,Yorkshire and Humber,51,15,21,3,6,4,,,1,,,,,
+9,comres,26,7,2015,West Midlands,51,22,15,2,7,4,,,2,,,,,
+9,comres,26,7,2015,East Midlands,40,21,15,1,3,1,,,0,,,,,
+9,comres,26,7,2015,Wales,27,8,5,2,3,2,,7,1,,,,,
+9,comres,26,7,2015,East of England,62,34,12,5,8,3,,,0,,,,,
+9,comres,26,7,2015,London,66,25,22,9,3,4,,,3,,,,,
+9,comres,26,7,2015,South East England,74,40,17,6,8,3,,,2,,,,,
+9,comres,26,7,2015,South West England,53,25,10,7,6,3,,,2,,,,,
+10,icm2,9,8,2015,Scotland,65,13,22,1,0,0,27,,2,,,,,
+10,icm2,9,8,2015,Wales,32,9,11,1,5,1,,5,0,,,,,
+10,icm2,9,8,2015,North,165,53,71,11,28,3,,,0,,,,,
+10,icm2,9,8,2015,Midlands,163,74,52,4,24,8,,,0,,,,,
+10,icm2,9,8,2015,South,232,101,68,25,24,13,,,1,,,,,
+11,survation,13,8,2015,London,101,35,41,6,19,1,,,,,,,,
+11,survation,13,8,2015,Midlands,143,82,33,1,24,3,,,,,,,,
+11,survation,13,8,2015,North,196,58,95,10,27,6,,,,,,,,
+11,survation,13,8,2015,South,284,115,79,26,54,9,,,1,,,,,
+11,survation,13,8,2015,Scotland,97,24,21,5,1,2,44,,,,,,,
+11,survation,13,8,2015,Wales,37,16,12,2,2,,,4,,,,,,
+12,comres,13,8,2015,Scotland,119,27,17,8,5,4,57,,9,,,,,
+12,comres,13,8,2015,North East England,43,15,21,3,4,0,,,0,,,,,
+12,comres,13,8,2015,North West England,146,57,48,12,25,2,,,1,,,,,
+12,comres,13,8,2015,Yorkshire and Humber,102,40,39,5,13,5,,,1,,,,,
+12,comres,13,8,2015,West Midlands,104,40,37,13,12,0,,,0,,,,,
+12,comres,13,8,2015,East Midlands,90,35,28,9,12,6,,,1,,,,,
+12,comres,13,8,2015,Wales,60,22,20,3,9,2,,4,0,,,,,
+12,comres,13,8,2015,East of England,117,53,23,11,26,4,,,0,,,,,
+12,comres,13,8,2015,London,166,72,61,11,16,4,,,2,,,,,
+12,comres,13,8,2015,South East England,181,90,40,12,30,7,,,2,,,,,
+12,comres,13,8,2015,South West England,117,47,32,13,14,11,,,,,,,,
+13,comresdm,23,8,2015,Wales,27,11,10,1,2,2,,1,,,,,,
+13,comresdm,23,8,2015,Scotland,49,8,10,2,2,3,24,,,,,,,
+13,comresdm,23,8,2015,North,131,51,48,9,13,6,,,,,,,,
+13,comresdm,23,8,2015,Midlands,128,58,36,12,12,7,,,3,,,,,
+13,comresdm,23,8,2015,South,184,86,43,15,18,12,,,3,,,,,
+14,survation,4,9,2015,London,111,55,31,10,11,4,,,,,,,,
+14,survation,4,9,2015,Midlands,148,57,51,5,27,6,,,2,,,,,
+14,survation,4,9,2015,North,199,60,93,7,29,8,,,2,,,,,
+14,survation,4,9,2015,South,271,129,68,21,39,10,,,2,,,,,
+14,survation,4,9,2015,Scotland,81,10,13,3,5,4,45,,,,,,,
+14,survation,4,9,2015,Wales,39,10,15,2,3,,,8,,,,,,
+15,icm2,13,9,2015,Scotland,57,9,8,3,1,2,35,,0,,,,,
+15,icm2,13,9,2015,Wales,31,3,8,4,9,0,,7,0,,,,,
+15,icm2,13,9,2015,North,136,46,60,9,19,2,,,0,,,,,
+15,icm2,13,9,2015,Midlands,171,75,58,12,22,4,,,0,,,,,
+15,icm2,13,9,2015,South,232,95,67,21,34,11,,,4,,,,,
+16,comres,17,9,2015,Scotland,113,26,20,4,5,3,55,,0,,,,,
+16,comres,17,9,2015,North East England,50,22,19,1,6,1,,,0,,,,,
+16,comres,17,9,2015,North West England,136,55,54,7,16,3,,,0,,,,,
+16,comres,17,9,2015,Yorkshire and Humber,96,39,29,6,18,4,,,1,,,,,
+16,comres,17,9,2015,West Midlands,107,53,30,5,17,2,,,0,,,,,
+16,comres,17,9,2015,East Midlands,88,39,24,7,16,3,,,0,,,,,
+16,comres,17,9,2015,Wales,58,19,18,4,10,1,,6,0,,,,,
+16,comres,17,9,2015,East of England,129,60,34,9,21,3,,,2,,,,,
+16,comres,17,9,2015,London,170,75,62,13,14,4,,,1,,,,,
+16,comres,17,9,2015,South East England,169,75,44,16,24,8,,,1,,,,,
+16,comres,17,9,2015,South West England,106,48,32,8,15,3,,,1,,,,,
+17,opinium,18,9,2015,England,1307,512,405,85,184,48,,,15,,,,,
+17,opinium,18,9,2015,Scotland,125,24,32,4,7,4,76,,0,,,,,
+17,opinium,18,9,2015,Wales,58,13,28,5,11,3,,8,0,,,,,
+18,yougov,18,9,2015,London,205,44,32,6,14,4,,,0,,,,,
+18,yougov,18,9,2015,Rest of South,520,49,21,6,19,4,,,0,,,,,
+18,yougov,18,9,2015,Midlands and Wales,343,37,32,6,18,1,,3,2,,,,,
+18,yougov,18,9,2015,North England,394,33,42,7,15,2,,,1,,,,,
+18,yougov,18,9,2015,Scotland,139,21,28,3,2,2,44,,0,,,,,
+19,mori,23,9,2015,North,189,65,80,26,10,5,,,4,,,,,
+19,mori,23,9,2015,Midlands,202,84,69,17,19,11,,,0,,,,,
+19,mori,23,9,2015,Wales,0,0,0,0,0,0,0,0,0,,,,,
+19,mori,23,9,2015,South,186,95,39,21,48,29,,,1,,,,,
+19,mori,23,9,2015,London,106,45,47,4,5,3,,,,,,,,
+19,mori,23,9,2015,England,683,289,235,68,53,32,,,6,,,,,
+19,mori,23,9,2015,Scotland,75,17,14,3,,,40,,1,,,,,
+20,survation,23,9,2015,London,104,51,27,13,10,2,,,1,,,,,
+20,survation,23,9,2015,Midlands,135,60,52,5,18,1,,,0,,,,,
+20,survation,23,9,2015,North,193,55,92,11,30,3,,,2,,,,,
+20,survation,23,9,2015,South,287,132,72,28,39,11,,,5,,,,,
+20,survation,23,9,2015,Scotland,74,12,9,7,3,3,41,,0,,,,,
+20,survation,23,9,2015,Wales,45,5,18,8,9,1,,3,0,,,,,
+21,comresdm,28,9,2015,Wales,26,8,9,3,2,0,,4,0,,,,,
+21,comresdm,28,9,2015,Scotland,50,10,9,2,3,3,22,,0,,,,,
+21,comresdm,28,9,2015,North,138,46,53,12,21,2,,,2,,,,,
+21,comresdm,28,9,2015,Midlands,145,68,43,10,17,4,,,3,,,,,
+21,comresdm,28,9,2015,South,200,85,54,22,24,11,,,4,,,,,
+22,yougov,29,9,2015,London,264,35,36,10,16,2,,,1,,,,,
+22,yougov,29,9,2015,Rest of South,671,42,28,7,20,2,,,0,,,,,
+22,yougov,29,9,2015,Midlands and Wales,442,37,30,6,19,3,,3,1,,,,,
+22,yougov,29,9,2015,North England,508,35,39,7,16,2,,,1,,,,,
+22,yougov,29,9,2015,Scotland,180,26,17,3,5,1,47,,1,,,,,
+23,icm2,11,10,2015,Scotland,52,9,11,1,1,1,28,,1,,,,,
+23,icm2,11,10,2015,Wales,29,5,15,1,1,1,,3,1,,,,,
+23,icm2,11,10,2015,North,146,44,77,10,10,2,,,2,,,,,
+23,icm2,11,10,2015,Midlands,161,72,40,10,27,9,,,4,,,,,
+23,icm2,11,10,2015,South,235,106,71,18,29,8,,,4,,,,,
+24,comres,16,10,2015,Scotland,153,26,28,9,3,3,84,,0,,,,,
+24,comres,16,10,2015,North East England,64,19,27,4,13,1,,,0,,,,,
+24,comres,16,10,2015,North West England,190,56,97,8,21,7,,,1,,,,,
+24,comres,16,10,2015,Yorkshire and Humber,147,63,54,7,18,3,,,2,,,,,
+24,comres,16,10,2015,West Midlands,146,56,49,7,25,8,,,1,,,,,
+24,comres,16,10,2015,East Midlands,130,64,34,6,19,7,,,0,,,,,
+24,comres,16,10,2015,Wales,87,26,33,6,9,4,,9,0,,,,,
+24,comres,16,10,2015,East of England,161,80,36,6,34,4,,,1,,,,,
+24,comres,16,10,2015,London,218,80,87,11,29,10,,,1,,,,,
+24,comres,16,10,2015,South East England,245,114,56,20,49,4,,,2,,,,,
+24,comres,16,10,2015,South West England,140,55,39,20,17,7,,,2,,,,,
+25,opinium,16,10,2015,England,947,379,311,49,162,38,,,8,,,,,
+25,opinium,16,10,2015,Scotland,116,19,22,2,2,2,68,,0,,,,,
+25,opinium,16,10,2015,Wales,63,15,27,0,8,2,,9,1,,,,,
+26,mori,19,10,2015,North,162,44,72,19,20,6,,,2,,,,,
+26,mori,19,10,2015,Midlands,183,72,57,22,22,,,,5,,,,,
+26,mori,19,10,2015,Wales,0,0,0,0,0,0,0,5,0,,,,,
+26,mori,19,10,2015,South,228,92,69,19,34,11,,,2,,,,,
+26,mori,19,10,2015,London,84,28,37,1,15,3,,,0,,,,,
+26,mori,19,10,2015,England,539,197,185,58,74,18,,,8,,,,,
+26,mori,19,10,2015,Scotland,63,19,8,1,1,2,32,,1,,,,,
+27,comresdm,25,10,2015,Wales,27,7,10,2,5,0,,3,1,,,,,
+27,comresdm,25,10,2015,Scotland,53,13,12,4,1,2,18,,2,,,,,
+27,comresdm,25,10,2015,North,121,37,50,7,13,6,,,9,,,,,
+27,comresdm,25,10,2015,Midlands,137,58,48,9,13,3,,,4,,,,,
+27,comresdm,25,10,2015,South,204,90,60,19,23,8,,,4,,,,,
+28,bmg,27,10,2015,Scotland,115,22,27,9,4,0,52,,2,,,,,
+28,bmg,27,10,2015,Wales,52,12,20,2,7,4,,7,1,,,,,
+28,bmg,27,10,2015,East Midlands,86,37,26,5,16,2,,,0,,,,,
+28,bmg,27,10,2015,East of England,127,43,47,6,22,8,,,1,,,,,
+28,bmg,27,10,2015,London,151,68,56,6,14,7,,,1,,,,,
+28,bmg,27,10,2015,North East England,41,12,14,3,8,3,,,1,,,,,
+28,bmg,27,10,2015,North West England,125,39,54,3,23,5,,,1,,,,,
+28,bmg,27,10,2015,South East England,163,84,31,10,28,8,,,3,,,,,
+28,bmg,27,10,2015,South West England,112,49,29,11,17,5,,,1,,,,,
+28,bmg,27,10,2015,West Midlands,108,45,34,4,16,7,,,1,,,,,
+28,bmg,27,10,2015,Yorkshire and Humber,96,31,33,8,21,3,,,1,,,,,
+29,survation,11,11,2015,London,221,77,86,20,29,8,,,1,,,,,
+29,survation,11,11,2015,Midlands,257,125,72,13,40,6,,,0,,,,,
+29,survation,11,11,2015,North,364,120,147,27,63,5,,,2,,,,,
+29,survation,11,11,2015,South,519,228,127,41,97,17,,,5,,,,,
+29,survation,11,11,2015,Scotland,165,30,26,7,8,5,85,,,,,,,
+29,survation,11,11,2015,Wales,94,20,34,11,16,4,,9,,,,,,
+30,icm2,15,11,2015,Scotland,68,10,12,4,1,3,38,,0,,,,,
+30,icm2,15,11,2015,Wales,31,13,11,1,6,0,,,0,,,,,
+30,icm2,15,11,2015,North,169,43,80,11,25,7,,,3,,,,,
+30,icm2,15,11,2015,Midlands,187,74,59,11,36,4,,,3,,,,,
+30,icm2,15,11,2015,South,277,107,102,23,28,13,,,4,,,,,
+31,bmg,17,11,2015,Scotland,133,38,18,11,5,5,55,,,,,,,
+31,bmg,17,11,2015,Wales,69,24,23,3,7,4,,7,,,,,,
+31,bmg,17,11,2015,East Midlands,116,42,38,5,18,6,,,2,,,,,
+31,bmg,17,11,2015,East of England,141,62,41,6,23,8,,,1,,,,,
+31,bmg,17,11,2015,London,150,41,54,15,27,7,,,4,,,,,
+31,bmg,17,11,2015,North East England,46,18,17,2,4,2,,,3,,,,,
+31,bmg,17,11,2015,North West England,138,43,55,12,16,5,,,2,,,,,
+31,bmg,17,11,2015,South East England,177,84,30,16,32,10,,,1,,,,,
+31,bmg,17,11,2015,South West England,120,48,29,8,24,6,,,2,,,,,
+31,bmg,17,11,2015,West Midlands,117,47,36,5,16,3,,,2,,,,,
+31,bmg,17,11,2015,Yorkshire and Humber,127,35,42,13,27,3,,,1,,,,,
+32,survation,17,11,2015,London,162,71,48,12,24,5,,,1,,,,,
+32,survation,17,11,2015,Midlands,205,85,68,8,33,8,,,4,,,,,
+32,survation,17,11,2015,North,299,97,126,16,50,8,,,2,,,,,
+32,survation,17,11,2015,South,418,181,108,30,89,9,,,1,,,,,
+32,survation,17,11,2015,Scotland,120,25,20,5,3,0,66,,1,,,,,
+32,survation,17,11,2015,Wales,68,19,20,3,8,2,,15,,,,,,
+33,mori,17,11,2015,North,147,53,59,15,10,9,,,1,,,,,
+33,mori,17,11,2015,Midlands,190,97,58,12,15,6,,2,0,,,,,
+33,mori,17,11,2015,Wales,0,0,0,0,0,0,0,0,0,,,,,
+33,mori,17,11,2015,South,242,96,89,20,19,12,,,0,,,,,
+33,mori,17,11,2015,London,100,39,45,6,2,3,,,0,,,,,
+33,mori,17,11,2015,England,543,235,188,46,43,25,,,1,,,,,
+33,mori,17,11,2015,Scotland,59,15,9,1,3,,31,,0,,,,,
+34,comres,20,11,2015,Scotland,115,19,16,8,6,4,62,,,,,,,
+34,comres,20,11,2015,North East England,50,21,22,1,6,0,,,,,,,,
+34,comres,20,11,2015,North West England,150,63,56,8,15,7,,,,,,,,
+34,comres,20,11,2015,Yorkshire and Humber,106,45,33,5,18,4,,,1,,,,,
+34,comres,20,11,2015,West Midlands,109,46,28,8,24,2,,,,,,,,
+34,comres,20,11,2015,East Midlands,97,47,26,4,17,4,,,,,,,,
+34,comres,20,11,2015,Wales,57,18,22,1,9,1,,4,,,,,,
+34,comres,20,11,2015,East of England,123,52,25,18,26,2,,,,,,,,
+34,comres,20,11,2015,London,167,66,61,13,22,4,,,1,,,,,
+34,comres,20,11,2015,South East England,191,104,34,16,29,6,,,1,,,,,
+34,comres,20,11,2015,South West England,116,53,26,11,17,8,,,,,,,,
+35,comresdm,22,11,2015,Wales,25,8,8,1,2,0,,5,1,,,,,
+35,comresdm,22,11,2015,Scotland,50,12,11,2,1,1,20,,2,,,,,
+35,comresdm,22,11,2015,North,117,49,39,7,16,3,,,2,,,,,
+35,comresdm,22,11,2015,Midlands,144,67,38,13,17,3,,,6,,,,,
+35,comresdm,22,11,2015,South,170,68,52,17,18,9,,,6,,,,,
+36,yougov,24,11,2015,London,552,38,36,7,13,4,,,1,,,,,
+36,yougov,24,11,2015,Rest of South,1403,43,24,7,19,4,,,1,,,,,
+36,yougov,24,11,2015,Midlands and Wales,920,40,27,6,22,2,,2,1,,,,,
+36,yougov,24,11,2015,North England,1060,34,39,6,17,3,,,1,,,,,
+36,yougov,24,11,2015,Scotland,378,24,17,3,6,2,48,,,,,,,
+37,yougov,1,12,2015,London,212,38,37,6,14,4,,,0,,,,,
+37,yougov,1,12,2015,Rest of South,539,48,24,7,18,2,,,1,,,,,
+37,yougov,1,12,2015,Midlands and Wales,355,42,33,5,16,2,,2,0,,,,,
+37,yougov,1,12,2015,North England,408,41,32,5,17,4,,,1,,,,,
+37,yougov,1,12,2015,Scotland,144,20,24,4,8,2,41,,0,,,,,
+38,comres,11,12,2015,Scotland,156,26,17,12,8,4,54,,,,,,,
+38,comres,11,12,2015,North East England,77,16,20,3,7,4,,,,,,,,
+38,comres,11,12,2015,North West England,165,55,53,10,22,3,,,,,,,,
+38,comres,11,12,2015,Yorkshire and Humber,176,42,39,4,24,4,,,,,,,,
+38,comres,11,12,2015,West Midlands,121,43,23,6,22,3,,,2,,,,,
+38,comres,11,12,2015,East Midlands,132,44,24,7,16,5,,,,,,,,
+38,comres,11,12,2015,Wales,99,19,19,3,10,1,,5,,,,,,
+38,comres,11,12,2015,East of England,184,60,26,9,21,2,,,,,,,,
+38,comres,11,12,2015,London,250,67,69,9,22,4,,,1,,,,,
+38,comres,11,12,2015,South East England,290,85,42,17,33,5,,,,,,,,
+38,comres,11,12,2015,South West England,127,53,28,7,13,2,,,1,,,,,
+39,comresdm,13,12,2015,Wales,25,9,10,2,2,,,2,1,,,,,
+39,comresdm,13,12,2015,Scotland,54,10,17,3,,,23,,1,,,,,
+39,comresdm,13,12,2015,North,129,41,68,4,16,8,,,1,,,,,
+39,comresdm,13,12,2015,Midlands,151,70,35,14,23,5,,,4,,,,,
+39,comresdm,13,12,2015,South,194,76,65,16,19,12,,,6,,,,,
+40,mori,14,12,2015,North,154,57,63,10,16,8,,,1,,,,,
+40,mori,14,12,2015,Midlands,185,76,43,15,25,12,,14,2,,,,,
+40,mori,14,12,2015,Wales,0,0,0,0,0,0,,,0,,,,,
+40,mori,14,12,2015,South,231,100,72,29,17,14,,,0,,,,,
+40,mori,14,12,2015,London,81,30,31,9,4,7,,,0,,,,,
+40,mori,14,12,2015,England,539,228,172,52,51,33,,,3,,,,,
+40,mori,14,12,2015,Scotland,65,8,18,4,1,2,32,,1,,,,,
+41,opinium,18,12,2015,England,999,403,316,55,173,47,,,8,,,,,
+41,opinium,18,12,2015,Scotland,102,16,11,3,7,4,67,,0,,,,,
+41,opinium,18,12,2015,Wales,61,21,20,,,2,,7,1,,,,,
+42,yougov,18,12,2015,London,205,42,33,6,16,1,,,2,,,,,
+42,yougov,18,12,2015,Rest of South,519,45,23,6,20,4,,,0,,,,,
+42,yougov,18,12,2015,Midlands and Wales,342,38,32,7,17,3,,2,1,,,,,
+42,yougov,18,12,2015,North England,393,38,38,5,17,2,,,,,,,,
+42,yougov,18,12,2015,Scotland,139,20,17,3,5,3,52,,,,,,,
+43,icm2,20,12,2015,Scotland,51,10,9,2,0,1,26,,2,,,,,
+43,icm2,20,12,2015,Wales,30,11,14,,2,1,,3,0,,,,,
+43,icm2,20,12,2015,North,153,52,63,13,22,3,,,0,,,,,
+43,icm2,20,12,2015,Midlands,161,59,63,7,20,7,,,5,,,,,
+43,icm2,20,12,2015,South,201,95,55,18,22,8,,,4,,,,,
+44,comres,14,1,2016,Scotland,115,22,12,15,9,3,54,,0,,,,,
+44,comres,14,1,2016,North East England,46,17,18,2,6,2,,,0,,,,,
+44,comres,14,1,2016,North West England,132,47,61,3,15,4,,,1,,,,,
+44,comres,14,1,2016,Yorkshire and Humber,101,36,39,3,20,2,,,,,,,,
+44,comres,14,1,2016,West Midlands,106,48,30,6,18,4,,,,,,,,
+44,comres,14,1,2016,East Midlands,90,39,25,5,17,4,,,,,,,,
+44,comres,14,1,2016,Wales,52,19,19,3,4,1,,6,,,,,,
+44,comres,14,1,2016,East of England,123,65,25,9,22,2,,,,,,,,
+44,comres,14,1,2016,London,160,59,59,9,27,5,,,1,,,,,
+44,comres,14,1,2016,South East England,182,83,40,14,35,9,,,1,,,,,
+44,comres,14,1,2016,South West England,107,45,26,12,19,3,,,2,,,,,
+45,survation,17,1,2016,London,98,35,37,8,17,1,,,0,,,,,
+45,survation,17,1,2016,Midlands,139,61,43,6,27,1,,,0,,,,,
+45,survation,17,1,2016,North,200,63,80,8,41,7,,,1,,,,,
+45,survation,17,1,2016,South,253,118,59,21,39,11,,,4,,,,,
+45,survation,17,1,2016,Scotland,68,16,6,3,5,,38,,,,,,,
+45,survation,17,1,2016,Wales,49,17,15,6,5,,,6,,,,,,
+46,icm2,17,1,2016,Scotland,50,10,12,4,3,,21,,,,,,,
+46,icm2,17,1,2016,Wales,33,5,14,1,6,,,7,,,,,,
+46,icm2,17,1,2016,North,150,56,68,12,12,3,,,,,,,,
+46,icm2,17,1,2016,Midlands,168,77,50,9,25,5,,,2,,,,,
+46,icm2,17,1,2016,South,214,93,83,10,20,4,,,1,,,,,
+47,mori,25,1,2016,North,152,52,55,17,18,6,,,4,,,,,
+47,mori,25,1,2016,Midlands,184,79,59,11,24,9,,1,3,,,,,
+47,mori,25,1,2016,Wales,0,0,0,0,0,0,,,,,,,,
+47,mori,25,1,2016,South,231,99,72,18,26,13,,,,,,,,
+47,mori,25,1,2016,London,82,27,36,3,15,1,,,,,,,,
+47,mori,25,1,2016,England,534,221,171,44,66,25,,,7,,,,,
+47,mori,25,1,2016,Scotland,55,22,11,,3,,28,,,,,,,
+48,yougov,28,1,2016,London,222,39,34,8,14,4,,,1,,,,,
+48,yougov,28,1,2016,Rest of South,564,42,26,6,22,2,,,0,,,,,
+48,yougov,28,1,2016,Midlands and Wales,371,44,27,6,19,2,,2,0,,,,,
+48,yougov,28,1,2016,North England,427,37,37,5,15,6,,,1,,,,,
+48,yougov,28,1,2016,Scotland,151,20,23,7,5,2,41,,2,,,,,
+49,yougov,4,2,2016,London,214,41,35,8,11,3,,,,,,,,
+49,yougov,4,2,2016,Rest of South,544,46,22,9,20,3,,,,,,,,
+49,yougov,4,2,2016,Midlands and Wales,358,36,30,5,23,3,,2,,,,,,
+49,yougov,4,2,2016,North England,412,35,37,5,21,1,,,,,,,,
+49,yougov,4,2,2016,Scotland,146,25,28,2,3,,42,,,,,,,
+50,comres,12,2,2016,Scotland,114,28,16,3,6,3,58,,0,,,,,
+50,comres,12,2,2016,North East England,52,13,21,2,13,3,,,0,,,,,
+50,comres,12,2,2016,North West England,138,41,59,9,24,5,,,0,,,,,
+50,comres,12,2,2016,Yorkshire and Humber,100,37,35,7,19,1,,,1,,,,,
+50,comres,12,2,2016,West Midlands,112,47,34,12,16,3,,,2,,,,,
+50,comres,12,2,2016,East Midlands,88,39,27,6,14,2,,,0,,,,,
+50,comres,12,2,2016,Wales,55,20,13,5,8,0,,9,0,,,,,
+50,comres,12,2,2016,East of England,126,62,31,17,15,0,,,0,,,,,
+50,comres,12,2,2016,London,163,74,43,16,16,11,,,3,,,,,
+50,comres,12,2,2016,South East England,174,84,31,14,37,7,,,1,,,,,
+50,comres,12,2,2016,South West England,107,55,18,14,16,4,,,0,,,,,
+51,icmmissing,14,2,2016,All,100,39,32,7,11,4,4,,3,,,,,
+52,mori,16,2,2016,North,138,55,49,9,19,5,,,0,,,,,
+52,mori,16,2,2016,Midlands,170,66,54,8,28,6,,4,2,,,,,
+52,mori,16,2,2016,Wales,0,0,0,0,0,0,,,0,,,,,
+52,mori,16,2,2016,South,217,101,74,14,20,6,,,2,,,,,
+52,mori,16,2,2016,London,88,37,40,6,3,2,,,1,,,,,
+52,mori,16,2,2016,England,502,218,165,32,64,17,,,4,,,,,
+52,mori,16,2,2016,Scotland,66,8,16,4,2,0,36,,,,,,,
+53,comresdm,22,2,2016,Wales,20,6,6,0,7,1,,1,0,,,,,
+53,comresdm,22,2,2016,Scotland,53,14,10,4,2,2,22,,0,,,,,
+53,comresdm,22,2,2016,North,136,43,53,7,21,6,,,6,,,,,
+53,comresdm,22,2,2016,Midlands,153,64,46,13,21,4,,,5,,,,,
+53,comresdm,22,2,2016,South,201,90,62,19,16,7,,,6,,,,,
+54,bmg,23,2,2016,Scotland,118,21,14,6,8,5,64,,,,,,,
+54,bmg,23,2,2016,Wales,52,12,17,2,9,2,,9,,,,,,
+54,bmg,23,2,2016,East Midlands,78,35,27,3,11,3,,,0,,,,,
+54,bmg,23,2,2016,East of England,121,58,30,4,23,7,,,0,,,,,
+54,bmg,23,2,2016,London,142,54,43,10,27,6,,,2,,,,,
+54,bmg,23,2,2016,North East England,39,11,22,0,7,0,,,1,,,,,
+54,bmg,23,2,2016,North West England,130,52,55,4,13,6,,,1,,,,,
+54,bmg,23,2,2016,South East England,167,82,40,11,24,9,,,2,,,,,
+54,bmg,23,2,2016,South West England,111,45,26,15,20,5,,,0,,,,,
+54,bmg,23,2,2016,West Midlands,99,34,32,5,22,6,,,0,,,,,
+54,bmg,23,2,2016,Yorkshire and Humber,84,25,37,5,15,3,,,0,,,,,
+55,yougov,23,2,2016,London,415,33,44,4,14,3,,,0,,,,,
+55,yougov,23,2,2016,Rest of South,1168,48,21,9,19,3,,,0,,,,,
+55,yougov,23,2,2016,Midlands and Wales,747,38,32,6,18,3,,2,1,,,,,
+55,yougov,23,2,2016,North England,839,33,41,5,18,3,,,,,,,,
+55,yougov,23,2,2016,Scotland,322,20,19,3,4,4,49,,,,,,,
+56,comres,10,3,2016,Scotland,116,16,21,7,10,7,54,,1,,,,,
+56,comres,10,3,2016,North East England,49,21,19,1,5,3,,,,,,,,
+56,comres,10,3,2016,North West England,128,45,50,9,21,5,,,,,,,,
+56,comres,10,3,2016,Yorkshire and Humber,111,40,37,16,15,1,,,,,,,,
+56,comres,10,3,2016,West Midlands,119,57,37,4,18,2,,,,,,,,
+56,comres,10,3,2016,East Midlands,95,40,27,6,18,4,,,,,,,,
+56,comres,10,3,2016,Wales,52,17,18,2,8,2,,5,1,,,,,
+56,comres,10,3,2016,East of England,118,48,28,7,29,5,,,,,,,,
+56,comres,10,3,2016,London,178,68,63,16,23,7,,,,,,,,
+56,comres,10,3,2016,South East England,181,79,45,12,36,8,,,1,,,,,
+56,comres,10,3,2016,South West England,116,53,18,16,24,6,,,,,,,,
+57,icmmissing,13,3,2016,All,100,36,36,8,11,3,3,,1,,,,,
+58,yougov,17,3,2016,London,202,29,48,8,12,2,,,1,,,,,
+58,yougov,17,3,2016,Rest of South,561,43,26,7,19,4,,,1,,,,,
+58,yougov,17,3,2016,Midlands and Wales,363,35,34,4,20,4,,3,1,,,,,
+58,yougov,17,3,2016,North England,408,29,45,6,16,4,,,0,,,,,
+58,yougov,17,3,2016,Scotland,156,15,21,7,4,3,47,,2,,,,,
+59,comresdm,20,3,2016,Wales,27,8,9,3,5,0,,4,0,,,,,
+59,comresdm,20,3,2016,Scotland,57,19,10,3,0,0,25,,0,,,,,
+59,comresdm,20,3,2016,North,127,41,58,9,9,7,,,2,,,,,
+59,comresdm,20,3,2016,Midlands,138,53,45,13,18,5,,,4,,,,,
+59,comresdm,20,3,2016,South,212,84,77,15,20,12,,,3,,,,,
+60,mori,22,3,2016,North,211,64,95,18,29,2,,,0,,,,,
+60,mori,22,3,2016,Midlands,243,98,75,20,26,14,,9,0,,,,,
+60,mori,22,3,2016,Wales,0,0,0,0,0,0,,,0,,,,,
+60,mori,22,3,2016,South,308,117,108,31,43,6,,,1,,,,,
+60,mori,22,3,2016,London,115,40,52,7,13,1,,,1,,,,,
+60,mori,22,3,2016,England,717,267,267,67,92,20,,,1,,,,,
+60,mori,22,3,2016,Scotland,73,16,14,4,1,2,33,,2,,,,,
+61,bmg,31,3,2016,Scotland,111,17,19,6,6,4,59,,,,,,,
+61,bmg,31,3,2016,Wales,69,18,30,1,10,2,,7,,,,,,
+61,bmg,31,3,2016,East Midlands,91,31,32,6,19,4,,,0,,,,,
+61,bmg,31,3,2016,East of England,109,43,30,8,17,9,,,1,,,,,
+61,bmg,31,3,2016,London,152,68,50,13,13,8,,,1,,,,,
+61,bmg,31,3,2016,North East England,46,13,19,3,9,2,,,1,,,,,
+61,bmg,31,3,2016,North West England,128,39,50,10,25,3,,,2,,,,,
+61,bmg,31,3,2016,South East England,173,78,45,8,32,7,,,2,,,,,
+61,bmg,31,3,2016,South West England,109,45,29,9,21,5,,,0,,,,,
+61,bmg,31,3,2016,West Midlands,86,30,22,5,25,4,,,0,,,,,
+61,bmg,31,3,2016,Yorkshire and Humber,102,42,35,6,15,4,,,0,,,,,
+62,opiniummissing,1,4,2016,All,100,33,32,5,17,4,6,1,2,,,,,
+63,yougov,12,4,2016,London,203,31,45,7,11,5,,,1,,,,,
+63,yougov,12,4,2016,Rest of South,562,39,27,11,20,3,,,1,,,,,
+63,yougov,12,4,2016,Midlands and Wales,364,31,32,10,20,3,,4,0,,,,,
+63,yougov,12,4,2016,North England,408,28,46,6,17,2,,,0,,,,,
+63,yougov,12,4,2016,Scotland,156,13,18,4,7,3,55,,0,,,,,
+64,comres,16,4,2016,Scotland,118,29,18,6,5,2,58,,0,,,,,
+64,comres,16,4,2016,North East England,49,12,23,3,9,1,,,0,,,,,
+64,comres,16,4,2016,North West England,146,52,55,10,25,3,,,1,,,,,
+64,comres,16,4,2016,Yorkshire and Humber,111,36,39,6,24,5,,,0,,,,,
+64,comres,16,4,2016,West Midlands,103,32,34,8,23,5,,,1,,,,,
+64,comres,16,4,2016,East Midlands,92,41,27,7,13,2,,,0,,,,,
+64,comres,16,4,2016,Wales,59,18,17,5,10,4,,5,0,,,,,
+64,comres,16,4,2016,East of England,113,42,30,9,23,7,,,1,,,,,
+64,comres,16,4,2016,London,164,58,61,16,22,7,,,1,,,,,
+64,comres,16,4,2016,South East England,180,78,34,18,39,9,,,3,,,,,
+64,comres,16,4,2016,South West England,108,40,36,14,12,6,,,0,,,,,
+65,icm,17,4,2016,Scotland,130,31,24,8,7,4,56,,0,,,,,
+65,icm,17,4,2016,Wales,77,14,27,9,11,5,,9,1,,,,,
+65,icm,17,4,2016,North,501,146,179,21,79,19,,,1,,,,,
+65,icm,17,4,2016,Midlands,456,154,139,34,95,20,,,3,,,,,
+65,icm,17,4,2016,South,490,210,132,48,75,23,,,2,,,,,
+66,mori,18,4,2016,North,149,53,62,5,22,6,,,1,,,,,
+66,mori,18,4,2016,Midlands,189,73,63,11,28,8,,5,1,,,,,
+66,mori,18,4,2016,Wales,0,0,0,0,0,0,,,0,,,,,
+66,mori,18,4,2016,South,237,101,88,21,20,6,,,0,,,,,
+66,mori,18,4,2016,London,84,26,51,2,2,2,,,0,,,,,
+66,mori,18,4,2016,England,542,222,199,33,66,21,,,2,,,,,
+66,mori,18,4,2016,Scotland,74,22,13,1,,2,36,,0,,,,,
+67,bmg,27,4,2016,Scotland,109,16,26,3,3,4,56,,,,,,,
+67,bmg,27,4,2016,Wales,53,13,22,1,4,3,,9,,,,,,
+67,bmg,27,4,2016,East Midlands,90,39,27,4,13,6,,,0,,,,,
+67,bmg,27,4,2016,East of England,110,46,23,10,23,7,,,0,,,,,
+67,bmg,27,4,2016,London,145,57,52,4,22,7,,,3,,,,,
+67,bmg,27,4,2016,North East England,51,14,21,1,12,3,,,0,,,,,
+67,bmg,27,4,2016,North West England,140,36,63,12,27,2,,,0,,,,,
+67,bmg,27,4,2016,South East England,184,76,45,7,46,8,,,3,,,,,
+67,bmg,27,4,2016,South West England,100,41,25,5,19,8,,,1,,,,,
+67,bmg,27,4,2016,West Midlands,107,32,34,11,27,3,,,0,,,,,
+67,bmg,27,4,2016,Yorkshire and Humber,104,25,48,6,18,5,,,0,,,,,
+68,yougov,27,4,2016,London,198,30,46,6,13,3,,,,,,,,
+68,yougov,27,4,2016,Rest of South,548,41,25,8,22,4,,,,,,,,
+68,yougov,27,4,2016,Midlands and Wales,355,20,36,5,22,3,,4,1,,,,,
+68,yougov,27,4,2016,North England,398,24,43,4,25,4,,,,,,,,
+68,yougov,27,4,2016,Scotland,152,13,17,3,6,2,58,,,,,,,
+69,opiniummissing,29,4,2016,All,100,38,30,5,15,5,5,1,1,,,,,
+70,comres,12,5,2016,Scotland,128,29,15,8,6,3,66,,1,,,,,
+70,comres,12,5,2016,North East England,60,17,28,3,12,0,,,,,,,,
+70,comres,12,5,2016,North West England,160,44,69,13,31,3,,,,,,,,
+70,comres,12,5,2016,Yorkshire and Humber,110,30,51,5,21,2,,,,,,,,
+70,comres,12,5,2016,West Midlands,117,45,33,8,29,4,,,,,,,,
+70,comres,12,5,2016,East Midlands,107,42,26,13,21,2,,,1,,,,,
+70,comres,12,5,2016,Wales,61,20,17,8,8,1,,5,0,,,,,
+70,comres,12,5,2016,East of England,132,61,31,9,24,6,,,1,,,,,
+70,comres,12,5,2016,London,210,86,72,13,27,11,,,,,,,,
+70,comres,12,5,2016,South East England,198,88,44,13,40,12,,,,,,,,
+70,comres,12,5,2016,South West England,120,36,36,18,24,6,,,,,,,,
+71,icm,15,5,2016,Scotland,151,28,24,8,8,4,80,,,,,,,
+71,icm,15,5,2016,Wales,83,23,27,5,20,3,,6,,,,,,
+71,icm,15,5,2016,North,527,131,194,26,71,21,80,,3,,,,,
+71,icm,15,5,2016,Midlands,454,158,135,20,11,21,,6,3,,,,,
+71,icm,15,5,2016,South,517,200,144,49,97,26,,,1,,,,,
+72,mori,16,5,2016,North,130,37,64,12,16,1,,,0,,,,,
+72,mori,16,5,2016,Midlands,180,77,60,5,18,12,,8,0,,,,,
+72,mori,16,5,2016,Wales,0,0,0,0,0,0,,,0,,,,,
+72,mori,16,5,2016,South,222,82,68,27,22,18,,,5,,,,,
+72,mori,16,5,2016,London,77,28,35,4,5,5,,,1,,,,,
+72,mori,16,5,2016,England,499,182,185,43,53,30,,,5,,,,,
+72,mori,16,5,2016,Scotland,64,16,10,1,1,1,31,,3,,,,,
+73,opiniummissing,19,5,2016,All,100,35,30,5,18,5,6,1,1,,,,,
+74,icm,30,5,2016,Scotland,146,37,21,9,5,5,69,,0,,,,,
+74,icm,30,5,2016,Wales,86,17,36,3,18,2,,10,0,,,,,
+74,icm,30,5,2016,North,523,155,181,26,68,24,69,,0,,,,,
+74,icm,30,5,2016,Midlands,462,150,154,31,104,13,,10,0,,,,,
+74,icm,30,5,2016,South,555,228,151,42,96,30,,,7,,,,,
+75,opiniummissing,3,6,2016,All,100,34,30,6,18,4,6,0,2,,,,,
+76,opiniummissing,10,6,2016,All,100,35,32,4,18,4,5,0,1,,,,,
+77,mori,14,6,2016,North,165,43,85,9,18,9,,,0,,,,,
+77,mori,14,6,2016,Midlands,227,86,67,24,30,6,,12,2,,,,,
+77,mori,14,6,2016,Wales,0,0,0,0,0,0,0,0,0,,,,,
+77,mori,14,6,2016,South,274,120,80,29,27,14,,,3,,,,,
+77,mori,14,6,2016,London,105,42,42,7,10,3,,,0,,,,,
+77,mori,14,6,2016,England,631,244,223,58,72,29,,,3,,,,,
+77,mori,14,6,2016,Scotland,78,11,19,1,2,3,40,,2,,,,,
+78,comres,16,6,2016,Scotland,111,19,9,10,9,5,59,,1,,,,,
+78,comres,16,6,2016,North East England,53,13,24,3,10,1,,,1,,,,,
+78,comres,16,6,2016,North West England,148,50,67,7,19,4,,,1,,,,,
+78,comres,16,6,2016,Yorkshire and Humber,99,31,30,8,25,5,,,,,,,,
+78,comres,16,6,2016,West Midlands,112,50,32,3,24,2,,,,,,,,
+78,comres,16,6,2016,East Midlands,92,38,25,4,20,4,,,,,,,,
+78,comres,16,6,2016,Wales,55,18,15,4,8,2,,7,,,,,,
+78,comres,16,6,2016,East of England,122,47,25,13,31,5,,,,,,,,
+78,comres,16,6,2016,London,179,79,77,13,19,11,,,,,,,,
+78,comres,16,6,2016,South East England,181,70,39,21,45,6,,,1,,,,,
+78,comres,16,6,2016,South West England,105,35,29,9,25,6,,,1,,,,,
+79,opiniummissing,17,6,2016,All,100,34,30,6,18,4,6,0,1,,,,,
+80,opiniummissing,22,6,2016,All,100,34,30,6,19,4,6,0,2,,,,,
+81,survation,25,6,2016,London,123,31,43,13,14,8,,,,,,,,
+81,survation,25,6,2016,Midlands,162,52,46,12,19,0,,,,,,,,
+81,survation,25,6,2016,North,231,61,74,11,36,7,,,,,,,,
+81,survation,25,6,2016,South,313,92,58,23,47,15,,,,,,,,
+81,survation,25,6,2016,Scotland,80,9,15,4,3,0,34,,,,,,,
+81,survation,25,6,2016,Wales,54,7,17,7,9,1,,3,,,,,,
+82,icm,26,6,2016,Scotland,129,27,20,4,4,4,70,,0,,,,,
+82,icm,26,6,2016,Wales,84,23,23,7,17,1,,11,1,,,,,
+82,icm,26,6,2016,North,484,142,184,22,53,22,70,,2,,,,,
+82,icm,26,6,2016,Midlands,438,152,138,27,89,19,,11,2,,,,,
+82,icm,26,6,2016,South,491,192,152,42,75,27,,,2,,,,,
+83,opiniummissing,30,6,2016,All,100,34,29,7,17,4,5,0,2,,,,,
+84,icm,3,7,2016,Scotland,136,25,20,4,6,5,76,,0,,,,,
+84,icm,3,7,2016,Wales,78,20,27,9,12,2,,8,1,,,,,
+84,icm,3,7,2016,North,492,146,159,35,57,19,76,,1,,,,,
+84,icm,3,7,2016,Midlands,431,162,129,30,85,14,,8,2,,,,,
+84,icm,3,7,2016,South,481,198,128,48,78,23,,,6,,,,,
+85,survation,5,7,2016,London,84,31,35,4,13,2,,,,,,,,
+85,survation,5,7,2016,Midlands,115,40,45,9,19,1,,,,,,,,
+85,survation,5,7,2016,North,152,55,64,18,12,3,,,,,,,,
+85,survation,5,7,2016,South,196,77,49,21,26,22,,,2,,,,,
+85,survation,5,7,2016,Scotland,70,17,9,3,0,2,38,,,,,,,
+85,survation,5,7,2016,Wales,34,10,9,3,5,2,,5,,,,,,
+86,icm,10,7,2016,Scotland,137,26,20,7,5,10,70,,0,,,,,
+86,icm,10,7,2016,Wales,74,25,16,5,16,3,,8,0,,,,,
+86,icm,10,7,2016,North,508,154,174,34,52,19,70,0,4,,,,,
+86,icm,10,7,2016,Midlands,407,157,114,28,81,18,,8,1,,,,,
+86,icm,10,7,2016,South,476,200,126,46,85,16,,,3,,,,,
+87,mori,11,7,2016,North,152,50,69,14,11,5,,,1,,,,,
+87,mori,11,7,2016,Midlands,206,74,77,14,23,7,,8,1,,,,,
+87,mori,11,7,2016,Wales,0,0,0,0,0,0,,,0,,,,,
+87,mori,11,7,2016,South,222,88,66,39,13,15,,,1,,,,,
+87,mori,11,7,2016,London,77,28,31,10,1,6,,,,,,,,
+87,mori,11,7,2016,England,542,201,200,63,46,27,,,3,,,,,
+87,mori,11,7,2016,Scotland,59,16,13,1,2,,28,,,,,,,
+88,icm,15,7,2016,Scotland,134,27,27,4,8,3,66,,0,,,,,
+88,icm,15,7,2016,Wales,80,16,25,10,15,1,,13,1,,,,,
+88,icm,15,7,2016,North,503,157,174,26,58,19,66,,3,,,,,
+88,icm,15,7,2016,Midlands,454,188,124,31,80,15,,13,4,,,,,
+88,icm,15,7,2016,South,536,235,128,70,75,25,,,4,,,,,
+89,yougov,18,7,2016,London,227,39,38,13,7,2,,,1,,,,,
+89,yougov,18,7,2016,Rest of South,628,48,24,10,13,3,,,2,,,,,
+89,yougov,18,7,2016,Midlands and Wales,407,44,27,6,15,4,,3,1,,,,,
+89,yougov,18,7,2016,North England,456,32,42,10,12,2,,,1,,,,,
+89,yougov,18,7,2016,Scotland,174,24,13,5,4,2,51,,1,,,,,
+90,opiniummissing,22,7,2016,All,100,37,31,6,15,6,4,0,1,,,,,
+91,icm,24,7,2016,Scotland,133,27,29,7,2,4,64,,,,,,,
+91,icm,24,7,2016,Wales,79,24,17,9,14,6,0,9,,,,,,
+91,icm,24,7,2016,North,500,190,149,26,57,14,64,,1,,,,,
+91,icm,24,7,2016,Midlands,442,200,93,35,82,22,0,9,1,,,,,
+91,icm,24,7,2016,South,471,222,122,42,56,28,,,1,,,,,
+92,yougov,26,7,2016,London,202,37,38,9,8,8,,,0,,,,,
+92,yougov,26,7,2016,Rest of South,558,52,20,9,14,3,,,1,,,,,
+92,yougov,26,7,2016,Midlands and Wales,361,37,29,8,7,2,,4,3,,,,,
+92,yougov,26,7,2016,North England,405,33,40,7,16,4,,,0,,,,,
+92,yougov,26,7,2016,Scotland,155,23,11,3,6,4,53,,0,,,,,
+93,yougov,2,8,2016,London,207,37,40,12,8,3,,,0,,,,,
+93,yougov,2,8,2016,Rest of South,572,51,20,9,15,4,,,0,,,,,
+93,yougov,2,8,2016,Midlands and Wales,370,45,29,6,15,1,,3,2,,,,,
+93,yougov,2,8,2016,North England,415,38,40,6,13,2,,,0,,,,,
+93,yougov,2,8,2016,Scotland,158,25,13,5,3,4,50,,0,,,,,
+94,yougov,9,8,2016,London,203,35,42,12,5,4,,,1,,,,,
+94,yougov,9,8,2016,Rest of South,562,49,23,11,13,4,,,0,,,,,
+94,yougov,9,8,2016,Midlands and Wales,364,41,33,5,15,4,,2,1,,,,,
+94,yougov,9,8,2016,North England,408,32,42,6,17,2,,,0,,,,,
+94,yougov,9,8,2016,Scotland,156,18,16,6,6,4,51,,0,,,,,
+95,icm,15,8,2016,Scotland,132,31,24,6,4,4,63,,0,,,,,
+95,icm,15,8,2016,Wales,76,26,24,2,8,,,15,0,,,,,
+95,icm,15,8,2016,North,493,163,158,31,55,19,63,,4,,,,,
+95,icm,15,8,2016,Midlands,414,178,103,20,76,17,,15,5,,,,,
+95,icm,15,8,2016,South,478,221,108,53,66,25,,,4,,,,,
+96,mori,15,8,2016,North,198,79,87,12,14,4,,,1,,,,,
+96,mori,15,8,2016,Midlands,271,121,88,15,32,9,,2,4,,,,,
+96,mori,15,8,2016,Wales,0,,0,,,,,,0,,,,,
+96,mori,15,8,2016,South,324,143,123,30,11,17,,,0,,,,,
+96,mori,15,8,2016,London,123,53,45,12,6,7,,,0,,,,,
+96,mori,15,8,2016,England,744,327,277,52,55,28,,,6,,,,,
+96,mori,15,8,2016,Scotland,63,11,11,2,,3,36,,1,,,,,
+97,yougov,17,8,2016,London,201,33,38,12,9,6,,,3,,,,,
+97,yougov,17,8,2016,Rest of South,557,47,26,11,12,4,,,0,,,,,
+97,yougov,17,8,2016,Midlands and Wales,361,41,29,9,15,3,,3,1,,,,,
+97,yougov,17,8,2016,North England,404,31,40,6,18,3,,,0,,,,,
+97,yougov,17,8,2016,Scotland,154,23,16,3,2,4,53,,0,,,,,
+98,ashcroft,22,8,2016,Scotland,498,106,73,25,15,12,267,,1,,,,,
+98,ashcroft,22,8,2016,North East,241,73,105,13,43,7,,,0,,,,,
+98,ashcroft,22,8,2016,North West,620,228,265,38,73,14,,,3,,,,,
+98,ashcroft,22,8,2016,Yorkshire and Humber,457,167,182,32,64,9,,,3,,,,,
+98,ashcroft,22,8,2016,West Midlands,468,202,165,27,65,6,,,3,,,,,
+98,ashcroft,22,8,2016,East Midlands,395,189,109,16,61,18,,,2,,,,,
+98,ashcroft,22,8,2016,Wales,282,92,91,17,38,4,,38,1,,,,,
+98,ashcroft,22,8,2016,East of England,475,215,113,34,93,17,,,3,,,,,
+98,ashcroft,22,8,2016,London,661,262,267,46,52,25,,,9,,,,,
+98,ashcroft,22,8,2016,South East England,683,341,147,57,108,26,,,4,,,,,
+98,ashcroft,22,8,2016,South West England,473,202,127,53,65,22,,,5,,,,,
+99,yougov,23,8,2016,London,199,36,42,8,9,5,,,1,,,,,
+99,yougov,23,8,2016,Rest of South,551,53,19,9,15,4,,,0,,,,,
+99,yougov,23,8,2016,Midlands and Wales,357,37,34,5,14,3,,4,2,,,,,
+99,yougov,23,8,2016,North England,400,31,40,10,17,2,,,0,,,,,
+99,yougov,23,8,2016,Scotland,153,25,12,4,2,5,50,,1,,,,,
+100,icm,28,8,2016,Scotland,136,27,24,8,4,7,67,,0,,,,,
+100,icm,28,8,2016,Wales,78,23,26,2,14,1,,11,0,,,,,
+100,icm,28,8,2016,North,494,172,156,37,45,13,67,,4,,,,,
+100,icm,28,8,2016,Midlands,439,190,112,34,68,23,,11,1,,,,,
+100,icm,28,8,2016,South,492,227,118,52,73,21,,,1,,,,,
+101,yougov,31,8,2016,London,202,31,50,8,9,1,,,0,,,,,
+101,yougov,31,8,2016,Rest of South,560,50,23,7,16,4,,,0,,,,,
+101,yougov,31,8,2016,Midlands and Wales,363,37,31,7,18,2,,2,1,,,,,
+101,yougov,31,8,2016,North England,407,31,41,7,16,5,,,0,,,,,
+101,yougov,31,8,2016,Scotland,155,25,11,5,4,4,51,,1,,,,,
+102,yougov,5,9,2016,London,194,31,45,14,6,3,,,1,,,,,
+102,yougov,5,9,2016,Rest of South,537,51,21,9,15,4,,,1,,,,,
+102,yougov,5,9,2016,Midlands and Wales,347,45,26,7,12,3,,6,,,,,,
+102,yougov,5,9,2016,North England,389,33,41,3,20,3,,,,,,,,
+102,yougov,5,9,2016,Scotland,149,21,23,3,1,1,51,,,,,,,
+103,icm,11,9,2016,Scotland,127,28,14,8,4,6,66,,0,,,,,
+103,icm,11,9,2016,Wales,80,24,25,11,7,3,,10,1,,,,,
+103,icm,11,9,2016,North,499,176,161,27,53,13,66,,4,,,,,
+103,icm,11,9,2016,Midlands,440,173,134,35,67,19,,10,2,,,,,
+103,icm,11,9,2016,South,475,231,89,56,74,22,,,3,,,,,
+104,mori,14,9,2016,North,159,43,83,6,21,1,,,5,,,,,
+104,mori,14,9,2016,Midlands,177,75,59,11,17,10,,2,2,,,,,
+104,mori,14,9,2016,Wales,0,0,0,0,0,0,,,0,,,,,
+104,mori,14,9,2016,South,237,117,67,22,13,18,,,1,,,,,
+104,mori,14,9,2016,London,85,36,32,4,1,13,,,0,,,,,
+104,mori,14,9,2016,England,540,224,192,39,51,26,,,8,,,,,
+104,mori,14,9,2016,Scotland,62,22,7,2,3,1,27,,,,,,,
+105,yougov,14,9,2016,London,208,39,41,5,12,3,,,,,,,,
+105,yougov,14,9,2016,Rest of South,575,47,25,9,14,5,,,,,,,,
+105,yougov,14,9,2016,Midlands and Wales,372,41,31,7,14,3,,3,,,,,,
+105,yougov,14,9,2016,North England,417,31,42,6,17,3,,,,,,,,
+105,yougov,14,9,2016,Scotland,159,21,12,7,6,3,51,,,,,,,
+106,yougov,21,9,2016,London,394,36,40,12,8,4,,,,,,,,
+106,yougov,21,9,2016,Rest of South,1091,49,23,10,13,4,,,1,,,,,
+106,yougov,21,9,2016,Midlands and Wales,706,38,31,7,16,4,,2,1,,,,,
+106,yougov,21,9,2016,North England,792,35,39,7,16,2,,,1,,,,,
+106,yougov,21,9,2016,Scotland,302,23,17,3,3,2,52,,,,,,,
+107,bmg,23,9,2016,Scotland,166,44,23,6,3,9,77,,3,,,,,
+107,bmg,23,9,2016,Wales,93,25,27,7,9,6,,20,,,,,,
+107,bmg,23,9,2016,East Midlands,128,60,32,13,18,6,,,0,,,,,
+107,bmg,23,9,2016,East of England,166,67,45,18,29,5,,,2,,,,,
+107,bmg,23,9,2016,London,197,86,56,22,18,13,,,3,,,,,
+107,bmg,23,9,2016,North East England,74,13,38,4,15,3,,,0,,,,,
+107,bmg,23,9,2016,North West England,177,62,64,16,21,10,,,5,,,,,
+107,bmg,23,9,2016,South East England,228,100,66,19,27,12,,,4,,,,,
+107,bmg,23,9,2016,South West England,161,85,32,13,20,9,,,3,,,,,
+107,bmg,23,9,2016,West Midlands,164,64,45,10,31,11,,,3,,,,,
+107,bmg,23,9,2016,Yorkshire and Humber,140,48,47,11,26,7,,,1,,,,,
+108,icm,23,9,2016,Scotland,130,22,20,6,5,3,74,,0,,,,,
+108,icm,23,9,2016,Wales,86,28,26,6,14,5,,7,1,,,,,
+108,icm,23,9,2016,North,466,139,149,37,52,12,74,,4,,,,,
+108,icm,23,9,2016,Midlands,444,191,110,27,87,20,,7,1,,,,,
+108,icm,23,9,2016,South,488,237,107,39,75,26,,,4,,,,,
+109,yougov,29,9,2016,London,199,37,40,9,11,3,,,0,,,,,
+109,yougov,29,9,2016,Rest of South,550,49,23,10,14,3,,,0,,,,,
+109,yougov,29,9,2016,Midlands and Wales,356,42,32,8,13,2,,3,1,,,,,
+109,yougov,29,9,2016,North England,400,30,40,8,18,3,,,,,,,,
+109,yougov,29,9,2016,Scotland,153,21,14,6,4,1,54,,,,,,,
+110,icm,9,10,2016,Scotland,124,31,18,6,4,7,57,,0,,,,,
+110,icm,9,10,2016,Wales,80,19,30,3,12,5,,9,2,,,,,
+110,icm,9,10,2016,North,469,183,125,37,44,21,57,,2,,,,,
+110,icm,9,10,2016,Midlands,416,197,99,25,57,25,,9,4,,,,,
+110,icm,9,10,2016,South,490,242,105,53,47,41,,,2,,,,,
+111,yougov,12,10,2016,London,200,29,40,12,15,4,,,,,,,,
+111,yougov,12,10,2016,Rest of South,554,52,20,11,12,4,,,,,,,,
+111,yougov,12,10,2016,Midlands and Wales,359,48,31,6,9,3,,3,,,,,,
+111,yougov,12,10,2016,North England,402,37,38,9,14,1,,,,,,,,
+111,yougov,12,10,2016,Scotland,154,24,12,5,2,5,50,,1,,,,,
+112,mori,17,10,2016,North,145,67,54,7,12,4,,,2,,,,,
+112,mori,17,10,2016,Midlands,199,106,59,7,14,7,,5,2,,,,,
+112,mori,17,10,2016,Wales,0,0,0,0,0,0,,,0,,,,,
+112,mori,17,10,2016,South,223,110,55,28,13,15,,,1,,,,,
+112,mori,17,10,2016,London,79,31,29,10,1,7,,,0,,,,,
+112,mori,17,10,2016,England,529,267,154,42,36,26,,,4,,,,,
+112,mori,17,10,2016,Scotland,58,13,14,2,,,29,,0,,,,,
+113,yougov,20,10,2016,London,193,28,39,13,11,6,,,3,,,,,
+113,yougov,20,10,2016,Rest of South,534,53,19,10,14,4,,,1,,,,,
+113,yougov,20,10,2016,Midlands and Wales,346,46,25,6,12,7,,3,2,,,,,
+113,yougov,20,10,2016,North England,388,39,37,6,13,4,,,,,,,,
+113,yougov,20,10,2016,Scotland,148,22,14,8,2,6,48,,,,,,,
+114,yougov,25,10,2016,London,199,33,37,13,12,4,,,1,,,,,
+114,yougov,25,10,2016,Rest of South,549,51,18,13,13,4,,,2,,,,,
+114,yougov,25,10,2016,Midlands and Wales,356,41,29,11,13,3,,2,1,,,,,
+114,yougov,25,10,2016,North England,399,35,40,10,12,3,,,1,,,,,
+114,yougov,25,10,2016,Scotland,152,25,14,4,2,1,55,,0,,,,,
+115,icm,30,10,2016,Scotland,129,38,22,6,2,6,56,,0,,,,,
+115,icm,30,10,2016,Wales,76,24,27,5,8,7,,4,1,,,,,
+115,icm,30,10,2016,North,489,195,154,26,41,18,56,,0,,,,,
+115,icm,30,10,2016,Midlands,440,186,115,35,74,25,,4,1,,,,,
+115,icm,30,10,2016,South,505,243,114,59,54,32,,,3,,,,,
+116,yougov,1,11,2016,London,199,35,36,13,9,7,,,0,,,,,
+116,yougov,1,11,2016,Rest of South,549,51,20,11,12,4,,,1,,,,,
+116,yougov,1,11,2016,Midlands and Wales,356,41,32,8,13,2,,3,1,,,,,
+116,yougov,1,11,2016,North England,399,39,36,9,12,3,,,,,,,,
+116,yougov,1,11,2016,Scotland,152,20,15,8,5,4,47,,,,,,,
+117,opinium,4,11,2016,England,1273,525,409,96,176,56,,,11,,,,,
+117,opinium,4,11,2016,Scotland,145,28,25,4,8,2,78,,,,,,,
+117,opinium,4,11,2016,Wales,73,17,31,4,13,4,,4,,,,,,
+118,mori,14,11,2016,North,158,57,76,14,5,5,,,0,,,,,
+118,mori,14,11,2016,Midlands,201,86,64,13,21,10,,4,2,,,,,
+118,mori,14,11,2016,Wales,0,,,,0,0,,,0,,,,,
+118,mori,14,11,2016,South,256,113,70,39,16,6,,,0,,,,,
+118,mori,14,11,2016,London,91,28,44,13,0,5,,,0,,,,,
+118,mori,14,11,2016,England,570,246,196,63,42,21,,,2,,,,,
+118,mori,14,11,2016,Scotland,65,24,11,3,1,,24,,1,,,,,
+119,yougov,15,11,2016,London,206,44,36,11,3,6,,,,,,,,
+119,yougov,15,11,2016,Rest of South,570,50,20,11,14,4,,,1,,,,,
+119,yougov,15,11,2016,Midlands and Wales,369,45,26,6,14,4,,4,1,,,,,
+119,yougov,15,11,2016,North England,414,37,39,8,12,3,,,,,,,,
+119,yougov,15,11,2016,Scotland,158,20,21,4,2,1,52,,,,,,,
+120,opiniummissing,18,11,2016,All,100,41,29,7,12,3,6,,2,,,,,
+121,icm,20,11,2016,Scotland,150,41,20,10,3,3,72,,0,,,,,
+121,icm,20,11,2016,Wales,78,19,22,6,18,2,,11,1,,,,,
+121,icm,20,11,2016,North,510,208,142,27,45,14,72,,3,,,,,
+121,icm,20,11,2016,Midlands,447,168,136,45,73,11,,11,3,,,,,
+121,icm,20,11,2016,South,493,254,113,56,49,17,,,4,,,,,
+122,yougov,22,11,2016,London,203,33,44,6,10,7,,,,,,,,
+122,yougov,22,11,2016,Rest of South,562,51,21,11,13,4,,,,,,,,
+122,yougov,22,11,2016,Midlands and Wales,364,44,23,8,17,3,,4,,,,,,
+122,yougov,22,11,2016,North England,408,34,41,7,14,3,,,1,,,,,
+122,yougov,22,11,2016,Scotland,156,22,15,9,2,2,49,,1,,,,,
+123,icm,27,11,2016,Scotland,127,39,24,6,4,3,52,,0,,,,,
+123,icm,27,11,2016,Wales,65,20,23,4,5,0,,11,1,,,,,
+123,icm,27,11,2016,North,482,202,153,22,41,11,52,,1,,,,,
+123,icm,27,11,2016,Midlands,416,164,124,39,65,9,,11,4,,,,,
+123,icm,27,11,2016,South,457,223,108,38,45,30,,,,,,,,
+122,yougov,29,11,2016,London,195,36,35,13,8,7,,,0,,,,,
+124,yougov,29,11,2016,Rest of South,539,49,21,11,14,4,,,1,,,,,
+124,yougov,29,11,2016,Midlands and Wales,349,40,27,6,18,3,,4,0,,,,,
+124,yougov,29,11,2016,North England,391,33,38,8,18,2,,,0,,,,,
+124,yougov,29,11,2016,Scotland,149,20,18,5,2,3,50,,2,,,,,
+125,yougov,5,12,2016,London,200,37,42,10,6,5,,,1,,,,,
+125,yougov,5,12,2016,Rest of South,553,52,16,14,13,4,,,0,,,,,
+125,yougov,5,12,2016,Midlands and Wales,358,44,21,9,17,5,,3,1,,,,,
+125,yougov,5,12,2016,North England,402,34,39,10,12,3,,,1,,,,,
+125,yougov,5,12,2016,Scotland,153,26,12,6,5,2,50,,,,,,,
+126,icm,11,12,2016,Scotland,137,34,23,4,4,3,70,,0,,,,,
+126,icm,11,12,2016,Wales,84,25,29,8,15,3,,2,1,,,,,
+126,icm,11,12,2016,North,511,185,152,33,59,13,70,,0,,,,,
+126,icm,11,12,2016,Midlands,453,193,119,41,81,12,,2,5,,,,,
+126,icm,11,12,2016,South,496,231,110,59,72,21,,,4,,,,,
+127,mori,12,12,2016,North,144,54,53,18,14,5,,,0,,,,,
+127,mori,12,12,2016,Midlands,187,87,51,22,19,6,,4,0,,,,,
+127,mori,12,12,2016,Wales,0,,,,0,0,,,0,,,,,
+127,mori,12,12,2016,South,239,91,71,43,23,10,,,2,,,,,
+127,mori,12,12,2016,London,78,23,36,10,6,3,,,0,,,,,
+127,mori,12,12,2016,England,547,227,165,79,55,20,,,2,,,,,
+127,mori,12,12,2016,Scotland,59,18,9,6,1,1,21,,3,,,,,
+128,opinium,16,12,2016,England,1284,511,429,86,187,57,,,14,,,,,
+128,opinium,16,12,2016,Scotland,142,27,24,5,6,4,76,,,,,,,
+128,opinium,16,12,2016,Wales,74,21,23,6,14,1,,9,,,,,,
+129,yougov,19,12,2016,London,191,29,40,11,10,8,,,3,,,,,
+129,yougov,19,12,2016,Rest of South,530,51,15,15,14,5,,,0,,,,,
+129,yougov,19,12,2016,Midlands and Wales,343,39,26,11,17,2,,4,1,,,,,
+129,yougov,19,12,2016,North England,384,33,34,12,16,2,,,2,,,,,
+129,yougov,19,12,2016,Scotland,147,25,12,6,4,3,51,,1,,,,,
+130,yougov,4,1,2017,London,209,38,34,13,10,5,,,,,,,,
+130,yougov,4,1,2017,Rest of South,578,50,18,13,16,4,,,,,,,,
+130,yougov,4,1,2017,Midlands and Wales,374,40,28,8,17,2,,4,,,,,,
+130,yougov,4,1,2017,North England,419,32,38,8,17,4,,,1,,,,,
+130,yougov,4,1,2017,Scotland,160,20,16,8,2,3,51,,,,,,,
+131,icm,8,1,2017,Scotland,121,30,20,6,7,4,54,,0,,,,,
+131,icm,8,1,2017,Wales,68,22,20,4,14,4,,4,,,,,,
+131,icm,8,1,2017,North,470,169,149,41,44,12,54,,1,,,,,
+131,icm,8,1,2017,Midlands,422,180,111,31,71,25,,4,1,,,,,
+131,icm,8,1,2017,South,469,232,113,50,46,26,,,3,,,,,
+132,yougov,10,1,2017,London,199,37,44,11,5,3,,,1,,,,,
+132,yougov,10,1,2017,Rest of South,551,47,21,12,16,4,,,1,,,,,
+132,yougov,10,1,2017,Midlands and Wales,357,41,25,12,15,3,,4,1,,,,,
+132,yougov,10,1,2017,North England,400,36,33,9,16,5,,,1,,,,,
+132,yougov,10,1,2017,Scotland,153,19,21,8,3,2,47,,0,,,,,
+133,opinium,12,1,2017,England,964,380,306,71,150,47,,,10,,,,,
+133,opinium,12,1,2017,Scotland,113,31,13,5,5,2,56,,1,,,,,
+133,opinium,12,1,2017,Wales,69,23,21,6,8,3,,8,,,,,,
+134,survation,13,1,2017,London,112,39,44,16,11,2,,,1,,,,,
+134,survation,13,1,2017,Midlands,144,69,39,13,22,1,,,,,,,,
+134,survation,13,1,2017,North,219,78,79,28,27,4,,,3,,,,,
+134,survation,13,1,2017,South,296,139,69,25,45,7,,,,,,,,
+134,survation,13,1,2017,Scotland,89,16,23,6,1,2,41,,1,,,,,
+134,survation,13,1,2017,Wales,46,16,11,6,5,1,,6,,,,,,
+135,mori,16,1,2017,North,167,73,66,13,10,4,,,1,,,,,
+135,mori,16,1,2017,Midlands,214,93,70,18,18,9,,4,1,,,,,
+135,mori,16,1,2017,Wales,0,0,0,0,,0,,,0,,,,,
+135,mori,16,1,2017,South,265,124,69,46,12,14,,,1,,,,,
+135,mori,16,1,2017,London,94,33,31,20,1,8,,,,,,,,
+135,mori,16,1,2017,England,615,277,198,74,38,26,,,2,,,,,
+135,mori,16,1,2017,Scotland,60,17,15,2,2,2,22,,,,,,,
+136,yougov,18,1,2017,London,198,41,35,11,7,5,,,,,,,,
+136,yougov,18,1,2017,Rest of South,549,52,18,13,13,4,,,,,,,,
+136,yougov,18,1,2017,Midlands and Wales,356,41,25,10,15,4,,4,1,,,,,
+136,yougov,18,1,2017,North England,399,37,34,9,16,2,,,,,,,,
+136,yougov,18,1,2017,Scotland,152,26,19,11,1,2,41,,,,,,,
+137,icm,22,1,2017,Scotland,124,30,19,9,5,2,58,,,,,,,
+137,icm,22,1,2017,Wales,80,18,26,10,13,5,,8,,,,,,
+137,icm,22,1,2017,North,492,186,159,33,43,14,58,,,,,,,
+137,icm,22,1,2017,Midlands,448,189,103,40,78,30,,8,,,,,,
+137,icm,22,1,2017,South,478,223,96,65,62,30,,,3,,,,,
+138,yougov,24,1,2017,London,197,42,22,20,11,2,,,3,,,,,
+138,yougov,24,1,2017,Rest of South,545,51,18,10,15,5,,,,,,,,
+138,yougov,24,1,2017,Midlands and Wales,353,37,29,10,15,4,,5,,,,,,
+138,yougov,24,1,2017,North England,396,34,36,8,17,3,,,,,,,,
+138,yougov,24,1,2017,Scotland,151,21,14,6,3,6,50,,,,,,,
+139,yougov,31,1,2017,London,205,40,30,14,10,5,,,,,,,,
+139,yougov,31,1,2017,Rest of South,566,49,17,13,15,4,,,1,,,,,
+139,yougov,31,1,2017,Midlands and Wales,367,43,26,8,13,5,,3,2,,,,,
+139,yougov,31,1,2017,North England,411,33,39,9,14,4,,,0,,,,,
+139,yougov,31,1,2017,Scotland,157,24,16,6,2,4,47,,1,,,,,
+140,opinium,1,2,2017,England,1311,506,412,107,206,60,,,20,,,,,
+140,opinium,1,2,2017,Scotland,152,32,31,5,7,7,69,,1,,,,,
+140,opinium,1,2,2017,Wales,69,13,22,10,10,3,,11,,,,,,
+141,icm,5,2,2017,Scotland,139,34,16,12,1,4,71,,,,,,,
+141,icm,5,2,2017,Wales,86,23,29,7,14,3,,10,,,,,,
+141,icm,5,2,2017,North,495,171,156,46,37,13,71,,1,,,,,
+141,icm,5,2,2017,Midlands,463,218,106,40,67,21,,10,,,,,,
+141,icm,5,2,2017,South,449,211,102,52,62,19,,,3,,,,,
+142,yougov,6,2,2017,London,204,33,36,13,9,6,,,3,,,,,
+142,yougov,6,2,2017,Rest of South,566,50,17,14,14,4,,,,,,,,
+142,yougov,6,2,2017,Midlands and Wales,366,37,25,11,18,4,,4,,,,,,
+142,yougov,6,2,2017,North England,411,36,31,8,19,5,,,,,,,,
+142,yougov,6,2,2017,Scotland,157,23,14,5,2,2,54,,1,,,,,
+143,comres,10,2,2017,Scotland,111,25,11,7,4,2,62,,0,,,,,
+143,comres,10,2,2017,North East England,47,13,21,5,5,3,,,1,,,,,
+143,comres,10,2,2017,North West England,137,61,51,10,11,1,,,2,,,,,
+143,comres,10,2,2017,Yorkshire and Humber,100,35,29,16,15,5,,,1,,,,,
+143,comres,10,2,2017,West Midlands,113,54,30,7,16,3,,,2,,,,,
+143,comres,10,2,2017,East Midlands,79,37,19,8,8,7,,,0,,,,,
+143,comres,10,2,2017,Wales,64,15,15,5,9,4,,15,1,,,,,
+143,comres,10,2,2017,East of England,125,56,33,19,17,1,,,0,,,,,
+143,comres,10,2,2017,London,158,58,57,26,12,5,,,0,,,,,
+143,comres,10,2,2017,South East England,182,91,37,24,20,7,,,2,,,,,
+143,comres,10,2,2017,South West England,103,54,17,11,14,7,,,0,,,,,
+144,mori,13,2,2017,North,150,59,52,22,13,2,,,,,,,,
+144,mori,13,2,2017,Midlands,187,74,60,19,23,4,,7,,,,,,
+144,mori,13,2,2017,Wales,0,0,0,0,0,0,,0,,,,,,
+144,mori,13,2,2017,South,244,103,62,44,18,18,,,,,,,,
+144,mori,13,2,2017,London,91,24,34,21,8,4,,,,,,,,
+144,mori,13,2,2017,England,557,230,165,83,54,23,,0,,,,,,
+144,mori,13,2,2017,Scotland,67,21,12,1,2,1,28,,1,,,,,
+145,opinium,16,2,2017,England,953,412,267,85,141,39,,,8,,,,,
+145,opinium,16,2,2017,Scotland,110,26,19,4,4,3,53,,1,,,,,
+145,opinium,16,2,2017,Wales,62,17,22,4,8,1,,10,0,,,,,
+146,icm,19,2,2017,Scotland,144,45,28,7,4,4,55,,,,,,,
+146,icm,19,2,2017,Wales,75,21,26,1,20,,,6,1,,,,,
+146,icm,19,2,2017,North,489,189,141,30,52,21,55,,1,,,,,
+146,icm,19,2,2017,Midlands,436,186,110,31,86,14,,6,2,,,,,
+146,icm,19,2,2017,South,463,246,94,42,53,27,,,1,,,,,
+147,yougov,22,2,2017,London,247,46,30,16,4,4,,,,,,,,
+147,yougov,22,2,2017,Rest of South,684,50,18,14,14,4,,,,,,,,
+147,yougov,22,2,2017,Midlands and Wales,443,37,27,9,19,3,,4,2,,,,,
+147,yougov,22,2,2017,North England,496,38,36,9,13,2,,,1,,,,,
+147,yougov,22,2,2017,Scotland,190,23,11,5,6,2,49,,3,,,,,
+148,yougov,28,2,2017,London,200,37,30,23,6,2,,,1,,,,,
+148,yougov,28,2,2017,Rest of South,553,51,21,10,12,5,,,0,,,,,
+148,yougov,28,2,2017,Midlands and Wales,358,43,24,8,17,2,,4,1,,,,,
+148,yougov,28,2,2017,North England,402,39,32,10,14,5,,,0,,,,,
+148,yougov,28,2,2017,Scotland,153,21,16,10,2,7,44,,1,,,,,
+149,icm,5,3,2017,Scotland,131,40,22,8,2,6,55,,0,,,,,
+149,icm,5,3,2017,Wales,80,29,19,1,10,8,,12,0,,,,,
+149,icm,5,3,2017,North,498,207,138,32,44,20,55,,2,,,,,
+149,icm,5,3,2017,Midlands,451,204,125,35,46,27,,12,1,,,,,
+149,icm,5,3,2017,South,480,236,110,51,56,23,,,5,,,,,
+150,yougov,9,3,2017,London,192,32,40,11,10,4,,,3,,,,,
+150,yougov,9,3,2017,Rest of South,531,56,14,14,12,3,,,1,,,,,
+150,yougov,9,3,2017,Midlands and Wales,344,46,26,7,12,2,,5,1,,,,,
+150,yougov,9,3,2017,North England,385,42,34,9,13,2,,,0,,,,,
+150,yougov,9,3,2017,Scotland,147,19,25,3,3,2,48,,1,,,,,
+151,yougov,14,3,2017,London,196,34,35,19,7,6,,,0,,,,,
+151,yougov,14,3,2017,Rest of South,541,55,19,11,10,4,,,1,,,,,
+151,yougov,14,3,2017,Midlands and Wales,351,47,31,7,8,3,,4,0,,,,,
+151,yougov,14,3,2017,North England,393,38,37,8,13,2,,,1,,,,,
+151,yougov,14,3,2017,Scotland,150,31,18,8,1,5,37,,0,,,,,
+152,mori,14,3,2017,North,148,54,70,9,8,8,,,,,,,,
+152,mori,14,3,2017,Midlands,194,96,57,13,20,3,,5,,,,,,
+152,mori,14,3,2017,Wales,0,0,0,0,0,0,0,0,0,,,,,
+152,mori,14,3,2017,South,224,101,57,46,9,12,,,,,,,,
+152,mori,14,3,2017,London,80,22,27,22,6,2,,,,,,,,
+152,mori,14,3,2017,England,531,235,173,65,36,22,,,,,,,,
+152,mori,14,3,2017,Scotland,57,17,4,11,,2,22,,1,,,,,
+153,opinium,17,3,2017,England,980,424,287,84,140,39,,,6,,,,,
+153,opinium,17,3,2017,Scotland,121,32,16,4,3,1,64,,1,,,,,
+153,opinium,17,3,2017,Wales,51,13,18,2,8,1,,8,1,,,,,
+154,comres,17,3,2017,Scotland,116,24,10,16,2,4,61,,0,,,,,
+154,comres,17,3,2017,North East England,48,19,13,6,5,4,,,0,,,,,
+154,comres,17,3,2017,North West England,134,54,46,17,13,3,,,1,,,,,
+154,comres,17,3,2017,Yorkshire and Humber,99,41,27,13,16,2,,,0,,,,,
+154,comres,17,3,2017,West Midlands,106,50,29,5,16,5,,,0,,,,,
+154,comres,17,3,2017,East Midlands,94,44,23,11,10,3,,,3,,,,,
+154,comres,17,3,2017,Wales,57,19,15,5,5,3,,9,1,,,,,
+154,comres,17,3,2017,East of England,121,50,28,19,20,5,,,0,,,,,
+154,comres,17,3,2017,London,175,59,70,24,11,9,,,3,,,,,
+154,comres,17,3,2017,South East England,185,105,33,23,17,5,,,1,,,,,
+154,comres,17,3,2017,South West England,100,50,17,13,10,7,,,1,,,,,
+155,icm,19,3,2017,Scotland,133,40,16,3,5,7,62,,0,,,,,
+155,icm,19,3,2017,Wales,87,33,23,3,8,4,,14,2,,,,,
+155,icm,19,3,2017,North,484,179,140,40,42,17,62,,2,,,,,
+155,icm,19,3,2017,Midlands,467,247,109,29,49,17,,14,2,,,,,
+155,icm,19,3,2017,South,453,223,102,56,53,14,,,4,,,,,
+156,yougov,21,3,2017,London,195,31,43,14,7,4,,,1,,,,,
+156,yougov,21,3,2017,Rest of South,540,52,17,14,12,5,,,1,,,,,
+156,yougov,21,3,2017,Midlands and Wales,350,47,25,7,13,2,,2,2,,,,,
+156,yougov,21,3,2017,North England,392,36,32,12,16,3,,,1,,,,,
+156,yougov,21,3,2017,Scotland,150,19,18,4,3,2,54,,0,,,,,
+157,gfk,15,3,2017,Scotland,126,34,13,7,3,7,60,,1,,,,,
+157,gfk,15,3,2017,North East,46,14,23,3,6,1,,,0,,,,,
+157,gfk,15,3,2017,Yorkshire and Humber,99,36,36,6,15,5,,,0,,,,,
+157,gfk,15,3,2017,North West,144,52,56,8,24,4,,,,,,,,
+157,gfk,15,3,2017,East Midlands,79,43,19,3,11,3,,,,,,,,
+157,gfk,15,3,2017,West Midlands,110,53,29,5,15,5,,,4,,,,,
+157,gfk,15,3,2017,East of England,121,60,27,7,20,8,,,,,,,,
+157,gfk,15,3,2017,London,155,63,56,15,16,4,,,2,,,,,
+157,gfk,15,3,2017,South East,180,79,43,17,19,21,,,2,,,,,
+157,gfk,15,3,2017,South West,105,48,25,9,14,10,,,,,,,,
+157,gfk,15,3,2017,Wales,53,14,17,4,4,6,,5,3,,,,,
+158,yougov,27,3,2017,London,235,35,35,18,7,3,,,2,,,,,
+158,yougov,27,3,2017,Rest of South,650,54,17,15,9,4,,,0,,,,,
+158,yougov,27,3,2017,Midlands and Wales,421,42,25,9,16,4,,3,1,,,,,
+158,yougov,27,3,2017,North England,472,38,36,8,12,4,,,2,,,,,
+158,yougov,27,3,2017,Scotland,180,28,18,4,3,1,45,,0,,,,,
+159,icm,2,4,2017,Scotland,147,43,18,6,5,5,70,,0,,,,,
+159,icm,2,4,2017,Wales,75,19,25,5,13,4,,9,0,,,,,
+159,icm,2,4,2017,North,497,192,143,42,32,15,70,,4,,,,,
+159,icm,2,4,2017,Midlands,441,195,102,43,69,18,,9,4,,,,,
+159,icm,2,4,2017,South,480,243,95,66,56,19,,,1,,,,,
+160,yougov,6,4,2017,London,196,35,31,20,9,4,,,0,,,,,
+160,yougov,6,4,2017,Rest of South,548,53,18,11,13,4,,,1,,,,,
+160,yougov,6,4,2017,Midlands and Wales,355,43,25,8,13,3,,6,2,,,,,
+160,yougov,6,4,2017,North England,398,40,35,9,13,1,,,0,,,,,
+160,yougov,6,4,2017,Scotland,152,23,13,8,1,1,53,,1,,,,,
+161,opinium,11,4,2017,England,914,362,288,74,141,44,,,5,,,,,
+161,opinium,11,4,2017,Scotland,123,38,12,5,2,7,60,,,,,,,
+161,opinium,11,4,2017,Wales,59,21,20,3,8,1,,6,,,,,,
+162,comres,13,4,2017,Scotland,113,27,17,11,3,5,49,,1,,,,,
+162,comres,13,4,2017,North East England,51,19,22,3,6,0,,,0,,,,,
+162,comres,13,4,2017,North West England,128,42,55,15,13,3,,,0,,,,,
+162,comres,13,4,2017,Yorkshire and Humber,103,46,27,14,10,4,,,1,,,,,
+162,comres,13,4,2017,West Midlands,106,57,21,9,11,7,,,1,,,,,
+162,comres,13,4,2017,East Midlands,83,46,17,5,10,3,,,1,,,,,
+162,comres,13,4,2017,Wales,59,25,14,4,4,1,,11,0,,,,,
+162,comres,13,4,2017,East of England,112,61,20,12,14,5,,,1,,,,,
+162,comres,13,4,2017,London,170,73,57,25,11,4,,,0,,,,,
+162,comres,13,4,2017,South East England,176,102,25,20,20,7,,,3,,,,,
+162,comres,13,4,2017,South West England,107,53,24,18,6,6,,,1,,,,,
+163,yougov,13,4,2017,London,248,43,31,16,5,4,,,1,,,,,
+163,yougov,13,4,2017,Rest of South,687,55,16,14,9,4,,,1,,,,,
+163,yougov,13,4,2017,Midlands and Wales,445,44,26,9,13,4,,4,1,,,,,
+163,yougov,13,4,2017,North England,499,37,34,11,14,4,,,,,,,,
+163,yougov,13,4,2017,Scotland,190,26,13,10,3,5,44,,,,,,,
+164,icm,18,4,2017,Scotland,68,13,13,3,1,9,29,,0,,,,,
+164,icm,18,4,2017,Wales,35,16,6,4,4,1,,2,0,,,,,
+164,icm,18,4,2017,North,243,94,67,21,12,15,29,,4,,,,,
+164,icm,18,4,2017,Midlands,211,111,48,24,18,8,,2,0,,,,,
+164,icm,18,4,2017,South,225,118,40,34,24,9,,,1,,,,,
+165,yougov,19,4,2017,London,207,42,36,15,3,4,,,1,,,,,
+165,yougov,19,4,2017,Rest of South,573,58,15,16,8,3,,,0,,,,,
+165,yougov,19,4,2017,Midlands and Wales,371,50,28,8,9,1,,2,1,,,,,
+165,yougov,19,4,2017,North England,416,45,32,11,9,2,,,0,,,,,
+165,yougov,19,4,2017,Scotland,159,29,15,5,1,0,49,,0,,,,,
+166,opinium,20,4,2017,England,951,448,264,104,98,33,,,4,,,,,
+166,opinium,20,4,2017,Scotland,117,37,17,9,2,2,50,,,,,,,
+166,opinium,20,4,2017,Wales,55,17,15,7,7,1,,8,,,,,,
+167,comres,20,4,2017,Scotland,113,43,11,10,1,1,48,,0,,,,,
+167,comres,20,4,2017,North East England,50,16,22,6,6,0,,,0,,,,,
+167,comres,20,4,2017,North West England,141,59,48,7,7,2,,,0,,,,,
+167,comres,20,4,2017,Yorkshire and Humber,101,48,35,10,10,1,,,1,,,,,
+167,comres,20,4,2017,West Midlands,115,57,32,6,9,1,,,1,,,,,
+167,comres,20,4,2017,East Midlands,84,47,17,5,8,4,,,0,,,,,
+167,comres,20,4,2017,Wales,66,33,16,8,3,4,,5,0,,,,,
+167,comres,20,4,2017,East of England,128,65,25,4,10,3,,,2,,,,,
+167,comres,20,4,2017,London,172,75,55,22,12,7,,,0,,,,,
+167,comres,20,4,2017,South East England,180,99,26,23,17,8,,,0,,,,,
+167,comres,20,4,2017,South West England,110,55,26,30,4,2,,,1,,,,,
+168,yougov,21,4,2017,London,191,42,33,19,3,3,,,0,,,,,
+168,yougov,21,4,2017,Rest of South,528,59,17,15,6,2,,,1,,,,,
+168,yougov,21,4,2017,Midlands and Wales,342,50,23,11,6,5,,5,1,,,,,
+168,yougov,21,4,2017,North England,383,44,38,7,7,3,,,0,,,,,
+168,yougov,21,4,2017,Scotland,146,27,15,6,0,3,49,,0,,,,,
+169,survationscotland,21,4,2017,Scotland,793,221,141,70,9,9,342,,1,,,,,
+174,icm,21,4,2017,Scotland,144,52,24,7,0,3,58,,0,,,,,
+174,icm,21,4,2017,Wales,88,36,21,8,11,2,,8,1,,,,,
+174,icm,21,4,2017,North,520,222,157,40,29,14,58,,1,,,,,
+174,icm,21,4,2017,Midlands,481,242,105,50,58,17,,8,1,,,,,
+174,icm,21,4,2017,South,490,272,111,57,28,19,,,3,,,,,
+170,survation,22,4,2017,London,224,70,71,45,33,5,,,0,,,,,
+170,survation,22,4,2017,Midlands,262,121,77,20,38,3,,,2,,,,,
+170,survation,22,4,2017,North,371,156,149,31,30,3,,,3,,,,,
+170,survation,22,4,2017,South,525,243,124,66,71,18,,,2,,,,,
+170,survation,22,4,2017,Scotland,163,31,33,12,11,2,73,,1,,,,,
+170,survation,22,4,2017,Wales,79,33,21,6,3,6,,10,0,,,,,
+171,panelbasescotland,22,4,2017,Scotland,100,33,13,5,2,2,44,,1,,,,,
+172,icm,24,4,2017,Scotland,144,38,22,15,1,4,63,,0,,,,,
+172,icm,24,4,2017,Wales,85,44,25,3,2,1,,8,1,,,,,
+172,icm,24,4,2017,North,508,187,166,48,33,11,63,,0,,,,,
+172,icm,24,4,2017,Midlands,478,282,99,39,34,14,,8,2,,,,,
+172,icm,24,4,2017,South,488,260,114,64,31,16,,,3,,,,,
+173,yougovwales,24,4,2017,Wales,100,40,30,8,6,2,,13,1,,,,,
+175,mori,25,4,2017,North,177,89,56,13,8,1,,,7,,,,,
+175,mori,25,4,2017,Midlands,194,114,38,22,3,5,,13,0,,,,,
+175,mori,25,4,2017,Wales,0,0,0,0,0,0,,,0,,,,,
+175,mori,25,4,2017,South,262,114,73,53,14,2,,,4,,,,,
+175,mori,25,4,2017,London,93,26,37,21,2,1,,,2,,,,,
+175,mori,25,4,2017,England,600,306,161,85,26,7,,,11,,,,,
+175,mori,25,4,2017,Scotland,62,22,11,3,,1,25,,,,,,,
+178,opinium,25,4,2017,England,1004,491,316,87,80,25,,,5,,,,,
+178,opinium,25,4,2017,Scotland,113,34,15,2,1,4,57,,0,,,,,
+178,opinium,25,4,2017,Wales,58,24,17,3,6,1,,7,0,,,,,
+176,yougov,26,4,2017,London,191,36,36,16,6,5,45,,1,,,,,
+176,yougov,26,4,2017,Rest of South,528,57,20,11,7,4,,,0,,,,,
+176,yougov,26,4,2017,Midlands and Wales,342,45,31,9,11,2,,2,1,,,,,
+176,yougov,26,4,2017,North England,383,41,42,7,7,2,,,0,,,,,
+176,yougov,26,4,2017,Scotland,146,25,19,8,2,1,,,0,,,,,
+177,yougovscotland,27,4,2017,Scotland,100,28,18,7,2,3,41,,1,,,,,
+179,yougov,28,4,2017,London,193,30,45,15,6,3,,,0,,,,,
+179,yougov,28,4,2017,Rest of South,535,51,22,16,7,2,,,1,,,,,
+179,yougov,28,4,2017,Midlands and Wales,347,49,29,7,8,3,,4,,,,,,
+179,yougov,28,4,2017,North England,388,41,43,8,6,2,,,,,,,,
+179,yougov,28,4,2017,Scotland,148,32,25,5,0,2,36,,,,,,,
+180,icm,30,4,2017,Scotland,137,33,23,14,1,4,61,,,,,,,
+180,icm,30,4,2017,Wales,75,35,21,4,8,2,,6,,,,,,
+180,icm,30,4,2017,North,498,200,157,37,30,12,61,,,,,,,
+180,icm,30,4,2017,Midlands,430,216,109,32,53,13,,6,1,,,,,
+180,icm,30,4,2017,South,472,265,99,55,27,24,,,2,,,,,
+181,icm,2,5,2017,Scotland,135,42,21,5,9,6,51,,0,,,,,
+181,icm,2,5,2017,Wales,73,28,30,2,8,,,5,0,,,,,
+181,icm,2,5,2017,North,491,208,143,32,36,18,51,,4,,,,,
+181,icm,2,5,2017,Midlands,449,229,125,35,43,10,,5,2,,,,,
+181,icm,2,5,2017,South,476,246,111,62,37,18,,,1,,,,,
+182,lucidtalk,29,4,2017,Norn Iron,100,1,,,1,2,,,2,12,28,10,29,15
+183,panelbase,2,5,2017,East Anglia,100,48,24,13,12,3,,,,,,,,
+183,panelbase,2,5,2017,East Midlands,100,58,26,8,6,2,,,,,,,,
+183,panelbase,2,5,2017,London,100,50,31,15,2,2,,,,,,,,
+183,panelbase,2,5,2017,North East,100,45,33,12,8,2,,,,,,,,
+183,panelbase,2,5,2017,North West,100,37,43,11,7,1,,,1,,,,,
+183,panelbase,2,5,2017,Scotland,100,19,14,14,3,1,48,,,,,,,
+183,panelbase,2,5,2017,South East,100,63,20,8,5,2,,,2,,,,,
+183,panelbase,2,5,2017,South West,100,51,22,18,4,5,,,,,,,,
+183,panelbase,2,5,2017,Wales,100,48,33,4,3,3,,9,,,,,,
+183,panelbase,2,5,2017,West Midlands,100,53,33,4,5,3,,,1,,,,,
+183,panelbase,2,5,2017,Yorkshire,100,40,47,5,7,1,,,,,,,,
+184,yougov,3,5,2017,London,248,38,39,15,4,4,,,0,,,,,
+184,yougov,3,5,2017,Rest of South,686,56,21,12,7,3,,,1,,,,,
+184,yougov,3,5,2017,Midlands and Wales,444,49,29,9,7,2,,2,2,,,,,
+184,yougov,3,5,2017,North England,498,43,43,7,5,1,,,0,,,,,
+184,yougov,3,5,2017,Scotland,190,37,15,6,,1,40,,0,,,,,
+185,opinium,3,5,2017,England,1057,500,338,105,86,22,,,6,,,,,
+185,opinium,3,5,2017,Scotland,134,44,17,7,1,7,56,,2,,,,,
+185,opinium,3,5,2017,Wales,56,29,14,3,5,,,4,1,,,,,
+186,yougov,5,5,2017,London,197,44,35,14,4,2,,,0,,,,,
+186,yougov,5,5,2017,Rest of South,546,57,20,13,6,3,,,1,,,,,
+186,yougov,5,5,2017,Midlands and Wales,353,48,32,9,6,2,,2,1,,,,,
+186,yougov,5,5,2017,North England,396,42,39,10,7,3,,,0,,,,,
+186,yougov,5,5,2017,Scotland,151,27,19,9,1,3,41,,0,,,,,
+187,icm,5,5,2017,Scotland,145,39,26,9,2,6,62,,1,,,,,
+187,icm,5,5,2017,Wales,77,34,32,1,3,1,,6,0,,,,,
+187,icm,5,5,2017,North,528,215,168,40,23,14,62,,5,,,,,
+187,icm,5,5,2017,Midlands,459,230,129,43,41,10,,6,0,,,,,
+187,icm,5,5,2017,South,487,249,113,61,40,22,,,1,,,,,
+188,icm,7,5,2017,Scotland,133,46,18,3,0,6,59,,1,,,,,
+188,icm,7,5,2017,Wales,73,32,24,6,7,3,,2,0,,,,,
+188,icm,7,5,2017,North,536,233,167,36,22,12,59,,6,,,,,
+188,icm,7,5,2017,Midlands,452,252,108,39,33,18,,2,2,,,,,
+188,icm,7,5,2017,South,497,272,113,61,33,17,,,2,,,,,
+189,yougovwales,7,5,2017,Wales,100,41,35,7,4,1,,11,1,,,,,
+190,survation,6,5,2017,London,101,35,52,8,3,3,,,1,,,,,
+190,survation,6,5,2017,Midlands,118,67,27,11,4,9,,,0,,,,,
+190,survation,6,5,2017,North,261,140,90,13,12,5,,,0,,,,,
+190,survation,6,5,2017,South,254,150,54,26,14,6,,,4,,,,,
+190,survation,6,5,2017,Scotland,71,15,14,3,,,38,,0,,,,,
+190,survation,6,5,2017,Wales,42,15,17,,,,,8,1,,,,,
+191,yougovlondon,2,5,2017,London,100,36,41,14,6,3,,,1,,,,,
+192,panelbase,9,5,2017,East Anglia,100,50,30,14,6,0,,,,,,,,
+192,panelbase,9,5,2017,East Midlands,100,56,28,3,7,5,,,,,,,,
+192,panelbase,9,5,2017,London,100,48,38,10,3,1,,,,,,,,
+192,panelbase,9,5,2017,North East,100,42,47,5,5,0,,,,,,,,
+192,panelbase,9,5,2017,North West,100,40,39,11,8,1,,,2,,,,,
+192,panelbase,9,5,2017,Scotland,100,42,11,3,1,1,42,,,,,,,
+192,panelbase,9,5,2017,South East,100,59,22,11,5,3,,,,,,,,
+192,panelbase,9,5,2017,South West,100,54,25,14,3,4,,,,,,,,
+192,panelbase,9,5,2017,Wales,100,50,29,2,0,3,,16,,,,,,
+192,panelbase,9,5,2017,West Midlands,100,47,39,3,7,4,,,,,,,,
+192,panelbase,9,5,2017,Yorkshire,100,37,41,9,8,3,,,2,,,,,
+193,yougov,10,5,2017,London,198,35,46,13,4,2,,,0,,,,,
+193,yougov,10,5,2017,Rest of South,548,57,20,15,5,2,,,0,,,,,
+193,yougov,10,5,2017,Midlands and Wales,355,48,32,5,7,2,,2,3,,,,,
+193,yougov,10,5,2017,North England,398,43,44,7,4,2,,,,,,,,
+193,yougov,10,5,2017,Scotland,152,26,14,11,2,1,46,,,,,,,
+194,opinium,10,5,2017,England,988,494,333,87,52,20,,,2,,,,,
+194,opinium,10,5,2017,Scotland,122,38,21,3,1,5,53,,1,,,,,
+194,opinium,10,5,2017,Wales,52,16,22,2,3,1,,8,,,,,,
+195,comres,12,5,2017,Scotland,111,34,14,12,2,4,45,,,,,,,
+195,comres,12,5,2017,North East England,51,27,21,1,2,1,,,,,,,,
+195,comres,12,5,2017,North West England,134,62,57,7,6,2,,,,,,,,
+195,comres,12,5,2017,Yorkshire and Humber,100,47,37,6,7,3,,,,,,,,
+195,comres,12,5,2017,West Midlands,103,52,33,9,6,1,,,2,,,,,
+195,comres,12,5,2017,East Midlands,90,50,23,5,9,2,,,1,,,,,
+195,comres,12,5,2017,Wales,61,26,18,6,1,2,,8,,,,,,
+195,comres,12,5,2017,East of England,123,67,25,20,6,4,,,2,,,,,
+195,comres,12,5,2017,London,161,65,62,21,5,7,,,1,,,,,
+195,comres,12,5,2017,South East England,179,97,44,21,11,6,,,,,,,,
+195,comres,12,5,2017,South West England,109,56,28,13,7,5,,,1,,,,,
+196,yougov,12,5,2017,London,196,39,46,10,2,3,,,0,,,,,
+196,yougov,12,5,2017,Rest of South,541,58,22,14,3,2,,,1,,,,,
+196,yougov,12,5,2017,Midlands and Wales,350,52,31,6,4,3,,2,1,,,,,
+196,yougov,12,5,2017,North England,393,45,43,6,4,1,,,1,,,,,
+196,yougov,12,5,2017,Scotland,150,33,15,5,,4,41,,2,,,,,
+197,survation,13,5,2017,London,101,35,45,11,5,4,,,2,,,,,
+197,survation,13,5,2017,Midlands,121,78,33,6,3,1,,,0,,,,,
+197,survation,13,5,2017,North,177,83,74,11,5,3,,,1,,,,,
+197,survation,13,5,2017,South,252,136,54,34,15,9,,,4,,,,,
+197,survation,13,5,2017,Scotland,70,22,13,0,,1,33,,2,,,,,
+197,survation,13,5,2017,Wales,44,19,14,3,,1,,7,,,,,,
+198,icm,14,5,2017,Scotland,139,36,23,9,1,2,68,,0,,,,,
+198,icm,14,5,2017,Wales,84,40,23,11,1,3,,6,0,,,,,
+198,icm,14,5,2017,North,520,202,180,37,19,11,68,,4,,,,,
+198,icm,14,5,2017,Midlands,456,245,111,43,32,15,,6,4,,,,,
+198,icm,14,5,2017,South,483,268,107,64,25,17,,,1,,,,,
+199,panelbase,15,5,2017,East Anglia,100,56,25,9,4,6,,,,,,,,
+199,panelbase,15,5,2017,East Midlands,100,60,28,1,9,2,,,,,,,,
+199,panelbase,15,5,2017,London,100,38,50,9,1,2,,,,,,,,
+199,panelbase,15,5,2017,North East,100,38,43,10,6,3,,,,,,,,
+199,panelbase,15,5,2017,North West,100,45,45,4,3,4,,,,,,,,
+199,panelbase,15,5,2017,Scotland,100,20,13,6,2,2,56,,1,,,,,
+199,panelbase,15,5,2017,South East,100,59,24,7,7,2,,,1,,,,,
+199,panelbase,15,5,2017,South West,100,56,23,16,3,2,,,,,,,,
+199,panelbase,15,5,2017,Wales,100,40,40,3,9,0,,8,,,,,,
+199,panelbase,15,5,2017,West Midlands,100,50,33,5,8,5,,,,,,,,
+199,panelbase,15,5,2017,Yorkshire,100,42,43,4,10,1,,,,,,,,
+200,yougov,17,5,2017,London,223,41,38,14,5,2,,,0,,,,,
+200,yougov,17,5,2017,Rest of South,618,54,23,11,7,3,,,1,,,,,
+200,yougov,17,5,2017,Midlands and Wales,400,46,34,6,7,2,,4,0,,,,,
+200,yougov,17,5,2017,North England,449,43,46,4,5,1,,,1,,,,,
+200,yougov,17,5,2017,Scotland,171,28,22,6,1,1,43,,0,,,,,
+201,mori,17,5,2017,North,238,78,77,9,2,5,,,,,,,,
+201,mori,17,5,2017,Midlands,171,126,76,14,2,10,,1,1,,,,,
+201,mori,17,5,2017,Wales,230,,,,,,,,,,,,,
+201,mori,17,5,2017,South,264,125,93,28,13,4,,,1,,,,,
+201,mori,17,5,2017,London,97,38,47,2,8,1,,,,,,,,
+201,mori,17,5,2017,England,626,317,224,49,16,19,,,1,,,,,
+201,mori,17,5,2017,Scotland,67,31,7,2,,,27,,,,,,,
+202,yougovscotland,18,5,2017,Scotland,100,29,19,6,1,2,42,,1,,,,,
+203,opinium,16,5,2017,England,1005,486,344,83,60,25,,,7,,,,,
+203,opinium,16,5,2017,Scotland,120,34,21,6,2,0,56,,1,,,,,
+203,opinium,16,5,2017,Wales,61,26,26,3,2,0,,4,,,,,,
+204,yougov,19,5,2017,London,231,34,44,12,3,3,,,3,,,,,
+204,yougov,19,5,2017,Rest of South,639,56,24,13,3,3,,,1,,,,,
+204,yougov,19,5,2017,Midlands and Wales,414,48,37,7,4,1,,3,1,,,,,
+204,yougov,19,5,2017,North England,464,36,50,7,5,1,,,,,,,,
+204,yougov,19,5,2017,Scotland,177,28,22,5,,1,44,,,,,,,
+205,survation,20,5,2017,London,103,50,35,14,2,2,,,3,,,,,
+205,survation,20,5,2017,Midlands,127,71,41,3,7,4,,,4,,,,,
+205,survation,20,5,2017,North,193,84,90,12,5,1,,,1,,,,,
+205,survation,20,5,2017,South,271,145,83,27,12,2,,,2,,,,,
+205,survation,20,5,2017,Scotland,80,22,21,8,,,30,,,,,,,
+205,survation,20,5,2017,Wales,37,15,17,2,,,,3,,,,,,
+206,survation,20,5,2017,London,101,40,47,7,2,3,,,2,,,,,
+206,survation,20,5,2017,Midlands,115,56,40,9,8,3,,,0,,,,,
+206,survation,20,5,2017,North,187,71,87,13,7,4,,,4,,,,,
+206,survation,20,5,2017,South,257,147,63,31,11,2,,,4,,,,,
+206,survation,20,5,2017,Scotland,65,17,14,7,,,27,,10,,,,,
+206,survation,20,5,2017,Wales,42,13,21,,2,1,,5,,,,,,
+207,icm,21,5,2017,Scotland,130,29,26,11,0,2,59,,2,,,,,
+207,icm,21,5,2017,Wales,78,26,33,5,8,0,,6,0,,,,,
+207,icm,21,5,2017,North,507,209,189,29,8,8,59,,5,,,,,
+207,icm,21,5,2017,Midlands,460,238,148,38,24,3,,6,4,,,,,
+207,icm,21,5,2017,South,478,243,135,52,17,23,,,8,,,,,
+208,yougovwales,21,5,2017,Wales,100,34,44,6,5,1,,9,1,,,,,
+209,yougov,25,5,2017,London,246,36,48,12,2,2,,,0,,,,,
+209,yougov,25,5,2017,Rest of South,681,51,30,12,5,2,,,0,,,,,
+209,yougov,25,5,2017,Midlands and Wales,441,46,39,8,5,0,,1,0,,,,,
+209,yougov,25,5,2017,North England,495,37,48,8,4,2,,,1,,,,,
+209,yougov,25,5,2017,Scotland,189,30,22,6,0,2,41,,0,,,,,

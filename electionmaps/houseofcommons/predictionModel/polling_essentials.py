@@ -233,7 +233,7 @@ class Poll(object):
         self.date = datetime(int(year), int(month), int(day))
         self.regions = {}
         self.weight = pollster_weights[self.company]
-        
+
     def add_row(self, row):
         to_add = {}
         for party in parties:
@@ -307,7 +307,8 @@ class Poll(object):
 
         #testing
         if self.company == "me":
-            self.weight = 10000000
+            weight = 10000000
+
 
         return weight
 

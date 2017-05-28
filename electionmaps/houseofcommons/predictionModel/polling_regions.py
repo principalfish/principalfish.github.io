@@ -181,6 +181,21 @@ polling_regions = {
 
     "yougovlondon" : {
         "London" : ["london"]
+    },
+
+    "orb" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East" : ["southeastengland"],
+        "South West" : ["southwestengland"],
+        "London" : ["london"],
+        "North East" : ["northeastengland"],
+        "North West" : ["northwestengland"],
+        "Yorks and Humber" : ["yorkshireandthehumber"],
+        "Eastern" : ["eastofengland"]
     }
 
 }

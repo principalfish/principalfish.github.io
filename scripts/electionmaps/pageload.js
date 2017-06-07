@@ -57,12 +57,9 @@ function pageLoadEssentials(){
 	if (currentMap != prediction && currentMap != hodgesrule){
 		$("#instructions").remove();
 	} else {
-		var oneDay = 24 * 60 * 60 * 1000;
-		var election = new Date(2017, 5, 8, 22, 0, 0);
-		var today = new Date();
-		var diffDays = Math.round(Math.abs((election.getTime() - today.getTime())/(oneDay)));
+		countdown.run();
 
-		$("#daysto").text(diffDays);
+
 
 		$(function(){
 			$("#lastpollster").load("lastpollster.html");
@@ -204,4 +201,37 @@ var urlParamMap = {
 	"election2015_600seat" : election2015_600seat,
 	"prediction_600seat" : prediction_600seat,
 	"hodgesrule" : hodgesrule
+};
+
+var countdown = {
+
+	run : function(){
+		var end = new Date(2017, 5, 8, 22, 0, 0);
+
+  	var timeinterval = setInterval(function(){
+	    var t = countdown.getDiff(end);
+			var toAdd = t.hours + " hrs " + t.minutes + " mins " + t.seconds + " secs ";
+			$("#daysto").text(toAdd);
+		  if(t.total<=0){
+					$("#daysto").text("Polls closed")
+		      clearInterval(timeinterval);
+		    }
+		  },1000);
+		},
+
+	getDiff: function(endTime){
+		var t = Date.parse(endTime) - Date.parse(new Date());
+		var seconds = Math.floor( (t/1000) % 60 );
+		var minutes = Math.floor( (t/1000/60) % 60 );
+		var hours = Math.floor( (t/(1000*60*60)) % 24 );
+		var days = Math.floor( t/(1000*60*60*24) );
+		return {
+		 'total': t,
+		 'days': days,
+		 'hours': hours,
+		 'minutes': minutes,
+		 'seconds': seconds
+		};
+	}
+
 };

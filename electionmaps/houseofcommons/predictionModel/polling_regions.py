@@ -4,7 +4,17 @@ polling_regions = {
         "England" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland",
             "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london" ],
         "Scotland" : ["scotland"],
-        "Wales" : ["wales"]
+        "Wales" : ["wales"],
+
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East England" : ["southeastengland"],
+        "South West England" : ["southwestengland"],
+        "London" : ["london"],
+        "North East England" : ["northeastengland"],
+        "North West England" : ["northwestengland"],
+        "Yorkshire and Humber" : ["yorkshireandthehumber"],
+        "East of England" : ["eastofengland"]
     },
 
     "general" : {

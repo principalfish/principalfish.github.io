@@ -746,6 +746,19 @@ svg .mapdark {
     padding-top: 2px;
     padding-bottom: 2px; }
 
+#myprediction {
+  width: auto;
+  max-width: 525px;
+  display: none;
+  left: 605px;
+  top: 577px;
+  height: auto;
+  position: absolute;
+  font-size: 1.1em; }
+  #myprediction li {
+    padding-top: 2px;
+    padding-bottom: 2px; }
+
 #seat-600 {
   width: 400px;
   left: 605px;

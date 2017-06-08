@@ -43,6 +43,7 @@ with open(polling_data, "rb") as polls_file:
     for row in poll_data:
         code = row["code"]
         if code not in poll_codes:
+
             polls[code] = Poll(code, row["company"], row["day"], row["month"], row["year"])
             poll_codes.append(code)
 
@@ -141,14 +142,55 @@ diff_names = {u'Birmingham, Edgbaston' : "Birmingham Edgbaston",
 for key, value in diff_names.iteritems():
     candidates[value] = candidates.pop(key)
 
-for seat, data in seats.iteritems():
-    data.get_new_data(regional[data.region].numerical)
-    data.generate_output()
+for seat, info in seats.iteritems():
+    info.get_new_data(regional[info.region].numerical)
+    info.generate_output()
+
+    if arguments[1] == "me":
+        if "ukip" in  info.data["partyInfo"] :
+            if "standing" in info.data["partyInfo"]["ukip"]:
+                if "conservative" in info.data["partyInfo"]:
+                    info.output["partyInfo"]["conservative"]["total"] += 0.75 * info.data["partyInfo"]["ukip"]["total"]
+                    info.output["partyInfo"]["conservative"]["total"] = round(info.output["partyInfo"]["conservative"]["total"], 0)
+                del info.output["partyInfo"]["ukip"]
+
+        if "green" in  info.data["partyInfo"] :
+            if "standing" in info.data["partyInfo"]["green"]:
+                if "labour" in info.data["partyInfo"]:
+                    info.output["partyInfo"]["labour"]["total"] += 0.35 * info.data["partyInfo"]["green"]["total"]
+                    info.output["partyInfo"]["labour"]["total"] = round(info.output["partyInfo"]["labour"]["total"], 0)
+                if "libdems" in info.data["partyInfo"]:
+                    info.output["partyInfo"]["libdems"]["total"] += 0.30 * info.data["partyInfo"]["green"]["total"]
+                    info.output["partyInfo"]["libdems"]["total"] = round(info.output["partyInfo"]["libdems"]["total"], 0)
+                del info.output["partyInfo"]["green"]
+
+        max = ""
+        max_votes = 0
+
+        votes_array = []
+        sum = 0
+
+        for party, votes in info.output["partyInfo"].iteritems():
+            votes_array.append(votes["total"])
+            sum += votes["total"]
+            if votes["total"] > max_votes:
+                max = party
+                max_votes = votes["total"]
+
+
+        info.output["seatInfo"]["current"] = max
+        info.output["seatInfo"]["turnout"] = sum
+
+        votes_array.sort()
+
+        info.output["seatInfo"]["majority"] = round(votes_array[-1] - votes_array[-2] ,0)
 
     #check if standing
     if arguments[1] == "650":
-        data.check_standing(candidates[seat])
-    to_dump[seat] = data.output
+        info.check_standing(candidates[seat])
+    to_dump[seat] = info.output
+
+
 
 with open("../" + model_map[arguments[1]][1], "w") as output:
     json.dump(to_dump, output)

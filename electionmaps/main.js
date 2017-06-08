@@ -1082,6 +1082,12 @@ function pageLoadEssentials(){
 		// check this TO DO
 	}
 
+	if (currentMap.name == "myprediction"){
+		$("#myprediction").show();
+	} else {
+		$("#myprediction").hide();
+	}
+
 	// if prediction show prediction button and div
 
 };
@@ -1122,7 +1128,8 @@ var dataurls =  {
 	e2010 : "houseofcommons/2010election.json",
 	e2015_600 : "houseofcommons/2015election_600seat.json",
 	predict_600 : "houseofcommons/prediction_600seat.json",
-	hodgesrule : "houseofcommons/hodgesrule.json"
+	hodgesrule : "houseofcommons/hodgesrule.json",
+	myprediction :"houseofcommons/myprediction.json"
 }
 
 var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true, false);
@@ -1133,6 +1140,8 @@ var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, da
 var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false, false);
 var hodgesrule = new pageSetting("hodgesrule", dataurls.map650, dataurls.hodgesrule, dataurls.e2015, true, false, true, false);
+var myprediction = new pageSetting("myprediction", dataurls.map650, dataurls.myprediction, dataurls.e2015, true, false, false, false);
+
 
 function initialization(){
 
@@ -1171,7 +1180,8 @@ var urlParamMap = {
 	"election2010" : election2010,
 	"election2015_600seat" : election2015_600seat,
 	"prediction_600seat" : prediction_600seat,
-	"hodgesrule" : hodgesrule
+	"hodgesrule" : hodgesrule,
+	"myprediction" : myprediction
 };
 
 var countdown = {

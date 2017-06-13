@@ -5,16 +5,18 @@ var params = {
   possibleBattlegroundParams : ["incumbent", "challenger", "region", "majlow", "majhigh"],
 
   checkParams : function(){
+    // 
+    // var urlFilters = getParameterByName("filters", url);
+    // if (urlFilters == "yes" || urlFilters == "true"){
+    //   params.filters();
+    // } else {
+    //   var urlBattle = getParameterByName("battlegrounds", url)
+    //   if (urlBattle == "yes" || urlBattle == "true"){
+    //     params.battleground();
+    //   }
+    // }
 
-    var urlFilters = getParameterByName("filters", url);
-    if (urlFilters == "yes" || urlFilters == "true"){
-      params.filters();
-    } else {
-      var urlBattle = getParameterByName("battlegrounds", url)
-      if (urlBattle == "yes" || urlBattle == "true"){
-        params.battleground();
-      }
-    }
+    params.filters()
   },
 
   filters : function(){

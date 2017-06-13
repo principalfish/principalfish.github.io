@@ -26,17 +26,11 @@
 			width: 300px;
 		}
 
-		#types {
-			top: 187px;
-			left: 325px;
-			position: absolute;
-			height: 150px;
-			width: 350px;
-		}
+
 
 		#specifics {
 			top: 187px;
-			left: 700px;
+			left: 325px;
 			position: absolute;
 			width: auto;
 		}
@@ -80,21 +74,24 @@
 		<div class="divider"></div>
 		<h3 id="nav-election2015"><a href="/electionmaps/?map=election2015"> 2015 Election</a> </h3>
 		<h3 id="nav-election2010"><a href="/electionmaps/?map=election2010"> 2010 Election</a> </h3>
-		<!-- <div class="divider"></div>
-		<h3 id="nav-2015-600seat"><a href="/electionmaps/?map=election2015_600seat">600 seat - 2015</a> </h3>
-		<h3 id="nav-prediction-600seat"><a href="/electionmaps/?map=prediction_600seat">600 seat - 2020</a> </h3> -->
+
 		<div class="divider"></div>
 		<!-- <h3><a href="/electionmaps/polltracker.html" >Poll Tracker</a></h3> -->
+
+		<h3 id="nav-prediction"><a href="/electionmaps/?map=prediction"> Nowcast </a> </h3>
+		<h3 id="nav-predictit"><a href="/electionmaps/?map=predictit"> Predict 2022 </a> </h3>
+		<div class="divider"></div>
 		<h3 id="nav-brexit"><a href="/electionmaps/brexit.html">Brexit by Seat</a></h3>
 		<div class="divider"></div>
-		<h3 id="nav-prediction"><a href="/electionmaps/?map=prediction"> 2022 Prediction </a> </h3>
-		<h3 id="nav-predictit"><a href="/electionmaps/?map=predictit"> Predict 2022 </a> </h3>
+		<h3 id="nav-2017-600seat"><a href="/electionmaps/?map=election2017_600seat">600 seat - 2017</a> </h3>
+		<h3 id="nav-prediction-600seat"><a href="/electionmaps/?map=prediction_600seat">600 seat - Nowcast</a> </h3>
 		<div class="divider"></div>
 		<h3 id="nav-urlparams" class="navbaractive"><a href="/electionmaps/urlparams.html">URL Parameters</a> </h3>
 
 
-		  <p id="copyright">Contains OS data © Crown copyright and database right (2017). <br/>
-		    Copyright 2017 principalfish.co.uk</p>
+
+		<p id="copyright">Contains OS data © Crown copyright and database right (2017). <br/>
+			Copyright 2017 principalfish.co.uk</p>
 
 	</nav>
 
@@ -108,17 +105,11 @@
 		</p>
 
 		<p>
-			eg - <a href="/electionmaps/?map=prediction&filters=true&incumbent=conservative&region=wales">
-				http://principalfish.co.uk/electionmaps/?map=prediction&amp;filters=true&amp;incumbent=conservative&amp;region=wales</a>
+			eg - <a href="/electionmaps/?map=prediction&incumbent=conservative&region=wales">
+				http://principalfish.co.uk/electionmaps/?map=prediction&amp;incumbent=conservative&amp;region=wales</a>
 			will only show Conservative seats in Wales on the Predicted 2017 map.
 		</p>
 
-		<p>
-			eg - <a href="/electionmaps/?map=election2015&battlegrounds=true&incumbent=labour&challenger=conservative&majlow=5&majhigh=10">
-				http://principalfish.co.uk/electionmaps/?map=election2015&battlegrounds=true&incumbent=labour&challenger=conservative&majlow=5&majhigh=10</a>
-				will only show Labour held seats where Labour beat the Conservatives by between 5 and 10% in 2015.
-
-		</p>
 
 		<p class="important">IMPORTANT - a map must be selected and ONLY ONE of filters or battlegrounds.</p>
 
@@ -132,24 +123,13 @@
 			<p>map=election2017 : 2017 Election</p>
 			<p>map=election2015 : 2015 Election</p>
 			<p>map=election2010 : 2010 Election</p>
-			<p>map=election2015_600seat : 600 seat-2015</p>
-			<p>map=prediction_600seat : 600 seat-2020</p>
-		</div>
-
-		<div id="types" >
-			<h3>Types - select one</h3>
-			<p>filters=yes or true : Filters</p>
-			<p>battlegrounds=yes or true : Battlegrounds</p>
-			<p class="important">If filters is active, battlegrounds will not be applied.</p>
-			<p class="important">Battlegrounds works on 2017 Prediction, Predict 2017, Current Parliament, 2015 Election.</p>
-			<p class="important">Neither will work on Brexit by Seat.</p>
-
+			<p>map=election2017_600seat : 600 seat-2017</p>
+			<p>map=prediction_600seat : 600 seat-2022</p>
 		</div>
 
 		<div id="specifics">
 			<h3>Specifics - select many</h3>
 			<p>incumbent=party : see party codes below</p>
-			<p>challenger=party : see party codes below (only for Battlegrounds - must be active)</p>
 			<p>region=region : see region codes below</p>
 			<p>majlow=integer : Majority/lead low bound </p>
 			<p>majhigh=integer : Majority/lead high bound </p>
@@ -159,7 +139,7 @@
 		</div>
 
 		<div id="parties">
-			<h3>Party Codes</h3>
+			<h3>Party Codes (incumbent=)</h3>
 			<p>conservative : Conservative</p>
 			<p>labour : Labour</p>
 			<p>libdems : Lib Dems</p>
@@ -175,7 +155,7 @@
 		</div>
 
 		<div id="regions">
-			<h3>Region Codes</h3>
+			<h3>Region Codes (region=)</h3>
 			<p>england : England</p>
 			<p>scotland : Scotland</p>
 			<p>wales : Wales</p>

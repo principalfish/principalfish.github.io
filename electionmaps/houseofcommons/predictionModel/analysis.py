@@ -11,7 +11,7 @@ arguments = sys.argv
 
 model_map = {
     "650" : ["2017election.json", "prediction.json"],
-    "600" : ["2015election_600seat.json", "prediction_600seat.json"]
+    "600" : ["2017election_600seat.json", "prediction_600seat.json"]
 }
 
 print model_map[arguments[1]]
@@ -87,10 +87,11 @@ for poll, data in polls.iteritems():
 
                 numbers[party] -= previous_area_percentage
 
-            for region in regions_in_poll_area:
+            for region in regions_in_poll_area:                
                 for party in numbers:
                     if party not in regional[region].new_totals:
                         regional[region].new_totals[party] = 0
+
                     previous_region_percentage = regional[region].old_totals[party] / float(regional[region].old_totals["turnout"]) #2015 region percentage
                     regional[region].new_totals[party] += (data.weight * (previous_region_percentage + numbers[party])) # add poll region and weight it
 
@@ -109,6 +110,7 @@ for region, data in regional.iteritems():
 to_dump = {}
 
 for seat, info in seats.iteritems():
+    print seat, info
     info.get_new_data(regional[info.region].numerical)
     info.generate_output()
     to_dump[seat] = info.output

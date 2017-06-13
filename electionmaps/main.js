@@ -373,17 +373,17 @@ var regionMap = {
 // for use with 600 seat map change
 var seatsPerRegion2015 = {
   "northeastengland" : {"labour" : 26, "conservative" : 3},
-  "northwestengland" : {"labour" : 51, "conservative" : 22, "libdems" : 2},
-  "yorkshireandthehumber" : {"labour" : 33, "conservative" : 19, "libdems" : 2},
-  "southeastengland" : {"conservative" : 78, "labour" : 4 ,"green" : 1, "others" : 1},
-  "southwestengland" : {"conservative" : 51, "labour" : 4},
-  "eastofengland" : {"conservative" : 52, "labour" : 4, "libdems" : 1, "ukip" : 1},
-  "eastmidlands" : {"conservative" : 32, "labour" : 14},
-  "westmidlands" : {"conservative" : 34, "labour" : 25},
-  "london" : {"labour" : 45, "conservative" : 27, "libdems" : 1},
-  "scotland" : {"snp" : 56, "conservative" : 1, "labour" : 1, "libdems" : 1},
-  "wales" : {"labour" : 25, "conservative" : 11, "libdems" : 1, "plaidcymru" : 3},
-  "northernireland"  : {"uu" : 2, "dup" : 8, "sdlp" : 3,  "sinnfein" : 4, "others" : 1}
+  "northwestengland" : {"labour" : 54, "conservative" : 20, "libdems" : 1},
+  "yorkshireandthehumber" : {"labour" : 37, "conservative" : 17, "libdems" : 0},
+  "southeastengland" : {"conservative" : 72, "labour" : 8 ,"green" : 1, "libdems" : 2, "others" : 1},
+  "southwestengland" : {},
+  "eastofengland" : {"conservative" : 50, "labour" : 7, "libdems" : 1, "ukip" : 0},
+  "eastmidlands" : {"conservative" : 31, "labour" : 15},
+  "westmidlands" : {"conservative" : 35, "labour" : 24},
+  "london" : {"labour" : 49, "conservative" : 21, "libdems" : 3},
+  "scotland" : {"snp" : 35, "conservative" : 13, "labour" : 7, "libdems" : 4},
+  "wales" : {"labour" : 28, "conservative" : 8, "libdems" : 0, "plaidcymru" : 4},
+  "northernireland"  : {"uu" : 0, "dup" : 10, "sdlp" : 0,  "sinnfein" : 7, "others" : 1}
 }
 ;var filters = {
   state : {
@@ -899,8 +899,10 @@ function seatExtended(seat, data){
 				.data(topojson.feature(setting.polygons, setting.polygons.objects.map).features)
 				.enter().append("path")
 				.attr("class", function(d){
-					var seatClass;
-					var seatCurrent = setting.seatData[d.properties.name]["seatInfo"]["current"];
+					var seatClass, seatCurrent;
+					if (d.properties.name in setting.seatData){
+							var seatCurrent = setting.seatData[d.properties.name]["seatInfo"]["current"];
+					}
 					if (d.properties.name in setting.seatData && seatCurrent == "snp"){
 						seatClass = "mapdark snp";
 					} else if (d.properties.name in setting.seatData){
@@ -1044,7 +1046,7 @@ function pageLoadEssentials(){
 	} else if (currentMap.election == false){
 		$("#filter-byElection").text("By-Elections");
 	}
-	if (currentMap.name == "election2010" || currentMap.name == "2015-600seat"){
+	if (currentMap.name == "election2010" || currentMap.name == "2017-600seat"){
 		$("#filter-byElection").hide();
 	} else {
 		$("#filter-byElection").show();
@@ -1057,7 +1059,7 @@ function pageLoadEssentials(){
 		userInput.seatDataCopy = jQuery.extend(true, {}, currentMap.seatData);
 	}
 
-	if (currentMap.name == "2015-600seat" || currentMap.name == "prediction-600seat"){
+	if (currentMap.name == "2017-600seat" || currentMap.name == "prediction-600seat"){
 		$("#seat-600 ").show();
 	} else {
 		$("#seat-600 ").hide();
@@ -1124,18 +1126,18 @@ var dataurls =  {
 	e2017 : "houseofcommons/2017election.json",
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
-	e2015_600 : "houseofcommons/2015election_600seat.json",
+	e2017_600 : "houseofcommons/2017election_600seat.json",
 	predict_600 : "houseofcommons/prediction_600seat.json"
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, false, false);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2017, false, false, false, false);
 var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, false, false);
 var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2017, true, false, true, false);
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2017, dataurls.e2017, true, true, false, false);
-var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false, false); // nodata to compare
-var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false, false);
+var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false); // nodata to compare
+var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false);
 
 
 function initialization(){
@@ -1174,7 +1176,7 @@ var urlParamMap = {
 	"election2017" : election2017,
 	"election2015" : election2015,
 	"election2010" : election2010,
-	"election2015_600seat" : election2015_600seat,
+	"election2017_600seat" : election2017_600seat,
 	"prediction_600seat" : prediction_600seat
 };
 
@@ -1217,16 +1219,18 @@ var urlParamMap = {
   possibleBattlegroundParams : ["incumbent", "challenger", "region", "majlow", "majhigh"],
 
   checkParams : function(){
+    // 
+    // var urlFilters = getParameterByName("filters", url);
+    // if (urlFilters == "yes" || urlFilters == "true"){
+    //   params.filters();
+    // } else {
+    //   var urlBattle = getParameterByName("battlegrounds", url)
+    //   if (urlBattle == "yes" || urlBattle == "true"){
+    //     params.battleground();
+    //   }
+    // }
 
-    var urlFilters = getParameterByName("filters", url);
-    if (urlFilters == "yes" || urlFilters == "true"){
-      params.filters();
-    } else {
-      var urlBattle = getParameterByName("battlegrounds", url)
-      if (urlBattle == "yes" || urlBattle == "true"){
-        params.battleground();
-      }
-    }
+    params.filters()
   },
 
   filters : function(){
@@ -2247,7 +2251,7 @@ function activeSeat(seat){
 
 
       // for change from 2015 in 600 seat map
-      if (currentMap.name == "2015-600seat"){
+      if (currentMap.name == "2017-600seat"){
         var previousSeatTotal = 0;
         $.each(regions, function(i, region){
           if (party in seatsPerRegion2015[region]){
@@ -2347,7 +2351,7 @@ function activeSeat(seat){
     // reset div
     $("#votetotals-table-data").empty();
     // display turnout for all but current parliament
-    if (currentMap.name == "election2015" || currentMap.name == "election2010"){
+    if (currentMap.name == "election2015" || currentMap.name == "election2010" || currentMap.name == "election2017"){
       $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
     } else {
         $("#votetotals-turnout").text(" ");

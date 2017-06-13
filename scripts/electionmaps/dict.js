@@ -69,15 +69,15 @@ var regionMap = {
 // for use with 600 seat map change
 var seatsPerRegion2015 = {
   "northeastengland" : {"labour" : 26, "conservative" : 3},
-  "northwestengland" : {"labour" : 51, "conservative" : 22, "libdems" : 2},
-  "yorkshireandthehumber" : {"labour" : 33, "conservative" : 19, "libdems" : 2},
-  "southeastengland" : {"conservative" : 78, "labour" : 4 ,"green" : 1, "others" : 1},
-  "southwestengland" : {"conservative" : 51, "labour" : 4},
-  "eastofengland" : {"conservative" : 52, "labour" : 4, "libdems" : 1, "ukip" : 1},
-  "eastmidlands" : {"conservative" : 32, "labour" : 14},
-  "westmidlands" : {"conservative" : 34, "labour" : 25},
-  "london" : {"labour" : 45, "conservative" : 27, "libdems" : 1},
-  "scotland" : {"snp" : 56, "conservative" : 1, "labour" : 1, "libdems" : 1},
-  "wales" : {"labour" : 25, "conservative" : 11, "libdems" : 1, "plaidcymru" : 3},
-  "northernireland"  : {"uu" : 2, "dup" : 8, "sdlp" : 3,  "sinnfein" : 4, "others" : 1}
+  "northwestengland" : {"labour" : 54, "conservative" : 20, "libdems" : 1},
+  "yorkshireandthehumber" : {"labour" : 37, "conservative" : 17, "libdems" : 0},
+  "southeastengland" : {"conservative" : 72, "labour" : 8 ,"green" : 1, "libdems" : 2, "others" : 1},
+  "southwestengland" : {},
+  "eastofengland" : {"conservative" : 50, "labour" : 7, "libdems" : 1, "ukip" : 0},
+  "eastmidlands" : {"conservative" : 31, "labour" : 15},
+  "westmidlands" : {"conservative" : 35, "labour" : 24},
+  "london" : {"labour" : 49, "conservative" : 21, "libdems" : 3},
+  "scotland" : {"snp" : 35, "conservative" : 13, "labour" : 7, "libdems" : 4},
+  "wales" : {"labour" : 28, "conservative" : 8, "libdems" : 0, "plaidcymru" : 4},
+  "northernireland"  : {"uu" : 0, "dup" : 10, "sdlp" : 0,  "sinnfein" : 7, "others" : 1}
 }

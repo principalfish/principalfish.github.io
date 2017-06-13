@@ -87,7 +87,7 @@ var voteTotals = {
 
 
       // for change from 2015 in 600 seat map
-      if (currentMap.name == "2015-600seat"){
+      if (currentMap.name == "2017-600seat"){
         var previousSeatTotal = 0;
         $.each(regions, function(i, region){
           if (party in seatsPerRegion2015[region]){
@@ -187,7 +187,7 @@ var voteTotals = {
     // reset div
     $("#votetotals-table-data").empty();
     // display turnout for all but current parliament
-    if (currentMap.name == "election2015" || currentMap.name == "election2010"){
+    if (currentMap.name == "election2015" || currentMap.name == "election2010" || currentMap.name == "election2017"){
       $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
     } else {
         $("#votetotals-turnout").text(" ");

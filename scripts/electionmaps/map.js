@@ -117,8 +117,10 @@ var mapAttr = {
 				.data(topojson.feature(setting.polygons, setting.polygons.objects.map).features)
 				.enter().append("path")
 				.attr("class", function(d){
-					var seatClass;
-					var seatCurrent = setting.seatData[d.properties.name]["seatInfo"]["current"];
+					var seatClass, seatCurrent;
+					if (d.properties.name in setting.seatData){
+							var seatCurrent = setting.seatData[d.properties.name]["seatInfo"]["current"];
+					}
 					if (d.properties.name in setting.seatData && seatCurrent == "snp"){
 						seatClass = "mapdark snp";
 					} else if (d.properties.name in setting.seatData){

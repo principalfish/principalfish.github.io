@@ -73,7 +73,7 @@ function pageLoadEssentials(){
 	} else if (currentMap.election == false){
 		$("#filter-byElection").text("By-Elections");
 	}
-	if (currentMap.name == "election2010" || currentMap.name == "2015-600seat"){
+	if (currentMap.name == "election2010" || currentMap.name == "2017-600seat"){
 		$("#filter-byElection").hide();
 	} else {
 		$("#filter-byElection").show();
@@ -86,7 +86,7 @@ function pageLoadEssentials(){
 		userInput.seatDataCopy = jQuery.extend(true, {}, currentMap.seatData);
 	}
 
-	if (currentMap.name == "2015-600seat" || currentMap.name == "prediction-600seat"){
+	if (currentMap.name == "2017-600seat" || currentMap.name == "prediction-600seat"){
 		$("#seat-600 ").show();
 	} else {
 		$("#seat-600 ").hide();
@@ -153,18 +153,18 @@ var dataurls =  {
 	e2017 : "houseofcommons/2017election.json",
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
-	e2015_600 : "houseofcommons/2015election_600seat.json",
+	e2017_600 : "houseofcommons/2017election_600seat.json",
 	predict_600 : "houseofcommons/prediction_600seat.json"
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, false, false);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2017, false, false, false, false);
 var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, false, false);
 var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2017, true, false, true, false);
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2017, dataurls.e2017, true, true, false, false);
-var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false, false); // nodata to compare
-var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false, false);
+var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false); // nodata to compare
+var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false);
 
 
 function initialization(){
@@ -203,7 +203,7 @@ var urlParamMap = {
 	"election2017" : election2017,
 	"election2015" : election2015,
 	"election2010" : election2010,
-	"election2015_600seat" : election2015_600seat,
+	"election2017_600seat" : election2017_600seat,
 	"prediction_600seat" : prediction_600seat
 };
 

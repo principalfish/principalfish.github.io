@@ -30,8 +30,8 @@ pollster_weights = {
     "icm2" : 1.25,
     "icmmissing" : 1.25,
     "mori" : 1.25,
-    "survation" : 0.8,
-    "survationscotland" : 3,
+    "survation" : 1.25,
+    "survationscotland" : 6,
     "yougov" : 1,
     "comres" : 1,
     "comresdm" : 1,
@@ -106,8 +106,12 @@ class Seat(object):
             #     if new > max:
             #         max = new
             #         current_max = party
+            if party in regional:
+                new = regional[party] + percentage_vote
+            else:
+                new = 0
 
-            new = regional[party] + percentage_vote
+
 
             if new > max:
                 max = new

@@ -54,7 +54,7 @@ function pageLoadEssentials(){
 	uiAttr.pageLoadDiv();
 
 	// if setting not currentParliament remove instructions
-	if (currentMap != election2017 && currentMap != prediction){
+	if (currentMap.name != "election2017" && currentMap.name != "prediction"){
 		$("#instructions").remove();
 	} else {
 
@@ -95,6 +95,8 @@ function pageLoadEssentials(){
 	// battlegrounds
 	if (currentMap.battlegrounds == false){
 		$("#battlegrounds").hide();
+	} else {
+		$("#battlegrounds").show();
 	}
 
 	if (currentMap.redistribute == false){
@@ -158,7 +160,7 @@ var dataurls =  {
 }
 
 var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2017, false, false, false, false);
-var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, false, false);
+var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, true, false);
 var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2017, true, false, true, false);

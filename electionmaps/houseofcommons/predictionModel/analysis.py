@@ -87,7 +87,7 @@ for poll, data in polls.iteritems():
 
                 numbers[party] -= previous_area_percentage
 
-            for region in regions_in_poll_area:                
+            for region in regions_in_poll_area:
                 for party in numbers:
                     if party not in regional[region].new_totals:
                         regional[region].new_totals[party] = 0
@@ -110,7 +110,7 @@ for region, data in regional.iteritems():
 to_dump = {}
 
 for seat, info in seats.iteritems():
-    print seat, info
+
     info.get_new_data(regional[info.region].numerical)
     info.generate_output()
     to_dump[seat] = info.output

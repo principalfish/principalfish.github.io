@@ -116,6 +116,8 @@ polling_regions = {
     "survation" : {
         "Scotland" : ["scotland"],
         "Wales" : ["wales"],
+        "England" :["northeastengland", "northwestengland", "southeastengland", "southwestengland",
+            "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london"],
         "Midlands" : ["eastmidlands", "westmidlands"],
         "London" : ["london"],
         "South" : ["southeastengland", "southwestengland", "eastofengland"],

@@ -271,10 +271,13 @@ var userInput = {
             previous = 100 * currentMap.previousSeatData[seat].partyInfo[party].total / currentMap.previousSeatData[seat].seatInfo.turnout;
           }
 
+
           //var previousRegional = regional[data.seatInfo.region][party];
 
           if (party == "other"){
-            previous += 100 * currentMap.previousSeatData[seat].partyInfo["others"].total / currentMap.previousSeatData[seat].seatInfo.turnout;
+            if ("others" in currentMap.previousSeatData[seat].partyInfo ){
+              previous += 100 * currentMap.previousSeatData[seat].partyInfo["others"].total / currentMap.previousSeatData[seat].seatInfo.turnout;
+            }
           }
 
           //var seatRelative = previous / previousRegional;

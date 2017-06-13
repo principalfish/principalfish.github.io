@@ -54,12 +54,9 @@ function pageLoadEssentials(){
 	uiAttr.pageLoadDiv();
 
 	// if setting not currentParliament remove instructions
-	if (currentMap != prediction && currentMap != hodgesrule){
+	if (currentMap != election2017 && currentMap != prediction){
 		$("#instructions").remove();
 	} else {
-		countdown.run();
-
-
 
 		$(function(){
 			$("#lastpollster").load("lastpollster.html");
@@ -153,23 +150,21 @@ var dataurls =  {
 	//parliaments
 	predict : "houseofcommons/prediction.json",
 	current : "houseofcommons/current.json",
+	e2017 : "houseofcommons/2017election.json",
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
 	e2015_600 : "houseofcommons/2015election_600seat.json",
-	predict_600 : "houseofcommons/prediction_600seat.json",
-	hodgesrule : "houseofcommons/hodgesrule.json",
-	myprediction :"houseofcommons/myprediction.json"
+	predict_600 : "houseofcommons/prediction_600seat.json"
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, true, false);
-var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, true, false);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2015, false, false, false, false);
+var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, false, false);
+var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
-var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2015, true, false, true, true);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true, true);
+var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2017, true, false, true, false);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2017, dataurls.e2017, true, true, false, false);
 var election2015_600seat = new pageSetting("2015-600seat", dataurls.map600, dataurls.e2015_600, dataurls.e2015_600, false, false, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2015_600, true, false, false, false);
-var hodgesrule = new pageSetting("hodgesrule", dataurls.map650, dataurls.hodgesrule, dataurls.e2015, true, false, true, false);
-var myprediction = new pageSetting("myprediction", dataurls.map650, dataurls.myprediction, dataurls.e2015, true, false, false, false);
 
 
 function initialization(){
@@ -201,47 +196,46 @@ function getParameterByName(name, url) {
 var url = window.location.href;
 
 var urlParamMap = {
-	null : prediction,
+	null : election2017,
 	"current" : currentParliament,
 	"prediction" : prediction,
 	"predictit" : predictit,
+	"election2017" : election2017,
 	"election2015" : election2015,
 	"election2010" : election2010,
 	"election2015_600seat" : election2015_600seat,
-	"prediction_600seat" : prediction_600seat,
-	"hodgesrule" : hodgesrule,
-	"myprediction" : myprediction
+	"prediction_600seat" : prediction_600seat
 };
 
-var countdown = {
-
-	run : function(){
-		var end = new Date(2017, 5, 8, 22, 0, 0);
-
-  	var timeinterval = setInterval(function(){
-	    var t = countdown.getDiff(end);
-			var toAdd = t.hours + " hrs " + t.minutes + " mins " + t.seconds + " secs ";
-			$("#daysto").text(toAdd);
-		  if(t.total<=0){
-					$("#daysto").text("Polls closed")
-		      clearInterval(timeinterval);
-		    }
-		  },1000);
-		},
-
-	getDiff: function(endTime){
-		var t = Date.parse(endTime) - Date.parse(new Date());
-		var seconds = Math.floor( (t/1000) % 60 );
-		var minutes = Math.floor( (t/1000/60) % 60 );
-		var hours = Math.floor( (t/(1000*60*60)) % 24 );
-		var days = Math.floor( t/(1000*60*60*24) );
-		return {
-		 'total': t,
-		 'days': days,
-		 'hours': hours,
-		 'minutes': minutes,
-		 'seconds': seconds
-		};
-	}
-
-};
+// var countdown = {
+//
+// 	run : function(){
+// 		var end = new Date(2017, 5, 8, 22, 0, 0);
+//
+//   	var timeinterval = setInterval(function(){
+// 	    var t = countdown.getDiff(end);
+// 			var toAdd = t.hours + " hrs " + t.minutes + " mins " + t.seconds + " secs ";
+// 			$("#daysto").text(toAdd);
+// 		  if(t.total<=0){
+// 					$("#daysto").text("Polls closed")
+// 		      clearInterval(timeinterval);
+// 		    }
+// 		  },1000);
+// 		},
+//
+// 	getDiff: function(endTime){
+// 		var t = Date.parse(endTime) - Date.parse(new Date());
+// 		var seconds = Math.floor( (t/1000) % 60 );
+// 		var minutes = Math.floor( (t/1000/60) % 60 );
+// 		var hours = Math.floor( (t/(1000*60*60)) % 24 );
+// 		var days = Math.floor( t/(1000*60*60*24) );
+// 		return {
+// 		 'total': t,
+// 		 'days': days,
+// 		 'hours': hours,
+// 		 'minutes': minutes,
+// 		 'seconds': seconds
+// 		};
+// 	}
+//
+// };

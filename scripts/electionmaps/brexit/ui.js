@@ -1,12 +1,15 @@
 var uiAttr = {
   changeNavBar : function(elem){
+
     $(".navbaractive").removeClass("navbaractive");
 
     var id = "#nav-" + elem;
+    console.log(id)
 
     $(id).addClass("navbaractive");
       // change pagetitle;
     var text = $(id).text();
+    console.log(text)
 
     $("#pagetitle").html(text);
     document.title = text;

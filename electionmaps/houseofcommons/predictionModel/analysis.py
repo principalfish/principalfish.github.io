@@ -10,9 +10,8 @@ polls = {}
 arguments = sys.argv
 
 model_map = {
-    "650" : ["2015election.json", "prediction.json"],
-    "600" : ["2015election_600seat.json", "prediction_600seat.json"],
-    "me" : ["2015election.json", "myprediction.json"]
+    "650" : ["2017election.json", "prediction.json"],
+    "600" : ["2015election_600seat.json", "prediction_600seat.json"]
 }
 
 print model_map[arguments[1]]
@@ -31,16 +30,15 @@ for region in regions:
 
 # get polls from csv
 
-if arguments[1] == "me":
-    polling_data = "polls-me.csv"
-else:
-    polling_data = "polls.csv"
+
+polling_data = "polls.csv"
 
 with open(polling_data, "rb") as polls_file:
-    poll_data = csv.DictReader(polls_file, delimiter = ",")
+    poll_data = csv.DictReader(polls_file, delimiter = "\t")
     poll_codes = []
     poll_rows = []
     for row in poll_data:
+
         code = row["code"]
         if code not in poll_codes:
 
@@ -107,89 +105,13 @@ for region, data in regional.iteritems():
     data.get_relative_change()
     data.get_numerical_change()
 
+
 to_dump = {}
-
-# for redistr - check if standing
-
-with open("candidates.json", "r") as candidate_json:
-    candidates = json.load(candidate_json)
-diff_names = {u'Birmingham, Edgbaston' : "Birmingham Edgbaston",
- u'Birmingham, Erdington' : 'Birmingham Erdington' ,
- u'Birmingham, Hall Green' : u'Birmingham Hall Green',
- u'Birmingham, Hodge Hill' : 'Birmingham Hodge Hill',
- u'Birmingham, Ladywood' : 'Birmingham Ladywood',
- u'Birmingham, Northfield' : 'Birmingham Northfield',
- u'Birmingham, Perry Barr' : 'Birmingham Perry Barr',
- u'Birmingham, Selly Oak' : 'Birmingham Selly Oak',
- u'Birmingham, Yardley': 'Birmingham Yardley',
- u'Brighton, Kemptown' : 'Brighton Kemptown',
- u'Brighton, Pavilion' : 'Brighton Pavilion',
- u'Bury St Edmunds': 'Bury St. Edmunds',
- u'Holborn and St Pancras' : 'Holborn and St. Pancras',
- u'Plymouth, Moor View' : 'Plymouth Moor View',
- u'Sheffield, Brightside and Hillsborough' : 'Sheffield Brightside and Hillsborough',
- u'Sheffield, Hallam' : 'Sheffield Hallam',
- u'Sheffield, Heeley' : 'Sheffield Heeley',
- u'Southampton, Itchen' : 'Southampton Itchen',
- u'Southampton, Test' : 'Southampton Test',
- u'St Albans' : 'St. Albans',
- u'St Austell and Newquay' : 'St. Austell and Newquay',
- u'St Helens North' : 'St. Helens North',
- u'St Helens South and Whiston' : 'St. Helens South and Whiston',
- u'St Ives' : "St. Ives",
- u'Ynys M\xf4n' : "Ynys Mon"}
-
-for key, value in diff_names.iteritems():
-    candidates[value] = candidates.pop(key)
 
 for seat, info in seats.iteritems():
     info.get_new_data(regional[info.region].numerical)
     info.generate_output()
-
-    if arguments[1] == "me":
-        if "ukip" in  info.data["partyInfo"] :
-            if "standing" in info.data["partyInfo"]["ukip"]:
-                if "conservative" in info.data["partyInfo"]:
-                    info.output["partyInfo"]["conservative"]["total"] += 0.75 * info.data["partyInfo"]["ukip"]["total"]
-                    info.output["partyInfo"]["conservative"]["total"] = round(info.output["partyInfo"]["conservative"]["total"], 0)
-                del info.output["partyInfo"]["ukip"]
-
-        if "green" in  info.data["partyInfo"] :
-            if "standing" in info.data["partyInfo"]["green"]:
-                if "labour" in info.data["partyInfo"]:
-                    info.output["partyInfo"]["labour"]["total"] += 0.35 * info.data["partyInfo"]["green"]["total"]
-                    info.output["partyInfo"]["labour"]["total"] = round(info.output["partyInfo"]["labour"]["total"], 0)
-                if "libdems" in info.data["partyInfo"]:
-                    info.output["partyInfo"]["libdems"]["total"] += 0.30 * info.data["partyInfo"]["green"]["total"]
-                    info.output["partyInfo"]["libdems"]["total"] = round(info.output["partyInfo"]["libdems"]["total"], 0)
-                del info.output["partyInfo"]["green"]
-
-        max = ""
-        max_votes = 0
-
-        votes_array = []
-        sum = 0
-
-        for party, votes in info.output["partyInfo"].iteritems():
-            votes_array.append(votes["total"])
-            sum += votes["total"]
-            if votes["total"] > max_votes:
-                max = party
-                max_votes = votes["total"]
-
-
-        info.output["seatInfo"]["current"] = max
-        info.output["seatInfo"]["turnout"] = sum
-
-        votes_array.sort()
-
-        info.output["seatInfo"]["majority"] = round(votes_array[-1] - votes_array[-2] ,0)
-
-    #check if standing
-    if arguments[1] == "650":
-        info.check_standing(candidates[seat])
     to_dump[seat] = info.output
-
 
 
 with open("../" + model_map[arguments[1]][1], "w") as output:

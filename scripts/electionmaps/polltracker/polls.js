@@ -26,7 +26,7 @@ var companies = []
 
 function getData(){
 	$.when(
-		$.getJSON("polltracker/scatter.json", function(data){
+		$.getJSON("polltracker/scatter1.json", function(data){
 
 			$.each(data["polls"], function(poll, numbers){
 
@@ -74,7 +74,7 @@ function pageLoad(){
 
 		for (var i=0; i < data.length; i++){
 
-			if (inDateRange(data[i].date)){				
+			if (inDateRange(data[i].date)){
 				var toAdd = {
 					"date" : data[i].date,
 					"seats" : data[i].seats

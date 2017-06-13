@@ -12,9 +12,6 @@ var uiAttr = {
 
     document.title = text;
 
-    if (elem == "hodgesrule"){
-      document.title = "UK Parliament";
-    }
   },
 
   clickMapButton : function(div){

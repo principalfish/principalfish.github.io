@@ -1137,7 +1137,7 @@ var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e20
 var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2017, true, false, true, false);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2017, dataurls.e2017, true, true, false, false);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2017, dataurls.e2017, true, true, true, false);
 var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false);
 

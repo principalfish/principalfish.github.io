@@ -185,8 +185,9 @@ var choro = {
   reset: function(){
     $("#keyonmap").hide();
 
-    $.each(currentMap.seatData, function(seat, data){
 
+    $.each(currentMap.seatData, function(seat, data){
+      
       $("#i" + data.mapSelect.properties.info_id).removeClass();
 
       $("#i" + data.mapSelect.properties.info_id).addClass("map " + data.seatInfo.current);

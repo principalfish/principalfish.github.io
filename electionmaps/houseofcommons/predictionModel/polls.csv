@@ -7,3 +7,6 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 1	survation	10	6	2017	England	686	280	322	48	26	9			1					
 1	survation	10	6	2017	Scotland	69	15	19	9	2		24							
 1	survation	10	6	2017	Wales	53	22	24	2				5						
+2	survation	10	6	2017	England	740	333	334	46	13	8			7					
+2	survation	10	6	2017	Scotland	73	10	34	2	0		25		1					
+2	survation	10	6	2017	Wales	45	14	20	2	2			8						

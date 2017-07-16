@@ -32,7 +32,7 @@ pollster_weights = {
     "mori" : 1.25,
     "survation" : 1.25,
     "survationscotland" : 6,
-    "yougov" : 1,
+    "yougov" : 1.3,
     "comres" : 1,
     "comresdm" : 1,
     "opinium" : 1,

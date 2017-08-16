@@ -268,10 +268,10 @@ var voteTotals = {
       seats = 600;
     }
 
-    var majorityThreshold =  (seats / 2 )  + 1;
+    var majorityThreshold =  (seats / 2 );
 
     if (max > majorityThreshold ){
-      var majorityNum = (max - majorityThreshold + 1) * 2;
+      var majorityNum = (max - majorityThreshold) * 2;
       $("#majoritytitle").text(leader + " Majority: " + majorityNum);
     } else {
       $("#majoritytitle").text("Hung Parliament");

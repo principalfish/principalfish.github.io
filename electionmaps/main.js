@@ -7,6 +7,7 @@ var battleground = {
   high : 10,
 
   handle : function(id, value){
+
     id = id.substring(14)
 
     if (id == "incumbent"){
@@ -291,7 +292,7 @@ var battleground = {
 
 
     $.each(currentMap.seatData, function(seat, data){
-
+      
       $("#i" + data.mapSelect.properties.info_id).removeClass();
 
       $("#i" + data.mapSelect.properties.info_id).addClass("map " + data.seatInfo.current);
@@ -471,7 +472,7 @@ var seatsPerRegion2015 = {
         } else if (parameter == "gains"){
           if (data.seatInfo.current == currentMap.previousSeatData[seat].seatInfo.current){
             meetsCriteria = false;
-          }
+          } 
 
         } else {
 
@@ -1221,7 +1222,7 @@ var urlParamMap = {
   possibleBattlegroundParams : ["incumbent", "challenger", "region", "majlow", "majhigh"],
 
   checkParams : function(){
-    //
+    // 
     // var urlFilters = getParameterByName("filters", url);
     // if (urlFilters == "yes" || urlFilters == "true"){
     //   params.filters();
@@ -2437,10 +2438,10 @@ function activeSeat(seat){
       seats = 600;
     }
 
-    var majorityThreshold =  (seats / 2 )  + 1;
+    var majorityThreshold =  (seats / 2 );
 
     if (max > majorityThreshold ){
-      var majorityNum = (max - majorityThreshold + 1) * 2;
+      var majorityNum = (max - majorityThreshold) * 2;
       $("#majoritytitle").text(leader + " Majority: " + majorityNum);
     } else {
       $("#majoritytitle").text("Hung Parliament");

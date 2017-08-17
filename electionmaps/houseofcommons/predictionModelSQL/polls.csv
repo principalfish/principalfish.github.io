@@ -1,0 +1,84 @@
+code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	snp	plaidcymru	other	sdlp	sinnfein	alliance	dup	uu
+1000	me	3	3	2017	Northern Ireland	10001	48			0	92			325	1175	2942	795	3599	1025
+1001	me	9	5	2015	England	10000	3600	2500	2500	1000	300			100					
+1001	me	9	5	2015	Scotland	10001	1492	2430	755	162	135	4997		30					
+1001	me	9	5	2015	Wales	10001	2724	3687	653	1364	256		1213	104					
+1001	me	7	5	2015	All	1000	378	312	81	129	38	49	6	9					
+1	survation	10	6	2017	England	686	280	322	48	26	9			1					
+1	survation	10	6	2017	Scotland	69	15	19	9	2		24							
+1	survation	10	6	2017	Wales	53	22	24	2				5						
+2	survation	10	6	2017	England	740	333	334	46	13	8			7					
+2	survation	10	6	2017	Scotland	73	10	34	2	0		25		1					
+2	survation	10	6	2017	Wales	45	14	20	2	2			8						
+3	panelbase	21	6	2017	East Anglia	403	195	170	23	11	3			1					
+3	panelbase	21	6	2017	East Midlands	302	146	126	14	8	7			1					
+3	panelbase	21	6	2017	London	535	193	282	40	7	9			3					
+3	panelbase	21	6	2017	North East	185	66	109	8	3	0			0					
+3	panelbase	21	6	2017	North West	495	180	280	20	10	4			1					
+3	panelbase	21	6	2017	Scotland	415	123	122	21	1	5	142		1					
+3	panelbase	21	6	2017	South East	611	296	230	47	21	15			2					
+3	panelbase	21	6	2017	South West	380	166	158	36	13	6			1					
+3	panelbase	21	6	2017	Wales	205	73	97	6	5	0		24	0					
+3	panelbase	21	6	2017	West Midlands	349	136	175	15	14	9			0					
+3	panelbase	21	6	2017	Yorkshire	256	144	181	15	11	4			2					
+4	opinium	27	6	2017	England	1146	459	541	56	63	23			4					
+4	opinium	27	6	2017	Scotland	120	33	33	3	2	3	46		0					
+4	opinium	27	6	2017	Wales	70	24	32	2	4	1		7	0					
+5	survation	30	6	2017	London	102	40	57	4	1									
+5	survation	30	6	2017	Midlands	105	51	39	7	6	1			1					
+5	survation	30	6	2017	North	190	56	114	10	1	5			4					
+5	survation	30	6	2017	South	227	115	63	20	9	6			14					
+5	survation	30	6	2017	Scotland	96	61	11	6			18							
+5	survation	30	6	2017	Wales	54	37	13	3				1						
+6	icm	3	7	2017	Scotland	124	29	46	4	3	3	40		0					
+6	icm	3	7	2017	Wales	85	39	33	8	1	0		2	1					
+6	icm	3	7	2017	North	527	172	264	22	15	13	40		2					
+6	icm	3	7	2017	Midlands	499	217	220	30	18	9		2	2					
+6	icm	3	7	2017	South	513	221	198	45	21	26			3					
+7	yougov	6	7	2017	London	221	29	57	8	5	1			0					
+7	yougov	6	7	2017	Rest of South	534	49	34	9	4	2			1					
+7	yougov	6	7	2017	Midlands and Wales	353	42	44	6	4	1		3	1					
+7	yougov	6	7	2017	North England	397	32	60	3	4	1			0					
+7	yougov	6	7	2017	Scotland	143	25	36	5		1	31		2					
+8	opinium	14	7	2017	England	1124	477	496	62	60	27			2					
+8	opinium	14	7	2017	Scotland	129	40	38	2	1	1	45		2					
+8	opinium	14	7	2017	Wales	65	20	36	2	2			5						
+9	survation	15	7	2017	London	105	33	51	12	6	3								
+9	survation	15	7	2017	Midlands	125	63	54	3	5	0								
+9	survation	15	7	2017	North	169	52	94	12	9	1								
+9	survation	15	7	2017	South	267	127	90	22	19	5			1					
+9	survation	15	7	2017	Scotland	76	19	19	11	3	0	25							
+9	survation	15	7	2017	Wales	54	17	24	3	4	0		7						
+10	icm	16	7	2017	Scotland	125	31	43	6	1	3	41							
+10	icm	16	7	2017	Wales	84	31	33	5	2	4		9						
+10	icm	16	7	2017	North	535	184	263	17	18	12	41							
+10	icm	16	7	2017	Midlands	473	219	188	28	18	12		9						
+10	icm	16	7	2017	South	519	220	216	48	19	12			5					
+11	mori	18	7	2017	North	200	74	102	20	1	1								
+11	mori	18	7	2017	Midlands	253	105	108	23	15	0		2						
+11	mori	18	7	2017	Wales	0	0	0	0	0	0	0	0	0					
+11	mori	18	7	2017	South	278	129	107	25	5	9			4					
+11	mori	18	7	2017	London	105	37	52	13	2									
+11	mori	18	7	2017	England	687	293	292	67	18	10			4					
+11	mori	18	7	2017	Scotland	68	17	15	4	0	5	26							
+12	yougov	19	7	2017	London	213	35	54	4	5	2								
+12	yougov	19	7	2017	Rest of South	516	51	34	9	3	2								
+12	yougov	19	7	2017	Midlands and Wales	341	44	44	5	2	2		2						
+12	yougov	19	7	2017	North England	384	34	57	5	3	1			1					
+12	yougov	19	7	2017	Scotland	139	27	29	7	2		33							
+13	yougov	1	8	2017	London	223	30	52	12	1	3			0					
+13	yougov	1	8	2017	Rest of South	539	52	36	7	3	1			1					
+13	yougov	1	8	2017	Midlands and Wales	356	42	45	6	4	1		2	0					
+13	yougov	1	8	2017	North England	401	35	53	5	4	2			0					
+13	yougov	1	8	2017	Scotland	145	28	33	7	2	2	29		0					
+14	bmg	11	8	2017	East Midlands	100	50	32	6	8	3			1					
+14	bmg	11	8	2017	East of England	100	42	38	7	10	3			0					
+14	bmg	11	8	2017	London	100	49	33	7	7	4			0					
+14	bmg	11	8	2017	North East England	100	23	64	5	7	0			0					
+14	bmg	11	8	2017	North West England	100	35	51	5	7	1			0					
+14	bmg	11	8	2017	Scotland	100	18	44	8	0	2	27		0					
+14	bmg	11	8	2017	South East England	100	53	26	10	5	4			1					
+14	bmg	11	8	2017	South West England	100	56	30	8	4	1			1					
+14	bmg	11	8	2017	Wales	100	49	36	2	3	1		6	3					
+14	bmg	11	8	2017	West Midlands	100	41	41	3	9	5			2					
+14	bmg	11	8	2017	Yorkshire and Humber	100	33	52	9	5	1			0					

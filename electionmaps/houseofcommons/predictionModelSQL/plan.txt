@@ -1,0 +1,4 @@
+table for all polls -  filter by date for script
+table for pollster weights
+table for each iteration of prediction - named accordingly (2017_prediction_date, 2022_prediction_date) etc
+queryable on back end - create tables using matplotlib

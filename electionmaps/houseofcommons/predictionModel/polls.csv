@@ -82,3 +82,6 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 14	bmg	11	8	2017	Wales	100	49	36	2	3	1		6	3					
 14	bmg	11	8	2017	West Midlands	100	41	41	3	9	5			2					
 14	bmg	11	8	2017	Yorkshire and Humber	100	33	52	9	5	1			0					
+15	opinium	18	8	2017	England	1066	439	471	68	54	24			10					
+15	opinium	18	8	2017	Scotland	124	44	28	3	0	1	46		2					
+15	opinium	18	8	2017	Wales	67	18	35	4	1	1		8	0					

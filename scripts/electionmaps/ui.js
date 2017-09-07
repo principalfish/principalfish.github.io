@@ -6,6 +6,8 @@ var uiAttr = {
 
     $(id).addClass("navbaractive");
       // change pagetitle;
+
+
     var text = $(id).text();
 
     $("#pagetitle").html(text);

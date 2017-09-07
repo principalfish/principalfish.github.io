@@ -1130,7 +1130,9 @@ var dataurls =  {
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
 	e2017_600 : "houseofcommons/2017election_600seat.json",
-	predict_600 : "houseofcommons/prediction_600seat.json"
+	predict_600 : "houseofcommons/prediction_600seat.json",
+
+
 }
 
 var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2017, false, false, false, false);
@@ -1141,6 +1143,9 @@ var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2017, dataurls.e2017, true, true, true, false);
 var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false);
+
+// hidden
+var predictit_2015 = new pageSetting("prediction_2015", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true, false);
 
 
 function initialization(){
@@ -1180,7 +1185,8 @@ var urlParamMap = {
 	"election2015" : election2015,
 	"election2010" : election2010,
 	"election2017_600seat" : election2017_600seat,
-	"prediction_600seat" : prediction_600seat
+	"prediction_600seat" : prediction_600seat,
+	"predictit_2015" : predictit_2015
 };
 
 // var countdown = {
@@ -1647,6 +1653,8 @@ function activeSeat(seat){
 
     $(id).addClass("navbaractive");
       // change pagetitle;
+
+
     var text = $(id).text();
 
     $("#pagetitle").html(text);

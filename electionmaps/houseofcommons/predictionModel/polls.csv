@@ -175,3 +175,43 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 34	yougov	19	10	2017	Midlands and Wales	353	42	44	6	3	1		1	2					
 34	yougov	19	10	2017	North England	397	34	53	5	5	2			1					
 34	yougov	19	10	2017	Scotland	143	22	24	5	6		42		0					
+35	icm	23	10	2017	Scotland	125	33	30	5	0	7	49		0					
+35	icm	23	10	2017	Wales	81	33	41	3	2	0	0	3	0					
+35	icm	23	10	2017	North	506	166	233	31	14	14	40		1					
+35	icm	23	10	2017	Midlands	471	229	198	16	17	7		3	1					
+35	icm	23	10	2017	South	505	224	193	53	24	9			1					
+36	yougov	24	10	2017	London	219	28	55	10	3	2			0					
+36	yougov	24	10	2017	Rest of South	530	54	31	9	3	2			0					
+36	yougov	24	10	2017	Midlands and Wales	350	41	47	5	3	2		2	1					
+36	yougov	24	10	2017	North England	395	39	51	4	3	1			0					
+36	yougov	24	10	2017	Scotland	142	25	30	5		2	36		1					
+37	mori	1	11	2017	North	168	60	82	16	4	1			2					
+37	mori	1	11	2017	Midlands	218	81	85	15	11	3		6	3					
+37	mori	1	11	2017	Wales	0	0	0	0	0	0			0					
+37	mori	1	11	2017	South	172	78	46	15	8	14			2					
+37	mori	1	11	2017	London	98	30	45	11	3	5			0					
+37	mori	1	11	2017	England	611	242	238	56	20	22			6					
+37	mori	1	11	2017	Scotland	75	16	17	6			29							
+38	yougov	8	11	2017	London	270	33	56	7	2	1			0					
+38	yougov	8	11	2017	Rest of South	652	51	34	7	4	2			0					
+38	yougov	8	11	2017	Midlands and Wales	431	41	45	5	4	1		2	1					
+38	yougov	8	11	2017	North England	485	34	52	6	4	3			1					
+38	yougov	8	11	2017	Scotland	175	25	28	5	4	1	36							
+39	icm	12	11	2017	Scotland	136	36	28	9	2	6	55		0					
+39	icm	12	11	2017	Wales	85	30	40	4	4	3		4	0					
+39	icm	12	11	2017	North	492	160	219	26	14	17	55		2					
+39	icm	12	11	2017	Midlands	465	189	208	29	27	9		4	0					
+39	icm	12	11	2017	South	503	238	187	35	28	13			2					
+40	opinium	16	11	2017	England	1046	435	458	65	61	21			5					
+40	opinium	16	11	2017	Scotland	111	33	35	0	0	3	44							
+40	opinium	16	11	2017	Wales	79	26	29	3	1	0		8						
+41	yougov	20	11	2017	London	225	32	53	10	3	2			0					
+41	yougov	20	11	2017	Rest of South	543	52	31	9	4	3			0					
+41	yougov	20	11	2017	Midlands and Wales	359	45	43	4	2	1		4	1					
+41	yougov	20	11	2017	North England	404	32	58	4	4	1			0					
+41	yougov	20	11	2017	Scotland	156	22	36	5	1	3	33		0					
+42	yougov	23	11	2017	London	220	24	60	4	7	3			1					
+42	yougov	23	11	2017	Rest of South	533	51	33	9	4	2			1					
+42	yougov	23	11	2017	Midlands and Wales	352	41	37	8	4	3		5	0					
+42	yougov	23	11	2017	North England	396	35	52	6	4	3								
+42	yougov	23	11	2017	Scotland	143	25	24	7	2	1	38		2					

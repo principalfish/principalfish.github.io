@@ -274,3 +274,49 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 54	opinium	12	1	2018	England	1090	450	451	72	57	32			8					
 54	opinium	12	1	2018	Scotland	141	35	30	1	3	8	50							
 54	opinium	12	1	2018	Wales	78	26	26	2	4	3		5						
+55	icm	14	1	2018	Scotland	126	31	38	9	2	5	40		0					
+55	icm	14	1	2018	Wales	81	29	33	2	1	2		12	1					
+55	icm	14	1	2018	North	486	146	248	25	15	10	40		1					
+55	icm	14	1	2018	Midlands	462	200	178	29	24	18		12	2					
+55	icm	14	1	2018	South	486	221	177	43	27	16			3					
+56	yougov	17	1	2018	London	224	32	52	11	1	2			2					
+56	yougov	17	1	2018	Rest of South	542	52	31	9	4	3			0					
+56	yougov	17	1	2018	Midlands and Wales	358	44	42	6	2	2		4	0					
+56	yougov	17	1	2018	North England	403	35	56	3	4	2			0					
+56	yougov	17	1	2018	Scotland	145	21	28	6	1	2	42		0					
+57	icm	19	1	2018	Scotland	329	89	95	19	5	10	111		0					
+57	icm	19	1	2018	Wales	203	65	99	8	4	8		17	2					
+57	icm	19	1	2018	North	1238	415	576	61	39	30	111		5					
+57	icm	19	1	2018	Midlands	1140	482	470	68	63	35		17	5					
+57	icm	19	1	2018	South	1245	546	474	118	59	42			6					
+58	mori	23	1	2018	North	166	52	91	5	11	6			1					
+58	mori	23	1	2018	Midlands	207	101	83	13	4	3		3	0					
+58	mori	23	1	2018	Wales	0	0	0	0	0	0			0					
+58	mori	23	1	2018	South	154	69	54	22	2	4			3					
+58	mori	23	1	2018	London	96	33	41	18	2	2			0					
+58	mori	23	1	2018	England	587	245	247	58	19	14			4					
+58	mori	23	1	2018	Scotland	68	18	20	2	1		28							
+59	yougov	29	1	2018	London	224	31	59	7	2	1			1					
+59	yougov	29	1	2018	Rest of South	541	54	31	7	2	3			2					
+59	yougov	29	1	2018	Midlands and Wales	357	47	39	5	3	2		3	1					
+59	yougov	29	1	2018	North England	402	33	55	7	3	2			0					
+59	yougov	29	1	2018	Scotland	145	26	32	4	1	4	33		1					
+60	survation	29	1	2018	London	102	40	39	17	2	2			2					
+60	survation	29	1	2018	Midlands	129	65	50	8	7	0			0					
+60	survation	29	1	2018	North	179	63	93	12	5	1			5					
+60	survation	29	1	2018	South	251	112	103	18	8	4			6					
+60	survation	29	1	2018	Scotland	69	17	27	5		1	18		1					
+60	survation	29	1	2018	Wales	44	15	24	3				3						
+61	icm	4	2	2018	Scotland	135	37	37	8	1	3	49							
+61	icm	4	2	2018	Wales	74	22	38	5	3	2		5						
+61	icm	4	2	2018	North	501	169	219	30	17	12	49		5					
+61	icm	4	2	2018	Midlands	453	203	181	30	21	9		5	3					
+61	icm	4	2	2018	South	497	210	188	56	21	17			5					
+62	yougov	6	2	2018	London	268	36	42	9	4	7			1					
+62	yougov	6	2	2018	Rest of South	648	52	30	10	4	2			1					
+62	yougov	6	2	2018	Midlands and Wales	428	45	39	8	3	1		2	1					
+62	yougov	6	2	2018	North England	482	36	56	4	2	1			0					
+62	yougov	6	2	2018	Scotland	173	29	26	8	2	4	30		1					
+63	opinium	12	2	2018	England	992	442	394	70	52	21			12					
+63	opinium	12	2	2018	Scotland	120	34	36	2	0	3	45		1					
+63	opinium	12	2	2018	Wales	61	18	27	6	2			9						

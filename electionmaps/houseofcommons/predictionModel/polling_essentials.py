@@ -365,7 +365,7 @@ class Poll(object):
                             total += votes
 
         for party in to_add:
-            if party != "date" and party != "company" and party !="dateobj":
+            if party != "date" and party != "company" and party !="dateobj":                
                 to_add[party] /= (float(total) / 100)
                 to_add[party] = round(to_add[party], 1)
 

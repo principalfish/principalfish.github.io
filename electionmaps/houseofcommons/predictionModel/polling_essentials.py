@@ -31,6 +31,7 @@ pollster_weights = {
     "icmmissing" : 1.25,
     "mori" : 1.25,
     "survation" : 1.25,
+    "survationall" : 1.25,
     "survationscotland" : 6,
     "yougov" : 1.3,
     "comres" : 1,
@@ -281,7 +282,7 @@ class Poll(object):
                         "mori", "comres", "comresdm", "survation",
                         "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk", "survationscotland",
                         "panelbasescotland", "yougovwales", "yougovscotland", "lucidtalk", "panelbase",
-                        "yougovlondon", "orb"]
+                        "yougovlondon", "orb", "survationall"]
 
         if self.company in raw_num_comps:
             for region, numbers in self.regions.iteritems():
@@ -365,7 +366,7 @@ class Poll(object):
                             total += votes
 
         for party in to_add:
-            if party != "date" and party != "company" and party !="dateobj":                
+            if party != "date" and party != "company" and party !="dateobj":
                 to_add[party] /= (float(total) / 100)
                 to_add[party] = round(to_add[party], 1)
 

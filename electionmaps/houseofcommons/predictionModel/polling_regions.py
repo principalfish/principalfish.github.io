@@ -125,6 +125,21 @@ polling_regions = {
 
     },
 
+    "survationall" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East" : ["southeastengland"],
+        "South West" : ["southwestengland"],
+        "London" : ["london"],
+        "North East" : ["northeastengland"],
+        "North West" : ["northwestengland"],
+        "Yorkshire and Humber" : ["yorkshireandthehumber"],
+        "East" : ["eastofengland"]
+    },
+
     "ashcroft" : {
         "Scotland" : ["scotland"],
         "Wales" : ["wales"],

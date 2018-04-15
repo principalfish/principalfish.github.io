@@ -87,7 +87,8 @@ polling_regions = {
         "North East England" : ["northeastengland"],
         "North West England" : ["northwestengland"],
         "Yorkshire and Humber" : ["yorkshireandthehumber"],
-        "East of England" : ["eastofengland"]
+        "East of England" : ["eastofengland"],
+		"Eastern" : ["eastofengland"]
     },
 
     "comresdm" : {

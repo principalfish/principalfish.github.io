@@ -432,3 +432,92 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 82	survationall	14	4	2018	Yorkshire and Humber	100	36	50	5	6	1			1					
 82	survationall	14	4	2018	Scotland	100	27	26	7		1	37		1					
 82	survationall	14	4	2018	Wales	100	34	27	8	4	1		10	0					
+83	yougov	17	4	2018	London	219	34	51	6	1	3			5					
+83	yougov	17	4	2018	Rest of South	528	55	28	11	2	4			0					
+83	yougov	17	4	2018	Midlands and Wales	349	43	40	6	3	4		4	0					
+83	yougov	17	4	2018	North England	393	38	51	6	4	0			1					
+83	yougov	17	4	2018	Scotland	142	30	15	9	1	4	39		3					
+84	mori	24	4	2018	North	160	42	73	17	9	5			8					
+84	mori	24	4	2018	Midlands	202	90	75	16	2	4		4	2					
+84	mori	24	4	2018	Wales	0	0	0	0	0	0			0					
+84	mori	24	4	2018	South	176	77	59	23	1	4								
+84	mori	24	4	2018	London	99	40	45	10	1	1								
+84	mori	24	4	2018	England	602	237	239	63	11	15			9					
+84	mori	24	4	2018	Scotland	55	18	10	3			19							
+85	yougov	25	4	2018	London	224	36	50	10	0	2			1					
+85	yougov	25	4	2018	Rest of South	540	50	30	11	3	4			0					
+85	yougov	25	4	2018	Midlands and Wales	357	43	38	8	3	3		3	0					
+85	yougov	25	4	2018	North England	402	41	48	5	3	2			0					
+85	yougov	25	4	2018	Scotland	145	31	22	8	2	2	35		0					
+86	icm	29	4	2018	Scotland	136	38	35	9	3	8	43		0					
+86	icm	29	4	2018	Wales	77	21	43	4	3	4		2	0					
+86	icm	29	4	2018	North	525	181	228	26	19	24	43		5					
+86	icm	29	4	2018	Midlands	453	207	188	31	17	8		2	1					
+86	icm	29	4	2018	South	485	221	161	59	26	16			2					
+87	comres	29	4	2018	Scotland	140	32	40	10	4	2	52		1					
+87	comres	29	4	2018	North East England	66	21	35	3	4	1			2					
+87	comres	29	4	2018	North West England	170	62	86	11	7	4								
+87	comres	29	4	2018	Yorkshire and Humber	117	47	59	3	7	1								
+87	comres	29	4	2018	West Midlands	139	58	56	15	6	3			1					
+87	comres	29	4	2018	East Midlands	110	42	48	7	6	4			2					
+87	comres	29	4	2018	Wales	77	28	34	5	5			5						
+87	comres	29	4	2018	Eastern	143	74	46	14	7	3								
+87	comres	29	4	2018	London	220	78	97	25	12	7			1					
+87	comres	29	4	2018	South East England	225	114	70	22	11	8								
+87	comres	29	4	2018	South West England	127	55	44	16	5	6			1					
+88	yougov	1	5	2018	London	215	37	44	11	3	3			3					
+88	yougov	1	5	2018	Rest of South	511	52	30	9	4	3			2					
+88	yougov	1	5	2018	Midlands and Wales	342	42	41	4	5	3		3	2					
+88	yougov	1	5	2018	North England	390	37	51	6	3	3			0					
+88	yougov	1	5	2018	Scotland	137	25	22	8	1	3	41		2					
+89	bmg	4	5	2018	East Midlands	100	38	35	6	5	2			0					
+89	bmg	4	5	2018	East of England	100	29	32	10	3	3			2					
+89	bmg	4	5	2018	London	100	33	32	14	4	2			0					
+89	bmg	4	5	2018	North East England	100	23	44	8	6	1			0					
+89	bmg	4	5	2018	North West England	100	32	46	3	2	0								
+89	bmg	4	5	2018	Scotland	100	24	20	5	1	3	37							
+89	bmg	4	5	2018	South East England	100	39	24	11	4	1			1					
+89	bmg	4	5	2018	South West England	100	31	34	9	1	5			1					
+89	bmg	4	5	2018	Wales	100	27	32	6	2	0		9						
+89	bmg	4	5	2018	West Midlands	100	38	30	6	5	3								
+89	bmg	4	5	2018	Yorkshire and Humber	100	36	38	9	2	3			2					
+90	yougov	9	5	2018	London	215	37	46	13	0	2			0					
+90	yougov	9	5	2018	Rest of South	511	54	27	13	3	2			1					
+90	yougov	9	5	2018	Midlands and Wales	342	44	42	6	2	3		3	2					
+90	yougov	9	5	2018	North England	390	37	49	8	2	3			1					
+90	yougov	9	5	2018	Scotland	137	27	27	4	2	2	37		1					
+91	survation	10	5	2018	London	152	75	46	21	3	6			1					
+91	survation	10	5	2018	Midlands	174	70	82	13	7	1			2					
+91	survation	10	5	2018	North	268	87	144	17	9	7			3					
+91	survation	10	5	2018	South	345	178	115	27	17	7								
+91	survation	10	5	2018	Scotland	104	28	30	8	0	1	38							
+91	survation	10	5	2018	Wales	65	18	34	5	2			6						
+92	icm	13	5	2018	Scotland	130	42	28	6	3	4	47		1					
+92	icm	13	5	2018	Wales	75	28	33	3	1	3		4	3					
+92	icm	13	5	2018	North	517	199	215	25	10	16	47		5					
+92	icm	13	5	2018	Midlands	456	219	173	30	15	11		4	3					
+92	icm	13	5	2018	South	498	206	189	61	16	21			6					
+93	yougov	14	5	2018	London	219	34	48	9	5	2	31		1					
+93	yougov	14	5	2018	Rest of South	529	53	29	10	2	4			0					
+93	yougov	14	5	2018	Midlands and Wales	350	45	40	5	3	3		3	1					
+93	yougov	14	5	2018	North England	394	41	46	8	3	1			0					
+93	yougov	14	5	2018	Scotland	142	22	32	12		2			1					
+94	opinium	16	5	2018	England	1015	448	415	68	39	38			8					
+94	opinium	16	5	2018	Scotland	122	45	22	3	2	1	49		1					
+94	opinium	16	5	2018	Wales	65	24	26	4	3	0		9	0					
+95	comres	17	5	2018	Scotland	138	37	33	10	2	3	47		1					
+95	comres	17	5	2018	North East England	69	26	30	4	6	2			0					
+95	comres	17	5	2018	North West England	182	52	115	10	4				1					
+95	comres	17	5	2018	Yorkshire and Humber	125	50	59	4	7	4			1					
+95	comres	17	5	2018	West Midlands	140	60	63	6	6	3			1					
+95	comres	17	5	2018	East Midlands	109	59	33	8	4	4			1					
+95	comres	17	5	2018	Wales	69	26	28	3	1	1		10	0					
+95	comres	17	5	2018	Eastern	138	66	55	5	6	4			1					
+95	comres	17	5	2018	London	215	85	88	23	4	10			1					
+95	comres	17	5	2018	South East England	206	101	69	20	3	8			2					
+95	comres	17	5	2018	South West England	130	55	49	14	6	4			2					
+96	yougov	21	5	2018	London	222	31	48	13	1	3			4					
+96	yougov	21	5	2018	Rest of South	538	55	29	11	2	3			1					
+96	yougov	21	5	2018	Midlands and Wales	355	45	38	7	3	3		3	2					
+96	yougov	21	5	2018	North England	400	35	49	9	3	4								
+96	yougov	21	5	2018	Scotland	144	27	23	6	1	5	38							

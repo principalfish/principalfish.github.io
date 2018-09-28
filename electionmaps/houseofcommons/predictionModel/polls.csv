@@ -540,13 +540,13 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 99	yougov	29	5	2018	Scotland	145	26	30	5	1		38		1					
 100	survationall	4	6	2018	London	199	35	34	27	1	3			0					
 100	survationall	4	6	2018	East	133	56	31	7	4	1			0					
-100	survationall	4	6	2018	North East	182	54	30	8	2	4			3					
-100	survationall	4	6	2018	North West	137	51	35	8	3	2			2					
-100	survationall	4	6	2018	South East	113	45	45	6	3	1			1					
-100	survationall	4	6	2018	South West	108	32	54	1	1	2			0					
-100	survationall	4	6	2018	East Midlands	123	36	52	7	3	1			1					
-100	survationall	4	6	2018	West Midlands	74	40	51	4	4	2			0					
-100	survationall	4	6	2018	Yorkshire and Humber	150	35	51	8	4	3			0					
+100	survationall	4	6	2018	South East	182	54	30	8	2	4			3					
+100	survationall	4	6	2018	South West	137	51	35	8	3	2			2					
+100	survationall	4	6	2018	East Midlands	113	45	45	6	3	1			1					
+100	survationall	4	6	2018	West Midlands	108	32	54	1	1	2			0					
+100	survationall	4	6	2018	Yorkshire and Humber	123	36	52	7	3	1			1					
+100	survationall	4	6	2018	North East	74	40	51	4	4	2			0					
+100	survationall	4	6	2018	North West	150	35	51	8	4	3			0					
 100	survationall	4	6	2018	Scotland	123	26	25	9	1	2	37		1					
 100	survationall	4	6	2018	Wales	103	32	53	1	2	1		9	1					
 101	yougov	5	6	2018	London	217	37	48	11	2	1								
@@ -562,3 +562,203 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 103	icm	10	6	2018	North	510	176	224	30	13	16	50		2					
 103	icm	10	6	2018	Midlands	462	215	190	22	14	14		4	2					
 103	icm	10	6	2018	South	493	224	174	57	15	19			4					
+104	yougov	12	6	2018	London	219	31	53	12	2	1			0					
+104	yougov	12	6	2018	Rest of South	531	51	30	11	4	2			1					
+104	yougov	12	6	2018	Midlands and Wales	351	47	40	5	4	3		1	0					
+104	yougov	12	6	2018	North England	395	38	50	6	4	2			1					
+104	yougov	12	6	2018	Scotland	143	25	19	6	2	2	43		2					
+105	yougov	19	6	2018	London	215	32	51	9	4	2			0					
+105	yougov	19	6	2018	Rest of South	520	52	28	12	2	4			0					
+105	yougov	19	6	2018	Midlands and Wales	344	45	41	5	4	1		3	1					
+105	yougov	19	6	2018	North England	387	36	54	6	2	1			1					
+105	yougov	19	6	2018	Scotland	140	25	27	10	1	1	35		0					
+106	survationall	20	6	2018	East	68	39	24	3	1	1			0					
+106	survationall	20	6	2018	London	89	31	33	15	1	11			0					
+106	survationall	20	6	2018	North East	32	11	19	1	0				0					
+106	survationall	20	6	2018	North West	79	29	43	3	1	3			0					
+106	survationall	20	6	2018	South East	91	50	26	4	6	4			1					
+106	survationall	20	6	2018	South West	72	39	21	6	4	2			0					
+106	survationall	20	6	2018	East Midlands	50	19	21	7	4				0					
+106	survationall	20	6	2018	West Midlands	53	17	27	7	1	1			0					
+106	survationall	20	6	2018	Yorkshire and Humber	58	25	30	1	0	0			1					
+106	survationall	20	6	2018	Scotland	72	22	17	4	0	0	29							
+106	survationall	20	6	2018	Wales	35	13	14	1	1	2		5						
+107	icm	24	6	2018	Scotland	126	34	37	9	2	2	41							
+107	icm	24	6	2018	Wales	81	13	45	9	2	0		11						
+107	icm	24	6	2018	North	491	160	216	39	13	16	41		6					
+107	icm	24	6	2018	Midlands	474	201	193	35	18	14		11	2					
+107	icm	24	6	2018	South	503	233	179	51	17	17			6					
+108	yougov	26	6	2018	London	220	33	49	10	3	4			0					
+108	yougov	26	6	2018	Rest of South	533	52	30	12	3	3			1					
+108	yougov	26	6	2018	Midlands and Wales	352	43	37	7	6	2		3	2					
+108	yougov	26	6	2018	North England	396	41	46	7	3	2			0					
+108	yougov	26	6	2018	Scotland	143	24	22	5	1	4	43		1					
+109	mori	27	6	2018	North	160	54	81	13	1	6			6					
+109	mori	27	6	2018	Midlands	211	94	70	16	13	12		6	0					
+109	mori	27	6	2018	Wales	0													
+109	mori	27	6	2018	South	149	91	34	5	9	9			2					
+109	mori	27	6	2018	London	90	25	55	9	1	0			0					
+109	mori	27	6	2018	England	569	257	221	41	16	27			6					
+109	mori	27	6	2018	Scotland	65	16	14	4	2		29							
+110	yougov	4	7	2018	London	220	33	47	12	3	2			3					
+110	yougov	4	7	2018	Rest of South	532	50	33	11	3	3			0					
+110	yougov	4	7	2018	Midlands and Wales	351	40	43	6	6	3		2	1					
+110	yougov	4	7	2018	North England	395	37	49	6	3	2			2					
+110	yougov	4	7	2018	Scotland	143	30	22	9		1	38							
+111	survationall	7	7	2018	East	67	58	33	6	1	1			1					
+111	survationall	7	7	2018	London	85	39	44	13	1	1			1					
+111	survationall	7	7	2018	North East	25	31	50	17	1									
+111	survationall	7	7	2018	North West	81	30	58	8	2	1			1					
+111	survationall	7	7	2018	South East	101	43	38	15	2	1			1					
+111	survationall	7	7	2018	South West	64	39	31	13	4	4			1					
+111	survationall	7	7	2018	East Midlands	43	45	41	12					1					
+111	survationall	7	7	2018	West Midlands	48	55	38	4					1					
+111	survationall	7	7	2018	Yorkshire and Humber	51	24	47	16	3	3			1					
+111	survationall	7	7	2018	Scotland	58	21	39	3	1		34		1					
+111	survationall	7	7	2018	Wales	40	42	34	4	1			15	1					
+112	icm	9	7	2018	Scotland	123	38	29	5	2	3	46		1					
+112	icm	9	7	2018	Wales	75	25	43	0	1	2	0	3	5					
+112	icm	9	7	2018	North	482	157	210	29	20	15	46		2					
+112	icm	9	7	2018	Midlands	446	170	194	37	24	16		3	5					
+112	icm	9	7	2018	South	519	262	169	56	14	13								
+113	yougov	9	7	2018	London	224	30	49	12	4	3			1					
+113	yougov	9	7	2018	Rest of South	541	50	31	10	6	2			1					
+113	yougov	9	7	2018	Midlands and Wales	357	41	40	8	6	1		2	1					
+113	yougov	9	7	2018	North England	402	34	51	6	4	4			0					
+113	yougov	9	7	2018	Scotland	145	24	22	7	5	5	37		1					
+114	yougov	11	7	2018	London	232	33	46	14	4	3			0					
+114	yougov	11	7	2018	Rest of South	561	50	29	12	4	4			1					
+114	yougov	11	7	2018	Midlands and Wales	371	39	40	9	6	1		2	1					
+114	yougov	11	7	2018	North England	417	27	51	8	9	3			1					
+114	yougov	11	7	2018	Scotland	151	21	27	6	4	3	38		1					
+115	opinium	13	7	2018	England	1124	389	504	87	93	28			21					
+115	opinium	13	7	2018	Wales	68	31	19	9	2	0	7		0					
+115	opinium	13	7	2018	Scotland	122	27	33	5	4	6		46	0					
+116	yougov	17	7	2018	London	222	29	50	15	6	0			0					
+116	yougov	17	7	2018	Rest of South	537	44	33	10	8	3			1					
+116	yougov	17	7	2018	Midlands and Wales	355	38	43	6	7	3		2	1					
+116	yougov	17	7	2018	North England	399	31	53	7	6	3								
+116	yougov	17	7	2018	Scotland	144	26	20	8	5	2	39							
+117	yougov	20	7	2018	London	224	33	46	12	3	4			2					
+117	yougov	20	7	2018	Rest of South	540	50	31	10	5	2			1					
+117	yougov	20	7	2018	Midlands and Wales	357	41	38	8	6	2		5	0					
+117	yougov	20	7	2018	North England	402	28	52	7	8	2			1					
+117	yougov	20	7	2018	Scotland	145	22	21	7	5	1	42		2					
+118	icm	22	7	2018	Scotland	131	41	33	6	4		47		0					
+118	icm	22	7	2018	Wales	74	26	37	2	7	1		1	0					
+118	icm	22	7	2018	North	484	161	218	23	24	9	47		2					
+118	icm	22	7	2018	Midlands	432	180	183	29	23	12		1	4					
+118	icm	22	7	2018	South	500	208	181	58	27	23			3					
+119	yougov	23	7	2018	London	221	25	53	13	4	4			1					
+119	yougov	23	7	2018	Rest of South	535	48	25	14	7	4			1					
+119	yougov	23	7	2018	Midlands and Wales	353	41	40	6	8	3		2						
+119	yougov	23	7	2018	North England	398	34	49	9	6	1								
+119	yougov	23	7	2018	Scotland	144	24	26	7		3	40							
+120	mori	24	7	2018	North	192	60	90	14	19	7			1					
+120	mori	24	7	2018	Midlands	283	124	89	23	23	11		7	6					
+120	mori	24	7	2018	Wales	0													
+120	mori	24	7	2018	South	204	89	78	24	9	2			2					
+120	mori	24	7	2018	London	115	35	59	19	1	2								
+120	mori	24	7	2018	England	749	290	300	77	50	23			9					
+120	mori	24	7	2018	Scotland	80	25	23	3		2	27		1					
+121	yougov	31	7	2018	London	230	40	34	16	4	5			0					
+121	yougov	31	7	2018	Rest of South	557	46	30	12	6	3			1					
+121	yougov	31	7	2018	Midlands and Wales	368	39	41	9	6	2		3	0					
+121	yougov	31	7	2018	North England	414	31	52	6	7	2			2					
+121	yougov	31	7	2018	Scotland	149	25	23	6	3	1	40		1					
+122	icm	5	8	2018	Scotland	143	36	32	6	6	5	58		0					
+122	icm	5	8	2018	Wales	80	27	36	5	6	1		4	0					
+122	icm	5	8	2018	North	529	159	240	29	24	16	58		3					
+122	icm	5	8	2018	Midlands	455	188	186	28	34	14		4	1					
+122	icm	5	8	2018	South	493	216	177	48	29	22			1					
+123	yougov	9	8	2018	London	224	33	40	18	6	3			0					
+123	yougov	9	8	2018	Rest of South	543	47	27	11	9	3			1					
+123	yougov	9	8	2018	Midlands and Wales	358	39	37	10	8	2		3	2					
+123	yougov	9	8	2018	North England	404	35	49	8	5	1			1					
+123	yougov	9	8	2018	Scotland	146	29	17	4		6	42		1					
+124	yougov	14	8	2018	London	222	32	48	11	4	4			0					
+124	yougov	14	8	2018	Rest of South	538	51	28	11	8	3			0					
+124	yougov	14	8	2018	Midlands and Wales	355	44	40	5	4	3		2	1					
+124	yougov	14	8	2018	North England	400	35	48	5	8	3			1					
+124	yougov	14	8	2018	Scotland	144	26	24	7	2	2	38		1					
+125	opinium	17	8	2018	England	1156	459	484	87	82	37			8					
+125	opinium	17	8	2018	Wales	60	18	23	5	3	1		10	1					
+125	opinium	17	8	2018	Scotland	119	33	28	3	3		52							
+126	icm	19	8	2018	Scotland	121	28	32	11	3	3	43		232					
+126	icm	19	8	2018	Wales	78	34	27	3	5	4		7	0					
+126	icm	19	8	2018	North	500	158	228	35	21	10	43		4					
+126	icm	19	8	2018	Midlands	437	184	178	25	34	8		7	1					
+126	icm	19	8	2018	South	499	215	166	56	39	17			6					
+127	yougov	21	8	2018	London	227	27	46	15	9	3			0					
+127	yougov	21	8	2018	Rest of South	550	53	25	13	5	3			1					
+127	yougov	21	8	2018	Midlands and Wales	363	40	38	5	9	1		4	2					
+127	yougov	21	8	2018	North England	409	33	54	5	4	2			0					
+127	yougov	21	8	2018	Scotland	148	31	17	6	1	2	42		1					
+128	yougov	29	8	2018	London	223	32	45	16	4	1			1					
+128	yougov	29	8	2018	Rest of South	539	49	28	13	4	3			1					
+128	yougov	29	8	2018	Midlands and Wales	356	42	39	6	5	4		3	1					
+128	yougov	29	8	2018	North England	401	34	48	5	8	2			2					
+128	yougov	29	8	2018	Scotland	145	27	24	8	3	3	34							
+129	survation	1	9	2018	London	87	34	38	12	3	0								
+129	survation	1	9	2018	Midlands	112	29	62	5	10	2			4					
+129	survation	1	9	2018	North	179	69	89	8	10	2			1					
+129	survation	1	9	2018	South	236	119	68	17	21	9			1					
+129	survation	1	9	2018	Scotland	76	14	29	5	6	13	22							
+129	survation	1	9	2018	Wales	43	11	17			1		6						
+130	yougov	4	9	2018	London	252	30	43	17	3	4			3					
+130	yougov	4	9	2018	Rest of South	610	48	28	13	5	6			1					
+130	yougov	4	9	2018	Midlands and Wales	403	44	35	9	6	2		3	2					
+130	yougov	4	9	2018	North England	454	33	47	8	6	3			2					
+130	yougov	4	9	2018	Scotland	164	23	21	9	4	3	40		1					
+131	survation	7	9	2018	London	94	32	43	16	0	0			4					
+131	survation	7	9	2018	Midlands	105	41	43	11	4	2			3					
+131	survation	7	9	2018	North	163	59	80	17	3	3			1					
+131	survation	7	9	2018	South	230	117	63	20	16	5			10					
+131	survation	7	9	2018	Scotland	40	13	26	7	5		22							
+131	survation	7	9	2018	Wales	20	15	16	1	1			8						
+132	icm	9	9	2018	Scotland	133	42	28	12	5		46							
+132	icm	9	9	2018	Wales	78	29	36	3	3	2		5						
+132	icm	9	9	2018	North	513	174	214	50	19	11	46							
+132	icm	9	9	2018	Midlands	448	190	184	20	32	14		5	2					
+132	icm	9	9	2018	South	492	219	168	60	20	22			3					
+133	yougov	13	9	2018	London	217	25	49	14	5	5			2					
+133	yougov	13	9	2018	Rest of South	525	50	27	13	5	3			1					
+133	yougov	13	9	2018	Midlands and Wales	347	42	38	7	4	3		2	1					
+133	yougov	13	9	2018	North England	390	38	45	9	5	1			1					
+133	yougov	13	9	2018	Scotland	141	25	23	8	1	4	38							
+134	mori	19	9	2018	North	160	63	67	18	4	6			1					
+134	mori	19	9	2018	Midlands	224	95	86	25	7	9		1	1					
+134	mori	19	9	2018	Wales	0													
+134	mori	19	9	2018	South	144	63	39	28	1	11			1					
+134	mori	19	9	2018	London	92	22	41	16	4	9			1					
+134	mori	19	9	2018	England	580	235	209	83	15	34			5					
+134	mori	19	9	2018	Scotland	55	17	15	2			19							
+135	yougov	19	9	2018	London	335	30	44	18	5	3			1					
+135	yougov	19	9	2018	Rest of South	813	51	26	13	4	3			1					
+135	yougov	19	9	2018	Midlands and Wales	537	40	39	8	7	2		4	1					
+135	yougov	19	9	2018	North England	605	36	48	8	5	2			1					
+135	yougov	19	9	2018	Scotland	218	25	23	7	4	2	39							
+136	opinium	17	9	2018	England	1123	414	483	102	88	28			8					
+136	opinium	17	9	2018	Wales	56	14	27	5	2			8						
+136	opinium	17	9	2018	Scotland	118	38	22	3	5	2	49							
+137	bmg	23	9	2018	East Midlands	100	32	51	3	8	2			3					
+137	bmg	23	9	2018	East of England	100	43	43	8	5	1			0					
+137	bmg	23	9	2018	London	100	38	33	19	3	6			0					
+137	bmg	23	9	2018	North East England	100	31	52	6	4	6			0					
+137	bmg	23	9	2018	North West England	100	31	50	8	8	3			1					
+137	bmg	23	9	2018	South East England	100	43	38	13	3	3			0					
+137	bmg	23	9	2018	South West England	100	40	25	23	5	6			0					
+137	bmg	23	9	2018	West Midlands	100	43	33	6	9	9			2					
+137	bmg	23	9	2018	Yorkshire and Humber	100	37	46	2	6	9			0					
+137	bmg	23	9	2018	Scotland	100	27	28	4	5		36							
+137	bmg	23	9	2018	Wales	100	48	22	15		6		6						
+138	icm	24	9	2018	Scotland	133	35	32	7	4	8	47							
+138	icm	24	9	2018	Wales	73	19	41	3	4	0		6						
+138	icm	24	9	2018	North	480	165	207	28	18	14	47							
+138	icm	24	9	2018	Midlands	437	191	175	28	26	10		6	2					
+138	icm	24	9	2018	South	495	218	177	66	16	17			2					
+139	yougov	25	9	2018	London	218	36	44	10	8	2			1					
+139	yougov	25	9	2018	Rest of South	526	54	30	11	3	2			0					
+139	yougov	25	9	2018	Midlands and Wales	348	37	40	13	7	0		3	0					
+139	yougov	25	9	2018	North England	392	40	44	9	3	2			1					
+139	yougov	25	9	2018	Scotland	141	26	20	11		4	38							

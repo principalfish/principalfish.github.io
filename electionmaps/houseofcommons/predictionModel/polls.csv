@@ -533,3 +533,32 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 98	icm	29	5	2018	North	490	178	215	28	9	10	48		2					
 98	icm	29	5	2018	Midlands	446	208	185	27	8	10		8	1					
 98	icm	29	5	2018	South	490	210	179	59	25	12	48		5					
+99	yougov	29	5	2018	London	224	34	45	16	2	1			0					
+99	yougov	29	5	2018	Rest of South	541	53	31	9	2	4			0					
+99	yougov	29	5	2018	Midlands and Wales	357	43	41	6	3	2		4	1					
+99	yougov	29	5	2018	North England	402	36	47	8	4	2			2					
+99	yougov	29	5	2018	Scotland	145	26	30	5	1		38		1					
+100	survationall	4	6	2018	London	199	35	34	27	1	3			0					
+100	survationall	4	6	2018	East	133	56	31	7	4	1			0					
+100	survationall	4	6	2018	North East	182	54	30	8	2	4			3					
+100	survationall	4	6	2018	North West	137	51	35	8	3	2			2					
+100	survationall	4	6	2018	South East	113	45	45	6	3	1			1					
+100	survationall	4	6	2018	South West	108	32	54	1	1	2			0					
+100	survationall	4	6	2018	East Midlands	123	36	52	7	3	1			1					
+100	survationall	4	6	2018	West Midlands	74	40	51	4	4	2			0					
+100	survationall	4	6	2018	Yorkshire and Humber	150	35	51	8	4	3			0					
+100	survationall	4	6	2018	Scotland	123	26	25	9	1	2	37		1					
+100	survationall	4	6	2018	Wales	103	32	53	1	2	1		9	1					
+101	yougov	5	6	2018	London	217	37	48	11	2	1								
+101	yougov	5	6	2018	Rest of South	525	56	27	9	4	3								
+101	yougov	5	6	2018	Midlands and Wales	346	42	43	6	2	3		3						
+101	yougov	5	6	2018	North England	390	40	46	7	3	3			1					
+101	yougov	5	6	2018	Scotland	141	31	22	7		3	36							
+102	opinium	7	6	2018	England	985	440	413	72	28	27			5					
+102	opinium	7	6	2018	Wales	59	20	24	4	2	0	6		3					
+102	opinium	7	6	2018	Scotland	128	29	28	2		2		66	0					
+103	icm	10	6	2018	Scotland	136	41	25	11	2	6	50		0					
+103	icm	10	6	2018	Wales	77	31	35	5	1	2		4	0					
+103	icm	10	6	2018	North	510	176	224	30	13	16	50		2					
+103	icm	10	6	2018	Midlands	462	215	190	22	14	14		4	2					
+103	icm	10	6	2018	South	493	224	174	57	15	19			4					

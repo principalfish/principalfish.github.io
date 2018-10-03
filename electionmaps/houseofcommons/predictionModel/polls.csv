@@ -773,3 +773,17 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 140	comres	27	9	2018	London	211	74	96	26	9	4			1					
 140	comres	27	9	2018	South East England	212	108	68	19	12	3			1					
 140	comres	27	9	2018	South West England	133	68	42	12	6	3			1					
+141	opinium	28	9	2018	England	1155	447	465	106	74	42			21					
+141	opinium	28	9	2018	Wales	58	19	23	6	3	2	5		1					
+141	opinium	28	9	2018	Scotland	122	40	21	9	3	2		46	1					
+142	bmg	29	9	2018	East Midlands	100	32	42	14	6	3			3					
+142	bmg	29	9	2018	East of England	100	34	37	16	6	2			3					
+142	bmg	29	9	2018	London	100	41	42	12	1	4			1					
+142	bmg	29	9	2018	North East England	100	14	51	24	9	3			0					
+142	bmg	29	9	2018	North West England	100	24	61	7	3	3			0					
+142	bmg	29	9	2018	South East England	100	46	29	18	3	5			2					
+142	bmg	29	9	2018	South West England	100	43	33	13	7	2			1					
+142	bmg	29	9	2018	West Midlands	100	35	42	8	12	4			0					
+142	bmg	29	9	2018	Yorkshire and Humber	100	33	49	10	5	3			0					
+142	bmg	29	9	2018	Scotland	100	31	17	9	0	3	42		0					
+142	bmg	29	9	2018	Wales	100	34	36	6	5	1		18	0					

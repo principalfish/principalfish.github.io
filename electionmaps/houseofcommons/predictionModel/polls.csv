@@ -787,3 +787,22 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 142	bmg	29	9	2018	Yorkshire and Humber	100	33	49	10	5	3			0					
 142	bmg	29	9	2018	Scotland	100	31	17	9	0	3	42		0					
 142	bmg	29	9	2018	Wales	100	34	36	6	5	1		18	0					
+143	yougov	1	10	2018	London	215	29	50	12	6	2			0					
+143	yougov	1	10	2018	Rest of South	521	54	26	12	4	2			0					
+143	yougov	1	10	2018	Midlands and Wales	344	44	35	7	8	2		2	1					
+143	yougov	1	10	2018	North England	387	39	47	7	4	2			1					
+143	yougov	1	10	2018	Scotland	140	22	28	5	1	2	37		1					
+144	bmg	5	10	2018	East Midlands	100	37	52	5	6	0			0					
+144	bmg	5	10	2018	East of England	100	43	35	12	6	3			2					
+144	bmg	5	10	2018	London	100	37	38	17	4	5			0					
+144	bmg	5	10	2018	North East England	100	29	50	11	5	4			1					
+144	bmg	5	10	2018	North West England	100	31	54	6	6	3			0					
+144	bmg	5	10	2018	South East England	100	55	26	11	2	5			1					
+144	bmg	5	10	2018	South West England	100	39	33	17	4	4			2					
+144	bmg	5	10	2018	West Midlands	100	41	41	8	7	4								
+144	bmg	5	10	2018	Yorkshire and Humber	100	37	51	4	4	4								
+144	bmg	5	10	2018	Scotland	100	25	21	7	0	7	40							
+144	bmg	5	10	2018	Wales	100	31	42	7	7	2		12						
+145	opinium	5	10	2018	England	1203	473	515	93	73	41			6					
+145	opinium	5	10	2018	Wales	63	19	27	7	3	1		6	0					
+145	opinium	5	10	2018	Scotland	117	31	28	3	10	2	42		1					

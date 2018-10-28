@@ -6,6 +6,11 @@
   "scripts": {
     "test": "dev"
   },
+
+  "repository": {
+  "type": "git",
+  "url": "git://github.com/principalfish/principalfish.github.io.git"
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {

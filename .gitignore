@@ -7,6 +7,7 @@
 /uselection/
 
 *.bat
+*.sh
 
 todo.txt
 todo2.txt

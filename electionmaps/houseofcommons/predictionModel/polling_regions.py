@@ -53,6 +53,20 @@ polling_regions = {
         "Scotland" : ["scotland"]
     },
 
+    "yougovall" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East" : ["southeastengland"],
+        "South West" : ["southwestengland"],
+        "London" : ["london"],
+        "North East" : ["northeastengland"],
+        "North West" : ["northwestengland"],
+        "Yorkshire" : ["yorkshireandthehumber"],
+        "East" : ["eastofengland"]
+    },
+
     "opinium" : {
         "England" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland", "eastofengland", "yorkshireandthehumber",
             "eastmidlands", "westmidlands", "london"],

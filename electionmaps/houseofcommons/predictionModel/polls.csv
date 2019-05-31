@@ -1166,3 +1166,8 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 199	survation	17	5	2019	Midlands	104	40	33	9	3	1			13					
 199	survation	17	5	2019	Scotland	61	15	25	8	0	0	50		2					
 199	survation	17	5	2019	Wales	32	26	31	20	4	5		4	10					
+200	yougov	29	5	2019	London	212	14	24	34	2	8			17					
+200	yougov	29	5	2019	Rest of South	589	21	14	32	2	9			22					
+200	yougov	29	5	2019	Midlands and Wales	381	21	19	17	0	4		6	30					
+200	yougov	29	5	2019	North England	430	17	29	16	1	9			26					
+200	yougov	29	5	2019	Scotland	152	19	12	11	1	6	44		8					

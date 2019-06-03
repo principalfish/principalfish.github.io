@@ -1,7 +1,7 @@
 from datetime import datetime, date
 import math
 
-parties = ["conservative", "labour", "libdems",	"ukip", "green", "snp",
+parties = ["conservative", "labour", "libdems", "green", "snp", "ukip",
             "plaidcymru", "other", "sdlp", "sinnfein", "alliance", "dup", "uu"]
 
 regions = ["northernireland", "scotland", "yorkshireandthehumber", "wales", "northeastengland", "northwestengland",
@@ -11,7 +11,7 @@ party_map = {
      'conservative': "Conservative",
      'labour': "Labour",
      'libdems': "Lib Dems",
-     'ukip': "UKIP",
+     'ukip': "Brexit Party",
      'snp': "SNP",
      'plaidcymru': "Plaid Cymru",
      'green': "Green",
@@ -34,7 +34,7 @@ pollster_weights = {
     "survationall" : 1.25,
     "survationscotland" : 6,
     "yougov" : 1.3,
-    "yougovall" : 2, 
+    "yougovall" : 2,
     "comres" : 1,
     "comresdm" : 1,
     "opinium" : 1,
@@ -78,7 +78,7 @@ class Seat(object):
             turnout += self.old_partyInfo[party]["total"]
 
         # for getting current, majority
-        max = 0
+        _max = 0
         current_max = ""
 
         new_percentages = {}
@@ -115,8 +115,8 @@ class Seat(object):
 
 
 
-            if new > max:
-                max = new
+            if new > _max:
+                _max = new
                 current_max = party
 
             if new < 0.1 * percentage_vote:
@@ -127,6 +127,11 @@ class Seat(object):
                 new = 0
 
             new_percentages[party] = new
+
+
+        for party in regional:
+            if party not in new_percentages:
+                new_percentages[party] = max(0, regional[party])
 
         sum = 0
         for party, total in new_percentages.iteritems():
@@ -310,7 +315,7 @@ class Poll(object):
         weight = pollster_weights[self.company]
 
         # alter closer to election  when more polls
-        degrade_factor = 0.95 #per day
+        degrade_factor = 0.9 #per day
         weight *= math.pow(degrade_factor, days_past)
 
         #testing

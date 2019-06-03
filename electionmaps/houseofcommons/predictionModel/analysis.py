@@ -39,7 +39,7 @@ with open(polling_data, "rb") as polls_file:
     poll_rows = []
 
     for row in poll_data:
-        
+
         code = row["code"]
         if code not in poll_codes:
 

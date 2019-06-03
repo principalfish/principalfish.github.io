@@ -309,7 +309,7 @@ partylist["labour"] = "Labour";
 partylist["conservative"] = "Conservative";
 partylist["libdems"] = "Lib Dems";
 partylist["snp"] = "SNP";
-partylist["ukip"] = "UKIP";
+partylist["ukip"] = "Brexit Party";
 partylist["plaidcymru"] = "Plaid Cymru";
 partylist["green"] = "Green";
 partylist["uu"] = "UUP";
@@ -1177,7 +1177,7 @@ function getParameterByName(name, url) {
 var url = window.location.href;
 
 var urlParamMap = {
-	null : election2017,
+	null : prediction,
 	"current" : currentParliament,
 	"prediction" : prediction,
 	"predictit" : predictit,

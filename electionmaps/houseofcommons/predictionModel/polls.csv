@@ -1190,8 +1190,13 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 203	comres	9	6	2019	London	235	53	93	49	26	11			1					
 203	comres	9	6	2019	South East England	244	67	46	48	65	15			3					
 203	comres	9	6	2019	South West England	157	39	33	37	32	9			5					
-204	yougov	6	6	2019	London	204	10	30	31	17	11			0					
-204	yougov	6	6	2019	Rest of South	568	21	14	24	30	8			2					
-204	yougov	6	6	2019	Midlands and Wales	368	18	20	19	26	11		4	2					
-204	yougov	6	6	2019	North England	415	15	26	17	34	6			2					
-204	yougov	6	6	2019	Scotland	146	15	8	19	11	6	38		3					
+204	yougov	10	6	2019	London	204	10	30	31	17	11			0					
+204	yougov	10	6	2019	Rest of South	568	21	14	24	30	8			2					
+204	yougov	10	6	2019	Midlands and Wales	368	18	20	19	26	11		4	2					
+204	yougov	10	6	2019	North England	415	15	26	17	34	6			2					
+204	yougov	10	6	2019	Scotland	146	15	8	19	11	6	38		3					
+215	yougov	14	6	2019	London	204	19	33	32	9	7			0					
+215	yougov	14	6	2019	Rest of South	568	27	13	22	27	11			2					
+215	yougov	14	6	2019	Midlands and Wales	368	22	20	15	30	9		4	1					
+215	yougov	14	6	2019	North England	415	17	30	14	27	11			2					
+215	yougov	14	6	2019	Scotland	146	17	10	15	14	3	38		2					

@@ -1226,3 +1226,22 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 210	yougov	25	6	2019	Midlands and Wales	445	24	23	13	26	9		4	1					
 210	yougov	25	6	2019	North England	502	16	29	18	24	10			2					
 210	yougov	25	6	2019	Scotland	177	14	7	13	7	9	43		6					
+211	yougov	3	7	2019	London	193	16	24	35	16	8			2					
+211	yougov	3	7	2019	Rest of South	536	29	12	23	25	10			1					
+211	yougov	3	7	2019	Midlands and Wales	347	28	17	17	26	8		4	0					
+211	yougov	3	7	2019	North England	392	20	26	16	27	10			1					
+211	yougov	3	7	2019	Scotland	138	15	10	11	10	8	45		1					
+212	opinium	5	7	2019	England	1012	244	266	154	246	85			7					
+212	opinium	5	7	2019	Scotland	116	17	15	9	14	6	55		0					
+212	opinium	5	7	2019	Wales	62	11	17	10	6	1		14	1					
+213	comres	9	7	2019	Scotland	153	31	28	21	8	8	54		2					
+213	comres	9	7	2019	Wales	89	21	27	11	19	3		7	1					
+213	comres	9	7	2019	North East England	77	18	27	14	13	3			1					
+213	comres	9	7	2019	North West England	209	41	82	22	48	13			0					
+213	comres	9	7	2019	Yorkshire and Humber	143	34	56	13	26	5			5					
+213	comres	9	7	2019	West Midlands	153	40	37	24	40	8			0					
+213	comres	9	7	2019	East Midlands	120	41	28	22	24	3			1					
+213	comres	9	7	2019	Eastern	173	48	44	23	45	9			2					
+213	comres	9	7	2019	London	243	63	81	47	37	12			3					
+213	comres	9	7	2019	South East England	251	71	52	50	51	18			0					
+213	comres	9	7	2019	South West England	148	41	28	33	30	6			5					

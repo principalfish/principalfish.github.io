@@ -715,6 +715,8 @@ svg .mapdark {
   top: 100px;
   display: block;
   width: 700px; }
+  #donation_please a {
+    color: white; }
   #donation_please a:visited {
     color: white; }
 

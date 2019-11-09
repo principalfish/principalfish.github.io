@@ -39,6 +39,15 @@ polling_regions = {
         "South":   ["southeastengland", "southwestengland", "london"]
     },
 
+    "icm3"  : {
+        "South East" : ["southeastengland", "london", "eastofengland"],
+        "Midlands" : ["eastmidlands", "westmidlands"],
+        "North England" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
+        "Wales" : ["wales"],
+        "South West" : ["southwestengland"],
+        "Scotland" : ["scotland"]
+    },
+
     "icmmissing" : {
         "All" :  ["northeastengland", "northwestengland", "southeastengland", "southwestengland",
             "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london",
@@ -66,6 +75,21 @@ polling_regions = {
         "Yorkshire" : ["yorkshireandthehumber"],
         "East" : ["eastofengland"]
     },
+
+    "yougovregional" : {
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"],
+        "East Midlands" : ["eastmidlands"],
+        "West Midlands" : ["westmidlands"],
+        "South East" : ["southeastengland"],
+        "South West" : ["southwestengland"],
+        "London" : ["london"],
+        "North East" : ["northeastengland"],
+        "North West" : ["northwestengland"],
+        "Yorkshire" : ["yorkshireandthehumber"],
+        "East" : ["eastofengland"]
+    },
+
 
     "opinium" : {
         "England" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland", "eastofengland", "yorkshireandthehumber",

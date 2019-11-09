@@ -1611,3 +1611,31 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 273	opinium	1	11	2019	England	851	369	236	138	82	19			10					
 273	opinium	1	11	2019	Scotland	81	24	7	9	4	0	36							
 273	opinium	1	11	2019	Wales	66	24	19	11	7	0		6						
+274	icm3	4	11	2019	South East	370	136	112	77	29	11			6					
+274	icm3	4	11	2019	Midlands	405	175	112	51	50	10			7					
+274	icm3	4	11	2019	North England	370	116	156	46	38	11			4					
+274	icm3	4	11	2019	Wales	80	39	25	5	6	2		4	0					
+274	icm3	4	11	2019	South West	138	63	30	31	8	3			3					
+274	icm3	4	11	2019	Scotland	129	35	29	15	5	4	40		0					
+275	yougov	4	11	2019	London	394	27	41	18	8	5			1					
+275	yougov	4	11	2019	Rest of South	1087	46	18	21	9	5			1					
+275	yougov	4	11	2019	Midlands and Wales	709	38	26	12	15	5		4	0					
+275	yougov	4	11	2019	North England	801	37	31	14	13	4			1					
+275	yougov	4	11	2019	Scotland	282	20	12	14	9	3	41		2					
+276	yougov	6	11	2019	London	200	26	30	24	7	9			4					
+276	yougov	6	11	2019	Rest of South	557	42	18	24	10	5			1					
+276	yougov	6	11	2019	Midlands and Wales	360	41	26	13	14	2		4	1					
+276	yougov	6	11	2019	North England	407	34	37	12	13	3			0					
+276	yougov	6	11	2019	Scotland	143	22	10	8	5	8	47		1					
+277	yougovregional	25	10	2019	Scotland	100	22	12	13	6	4	42							
+277	yougovregional	4	11	2019	Wales	100	28	29	12	15	3		12	1					
+277	yougovregional	28	10	2019	East Midlands	100	45	22	15	12	6			1					
+277	yougovregional	28	10	2019	West Midlands	100	43	23	14	12	7			1					
+277	yougovregional	28	10	2019	South East	100	41	16	23	12	6			0					
+277	yougovregional	28	10	2019	South West	100	41	17	21	13	7			1					
+277	yougovregional	4	11	2019	London	100	29	39	19	6	5								
+277	yougovregional	28	10	2019	North East	100	26	32	15	19	7			2					
+277	yougovregional	28	10	2019	North West	100	33	30	17	14	5			1					
+277	yougovregional	28	10	2019	Yorkshire	100	34	29	16	14	7			1					
+277	yougovregional	28	10	2019	East	100	45	17	18	14	5								
+278	lucidtalk	12	8	2019	Norn Iron	100								7	8	25	21	29	9

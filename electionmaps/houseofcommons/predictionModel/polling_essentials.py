@@ -28,6 +28,7 @@ pollster_weights = {
     "ashcroft" : 1,
     "icm" : 1.25,
     "icm2" : 1.25,
+    "icm3" : 1.25,
     "icmmissing" : 1.25,
     "mori" : 1.25,
     "survation" : 1.25,
@@ -44,6 +45,7 @@ pollster_weights = {
     "panelbasescotland" : 3,
     "yougovwales" : 6,
     "yougovscotland" : 6,
+    "yougovregional" : 6,
     "lucidtalk" : 1,
     "panelbase" : 1,
     "yougovlondon" : 6,
@@ -284,10 +286,10 @@ class Poll(object):
             del self.regions["England"]
 
         #convert to decimal percentaegs
-        raw_num_comps = ["general", "me", "icm", "icm2", "opinium",
+        raw_num_comps = ["general", "me", "icm", "icm2", "icm3", "opinium",
                         "mori", "comres", "comresdm", "survation",
                         "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk", "survationscotland",
-                        "panelbasescotland", "yougovwales", "yougovscotland", "lucidtalk", "panelbase",
+                        "panelbasescotland", "yougovwales", "yougovscotland", "yougovregional", "lucidtalk", "panelbase",
                         "yougovlondon", "orb", "survationall"]
 
         if self.company in raw_num_comps:

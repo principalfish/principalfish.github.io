@@ -1882,3 +1882,8 @@ code,company,day,month,year,region,total,conservative,labour,libdems,ukip,green,
 313,icm3,9,12,2019,Wales,81,28,34,6,3,3,,5,1,,,,,
 313,icm3,9,12,2019,South West,151,80,48,21,1,2,,,0,,,,,
 313,icm3,9,12,2019,Scotland,133,33,29,15,1,0,52,,3,,,,,
+314,lucidtalk,1,11,2019,Norn Iron,100,,,,,,,,8,14,24,16,28,9
+315,lucidtalk,30,11,2019,Norn Iron,100,,,,,,,,5,13,25,16,30,11
+316,yougovregional,2,12,2019,London,100,30,47,15,3,4,,,1,,,,,
+317,yougovregional,6,12,2019,Scotland,100,29,21,10,0,1,39,0,0,,,,,
+318,yougovwales,9,12,2019,Wales,100,37,40,6,5,1,,10,1,,,,,

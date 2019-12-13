@@ -152,21 +152,21 @@ var dataurls =  {
 	//parliaments
 	predict : "houseofcommons/prediction.json",
 	current : "houseofcommons/current.json",
+	e2019 : "houseofcommons/2019election.json",
 	e2017 : "houseofcommons/2017election.json",
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
 	e2017_600 : "houseofcommons/2017election_600seat.json",
 	predict_600 : "houseofcommons/prediction_600seat.json",
-
-
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2017, false, false, false, false);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2019, false, false, false, false);
+var election2019 = new pageSetting("election2019", dataurls.map650, dataurls.e2019, dataurls.e2017, true, false, true, false);
 var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, true, false);
 var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
-var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2017, true, false, true, false);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2017, dataurls.e2017, true, true, true, false);
+var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2019, true, false, true, false);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2019, dataurls.e2019, true, true, true, false);
 var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false);
 
@@ -203,10 +203,11 @@ function getParameterByName(name, url) {
 var url = window.location.href;
 
 var urlParamMap = {
-	null : prediction,
+	null : election2019,
 	"current" : currentParliament,
 	"prediction" : prediction,
 	"predictit" : predictit,
+	"election2019" : election2019,
 	"election2017" : election2017,
 	"election2015" : election2015,
 	"election2010" : election2010,

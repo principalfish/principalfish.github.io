@@ -187,7 +187,10 @@ var voteTotals = {
     // reset div
     $("#votetotals-table-data").empty();
     // display turnout for all but current parliament
-    if (currentMap.name == "election2015" || currentMap.name == "election2010" || currentMap.name == "election2017"){
+    if (currentMap.name == "election2015" 
+      || currentMap.name == "election2010"
+      || currentMap.name == "election2017"
+      || currentMap.name == "election2019"){
       $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
     } else {
         $("#votetotals-turnout").text(" ");

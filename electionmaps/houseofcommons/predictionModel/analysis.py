@@ -10,8 +10,8 @@ polls = {}
 arguments = sys.argv
 
 model_map = {
-    "650" : ["2017election.json", "prediction.json"],
-    "600" : ["2017election_600seat.json", "prediction_600seat.json"]
+    "650" : ["2019election.json", "prediction.json"],
+    "600" : ["2019election_600seat.json", "prediction_600seat.json"]
 }
 
 print model_map[arguments[1]]
@@ -34,7 +34,7 @@ for region in regions:
 polling_data = "polls.csv"
 
 with open(polling_data, "rb") as polls_file:
-    poll_data = csv.DictReader(polls_file, delimiter = ",")
+    poll_data = csv.DictReader(polls_file, delimiter = "\t")
     poll_codes = []
     poll_rows = []
 

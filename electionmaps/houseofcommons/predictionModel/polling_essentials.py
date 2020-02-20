@@ -39,6 +39,7 @@ pollster_weights = {
     "comres" : 1,
     "comresdm" : 1,
     "opinium" : 1,
+    "opinium2" : 1,
     "opiniummissing" : 1,
     "bmg" : 0.75,
     "gfk" : 1,
@@ -140,6 +141,7 @@ class Seat(object):
             sum += total
 
         votes_array = []
+
         normaliser = 1 / sum
 
         for party, total in new_percentages.iteritems():
@@ -277,16 +279,16 @@ class Poll(object):
                 self.regions["Wales"][party] = - (self.regions["England"][party]
                                                     - self.regions["South"][party]
                                                     - self.regions["Midlands"][party]
-                                                    - self.regions["North"][party])
+                                                    - self.regions["North"][party]
+                                                    - self.regions["London"][party])
 
                 self.regions["Midlands"][party] -= self.regions["Wales"][party]
 
-                self.regions["South"][party] -= self.regions["London"][party]
 
             del self.regions["England"]
 
         #convert to decimal percentaegs
-        raw_num_comps = ["general", "me", "icm", "icm2", "icm3", "opinium",
+        raw_num_comps = ["general", "me", "icm", "icm2", "icm3", "opinium", "opinium2"
                         "mori", "comres", "comresdm", "survation",
                         "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk", "survationscotland",
                         "panelbasescotland", "yougovwales", "yougovscotland", "yougovregional", "lucidtalk", "panelbase",
@@ -317,7 +319,7 @@ class Poll(object):
         weight = pollster_weights[self.company]
 
         # alter closer to election  when more polls
-        degrade_factor = 0.85 #per day
+        degrade_factor = 0.90 #per day
         weight *= math.pow(degrade_factor, days_past)
 
         #testing

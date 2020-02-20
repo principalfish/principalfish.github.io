@@ -98,6 +98,15 @@ polling_regions = {
         "Wales" : ["wales"]
     },
 
+    "opinium2" : {
+        "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
+        "Midlands" : ["eastmidlands",  "westmidlands"],
+        "London" : ["london"],
+        "South" : ["southeastengland", "southwestengland", "eastofengland"],
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"]
+    },
+
     "opiniummissing" : {
         "All" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland",
             "eastofengland", "yorkshireandthehumber", "eastmidlands", "westmidlands", "london",

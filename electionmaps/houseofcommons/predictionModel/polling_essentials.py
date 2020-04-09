@@ -319,7 +319,7 @@ class Poll(object):
         weight = pollster_weights[self.company]
 
         # alter closer to election  when more polls
-        degrade_factor = 0.25 #per day
+        degrade_factor = 0.85 #per day
         weight *= math.pow(degrade_factor, days_past)
 
         #testing

@@ -97,9 +97,31 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 14	bmg	9	4	2020	Yorkshire and Humber	100	54	34	5	4	1			2					
 14	bmg	9	4	2020	Scotland	100	29	17	9	2	4	38		1					
 14	bmg	9	4	2020	Wales	100	45	24	5	3	1		21	1					
-13	opinium2	9	4	2020	North	274	143	105	14	2	8			2					
-13	opinium2	9	4	2020	Midlands	175	111	44	10	0	6			4					
-13	opinium2	9	4	2020	London	134	60	56	11	0	6			1					
-13	opinium2	9	4	2020	South	337	218	76	20	4	14			5					
-13	opinium2	9	4	2020	Wales	57	33	16	2	1	2		4	0					
-13	opinium2	9	4	2020	Scotland	104	28	15	1	1	3	55		0					
+15	opinium2	9	4	2020	North	274	143	105	14	2	8			2					
+15	opinium2	9	4	2020	Midlands	175	111	44	10	0	6			4					
+15	opinium2	9	4	2020	London	134	60	56	11	0	6			1					
+15	opinium2	9	4	2020	South	337	218	76	20	4	14			5					
+15	opinium2	9	4	2020	Wales	57	33	16	2	1	2		4	0					
+15	opinium2	9	4	2020	Scotland	104	28	15	1	1	3	55		0					
+16	opinium2	17	4	2020	North	251	126	104	9	3	8			1					
+16	opinium2	17	4	2020	Midlands	182	96	69	11	0	3			3					
+16	opinium2	17	4	2020	London	118	54	45	11	2	4			2					
+16	opinium2	17	4	2020	South	362	215	91	29	7	15			5					
+16	opinium2	17	4	2020	Wales	52	28	14	4	1			5	0					
+16	opinium2	17	4	2020	Scotland	114	32	27	2			53		0					
+17	yougov	17	4	2020	London	242	41	47	8	0	4			0					
+17	yougov	17	4	2020	Rest of South	677	62	24	8	2	3			1					
+17	yougov	17	4	2020	Midlands and Wales	437	57	30	4	1	3		3	2					
+17	yougov	17	4	2020	North England	486	51	42	3	1	2			1					
+17	yougov	17	4	2020	Scotland	173	27	21	6	1	4	41		1					
+18	redfield	17	4	2020	South East	155	89	38	19	3	4			1					
+18	redfield	17	4	2020	London	149	73	48	21	0	4								
+18	redfield	17	4	2020	South West	112	70	20	12	5	4			1					
+18	redfield	17	4	2020	West Midlands	93	48	35	2	1	4								
+18	redfield	17	4	2020	East Midlands	70	40	18	8	1	3								
+18	redfield	17	4	2020	Eastern	103	60	33	5	1	3			1					
+18	redfield	17	4	2020	North East	47	21	21	0	2	0			1					
+18	redfield	17	4	2020	North West	119	59	53	2	2	2			1					
+18	redfield	17	4	2020	Yorks and Humber	89	42	36	8	0	2								
+18	redfield	17	4	2020	Scotland	97	37	16	3	0	0	41							
+18	redfield	17	4	2020	Wales	64	33	19	4	2	3		3	1					

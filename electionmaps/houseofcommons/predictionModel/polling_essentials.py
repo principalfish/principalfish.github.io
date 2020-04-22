@@ -50,7 +50,8 @@ pollster_weights = {
     "lucidtalk" : 1,
     "panelbase" : 1,
     "yougovlondon" : 6,
-    "orb" : 1.2
+    "orb" : 1.2,
+    "redfield" : 1.2
 }
 
 class Seat(object):
@@ -292,7 +293,7 @@ class Poll(object):
                         "mori", "comres", "comresdm", "survation",
                         "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk", "survationscotland",
                         "panelbasescotland", "yougovwales", "yougovscotland", "yougovregional", "lucidtalk", "panelbase",
-                        "yougovlondon", "orb", "survationall"]
+                        "yougovlondon", "orb", "redfield", "survationall"]
 
         if self.company in raw_num_comps:
             for region, numbers in self.regions.iteritems():
@@ -319,7 +320,7 @@ class Poll(object):
         weight = pollster_weights[self.company]
 
         # alter closer to election  when more polls
-        degrade_factor = 0.85 #per day
+        degrade_factor = 0.9 #per day
         weight *= math.pow(degrade_factor, days_past)
 
         #testing

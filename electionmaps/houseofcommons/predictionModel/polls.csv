@@ -142,3 +142,15 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 20	redfield	26	4	2020	Yorks and Humber	81	30	36	9	3	2			1					
 20	redfield	26	4	2020	Scotland	111	38	19	6	0	1	47		1					
 20	redfield	26	4	2020	Wales	51	28	18	3	0	0		2	0					
+21	survation	28	4	2020	London	112	57	28	19	1	9			0					
+21	survation	28	4	2020	South	273	167	65	24	2	15			0					
+21	survation	28	4	2020	Midlands	135	69	43	14	2	6			1					
+21	survation	28	4	2020	North	212	100	99	6	1	4			2					
+21	survation	28	4	2020	Scotland	78	9	19	8		4	38		0					
+21	survation	28	4	2020	Wales	42	17	14	1		2		8	0					
+22	opinium2	1	5	2020	North	264	122	120	11	0	10			2					
+22	opinium2	1	5	2020	Midlands	172	95	59	8	2	8			0					
+22	opinium2	1	5	2020	London	106	48	48	4	2	4			0					
+22	opinium2	1	5	2020	South	345	208	86	31	7	11			2					
+22	opinium2	1	5	2020	Wales	72	34	20	7	0	2		7	2					
+22	opinium2	1	5	2020	Scotland	112	38	19	0	0	1	54		0					

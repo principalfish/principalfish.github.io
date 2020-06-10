@@ -248,3 +248,17 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 35	yougov	30	5	2020	Midlands and Wales	358	50	34	6	4	4		1	1					
 35	yougov	30	5	2020	North England	398	42	46	5	1	4			2					
 35	yougov	30	5	2020	Scotland	142	22	13	2	1	5	54		2					
+37	survation	3	6	2020	London	94	33	49	9	0	3			0					
+37	survation	3	6	2020	South	237	118	74	26	2	14			3					
+37	survation	3	6	2020	Midlands	118	59	49	3	2	5			1					
+37	survation	3	6	2020	North	187	76	91	9	3	7			2					
+37	survation	3	6	2020	Scotland	68	16	14	4		2	32		0					
+37	survation	3	6	2020	Wales	40	15	18	1	1			5	0					
+38	opinium2	5	6	2020	North	273	109	130	13	8	9			4					
+38	opinium2	5	6	2020	Midlands	171	71	80	9	3	7			2					
+38	opinium2	5	6	2020	London	121	52	57	9	0	2			1					
+38	opinium2	5	6	2020	South	341	178	109	31	7	14			2					
+38	opinium2	5	6	2020	Wales	63	22	33	1	0	0		5	1					
+38	opinium2	5	6	2020	Scotland	97	25	13	2	1	1	55							
+39	panelbasescotland	5	6	2020	Scotland	100	21	19	6		2	51							
+40	yougovwales	1	6	2020	Wales	100	35	39	5	2	3		15						

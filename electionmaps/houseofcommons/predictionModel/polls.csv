@@ -418,3 +418,9 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 65	yougov	25	8	2020	Midlands and Wales	362	48	35	5	4	4		3	0					
 65	yougov	25	8	2020	North England	402	33	49	7	5	3			2					
 65	yougov	25	8	2020	Scotland	144	23	15	4	2	3	53		0					
+66	opinium2	28	8	2020	North	236	88	121	8	9	5			5					
+66	opinium2	28	8	2020	Midlands	171	85	68	8	6	3			1					
+66	opinium2	28	8	2020	London	116	36	58	14	3	0			5					
+66	opinium2	28	8	2020	South	328	145	119	32	15	5			12					
+66	opinium2	28	8	2020	Wales	65	26	25	4	3	0		4	2					
+66	opinium2	28	8	2020	Scotland	117	37	19	1	0	3	57		0					

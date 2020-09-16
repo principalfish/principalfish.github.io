@@ -429,4 +429,11 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 67	survation	4	9	2020	Midlands	15	56	63	15	0	11			1					
 67	survation	4	9	2020	North	208	90	107	5	1	3			2					
 67	survation	4	9	2020	Scotland	82	21	9	8	5	1	43		5					
-64	survation	4	9	2020	Wales	42	18	15			0		10	0					
+67	survation	4	9	2020	Wales	42	18	15			0		10	0					
+68	opinium2	11	9	2020	North	266	94	148	8	3	10			2					
+68	opinium2	11	9	2020	Midlands	161	84	61	6	2	7			2					
+68	opinium2	11	9	2020	London	120	47	48	19	1	4			1					
+68	opinium2	11	9	2020	South	333	154	114	27	6	22			9					
+68	opinium2	11	9	2020	Wales	56	20	25	1	0	0		8	1					
+68	opinium2	11	9	2020	Scotland	123	40	22	3	1	3	55		0					
+69	yougovwales	4	9	2020	Wales	100	33	41	2	4	3		15	2					

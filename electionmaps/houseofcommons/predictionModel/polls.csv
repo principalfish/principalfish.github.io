@@ -514,3 +514,8 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 80	comres	12	10	2020	South East England	202	86	79	20	8	7			3					
 80	comres	12	10	2020	Eastern	146	60	54	15	7	9			2					
 80	comres	12	10	2020	London	167	62	76	14	7	5			3					
+81	yougov	15	10	2020	London	201	28	54	5	7	4			1					
+81	yougov	15	10	2020	Rest of South	563	46	30	10	6	7			1					
+81	yougov	15	10	2020	Midlands and Wales	363	43	40	3	4	5		4	2					
+81	yougov	15	10	2020	North England	404	36	51	4	3	6			0					
+81	yougov	15	10	2020	Scotland	144	21	14	7	3	3	52		0					

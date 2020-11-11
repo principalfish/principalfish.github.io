@@ -541,3 +541,43 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 84	opinium2	23	10	2020	South	348	136	141	30	4	28			10					
 84	opinium2	23	10	2020	Wales	59	23	17	4	1			11	2					
 84	opinium2	23	10	2020	Scotland	116	31	24	1		4	55		0					
+85	comres	26	10	2020	Scotland	128	23	27	18	1	1	57		0					
+85	comres	26	10	2020	North West England	150	55	76	7	3	8			1					
+85	comres	26	10	2020	North East England	54	17	32	0	5	1			0					
+85	comres	26	10	2020	Yorkshire and Humber	106	41	58	2	1	3			1					
+85	comres	26	10	2020	Wales	65	27	31	0	2	3		2	1					
+85	comres	26	10	2020	West Midlands	105	51	37	7	3	7			0					
+85	comres	26	10	2020	East Midlands	91	41	35	6		7			2					
+85	comres	26	10	2020	South West England	127	56	43	21	3	3			1					
+85	comres	26	10	2020	South East England	189	103	61	17	5	3			0					
+85	comres	26	10	2020	Eastern	136	79	45	2	5	2			2					
+85	comres	26	10	2020	London	163	63	79	10	3	4			3					
+86	mori	28	10	2020	North	204	90	96	6	4	5			5					
+86	mori	28	10	2020	Midlands	245	97	107	20	1	10		10	1					
+86	mori	28	10	2020	Wales	0													
+86	mori	28	10	2020	South	227	77	70	18	1	11			6					
+86	mori	28	10	2020	London	138	30	55	8	4	13			1					
+86	mori	28	10	2020	England	88	286	310	49	9	39			12					
+86	mori	28	10	2020	Scotland	89	9	22	9		1	42							
+87	yougov	29	10	2020	London	199	23	54	8	6	7			2					
+87	yougov	29	10	2020	Rest of South	557	49	31	8	4	4			4					
+87	yougov	29	10	2020	Midlands and Wales	360	45	40	4	4	5		2	1					
+87	yougov	29	10	2020	North England	400	34	48	4	6	6			2					
+87	yougov	29	10	2020	Scotland	143	20	17	5		5	51		1					
+88	yougov	5	11	2020	London	197	31	57	6	4	2			1					
+88	yougov	5	11	2020	Rest of South	552	44	34	11	5	5			2					
+88	yougov	5	11	2020	Midlands and Wales	352	35	42	4	6	5		4	4					
+88	yougov	5	11	2020	North England	396	34	47	4	7	5			2					
+88	yougov	5	11	2020	Scotland	140	16	17	6	8	2	48		2					
+89	survation	6	11	2020	London	110	36	51	11	4	8			0					
+89	survation	6	11	2020	South	272	136	76	43	3	12			2					
+89	survation	6	11	2020	Midlands	134	53	63	13		4			0					
+89	survation	6	11	2020	North	202	85	93	11	5	5			3					
+89	survation	6	11	2020	Scotland	74	16	11	1		2	43		0					
+89	survation	6	11	2020	Wales	42	12	21	3		3		3	0					
+90	opinium2	6	11	2020	North	261	92	142	14	5	3			5					
+90	opinium2	6	11	2020	Midlands	179	78	80	8	3	2			7					
+90	opinium2	6	11	2020	London	124	36	68	8	3	7			1					
+90	opinium2	6	11	2020	South	346	150	117	41	11	15			13					
+90	opinium2	6	11	2020	Wales	64	25	24	3	0	4		7	2					
+90	opinium2	6	11	2020	Scotland	112	32	21	0	1	2	56		0					

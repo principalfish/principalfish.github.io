@@ -581,3 +581,19 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 90	opinium2	6	11	2020	South	346	150	117	41	11	15			13					
 90	opinium2	6	11	2020	Wales	64	25	24	3	0	4		7	2					
 90	opinium2	6	11	2020	Scotland	112	32	21	0	1	2	56		0					
+91	comres	11	11	2020	Scotland	138	33	27	7	0	8	64		0					
+91	comres	11	11	2020	North West England	161	63	80	8	5	5			0					
+91	comres	11	11	2020	North East England	49	20	24	2	4	0			0					
+91	comres	11	11	2020	Yorkshire and Humber	117	50	52	8	1	4			2					
+91	comres	11	11	2020	Wales	68	24	27	4	4	3		5	1					
+91	comres	11	11	2020	West Midlands	122	53	52	10	3	4			0					
+91	comres	11	11	2020	East Midlands	101	41	41	5	0	13			0					
+91	comres	11	11	2020	South West England	124	67	34	9	7	3			4					
+91	comres	11	11	2020	South East England	183	82	61	29	3	7			1					
+91	comres	11	11	2020	Eastern	148	75	40	14	1	15			2					
+91	comres	11	11	2020	London	179	54	80	25	5	15			0					
+92	yougov	11	11	2020	London	196	24	60	6	4	4			1					
+92	yougov	11	11	2020	Rest of South	548	48	36	6	3	7			2					
+92	yougov	11	11	2020	Midlands and Wales	354	44	34	4	5	6		5	2					
+92	yougov	11	11	2020	North England	393	33	52	5	5	4			1					
+92	yougov	11	11	2020	Scotland	140	20	16	3	2	3	52		1					

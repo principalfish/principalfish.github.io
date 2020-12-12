@@ -635,3 +635,31 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 97	yougov	27	11	2020	Midlands and Wales	368	39	38	3	6	5		5	3					
 97	yougov	27	11	2020	North England	409	33	52	4	5	4			2					
 97	yougov	27	11	2020	Scotland	146	19	15	4	3	2	55		2					
+98	comres	29	11	2020	Scotland	144	33	27	8	1	4	70		1					
+98	comres	29	11	2020	North West England	161	55	84	10	5	7			1					
+98	comres	29	11	2020	North East England	62	23	32	2	2	2			0					
+98	comres	29	11	2020	Yorkshire and Humber	104	30	50	9	9	6			0					
+98	comres	29	11	2020	Wales	75	36	22	2	0	5		9	1					
+98	comres	29	11	2020	West Midlands	123	59	51	11	1	1			0					
+98	comres	29	11	2020	East Midlands	110	46	40	17	1	5			1					
+98	comres	29	11	2020	South West England	138	66	48	16	4	5			0					
+98	comres	29	11	2020	South East England	205	99	71	19	5	8			3					
+98	comres	29	11	2020	Eastern	137	71	48	6	5	8			0					
+98	comres	29	11	2020	London	188	68	91	18	5	6			0					
+99	yougov	3	12	2020	London	205	29	53	7	2	7			2					
+99	yougov	3	12	2020	Rest of South	573	49	32	8	3	5			1					
+99	yougov	3	12	2020	Midlands and Wales	370	42	36	6	3	4		4	5					
+99	yougov	3	12	2020	North England	411	31	50	4	6	6			3					
+99	yougov	3	12	2020	Scotland	147	23	15	7	1	5	47		2					
+100	opinium2	4	12	2020	North	250	91	132	10	6	9			2					
+100	opinium2	4	12	2020	Midlands	177	84	72	6	8	3			4					
+100	opinium2	4	12	2020	London	124	44	56	11	4	5			4					
+100	opinium2	4	12	2020	South	307	134	106	21	17	8			20					
+100	opinium2	4	12	2020	Wales	56	15	25	4				10	2					
+100	opinium2	4	12	2020	Scotland	108	22	16	4		1	61		4					
+101	survation	10	12	2020	London	343	121	147	43	29	3			1					
+101	survation	10	12	2020	South	895	429	298	92	51	12			13					
+101	survation	10	12	2020	Midlands	439	214	164	32	21	4			5					
+101	survation	10	12	2020	North	657	248	320	42	27	11			7					
+101	survation	10	12	2020	Scotland	258	49	47	25	4	2	128		2					
+101	survation	10	12	2020	Wales	146	55	63	4	2	1		20	1					

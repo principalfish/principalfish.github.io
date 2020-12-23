@@ -663,3 +663,37 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 101	survation	10	12	2020	North	657	248	320	42	27	11			7					
 101	survation	10	12	2020	Scotland	258	49	47	25	4	2	128		2					
 101	survation	10	12	2020	Wales	146	55	63	4	2	1		20	1					
+102	mori	11	12	2020	North	150	62	80	5	1	1			0					
+102	mori	11	12	2020	Midlands	189	94	66	10	1	11		6	1					
+102	mori	11	12	2020	Wales	0													
+102	mori	11	12	2020	South	156	68	58	10	4	10			5					
+102	mori	11	12	2020	London	93	30	49	5	0	8			1					
+102	mori	11	12	2020	England	551	243	240	26	6	30			7					
+102	mori	11	12	2020	Scotland	56	12	8	6	0	0	29		1					
+103	comres	13	12	2020	Scotland	128	24	17	14	2	11	61							
+103	comres	13	12	2020	North West England	144	53	68	15	5	3								
+103	comres	13	12	2020	North East England	61	18	33	1	6	4								
+103	comres	13	12	2020	Yorkshire and Humber	108	53	47	2	5	0								
+103	comres	13	12	2020	Wales	56	21	21	9	1	1		4						
+103	comres	13	12	2020	West Midlands	108	47	41	11	5	4								
+103	comres	13	12	2020	East Midlands	78	44	29	3	1	0								
+103	comres	13	12	2020	South West England	114	57	31	10	12	3			1					
+103	comres	13	12	2020	South East England	178	73	68	21	2	14								
+103	comres	13	12	2020	Eastern	130	60	44	7	4	12			4					
+103	comres	13	12	2020	London	153	43	81	16	5	7			1					
+104	yougov	16	12	2020	London	228	31	45	8	5	10			1					
+104	yougov	16	12	2020	Rest of South	638	45	31	9	5	7			2					
+104	yougov	16	12	2020	Midlands and Wales	412	46	36	4	2	4		5	2					
+104	yougov	16	12	2020	North England	457	37	49	4	4	5			1					
+104	yougov	16	12	2020	Scotland	163	20	17	5	2	1	53		2					
+105	opinium2	17	12	2020	North	266	101	143	9	5	4			4					
+105	opinium2	17	12	2020	Midlands	160	66	68	9	6	5			7					
+105	opinium2	17	12	2020	London	119	53	46	8	2	3			8					
+105	opinium2	17	12	2020	South	317	133	97	29	22	22			14					
+105	opinium2	17	12	2020	Wales	68	21	32	1	0	1		10	2					
+105	opinium2	17	12	2020	Scotland	121	33	26	4	1	3	53		2					
+106	yougov	22	12	2020	London	206	26	59	8	2	3			1					
+106	yougov	22	12	2020	Rest of South	576	43	38	6	4	8			1					
+106	yougov	22	12	2020	Midlands and Wales	372	42	39	4	4	6		4	1					
+106	yougov	22	12	2020	North England	413	37	50	3	4	4			2					
+106	yougov	22	12	2020	Scotland	147	18	13	5	2	2	57		2					

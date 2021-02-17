@@ -792,3 +792,31 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 120	mori	4	2	2021	London	149	38	67	15	2	8			0					
 120	mori	4	2	2021	England	914	324	295	58	8	47			3					
 120	mori	4	2	2021	Scotland	89	19	15	5	0	7	33		0					
+121	survation	6	2	2021	London	89	21	44	10	1	12			1					
+121	survation	6	2	2021	South	227	106	67	31	2	20			1					
+121	survation	6	2	2021	Midlands	112	54	44	7	3	3			1					
+121	survation	6	2	2021	North	166	68	69	16	3	11			1					
+121	survation	6	2	2021	Scotland	71	22	7	2	0	1	38		0					
+121	survation	6	2	2021	Wales	29	10	8	1		0		10	0					
+122	comres	7	2	2021	Scotland	123	35	22	10	2	1	54		0					
+122	comres	7	2	2021	North West England	154	46	88	10	1	7			1					
+122	comres	7	2	2021	North East England	52	20	22	3	7	1			0					
+122	comres	7	2	2021	Yorkshire and Humber	117	50	45	15	2	3			2					
+122	comres	7	2	2021	Wales	64	27	23	2	3	0		9	0					
+122	comres	7	2	2021	West Midlands	128	63	46	5	1	8			4					
+122	comres	7	2	2021	East Midlands	102	57	39	4	2	0			1					
+122	comres	7	2	2021	South West England	132	55	43	15	5	8			6					
+122	comres	7	2	2021	South East England	179	85	77	12	2	3			0					
+122	comres	7	2	2021	Eastern	136	81	33	7	2	11			1					
+122	comres	7	2	2021	London	163	47	79	22	5	8			0					
+123	yougov	10	2	2021	London	199	28	56	7	1	3			5					
+123	yougov	10	2	2021	Rest of South	558	49	28	8	4	9			2					
+123	yougov	10	2	2021	Midlands and Wales	360	48	33	3	3	6		4	3					
+123	yougov	10	2	2021	North England	400	37	47	6	2	6			2					
+123	yougov	10	2	2021	Scotland	143	22	21	4	1	7	45		1					
+124	opinium2	12	2	2021	North	246	92	124	11	6	10			3					
+124	opinium2	12	2	2021	Midlands	165	79	64	8	2	5			6					
+124	opinium2	12	2	2021	London	118	37	59	10	0	8			4					
+124	opinium2	12	2	2021	South	338	162	104	27	7	26			12					
+124	opinium2	12	2	2021	Wales	62	34	21	4	0	1		12	1					
+124	opinium2	12	2	2021	Scotland	110	38	12	2	0	0	56		2					

@@ -820,3 +820,47 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 124	opinium2	12	2	2021	South	338	162	104	27	7	26			12					
 124	opinium2	12	2	2021	Wales	62	34	21	4	0	1		12	1					
 124	opinium2	12	2	2021	Scotland	110	38	12	2	0	0	56		2					
+125	yougov	18	2	2021	London	200	27	54	7	1	11			0					
+125	yougov	18	2	2021	Rest of South	559	53	27	10	3	4			2					
+125	yougov	18	2	2021	Midlands and Wales	361	40	38	5	4	7		4	2					
+125	yougov	18	2	2021	North England	401	33	48	7	5	6			1					
+125	yougov	18	2	2021	Scotland	143	24	14	4	1	2	55		0					
+126	comres	21	2	2021	Scotland	131	33	32	3	4	4	55							
+126	comres	21	2	2021	North West England	142	47	68	14	7	6								
+126	comres	21	2	2021	North East England	56	21	27	3	1	2			2					
+126	comres	21	2	2021	Yorkshire and Humber	113	51	48	7	1	2			3					
+126	comres	21	2	2021	Wales	76	24	32	4	1	2		13						
+126	comres	21	2	2021	West Midlands	105	44	41	11	1	3			4					
+126	comres	21	2	2021	East Midlands	93	49	31	7	1	2			1					
+126	comres	21	2	2021	South West England	122	54	46	8	4	3			7					
+126	comres	21	2	2021	South East England	201	98	68	13	9	11			1					
+126	comres	21	2	2021	Eastern	131	64	43	16	2	5								
+126	comres	21	2	2021	London	150	54	77	9	4	5			2					
+127	survation	25	2	2021	London	87	20	46	8	1	11			2					
+127	survation	25	2	2021	South	226	102	72	26	2	17			7					
+127	survation	25	2	2021	Midlands	119	63	39	9	1	7			1					
+127	survation	25	2	2021	North	173	84	74	5	1	4			5					
+127	survation	25	2	2021	Scotland	70	23	5	7		3	33		1					
+127	survation	25	2	2021	Wales	35	15	11	0		2		6	0					
+128	opinium2	26	2	2021	North	233	95	109	15	6	6			2					
+128	opinium2	26	2	2021	Midlands	168	96	62	5	0	3			3					
+128	opinium2	26	2	2021	London	123	30	59	22	2	7			3					
+128	opinium2	26	2	2021	South	339	165	112	25	8	20			9					
+128	opinium2	26	2	2021	Wales	58	20	17	2	0	5		11	2					
+128	opinium2	26	2	2021	Scotland	114	35	18	3	0	0	58		0					
+129	yougov	26	2	2021	London	196	29	52	4	2	11			1					
+129	yougov	26	2	2021	Rest of South	550	51	28	7	3	8			1					
+129	yougov	26	2	2021	Midlands and Wales	355	45	32	5	6	8		4	1					
+129	yougov	26	2	2021	North England	395	37	49	5	3	5			2					
+129	yougov	26	2	2021	Scotland	141	22	20	0	1	6	51		0					
+130	comres	28	2	2021	Scotland	115	28	23	13	3	2	46		0					
+130	comres	28	2	2021	North West England	144	59	69	5	4	8			0					
+130	comres	28	2	2021	North East England	55	23	24	3	5	1			0					
+130	comres	28	2	2021	Yorkshire and Humber	100	41	50	5	3	1			1					
+130	comres	28	2	2021	Wales	71	19	30	6		2		15	0					
+130	comres	28	2	2021	West Midlands	101	50	41	4	2	3			1					
+130	comres	28	2	2021	East Midlands	85	42	43	6	3	1			0					
+130	comres	28	2	2021	South West England	128	66	39	16	5	3			0					
+130	comres	28	2	2021	South East England	176	90	54	12	7	10			2					
+130	comres	28	2	2021	Eastern	150	90	35	14	3	5			3					
+130	comres	28	2	2021	London	143	48	73	11	1	9			1					

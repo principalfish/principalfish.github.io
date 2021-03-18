@@ -54,6 +54,7 @@ pollster_weights = {
     "redfield" : 1
 }
 
+
 class Seat(object):
 
     def __init__(self, data):

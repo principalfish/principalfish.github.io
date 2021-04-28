@@ -904,3 +904,43 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 137	opinium2	26	3	2021	South	343	159	102	33	11	25			14					
 137	opinium2	26	3	2021	Wales	56	23	16	4	0	0		11	2					
 137	opinium2	26	3	2021	Scotland	111	28	18	4	2	0	60		0					
+138	yougov	8	4	2021	London	205	31	53	9	1	4			1					
+138	yougov	8	4	2021	Rest of South	573	48	27	7	4	10			3					
+138	yougov	8	4	2021	Midlands and Wales	370	50	34	3	2	4		4	3					
+138	yougov	8	4	2021	North England	411	38	42	6	4	6			5					
+138	yougov	8	4	2021	Scotland	147	18	13	7	3	4	52		2					
+139	opinium2	9	4	2021	North	256	108	117	8	4	8			2					
+139	opinium2	9	4	2021	Midlands	180	99	66	6	4	7			6					
+139	opinium2	9	4	2021	London	94	48	53	15	1	5			0					
+139	opinium2	9	4	2021	South	402	169	117	28	2	20			8					
+139	opinium2	9	4	2021	Wales	62	23	21	4		0		10	1					
+139	opinium2	9	4	2021	Scotland	105	31	11	1		2	59		1					
+140	yougov	14	4	2021	London	203	36	34	20	2	7			1					
+140	yougov	14	4	2021	Rest of South	568	49	26	9	5	9			1					
+140	yougov	14	4	2021	Midlands and Wales	367	53	28	2	2	7		4	3					
+140	yougov	14	4	2021	North England	407	37	40	6	3	11			4					
+140	yougov	14	4	2021	Scotland	145	27	15	8	2	1	46		1					
+141	survation	19	4	2021	London	102	30	38	15		13			5					
+141	survation	19	4	2021	South	257	116	86	29		18			8					
+141	survation	19	4	2021	Midlands	134	64	48	9		9			4					
+141	survation	19	4	2021	North	202	93	88	8		8			4					
+141	survation	19	4	2021	Scotland	75	22	7	6		3	36		1					
+141	survation	19	4	2021	Wales	39	9	16	4		1		8	1					
+142	mori	22	4	2021	North	178	49	88	14	0	5			3					
+142	mori	22	4	2021	Midlands	239	122	62	13	6	12		6						
+142	mori	22	4	2021	Wales	0													
+142	mori	22	4	2021	South	172	69	50	17	1	10			12					
+142	mori	22	4	2021	London	95	16	45	7	2	4			3					
+142	mori	22	4	2021	England	646	243	230	51	8	31			17					
+142	mori	22	4	2021	Scotland	71	17	8	3	0	1	38		1					
+143	yougov	22	4	2021	London	208	30	49	9	5	6			1					
+143	yougov	22	4	2021	Rest of South	581	54	26	6	3	10			2					
+143	yougov	22	4	2021	Midlands and Wales	375	51	33	3	1	6		4	1					
+143	yougov	22	4	2021	North England	417	40	44	5	2	5			4					
+143	yougov	22	4	2021	Scotland	149	25	20	5	3	1	46		0					
+144	opinium2	23	4	2021	North	264	111	115	11	6	12			9					
+144	opinium2	23	4	2021	Midlands	167	86	60	7	2	9			4					
+144	opinium2	23	4	2021	London	126	42	56	14	2	7			6					
+144	opinium2	23	4	2021	South	338	170	93	37	8	19			7					
+144	opinium2	23	4	2021	Wales	56	30	14	0	0	3		7	1					
+144	opinium2	23	4	2021	Scotland	113	30	18	1	0	3	59		3					

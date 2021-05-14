@@ -1177,7 +1177,7 @@ function getParameterByName(name, url) {
 var url = window.location.href;
 
 var urlParamMap = {
-	null : election2019,
+	null : prediction,
 	"current" : currentParliament,
 	"prediction" : prediction,
 	"predictit" : predictit,
@@ -1431,7 +1431,7 @@ var urlParamMap = {
   },
 
   seatInfo : function(data){
-
+    console.log(data)
     // clean old divs
     $("#information-party .party-flair").removeClass(seatInfoTable.party);
     $("#information-gain .party-flair").removeClass(seatInfoTable.gain);

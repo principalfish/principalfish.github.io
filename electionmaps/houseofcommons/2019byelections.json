@@ -1,0 +1,38 @@
+{
+  "Hartlepool" : {
+    "partyInfo" : {
+      "conservative" : {"name" : "Jill Mortimer", "total" : 15529},
+      "labour" : {"name" : "Paul Williams", "total" : 8589},
+      "libdems" : {"name" : "Andrew Hagoon", "total" : 349},
+      "green" : {"name" : "Rachel Featherstone", "total" : 358},
+      "others" : {"name" : "Others", "total" : 5108}
+    },
+
+    "seatInfo" : {
+      "current" : "conservative",
+      "electorate" : 70100,
+      "majority" : 6940,
+      "name" : "Hartlepool",
+      "region" : "northeastengland",
+      "byElection" : "May 6th 2021"
+    }
+  },
+  "Airdrie and Shotts" : {
+    "partyInfo" : {
+      "conservative" : {"name" : "Ben Callaghan", "total" : 2812},
+      "labour" : {"name" : "Kenneth Stevenson", "total" : 8372},
+      "libdems" : {"name" : "Stephen Arundale", "total" : 220},
+      "snp" : {"name" : "Anum Qaisar-Javed", "total" : 10129},
+      "others" : {"name" : "Others", "total" : 294}
+    },
+
+    "seatInfo" : {
+      "current" : "snp",
+      "electorate" : 63635,
+      "majority" : 1757,
+      "name" : "Airdrie and Shotts",
+      "region" : "scotland",
+      "byElection" : "May 13th 2021"
+    }
+  }
+}

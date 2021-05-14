@@ -13,7 +13,7 @@ var seatInfoTable = {
   },
 
   seatInfo : function(data){
-
+    console.log(data)
     // clean old divs
     $("#information-party .party-flair").removeClass(seatInfoTable.party);
     $("#information-gain .party-flair").removeClass(seatInfoTable.gain);

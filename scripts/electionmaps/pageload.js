@@ -203,7 +203,7 @@ function getParameterByName(name, url) {
 var url = window.location.href;
 
 var urlParamMap = {
-	null : election2019,
+	null : prediction,
 	"current" : currentParliament,
 	"prediction" : prediction,
 	"predictit" : predictit,

@@ -34,5 +34,25 @@
       "region" : "scotland",
       "byElection" : "May 13th 2021"
     }
+  },
+  
+  "Chesham and Amersham" : {
+    "partyInfo" : {
+      "conservative" : {"name" : "Peter Fleet", "total" : 13489},
+      "labour" : {"name" : "Natasa Pantelic", "total" : 622},
+      "libdems" : {"name" : "Sarah Green", "total" : 21517},
+      "ukip" : {"name" : "Alex Wilson", "total" : 414},
+      "green" : {"name" : "Carolyne Culver", "total" : 1480},
+      "others" : {"name" : "Others", "total" : 432 }
+    },
+
+    "seatInfo" : {
+      "current" : "libdems",
+      "electorate" : 72828,
+      "majority" : 8028,
+      "name" : "Chesham and Amersham",
+      "region" : "southeastengland",
+      "byElection" : "Jun 17th 2021"
+    }
   }
 }

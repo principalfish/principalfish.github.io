@@ -54,5 +54,25 @@
       "region" : "southeastengland",
       "byElection" : "Jun 17th 2021"
     }
-  }
+  },
+  
+  "Batley and Spen" : {
+    "partyInfo" : {
+      "conservative" : {"name" : "Ryan Stephenson", "total" : 12973},
+      "labour" : {"name" : "Kim Leadbeater", "total" : 13296},
+      "libdems" : {"name" : "Tom Gordon", "total" : 1254},
+      "other" : {"name" : "George Galloway", "total" : 8264,
+      "others" : {"name" : "Others", "total" : 1908 }
+    },
+
+    "seatInfo" : {
+      "current" : "labour",
+      "electorate" : 79375,
+      "majority" : 323,
+      "name" : "Batley & Spen",
+      "region" : "yorkshireandthehumber",
+      "byElection" : "Jul 1st 2021"
+      }
+    }
+  } 
 }

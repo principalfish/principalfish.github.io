@@ -1177,3 +1177,35 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 186	yougov	29	9	2021	Midlands and Wales	396	41	32	5	9	6		7	1					
 186	yougov	29	9	2021	North England	442	36	38	5	8	5			5					
 186	yougov	29	9	2021	Scotland	158	25	20	4	2	1	48		1					
+187	yougov	6	10	2021	London	200	28	43	11	7	9			2					
+187	yougov	6	10	2021	Rest of South	560	45	25	15	3	9			3					
+187	yougov	6	10	2021	Midlands and Wales	362	48	29	4	3	9		3	2					
+187	yougov	6	10	2021	North England	402	37	39	5	4	11			4					
+187	yougov	6	10	2021	Scotland	143	12	20	8	2	1	55		1					
+188	yougov	13	10	2021	London	199	31	44	16	2	6			1					
+188	yougov	13	10	2021	Rest of South	557	48	25	11	6	8			1					
+188	yougov	13	10	2021	Midlands and Wales	360	43	31	8	6	8		3	2					
+188	yougov	13	10	2021	North England	400	38	40	4	2	11			5					
+188	yougov	13	10	2021	Scotland	143	30	14	4		6	41		2					
+189	opinium2	13	10	2021	North	229	86	110	14		7			12					
+189	opinium2	13	10	2021	Midlands	175	90	56	10		11			8					
+189	opinium2	13	10	2021	London	114	37	62	8		5			3					
+189	opinium2	13	10	2021	South	333	153	108	30		25			17					
+189	opinium2	13	10	2021	Wales	59	18	20	5		1		13	1					
+189	opinium2	13	10	2021	Scotland	97	25	14	1		1	51		6					
+190	yougov	21	10	2021	London	201	25	48	16	1	10			1					
+190	yougov	21	10	2021	Rest of South	563	46	24	13	3	11			2					
+190	yougov	21	10	2021	Midlands and Wales	364	40	33	4	7	12		3	2					
+190	yougov	21	10	2021	North England	404	35	44	5	5	9			1					
+190	yougov	21	10	2021	Scotland	144	24	16	9	1	7	44							
+191	opinium2	25	10	2021	North	319	124	132	19		27			17					
+191	opinium2	25	10	2021	Midlands	212	101	76	11		13			11					
+191	opinium2	25	10	2021	London	154	41	78	14		13			8					
+191	opinium2	25	10	2021	South	426	194	130	54		28			21					
+191	opinium2	25	10	2021	Wales	72	27	23	5		5		10	2					
+191	opinium2	25	10	2021	Scotland	121	37	13	1		0	63		6					
+192	yougov	28	10	2021	London	204	27	43	12	2	14			2					
+192	yougov	28	10	2021	Rest of South	571	47	27	10	4	10			1					
+192	yougov	28	10	2021	Midlands and Wales	369	44	35	6	1	10		3	2					
+192	yougov	28	10	2021	North England	409	36	39	6	4	11			4					
+192	yougov	28	10	2021	Scotland	146	19	20	5	2	5	46		2					

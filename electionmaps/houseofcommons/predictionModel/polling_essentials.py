@@ -11,7 +11,7 @@ party_map = {
      'conservative': "Conservative",
      'labour': "Labour",
      'libdems': "Lib Dems",
-     'ukip': "Brexit Party",
+     'ukip': "Reform UK",
      'snp': "SNP",
      'plaidcymru': "Plaid Cymru",
      'green': "Green",

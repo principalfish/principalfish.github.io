@@ -1329,9 +1329,41 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 223	yougov	13	1	2022	Midlands and Wales	367	33	41	8	7	4		3	2					
 223	yougov	13	1	2022	North England	407	28	50	9	6	6			1					
 223	yougov	13	1	2022	Scotland	145	21	10	10	1	3	53		1					
-210	opinium2	14	1	2022	North	320	102	150	29		18			22					
-210	opinium2	14	1	2022	Midlands	192	75	86	14		8			9					
-210	opinium2	14	1	2022	London	161	42	76	20		14			10					
-210	opinium2	14	1	2022	South	405	136	147	49		34			39					
-210	opinium2	14	1	2022	Wales	64	10	30	4		2		13	5					
-210	opinium2	14	1	2022	Scotland	129	27	32	5		4	56		5					
+224	opinium2	14	1	2022	North	320	102	150	29		18			22					
+224	opinium2	14	1	2022	Midlands	192	75	86	14		8			9					
+224	opinium2	14	1	2022	London	161	42	76	20		14			10					
+224	opinium2	14	1	2022	South	405	136	147	49		34			39					
+224	opinium2	14	1	2022	Wales	64	10	30	4		2		13	5					
+224	opinium2	14	1	2022	Scotland	129	27	32	5		4	56		5					
+225	yougov	14	1	2022	London	202	21	55	7	5	10			1					
+225	yougov	14	1	2022	Rest of South	565	36	35	15	6	5			3					
+225	yougov	14	1	2022	Midlands and Wales	365	35	40	9	5	5		5	1					
+225	yougov	14	1	2022	North England	406	33	45	9	5	7			1					
+225	yougov	14	1	2022	Scotland	145	17	18	8	3	3	46		5					
+226	survation	17	1	2022	London	213	64	102	30	7	5			4					
+226	survation	17	1	2022	South	510	215	202	53	14	19			7					
+226	survation	17	1	2022	Midlands	262	114	103	30	4	8			3					
+226	survation	17	1	2022	North	395	99	234	29	14	13			5					
+226	survation	17	1	2022	Scotland	149	27	33	13	1	2	67		7					
+226	survation	17	1	2022	Wales	89	26	39	9	2	2		10						
+227	yougov	21	1	2022	London	200	24	46	11	3	11			4					
+227	yougov	21	1	2022	Rest of South	560	37	33	12	6	10			2					
+227	yougov	21	1	2022	Midlands and Wales	362	38	39	8	4	5		2	3					
+227	yougov	21	1	2022	North England	402	30	54	4	3	8			1					
+227	yougov	21	1	2022	Scotland	143	18	22	4	2	6	48		0					
+228	survation	25	1	2022	London	127	42	53	15	10	5			0					
+228	survation	25	1	2022	South	278	117	103	37	10	10			1					
+228	survation	25	1	2022	Midlands	126	55	56	8	1	5			2					
+228	survation	25	1	2022	North	212	71	111	21	3	4			0					
+228	survation	25	1	2022	Scotland	82	18	13	8	0	0	42		0					
+228	survation	25	1	2022	Wales	38	6	20	0	4	1		7	0					
+229	yougov	27	1	2022	London	199	21	47	16	3	9			3					
+229	yougov	27	1	2022	Rest of South	556	39	35	13	2	8			2					
+229	yougov	27	1	2022	Midlands and Wales	359	35	40	9	5	4		4	3					
+229	yougov	27	1	2022	North England	399	32	44	7	4	7			6					
+229	yougov	27	1	2022	Scotland	142	18	18	6	1	3	53		1					
+231	yougov	2	2	2022	London	199	19	62	10	3	4			2					
+231	yougov	2	2	2022	Rest of South	558	37	33	13	6	8			2					
+231	yougov	2	2	2022	Midlands and Wales	350	37	40	10	4	4		3	2					
+231	yougov	2	2	2022	North England	400	31	49	7	4	7			1					
+231	yougov	2	2	2022	Scotland	143	27	19	3	1	4	46		0					

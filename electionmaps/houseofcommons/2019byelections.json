@@ -72,6 +72,60 @@
       "region" : "yorkshireandthehumber",
       "byElection" : "Jul 1st 2021"
       }
+    },
+  
+  
+  "Old Bexley and Sidcup" : {
+    "partyInfo" : {
+      "conservative" : {"name" : "Louie French", "total" : 11189},
+      "labour" : {"name" : "Daniel Francis", "total" : 6711},
+      "libdems" : {"name" : "Simone Reynolds", "total" : 647},
+	  "ukip": {"name": "Richard Tice", "total": 1432},
+      "green" : {"name" : "Jonathan Rooks", "total" : 830},
+      "others" : {"name" : "Others", "total" : 924 }
+    },
+
+    "seatInfo" : {
+      "current" : "conservative",
+      "electorate" : 64831,
+      "majority" : 4478,
+      "region" : "london",
+      "byElection" : "Dec 2nd 2021"
+      }
+    },
+  
+  "North Shropshire" : {
+    "partyInfo" : {
+      "conservative" : {"name" : "Neil Shastri-Hurst", "total" : 12032},
+      "labour" : {"name" : "Ben Wood", "total" : 3686},
+      "libdems" : {"name" : "Helen Morgan", "total" : 17957},
+	  "ukip" : {"name" : "Kirsty Walmsley", "total" : 1427},
+	  "green" : {"name" : "Duncan Kerr", "total" : 1738},
+      "others" : {"name" : "Others", "total" : 1182 }
+    },
+
+    "seatInfo" : {
+      "current" : "libdems",
+      "electorate" : 82314,
+      "majority" : 5925,
+      "region" : "westmidlands",
+      "byElection" : "Dec 16th 2021"
+      }
+    },
+  
+  "Southend West" : {
+    "partyInfo" : {
+      "conservative" : {"name" : "Anna Firth", "total" : 12792},
+      "others" : {"name" : "Others", "total" : 2066 }
+    },
+
+    "seatInfo" : {
+      "current" : "conservative",
+      "electorate" : 66354,
+      "majority" : 12280,
+      "region" : "eastofengland",
+      "byElection" : "Feb 3rd 2022"
+      }
     }
   
 }

@@ -324,7 +324,7 @@ class Poll(object):
         # alter closer to election  when more polls
         degrade_factor = 0.9 #per day
         weight *= math.pow(degrade_factor, days_past)
-
+#
         #testing
         if self.company == "me":
             weight = 10000000

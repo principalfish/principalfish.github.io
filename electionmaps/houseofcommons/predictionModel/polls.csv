@@ -1412,3 +1412,9 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 242	yougov	29	9	2022	Midlands and Wales	372	23	53	6	4	7		4	1					
 242	yougov	29	9	2022	North England	413	22	59	9	4	6			1					
 242	yougov	29	9	2022	Scotland	147	10	38	2	1	4	44		1					
+243	survation	29	9	2022	London	138	35	89	8	4	2								
+243	survation	29	9	2022	South	328	116	146	58	3	2								
+243	survation	29	9	2022	Midlands	185	74	92	13	2	3								
+243	survation	29	9	2022	North	252	62	149	18	14	3			5					
+243	survation	29	9	2022	Scotland	97	11	28	7		1	50							
+243	survation	29	9	2022	Wales	58	9	31	10				7						

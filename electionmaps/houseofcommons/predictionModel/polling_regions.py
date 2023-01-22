@@ -62,6 +62,15 @@ polling_regions = {
         "Scotland" : ["scotland"]
     },
 
+    "yougov2" : {
+        "Wales" : ["wales"],
+        "London" : ["london"],
+        "South" : ["southwestengland", "southeastengland", "eastofengland"],
+        "Midlands" : ["eastmidlands", "westmidlands"],
+        "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
+        "Scotland" : ["scotland"]
+    },
+
     "yougovall" : {
         "Scotland" : ["scotland"],
         "Wales" : ["wales"],

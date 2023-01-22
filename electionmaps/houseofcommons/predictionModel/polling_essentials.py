@@ -35,6 +35,7 @@ pollster_weights = {
     "survationall" : 1.25,
     "survationscotland" : 6,
     "yougov" : 1.3,
+    "yougov2" : 1.3,
     "yougovall" : 2,
     "comres" : 1,
     "comresdm" : 1,
@@ -304,7 +305,7 @@ class Poll(object):
                         numbers[party] /= float(numbers["total"])
 
         #convert percentages to decimal
-        if self.company in ["yougov"]:
+        if self.company in ["yougov", "yougov2"]:
             for region, numbers in self.regions.iteritems():
                 for party in numbers:
                     if party != "total":

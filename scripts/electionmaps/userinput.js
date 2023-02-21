@@ -54,7 +54,7 @@ var userInput = {
       value = 0;
     }
 
-    userInput.inputs[region][party] = parseInt(value);
+    userInput.inputs[region][party] = Math.round(100*parseFloat(value)) / 100 ;
 
     var checkSum = 0;
 
@@ -65,6 +65,7 @@ var userInput = {
         maxVal = val;
       }
     });
+    
     // if all values 0, delete obj
     if (maxVal == 0){
       delete userInput.inputs[region]

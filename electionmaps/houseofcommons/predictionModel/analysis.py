@@ -34,12 +34,13 @@ for region in regions:
 polling_data = "polls.csv"
 
 with open(polling_data, "rb") as polls_file:
-    poll_data = csv.DictReader(polls_file, delimiter = "/t")
+    poll_data = csv.DictReader(polls_file, delimiter = "\t")
+
     poll_codes = []
     poll_rows = []
 
     for row in poll_data:
-
+  
         code = row["code"]
         if code not in poll_codes:
 

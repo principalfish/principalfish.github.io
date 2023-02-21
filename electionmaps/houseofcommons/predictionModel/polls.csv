@@ -1475,3 +1475,42 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 253	opinium2	13	1	2023	South	503	167	201	60	29	31			15					
 253	opinium2	13	1	2023	Wales	71	13	24	11	4	3		16	0					
 253	opinium2	13	1	2023	Scotland	128	24	37	8	2	5	51		2					
+254	yougov2	19	1	2023	Wales	100	13	59	3	9	3		11	2					
+254	yougov2	19	1	2023	Scotland	174	18	32	4	0	3	42		2					
+254	yougov2	19	1	2023	North	483	26	53	5	7	6			1					
+254	yougov2	19	1	2023	Midlands	333	28	48	8	9	5			1					
+254	yougov2	19	1	2023	London	242	20	60	6	5	7			1					
+254	yougov2	19	1	2023	South	671	33	42	13	7	4			1					
+255	yougov2	25	1	2023	Wales	103	18	52	5	4	4		14	3					
+255	yougov2	25	1	2023	Scotland	179	13	25	9	1	9	43		0					
+255	yougov2	25	1	2023	North	496	19	59	8	7	4			2					
+255	yougov2	25	1	2023	Midlands	342	34	42	9	7	5			2					
+255	yougov2	25	1	2023	London	249	20	52	9	4	9			4					
+255	yougov2	25	1	2023	South	689	33	38	13	7	7			1					
+256	yougov2	1	2	2023	Wales	100	24	46	1	9	2		14	4					
+256	yougov2	1	2	2023	Scotland	175	12	28	11	0	2	44		2					
+256	yougov2	1	2	2023	North	483	21	56	5	7	8			2					
+256	yougov2	1	2	2023	Midlands	333	27	49	5	11	5			2					
+256	yougov2	1	2	2023	London	243	18	66	6	3	6			1					
+256	yougov2	1	2	2023	South	672	30	40	14	7	7			2					
+257	survation	6	2	2023	London	185	48	90	26	8	8			3					
+257	survation	6	2	2023	South	471	147	177	76	34	30			5					
+257	survation	6	2	2023	Midlands	238	69	122	20	18	7			1					
+257	survation	6	2	2023	North	356	88	180	24	29	23			3					
+257	survation	6	2	2023	Scotland	145	28	26	13	3	7	63		0					
+257	survation	6	2	2023	Wales	77	13	46	0	3	1		13	1					
+258	yougov2	8	2	2023	Wales	103	18	56	1	7	1		14	5					
+258	yougov2	8	2	2023	Scotland	179	13	31	7	3	3	41		1					
+258	yougov2	8	2	2023	North	497	20	57	9	6	6			2					
+258	yougov2	8	2	2023	Midlands	342	31	46	9	7	7			1					
+258	yougov2	8	2	2023	London	249	21	50	11	6	7			3					
+258	yougov2	8	2	2023	South	690	28	42	14	7	8			1					
+259	opinium2	17	2	2023	North	343	24	51	6	7	8			4					
+259	opinium2	17	2	2023	Midlands	232	34	46	8	7	5			1					
+259	opinium2	17	2	2023	London	222	27	52	6	9	2			3					
+259	opinium2	17	2	2023	South	455	30	38	15	8	7			1					
+259	opinium2	17	2	2023	Wales	70	36	45	4	4	3		8	0					
+259	opinium2	17	2	2023	Scotland	129	14	28	4	5	3	44		2					
+260	yougovscotland	20	2	2023	Scotland	100	19	29	6		4	38		4					
+261	survationscotland	17	2	2023	Scotland	100	17	30	6		4	43		3					
+262	yougovwales	7	2	2023	Wales	100	20	49	5	9	3		14	1					

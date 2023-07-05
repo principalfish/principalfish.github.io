@@ -65,6 +65,8 @@ var userInput = {
         maxVal = val;
       }
     });
+
+    checkSum = 100*parseFloat(checkSum)) / 100
     
     // if all values 0, delete obj
     if (maxVal == 0){

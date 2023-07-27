@@ -1,131 +1,533 @@
 {
-  "Hartlepool" : {
-    "partyInfo" : {
-      "conservative" : {"name" : "Jill Mortimer", "total" : 15529},
-      "labour" : {"name" : "Paul Williams", "total" : 8589},
-      "libdems" : {"name" : "Andrew Hagoon", "total" : 349},
-      "green" : {"name" : "Rachel Featherstone", "total" : 358},
-      "others" : {"name" : "Others", "total" : 5108}
+  "Hartlepool": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Jill Mortimer",
+        "total": 15529
+      },
+      "labour": {
+        "name": "Paul Williams",
+        "total": 8589
+      },
+      "libdems": {
+        "name": "Andrew Hagoon",
+        "total": 349
+      },
+      "green": {
+        "name": "Rachel Featherstone",
+        "total": 358
+      },
+      "others": {
+        "name": "Others",
+        "total": 5108
+      }
     },
-
-    "seatInfo" : {
-      "current" : "conservative",
-      "electorate" : 70100,
-      "majority" : 6940,
-      "name" : "Hartlepool",
-      "region" : "northeastengland",
-      "byElection" : "May 6th 2021"
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": 70100,
+      "majority": 6940,
+      "name": "Hartlepool",
+      "region": "northeastengland",
+      "byElection": "May 6th 2021"
     }
   },
-  "Airdrie and Shotts" : {
-    "partyInfo" : {
-      "conservative" : {"name" : "Ben Callaghan", "total" : 2812},
-      "labour" : {"name" : "Kenneth Stevenson", "total" : 8372},
-      "libdems" : {"name" : "Stephen Arundale", "total" : 220},
-      "snp" : {"name" : "Anum Qaisar-Javed", "total" : 10129},
-      "others" : {"name" : "Others", "total" : 294}
+  "Airdrie and Shotts": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Ben Callaghan",
+        "total": 2812
+      },
+      "labour": {
+        "name": "Kenneth Stevenson",
+        "total": 8372
+      },
+      "libdems": {
+        "name": "Stephen Arundale",
+        "total": 220
+      },
+      "snp": {
+        "name": "Anum Qaisar-Javed",
+        "total": 10129
+      },
+      "others": {
+        "name": "Others",
+        "total": 294
+      }
     },
-
-    "seatInfo" : {
-      "current" : "snp",
-      "electorate" : 63635,
-      "majority" : 1757,
-      "name" : "Airdrie and Shotts",
-      "region" : "scotland",
-      "byElection" : "May 13th 2021"
+    "seatInfo": {
+      "current": "snp",
+      "electorate": 63635,
+      "majority": 1757,
+      "name": "Airdrie and Shotts",
+      "region": "scotland",
+      "byElection": "May 13th 2021"
     }
   },
-  
-  "Chesham and Amersham" : {
-    "partyInfo" : {
-      "conservative" : {"name" : "Peter Fleet", "total" : 13489},
-      "labour" : {"name" : "Natasa Pantelic", "total" : 622},
-      "libdems" : {"name" : "Sarah Green", "total" : 21517},
-      "ukip" : {"name" : "Alex Wilson", "total" : 414},
-      "green" : {"name" : "Carolyne Culver", "total" : 1480},
-      "others" : {"name" : "Others", "total" : 432 }
+  "Chesham and Amersham": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Peter Fleet",
+        "total": 13489
+      },
+      "labour": {
+        "name": "Natasa Pantelic",
+        "total": 622
+      },
+      "libdems": {
+        "name": "Sarah Green",
+        "total": 21517
+      },
+      "ukip": {
+        "name": "Alex Wilson",
+        "total": 414
+      },
+      "green": {
+        "name": "Carolyne Culver",
+        "total": 1480
+      },
+      "others": {
+        "name": "Others",
+        "total": 432
+      }
     },
-
-    "seatInfo" : {
-      "current" : "libdems",
-      "electorate" : 72828,
-      "majority" : 8028,
-      "name" : "Chesham and Amersham",
-      "region" : "southeastengland",
-      "byElection" : "Jun 17th 2021"
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": 72828,
+      "majority": 8028,
+      "name": "Chesham and Amersham",
+      "region": "southeastengland",
+      "byElection": "Jun 17th 2021"
     }
   },
-  
-  "Batley and Spen" : {
-    "partyInfo" : {
-      "conservative" : {"name" : "Ryan Stephenson", "total" : 12973},
-      "labour" : {"name" : "Kim Leadbeater", "total" : 13296},
-      "libdems" : {"name" : "Tom Gordon", "total" : 1254},
-      "other" : {"name" : "George Galloway", "total" : 8264},
-      "others" : {"name" : "Others", "total" : 1908 }
-    },
-
-    "seatInfo" : {
-      "current" : "labour",
-      "electorate" : 79375,
-      "majority" : 323,
-      "region" : "yorkshireandthehumber",
-      "byElection" : "Jul 1st 2021"
+  "Batley and Spen": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Ryan Stephenson",
+        "total": 12973
+      },
+      "labour": {
+        "name": "Kim Leadbeater",
+        "total": 13296
+      },
+      "libdems": {
+        "name": "Tom Gordon",
+        "total": 1254
+      },
+      "other": {
+        "name": "George Galloway",
+        "total": 8264
+      },
+      "others": {
+        "name": "Others",
+        "total": 1908
       }
     },
-  
-  
-  "Old Bexley and Sidcup" : {
-    "partyInfo" : {
-      "conservative" : {"name" : "Louie French", "total" : 11189},
-      "labour" : {"name" : "Daniel Francis", "total" : 6711},
-      "libdems" : {"name" : "Simone Reynolds", "total" : 647},
-	  "ukip": {"name": "Richard Tice", "total": 1432},
-      "green" : {"name" : "Jonathan Rooks", "total" : 830},
-      "others" : {"name" : "Others", "total" : 924 }
-    },
-
-    "seatInfo" : {
-      "current" : "conservative",
-      "electorate" : 64831,
-      "majority" : 4478,
-      "region" : "london",
-      "byElection" : "Dec 2nd 2021"
-      }
-    },
-  
-  "North Shropshire" : {
-    "partyInfo" : {
-      "conservative" : {"name" : "Neil Shastri-Hurst", "total" : 12032},
-      "labour" : {"name" : "Ben Wood", "total" : 3686},
-      "libdems" : {"name" : "Helen Morgan", "total" : 17957},
-	  "ukip" : {"name" : "Kirsty Walmsley", "total" : 1427},
-	  "green" : {"name" : "Duncan Kerr", "total" : 1738},
-      "others" : {"name" : "Others", "total" : 1182 }
-    },
-
-    "seatInfo" : {
-      "current" : "libdems",
-      "electorate" : 82314,
-      "majority" : 5925,
-      "region" : "westmidlands",
-      "byElection" : "Dec 16th 2021"
-      }
-    },
-  
-  "Southend West" : {
-    "partyInfo" : {
-      "conservative" : {"name" : "Anna Firth", "total" : 12792},
-      "others" : {"name" : "Others", "total" : 2066 }
-    },
-
-    "seatInfo" : {
-      "current" : "conservative",
-      "electorate" : 66354,
-      "majority" : 12280,
-      "region" : "eastofengland",
-      "byElection" : "Feb 3rd 2022"
-      }
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 79375,
+      "majority": 323,
+      "region": "yorkshireandthehumber",
+      "byElection": "Jul 1st 2021"
     }
-  
+  },
+  "Old Bexley and Sidcup": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Louie French",
+        "total": 11189
+      },
+      "labour": {
+        "name": "Daniel Francis",
+        "total": 6711
+      },
+      "libdems": {
+        "name": "Simone Reynolds",
+        "total": 647
+      },
+      "ukip": {
+        "name": "Richard Tice",
+        "total": 1432
+      },
+      "green": {
+        "name": "Jonathan Rooks",
+        "total": 830
+      },
+      "others": {
+        "name": "Others",
+        "total": 924
+      }
+    },
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": 64831,
+      "majority": 4478,
+      "region": "london",
+      "byElection": "Dec 2nd 2021"
+    }
+  },
+  "North Shropshire": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Neil Shastri-Hurst",
+        "total": 12032
+      },
+      "labour": {
+        "name": "Ben Wood",
+        "total": 3686
+      },
+      "libdems": {
+        "name": "Helen Morgan",
+        "total": 17957
+      },
+      "ukip": {
+        "name": "Kirsty Walmsley",
+        "total": 1427
+      },
+      "green": {
+        "name": "Duncan Kerr",
+        "total": 1738
+      },
+      "others": {
+        "name": "Others",
+        "total": 1182
+      }
+    },
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": 82314,
+      "majority": 5925,
+      "region": "westmidlands",
+      "byElection": "Dec 16th 2021"
+    }
+  },
+  "Southend West": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Anna Firth",
+        "total": 12792
+      },
+      "others": {
+        "name": "Others",
+        "total": 2066
+      }
+    },
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": 66354,
+      "majority": 12280,
+      "region": "eastofengland",
+      "byElection": "Feb 3rd 2022"
+    }
+  },
+  "Birmingham Erdington": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Robert Alden",
+        "total": 6147
+      },
+      "labour": {
+        "name": "Paulette Hamilton",
+        "total": 9413
+      },
+      "libdems": {
+        "name": "Lee Dargue",
+        "total": 173
+      },
+      "ukip": {
+        "name": "Jack Brookes",
+        "total": 293
+      },
+      "green": {
+        "name": "Siobhan Harper-Nunes",
+        "total": 236
+      },
+      "others": {
+        "name": "Others",
+        "total": 695
+      }
+    },
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 63022,
+      "majority": 3266,
+      "region": "westmidlands",
+      "byElection": "Mar 3rd 2022"
+    }
+  },
+  "Tiverton and Honiton": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Helen Hurford",
+        "total": 16393
+      },
+      "labour": {
+        "name": "Liz Pole",
+        "total": 1562
+      },
+      "libdems": {
+        "name": "Richard Foord",
+        "total": 22537
+      },
+      "ukip": {
+        "name": "Andy Foan",
+        "total": 481
+      },
+      "green": {
+        "name": "Gill Westcott",
+        "total": 1064
+      },
+      "others": {
+        "name": "Others",
+        "total": 313
+      }
+    },
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": 81440,
+      "majority": 6144,
+      "region": "southwestengland",
+      "byElection": "Jun 23rd 2022"
+    }
+  },
+  "Wakefield": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Nadeem Ahmed",
+        "total": 8241
+      },
+      "labour": {
+        "name": "Simon Lightwood",
+        "total": 13166
+      },
+      "libdems": {
+        "name": "Jamie Needle",
+        "total": 508
+      },
+      "ukip": {
+        "name": "Chris Walsh",
+        "total": 513
+      },
+      "green": {
+        "name": "Ashley Routh",
+        "total": 587
+      },
+      "others": {
+        "name": "Others",
+        "total": 4451
+      }
+    },
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 69601,
+      "majority": 4925,
+      "region": "yorkshireandthehumber",
+      "byElection": "Jun 23rd 2022"
+    }
+  },
+  "City of Chester": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Liz Wardlaw",
+        "total": 6335
+      },
+      "labour": {
+        "name": "Samantha Dixon",
+        "total": 17309
+      },
+      "libdems": {
+        "name": "Rob Herd",
+        "total": 2368
+      },
+      "ukip": {
+        "name": "Jeanie Barton",
+        "total": 773
+      },
+      "green": {
+        "name": "Paul Bowers",
+        "total": 987
+      },
+      "others": {
+        "name": "Others",
+        "total": 426
+      }
+    },
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 69274,
+      "majority": 10974,
+      "region": "northwestengland",
+      "byElection": "Dec 1st 2022"
+    }
+  },
+  "Stretford and Urmston": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Emily Carter-Kandola",
+        "total": 2922
+      },
+      "labour": {
+        "name": "Andrew Western",
+        "total": 12828
+      },
+      "libdems": {
+        "name": "Anna Fryer",
+        "total": 659
+      },
+      "ukip": {
+        "name": "Paul Swansborough",
+        "total": 650
+      },
+      "green": {
+        "name": "Dan Jerrome",
+        "total": 789
+      },
+      "others": {
+        "name": "Others",
+        "total": 570
+      }
+    },
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 71641,
+      "majority": 9906,
+      "region": "northwestengland",
+      "byElection": "Dec 15th 2022"
+    }
+  },
+  "West Lancashire": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Mike Prendergast",
+        "total": 5742
+      },
+      "labour": {
+        "name": "Ashley Dalton",
+        "total": 14068
+      },
+      "libdems": {
+        "name": "Jo Barton",
+        "total": 918
+      },
+      "ukip": {
+        "name": "Jonathan Kay",
+        "total": 994
+      },
+      "green": {
+        "name": "Peter Cranie",
+        "total": 646
+      },
+      "others": {
+        "name": "Others",
+        "total": 210
+      }
+    },
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 72098,
+      "majority": 8326,
+      "region": "northwestengland",
+      "byElection": "Feb 9th 2023"
+    }
+  },
+  "Uxbridge and South Ruislip": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Steve Tuckwell",
+        "total": 13965
+      },
+      "labour": {
+        "name": "Danny Beales",
+        "total": 13470
+      },
+      "libdems": {
+        "name": "Blaise Baquiche",
+        "total": 526
+      },
+      "green": {
+        "name": "Sarah Green",
+        "total": 893
+      },
+      "others": {
+        "name": "Others",
+        "total": 2071
+      }
+    },
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": 67060,
+      "majority": 495,
+      "region": "london",
+      "byElection": "Jul 20th 2023"
+    }
+  },  
+  "Selby and Ainsty": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Claire Holmes",
+        "total": 12295
+      },
+      "labour": {
+        "name": "Keir Mather",
+        "total": 16456
+      },
+      "libdems": {
+        "name": "Matt Walker",
+        "total": 1188
+      },
+      "ukip": {
+        "name": "Dave Kent",
+        "total": 1332
+      },
+      "green": {
+        "name": "Arnold Warneken",
+        "total": 1838
+      },
+      "others": {
+        "name": "Others",
+        "total": 2698
+      }
+    },
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 80150,
+      "majority": 4161,
+      "region": "yorkshireandthehumber",
+      "byElection": "Jul 20th 2023"
+    }
+  }, 
+  "Somerton and Frome": {
+    "partyInfo": {
+      "conservative": {
+        "name": "Faye Purbrick",
+        "total": 10179
+      },
+      "labour": {
+        "name": "Neil Guild",
+        "total": 1009
+      },
+      "libdems": {
+        "name": "Sarah Dyke",
+        "total": 21187
+      },
+      "ukip": {
+        "name": "Bruce Evans",
+        "total": 1303
+      },
+      "green": {
+        "name": "Martin Dimery",
+        "total": 3944
+      },
+      "others": {
+        "name": "Others",
+        "total": 1166
+      }
+    },
+    "seatInfo": {
+      "current": "labour",
+      "electorate": 87921,
+      "majority": 11008,
+      "region": "southwwestengland",
+      "byElection": "Jul 20th 2023"
+    }
+  }
 }

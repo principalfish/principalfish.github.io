@@ -8,7 +8,10 @@ with open("2019byelections.json", "r") as by_elections:
     
 for seat in new:
     print (seat)
-    seats[seat] = new[seat]
+    if seat in seats:
+        seats[seat] = new[seat]
+    else:
+        print ("seat not there!!")
     
 with open("current.json", "w") as current_out:
     json.dump(seats, current_out)

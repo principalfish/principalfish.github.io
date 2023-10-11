@@ -140,14 +140,14 @@ class Seat(object):
                 new_percentages[party] = max(0, regional[party])
 
         sum = 0
-        for party, total in new_percentages.iteritems():
+        for party, total in new_percentages.items():
             sum += total
 
         votes_array = []
 
         normaliser = 1 / sum
 
-        for party, total in new_percentages.iteritems():
+        for party, total in new_percentages.items():
             new_percentages[party] *= normaliser
             votes = int(round(new_percentages[party] * turnout))
             votes_array.append(votes)
@@ -268,7 +268,7 @@ class Poll(object):
 
         #sort out certain companies/regions
         if self.company == "icm":
-            for region, numbers in self.regions.iteritems():
+            for region, numbers in self.regions.items():
                 if region == "North":
                     for party in numbers:
                         numbers[party] -= int(self.regions["Scotland"][party])
@@ -299,21 +299,21 @@ class Poll(object):
                         "yougovlondon", "orb", "redfield", "survationall"]
 
         if self.company in raw_num_comps:
-            for region, numbers in self.regions.iteritems():
+            for region, numbers in self.regions.items():
                 for party in numbers:
                     if party != "total":
                         numbers[party] /= float(numbers["total"])
 
         #convert percentages to decimal
         if self.company in ["yougov", "yougov2"]:
-            for region, numbers in self.regions.iteritems():
+            for region, numbers in self.regions.items():
                 for party in numbers:
                     if party != "total":
                         numbers[party] /= float(100)
 
 
         # delete total from polls
-        for region, numbers in self.regions.iteritems():
+        for region, numbers in self.regions.items():
             del numbers["total"]
 
     def weight_poll(self):
@@ -359,9 +359,9 @@ class Poll(object):
             to_add["company"] = "others"
 
         total = 0
-        for region, numbers in self.regions.iteritems():
+        for region, numbers in self.regions.items():
             if (self.company != "mori" or region != "England") and (self.company != "icm" or region not in ["Wales", "Scotland"]):
-                for party, votes in numbers.iteritems():
+                for party, votes in numbers.items():
                     if party != "total":
                         if self.company == "yougov":
                             if party in to_add:

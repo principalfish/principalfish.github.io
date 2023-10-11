@@ -14,7 +14,7 @@ model_map = {
     "600" : ["2019election_600seat.json", "prediction_600seat.json"]
 }
 
-print model_map[arguments[1]]
+print (model_map[arguments[1]])
 
 poll_limit = arguments[2]
 
@@ -33,7 +33,7 @@ for region in regions:
 
 polling_data = "polls.csv"
 
-with open(polling_data, "rb") as polls_file:
+with open(polling_data, "rt") as polls_file:
     poll_data = csv.DictReader(polls_file, delimiter = "\t")
 
     poll_codes = []
@@ -57,7 +57,7 @@ exclude_for_scatter = ["yougovscotland", "survationscotland",
                         "panelbasescotland", "yougovwales",
                         "lucidtalk", "yougovlondon"]
 #configure, weight and log polls
-for poll, data in polls.iteritems():
+for poll, data in polls.items():
     # do first since delete total later on
     if data.company != "me" and data.company not in exclude_for_scatter:
         polls_for_scatterplot.append(data.scatterplot())
@@ -73,9 +73,9 @@ for poll in polls_for_scatterplot:
     del poll["dateobj"]
 
 #get change for each polling region relative to 2015
-for poll, data in polls.iteritems():
+for poll, data in polls.items():
     if poll != "1001":# my test poll nullified
-        for area, numbers in data.regions.iteritems():
+        for area, numbers in data.regions.items():
             regions_in_poll_area = polling_regions[data.company][area]
             for party in numbers:
                 #get previous regional total per party
@@ -102,7 +102,7 @@ for poll, data in polls.iteritems():
 #END POLL ANALYSIS
 
 #START SEAT ANALYSIS
-for region, data in regional.iteritems():
+for region, data in regional.items():
 
     data.normalise()
     data.get_old_percentages()
@@ -112,7 +112,7 @@ for region, data in regional.iteritems():
 
 to_dump = {}
 
-for seat, info in seats.iteritems():
+for seat, info in seats.items():
 
     info.get_new_data(regional[info.region].numerical)
     info.generate_output()
@@ -145,7 +145,7 @@ def dump_scatter_data():
         "others" : 0
     }
 
-    for seat, data in seats.iteritems():
+    for seat, data in seats.items():
         winner = data.current
         if winner in seat_totals:
             seat_totals[winner] += 1
@@ -157,7 +157,7 @@ def dump_scatter_data():
 
     duplicate_dates = []
     for i in range(len(scatter_data["models"])):
-        #print scatter_data["models"][i]["date"]
+        #print (scatter_data["models"][i]["date"])
         if scatter_data["models"][i]["date"] == date_code:
             duplicate_dates.append(i)
 
@@ -170,8 +170,8 @@ def dump_scatter_data():
     with open("../../polltracker/scatter.json", "w") as scatter_json:
         json.dump(scatter_data, scatter_json)
 
-    print poll_limit, last_date
-    print seat_totals
+    print (poll_limit, last_date)
+    print (seat_totals)
 
 if arguments[1] == "650":
     dump_scatter_data()

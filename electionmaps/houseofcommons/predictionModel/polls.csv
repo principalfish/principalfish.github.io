@@ -1673,3 +1673,27 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 289	opinium2	27	10	2023	South	494	149	173	80	46	39			7					
 289	opinium2	27	10	2023	Wales	70	16	27	4	9	4		8	2					
 289	opinium2	27	10	2023	Scotland	126	23	37	7	5	5	42		6					
+290	yougov2	15	11	2023	Wales	124	18	48	6	9	5		13	0					
+290	yougov2	15	11	2023	Scotland	216	14	32	8	3	3	37		3					
+290	yougov2	15	11	2023	North	598	16	51	7	15	7			3					
+290	yougov2	15	11	2023	Midlands	412	27	42	10	12	7			2					
+290	yougov2	15	11	2023	London	300	19	54	14	4	8			1					
+290	yougov2	15	11	2023	South	831	26	40	12	11	10			1					
+291	yougov2	30	11	2023	Wales	103	16	40	8	12	3		19	2					
+291	yougov2	30	11	2023	Scotland	179	19	24	4	5	6	39		3					
+291	yougov2	30	11	2023	North	495	19	56	7	11	6			1					
+291	yougov2	30	11	2023	Midlands	341	26	46	6	13	8			1					
+291	yougov2	30	11	2023	London	249	20	54	11	5	7			3					
+291	yougov2	30	11	2023	South	688	27	39	14	12	8			0					
+292	yougov2	7	12	2023	Wales	103	16	35	6	17	4		22	0					
+292	yougov2	7	12	2023	Scotland	179	15	30	10	4	6	34		1					
+292	yougov2	7	12	2023	North	495	20	55	5	12	8			0					
+292	yougov2	7	12	2023	Midlands	341	29	42	9	14	4			1					
+292	yougov2	7	12	2023	London	249	19	54	10	5	9			3					
+292	yougov2	7	12	2023	South	688	25	40	15	10	7			2					
+293	yougov2	13	12	2023	Wales	101	25	44	2	18	2		11	0					
+293	yougov2	13	12	2023	Scotland	176	16	28	6	3	8	37		2					
+293	yougov2	13	12	2023	North	486	21	51	8	12	7			2					
+293	yougov2	13	12	2023	Midlands	335	29	40	9	14	8			1					
+293	yougov2	13	12	2023	London	244	17	56	10	8	9			0					
+293	yougov2	13	12	2023	South	676	23	41	14	12	8			1					

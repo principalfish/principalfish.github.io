@@ -31,7 +31,7 @@
     }
 
     img {
-        max-width: 100%;
+        max-width: 10 0%;
         height: auto;
       }
 
@@ -170,7 +170,7 @@
     </div>
 
   </div>
-
+  <p>Score: <span id="score2">0</span>/12</p>
   <script>
     let score = 0;
 
@@ -190,6 +190,7 @@
       // Increment the score if the answer is correct 
       score++;
       document.getElementById('score').innerText = score;
+      document.getElementById('score2').innerText = score;
   
       // Disable the "Correct?" button after checking
       invisibleBtn.disabled = true;

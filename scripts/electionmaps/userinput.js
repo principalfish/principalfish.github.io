@@ -57,7 +57,6 @@ var userInput = {
     userInput.inputs[region][party] = Math.round(100*parseFloat(value)) / 100 ;
 
     var checkSum = 0;
-
     var maxVal = 0;
     $.each(userInput.inputs[region], function(key, val){
       checkSum += val
@@ -66,7 +65,8 @@ var userInput = {
       }
     });
 
-    checkSum = 100*parseFloat(checkSum)) / 100
+    checkSum = 100*parseFloat(checkSum) / 100
+
     
     // if all values 0, delete obj
     if (maxVal == 0){
@@ -77,12 +77,12 @@ var userInput = {
       $("#userinput-" + region + "-other").text("<0");
       userInput.over100 = true;
     } else {
-      $("#userinput-" + region + "-other").text(100 - checkSum);
+      $("#userinput-" + region + "-other").text((100 - checkSum).toFixed(1));
       userInput.over100 = false;
 
     }
   },
-
+  
   handle : function(){
     if (userInput.over100 == true){
         alert("Some percentages add up to more than 100!");

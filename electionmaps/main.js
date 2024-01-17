@@ -1849,6 +1849,9 @@ function activeSeat(seat){
         maxVal = val;
       }
     });
+
+    checkSum = 100*parseFloat(checkSum) / 100
+
     
     // if all values 0, delete obj
     if (maxVal == 0){
@@ -1859,7 +1862,7 @@ function activeSeat(seat){
       $("#userinput-" + region + "-other").text("<0");
       userInput.over100 = true;
     } else {
-      $("#userinput-" + region + "-other").text(100 - checkSum);
+      $("#userinput-" + region + "-other").text((100 - checkSum).toFixed(1));
       userInput.over100 = false;
 
     }

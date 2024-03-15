@@ -1703,3 +1703,21 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 294	yougov2	11	1	2024	Midlands	341	24	48	7	11	9			1					
 294	yougov2	11	1	2024	London	249	18	48	9	7	15			3					
 294	yougov2	11	1	2024	South	689	28	37	14	11	9			1					
+295	yougov2	7	3	2024	Wales	103	14	44	7	13	7		15	1					
+295	yougov2	7	3	2024	Scotland	179	11	40	8	3	5	29		3					
+295	yougov2	7	3	2024	North	495	15	54	7	15	8			1					
+295	yougov2	7	3	2024	Midlands	341	24	46	6	19	4			0					
+295	yougov2	7	3	2024	London	248	14	57	11	7	10			1					
+295	yougov2	7	3	2024	South	688	27	40	12	13	6			2					
+296	opinium2	11	3	2024	North	345	63	184	30	39	17			12					
+296	opinium2	11	3	2024	Midlands	238	61	90	20	32	22			13					
+296	opinium2	11	3	2024	London	178	40	92	14	12	13			7					
+296	opinium2	11	3	2024	South	506	161	168	66	60	35			16					
+296	opinium2	11	3	2024	Wales	72	15	29	8	7	2		8	2					
+296	opinium2	11	3	2024	Scotland	129	24	42	10	5	6	42		0					
+297	yougov2	13	3	2024	Wales	103	17	46	2	14	7		13	2					
+297	yougov2	13	3	2024	Scotland	179	13	36	5	6	5	30		4					
+297	yougov2	13	3	2024	North	495	17	53	6	16	6			2					
+297	yougov2	13	3	2024	Midlands	341	22	43	7	19	8			1					
+297	yougov2	13	3	2024	London	248	15	51	9	15	9			1					
+297	yougov2	13	3	2024	South	688	25	39	15	14	6			2					

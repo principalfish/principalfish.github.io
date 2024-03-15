@@ -11,7 +11,7 @@ party_map = {
      'conservative': "Conservative",
      'labour': "Labour",
      'libdems': "Lib Dems",
-     'ukip': "Reform UK",
+     'ukip': "Reform",
      'snp': "SNP",
      'plaidcymru': "Plaid Cymru",
      'green': "Green",
@@ -323,7 +323,7 @@ class Poll(object):
         weight = pollster_weights[self.company]
 
         # alter closer to election  when more polls
-        degrade_factor = 0.90 #per day
+        degrade_factor = 0.8 #per day
         weight *= math.pow(degrade_factor, days_past)
 #
         #testing

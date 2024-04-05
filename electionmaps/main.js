@@ -117,7 +117,7 @@ var battleground = {
 
 
     parameter = parameter.slice(6);
-
+    
     // for vote share change and swing attribute new class to each map obj
     if (value != "null"){
       var max = choro.minmax(parameter, value)
@@ -290,9 +290,8 @@ var battleground = {
   reset: function(){
     $("#keyonmap").hide();
 
-
     $.each(currentMap.seatData, function(seat, data){
-      
+ 
       $("#i" + data.mapSelect.properties.info_id).removeClass();
 
       $("#i" + data.mapSelect.properties.info_id).addClass("map " + data.seatInfo.current);
@@ -511,6 +510,7 @@ var seatsPerRegion2015 = {
   },
 
   reset : function(){
+    
     filters.state = {"majority" : [0, 100]}; // reset filters state
     // reset ui
     $("#filter-current option:eq(0)").prop("selected", true);
@@ -996,10 +996,13 @@ function pageLoadEssentials(){
 	// function does all the random crap that needs changing / resetting on pageload
 
 	// laod the map
+
 	mapAttr.loadmap(currentMap);
 	// reset filters.state - also get and show vote totals
 	filters.opacities = {};
+
 	filters.reset();
+
 	params.checkParams();
 
 	// reset user inputs
@@ -1027,8 +1030,7 @@ function pageLoadEssentials(){
 	//show and hide various divs on load
 	uiAttr.pageLoadDiv();
 
-	// if setting not currentParliament remove instructions
-	if (currentMap.name != "election2017" && currentMap.name != "prediction"){
+	if (currentMap.name != "prediction_new" && currentMap.name != "prediction"){
 		$("#instructions").remove();
 	} else {
 
@@ -1122,11 +1124,14 @@ var dataurls =  {
 	// maps
 	map650 : "650map.json",
 	map600 : "600map.json",
+	map650_new: "650map_new.json",
 
 	//parliaments
 	predict : "houseofcommons/prediction.json",
+	predict_new : "houseofcommons/prediction_new.json",
 	current : "houseofcommons/current.json",
 	e2019 : "houseofcommons/2019election.json",
+	e2019_new : "houseofcommons/2019election_new.json",
 	e2017 : "houseofcommons/2017election.json",
 	e2015 : "houseofcommons/2015election.json",
 	e2010 : "houseofcommons/2010election.json",
@@ -1136,11 +1141,14 @@ var dataurls =  {
 
 var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2019, false, false, false, false);
 var election2019 = new pageSetting("election2019", dataurls.map650, dataurls.e2019, dataurls.e2017, true, false, true, false);
+var election2019_new = new pageSetting("election2019_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, false, true, false);
 var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, true, false);
 var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2019, true, false, true, false);
+var prediction_new = new pageSetting("prediction_new", dataurls.map650_new, dataurls.predict_new, dataurls.e2019_new, true, false, true, false);
 var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2019, dataurls.e2019, true, true, true, false);
+var predictit_new = new pageSetting("predictit_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, true, true, false);
 var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false); // nodata to compare
 var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false);
 
@@ -1176,12 +1184,16 @@ function getParameterByName(name, url) {
 
 var url = window.location.href;
 
+
 var urlParamMap = {
-	null : prediction,
+	null : prediction_new,
 	"current" : currentParliament,
 	"prediction" : prediction,
+	"prediction_new" : prediction_new,
 	"predictit" : predictit,
+	"predictit_new" : predictit_new,
 	"election2019" : election2019,
+  	"election2019_new" : election2019_new,
 	"election2017" : election2017,
 	"election2015" : election2015,
 	"election2010" : election2010,
@@ -1657,6 +1669,12 @@ function activeSeat(seat){
 
     var text = $(id).text();
 
+    // Check if the string ends with "(New)"
+    if (text.endsWith("(New) ")) {
+      // If it does, replace "(New)" with "(New Boundaries)"
+      text = text.replace("(New)", "(New Boundaries)");
+    }
+
     $("#pagetitle").html(text);
 
     document.title = text;
@@ -1841,7 +1859,6 @@ function activeSeat(seat){
     userInput.inputs[region][party] = Math.round(100*parseFloat(value)) / 100 ;
 
     var checkSum = 0;
-
     var maxVal = 0;
     $.each(userInput.inputs[region], function(key, val){
       checkSum += val
@@ -1867,7 +1884,7 @@ function activeSeat(seat){
 
     }
   },
-
+  
   handle : function(){
     if (userInput.over100 == true){
         alert("Some percentages add up to more than 100!");
@@ -2447,7 +2464,7 @@ function activeSeat(seat){
       }
     });
     var seats;
-    if (currentMap.mapurl == "650map.json"){
+    if (currentMap.mapurl == "650map.json" || currentMap.mapurl == "650map_new.json"){
       seats = 650 ;
     } else if (currentMap.mapurl == "600map.json"){
       seats = 600;

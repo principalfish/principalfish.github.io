@@ -10,6 +10,12 @@ var uiAttr = {
 
     var text = $(id).text();
 
+    // Check if the string ends with "(New)"
+    if (text.endsWith("(New) ")) {
+      // If it does, replace "(New)" with "(New Boundaries)"
+      text = text.replace("(New)", "(New Boundaries)");
+    }
+
     $("#pagetitle").html(text);
 
     document.title = text;

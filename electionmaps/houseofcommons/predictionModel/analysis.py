@@ -11,12 +11,12 @@ arguments = sys.argv
 
 model_map = {
     "650" : ["2019election.json", "prediction.json"],
-    "600" : ["2019election_600seat.json", "prediction_600seat.json"]
+    "600" : ["2019election_600seat.json", "prediction_600seat.json"],
+    "650_new" : ["2019election_new.json", "prediction_new.json"]
 }
 
 print (model_map[arguments[1]])
 
-poll_limit = arguments[2]
 
 with open("../" + model_map[arguments[1]][0]) as f:
     data = json.load(f)
@@ -170,7 +170,7 @@ def dump_scatter_data():
     with open("../../polltracker/scatter.json", "w") as scatter_json:
         json.dump(scatter_data, scatter_json)
 
-    print (poll_limit, last_date)
+    print (last_date)
     print (seat_totals)
 
 if arguments[1] == "650":

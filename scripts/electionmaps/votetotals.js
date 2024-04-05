@@ -265,7 +265,7 @@ var voteTotals = {
       }
     });
     var seats;
-    if (currentMap.mapurl == "650map.json"){
+    if (currentMap.mapurl == "650map.json" || currentMap.mapurl == "650map_new.json"){
       seats = 650 ;
     } else if (currentMap.mapurl == "600map.json"){
       seats = 600;

@@ -123,6 +123,7 @@ var filters = {
   },
 
   reset : function(){
+    
     filters.state = {"majority" : [0, 100]}; // reset filters state
     // reset ui
     $("#filter-current option:eq(0)").prop("selected", true);

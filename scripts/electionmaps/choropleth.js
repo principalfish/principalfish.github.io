@@ -12,7 +12,7 @@ var choro = {
 
 
     parameter = parameter.slice(6);
-
+    
     // for vote share change and swing attribute new class to each map obj
     if (value != "null"){
       var max = choro.minmax(parameter, value)
@@ -185,9 +185,8 @@ var choro = {
   reset: function(){
     $("#keyonmap").hide();
 
-
     $.each(currentMap.seatData, function(seat, data){
-      
+ 
       $("#i" + data.mapSelect.properties.info_id).removeClass();
 
       $("#i" + data.mapSelect.properties.info_id).addClass("map " + data.seatInfo.current);

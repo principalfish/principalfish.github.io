@@ -3,16 +3,16 @@ var seatInfoTable = {
   party : null,
   gain : null,
 
-  display : function(seat){
+  display : function(seat,showTurnout){
 
     var activeSeatData = new activeSeat(seat);
 
-    seatInfoTable.seatInfo(activeSeatData); // draw tables with data
+    seatInfoTable.seatInfo(activeSeatData, showTurnout); // draw tables with data
     seatInfoTable.voteTable(activeSeatData.votes); // draw table - do first since votes altered
     seatInfoTable.barChart(activeSeatData.votes); // draw bar chart with data
   },
 
-  seatInfo : function(data){
+  seatInfo : function(data, showTurnout){
     // clean old divs
     $("#information-party .party-flair").removeClass(seatInfoTable.party);
     $("#information-gain .party-flair").removeClass(seatInfoTable.gain);
@@ -36,12 +36,21 @@ var seatInfoTable = {
     } else {
       $("#information-gain .party-name").text("");
     }
-
+    console.log(data)
     var majorityPercentage = (100 * data.majority / data.turnout).toFixed(2);
-    $("#information-majority").text("Majority: " + majorityPercentage + "% = " + data.majority);
+    var majorityTextString = "Majority: " + majorityPercentage + "%"
+    if (showTurnout){
+      majorityTextString += "= " + data.majority
+    }
+    $("#information-majority").text(majorityTextString);
 
     var turnoutPercentage = (100 * data.turnout / data.electorate).toFixed(2);
-    $("#information-turnout").text("Turnout : " + data.turnout + " = " + turnoutPercentage + "%" );
+    if (showTurnout) {
+      $("#information-turnout").text("Turnout : " + data.turnout + " = " + turnoutPercentage + "%" );
+    } else {
+      $("#information-turnout").text("")
+    }
+   
 
     // set for next time
     seatInfoTable.party = data.current;

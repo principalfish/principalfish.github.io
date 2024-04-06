@@ -187,6 +187,7 @@ var voteTotals = {
     // reset div
     $("#votetotals-table-data").empty();
     // display turnout for all but current parliament
+    
     if (currentMap.name == "election2015" 
       || currentMap.name == "election2010"
       || currentMap.name == "election2017"

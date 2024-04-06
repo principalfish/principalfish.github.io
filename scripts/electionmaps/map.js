@@ -30,7 +30,7 @@ var mapAttr = {
 				.on("end", mapAttr.enableZoom);
 
     uiAttr.showDiv("seat-information")
-		seatInfoTable.display(d.properties.name);
+		seatInfoTable.display(d.properties.name, currentMap.showTurnout);
 	},
 
 	// flash seat on click - reset previous

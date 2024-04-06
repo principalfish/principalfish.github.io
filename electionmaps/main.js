@@ -813,7 +813,7 @@ function seatExtended(seat, data){
 				.on("end", mapAttr.enableZoom);
 
     uiAttr.showDiv("seat-information")
-		seatInfoTable.display(d.properties.name);
+		seatInfoTable.display(d.properties.name, currentMap.showTurnout);
 	},
 
 	// flash seat on click - reset previous
@@ -1102,7 +1102,7 @@ function searchSeats(value){
 };
 
 
-function pageSetting(name, mapurl, dataurl, previous, election, predict, battlegrounds, redistribute){
+function pageSetting(name, mapurl, dataurl, previous, election, predict, battlegrounds, redistribute, showTurnout){
 
 	this.name = name;
 	this.mapurl = mapurl;
@@ -1112,6 +1112,7 @@ function pageSetting(name, mapurl, dataurl, previous, election, predict, battleg
 	this.predict = predict;
 	this.battlegrounds = battlegrounds;
 	this.redistribute = redistribute;
+	this.showTurnout = showTurnout
 
 	this.seatData = {};
 	this.previousSeatData = {};
@@ -1139,18 +1140,18 @@ var dataurls =  {
 	predict_600 : "houseofcommons/prediction_600seat.json",
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2019, false, false, false, false);
-var election2019 = new pageSetting("election2019", dataurls.map650, dataurls.e2019, dataurls.e2017, true, false, true, false);
-var election2019_new = new pageSetting("election2019_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, false, true, false);
-var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, true, false);
-var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false);
-var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false); // no 2005 data to compare atm
-var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2019, true, false, true, false);
-var prediction_new = new pageSetting("prediction_new", dataurls.map650_new, dataurls.predict_new, dataurls.e2019_new, true, false, true, false);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2019, dataurls.e2019, true, true, true, false);
-var predictit_new = new pageSetting("predictit_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, true, true, false);
-var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false); // nodata to compare
-var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false);
+var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2019, false, false, false, false, false);
+var election2019 = new pageSetting("election2019", dataurls.map650, dataurls.e2019, dataurls.e2017, true, false, true, false, true);
+var election2019_new = new pageSetting("election2019_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, false, true, false, false);
+var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, true, false, true);
+var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e2015, dataurls.e2010, true, false, false, false, true);
+var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false, true); // no 2005 data to compare atm
+var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2019, true, false, true, false, false);
+var prediction_new = new pageSetting("prediction_new", dataurls.map650_new, dataurls.predict_new, dataurls.e2019_new, true, false, true, false, false);
+var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2019, dataurls.e2019, true, true, true, false, false);
+var predictit_new = new pageSetting("predictit_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, true, true, false, false);
+var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false, false); // nodata to compare
+var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false, false);
 
 // hidden
 var predictit_2015 = new pageSetting("prediction_2015", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true, false);
@@ -1433,16 +1434,16 @@ var urlParamMap = {
   party : null,
   gain : null,
 
-  display : function(seat){
+  display : function(seat,showTurnout){
 
     var activeSeatData = new activeSeat(seat);
 
-    seatInfoTable.seatInfo(activeSeatData); // draw tables with data
+    seatInfoTable.seatInfo(activeSeatData, showTurnout); // draw tables with data
     seatInfoTable.voteTable(activeSeatData.votes); // draw table - do first since votes altered
     seatInfoTable.barChart(activeSeatData.votes); // draw bar chart with data
   },
 
-  seatInfo : function(data){
+  seatInfo : function(data, showTurnout){
     // clean old divs
     $("#information-party .party-flair").removeClass(seatInfoTable.party);
     $("#information-gain .party-flair").removeClass(seatInfoTable.gain);
@@ -1466,12 +1467,21 @@ var urlParamMap = {
     } else {
       $("#information-gain .party-name").text("");
     }
-
+    console.log(data)
     var majorityPercentage = (100 * data.majority / data.turnout).toFixed(2);
-    $("#information-majority").text("Majority: " + majorityPercentage + "% = " + data.majority);
+    var majorityTextString = "Majority: " + majorityPercentage + "%"
+    if (showTurnout){
+      majorityTextString += "= " + data.majority
+    }
+    $("#information-majority").text(majorityTextString);
 
     var turnoutPercentage = (100 * data.turnout / data.electorate).toFixed(2);
-    $("#information-turnout").text("Turnout : " + data.turnout + " = " + turnoutPercentage + "%" );
+    if (showTurnout) {
+      $("#information-turnout").text("Turnout : " + data.turnout + " = " + turnoutPercentage + "%" );
+    } else {
+      $("#information-turnout").text("")
+    }
+   
 
     // set for next time
     seatInfoTable.party = data.current;
@@ -2386,6 +2396,7 @@ function activeSeat(seat){
     // reset div
     $("#votetotals-table-data").empty();
     // display turnout for all but current parliament
+    
     if (currentMap.name == "election2015" 
       || currentMap.name == "election2010"
       || currentMap.name == "election2017"

@@ -117,6 +117,7 @@ var userInput = {
           }
         } else {
           var parties = partyToRegion["default"];
+
           for (var i=0; i < parties.length; i++ ){
             if (!(parties[i] in data)){
               data[parties[i]] = 0;
@@ -128,7 +129,6 @@ var userInput = {
         data["other"] = otherPercentage;
 
         delete data["others"];
-
         userInput.calculate(region, data);
         delete data["other"];
       })
@@ -274,46 +274,11 @@ var userInput = {
             previous = 100 * currentMap.previousSeatData[seat].partyInfo[party].total / currentMap.previousSeatData[seat].seatInfo.turnout;
           }
 
-
-          //var previousRegional = regional[data.seatInfo.region][party];
-
           if (party == "other"){
             if ("others" in currentMap.previousSeatData[seat].partyInfo ){
               previous += 100 * currentMap.previousSeatData[seat].partyInfo["others"].total / currentMap.previousSeatData[seat].seatInfo.turnout;
             }
           }
-
-          //var seatRelative = previous / previousRegional;
-
-          // if (seatRelative == 0){
-          //   newSeatData[party] = 0;
-          // } else {
-          //   var distribute = relativeChange[data.seatInfo.region][party] - 1;
-          //
-          //   var seatChange = 1 + (distribute / Math.sqrt(seatRelative));
-          //
-          //   if (seatChange < 0.15){
-          //     seatChange = 0.15;
-          //   }
-          //
-          //   var newPercentage = seatChange * previous;
-          //
-          //   //incumbency boost
-          //   var incumbencyBoost = {"conservative" : 1, "labour" : 1, "libdems" : 4,
-          //   "ukip" : 4, "green" : 8, "snp" : 1, "plaidcymru" : 4, "other" : 0,
-          //   "dup" : 0, "uu" : 0, "sinnfein" : 0, "alliance" : 0, "sdlp" : 0 };
-          //   if (currentMap.previousSeatData[seat].seatInfo.current == party){
-          //     newPercentage += incumbencyBoost[party];
-          //   }
-          //
-          //   if (isNaN(newPercentage)){
-          //     newPercentage = 0;
-          //   }
-          //
-          //   newSeatData[party] = newPercentage;
-          //
-          // }
-
 
           var seatChange = relativeChange[data.seatInfo.region][party];
           var newPercentage = previous + seatChange;
@@ -321,9 +286,9 @@ var userInput = {
             newPercentage = 0.1 * previous;
           }
 
-          if (previous == 0){
-            newPercentage = 0;
-          }
+          // if (previous == 0){
+          //   newPercentage = 0;
+          // }
 
           newSeatData[party] = newPercentage;
         });

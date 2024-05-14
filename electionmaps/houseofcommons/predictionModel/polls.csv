@@ -1733,3 +1733,26 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 299	yougov2	3	4	2024	Midlands	342	22	40	5	24	9			1					
 299	yougov2	3	4	2024	London	249	18	52	10	10	7			2					
 299	yougov2	3	4	2024	South	690	24	36	11	19	8			1					
+300	yougov2	1	5	2024	Wales	101	15	51	2	2	14		17	0					
+300	yougov2	1	5	2024	Scotland	175	15	37	3	6	7	28		4					
+300	yougov2	1	5	2024	North	484	15	55	4	8	15			2					
+300	yougov2	1	5	2024	Midlands	334	21	45	7	10	15			3					
+300	yougov2	1	5	2024	London	243	10	44	16	12	14			4					
+300	yougov2	1	5	2024	South	673	23	35	15	7	17			2					
+301	yougov2	8	5	2024	Wales	104	17	52	3	10	6		9	3					
+301	yougov2	8	5	2024	Scotland	180	10	45	4	3	6	30		2					
+301	yougov2	8	5	2024	North	499	17	53	5	15	8			2					
+301	yougov2	8	5	2024	Midlands	344	24	46	6	15	6			2					
+301	yougov2	8	5	2024	London	251	16	54	12	9	7			1					
+301	yougov2	8	5	2024	South	694	20	42	15	14	7			1					
+302	comres	13	5	2024	Scotland	125	20	44	10	8	0	41		2					
+302	comres	13	5	2024	North West England	173	35	96	15	18	6			3					
+302	comres	13	5	2024	North East England	64	20	28	6	8	2			0					
+302	comres	13	5	2024	Yorkshire and Humber	119	23	67	8	14	7			0					
+302	comres	13	5	2024	Wales	84	16	34	14	3	3		14	0					
+302	comres	13	5	2024	West Midlands	128	42	58	9	14	5			0					
+302	comres	13	5	2024	East Midlands	110	26	56	7	16	5			0					
+302	comres	13	5	2024	South West England	130	40	46	25	13	6			0					
+302	comres	13	5	2024	South East England	211	58	85	31	22	13			2					
+302	comres	13	5	2024	Eastern	139	36	57	18	25	3			0					
+302	comres	13	5	2024	London	204	73	87	31	7	6			0					

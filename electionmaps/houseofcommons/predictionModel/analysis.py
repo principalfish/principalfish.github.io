@@ -77,7 +77,7 @@ for poll, data in polls.items():
     
     if poll != "1001":# my test poll nullified
         for area, numbers in data.regions.items():
-            print (area, numbers)
+  
             regions_in_poll_area = polling_regions[data.company][area]
             for party in numbers:
                 #get previous regional total per party
@@ -93,7 +93,7 @@ for poll, data in polls.items():
                 numbers[party] -= previous_area_percentage
 
             for region in regions_in_poll_area:
-                print (region)
+         
                 for party in numbers:
                     if party not in regional[region].new_totals:
                         regional[region].new_totals[party] = 0

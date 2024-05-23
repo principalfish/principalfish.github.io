@@ -176,7 +176,7 @@ def dump_scatter_data():
     print (last_date)
     print (seat_totals)
 
-if arguments[1] == "650":
+if arguments[1] == "650" or arguments[1] == "650_new":
     dump_scatter_data()
 
 # dump last pollster

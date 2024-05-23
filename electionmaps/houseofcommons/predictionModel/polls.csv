@@ -1756,3 +1756,37 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 302	comres	13	5	2024	South East England	211	58	85	31	22	13			2					
 302	comres	13	5	2024	Eastern	139	36	57	18	25	3			0					
 302	comres	13	5	2024	London	204	73	87	31	7	6			0					
+303	yougov2	16	5	2024	Wales	100	17	44	6	14	7		11	1					
+303	yougov2	16	5	2024	Scotland	174	14	36	5	3	12	31		0					
+303	yougov2	16	5	2024	North	483	15	60	5	12	7			2					
+303	yougov2	16	5	2024	Midlands	332	23	41	8	17	10			1					
+303	yougov2	16	5	2024	London	242	15	58	10	7	10			1					
+303	yougov2	16	5	2024	South	671	25	40	13	11	8			2					
+304	whitestone	16	5	2024	Scotland	121	20	51	7	5	5	32		1					
+304	whitestone	16	5	2024	North East	57	11	34	1	9	1			1					
+304	whitestone	16	5	2024	North West	140	27	71	6	25	5			6					
+304	whitestone	16	5	2024	Yorks and Humber	107	22	52	7	15	6			5					
+304	whitestone	16	5	2024	West Midlands	109	24	50	10	16	6			2					
+304	whitestone	16	5	2024	East Midlands	83	22	34	4	17	5			2					
+304	whitestone	16	5	2024	Wales	59	20	24	3	6	3		3	0					
+304	whitestone	16	5	2024	Eastern	120	41	45	12	11	9			1					
+304	whitestone	16	5	2024	London	164	34	75	18	15	12			7					
+304	whitestone	16	5	2024	South East	176	49	65	18	31	11			2					
+304	whitestone	16	5	2024	South West	105	24	48	9	11	10			3					
+305	comres	13	5	2024	Scotland	150	23	59	15	2	2	47		0					
+305	comres	13	5	2024	North West England	187	35	110	15	12	12			4					
+305	comres	13	5	2024	North East England	68	23	31	2	11				0					
+305	comres	13	5	2024	Yorkshire and Humber	127	31	59	15	16	6			0					
+305	comres	13	5	2024	Wales	86	21	34	9	6	8		8	0					
+305	comres	13	5	2024	West Midlands	146	32	79	9	18	7			1					
+305	comres	13	5	2024	East Midlands	112	21	58	7	15	11			0					
+305	comres	13	5	2024	South West England	141	48	56	24	10	4			0					
+305	comres	13	5	2024	South East England	221	71	67	31	24	26			3					
+305	comres	13	5	2024	Eastern	146	47	54	8	29	8			1					
+305	comres	13	5	2024	London	223	84	96	31	4	6			2					
+306	yougov2	22	5	2024	Wales	105	22	41	1	22	7		5	1					
+306	yougov2	22	5	2024	Scotland	182	16	34	7	2	9	31		1					
+306	yougov2	22	5	2024	North	504	19	56	7	14	5			1					
+306	yougov2	22	5	2024	Midlands	347	23	47	8	10	9			3					
+306	yougov2	22	5	2024	London	253	16	58	9	7	9			1					
+306	yougov2	22	5	2024	South	701	26	38	13	15	7			1					

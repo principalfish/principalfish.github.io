@@ -1790,3 +1790,56 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 306	yougov2	22	5	2024	Midlands	347	23	47	8	10	9			3					
 306	yougov2	22	5	2024	London	253	16	58	9	7	9			1					
 306	yougov2	22	5	2024	South	701	26	38	13	15	7			1					
+307	yougov2	24	5	2024	Wales	104	25	50	3	6	4		10	3					
+307	yougov2	24	5	2024	Scotland	180	13	34	7	2	4	37		2					
+307	yougov2	24	5	2024	North	499	18	51	5	18	6			1					
+307	yougov2	24	5	2024	Midlands	344	25	48	6	16	6			0					
+307	yougov2	24	5	2024	London	251	17	50	13	10	8			2					
+307	yougov2	24	5	2024	South	694	27	38	13	15	7			0					
+308	opinium2	24	5	2024	North	347	67	199	22	40	18			2					
+308	opinium2	24	5	2024	Midlands	239	80	92	13	23	25			6					
+308	opinium2	24	5	2024	London	179	42	83	20	16	18			1					
+308	opinium2	24	5	2024	South	510	163	167	77	67	30			5					
+308	opinium2	24	5	2024	Wales	72	25	27	4	2	3		11	1					
+308	opinium2	24	5	2024	Scotland	130	21	43	15	4	7	35		6					
+309	redfield	27	5	2024	South East	1135	299	452	144	150	70			20					
+309	redfield	27	5	2024	London	1199	306	543	129	119	78			23					
+309	redfield	27	5	2024	South West	759	176	303	152	82	30			16					
+309	redfield	27	5	2024	West Midlands	741	161	379	56	103	32			10					
+309	redfield	27	5	2024	East Midlands	526	125	233	67	72	21			8					
+309	redfield	27	5	2024	Eastern	826	178	384	71	141	46			6					
+309	redfield	27	5	2024	North East	330	79	174	19	45	10			3					
+309	redfield	27	5	2024	North West	907	153	527	48	103	56			20					
+309	redfield	27	5	2024	Yorks and Humber	668	141	339	22	121	28			18					
+309	redfield	27	5	2024	Scotland	809	176	284	39	58	19	225		8					
+309	redfield	27	5	2024	Wales	457	114	206	20	57	14		46	0					
+310	yougov2	28	5	2024	Wales	106	20	41	6	15	4		13	1					
+310	yougov2	28	5	2024	Scotland	185	10	36	6	4	11	33		1					
+310	yougov2	28	5	2024	North	513	16	57	6	12	7			2					
+310	yougov2	28	5	2024	Midlands	353	24	46	6	14	7			3					
+310	yougov2	28	5	2024	London	257	17	56	11	5	10			1					
+310	yougov2	28	5	2024	South	713	23	41	12	15	7			2					
+311	whitestone	30	5	2024	Scotland	109	14	42	8	5	4	32		5					
+311	whitestone	30	5	2024	North East	53	10	30	3	5	2			2					
+311	whitestone	30	5	2024	North West	146	36	73	6	20	9			3					
+311	whitestone	30	5	2024	Yorks and Humber	99	16	55	8	12	6			4					
+311	whitestone	30	5	2024	West Midlands	110	31	56	5	15	2			1					
+311	whitestone	30	5	2024	East Midlands	91	24	40	5	14	6			3					
+311	whitestone	30	5	2024	Wales	62	14	26	4	6	4		8	1					
+311	whitestone	30	5	2024	Eastern	117	26	50	15	14	12			8					
+311	whitestone	30	5	2024	London	165	42	66	19	15	15			1					
+311	whitestone	30	5	2024	South East	179	45	66	31	23	14			2					
+311	whitestone	30	5	2024	South West	115	38	39	14	14	7								
+312	yougov2	30	5	2024	Wales	102	22	51	4	9	2		11	1					
+312	yougov2	30	5	2024	Scotland	177	12	44	7	4	5	25		2					
+312	yougov2	30	5	2024	North	492	17	54	5	17	6			2					
+312	yougov2	30	5	2024	Midlands	339	24	45	5	18	7			1					
+312	yougov2	30	5	2024	London	247	14	58	7	12	9			0					
+312	yougov2	30	5	2024	South	683	27	38	14	16	6			0					
+313	opinium2	31	5	2024	North	370	73	201	25	47	19			7					
+313	opinium2	31	5	2024	Midlands	255	80	106	17	26	22			5					
+313	opinium2	31	5	2024	London	190	37	105	18	12	14			5					
+313	opinium2	31	5	2024	South	543	154	215	62	76	28			9					
+313	opinium2	31	5	2024	Wales	77	18	32	5	8	6		7	0					
+313	opinium2	31	5	2024	Scotland	138	27	55	5	4		44		4					
+314	survationscotland	27	5	2024	Scotland	100	17	36	9	3	3	32		0					

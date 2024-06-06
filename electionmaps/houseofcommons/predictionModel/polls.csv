@@ -1854,3 +1854,28 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 315	redfield	2	6	2024	Yorks and Humber	543	130	235	43	97	30			7					
 315	redfield	2	6	2024	Scotland	629	98	242	69	49	19	147		6					
 315	redfield	2	6	2024	Wales	353	52	170	33	41	28		24	5					
+316	yougov2	4	6	2024	Wales	107	19	39	6	10	2		22	2					
+316	yougov2	4	6	2024	Scotland	187	12	37	8	6	6	28		3					
+316	yougov2	4	6	2024	North	517	16	48	5	21	8			2					
+316	yougov2	4	6	2024	Midlands	356	20	42	5	25	5			2					
+316	yougov2	4	6	2024	London	259	16	47	10	12	11			3					
+316	yougov2	4	6	2024	South	718	25	32	19	16	7			2					
+317	mori	4	6	2024	North	127	22	64	7	11	21			3					
+317	mori	4	6	2024	Midlands	178	50	71	12	22	12		4	7					
+317	mori	4	6	2024	Wales	0													
+317	mori	4	6	2024	South	128	30	57	19	13	9								
+317	mori	4	6	2024	London	68	11	41	2	4	8			2					
+317	mori	4	6	2024	England	469	101	220	39	49	49			12					
+317	mori	4	6	2024	Scotland	64	16	11	5	2	2	28		1					
+318	redfield	6	6	2024	South East	178	40	69	33	28	6			1					
+318	redfield	6	6	2024	London	202	52	89	23	21	12			1					
+318	redfield	6	6	2024	South West	114	17	57	14	15	9			2					
+318	redfield	6	6	2024	West Midlands	126	25	58	13	23	6			0					
+318	redfield	6	6	2024	East Midlands	83	17	27	9	20	9			0					
+318	redfield	6	6	2024	Eastern	134	26	44	19	36	6			2					
+318	redfield	6	6	2024	North East	59	8	26	7	11	0			0					
+318	redfield	6	6	2024	North West	153	19	84	11	27	10			1					
+318	redfield	6	6	2024	Yorks and Humber	118	31	46	10	29	3			0					
+318	redfield	6	6	2024	Scotland	122	10	42	15	10	6	35		4					
+318	redfield	6	6	2024	Wales	70	10	32	7	10	8		8	0					
+319	yougovwales	3	6	2024	Wales	100	18	45	5	13	4		12	1					

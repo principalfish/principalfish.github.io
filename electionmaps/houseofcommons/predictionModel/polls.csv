@@ -1907,3 +1907,6 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 322	redfield	10	6	2024	Yorks and Humber	100	20	49	6	20	4			1					
 322	redfield	10	6	2024	Scotland	100	16	37	4	11	3	27		1					
 322	redfield	10	6	2024	Wales	100	20	43	5	20	5		6	1					
+323	yougov3	11	6	2024	England	1826	19	38	15	18	8			2					
+323	yougov3	11	6	2024	Wales	111	17	30	8	19	1		24	0					
+323	yougov3	11	6	2024	Scotland	174	10	44	11	3	10	23		0					

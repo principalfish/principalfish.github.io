@@ -70,6 +70,13 @@ polling_regions = {
         "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
         "Scotland" : ["scotland"]
     },
+    
+    "yougov3" : {
+        "England" : ["northeastengland", "northwestengland", "southeastengland", "southwestengland", "eastofengland", "yorkshireandthehumber",
+            "eastmidlands", "westmidlands", "london"],
+        "Scotland" : ["scotland"],
+        "Wales" : ["wales"]
+    },
 
     "yougovall" : {
         "Scotland" : ["scotland"],

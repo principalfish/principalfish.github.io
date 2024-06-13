@@ -36,6 +36,7 @@ pollster_weights = {
     "survationscotland" : 6,
     "yougov" : 1.3,
     "yougov2" : 1.3,
+    "yougov3" : 1.5,
     "yougovall" : 2,
     "comres" : 1,
     "comresdm" : 1,

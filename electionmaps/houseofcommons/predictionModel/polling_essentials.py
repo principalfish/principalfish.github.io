@@ -54,7 +54,8 @@ pollster_weights = {
     "yougovlondon" : 6,
     "orb" : 1,
     "redfield" : 1,
-    "whitestone": 1
+    "whitestone": 1,
+    "deltapoll": 1
 }
 
 

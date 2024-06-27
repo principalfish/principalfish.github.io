@@ -317,5 +317,13 @@ polling_regions = {
         "Yorks and Humber" : ["yorkshireandthehumber"],
         "Eastern" : ["eastofengland"]
     },
+    "deltapoll" : {
+          "Wales" : ["wales"],
+        "London" : ["london"],
+        "Rest of South" : ["southwestengland", "southeastengland", "eastofengland"],
+        "Midlands" : ["eastmidlands", "westmidlands"],
+        "North" : ["northeastengland", "northwestengland", "yorkshireandthehumber"],
+        "Scotland" : ["scotland"]
+    },
 
 }

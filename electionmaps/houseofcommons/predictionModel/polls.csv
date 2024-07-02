@@ -1985,3 +1985,37 @@ code	company	day	month	year	region	total	conservative	labour	libdems	ukip	green	
 332	mori	24	6	2024	London	188	16	68	10	13	14			4					
 332	mori	24	6	2024	England	1215	171	389	104	172	74			12					
 332	mori	24	6	2024	Scotland	120	7	35	3	10	4	42		2					
+333	yougov2	27	6	2024	Wales	206	18	37	9	15	5		12	4					
+333	yougov2	27	6	2024	Scotland	358	12	34	8	6	5	33		2					
+333	yougov2	27	6	2024	North	991	19	45	6	19	8			3					
+333	yougov2	27	6	2024	Midlands	682	26	36	7	21	7			3					
+333	yougov2	27	6	2024	London	497	16	43	14	13	8			6					
+333	yougov2	27	6	2024	South	1377	23	29	23	17	6			1					
+334	redfield	27	6	2024	South East	100	21	39	19	17	4			1					
+334	redfield	27	6	2024	London	100	20	44	15	12	8			0					
+334	redfield	27	6	2024	South West	100	23	32	18	17	6			1					
+334	redfield	27	6	2024	West Midlands	100	17	51	5	18	8			0					
+334	redfield	27	6	2024	East Midlands	100	23	43	13	18	3			0					
+334	redfield	27	6	2024	Eastern	100	20	41	7	26	5			1					
+334	redfield	27	6	2024	North East	100	23	39	8	26	4			0					
+334	redfield	27	6	2024	North West	100	15	55	8	15	5			1					
+334	redfield	27	6	2024	Yorks and Humber	100	15	41	7	29	5			3					
+334	redfield	27	6	2024	Scotland	100	16	35	8	9	2	29		1					
+334	redfield	27	6	2024	Wales	100	23	47	7	14	1		7	0					
+335	opinium2	27	6	2024	North	100	15	49	10	19	6			1					
+335	opinium2	27	6	2024	Midlands	100	25	46	7	15	5			3					
+335	opinium2	27	6	2024	London	100	18	51	9	14	6			2					
+335	opinium2	27	6	2024	South	100	22	32	21	19	6			1					
+335	opinium2	27	6	2024	Wales	100	25	26	6	21	9		12	2					
+335	opinium2	27	6	2024	Scotland	100	20	33	5	3	2	37		0					
+336	redfield	2	7	2024	South East	100	25	35	16	17	6			1					
+336	redfield	2	7	2024	London	100	23	47	12	8	7			1					
+336	redfield	2	7	2024	South West	100	21	34	19	19	5			1					
+336	redfield	2	7	2024	West Midlands	100	18	49	8	17	6			1					
+336	redfield	2	7	2024	East Midlands	100	26	39	9	16	7			2					
+336	redfield	2	7	2024	Eastern	100	22	37	12	22	7			1					
+336	redfield	2	7	2024	North East	100	28	49	6	14	2			1					
+336	redfield	2	7	2024	North West	100	18	50	6	17	5			2					
+336	redfield	2	7	2024	Yorks and Humber	100	22	44	6	20	7			2					
+336	redfield	2	7	2024	Scotland	100	17	33	7	7	5	29		1					
+336	redfield	2	7	2024	Wales	100	28	36	7	18	4		5	1					

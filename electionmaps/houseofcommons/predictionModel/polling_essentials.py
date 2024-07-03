@@ -58,11 +58,14 @@ pollster_weights = {
     "deltapoll": 1
 }
 
+def _isFuckedSeat(name):
+    return name.strip() in ["Beaconsfield", "South West Hertfordshire", "East Devon", "Devon East", "Exmouth and Exeter East", "Hertfordshire South West"]
 
 class Seat(object):
 
     def __init__(self, data):
         self.data = data
+        self.name = data["seatInfo"]["name"]
         self.region = data["seatInfo"]["region"]
         self.electorate = data["seatInfo"]["electorate"]
         self.current = data["seatInfo"]["current"]
@@ -70,7 +73,16 @@ class Seat(object):
         self.old_partyInfo = data["partyInfo"]
         self.new_partyInfo = {}
         self.output = None
-
+        if _isFuckedSeat(self.name):
+            if "libdems" not in self.old_partyInfo:
+                self.old_partyInfo["libdems"] = {
+                    "total": self.old_partyInfo["others"]["total"] * 0.5,
+                    "name": "Libdems"
+                }
+            else:
+                self.old_partyInfo["libdems"]["total"] *= 1.4
+       
+            del self.old_partyInfo["others"]
         other_total = 0
         for party in self.old_partyInfo:
             if party == "others" or party == "other":

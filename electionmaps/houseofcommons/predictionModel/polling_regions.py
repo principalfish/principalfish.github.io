@@ -252,7 +252,7 @@ polling_regions = {
     },
 
     "lucidtalk" : {
-        "Norn Iron" : ["northernireland"]
+        "Northern Ireland" : ["northernireland"]
     },
 
     "panelbase" : {

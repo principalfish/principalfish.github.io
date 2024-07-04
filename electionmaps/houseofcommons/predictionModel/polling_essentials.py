@@ -310,7 +310,7 @@ class Poll(object):
         raw_num_comps = ["general", "me", "icm", "icm2", "icm3", "opinium", "opinium2"
                         "mori", "comres", "comresdm", "survation",
                         "bmg", "icmmissing", "opiniummissing", "ashcroft", "gfk", "survationscotland",
-                        "panelbasescotland", "yougovwales", "yougovscotland", "yougovregional", "lucidtalk", "panelbase",
+                        "panelbasescotland", "yougovwales", "yougovscotland", "yougovregional", "panelbase",
                         "yougovlondon", "orb", "redfield", "survationall", "whitestone"]
 
         if self.company in raw_num_comps:
@@ -330,6 +330,10 @@ class Poll(object):
         # delete total from polls
         for region, numbers in self.regions.items():
             del numbers["total"]
+            
+        if self.company == "lucidtalk":
+            print (self.regions)
+
 
     def weight_poll(self):
         today = datetime.today()
@@ -342,7 +346,7 @@ class Poll(object):
         weight *= math.pow(degrade_factor, days_past)
 #
         #testing
-        if self.company == "me":
+        if self.company == "me" or self.company == "lucidtalk":
             weight = 10000000
 
         return weight

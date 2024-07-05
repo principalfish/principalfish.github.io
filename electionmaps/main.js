@@ -1187,7 +1187,7 @@ var url = window.location.href;
 
 
 var urlParamMap = {
-	null : current,
+	null : currentParliament,
 	"current" : currentParliament,
 	"prediction" : prediction,
 	"prediction_new" : prediction_new,

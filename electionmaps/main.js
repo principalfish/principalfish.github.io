@@ -1030,7 +1030,7 @@ function pageLoadEssentials(){
 	//show and hide various divs on load
 	uiAttr.pageLoadDiv();
 
-	if (currentMap.name != "prediction_new" && currentMap.name != "prediction"){
+	if (currentMap.name != "prediction_new" && currentMap.name != "prediction" && currentMap.name != "current"){
 		$("#instructions").remove();
 	} else {
 
@@ -1140,7 +1140,7 @@ var dataurls =  {
 	predict_600 : "houseofcommons/prediction_600seat.json",
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2019, false, false, false, false, false);
+var currentParliament = new pageSetting("current", dataurls.map650_new, dataurls.current, dataurls.e2019_new, true, false, false, false, true);
 var election2019 = new pageSetting("election2019", dataurls.map650, dataurls.e2019, dataurls.e2017, true, false, true, false, true);
 var election2019_new = new pageSetting("election2019_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, false, true, false, false);
 var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, true, false, true);
@@ -1435,7 +1435,7 @@ var urlParamMap = {
   gain : null,
 
   display : function(seat,showTurnout){
-
+    
     var activeSeatData = new activeSeat(seat);
 
     seatInfoTable.seatInfo(activeSeatData, showTurnout); // draw tables with data
@@ -1467,7 +1467,6 @@ var urlParamMap = {
     } else {
       $("#information-gain .party-name").text("");
     }
-    console.log(data)
     var majorityPercentage = (100 * data.majority / data.turnout).toFixed(2);
     var majorityTextString = "Majority: " + majorityPercentage + "%"
     if (showTurnout){
@@ -1613,6 +1612,8 @@ function activeSeat(seat){
 
   this.turnout = (seatInfo.turnout.toFixed(0)) / 1;
 
+
+
   this.majority = seatInfo.majority;
   //  this.turnoutPercentage = seatInfo.percentage_turnout; = turnout / electorate x 100
   // this.majorityPercent = seatInfo.maj_percent; = majority / turnout
@@ -1645,7 +1646,9 @@ function activeSeat(seat){
 
       partyData = partyInfo[party];
       var totalPercentage = (100 * partyData.total / this.turnout).toFixed(2);
+
       var change = (totalPercentage - previousTotalPercentage).toFixed(2);
+    
       if (party == "other" || party == "others"){
         var change = "0";
       }
@@ -2372,7 +2375,6 @@ function activeSeat(seat){
     }
 
     var divider = "</div><div>";
-
     $.each(voteTotals.data, function(i, totals){
       var party = totals.party;
       var name = "<div class='party-flair " + party + "'></div>" + totals.name;

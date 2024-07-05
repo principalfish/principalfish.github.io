@@ -36,7 +36,7 @@ var seatInfoTable = {
     } else {
       $("#information-gain .party-name").text("");
     }
-    console.log(data)
+
     var majorityPercentage = (100 * data.majority / data.turnout).toFixed(2);
     var majorityTextString = "Majority: " + majorityPercentage + "%"
     if (showTurnout){

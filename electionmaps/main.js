@@ -2368,7 +2368,8 @@ function activeSeat(seat){
     if (currentMap.name == "election2015" 
       || currentMap.name == "election2010"
       || currentMap.name == "election2017"
-      || currentMap.name == "election2019"){
+      || currentMap.name == "election2019" 
+      || currentMap.name == "current"){
       $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
     } else {
         $("#votetotals-turnout").text(" ");
@@ -2381,7 +2382,6 @@ function activeSeat(seat){
       var seats = totals.seats;
       var change = totals.change;
       var votes = parseInt(totals.votes);
-
       var percent = totals.votePercent.toFixed(2);
       var percentChange = null;
       if (totals.votePercentChange != null) {

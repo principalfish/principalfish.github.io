@@ -157,6 +157,7 @@ var dataurls =  {
 	predict : "houseofcommons/prediction.json",
 	predict_new : "houseofcommons/prediction_new.json",
 	current : "houseofcommons/current.json",
+	e2024 : "houseofcommons/2024election.json",
 	e2019 : "houseofcommons/2019election.json",
 	e2019_new : "houseofcommons/2019election_new.json",
 	e2017 : "houseofcommons/2017election.json",
@@ -166,7 +167,8 @@ var dataurls =  {
 	predict_600 : "houseofcommons/prediction_600seat.json",
 }
 
-var currentParliament = new pageSetting("current", dataurls.map650, dataurls.current, dataurls.e2019, false, false, false, false, false);
+var currentParliament = new pageSetting("current", dataurls.map650_new, dataurls.current, dataurls.e2019, false, false, false, false, false);
+var election2024 = new pageSetting("election2024", dataurls.map650_new, dataurls.e2024, dataurls.e2019_new, true, false, true, false, true);
 var election2019 = new pageSetting("election2019", dataurls.map650, dataurls.e2019, dataurls.e2017, true, false, true, false, true);
 var election2019_new = new pageSetting("election2019_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, false, true, false, false);
 var election2017 = new pageSetting("election2017", dataurls.map650, dataurls.e2017, dataurls.e2015, true, false, true, false, true);
@@ -174,14 +176,8 @@ var election2015 = new pageSetting("election2015", dataurls.map650, dataurls.e20
 var election2010 = new pageSetting("election2010", dataurls.map650, dataurls.e2010, dataurls.e2010, false, false, false, false, true); // no 2005 data to compare atm
 var prediction = new pageSetting("prediction", dataurls.map650, dataurls.predict, dataurls.e2019, true, false, true, false, false);
 var prediction_new = new pageSetting("prediction_new", dataurls.map650_new, dataurls.predict_new, dataurls.e2019_new, true, false, true, false, false);
-var predictit = new pageSetting("predictit", dataurls.map650, dataurls.e2019, dataurls.e2019, true, true, true, false, false);
+var predictit = new pageSetting("predictit", dataurls.map650_new, dataurls.e2024, dataurls.e2024, true, true, true, false, false);
 var predictit_new = new pageSetting("predictit_new", dataurls.map650_new, dataurls.e2019_new, dataurls.e2019_new, true, true, true, false, false);
-var election2017_600seat = new pageSetting("2017-600seat", dataurls.map600, dataurls.e2017_600, dataurls.e2017_600, false, false, false, false, false); // nodata to compare
-var prediction_600seat = new pageSetting("prediction-600seat", dataurls.map600, dataurls.predict_600, dataurls.e2017_600, true, false, false, false, false);
-
-// hidden
-var predictit_2015 = new pageSetting("prediction_2015", dataurls.map650, dataurls.e2015, dataurls.e2015, true, true, true, false);
-
 
 function initialization(){
 
@@ -213,20 +209,18 @@ var url = window.location.href;
 
 
 var urlParamMap = {
-	null : prediction_new,
+	null : election2024,
 	"current" : currentParliament,
 	"prediction" : prediction,
 	"prediction_new" : prediction_new,
 	"predictit" : predictit,
 	"predictit_new" : predictit_new,
+	"election2024" : election2024,
 	"election2019" : election2019,
   	"election2019_new" : election2019_new,
 	"election2017" : election2017,
 	"election2015" : election2015,
-	"election2010" : election2010,
-	"election2017_600seat" : election2017_600seat,
-	"prediction_600seat" : prediction_600seat,
-	"predictit_2015" : predictit_2015
+	"election2010" : election2010
 };
 
 // var countdown = {

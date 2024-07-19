@@ -191,7 +191,8 @@ var voteTotals = {
     if (currentMap.name == "election2015" 
       || currentMap.name == "election2010"
       || currentMap.name == "election2017"
-      || currentMap.name == "election2019"){
+      || currentMap.name == "election2019"
+      || currentMap.name == "election2024"){
       $("#votetotals-turnout").text("Turnout: " + voteTotals.turnout + "%");
     } else {
         $("#votetotals-turnout").text(" ");

@@ -92,7 +92,7 @@
     let currentSeed = null;
     let guessHistory = [];
     let won = false;
-    let currentStreak = 0; // New global for streaks
+    let currentStreak = 0;
 
     async function init() {
     try {
@@ -261,12 +261,8 @@
         
         document.getElementById('result-title').innerText = won ? "🏆 Victory!" : "⌛ Time's Up!";
         document.getElementById('result-text').innerHTML = `The year was <b>${currentChallenge.y} ${currentChallenge.e}</b>.`;
-        const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
-        calculateStreak(history);
-        
-        document.getElementById('result-text').innerHTML += `
-            <div class="mt-2 small">Current Streak: <b>${currentStreak}</b> 🔥</div>
-        `;
+    
+
         if (mode === 'daily') {
             localStorage.setItem('chronos_daily_done', currentSeed);
             const dailyResult = { 
@@ -277,6 +273,11 @@
             localStorage.setItem('chronos_daily_result', JSON.stringify(dailyResult));
         }
         saveHistory(won);
+        const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');    
+        calculateStreak(history);
+        document.getElementById('result-text').innerHTML += `
+            <div class="mt-2 small">Current Streak: <b>${currentStreak}</b> 🔥</div>
+        `;
         if (mode === 'daily') startTimer();
     }
 
@@ -376,37 +377,47 @@
     }
 
     function calculateStreak(history) {
+        // 1. Get only successful Daily wins
         const dailyWins = history.filter(g => g.m === 'daily' && g.w === true);
-        if (!dailyWins.length) {
+        if (dailyWins.length === 0) {
+            currentStreak = 0;
+            return;
+        }
+        // 2. Extract unique dates and sort them NEWEST to OLDEST
+        // Using a Set handles cases where a user might have two entries for one day
+        const uniqueDates = [...new Set(dailyWins.map(g => g.d))];
+        uniqueDates.sort((a, b) => new Date(b) - new Date(a));
+
+        let streak = 0;
+        let today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const todayStr = today.toLocaleDateString();
+        const yesterdayStr = yesterday.toLocaleDateString();
+
+        // 3. Check if the most recent win is today OR yesterday
+        // If the most recent win is older than yesterday, the streak is dead.
+        if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
             currentStreak = 0;
             return;
         }
 
-        // Sort by date descending (Newest first)
-        dailyWins.sort((a, b) => new Date(b.d) - new Date(a.d));
+        // 4. Walk through the sorted dates and count consecutive days
+        let expectedDate = new Date(new Date(uniqueDates[0])); // Start from the latest win
 
-        let streak = 0;
-        let checkDate = new Date(); // Start from today
-        checkDate.setHours(0,0,0,0);
-
-        for (let game of dailyWins) {
-            let gameDate = new Date(game.d);
-            gameDate.setHours(0,0,0,0);
+        for (let dateStr of uniqueDates) {
+            const actualDate = new Date(dateStr);
             
-            const diffTime = checkDate - gameDate;
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 0) {
+            if (actualDate.toLocaleDateString() === expectedDate.toLocaleDateString()) {
                 streak++;
-                checkDate.setDate(checkDate.getDate() - 1); // Move check back to yesterday
-            } else if (diffDays === 1) {
-                // This handles the case where the first game checked is "yesterday" 
-                // because they haven't won "today" yet
-                streak++;
-                checkDate = gameDate;
-                checkDate.setDate(checkDate.getDate() - 1);
+                // Move expected date back by one day
+                expectedDate.setDate(expectedDate.getDate() - 1);
             } else {
-                break; 
+                // There is a gap in the dates
+                break;
             }
         }
         currentStreak = streak;

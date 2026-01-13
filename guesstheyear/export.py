@@ -46,7 +46,7 @@ def export_challenges(db_path, output_file):
             clean_events.append(text)
 
         # Skip this challenge if no valid facts remain
-        if not clean_events:
+        if len(clean_events) < 2:
             continue
             
         # RANDOMIZATION: Pick up to 5 random facts from the available pool

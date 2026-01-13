@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos: The Daily History Guess</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --bg-color: #f8f9fa; --card-bg: #ffffff; --primary-text: #2c3e50; }
+        body { background-color: var(--bg-color); color: var(--primary-text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .game-container { max-width: 700px; margin: 40px auto; }
+        .event-card { background: var(--card-bg); border-left: 5px solid #34495e; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .guess-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; margin-top: 8px; border-radius: 6px; color: white; font-weight: bold; }
+        .stats-badge { font-size: 0.9rem; background: #e9ecef; padding: 5px 12px; border-radius: 20px; }
+        .hidden { display: none; }
+        .nav-tabs .nav-link { color: #495057; }
+        .nav-tabs .nav-link.active { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container game-container">
+    <header class="text-center mb-4">
+        <h1 class="display-5 fw-bold">⌛ Chronos</h1>
+        <div class="d-flex justify-content-center gap-2 mt-2">
+            <span id="mode-badge" class="stats-badge">Daily Mode</span>
+            <span class="stats-badge">Attempts: <span id="attempts-left">8</span>/8</span>
+        </div>
+    </header>
+
+    <div id="game-view">
+        <div id="facts-area"></div>
+        <div class="card p-4 mt-4 shadow-sm">
+            <div class="input-group">
+                <input type="number" id="guessYear" class="form-control form-control-lg" placeholder="Year">
+                <select id="guessEra" class="form-select form-select-lg" style="max-width: 100px;">
+                    <option value="AD">AD</option>
+                    <option value="BC">BC</option>
+                </select>
+                <button class="btn btn-primary btn-lg" onclick="handleGuess()">Guess</button>
+            </div>
+        </div>
+        <div id="feedback-list" class="mt-4"></div>
+    </div>
+
+    <div id="result-view" class="hidden text-center p-5 card shadow mt-4">
+        <h2 id="result-title"></h2>
+        <p id="result-text" class="lead"></p>
+        <div class="d-grid gap-2 d-md-block">
+            <button id="btn-next" class="btn btn-success btn-lg" onclick="location.reload()">Play Again</button>
+            <button class="btn btn-primary btn-lg" onclick="shareResult()">Share Result 📋</button>
+            <button class="btn btn-outline-secondary btn-lg" onclick="toggleHistory()">History</button>
+        </div>
+    </div>
+
+    <footer class="mt-5 text-center border-top pt-3">
+        <div class="btn-group">
+            <a href="?" class="btn btn-sm btn-outline-primary">Daily Mode</a>
+            <a href="?mode=infinite" class="btn btn-sm btn-outline-secondary">Infinite Mode</a>
+            <button class="btn btn-sm btn-outline-dark" onclick="toggleHistory()">My History</button>
+        </div>
+    </footer>
+</div>
+
+<div class="modal fade" id="historyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h5>History & Stats</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body" id="history-content"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let allChallenges = [];
+    let currentChallenge = null;
+    let attempts = 8;
+    let isGameOver = false;
+    let mode = 'daily';
+    let currentSeed = null;
+    let guessHistory = [];
+
+    async function init() {
+        try {
+            const response = await fetch('challenges.json');
+            if (!response.ok) throw new Error("File not found");
+            allChallenges = await response.json();
+            
+            const params = new URLSearchParams(window.location.search);
+            mode = params.get('mode') === 'infinite' ? 'infinite' : 'daily';
+            
+            if (mode === 'daily') {
+                currentSeed = new Date().toDateString();
+                if (localStorage.getItem('chronos_daily_done') === currentSeed) {
+                    showAlreadyPlayed();
+                    return;
+                }
+            }
+            setupGame();
+        } catch (e) {
+            document.getElementById('facts-area').innerHTML = `<div class="alert alert-danger"><b>Error:</b> Could not load <i>challenges.json</i>. <br>If running locally, use a local server (e.g., python3 -m http.server).</div>`;
+        }
+    }
+
+    function showAlreadyPlayed() {
+        document.getElementById('game-view').classList.add('hidden');
+        const rv = document.getElementById('result-view');
+        rv.classList.remove('hidden');
+        document.getElementById('result-title').innerText = "Daily Complete!";
+        document.getElementById('result-text').innerText = "You've already played today's challenge. Try Infinite Mode!";
+        document.getElementById('btn-next').classList.add('hidden');
+    }
+
+    function setupGame() {
+        if (mode === 'daily') {
+            const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
+            currentChallenge = allChallenges[Math.abs(hash) % allChallenges.length];
+        } else {
+            currentChallenge = allChallenges[Math.floor(Math.random() * allChallenges.length)];
+            document.getElementById('mode-badge').innerText = "Infinite Mode";
+        }
+        renderFacts();
+    }
+
+    function renderFacts() {
+        const factsArea = document.getElementById('facts-area');
+        factsArea.innerHTML = `<p class="text-muted">Target is a <b>${currentChallenge.t}</b>:</p>`;
+        currentChallenge.f.forEach(f => factsArea.innerHTML += `<div class="event-card">${f}</div>`);
+    }
+
+    function handleGuess() {
+        if (isGameOver) return;
+        const gYear = parseInt(document.getElementById('guessYear').value);
+        const gEra = document.getElementById('guessEra').value;
+        if (isNaN(gYear)) return;
+
+        const tVal = currentChallenge.e === 'BC' ? -currentChallenge.y : currentChallenge.y;
+        const gVal = gEra === 'BC' ? -gYear : gYear;
+        let diff = Math.abs(tVal - gVal);
+        if ((tVal < 0 && gVal > 0) || (tVal > 0 && gVal < 0)) diff -= 1;
+
+        let won = (currentChallenge.t === 'year' && diff === 0) ||
+                  (currentChallenge.t === 'decade' && diff < 10 && Math.floor(Math.abs(tVal)/10) === Math.floor(Math.abs(gVal)/10)) ||
+                  (currentChallenge.t === 'century' && diff < 100 && Math.ceil(Math.abs(tVal)/100) === Math.ceil(Math.abs(gVal)/100) && currentChallenge.e === gEra);
+
+        const config = getFeedbackConfig(diff, won);
+        guessHistory.push(config.emoji);
+        addFeedbackUI(gYear, gEra, config);
+
+        if (won) endGame(true);
+        else {
+            attempts--;
+            document.getElementById('attempts-left').innerText = attempts;
+            if (attempts <= 0) endGame(false);
+        }
+    }
+
+    function getFeedbackConfig(diff, won) {
+        if (won) return { label: "CORRECT!", color: "#198754", emoji: "🟩" };
+        if (diff <= 2) return { label: "1-2 yrs (Burning!)", color: "#dc3545", emoji: "🟥" };
+        if (diff <= 10) return { label: "3-10 yrs (Hot)", color: "#fd7e14", emoji: "🟧" };
+        if (diff <= 40) return { label: "11-40 yrs (Warm)", color: "#ffc107", emoji: "🟨" };
+        if (diff <= 200) return { label: "41-200 yrs (Cool)", color: "#0dcaf0", emoji: "🟦" };
+        if (diff <= 1000) return { label: "200-1000 yrs (Cold)", color: "#0d6efd", emoji: "❄️" };
+        return { label: "Freezing (>1000 yrs)", color: "#4b0082", emoji: "💀" };
+    }
+
+    function addFeedbackUI(year, era, cfg) {
+        const row = document.createElement('div');
+        row.className = 'guess-row';
+        row.style.backgroundColor = cfg.color;
+        row.innerHTML = `<span>${year} ${era}</span> <span>${cfg.label}</span>`;
+        document.getElementById('feedback-list').prepend(row);
+    }
+
+    function endGame(won) {
+        isGameOver = true;
+        document.getElementById('game-view').classList.add('hidden');
+        document.getElementById('result-view').classList.remove('hidden');
+        document.getElementById('result-title').innerText = won ? "🏆 Victory!" : "⌛ Time's Up!";
+        document.getElementById('result-text').innerHTML = `The year was <b>${currentChallenge.y} ${currentChallenge.e}</b>.`;
+        
+        if (mode === 'daily') localStorage.setItem('chronos_daily_done', currentSeed);
+        saveHistory(won);
+    }
+
+    function saveHistory(won) {
+        const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
+        history.push({ d: new Date().toLocaleDateString(), y: `${currentChallenge.y} ${currentChallenge.e}`, w: won, s: 8 - attempts, m: mode });
+        localStorage.setItem('chronos_history_v3', JSON.stringify(history));
+    }
+
+    function shareResult() {
+        const text = `Chronos ${mode === 'daily' ? 'Daily' : 'Infinite'}\nYear: ${currentChallenge.y} ${currentChallenge.e}\n${guessHistory.join('')}\nResult: ${8-attempts}/8`;
+        navigator.clipboard.writeText(text).then(() => alert("Result copied to clipboard!"));
+    }
+
+    function toggleHistory() {
+        const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
+        const daily = history.filter(g => g.m === 'daily').reverse();
+        const infinite = history.filter(g => g.m === 'infinite').reverse();
+
+        const genTable = (data) => {
+            if (!data.length) return "<p class='text-center p-3'>No games yet.</p>";
+            let t = '<table class="table"><thead><tr><th>Date</th><th>Year</th><th>Score</th></tr></thead><tbody>';
+            data.forEach(g => t += `<tr><td>${g.d}</td><td>${g.y}</td><td>${g.w?'✅':'❌'} ${g.s}/8</td></tr>`);
+            return t + '</tbody></table>';
+        };
+
+        document.getElementById('history-content').innerHTML = `
+            <ul class="nav nav-tabs"><li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#h-daily">Daily</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#h-inf">Infinite</a></li></ul>
+            <div class="tab-content"><div id="h-daily" class="tab-pane active">${genTable(daily)}</div>
+            <div id="h-inf" class="tab-pane">${genTable(infinite)}</div></div>`;
+        new bootstrap.Modal(document.getElementById('historyModal')).show();
+    }
+
+    init();
+</script>
+</body>
+</html>

@@ -16,6 +16,10 @@ todo2.txt
 
 /hearthstone/
 
+/guesstheyear/*.db
+/guesstheyear/*.db-wal
+/guesstheyear/*.db-shm
+
 
 electionmaps/houseofcommons/predictionModel/__pycache__/
 electionmaps/new_seats_scripts/*

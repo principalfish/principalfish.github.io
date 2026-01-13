@@ -169,10 +169,42 @@
         renderFacts();
     }
 
+    let visibleFacts = 1; // Start with one fact
+
     function renderFacts() {
         const factsArea = document.getElementById('facts-area');
         factsArea.innerHTML = `<p class="text-muted">Target is a <b>${currentChallenge.t}</b>:</p>`;
-        currentChallenge.f.forEach(f => factsArea.innerHTML += `<div class="event-card">${f}</div>`);
+        
+        currentChallenge.f.forEach((fact, index) => {
+            // Trim to first sentence in the browser
+            const firstSentence = fact.split(/(?<=[.!?])\s+/)[0];
+            
+            const isHidden = index >= visibleFacts ? 'hidden' : '';
+            factsArea.innerHTML += `
+                <div class="event-card fact-item ${isHidden}" id="fact-${index}">
+                    ${firstSentence}
+                </div>`;
+        });
+
+        // Add Hint Button if there are more facts to show
+        if (visibleFacts < currentChallenge.f.length) {
+            factsArea.innerHTML += `
+                <button id="hint-btn" class="btn btn-sm btn-outline-info mt-2" onclick="showHint()">
+                    💡 Reveal another clue
+                </button>`;
+        }
+    }
+
+    function showHint() {
+        const nextFact = document.getElementById(`fact-${visibleFacts}`);
+        if (nextFact) {
+            nextFact.classList.remove('hidden');
+            visibleFacts++;
+        }
+        // Remove button if no more facts
+        if (visibleFacts >= currentChallenge.f.length) {
+            document.getElementById('hint-btn')?.remove();
+        }
     }
 
     function handleGuess() {
@@ -235,12 +267,13 @@
         document.getElementById('result-text').innerHTML += `
             <div class="mt-2 small">Current Streak: <b>${currentStreak}</b> 🔥</div>
         `;
-
-
         if (mode === 'daily') {
             localStorage.setItem('chronos_daily_done', currentSeed);
-            // Save today's specific result for the share button to find after reload
-            const dailyResult = { won: won, score: 8 - attempts, emojis: guessHistory };
+            const dailyResult = { 
+                won: won, 
+                score: guessHistory.length, // Use length here
+                emojis: guessHistory 
+            };
             localStorage.setItem('chronos_daily_result', JSON.stringify(dailyResult));
         }
         saveHistory(won);
@@ -249,16 +282,21 @@
 
     function saveHistory(won) {
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
-        history.push({ d: new Date().toLocaleDateString(), y: `${currentChallenge.y} ${currentChallenge.e}`, w: won, s: 8 - attempts, m: mode });
+        history.push({ 
+            d: new Date().toLocaleDateString(), 
+            y: `${currentChallenge.y} ${currentChallenge.e}`, 
+            w: won, 
+            s: guessHistory.length, // Change this line
+            m: mode 
+        });
         localStorage.setItem('chronos_history_v3', JSON.stringify(history));
     }
 
     function shareResult() {
         let finalWon = won;
-        let finalScore = 8 - attempts;
         let emojis = guessHistory.join('');
+        let finalScore = guessHistory.length; // Change this line
 
-        // If variables are empty (after reload), grab from LocalStorage
         if (mode === 'daily' && guessHistory.length === 0) {
             const saved = JSON.parse(localStorage.getItem('chronos_daily_result'));
             if (saved) {
@@ -268,7 +306,8 @@
             }
         }
 
-        const scoreDisplay = finalWon ? finalScore : "X";
+    const scoreDisplay = finalWon ? finalScore : "X";
+    // ... rest of the function remains the same ...
         const text = `⌛ Chronos ${mode === 'daily' ? 'Daily' : 'Infinite'}\n` +
                     `Year: ${currentChallenge.y} ${currentChallenge.e}\n` +
                     `${emojis}\n` +
@@ -330,12 +369,14 @@
 
     function generateTable(data) {
         if (!data || data.length === 0) return "<p class='text-center p-3 text-muted'>No games played yet.</p>";
-        let t = '<table class="table table-hover align-middle"><thead><tr><th>Date</th><th>Year</th><th>Score</th></tr></thead><tbody>';
+        let t = '<table class="table table-hover align-middle"><thead><tr><th>Date</th><th>Year</th><th>Result</th></tr></thead><tbody>';
         data.forEach(g => {
+            // 's' now correctly reflects guessHistory.length
+            const resultText = g.w ? `${g.s} ${g.s === 1 ? 'guess' : 'guesses'}` : 'Failed';
             t += `<tr>
                     <td>${g.d}</td>
                     <td><span class="badge bg-secondary">${g.y}</span></td>
-                    <td>${g.w ? '✅' : '❌'} ${g.s}/8</td>
+                    <td>${g.w ? '✅' : '❌'} ${resultText}</td>
                 </tr>`;
         });
         return t + '</tbody></table>';
@@ -401,6 +442,7 @@
         isGameOver = false;
         guessHistory = [];
         won = false;
+        visibleFacts = 1;
 
         // Reset UI
         document.getElementById('attempts-left').innerText = attempts;

@@ -64,7 +64,7 @@ def get_timeframe_info(year, era):
         title = f"{year}_BC"
         return title, None, "year", [year]
     
-    elif year <= 1800:
+    elif year <= 1799:
         decade = (year // 10) * 10
         # Wikipedia quirk for century heads
         title = f"{year}s_BC_(decade)" if year % 100 == 0 else f"{decade}s_BC"
@@ -86,14 +86,14 @@ def get_year_events(page_title):
     try:
         res = requests.get(URL, params=params, headers=headers, timeout=10).json()
         if 'parse' not in res: return []
-
+     
         # EXCLUDE undesirable sections like References, Sources, External Links
         exclude_keywords = ["references", "sources", "bibliography", "external links", "further reading", "notes"]
         
         # Get only valid section indices
         valid_sections = [
             s['index'] for s in res['parse']['sections'] 
-            if any(kw in s['line'].lower() for kw in ["events", "by place", "content"])
+            if any(kw in s['line'] for kw in ["events", "by place", "content", "Events and trends", "January – March", "April – June", "July – September", "October – December"])
             and not any(ex in s['line'].lower() for ex in exclude_keywords)
         ]
 
@@ -102,7 +102,7 @@ def get_year_events(page_title):
             params = {"action": "parse", "page": page_title, "section": section_index, "prop": "text", "format": "json"}
             page_res = requests.get(URL, params=params, headers=headers).json()
             soup = BeautifulSoup(page_res['parse']['text']['*'], 'html.parser')
-            
+  
             for li in soup.find_all('li'):
                 if li.parent.name in ['ul', 'ol']:
                     # Remove citation sups [1], [2], etc.
@@ -143,7 +143,7 @@ def scrape_range(year_range, era, conn, cursor):
             final_title = fallback_title if events else primary_title
         else:
             final_title = primary_title
-
+    
         if events:
             print (f"  Found {len(events)} events for Year {year} ({t_type})")
             for r_year in y_range:
@@ -170,7 +170,7 @@ def main():
     
     print("--- Starting AD Scraping ---")
     scrape_range(range(1, 2027), "AD", conn, cursor)
-    
+ 
     print("\n--- Starting BC Scraping ---")
     scrape_range(range(1, 4001), "BC", conn, cursor)
 

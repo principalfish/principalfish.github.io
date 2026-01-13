@@ -19,6 +19,33 @@
         #result-view .btn {
             min-width: 160px; /* Forces buttons to have a uniform minimum size */
         }
+        .feedback-item {
+            transition: all 0.3s ease;
+            border-top: 1px solid #eee;
+            border-right: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+        }
+
+        .feedback-item div {
+            display: flex;
+            align-items: center;
+        }
+
+        #feedback-list {
+            max-width: 500px; /* Limits width */
+            margin: 0 auto;   /* Centers it */
+            padding: 10px;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(25, 135, 84, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+        }
+
+        .pulse-win {
+            animation: pulse-green 0.8s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -173,8 +200,8 @@
 
     function renderFacts() {
         const factsArea = document.getElementById('facts-area');
-        factsArea.innerHTML = `<p class="text-muted">Target is a <b>${currentChallenge.t}</b>:</p>`;
-        
+        const typeLabel = currentChallenge.t.charAt(0).toUpperCase() + currentChallenge.t.slice(1); 
+        factsArea.innerHTML = `<p class="text-muted text-uppercase small fw-bold">Target Type: ${typeLabel}</p>`;
         currentChallenge.f.forEach((fact, index) => {
             // Trim to first sentence in the browser
             const firstSentence = fact.split(/(?<=[.!?])\s+/)[0];
@@ -195,6 +222,30 @@
         }
     }
 
+    function getDisplayName(challenge) {
+        const { y, e, t } = challenge;
+        
+        if (t === 'year') return `Year: ${y} ${e}`;
+        
+        if (t === 'decade') {
+            const decadeStart = Math.floor(y / 10) * 10;
+            return `The ${decadeStart}s ${e}`;
+        }
+        
+        if (t === 'century') {
+            const century = Math.floor(y / 100) + 1;
+            const s = ["th", "st", "nd", "rd"], v = century % 100;
+            const suffix = s[(v - 20) % 10] || s[v] || s[0];
+            return `The ${century}${suffix} Century ${e}`;
+        }
+    }
+
+    function getOrdinalSuffix(n) {
+        let s = ["th", "st", "nd", "rd"],
+            v = n % 100;
+        return s[(v - 20) % 10] || s[v] || s[0];
+    }
+
     function showHint() {
         const nextFact = document.getElementById(`fact-${visibleFacts}`);
         if (nextFact) {
@@ -207,42 +258,126 @@
         }
     }
 
-    function handleGuess() {
+    function handleGuess() {  
         if (isGameOver) return;
-        const gYear = parseInt(document.getElementById('guessYear').value);
+        
+        const gYearInput = document.getElementById('guessYear');
+        const gYear = parseInt(gYearInput.value);
         const gEra = document.getElementById('guessEra').value;
-        if (isNaN(gYear)) return;
+        
+        if (isNaN(gYear)) {
+            alert("Please enter a valid year.");
+            return;
+        }
 
-        const tVal = currentChallenge.e === 'BC' ? -currentChallenge.y : currentChallenge.y;
+        const targetY = currentChallenge.y;
+        const targetE = currentChallenge.e;
+        const type = currentChallenge.t;
+
+        let diff = 0;
+        let won = false;
+
+        // Convert to absolute years (BC is negative)
+        const tVal = targetE === 'BC' ? -targetY : targetY;
         const gVal = gEra === 'BC' ? -gYear : gYear;
-        let diff = Math.abs(tVal - gVal);
+
+        // Logic for different timeframes
+        if (type === 'year') {
+            diff = Math.abs(tVal - gVal);
+            won = (diff === 0);
+        } else {
+            // Decade is 10 years, Century is 100
+            const span = (type === 'decade') ? 9 : 99;
+            const rangeStart = tVal;
+            const rangeEnd = tVal + (targetE === 'BC' ? -span : span);
+            
+            const minRange = Math.min(rangeStart, rangeEnd);
+            const maxRange = Math.max(rangeStart, rangeEnd);
+
+            if (gVal >= minRange && gVal <= maxRange) {
+                diff = 0;
+                won = true;
+            } else {
+                diff = gVal < minRange ? minRange - gVal : gVal - maxRange;
+            }
+        }
+
+        // Adjust for "Year 0" gap
         if ((tVal < 0 && gVal > 0) || (tVal > 0 && gVal < 0)) diff -= 1;
 
-        // Set the global 'won' variable
-        won = (currentChallenge.t === 'year' && diff === 0) ||
-            (currentChallenge.t === 'decade' && diff < 10 && Math.floor(Math.abs(tVal)/10) === Math.floor(Math.abs(gVal)/10)) ||
-            (currentChallenge.t === 'century' && diff < 100 && Math.ceil(Math.abs(tVal)/100) === Math.ceil(Math.abs(gVal)/100) && currentChallenge.e === gEra);
-
+        // Feedback Logic
         const config = getFeedbackConfig(diff, won);
+        console.log(config)
         guessHistory.push(config.emoji);
-        addFeedbackUI(gYear, gEra, config);
+        
+        // --- Add to UI ---
+        const feedbackList = document.getElementById('feedback-list');
+        const item = document.createElement('div');
 
-        if (won) endGame(true);
-        else {
+        // Decide text color: Use white text for dark colors (Red/Green/Blue), black for light colors (Yellow/Cyan)
+        const isLightColor = ['#ffc107', '#0dcaf0', '#f8f9fa'].includes(config.color);
+        const textColor = isLightColor ? 'text-dark' : 'text-white';
+
+        item.className = `feedback-item p-3 mb-2 rounded shadow-sm d-flex justify-content-between align-items-center ${textColor}`;
+        item.style.backgroundColor = config.color;
+
+        item.innerHTML = `
+            <div>
+                <span class="fw-bold fs-5">${gYear} ${gEra}</span>
+                <span class="ms-3 fw-medium">${config.label}</span>
+            </div>
+            <div class="fs-3">${config.emoji}</div>
+        `;
+
+        feedbackList.prepend(item);
+
+     if (won) {
+            // 1. Add the pulse class to the specific item we just created
+            item.classList.add('pulse-win');
+            
+            // 2. Disable the button so they can't double-guess
+            document.querySelector("button[onclick='handleGuess()']").disabled = true;
+
+            // 3. Wait 3 seconds before showing the Game Over/Victory screen
+            setTimeout(() => {
+                endGame(true);
+            }, 3000);
+        } else {
             attempts--;
             document.getElementById('attempts-left').innerText = attempts;
             if (attempts <= 0) endGame(false);
         }
+        
+        gYearInput.value = ''; // Clear input for next guess
     }
 
     function getFeedbackConfig(diff, won) {
-        if (won) return { label: "CORRECT!", color: "#198754", emoji: "🟩" };
-        if (diff <= 2) return { label: "1-2 yrs (Burning!)", color: "#dc3545", emoji: "🟥" };
-        if (diff <= 10) return { label: "3-10 yrs (Hot)", color: "#fd7e14", emoji: "🟧" };
-        if (diff <= 40) return { label: "11-40 yrs (Warm)", color: "#ffc107", emoji: "🟨" };
-        if (diff <= 200) return { label: "41-200 yrs (Cool)", color: "#0dcaf0", emoji: "🟦" };
-        if (diff <= 1000) return { label: "200-1000 yrs (Cold)", color: "#0d6efd", emoji: "❄️" };
-        return { label: "Freezing (>1000 yrs)", color: "#4b0082", emoji: "💀" };
+        if (won || diff === 0) {
+            return { label: "Correct!", color: "#198754", emoji: "✅" };
+        }
+        
+        // 1-2 Years: Burning
+        if (diff <= 2) {
+            return { label: "1-2 yrs (Burning!)", color: "#dc3545", emoji: "🔥" };
+        } 
+        // 3-10 Years: Hot
+        if (diff <= 10) {
+            return { label: "3-10 yrs (Hot)", color: "#fd7e14", emoji: "♨️" };
+        } 
+        // 11-40 Years: Warm
+        if (diff <= 40) {
+            return { label: "11-40 yrs (Warm)", color: "#ffc107", emoji: "☀️" };
+        } 
+        // 41-200 Years: Chilly
+        if (diff <= 200) {
+            return { label: "41-200 yrs (Chilly)", color: "#0dcaf0", emoji: "🧊" };
+        } 
+        // 201-1000 Years: Cold
+        if (diff <= 1000) {
+            return { label: "201-1000 yrs (Cold)", color: "#0d6efd", emoji: "❄️" };
+        } 
+        // 1000+ Years: Freezing
+        return { label: "1000+ yrs (Freezing)", color: "#6c757d", emoji: "🌌" };
     }
 
     function addFeedbackUI(year, era, cfg) {
@@ -260,8 +395,9 @@
         document.getElementById('result-view').classList.remove('hidden');
         
         document.getElementById('result-title').innerText = won ? "🏆 Victory!" : "⌛ Time's Up!";
-        document.getElementById('result-text').innerHTML = `The year was <b>${currentChallenge.y} ${currentChallenge.e}</b>.`;
-    
+        // Use formatHistoryDate here to ensure "1333" becomes "1330s" for the reveal
+        const displayDate = formatHistoryDate(currentChallenge.y, currentChallenge.e, currentChallenge.t);
+        document.getElementById('result-text').innerHTML = `The target was <b>${displayDate}</b>.`;
 
         if (mode === 'daily') {
             localStorage.setItem('chronos_daily_done', currentSeed);
@@ -284,8 +420,10 @@
     function saveHistory(wonStatus) {
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
         history.push({ 
-            d: new Date().toLocaleDateString(), // Consistent date format
-            y: `${currentChallenge.y} ${currentChallenge.e}`, 
+            d: new Date().toLocaleDateString(), 
+            y: currentChallenge.y,  // Store as number
+            e: currentChallenge.e,  // Store as "AD" or "BC"
+            t: currentChallenge.t,  // Store as "year", "decade", or "century"
             w: wonStatus, 
             s: guessHistory.length,
             m: mode 
@@ -306,10 +444,13 @@
                 emojis = saved.emojis.join('');
             }
         }
+        const scoreDisplay = finalWon ? finalScore : "X";
 
-    const scoreDisplay = finalWon ? finalScore : "X";
-    // ... rest of the function remains the same ...
+        // Get the formatted date for the share message
+        const displayDate = formatHistoryDate(currentChallenge.y, currentChallenge.e, currentChallenge.t);
+
         const text = `⌛ Chronos ${mode === 'daily' ? 'Daily' : 'Infinite'}\n` +
+                    `Target: ${displayDate}\n` + 
                     `${emojis}\n` +
                     `Result: ${scoreDisplay}/8\n` +
                     window.location.href;
@@ -363,17 +504,48 @@
 
     function generateTable(data) {
         if (!data || data.length === 0) return "<p class='text-center p-3 text-muted'>No games played yet.</p>";
-        let t = '<table class="table table-hover align-middle"><thead><tr><th>Date</th><th>Year</th><th>Result</th></tr></thead><tbody>';
+        
+        let t = '<table class="table table-hover align-middle"><thead><tr><th>Date</th><th>Target</th><th>Result</th></tr></thead><tbody>';
+        
         data.forEach(g => {
-            // 's' now correctly reflects guessHistory.length
+            // Handle potential undefined issues from old vs new data
+            let displayDate = "Unknown";
+            
+            if (g.y && g.e && g.t) {
+                // New data format: format it nicely
+                displayDate = formatHistoryDate(g.y, g.e, g.t);
+            } else if (g.y) {
+                // Old data format (just year/era string)
+                displayDate = g.y; 
+            }
+
             const resultText = g.w ? `${g.s} ${g.s === 1 ? 'guess' : 'guesses'}` : 'Failed';
+            const badgeClass = g.w ? 'bg-success' : 'bg-danger';
+
             t += `<tr>
-                    <td>${g.d}</td>
-                    <td><span class="badge bg-secondary">${g.y}</span></td>
-                    <td>${g.w ? '✅' : '❌'} ${resultText}</td>
+                    <td class="small">${g.d}</td>
+                    <td><span class="badge bg-secondary">${displayDate}</span></td>
+                    <td><span class="badge ${badgeClass}">${resultText}</span></td>
                 </tr>`;
         });
         return t + '</tbody></table>';
+    }
+
+    function formatHistoryDate(year, era, timeframe) {
+        if (timeframe === 'year') return `${year} ${era}`;
+        
+        if (timeframe === 'decade') {
+            const decadeStart = Math.floor(year / 10) * 10;
+            return `${decadeStart}s ${era}`;
+        }
+        
+        if (timeframe === 'century') {
+            const cent = Math.floor(year / 100) + 1;
+            const s = ["th", "st", "nd", "rd"], v = cent % 100;
+            const suffix = s[(v - 20) % 10] || s[v] || s[0];
+            return `${cent}${suffix} Century ${era}`;
+        }
+        return `${year} ${era}`;
     }
 
     function calculateStreak(history) {
@@ -468,7 +640,6 @@
         // Pick a new challenge
         setupGame();
     }
-
     init();
 </script>
 </body>

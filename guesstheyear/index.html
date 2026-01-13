@@ -143,26 +143,24 @@
         
         if (mode === 'daily') {
             currentSeed = new Date().toDateString();
+            const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
             
-            // 1. Reset variables to a clean state before loading
-            guesses = []; 
-            attempts = 5; 
-            won = false;
+            // 1. SET THE CHALLENGE FIRST
+            currentChallenge = allChallenges[Math.abs(hash) % allChallenges.length];
 
+            // 2. NOW CHECK FOR SAVED STATE
             const saved = localStorage.getItem('chronos_save_' + currentSeed);
             if (saved) {
                 const gameState = JSON.parse(saved);
-                
-                // 2. Overwrite with saved data
-                guesses = gameState.guesses;
+                guesses = gameState.guesses || [];
                 attempts = gameState.attempts;
                 won = gameState.won;
 
-                // 3. Render once
                 renderSavedGuesses();
 
                 if (won || attempts <= 0) {
-                    setTimeout(() => endGame(won), 100); 
+                    // Now currentChallenge is guaranteed to exist when this runs
+                    setTimeout(() => endGame(won, true), 100); 
                     return;
                 }
             }
@@ -250,9 +248,10 @@
 
     function renderSavedGuesses() {
         const feedbackList = document.getElementById('feedback-list');
+        if (!feedbackList) return;
         feedbackList.innerHTML = ''; 
 
-        guesses.forEach(g => {
+        [...guesses].forEach(g => {
             const item = document.createElement('div');
             const isLightColor = ['#ffc107', '#0dcaf0', '#f8f9fa'].includes(g.config.color);
             const textColor = isLightColor ? 'text-dark' : 'text-white';
@@ -454,7 +453,13 @@
         document.getElementById('feedback-list').prepend(row);
     }
 
-    function endGame(winStatus) {
+    function endGame(winStatus, isRestoring = false) {
+        if (!currentChallenge) return;
+
+        const resultYear = document.getElementById('result-year');
+        if (resultYear) {
+            resultYear.innerText = `${currentChallenge.y} ${currentChallenge.e}`;
+        }
         isGameOver = true;
         won = winStatus; // Ensure global won is set
         document.getElementById('game-view').classList.add('hidden');
@@ -465,16 +470,20 @@
         const displayDate = formatHistoryDate(currentChallenge.y, currentChallenge.e, currentChallenge.t);
         document.getElementById('result-text').innerHTML = `The target was <b>${displayDate}</b>.`;
 
-        if (mode === 'daily') {
-            localStorage.setItem('chronos_daily_done', currentSeed);
-            const dailyResult = { 
-                won: won, 
-                score: guessHistory.length, // Use length here
-                emojis: guessHistory 
-            };
-            localStorage.setItem('chronos_daily_result', JSON.stringify(dailyResult));
+        if (!isRestoring) {
+            console.log("Saving game result to history.");
+            if (mode === 'daily') {
+                localStorage.setItem('chronos_daily_done', currentSeed);
+                const dailyResult = { 
+                    won: won, 
+                    score: guessHistory.length, 
+                    emojis: guessHistory 
+                };
+                localStorage.setItem('chronos_daily_result', JSON.stringify(dailyResult));
+            }
+            saveHistory(won);
         }
-        saveHistory(won);
+      
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');    
         calculateStreak(history);
         document.getElementById('result-text').innerHTML += `

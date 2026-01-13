@@ -19,12 +19,7 @@
         #result-view .btn {
             min-width: 160px; /* Forces buttons to have a uniform minimum size */
         }
-        .feedback-item {
-            transition: all 0.3s ease;
-            border-top: 1px solid #eee;
-            border-right: 1px solid #eee;
-            border-bottom: 1px solid #eee;
-        }
+
 
         .feedback-item div {
             display: flex;
@@ -32,9 +27,20 @@
         }
 
         #feedback-list {
-            max-width: 500px; /* Limits width */
-            margin: 0 auto;   /* Centers it */
-            padding: 10px;
+            /* Match this to the max-width of your main input card */
+            max-width: 700px; 
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        .feedback-item {
+            /* Use 100% to fill the container width */
+            width: 100% !important; 
+            /* Reduce vertical padding (from p-3 to p-2) to make it thinner */
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
+            /* Clean up transitions */
+            transition: all 0.3s ease;
         }
 
         @keyframes pulse-green {
@@ -111,7 +117,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Deletes saves from previous days
+    Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('chronos_save_') && key !== 'chronos_save_' + new Date().toDateString()) {
+            localStorage.removeItem(key);
+        }
+    });
     let allChallenges = [];
+    let guesses = [];
     let currentChallenge = null;
     let attempts = 8;
     let isGameOver = false;
@@ -132,13 +145,25 @@
         
         if (mode === 'daily') {
             currentSeed = new Date().toDateString();
-            // ALWAYS setup the challenge so currentChallenge is not null for sharing
             const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
             currentChallenge = allChallenges[Math.abs(hash) % allChallenges.length];
-            
-            if (localStorage.getItem('chronos_daily_done') === currentSeed) {
-                showAlreadyPlayed();
-                return;
+
+            // --- NEW LOAD LOGIC ---
+            const saved = localStorage.getItem('chronos_save_' + currentSeed);
+            if (saved) {
+                const gameState = JSON.parse(saved);
+                
+                guesses = gameState.guesses;
+                attempts = gameState.attempts;
+                won = gameState.won;
+
+                renderSavedGuesses(); // Rebuild the UI bars
+
+                if (won || attempts <= 0) {
+                    // Show result screen immediately if already finished
+                    setTimeout(() => endGame(won), 100); 
+                    return;
+                }
             }
         }
         setupGame();
@@ -150,7 +175,7 @@
     function showAlreadyPlayed() {
         document.getElementById('game-view').classList.add('hidden');
         document.getElementById('result-view').classList.remove('hidden');
-        document.getElementById('result-title').innerText = "Daily Complete!";
+        document.getElementById('result-title').innerText = "Daily Complete!";F
         // Add the timer display here
         document.getElementById('result-text').innerHTML = `
             <div class="mb-3">You've already played today's challenge.</div>
@@ -220,6 +245,30 @@
                     💡 Reveal another clue
                 </button>`;
         }
+    }
+
+    function renderSavedGuesses() {
+        const feedbackList = document.getElementById('feedback-list');
+        feedbackList.innerHTML = ''; 
+
+        guesses.forEach(g => {
+            const item = document.createElement('div');
+            const isLightColor = ['#ffc107', '#0dcaf0', '#f8f9fa'].includes(g.config.color);
+            const textColor = isLightColor ? 'text-dark' : 'text-white';
+            
+            // Using the slimmer py-2 padding and full width
+            item.className = `feedback-item py-2 px-3 mb-2 rounded shadow-sm d-flex justify-content-between align-items-center ${textColor}`;
+            item.style.backgroundColor = g.config.color;
+
+            item.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <span class="fw-bold fs-5 me-3">${g.year} ${g.era}</span>
+                    <span class="fw-medium" style="font-size: 0.9rem;">${g.config.label}</span>
+                </div>
+                <div class="fs-4">${g.config.emoji}</div>
+            `;
+            feedbackList.prepend(item);
+        });
     }
 
     function getDisplayName(challenge) {
@@ -308,6 +357,21 @@
         // Feedback Logic
         const config = getFeedbackConfig(diff, won);
         guessHistory.push(config.emoji);
+ 
+        guesses.push({
+            year: gYear,
+            era: gEra,
+            config: config
+        });
+
+        if (mode === 'daily') {
+            const state = {
+                guesses: guesses,
+                attempts: attempts,
+                won: won
+            };
+            localStorage.setItem('chronos_save_' + currentSeed, JSON.stringify(state));
+        }
         
         // --- Add to UI ---
         const feedbackList = document.getElementById('feedback-list');
@@ -333,7 +397,9 @@
      if (won) {
             // 1. Add the pulse class to the specific item we just created
             item.classList.add('pulse-win');
-            
+            // Disable to prevent spamming during the animation
+            const guessBtn = document.querySelector("button[onclick='handleGuess()']");
+            if (guessBtn) guessBtn.disabled = true;
             // 2. Disable the button so they can't double-guess
             document.querySelector("button[onclick='handleGuess()']").disabled = true;
 
@@ -600,7 +666,8 @@
                 'chronos_history_v2', 
                 'chronos_history_v3', 
                 'chronos_daily_done', 
-                'chronos_daily_result'
+                'chronos_daily_result',
+                'chronos_save_' + currentSeed
             ];
             keys.forEach(k => localStorage.removeItem(k));
             
@@ -634,7 +701,10 @@
         document.getElementById('game-view').classList.remove('hidden');
         document.getElementById('result-view').classList.add('hidden');
         document.getElementById('guessYear').value = '';
-
+        const guessBtn = document.querySelector("button[onclick='handleGuess()']");
+        if (guessBtn) {
+            guessBtn.disabled = false;
+        }
         // Pick a new challenge
         setupGame();
     }

@@ -280,13 +280,13 @@
         if (mode === 'daily') startTimer();
     }
 
-    function saveHistory(won) {
+    function saveHistory(wonStatus) {
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
         history.push({ 
-            d: new Date().toLocaleDateString(), 
+            d: new Date().toLocaleDateString(), // Consistent date format
             y: `${currentChallenge.y} ${currentChallenge.e}`, 
-            w: won, 
-            s: guessHistory.length, // Change this line
+            w: wonStatus, 
+            s: guessHistory.length,
             m: mode 
         });
         localStorage.setItem('chronos_history_v3', JSON.stringify(history));
@@ -324,47 +324,41 @@
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
         calculateStreak(history); 
 
-        const dailyGames = history.filter(g => g.m === 'daily').reverse();
-        const infiniteGames = history.filter(g => g.m === 'infinite').reverse();
+        const dailyGames = history.filter(g => g.m === 'daily');
+        const infiniteGames = history.filter(g => g.m === 'infinite');
 
-        // 1. Stats Summary Header
         const statsHeader = `
             <div class="row text-center mb-4">
                 <div class="col">
-                    <div class="h3 mb-0">${history.length}</div>
-                    <div class="small text-muted text-uppercase">Played</div>
+                    <div class="small text-muted text-uppercase">Daily</div>
+                    <div class="h4 mb-0">${dailyGames.length} Played</div>
+                    <div class="fw-bold text-primary">${currentStreak} Day Streak 🔥</div>
                 </div>
                 <div class="col border-start">
-                    <div class="h3 mb-0">${currentStreak}</div>
-                    <div class="small text-muted text-uppercase">Streak 🔥</div>
+                    <div class="small text-muted text-uppercase">Infinite</div>
+                    <div class="h4 mb-0">${infiniteGames.length} Played</div>
+                    <div class="text-success">${infiniteGames.filter(g => g.w).length} Wins ✅</div>
                 </div>
             </div>
         `;
 
-        // 2. Tab Content (Defining the html variable correctly)
         const tableHtml = `
             <ul class="nav nav-tabs" id="historyTabs">
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#h-daily">Daily</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#h-inf">Infinite</button></li>
             </ul>
-            <div class="tab-content pt-3">
-                <div class="tab-pane fade show active" id="h-daily">${generateTable(dailyGames)}</div>
-                <div class="tab-pane fade" id="h-inf">${generateTable(infiniteGames)}</div>
+            <div class="tab-content pt-3" style="max-height: 400px; overflow-y: auto;">
+                <div class="tab-pane fade show active" id="h-daily">${generateTable(dailyGames.reverse())}</div>
+                <div class="tab-pane fade" id="h-inf">${generateTable(infiniteGames.reverse())}</div>
             </div>
         `;
 
-        // 3. Clear Data Button
-        const clearBtn = `
-            <div class="mt-4 pt-3 border-top text-center">
-                <button class="btn btn-sm btn-outline-danger opacity-50" onclick="clearAllData()">Clear All Game Data</button>
-            </div>
-        `;
+        const clearBtn = `<div class="mt-4 pt-3 border-top text-center">
+            <button class="btn btn-sm btn-outline-danger" onclick="clearAllData()">Clear All Game Data</button>
+        </div>`;
 
         document.getElementById('history-content').innerHTML = statsHeader + tableHtml + clearBtn;
-        
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('historyModal'));
-        modal.show();
+        new bootstrap.Modal(document.getElementById('historyModal')).show();
     }
 
     function generateTable(data) {
@@ -420,12 +414,22 @@
     }
 
     function clearAllData() {
-        if (confirm("This will permanently delete your history and streaks. Continue?")) {
-            localStorage.clear();
-            location.reload();
+        if (confirm("Are you sure? This will delete ALL history, streaks, and today's result!")) {
+            // Clear all known keys
+            const keys = [
+                'chronos_history_v2', 
+                'chronos_history_v3', 
+                'chronos_daily_done', 
+                'chronos_daily_result'
+            ];
+            keys.forEach(k => localStorage.removeItem(k));
+            
+            alert("All data cleared.");
+            // Redirect to Daily mode to start fresh
+            window.location.href = window.location.pathname; 
         }
     }
-
+    
     function playAgain() {
         // If we are in Daily mode and finished, 'Play Again' should take us to Infinite
         if (mode === 'daily') {

@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import re
+import random
 
 def export_challenges(db_path, output_file):
     conn = sqlite3.connect(db_path)
@@ -48,7 +49,9 @@ def export_challenges(db_path, output_file):
         if not clean_events:
             continue
             
-        final_events = clean_events[:5]
+        # RANDOMIZATION: Pick up to 5 random facts from the available pool
+        num_to_pick = min(len(clean_events), 5)
+        final_events = random.sample(clean_events, num_to_pick)
 
         if timeframe == 'year':
             final_challenges.append({"y": year, "e": era, "t": timeframe, "f": final_events})

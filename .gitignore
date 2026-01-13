@@ -16,7 +16,6 @@ todo2.txt
 
 /hearthstone/
 
-/guesstheyear/*.db
 /guesstheyear/*.db-wal
 /guesstheyear/*.db-shm
 

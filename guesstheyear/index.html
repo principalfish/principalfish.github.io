@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chronos: The Daily History Guess</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌛</text></svg>">
     <style>
         :root { --bg-color: #f8f9fa; --card-bg: #ffffff; --primary-text: #2c3e50; }
         body { background-color: var(--bg-color); color: var(--primary-text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -80,36 +81,70 @@
     let mode = 'daily';
     let currentSeed = null;
     let guessHistory = [];
+    let won = false;
 
     async function init() {
-        try {
-            const response = await fetch('challenges.json');
-            if (!response.ok) throw new Error("File not found");
-            allChallenges = await response.json();
+    try {
+        const response = await fetch('challenges.json');
+        if (!response.ok) throw new Error("File not found");
+        allChallenges = await response.json();
+        
+        const params = new URLSearchParams(window.location.search);
+        mode = params.get('mode') === 'infinite' ? 'infinite' : 'daily';
+        
+        if (mode === 'daily') {
+            currentSeed = new Date().toDateString();
+            // ALWAYS setup the challenge so currentChallenge is not null for sharing
+            const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
+            currentChallenge = allChallenges[Math.abs(hash) % allChallenges.length];
             
-            const params = new URLSearchParams(window.location.search);
-            mode = params.get('mode') === 'infinite' ? 'infinite' : 'daily';
-            
-            if (mode === 'daily') {
-                currentSeed = new Date().toDateString();
-                if (localStorage.getItem('chronos_daily_done') === currentSeed) {
-                    showAlreadyPlayed();
-                    return;
-                }
+            if (localStorage.getItem('chronos_daily_done') === currentSeed) {
+                showAlreadyPlayed();
+                return;
             }
-            setupGame();
-        } catch (e) {
-            document.getElementById('facts-area').innerHTML = `<div class="alert alert-danger"><b>Error:</b> Could not load <i>challenges.json</i>. <br>If running locally, use a local server (e.g., python3 -m http.server).</div>`;
         }
+        setupGame();
+    } catch (e) {
+        document.getElementById('facts-area').innerHTML = `<div class="alert alert-danger">Error loading data.</div>`;
+    }
     }
 
     function showAlreadyPlayed() {
         document.getElementById('game-view').classList.add('hidden');
-        const rv = document.getElementById('result-view');
-        rv.classList.remove('hidden');
+        document.getElementById('result-view').classList.remove('hidden');
         document.getElementById('result-title').innerText = "Daily Complete!";
-        document.getElementById('result-text').innerText = "You've already played today's challenge. Try Infinite Mode!";
+        // Add the timer display here
+        document.getElementById('result-text').innerHTML = `
+            <div class="mb-3">You've already played today's challenge.</div>
+            <div class="small text-muted">Next Daily Challenge in:</div>
+            <div id="timer" class="fw-bold fs-3 text-primary">00:00:00</div>
+        `;
         document.getElementById('btn-next').classList.add('hidden');
+        startTimer();
+    }
+
+    // --- Countdown Timer Logic ---
+    function startTimer() {
+        updateTimer();
+        setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+        const timerEl = document.getElementById('timer');
+        if (!timerEl) return;
+
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+
+        const diff = tomorrow - now;
+        
+        const hours = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        const secs = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+
+        timerEl.innerText = `${hours}:${mins}:${secs}`;
     }
 
     function setupGame() {
@@ -140,9 +175,10 @@
         let diff = Math.abs(tVal - gVal);
         if ((tVal < 0 && gVal > 0) || (tVal > 0 && gVal < 0)) diff -= 1;
 
-        let won = (currentChallenge.t === 'year' && diff === 0) ||
-                  (currentChallenge.t === 'decade' && diff < 10 && Math.floor(Math.abs(tVal)/10) === Math.floor(Math.abs(gVal)/10)) ||
-                  (currentChallenge.t === 'century' && diff < 100 && Math.ceil(Math.abs(tVal)/100) === Math.ceil(Math.abs(gVal)/100) && currentChallenge.e === gEra);
+        // Set the global 'won' variable
+        won = (currentChallenge.t === 'year' && diff === 0) ||
+            (currentChallenge.t === 'decade' && diff < 10 && Math.floor(Math.abs(tVal)/10) === Math.floor(Math.abs(gVal)/10)) ||
+            (currentChallenge.t === 'century' && diff < 100 && Math.ceil(Math.abs(tVal)/100) === Math.ceil(Math.abs(gVal)/100) && currentChallenge.e === gEra);
 
         const config = getFeedbackConfig(diff, won);
         guessHistory.push(config.emoji);
@@ -174,15 +210,23 @@
         document.getElementById('feedback-list').prepend(row);
     }
 
-    function endGame(won) {
+    function endGame(winStatus) {
         isGameOver = true;
+        won = winStatus; // Ensure global won is set
         document.getElementById('game-view').classList.add('hidden');
         document.getElementById('result-view').classList.remove('hidden');
+        
         document.getElementById('result-title').innerText = won ? "🏆 Victory!" : "⌛ Time's Up!";
         document.getElementById('result-text').innerHTML = `The year was <b>${currentChallenge.y} ${currentChallenge.e}</b>.`;
         
-        if (mode === 'daily') localStorage.setItem('chronos_daily_done', currentSeed);
+        if (mode === 'daily') {
+            localStorage.setItem('chronos_daily_done', currentSeed);
+            // Save today's specific result for the share button to find after reload
+            const dailyResult = { won: won, score: 8 - attempts, emojis: guessHistory };
+            localStorage.setItem('chronos_daily_result', JSON.stringify(dailyResult));
+        }
         saveHistory(won);
+        if (mode === 'daily') startTimer();
     }
 
     function saveHistory(won) {
@@ -192,8 +236,30 @@
     }
 
     function shareResult() {
-        const text = `Chronos ${mode === 'daily' ? 'Daily' : 'Infinite'}\nYear: ${currentChallenge.y} ${currentChallenge.e}\n${guessHistory.join('')}\nResult: ${8-attempts}/8`;
-        navigator.clipboard.writeText(text).then(() => alert("Result copied to clipboard!"));
+        let finalWon = won;
+        let finalScore = 8 - attempts;
+        let emojis = guessHistory.join('');
+
+        // If variables are empty (after reload), grab from LocalStorage
+        if (mode === 'daily' && guessHistory.length === 0) {
+            const saved = JSON.parse(localStorage.getItem('chronos_daily_result'));
+            if (saved) {
+                finalWon = saved.won;
+                finalScore = saved.score;
+                emojis = saved.emojis.join('');
+            }
+        }
+
+        const scoreDisplay = finalWon ? finalScore : "X";
+        const text = `⌛ Chronos ${mode === 'daily' ? 'Daily' : 'Infinite'}\n` +
+                    `Year: ${currentChallenge.y} ${currentChallenge.e}\n` +
+                    `${emojis}\n` +
+                    `Result: ${scoreDisplay}/8\n` +
+                    window.location.href;
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert("Result copied to clipboard!");
+        });
     }
 
     function toggleHistory() {

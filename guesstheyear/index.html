@@ -27,12 +27,10 @@
         }
 
         #feedback-list {
-            /* Match this to the max-width of your main input card */
-            max-width: 700px; 
+            max-width: 700px; /* Adjust this to match your "Guess" input card width */
             margin: 0 auto;
-            padding: 0;
+            width: 100%; /* Responsive fallback */
         }
-
         .feedback-item {
             /* Use 100% to fill the container width */
             width: 100% !important; 
@@ -145,22 +143,25 @@
         
         if (mode === 'daily') {
             currentSeed = new Date().toDateString();
-            const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
-            currentChallenge = allChallenges[Math.abs(hash) % allChallenges.length];
+            
+            // 1. Reset variables to a clean state before loading
+            guesses = []; 
+            attempts = 5; 
+            won = false;
 
-            // --- NEW LOAD LOGIC ---
             const saved = localStorage.getItem('chronos_save_' + currentSeed);
             if (saved) {
                 const gameState = JSON.parse(saved);
                 
+                // 2. Overwrite with saved data
                 guesses = gameState.guesses;
                 attempts = gameState.attempts;
                 won = gameState.won;
 
-                renderSavedGuesses(); // Rebuild the UI bars
+                // 3. Render once
+                renderSavedGuesses();
 
                 if (won || attempts <= 0) {
-                    // Show result screen immediately if already finished
                     setTimeout(() => endGame(won), 100); 
                     return;
                 }

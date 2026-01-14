@@ -50,6 +50,37 @@
         .pulse-win {
             animation: pulse-green 0.8s ease-out;
         }
+
+
+        #result-view {
+            animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 50px rgba(255, 193, 7, 0.5); /* Golden Glow */
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes victoryGlow {
+            0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); border-color: gold; }
+            50% { box-shadow: 0 0 60px rgba(255, 215, 0, 1), 0 0 100px rgba(255, 255, 255, 0.4); border-color: white; }
+            100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); border-color: gold; }
+        }
+
+        .victory-card-active {
+            animation: victoryGlow 1.5s infinite alternate ease-in-out;
+            border: 3px solid gold !important;
+        }
+
+        #result-view h2 {
+            background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 3rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
@@ -112,7 +143,7 @@
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Deletes saves from previous days
@@ -146,7 +177,10 @@
             const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
             
             // 1. SET THE CHALLENGE FIRST
-            currentChallenge = allChallenges[Math.abs(hash) % allChallenges.length];
+            seed = Math.abs((hash * 12) + 912)
+            console.log("Daily Seed:", currentSeed, "Hash:", seed, "Index:", seed % allChallenges.length);
+            currentChallenge = allChallenges[seed % allChallenges.length];
+            console.log("Today's Challenge:", currentChallenge);
 
             // 2. NOW CHECK FOR SAVED STATE
             const saved = localStorage.getItem('chronos_save_' + currentSeed);
@@ -211,8 +245,7 @@
 
     function setupGame() {
         if (mode === 'daily') {
-            const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
-            currentChallenge = allChallenges[Math.abs(hash) % allChallenges.length];
+            // Daily mode already set currentChallenge above
         } else {
             currentChallenge = allChallenges[Math.floor(Math.random() * allChallenges.length)];
             document.getElementById('mode-badge').innerText = "Infinite Mode";
@@ -405,8 +438,8 @@
 
             // 3. Wait 3 seconds before showing the Game Over/Victory screen
             setTimeout(() => {
-                endGame(true);
-            }, 3000);
+                endGame(true); // This triggers the fireworks
+            }, 1200);
         } else {
             attempts--;
             document.getElementById('attempts-left').innerText = attempts;
@@ -465,7 +498,17 @@
         document.getElementById('game-view').classList.add('hidden');
         document.getElementById('result-view').classList.remove('hidden');
         
-        document.getElementById('result-title').innerText = won ? "🏆 Victory!" : "⌛ Time's Up!";
+        if (winStatus) {
+            document.getElementById('result-title').innerText = "🏆 Victory!";
+            const resultCard = document.getElementById('result-view');
+            resultCard.classList.add('victory-card-active');
+            // ONLY launch fireworks if they actually just won (not on refresh)
+            if (!isRestoring) {
+                    launchFireworks();
+                }
+            } else {
+                document.getElementById('result-title').innerText = "⌛ Time's Up!";
+        }
         // Use formatHistoryDate here to ensure "1333" becomes "1330s" for the reveal
         const displayDate = formatHistoryDate(currentChallenge.y, currentChallenge.e, currentChallenge.t);
         document.getElementById('result-text').innerHTML = `The target was <b>${displayDate}</b>.`;
@@ -718,6 +761,80 @@
         // Pick a new challenge
         setupGame();
     }
+function launchFireworks() {
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff', '#ffc107'];
+
+    // 1. THE INITIAL MASSIVE BLAST
+    confetti({
+        particleCount: 250,
+        spread: 100,
+        origin: { y: 0.6 },
+        scalar: 1.5,
+        ticks: 200,
+        colors: colors,
+        gravity: 0.8,
+        shapes: ['star', 'circle']
+    });
+
+    // 2. THE STAGED SHOW (Side Cannons & Random Bursts)
+    const interval = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+            return clearInterval(interval);
+        }
+
+        // Side Cannons
+        confetti({
+            particleCount: 40,
+            angle: 60,
+            spread: 60,
+            origin: { x: 0, y: 0.7 },
+            colors: colors,
+            scalar: 1.2
+        });
+        confetti({
+            particleCount: 40,
+            angle: 120,
+            spread: 60,
+            origin: { x: 1, y: 0.7 },
+            colors: colors,
+            scalar: 1.2
+        });
+
+        // Random "Popcorn" bursts in the sky
+        if (Math.random() > 0.7) {
+            confetti({
+                particleCount: 30,
+                origin: { x: Math.random(), y: Math.random() - 0.2 },
+                colors: ['#ffffff', '#ffc107'], // Golden/White pops
+                shapes: ['star']
+            });
+        }
+    }, 250);
+
+    // 3. THE GLITTER FINALE (Slow falling shimmer)
+    setTimeout(() => {
+        const end = Date.now() + 2000;
+        (function frame() {
+            confetti({
+                particleCount: 2,
+                angle: 90,
+                spread: 360,
+                startVelocity: 0,
+                ticks: 100,
+                origin: { x: Math.random(), y: Math.random() * 0.5 },
+                colors: ['#ffffff'],
+                gravity: 0.3,
+                scalar: 0.7,
+                drift: Math.random() - 0.5
+            });
+            if (Date.now() < end) requestAnimationFrame(frame);
+        }());
+    }, 3000);
+}
     init();
 </script>
 </body>

@@ -23,34 +23,6 @@ def setup_database():
     conn.commit()
     return conn, cursor
 
-def clean_event_text(text):
-    """Safely removes year/era references and citation markers."""
-    # 1. Skip if it looks like a bibliography entry (starts with ^ or contains pp. for pages)
-    if text.startswith('^') or ' pp.' in text or 'ISBN' in text:
-        return ""
-
-    patterns = [
-        r'\b\d+s\s+BC\b', 
-        r'\b\d+\s+BC\b', 
-        r'\bAD\s+\d+\b', 
-        r'\b\d+\s+AD\b',
-        r'\b\d+(?:st|nd|rd|th)\s+century\b'
-    ]
-    cleaned = text
-    for p in patterns:
-        cleaned = re.sub(p, '', cleaned, flags=re.IGNORECASE)
-    
-    # Logic: Look for a word boundary, 1-4 digits, and another word boundary
-    # This prevents turning "30,000" into "000" or messing with "Year2026"
-    cleaned = re.sub(r'\b\d{1,4}\b', '', cleaned)
-    
-    cleaned = cleaned.strip()
-    # 2. Strip leading years/dashes/colons
-    while len(cleaned) > 0 and (cleaned[0].isdigit() or cleaned[0] in ' —–-:'):
-        cleaned = cleaned[1:].strip()
-        
-    return cleaned
-
 def get_timeframe_info(year, era):
     """Returns (primary_title, fallback_title, timeframe_type, year_range)"""
     if era == "AD":
@@ -93,25 +65,34 @@ def get_year_events(page_title):
         # Get only valid section indices
         valid_sections = [
             s['index'] for s in res['parse']['sections'] 
-            if any(kw in s['line'] for kw in ["events", "by place", "content", "Events and trends", "January – March", "April – June", "July – September", "October – December"])
+            if any(kw.lower() in s['line'].lower() for kw in ["events", "by place", "content", "Events and trends", "January – March", "April – June", "July – September", "October – December"])
             and not any(ex in s['line'].lower() for ex in exclude_keywords)
         ]
 
         all_events = []
         for section_index in valid_sections:
+         
             params = {"action": "parse", "page": page_title, "section": section_index, "prop": "text", "format": "json"}
             page_res = requests.get(URL, params=params, headers=headers).json()
             soup = BeautifulSoup(page_res['parse']['text']['*'], 'html.parser')
   
             for li in soup.find_all('li'):
                 if li.parent.name in ['ul', 'ol']:
-                    # Remove citation sups [1], [2], etc.
+                    # 1. Remove HTML citation sups [1], [2], etc.
                     for sup in li.find_all('sup'): 
                         sup.decompose() 
-                    
-                    cleaned = clean_event_text(li.get_text())
-                    # Filter out short fragments or empty strings from references
 
+                    cleaned = li.get_text().strip()
+
+                    # 2. Skip if it's a plain-text reference line (starts with ^)
+                    if cleaned.startswith('^'):
+                        continue
+
+                    # 3. Final cleaning: Remove any remaining bracketed [edit] or [12] 
+                    # that might not have been in <sup> tags
+                    cleaned = re.sub(r'\[\d+\]|\[edit\]', '', cleaned)
+                    
+                    # Filter out short fragments or empty strings
                     if len(cleaned) > 25 and cleaned not in all_events: 
                         all_events.append(cleaned)
         

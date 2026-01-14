@@ -4,7 +4,14 @@ import re
 import random
 
 def clean_event_text(text, target_year):
-    """Removes numbers within +/- 100 of the target year and cleans formatting."""
+    """Protects titles, removes numbers +/- 100 years, and heals formatting."""
+    # 1. Protect common abbreviations from being treated as sentence endings
+    text = re.sub(r'\bSt\.\s', 'St_PLACEHOLDER ', text)
+    text = re.sub(r'\bMt\.\s', 'Mt_PLACEHOLDER ', text)
+    text = re.sub(r'\bDr\.\s', 'Dr_PLACEHOLDER ', text)
+    text = re.sub(r'\bCapt\.\s', 'Capt_PLACEHOLDER ', text)
+
+    # 2. Year/Era filtering
     text = re.sub(r'\b\d+(?:st|nd|rd|th)\s+century\b', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\b(AD|BC|BCE|CE)\b', '', text, flags=re.IGNORECASE)
 
@@ -15,10 +22,18 @@ def clean_event_text(text, target_year):
         return match.group() 
 
     text = re.sub(r'\b\d{1,4}\b', year_replacer, text)
+    
+    # 3. Cleanup "wreckage"
     text = re.sub(r'\(\s*[,.]?\s*\w*\s*\)', '', text)
     text = re.sub(r'\s{2,}', ' ', text)
     text = re.sub(r'\s+([,.])', r'\1', text)
     
+    # 4. Restore Protected Titles
+    text = text.replace('St_PLACEHOLDER', 'St.')
+    text = text.replace('Mt_PLACEHOLDER', 'Mt.')
+    text = text.replace('Dr_PLACEHOLDER', 'Dr.')
+    text = text.replace('Capt_PLACEHOLDER', 'Capt.')
+
     text = text.strip()
     if text:
         text = text[0].upper() + text[1:]
@@ -30,11 +45,12 @@ def export_challenges(db_path, output_file):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
+    # We need at least 2 events per year now to make a paired challenge
     query = """
         SELECT year, era, timeframe_type, GROUP_CONCAT(event, '||') as events
         FROM events
         GROUP BY year, era, timeframe_type
-        HAVING COUNT(*) >= 1
+        HAVING COUNT(*) >= 2
     """
     
     cursor.execute(query)
@@ -53,38 +69,42 @@ def export_challenges(db_path, output_file):
         for f in raw_events:
             t = re.sub(r'^c\.\s*[\u2014\-]?\s*', '', f.strip())
             t = clean_event_text(t, target_year)
-            if not t or len(t) < 15:
-                continue
-            clean_events.append(t)
+            if t and len(t) > 25:
+                clean_events.append(t)
 
         if len(clean_events) < 2:
             continue
             
-        num_to_pick = min(len(clean_events), 5)
-        final_events = random.sample(clean_events, num_to_pick)
+        # Select exactly 2 random facts and combine them
+        selected = random.sample(clean_events, 2)
+        combined_fact = " ".join(selected)
+
+        # Structure the entry
+        entry = {"y": year, "e": era, "t": timeframe, "f": [combined_fact]}
 
         if timeframe == 'year':
-            final_challenges.append({"y": year, "e": era, "t": timeframe, "f": final_events})
+            final_challenges.append(entry)
             counts['year'] += 1
         elif timeframe == 'decade':
             decade_start = (year // 10) * 10
             key = f"{decade_start}-{era}"
             if key not in seen_decades:
-                final_challenges.append({"y": decade_start, "e": era, "t": timeframe, "f": final_events})
+                entry["y"] = decade_start
+                final_challenges.append(entry)
                 seen_decades.add(key)
                 counts['decade'] += 1
         elif timeframe == 'century':
             cent_start = (year // 100) * 100
             key = f"{cent_start}-{era}"
             if key not in seen_centuries:
-                final_challenges.append({"y": year, "e": era, "t": timeframe, "f": final_events})
+                final_challenges.append(entry)
                 seen_centuries.add(key)
                 counts['century'] += 1
 
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(final_challenges, f, indent=2)
     
-    # --- START OF RESTORED GAP ANALYSIS ---
+    # --- RESTORED COVERAGE ANALYSIS ---
 
     def print_gaps(seen_set, start_val, end_val, step, era_label):
         missing = []
@@ -106,23 +126,19 @@ def export_challenges(db_path, output_file):
                 missing_count += 1
         return missing_count
 
-    # Gather years for individual analysis
     seen_years_ad = {f"{c['y']}-AD" for c in final_challenges if c['t'] == 'year' and c['e'] == 'AD'}
     seen_years_bc = {f"{c['y']}-BC" for c in final_challenges if c['t'] == 'year' and c['e'] == 'BC'}
 
-    print("\n--- Timeline Coverage Analysis ---")
+    print("\n--- Coverage Analysis ---")
     print_gaps(seen_decades, 600, 1800, 10, "BC")
     
     ad_miss = analyze_year_gaps(seen_years_ad, 1, 2025, "AD")
     bc_miss = analyze_year_gaps(seen_years_bc, 1, 500, "BC")
 
-    print(f"\n--- Export Summary ---")
+    print(f"\n--- Final Export Summary ---")
     print(f"AD Years Missing: {ad_miss} / 2025")
     print(f"BC Years Missing: {bc_miss} / 500")
-    print(f"Total Years:      {counts['year']}")
-    print(f"Total Decades:    {counts['decade']}")
-    print(f"Total Centuries:  {counts['century']}")
-    print(f"Grand Total:      {len(final_challenges)}")
+    print(f"Total Challenges: {len(final_challenges)}")
     
     conn.close()
 

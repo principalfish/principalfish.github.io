@@ -178,9 +178,7 @@
             
             // 1. SET THE CHALLENGE FIRST
             seed = Math.abs((hash * 12) + 912)
-            console.log("Daily Seed:", currentSeed, "Hash:", seed, "Index:", seed % allChallenges.length);
             currentChallenge = allChallenges[seed % allChallenges.length];
-            console.log("Today's Challenge:", currentChallenge);
 
             // 2. NOW CHECK FOR SAVED STATE
             const saved = localStorage.getItem('chronos_save_' + currentSeed);

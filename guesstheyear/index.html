@@ -112,6 +112,11 @@
             </div>
         </div>
         <div id="feedback-list" class="mt-4"></div>
+        <div class="text-center mt-3">
+            <a id="btn-view-results" class="hidden" href="#" onclick="viewResults(); return false;" style="color: #0d6efd; text-decoration: underline; cursor: pointer;">
+                View Results 📊
+            </a>
+        </div>
     </div>
 
     <div id="result-view" class="hidden text-center p-5 card shadow mt-4">
@@ -128,6 +133,11 @@
             <button class="btn btn-outline-secondary btn-lg" onclick="toggleHistory()">
                 History
             </button>
+        </div>
+        <div class="text-center mt-3">
+            <a href="#" onclick="viewGame(); return false;" style="color: #0d6efd; text-decoration: underline; cursor: pointer;">
+                View Game 🎮
+            </a>
         </div>
     </div>
 
@@ -151,12 +161,7 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Deletes saves from previous days
-    Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('chronos_save_') && key !== 'chronos_save_' + new Date().toDateString()) {
-            localStorage.removeItem(key);
-        }
-    });
+
     let allChallenges = [];
     let guesses = [];
     let currentChallenge = null;
@@ -184,7 +189,6 @@
             // 1. SET THE CHALLENGE FIRST
             seed = Math.abs((hash * 12) + 912)
             currentChallenge = allChallenges[seed % allChallenges.length];
-
             // 2. NOW CHECK FOR SAVED STATE
             const saved = localStorage.getItem('chronos_save_' + currentSeed);
             if (saved) {
@@ -192,18 +196,26 @@
                 guesses = gameState.guesses || [];
                 attempts = gameState.attempts;
                 won = gameState.won;
+                guessHistory = gameState.guessHistory || [];
+                visibleFacts = gameState.visibleFacts || 1;
 
                 renderSavedGuesses();
-
                 if (won || attempts <= 0) {
-                    // Now currentChallenge is guaranteed to exist when this runs
-                    setTimeout(() => endGame(won, true), 100); 
+                    isGameOver = true;
+                    setupGame(); // Render facts before showing results
+                    showAlreadyPlayed();
+                    // Disable game controls
+                    document.getElementById('guessYear').disabled = true;
+                    document.getElementById('guessEra').disabled = true;
+                    const guessBtn = document.querySelector("button[onclick='handleGuess()']");
+                    if (guessBtn) guessBtn.disabled = true;
                     return;
                 }
             }
         }
         setupGame();
     } catch (e) {
+        console.log(e)
         document.getElementById('facts-area').innerHTML = `<div class="alert alert-danger">Error loading data.</div>`;
     }
     }
@@ -226,14 +238,14 @@
     function showAlreadyPlayed() {
         document.getElementById('game-view').classList.add('hidden');
         document.getElementById('result-view').classList.remove('hidden');
-        document.getElementById('result-title').innerText = "Daily Complete!";F
+        document.getElementById('btn-view-results').classList.remove('hidden');
+        document.getElementById('result-title').innerText = "Daily Complete!";
         // Add the timer display here
         document.getElementById('result-text').innerHTML = `
             <div class="mb-3">You've already played today's challenge.</div>
             <div class="small text-muted">Next Daily Challenge in:</div>
             <div id="timer" class="fw-bold fs-3 text-primary">00:00:00</div>
         `;
-        document.getElementById('btn-next').classList.add('hidden');
         startTimer();
     }
 
@@ -275,6 +287,8 @@
 
     function renderFacts() {
         const factsArea = document.getElementById('facts-area');
+        if (!factsArea || !currentChallenge) return;
+        
         const typeLabel = currentChallenge.t.charAt(0).toUpperCase() + currentChallenge.t.slice(1); 
         factsArea.innerHTML = `<p class="text-muted text-uppercase small fw-bold">Target Type: ${typeLabel}</p>`;
         currentChallenge.f.forEach((fact, index) => {
@@ -401,6 +415,11 @@
     // Adjust for "Year 0" gap
     if ((tVal < 0 && gVal > 0) || (tVal > 0 && gVal < 0)) diff -= 1;
 
+    const config = getFeedbackConfig(diff, won);
+    
+    // Store the guess for restoration
+    guesses.push({ year: gYear, era: gEra, config: config });
+    
     // --- EASY MODE HINT LOGIC ---
     let hintArrow = "";
     if (isEasyMode && !won) {
@@ -408,7 +427,6 @@
         hintArrow = gVal < minRange ? " ⬆️ Higher" : " ⬇️ Lower";
     }
 
-    const config = getFeedbackConfig(diff, won);
     // Add the emoji to guess history for sharing
     guessHistory.push(config.emoji);
 
@@ -454,6 +472,18 @@
         }
         
         gYearInput.value = ''; // Clear input for next guess
+        
+        // Save game state after each guess in daily mode
+        if (mode === 'daily') {
+            const gameState = {
+                guesses: guesses,
+                attempts: attempts,
+                won: won,
+                guessHistory: guessHistory,
+                visibleFacts: visibleFacts
+            };
+            localStorage.setItem('chronos_save_' + currentSeed, JSON.stringify(gameState));
+        }
     }
 
     function getFeedbackConfig(diff, won) {
@@ -504,6 +534,7 @@
         won = winStatus; // Ensure global won is set
         document.getElementById('game-view').classList.add('hidden');
         document.getElementById('result-view').classList.remove('hidden');
+        document.getElementById('btn-view-results').classList.remove('hidden');
         
         if (winStatus) {
             document.getElementById('result-title').innerText = "🏆 Victory!";
@@ -523,7 +554,6 @@
         if (!isRestoring) {
             console.log("Saving game result to history.");
             if (mode === 'daily') {
-                localStorage.setItem('chronos_daily_done', currentSeed);
                 const dailyResult = { 
                     won: won, 
                     score: guessHistory.length, 
@@ -540,6 +570,25 @@
             <div class="mt-2 small">Current Streak: <b>${currentStreak}</b> 🔥</div>
         `;
         if (mode === 'daily') startTimer();
+    }
+
+    function viewGame() {
+        document.getElementById('result-view').classList.add('hidden');
+        document.getElementById('game-view').classList.remove('hidden');
+        document.getElementById('btn-view-results').classList.remove('hidden');
+        
+        // Disable game controls when viewing completed game
+        if (isGameOver) {
+            document.getElementById('guessYear').disabled = true;
+            document.getElementById('guessEra').disabled = true;
+            const guessBtn = document.querySelector("button[onclick='handleGuess()']");
+            if (guessBtn) guessBtn.disabled = true;
+        }
+    }
+
+    function viewResults() {
+        document.getElementById('game-view').classList.add('hidden');
+        document.getElementById('result-view').classList.remove('hidden');
     }
 
     function saveHistory(wonStatus) {
@@ -725,7 +774,6 @@
             const keys = [
                 'chronos_history_v2', 
                 'chronos_history_v3', 
-                'chronos_daily_done', 
                 'chronos_daily_result',
                 'chronos_save_' + currentSeed
             ];
@@ -760,6 +808,7 @@
         document.getElementById('feedback-list').innerHTML = '';
         document.getElementById('game-view').classList.remove('hidden');
         document.getElementById('result-view').classList.add('hidden');
+        document.getElementById('btn-view-results').classList.add('hidden');
         document.getElementById('guessYear').value = '';
         const guessBtn = document.querySelector("button[onclick='handleGuess()']");
         if (guessBtn) {

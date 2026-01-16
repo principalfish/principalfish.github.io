@@ -25,32 +25,43 @@ def get_first_two_sentences(text):
     return truncated
 
 def clean_event_text(text, target_year):
-    """Cleans years and restricts to two sentences."""
-    # Apply sentence truncation first
+    """Cleans prefixes, citations, years, and restricts to two sentences."""
+    
+    # 1. NEW: Strip leading "c.", "ca.", "circa", and dashes/dots
+    # This catches "c. 1700", "C. - ", etc. before they get capitalized
+    text = re.sub(r'^[Cc](?:ir?ca)?\.?\s*[\u2014\-\u2013]?\s*', '', text.strip())
+
+    # 2. NEW: Remove Wikipedia citations like [1] or [12]
+    text = re.sub(r'\[\d+\]', '', text)
+
+    # 3. Apply your existing sentence truncation
     text = get_first_two_sentences(text)
 
-    # Year/Era filtering
+    # 4. Year/Era filtering
     text = re.sub(r'\b\d+(?:st|nd|rd|th)\s+century\b', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\b(AD|BC|BCE|CE)\b', '', text, flags=re.IGNORECASE)
 
     def year_replacer(match):
         val = int(match.group())
+        # If the number is within 100 years of the target, nuke it
         if (target_year - 100) <= val <= (target_year + 100):
             return "" 
         return match.group() 
 
     text = re.sub(r'\b\d{1,4}\b', year_replacer, text)
     
-    # Cleanup formatting
-    text = re.sub(r'\(\s*[,.]?\s*\w*\s*\)', '', text)
-    text = re.sub(r'\s{2,}', ' ', text)
-    text = re.sub(r'\s+([,.])', r'\1', text)
+    # 5. Cleanup formatting "wreckage"
+    text = re.sub(r'\(\s*[,.]?\s*\w*\s*\)', '', text) # Remove empty parens
+    text = re.sub(r'\s{2,}', ' ', text)              # Collapse multiple spaces
+    text = re.sub(r'\s+([,.])', r'\1', text)         # Fix spaces before punctuation
     
     text = text.strip()
     if text:
+        # Ensure it starts with a Capital and ends with a Dot
         text = text[0].upper() + text[1:]
         if not text.endswith('.'):
             text += '.'
+            
     return text
 
 def export_challenges(db_path, output_file):

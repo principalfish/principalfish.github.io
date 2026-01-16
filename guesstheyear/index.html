@@ -94,6 +94,11 @@
         </div>
     </header>
 
+    <div class="form-check form-switch d-flex justify-content-center mb-3">
+    <input class="form-check-input me-2" type="checkbox" id="easyModeToggle" onchange="saveEasyModePref()">
+    <label class="form-check-label" for="easyModeToggle">🌟 Easy Mode (Hints)</label>
+    </div>
+
     <div id="game-view">
         <div id="facts-area"></div>
         <div class="card p-4 mt-4 shadow-sm">
@@ -171,7 +176,7 @@
         
         const params = new URLSearchParams(window.location.search);
         mode = params.get('mode') === 'infinite' ? 'infinite' : 'daily';
-        
+        loadEasyModePref();
         if (mode === 'daily') {
             currentSeed = new Date().toDateString();
             const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
@@ -201,6 +206,21 @@
     } catch (e) {
         document.getElementById('facts-area').innerHTML = `<div class="alert alert-danger">Error loading data.</div>`;
     }
+    }
+
+    // Save the preference
+    function saveEasyModePref() {
+        const isEasy = document.getElementById('easyModeToggle').checked;
+        localStorage.setItem('chronos_easy_mode', isEasy);
+    }
+
+    // Load the preference on startup
+    function loadEasyModePref() {
+        const savedPref = localStorage.getItem('chronos_easy_mode');
+        if (savedPref !== null) {
+            // localStorage stores everything as strings, so we compare to "true"
+            document.getElementById('easyModeToggle').checked = (savedPref === 'true');
+        }
     }
 
     function showAlreadyPlayed() {
@@ -339,92 +359,80 @@
     }
 
     function handleGuess() {  
-        if (isGameOver) return;
-        
-        const gYearInput = document.getElementById('guessYear');
-        const gYear = parseInt(gYearInput.value);
-        const gEra = document.getElementById('guessEra').value;
-        
-        if (isNaN(gYear)) {
-            alert("Please enter a valid year.");
-            return;
-        }
+    if (isGameOver) return;
+    
+    const gYearInput = document.getElementById('guessYear');
+    const gYear = parseInt(gYearInput.value);
+    const gEra = document.getElementById('guessEra').value;
+    const isEasyMode = document.getElementById('easyModeToggle').checked;
+    
+    if (isNaN(gYear)) {
+        alert("Please enter a valid year.");
+        return;
+    }
 
-        const targetY = currentChallenge.y;
-        const targetE = currentChallenge.e;
-        const type = currentChallenge.t;
+    const targetY = currentChallenge.y;
+    const targetE = currentChallenge.e;
+    const type = currentChallenge.t;
 
-        let diff = 0;
-        let won = false;
+    let diff = 0;
+    let won = false;
 
-        // Convert to absolute years (BC is negative)
-        const tVal = targetE === 'BC' ? -targetY : targetY;
-        const gVal = gEra === 'BC' ? -gYear : gYear;
+    // Convert to absolute years (BC is negative) for math
+    const tVal = targetE === 'BC' ? -targetY : targetY;
+    const gVal = gEra === 'BC' ? -gYear : gYear;
 
-        // Logic for different timeframes
-        if (type === 'year') {
-            diff = Math.abs(tVal - gVal);
-            won = (diff === 0);
-        } else {
-            // Decade is 10 years, Century is 100
-            const span = (type === 'decade') ? 9 : 99;
-            const rangeStart = tVal;
-            const rangeEnd = tVal + (targetE === 'BC' ? -span : span);
-            
-            const minRange = Math.min(rangeStart, rangeEnd);
-            const maxRange = Math.max(rangeStart, rangeEnd);
+    // Calculate ranges
+    const span = (type === 'decade') ? 9 : (type === 'century' ? 99 : 0);
+    const rangeStart = tVal;
+    const rangeEnd = tVal + (targetE === 'BC' ? -span : span);
+    
+    const minRange = Math.min(rangeStart, rangeEnd);
+    const maxRange = Math.max(rangeStart, rangeEnd);
 
-            if (gVal >= minRange && gVal <= maxRange) {
-                diff = 0;
-                won = true;
-            } else {
-                diff = gVal < minRange ? minRange - gVal : gVal - maxRange;
-            }
-        }
+    // Winning Logic
+    if (gVal >= minRange && gVal <= maxRange) {
+        diff = 0;
+        won = true;
+    } else {
+        diff = gVal < minRange ? minRange - gVal : gVal - maxRange;
+    }
 
-        // Adjust for "Year 0" gap
-        if ((tVal < 0 && gVal > 0) || (tVal > 0 && gVal < 0)) diff -= 1;
+    // Adjust for "Year 0" gap
+    if ((tVal < 0 && gVal > 0) || (tVal > 0 && gVal < 0)) diff -= 1;
 
-        // Feedback Logic
-        const config = getFeedbackConfig(diff, won);
-        guessHistory.push(config.emoji);
- 
-        guesses.push({
-            year: gYear,
-            era: gEra,
-            config: config
-        });
+    // --- EASY MODE HINT LOGIC ---
+    let hintArrow = "";
+    if (isEasyMode && !won) {
+        // If guess is -500 (500 BC) and target is -400 (400 BC), -500 < -400, so "Higher" (Modern)
+        hintArrow = gVal < minRange ? " ⬆️ Higher" : " ⬇️ Lower";
+    }
 
-        if (mode === 'daily') {
-            const state = {
-                guesses: guesses,
-                attempts: attempts,
-                won: won
-            };
-            localStorage.setItem('chronos_save_' + currentSeed, JSON.stringify(state));
-        }
-        
-        // --- Add to UI ---
-        const feedbackList = document.getElementById('feedback-list');
-        const item = document.createElement('div');
+    const config = getFeedbackConfig(diff, won);
+    // ... rest of your storage logic (guessHistory/guesses.push) ...
 
-        // Decide text color: Use white text for dark colors (Red/Green/Blue), black for light colors (Yellow/Cyan)
-        const isLightColor = ['#ffc107', '#0dcaf0', '#f8f9fa'].includes(config.color);
-        const textColor = isLightColor ? 'text-dark' : 'text-white';
+    // --- Add to UI ---
+    const feedbackList = document.getElementById('feedback-list');
+    const item = document.createElement('div');
 
-        item.className = `feedback-item p-3 mb-2 rounded shadow-sm d-flex justify-content-between align-items-center ${textColor}`;
-        item.style.backgroundColor = config.color;
+    const isLightColor = ['#ffc107', '#0dcaf0', '#f8f9fa'].includes(config.color);
+    const textColor = isLightColor ? 'text-dark' : 'text-white';
 
-        item.innerHTML = `
-            <div>
-                <span class="fw-bold fs-5">${gYear} ${gEra}</span>
-                <span class="ms-3 fw-medium">${config.label}</span>
-            </div>
+    item.className = `feedback-item p-3 mb-2 rounded shadow-sm d-flex justify-content-between align-items-center ${textColor}`;
+    item.style.backgroundColor = config.color;
+
+    item.innerHTML = `
+        <div>
+            <span class="fw-bold fs-5">${gYear} ${gEra}</span>
+            <span class="ms-3 fw-medium">${config.label}</span>
+        </div>
+        <div class="d-flex align-items-center">
+            ${hintArrow ? `<span class="badge bg-dark me-2">${hintArrow}</span>` : ''}
             <div class="fs-3">${config.emoji}</div>
-        `;
+        </div>
+    `;
 
-        feedbackList.prepend(item);
-
+    feedbackList.prepend(item);
      if (won) {
             // 1. Add the pulse class to the specific item we just created
             item.classList.add('pulse-win');

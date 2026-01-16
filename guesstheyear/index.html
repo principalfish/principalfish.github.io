@@ -759,80 +759,115 @@
         // Pick a new challenge
         setupGame();
     }
-function launchFireworks() {
-    const duration = 5 * 1000;
-    const animationEnd = Date.now() + duration;
-    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff', '#ffc107'];
+    function launchFireworks() {
+        const duration = 12 * 1000; // Increased to 12 seconds for the full symphony
+        const animationEnd = Date.now() + duration;
 
-    // 1. THE INITIAL MASSIVE BLAST
-    confetti({
-        particleCount: 250,
-        spread: 100,
-        origin: { y: 0.6 },
-        scalar: 1.5,
-        ticks: 200,
-        colors: colors,
-        gravity: 0.8,
-        shapes: ['star', 'circle']
-    });
-
-    // 2. THE STAGED SHOW (Side Cannons & Random Bursts)
-    const interval = setInterval(function() {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-            return clearInterval(interval);
-        }
-
-        // Side Cannons
-        confetti({
-            particleCount: 40,
-            angle: 60,
-            spread: 60,
-            origin: { x: 0, y: 0.7 },
-            colors: colors,
-            scalar: 1.2
-        });
-        confetti({
-            particleCount: 40,
-            angle: 120,
-            spread: 60,
-            origin: { x: 1, y: 0.7 },
-            colors: colors,
-            scalar: 1.2
-        });
-
-        // Random "Popcorn" bursts in the sky
-        if (Math.random() > 0.7) {
-            confetti({
-                particleCount: 30,
-                origin: { x: Math.random(), y: Math.random() - 0.2 },
-                colors: ['#ffffff', '#ffc107'], // Golden/White pops
-                shapes: ['star']
-            });
-        }
-    }, 250);
-
-    // 3. THE GLITTER FINALE (Slow falling shimmer)
-    setTimeout(() => {
-        const end = Date.now() + 2000;
-        (function frame() {
+        // --- ACT 1: THE TENSE OPENING (Gentle Shimmer) ---
+        const act1 = setInterval(() => {
             confetti({
                 particleCount: 2,
                 angle: 90,
-                spread: 360,
-                startVelocity: 0,
-                ticks: 100,
-                origin: { x: Math.random(), y: Math.random() * 0.5 },
-                colors: ['#ffffff'],
-                gravity: 0.3,
-                scalar: 0.7,
-                drift: Math.random() - 0.5
+                spread: 50,
+                origin: { y: 0.8 },
+                colors: ['#ffffff', '#ffc107'],
+                gravity: 0.5,
+                scalar: 0.8
             });
-            if (Date.now() < end) requestAnimationFrame(frame);
-        }());
-    }, 3000);
-}
+        }, 300);
+
+        // --- ACT 2: THE CANNON BLASTS (Heavy Hits) ---
+        // These trigger at 3s, 4s, 5s, 6s
+        [3000, 4000, 5000, 6000].forEach((delay) => {
+            setTimeout(() => {
+                // Massive central blast (The Cannon)
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.5 },
+                    scalar: 2,
+                    colors: ['#ff0000', '#ffffff', '#ffc107'],
+                    shapes: ['star']
+                });
+                // Haptic-style screen flash (if you want to add a white overlay briefly)
+            }, delay);
+        });
+
+        // --- ACT 3: THE FLANKING MANEUVER (Rapid Side Fire) ---
+        setTimeout(() => {
+            const sideFire = setInterval(() => {
+                if (Date.now() > animationEnd - 4000) return clearInterval(sideFire);
+                
+                confetti({
+                    particleCount: 30,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.6 },
+                    colors: ['#28a745', '#ffc107']
+                });
+                confetti({
+                    particleCount: 30,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.6 },
+                    colors: ['#28a745', '#ffc107']
+                });
+            }, 400);
+        }, 6000);
+
+        // --- ACT 4: THE GRAND FINALE (Total Chaos) ---
+        setTimeout(() => {
+            clearInterval(act1); // Stop the shimmer
+            const finale = setInterval(() => {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(finale);
+
+                confetti({
+                    particleCount: 80,
+                    spread: 360,
+                    startVelocity: 45,
+                    origin: { x: Math.random(), y: Math.random() - 0.2 },
+                    colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ffffff'],
+                    gravity: 1,
+                    scalar: 1.2
+                });
+            }, 150);
+        }, 8500);
+        // --- THE GRAND SLAM (The Final Note) ---
+    setTimeout(() => {
+        // 1. The "Big One" - 500 particles at once
+        confetti({
+            particleCount: 500,
+            spread: 200,
+            origin: { y: 0.4 },
+            scalar: 2.5, // Extra large chunks
+            colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700'], // Gold and Fire
+            ticks: 400, // Makes them last longer on screen
+            gravity: 0.6, // They float down slowly
+            drift: 0,
+            shapes: ['star']
+        });
+
+        // 2. The "Echo" - A wide, thin shimmer across the whole horizon
+        confetti({
+            particleCount: 100,
+            spread: 360,
+            origin: { y: 0.3 },
+            scalar: 0.5,
+            colors: ['#ffffff'],
+            ticks: 500,
+            gravity: 0.2, // Very floaty
+        });
+
+        // 3. Final Screen Flash
+        document.body.style.transition = "background-color 0.1s";
+        document.body.style.backgroundColor = "white";
+        setTimeout(() => {
+            document.body.style.backgroundColor = "";
+        }, 150);
+
+    }, 12000); // Triggers at the 12-second mark
+    }
     init();
 </script>
 </body>

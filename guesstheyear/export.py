@@ -5,61 +5,90 @@ import random
 
 def get_first_two_sentences(text):
     """Splits text into sentences and returns the first two, respecting St./Mt. abbreviations."""
-    # 1. Protect titles before splitting
+    # 1. Protect titles and circa abbreviations before splitting
     text = re.sub(r'\bSt\.\s', 'St_PLACEHOLDER ', text)
     text = re.sub(r'\bMt\.\s', 'Mt_PLACEHOLDER ', text)
     text = re.sub(r'\bDr\.\s', 'Dr_PLACEHOLDER ', text)
+    text = re.sub(r'\bMr\.\s', 'Mr_PLACEHOLDER ', text)
+    text = re.sub(r'\bMrs\.\s', 'Mrs_PLACEHOLDER ', text)
+    text = re.sub(r'\b[Cc]\.\s', 'C_PLACEHOLDER ', text)
+    text = re.sub(r'\b[Cc]a\.\s', 'Ca_PLACEHOLDER ', text)
     
     # 2. Split by punctuation followed by space and capital letter
-    # This is more robust than just splitting by '.'
     sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', text)
     
     # 3. Take the first two
     truncated = " ".join(sentences[:2])
     
-    # 4. Restore titles
+    # 4. Restore titles and abbreviations
     truncated = truncated.replace('St_PLACEHOLDER', 'St.')
     truncated = truncated.replace('Mt_PLACEHOLDER', 'Mt.')
     truncated = truncated.replace('Dr_PLACEHOLDER', 'Dr.')
+    truncated = truncated.replace('Mr_PLACEHOLDER', 'Mr.')
+    truncated = truncated.replace('Mrs_PLACEHOLDER', 'Mrs.')
+    truncated = truncated.replace('C_PLACEHOLDER', 'c.')
+    truncated = truncated.replace('Ca_PLACEHOLDER', 'ca.')
     
     return truncated
 
 def clean_event_text(text, target_year):
     """Cleans prefixes, citations, years, and restricts to two sentences."""
     
-    # 1. NEW: Strip leading "c.", "ca.", "circa", and dashes/dots
-    # This catches "c. 1700", "C. - ", etc. before they get capitalized
+    # 1. Strip leading "c.", "ca.", "circa" including standalone "C." lines
     text = re.sub(r'^[Cc](?:ir?ca)?\.?\s*[\u2014\-\u2013]?\s*', '', text.strip())
-
-    # 2. NEW: Remove Wikipedia citations like [1] or [12]
+    
+    # 2. Remove Wikipedia citations like [1] or [12]
     text = re.sub(r'\[\d+\]', '', text)
-
-    # 3. Apply your existing sentence truncation
+    
+    # 3. Remove newlines and replace with space (handles multi-line facts)
+    text = re.sub(r'\n+', ' ', text)
+    
+    # 4. Apply sentence truncation
     text = get_first_two_sentences(text)
 
-    # 4. Year/Era filtering
+    # 5. Year/Era filtering
     text = re.sub(r'\b\d+(?:st|nd|rd|th)\s+century\b', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\b(AD|BC|BCE|CE)\b', '', text, flags=re.IGNORECASE)
 
+    # 6. IMPROVED: Replace years within 100 years of target with a placeholder first
+    # This prevents leaving behind "-year-old" artifacts
     def year_replacer(match):
         val = int(match.group())
-        # If the number is within 100 years of the target, nuke it
         if (target_year - 100) <= val <= (target_year + 100):
-            return "" 
-        return match.group() 
+            return "YYYY"  # Use placeholder
+        return match.group()
 
     text = re.sub(r'\b\d{1,4}\b', year_replacer, text)
     
-    # 5. Cleanup formatting "wreckage"
-    text = re.sub(r'\(\s*[,.]?\s*\w*\s*\)', '', text) # Remove empty parens
-    text = re.sub(r'\s{2,}', ' ', text)              # Collapse multiple spaces
-    text = re.sub(r'\s+([,.])', r'\1', text)         # Fix spaces before punctuation
+    # 7. Clean up YYYY artifacts: "his YYYY-year-old" -> "his young", "YYYY months" -> "several months"
+    text = re.sub(r'\bYYYY-year-old\b', 'young', text)
+    text = re.sub(r'\bYYYY years?\b', 'some years', text)
+    text = re.sub(r'\bYYYY months?\b', 'several months', text)
+    text = re.sub(r'\bYYYY\b', '', text)  # Remove remaining YYYY
+    
+    # 8. Cleanup formatting "wreckage"
+    text = re.sub(r'\(\s*[,.]?\s*\)', '', text)       # Remove empty parens
+    text = re.sub(r'\(\s*\w*\s*\)', '', text)         # Remove parens with only a word
+    text = re.sub(r'\s{2,}', ' ', text)               # Collapse multiple spaces
+    text = re.sub(r'\s+([,.])', r'\1', text)          # Fix spaces before punctuation
+    text = re.sub(r'\s+([,])\s+', r'\1 ', text)       # Normalize comma spacing
+    
+    # 9. Remove facts that start with just a month (likely incomplete after cleanup)
+    if re.match(r'^(January|February|March|April|May|June|July|August|September|October|November|December)\s+[A-Z]', text):
+        # Check if it's ONLY a month and a name/place without substance
+        if len(text) < 50:
+            return ""
     
     text = text.strip()
+    
+    # 10. Quality filters - reject if too short or doesn't contain enough words
+    if len(text) < 30 or len(text.split()) < 5:
+        return ""
+    
     if text:
-        # Ensure it starts with a Capital and ends with a Dot
+        # Ensure it starts with a Capital and ends with proper punctuation
         text = text[0].upper() + text[1:]
-        if not text.endswith('.'):
+        if not text.endswith(('.', '!', '?')):
             text += '.'
             
     return text
@@ -82,6 +111,7 @@ def export_challenges(db_path, output_file):
     seen_decades = set()
     seen_centuries = set()
     counts = {'year': 0, 'decade': 0, 'century': 0}
+    quality_stats = {'total_raw': 0, 'filtered_out': 0, 'kept': 0}
 
     for year, era, timeframe, events_str in rows:
         raw_events = events_str.split('||')
@@ -89,10 +119,14 @@ def export_challenges(db_path, output_file):
         target_year = int(year)
         
         for f in raw_events:
+            quality_stats['total_raw'] += 1
             t = clean_event_text(f, target_year)
-            # Basic quality filter
-            if t and len(t) > 20:
+            # Enhanced quality filter
+            if t and len(t) > 30 and not t.startswith('C. '):
                 clean_events.append(t)
+                quality_stats['kept'] += 1
+            else:
+                quality_stats['filtered_out'] += 1
 
         if not clean_events:
             continue
@@ -126,9 +160,14 @@ def export_challenges(db_path, output_file):
         json.dump(final_challenges, f, indent=2)
     
     # --- ANALYSIS CHECKS ---
-    seen_years_ad = {f"{c['y']}-AD" for c in final_challenges if c['t'] == 'year' and c['e'] == 'AD'}
     print(f"\n✅ Export Summary: {len(final_challenges)} challenges.")
-    print(f"AD Years Coverage: {len(seen_years_ad)} / 2025")
+    print(f"   - Years: {counts['year']}")
+    print(f"   - Decades: {counts['decade']}")
+    print(f"   - Centuries: {counts['century']}")
+    print(f"\n📊 Quality Stats:")
+    print(f"   - Raw facts: {quality_stats['total_raw']}")
+    print(f"   - Kept: {quality_stats['kept']} ({100*quality_stats['kept']/quality_stats['total_raw']:.1f}%)")
+    print(f"   - Filtered: {quality_stats['filtered_out']} ({100*quality_stats['filtered_out']/quality_stats['total_raw']:.1f}%)")
     
     conn.close()
 

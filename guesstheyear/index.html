@@ -594,9 +594,9 @@
     function saveHistory(wonStatus) {
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
         const today = new Date();
-        const dateStr = today.getFullYear() + '-' + 
-                        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(today.getDate()).padStart(2, '0');
+        const dateStr = String(today.getDate()).padStart(2, '0') + '/' + 
+                        String(today.getMonth() + 1).padStart(2, '0') + '/' + 
+                        today.getFullYear();
         history.push({ 
             d: dateStr, 
             y: currentChallenge.y,  // Store as number
@@ -739,15 +739,15 @@
 
         let streak = 0;
         const today = new Date();
-        const todayStr = today.getFullYear() + '-' + 
-                         String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                         String(today.getDate()).padStart(2, '0');
+        const todayStr = String(today.getDate()).padStart(2, '0') + '/' + 
+                         String(today.getMonth() + 1).padStart(2, '0') + '/' + 
+                         today.getFullYear();
         
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.getFullYear() + '-' + 
-                             String(yesterday.getMonth() + 1).padStart(2, '0') + '-' + 
-                             String(yesterday.getDate()).padStart(2, '0');
+        const yesterdayStr = String(yesterday.getDate()).padStart(2, '0') + '/' + 
+                             String(yesterday.getMonth() + 1).padStart(2, '0') + '/' + 
+                             yesterday.getFullYear();
 
         // 3. Check if the most recent win is today OR yesterday
         // If the most recent win is older than yesterday, the streak is dead.
@@ -757,10 +757,13 @@
         }
 
         // 4. Walk through the sorted dates and count consecutive days
-        let expectedDate = new Date(uniqueDates[0] + 'T00:00:00'); // Start from the latest win
+        // Parse DD/MM/YYYY format
+        const parts = uniqueDates[0].split('/');
+        let expectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
 
         for (let dateStr of uniqueDates) {
-            const actualDate = new Date(dateStr + 'T00:00:00');
+            const dateParts = dateStr.split('/');
+            const actualDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
             
             if (actualDate.getTime() === expectedDate.getTime()) {
                 streak++;

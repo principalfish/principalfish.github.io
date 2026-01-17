@@ -1044,20 +1044,37 @@
         }, 150);
 
         // --- PHASE 2: MEGA CANNON BLASTS (More frequent, bigger) ---
-        [2000, 3000, 4000, 5000, 6000, 7000, 8000].forEach((delay) => {
+        [2000, 4000, 6000, 8000].forEach((delay) => {
             setTimeout(() => {
-                // Triple blast from different positions
-                [0.5].forEach((xPos) => {
+                // Alternating pattern: single center, then side splits
+                const pattern = (delay / 2000) % 2;
+                if (pattern === 0) {
+                    // Center mega blast
                     confetti({
-                        particleCount: 200,
-                        spread: 120,
-                        origin: { x: xPos, y: 0.5 },
-                        scalar: 2.5,
-                        colors: ['#ff0000', '#ffffff', '#ffc107', '#00ff00', '#0000ff'],
-                        shapes: ['star', 'circle'],
-                        gravity: 0.8
+                        particleCount: 250,
+                        spread: 140,
+                        origin: { x: 0.5, y: 0.4 },
+                        scalar: 2.8,
+                        colors: ['#ff0000', '#ffd700', '#ffffff'],
+                        shapes: ['star'],
+                        gravity: 0.9,
+                        startVelocity: 60
                     });
-                });
+                } else {
+                    // Left and right dual blasts
+                    [0.2, 0.8].forEach((xPos) => {
+                        confetti({
+                            particleCount: 150,
+                            spread: 100,
+                            origin: { x: xPos, y: 0.5 },
+                            scalar: 2.2,
+                            colors: ['#00ff00', '#0000ff', '#ffc107', '#ff69b4'],
+                            shapes: ['circle', 'star'],
+                            gravity: 0.7,
+                            startVelocity: 50
+                        });
+                    });
+                }
                 // Screen pulse
                 document.body.style.transition = "background-color 0.05s";
                 document.body.style.backgroundColor = `rgba(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255}, 0.1)`;

@@ -637,6 +637,16 @@
         });
     }
 
+    // Load fireworks preference
+    function loadFireworksPref() {
+        return localStorage.getItem('chronos_fireworks_mode') || 'low';
+    }
+
+    // Save fireworks preference
+    function saveFireworksPref(mode) {
+        localStorage.setItem('chronos_fireworks_mode', mode);
+    }
+
     // Update your toggleHistory function's modal footer or top
     function toggleHistory() {
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
@@ -660,14 +670,43 @@
             </div>
         `;
 
+        const fireworksMode = loadFireworksPref();
         const tableHtml = `
             <ul class="nav nav-tabs" id="historyTabs">
                 <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#h-daily">Daily</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#h-inf">Infinite</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#h-settings">🎆 Fireworks</button></li>
             </ul>
             <div class="tab-content pt-3" style="max-height: 400px; overflow-y: auto;">
                 <div class="tab-pane fade show active" id="h-daily">${generateTable(dailyGames.reverse())}</div>
                 <div class="tab-pane fade" id="h-inf">${generateTable(infiniteGames.reverse())}</div>
+                <div class="tab-pane fade" id="h-settings">
+                    <h5 class="mb-3">Victory Fireworks Intensity</h5>
+                    <p class="text-muted small">Choose how extravagant your victory celebration should be!</p>
+                    <div class="list-group">
+                        <label class="list-group-item d-flex gap-3 align-items-center" style="cursor: pointer;">
+                            <input class="form-check-input flex-shrink-0" type="radio" name="fireworks" value="low" ${fireworksMode === 'low' ? 'checked' : ''} onchange="saveFireworksPref('low')">
+                            <div>
+                                <strong>🎇 Low (Default)</strong>
+                                <div class="small text-muted">Gentle celebration - first few seconds only</div>
+                            </div>
+                        </label>
+                        <label class="list-group-item d-flex gap-3 align-items-center" style="cursor: pointer;">
+                            <input class="form-check-input flex-shrink-0" type="radio" name="fireworks" value="high" ${fireworksMode === 'high' ? 'checked' : ''} onchange="saveFireworksPref('high')">
+                            <div>
+                                <strong>🎆 High</strong>
+                                <div class="small text-muted">Full display - the complete show</div>
+                            </div>
+                        </label>
+                        <label class="list-group-item d-flex gap-3 align-items-center" style="cursor: pointer;">
+                            <input class="form-check-input flex-shrink-0" type="radio" name="fireworks" value="extreme" ${fireworksMode === 'extreme' ? 'checked' : ''} onchange="saveFireworksPref('extreme')">
+                            <div>
+                                <strong>💥 Extreme</strong>
+                                <div class="small text-muted">Over the top - absolute chaos and glory!</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
             </div>
         `;
 
@@ -829,6 +868,55 @@
         setupGame();
     }
     function launchFireworks() {
+        const fireworksMode = loadFireworksPref();
+        
+        if (fireworksMode === 'low') {
+            launchFireworksLow();
+        } else if (fireworksMode === 'extreme') {
+            launchFireworksExtreme();
+        } else {
+            launchFireworksHigh();
+        }
+    }
+
+    function launchFireworksLow() {
+        // Enhanced gentle celebration for 5 seconds
+        const duration = 5 * 1000;
+        const animationEnd = Date.now() + duration;
+        
+        // Gentle shimmer throughout
+        const shimmer = setInterval(() => {
+            if (Date.now() > animationEnd) {
+                clearInterval(shimmer);
+                return;
+            }
+            confetti({
+                particleCount: 3,
+                angle: 90,
+                spread: 60,
+                origin: { y: 0.8 },
+                colors: ['#ffffff', '#ffc107', '#28a745'],
+                gravity: 0.5,
+                scalar: 1
+            });
+        }, 250);
+        
+        // A couple of gentle bursts
+        [1500, 3000].forEach((delay) => {
+            setTimeout(() => {
+                confetti({
+                    particleCount: 40,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#ffc107', '#ffffff'],
+                    gravity: 0.8,
+                    scalar: 1.2
+                });
+            }, delay);
+        });
+    }
+
+    function launchFireworksHigh() {
         const duration = 12 * 1000; // Increased to 12 seconds for the full symphony
         const animationEnd = Date.now() + duration;
 
@@ -937,6 +1025,146 @@
 
     }, 12000); // Triggers at the 12-second mark
     }
+
+    function launchFireworksExtreme() {
+        const duration = 20 * 1000; // Extended to 20 seconds of pure chaos
+        const animationEnd = Date.now() + duration;
+
+        // --- PHASE 1: OVERWHELMING OPENING (Triple Shimmer) ---
+        const phase1 = setInterval(() => {
+            confetti({
+                particleCount: 8,
+                angle: 90,
+                spread: 80,
+                origin: { y: 0.8 },
+                colors: ['#ffffff', '#ffc107', '#ff0000', '#00ff00'],
+                gravity: 0.3,
+                scalar: 1.2
+            });
+        }, 150);
+
+        // --- PHASE 2: MEGA CANNON BLASTS (More frequent, bigger) ---
+        [2000, 3000, 4000, 5000, 6000, 7000, 8000].forEach((delay) => {
+            setTimeout(() => {
+                // Triple blast from different positions
+                [0.3, 0.5, 0.7].forEach((xPos) => {
+                    confetti({
+                        particleCount: 200,
+                        spread: 120,
+                        origin: { x: xPos, y: 0.5 },
+                        scalar: 2.5,
+                        colors: ['#ff0000', '#ffffff', '#ffc107', '#00ff00', '#0000ff'],
+                        shapes: ['star', 'circle'],
+                        gravity: 0.8
+                    });
+                });
+                // Screen pulse
+                document.body.style.transition = "background-color 0.05s";
+                document.body.style.backgroundColor = `rgba(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255}, 0.1)`;
+                setTimeout(() => {
+                    document.body.style.backgroundColor = "";
+                }, 100);
+            }, delay);
+        });
+
+        // --- PHASE 3: QUADRUPLE FLANKING (All four corners) ---
+        setTimeout(() => {
+            const sideFire = setInterval(() => {
+                if (Date.now() > animationEnd - 8000) return clearInterval(sideFire);
+                
+                // All four corners firing
+                [[0, 60], [1, 120], [0, 300], [1, 240]].forEach(([x, angle]) => {
+                    confetti({
+                        particleCount: 40,
+                        angle: angle,
+                        spread: 70,
+                        origin: { x: x, y: 0.6 },
+                        colors: ['#28a745', '#ffc107', '#ff69b4', '#00ffff'],
+                        scalar: 1.5
+                    });
+                });
+            }, 200);
+        }, 8000);
+
+        // --- PHASE 4: ABSOLUTE CHAOS (Total madness) ---
+        setTimeout(() => {
+            clearInterval(phase1);
+            const chaos = setInterval(() => {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(chaos);
+
+                // Random explosions everywhere
+                confetti({
+                    particleCount: 120,
+                    spread: 360,
+                    startVelocity: 60,
+                    origin: { x: Math.random(), y: Math.random() },
+                    colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ffffff', '#ff69b4', '#ffa500'],
+                    gravity: 1.2,
+                    scalar: 1.8,
+                    drift: Math.random() * 2 - 1
+                });
+            }, 80);
+        }, 12000);
+
+        // --- PHASE 5: TRIPLE GRAND FINALE ---
+        [16000, 17000, 18000].forEach((delay) => {
+            setTimeout(() => {
+                // Massive explosion
+                confetti({
+                    particleCount: 300,
+                    spread: 180,
+                    origin: { y: 0.3 },
+                    scalar: 3,
+                    colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700', '#00ff00'],
+                    ticks: 500,
+                    gravity: 0.5,
+                    shapes: ['star']
+                });
+                
+                // Shockwave effect
+                confetti({
+                    particleCount: 150,
+                    spread: 360,
+                    origin: { y: 0.3 },
+                    scalar: 0.3,
+                    colors: ['#ffffff'],
+                    ticks: 600,
+                    gravity: 0.1,
+                    startVelocity: 80
+                });
+                
+                // Screen flash
+                document.body.style.transition = "background-color 0.08s";
+                document.body.style.backgroundColor = "white";
+                setTimeout(() => {
+                    document.body.style.backgroundColor = "";
+                }, 120);
+            }, delay);
+        });
+
+        // --- THE ULTIMATE FINALE ---
+        setTimeout(() => {
+            confetti({
+                particleCount: 1000,
+                spread: 200,
+                origin: { y: 0.4 },
+                scalar: 3,
+                colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700', '#ff69b4', '#00ff00', '#0000ff'],
+                ticks: 600,
+                gravity: 0.4,
+                shapes: ['star', 'circle']
+            });
+            
+            // Final massive flash
+            document.body.style.transition = "background-color 0.15s";
+            document.body.style.backgroundColor = "gold";
+            setTimeout(() => {
+                document.body.style.backgroundColor = "";
+            }, 200);
+        }, 19500);
+    }
+
     init();
 </script>
 </body>

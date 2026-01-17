@@ -114,6 +114,7 @@ def export_challenges(db_path, output_file):
     seen_centuries = set()
     counts = {'year': 0, 'decade': 0, 'century': 0}
     quality_stats = {'total_raw': 0, 'filtered_out': 0, 'kept': 0}
+    excluded_years = []
 
     for year, era, timeframe, events_str in rows:
         raw_events = events_str.split('||')
@@ -130,7 +131,10 @@ def export_challenges(db_path, output_file):
             else:
                 quality_stats['filtered_out'] += 1
 
-        if not clean_events:
+        # Require at least 3 facts
+        if len(clean_events) < 3:
+            if clean_events:  # Only track if there were some events (just not enough)
+                excluded_years.append(f"{year} {era} ({len(clean_events)} facts)")
             continue
             
         # Pick up to 5 individual facts
@@ -171,6 +175,8 @@ def export_challenges(db_path, output_file):
     print(f"   - Kept: {quality_stats['kept']} ({100*quality_stats['kept']/quality_stats['total_raw']:.1f}%)")
     print(f"   - Filtered: {quality_stats['filtered_out']} ({100*quality_stats['filtered_out']/quality_stats['total_raw']:.1f}%)")
     
+    print(f"\n🚫 Excluded Years (< 3 facts): {len(excluded_years)}")
+
     conn.close()
 
 if __name__ == "__main__":

@@ -423,8 +423,8 @@
     // --- EASY MODE HINT LOGIC ---
     let hintArrow = "";
     if (isEasyMode && !won) {
-        // If guess is -500 (500 BC) and target is -400 (400 BC), -500 < -400, so "Higher" (Modern)
-        hintArrow = gVal < minRange ? " ⬆️ Higher" : " ⬇️ Lower";
+        // If guess is -500 (500 BC) and target is -400 (400 BC), -500 < -400, so "Later" (More modern)
+        hintArrow = gVal < minRange ? " ⬆️ Later" : " ⬇️ Earlier";
     }
 
     // Add the emoji to guess history for sharing

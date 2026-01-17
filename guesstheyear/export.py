@@ -34,8 +34,10 @@ def get_first_two_sentences(text):
 def clean_event_text(text, target_year):
     """Cleans prefixes, citations, years, and restricts to two sentences."""
     
-    # 1. Strip leading "c.", "ca.", "circa" including standalone "C." lines
-    text = re.sub(r'^[Cc](?:ir?ca)?\.?\s*[\u2014\-\u2013]?\s*', '', text.strip())
+    # 1. Strip leading "c.", "ca.", "circa" - must have period or be full word
+    text = text.strip()
+    # Match only: "c. ", "C. ", "ca. ", "Ca. ", "circa ", "Circa " (with required space/period)
+    text = re.sub(r'^(?:[Cc]\.\s+|[Cc]a\.\s+|[Cc]irca\s+)[\u2014\-\u2013]?\s*', '', text)
     
     # 2. Remove Wikipedia citations like [1] or [12]
     text = re.sub(r'\[\d+\]', '', text)

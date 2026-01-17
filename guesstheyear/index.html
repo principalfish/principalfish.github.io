@@ -593,8 +593,12 @@
 
     function saveHistory(wonStatus) {
         const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
+        const today = new Date();
+        const dateStr = today.getFullYear() + '-' + 
+                        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                        String(today.getDate()).padStart(2, '0');
         history.push({ 
-            d: new Date().toLocaleDateString(), 
+            d: dateStr, 
             y: currentChallenge.y,  // Store as number
             e: currentChallenge.e,  // Store as "AD" or "BC"
             t: currentChallenge.t,  // Store as "year", "decade", or "century"
@@ -734,14 +738,16 @@
         uniqueDates.sort((a, b) => new Date(b) - new Date(a));
 
         let streak = 0;
-        let today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = new Date();
+        const todayStr = today.getFullYear() + '-' + 
+                         String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                         String(today.getDate()).padStart(2, '0');
         
-        let yesterday = new Date(today);
+        const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-
-        const todayStr = today.toLocaleDateString();
-        const yesterdayStr = yesterday.toLocaleDateString();
+        const yesterdayStr = yesterday.getFullYear() + '-' + 
+                             String(yesterday.getMonth() + 1).padStart(2, '0') + '-' + 
+                             String(yesterday.getDate()).padStart(2, '0');
 
         // 3. Check if the most recent win is today OR yesterday
         // If the most recent win is older than yesterday, the streak is dead.
@@ -751,12 +757,12 @@
         }
 
         // 4. Walk through the sorted dates and count consecutive days
-        let expectedDate = new Date(new Date(uniqueDates[0])); // Start from the latest win
+        let expectedDate = new Date(uniqueDates[0] + 'T00:00:00'); // Start from the latest win
 
         for (let dateStr of uniqueDates) {
-            const actualDate = new Date(dateStr);
+            const actualDate = new Date(dateStr + 'T00:00:00');
             
-            if (actualDate.toLocaleDateString() === expectedDate.toLocaleDateString()) {
+            if (actualDate.getTime() === expectedDate.getTime()) {
                 streak++;
                 // Move expected date back by one day
                 expectedDate.setDate(expectedDate.getDate() - 1);
@@ -810,6 +816,8 @@
         document.getElementById('result-view').classList.add('hidden');
         document.getElementById('btn-view-results').classList.add('hidden');
         document.getElementById('guessYear').value = '';
+        document.getElementById('guessYear').disabled = false;
+        document.getElementById('guessEra').disabled = false;
         const guessBtn = document.querySelector("button[onclick='handleGuess()']");
         if (guessBtn) {
             guessBtn.disabled = false;

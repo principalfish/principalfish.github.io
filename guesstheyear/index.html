@@ -179,6 +179,9 @@
         if (!response.ok) throw new Error("File not found");
         allChallenges = await response.json();
         
+        // Clean up old daily save games
+        cleanupOldDailySaves();
+        
         const params = new URLSearchParams(window.location.search);
         mode = params.get('mode') === 'infinite' ? 'infinite' : 'daily';
         loadEasyModePref();
@@ -218,6 +221,29 @@
         console.log(e)
         document.getElementById('facts-area').innerHTML = `<div class="alert alert-danger">Error loading data.</div>`;
     }
+    }
+
+    // Clean up old daily save games (keep only today's)
+    function cleanupOldDailySaves() {
+        const today = new Date().toDateString();
+        const todayKey = 'chronos_save_' + today;
+        
+        // Get all localStorage keys
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            // Find all chronos_save_ keys that aren't today's
+            if (key && key.startsWith('chronos_save_') && key !== todayKey) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        // Remove old save games
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        if (keysToRemove.length > 0) {
+            console.log(`Cleaned up ${keysToRemove.length} old daily save game(s)`);
+        }
     }
 
     // Save the preference
@@ -774,7 +800,15 @@
         // 2. Extract unique dates and sort them NEWEST to OLDEST
         // Using a Set handles cases where a user might have two entries for one day
         const uniqueDates = [...new Set(dailyWins.map(g => g.d))];
-        uniqueDates.sort((a, b) => new Date(b) - new Date(a));
+        
+        // Sort by converting DD/MM/YYYY to comparable format
+        uniqueDates.sort((a, b) => {
+            const [dayA, monthA, yearA] = a.split('/').map(Number);
+            const [dayB, monthB, yearB] = b.split('/').map(Number);
+            const dateA = new Date(yearA, monthA - 1, dayA);
+            const dateB = new Date(yearB, monthB - 1, dayB);
+            return dateB - dateA; // Newest first
+        });
 
         let streak = 0;
         const today = new Date();
@@ -799,10 +833,12 @@
         // Parse DD/MM/YYYY format
         const parts = uniqueDates[0].split('/');
         let expectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        expectedDate.setHours(0, 0, 0, 0); // Normalize to midnight
 
         for (let dateStr of uniqueDates) {
             const dateParts = dateStr.split('/');
             const actualDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+            actualDate.setHours(0, 0, 0, 0); // Normalize to midnight
             
             if (actualDate.getTime() === expectedDate.getTime()) {
                 streak++;
@@ -817,15 +853,27 @@
     }
 
     function clearAllData() {
-        if (confirm("Are you sure? This will delete ALL history, streaks, and today's result!")) {
+        if (confirm("Are you sure? This will delete ALL history, streaks, and saved games!")) {
             // Clear all known keys
             const keys = [
                 'chronos_history_v2', 
                 'chronos_history_v3', 
                 'chronos_daily_result',
+                'chronos_easy_mode',
+                'chronos_fireworks_mode',
                 'chronos_save_' + currentSeed
             ];
             keys.forEach(k => localStorage.removeItem(k));
+            
+            // Remove ALL daily save games (chronos_save_*)
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('chronos_save_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
             
             alert("All data cleared.");
             // Redirect to Daily mode to start fresh
@@ -838,8 +886,25 @@
         if (mode === 'daily') {
             window.location.href = "?mode=infinite";
         } else {
-            // If already in Infinite mode, just reset the game state and pick a new year
-            resetGameState();
+            // If in Infinite mode, check if a new daily is available
+            const currentSeed = new Date().toDateString();
+            const saved = localStorage.getItem('chronos_save_' + currentSeed);
+            
+            // If no saved game for today, or if the saved game is not finished, go to daily
+            if (!saved) {
+                window.location.href = window.location.pathname; // Go to daily mode
+            } else {
+                const gameState = JSON.parse(saved);
+                const isFinished = gameState.won || gameState.attempts <= 0;
+                
+                if (!isFinished) {
+                    // Daily game in progress, go to it
+                    window.location.href = window.location.pathname;
+                } else {
+                    // Daily already completed, stay in infinite and reset
+                    resetGameState();
+                }
+            }
         }
     }
 

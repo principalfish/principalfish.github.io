@@ -38,6 +38,11 @@ class TestAddPollster:
         p = db.add_pollster("Survation", "survation_v2", weight=0.8)
         assert p.weight == pytest.approx(0.8)
 
+    def test_regions_mapping(self, db):
+        mapping = "South:12,13,14\nScotland:2"
+        p = db.add_pollster("YouGov", "yougov_regions", regions_mapping=mapping)
+        assert p.regions_mapping == mapping
+
     def test_duplicate_identifier_raises(self, db):
         _make_pollster(db, "yougov_v1")
         with pytest.raises(Exception):

@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-../.venv/bin/python -m pytest tests/ "$@"
+
+if [[ -x ../election_data/bin/python ]]; then
+	PYTHON=../election_data/bin/python
+elif [[ -x ../.venv/bin/python ]]; then
+	PYTHON=../.venv/bin/python
+else
+	echo "Error: no virtualenv found. Expected ../election_data or ../.venv"
+	exit 1
+fi
+
+"$PYTHON" -m pytest tests/ "$@"

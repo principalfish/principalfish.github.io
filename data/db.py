@@ -71,14 +71,12 @@ class Database:
         name: str,
         *,
         short_name: str | None = None,
-        long_name: str | None = None,
         colour: str | None = None,
     ) -> Party:
         with self.session() as s:
             party = Party(
                 name=name,
                 short_name=short_name,
-                long_name=long_name,
                 colour=colour,
             )
             s.add(party)
@@ -123,10 +121,20 @@ class Database:
     # ── regions ───────────────────────────────────────────────────────────
 
     def add_region(
-        self, map_id: int, name: str, *, parent_id: int | None = None
+        self,
+        map_id: int,
+        name: str,
+        *,
+        parent_id: int | None = None,
+        population: int | None = None,
     ) -> Region:
         with self.session() as s:
-            r = Region(map_id=map_id, name=name, parent_id=parent_id)
+            r = Region(
+                map_id=map_id,
+                name=name,
+                parent_id=parent_id,
+                population=population,
+            )
             s.add(r)
             s.flush()
             region_id = r.id
@@ -382,9 +390,15 @@ class Database:
         identifier: str,
         *,
         weight: float | None = 1.0,
+        regions_mapping: str | None = None,
     ) -> Pollster:
         with self.session() as s:
-            p = Pollster(name=name, identifier=identifier, weight=weight)
+            p = Pollster(
+                name=name,
+                identifier=identifier,
+                weight=weight,
+                regions_mapping=regions_mapping,
+            )
             s.add(p)
             s.flush()
             pid = p.id

@@ -18,6 +18,11 @@ class TestAddRegion:
         london = db.add_region(m.id, "London", parent_id=england.id)
         assert london.parent_id == england.id
 
+    def test_population(self, db):
+        m = db.add_map("UK")
+        region = db.add_region(m.id, "Scotland", population=5430000)
+        assert region.population == 5430000
+
     def test_invalid_map_raises(self, db):
         with pytest.raises(Exception):
             db.add_region(9999, "Nowhere")

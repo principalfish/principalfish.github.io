@@ -2,3 +2,5 @@ sqlalchemy>=2.0
 geoalchemy2>=0.15
 psycopg2-binary>=2.9
 shapely>=2.0
+pypdf>=5.0
+flask>=3.0

@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -36,7 +37,6 @@ class Party(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False, unique=True)
     short_name = Column(String, nullable=True)
-    long_name = Column(String, nullable=True)
     colour = Column(String, nullable=True)  # hex e.g. "#E4003B"
 
     votes = relationship("Vote", back_populates="party")
@@ -68,6 +68,7 @@ class Region(Base):
     map_id = Column(Integer, ForeignKey("maps.id"), nullable=False)
     name = Column(String, nullable=False)
     parent_id = Column(Integer, ForeignKey("regions.id"), nullable=True)
+    population = Column(Integer, nullable=True)
 
     map = relationship("Map", back_populates="regions")
     parent = relationship("Region", remote_side=[id], backref="children")
@@ -164,6 +165,7 @@ class Pollster(Base):
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=False, unique=True)
     weight = Column(Float, nullable=True, default=1.0)
+    regions_mapping = Column(Text, nullable=True)
 
     polls = relationship("Poll", back_populates="pollster", cascade="all, delete-orphan")
 

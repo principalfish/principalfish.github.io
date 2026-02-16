@@ -15,11 +15,9 @@ class TestAddParty:
         party = db.add_party(
             "Labour",
             short_name="Lab",
-            long_name="Labour Party",
             colour="#E4003B",
         )
         assert party.short_name == "Lab"
-        assert party.long_name == "Labour Party"
         assert party.colour == "#E4003B"
 
     def test_duplicate_name_raises(self, db):
@@ -30,7 +28,6 @@ class TestAddParty:
     def test_nullable_optional_fields(self, db):
         party = db.add_party("Independent")
         assert party.short_name is None
-        assert party.long_name is None
         assert party.colour is None
 
 

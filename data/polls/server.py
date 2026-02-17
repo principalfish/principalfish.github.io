@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from db import Database
 from models import Party, Poll, PollRow, Pollster, Region
 from polls.export_poll_rows_csv import build_rows
-from polls import yougov_import
+from polls.importers import find_out_now_import, yougov_import
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "local-polls-dev-key"
@@ -34,6 +34,12 @@ IMPORTERS = {
     "yougov": {
         "label": "YouGov",
         "module": yougov_import,
+        "url_arg": "pdf_url",
+    },
+    "find_out_now": {
+        "label": "Find Out Now",
+        "module": find_out_now_import,
+        "url_arg": "xlsx_url",
     }
 }
 
@@ -54,16 +60,15 @@ def import_poll_form():
     return render_template(
         "import_form.html",
         pollsters=[{"identifier": key, "name": meta["label"]} for key, meta in IMPORTERS.items()],
-        default_url=yougov_import.DEFAULT_PDF_URL,
     )
 
 
 @app.route("/import/preview", methods=["POST"])
 def import_poll_preview():
     pollster_identifier = (request.form.get("pollster_identifier") or "").strip()
-    pdf_url = (request.form.get("pdf_url") or "").strip()
+    source_url = (request.form.get("source_url") or "").strip()
 
-    if not pollster_identifier or not pdf_url:
+    if not pollster_identifier or not source_url:
         flash("Pollster and URL are required.")
         return redirect(url_for("import_poll_form"))
 
@@ -74,14 +79,15 @@ def import_poll_preview():
 
     db = _get_db()
     module = importer["module"]
+    url_arg = importer["url_arg"]
 
     try:
-        plan = module.build_import_plan(
-            db,
-            pdf_url=pdf_url,
-            map_name=module.DEFAULT_MAP_NAME,
-            pollster_identifier=pollster_identifier,
-        )
+        build_kwargs = {
+            url_arg: source_url,
+            "map_name": module.DEFAULT_MAP_NAME,
+            "pollster_identifier": pollster_identifier,
+        }
+        plan = module.build_import_plan(db, **build_kwargs)
     except Exception as exc:
         flash(f"Import preview failed: {exc}")
         return redirect(url_for("import_poll_form"))
@@ -89,7 +95,7 @@ def import_poll_preview():
     token = uuid.uuid4().hex
     PREVIEW_CACHE[token] = {
         "pollster_identifier": pollster_identifier,
-        "pdf_url": pdf_url,
+        "source_url": source_url,
         "plan": plan,
     }
 
@@ -97,7 +103,7 @@ def import_poll_preview():
         "import_preview.html",
         token=token,
         pollster_name=importer["label"],
-        pdf_url=pdf_url,
+        source_url=source_url,
         plan=plan,
     )
 
@@ -158,6 +164,7 @@ def poll_list():
             "fieldwork_start": poll.fieldwork_start,
             "fieldwork_end": poll.fieldwork_end,
             "sample_size": poll.sample_size,
+            "source_url": poll.source_url,
             "row_count": int(row_counts.get(poll.id, 0)),
         }
         for poll, pollster in polls
@@ -231,6 +238,7 @@ def poll_detail_csv(poll_id: int):
         "fieldwork_start",
         "fieldwork_end",
         "sample_size",
+        "source_url",
         "region_id",
         "region_name",
         "party_id",

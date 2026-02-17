@@ -182,6 +182,7 @@ class Poll(Base):
     fieldwork_start = Column(Date, nullable=False)
     fieldwork_end = Column(Date, nullable=False)
     sample_size = Column(Integer, nullable=True)
+    source_url = Column(String, nullable=True)
 
     pollster = relationship("Pollster", back_populates="polls")
     map = relationship("Map")

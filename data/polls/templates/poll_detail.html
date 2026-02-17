@@ -5,6 +5,14 @@
     <p><strong>Pollster:</strong> {{ pollster.name }} ({{ pollster.identifier }})</p>
     <p><strong>Fieldwork:</strong> {{ poll.fieldwork_start }} to {{ poll.fieldwork_end }}</p>
     <p><strong>Sample size:</strong> {{ poll.sample_size }}</p>
+    <p>
+      <strong>Source URL:</strong>
+      {% if poll.source_url %}
+        <a href="{{ poll.source_url }}" target="_blank" rel="noopener">{{ poll.source_url }}</a>
+      {% else %}
+        -
+      {% endif %}
+    </p>
     <p><a class="button" href="{{ url_for('poll_detail_csv', poll_id=poll.id) }}">Download CSV</a></p>
   </section>
 

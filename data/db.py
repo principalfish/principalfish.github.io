@@ -428,6 +428,7 @@ class Database:
         fieldwork_end: "date",
         *,
         sample_size: int | None = None,
+        source_url: str | None = None,
     ) -> Poll:
         with self.session() as s:
             poll = Poll(
@@ -436,6 +437,7 @@ class Database:
                 fieldwork_start=fieldwork_start,
                 fieldwork_end=fieldwork_end,
                 sample_size=sample_size,
+                source_url=source_url,
             )
             s.add(poll)
             s.flush()

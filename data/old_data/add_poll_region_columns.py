@@ -6,6 +6,7 @@ This script is idempotent and safe to run multiple times.
 Adds:
 - regions.population (INTEGER, nullable)
 - pollsters.regions_mapping (TEXT, nullable)
+- polls.source_url (TEXT, nullable)
 
 Usage:
   python old_data/add_poll_region_columns.py
@@ -43,8 +44,16 @@ def main() -> None:
                 """
             )
         )
+        s.execute(
+            text(
+                """
+                ALTER TABLE polls
+                ADD COLUMN IF NOT EXISTS source_url TEXT
+                """
+            )
+        )
 
-    print("✅ Added columns: regions.population, pollsters.regions_mapping")
+    print("✅ Added columns: regions.population, pollsters.regions_mapping, polls.source_url")
 
 
 if __name__ == "__main__":

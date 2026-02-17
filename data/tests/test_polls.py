@@ -102,6 +102,19 @@ class TestAddPoll:
         assert poll.fieldwork_end == date(2026, 2, 12)
         assert poll.sample_size == 1500
 
+    def test_source_url(self, db):
+        pollster, m, _, _ = _make_poll_scaffold(db)
+        url = "https://example.com/poll.pdf"
+        poll = db.add_poll(
+            pollster.id,
+            m.id,
+            date(2026, 2, 10),
+            date(2026, 2, 12),
+            sample_size=1500,
+            source_url=url,
+        )
+        assert poll.source_url == url
+
     def test_no_sample_size(self, db):
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 1, 1), date(2026, 1, 1))

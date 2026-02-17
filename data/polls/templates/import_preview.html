@@ -3,7 +3,7 @@
   <section class="card">
     <h2>Import Preview</h2>
     <p><strong>Pollster:</strong> {{ pollster_name }} ({{ plan.pollster_identifier }})</p>
-    <p><strong>Source URL:</strong> {{ pdf_url }}</p>
+    <p><strong>Source URL:</strong> {{ source_url }}</p>
     <p><strong>Map:</strong> {{ plan.map_name }}</p>
     <p><strong>Fieldwork:</strong> {{ plan.parsed.fieldwork_start }} to {{ plan.parsed.fieldwork_end }}</p>
     <p><strong>Sample size:</strong> {{ plan.parsed.sample_size }}</p>
@@ -34,7 +34,7 @@
           {% for row in plan.rows %}
             <tr>
               <td>{{ row.party_name }}</td>
-              <td>{{ row.macro_region }}</td>
+              <td>{% if row.macro_region is defined %}{{ row.macro_region }}{% endif %}</td>
               <td>{{ row.region_name }}</td>
               <td>{{ row.percentage }}</td>
             </tr>

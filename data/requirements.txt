@@ -4,3 +4,6 @@ psycopg2-binary>=2.9
 shapely>=2.0
 pypdf>=5.0
 flask>=3.0
+beautifulsoup4>=4.12
+lxml>=5.0
+openpyxl>=3.1

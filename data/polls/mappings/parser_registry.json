@@ -24,16 +24,16 @@
     "status": "planned"
   },
   "ipsos": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.ipsos_import",
+    "status": "implemented"
   },
   "jl_partners": {
     "module": null,
     "status": "planned"
   },
   "lord_ashcroft": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.lord_ashcroft_import",
+    "status": "implemented"
   },
   "merlin_strategy": {
     "module": null,

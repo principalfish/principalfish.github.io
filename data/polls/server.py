@@ -29,6 +29,8 @@ from polls.importers import (
     bmg_research_import,
     find_out_now_import,
     focaldata_import,
+    ipsos_import,
+    lord_ashcroft_import,
     more_in_common_import,
     opinium_import,
     survation_import,
@@ -79,6 +81,16 @@ IMPORTERS = {
         "label": "Survation",
         "module": survation_import,
         "url_arg": "xlsx_url",
+    },
+    "ipsos": {
+        "label": "Ipsos",
+        "module": ipsos_import,
+        "url_arg": "pdf_url",
+    },
+    "lord_ashcroft": {
+        "label": "Lord Ashcroft Polls",
+        "module": lord_ashcroft_import,
+        "url_arg": "source_url",
     }
 }
 

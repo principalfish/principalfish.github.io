@@ -25,7 +25,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from db import Database
 from models import Party, Poll, PollRow, Pollster, Region
 from polls.export_poll_rows_csv import build_rows
-from polls.importers import find_out_now_import, yougov_import
+from polls.importers import (
+    find_out_now_import,
+    more_in_common_import,
+    opinium_import,
+    techne_import,
+    yougov_import,
+)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "local-polls-dev-key"
@@ -39,6 +45,21 @@ IMPORTERS = {
     "find_out_now": {
         "label": "Find Out Now",
         "module": find_out_now_import,
+        "url_arg": "xlsx_url",
+    },
+    "more_in_common": {
+        "label": "More in Common",
+        "module": more_in_common_import,
+        "url_arg": "xlsx_url",
+    },
+    "techne": {
+        "label": "Techne",
+        "module": techne_import,
+        "url_arg": "pdf_url",
+    },
+    "opinium": {
+        "label": "Opinium",
+        "module": opinium_import,
         "url_arg": "xlsx_url",
     }
 }

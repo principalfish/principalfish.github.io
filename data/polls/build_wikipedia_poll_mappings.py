@@ -324,6 +324,21 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
                 "module": "polls.importers.find_out_now_import",
                 "status": "implemented",
             }
+        elif parser_id == "more_in_common":
+            parser_registry[parser_id] = {
+                "module": "polls.importers.more_in_common_import",
+                "status": "implemented",
+            }
+        elif parser_id == "techne":
+            parser_registry[parser_id] = {
+                "module": "polls.importers.techne_import",
+                "status": "implemented",
+            }
+        elif parser_id == "opinium":
+            parser_registry[parser_id] = {
+                "module": "polls.importers.opinium_import",
+                "status": "implemented",
+            }
         else:
             parser_registry[parser_id] = {
                 "module": None,

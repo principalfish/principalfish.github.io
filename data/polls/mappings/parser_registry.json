@@ -40,12 +40,12 @@
     "status": "planned"
   },
   "more_in_common": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.more_in_common_import",
+    "status": "implemented"
   },
   "opinium": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.opinium_import",
+    "status": "implemented"
   },
   "stack_data_strategy": {
     "module": null,
@@ -60,8 +60,8 @@
     "status": "planned"
   },
   "techne": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.techne_import",
+    "status": "implemented"
   },
   "verian": {
     "module": null,

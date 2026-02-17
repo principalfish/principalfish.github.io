@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from pypdf import PdfReader
 from sqlalchemy import select
@@ -116,8 +116,24 @@ def _infer_year(pdf_url: str, fallback: int | None = None) -> int:
 
 
 def extract_pdf_text(pdf_url: str) -> str:
-    with urlopen(pdf_url) as response:
-        payload = response.read()
+    candidate_urls = [pdf_url]
+    if "web.archive.org/web/" in pdf_url and "if_/" not in pdf_url:
+        candidate_urls.append(pdf_url.replace("/web/", "/web/").replace("/https://", "if_/https://", 1))
+
+    payload = None
+    for candidate in candidate_urls:
+        req = Request(candidate, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+        try:
+            with urlopen(req) as response:
+                data = response.read()
+            if data.startswith(b"%PDF"):
+                payload = data
+                break
+        except Exception:
+            continue
+
+    if payload is None:
+        raise ValueError(f"Could not fetch PDF payload from URL: {pdf_url}")
 
     with NamedTemporaryFile(suffix=".pdf") as tmp:
         tmp.write(payload)

@@ -339,6 +339,21 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
                 "module": "polls.importers.opinium_import",
                 "status": "implemented",
             }
+        elif parser_id == "bmg_research":
+            parser_registry[parser_id] = {
+                "module": "polls.importers.bmg_research_import",
+                "status": "implemented",
+            }
+        elif parser_id == "focaldata":
+            parser_registry[parser_id] = {
+                "module": "polls.importers.focaldata_import",
+                "status": "implemented",
+            }
+        elif parser_id == "survation":
+            parser_registry[parser_id] = {
+                "module": "polls.importers.survation_import",
+                "status": "implemented",
+            }
         else:
             parser_registry[parser_id] = {
                 "module": None,

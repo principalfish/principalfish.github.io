@@ -1,7 +1,7 @@
 {
   "bmg_research": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.bmg_research_import",
+    "status": "implemented"
   },
   "deltapoll": {
     "module": null,
@@ -16,8 +16,8 @@
     "status": "planned"
   },
   "focaldata": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.focaldata_import",
+    "status": "implemented"
   },
   "freshwater_strategy": {
     "module": null,
@@ -56,8 +56,8 @@
     "status": "planned"
   },
   "survation": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.survation_import",
+    "status": "implemented"
   },
   "techne": {
     "module": "polls.importers.techne_import",

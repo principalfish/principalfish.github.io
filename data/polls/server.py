@@ -26,9 +26,12 @@ from db import Database
 from models import Party, Poll, PollRow, Pollster, Region
 from polls.export_poll_rows_csv import build_rows
 from polls.importers import (
+    bmg_research_import,
     find_out_now_import,
+    focaldata_import,
     more_in_common_import,
     opinium_import,
+    survation_import,
     techne_import,
     yougov_import,
 )
@@ -60,6 +63,21 @@ IMPORTERS = {
     "opinium": {
         "label": "Opinium",
         "module": opinium_import,
+        "url_arg": "xlsx_url",
+    },
+    "bmg_research": {
+        "label": "BMG Research",
+        "module": bmg_research_import,
+        "url_arg": "xlsx_url",
+    },
+    "focaldata": {
+        "label": "Focaldata",
+        "module": focaldata_import,
+        "url_arg": "xlsx_url",
+    },
+    "survation": {
+        "label": "Survation",
+        "module": survation_import,
         "url_arg": "xlsx_url",
     }
 }

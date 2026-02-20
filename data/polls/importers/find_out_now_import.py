@@ -110,7 +110,7 @@ def _month_number(month_text: str) -> int | None:
     return month_map.get(month_text.lower())
 
 
-def parse_fieldwork(value: str) -> tuple[date, date]:
+def parse_fieldwork(value: str, *, year_hint: int | None = None) -> tuple[date, date]:
     normalized = re.sub(r"\s+", " ", value.strip().replace("–", "-"))
 
     cross_month_pattern = re.compile(
@@ -121,6 +121,12 @@ def parse_fieldwork(value: str) -> tuple[date, date]:
     )
     single_day_pattern = re.compile(
         r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(\d{4})"
+    )
+    range_same_month_no_year_pattern = re.compile(
+        r"(\d{1,2})(?:st|nd|rd|th)?\s*-\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)"
+    )
+    single_day_no_year_pattern = re.compile(
+        r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)"
     )
 
     match = cross_month_pattern.search(normalized)
@@ -155,7 +161,36 @@ def parse_fieldwork(value: str) -> tuple[date, date]:
         parsed_day = date(year, month, day)
         return parsed_day, parsed_day
 
+    match = range_same_month_no_year_pattern.search(normalized)
+    if match:
+        if year_hint is None:
+            raise ValueError(f"Could not parse fieldwork year from string: {value!r}")
+        day_start = int(match.group(1))
+        day_end = int(match.group(2))
+        month = _month_number(match.group(3))
+        if month is None:
+            raise ValueError(f"Could not parse fieldwork string: {value!r}")
+        return date(year_hint, month, day_start), date(year_hint, month, day_end)
+
+    match = single_day_no_year_pattern.search(normalized)
+    if match:
+        if year_hint is None:
+            raise ValueError(f"Could not parse fieldwork year from string: {value!r}")
+        day = int(match.group(1))
+        month = _month_number(match.group(2))
+        if month is None:
+            raise ValueError(f"Could not parse fieldwork string: {value!r}")
+        parsed_day = date(year_hint, month, day)
+        return parsed_day, parsed_day
+
     raise ValueError(f"Could not parse fieldwork string: {value!r}")
+
+
+def _infer_year_hint_from_url(url: str) -> int | None:
+    match = re.search(r"(20\d{2})", url)
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 def extract_workbook(xlsx_url: str):
@@ -199,14 +234,14 @@ def _to_percentage(value: object) -> float:
     return float(int(round(pct)))
 
 
-def parse_poll(workbook) -> ParsedPoll:
+def parse_poll(workbook, *, fieldwork_year_hint: int | None = None) -> ParsedPoll:
     cover_sheet_name = "Cover page" if "Cover page" in workbook.sheetnames else workbook.sheetnames[0]
     cover = workbook[cover_sheet_name]
 
     fieldwork_raw = _find_label_value(cover, "Fieldwork date") or _cell_text(cover["C5"].value)
     if not fieldwork_raw:
         raise ValueError("Fieldwork date not found in workbook")
-    fieldwork_start, fieldwork_end = parse_fieldwork(fieldwork_raw)
+    fieldwork_start, fieldwork_end = parse_fieldwork(fieldwork_raw, year_hint=fieldwork_year_hint)
 
     sample_raw = _find_label_value(cover, "Sample size") or _cell_text(cover["C6"].value)
     if not sample_raw:
@@ -219,49 +254,82 @@ def parse_poll(workbook) -> ParsedPoll:
             if "headline" in sheet_name.lower():
                 headline_sheet = sheet_name
                 break
-    if headline_sheet is None:
-        raise ValueError("Could not find 'Headline VI' sheet in workbook")
-
-    sheet = workbook[headline_sheet]
-
-    header_row = None
-    for row in range(1, 30):
-        values = [_cell_text(sheet.cell(row, col).value) for col in range(1, 50)]
-        if "All" in values and "East Midlands" in values:
-            header_row = row
-            break
-    if header_row is None:
-        raise ValueError("Could not locate regional header row in Headline VI sheet")
-
-    region_columns: dict[int, str] = {}
-    national_column: int | None = None
-    for col in range(1, 80):
-        header = _cell_text(sheet.cell(header_row, col).value)
-        if header == "All":
-            national_column = col
-        if header in REGION_HEADER_TO_INTERNAL:
-            region_columns[col] = REGION_HEADER_TO_INTERNAL[header]
-    if national_column is None:
-        raise ValueError("Could not locate 'All' (national) column in Headline VI")
-    if len(region_columns) < 6:
-        raise ValueError("Could not resolve sufficient region columns in Headline VI")
-
     party_region_percentages: dict[str, dict[str, float]] = {}
-    for row in range(header_row + 1, header_row + 40):
-        party_label = _cell_text(sheet.cell(row, 1).value)
-        if not party_label:
-            continue
-        if normalize_name(party_label) == "filtered n":
-            break
-        canonical_party = PARTY_NAME_MAP.get(party_label)
-        if canonical_party is None:
-            continue
 
-        region_values: dict[str, float] = {}
-        region_values[NATIONAL_KEY] = _to_percentage(sheet.cell(row, national_column).value)
-        for col, internal_region in region_columns.items():
-            region_values[internal_region] = _to_percentage(sheet.cell(row, col).value)
-        party_region_percentages[canonical_party] = region_values
+    if headline_sheet is not None:
+        sheet = workbook[headline_sheet]
+
+        header_row = None
+        for row in range(1, 30):
+            values = [_cell_text(sheet.cell(row, col).value) for col in range(1, 50)]
+            if "All" in values and "East Midlands" in values:
+                header_row = row
+                break
+        if header_row is None:
+            raise ValueError("Could not locate regional header row in Headline VI sheet")
+
+        region_columns: dict[int, str] = {}
+        national_column: int | None = None
+        for col in range(1, 80):
+            header = _cell_text(sheet.cell(header_row, col).value)
+            if header == "All":
+                national_column = col
+            if header in REGION_HEADER_TO_INTERNAL:
+                region_columns[col] = REGION_HEADER_TO_INTERNAL[header]
+        if national_column is None:
+            raise ValueError("Could not locate 'All' (national) column in Headline VI")
+        if len(region_columns) < 6:
+            raise ValueError("Could not resolve sufficient region columns in Headline VI")
+
+        for row in range(header_row + 1, header_row + 40):
+            party_label = _cell_text(sheet.cell(row, 1).value)
+            if not party_label:
+                continue
+            if normalize_name(party_label) == "filtered n":
+                break
+            canonical_party = PARTY_NAME_MAP.get(party_label)
+            if canonical_party is None:
+                continue
+
+            region_values: dict[str, float] = {}
+            region_values[NATIONAL_KEY] = _to_percentage(sheet.cell(row, national_column).value)
+            for col, internal_region in region_columns.items():
+                region_values[internal_region] = _to_percentage(sheet.cell(row, col).value)
+            party_region_percentages[canonical_party] = region_values
+    else:
+        q2_sheet_name = "Q2" if "Q2" in workbook.sheetnames else None
+        if q2_sheet_name is None:
+            for sheet_name in workbook.sheetnames:
+                if sheet_name.lower().startswith("q2"):
+                    q2_sheet_name = sheet_name
+                    break
+        if q2_sheet_name is None:
+            raise ValueError("Could not find 'Headline VI' or 'Q2' sheet in workbook")
+
+        sheet = workbook[q2_sheet_name]
+        header_row = None
+        national_column: int | None = None
+        for row in range(1, 30):
+            values = [_cell_text(sheet.cell(row, col).value) for col in range(1, 30)]
+            if "All" in values:
+                header_row = row
+                national_column = values.index("All") + 1
+                break
+        if header_row is None or national_column is None:
+            raise ValueError("Could not locate 'All' (national) column in Q2 sheet")
+
+        for row in range(header_row + 1, header_row + 50):
+            party_label = _cell_text(sheet.cell(row, 1).value)
+            if not party_label:
+                continue
+            if normalize_name(party_label) == "filtered n":
+                break
+            canonical_party = PARTY_NAME_MAP.get(party_label)
+            if canonical_party is None:
+                continue
+            party_region_percentages[canonical_party] = {
+                NATIONAL_KEY: _to_percentage(sheet.cell(row, national_column).value)
+            }
 
     required_parties = {
         "Conservative",
@@ -309,6 +377,7 @@ def build_import_plan(
     xlsx_url: str = DEFAULT_XLSX_URL,
     map_name: str = DEFAULT_MAP_NAME,
     pollster_identifier: str = DEFAULT_POLLSTER_IDENTIFIER,
+    fieldwork_year_hint: int | None = None,
 ) -> ImportPlan:
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
@@ -327,7 +396,10 @@ def build_import_plan(
     )
 
     workbook = extract_workbook(xlsx_url)
-    parsed = parse_poll(workbook)
+    effective_year_hint = fieldwork_year_hint
+    if effective_year_hint is None:
+        effective_year_hint = _infer_year_hint_from_url(xlsx_url)
+    parsed = parse_poll(workbook, fieldwork_year_hint=effective_year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -509,6 +581,7 @@ def main() -> None:
     parser.add_argument("--xlsx-url", default=DEFAULT_XLSX_URL)
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME)
     parser.add_argument("--pollster-identifier", default=DEFAULT_POLLSTER_IDENTIFIER)
+    parser.add_argument("--fieldwork-year-hint", type=int, default=None)
     parser.add_argument(
         "--replace-rows",
         action="store_true",
@@ -525,6 +598,7 @@ def main() -> None:
         xlsx_url=args.xlsx_url,
         map_name=args.map_name,
         pollster_identifier=args.pollster_identifier,
+        fieldwork_year_hint=args.fieldwork_year_hint,
     )
 
     if args.dry_run:

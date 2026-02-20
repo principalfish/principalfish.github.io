@@ -4,8 +4,8 @@
     "status": "implemented"
   },
   "deltapoll": {
-    "module": null,
-    "status": "planned"
+    "module": "polls.importers.deltapoll_import",
+    "status": "implemented"
   },
   "find_out_now": {
     "module": "polls.importers.find_out_now_import",
@@ -20,6 +20,10 @@
     "status": "implemented"
   },
   "freshwater_strategy": {
+    "module": null,
+    "status": "planned"
+  },
+  "good_growth_foundation": {
     "module": null,
     "status": "planned"
   },

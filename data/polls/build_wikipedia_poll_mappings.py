@@ -354,6 +354,11 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
                 "module": "polls.importers.survation_import",
                 "status": "implemented",
             }
+        elif parser_id == "deltapoll":
+            parser_registry[parser_id] = {
+                "module": "polls.importers.deltapoll_import",
+                "status": "implemented",
+            }
         elif parser_id == "ipsos":
             parser_registry[parser_id] = {
                 "module": "polls.importers.ipsos_import",

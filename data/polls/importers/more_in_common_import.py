@@ -27,6 +27,7 @@ DEFAULT_POLLSTER_IDENTIFIER = "more_in_common"
 NATIONAL_KEY = "__national__"
 
 PARTY_NAME_MAP = {
+    "Conservatives": "Conservative",
     "Conservative": "Conservative",
     "Labour": "Labour",
     "Liberal Democrat": "Liberal Democrats",
@@ -37,8 +38,13 @@ PARTY_NAME_MAP = {
     "Green": "Green",
     "Scottish National Party": "Scottish National Party",
     "Scottish National Party (SNP)": "Scottish National Party",
+    "The SNP": "Scottish National Party",
     "SNP": "Scottish National Party",
     "Plaid Cymru": "Plaid Cymru",
+    "Another Party/ Independent": "Other",
+    "Another party/ Independent": "Other",
+    "Another Party/Independent": "Other",
+    "Another party/Independent": "Other",
     "Another party/Independent candidate": "Other",
     "Another party/Independent Candidate": "Other",
     "Another party": "Other",
@@ -245,20 +251,78 @@ def _infer_year_from_url(xlsx_url: str) -> int | None:
     return int(matches[0])
 
 
+def _infer_fieldwork_from_source_url(
+    source_url: str,
+    *,
+    default_year: int | None,
+) -> tuple[date, date] | None:
+    if default_year is None:
+        return None
+
+    lower = source_url.lower()
+    month_pattern = "|".join(
+        [
+            "january",
+            "february",
+            "march",
+            "april",
+            "may",
+            "june",
+            "july",
+            "august",
+            "september",
+            "october",
+            "november",
+            "december",
+        ]
+    )
+
+    patterns = [
+        re.compile(rf"voting[-_ ]intention[-_ ]({month_pattern})[-_ ](\d{{1,2}})"),
+        re.compile(rf"voting[-_ ]intention[-_ ]({month_pattern})(\d{{1,2}})"),
+    ]
+
+    for pattern in patterns:
+        match = pattern.search(lower)
+        if not match:
+            continue
+        month = _month_number(match.group(1))
+        day = int(match.group(2))
+        if month is None:
+            continue
+        parsed_day = date(default_year, month, day)
+        return parsed_day, parsed_day
+
+    return None
+
+
 def _find_headline_sheet(workbook):
-    candidates = []
-    for sheet_name in workbook.sheetnames:
+    def _sheet_priority(sheet_name: str) -> tuple[int, str]:
         lowered = sheet_name.lower()
+        if "votingintention (headline)" in lowered:
+            return (0, lowered)
+        if "headline" in lowered and "votingintention" in lowered:
+            return (1, lowered)
         if "votingintention" in lowered:
-            candidates.append(sheet_name)
+            return (2, lowered)
+        if "corbyn" in lowered:
+            return (3, lowered)
+        return (9, lowered)
 
-    candidates.sort(key=lambda name: ("headline" not in name.lower(), name.lower()))
-
-    for sheet_name in candidates:
+    for sheet_name in sorted(workbook.sheetnames, key=_sheet_priority):
         ws = workbook[sheet_name]
         for row in range(1, 35):
             values = [_cell_text(ws.cell(row, col).value) for col in range(1, 60)]
             if "All" in values and "East Midlands" in values:
+                return ws, row
+
+    for sheet_name in sorted(workbook.sheetnames, key=_sheet_priority):
+        ws = workbook[sheet_name]
+        for row in range(1, 35):
+            values = [_cell_text(ws.cell(row, col).value) for col in range(1, 60)]
+            if "All" not in values:
+                continue
+            if any(label in values for label in ("Conservative", "Labour", "Reform UK", "The Green Party")):
                 return ws, row
 
     raise ValueError("Could not locate headline voting intention table")
@@ -289,8 +353,12 @@ def parse_poll(
             break
 
     if not fieldwork_raw:
-        raise ValueError("Fieldwork date not found in workbook")
-    fieldwork_start, fieldwork_end = parse_fieldwork(fieldwork_raw, default_year=default_year)
+        inferred = _infer_fieldwork_from_source_url(source_url, default_year=default_year)
+        if inferred is None:
+            raise ValueError("Fieldwork date not found in workbook")
+        fieldwork_start, fieldwork_end = inferred
+    else:
+        fieldwork_start, fieldwork_end = parse_fieldwork(fieldwork_raw, default_year=default_year)
 
     if not sample_raw:
         for row in range(header_row + 1, header_row + 80):
@@ -304,6 +372,16 @@ def parse_poll(
         raise ValueError("Sample size not found in workbook")
     sample_size = _as_int(sample_raw)
 
+    population_label = ""
+    for sheet_name in ["Cover page", workbook.sheetnames[0]] + workbook.sheetnames:
+        if sheet_name not in workbook.sheetnames:
+            continue
+        ws = workbook[sheet_name]
+        value = _find_label_value(ws, "Population effectively represented")
+        if value:
+            population_label = value
+            break
+
     region_columns: dict[int, str] = {}
     national_column: int | None = None
     for col in range(1, 120):
@@ -316,7 +394,8 @@ def parse_poll(
 
     if national_column is None:
         raise ValueError("Could not locate 'All' (national) column in headline table")
-    if len(region_columns) < 6:
+    is_special_population = "16-17" in population_label.replace(" ", "")
+    if len(region_columns) < 6 and not is_special_population:
         raise ValueError("Could not resolve sufficient region columns in headline table")
 
     party_region_percentages: dict[str, dict[str, float]] = {}

@@ -27,6 +27,7 @@ from models import Party, Poll, PollRow, Pollster, Region
 from polls.export_poll_rows_csv import build_rows
 from polls.importers import (
     bmg_research_import,
+    deltapoll_import,
     find_out_now_import,
     focaldata_import,
     ipsos_import,
@@ -81,6 +82,11 @@ IMPORTERS = {
         "label": "Survation",
         "module": survation_import,
         "url_arg": "xlsx_url",
+    },
+    "deltapoll": {
+        "label": "Deltapoll",
+        "module": deltapoll_import,
+        "url_arg": "source_url",
     },
     "ipsos": {
         "label": "Ipsos",

@@ -1,22 +1,11 @@
 {
-  "techne": {
-    "pollster_examples": [
-      "Techne"
-    ],
-    "format_counts": {
-      "pdf": 26,
-      "html": 14
-    },
-    "parser_identifiers": [
-      "techne"
-    ]
-  },
   "find_out_now": {
     "pollster_examples": [
       "Find Out Now"
     ],
     "format_counts": {
       "xlsx": 60,
+      "pdf": 1,
       "html": 3,
       "unknown": 4
     },
@@ -31,8 +20,7 @@
       "More in Common (MRP)"
     ],
     "format_counts": {
-      "xlsx": 58,
-      "pdf": 1,
+      "xlsx": 60,
       "html": 2,
       "unknown": 20,
       "social_post": 1
@@ -47,12 +35,49 @@
       "YouGov  (MRP)"
     ],
     "format_counts": {
-      "pdf": 55,
+      "pdf": 56,
       "unknown": 6,
       "html": 1
     },
     "parser_identifiers": [
       "yougov"
+    ]
+  },
+  "good_growth_foundation": {
+    "pollster_examples": [
+      "Good Growth Foundation"
+    ],
+    "format_counts": {
+      "html": 1
+    },
+    "parser_identifiers": [
+      "good_growth_foundation"
+    ]
+  },
+  "techne": {
+    "pollster_examples": [
+      "Techne"
+    ],
+    "format_counts": {
+      "pdf": 26,
+      "html": 14
+    },
+    "parser_identifiers": [
+      "techne"
+    ]
+  },
+  "jl_partners": {
+    "pollster_examples": [
+      "J.L. Partners",
+      "JL Partners"
+    ],
+    "format_counts": {
+      "xlsx": 8,
+      "unknown": 2,
+      "html": 3
+    },
+    "parser_identifiers": [
+      "jl_partners"
     ]
   },
   "opinium": {
@@ -184,19 +209,6 @@
     },
     "parser_identifiers": [
       "find_out_now_electoral_calculus"
-    ]
-  },
-  "jl_partners": {
-    "pollster_examples": [
-      "J.L. Partners"
-    ],
-    "format_counts": {
-      "xlsx": 7,
-      "unknown": 2,
-      "html": 3
-    },
-    "parser_identifiers": [
-      "jl_partners"
     ]
   },
   "stack_data_strategy": {

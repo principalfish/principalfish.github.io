@@ -2,8 +2,8 @@
 {% block content %}
   {% set map_name_help = (explanations | selectattr('flag', 'equalto', '--map-name') | map(attribute='description') | list | first) %}
   {% set baseline_help = (explanations | selectattr('flag', 'equalto', '--baseline-election-name') | map(attribute='description') | list | first) %}
-  {% set as_of_help = (explanations | selectattr('flag', 'equalto', '--as-of-date') | map(attribute='description') | list | first) %}
-  {% set since_help = (explanations | selectattr('flag', 'equalto', '--since-date') | map(attribute='description') | list | first) %}
+  {% set as_of_help = (explanations | selectattr('flag', 'equalto', '--as-of-days-back') | map(attribute='description') | list | first) %}
+  {% set since_help = (explanations | selectattr('flag', 'equalto', '--since-days-back') | map(attribute='description') | list | first) %}
   {% set half_life_help = (explanations | selectattr('flag', 'equalto', '--half-life-days') | map(attribute='description') | list | first) %}
   {% set output_help = (explanations | selectattr('flag', 'equalto', '--output-csv') | map(attribute='description') | list | first) %}
   {% set dry_run_help = (explanations | selectattr('flag', 'equalto', '--dry-run') | map(attribute='description') | list | first) %}
@@ -25,23 +25,19 @@
         {% endfor %}
       </select>
 
-      <label for="as_of_date">{{ as_of_help }} <span class="arg-flag">(--as-of-date)</span></label>
-      <select name="as_of_date" id="as_of_date" required>
-        {% for date_value in choices.as_of_dates %}
-          <option value="{{ date_value }}" {% if form_values.as_of_date == date_value %}selected{% endif %}>{{ date_value }}</option>
+      <label for="as_of_days_back">{{ as_of_help }} <span class="arg-flag">(--as-of-days-back)</span></label>
+      <select name="as_of_days_back" id="as_of_days_back" required>
+        {% for days_value in choices.as_of_days_back %}
+          {% set days_str = days_value|string %}
+          <option value="{{ days_str }}" {% if form_values.as_of_days_back == days_str %}selected{% endif %}>{{ days_str }}</option>
         {% endfor %}
       </select>
 
-      <label for="since_date">{{ since_help }} <span class="arg-flag">(--since-date)</span></label>
-      <select name="since_date" id="since_date">
-        {% for date_value in choices.since_dates %}
-          <option value="{{ date_value }}" {% if form_values.since_date == date_value %}selected{% endif %}>
-            {% if date_value %}
-              {{ date_value }}
-            {% else %}
-              Auto (baseline year start)
-            {% endif %}
-          </option>
+      <label for="since_days_back">{{ since_help }} <span class="arg-flag">(--since-days-back)</span></label>
+      <select name="since_days_back" id="since_days_back" required>
+        {% for days_value in choices.since_days_back %}
+          {% set days_str = days_value|string %}
+          <option value="{{ days_str }}" {% if form_values.since_days_back == days_str %}selected{% endif %}>{{ days_str }}</option>
         {% endfor %}
       </select>
 

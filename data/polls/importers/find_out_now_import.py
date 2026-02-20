@@ -63,6 +63,34 @@ class ParsedPoll:
     party_region_percentages: dict[str, dict[str, float]]
 
 
+def _maybe_adjust_fieldwork_year_from_url(parsed: ParsedPoll, url_year: int | None) -> ParsedPoll:
+    if url_year is None:
+        return parsed
+
+    start = parsed.fieldwork_start
+    end = parsed.fieldwork_end
+
+    if start.year != end.year:
+        return parsed
+    if end.year != (url_year - 1):
+        return parsed
+    if end.month > 3:
+        return parsed
+
+    try:
+        adjusted_start = start.replace(year=url_year)
+        adjusted_end = end.replace(year=url_year)
+    except ValueError:
+        return parsed
+
+    return ParsedPoll(
+        sample_size=parsed.sample_size,
+        fieldwork_start=adjusted_start,
+        fieldwork_end=adjusted_end,
+        party_region_percentages=parsed.party_region_percentages,
+    )
+
+
 @dataclass
 class PlannedPollRow:
     party_id: int
@@ -400,6 +428,7 @@ def build_import_plan(
     if effective_year_hint is None:
         effective_year_hint = _infer_year_hint_from_url(xlsx_url)
     parsed = parse_poll(workbook, fieldwork_year_hint=effective_year_hint)
+    parsed = _maybe_adjust_fieldwork_year_from_url(parsed, effective_year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None

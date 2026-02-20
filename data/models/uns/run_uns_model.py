@@ -9,12 +9,13 @@ import math
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from sqlalchemy import text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
+TREND_CACHE_CSV = DATA_DIR / "models" / "uns" / "output" / "model_output_trends.csv"
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
@@ -37,15 +38,32 @@ def parse_args() -> SimulationConfig:
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", default="UK Constituencies post 2022")
     parser.add_argument("--baseline-election-name", default="2024 General Election")
-    parser.add_argument("--as-of-date", default=date.today().isoformat())
+    parser.add_argument("--as-of-days-back", type=int, default=0)
+    parser.add_argument("--since-days-back", type=int, default=30)
+    parser.add_argument("--as-of-date", default=None)
     parser.add_argument("--since-date", default=None)
     parser.add_argument("--half-life-days", type=float, default=30.0)
     parser.add_argument("--output-csv", default=None)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    as_of_date = date.fromisoformat(args.as_of_date)
-    since_date = date.fromisoformat(args.since_date) if args.since_date else date(1900, 1, 1)
+    today = date.today()
+    as_of_days_back = max(0, int(args.as_of_days_back))
+    since_days_back = max(0, int(args.since_days_back))
+
+    as_of_date = (
+        date.fromisoformat(args.as_of_date)
+        if args.as_of_date
+        else today - timedelta(days=as_of_days_back)
+    )
+    since_date = (
+        date.fromisoformat(args.since_date)
+        if args.since_date
+        else today - timedelta(days=since_days_back)
+    )
+
+    if since_date > as_of_date:
+        parser.error("--since-days-back/--since-date must be older than or equal to as-of")
 
     return SimulationConfig(
         map_name=args.map_name,
@@ -126,6 +144,7 @@ def build_reference_data(db: Database, map_id: int):
 
     all_parties = db.get_all_parties()
     party_name_by_id = {party.id: party.name for party in all_parties}
+    party_colour_by_id = {party.id: party.colour for party in all_parties}
     pollster_weight_by_id = {
         pollster.id: (pollster.weight if pollster.weight is not None else 1.0)
         for pollster in db.get_all_pollsters()
@@ -138,6 +157,7 @@ def build_reference_data(db: Database, map_id: int):
         region_by_id,
         region_by_seat_id,
         party_name_by_id,
+        party_colour_by_id,
         pollster_weight_by_id,
     )
 
@@ -219,9 +239,8 @@ def aggregate_poll_shares(
             continue
 
         decay_weight = math.exp(-decay_lambda * float(days_since))
-        sample_weight = math.sqrt(float(poll.sample_size) / 1000.0) if poll.sample_size else 1.0
         pollster_weight = float(pollster_weight_by_id.get(poll.pollster_id, 1.0) or 1.0)
-        poll_weight = decay_weight * sample_weight * pollster_weight
+        poll_weight = decay_weight * pollster_weight
         if poll_weight <= 0:
             continue
 
@@ -422,7 +441,7 @@ def persist_projection(
     election_name: str,
     projected_votes: list[dict[str, object]],
     party_name_by_id: dict[int, str],
-) -> str:
+) -> tuple[str, int]:
     ensure_model_uns_enum_value(db)
     election = db.add_election(
         map_id,
@@ -443,7 +462,78 @@ def persist_projection(
         for row in projected_votes
     ]
     db.bulk_add_votes(payload)
-    return election.name
+    return election.name, int(election.id)
+
+
+def update_trend_cache_csv(
+    election_id: int,
+    election_name: str,
+    as_of_date: date,
+    projected_votes: list[dict[str, object]],
+    party_name_by_id: dict[int, str],
+    party_colour_by_id: dict[int, str | None],
+) -> None:
+    TREND_CACHE_CSV.parent.mkdir(parents=True, exist_ok=True)
+
+    vote_totals_by_party: dict[int, float] = defaultdict(float)
+    seats_by_party: dict[int, int] = defaultdict(int)
+    for row in projected_votes:
+        party_id = int(row["party_id"])
+        vote_totals_by_party[party_id] += float(row["vote_total"])
+        if bool(row["elected"]):
+            seats_by_party[party_id] += 1
+
+    total_votes = sum(vote_totals_by_party.values())
+
+    existing_rows: list[dict[str, str]] = []
+    if TREND_CACHE_CSV.exists():
+        with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                if int(row.get("election_id", "0") or "0") == election_id:
+                    continue
+                existing_rows.append(row)
+
+    new_rows = []
+    for party_id in sorted(vote_totals_by_party.keys(), key=lambda key: party_name_by_id.get(key, "")):
+        new_rows.append(
+            {
+                "election_id": str(election_id),
+                "election_name": election_name,
+                "as_of_date": as_of_date.isoformat(),
+                "party_id": str(party_id),
+                "party_name": party_name_by_id.get(party_id, str(party_id)),
+                "party_colour": party_colour_by_id.get(party_id) or "",
+                "seats_won": str(seats_by_party.get(party_id, 0)),
+                "vote_total_sum": f"{vote_totals_by_party.get(party_id, 0.0):.6f}",
+                "vote_pct": (
+                    f"{((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0):.6f}"
+                    if total_votes > 0
+                    else "0.000000"
+                ),
+            }
+        )
+
+    combined = existing_rows + new_rows
+    combined.sort(key=lambda row: (int(row["election_id"]), row["party_name"]))
+
+    with TREND_CACHE_CSV.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=[
+                "election_id",
+                "election_name",
+                "as_of_date",
+                "party_id",
+                "party_name",
+                "party_colour",
+                "seats_won",
+                "vote_total_sum",
+                "vote_pct",
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(combined)
 
 
 def run_simulation(
@@ -460,6 +550,7 @@ def run_simulation(
         region_by_id,
         region_by_seat_id,
         party_name_by_id,
+        party_colour_by_id,
         pollster_weight_by_id,
     ) = build_reference_data(db, poll_map.id)
 
@@ -513,13 +604,22 @@ def run_simulation(
     if cfg.dry_run:
         return election_name, projected_votes, region_diff_rows, winners_by_party
 
-    persisted_name = persist_projection(
+    persisted_name, persisted_election_id = persist_projection(
         db,
         poll_map.id,
         cfg.as_of_date,
         election_name,
         projected_votes,
         party_name_by_id,
+    )
+
+    update_trend_cache_csv(
+        persisted_election_id,
+        persisted_name,
+        cfg.as_of_date,
+        projected_votes,
+        party_name_by_id,
+        party_colour_by_id,
     )
 
     return persisted_name, projected_votes, region_diff_rows, winners_by_party

@@ -46,6 +46,7 @@ TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
 UPDATE_POLLS_SCRIPT = DATA_DIR / "update_polls.sh"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "uns" / "run_uns_model.py"
+UNS_TREND_CACHE_CSV = DATA_DIR / "models" / "uns" / "output" / "model_output_trends.csv"
 
 app = Flask(__name__, template_folder=str(TEMPLATE_DIR), static_folder=str(STATIC_DIR))
 app.config["SECRET_KEY"] = "local-polls-dev-key"
@@ -125,26 +126,8 @@ def _choices_for_model_form(db: Database) -> dict[str, object]:
             .order_by(Election.year.desc(), Election.name.asc())
         ).all()
 
-        poll_dates = session.execute(
-            select(Poll.fieldwork_end)
-            .distinct()
-            .order_by(Poll.fieldwork_end.desc())
-            .limit(24)
-        ).scalars().all()
-
     today = date.today().isoformat()
-    as_of_dates: list[str] = [today]
-    as_of_dates.extend(d.isoformat() for d in poll_dates if d.isoformat() != today)
-
-    election_year_starts: list[str] = []
-    seen: set[str] = set()
-    for election, _ in election_rows:
-        candidate = f"{election.year}-01-01"
-        if candidate not in seen:
-            election_year_starts.append(candidate)
-            seen.add(candidate)
-
-    since_dates = [""] + election_year_starts
+    day_window_options = [0, 1, 3, 7, 14, 21, 30, 45, 60, 90, 120, 180, 365]
 
     return {
         "map_names": [item.name for item in maps],
@@ -156,8 +139,8 @@ def _choices_for_model_form(db: Database) -> dict[str, object]:
             }
             for election, map_row in election_rows
         ],
-        "as_of_dates": as_of_dates,
-        "since_dates": since_dates,
+        "as_of_days_back": day_window_options,
+        "since_days_back": day_window_options,
         "half_life_days": [7.0, 14.0, 21.0, 30.0, 45.0, 60.0, 90.0],
         "output_csv_options": [
             "",
@@ -182,12 +165,12 @@ def _model_arg_explanations() -> list[dict[str, str]]:
             "description": "Election that provides the seat-level baseline vote totals before applying swing.",
         },
         {
-            "flag": "--as-of-date",
-            "description": "Cut-off date for included polls; newer polls are excluded.",
+            "flag": "--as-of-days-back",
+            "description": "Cut-off offset from today in days (0 = today).",
         },
         {
-            "flag": "--since-date",
-            "description": "Lower date bound for poll inclusion. Auto means baseline year start.",
+            "flag": "--since-days-back",
+            "description": "How many days back from today to include polls from (window start).",
         },
         {
             "flag": "--half-life-days",
@@ -245,8 +228,8 @@ def model_run_form():
         form_values={
             "map_name": "UK Constituencies post 2022",
             "baseline_election_name": "2024 General Election",
-            "as_of_date": date.today().isoformat(),
-            "since_date": "",
+            "as_of_days_back": "0",
+            "since_days_back": "30",
             "half_life_days": "30.0",
             "output_csv": "",
             "dry_run": "true",
@@ -259,8 +242,8 @@ def model_run_form():
 def model_run_execute():
     map_name = (request.form.get("map_name") or "").strip()
     baseline_election_name = (request.form.get("baseline_election_name") or "").strip()
-    as_of_date_value = (request.form.get("as_of_date") or "").strip()
-    since_date_value = (request.form.get("since_date") or "").strip()
+    as_of_days_back = (request.form.get("as_of_days_back") or "").strip()
+    since_days_back = (request.form.get("since_days_back") or "").strip()
     half_life_days = (request.form.get("half_life_days") or "").strip()
     output_csv = (request.form.get("output_csv") or "").strip()
     dry_run_value = (request.form.get("dry_run") or "true").strip().lower()
@@ -268,8 +251,8 @@ def model_run_execute():
     form_values = {
         "map_name": map_name,
         "baseline_election_name": baseline_election_name,
-        "as_of_date": as_of_date_value,
-        "since_date": since_date_value,
+        "as_of_days_back": as_of_days_back,
+        "since_days_back": since_days_back,
         "half_life_days": half_life_days,
         "output_csv": output_csv,
         "dry_run": dry_run_value,
@@ -279,9 +262,12 @@ def model_run_execute():
     choices = _choices_for_model_form(db)
 
     try:
-        date.fromisoformat(as_of_date_value)
-        if since_date_value:
-            date.fromisoformat(since_date_value)
+        as_of_days_back_int = int(as_of_days_back)
+        since_days_back_int = int(since_days_back)
+        if as_of_days_back_int < 0 or since_days_back_int < 0:
+            raise ValueError("Day values must be zero or greater")
+        if since_days_back_int < as_of_days_back_int:
+            raise ValueError("Since-days-back must be greater than or equal to as-of-days-back")
         float(half_life_days)
     except ValueError as exc:
         flash(f"Invalid model argument value: {exc}")
@@ -300,14 +286,13 @@ def model_run_execute():
         map_name,
         "--baseline-election-name",
         baseline_election_name,
-        "--as-of-date",
-        as_of_date_value,
+        "--as-of-days-back",
+        str(as_of_days_back_int),
+        "--since-days-back",
+        str(since_days_back_int),
         "--half-life-days",
         half_life_days,
     ]
-
-    if since_date_value:
-        command.extend(["--since-date", since_date_value])
     if output_csv:
         command.extend(["--output-csv", output_csv])
     if dry_run_value == "true":
@@ -339,16 +324,199 @@ def model_run_execute():
 
 @app.route("/models/outputs", methods=["GET"])
 def model_outputs():
+    show_all = (request.args.get("show") or "").strip().lower() == "all"
+    default_limit = 10
+
     db = _get_db()
     with db.session() as session:
-        rows = session.execute(
+        total_output_count = session.execute(
+            select(func.count(Election.id)).where(Election.type == ElectionType.model_uns)
+        ).scalar_one()
+
+        rows_query = (
             select(Election, Map, func.count(Vote.id).label("vote_rows"))
             .join(Map, Election.map_id == Map.id)
             .outerjoin(Vote, Vote.election_id == Election.id)
             .where(Election.type == ElectionType.model_uns)
             .group_by(Election.id, Map.id)
             .order_by(Election.id.desc())
-        ).all()
+        )
+
+        if not show_all:
+            rows_query = rows_query.limit(default_limit)
+
+        rows = session.execute(rows_query).all()
+
+        trend_labels: list[str] = []
+        party_series: dict[str, dict[str, object]] = {}
+
+        if UNS_TREND_CACHE_CSV.exists():
+            election_name_by_id: dict[int, str] = {}
+            with UNS_TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
+                reader = csv.DictReader(handle)
+                rows_from_cache = list(reader)
+
+            election_ids_sorted = sorted(
+                {
+                    int(row.get("election_id") or "0")
+                    for row in rows_from_cache
+                    if row.get("election_id")
+                }
+            )
+            election_index = {election_id: idx for idx, election_id in enumerate(election_ids_sorted)}
+
+            for row in rows_from_cache:
+                election_id_raw = row.get("election_id")
+                if not election_id_raw:
+                    continue
+                election_id = int(election_id_raw)
+                election_name_by_id[election_id] = row.get("election_name") or str(election_id)
+
+                party_key = row.get("party_id") or row.get("party_name") or ""
+                if not party_key:
+                    continue
+
+                series = party_series.get(party_key)
+                if series is None:
+                    series = {
+                        "label": row.get("party_name") or party_key,
+                        "colour": row.get("party_colour") or None,
+                        "seats": [0] * len(election_ids_sorted),
+                        "vote_totals": [0.0] * len(election_ids_sorted),
+                        "vote_pct": [None] * len(election_ids_sorted),
+                    }
+                    party_series[party_key] = series
+
+                idx = election_index[election_id]
+                series["seats"][idx] = int(float(row.get("seats_won") or "0"))
+                series["vote_totals"][idx] = float(row.get("vote_total_sum") or "0")
+                vote_pct_raw = row.get("vote_pct")
+                if vote_pct_raw not in (None, ""):
+                    series["vote_pct"][idx] = float(vote_pct_raw)
+
+            trend_labels = [election_name_by_id.get(election_id, str(election_id)) for election_id in election_ids_sorted]
+
+        if not trend_labels:
+            elections_for_trend = session.execute(
+                select(Election)
+                .where(Election.type == ElectionType.model_uns)
+                .order_by(Election.id.asc())
+            ).scalars().all()
+
+            election_ids = [election.id for election in elections_for_trend]
+            election_index = {election_id: idx for idx, election_id in enumerate(election_ids)}
+            trend_labels = [election.name for election in elections_for_trend]
+
+            if election_ids:
+                vote_rows = session.execute(
+                    select(
+                        Vote.election_id,
+                        Vote.party_id,
+                        Vote.vote_total,
+                        Vote.elected,
+                        Party.name,
+                        Party.colour,
+                    )
+                    .join(Party, Vote.party_id == Party.id)
+                    .where(Vote.election_id.in_(election_ids))
+                    .order_by(Vote.election_id.asc())
+                ).all()
+
+                for election_id, party_id, vote_total, elected, party_name, party_colour in vote_rows:
+                    if party_id is None:
+                        continue
+                    party_key = str(party_id)
+                    series = party_series.get(party_key)
+                    if series is None:
+                        series = {
+                            "label": party_name,
+                            "colour": party_colour,
+                            "seats": [0] * len(election_ids),
+                            "vote_totals": [0.0] * len(election_ids),
+                            "vote_pct": [None] * len(election_ids),
+                        }
+                        party_series[party_key] = series
+
+                    idx = election_index[election_id]
+                    series["vote_totals"][idx] = float(series["vote_totals"][idx]) + float(vote_total or 0.0)
+                    if elected:
+                        series["seats"][idx] = int(series["seats"][idx]) + 1
+
+        fallback_colours = [
+            "#1d4ed8",
+            "#dc2626",
+            "#16a34a",
+            "#7c3aed",
+            "#ea580c",
+            "#0f766e",
+            "#be123c",
+            "#4338ca",
+            "#0e7490",
+            "#334155",
+        ]
+
+        ordered_series = sorted(
+            party_series.values(),
+            key=lambda item: (-int(item["seats"][-1]) if item["seats"] else 0, str(item["label"])),
+        )
+
+        vote_pct_series: list[list[float]] = []
+        if ordered_series and trend_labels:
+            point_count = len(trend_labels)
+            totals_per_point = [0.0] * point_count
+            for item in ordered_series:
+                values = [float(value) for value in item["vote_totals"]]
+                for idx, value in enumerate(values):
+                    totals_per_point[idx] += value
+
+            for item in ordered_series:
+                values = [float(value) for value in item["vote_totals"]]
+                cached_pct_values = item.get("vote_pct") or [None] * point_count
+                vote_pct_series.append(
+                    [
+                        (
+                            round(float(cached_pct_values[idx]), 2)
+                            if cached_pct_values[idx] is not None
+                            else (
+                                round((value / totals_per_point[idx]) * 100.0, 2)
+                                if totals_per_point[idx] > 0
+                                else 0.0
+                            )
+                        )
+                        for idx, value in enumerate(values)
+                    ]
+                )
+
+        seats_datasets = []
+        vote_pct_datasets = []
+        for idx, item in enumerate(ordered_series):
+            colour = item["colour"] or fallback_colours[idx % len(fallback_colours)]
+            seats_datasets.append(
+                {
+                    "label": item["label"],
+                    "data": item["seats"],
+                    "borderColor": colour,
+                    "backgroundColor": colour,
+                    "fill": False,
+                    "tension": 0.2,
+                }
+            )
+            vote_pct_datasets.append(
+                {
+                    "label": item["label"],
+                    "data": vote_pct_series[idx] if idx < len(vote_pct_series) else [],
+                    "borderColor": colour,
+                    "backgroundColor": colour,
+                    "fill": False,
+                    "tension": 0.2,
+                }
+            )
+
+        trend_data = {
+            "labels": trend_labels,
+            "seats_datasets": seats_datasets,
+            "vote_pct_datasets": vote_pct_datasets,
+        }
 
     items = [
         {
@@ -361,7 +529,14 @@ def model_outputs():
         for election, map_row, vote_rows in rows
     ]
 
-    return render_template("model_outputs.html", outputs=items)
+    return render_template(
+        "model_outputs.html",
+        outputs=items,
+        trend_data=trend_data,
+        show_all=show_all,
+        default_limit=default_limit,
+        total_output_count=int(total_output_count),
+    )
 
 
 @app.route("/models/outputs/<int:election_id>", methods=["GET"])
@@ -632,6 +807,48 @@ def delete_model_output(election_id: int):
         session.delete(election)
 
     flash(f"Deleted model output #{election_id} and {deleted_votes} vote rows.")
+    return redirect(url_for("model_outputs"))
+
+
+@app.route("/models/outputs/delete-selected", methods=["POST"])
+def delete_selected_model_outputs():
+    raw_ids = request.form.getlist("election_ids")
+    parsed_ids: list[int] = []
+    for value in raw_ids:
+        try:
+            parsed_ids.append(int(value))
+        except ValueError:
+            continue
+
+    selected_ids = sorted(set(parsed_ids))
+    if not selected_ids:
+        flash("No model outputs selected.")
+        return redirect(url_for("model_outputs"))
+
+    db = _get_db()
+    with db.session() as session:
+        existing_ids = session.execute(
+            select(Election.id)
+            .where(
+                Election.id.in_(selected_ids),
+                Election.type == ElectionType.model_uns,
+            )
+        ).scalars().all()
+
+        if not existing_ids:
+            flash("No matching model outputs were found for deletion.")
+            return redirect(url_for("model_outputs"))
+
+        deleted_votes = session.execute(
+            delete(Vote).where(Vote.election_id.in_(existing_ids))
+        ).rowcount or 0
+        deleted_elections = session.execute(
+            delete(Election).where(Election.id.in_(existing_ids))
+        ).rowcount or 0
+
+    flash(
+        f"Deleted {deleted_elections} model outputs and {deleted_votes} vote rows."
+    )
     return redirect(url_for("model_outputs"))
 
 

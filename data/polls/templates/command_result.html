@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>{{ title }}</h2>
+    <p><strong>Command:</strong> {{ command }}</p>
+    <p><strong>Exit code:</strong> {{ return_code }}</p>
+    <p>
+      <a class="button" href="{{ url_for(back_endpoint) }}">{{ back_label }}</a>
+    </p>
+  </section>
+
+  <section class="card">
+    <h3>Stdout</h3>
+    <pre class="terminal-output">{{ stdout or "(no stdout)" }}</pre>
+  </section>
+
+  <section class="card">
+    <h3>Stderr</h3>
+    <pre class="terminal-output">{{ stderr or "(no stderr)" }}</pre>
+  </section>
+{% endblock %}

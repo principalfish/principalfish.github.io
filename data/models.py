@@ -26,6 +26,7 @@ class ElectionType(enum.Enum):
     uk_general = "uk_general"
     by_election = "by_election"
     model_run = "model_run"
+    model_uns = "model_uns"
 
 
 # ── Tables ───────────────────────────────────────────────────────────────────
@@ -140,7 +141,7 @@ class Vote(Base):
     election_id = Column(Integer, ForeignKey("elections.id"), nullable=False)
     seat_id = Column(Integer, ForeignKey("seats.id"), nullable=False)
     party_id = Column(Integer, ForeignKey("parties.id"), nullable=True)  # nullable for independents
-    candidate_name = Column(String, nullable=True)  # empty for model_run elections
+    candidate_name = Column(String, nullable=True)  # empty for model_run/model_uns elections
     vote_total = Column(Float, nullable=True)
     elected = Column(Boolean, nullable=False, default=False)
 

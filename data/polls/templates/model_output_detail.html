@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Model Output #{{ election.id }}</h2>
+    <p><strong>Name:</strong> {{ election.name }}</p>
+    <p><strong>Year:</strong> {{ election.year }}</p>
+    <p><strong>Map:</strong> {{ election.map_name }}</p>
+    <p><strong>Total Vote Rows:</strong> {{ election.vote_rows }}</p>
+    <p>
+      <strong>Base Election:</strong>
+      {% if baseline_election %}
+        {{ baseline_election.name }} (#{{ baseline_election.id }})
+      {% else %}
+        None
+      {% endif %}
+    </p>
+    <p><a class="button" href="{{ url_for('model_outputs') }}">Back to Model Outputs</a></p>
+  </section>
+
+  <section class="card">
+    <h3>Seat Totals by Party</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Party</th>
+            <th>Seats Won</th>
+            <th>Diff vs base election</th>
+            <th>Vote %</th>
+            <th>Vote % diff vs base</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in party_totals %}
+            <tr>
+              <td>{{ row.party_name }}</td>
+              <td>{{ row.seats_won }}</td>
+              <td>{% if row.seats_diff_vs_base > 0 %}+{% endif %}{{ row.seats_diff_vs_base }}</td>
+              <td>{{ row.vote_pct }}</td>
+              <td>{% if row.vote_pct_diff_vs_base > 0 %}+{% endif %}{{ row.vote_pct_diff_vs_base }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Region / Party Vote % Diff vs base election</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Party</th>
+            {% for region_name in region_diff_headers %}
+              <th>{{ region_name }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in region_diff_matrix_rows %}
+            <tr>
+              <td>{{ row.party_name }}</td>
+              {% for value in row.cells %}
+                <td>{% if value > 0 %}+{% endif %}{{ value }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>All Seats (paginated)</h3>
+    <p>
+      Showing {{ ((pagination.page - 1) * pagination.page_size) + 1 }}
+      to {{ ((pagination.page - 1) * pagination.page_size) + (seats|length) }}
+      of {{ pagination.total_seats }} seats
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Seat</th>
+            <th>Projected Winner</th>
+            <th>Vote Total (rounded)</th>
+            <th>Change vs base election</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in seats %}
+            <tr>
+              <td>{{ row.seat_name }}</td>
+              <td>{{ row.winner_party }}</td>
+              <td>{{ row.winner_vote_total }}</td>
+              <td>{{ row.change_status }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-controls">
+      {% if pagination.page > 1 %}
+        <a class="button" href="{{ url_for('model_output_detail', election_id=election.id, page=pagination.page - 1) }}">Previous</a>
+      {% endif %}
+      <span>Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
+      {% if pagination.page < pagination.total_pages %}
+        <a class="button" href="{{ url_for('model_output_detail', election_id=election.id, page=pagination.page + 1) }}">Next</a>
+      {% endif %}
+    </div>
+  </section>
+{% endblock %}

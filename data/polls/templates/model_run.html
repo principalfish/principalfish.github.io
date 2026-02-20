@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+  {% set map_name_help = (explanations | selectattr('flag', 'equalto', '--map-name') | map(attribute='description') | list | first) %}
+  {% set baseline_help = (explanations | selectattr('flag', 'equalto', '--baseline-election-name') | map(attribute='description') | list | first) %}
+  {% set as_of_help = (explanations | selectattr('flag', 'equalto', '--as-of-date') | map(attribute='description') | list | first) %}
+  {% set since_help = (explanations | selectattr('flag', 'equalto', '--since-date') | map(attribute='description') | list | first) %}
+  {% set half_life_help = (explanations | selectattr('flag', 'equalto', '--half-life-days') | map(attribute='description') | list | first) %}
+  {% set output_help = (explanations | selectattr('flag', 'equalto', '--output-csv') | map(attribute='description') | list | first) %}
+  {% set dry_run_help = (explanations | selectattr('flag', 'equalto', '--dry-run') | map(attribute='description') | list | first) %}
+
+  <section class="card">
+    <h2>Run UNS Model</h2>
+    <form method="post" action="{{ url_for('model_run_execute') }}" class="form">
+      <label for="map_name">{{ map_name_help }} <span class="arg-flag">(--map-name)</span></label>
+      <select name="map_name" id="map_name" required>
+        {% for map_name in choices.map_names %}
+          <option value="{{ map_name }}" {% if form_values.map_name == map_name %}selected{% endif %}>{{ map_name }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="baseline_election_name">{{ baseline_help }} <span class="arg-flag">(--baseline-election-name)</span></label>
+      <select name="baseline_election_name" id="baseline_election_name" required>
+        {% for election in choices.election_options %}
+          <option value="{{ election.name }}" {% if form_values.baseline_election_name == election.name %}selected{% endif %}>{{ election.label }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="as_of_date">{{ as_of_help }} <span class="arg-flag">(--as-of-date)</span></label>
+      <select name="as_of_date" id="as_of_date" required>
+        {% for date_value in choices.as_of_dates %}
+          <option value="{{ date_value }}" {% if form_values.as_of_date == date_value %}selected{% endif %}>{{ date_value }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="since_date">{{ since_help }} <span class="arg-flag">(--since-date)</span></label>
+      <select name="since_date" id="since_date">
+        {% for date_value in choices.since_dates %}
+          <option value="{{ date_value }}" {% if form_values.since_date == date_value %}selected{% endif %}>
+            {% if date_value %}
+              {{ date_value }}
+            {% else %}
+              Auto (baseline year start)
+            {% endif %}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="half_life_days">{{ half_life_help }} <span class="arg-flag">(--half-life-days)</span></label>
+      <select name="half_life_days" id="half_life_days" required>
+        {% for half_life in choices.half_life_days %}
+          {% set half_life_str = "%.1f"|format(half_life) %}
+          <option value="{{ half_life_str }}" {% if form_values.half_life_days == half_life_str %}selected{% endif %}>{{ half_life_str }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="output_csv">{{ output_help }} <span class="arg-flag">(--output-csv)</span></label>
+      <select name="output_csv" id="output_csv">
+        {% for output_option in choices.output_csv_options %}
+          <option value="{{ output_option }}" {% if form_values.output_csv == output_option %}selected{% endif %}>
+            {% if output_option %}
+              {{ output_option }}
+            {% else %}
+              None
+            {% endif %}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label for="dry_run">{{ dry_run_help }} <span class="arg-flag">(--dry-run)</span></label>
+      <select name="dry_run" id="dry_run" required>
+        {% for option in choices.dry_run_options %}
+          <option value="{{ option.value }}" {% if form_values.dry_run == option.value %}selected{% endif %}>{{ option.label }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="button primary">Run Model</button>
+    </form>
+  </section>
+
+  {% if run_result %}
+    <section class="card">
+      <h3>Run Result</h3>
+      <p><strong>Command:</strong> {{ run_result.command }}</p>
+      <p><strong>Exit code:</strong> {{ run_result.return_code }}</p>
+      <h4>Stdout</h4>
+      <pre class="terminal-output">{{ run_result.stdout or "(no stdout)" }}</pre>
+      <h4>Stderr</h4>
+      <pre class="terminal-output">{{ run_result.stderr or "(no stderr)" }}</pre>
+    </section>
+  {% endif %}
+{% endblock %}

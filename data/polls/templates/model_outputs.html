@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Model Outputs</h2>
+    {% if not outputs %}
+      <p>No model outputs have been generated yet.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Election ID</th>
+              <th>Name</th>
+              <th>Year</th>
+              <th>Map</th>
+              <th>Vote Rows</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for output in outputs %}
+              <tr>
+                <td>{{ output.election_id }}</td>
+                <td>{{ output.name }}</td>
+                <td>{{ output.year }}</td>
+                <td>{{ output.map_name }}</td>
+                <td>{{ output.vote_rows }}</td>
+                <td>
+                  <div class="table-actions">
+                    <a class="button" href="{{ url_for('model_output_detail', election_id=output.election_id) }}">View Model</a>
+                    <form method="post" action="{{ url_for('delete_model_output', election_id=output.election_id) }}" class="inline-form">
+                      <button type="submit" class="button button-danger">Delete Model</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

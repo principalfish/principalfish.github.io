@@ -19,6 +19,11 @@ class TestAddElection:
         e = db.add_election(m.id, 2026, "model_run_2026-02-12", ElectionType.model_run)
         assert e.type == ElectionType.model_run
 
+    def test_model_uns_type(self, db):
+        m = db.add_map("UK")
+        e = db.add_election(m.id, 2026, "model_uns_2026-02-20", ElectionType.model_uns)
+        assert e.type == ElectionType.model_uns
+
     def test_by_election_type(self, db):
         m = db.add_map("UK")
         e = db.add_election(m.id, 2025, "Wellingborough", ElectionType.by_election)

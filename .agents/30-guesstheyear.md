@@ -16,6 +16,7 @@ A separate mini-app/game area that appears independent from `data/` workflows.
 
 - `index.html` now includes a lightweight `site-topbar` with a `../` back link to the root homepage.
 - The top bar styling is isolated in `styles.css` (`site-topbar*` selectors) to avoid altering game logic/UI components.
+- Blue background parity with election-maps is implemented locally via `.bluey-page` + `.bluey-background` in `styles.css` to avoid importing the full shared site stylesheet.
 
 ## Relationship to `data/`
 

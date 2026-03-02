@@ -81,3 +81,14 @@
 - Fixed selected-seat pulse targeting: hovering no longer marks seats as active, and active pulse now follows click/search-selected seat only; reset/close clears active seat pulse.
 - Updated back links across maps/bio/Chronos to use fish SVG (`principal-fish-silly.svg`) on the left and include `← Back home` label text; added shared back-link fish sizing/alignment styles.
 - Fixed fish icon cutoff by removing square crop styling (`object-fit: cover` and circular radius) and preserving intrinsic SVG aspect ratio (`width: auto`, fixed height) on all back-link fish icons.
+- Added first-pass popup controls on election maps for `Filters`, `Choropleths`, and `Battlegrounds` (toggleable panels from toolbar), including working gains-only filter, majority/party/region filtering, choropleth metric and delta colouring, and battleground filtering based on previous-election incumbent/challenger lead.
+- Refined map control popup visuals to a stronger bespoke style: rounded/glass cards, gradient headers, tighter typography/spacing, focus rings, and improved close-button/button emphasis while preserving existing panel behavior.
+- Merged battleground behavior into `Filters` so it works in sync: added optional `second place party` + `%gap` controls in the main filter pass (no separate battleground popup path).
+- Simplified choropleths to exactly `type` (`vote share` | `vote share change`) + `party` selection; map colouring and legend now use the selected party metric/delta.
+- Refined Filters UX: removed `%gap` controls; moved `second place party` under majority and made it conditional (shown only when `by party` is selected), with state reset to `all` when hidden.
+- Vote Totals table now recalculates from the currently visible filtered seats (and visible comparison seats for deltas) on every filter/choropleth refresh, keeping table sorting/toggle state bound to filtered summaries.
+- Added on-map choropleth key rendering (title + gradient bar + labels) whenever choropleth is active, and switched choropleth colour ramps to party-aware colouring using the selected party's base colour.
+- Increased contrast for negative `vote share change` choropleth values (deeper red anchor) to avoid washed-out appearance on loss-side shading while preserving party-colour positive ramp.
+- Updated `vote share change` to a fixed diverging red↔blue ramp (negative red, positive blue) for clearer semantic interpretation; plain `vote share` remains party-colour based.
+- Applied the election-maps “bluey” gradient background consistently across root static pages (`/`, `/bio/`, `/404`) by using the same `maps-page` + `maps-background` structure used on `election-maps/index.html`.
+- `guesstheyear/` now uses an equivalent local background layer (`.bluey-page` + `.bluey-background`) matching the election-maps gradient while keeping existing Bootstrap/game UI behavior unchanged.

@@ -22,6 +22,19 @@ const seatPopupTitle = document.getElementById('mapsSeatPopupTitle');
 const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
 const seatPopupList = document.getElementById('mapsSeatPopupList');
 const seatPopupClose = document.getElementById('mapsSeatPopupClose');
+const choroplethLegend = document.getElementById('mapsChoroplethLegend');
+
+const filterPartySelect = document.getElementById('mapsFilterParty');
+const filterRegionSelect = document.getElementById('mapsFilterRegion');
+const filterSecondPartyGroup = document.getElementById('mapsFilterSecondPartyGroup');
+const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
+const filterMajorityMinInput = document.getElementById('mapsFilterMajorityMin');
+const filterMajorityMaxInput = document.getElementById('mapsFilterMajorityMax');
+const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
+const filtersResetButton = document.getElementById('mapsFiltersReset');
+
+const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
+const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
 
 let currentSort = { key: 'seats', direction: 'desc' };
 let manifestPartiesByKey = {};
@@ -35,6 +48,20 @@ let currentSeatNameByKey = new Map();
 let seatListRowByKey = new Map();
 let currentRegionLabelsByKey = new Map();
 let currentElectionType = null;
+let currentSeats = [];
+let currentComparisonSeats = [];
+let currentMapData = null;
+
+const mapViewState = {
+  filterParty: 'all',
+  filterRegion: 'all',
+  filterSecondParty: 'all',
+  majorityMin: 0,
+  majorityMax: 100,
+  gainsOnly: false,
+  choroplethType: 'none',
+  choroplethParty: 'all',
+};
 const INITIAL_MAP_SCALE = 1.2;
 const ZOOM_MIN_SCALE = 1;
 const ZOOM_MAX_SCALE = 10;
@@ -44,6 +71,7 @@ const RESET_ZOOM_DURATION_MS = 500;
 let mapInteractionController = {
   zoomBy: () => {},
   reset: () => {},
+  clearSelection: () => {},
   zoomToSeat: () => false,
 };
 
@@ -367,6 +395,346 @@ function seatMajorityStats(seat) {
     pct: (marginVotes / totalVotes) * 100,
     raw: marginVotes,
   };
+}
+
+function secondPlacePartyKey(seat) {
+  const voteRows = Object.entries(seat?.votes || {})
+    .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
+    .filter((row) => row.votes > 0)
+    .sort((a, b) => b.votes - a.votes);
+  if (voteRows.length < 2) return null;
+  return voteRows[1].party;
+}
+
+function clampNumber(value, minimum, maximum) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return minimum;
+  return Math.max(minimum, Math.min(maximum, numeric));
+}
+
+function voteSharePct(seat, partyKey) {
+  const totalVotes = totalVotesForSeat(seat);
+  if (totalVotes <= 0) return 0;
+  const partyVotes = Number(seat?.votes?.[partyKey] || 0);
+  return (partyVotes / totalVotes) * 100;
+}
+
+function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
+  if (!selectEl) return;
+  const currentValue = selectEl.value;
+  selectEl.innerHTML = '';
+
+  rows.forEach((row) => {
+    const option = document.createElement('option');
+    option.value = row.value;
+    option.textContent = row.label;
+    selectEl.appendChild(option);
+  });
+
+  const availableValues = new Set(rows.map((row) => row.value));
+  if (availableValues.has(currentValue)) {
+    selectEl.value = currentValue;
+    return;
+  }
+
+  if (availableValues.has(fallbackValue)) {
+    selectEl.value = fallbackValue;
+    return;
+  }
+
+  if (rows[0]) selectEl.value = rows[0].value;
+}
+
+function collectPartyKeysForControls() {
+  const keys = new Set(['all']);
+  currentSeats.forEach((seat) => {
+    keys.add(seat.winner || 'others');
+    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(partyKey));
+  });
+  currentComparisonSeats.forEach((seat) => {
+    keys.add(seat.winner || 'others');
+    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(partyKey));
+  });
+
+  const sorted = Array.from(keys).filter((key) => key !== 'all')
+    .sort((a, b) => labelParty(a).localeCompare(labelParty(b)));
+
+  return [{ value: 'all', label: 'all parties...' }, ...sorted.map((key) => ({ value: key, label: labelParty(key) }))];
+}
+
+function collectRegionsForControls() {
+  const byKey = new Map();
+  currentSeats.forEach((seat) => {
+    const key = normalizeRegionKey(seat.region);
+    if (!key) return;
+    if (!byKey.has(key)) byKey.set(key, labelRegion(seat.region));
+  });
+
+  const rows = Array.from(byKey.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return [{ value: 'all', label: 'all regions...' }, ...rows];
+}
+
+function syncMapControlInputsFromState() {
+  if (filterPartySelect) filterPartySelect.value = mapViewState.filterParty;
+  if (filterRegionSelect) filterRegionSelect.value = mapViewState.filterRegion;
+
+  const showSecondPlaceFilter = mapViewState.filterParty !== 'all';
+  if (filterSecondPartyGroup) filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
+  if (!showSecondPlaceFilter) {
+    mapViewState.filterSecondParty = 'all';
+  }
+  if (filterSecondPartySelect) filterSecondPartySelect.value = mapViewState.filterSecondParty;
+
+  if (filterMajorityMinInput) filterMajorityMinInput.value = String(mapViewState.majorityMin);
+  if (filterMajorityMaxInput) filterMajorityMaxInput.value = String(mapViewState.majorityMax);
+  if (filterGainsButton) filterGainsButton.classList.toggle('is-active', mapViewState.gainsOnly);
+
+  if (choroplethTypeSelect) choroplethTypeSelect.value = mapViewState.choroplethType;
+  if (choroplethPartySelect) choroplethPartySelect.value = mapViewState.choroplethParty;
+}
+
+function syncMapControlStateFromInputs() {
+  if (filterPartySelect) mapViewState.filterParty = filterPartySelect.value || 'all';
+  if (filterRegionSelect) mapViewState.filterRegion = filterRegionSelect.value || 'all';
+  if (mapViewState.filterParty === 'all') {
+    mapViewState.filterSecondParty = 'all';
+  } else if (filterSecondPartySelect) {
+    mapViewState.filterSecondParty = filterSecondPartySelect.value || 'all';
+  }
+  if (filterMajorityMinInput) mapViewState.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
+  if (filterMajorityMaxInput) mapViewState.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
+  if (mapViewState.majorityMin > mapViewState.majorityMax) {
+    const swap = mapViewState.majorityMin;
+    mapViewState.majorityMin = mapViewState.majorityMax;
+    mapViewState.majorityMax = swap;
+  }
+
+  if (choroplethTypeSelect) mapViewState.choroplethType = choroplethTypeSelect.value || 'none';
+  if (choroplethPartySelect) mapViewState.choroplethParty = choroplethPartySelect.value || 'all';
+
+  syncMapControlInputsFromState();
+}
+
+function resetPrimaryFilters() {
+  mapViewState.filterParty = 'all';
+  mapViewState.filterRegion = 'all';
+  mapViewState.filterSecondParty = 'all';
+  mapViewState.majorityMin = 0;
+  mapViewState.majorityMax = 100;
+  mapViewState.gainsOnly = false;
+  syncMapControlInputsFromState();
+}
+
+function populateMapControlOptions() {
+  const partyRows = collectPartyKeysForControls();
+  const regionRows = collectRegionsForControls();
+
+  setSelectOptions(filterPartySelect, partyRows, 'all');
+  setSelectOptions(filterSecondPartySelect, partyRows, 'all');
+  setSelectOptions(choroplethPartySelect, partyRows, 'all');
+
+  setSelectOptions(filterRegionSelect, regionRows, 'all');
+
+  syncMapControlInputsFromState();
+}
+
+function seatMatchesPrimaryFilters(seat, comparisonSeat) {
+  if (mapViewState.filterParty !== 'all' && seat.winner !== mapViewState.filterParty) return false;
+
+  if (mapViewState.filterRegion !== 'all') {
+    const seatRegion = normalizeRegionKey(seat.region);
+    if (seatRegion !== mapViewState.filterRegion) return false;
+  }
+
+  const majority = seatMajorityStats(seat).pct;
+  if (majority < mapViewState.majorityMin || majority > mapViewState.majorityMax) return false;
+
+  if (mapViewState.filterSecondParty !== 'all') {
+    const secondParty = secondPlacePartyKey(seat);
+    if (secondParty !== mapViewState.filterSecondParty) return false;
+  }
+
+  if (mapViewState.gainsOnly) {
+    const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
+    if (!gainFrom) return false;
+  }
+
+  return true;
+}
+
+function buildVisibleSeatKeySet() {
+  const keySet = new Set();
+
+  currentSeats.forEach((seat) => {
+    const seatKey = seatLookupKey(seat.seat);
+    const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
+    const visible = seatMatchesPrimaryFilters(seat, comparisonSeat);
+
+    if (visible) keySet.add(seatKey);
+  });
+
+  return keySet;
+}
+
+function getChoroplethValue(seat, comparisonSeat) {
+  if (mapViewState.choroplethType === 'none') return null;
+  const partyKey = mapViewState.choroplethParty;
+  if (!partyKey || partyKey === 'all') return null;
+
+  if (mapViewState.choroplethType === 'voteShareChange') {
+    if (!comparisonSeat) return null;
+    return voteSharePct(seat, partyKey) - voteSharePct(comparisonSeat, partyKey);
+  }
+
+  if (mapViewState.choroplethType === 'voteShare') {
+    return voteSharePct(seat, partyKey);
+  }
+
+  return null;
+}
+
+function buildChoroplethConfig(visibleSeatKeys) {
+  if (mapViewState.choroplethType === 'none' || mapViewState.choroplethParty === 'all') return { enabled: false };
+  const isDelta = mapViewState.choroplethType === 'voteShareChange';
+
+  const valueBySeatKey = new Map();
+  const values = [];
+
+  currentSeats.forEach((seat) => {
+    const seatKey = seatLookupKey(seat.seat);
+    if (!visibleSeatKeys.has(seatKey)) return;
+    const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
+    const value = getChoroplethValue(seat, comparisonSeat);
+    if (!Number.isFinite(value)) return;
+    valueBySeatKey.set(seatKey, value);
+    values.push(value);
+  });
+
+  if (!values.length) return { enabled: false };
+
+  const selectedPartyLabel = labelParty(mapViewState.choroplethParty);
+  const selectedPartyColour = colourParty(mapViewState.choroplethParty);
+  const legendBase = {
+    party: selectedPartyLabel,
+    isDelta,
+  };
+
+  if (isDelta) {
+    const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 0.000001);
+    const scale = d3.scaleLinear().domain([-maxAbs, 0, maxAbs]).range(['#991b1b', '#f8fbff', '#1d4ed8']);
+    return {
+      enabled: true,
+      valueBySeatKey,
+      toColour: (value) => scale(value),
+      legendText: `${selectedPartyLabel} vote share change (${formatSigned(maxAbs, 2)} max abs)`,
+      legend: {
+        ...legendBase,
+        title: `${selectedPartyLabel} vote share change`,
+        startColour: '#991b1b',
+        midColour: '#f8fbff',
+        endColour: '#1d4ed8',
+        minLabel: formatSigned(-maxAbs, 2),
+        midLabel: '0',
+        maxLabel: formatSigned(maxAbs, 2),
+      },
+    };
+  }
+
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  if (Math.abs(maxValue - minValue) < 1e-9) {
+    return {
+      enabled: true,
+      valueBySeatKey,
+      toColour: () => selectedPartyColour,
+      legendText: `${selectedPartyLabel} vote share (uniform)`
+    };
+  }
+
+  const scale = d3.scaleLinear().domain([minValue, maxValue]).range(['#f8fbff', selectedPartyColour]);
+  return {
+    enabled: true,
+    valueBySeatKey,
+    toColour: (value) => scale(value),
+    legendText: `${selectedPartyLabel} vote share (${formatPct(minValue)} to ${formatPct(maxValue)})`,
+    legend: {
+      ...legendBase,
+      title: `${selectedPartyLabel} vote share`,
+      startColour: '#f8fbff',
+      endColour: selectedPartyColour,
+      minLabel: formatPct(minValue),
+      maxLabel: formatPct(maxValue),
+    },
+  };
+}
+
+function renderChoroplethLegend(choroplethConfig) {
+  if (!choroplethLegend) return;
+  if (!choroplethConfig?.enabled) {
+    choroplethLegend.hidden = true;
+    choroplethLegend.innerHTML = '';
+    return;
+  }
+
+  const legend = choroplethConfig.legend;
+  if (!legend) {
+    choroplethLegend.textContent = `Choropleth: ${choroplethConfig.legendText}`;
+    choroplethLegend.hidden = false;
+    return;
+  }
+
+  const gradient = legend.isDelta
+    ? `linear-gradient(90deg, ${legend.startColour} 0%, ${legend.midColour} 50%, ${legend.endColour} 100%)`
+    : `linear-gradient(90deg, ${legend.startColour} 0%, ${legend.endColour} 100%)`;
+
+  choroplethLegend.innerHTML = `
+    <div class="maps-choropleth-legend-title">${legend.title}</div>
+    <div class="maps-choropleth-legend-bar" style="background:${gradient}"></div>
+    <div class="maps-choropleth-legend-labels">
+      <span>${legend.minLabel}</span>
+      ${legend.isDelta ? `<span>${legend.midLabel}</span>` : ''}
+      <span>${legend.maxLabel}</span>
+    </div>
+  `;
+  choroplethLegend.hidden = false;
+}
+
+function renderMapWithViewState() {
+  if (!currentMapData) return;
+
+  const visibleSeatKeys = buildVisibleSeatKeySet();
+  const visibleSeats = currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
+  const visibleComparisonSeats = Array.from(visibleSeatKeys)
+    .map((seatKey) => comparisonSeatsByKey.get(seatKey))
+    .filter(Boolean);
+  const choroplethConfig = buildChoroplethConfig(visibleSeatKeys);
+
+  const filteredSummary = summarizeElection(visibleSeats);
+  const filteredComparisonSummary = currentComparisonSeats.length
+    ? summarizeElection(visibleComparisonSeats)
+    : null;
+
+  window.__mapsCurrentSummary = filteredSummary;
+  window.__mapsComparisonSummary = filteredComparisonSummary;
+
+  renderVoteTotals(filteredSummary, filteredComparisonSummary, {
+    showVoteTotals: window.__mapsShowVoteTotals !== false,
+  });
+
+  renderTopoMap(currentMapData, currentSeats, {
+    visibleSeatKeys,
+    choroplethConfig,
+  });
+  renderSeatList(visibleSeats, currentComparisonSeats);
+  applySeatSearchSuggestions(buildSeatSearchIndex(visibleSeats));
+  renderChoroplethLegend(choroplethConfig);
+
+  if (seatPreview) {
+    seatPreview.textContent = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(currentSeats.length)} seats (filters).`;
+  }
 }
 
 function hideSeatPopup() {
@@ -758,7 +1126,7 @@ function getLegacySeatZoomTransform(path, featureDatum, width, height) {
   return d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale);
 }
 
-function renderTopoMap(mapData, seats) {
+function renderTopoMap(mapData, seats, options = {}) {
   if (!mapSvg || !mapContent || !zoomValue) return;
 
   const objectName = Object.keys(mapData?.objects || {})[0];
@@ -786,6 +1154,8 @@ function renderTopoMap(mapData, seats) {
   content.selectAll('*').remove();
 
   const winnerBySeat = buildWinnerBySeat(seats);
+  const visibleSeatKeys = options.visibleSeatKeys || null;
+  const choroplethConfig = options.choroplethConfig || { enabled: false };
   const featureBySeat = new Map();
   const seatPathByKey = new Map();
   activeSeatPathNode = null;
@@ -873,6 +1243,19 @@ function renderTopoMap(mapData, seats) {
     .attr('fill', (datum) => {
       const seatName = seatNameFromFeature(datum);
       if (!seatName) return colourParty('others');
+      const seatKey = seatLookupKey(seatName);
+      const seat = currentSeatsByKey.get(seatKey);
+      if (!seat) return colourParty('others');
+
+      if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) {
+        return '#cbd5e1';
+      }
+
+      if (choroplethConfig.enabled && choroplethConfig.valueBySeatKey?.has(seatKey)) {
+        const metricValue = choroplethConfig.valueBySeatKey.get(seatKey);
+        return choroplethConfig.toColour(metricValue);
+      }
+
       const winner = winnerBySeat.get(seatName) || winnerBySeat.get(seatLookupKey(seatName)) || 'others';
       return colourParty(winner);
     })
@@ -904,6 +1287,69 @@ function renderTopoMap(mapData, seats) {
   });
 
   svg.call(zoomBehavior.transform, initialTransform);
+}
+
+function wirePopupPanels() {
+  document.querySelectorAll('[data-popup-action]').forEach((button) => {
+    if (button.dataset.wired === 'true') return;
+
+    button.addEventListener('click', () => {
+      const action = button.getAttribute('data-popup-action');
+      const targetId = button.getAttribute('data-popup-target');
+      const panel = targetId ? document.getElementById(targetId) : null;
+      if (!panel) return;
+
+      if (action === 'close') {
+        panel.hidden = true;
+        return;
+      }
+
+      if (action === 'toggle') {
+        panel.hidden = !panel.hidden;
+      }
+    });
+
+    button.dataset.wired = 'true';
+  });
+}
+
+function wireMapViewControls() {
+  if (filterPartySelect?.dataset.wired === 'true') return;
+
+  const applyFromInputs = () => {
+    syncMapControlStateFromInputs();
+    renderMapWithViewState();
+  };
+
+  [
+    filterPartySelect,
+    filterRegionSelect,
+    filterSecondPartySelect,
+    filterMajorityMinInput,
+    filterMajorityMaxInput,
+    choroplethTypeSelect,
+    choroplethPartySelect,
+  ].forEach((input) => {
+    if (!input) return;
+    input.addEventListener('change', applyFromInputs);
+  });
+
+  if (filterGainsButton) {
+    filterGainsButton.addEventListener('click', () => {
+      mapViewState.gainsOnly = !mapViewState.gainsOnly;
+      syncMapControlInputsFromState();
+      renderMapWithViewState();
+    });
+  }
+
+  if (filtersResetButton) {
+    filtersResetButton.addEventListener('click', () => {
+      resetPrimaryFilters();
+      renderMapWithViewState();
+    });
+  }
+
+  if (filterPartySelect) filterPartySelect.dataset.wired = 'true';
 }
 
 function wireMapInteractions() {
@@ -947,8 +1393,9 @@ async function initElectionData() {
   const summary = summarizeElection(seats);
   const showVoteTotals = currentElection.type !== 'model_uns';
   currentElectionType = currentElection.type;
+  currentSeats = seats;
+  currentMapData = mapData;
   currentSeatsByKey = buildSeatIndex(seats);
-  applySeatSearchSuggestions(buildSeatSearchIndex(seats));
 
   let comparisonSummary = null;
   let comparisonSeats = null;
@@ -962,7 +1409,11 @@ async function initElectionData() {
     }
   }
 
+  currentComparisonSeats = comparisonSeats || [];
   comparisonSeatsByKey = buildSeatIndex(comparisonSeats || []);
+
+  populateMapControlOptions();
+  syncMapControlStateFromInputs();
 
   window.__mapsCurrentSummary = summary;
   window.__mapsComparisonSummary = comparisonSummary;
@@ -970,17 +1421,14 @@ async function initElectionData() {
 
   updateTopSummary(currentElection, summary);
   renderVoteTotals(summary, comparisonSummary, { showVoteTotals });
-  renderTopoMap(mapData, seats);
-  renderSeatList(seats, comparisonSeats);
+  renderMapWithViewState();
   syncRightPanelHeightToMap();
-
-  if (seatPreview) {
-    seatPreview.textContent = 'Click a constituency to zoom. Click empty map space to reset.';
-  }
 }
 
 async function init() {
   wireMapInteractions();
+  wirePopupPanels();
+  wireMapViewControls();
   wireSeatSearch();
   if (seatPopupClose) {
     seatPopupClose.addEventListener('click', () => {

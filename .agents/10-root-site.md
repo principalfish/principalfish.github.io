@@ -32,6 +32,7 @@
 - Maintain maps-page shell styling (top bar + background + three-pane app scaffold)
 - Maintain election-map data contract (`?election=` URL param + manifest-driven file loading)
 - Keep manifest/settings schema aligned with exporter outputs (`mapFilesById`, `dataFilesByElectionId`, `parties`, `partiesByKey`, `regionsByMapId`, `comparisonElectionId`)
+- Keep the “bluey” gradient background consistent across root static pages by reusing `maps-page` + `maps-background` from `site/styles.css`
 - Build style concept previews before committing to one visual direction
 - Static page changes
 - Domain/hosting adjustments

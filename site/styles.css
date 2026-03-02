@@ -380,6 +380,141 @@ a {
   flex-wrap: wrap;
 }
 
+.maps-popups-wrap {
+  position: absolute;
+  top: 3.4rem;
+  left: 0.7rem;
+  z-index: 7;
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.maps-control-popup {
+  width: min(270px, 42vw);
+  border: 1px solid rgba(15, 23, 42, 0.24);
+  border-radius: 12px;
+  background: rgba(248, 251, 255, 0.96);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.maps-control-popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #173253 0%, #1f3b5a 62%, #234565 100%);
+  color: #ffffff;
+  padding: 0.48rem 0.68rem;
+}
+
+.maps-control-popup-title {
+  margin: 0;
+  font: 700 1.02rem/1 "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.maps-control-popup-close {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font: 700 0.9rem/1 "DM Sans", "Segoe UI", sans-serif;
+  cursor: pointer;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+}
+
+.maps-control-popup-close:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.maps-control-popup-body {
+  padding: 0.62rem 0.68rem 0.7rem;
+  display: grid;
+  gap: 0.44rem;
+}
+
+.maps-control-popup-body select,
+.maps-control-popup-body input {
+  border: 1px solid rgba(15, 23, 42, 0.23);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font: 600 0.88rem/1.2 "Source Sans 3", "Segoe UI", sans-serif;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.maps-control-popup-body select:focus,
+.maps-control-popup-body input:focus {
+  outline: none;
+  border-color: #1f3b5a;
+  box-shadow: 0 0 0 2px rgba(31, 59, 90, 0.16);
+}
+
+.maps-range-row {
+  margin-top: 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  color: #0f172a;
+  font: 700 0.81rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-range-row input {
+  width: 3.1rem;
+}
+
+.maps-control-note {
+  margin: 0.18rem 0 0;
+  color: #1f2937;
+  font: 600 0.8rem/1.28 "Source Sans 3", "Segoe UI", sans-serif;
+}
+
+.maps-apply-btn.is-active {
+  background: #0f2f4d;
+  border-color: #0f2f4d;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.maps-choropleth-legend {
+  position: absolute;
+  left: 0.8rem;
+  bottom: 0.8rem;
+  z-index: 6;
+  border: 1px solid rgba(15, 23, 42, 0.3);
+  border-radius: 8px;
+  background: rgba(248, 251, 255, 0.94);
+  padding: 0.42rem 0.52rem;
+  color: #0f172a;
+  font: 700 0.74rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  min-width: 210px;
+}
+
+.maps-choropleth-legend-title {
+  font: 700 0.74rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  margin-bottom: 0.22rem;
+}
+
+.maps-choropleth-legend-bar {
+  height: 0.62rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.22);
+}
+
+.maps-choropleth-legend-labels {
+  margin-top: 0.18rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font: 700 0.68rem/1.1 "DM Sans", "Segoe UI", sans-serif;
+  color: #334155;
+}
+
 .maps-toolbar-group {
   display: flex;
   align-items: center;

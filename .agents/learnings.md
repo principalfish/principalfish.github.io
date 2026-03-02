@@ -109,3 +109,14 @@ Append-only notes from completed tasks.
 - If selected-seat styling includes animation, do not assign the active class on hover events; keep active state click/search-driven and clear it on reset/popup-close to avoid pulsing non-selected seats.
 - For back navigation branding, use `imgs/principal-fish-silly.svg` (not `logo.png`) and style links as inline-flex with icon-first layout so `← Back home` remains consistently aligned across pages.
 - Do not apply square `object-fit: cover` icon styles to non-square mascot SVGs; keep fixed height with `width: auto` to avoid clipping/cutoff.
+- For interactive map overlays, maintain a single `mapViewState` (filters + choropleth + battleground params) and re-render map + seat list from canonical `currentSeats/currentComparisonSeats`; this keeps gains-only/filter/choropleth interactions consistent and avoids stale seat-search options.
+- For map popup control UX, styling upgrades can stay low-risk by targeting only panel/card primitives (`maps-control-popup*` selectors): improved spacing/contrast/focus states materially improve readability without touching JS behavior.
+- Battleground-like narrowing can be made composable by expressing it as optional core filters (`secondPlaceParty` + `gap range`) instead of a separate filter mode; this keeps all controls additive.
+- Party-scoped choropleths are clearer when modeled as `type + party` rather than separate metric/delta selectors; legend text should explicitly include party + metric context.
+- Dependent filters (like `second place party`) should be hidden unless their parent filter (`by party`) is active, and their state should auto-reset when hidden to prevent invisible constraints.
+- Vote-total widgets should derive from the same visible-seat key set used by map/list rendering; updating shared summary state during filtered re-render keeps sort/toggle handlers consistent with filtered results.
+- Choropleths are more interpretable when colour ramps are anchored to the selected party colour and accompanied by explicit map legends (title + gradient + min/mid/max labels) generated from choropleth config metadata.
+- Diverging party-based change ramps need a high-contrast negative anchor; pale neutral-side negatives can look washed out and hide losses on map polygons.
+- For percent-change choropleths, fixed semantic diverging colours (red negative, blue positive) are often easier to interpret than party-tinted positives; reserve party tinting for absolute share maps.
+- To keep root static pages visually aligned with election maps, reuse the same background primitives: `body.maps-page` and a top-level `.maps-background` layer from `site/styles.css`.
+- For `guesstheyear/`, prefer adding a local clone of the gradient layer (`.bluey-page` + `.bluey-background`) rather than importing full shared site CSS, to avoid unintentional typography/layout overrides.

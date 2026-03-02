@@ -1,16 +1,29 @@
 {
-  "find_out_now": {
+  "opinium": {
     "pollster_examples": [
-      "Find Out Now"
+      "Opinium"
     ],
     "format_counts": {
-      "xlsx": 60,
-      "pdf": 1,
-      "html": 3,
-      "unknown": 4
+      "xlsx": 21,
+      "html": 2,
+      "unknown": 15
     },
     "parser_identifiers": [
-      "find_out_now"
+      "opinium"
+    ]
+  },
+  "yougov": {
+    "pollster_examples": [
+      "YouGov",
+      "YouGov  (MRP)"
+    ],
+    "format_counts": {
+      "pdf": 57,
+      "unknown": 6,
+      "html": 1
+    },
+    "parser_identifiers": [
+      "yougov"
     ]
   },
   "more_in_common": {
@@ -20,7 +33,7 @@
       "More in Common (MRP)"
     ],
     "format_counts": {
-      "xlsx": 60,
+      "xlsx": 61,
       "html": 2,
       "unknown": 20,
       "social_post": 1
@@ -29,18 +42,17 @@
       "more_in_common"
     ]
   },
-  "yougov": {
+  "find_out_now": {
     "pollster_examples": [
-      "YouGov",
-      "YouGov  (MRP)"
+      "Find Out Now"
     ],
     "format_counts": {
-      "pdf": 56,
-      "unknown": 6,
-      "html": 1
+      "xlsx": 61,
+      "html": 3,
+      "unknown": 6
     },
     "parser_identifiers": [
-      "yougov"
+      "find_out_now"
     ]
   },
   "good_growth_foundation": {
@@ -68,7 +80,6 @@
   },
   "jl_partners": {
     "pollster_examples": [
-      "J.L. Partners",
       "JL Partners"
     ],
     "format_counts": {
@@ -80,25 +91,13 @@
       "jl_partners"
     ]
   },
-  "opinium": {
-    "pollster_examples": [
-      "Opinium"
-    ],
-    "format_counts": {
-      "xlsx": 20,
-      "html": 2,
-      "unknown": 15
-    },
-    "parser_identifiers": [
-      "opinium"
-    ]
-  },
   "freshwater_strategy": {
     "pollster_examples": [
       "Freshwater Strategy"
     ],
     "format_counts": {
-      "xlsx": 4,
+      "xlsx": 3,
+      "pdf": 1,
       "unknown": 11
     },
     "parser_identifiers": [

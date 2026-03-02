@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Election Maps | Principal Fish</title>
+    <meta
+      name="description"
+      content="Interactive election maps scaffold with election navigation, zoomable map canvas, and control panels."
+    />
+    <link rel="icon" type="image/png" href="/imgs/logo.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="../site/vendor/tailwindcdn.js"></script>
+    <script src="../site/tailwind-config.js"></script>
+    <link rel="stylesheet" href="../site/styles.css" />
+  </head>
+  <body class="maps-page">
+    <div class="maps-background" aria-hidden="true"></div>
+
+    <div class="maps-topbar">
+      <div class="maps-topbar-inner">
+        <a href="../" class="maps-back-link"><img src="../imgs/principal-fish-silly.svg" alt="" class="maps-back-fish" aria-hidden="true" />← Back home</a>
+        <span class="maps-topbar-label">Election Maps</span>
+      </div>
+    </div>
+
+    <main class="site-wrap maps-wrap">
+      <header class="maps-header">
+        <h1 class="maps-title">UK Election Maps</h1>
+        <p id="mapsSubtitle" class="maps-subtitle">Loading election…</p>
+      </header>
+
+      <section class="maps-app" aria-label="Election maps application layout">
+        <aside class="maps-panel maps-panel-left" aria-label="Election selection">
+          <h2 class="maps-panel-title">Elections</h2>
+          <nav id="mapsElectionList" class="maps-election-list" aria-label="Election years"></nav>
+        </aside>
+
+        <section class="maps-main" aria-label="Map and election insights">
+          <section class="maps-stage" aria-label="Zoomable map stage">
+            <div class="maps-toolbar">
+              <div class="maps-toolbar-group">
+                <button type="button" class="maps-tool-btn" data-map-action="reset-view">Reset</button>
+              </div>
+              <div class="maps-toolbar-group">
+                <label for="maps-seat-search" class="maps-search-label">Seat search</label>
+                <input id="maps-seat-search" type="text" placeholder="type a seat name" />
+              </div>
+              <div class="maps-toolbar-group">
+                <button type="button" class="maps-icon-btn" data-map-action="zoom-out" aria-label="Zoom out">−</button>
+                <button type="button" class="maps-icon-btn" data-map-action="zoom-in" aria-label="Zoom in">+</button>
+                <button type="button" class="maps-icon-btn" data-map-action="reset-zoom" aria-label="Reset zoom">⟲</button>
+                <span id="mapsZoomValue" class="maps-zoom-value">100%</span>
+              </div>
+            </div>
+
+            <div id="mapsViewport" class="maps-viewport" aria-label="Map viewport">
+              <svg viewBox="0 0 1200 900" role="img" aria-label="UK election map" class="maps-svg">
+                <g id="mapContent" class="maps-map-content">
+                  <rect x="0" y="0" width="1200" height="900" rx="26" class="maps-water" />
+                </g>
+              </svg>
+            </div>
+
+            <article id="mapsSeatPopup" class="maps-seat-popup" hidden aria-live="polite">
+              <header class="maps-seat-popup-head">
+                <h3 id="mapsSeatPopupTitle" class="maps-seat-popup-title">Seat</h3>
+                <button type="button" id="mapsSeatPopupClose" class="maps-seat-popup-close" aria-label="Close seat details">×</button>
+              </header>
+              <div id="mapsSeatPopupMeta" class="maps-seat-popup-meta"></div>
+              <div id="mapsSeatPopupList" class="maps-seat-popup-list"></div>
+            </article>
+          </section>
+
+          <aside class="maps-panel maps-panel-right" aria-label="Map insights and controls">
+            <article class="maps-card" id="mapsVoteTotalsCard">
+              <div class="maps-card-head">
+                <h2 class="maps-panel-title">Vote Totals</h2>
+                <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
+              </div>
+              <p id="mapsVoteMeta" class="maps-meta">United Kingdom · turnout —</p>
+              <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder">
+                <thead>
+                  <tr>
+                    <th data-sort-key="party" role="button" tabindex="0" title="Sort by party">Party</th>
+                    <th data-sort-key="seats" role="button" tabindex="0" title="Sort by seats">Seats</th>
+                    <th class="comparison-col">±</th>
+                    <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
+                    <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
+                    <th class="comparison-col">±</th>
+                  </tr>
+                </thead>
+                <tbody id="mapsVoteTotalsBody"></tbody>
+              </table>
+            </article>
+
+            <article class="maps-card maps-seat-card" id="mapsSeatCard">
+              <h2 class="maps-panel-title">Seats</h2>
+              <p id="mapsSeatPreview" class="maps-meta">Hover a region on the map to preview selection.</p>
+              <div id="mapsSeatList" class="maps-seat-list" aria-label="Seat list placeholder">
+                <p>Loading seats…</p>
+              </div>
+            </article>
+          </aside>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="./election-maps.js"></script>
+  </body>
+</html>

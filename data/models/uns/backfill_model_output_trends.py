@@ -7,7 +7,7 @@ import argparse
 import csv
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from run_uns_model import Database, TREND_CACHE_CSV
 from models import Election, ElectionType, Map, Party, Vote
@@ -25,7 +25,41 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional map name filter (default: all model_uns elections)",
     )
+    parser.add_argument(
+        "--reset-existing",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Delete existing model_uns elections and votes, and remove the existing "
+            "trend cache CSV before writing output (default: disabled)."
+        ),
+    )
     return parser.parse_args()
+
+
+def reset_existing_model_outputs(db: Database, output_path: Path) -> tuple[int, int, bool]:
+    with db.session() as session:
+        existing_ids = session.execute(
+            select(Election.id).where(Election.type == ElectionType.model_uns)
+        ).scalars().all()
+
+        if existing_ids:
+            deleted_votes = session.execute(
+                delete(Vote).where(Vote.election_id.in_(existing_ids))
+            ).rowcount or 0
+            deleted_elections = session.execute(
+                delete(Election).where(Election.id.in_(existing_ids))
+            ).rowcount or 0
+        else:
+            deleted_votes = 0
+            deleted_elections = 0
+
+    csv_deleted = False
+    if output_path.exists():
+        output_path.unlink()
+        csv_deleted = True
+
+    return deleted_elections, deleted_votes, csv_deleted
 
 
 def main() -> None:
@@ -34,6 +68,15 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     db = Database()
+
+    if args.reset_existing:
+        deleted_elections, deleted_votes, csv_deleted = reset_existing_model_outputs(db, output_path)
+        print(
+            "RESET "
+            f"deleted_elections={deleted_elections} "
+            f"deleted_votes={deleted_votes} "
+            f"deleted_trend_cache_csv={csv_deleted}"
+        )
 
     with db.session() as session:
         party_rows = session.execute(select(Party)).scalars().all()

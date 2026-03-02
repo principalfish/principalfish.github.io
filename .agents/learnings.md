@@ -1,0 +1,111 @@
+# Learnings Log
+
+Append-only notes from completed tasks.
+
+## 2026-03-01
+
+- `data/start_db.sh` currently expects Docker Postgres on `localhost:5432` and can attempt to stop host Postgres to free that port.
+- Full base data import order that works with current schema:
+  1) `old_data/import_topojson.py`
+  2) `old_data/import_parties.py`
+  3) `old_data/import_general_elections.py`
+- Poll import on a fresh DB should use `--include-unimported-parsers`; otherwise many rows can be skipped.
+- Poll importer zero issue is reproducible: several importer modules default missing regional values to `0.0` and this can produce very high `% zero` polls.
+- Retrospective UNS run completed successfully across 2024-07-05 to 2026-03-01 with `SUCCESS=605`, `FAILED=0`.
+- `data/models/uns/run_retrospective_uns.py` now resets backfill state by default in non-dry-run mode: deletes existing `model_uns` elections and related votes, and removes `data/models/uns/output/model_output_trends.csv` before generating fresh outputs.
+- Use `--no-reset-existing` with `run_retrospective_uns.py` to append/preserve prior model outputs instead of wiping them first.
+- `data/models/uns/backfill_model_output_trends.py` now supports optional `--reset-existing` wipe mode; default behavior remains non-destructive rebuild of CSV from persisted model outputs.
+- Full retrospective UNS backfill and trend CSV rebuild were re-run successfully after the reset behavior changes.
+- `seat_results` is no longer required in the active schema: electorate now lives on `seats.electorate`, and turnout is derived from summed `votes.vote_total` per seat/election.
+- `old_data/import_general_elections.py` now updates seat electorate directly and treats existing votes as the duplicate-import guard.
+- Task-planned work now requires a corresponding `.agents/plans/<index>-<short-description-of-task>.md` file (3-digit index) that is updated as implementation progresses.
+
+## 2026-03-02
+
+- Root static homepage scaffolding now uses `index.html` + `site/` assets, with Tailwind loaded via CDN for zero-build GitHub Pages compatibility.
+- Keep runtime page logic and custom styles under `site/` (`main.js`, `styles.css`, `tailwind-config.js`) and keep root HTML as the entry shell.
+- Local static smoke checks may require escalated permissions in sandboxed environments to bind a local HTTP port.
+- Homepage navigation now uses three user-facing destinations: `bio/`, `election-maps/`, and `guesstheyear/`.
+- `bio/index.html` uses local SVG placeholders in `site/assets/photos/`; replace these with real images without changing page routing.
+- Style direction can be previewed as static alternatives under `designs/` with shared CSS in `site/design-showcase.css` before applying one approach to the main homepage.
+- Concept 1 (editorial) is now the live style on `/`, `/bio/`, and `/election-maps/`, using shared classes in `site/styles.css` and Google Fonts (`Merriweather`, `Source Sans 3`, `DM Sans`).
+- Editorial tuning pass is centralized in `site/styles.css`; spacing, card softness, and background palette updates propagate across root, bio, and election-map pages without HTML edits.
+- Root homepage footer now excludes the `designs/` preview link; homepage navigation stays focused on core destinations only.
+- Stronger contrast for the editorial theme is controlled by `site/styles.css` tokens (`--ink`, `--muted`, `--line`) and card hover shadow strength.
+- Plan workflow updated: do not create a new `.agents/plans/` file for every prompt; continue the most recent active issue by default, and only open a new plan when the user explicitly starts a new issue.
+- `guesstheyear/index.html` can adopt shared-site navigation context safely via a minimal top bar/back link while retaining existing game layout and JS behavior.
+- `bio/index.html` now contains user-provided biography copy and preserves two local image placeholders; requested map link is currently `/electionmaps/`.
+- For temporary bio drafts, long lorem ipsum can be used with inline floated placeholders (`.bio-photo.left` and `.bio-photo.right`) so images sit within text flow while remaining responsive on mobile.
+- Current bio presentation uses a clearer split layout (`.bio-layout`): text on the left and a 1/3-width right image rail (`.bio-rail`) with stacked placeholders.
+- `election-maps/index.html` now has a dedicated maps shell (`maps-topbar`, `maps-background`, `map-placeholder`) styled in shared `site/styles.css`, enabling a distinct map-focused page identity without adding runtime JS yet.
+- Issue boundaries are user-driven: when the user declares a new issue, close the active plan and create a new indexed plan file for subsequent changes.
+- Election maps now has a three-pane scaffold (`maps-app`) and a separate interaction script (`site/election-maps.js`) providing baseline zoom/pan and control hooks without committing to a final map engine yet.
+- CDN JS/CSS dependencies for static pages can be vendored into `site/vendor/` and referenced locally (`tailwindcdn.js`, `bootstrap.min.css`, `bootstrap.bundle.min.js`, `confetti.browser.min.js`) to reduce runtime external script dependencies.
+- Guess The Year header/favicon branding can be cleaned without affecting gameplay by removing emoji from the `<h1>` and using a neutral inline SVG favicon.
+- Homepage can be reduced to a single-brand hero (`principalfish`) by removing subtitle/footer and applying small page-specific spacing classes (`homepage`, `home-title`, `homepage-top`) in shared CSS.
+- `404.html` can be kept lightweight but consistent by using shared root-site classes from `/site/styles.css` and a single prominent link back to `/`.
+- Shared branding assets can be centralized by storing `imgs/logo.png` in-repo and referencing it as favicon across pages; the same logo can be reused as a compact homepage card icon where context fits (Election Maps).
+- Election maps file loading now uses a manifest (`election-maps/data/elections.json`) and `?election=` URL parameter, with placeholder map/results files that can be replaced directly by DB export outputs without changing frontend routing code.
+- Keep top-bar return copy consistent across static app pages (`bio/`, `election-maps/`, `guesstheyear/`) by using `← Back home` with `href="../"`.
+- For playful homepage branding, add a dedicated local SVG icon near the `principalfish` title and keep motion subtle with a `prefers-reduced-motion` CSS fallback.
+- `data/export_non_simulation_elections.py` now supports single-target export selectors: `--election-name` (exact match) or `--current-simulation` (latest `ElectionType.model_uns`).
+- `data/export_non_simulation_elections.py --output-file /path/file.json` writes one election payload directly to a custom JSON file and requires one of the single-target selectors.
+- In single-target mode, the exporter intentionally skips manifest rewrite so ad-hoc exports do not overwrite `election-maps/data/elections.json`.
+- `data/run_export_targets.py` orchestrates targeted exports by invoking `export_non_simulation_elections.py` once per non-simulation election (`--election-name ... --output-file ...`) and once for latest prediction simulation (`--current-simulation`) into `election-maps/data/results/`.
+- Export scripts now live under `data/scripts/` (`export_non_simulation_elections.py`, `run_export_targets.py`) and prepend `data/` to `sys.path` so `db`/`models` imports work from the subfolder.
+- Bulk export now writes TopoJSON per `maps.id` (`election-maps/data/maps/map-<id>.topo.json`) rather than per election, and removes stale per-election topo outputs.
+- `election-maps/data/elections.json` now includes `settings.mapFilesById` and `settings.dataFilesByElectionId`; frontend file resolution can be driven by configuration using `election.mapId` and `election.id`.
+- `README.md` now documents the static export runbook under `data/scripts/`, including targeted flags, wrapper usage, and the `elections.json` settings contract used by `site/election-maps.js`.
+- Bulk static export now injects latest `ElectionType.model_uns` as stable manifest election id `current-prediction` with data file `results/prediction-simulation.json`, making current prediction appear in the election left sidebar without frontend code changes.
+- Export manifest display name for `current-prediction` is now normalized to `Current prediction` so left-nav text stays stable regardless of underlying DB election naming (e.g., `UNS YYYY-MM-DD`).
+- Party key mapping for `reformuk` is now election-year aware in static export: pre-2024 outputs remain `ukip`, while 2024+ outputs use `reform` so UKIP and Reform UK remain separate in modern elections.
+- `site/election-maps.js` label map now explicitly covers `sdlp` and `uu` (UUP), removing missing vote-total labels for current exported party keys.
+- Exported `partyInfo[*].total` now preserves full numeric `vote_total` precision (no forced integer rounding), which keeps model prediction totals accurate.
+- `write_json` in export flow now writes compact JSON (`separators=(',', ':')`) to reduce generated file size.
+- Exported `partyInfo[*].total` now normalizes whole-number values to JSON integers while preserving non-integer decimals, so historical elections avoid trailing `.0` and model predictions retain fractional precision.
+- Main DB now has separate UKIP/Reform party entities via `data/scripts/split_ukip_reform_parties.py`; it enforces a 2024 boundary for both `votes` and `poll_rows` (`<2024` => UKIP, `>=2024` => Reform UK) and is safe to rerun.
+- `election-maps/data/elections.json` settings now include startup metadata (`parties`, `partiesByKey`, `regionsByMapId`) with party colours so frontend can render colour keys/labels without extra fetches.
+- `data/scripts/export_manifest_metadata.py` updates only those metadata settings in the manifest and is useful when party/region DB state changes without needing a full static export rerun.
+- Election maps runtime module has moved from `site/election-maps.js` to `election-maps/election-maps.js`; `election-maps/index.html` now loads the local module path (`./election-maps.js`).
+- Election result exports now default to compact schema `pf-results-v2` (`seats[]` with short keys `n/r/w/e/m/t/p`) and preserved semantics (winner, turnout, majority, per-party totals and labels), reducing result JSON size substantially (~1,035,729 bytes -> ~706,284 bytes across 2019/2024/current-simulation samples).
+- `election-maps/election-maps.js` normalizes both compact and legacy result schemas so historical files remain readable while new exports stay smaller.
+- `elections.json` entries now support `comparisonElectionId`; frontend loads comparison result files at startup to compute vote-table deltas (`±` seats and `±` vote%) and hides comparison columns automatically when no comparison is configured (e.g., 2010 baseline).
+- Docs sync pass updated `README.md`, `.agents/01-file-map.md`, and `.agents/10-root-site.md` for the current structure: `election-maps/election-maps.js`, `data/scripts/*` exporters/migrations, manifest metadata settings, and compact `pf-results-v2` result schema.
+- Vote totals table now styles comparison deltas with semantic colours (`.maps-delta-positive` green, `.maps-delta-negative` red) while retaining sortable headers for party/seats/votes/vote% via `data-sort-key` in `election-maps/election-maps.js`.
+- Maps viewport now uses D3 + TopoJSON client in `election-maps/election-maps.js` to render real constituency polygons from `election-maps/data/maps/*.topo.json`; interaction behavior is click-to-zoom on polygon and click-empty-space reset.
+- Maps layout now uses a two-level grid: left elections rail plus `maps-main` content split at ~60/40 (map stage vs right insights cards), so vote totals and seat list sit beside the map rather than in a far-right third column.
+- Right insights panel now omits Filters/Choropleths; vote totals default to top 4 parties with a `Show all`/`Show fewer` toggle, and the seats card/list is flexed to consume remaining panel height alongside the map.
+- Vote totals meta line now omits turnout percentage and shows only `United Kingdom · seats <count>`.
+- Subtitle majority logic now uses seat-majority threshold over total seats: if `leadSeats > totalSeats/2`, majority is `2 * (leadSeats - totalSeats/2)`; otherwise subtitle shows a hung parliament message with largest party and seat count.
+- Seats list rows in `election-maps/election-maps.js` now use party-colour icons instead of full winner-name text; flipped seats against `comparisonElectionId` add a `GAIN FROM` marker plus losing-party colour icon.
+- Map interaction controller now exposes `zoomToSeat(seatName)` backed by TopoJSON feature-name lookup, enabling seat-list click-to-zoom in addition to polygon click-to-zoom.
+- Seat-list UX now tracks the last clicked row with `.maps-seat-row.is-selected`, resetting on list rerender so highlight always reflects the current election dataset.
+- Seat-list winner icon alignment is stabilized by splitting seat meta into a fixed `.maps-seat-owner` icon slot plus optional `.maps-seat-gain` group, preventing icon drift when `GAIN FROM` is present/absent.
+- `election-maps/election-maps.js` now applies an initial centered zoom transform (`INITIAL_MAP_SCALE`) on map load, and reset/empty-space click restore that same initial view for consistent framing.
+- Seat list row markup now uses a left-side winner block (`.maps-seat-main`: icon + seat name) and preserves gain messaging on the right (`.maps-seat-gain`), improving scan order and alignment.
+- Production zoom feel from `https://principalfish.co.uk/electionmaps/main.min.js` is now mirrored in `election-maps/election-maps.js`: seat-click zoom transform uses sqrt-adjusted feature bounds with a `0.05` base factor and clamped scale `[1,8]`, with slower transitions (`1500ms` zoom, `500ms` reset).
+- Map stroke tuning can overshoot quickly; for the current election maps style, thin constituency lines (`~1.15px`) with only slightly heavier region mesh lines (`~1.55px`) better match the desired visual density.
+- Final visual calibration pushed thinner again: constituency borders now `0.9px`, hover `1.35px`, and region mesh `1.25px` for a cleaner low-noise look.
+- Initial map framing was tuned one step closer by increasing `INITIAL_MAP_SCALE` to `1.18`; this affects load/reset framing only and leaves seat-click zoom math unchanged.
+- For clear interactive highlighting, render region boundary mesh before seat paths and call `d3.select(event.currentTarget).raise()` on hover/click so the active seat stroke sits on top.
+- Important D3 caveat: avoid `selectAll('path')` for seat joins when boundary paths share the same parent; use dedicated groups/layer-scoped selectors, or boundary geometry can be captured by the join and invert intended z-order behavior.
+- Repeated hover highlights can appear inconsistent when relying only on `:hover`; tracking an active SVG path node and applying/removing an explicit class (`.maps-region-path-active`) makes highlight behavior stable across mouse + programmatic seat selection.
+- Seat-level contextual details can be surfaced cleanly without extra data fetches by indexing current/comparison seats in-memory (`Map` by normalized seat name) and rendering a map-stage popup on seat click with computed majority %, turnout, party shares, and deltas.
+- For predictable dismissal UX, attach popup hide logic to the central map reset function rather than duplicating handlers; this automatically covers toolbar reset buttons and empty-map-space reset clicks.
+- Region display labels should come from manifest metadata (`settings.regionsByMapId`) rather than raw seat payload region slugs; build a normalized key lookup per active `mapId` and use it in seat-level UI.
+- Seat popup summary is clearer when majority is rendered as both percentage and raw vote margin (computed from top two party totals), and turnout visibility is keyed to election type (`model_uns` hides turnout, other elections always show it).
+- Historical result files can contain alternate party keys (e.g., `ukindependenceparty`); normalize keys during client-side seat parsing to canonical keys (`ukip`, `reform`, `libdems`, etc.) before any UI aggregation or labeling.
+- For compact seat-popup party tables, an absolute-positioned low-opacity fill element with width set to vote share (`pct%`) provides a clean bar-chart background without requiring a separate chart component.
+- For reliable visual alignment in popup rows, use a `grid-template-columns: minmax(0,1fr) auto` layout (party left, values right) and slightly higher fill opacity so background bars remain visible without obscuring text.
+- In this UI theme, popup row background bars below ~0.3 opacity read too faint; increasing toward ~0.45 improves quick scan while keeping labels readable on top.
+- Seat-popup metadata can use the same election-type gate for turnout and raw majority values: hide raw figures in `model_uns` prediction context while keeping full detail for historical/general elections.
+- When DB elections and seat-boundary-compatible historical comparisons differ, keep a supplemental legacy election in the export pipeline (manifest + results copy) so left-nav selection and `comparisonElectionId` remain stable across bulk re-exports.
+- Live DB schema can lag ORM models (e.g., missing `seats.electorate`); for one-off imports use schema-compatible SQL inserts/selects against known columns to avoid ORM column-selection failures while still loading elections/votes safely.
+- If a supplemental legacy election should have no deltas in UI, remove `comparisonElectionId` for that election entry; frontend automatically hides change columns and gain-from state when comparison data is absent.
+- When supplemental manifest elections are also inserted into DB, bulk exporter must explicitly filter out DB rows with the same election name to prevent duplicate manifest entries with different ids.
+- Seat search should be rebuilt per loaded election/map dataset (not global) to avoid stale suggestions; generate a normalized seat-name lookup plus datalist options during `initElectionData` and route Enter/change to shared seat selection logic.
+- Selected constituency visual effects are safest on `.maps-region-path.maps-region-path-active` so they track existing JS class toggling/raise behavior; include `prefers-reduced-motion: reduce` to disable pulsing animation.
+- Search inputs with datalist suggestions can feel unresponsive if they require Enter; binding seat selection to `blur` improves UX, and storing `lastSubmittedQuery` avoids duplicate zooms from `change` + `blur` firing together.
+- If selected-seat styling includes animation, do not assign the active class on hover events; keep active state click/search-driven and clear it on reset/popup-close to avoid pulsing non-selected seats.
+- For back navigation branding, use `imgs/principal-fish-silly.svg` (not `logo.png`) and style links as inline-flex with icon-first layout so `← Back home` remains consistently aligned across pages.
+- Do not apply square `object-fit: cover` icon styles to non-square mascot SVGs; keep fixed height with `width: auto` to avoid clipping/cutoff.

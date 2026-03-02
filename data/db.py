@@ -11,7 +11,7 @@ from typing import Generator, Sequence
 
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import MultiPolygon, shape
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import DatabaseConfig
@@ -26,7 +26,6 @@ from models import (
     Pollster,
     Region,
     Seat,
-    SeatResult,
     Vote,
 )
 
@@ -162,6 +161,7 @@ class Database:
         seat_name: str,
         *,
         region_id: int | None = None,
+        electorate: int | None = None,
         geometry: MultiPolygon | dict | None = None,
     ) -> Seat:
         geom_col = None
@@ -175,6 +175,7 @@ class Database:
                 map_id=map_id,
                 seat_name=seat_name,
                 region_id=region_id,
+                electorate=electorate,
                 geometry=geom_col,
             )
             s.add(seat)
@@ -203,6 +204,15 @@ class Database:
             if seat is None or seat.geometry is None:
                 return None
             return to_shape(seat.geometry)
+
+    def set_seat_electorate(self, seat_id: int, electorate: int | None) -> Seat | None:
+        with self.session() as s:
+            seat = s.get(Seat, seat_id)
+            if seat is None:
+                return None
+            seat.electorate = electorate
+            s.flush()
+            return seat
 
     # ── elections ──────────────────────────────────────────────────────────
 
@@ -237,46 +247,6 @@ class Database:
                     select(Election)
                     .where(Election.map_id == map_id)
                     .order_by(Election.year)
-                )
-                .scalars()
-                .all()
-            )
-
-    # ── seat results ──────────────────────────────────────────────────────
-
-    def add_seat_result(
-        self,
-        election_id: int,
-        seat_id: int,
-        *,
-        electorate: int | None = None,
-        turnout: int | None = None,
-    ) -> SeatResult:
-        with self.session() as s:
-            sr = SeatResult(
-                election_id=election_id,
-                seat_id=seat_id,
-                electorate=electorate,
-                turnout=turnout,
-            )
-            s.add(sr)
-            s.flush()
-            sr_id = sr.id
-        return self.get_seat_result(sr_id)
-
-    def get_seat_result(self, sr_id: int) -> SeatResult | None:
-        with self.session() as s:
-            return s.get(SeatResult, sr_id)
-
-    def get_seat_results_for_election(
-        self, election_id: int
-    ) -> Sequence[SeatResult]:
-        with self.session() as s:
-            return (
-                s.execute(
-                    select(SeatResult).where(
-                        SeatResult.election_id == election_id
-                    )
                 )
                 .scalars()
                 .all()
@@ -337,6 +307,18 @@ class Database:
                 .scalars()
                 .all()
             )
+
+    def get_turnout_for_seat_election(self, election_id: int, seat_id: int) -> float | None:
+        with self.session() as s:
+            turnout = s.execute(
+                select(func.sum(Vote.vote_total)).where(
+                    Vote.election_id == election_id,
+                    Vote.seat_id == seat_id,
+                )
+            ).scalar_one()
+            if turnout is None:
+                return None
+            return float(turnout)
 
     def get_winner_for_seat(
         self, election_id: int, seat_id: int

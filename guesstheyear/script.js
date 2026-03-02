@@ -1061,29 +1061,72 @@ function launchFireworksExtreme() {
         }, delay);
     });
 
- const bursts = [
-  { t: 19500, origin: { x: 0.3, y: 0.3 } },
-  { t: 20000, origin: { x: 0.7, y: 0.7 } },
-  { t: 20500, origin: { x: 0.3, y: 0.7 } },
-  { t: 21000, origin: { x: 0.7, y: 0.3 } },
-  { t: 21500, origin: { x: 0.5, y: 0.4 } }
-];
+    // --- THE ULTIMATE FINALE ---
+    setTimeout(() => {
+        confetti({
+            particleCount: 1000,
+            spread: 1000,
+            origin: { x: 0.3, y: 0.3 },
+            scalar: 3,
+            colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700', '#ff69b4', '#00ff00', '#0000ff'],
+            ticks: 600,
+            gravity: 0.4,
+            shapes: ['star', 'circle']
+        });
+    }, 19500);
 
-const moai = confetti.shapeFromText({ text: '🗿', scalar: 5 });
+    setTimeout(() => {
+        confetti({
+            particleCount: 1000,
+            spread: 1000,
+            origin: { x: 0.7, y: 0.7 },
+            scalar: 3,
+            colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700', '#ff69b4', '#00ff00', '#0000ff'],
+            ticks: 600,
+            gravity: 0.4,
+            shapes: ['star', 'circle']
+        });
+    }, 20000);
+    
 
-bursts.forEach(({ t, origin }) => {
-  setTimeout(() => {
-    confetti({
-      particleCount: 200,
-      spread: 360,
-      origin,
-      ticks: 600,
-      gravity: 0.4,
-      shapes: [moai],
-      scalar: 5
-    });
-  }, t);
-});
-        }
+    setTimeout(() => {
+        confetti({
+            particleCount: 1000,
+            spread: 1000,
+            origin: { x: 0.3, y: 0.7 },
+            scalar: 3,
+            colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700', '#ff69b4', '#00ff00', '#0000ff'],
+            ticks: 600,
+            gravity: 0.4,
+            shapes: ['star', 'circle']
+        });
+    }, 20500);
+
+    setTimeout(() => {
+        confetti({
+            particleCount: 1000,
+            spread: 1000,
+            origin: { x: 0.7, y: 0.3 },
+            scalar: 3,
+            colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700', '#ff69b4', '#00ff00', '#0000ff'],
+            ticks: 600,
+            gravity: 0.4,
+            shapes: ['star', 'circle']
+        });
+    }, 21000);
+
+     setTimeout(() => {
+        confetti({
+            particleCount: 1000,
+            spread: 1000,
+            origin: { y: 0.4 },
+            scalar: 3,
+            colors: ['#ffc107', '#ffffff', '#ff0000', '#ffd700', '#ff69b4', '#00ff00', '#0000ff'],
+            ticks: 600,
+            gravity: 0.4,
+            shapes: ['star', 'circle']
+        });
+    }, 21500);
+}
 
 init();

@@ -55,6 +55,7 @@ Top-level durable insights only.
 ## Frontend + Assets
 
 - Prefer local vendored assets for static reliability; bundle D3 rather than relying on jsDelivr ESM entrypoints.
+- In `guesstheyear`, entering `?mode=infinite` now checks whether today's Daily challenge is completed; if not, it redirects to Daily so users finish the current game before starting Infinite.
 - Static HTML entrypoints should not include `site/vendor/tailwindcdn.js` in served output; keep styling build/static to avoid Tailwind’s production runtime warning.
 - After removing runtime includes, `site/tailwind-config.js` and `site/vendor/tailwindcdn.js` can be deleted entirely; the current build uses static CSS (`site/styles.css` / minified outputs) and does not depend on Tailwind runtime scripts.
 - `server.sh` is the canonical local preview entrypoint and runs required frontend build steps before serving.

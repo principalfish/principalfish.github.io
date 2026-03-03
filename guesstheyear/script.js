@@ -29,6 +29,11 @@ function saveDailyGameState(seedSource, gameState) {
     localStorage.setItem(getDailySaveKey(seedSource), JSON.stringify(gameState));
 }
 
+function isDailyGameFinished(gameState) {
+    if (!gameState) return false;
+    return gameState.won || gameState.attempts <= 0;
+}
+
 function setGuessControlsDisabled(disabled) {
     document.getElementById('guessYear').disabled = disabled;
     document.getElementById('guessEra').disabled = disabled;
@@ -48,6 +53,14 @@ try {
     const params = new URLSearchParams(window.location.search);
     mode = params.get('mode') === 'infinite' ? 'infinite' : 'daily';
     loadEasyModePref();
+    if (mode === 'infinite') {
+        const todaySeed = new Date().toDateString();
+        const todayDailyState = loadDailyGameState(todaySeed);
+        if (!isDailyGameFinished(todayDailyState)) {
+            window.location.href = window.location.pathname;
+            return;
+        }
+    }
     if (mode === 'daily') {
         currentSeed = new Date().toDateString();
         const dailyIndex = getDailyChallengeIndex(currentSeed, allChallenges.length);

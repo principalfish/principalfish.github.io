@@ -129,3 +129,49 @@ Append-only notes from completed tasks.
 - In Flask local tooling (`data/server.py`), memoizing a single `Database` wrapper at module scope avoids repeated SQLAlchemy engine creation per request while keeping current route code unchanged.
 - Small helper extraction in `guesstheyear/script.js` (daily save/load + control toggling + daily index calculation) is a low-risk way to chip away at monolithic-file complexity without changing gameplay behavior.
 - Implicit globals in browser scripts can hide for long periods; converting to explicit helper-returned `const` values both fixes the bug and improves testability/readability of initialization flows.
+- `election-maps` now supports a synthetic left-rail mode action (`Predict 2029`) in `election-maps/election-maps.js`; this can coexist with manifest-driven election links without changing manifest schema.
+- Regional swing UX can stay lightweight by binding one party selector to a generated per-region numeric input list; storing swings as `Map<partyKey, Map<regionKey, swing>>` keeps updates fast and simple.
+- Client-side projection can reuse existing rendering/filtering pipelines by projecting seats into `currentSeats` and keeping baseline seats in `currentComparisonSeats`, which automatically preserves deltas, map filters, and seat list behavior.
+- Predict-mode state variables in `election-maps/election-maps.js` should be declared centrally with other module-level state; missing one (`predictBaseSeatsByKey`) causes immediate runtime failure on initialization.
+- `election-maps/index.html` does not require Tailwind CDN runtime for current styling; removing `tailwindcdn.js` avoids the production warning while preserving the page via static `site/styles.css`.
+- Predict 2029 now uses a constrained input matrix (Labour, Conservative, Reform, Green, Lib Dems) and treats remaining vote share as residual non-listed parties; this keeps user input focused while preserving full-seat vote maps.
+- England aggregate input can act as default swing for all English regions, with optional per-region overrides via expandable rows; Northern Ireland can be excluded cleanly by filtering input-row generation while leaving baseline NI seats unchanged.
+- Predict input UX can be more intuitive when values are prefilled from a fixed baseline election (2024 shares) and submit derives swings from deltas rather than asking users to enter swing values directly.
+- Reset semantics should match prefilled workflows: restoring baseline shares is safer than zeroing all fields, especially when residual (`Other`) share is implicit.
+- For matrix-style percentage inputs, showing an auto-calculated residual `Other` column gives immediate feedback and avoids forcing users to manually balance rows.
+- Submit-time row-sum validation (`entered > 100`) with a blocking popup is an effective guardrail when editing constrained share inputs; keep input display normalized to one decimal place for consistency.
+- A no-map analytics mode can coexist cleanly in `election-maps` by toggling layout visibility (`maps-stage`/`maps-panel-right`) and rendering a dedicated full-width card inside `maps-main`.
+- `data/models/uns/output/model_output_trends.csv` can be consumed client-side for trend visualizations; plotting seats and votes with separate y-axes and line styles (solid vs dashed) keeps dual-metric comparisons readable while preserving party colour identity.
+- For this tracker dataset, the right-axis metric should use `vote_pct` (not raw vote totals) to keep scales interpretable alongside seats.
+- When mode-swapping complex panes, `hidden` alone may be insufficient in some render states; setting `display:none`/reset explicitly avoids map-panel bleed-through.
+- For chart hover UX on thin lines, add transparent wider hit paths on top of each rendered line; this makes pointer interaction reliable without changing visual stroke styling.
+- For long timeline x-axes, combine width-based adaptive tick density with slight label rotation and bottom-margin padding to avoid end-label stacking without removing key date context.
+- Query-param mode routing (`view=election|predict|polltracker`) can be handled cleanly in a static SPA-like module by loading canonical election state first, then activating mode-specific UI and replacing URL state without reload.
+- Dual-axis charts are clearer with explicit axis titles (`Seats`, `Vote %`, `Date`) rather than relying only on legend styling or tick formats.
+- Query params should be mode-scoped: analytics-only modes like poll tracker can omit unrelated `election` params to keep URLs cleaner and less ambiguous.
+- `run_uns_model.py` trend cache output path is now `election-maps/data/results/model_output_trends.csv` so generation and frontend consumption share one canonical file location.
+- `data/models/uns/run_uns_model.py` now uses a minimal seat-scope SQL query (`id`, `region_id`) rather than ORM `Seat` loading, so UNS runs do not require `seats.electorate` to exist.
+- Poll tracker default party toggles should be computed from party names (not raw top-N index): explicitly include `Green` and exclude `Other`/`Others` from the default checked set.
+- Predict input can support regional nationalist parties cleanly with one shared `NAT` column by resolving row-specific party keys (`SNP` in Scotland, `Plaid Cymru` in Wales) and leaving non-applicable rows blank.
+- For left-rail mode toggles, remove existing `.active` classes before setting the new mode active; reversing that order can clear the just-selected item highlight.
+- Predict matrix display order is driven directly by `PREDICT_BASE_PARTY_KEYS`; update that list to change column order while NAT/Other remain appended.
+- `run_uns_model.py` now auto-backfills missing daily dates (non-dry-run) using trend-cache `as_of_date` gaps; it runs each missing day with the same lookback-window length relative to each day and prints `AUTO-BACKFILL` progress.
+- Live run verification: executing `run_uns_model.py --as-of-date 2026-03-03 --since-days-back 30` filled the previously missing `2026-02-20`→`2026-03-03` interval in `election-maps/data/results/model_output_trends.csv`.
+- To remove duplicate backfill artifacts (`UNS YYYY-MM-DD #2`), delete matching `model_uns` elections + votes in DB and then remove matching trend CSV rows by both `election_id` and `election_name` suffix to keep stores consistent.
+- `run_uns_model.py` now enforces same-date overwrite: before persisting a date, it deletes existing `model_uns` rows for `UNS <date>%` and rewrites trend cache rows for that `as_of_date`, preventing future `#2` duplicates.
+- Local console trend charts should key timeline by `as_of_date` (not `election_id`); when duplicates exist for the same party/date, keep the row with highest `election_id` to avoid mis-mapped lines/spikes.
+- Predict mode layout works best as a right-column card (not map overlay); in this mode, tie `voteTotalsExpanded` to conditional `Seats` card hiding so input can use reclaimed vertical space.
+- Predict right-column sizing is easiest to control with explicit state classes (`compact` when Seats visible, `fill` when Seats hidden) rather than one static max-height.
+- Predict matrix usability improves with colour-only party headers (`title` hover labels), smaller numeric inputs, and tying `Show regions` expansion to Seats-card hiding to free right-column space.
+- Small predict/filter UX improvements can be handled with CSS-only tweaks: stack `Show regions` under `England` via a vertical label wrapper, and widen `.maps-range-row input` to comfortably hold 3-digit values.
+- For the swatch-only Predict header style, `Other` should use an explicit grey swatch class so the column stays visually consistent without text labels.
+- When both Vote Totals and Predict regions are expanded, enable a conditional internal scrollbar on the Predict grid to avoid clipping while preserving the default no-scroll behavior in other states.
+- Long region names in Predict can be shortened via display-only aliases (e.g., `Yorkshire and the Humber` -> `Yorks and the Humber`) without touching underlying region identifiers.
+- Directional English region labels in Predict are best shortened with explicit aliases (`North West England` -> `North West`, `East of England` -> `E of England`) to keep matrix width manageable.
+- For the Predict matrix, final preferred short label for `Yorkshire and the Humber` is simply `Yorks`.
+- Predict panel copy can be kept minimal by removing explanatory helper text when controls are self-evident.
+- Internal scrollbars require a constrained height; for Predict force-scroll states, combine `overflow-y:auto` with a state-specific `max-height` to guarantee scrollbar visibility.
+- For matrix panels with action buttons, use a split layout (`minmax(0,1fr)` scroll region + `auto` actions row) so controls stay anchored while content scrolls fully.
+- For subtle matrix scrolling UX, style thin scrollbars directly on the grid container with both Firefox (`scrollbar-width`) and WebKit pseudo-elements.
+- In complex flex/grid panels, `overflow-y:auto` alone may not show scrollbars; double-expanded states need an explicit bounded height/max-height on the scroll region container.
+- For anchored/sticky headers over scrollable grids, use opaque backgrounds plus explicit z-index layering; transparent headers can show row content bleeding behind them.

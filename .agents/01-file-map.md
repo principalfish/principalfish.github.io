@@ -57,7 +57,7 @@
 - `data/models/uns/run_uns_model.py` — single-run UNS model
 - `data/models/uns/run_retrospective_uns.py` — day-by-day retrospective runner
 - `data/models/uns/backfill_model_output_trends.py` — trend cache repair/backfill
-- `data/models/uns/output/` — model output files
+- `election-maps/data/results/model_output_trends.csv` — UNS trend cache used by poll tracker chart
 
 ### Tests
 - `data/tests/*.py` — DB-backed tests (maps, seats, votes, polls, etc.)

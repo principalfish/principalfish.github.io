@@ -16,8 +16,6 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <script src="../site/vendor/tailwindcdn.js"></script>
-    <script src="../site/tailwind-config.js"></script>
     <link rel="stylesheet" href="../site/styles.css" />
   </head>
   <body class="maps-page">
@@ -154,6 +152,19 @@
               </table>
             </article>
 
+            <article id="mapsPredictWindow" class="maps-predict-window" hidden aria-label="Predict 2029 input">
+              <header class="maps-predict-window-head">
+                <h3 class="maps-predict-window-title">User Input (uniform swing)</h3>
+              </header>
+              <div class="maps-predict-window-body">
+                <div id="mapsPredictGrid" class="maps-predict-grid" aria-label="Regional swing matrix"></div>
+                <div class="maps-predict-window-actions">
+                  <button type="button" id="mapsPredictSubmit" class="maps-apply-btn">Submit</button>
+                  <button type="button" id="mapsPredictResetAll" class="maps-apply-btn">Reset</button>
+                </div>
+              </div>
+            </article>
+
             <article class="maps-card maps-seat-card" id="mapsSeatCard">
               <h2 class="maps-panel-title">Seats</h2>
               <p id="mapsSeatPreview" class="maps-meta">Hover a region on the map to preview selection.</p>
@@ -162,6 +173,29 @@
               </div>
             </article>
           </aside>
+
+          <section id="mapsPollTrackerView" class="maps-polltracker-view" hidden aria-label="Poll tracker view">
+            <article class="maps-card maps-polltracker-card">
+              <div class="maps-card-head">
+                <h2 class="maps-panel-title">Poll tracker</h2>
+              </div>
+
+              <div class="maps-polltracker-controls">
+                <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked /> Seats</label>
+                <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked /> Vote %</label>
+              </div>
+
+              <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
+                <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
+                <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
+                <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="90">Last 90</button>
+              </div>
+
+              <div id="mapsPollTrackerPartyControls" class="maps-polltracker-party-controls" aria-label="Poll tracker party toggles"></div>
+
+              <div id="mapsPollTrackerChartWrap" class="maps-polltracker-chart-wrap" aria-label="Poll tracker chart container"></div>
+            </article>
+          </section>
         </section>
       </section>
     </main>

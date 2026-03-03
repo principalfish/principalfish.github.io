@@ -12,15 +12,16 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
-from sqlalchemy import text
+from sqlalchemy import delete, select, text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
-TREND_CACHE_CSV = DATA_DIR / "models" / "uns" / "output" / "model_output_trends.csv"
+REPO_ROOT = DATA_DIR.parent
+TREND_CACHE_CSV = REPO_ROOT / "election-maps" / "data" / "results" / "model_output_trends.csv"
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from db import Database
-from models import ElectionType
+from models import Election, ElectionType, Vote
 
 
 @dataclass
@@ -32,6 +33,52 @@ class SimulationConfig:
     half_life_days: float
     output_csv: str | None
     dry_run: bool
+
+
+@dataclass
+class SeatRef:
+    id: int
+    region_id: int | None
+
+
+def existing_trend_dates() -> set[date]:
+    if not TREND_CACHE_CSV.exists():
+        return set()
+
+    dates: set[date] = set()
+    with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            raw = str(row.get("as_of_date") or "").strip()
+            if not raw:
+                continue
+            try:
+                dates.add(date.fromisoformat(raw))
+            except ValueError:
+                continue
+    return dates
+
+
+def dates_to_run_for_cfg(cfg: SimulationConfig) -> list[date]:
+    if cfg.dry_run:
+        return [cfg.as_of_date]
+
+    existing = existing_trend_dates()
+    previous_dates = [value for value in existing if value < cfg.as_of_date]
+    if not previous_dates:
+        return [cfg.as_of_date]
+
+    previous = max(previous_dates)
+    missing: list[date] = []
+    current = previous + timedelta(days=1)
+    while current <= cfg.as_of_date:
+        if current not in existing:
+            missing.append(current)
+        current += timedelta(days=1)
+
+    if missing:
+        return missing
+    return [cfg.as_of_date]
 
 
 def parse_args() -> SimulationConfig:
@@ -109,6 +156,29 @@ def unique_election_name(db: Database, base_name: str) -> str:
         suffix += 1
 
 
+def delete_model_uns_for_as_of_date(db: Database, as_of_date: date) -> tuple[int, int]:
+    base_name = f"UNS {as_of_date.isoformat()}"
+
+    with db.session() as session:
+        existing_ids = session.execute(
+            select(Election.id)
+            .where(Election.type == ElectionType.model_uns)
+            .where(Election.name.like(f"{base_name}%"))
+        ).scalars().all()
+
+        if not existing_ids:
+            return 0, 0
+
+        deleted_votes = session.execute(
+            delete(Vote).where(Vote.election_id.in_(existing_ids))
+        ).rowcount or 0
+        deleted_elections = session.execute(
+            delete(Election).where(Election.id.in_(existing_ids))
+        ).rowcount or 0
+
+    return int(deleted_elections), int(deleted_votes)
+
+
 def weighted_average(weighted_sum: float, total_weight: float) -> float | None:
     if total_weight <= 0:
         return None
@@ -135,8 +205,25 @@ def resolve_simulation_scope(db: Database, cfg: SimulationConfig):
     return poll_map, baseline, since_date
 
 
+def fetch_seat_refs(db: Database, map_id: int) -> list[SeatRef]:
+    with db.session() as session:
+        rows = session.execute(
+            text(
+                """
+                SELECT id, region_id
+                FROM seats
+                WHERE map_id = :map_id
+                ORDER BY seat_name
+                """
+            ),
+            {"map_id": map_id},
+        ).fetchall()
+
+    return [SeatRef(id=int(row.id), region_id=row.region_id) for row in rows]
+
+
 def build_reference_data(db: Database, map_id: int):
-    seats = db.get_seats_for_map(map_id)
+    seats = fetch_seat_refs(db, map_id)
     regions = db.get_regions_for_map(map_id)
     seat_by_id = {seat.id: seat for seat in seats}
     region_by_id = {region.id: region for region in regions}
@@ -490,6 +577,8 @@ def update_trend_cache_csv(
         with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
+                if str(row.get("as_of_date") or "").strip() == as_of_date.isoformat():
+                    continue
                 if int(row.get("election_id", "0") or "0") == election_id:
                     continue
                 existing_rows.append(row)
@@ -590,7 +679,7 @@ def run_simulation(
     )
 
     base_election_name = f"UNS {cfg.as_of_date.isoformat()}"
-    election_name = unique_election_name(db, base_election_name)
+    election_name = base_election_name
 
     if cfg.output_csv:
         write_output_csvs(
@@ -603,6 +692,8 @@ def run_simulation(
 
     if cfg.dry_run:
         return election_name, projected_votes, region_diff_rows, winners_by_party
+
+    delete_model_uns_for_as_of_date(db, cfg.as_of_date)
 
     persisted_name, persisted_election_id = persist_projection(
         db,
@@ -629,54 +720,78 @@ def main() -> None:
     cfg = parse_args()
     db = Database()
 
-    election_name, projected_votes, region_diff_rows, winners_by_party = run_simulation(db, cfg)
-
-    seat_ids = {int(row["seat_id"]) for row in projected_votes}
-
-    print("UNS simulation complete")
-    print(f"Map: {cfg.map_name}")
-    print(f"Baseline election: {cfg.baseline_election_name}")
-    print(f"As-of date: {cfg.as_of_date.isoformat()}")
-    print(f"Since date: {cfg.since_date.isoformat()}")
-    print(f"Half-life days: {cfg.half_life_days}")
-    print(f"Election name: {election_name}")
-    print(f"Projected seats: {len(seat_ids)}")
-    print(f"Projected vote rows: {len(projected_votes)}")
-
-    print("Top projected seat winners:")
-    for party_name, seats in winners_by_party.most_common(8):
-        print(f"- {party_name}: {seats}")
-
-    print("Weighted regional diffs (swing) snapshot:")
-    by_region: dict[str, list[dict[str, object]]] = defaultdict(list)
-    for row in region_diff_rows:
-        by_region[str(row["region_name"])].append(row)
-
-    key_parties = {
-        "Conservative",
-        "Labour",
-        "Liberal Democrats",
-        "Reform UK",
-        "Green",
-        "Scottish National Party",
-        "Plaid Cymru",
-        "Other",
-    }
-
-    for region_name in sorted(by_region.keys()):
-        rows = [
-            row
-            for row in by_region[region_name]
-            if str(row["party_name"]) in key_parties
-        ]
-        rows.sort(key=lambda row: str(row["party_name"]))
-        if not rows:
-            continue
-        summary = ", ".join(
-            f"{row['party_name']}: {float(row['swing']):+.2f}"
-            for row in rows
+    run_dates = dates_to_run_for_cfg(cfg)
+    if len(run_dates) > 1:
+        print(
+            "AUTO-BACKFILL "
+            f"missing_dates={len(run_dates)} "
+            f"from={run_dates[0].isoformat()} "
+            f"to={run_dates[-1].isoformat()}"
         )
-        print(f"- {region_name}: {summary}")
+
+    lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
+
+    for index, run_date in enumerate(run_dates, start=1):
+        run_cfg = SimulationConfig(
+            map_name=cfg.map_name,
+            baseline_election_name=cfg.baseline_election_name,
+            as_of_date=run_date,
+            since_date=run_date - timedelta(days=lookback_days),
+            half_life_days=cfg.half_life_days,
+            output_csv=cfg.output_csv,
+            dry_run=cfg.dry_run,
+        )
+
+        election_name, projected_votes, region_diff_rows, winners_by_party = run_simulation(db, run_cfg)
+
+        seat_ids = {int(row["seat_id"]) for row in projected_votes}
+
+        print("UNS simulation complete")
+        print(f"Map: {run_cfg.map_name}")
+        print(f"Baseline election: {run_cfg.baseline_election_name}")
+        print(f"As-of date: {run_cfg.as_of_date.isoformat()}")
+        print(f"Since date: {run_cfg.since_date.isoformat()}")
+        print(f"Half-life days: {run_cfg.half_life_days}")
+        print(f"Election name: {election_name}")
+        print(f"Projected seats: {len(seat_ids)}")
+        print(f"Projected vote rows: {len(projected_votes)}")
+        if len(run_dates) > 1:
+            print(f"Backfill progress: {index}/{len(run_dates)}")
+
+        print("Top projected seat winners:")
+        for party_name, seats in winners_by_party.most_common(8):
+            print(f"- {party_name}: {seats}")
+
+        print("Weighted regional diffs (swing) snapshot:")
+        by_region: dict[str, list[dict[str, object]]] = defaultdict(list)
+        for row in region_diff_rows:
+            by_region[str(row["region_name"])].append(row)
+
+        key_parties = {
+            "Conservative",
+            "Labour",
+            "Liberal Democrats",
+            "Reform UK",
+            "Green",
+            "Scottish National Party",
+            "Plaid Cymru",
+            "Other",
+        }
+
+        for region_name in sorted(by_region.keys()):
+            rows = [
+                row
+                for row in by_region[region_name]
+                if str(row["party_name"]) in key_parties
+            ]
+            rows.sort(key=lambda row: str(row["party_name"]))
+            if not rows:
+                continue
+            summary = ", ".join(
+                f"{row['party_name']}: {float(row['swing']):+.2f}"
+                for row in rows
+            )
+            print(f"- {region_name}: {summary}")
 
 
 if __name__ == "__main__":

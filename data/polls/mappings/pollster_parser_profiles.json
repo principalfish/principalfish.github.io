@@ -1,4 +1,18 @@
 {
+  "yougov": {
+    "pollster_examples": [
+      "YouGov",
+      "YouGov  (MRP)"
+    ],
+    "format_counts": {
+      "unknown": 7,
+      "pdf": 57,
+      "html": 1
+    },
+    "parser_identifiers": [
+      "yougov"
+    ]
+  },
   "opinium": {
     "pollster_examples": [
       "Opinium"
@@ -12,18 +26,17 @@
       "opinium"
     ]
   },
-  "yougov": {
+  "find_out_now": {
     "pollster_examples": [
-      "YouGov",
-      "YouGov  (MRP)"
+      "Find Out Now"
     ],
     "format_counts": {
-      "pdf": 57,
-      "unknown": 6,
-      "html": 1
+      "xlsx": 62,
+      "html": 3,
+      "unknown": 6
     },
     "parser_identifiers": [
-      "yougov"
+      "find_out_now"
     ]
   },
   "more_in_common": {
@@ -33,7 +46,8 @@
       "More in Common (MRP)"
     ],
     "format_counts": {
-      "xlsx": 61,
+      "xlsx": 60,
+      "pdf": 1,
       "html": 2,
       "unknown": 20,
       "social_post": 1
@@ -42,17 +56,17 @@
       "more_in_common"
     ]
   },
-  "find_out_now": {
+  "lord_ashcroft": {
     "pollster_examples": [
-      "Find Out Now"
+      "Lord Ashcroft Polls"
     ],
     "format_counts": {
-      "xlsx": 61,
-      "html": 3,
-      "unknown": 6
+      "xls": 3,
+      "html": 5,
+      "unknown": 5
     },
     "parser_identifiers": [
-      "find_out_now"
+      "lord_ashcroft"
     ]
   },
   "good_growth_foundation": {
@@ -96,8 +110,7 @@
       "Freshwater Strategy"
     ],
     "format_counts": {
-      "xlsx": 3,
-      "pdf": 1,
+      "xlsx": 4,
       "unknown": 11
     },
     "parser_identifiers": [
@@ -154,19 +167,6 @@
     },
     "parser_identifiers": [
       "focaldata"
-    ]
-  },
-  "lord_ashcroft": {
-    "pollster_examples": [
-      "Lord Ashcroft Polls"
-    ],
-    "format_counts": {
-      "html": 5,
-      "xls": 2,
-      "unknown": 5
-    },
-    "parser_identifiers": [
-      "lord_ashcroft"
     ]
   },
   "deltapoll": {

@@ -345,6 +345,252 @@ a {
   gap: 0.45rem;
 }
 
+.maps-predict-window {
+  position: relative;
+  width: 100%;
+  max-height: none;
+  border: 1px solid rgba(15, 23, 42, 0.22);
+  border-radius: 9px;
+  background: #fbfdff;
+  box-shadow: none;
+  z-index: auto;
+  overflow: hidden;
+}
+
+.maps-predict-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.4rem;
+  background: #fbfdff;
+  color: #10243b;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 0.36rem 0.55rem;
+  position: relative;
+  z-index: 3;
+}
+
+.maps-predict-window-title {
+  margin: 0;
+  font: 700 1rem/1.15 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-predict-window-body {
+  padding: 0.55rem 0.62rem 0.68rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.46rem;
+  min-height: 0;
+}
+
+.maps-predict-grid {
+  overflow: visible;
+  max-height: none;
+  border: 1px solid rgba(15, 23, 42, 0.17);
+  border-radius: 8px;
+  background: #f7fbff;
+  padding: 0.38rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.32) transparent;
+}
+
+.maps-predict-grid::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.maps-predict-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.maps-predict-grid::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.32);
+  border-radius: 999px;
+}
+
+.maps-predict-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.44);
+}
+
+.maps-predict-window.maps-predict-window-compact {
+  max-height: 44%;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+.maps-predict-window.maps-predict-window-compact .maps-predict-window-body {
+  flex: 1;
+}
+
+.maps-predict-window.maps-predict-window-compact .maps-predict-grid {
+  flex: 1;
+  max-height: none;
+}
+
+.maps-predict-window.maps-predict-window-fill {
+  flex: 1;
+  min-height: 0;
+}
+
+.maps-predict-window.maps-predict-window-fill .maps-predict-grid {
+  flex: 1;
+  max-height: none;
+}
+
+.maps-predict-window.maps-predict-window-force-scroll .maps-predict-grid {
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: none;
+  min-height: 0;
+}
+
+.maps-predict-window.maps-predict-window-force-scroll {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.maps-predict-window.maps-predict-window-force-scroll .maps-predict-window-body {
+  flex: 1;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  max-height: min(52vh, 430px);
+  min-height: 0;
+}
+
+.maps-predict-window.maps-predict-window-force-scroll .maps-predict-window-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 0.32rem;
+  padding-top: 0.36rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.14);
+  background: #fbfdff;
+}
+
+.maps-predict-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.maps-predict-grid-table th,
+.maps-predict-grid-table td {
+  padding: 0.2rem 0.24rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.09);
+}
+
+.maps-predict-grid-table th:first-child,
+.maps-predict-grid-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: #f7fbff;
+}
+
+.maps-predict-grid-table th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: #eef4fb;
+  color: #1e293b;
+  font: 700 0.73rem/1.1 "DM Sans", "Segoe UI", sans-serif;
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.1);
+}
+
+.maps-predict-grid-table th:first-child {
+  z-index: 5;
+  background: #eef4fb;
+}
+
+.maps-predict-grid-th-label {
+  margin-left: 0.22rem;
+  font: 700 0.68rem/1 "DM Sans", "Segoe UI", sans-serif;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.maps-predict-grid-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  display: inline-block;
+  border: 1px solid rgba(15, 23, 42, 0.24);
+}
+
+.maps-predict-grid-swatch-nat {
+  background: linear-gradient(90deg, #fdf38e 0%, #fdf38e 50%, #005b54 50%, #005b54 100%);
+}
+
+.maps-predict-grid-swatch-other {
+  background: #9ca3af;
+}
+
+.maps-predict-grid-region {
+  font: 700 0.77rem/1.15 "Source Sans 3", "Segoe UI", sans-serif;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.maps-predict-grid-region-child {
+  padding-left: 0.8rem;
+  color: #334155;
+}
+
+.maps-predict-region-label-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.maps-predict-expand-btn {
+  border: 1px solid rgba(15, 23, 42, 0.22);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #173253;
+  font: 700 0.68rem/1 "DM Sans", "Segoe UI", sans-serif;
+  padding: 0.16rem 0.45rem;
+  cursor: pointer;
+}
+
+.maps-predict-expand-btn:hover {
+  background: #edf4fb;
+}
+
+.maps-predict-grid-input {
+  width: 3.6rem;
+  border: 1px solid rgba(15, 23, 42, 0.24);
+  border-radius: 6px;
+  padding: 0.16rem 0.2rem;
+  font: 700 0.75rem/1 "DM Sans", "Segoe UI", sans-serif;
+  text-align: center;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.maps-predict-grid-input:focus {
+  outline: none;
+  border-color: #1f3b5a;
+  box-shadow: 0 0 0 2px rgba(31, 59, 90, 0.15);
+}
+
+.maps-predict-grid-total {
+  color: #334155;
+  font: 700 0.77rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-predict-grid-total.maps-predict-grid-total-over {
+  color: #d93025;
+}
+
+.maps-predict-window-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.42rem;
+}
+
 .maps-election-item {
   display: block;
   width: 100%;
@@ -466,7 +712,7 @@ a {
 }
 
 .maps-range-row input {
-  width: 3.1rem;
+  width: 4.4rem;
 }
 
 .maps-control-note {
@@ -895,6 +1141,133 @@ a {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+.maps-polltracker-view {
+  width: 100%;
+}
+
+.maps-polltracker-card {
+  min-height: 760px;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.maps-polltracker-status {
+  margin: 0;
+}
+
+.maps-polltracker-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.maps-polltracker-range-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: -0.1rem;
+}
+
+.maps-polltracker-range-btn {
+  padding: 0.28rem 0.48rem;
+  font-size: 0.74rem;
+}
+
+.maps-polltracker-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #173253;
+  font: 700 0.78rem/1 "DM Sans", "Segoe UI", sans-serif;
+  padding: 0.2rem 0.5rem;
+}
+
+.maps-polltracker-party-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.32rem;
+}
+
+.maps-polltracker-party-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #1f2937;
+  font: 700 0.78rem/1.1 "Source Sans 3", "Segoe UI", sans-serif;
+}
+
+.maps-polltracker-chart-wrap {
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 0.45rem;
+  min-height: 560px;
+}
+
+.maps-polltracker-chart-wrap svg {
+  width: 100%;
+  height: 540px;
+  display: block;
+}
+
+.maps-polltracker-grid-line {
+  stroke: rgba(15, 23, 42, 0.1);
+  stroke-width: 1;
+}
+
+.maps-polltracker-crosshair {
+  stroke: rgba(15, 23, 42, 0.34);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 4;
+  pointer-events: none;
+}
+
+.maps-polltracker-axis text {
+  fill: #334155;
+  font: 700 0.69rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-polltracker-axis-label {
+  fill: #1f2937;
+  font: 700 0.74rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-polltracker-axis path,
+.maps-polltracker-axis line {
+  stroke: rgba(15, 23, 42, 0.25);
+}
+
+.maps-polltracker-empty {
+  color: #475569;
+  font: 700 0.86rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  padding: 1rem;
+}
+
+.maps-polltracker-tooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  border: 1px solid rgba(15, 23, 42, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+  padding: 0.36rem 0.46rem;
+  color: #0f172a;
+  font: 700 0.72rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  white-space: nowrap;
+}
+
+.maps-polltracker-tooltip-party {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin-bottom: 0.18rem;
 }
 
 .maps-seat-row {

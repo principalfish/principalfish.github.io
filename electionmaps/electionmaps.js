@@ -40,6 +40,7 @@ const predictWindow = document.getElementById('mapsPredictWindow');
 const predictWindowCloseButton = document.getElementById('mapsPredictWindowClose');
 const predictGrid = document.getElementById('mapsPredictGrid');
 const predictSubmitButton = document.getElementById('mapsPredictSubmit');
+const predictShareButton = document.getElementById('mapsPredictShare');
 const predictResetAllButton = document.getElementById('mapsPredictResetAll');
 
 const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
@@ -92,6 +93,7 @@ let pollTrackerLatestSnippet = '';
 function buildRouteSearchParams(view, electionId = null) {
   const params = new URLSearchParams(window.location.search);
   params.set('view', view);
+  if (view !== 'predict') params.delete('predict');
 
   if (view === 'polltracker') {
     params.delete('election');
@@ -109,6 +111,38 @@ function replaceRouteState(view, electionId = null) {
   const params = buildRouteSearchParams(view, electionId);
   const nextUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState({}, '', nextUrl);
+}
+
+function encodePredictPayload(payload) {
+  try {
+    const json = JSON.stringify(payload);
+    const utf8 = encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_match, byteHex) => {
+      return String.fromCharCode(Number.parseInt(byteHex, 16));
+    });
+    return btoa(utf8)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '');
+  } catch (_error) {
+    return '';
+  }
+}
+
+function decodePredictPayload(encoded) {
+  try {
+    const safe = String(encoded || '').trim().replace(/-/g, '+').replace(/_/g, '/');
+    if (!safe) return null;
+    const padded = `${safe}${'='.repeat((4 - (safe.length % 4)) % 4)}`;
+    const binary = atob(padded);
+    const percentEncoded = Array.from(binary)
+      .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
+      .join('');
+    const json = decodeURIComponent(percentEncoded);
+    const parsed = JSON.parse(json);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
 }
 
 const PREDICT_BASE_PARTY_KEYS = ['labour', 'conservative', 'libdems', 'green', 'reform'];
@@ -1339,6 +1373,114 @@ function collectPredictValidationRows() {
   return rows;
 }
 
+function collectPredictShareStateRows() {
+  return collectPredictValidationRows();
+}
+
+function buildPredictShareStatePayload() {
+  const rows = collectPredictShareStateRows();
+  const serializedRows = [];
+
+  rows.forEach((row) => {
+    const regionKey = row.regionKey;
+    collectPredictInputPartyKeysForRegion(regionKey).forEach((partyKey) => {
+      const inputValue = roundPredictShareValue(getPredictInputShareValue(regionKey, partyKey));
+      const baselineValue = roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey));
+      if (inputValue === baselineValue) return;
+      serializedRows.push([regionKey, partyKey, inputValue]);
+    });
+  });
+
+  if (!serializedRows.length && !predictEnglandExpanded) {
+    return '';
+  }
+
+  const payload = {
+    v: 1,
+    e: predictEnglandExpanded ? 1 : 0,
+    s: serializedRows,
+  };
+  return encodePredictPayload(payload);
+}
+
+function readPredictShareStateFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get('predict');
+  if (!encoded) return null;
+
+  const payload = decodePredictPayload(encoded);
+  if (!payload || Number(payload.v) !== 1) return null;
+
+  const rows = Array.isArray(payload.s) ? payload.s : [];
+  return {
+    englandExpanded: Number(payload.e) === 1,
+    rows,
+  };
+}
+
+function applyPredictShareStateFromUrl(sharedState) {
+  if (!sharedState) return;
+  predictEnglandExpanded = Boolean(sharedState.englandExpanded);
+
+  const validRows = new Set(collectPredictShareStateRows().map((row) => row.regionKey));
+
+  (sharedState.rows || []).forEach((entry) => {
+    if (!Array.isArray(entry) || entry.length < 3) return;
+
+    const regionKey = String(entry[0] || '');
+    const partyKey = String(entry[1] || '');
+    if (!validRows.has(regionKey)) return;
+
+    const validParties = new Set(collectPredictInputPartyKeysForRegion(regionKey));
+    if (!validParties.has(partyKey)) return;
+
+    setPredictInputShareValue(regionKey, partyKey, entry[2]);
+  });
+}
+
+function buildPredictShareUrl() {
+  const params = buildRouteSearchParams('predict');
+  const payload = buildPredictShareStatePayload();
+  if (payload) params.set('predict', payload);
+  else params.delete('predict');
+
+  const query = params.toString();
+  const origin = window.location.origin || '';
+  const path = window.location.pathname || '';
+  return query ? `${origin}${path}?${query}` : `${origin}${path}`;
+}
+
+function replacePredictRouteStateFromInputs() {
+  const nextUrl = buildPredictShareUrl();
+  window.history.replaceState({}, '', nextUrl);
+}
+
+async function sharePredictScenario() {
+  const shareUrl = buildPredictShareUrl();
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'UK Election Maps prediction',
+        text: 'My Predict 2029 scenario',
+        url: shareUrl,
+      });
+      return;
+    }
+  } catch (_error) {
+  }
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      window.alert('Prediction link copied to clipboard.');
+    }).catch(() => {
+      window.prompt('Copy your prediction link:', shareUrl);
+    });
+    return;
+  }
+
+  window.prompt('Copy your prediction link:', shareUrl);
+}
+
 function validatePredictRowsNotOver100() {
   const invalidRows = collectPredictValidationRows()
     .map((row) => ({
@@ -1716,13 +1858,14 @@ async function activatePredictMode() {
   predictInputByRegionParty = normalizePredictShareMap(predictBaselineShareByRegionParty);
   predictEnglandExpanded = false;
   predictColumnPartyKeys = collectPredictPartyKeys();
+  applyPredictShareStateFromUrl(readPredictShareStateFromUrl());
   renderPredictGrid();
 
   if (seatPreview) {
     seatPreview.textContent = 'Predict mode active: edit regional vote shares and click Submit.';
   }
 
-  replaceRouteState('predict');
+  replacePredictRouteStateFromInputs();
 
   rebuildPredictSwingsFromInputs();
   applyPredictModeProjection();
@@ -1744,6 +1887,13 @@ function wirePredictControls() {
       }
       rebuildPredictSwingsFromInputs();
       applyPredictModeProjection();
+      replacePredictRouteStateFromInputs();
+    });
+  }
+
+  if (predictShareButton) {
+    predictShareButton.addEventListener('click', () => {
+      sharePredictScenario();
     });
   }
 
@@ -1752,6 +1902,7 @@ function wirePredictControls() {
       resetPredictInputsToBaseline();
       rebuildPredictSwingsFromInputs();
       applyPredictModeProjection();
+      replacePredictRouteStateFromInputs();
     });
   }
 

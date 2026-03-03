@@ -5,7 +5,7 @@ Top-level durable insights only.
 ## Workflow
 
 - Use `.agents/01-file-map.md` first to locate affected files quickly.
-- Treat `.agents/plans/` files as issue-level tracking: continue the active issue by default, create a new plan only when a new issue is explicitly started.
+- Treat `.agents/issues/` files as issue-level tracking: keep one active file per branch and name it from the branch (for example `issue-13.md`).
 - Keep user-facing docs in `README.md`; keep operational/internal detail in `.agents/`.
 
 ## Data + DB
@@ -27,6 +27,7 @@ Top-level durable insights only.
 ## Electionmaps
 
 - Poll tracker now uses a true date-based x-axis when trend dates are parseable ISO dates, and expands to daily timeline points with carry-forward values so missing poll days render as flat status-quo segments.
+- Predict 2029 now supports shareable URL state via `predict` query param; links restore regional share overrides and England expanded/collapsed state.
 
 ## Electionmaps
 

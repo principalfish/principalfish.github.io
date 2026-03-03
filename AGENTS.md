@@ -19,15 +19,15 @@ Use `.agents/01-file-map.md` to locate where functionality lives.
 - Implement the smallest safe change that resolves the issue.
 - Validate with focused checks/tests/queries.
 
-## 2.5) Maintain issue plan files (not per prompt)
+## 2.5) Maintain issue files (not per prompt)
 
-- Plan files in `.agents/plans/` are issue-level, not prompt-level.
+- Issue files in `.agents/issues/` are issue-level, not prompt-level.
 - The user will explicitly indicate when a new issue starts and when an issue ends.
-- By default, continue updating the most recent active issue plan file.
-- Create a new plan file only when the user indicates a new issue.
-- File naming convention remains `<index>-<short-description-of-task>.md` (3-digit zero-padded index, for example `001-my-issue.md`).
-- Keep the active issue plan updated as work progresses (status changes, scope updates, validation notes).
-- If no plan is needed for a very small issue, no plan file is required.
+- By default, continue updating the active issue file for the current branch.
+- Create a new issue file only when the user indicates a new issue.
+- File naming convention should match the branch name (for example `issue-13.md`, `feat-poll-ingest.md`).
+- Keep the active issue file updated as work progresses (status changes, scope updates, validation notes).
+- If no issue file is needed for a very small issue, no file is required.
 
 ## 3) Update learnings after every task
 

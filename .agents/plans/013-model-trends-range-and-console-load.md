@@ -35,3 +35,6 @@
 - UI polish: applied the predict-grid thin scrollbar style globally in `site/styles.css` so all scrollable panels use consistent thin scrollbars; regenerated `site/styles.min.css`.
 - Predict input table sticky header layering adjusted in `site/styles.css` (opaque cell backgrounds + stronger z-index ordering) to prevent underlying row text bleeding behind the header while scrolling.
 - Top-left map toolbar `Reset` (`data-map-action="reset-view"`) now resets map view + filters + choropleths and re-renders, without touching predict user-input values.
+- Performance pass: removed `google-fonts.css` from `electionmaps/index.html` so `/electionmaps` no longer fetches self-hosted custom font files; measured avoided font payload is ~1927.48 KB for that route.
+- Follow-up experiment: removed `google-fonts.css` from `index.html` as well; measured homepage shell (without custom fonts) ~427.21 KB and avoided custom-font payload ~1927.48 KB on `/`.
+- Completed cleanup: removed remaining `bio/index.html` font stylesheet include and deleted all files under `site/vendor/fonts/` (including `google-fonts.css` and bundled font binaries) since no runtime pages reference them.

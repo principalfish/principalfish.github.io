@@ -55,11 +55,14 @@ Top-level durable insights only.
 ## Frontend + Assets
 
 - Prefer local vendored assets for static reliability; bundle D3 rather than relying on jsDelivr ESM entrypoints.
+- Static HTML entrypoints should not include `site/vendor/tailwindcdn.js` in served output; keep styling build/static to avoid Tailwind’s production runtime warning.
+- After removing runtime includes, `site/tailwind-config.js` and `site/vendor/tailwindcdn.js` can be deleted entirely; the current build uses static CSS (`site/styles.css` / minified outputs) and does not depend on Tailwind runtime scripts.
 - `server.sh` is the canonical local preview entrypoint and runs required frontend build steps before serving.
 - Shared styles should remain centralized in `site/styles.css` to keep root, bio, and maps pages visually consistent.
 - Topbar is centralized via `site/topbar.js` + `site/topbar.css`; configure per-page behavior with body data attributes instead of duplicating page-specific header markup.
 - `npm run minify:electionmaps` now also builds `site/topbar.min.js` and `site/topbar.min.css`; pages should reference these minified topbar assets for served output.
 - GA4 should be wired with a `G-...` Measurement ID (not legacy `UA-...`), and the global site tag should be included in each static HTML entrypoint head.
+- For pages served on multiple hostnames (custom domain, GitHub Pages preview, localhost), set GA4 `gtag('config', ..., { cookie_domain: 'auto' })` to avoid invalid-domain cookie warnings.
 - For `electionmaps` history-driven route updates (`history.replaceState`), emit explicit GA4 `page_view` events to capture virtual navigation beyond initial page load.
 - Bio/profile photos added from phone originals can be multi-megabyte JPEGs; keep layout lazy-loaded and plan a web-optimized pass (downscale/WebP) to reduce static page payload.
 - For profile pages, concise copy with fewer dense paragraphs improves scanability and preserves the existing card-style visual rhythm.

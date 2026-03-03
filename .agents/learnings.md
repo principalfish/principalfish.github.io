@@ -30,6 +30,13 @@ Top-level durable insights only.
 
 - Maps subtitle now uses stacked span layout by default, so the latest poll snippet line (`maps-subtitle-latest`) appears on a separate line on desktop and mobile.
 - Zoom percentage display is baseline-relative to `INITIAL_MAP_SCALE`, allowing a slightly zoomed-in initial map view while showing `100%` at load.
+- To place map action buttons directly on the map, a page-local override in `electionmaps/index.html` can position `.maps-toolbar` absolutely at top-right (desktop) and remove the viewport top margin to avoid leaving a gap.
+- Within that top-right overlay toolbar, the seat search block can be made to sit above other controls by giving it a dedicated class (`maps-toolbar-group-search`) and applying desktop-only `order: -1; width: 100%`.
+- If that overlay feels cramped, restore the desktop toolbar to the default above-map strip (`position: static`) and use `maps-toolbar-group-search { order: -1; margin-right: auto; }` so seat search sits left while filter/zoom groups stay right.
+- For a mixed layout, keep `Reset/Filters/Choropleths` and `Seat search` in the above-map toolbar (`search` right via `margin-left: auto`), and move zoom controls into a `.maps-zoom-overlay` positioned absolutely in the viewport top-right.
+- To make map-embedded zoom controls visually blend with the map, keep `.maps-zoom-overlay` positioned in the viewport but set its container chrome to transparent (`padding: 0; border: 0; background: transparent`).
+- If zoom overlay placement should match on mobile and desktop, define `.maps-viewport { position: relative; }` and `.maps-zoom-overlay { position: absolute; top/right... }` outside desktop-only media queries; otherwise mobile falls back to normal flow placement.
+- To move map-embedded zoom controls from top-right to top-left globally, switch the overlay anchor from `right` to `left` in the shared `.maps-zoom-overlay` rule.
 ## Electionmaps
 
 - Runtime architecture is manifest-driven (`electionmaps/data/elections.json`) with data resolved by configured map/result file mappings.

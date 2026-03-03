@@ -87,7 +87,7 @@ class ImportStats:
     seats_seen: int = 0
     seats_matched: int = 0
     seats_unmatched: int = 0
-    seat_results_inserted: int = 0
+    seat_electorates_updated: int = 0
     votes_inserted: int = 0
 
 
@@ -175,7 +175,7 @@ def main() -> None:
     parser.add_argument(
         "--skip-existing",
         action="store_true",
-        help="Skip elections that already contain seat results or votes",
+        help="Skip elections that already contain votes",
     )
     args = parser.parse_args()
 
@@ -225,17 +225,16 @@ def main() -> None:
         existing_election = db.get_election_by_name(spec.name)
         if existing_election is not None and not args.dry_run:
             existing_votes = db.get_votes_for_election(existing_election.id)
-            existing_results = db.get_seat_results_for_election(existing_election.id)
-            if existing_votes or existing_results:
+            if existing_votes:
                 if args.skip_existing:
                     print(
                         f"Skipping '{spec.name}' because it already has data "
-                        f"({len(existing_results)} seat_results, {len(existing_votes)} votes)."
+                        f"({len(existing_votes)} votes)."
                     )
                     continue
                 raise RuntimeError(
                     f"Election '{spec.name}' already has data "
-                    f"({len(existing_results)} seat_results, {len(existing_votes)} votes). "
+                    f"({len(existing_votes)} votes). "
                     "Refusing to import duplicate rows."
                 )
 
@@ -274,20 +273,13 @@ def main() -> None:
             party_info = seat_payload.get("partyInfo", {})
 
             electorate = seat_info.get("electorate")
-            turnout_total = sum(
-                int(row.get("total", 0))
-                for row in party_info.values()
-                if isinstance(row, dict)
-            )
 
             if not args.dry_run:
-                db.add_seat_result(
-                    election.id,
+                db.set_seat_electorate(
                     seat.id,
-                    electorate=int(electorate) if electorate is not None else None,
-                    turnout=turnout_total if turnout_total > 0 else None,
+                    int(electorate) if electorate is not None else None,
                 )
-                stats.seat_results_inserted += 1
+                stats.seat_electorates_updated += 1
 
             current_party_key = seat_info.get("current", "")
             winner_key = pick_winner_key(current_party_key, party_info) if party_info else ""
@@ -319,7 +311,7 @@ def main() -> None:
         if args.dry_run:
             print("Dry-run mode: no database writes")
         else:
-            print(f"Seat results inserted: {stats.seat_results_inserted}")
+            print(f"Seat electorates updated: {stats.seat_electorates_updated}")
             print(f"Votes inserted: {stats.votes_inserted}")
 
         if unknown_seats:
@@ -332,7 +324,7 @@ def main() -> None:
         overall.seats_seen += stats.seats_seen
         overall.seats_matched += stats.seats_matched
         overall.seats_unmatched += stats.seats_unmatched
-        overall.seat_results_inserted += stats.seat_results_inserted
+        overall.seat_electorates_updated += stats.seat_electorates_updated
         overall.votes_inserted += stats.votes_inserted
 
     print("\n=== Overall Summary ===")
@@ -342,7 +334,7 @@ def main() -> None:
     if args.dry_run:
         print("Dry-run mode: no database writes")
     else:
-        print(f"Total seat results inserted: {overall.seat_results_inserted}")
+        print(f"Total seat electorates updated: {overall.seat_electorates_updated}")
         print(f"Total votes inserted: {overall.votes_inserted}")
 
 

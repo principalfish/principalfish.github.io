@@ -1,13 +1,39 @@
 {
+  "yougov": {
+    "pollster_examples": [
+      "YouGov",
+      "YouGov  (MRP)"
+    ],
+    "format_counts": {
+      "unknown": 7,
+      "pdf": 57,
+      "html": 1
+    },
+    "parser_identifiers": [
+      "yougov"
+    ]
+  },
+  "opinium": {
+    "pollster_examples": [
+      "Opinium"
+    ],
+    "format_counts": {
+      "xlsx": 21,
+      "html": 2,
+      "unknown": 15
+    },
+    "parser_identifiers": [
+      "opinium"
+    ]
+  },
   "find_out_now": {
     "pollster_examples": [
       "Find Out Now"
     ],
     "format_counts": {
-      "xlsx": 60,
-      "pdf": 1,
+      "xlsx": 62,
       "html": 3,
-      "unknown": 4
+      "unknown": 6
     },
     "parser_identifiers": [
       "find_out_now"
@@ -21,6 +47,7 @@
     ],
     "format_counts": {
       "xlsx": 60,
+      "pdf": 1,
       "html": 2,
       "unknown": 20,
       "social_post": 1
@@ -29,18 +56,17 @@
       "more_in_common"
     ]
   },
-  "yougov": {
+  "lord_ashcroft": {
     "pollster_examples": [
-      "YouGov",
-      "YouGov  (MRP)"
+      "Lord Ashcroft Polls"
     ],
     "format_counts": {
-      "pdf": 56,
-      "unknown": 6,
-      "html": 1
+      "xls": 3,
+      "html": 5,
+      "unknown": 5
     },
     "parser_identifiers": [
-      "yougov"
+      "lord_ashcroft"
     ]
   },
   "good_growth_foundation": {
@@ -68,7 +94,6 @@
   },
   "jl_partners": {
     "pollster_examples": [
-      "J.L. Partners",
       "JL Partners"
     ],
     "format_counts": {
@@ -78,19 +103,6 @@
     },
     "parser_identifiers": [
       "jl_partners"
-    ]
-  },
-  "opinium": {
-    "pollster_examples": [
-      "Opinium"
-    ],
-    "format_counts": {
-      "xlsx": 20,
-      "html": 2,
-      "unknown": 15
-    },
-    "parser_identifiers": [
-      "opinium"
     ]
   },
   "freshwater_strategy": {
@@ -155,19 +167,6 @@
     },
     "parser_identifiers": [
       "focaldata"
-    ]
-  },
-  "lord_ashcroft": {
-    "pollster_examples": [
-      "Lord Ashcroft Polls"
-    ],
-    "format_counts": {
-      "html": 5,
-      "xls": 2,
-      "unknown": 5
-    },
-    "parser_identifiers": [
-      "lord_ashcroft"
     ]
   },
   "deltapoll": {

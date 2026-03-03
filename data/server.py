@@ -42,11 +42,12 @@ from polls.importers import (
 )
 
 DATA_DIR = Path(__file__).resolve().parent
+REPO_ROOT = DATA_DIR.parent
 TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
 UPDATE_POLLS_SCRIPT = DATA_DIR / "update_polls.sh"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "uns" / "run_uns_model.py"
-UNS_TREND_CACHE_CSV = DATA_DIR / "models" / "uns" / "output" / "model_output_trends.csv"
+UNS_TREND_CACHE_CSV = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.csv"
 
 app = Flask(__name__, template_folder=str(TEMPLATE_DIR), static_folder=str(STATIC_DIR))
 app.config["SECRET_KEY"] = "local-polls-dev-key"
@@ -110,10 +111,14 @@ IMPORTERS = {
 }
 
 PREVIEW_CACHE: dict[str, dict] = {}
+_DB: Database | None = None
 
 
 def _get_db() -> Database:
-    return Database()
+    global _DB
+    if _DB is None:
+        _DB = Database()
+    return _DB
 
 
 def _choices_for_model_form(db: Database) -> dict[str, object]:
@@ -351,50 +356,60 @@ def model_outputs():
         party_series: dict[str, dict[str, object]] = {}
 
         if UNS_TREND_CACHE_CSV.exists():
-            election_name_by_id: dict[int, str] = {}
+            election_name_by_date: dict[date, str] = {}
             with UNS_TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
                 reader = csv.DictReader(handle)
                 rows_from_cache = list(reader)
 
-            election_ids_sorted = sorted(
-                {
-                    int(row.get("election_id") or "0")
-                    for row in rows_from_cache
-                    if row.get("election_id")
-                }
-            )
-            election_index = {election_id: idx for idx, election_id in enumerate(election_ids_sorted)}
-
+            dated_rows: list[tuple[date, int, dict[str, str]]] = []
             for row in rows_from_cache:
-                election_id_raw = row.get("election_id")
-                if not election_id_raw:
+                as_of_date_raw = str(row.get("as_of_date") or "").strip()
+                if not as_of_date_raw:
                     continue
-                election_id = int(election_id_raw)
-                election_name_by_id[election_id] = row.get("election_name") or str(election_id)
+                try:
+                    as_of_value = date.fromisoformat(as_of_date_raw)
+                except ValueError:
+                    continue
+                election_id_raw = row.get("election_id")
+                election_id = int(election_id_raw or "0") if election_id_raw else 0
+                dated_rows.append((as_of_value, election_id, row))
 
+            as_of_dates_sorted = sorted({as_of_value for as_of_value, _, _ in dated_rows})
+            election_index = {as_of_value: idx for idx, as_of_value in enumerate(as_of_dates_sorted)}
+
+            deduped_rows: dict[tuple[str, date], tuple[int, dict[str, str]]] = {}
+            for as_of_value, election_id, row in dated_rows:
                 party_key = row.get("party_id") or row.get("party_name") or ""
                 if not party_key:
                     continue
+                dedupe_key = (party_key, as_of_value)
+                existing = deduped_rows.get(dedupe_key)
+                if existing is None or election_id >= existing[0]:
+                    deduped_rows[dedupe_key] = (election_id, row)
+
+            for (_, as_of_value), (_, row) in deduped_rows.items():
+                election_name_by_date[as_of_value] = row.get("election_name") or as_of_value.isoformat()
+                party_key = row.get("party_id") or row.get("party_name") or ""
 
                 series = party_series.get(party_key)
                 if series is None:
                     series = {
                         "label": row.get("party_name") or party_key,
                         "colour": row.get("party_colour") or None,
-                        "seats": [0] * len(election_ids_sorted),
-                        "vote_totals": [0.0] * len(election_ids_sorted),
-                        "vote_pct": [None] * len(election_ids_sorted),
+                        "seats": [0] * len(as_of_dates_sorted),
+                        "vote_totals": [0.0] * len(as_of_dates_sorted),
+                        "vote_pct": [None] * len(as_of_dates_sorted),
                     }
                     party_series[party_key] = series
 
-                idx = election_index[election_id]
+                idx = election_index[as_of_value]
                 series["seats"][idx] = int(float(row.get("seats_won") or "0"))
                 series["vote_totals"][idx] = float(row.get("vote_total_sum") or "0")
                 vote_pct_raw = row.get("vote_pct")
                 if vote_pct_raw not in (None, ""):
                     series["vote_pct"][idx] = float(vote_pct_raw)
 
-            trend_labels = [election_name_by_id.get(election_id, str(election_id)) for election_id in election_ids_sorted]
+            trend_labels = [election_name_by_date.get(as_of_value, as_of_value.isoformat()) for as_of_value in as_of_dates_sorted]
 
         if not trend_labels:
             elections_for_trend = session.execute(

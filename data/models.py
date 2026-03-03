@@ -86,11 +86,11 @@ class Seat(Base):
     map_id = Column(Integer, ForeignKey("maps.id"), nullable=False)
     seat_name = Column(String, nullable=False)
     region_id = Column(Integer, ForeignKey("regions.id"), nullable=True)
+    electorate = Column(Integer, nullable=True)
     geometry = Column(Geometry("MULTIPOLYGON", srid=4326), nullable=True)
 
     map = relationship("Map", back_populates="seats")
     region = relationship("Region", back_populates="seats")
-    results = relationship("SeatResult", back_populates="seat", cascade="all, delete-orphan")
     votes = relationship("Vote", back_populates="seat", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
@@ -107,31 +107,10 @@ class Election(Base):
     type = Column(Enum(ElectionType), nullable=False)
 
     map = relationship("Map", back_populates="elections")
-    seat_results = relationship(
-        "SeatResult", back_populates="election", cascade="all, delete-orphan"
-    )
     votes = relationship("Vote", back_populates="election", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<Election {self.name} ({self.year})>"
-
-
-class SeatResult(Base):
-    """Per-seat aggregates for an election (turnout, electorate size)."""
-
-    __tablename__ = "seat_results"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    election_id = Column(Integer, ForeignKey("elections.id"), nullable=False)
-    seat_id = Column(Integer, ForeignKey("seats.id"), nullable=False)
-    electorate = Column(Integer, nullable=True)
-    turnout = Column(Integer, nullable=True)
-
-    election = relationship("Election", back_populates="seat_results")
-    seat = relationship("Seat", back_populates="results")
-
-    def __repr__(self) -> str:
-        return f"<SeatResult election={self.election_id} seat={self.seat_id}>"
 
 
 class Vote(Base):

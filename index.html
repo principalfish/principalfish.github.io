@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Principal Fish</title>
+    <meta
+      name="description"
+      content="Static homepage for Principal Fish projects and single-page apps."
+    />
+    <link rel="icon" type="image/png" href="/imgs/logo.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="site/vendor/tailwindcdn.js"></script>
+    <script src="site/tailwind-config.js"></script>
+    <link rel="stylesheet" href="site/styles.css" />
+  </head>
+  <body class="maps-page">
+    <div class="maps-background" aria-hidden="true"></div>
+    <main class="site-wrap homepage">
+      <header>
+        <h1 class="site-title home-title">
+          <img
+            class="home-title-icon"
+            src="/imgs/principal-fish-silly.svg"
+            alt="Silly principal fish icon"
+          />
+          principalfish
+        </h1>
+      </header>
+
+      <section class="top-rule homepage-top">
+        <h2 class="section-title">Pages</h2>
+        <div class="card-grid">
+          <a href="bio/" class="editorial-card app-card">
+            <p class="card-tag">Profile</p>
+            <div class="card-head">
+              <span class="card-icon card-icon-bio" aria-hidden="true">B</span>
+              <h3 class="card-title">Bio</h3>
+            </div>
+            <p class="card-copy">Text biography page with photos and background information.</p>
+            <p class="card-cta">Open bio</p>
+          </a>
+
+          <a href="electionmaps/" class="editorial-card app-card">
+            <p class="card-tag">Data</p>
+            <div class="card-head">
+              <img class="card-icon-image" src="/imgs/logo.png" alt="" />
+              <h3 class="card-title">Election Maps</h3>
+            </div>
+            <p class="card-copy">Interactive election map hosting page for visual data exploration.</p>
+            <p class="card-cta">Open maps</p>
+          </a>
+
+          <a href="guesstheyear/" class="editorial-card app-card">
+            <p class="card-tag game">Game</p>
+            <div class="card-head">
+              <span class="card-icon card-icon-game" aria-hidden="true">G</span>
+              <h3 class="card-title">Guess The Year</h3>
+            </div>
+            <p class="card-copy">Web game that challenges players to place events in time.</p>
+            <p class="card-cta">Open game</p>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="site/main.js"></script>
+  </body>
+</html>

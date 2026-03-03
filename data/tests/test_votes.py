@@ -1,4 +1,4 @@
-"""Tests for SeatResult, Vote, winner queries, and bulk helpers."""
+"""Tests for seat electorate, vote queries, winner queries, and bulk helpers."""
 
 import pytest
 
@@ -15,33 +15,40 @@ def _make_election(db):
     return m, seat, election
 
 
-# ── seat results ──────────────────────────────────────────────────────────────
+# ── seat electorate + turnout derivation ─────────────────────────────────────
 
 
-class TestSeatResult:
-    def test_add_and_get(self, db):
-        _, seat, election = _make_election(db)
-        sr = db.add_seat_result(election.id, seat.id, electorate=70000, turnout=50000)
-        assert sr.id is not None
-        assert sr.electorate == 70000
-        assert sr.turnout == 50000
+class TestSeatElectorate:
+    def test_set_and_get(self, db):
+        _, seat, _ = _make_election(db)
+        updated = db.set_seat_electorate(seat.id, 70000)
+        assert updated is not None
+        assert updated.electorate == 70000
+        fetched = db.get_seat(seat.id)
+        assert fetched is not None
+        assert fetched.electorate == 70000
 
-    def test_nullable_fields(self, db):
-        _, seat, election = _make_election(db)
-        sr = db.add_seat_result(election.id, seat.id)
-        assert sr.electorate is None
-        assert sr.turnout is None
+    def test_nullable_field(self, db):
+        _, seat, _ = _make_election(db)
+        updated = db.set_seat_electorate(seat.id, None)
+        assert updated is not None
+        assert updated.electorate is None
 
     def test_get_missing(self, db):
-        assert db.get_seat_result(9999) is None
+        assert db.set_seat_electorate(9999, 12345) is None
 
-    def test_get_for_election(self, db):
-        m, seat, election = _make_election(db)
-        seat2 = db.add_seat(m.id, "Bath")
-        db.add_seat_result(election.id, seat.id, electorate=70000, turnout=50000)
-        db.add_seat_result(election.id, seat2.id, electorate=65000, turnout=48000)
-        results = db.get_seat_results_for_election(election.id)
-        assert len(results) == 2
+
+class TestTurnoutDerivation:
+    def test_get_turnout_for_seat_election(self, db):
+        _, seat, election = _make_election(db)
+        db.add_vote(election.id, seat.id, vote_total=100)
+        db.add_vote(election.id, seat.id, vote_total=250)
+        turnout = db.get_turnout_for_seat_election(election.id, seat.id)
+        assert turnout == pytest.approx(350)
+
+    def test_get_turnout_empty(self, db):
+        _, seat, election = _make_election(db)
+        assert db.get_turnout_for_seat_election(election.id, seat.id) is None
 
 
 # ── votes ─────────────────────────────────────────────────────────────────────

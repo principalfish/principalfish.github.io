@@ -10,6 +10,64 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 }
 
+.bluey-page {
+    position: relative;
+    min-height: 100vh;
+    background: #e6eef5;
+}
+
+.bluey-background {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(circle at 15% 10%, rgba(14, 116, 144, 0.2), transparent 36%),
+        radial-gradient(circle at 82% 18%, rgba(56, 189, 248, 0.2), transparent 40%),
+        linear-gradient(155deg, #e6eef5 0%, #dbe8f2 58%, #e9f1f7 100%);
+}
+
+.site-topbar {
+    background: #f9fcff;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.18);
+}
+
+.site-topbar-inner {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0.7rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.site-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #0f766e;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.site-back-fish {
+    width: auto;
+    height: 1rem;
+}
+
+.site-back-link:hover {
+    text-decoration: underline;
+}
+
+.site-topbar-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #334155;
+}
+
 .game-container { 
     max-width: 700px; 
     margin: 40px auto; 

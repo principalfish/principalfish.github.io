@@ -25,7 +25,7 @@ from models import Election, ElectionType
 
 
 DEFAULT_EXPORTER = SCRIPT_DIR / "export_non_simulation_elections.py"
-DEFAULT_OUTPUT_DIR = DATA_DIR.parent / "election-maps" / "data" / "results"
+DEFAULT_OUTPUT_DIR = DATA_DIR.parent / "electionmaps" / "data" / "results"
 
 
 def parse_args() -> argparse.Namespace:

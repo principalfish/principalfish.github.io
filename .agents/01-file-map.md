@@ -6,12 +6,12 @@
 - `index.html` — root static homepage entrypoint
 - `imgs/logo.png` — shared logo used for favicon and homepage map-card icon
 - `bio/index.html` — static bio page with profile text/photos
-- `election-maps/index.html` — static election maps landing page
-- `election-maps/data/elections.json` — election manifest (`?election=` routing + file/metadata settings)
-- `election-maps/data/maps/*.topo.json` — exported map data keyed by `maps.id`
-- `election-maps/data/results/*.json` — exported election result payloads (`pf-results-v2` compact schema)
+- `electionmaps/index.html` — static election maps landing page
+- `electionmaps/data/elections.json` — election manifest (`?election=` routing + file/metadata settings)
+- `electionmaps/data/maps/*.topo.json` — exported map data keyed by `maps.id`
+- `electionmaps/data/results/*.json` — exported election result payloads (`pf-results-v2` compact schema)
 - `site/` — root homepage assets (`tailwind-config.js`, `styles.css`, `main.js`)
-- `election-maps/election-maps.js` — election maps interaction scaffold (zoom, pan, control hooks)
+- `electionmaps/electionmaps.js` — election maps interaction scaffold (zoom, pan, control hooks)
 - `site/vendor/` — vendored third-party frontend assets (Tailwind runtime, Bootstrap, confetti)
 - `site/assets/photos/` — local bio photo assets/placeholders
 - `site/design-showcase.css` — shared styling for design concept previews
@@ -57,7 +57,7 @@
 - `data/models/uns/run_uns_model.py` — single-run UNS model
 - `data/models/uns/run_retrospective_uns.py` — day-by-day retrospective runner
 - `data/models/uns/backfill_model_output_trends.py` — trend cache repair/backfill
-- `election-maps/data/results/model_output_trends.csv` — UNS trend cache used by poll tracker chart
+- `electionmaps/data/results/model_output_trends.csv` — UNS trend cache used by poll tracker chart
 
 ### Tests
 - `data/tests/*.py` — DB-backed tests (maps, seats, votes, polls, etc.)

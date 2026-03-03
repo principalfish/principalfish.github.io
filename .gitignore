@@ -12,3 +12,5 @@ election_data/*
 
 /guesstheyear/*.db-wal
 /guesstheyear/*.db-shm
+
+node_modules/

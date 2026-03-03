@@ -16,7 +16,7 @@ from sqlalchemy import delete, select, text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = DATA_DIR.parent
-TREND_CACHE_CSV = REPO_ROOT / "election-maps" / "data" / "results" / "model_output_trends.csv"
+TREND_CACHE_CSV = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.csv"
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 

@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for election-maps database tests.
+Shared pytest fixtures for electionmaps database tests.
 
 Each test gets a fully fresh set of tables (drop + create) so tests
 are completely isolated from each other.

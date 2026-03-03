@@ -16,7 +16,7 @@ Runs a regionalized Uniform National Swing-style simulation and persists modeled
 - `run_retrospective_uns.py`
   - Loops by date across a range (default from 2024-07-05 to today).
   - Uses lookback window and half-life decay.
-  - By default, clears existing `model_uns` elections/votes and deletes `election-maps/data/results/model_output_trends.csv` before backfill; use `--no-reset-existing` to keep prior outputs.
+  - By default, clears existing `model_uns` elections/votes and deletes `electionmaps/data/results/model_output_trends.csv` before backfill; use `--no-reset-existing` to keep prior outputs.
   - Supports `--continue-on-error`.
 
 - `backfill_model_output_trends.py`

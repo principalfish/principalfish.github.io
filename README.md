@@ -180,7 +180,7 @@ docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT type
 
 ## 10) Static election-map export (manifest + files)
 
-Use scripts under `data/scripts/` to generate static files for `election-maps/`.
+Use scripts under `data/scripts/` to generate static files for `electionmaps/`.
 
 ### Bulk export (all non-simulation elections)
 
@@ -224,7 +224,7 @@ Dry-run:
 
 ### Manifest contract used by webpage
 
-`election-maps/data/elections.json` now includes:
+`electionmaps/data/elections.json` now includes:
 
 - `defaultElection`
 - `settings.mapFilesById` (map_id -> `maps/map-<id>.topo.json`)
@@ -233,7 +233,7 @@ Dry-run:
 - `settings.regionsByMapId` (region metadata grouped by map)
 - `elections[]` entries containing at least `id`, `name`, `year`, `type`, `mapId`, and optional `comparisonElectionId`
 
-The webpage (`election-maps/election-maps.js`) resolves files from `settings` using election `id` + `mapId`.
+The webpage (`electionmaps/electionmaps.js`) resolves files from `settings` using election `id` + `mapId`.
 
 ### Results schema
 
@@ -246,7 +246,7 @@ The webpage (`election-maps/election-maps.js`) resolves files from `settings` us
 ### Topo output behavior
 
 - Bulk export writes TopoJSON per map (`maps.id`), not per election.
-- For the current DB this yields two topo files in `election-maps/data/maps/`.
+- For the current DB this yields two topo files in `electionmaps/data/maps/`.
 - Stale per-election topo files are removed during bulk export.
 
 ---

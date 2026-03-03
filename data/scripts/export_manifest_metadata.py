@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Export parties/regions metadata into election-maps manifest settings.
+"""Export parties/regions metadata into electionmaps manifest settings.
 
-Updates `election-maps/data/elections.json` in place, setting:
+Updates `electionmaps/data/elections.json` in place, setting:
 - settings.parties
 - settings.partiesByKey
 - settings.regionsByMapId

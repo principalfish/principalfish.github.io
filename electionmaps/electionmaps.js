@@ -1,6 +1,5 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-import { feature as topojsonFeature } from 'https://cdn.jsdelivr.net/npm/topojson-client@3/+esm';
-import { mesh as topojsonMesh } from 'https://cdn.jsdelivr.net/npm/topojson-client@3/+esm';
+import { feature as topojsonFeature, mesh as topojsonMesh } from 'https://cdn.jsdelivr.net/npm/topojson-client@3/+esm';
 
 const viewport = document.getElementById('mapsViewport');
 const mapSvg = document.querySelector('.maps-svg');
@@ -234,20 +233,20 @@ function deltaClass(value) {
   return num > 0 ? 'maps-delta-positive' : 'maps-delta-negative';
 }
 
-async function fetchJson(url) {
+async function fetchResource(url, parser) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.status}`);
   }
-  return response.json();
+  return parser(response);
+}
+
+async function fetchJson(url) {
+  return fetchResource(url, (response) => response.json());
 }
 
 async function fetchText(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-  return response.text();
+  return fetchResource(url, (response) => response.text());
 }
 
 function setPollTrackerNavState(active) {
@@ -964,11 +963,15 @@ function seatGainFromPartyKey(currentSeat, comparisonSeat) {
   return previousWinner;
 }
 
-function seatMajorityStats(seat) {
-  const voteRows = Object.entries(seat?.votes || {})
+function sortedSeatVoteRows(seat) {
+  return Object.entries(seat?.votes || {})
     .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
     .filter((row) => row.votes > 0)
     .sort((a, b) => b.votes - a.votes);
+}
+
+function seatMajorityStats(seat) {
+  const voteRows = sortedSeatVoteRows(seat);
 
   if (voteRows.length < 2) return { pct: 0, raw: 0 };
   const marginVotes = voteRows[0].votes - voteRows[1].votes;
@@ -981,10 +984,7 @@ function seatMajorityStats(seat) {
 }
 
 function secondPlacePartyKey(seat) {
-  const voteRows = Object.entries(seat?.votes || {})
-    .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
-    .filter((row) => row.votes > 0)
-    .sort((a, b) => b.votes - a.votes);
+  const voteRows = sortedSeatVoteRows(seat);
   if (voteRows.length < 2) return null;
   return voteRows[1].party;
 }
@@ -2586,20 +2586,17 @@ function wireMapInteractions() {
   });
 }
 
-function wirePollTrackerControls() {
-  if (pollTrackerMetricSeatsInput && pollTrackerMetricSeatsInput.dataset.wired !== 'true') {
-    pollTrackerMetricSeatsInput.addEventListener('change', () => {
-      if (pollTrackerModeActive) renderPollTrackerChart();
-    });
-    pollTrackerMetricSeatsInput.dataset.wired = 'true';
-  }
+function wirePollTrackerMetricInput(inputEl) {
+  if (!inputEl || inputEl.dataset.wired === 'true') return;
+  inputEl.addEventListener('change', () => {
+    if (pollTrackerModeActive) renderPollTrackerChart();
+  });
+  inputEl.dataset.wired = 'true';
+}
 
-  if (pollTrackerMetricVotesInput && pollTrackerMetricVotesInput.dataset.wired !== 'true') {
-    pollTrackerMetricVotesInput.addEventListener('change', () => {
-      if (pollTrackerModeActive) renderPollTrackerChart();
-    });
-    pollTrackerMetricVotesInput.dataset.wired = 'true';
-  }
+function wirePollTrackerControls() {
+  wirePollTrackerMetricInput(pollTrackerMetricSeatsInput);
+  wirePollTrackerMetricInput(pollTrackerMetricVotesInput);
 
   document.querySelectorAll('[data-polltracker-range]').forEach((button) => {
     if (button.dataset.wired === 'true') return;
@@ -2613,6 +2610,29 @@ function wirePollTrackerControls() {
     });
     button.dataset.wired = 'true';
   });
+}
+
+function resetPredictModeState() {
+  predictModeActive = false;
+  predictBaseSeats = [];
+  predictBaseSeatsByKey = new Map();
+  predictBaseMapData = null;
+  predictBaseRegionLabelsByKey = new Map();
+  predictColumnPartyKeys = [];
+  predictInputByRegionParty = new Map();
+  predictBaselineShareByRegionParty = new Map();
+  predictOtherCellByRegion = new Map();
+  predictEnglandExpanded = false;
+  predictRegionalSwingsByParty = new Map();
+  if (predictWindow) predictWindow.hidden = true;
+  syncPredictModeRightColumnLayout();
+}
+
+function resetPollTrackerModeState() {
+  pollTrackerModeActive = false;
+  pollTrackerRangeSelection = 'all';
+  setPollTrackerLayoutVisible(false);
+  syncPredictModeRightColumnLayout();
 }
 
 async function initElectionData() {
@@ -2636,24 +2656,8 @@ async function initElectionData() {
 
   currentElectionId = currentElection.id;
 
-  predictModeActive = false;
-  predictBaseSeats = [];
-  predictBaseSeatsByKey = new Map();
-  predictBaseMapData = null;
-  predictBaseRegionLabelsByKey = new Map();
-  predictColumnPartyKeys = [];
-  predictInputByRegionParty = new Map();
-  predictBaselineShareByRegionParty = new Map();
-  predictOtherCellByRegion = new Map();
-  predictEnglandExpanded = false;
-  predictRegionalSwingsByParty = new Map();
-  if (predictWindow) predictWindow.hidden = true;
-  syncPredictModeRightColumnLayout();
-
-  pollTrackerModeActive = false;
-  pollTrackerRangeSelection = 'all';
-  setPollTrackerLayoutVisible(false);
-  syncPredictModeRightColumnLayout();
+  resetPredictModeState();
+  resetPollTrackerModeState();
 
   currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId);
 

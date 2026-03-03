@@ -177,3 +177,7 @@ Append-only notes from completed tasks.
 - For anchored/sticky headers over scrollable grids, use opaque backgrounds plus explicit z-index layering; transparent headers can show row content bleeding behind them.
 - Choropleths popup reset UX is straightforward with a dedicated `Reset` button that restores `choroplethType='none'` and `choroplethParty='all'`, followed by a single `renderMapWithViewState()`.
 - Popup edge spacing on map overlays can be improved by insetting the popup tray (`left/right/top`) rather than resizing popup cards.
+- Route/path migration from `election-maps` to `electionmaps` requires coordinated updates across static links, exporter defaults, UNS trend cache paths, and manifest docs; code-path grep checks should exclude `.agents/plans/*` to avoid historical-noise false positives.
+- `electionmaps/electionmaps.js` duplication can be reduced safely by extracting shared helpers (`fetchResource`, `sortedSeatVoteRows`, poll-tracker metric wiring) without changing user-visible behavior.
+- Minification is now reproducible via `npm run minify:electionmaps`, producing `electionmaps/electionmaps.min.js` and `site/styles.min.css`; wiring the page to minified assets keeps delivery optimized while retaining readable source files.
+- Electionmaps runtime currently depends on two external JS libraries loaded via jsDelivr ESM: D3 v7 and TopoJSON client v3 (with Google Fonts as a separate external asset dependency).

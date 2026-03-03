@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Export non-simulation elections into election-maps static data files.
+"""Export non-simulation elections into electionmaps static data files.
 
 Outputs:
-  - election-maps/data/results/*.json (legacy seatInfo/partyInfo shape)
-    - election-maps/data/maps/*.topo.json (TopoJSON map per map_id)
-    - election-maps/data/elections.json (manifest consumed by election-maps/election-maps.js)
+    - electionmaps/data/results/*.json (legacy seatInfo/partyInfo shape)
+        - electionmaps/data/maps/*.topo.json (TopoJSON map per map_id)
+        - electionmaps/data/elections.json (manifest consumed by electionmaps/electionmaps.js)
 
 Usage:
     python data/scripts/export_non_simulation_elections.py
@@ -35,7 +35,7 @@ from db import Database
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 
 REPO_ROOT = DATA_DIR.parent
-OUTPUT_ROOT_DEFAULT = REPO_ROOT / "election-maps" / "data"
+OUTPUT_ROOT_DEFAULT = REPO_ROOT / "electionmaps" / "data"
 LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files"
 
 SUPPLEMENTAL_LEGACY_ELECTIONS = [
@@ -326,7 +326,7 @@ def write_json(path: Path, payload: dict) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Export non-simulation elections to election-maps/data")
+    parser = argparse.ArgumentParser(description="Export non-simulation elections to electionmaps/data")
     target_group = parser.add_mutually_exclusive_group()
     target_group.add_argument(
         "--election-name",

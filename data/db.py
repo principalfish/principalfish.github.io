@@ -31,7 +31,7 @@ from models import (
 
 
 class Database:
-    """Thin wrapper around SQLAlchemy for the election-maps schema."""
+    """Thin wrapper around SQLAlchemy for the electionmaps schema."""
 
     def __init__(self, config: DatabaseConfig | None = None) -> None:
         self.config = config or DatabaseConfig.from_env()

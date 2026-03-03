@@ -9,12 +9,12 @@
 
 - `index.html`: root homepage entrypoint for static hosting.
 - `bio/index.html`: biography page (text + photos).
-- `election-maps/index.html`: election maps page shell.
-- `election-maps/data/elections.json`: manifest for election URL routing plus settings metadata (map/data file mapping, party and region metadata, comparison election ids).
-- `election-maps/data/maps/`, `election-maps/data/results/`: generated static data targets (maps per `map_id`, compact `pf-results-v2` results).
+- `electionmaps/index.html`: election maps page shell.
+- `electionmaps/data/elections.json`: manifest for election URL routing plus settings metadata (map/data file mapping, party and region metadata, comparison election ids).
+- `electionmaps/data/maps/`, `electionmaps/data/results/`: generated static data targets (maps per `map_id`, compact `pf-results-v2` results).
 - `site/`: homepage assets (Tailwind config, custom CSS, and JS behavior).
-- `site/styles.css`: shared live editorial style system for root, bio, and election-maps pages.
-- `election-maps/election-maps.js`: interaction scaffold for maps viewport (zoom/pan/control wiring).
+- `site/styles.css`: shared live editorial style system for root, bio, and electionmaps pages.
+- `electionmaps/electionmaps.js`: interaction scaffold for maps viewport (zoom/pan/control wiring).
 - `site/vendor/`: local copies of third-party frontend dependencies referenced by static pages.
 - `designs/`: visual concept preview pages for homepage direction.
 - `server.sh`: runs `python3 -m http.server`.

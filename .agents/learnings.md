@@ -46,6 +46,9 @@ Top-level durable insights only.
 - `npm run minify:electionmaps` now also builds `site/topbar.min.js` and `site/topbar.min.css`; pages should reference these minified topbar assets for served output.
 - GA4 should be wired with a `G-...` Measurement ID (not legacy `UA-...`), and the global site tag should be included in each static HTML entrypoint head.
 - For `electionmaps` history-driven route updates (`history.replaceState`), emit explicit GA4 `page_view` events to capture virtual navigation beyond initial page load.
+- Bio/profile photos added from phone originals can be multi-megabyte JPEGs; keep layout lazy-loaded and plan a web-optimized pass (downscale/WebP) to reduce static page payload.
+- For profile pages, concise copy with fewer dense paragraphs improves scanability and preserves the existing card-style visual rhythm.
+- Contextual inline links (rather than separate CTA blocks) work well for profile prose when pointing to flagship internal pages like `electionmaps/`.
 
 ## Quality + Risks
 

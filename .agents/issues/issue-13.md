@@ -10,6 +10,9 @@
 - [x] Refresh README runbook references and troubleshooting accuracy
 - [x] Add GA4 tracking snippet across site pages
 - [x] Track electionmaps route changes as GA4 page views
+- [x] Build out bio page content and photo rail
+- [x] Trim and proofread bio copy
+- [x] Add election maps link in bio
 
 ## Notes
 - Track this issue in a branch-named file under `.agents/issues/`.
@@ -26,3 +29,7 @@
 - README pass: added explicit static-preview prerequisites (`Node.js + npm`, `Python 3`), documented both `--no-reset-existing` and `--reset-existing` UNS flags, and replaced stale `data/recovery/` troubleshooting reference with a direct SQL audit query for zero-valued `poll_rows`.
 - Added GA4 (`G-DF15MKHP0V`) global site tag to `index.html`, `bio/index.html`, `electionmaps/index.html`, `guesstheyear/index.html`, and `404.html` so page-load tracking works across the static site surface.
 - Added SPA-style GA4 virtual pageview tracking inside `electionmaps/electionmaps.js` for URL updates triggered by `replaceRouteState` and `replacePredictRouteStateFromInputs`, then rebuilt `electionmaps/electionmaps.min.js`.
+- Replaced `bio/index.html` placeholder copy with full profile text and integrated the two local photos from `site/assets/photos/` via the existing responsive `bio-layout` + `bio-rail` structure.
+- Asset check: current photo files are high-resolution JPEGs (`4080x3072` ~4.0MB and `3264x2448` ~1.8MB), so further compression/WebP conversion would improve page weight.
+- Follow-up bio pass: trimmed and proofread profile copy for concision/readability, and kept only `IMG_20250906_153505506_HDR.jpg` in the bio photo rail.
+- Added an inline link in `bio/index.html` from the project mention text to `../electionmaps/` so readers can jump directly to the maps page.

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Model Trends</h2>
+    <div class="chart-grid">
+      <div>
+        <h3>Seats by Party Over Time</h3>
+        <div class="chart-container">
+          <canvas id="seats-trend-chart"></canvas>
+        </div>
+      </div>
+      <div>
+        <h3>Vote % by Party Over Time</h3>
+        <div class="chart-container">
+          <canvas id="vote-totals-trend-chart"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Model Outputs</h2>
+    <div class="outputs-toolbar">
+      <p class="outputs-meta">
+        Showing {{ outputs|length }} of {{ total_output_count }} model runs.
+      </p>
+      <div class="table-actions">
+        {% if show_all %}
+          <a class="button" href="{{ url_for('model_outputs') }}">Show Recent ({{ default_limit }})</a>
+        {% else %}
+          <a class="button" href="{{ url_for('model_outputs', show='all') }}">Show All</a>
+        {% endif %}
+      </div>
+    </div>
+    {% if not outputs %}
+      <p>No model outputs have been generated yet.</p>
+    {% else %}
+      <div class="bulk-actions">
+        <form id="bulk-delete-form" method="post" action="{{ url_for('delete_selected_model_outputs') }}" class="inline-form">
+          <button id="bulk-delete-btn" type="submit" class="button button-danger" disabled>Delete Selected</button>
+        </form>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all-models" /></th>
+              <th>Election ID</th>
+              <th>Name</th>
+              <th>Year</th>
+              <th>Map</th>
+              <th>Vote Rows</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for output in outputs %}
+              <tr>
+                <td>
+                  <input
+                    type="checkbox"
+                    class="model-select"
+                    name="election_ids"
+                    value="{{ output.election_id }}"
+                  />
+                </td>
+                <td>{{ output.election_id }}</td>
+                <td>{{ output.name }}</td>
+                <td>{{ output.year }}</td>
+                <td>{{ output.map_name }}</td>
+                <td>{{ output.vote_rows }}</td>
+                <td>
+                  <div class="table-actions">
+                    <a class="button" href="{{ url_for('model_output_detail', election_id=output.election_id) }}">View Model</a>
+                    <form method="post" action="{{ url_for('delete_model_output', election_id=output.election_id) }}" class="inline-form">
+                      <button type="submit" class="button button-danger">Delete Model</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    (() => {
+      const trendData = {{ trend_data | tojson }};
+
+      const createLineChart = (canvasId, datasets, yLabel) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !window.Chart) return;
+        new window.Chart(canvas, {
+          type: "line",
+          data: {
+            labels: trendData.labels,
+            datasets,
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            resizeDelay: 200,
+            plugins: {
+              legend: {
+                position: "bottom",
+              },
+            },
+            scales: {
+              x: {
+                ticks: {
+                  maxTicksLimit: 12,
+                },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: yLabel,
+                },
+              },
+            },
+          },
+        });
+      };
+
+      createLineChart("seats-trend-chart", trendData.seats_datasets, "Seats");
+      createLineChart("vote-totals-trend-chart", trendData.vote_pct_datasets, "Vote %");
+
+      const selectAll = document.getElementById("select-all-models");
+      const checkboxes = Array.from(document.querySelectorAll(".model-select"));
+      const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+
+      const syncButtonState = () => {
+        if (!bulkDeleteBtn) return;
+        bulkDeleteBtn.disabled = !checkboxes.some((box) => box.checked);
+      };
+
+      if (selectAll) {
+        selectAll.addEventListener("change", () => {
+          checkboxes.forEach((box) => {
+            box.checked = selectAll.checked;
+          });
+          syncButtonState();
+        });
+      }
+
+      checkboxes.forEach((box) => {
+        box.addEventListener("change", () => {
+          if (selectAll) {
+            selectAll.checked = checkboxes.length > 0 && checkboxes.every((item) => item.checked);
+          }
+          syncButtonState();
+        });
+      });
+
+      const bulkDeleteForm = document.getElementById("bulk-delete-form");
+      if (bulkDeleteForm && bulkDeleteBtn) {
+        bulkDeleteForm.addEventListener("submit", (event) => {
+          const selected = checkboxes.filter((box) => box.checked).map((box) => box.value);
+          if (selected.length === 0) {
+            event.preventDefault();
+            return;
+          }
+
+          bulkDeleteForm.querySelectorAll('input[name="election_ids"]').forEach((node) => node.remove());
+          selected.forEach((id) => {
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.name = "election_ids";
+            hidden.value = id;
+            bulkDeleteForm.appendChild(hidden);
+          });
+
+          bulkDeleteBtn.disabled = true;
+          bulkDeleteBtn.textContent = "Deleting...";
+        });
+      }
+
+      syncButtonState();
+    })();
+  </script>
+{% endblock %}

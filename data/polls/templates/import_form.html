@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Import Poll</h2>
+    <form method="post" action="{{ url_for('import_poll_preview') }}" class="form">
+      <label for="pollster_identifier">Pollster</label>
+      <select name="pollster_identifier" id="pollster_identifier" required>
+        {% for pollster in pollsters %}
+          <option value="{{ pollster.identifier }}">{{ pollster.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="source_url">Poll Source URL</label>
+      <input
+        type="url"
+        id="source_url"
+        name="source_url"
+        required
+        placeholder="https://..."
+      />
+
+      <button type="submit" class="button primary">Preview Import</button>
+    </form>
+  </section>
+{% endblock %}

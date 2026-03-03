@@ -1,24 +1,16 @@
-
 .DS_Store
 
-/node_modules/
-/.sass-cache/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*$py.class
 
-/libraries/d3.js
 
-/uselection/
-
-*.bat
-*.sh
-
-todo.txt
-todo2.txt
-
-/hearthstone/
+election_data/*
 
 /guesstheyear/*.db-wal
 /guesstheyear/*.db-shm
 
-
-electionmaps/houseofcommons/predictionModel/__pycache__/
-electionmaps/new_seats_scripts/*
+node_modules/

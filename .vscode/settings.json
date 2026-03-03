@@ -1,0 +1,6 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/home/philiph/workspace/principalfish.github.io/election_data/bin/python": true,
+        "docker run": true
+    }
+}

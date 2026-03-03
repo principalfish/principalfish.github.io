@@ -9,6 +9,33 @@ let guessHistory = [];
 let won = false;
 let currentStreak = 0;
 
+function getDailyChallengeIndex(seedSource, challengeCount) {
+    const hash = Array.from(seedSource).reduce((sum, char) => Math.imul(31, sum) + char.charCodeAt(0) | 0, 0);
+    const seed = Math.abs((hash * 12) + 912);
+    return seed % challengeCount;
+}
+
+function getDailySaveKey(seedSource) {
+    return 'chronos_save_' + seedSource;
+}
+
+function loadDailyGameState(seedSource) {
+    const raw = localStorage.getItem(getDailySaveKey(seedSource));
+    if (!raw) return null;
+    return JSON.parse(raw);
+}
+
+function saveDailyGameState(seedSource, gameState) {
+    localStorage.setItem(getDailySaveKey(seedSource), JSON.stringify(gameState));
+}
+
+function setGuessControlsDisabled(disabled) {
+    document.getElementById('guessYear').disabled = disabled;
+    document.getElementById('guessEra').disabled = disabled;
+    const guessBtn = document.querySelector("button[onclick='handleGuess()']");
+    if (guessBtn) guessBtn.disabled = disabled;
+}
+
 async function init() {
 try {
     const response = await fetch('challenges.json');
@@ -23,15 +50,11 @@ try {
     loadEasyModePref();
     if (mode === 'daily') {
         currentSeed = new Date().toDateString();
-        const hash = Array.from(currentSeed).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0);
-        
-        // 1. SET THE CHALLENGE FIRST
-        seed = Math.abs((hash * 12) + 912)
-        currentChallenge = allChallenges[seed % allChallenges.length];
+        const dailyIndex = getDailyChallengeIndex(currentSeed, allChallenges.length);
+        currentChallenge = allChallenges[dailyIndex];
         // 2. NOW CHECK FOR SAVED STATE
-        const saved = localStorage.getItem('chronos_save_' + currentSeed);
-        if (saved) {
-            const gameState = JSON.parse(saved);
+        const gameState = loadDailyGameState(currentSeed);
+        if (gameState) {
             guesses = gameState.guesses || [];
             attempts = gameState.attempts;
             won = gameState.won;
@@ -44,10 +67,7 @@ try {
                 setupGame(); // Render facts before showing results
                 showAlreadyPlayed();
                 // Disable game controls
-                document.getElementById('guessYear').disabled = true;
-                document.getElementById('guessEra').disabled = true;
-                const guessBtn = document.querySelector("button[onclick='handleGuess()']");
-                if (guessBtn) guessBtn.disabled = true;
+                setGuessControlsDisabled(true);
                 return;
             }
         }
@@ -318,10 +338,7 @@ feedbackList.prepend(item);
         // 1. Add the pulse class to the specific item we just created
         item.classList.add('pulse-win');
         // Disable to prevent spamming during the animation
-        const guessBtn = document.querySelector("button[onclick='handleGuess()']");
-        if (guessBtn) guessBtn.disabled = true;
-        // 2. Disable the button so they can't double-guess
-        document.querySelector("button[onclick='handleGuess()']").disabled = true;
+    setGuessControlsDisabled(true);
 
         // 3. Wait 3 seconds before showing the Game Over/Victory screen
         setTimeout(() => {
@@ -344,7 +361,7 @@ feedbackList.prepend(item);
             guessHistory: guessHistory,
             visibleFacts: visibleFacts
         };
-        localStorage.setItem('chronos_save_' + currentSeed, JSON.stringify(gameState));
+        saveDailyGameState(currentSeed, gameState);
     }
 }
 
@@ -441,10 +458,7 @@ function viewGame() {
     
     // Disable game controls when viewing completed game
     if (isGameOver) {
-        document.getElementById('guessYear').disabled = true;
-        document.getElementById('guessEra').disabled = true;
-        const guessBtn = document.querySelector("button[onclick='handleGuess()']");
-        if (guessBtn) guessBtn.disabled = true;
+        setGuessControlsDisabled(true);
     }
 }
 
@@ -759,12 +773,7 @@ function resetGameState() {
     document.getElementById('result-view').classList.add('hidden');
     document.getElementById('btn-view-results').classList.add('hidden');
     document.getElementById('guessYear').value = '';
-    document.getElementById('guessYear').disabled = false;
-    document.getElementById('guessEra').disabled = false;
-    const guessBtn = document.querySelector("button[onclick='handleGuess()']");
-    if (guessBtn) {
-        guessBtn.disabled = false;
-    }
+    setGuessControlsDisabled(false);
     // Pick a new challenge
     setupGame();
 }

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 120" role="img" aria-labelledby="title desc">
+  <title id="title">Silly Principal Fish</title>
+  <desc id="desc">A blue fish wearing a graduation cap and tie.</desc>
+  <defs>
+    <linearGradient id="fishBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8ee8ff" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+  </defs>
+
+  <path d="M24 60 L4 44 L4 76 Z" fill="#0ea5e9" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" />
+  <ellipse cx="92" cy="60" rx="64" ry="34" fill="url(#fishBody)" stroke="#0f172a" stroke-width="3" />
+  <path d="M78 87 L92 104 L108 86 Z" fill="#0284c7" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" />
+  <path d="M126 47 Q141 42 154 49" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+  <circle cx="120" cy="54" r="7" fill="#ffffff" stroke="#0f172a" stroke-width="2.5" />
+  <circle cx="122" cy="55" r="2.5" fill="#0f172a" />
+  <path d="M110 70 Q122 79 136 72" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+
+  <polygon points="84,24 128,8 168,22 124,38" fill="#1e293b" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" />
+  <rect x="112" y="33" width="24" height="10" rx="2" fill="#334155" stroke="#0f172a" stroke-width="2.5" />
+  <path d="M162 22 L168 44" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" />
+  <circle cx="169" cy="47" r="4" fill="#f59e0b" stroke="#0f172a" stroke-width="2" />
+
+  <path d="M88 74 L100 74 L96 91 L92 91 Z" fill="#ef4444" stroke="#0f172a" stroke-width="2.5" stroke-linejoin="round" />
+</svg>

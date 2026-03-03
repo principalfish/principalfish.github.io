@@ -1,0 +1,86 @@
+{
+  "bmg_research": {
+    "module": "polls.importers.bmg_research_import",
+    "status": "implemented"
+  },
+  "deltapoll": {
+    "module": "polls.importers.deltapoll_import",
+    "status": "implemented"
+  },
+  "find_out_now": {
+    "module": "polls.importers.find_out_now_import",
+    "status": "implemented"
+  },
+  "find_out_now_electoral_calculus": {
+    "module": null,
+    "status": "planned"
+  },
+  "focaldata": {
+    "module": "polls.importers.focaldata_import",
+    "status": "implemented"
+  },
+  "freshwater_strategy": {
+    "module": null,
+    "status": "planned"
+  },
+  "good_growth_foundation": {
+    "module": null,
+    "status": "planned"
+  },
+  "ipsos": {
+    "module": "polls.importers.ipsos_import",
+    "status": "implemented"
+  },
+  "jl_partners": {
+    "module": null,
+    "status": "planned"
+  },
+  "lord_ashcroft": {
+    "module": "polls.importers.lord_ashcroft_import",
+    "status": "implemented"
+  },
+  "merlin_strategy": {
+    "module": null,
+    "status": "planned"
+  },
+  "more_in_common": {
+    "module": "polls.importers.more_in_common_import",
+    "status": "implemented"
+  },
+  "opinium": {
+    "module": "polls.importers.opinium_import",
+    "status": "implemented"
+  },
+  "stack_data_strategy": {
+    "module": null,
+    "status": "planned"
+  },
+  "stonehaven": {
+    "module": null,
+    "status": "planned"
+  },
+  "survation": {
+    "module": "polls.importers.survation_import",
+    "status": "implemented"
+  },
+  "techne": {
+    "module": "polls.importers.techne_import",
+    "status": "implemented"
+  },
+  "verian": {
+    "module": null,
+    "status": "planned"
+  },
+  "we_think": {
+    "module": null,
+    "status": "planned"
+  },
+  "whitestone_insight": {
+    "module": null,
+    "status": "planned"
+  },
+  "yougov": {
+    "module": "polls.importers.yougov_import",
+    "status": "implemented"
+  }
+}

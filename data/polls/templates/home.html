@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <h1>Election Data Console</h1>
+    <p>Run poll imports, refresh polling data, and manage model runs and outputs.</p>
+
+    <div class="action-grid action-grid-three">
+      <a class="button primary button-block" href="{{ url_for('import_poll_form') }}">Import Poll</a>
+      <form method="post" action="{{ url_for('update_polls') }}" class="inline-form button-form">
+        <button type="submit" class="button button-block">Update Polls</button>
+      </form>
+      <a class="button button-block" href="{{ url_for('poll_list') }}">View Polls</a>
+    </div>
+
+    <div class="action-grid action-grid-two">
+      <a class="button button-block" href="{{ url_for('model_run_form') }}">Run Model</a>
+      <a class="button button-block" href="{{ url_for('model_outputs') }}">View Model Outputs</a>
+    </div>
+  </section>
+{% endblock %}

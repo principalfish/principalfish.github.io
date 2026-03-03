@@ -1,72 +1,71 @@
-<!DOCTYPE html>
-<meta charset="utf-8">
-<head>
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Principal Fish</title>
+    <meta
+      name="description"
+      content="Static homepage for Principal Fish projects and single-page apps."
+    />
+    <link rel="icon" type="image/png" href="/imgs/logo.png" />
 
-	<title>Principal Fish</title>
-	<link rel="shortcut icon" href="imgs/logo.png">
-	<link type="text/css" rel="stylesheet" href="stylesheets/index.css"/>
-	<link type="text/css" rel="stylesheet" href="stylesheets/electionmaps/navbar.css"/>
-</head>
+    <script src="site/vendor/tailwindcdn.js"></script>
+    <script src="site/tailwind-config.js"></script>
+    <link rel="stylesheet" href="site/topbar.min.css" />
+    <link rel="stylesheet" href="site/styles.css" />
+  </head>
+  <body class="maps-page" data-topbar-home="true">
+    <div class="maps-background" aria-hidden="true"></div>
+    <main class="site-wrap homepage">
+      <header>
+        <h1 class="site-title home-title">
+          <img
+            class="home-title-icon"
+            src="/imgs/principal-fish-silly.svg"
+            alt="Silly principal fish icon"
+          />
+          principalfish
+        </h1>
+      </header>
 
-<body>
-	<header>
-		<h2> Home </h2>
-		<nav>
-				<ul>
-					<a href="/" class=>Home</a>
-				</ul>
+      <section class="top-rule homepage-top">
+        <h2 class="section-title">Pages</h2>
+        <div class="card-grid">
+          <a href="bio/" class="editorial-card app-card">
+            <p class="card-tag">Profile</p>
+            <div class="card-head">
+              <span class="card-icon card-icon-bio" aria-hidden="true">B</span>
+              <h3 class="card-title">Bio</h3>
+            </div>
+            <p class="card-copy">Text biography page with photos and background information.</p>
+            <p class="card-cta">Open bio</p>
+          </a>
 
-		    <ul>
-		      mail : principalfish@gmail.com
-		    </ul>
-		</nav>
-	</header>
+          <a href="electionmaps/" class="editorial-card app-card">
+            <p class="card-tag">Data</p>
+            <div class="card-head">
+              <img class="card-icon-image" src="/imgs/logo.png" alt="" />
+              <h3 class="card-title">Election Maps</h3>
+            </div>
+            <p class="card-copy">Interactive election map hosting page for visual data exploration.</p>
+            <p class="card-cta">Open maps</p>
+          </a>
 
-	<nav id="projections">
-			<h3 id="nav-current" class="navbaractive"><a href="/">Home</a></h3>
-			<h3><a href="/electionmaps/">UK Election Maps</a></h3>
+          <a href="guesstheyear/" class="editorial-card app-card">
+            <p class="card-tag game">Game</p>
+            <div class="card-head">
+              <span class="card-icon card-icon-game" aria-hidden="true">G</span>
+              <h3 class="card-title">Guess The Year</h3>
+            </div>
+            <p class="card-copy">Web game that challenges players to place events in time.</p>
+            <p class="card-cta">Open game</p>
+          </a>
+        </div>
+      </section>
+    </main>
 
-
-			<p id="copyright"> Copyright 2024 principalfish.co.uk</p>
-	</nav>
-
-
-	<div id="wrapper">
-			<div id="about">
-				<p>
-					I'm Phil. Born in Nottingham in 1988 I grew up in the North East of England,
-					going to high school in Morpeth.
-					I attended Durham University and studied Maths from 2006 to 2009.
-					After graduating I spent 6 years playing poker for a living.
-					Currently working as a software developer.
-				</p>
-
-				<p>
-					I have always loved maps and followed politics closely so decided to combine
-					the two and make a set of <a href="/electionmaps/">interactive UK Election Maps</a>.
-				</p>
-			
-
-			</div>
-
-
-	 	 <div id="me">
-				 <img src="imgs/me.jpg" alt="Idiot in Namibia" />
-			 <p>
-				 On top of a sand dune in Namibia.
-			 </p>
-		 </div>
-	</div>
-
-
-</body>
-
-
-<script>
-	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-	})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-	ga('create', 'UA-58696407-1', 'auto');
-	ga('send', 'pageview');
-</script>
+    <script type="module" src="site/topbar.min.js"></script>
+    <script type="module" src="site/main.js"></script>
+  </body>
+</html>

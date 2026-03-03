@@ -7,6 +7,7 @@ Top-level durable insights only.
 - Use `.agents/01-file-map.md` first to locate affected files quickly.
 - Treat `.agents/issues/` files as issue-level tracking: keep one active file per branch and name it from the branch (for example `issue-13.md`).
 - Keep user-facing docs in `README.md`; keep operational/internal detail in `.agents/`.
+- When documentation references one-off audit directories, prefer reproducible SQL checks against current tables unless that directory is guaranteed to exist.
 
 ## Data + DB
 
@@ -43,6 +44,8 @@ Top-level durable insights only.
 - Shared styles should remain centralized in `site/styles.css` to keep root, bio, and maps pages visually consistent.
 - Topbar is centralized via `site/topbar.js` + `site/topbar.css`; configure per-page behavior with body data attributes instead of duplicating page-specific header markup.
 - `npm run minify:electionmaps` now also builds `site/topbar.min.js` and `site/topbar.min.css`; pages should reference these minified topbar assets for served output.
+- GA4 should be wired with a `G-...` Measurement ID (not legacy `UA-...`), and the global site tag should be included in each static HTML entrypoint head.
+- For `electionmaps` history-driven route updates (`history.replaceState`), emit explicit GA4 `page_view` events to capture virtual navigation beyond initial page load.
 
 ## Quality + Risks
 

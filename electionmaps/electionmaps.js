@@ -89,6 +89,25 @@ const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
 
 let pollTrackerMetaLoaded = false;
 let pollTrackerLatestSnippet = '';
+let lastTrackedVirtualPagePath = `${window.location.pathname}${window.location.search}`;
+
+function trackVirtualPageView(nextUrl) {
+  if (typeof window.gtag !== 'function') return;
+
+  try {
+    const parsed = new URL(nextUrl, window.location.origin);
+    const pagePath = `${parsed.pathname}${parsed.search}`;
+    if (pagePath === lastTrackedVirtualPagePath) return;
+
+    lastTrackedVirtualPagePath = pagePath;
+    window.gtag('event', 'page_view', {
+      page_location: parsed.toString(),
+      page_path: pagePath,
+      page_title: document.title,
+    });
+  } catch (_error) {
+  }
+}
 
 function buildRouteSearchParams(view, electionId = null) {
   const params = new URLSearchParams(window.location.search);
@@ -111,6 +130,7 @@ function replaceRouteState(view, electionId = null) {
   const params = buildRouteSearchParams(view, electionId);
   const nextUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState({}, '', nextUrl);
+  trackVirtualPageView(nextUrl);
 }
 
 function encodePredictPayload(payload) {
@@ -1566,6 +1586,7 @@ function buildPredictShareUrl() {
 function replacePredictRouteStateFromInputs() {
   const nextUrl = buildPredictShareUrl();
   window.history.replaceState({}, '', nextUrl);
+  trackVirtualPageView(nextUrl);
 }
 
 async function sharePredictScenario() {

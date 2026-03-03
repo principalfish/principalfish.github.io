@@ -7,6 +7,9 @@
 - [x] Improve mobile wrapping for prediction subtitle + latest poll snippet
 - [x] Show latest poll snippet on separate line on desktop
 - [x] Set default map zoom readout to 100%
+- [x] Refresh README runbook references and troubleshooting accuracy
+- [x] Add GA4 tracking snippet across site pages
+- [x] Track electionmaps route changes as GA4 page views
 
 ## Notes
 - Track this issue in a branch-named file under `.agents/issues/`.
@@ -20,3 +23,6 @@
 - Validation: no editor errors in `site/styles.css` and rebuilt `site/styles.min.css`; ran `npm run minify:electionmaps`.
 - Updated zoom label calculation to be baseline-relative to `INITIAL_MAP_SCALE`, so initial map view remains slightly zoomed in but displays `100%` by default.
 - Validation: no editor errors in `electionmaps/electionmaps.js` and rebuilt `electionmaps/electionmaps.min.js`; ran `npm run minify:electionmaps`.
+- README pass: added explicit static-preview prerequisites (`Node.js + npm`, `Python 3`), documented both `--no-reset-existing` and `--reset-existing` UNS flags, and replaced stale `data/recovery/` troubleshooting reference with a direct SQL audit query for zero-valued `poll_rows`.
+- Added GA4 (`G-DF15MKHP0V`) global site tag to `index.html`, `bio/index.html`, `electionmaps/index.html`, `guesstheyear/index.html`, and `404.html` so page-load tracking works across the static site surface.
+- Added SPA-style GA4 virtual pageview tracking inside `electionmaps/electionmaps.js` for URL updates triggered by `replaceRouteState` and `replacePredictRouteStateFromInputs`, then rebuilt `electionmaps/electionmaps.min.js`.

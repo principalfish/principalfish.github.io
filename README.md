@@ -4,6 +4,10 @@ Contributor workflow notes (plans, internal docs, and task learnings) are mainta
 
 ## Static site local preview (`/`, `/bio`, `/electionmaps`)
 
+Prerequisites:
+- Node.js + npm (for frontend asset build steps)
+- Python 3 (for local static server)
+
 From repo root:
 
 ```bash
@@ -150,6 +154,7 @@ Useful options:
 - `--half-life-days 30`
 - `--dry-run`
 - `--no-reset-existing` (preserve existing `model_uns` elections and trend CSV; default behavior is to clear them before backfill)
+- `--reset-existing` (explicitly force reset behavior; enabled by default)
 
 ---
 
@@ -193,7 +198,11 @@ docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT type
 
 - **Many `0` regional poll rows**
 	- Current importers can default missing regional values to `0.0` for some source formats.
-	- Use reports under `data/recovery/` to audit poll-level zero percentages.
+	- Audit directly in DB, for example:
+
+```bash
+docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT poll_id, COUNT(*) AS zero_rows FROM poll_rows WHERE pct = 0 GROUP BY poll_id ORDER BY zero_rows DESC LIMIT 25;"
+```
 
 ---
 

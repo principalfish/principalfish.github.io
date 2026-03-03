@@ -2075,7 +2075,7 @@ function renderMapWithViewState() {
   renderChoroplethLegend(choroplethConfig);
 
   if (seatPreview) {
-    seatPreview.textContent = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(currentSeats.length)} seats (filters).`;
+    seatPreview.textContent = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(currentSeats.length)} seats.`;
   }
 }
 

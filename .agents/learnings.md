@@ -120,3 +120,12 @@ Append-only notes from completed tasks.
 - For percent-change choropleths, fixed semantic diverging colours (red negative, blue positive) are often easier to interpret than party-tinted positives; reserve party tinting for absolute share maps.
 - To keep root static pages visually aligned with election maps, reuse the same background primitives: `body.maps-page` and a top-level `.maps-background` layer from `site/styles.css`.
 - For `guesstheyear/`, prefer adding a local clone of the gradient layer (`.bluey-page` + `.bluey-background`) rather than importing full shared site CSS, to avoid unintentional typography/layout overrides.
+- Audit baseline: `data/run_tests.sh` currently passes cleanly (`103 passed`), so quality issues found in this pass are primarily latent runtime/performance/modularity risks rather than active test regressions.
+- `data/server.py` currently instantiates a new `Database()` (and therefore `create_engine`) per route call via `_get_db()`, which is a maintainability/performance hotspot even when behavior appears correct.
+- `data/server.py` poll import preview state is kept in global `PREVIEW_CACHE` without expiration/size controls; repeated preview operations can accumulate stale entries.
+- `guesstheyear/script.js` contains an implicit global assignment (`seed = ...`) in daily initialization, which can cause accidental cross-scope mutation.
+- `guesstheyear/app.py` challenge endpoint assumes a DB row exists and dereferences `row[...]` unguarded; empty/misaligned `wikipedia_history.db` can crash the endpoint.
+- Large monolithic files (`election-maps/election-maps.js`, `guesstheyear/script.js`, `data/server.py`) are now the primary modularization risk areas and should be split by domain responsibility before further feature growth.
+- In Flask local tooling (`data/server.py`), memoizing a single `Database` wrapper at module scope avoids repeated SQLAlchemy engine creation per request while keeping current route code unchanged.
+- Small helper extraction in `guesstheyear/script.js` (daily save/load + control toggling + daily index calculation) is a low-risk way to chip away at monolithic-file complexity without changing gameplay behavior.
+- Implicit globals in browser scripts can hide for long periods; converting to explicit helper-returned `const` values both fixes the bug and improves testability/readability of initialization flows.

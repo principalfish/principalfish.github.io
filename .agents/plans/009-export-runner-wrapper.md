@@ -92,3 +92,7 @@
 - Updated `vote share change` to a fixed diverging red↔blue ramp (negative red, positive blue) for clearer semantic interpretation; plain `vote share` remains party-colour based.
 - Applied the election-maps “bluey” gradient background consistently across root static pages (`/`, `/bio/`, `/404`) by using the same `maps-page` + `maps-background` structure used on `election-maps/index.html`.
 - `guesstheyear/` now uses an equivalent local background layer (`.bluey-page` + `.bluey-background`) matching the election-maps gradient while keeping existing Bootstrap/game UI behavior unchanged.
+
+## Closeout
+- Issue 009 is complete and closed.
+- All requested election-map UX/filter/choropleth updates were implemented and recorded in this plan and `.agents/learnings.md`.

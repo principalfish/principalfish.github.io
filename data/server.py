@@ -110,10 +110,14 @@ IMPORTERS = {
 }
 
 PREVIEW_CACHE: dict[str, dict] = {}
+_DB: Database | None = None
 
 
 def _get_db() -> Database:
-    return Database()
+    global _DB
+    if _DB is None:
+        _DB = Database()
+    return _DB
 
 
 def _choices_for_model_form(db: Database) -> dict[str, object]:

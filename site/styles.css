@@ -339,6 +339,21 @@ a {
   margin: 0.35rem 0 0;
   color: #334155;
   font: 700 1.02rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.32rem;
+  row-gap: 0.12rem;
+}
+
+.maps-subtitle-main,
+.maps-subtitle-latest {
+  max-width: 100%;
+}
+
+.maps-subtitle-has-latest .maps-subtitle-latest::before {
+  content: "·";
+  margin-right: 0.32rem;
 }
 
 .maps-app {
@@ -1467,6 +1482,16 @@ a {
 
   .maps-topbar-inner {
     padding: 0.65rem 0;
+  }
+
+  .maps-subtitle {
+    display: grid;
+    gap: 0.18rem;
+    line-height: 1.28;
+  }
+
+  .maps-subtitle-has-latest .maps-subtitle-latest::before {
+    content: none;
   }
 }
 

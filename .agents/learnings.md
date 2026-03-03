@@ -28,6 +28,7 @@ Top-level durable insights only.
 
 - Poll tracker now uses a true date-based x-axis when trend dates are parseable ISO dates, and expands to daily timeline points with carry-forward values so missing poll days render as flat status-quo segments.
 - Predict 2029 now supports shareable URL state via `predict` query param; links restore regional share overrides and England expanded/collapsed state.
+- `mapsSubtitle` is now rendered as segmented DOM nodes (main summary + latest poll snippet) so mobile CSS can stack lines cleanly; avoid composing long one-line subtitle strings for responsive map headers.
 
 ## Electionmaps
 

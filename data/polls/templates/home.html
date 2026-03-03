@@ -16,5 +16,11 @@
       <a class="button button-block" href="{{ url_for('model_run_form') }}">Run Model</a>
       <a class="button button-block" href="{{ url_for('model_outputs') }}">View Model Outputs</a>
     </div>
+
+    <div class="action-grid action-grid-two">
+      <form method="post" action="{{ url_for('export_current_simulation') }}" class="inline-form button-form">
+        <button type="submit" class="button button-block">Export Simulation JSON</button>
+      </form>
+    </div>
   </section>
 {% endblock %}

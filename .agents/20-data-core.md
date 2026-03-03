@@ -20,3 +20,5 @@
 
 - Local runtime expects PostgreSQL/PostGIS.
 - Backend orchestration is centered on `server.py` + script entrypoints.
+- Local `/models/run` execution in `data/server.py` now auto-refreshes `electionmaps/data/results/prediction-simulation.json` after a successful non-dry-run UNS run.
+- Local console also exposes a manual `/exports/current-simulation` action for one-click refresh of `prediction-simulation.json` without triggering a model run.

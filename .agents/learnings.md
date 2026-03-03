@@ -6,6 +6,7 @@ Top-level durable insights only.
 
 - Use `.agents/01-file-map.md` first to locate affected files quickly.
 - Treat `.agents/issues/` files as issue-level tracking: keep one active file per branch and name it from the branch (for example `issue-13.md`).
+- When starting work on an existing branch, resolve and update the matching `.agents/issues/<branch>.md` file first (for example `issue-18` -> `.agents/issues/issue-18.md`).
 - Keep user-facing docs in `README.md`; keep operational/internal detail in `.agents/`.
 - When documentation references one-off audit directories, prefer reproducible SQL checks against current tables unless that directory is guaranteed to exist.
 
@@ -36,6 +37,12 @@ Top-level durable insights only.
 - Keep map interaction state centralized and re-render from canonical seat datasets to avoid stale filters/search/highlights.
 - Route/path naming is now `electionmaps` (not `election-maps`); keep links/scripts/exports/docs aligned when making path changes.
 - Mobile UX now uses an off-canvas elections drawer on `max-width: 980px`, implemented with page-local assets (`electionmaps/mobile-sidebar.css` + `electionmaps/mobile-sidebar.js`) so desktop layout stays untouched.
+- Electionmaps mobile UX now works as a unified shell: full-screen election picker, `Map/Seats/Totals` switch, and a bottom-sheet right panel with collapsed/half/full states driven by `maps-mobile-*` classes on `.maps-page`.
+
+## Data Server
+
+- Local UNS runs from `data/server.py` now auto-export the latest simulation payload to `electionmaps/data/results/prediction-simulation.json` after successful non-dry-run execution, using `data/scripts/export_non_simulation_elections.py --current-simulation`.
+- Data console home now includes a manual export-only action (`/exports/current-simulation`) so `prediction-simulation.json` can be refreshed independently of running the model.
 
 ## Frontend + Assets
 

@@ -5,12 +5,25 @@
       "YouGov  (MRP)"
     ],
     "format_counts": {
-      "unknown": 7,
-      "pdf": 57,
+      "pdf": 58,
+      "unknown": 6,
       "html": 1
     },
     "parser_identifiers": [
       "yougov"
+    ]
+  },
+  "freshwater_strategy": {
+    "pollster_examples": [
+      "Freshwater Strategy"
+    ],
+    "format_counts": {
+      "html": 1,
+      "xlsx": 4,
+      "unknown": 11
+    },
+    "parser_identifiers": [
+      "freshwater_strategy"
     ]
   },
   "opinium": {
@@ -31,9 +44,10 @@
       "Find Out Now"
     ],
     "format_counts": {
-      "xlsx": 62,
+      "xlsx": 61,
+      "pdf": 1,
       "html": 3,
-      "unknown": 6
+      "unknown": 5
     },
     "parser_identifiers": [
       "find_out_now"
@@ -46,8 +60,7 @@
       "More in Common (MRP)"
     ],
     "format_counts": {
-      "xlsx": 60,
-      "pdf": 1,
+      "xlsx": 61,
       "html": 2,
       "unknown": 20,
       "social_post": 1
@@ -103,18 +116,6 @@
     },
     "parser_identifiers": [
       "jl_partners"
-    ]
-  },
-  "freshwater_strategy": {
-    "pollster_examples": [
-      "Freshwater Strategy"
-    ],
-    "format_counts": {
-      "xlsx": 4,
-      "unknown": 11
-    },
-    "parser_identifiers": [
-      "freshwater_strategy"
     ]
   },
   "bmg_research": {

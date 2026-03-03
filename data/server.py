@@ -48,6 +48,8 @@ TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
 UPDATE_POLLS_SCRIPT = DATA_DIR / "update_polls.sh"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "uns" / "run_uns_model.py"
+EXPORT_ELECTION_SCRIPT = DATA_DIR / "scripts" / "export_non_simulation_elections.py"
+PREDICTION_SIMULATION_OUTPUT = REPO_ROOT / "electionmaps" / "data" / "results" / "prediction-simulation.json"
 UNS_TREND_CACHE_CSV = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.csv"
 UNS_NAME_DATE_PATTERN = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
 
@@ -243,6 +245,39 @@ def update_polls():
     )
 
 
+@app.route("/exports/current-simulation", methods=["POST"])
+def export_current_simulation():
+    if not EXPORT_ELECTION_SCRIPT.exists():
+        flash(f"Export script not found: {EXPORT_ELECTION_SCRIPT}")
+        return redirect(url_for("home"))
+
+    command = [
+        sys.executable,
+        str(EXPORT_ELECTION_SCRIPT),
+        "--current-simulation",
+        "--output-file",
+        str(PREDICTION_SIMULATION_OUTPUT),
+    ]
+    result = subprocess.run(
+        command,
+        cwd=str(DATA_DIR),
+        capture_output=True,
+        text=True,
+        timeout=900,
+    )
+
+    return render_template(
+        "command_result.html",
+        title="Export Current Simulation JSON",
+        command=shlex.join(command),
+        stdout=result.stdout,
+        stderr=result.stderr,
+        return_code=result.returncode,
+        back_endpoint="home",
+        back_label="Back to home",
+    )
+
+
 @app.route("/models/run", methods=["GET"])
 def model_run_form():
     db = _get_db()
@@ -331,11 +366,43 @@ def model_run_execute():
         timeout=1800,
     )
 
+    export_result = None
+    if dry_run_value != "true" and result.returncode == 0:
+        if not EXPORT_ELECTION_SCRIPT.exists():
+            export_result = {
+                "command": "",
+                "stdout": "",
+                "stderr": f"Export script not found: {EXPORT_ELECTION_SCRIPT}",
+                "return_code": 1,
+            }
+        else:
+            export_command = [
+                sys.executable,
+                str(EXPORT_ELECTION_SCRIPT),
+                "--current-simulation",
+                "--output-file",
+                str(PREDICTION_SIMULATION_OUTPUT),
+            ]
+            export_proc = subprocess.run(
+                export_command,
+                cwd=str(DATA_DIR),
+                capture_output=True,
+                text=True,
+                timeout=900,
+            )
+            export_result = {
+                "command": shlex.join(export_command),
+                "stdout": export_proc.stdout,
+                "stderr": export_proc.stderr,
+                "return_code": export_proc.returncode,
+            }
+
     run_result = {
         "command": shlex.join(command),
         "stdout": result.stdout,
         "stderr": result.stderr,
         "return_code": result.returncode,
+        "export_result": export_result,
     }
 
     return render_template(

@@ -82,6 +82,16 @@
       <pre class="terminal-output">{{ run_result.stdout or "(no stdout)" }}</pre>
       <h4>Stderr</h4>
       <pre class="terminal-output">{{ run_result.stderr or "(no stderr)" }}</pre>
+
+      {% if run_result.export_result %}
+        <h4>Simulation JSON Export</h4>
+        <p><strong>Command:</strong> {{ run_result.export_result.command }}</p>
+        <p><strong>Exit code:</strong> {{ run_result.export_result.return_code }}</p>
+        <h5>Stdout</h5>
+        <pre class="terminal-output">{{ run_result.export_result.stdout or "(no stdout)" }}</pre>
+        <h5>Stderr</h5>
+        <pre class="terminal-output">{{ run_result.export_result.stderr or "(no stderr)" }}</pre>
+      {% endif %}
     </section>
   {% endif %}
 {% endblock %}

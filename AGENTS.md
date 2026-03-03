@@ -57,6 +57,7 @@ Include:
 
 ## 6) Git branch and commit workflow
 
+- Do not create new branches or push any branch without explicit user approval in the current conversation.
 - Create a dedicated branch per task; do not work directly on `main`.
 - Branch naming:
 	- `feat/<short-topic>` for features

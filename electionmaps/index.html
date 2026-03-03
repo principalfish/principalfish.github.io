@@ -10,12 +10,7 @@
     />
     <link rel="icon" type="image/png" href="/imgs/logo.png" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="stylesheet" href="../site/vendor/fonts/google-fonts.css" />
     <link rel="stylesheet" href="../site/styles.min.css" />
   </head>
   <body class="maps-page">
@@ -185,12 +180,11 @@
               <div class="maps-polltracker-controls">
                 <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked /> Seats</label>
                 <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked /> Vote %</label>
-              </div>
-
-              <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
-                <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
-                <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
-                <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="90">Last 90</button>
+                <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
+                  <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
+                  <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
+                  <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="90">Last 90</button>
+                </div>
               </div>
 
               <div id="mapsPollTrackerPartyControls" class="maps-polltracker-party-controls" aria-label="Poll tracker party toggles"></div>

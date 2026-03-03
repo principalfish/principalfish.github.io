@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import math
 import sys
 from collections import Counter, defaultdict
@@ -17,6 +18,15 @@ from sqlalchemy import delete, select, text
 DATA_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = DATA_DIR.parent
 TREND_CACHE_CSV = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.csv"
+TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
+TREND_CACHE_FIELDS = [
+    "election_id",
+    "election_name",
+    "as_of_date",
+    "party_id",
+    "seats_won",
+    "vote_pct",
+]
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
@@ -39,6 +49,13 @@ class SimulationConfig:
 class SeatRef:
     id: int
     region_id: int | None
+
+
+@dataclass
+class LatestPollUsage:
+    pollster: str
+    fieldwork_start: date
+    fieldwork_end: date
 
 
 def existing_trend_dates() -> set[date]:
@@ -231,9 +248,12 @@ def build_reference_data(db: Database, map_id: int):
 
     all_parties = db.get_all_parties()
     party_name_by_id = {party.id: party.name for party in all_parties}
-    party_colour_by_id = {party.id: party.colour for party in all_parties}
     pollster_weight_by_id = {
         pollster.id: (pollster.weight if pollster.weight is not None else 1.0)
+        for pollster in db.get_all_pollsters()
+    }
+    pollster_name_by_id = {
+        pollster.id: pollster.name
         for pollster in db.get_all_pollsters()
     }
 
@@ -244,8 +264,8 @@ def build_reference_data(db: Database, map_id: int):
         region_by_id,
         region_by_seat_id,
         party_name_by_id,
-        party_colour_by_id,
         pollster_weight_by_id,
+        pollster_name_by_id,
     )
 
 
@@ -310,10 +330,12 @@ def aggregate_poll_shares(
     as_of_date: date,
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
+    pollster_name_by_id: dict[int, str],
 ):
     polls = db.get_polls_for_map(map_id)
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
+    latest_poll_usage: LatestPollUsage | None = None
 
     decay_lambda = math.log(2.0) / max(half_life_days, 0.001)
 
@@ -335,6 +357,22 @@ def aggregate_poll_shares(
         if not rows:
             continue
 
+        candidate_poll = LatestPollUsage(
+            pollster=str(pollster_name_by_id.get(poll.pollster_id, f"Pollster {poll.pollster_id}")),
+            fieldwork_start=poll.fieldwork_start,
+            fieldwork_end=poll.fieldwork_end,
+        )
+        if latest_poll_usage is None or (
+            candidate_poll.fieldwork_end,
+            candidate_poll.fieldwork_start,
+            int(poll.id),
+        ) > (
+            latest_poll_usage.fieldwork_end,
+            latest_poll_usage.fieldwork_start,
+            -1,
+        ):
+            latest_poll_usage = candidate_poll
+
         for row in rows:
             if row.party_id is None:
                 continue
@@ -342,7 +380,43 @@ def aggregate_poll_shares(
             weighted_sums[key] += float(row.percentage) * poll_weight
             total_weights[key] += poll_weight
 
-    return weighted_sums, total_weights
+    return weighted_sums, total_weights, latest_poll_usage
+
+
+def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:
+    if latest_poll_usage is None:
+        return ""
+
+    start = latest_poll_usage.fieldwork_start.isoformat()
+    end = latest_poll_usage.fieldwork_end.isoformat()
+    fieldwork_text = start if start == end else f"{start} to {end}"
+    return f"Latest poll used: {latest_poll_usage.pollster} ({fieldwork_text})"
+
+
+def write_trend_cache_meta(
+    as_of_date: date,
+    since_date: date,
+    latest_poll_usage: LatestPollUsage | None,
+) -> None:
+    TREND_CACHE_META_JSON.parent.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        "as_of_date": as_of_date.isoformat(),
+        "since_date": since_date.isoformat(),
+        "latest_poll_snippet": latest_poll_snippet(latest_poll_usage),
+        "latest_poll": (
+            {
+                "pollster": latest_poll_usage.pollster,
+                "fieldwork_start": latest_poll_usage.fieldwork_start.isoformat(),
+                "fieldwork_end": latest_poll_usage.fieldwork_end.isoformat(),
+            }
+            if latest_poll_usage is not None
+            else None
+        ),
+    }
+
+    with TREND_CACHE_META_JSON.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, separators=(",", ":"))
 
 
 def compute_region_diffs(
@@ -557,8 +631,6 @@ def update_trend_cache_csv(
     election_name: str,
     as_of_date: date,
     projected_votes: list[dict[str, object]],
-    party_name_by_id: dict[int, str],
-    party_colour_by_id: dict[int, str | None],
 ) -> None:
     TREND_CACHE_CSV.parent.mkdir(parents=True, exist_ok=True)
 
@@ -581,20 +653,17 @@ def update_trend_cache_csv(
                     continue
                 if int(row.get("election_id", "0") or "0") == election_id:
                     continue
-                existing_rows.append(row)
+                existing_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
 
     new_rows = []
-    for party_id in sorted(vote_totals_by_party.keys(), key=lambda key: party_name_by_id.get(key, "")):
+    for party_id in sorted(vote_totals_by_party.keys()):
         new_rows.append(
             {
                 "election_id": str(election_id),
                 "election_name": election_name,
                 "as_of_date": as_of_date.isoformat(),
                 "party_id": str(party_id),
-                "party_name": party_name_by_id.get(party_id, str(party_id)),
-                "party_colour": party_colour_by_id.get(party_id) or "",
                 "seats_won": str(seats_by_party.get(party_id, 0)),
-                "vote_total_sum": f"{vote_totals_by_party.get(party_id, 0.0):.6f}",
                 "vote_pct": (
                     f"{((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0):.6f}"
                     if total_votes > 0
@@ -604,22 +673,12 @@ def update_trend_cache_csv(
         )
 
     combined = existing_rows + new_rows
-    combined.sort(key=lambda row: (int(row["election_id"]), row["party_name"]))
+    combined.sort(key=lambda row: (int(row["election_id"]), int(row.get("party_id") or "0")))
 
     with TREND_CACHE_CSV.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=[
-                "election_id",
-                "election_name",
-                "as_of_date",
-                "party_id",
-                "party_name",
-                "party_colour",
-                "seats_won",
-                "vote_total_sum",
-                "vote_pct",
-            ],
+            fieldnames=TREND_CACHE_FIELDS,
         )
         writer.writeheader()
         writer.writerows(combined)
@@ -628,7 +687,7 @@ def update_trend_cache_csv(
 def run_simulation(
     db: Database,
     cfg: SimulationConfig,
-) -> tuple[str, list[dict[str, object]], list[dict[str, object]], Counter]:
+) -> tuple[str, list[dict[str, object]], list[dict[str, object]], Counter, LatestPollUsage | None]:
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date
 
@@ -639,8 +698,8 @@ def run_simulation(
         region_by_id,
         region_by_seat_id,
         party_name_by_id,
-        party_colour_by_id,
         pollster_weight_by_id,
+        pollster_name_by_id,
     ) = build_reference_data(db, poll_map.id)
 
     (
@@ -650,13 +709,14 @@ def run_simulation(
         baseline_region_shares,
     ) = build_baseline_vote_state(db, baseline.id, region_by_seat_id)
 
-    weighted_sums, total_weights = aggregate_poll_shares(
+    weighted_sums, total_weights, latest_poll_usage = aggregate_poll_shares(
         db,
         poll_map.id,
         cfg.since_date,
         cfg.as_of_date,
         cfg.half_life_days,
         pollster_weight_by_id,
+        pollster_name_by_id,
     )
 
     party_universe, region_swings, region_diff_rows = compute_region_diffs(
@@ -691,7 +751,7 @@ def run_simulation(
         )
 
     if cfg.dry_run:
-        return election_name, projected_votes, region_diff_rows, winners_by_party
+        return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
     delete_model_uns_for_as_of_date(db, cfg.as_of_date)
 
@@ -709,11 +769,15 @@ def run_simulation(
         persisted_name,
         cfg.as_of_date,
         projected_votes,
-        party_name_by_id,
-        party_colour_by_id,
     )
 
-    return persisted_name, projected_votes, region_diff_rows, winners_by_party
+    write_trend_cache_meta(
+        cfg.as_of_date,
+        cfg.since_date,
+        latest_poll_usage,
+    )
+
+    return persisted_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
 
 def main() -> None:
@@ -742,7 +806,7 @@ def main() -> None:
             dry_run=cfg.dry_run,
         )
 
-        election_name, projected_votes, region_diff_rows, winners_by_party = run_simulation(db, run_cfg)
+        election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage = run_simulation(db, run_cfg)
 
         seat_ids = {int(row["seat_id"]) for row in projected_votes}
 
@@ -757,6 +821,9 @@ def main() -> None:
         print(f"Projected vote rows: {len(projected_votes)}")
         if len(run_dates) > 1:
             print(f"Backfill progress: {index}/{len(run_dates)}")
+        snippet = latest_poll_snippet(latest_poll_usage)
+        if snippet:
+            print(snippet)
 
         print("Top projected seat winners:")
         for party_name, seats in winners_by_party.most_common(8):

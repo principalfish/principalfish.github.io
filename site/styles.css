@@ -12,6 +12,29 @@
   box-sizing: border-box;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.32) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.32);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.44);
+}
+
 body {
   margin: 0;
   background: var(--paper);
@@ -479,6 +502,7 @@ a {
   padding: 0.2rem 0.24rem;
   text-align: center;
   border-bottom: 1px solid rgba(15, 23, 42, 0.09);
+  background: #f7fbff;
 }
 
 .maps-predict-grid-table th:first-child,
@@ -492,7 +516,7 @@ a {
 .maps-predict-grid-table th {
   position: sticky;
   top: 0;
-  z-index: 4;
+  z-index: 6;
   background: #eef4fb;
   color: #1e293b;
   font: 700 0.73rem/1.1 "DM Sans", "Segoe UI", sans-serif;
@@ -500,8 +524,12 @@ a {
 }
 
 .maps-predict-grid-table th:first-child {
-  z-index: 5;
+  z-index: 7;
   background: #eef4fb;
+}
+
+.maps-predict-grid-table td:first-child {
+  z-index: 2;
 }
 
 .maps-predict-grid-th-label {
@@ -1162,6 +1190,7 @@ a {
 .maps-polltracker-controls {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.45rem;
 }
 
@@ -1169,7 +1198,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  margin-top: -0.1rem;
+  margin-left: auto;
 }
 
 .maps-polltracker-range-btn {

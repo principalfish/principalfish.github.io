@@ -17,7 +17,7 @@
 - `electionmaps/electionmaps.js`: interaction scaffold for maps viewport (zoom/pan/control wiring).
 - `site/vendor/`: local copies of third-party frontend dependencies referenced by static pages.
 - `designs/`: visual concept preview pages for homepage direction.
-- `server.sh`: runs `python3 -m http.server`.
+- `server.sh`: runs local frontend asset automation (`npm run vendor:d3`, `npm run minify:electionmaps`) and then serves via `python3 -m http.server` (default `PORT=8000`, override with `PORT=...`).
 - `404.html`, `CNAME`: static hosting/domain behavior.
 
 ## Working assumptions

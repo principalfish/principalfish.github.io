@@ -2,6 +2,25 @@ Hosting for principalfish.co.uk
 
 Contributor workflow notes (plans, internal docs, and task learnings) are maintained in `AGENTS.md` and `.agents/README.md`.
 
+## Static site local preview (`/`, `/bio`, `/electionmaps`)
+
+From repo root:
+
+```bash
+./server.sh
+```
+
+`server.sh` now runs frontend asset build steps before serving:
+- `npm run vendor:d3`
+- `npm run minify:electionmaps`
+
+Then it starts `python3 -m http.server` (default port `8000`).
+To use a different port:
+
+```bash
+PORT=8001 ./server.sh
+```
+
 ## Data subsystem setup and runbook
 
 This guide covers local setup for the `data/` part of the repo end-to-end:

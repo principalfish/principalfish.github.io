@@ -1,7 +1,6 @@
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-import { feature as topojsonFeature, mesh as topojsonMesh } from 'https://cdn.jsdelivr.net/npm/topojson-client@3/+esm';
+import * as d3 from '../site/vendor/d3.v7.esm.js';
+import { feature as topojsonFeature, mesh as topojsonMesh } from '../site/vendor/topojson-client.v3.esm.js';
 
-const viewport = document.getElementById('mapsViewport');
 const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');
@@ -51,6 +50,7 @@ const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
 let currentSort = { key: 'seats', direction: 'desc' };
 let currentManifest = null;
 let manifestPartiesByKey = {};
+let manifestPartiesById = new Map();
 let manifestRegionsByMapId = {};
 let voteTotalsExpanded = false;
 let selectedSeatRow = null;
@@ -82,10 +82,13 @@ let pollTrackerModeLinkEl = null;
 let pollTrackerDataLoaded = false;
 let pollTrackerTimeline = [];
 let pollTrackerSeriesByParty = new Map();
-let pollTrackerPartyMetaByName = new Map();
 let pollTrackerRangeSelection = 'all';
 
 const POLL_TRACKER_CSV_PATH = 'data/results/model_output_trends.csv';
+const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
+
+let pollTrackerMetaLoaded = false;
+let pollTrackerLatestSnippet = '';
 
 function buildRouteSearchParams(view, electionId = null) {
   const params = new URLSearchParams(window.location.search);
@@ -241,6 +244,25 @@ async function fetchResource(url, parser) {
   return parser(response);
 }
 
+async function loadPollTrackerMetaIfNeeded() {
+  if (pollTrackerMetaLoaded) return;
+
+  try {
+    const payload = await fetchJson(POLL_TRACKER_META_PATH);
+    pollTrackerLatestSnippet = String(payload?.latest_poll_snippet || '').trim();
+  } catch (_error) {
+    pollTrackerLatestSnippet = '';
+  }
+
+  pollTrackerMetaLoaded = true;
+}
+
+function withLatestPollSubtitle(baseText) {
+  const snippet = String(pollTrackerLatestSnippet || '').trim();
+  if (!snippet) return baseText;
+  return `${baseText} · ${snippet}`;
+}
+
 async function fetchJson(url) {
   return fetchResource(url, (response) => response.json());
 }
@@ -283,61 +305,90 @@ function pollTrackerDateLabel(electionName, fallbackId) {
 function parsePollTrackerData(csvText) {
   const rows = d3.csvParse(csvText, (row) => {
     const electionId = Number(row.election_id);
+    const partyId = Number(row.party_id);
     const seats = Number(row.seats_won);
     const votePct = Number(row.vote_pct);
     if (!Number.isFinite(electionId)) return null;
+    if (!Number.isFinite(partyId)) return null;
     if (!Number.isFinite(seats) || !Number.isFinite(votePct)) return null;
+
+    const electionName = String(row.election_name || '');
+    const asOfDateRaw = String(row.as_of_date || '').trim();
+    const unsDateMatch = electionName.match(/UNS\s+(\d{4}-\d{2}-\d{2})/);
+    const manifestParty = manifestPartiesById.get(partyId);
+    const normalizedPartyKey = normalizePartyKey(manifestParty?.key || manifestParty?.name || String(partyId));
+    const partyName = manifestParty?.name || labelParty(normalizedPartyKey) || `Party ${partyId}`;
 
     return {
       electionId,
-      electionName: String(row.election_name || ''),
-      partyName: String(row.party_name || 'Other'),
-      partyColour: String(row.party_colour || '#9CA3AF'),
+      partyId,
+      partyKey: String(partyId),
+      asOfDate: unsDateMatch?.[1] || asOfDateRaw,
+      electionName,
+      partyName,
       seats,
       votePct,
     };
   }).filter(Boolean);
 
-  const byElectionId = new Map();
+  const timelineByDateKey = new Map();
   const byParty = new Map();
   const partyMeta = new Map();
 
+  const toDateSortValue = (value, fallback) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    return String(fallback);
+  };
+
   rows.forEach((row) => {
-    if (!byElectionId.has(row.electionId)) {
-      byElectionId.set(row.electionId, {
+    const dateKey = row.asOfDate || pollTrackerDateLabel(row.electionName, row.electionId);
+    const existingTimelineEntry = timelineByDateKey.get(dateKey);
+    if (!existingTimelineEntry || row.electionId > existingTimelineEntry.electionId) {
+      timelineByDateKey.set(dateKey, {
+        dateKey,
         electionId: row.electionId,
-        label: pollTrackerDateLabel(row.electionName, row.electionId),
-        rows: [],
+        sortValue: toDateSortValue(dateKey, row.electionId),
+        label: row.asOfDate || pollTrackerDateLabel(row.electionName, row.electionId),
       });
     }
-    byElectionId.get(row.electionId).rows.push(row);
 
-    if (!byParty.has(row.partyName)) byParty.set(row.partyName, new Map());
-    byParty.get(row.partyName).set(row.electionId, row);
+    if (!byParty.has(row.partyKey)) byParty.set(row.partyKey, new Map());
+    const byDateKey = byParty.get(row.partyKey);
+    const existingPartyDateRow = byDateKey.get(dateKey);
+    if (!existingPartyDateRow || row.electionId > existingPartyDateRow.electionId) {
+      byDateKey.set(dateKey, row);
+    }
 
-    if (!partyMeta.has(row.partyName)) {
-      partyMeta.set(row.partyName, {
+    if (!partyMeta.has(row.partyKey)) {
+      const manifestParty = Number.isFinite(row.partyId) ? manifestPartiesById.get(row.partyId) : null;
+      const normalizedPartyKey = normalizePartyKey(manifestParty?.key || row.partyName);
+      partyMeta.set(row.partyKey, {
         name: row.partyName,
-        colour: row.partyColour || '#9CA3AF',
+        colour: manifestParty?.colour || colourParty(normalizedPartyKey),
       });
     }
   });
 
-  const timeline = Array.from(byElectionId.values()).sort((a, b) => a.electionId - b.electionId);
+  const timeline = Array.from(timelineByDateKey.values())
+    .sort((a, b) => {
+      if (a.sortValue === b.sortValue) return a.electionId - b.electionId;
+      return a.sortValue.localeCompare(b.sortValue);
+    });
 
   const seriesByParty = new Map();
-  byParty.forEach((rowsByElection, partyName) => {
+  byParty.forEach((rowsByDateKey, partyKey) => {
     const seats = [];
     const votePct = [];
     timeline.forEach((entry) => {
-      const row = rowsByElection.get(entry.electionId);
+      const row = rowsByDateKey.get(entry.dateKey);
       seats.push(row ? Number(row.seats || 0) : null);
       votePct.push(row ? Number(row.votePct || 0) : null);
     });
 
-    seriesByParty.set(partyName, {
-      partyName,
-      colour: partyMeta.get(partyName)?.colour || '#9CA3AF',
+    seriesByParty.set(partyKey, {
+      partyKey,
+      partyName: partyMeta.get(partyKey)?.name || partyKey,
+      colour: partyMeta.get(partyKey)?.colour || '#9CA3AF',
       seats,
       votePct,
       latestSeats: Number(seats[seats.length - 1] || 0),
@@ -351,12 +402,6 @@ function getPollTrackerSelectedParties() {
   return Array.from(document.querySelectorAll('.maps-polltracker-party-toggle input[type="checkbox"]'))
     .filter((input) => input.checked)
     .map((input) => input.value);
-}
-
-function hasPollTrackerMetricEnabled() {
-  const seatsEnabled = Boolean(pollTrackerMetricSeatsInput?.checked);
-  const votesEnabled = Boolean(pollTrackerMetricVotesInput?.checked);
-  return seatsEnabled || votesEnabled;
 }
 
 function renderPollTrackerChart() {
@@ -411,7 +456,7 @@ function renderPollTrackerChart() {
     .range([0, innerWidth]);
 
   const selectedSeries = selectedParties
-    .map((partyName) => pollTrackerSeriesByParty.get(partyName))
+    .map((partyKey) => pollTrackerSeriesByParty.get(partyKey))
     .filter(Boolean)
     .map((series) => ({
       ...series,
@@ -602,26 +647,26 @@ function renderPollTrackerPartyControls() {
   const isOtherParty = (name) => /^others?$/.test(normalizePartyName(name));
   const isGreenParty = (name) => normalizePartyName(name) === 'green';
 
-  const defaultSelectedPartyNames = partyRows
+  const defaultSelectedPartyKeys = partyRows
     .filter((row) => !isOtherParty(row.partyName))
     .slice(0, 6)
-    .map((row) => row.partyName);
+    .map((row) => row.partyKey);
 
   const greenRow = partyRows.find((row) => isGreenParty(row.partyName));
-  if (greenRow && !defaultSelectedPartyNames.includes(greenRow.partyName)) {
-    const removableIndex = defaultSelectedPartyNames.findIndex((name) => !isGreenParty(name));
+  if (greenRow && !defaultSelectedPartyKeys.includes(greenRow.partyKey)) {
+    const removableIndex = defaultSelectedPartyKeys.findIndex((key) => key !== greenRow.partyKey);
     if (removableIndex >= 0) {
-      defaultSelectedPartyNames.splice(removableIndex, 1);
-    } else if (defaultSelectedPartyNames.length >= 6) {
-      defaultSelectedPartyNames.pop();
+      defaultSelectedPartyKeys.splice(removableIndex, 1);
+    } else if (defaultSelectedPartyKeys.length >= 6) {
+      defaultSelectedPartyKeys.pop();
     }
 
-    if (defaultSelectedPartyNames.length < 6) {
-      defaultSelectedPartyNames.push(greenRow.partyName);
+    if (defaultSelectedPartyKeys.length < 6) {
+      defaultSelectedPartyKeys.push(greenRow.partyKey);
     }
   }
 
-  const defaultSelectedPartySet = new Set(defaultSelectedPartyNames);
+  const defaultSelectedPartySet = new Set(defaultSelectedPartyKeys);
 
   pollTrackerPartyControls.innerHTML = '';
 
@@ -631,8 +676,8 @@ function renderPollTrackerPartyControls() {
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.value = row.partyName;
-    checkbox.checked = defaultSelectedPartySet.has(row.partyName);
+    checkbox.value = row.partyKey;
+    checkbox.checked = defaultSelectedPartySet.has(row.partyKey);
     checkbox.addEventListener('change', () => {
       renderPollTrackerChart();
     });
@@ -659,7 +704,6 @@ async function loadPollTrackerDataIfNeeded() {
 
   pollTrackerTimeline = parsed.timeline;
   pollTrackerSeriesByParty = parsed.seriesByParty;
-  pollTrackerPartyMetaByName = parsed.partyMeta;
   pollTrackerDataLoaded = true;
 }
 
@@ -675,7 +719,8 @@ async function activatePollTrackerMode() {
   setPollTrackerNavState(true);
 
   setPollTrackerLayoutVisible(true);
-  if (subtitle) subtitle.textContent = 'Poll tracker · model output trends';
+  await loadPollTrackerMetaIfNeeded();
+  if (subtitle) subtitle.textContent = withLatestPollSubtitle('Poll tracker · model output trends');
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
   replaceRouteState('polltracker');
 
@@ -894,6 +939,23 @@ function resolveElectionFiles(manifest, election) {
 function hydrateManifestSettings(manifest) {
   const settings = manifest?.settings || {};
   manifestPartiesByKey = settings.partiesByKey || {};
+  manifestPartiesById = new Map();
+
+  const partyRows = Array.isArray(settings.parties) ? settings.parties : [];
+  partyRows.forEach((party) => {
+    const id = Number(party?.id);
+    if (!Number.isFinite(id)) return;
+    manifestPartiesById.set(id, party);
+  });
+
+  Object.values(manifestPartiesByKey || {}).forEach((party) => {
+    const id = Number(party?.id);
+    if (!Number.isFinite(id)) return;
+    if (!manifestPartiesById.has(id)) {
+      manifestPartiesById.set(id, party);
+    }
+  });
+
   manifestRegionsByMapId = settings.regionsByMapId || {};
 }
 
@@ -2290,9 +2352,11 @@ function updateTopSummary(election, summary) {
 
   if (subtitle) {
     if (hasMajority) {
-      subtitle.textContent = `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`;
+      const baseText = `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`;
+      subtitle.textContent = election?.type === 'model_uns' ? withLatestPollSubtitle(baseText) : baseText;
     } else {
-      subtitle.textContent = `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
+      const baseText = `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
+      subtitle.textContent = election?.type === 'model_uns' ? withLatestPollSubtitle(baseText) : baseText;
     }
   }
 
@@ -2581,7 +2645,13 @@ function wireMapInteractions() {
       const action = button.getAttribute('data-map-action');
       if (action === 'zoom-in') mapInteractionController.zoomBy(1.2);
       if (action === 'zoom-out') mapInteractionController.zoomBy(0.83);
-      if (action === 'reset-zoom' || action === 'reset-view') mapInteractionController.reset();
+      if (action === 'reset-zoom') mapInteractionController.reset();
+      if (action === 'reset-view') {
+        mapInteractionController.reset();
+        resetPrimaryFilters();
+        resetChoropleths();
+        renderMapWithViewState();
+      }
     });
   });
 }
@@ -2639,6 +2709,7 @@ async function initElectionData() {
   const manifest = await fetchJson('data/elections.json');
   currentManifest = manifest;
   hydrateManifestSettings(manifest);
+  await loadPollTrackerMetaIfNeeded();
   const params = new URLSearchParams(window.location.search);
   const requestedId = params.get('election');
 

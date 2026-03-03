@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import math
+import re
 import shlex
 import subprocess
 import sys
@@ -48,6 +49,7 @@ STATIC_DIR = DATA_DIR / "polls" / "static"
 UPDATE_POLLS_SCRIPT = DATA_DIR / "update_polls.sh"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "uns" / "run_uns_model.py"
 UNS_TREND_CACHE_CSV = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.csv"
+UNS_NAME_DATE_PATTERN = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
 
 app = Flask(__name__, template_folder=str(TEMPLATE_DIR), static_folder=str(STATIC_DIR))
 app.config["SECRET_KEY"] = "local-polls-dev-key"
@@ -119,6 +121,24 @@ def _get_db() -> Database:
     if _DB is None:
         _DB = Database()
     return _DB
+
+
+def _trend_row_as_of_date(row: dict[str, str]) -> date | None:
+    election_name = str(row.get("election_name") or "").strip()
+    name_match = UNS_NAME_DATE_PATTERN.search(election_name)
+    if name_match:
+        try:
+            return date.fromisoformat(name_match.group(1))
+        except ValueError:
+            pass
+
+    as_of_date_raw = str(row.get("as_of_date") or "").strip()
+    if not as_of_date_raw:
+        return None
+    try:
+        return date.fromisoformat(as_of_date_raw)
+    except ValueError:
+        return None
 
 
 def _choices_for_model_form(db: Database) -> dict[str, object]:
@@ -334,16 +354,25 @@ def model_outputs():
 
     db = _get_db()
     with db.session() as session:
+        party_name_by_id = {
+            int(party_id): name
+            for party_id, name in session.execute(select(Party.id, Party.name)).all()
+            if party_id is not None
+        }
+        party_colour_by_id = {
+            int(party_id): colour
+            for party_id, colour in session.execute(select(Party.id, Party.colour)).all()
+            if party_id is not None
+        }
+
         total_output_count = session.execute(
             select(func.count(Election.id)).where(Election.type == ElectionType.model_uns)
         ).scalar_one()
 
         rows_query = (
-            select(Election, Map, func.count(Vote.id).label("vote_rows"))
+            select(Election, Map)
             .join(Map, Election.map_id == Map.id)
-            .outerjoin(Vote, Vote.election_id == Election.id)
             .where(Election.type == ElectionType.model_uns)
-            .group_by(Election.id, Map.id)
             .order_by(Election.id.desc())
         )
 
@@ -351,6 +380,20 @@ def model_outputs():
             rows_query = rows_query.limit(default_limit)
 
         rows = session.execute(rows_query).all()
+        selected_election_ids = [election.id for election, _ in rows]
+
+        vote_rows_by_election_id: dict[int, int] = {}
+        if selected_election_ids:
+            vote_count_rows = session.execute(
+                select(Vote.election_id, func.count(Vote.id))
+                .where(Vote.election_id.in_(selected_election_ids))
+                .group_by(Vote.election_id)
+            ).all()
+            vote_rows_by_election_id = {
+                int(election_id): int(count or 0)
+                for election_id, count in vote_count_rows
+                if election_id is not None
+            }
 
         trend_labels: list[str] = []
         party_series: dict[str, dict[str, object]] = {}
@@ -363,12 +406,8 @@ def model_outputs():
 
             dated_rows: list[tuple[date, int, dict[str, str]]] = []
             for row in rows_from_cache:
-                as_of_date_raw = str(row.get("as_of_date") or "").strip()
-                if not as_of_date_raw:
-                    continue
-                try:
-                    as_of_value = date.fromisoformat(as_of_date_raw)
-                except ValueError:
+                as_of_value = _trend_row_as_of_date(row)
+                if as_of_value is None:
                     continue
                 election_id_raw = row.get("election_id")
                 election_id = int(election_id_raw or "0") if election_id_raw else 0
@@ -379,9 +418,10 @@ def model_outputs():
 
             deduped_rows: dict[tuple[str, date], tuple[int, dict[str, str]]] = {}
             for as_of_value, election_id, row in dated_rows:
-                party_key = row.get("party_id") or row.get("party_name") or ""
-                if not party_key:
+                party_id = str(row.get("party_id") or "").strip()
+                if not party_id:
                     continue
+                party_key = party_id
                 dedupe_key = (party_key, as_of_value)
                 existing = deduped_rows.get(dedupe_key)
                 if existing is None or election_id >= existing[0]:
@@ -389,13 +429,17 @@ def model_outputs():
 
             for (_, as_of_value), (_, row) in deduped_rows.items():
                 election_name_by_date[as_of_value] = row.get("election_name") or as_of_value.isoformat()
-                party_key = row.get("party_id") or row.get("party_name") or ""
+                party_id = str(row.get("party_id") or "").strip()
+                if not party_id:
+                    continue
+                party_key = party_id
+                party_id_int = int(party_id) if party_id.isdigit() else None
 
                 series = party_series.get(party_key)
                 if series is None:
                     series = {
-                        "label": row.get("party_name") or party_key,
-                        "colour": row.get("party_colour") or None,
+                        "label": party_name_by_id.get(party_id_int, party_key),
+                        "colour": party_colour_by_id.get(party_id_int) if party_id_int is not None else None,
                         "seats": [0] * len(as_of_dates_sorted),
                         "vote_totals": [0.0] * len(as_of_dates_sorted),
                         "vote_pct": [None] * len(as_of_dates_sorted),
@@ -404,17 +448,16 @@ def model_outputs():
 
                 idx = election_index[as_of_value]
                 series["seats"][idx] = int(float(row.get("seats_won") or "0"))
-                series["vote_totals"][idx] = float(row.get("vote_total_sum") or "0")
                 vote_pct_raw = row.get("vote_pct")
                 if vote_pct_raw not in (None, ""):
                     series["vote_pct"][idx] = float(vote_pct_raw)
 
             trend_labels = [election_name_by_date.get(as_of_value, as_of_value.isoformat()) for as_of_value in as_of_dates_sorted]
 
-        if not trend_labels:
+        if not trend_labels and selected_election_ids:
             elections_for_trend = session.execute(
                 select(Election)
-                .where(Election.type == ElectionType.model_uns)
+                .where(Election.id.in_(selected_election_ids))
                 .order_by(Election.id.asc())
             ).scalars().all()
 
@@ -539,9 +582,9 @@ def model_outputs():
             "name": election.name,
             "year": election.year,
             "map_name": map_row.name,
-            "vote_rows": int(vote_rows or 0),
+            "vote_rows": vote_rows_by_election_id.get(int(election.id), 0),
         }
-        for election, map_row, vote_rows in rows
+        for election, map_row in rows
     ]
 
     return render_template(

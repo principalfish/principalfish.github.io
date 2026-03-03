@@ -290,10 +290,26 @@ async function loadPollTrackerMetaIfNeeded() {
   pollTrackerMetaLoaded = true;
 }
 
-function withLatestPollSubtitle(baseText) {
-  const snippet = String(pollTrackerLatestSnippet || '').trim();
-  if (!snippet) return baseText;
-  return `${baseText} · ${snippet}`;
+function setSubtitleText(baseText, options = {}) {
+  if (!subtitle) return;
+
+  const includeLatestPollSnippet = options.includeLatestPollSnippet === true;
+  const latestPollSnippet = includeLatestPollSnippet ? String(pollTrackerLatestSnippet || '').trim() : '';
+
+  subtitle.textContent = '';
+  subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
+
+  const mainSpan = document.createElement('span');
+  mainSpan.className = 'maps-subtitle-main';
+  mainSpan.textContent = String(baseText || '').trim();
+  subtitle.appendChild(mainSpan);
+
+  if (!latestPollSnippet) return;
+
+  const latestSpan = document.createElement('span');
+  latestSpan.className = 'maps-subtitle-latest';
+  latestSpan.textContent = latestPollSnippet;
+  subtitle.appendChild(latestSpan);
 }
 
 async function fetchJson(url) {
@@ -817,7 +833,7 @@ async function activatePollTrackerMode() {
 
   setPollTrackerLayoutVisible(true);
   await loadPollTrackerMetaIfNeeded();
-  if (subtitle) subtitle.textContent = withLatestPollSubtitle('Poll tracker · model output trends');
+  setSubtitleText('Poll tracker · model output trends', { includeLatestPollSnippet: true });
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
   replaceRouteState('polltracker');
 
@@ -2577,10 +2593,10 @@ function updateTopSummary(election, summary) {
   if (subtitle) {
     if (hasMajority) {
       const baseText = `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`;
-      subtitle.textContent = election?.type === 'model_uns' ? withLatestPollSubtitle(baseText) : baseText;
+      setSubtitleText(baseText, { includeLatestPollSnippet: election?.type === 'model_uns' });
     } else {
       const baseText = `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
-      subtitle.textContent = election?.type === 'model_uns' ? withLatestPollSubtitle(baseText) : baseText;
+      setSubtitleText(baseText, { includeLatestPollSnippet: election?.type === 'model_uns' });
     }
   }
 }
@@ -3049,7 +3065,7 @@ async function init() {
       replaceRouteState('election');
     }
   } catch (error) {
-    if (subtitle) subtitle.textContent = 'Failed to load election data';
+    setSubtitleText('Failed to load election data');
     if (seatList) {
       seatList.innerHTML = '<p>Unable to load configured election files.</p>';
     }

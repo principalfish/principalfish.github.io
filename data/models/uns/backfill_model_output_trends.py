@@ -102,6 +102,8 @@ def main() -> None:
         elections = session.execute(election_query).scalars().all()
 
         rows_out: list[dict[str, str]] = []
+        previous_seat_snapshot: tuple[tuple[int, int], ...] | None = None
+        skipped_elections = 0
         for election in elections:
             vote_rows = session.execute(
                 select(Vote.party_id, Vote.vote_total, Vote.elected)
@@ -117,6 +119,14 @@ def main() -> None:
                 vote_totals_by_party[party_id] = vote_totals_by_party.get(party_id, 0.0) + float(vote_total or 0.0)
                 if bool(elected):
                     seats_by_party[party_id] = seats_by_party.get(party_id, 0) + 1
+
+            current_seat_snapshot = tuple(
+                sorted((int(party_id), int(seats)) for party_id, seats in seats_by_party.items() if int(seats) > 0)
+            )
+            if previous_seat_snapshot is not None and current_seat_snapshot == previous_seat_snapshot:
+                skipped_elections += 1
+                continue
+            previous_seat_snapshot = current_seat_snapshot
 
             total_votes = sum(vote_totals_by_party.values())
 
@@ -158,7 +168,10 @@ def main() -> None:
         writer.writerows(rows_out)
 
     election_count = len({row["election_id"] for row in rows_out})
-    print(f"Backfill complete: elections={election_count}, rows={len(rows_out)}")
+    print(
+        "Backfill complete: "
+        f"elections={election_count}, rows={len(rows_out)}, skipped_unchanged_elections={skipped_elections}"
+    )
     print(f"Wrote: {output_path}")
 
 

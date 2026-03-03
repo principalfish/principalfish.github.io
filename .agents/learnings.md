@@ -19,7 +19,14 @@ Top-level durable insights only.
 
 - `run_retrospective_uns.py` resets existing model outputs by default in non-dry-run mode; use `--no-reset-existing` to preserve prior output.
 - `run_uns_model.py` now enforces same-date overwrite and can auto-backfill missing dates, preventing duplicate same-day model outputs.
+- `run_uns_model.py` trend-cache writes now skip appending a new date when the full seat snapshot is unchanged from the latest prior date (`TREND_CACHE_SKIP`).
+- `backfill_model_output_trends.py` now also skips consecutive model elections with unchanged full seat snapshots, so rebuilt trend CSVs stay compact by default.
 - Trend timelines should use canonical UNS date semantics (`UNS YYYY-MM-DD` / normalized `as_of_date`) to avoid chart drift.
+- `electionmaps/data/results/model_output_trends.csv` can be safely reduced by dropping consecutive dates whose full seat snapshot is unchanged; these often represent no-new-poll periods and add chart noise/size.
+
+## Electionmaps
+
+- Poll tracker now uses a true date-based x-axis when trend dates are parseable ISO dates, and expands to daily timeline points with carry-forward values so missing poll days render as flat status-quo segments.
 
 ## Electionmaps
 

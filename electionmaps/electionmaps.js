@@ -375,14 +375,66 @@ function parsePollTrackerData(csvText) {
       return a.sortValue.localeCompare(b.sortValue);
     });
 
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const parseIsoDate = (value) => {
+    const text = String(value || '').trim();
+    if (!ISO_DATE_RE.test(text)) return null;
+    const parsed = new Date(`${text}T00:00:00Z`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const formatIsoDate = (value) => {
+    const year = value.getUTCFullYear();
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const allTimelineDates = timeline
+    .map((entry) => parseIsoDate(entry.dateKey || entry.label))
+    .filter(Boolean)
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  const shouldExpandDailyTimeline = allTimelineDates.length === timeline.length && timeline.length > 1;
+  const expandedTimeline = shouldExpandDailyTimeline
+    ? (() => {
+        const start = allTimelineDates[0];
+        const end = allTimelineDates[allTimelineDates.length - 1];
+        const entries = [];
+        const current = new Date(start.getTime());
+        while (current.getTime() <= end.getTime()) {
+          const iso = formatIsoDate(current);
+          const existing = timelineByDateKey.get(iso);
+          entries.push({
+            dateKey: iso,
+            electionId: existing?.electionId || 0,
+            sortValue: iso,
+            label: iso,
+            dateValue: new Date(current.getTime()),
+          });
+          current.setUTCDate(current.getUTCDate() + 1);
+        }
+        return entries;
+      })()
+    : timeline.map((entry) => ({
+        ...entry,
+        dateValue: parseIsoDate(entry.dateKey || entry.label),
+      }));
+
   const seriesByParty = new Map();
   byParty.forEach((rowsByDateKey, partyKey) => {
     const seats = [];
     const votePct = [];
-    timeline.forEach((entry) => {
+    let lastSeats = null;
+    let lastVotePct = null;
+    expandedTimeline.forEach((entry) => {
       const row = rowsByDateKey.get(entry.dateKey);
-      seats.push(row ? Number(row.seats || 0) : null);
-      votePct.push(row ? Number(row.votePct || 0) : null);
+      if (row) {
+        lastSeats = Number(row.seats || 0);
+        lastVotePct = Number(row.votePct || 0);
+      }
+      seats.push(lastSeats);
+      votePct.push(lastVotePct);
     });
 
     seriesByParty.set(partyKey, {
@@ -395,7 +447,7 @@ function parsePollTrackerData(csvText) {
     });
   });
 
-  return { timeline, seriesByParty, partyMeta };
+  return { timeline: expandedTimeline, seriesByParty, partyMeta };
 }
 
 function getPollTrackerSelectedParties() {
@@ -451,9 +503,16 @@ function renderPollTrackerChart() {
     .attr('y2', innerHeight)
     .attr('opacity', 0);
 
-  const x = d3.scaleLinear()
-    .domain([0, Math.max(0, visibleTimeline.length - 1)])
-    .range([0, innerWidth]);
+  const visibleTimelineDates = visibleTimeline.map((entry) => entry.dateValue).filter((value) => value instanceof Date);
+  const useTimeScale = visibleTimelineDates.length === visibleTimeline.length && visibleTimeline.length > 1;
+
+  const x = useTimeScale
+    ? d3.scaleTime()
+      .domain(d3.extent(visibleTimelineDates))
+      .range([0, innerWidth])
+    : d3.scaleLinear()
+      .domain([0, Math.max(0, visibleTimeline.length - 1)])
+      .range([0, innerWidth]);
 
   const selectedSeries = selectedParties
     .map((partyKey) => pollTrackerSeriesByParty.get(partyKey))
@@ -478,21 +537,15 @@ function renderPollTrackerChart() {
     .attr('class', 'maps-polltracker-grid-line');
 
   const maxTicksByWidth = Math.max(4, Math.floor(innerWidth / 105));
-  const targetTickCount = Math.min(maxTicksByWidth, visibleTimeline.length);
-  const step = Math.max(1, Math.ceil(visibleTimeline.length / Math.max(1, targetTickCount)));
-  const xTicks = d3.range(0, visibleTimeline.length, step);
-  const lastIndex = visibleTimeline.length - 1;
-  const lastTick = xTicks.length ? xTicks[xTicks.length - 1] : null;
-  if (lastTick == null || (lastIndex - lastTick) > Math.max(1, Math.floor(step / 2))) {
-    xTicks.push(lastIndex);
-  }
-
   const xAxisGroup = plot.append('g')
     .attr('class', 'maps-polltracker-axis')
     .attr('transform', `translate(0,${innerHeight})`)
-    .call(
-      d3.axisBottom(x)
-        .tickValues(xTicks)
+    .call(useTimeScale
+      ? d3.axisBottom(x)
+        .ticks(maxTicksByWidth)
+        .tickFormat((value) => d3.timeFormat('%Y-%m-%d')(value))
+      : d3.axisBottom(x)
+        .tickValues(d3.range(0, visibleTimeline.length, Math.max(1, Math.ceil(visibleTimeline.length / Math.max(1, maxTicksByWidth)))))
         .tickFormat((index) => visibleTimeline[index]?.label || '')
     );
 
@@ -540,12 +593,12 @@ function renderPollTrackerChart() {
 
   const seatsLine = d3.line()
     .defined((value) => Number.isFinite(value))
-    .x((value, index) => x(index))
+    .x((value, index) => (useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index)))
     .y((value) => ySeats(value));
 
   const votePctLine = d3.line()
     .defined((value) => Number.isFinite(value))
-    .x((value, index) => x(index))
+    .x((value, index) => (useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index)))
     .y((value) => yVotePct(value));
 
   const showTrackerTooltip = (event, series) => {
@@ -556,8 +609,19 @@ function renderPollTrackerChart() {
       return;
     }
 
-    const index = Math.max(0, Math.min(visibleTimeline.length - 1, Math.round(x.invert(plotX))));
-    const xPos = x(index);
+    const index = useTimeScale
+      ? (() => {
+          const hoveredDate = x.invert(plotX);
+          const bisectDate = d3.bisector((entry) => entry.dateValue.getTime()).left;
+          const candidate = bisectDate(visibleTimeline, hoveredDate.getTime());
+          const leftIndex = Math.max(0, candidate - 1);
+          const rightIndex = Math.min(visibleTimeline.length - 1, candidate);
+          const leftDistance = Math.abs(visibleTimeline[leftIndex].dateValue.getTime() - hoveredDate.getTime());
+          const rightDistance = Math.abs(visibleTimeline[rightIndex].dateValue.getTime() - hoveredDate.getTime());
+          return rightDistance < leftDistance ? rightIndex : leftIndex;
+        })()
+      : Math.max(0, Math.min(visibleTimeline.length - 1, Math.round(x.invert(plotX))));
+    const xPos = useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index);
     const timelinePoint = visibleTimeline[index];
     const seatsValue = Number(series.seats[index] || 0);
     const votePctValue = Number(series.votePct[index] || 0);

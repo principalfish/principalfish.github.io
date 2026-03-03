@@ -644,7 +644,24 @@ def update_trend_cache_csv(
 
     total_votes = sum(vote_totals_by_party.values())
 
+    def seat_snapshot_from_rows(rows: list[dict[str, str]]) -> tuple[tuple[int, int], ...]:
+        snapshot: dict[int, int] = {}
+        for row in rows:
+            try:
+                party_id = int(str(row.get("party_id") or "0"))
+                seats_won = int(str(row.get("seats_won") or "0"))
+            except ValueError:
+                continue
+            if party_id <= 0 or seats_won <= 0:
+                continue
+            snapshot[party_id] = seats_won
+        return tuple(sorted(snapshot.items()))
+
+    def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
+        return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
+
     existing_rows: list[dict[str, str]] = []
+    rows_by_date: dict[date, list[dict[str, str]]] = defaultdict(list)
     if TREND_CACHE_CSV.exists():
         with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
@@ -653,7 +670,14 @@ def update_trend_cache_csv(
                     continue
                 if int(row.get("election_id", "0") or "0") == election_id:
                     continue
-                existing_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
+                normalized_row = {field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS}
+                existing_rows.append(normalized_row)
+                try:
+                    parsed_date = date.fromisoformat(str(normalized_row.get("as_of_date") or ""))
+                except ValueError:
+                    continue
+                if parsed_date < as_of_date:
+                    rows_by_date[parsed_date].append(normalized_row)
 
     new_rows = []
     for party_id in sorted(vote_totals_by_party.keys()):
@@ -672,7 +696,25 @@ def update_trend_cache_csv(
             }
         )
 
-    combined = existing_rows + new_rows
+    previous_date = max(rows_by_date.keys(), default=None)
+    previous_snapshot = (
+        seat_snapshot_from_rows(rows_by_date[previous_date])
+        if previous_date is not None
+        else tuple()
+    )
+    current_snapshot = seat_snapshot_from_party_counts(seats_by_party)
+
+    if previous_date is not None and current_snapshot == previous_snapshot:
+        combined = existing_rows
+        print(
+            "TREND_CACHE_SKIP "
+            f"as_of_date={as_of_date.isoformat()} "
+            f"reason=unchanged_seat_snapshot "
+            f"previous_date={previous_date.isoformat()}"
+        )
+    else:
+        combined = existing_rows + new_rows
+
     combined.sort(key=lambda row: (int(row["election_id"]), int(row.get("party_id") or "0")))
 
     with TREND_CACHE_CSV.open("w", encoding="utf-8", newline="") as handle:

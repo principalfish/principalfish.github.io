@@ -2,32 +2,13 @@
 
 ## Purpose
 
-Validates DB-layer behavior for core entities and relationships.
+- Validate DB-backed behavior for maps, seats, elections, votes, and polls.
 
-## Coverage examples
+## How to run
 
-- maps
-- regions
-- seats
-- elections
-- votes
-- polls
+- From `data/`: `./run_tests.sh`
+- Or: `../election_data/bin/python -m pytest tests/`
 
-## Characteristics
+## Caveat
 
-- Tests are DB-backed and rely on configured test DB (`election_maps_test`).
-- Failures can come from environment/auth setup, not just logic changes.
-
-## Execution
-
-From `data/`:
-
-```bash
-../election_data/bin/python -m pytest tests/
-```
-
-or wrapper:
-
-```bash
-./run_tests.sh
-```
+- Failures can be environment-driven (DB/auth/config), not only logic regressions.

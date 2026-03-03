@@ -2,23 +2,14 @@
 
 ## Purpose
 
-A separate mini-app/game area that appears independent from `data/` workflows.
+- Standalone mini-app with separate frontend and local content data.
 
-## Components
+## Core files
 
-- `app.py`: app entrypoint
-- `wiki.py`: data/content retrieval helpers
-- `challenges.json`: prompt/challenge dataset
-- `index.html`, `script.js`, `styles.css`: frontend
-- `wikipedia_history.db`: local data store/artifact
+- `app.py`, `wiki.py`
+- `index.html`, `script.js`, `styles.css`
+- `challenges.json`, `wikipedia_history.db`
 
-## UI notes
+## Working note
 
-- `index.html` now includes a lightweight `site-topbar` with a `../` back link to the root homepage.
-- The top bar styling is isolated in `styles.css` (`site-topbar*` selectors) to avoid altering game logic/UI components.
-- Blue background parity with election-maps is implemented locally via `.bluey-page` + `.bluey-background` in `styles.css` to avoid importing the full shared site stylesheet.
-
-## Relationship to `data/`
-
-- No direct dependency observed on `data/models.py` or `data/db.py`.
-- Can be treated as a separate product area for most tasks.
+- Treat as mostly independent from `data/` unless a task explicitly bridges both areas.

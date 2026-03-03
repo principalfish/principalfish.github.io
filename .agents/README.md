@@ -1,20 +1,15 @@
 # .agents docs
 
-This folder contains internal area-by-area repository understanding.
+Internal operating notes for this repository.
 
-Start with:
+## Read order
+
 1. `00-overview.md`
 2. `01-file-map.md`
-3. Area-specific files for the subsystem you are changing
+3. Area docs for the subsystem being changed
 
-Always append task-level discoveries to `learnings.md`.
+## Working rules
 
-## Task plans
-
-- Plan files are issue-level, not prompt-level.
-- The user explicitly defines issue boundaries (when an issue starts/ends).
-- Default behavior: update the most recent active issue plan file.
-- Create a new plan file only when a new issue is explicitly started.
-- Naming format: `<index>-<short-description-of-task>.md`.
-- Use a 3-digit zero-padded index (example: `001-remove-seat-results.md`).
-- Update the active issue plan throughout implementation so it reflects current status.
+- Keep durable internal notes in `.agents/`; keep user-facing runbooks in `README.md`.
+- Keep `learnings.md` high-level (no task-by-task logs).
+- Treat `.agents/plans/` as issue-level tracking: update the active issue plan; create a new one only when the user starts a new issue.

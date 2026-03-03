@@ -2,33 +2,21 @@
 
 ## Purpose
 
-`data/` is the main election-data backend and operations toolkit.
+- Main backend for election data ingest, storage, exports, and local tooling.
 
-## Core components
+## Core files
 
-- `data/models.py`: canonical SQLAlchemy schema.
-- `data/db.py`: DB wrapper + convenience APIs.
-- `data/config.py`: DB connection config via env defaults.
-- `data/server.py`: local Flask UI and orchestration endpoints.
+- `models.py`, `db.py`, `config.py`, `server.py`
+- `docker-compose.yml`, `start_db.sh`
 
-## Main schema groups
+## Schema truths
 
-- Geography: `maps`, `regions`, `seats`
-- Elections: `elections`, `votes` (with `seats.electorate` for electorate)
-- Polling: `pollsters`, `polls`, `poll_rows`
+- Geography: maps/regions/seats
+- Results: elections/votes
+- Polling: pollsters/polls/poll_rows
+- `seats.electorate` is canonical; turnout is derived from vote totals
 
-## Election data notes
+## Operational notes
 
-- `seat_results` has been removed from the active schema.
-- Seat electorate is stored directly on `seats.electorate`.
-- Seat turnout is treated as a derived metric from `votes.vote_total` per `election_id` + `seat_id`.
-
-## Runtime behavior
-
-- Flask app calls importers and model scripts via subprocess or module calls.
-- Poll CSV export supported via `polls/export_poll_rows_csv.py`.
-- Model UI supports `run_uns_model.py` execution from browser workflow.
-
-## Critical dependency
-
-- PostgreSQL/PostGIS container from `docker-compose.yml`.
+- Local runtime expects PostgreSQL/PostGIS.
+- Backend orchestration is centered on `server.py` + script entrypoints.

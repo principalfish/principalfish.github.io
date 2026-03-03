@@ -145,6 +145,90 @@ function decodePredictPayload(encoded) {
   }
 }
 
+function buildPredictShareStateSlots() {
+  const slots = [];
+  const rows = collectPredictShareStateRows();
+
+  rows.forEach((row) => {
+    const regionKey = row.regionKey;
+    collectPredictInputPartyKeysForRegion(regionKey).forEach((partyKey) => {
+      slots.push([regionKey, partyKey]);
+    });
+  });
+
+  return slots;
+}
+
+function encodePredictPayloadV2(serializedRows, englandExpanded) {
+  const slots = buildPredictShareStateSlots();
+  if (!slots.length) return '';
+
+  const slotIndexByKey = new Map(
+    slots.map(([regionKey, partyKey], index) => [`${regionKey}::${partyKey}`, index])
+  );
+
+  const entries = [];
+  serializedRows.forEach((entry) => {
+    if (!Array.isArray(entry) || entry.length < 3) return;
+    const regionKey = String(entry[0] || '');
+    const partyKey = String(entry[1] || '');
+    const slotIndex = slotIndexByKey.get(`${regionKey}::${partyKey}`);
+    if (!Number.isInteger(slotIndex) || slotIndex < 0) return;
+
+    const value = Math.round(Number(entry[2]));
+    if (!Number.isFinite(value) || value < 0 || value > 100) return;
+
+    entries.push(`${slotIndex.toString(36)}-${value.toString(36)}`);
+  });
+
+  if (!entries.length && !englandExpanded) return '';
+  return `2.${englandExpanded ? 1 : 0}.${entries.join(',')}`;
+}
+
+function decodePredictPayloadV2(encoded) {
+  const raw = String(encoded || '').trim();
+  if (!raw.startsWith('2.')) return null;
+
+  const parts = raw.split('.');
+  if (parts.length < 2 || parts[0] !== '2') return null;
+
+  const englandExpanded = parts[1] === '1';
+  const rowsPart = parts.slice(2).join('.').trim();
+  if (!rowsPart) {
+    return {
+      englandExpanded,
+      rows: [],
+    };
+  }
+
+  const slots = buildPredictShareStateSlots();
+  if (!slots.length) return null;
+
+  const rows = [];
+  rowsPart.split(',').forEach((chunk) => {
+    const token = String(chunk || '').trim();
+    if (!token) return;
+
+    const [indexToken, valueToken] = token.split('-');
+    if (!indexToken || !valueToken) return;
+
+    const slotIndex = Number.parseInt(indexToken, 36);
+    const value = Number.parseInt(valueToken, 36);
+    if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= slots.length) return;
+    if (!Number.isInteger(value) || value < 0 || value > 100) return;
+
+    const slot = slots[slotIndex];
+    if (!Array.isArray(slot) || slot.length < 2) return;
+
+    rows.push([slot[0], slot[1], value]);
+  });
+
+  return {
+    englandExpanded,
+    rows,
+  };
+}
+
 const PREDICT_BASE_PARTY_KEYS = ['labour', 'conservative', 'libdems', 'green', 'reform'];
 const PREDICT_MODELLED_PARTY_KEYS = [...PREDICT_BASE_PARTY_KEYS, 'snp', 'plaidcymru'];
 const PREDICT_NAT_COLUMN_KEY = 'nat';
@@ -175,6 +259,13 @@ let mapInteractionController = {
   clearSelection: () => {},
   zoomToSeat: () => false,
 };
+
+function formatZoomPct(scaleValue) {
+  const baselineScale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
+  const ratio = Number(scaleValue) / baselineScale;
+  if (!Number.isFinite(ratio) || ratio <= 0) return '100%';
+  return `${Math.round(ratio * 100)}%`;
+}
 
 const PARTY_LABELS = {
   labour: 'Labour',
@@ -1411,6 +1502,9 @@ function buildPredictShareStatePayload() {
     return '';
   }
 
+  const compact = encodePredictPayloadV2(serializedRows, predictEnglandExpanded);
+  if (compact) return compact;
+
   const payload = {
     v: 1,
     e: predictEnglandExpanded ? 1 : 0,
@@ -1423,6 +1517,9 @@ function readPredictShareStateFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const encoded = params.get('predict');
   if (!encoded) return null;
+
+  const compact = decodePredictPayloadV2(encoded);
+  if (compact) return compact;
 
   const payload = decodePredictPayload(encoded);
   if (!payload || Number(payload.v) !== 1) return null;
@@ -2693,7 +2790,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     .scaleExtent([ZOOM_MIN_SCALE, ZOOM_MAX_SCALE])
     .on('zoom', (event) => {
       zoomLayer.attr('transform', event.transform.toString());
-      zoomValue.textContent = `${Math.round(event.transform.k * 100)}%`;
+      zoomValue.textContent = formatZoomPct(event.transform.k);
     });
 
   svg.call(zoomBehavior);

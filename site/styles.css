@@ -141,7 +141,8 @@ a {
 }
 
 .editorial-card {
-  display: block;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
   background: var(--paper-soft);
   border-radius: 10px;
@@ -220,7 +221,8 @@ a {
 }
 
 .card-cta {
-  margin-top: 0.7rem;
+  margin-top: auto;
+  padding-top: 0.7rem;
   font: 700 0.9rem/1 "DM Sans", "Segoe UI", sans-serif;
   color: var(--teal);
 }
@@ -339,11 +341,9 @@ a {
   margin: 0.35rem 0 0;
   color: #334155;
   font: 700 1.02rem/1.2 "DM Sans", "Segoe UI", sans-serif;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 0.32rem;
-  row-gap: 0.12rem;
+  display: grid;
+  gap: 0.18rem;
+  line-height: 1.28;
 }
 
 .maps-subtitle-main,
@@ -352,8 +352,7 @@ a {
 }
 
 .maps-subtitle-has-latest .maps-subtitle-latest::before {
-  content: "·";
-  margin-right: 0.32rem;
+  content: none;
 }
 
 .maps-app {

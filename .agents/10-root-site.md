@@ -18,3 +18,4 @@
 - Keep shared visual primitives centralized in `site/styles.css`.
 - Keep electionmaps file loading manifest-driven.
 - Keep path naming consistent with `electionmaps` across links/scripts/docs.
+- Electionmaps mobile-specific UX adjustments can live in page-local assets when they must override minified shared styles without changing desktop behavior.

@@ -26,16 +26,15 @@ Top-level durable insights only.
 
 ## Electionmaps
 
-- Poll tracker now uses a true date-based x-axis when trend dates are parseable ISO dates, and expands to daily timeline points with carry-forward values so missing poll days render as flat status-quo segments.
-- Predict 2029 now supports shareable URL state via `predict` query param; links restore regional share overrides and England expanded/collapsed state.
-- `mapsSubtitle` is now rendered as segmented DOM nodes (main summary + latest poll snippet) so mobile CSS can stack lines cleanly; avoid composing long one-line subtitle strings for responsive map headers.
-
+- Maps subtitle now uses stacked span layout by default, so the latest poll snippet line (`maps-subtitle-latest`) appears on a separate line on desktop and mobile.
+- Zoom percentage display is baseline-relative to `INITIAL_MAP_SCALE`, allowing a slightly zoomed-in initial map view while showing `100%` at load.
 ## Electionmaps
 
 - Runtime architecture is manifest-driven (`electionmaps/data/elections.json`) with data resolved by configured map/result file mappings.
 - Exported results use compact schema `pf-results-v2`; frontend supports compact and legacy normalization.
 - Keep map interaction state centralized and re-render from canonical seat datasets to avoid stale filters/search/highlights.
 - Route/path naming is now `electionmaps` (not `election-maps`); keep links/scripts/exports/docs aligned when making path changes.
+- Mobile UX now uses an off-canvas elections drawer on `max-width: 980px`, implemented with page-local assets (`electionmaps/mobile-sidebar.css` + `electionmaps/mobile-sidebar.js`) so desktop layout stays untouched.
 
 ## Frontend + Assets
 

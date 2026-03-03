@@ -37,6 +37,7 @@ Top-level durable insights only.
 - To make map-embedded zoom controls visually blend with the map, keep `.maps-zoom-overlay` positioned in the viewport but set its container chrome to transparent (`padding: 0; border: 0; background: transparent`).
 - If zoom overlay placement should match on mobile and desktop, define `.maps-viewport { position: relative; }` and `.maps-zoom-overlay { position: absolute; top/right... }` outside desktop-only media queries; otherwise mobile falls back to normal flow placement.
 - To move map-embedded zoom controls from top-right to top-left globally, switch the overlay anchor from `right` to `left` in the shared `.maps-zoom-overlay` rule.
+- Keep layout rules in `site/styles.css` (not page-local `<style>` in `electionmaps/index.html`) for maintainability, then run `npm run minify:electionmaps` so `site/styles.min.css` picks up the change.
 ## Electionmaps
 
 - Runtime architecture is manifest-driven (`electionmaps/data/elections.json`) with data resolved by configured map/result file mappings.

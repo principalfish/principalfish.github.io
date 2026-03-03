@@ -867,7 +867,22 @@ a {
   font: 700 0.82rem/1 "DM Sans", "Segoe UI", sans-serif;
 }
 
+.maps-zoom-overlay {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .maps-viewport {
+  position: relative;
   margin-top: 0.65rem;
   border-radius: 10px;
   border: 1px solid rgba(15, 23, 42, 0.24);
@@ -1501,6 +1516,14 @@ a {
 
   .maps-main {
     grid-template-columns: minmax(560px, 58vw) minmax(320px, 42vw);
+  }
+}
+
+@media (min-width: 981px) {
+  .maps-toolbar-group-search {
+    order: 1;
+    width: auto;
+    margin-left: auto;
   }
 }
 

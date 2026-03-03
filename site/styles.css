@@ -628,8 +628,9 @@ a {
 
 .maps-popups-wrap {
   position: absolute;
-  top: 3.4rem;
-  left: 0.7rem;
+  top: 3.75rem;
+  left: 1rem;
+  right: 1rem;
   z-index: 7;
   display: flex;
   gap: 0.7rem;

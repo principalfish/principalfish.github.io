@@ -175,3 +175,5 @@ Append-only notes from completed tasks.
 - For subtle matrix scrolling UX, style thin scrollbars directly on the grid container with both Firefox (`scrollbar-width`) and WebKit pseudo-elements.
 - In complex flex/grid panels, `overflow-y:auto` alone may not show scrollbars; double-expanded states need an explicit bounded height/max-height on the scroll region container.
 - For anchored/sticky headers over scrollable grids, use opaque backgrounds plus explicit z-index layering; transparent headers can show row content bleeding behind them.
+- Choropleths popup reset UX is straightforward with a dedicated `Reset` button that restores `choroplethType='none'` and `choroplethParty='all'`, followed by a single `renderMapWithViewState()`.
+- Popup edge spacing on map overlays can be improved by insetting the popup tray (`left/right/top`) rather than resizing popup cards.

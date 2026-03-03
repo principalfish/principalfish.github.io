@@ -47,6 +47,7 @@ const predictResetAllButton = document.getElementById('mapsPredictResetAll');
 
 const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
 const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
+const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
 
 let currentSort = { key: 'seats', direction: 'desc' };
 let currentManifest = null;
@@ -1737,6 +1738,12 @@ function resetPrimaryFilters() {
   syncMapControlInputsFromState();
 }
 
+function resetChoropleths() {
+  mapViewState.choroplethType = 'none';
+  mapViewState.choroplethParty = 'all';
+  syncMapControlInputsFromState();
+}
+
 function populateMapControlOptions() {
   const partyRows = collectPartyKeysForControls();
   const regionRows = collectRegionsForControls();
@@ -2554,6 +2561,13 @@ function wireMapViewControls() {
   if (filtersResetButton) {
     filtersResetButton.addEventListener('click', () => {
       resetPrimaryFilters();
+      renderMapWithViewState();
+    });
+  }
+
+  if (choroplethsResetButton) {
+    choroplethsResetButton.addEventListener('click', () => {
+      resetChoropleths();
       renderMapWithViewState();
     });
   }

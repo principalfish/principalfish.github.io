@@ -1,0 +1,56 @@
+.pf-topbar {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.2);
+  background: rgba(249, 252, 255, 0.86);
+  backdrop-filter: blur(8px);
+}
+
+.pf-topbar-inner {
+  width: min(1120px, 92vw);
+  margin: 0 auto;
+  padding: 0.75rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pf-topbar-inner.is-home {
+  justify-content: flex-end;
+}
+
+.pf-topbar-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+  color: #0f766e;
+  font: 700 0.92rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.pf-topbar-fish {
+  width: auto;
+  height: 1rem;
+}
+
+.pf-topbar-back-link:hover,
+.pf-topbar-contact-link:hover {
+  text-decoration: underline;
+}
+
+.pf-topbar-contact-link {
+  color: #334155;
+  text-decoration: none;
+  font: 700 0.82rem/1 "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+  opacity: 0.88;
+}
+
+.pf-topbar-contact-link:hover {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .pf-topbar-inner {
+    padding: 0.65rem 0;
+  }
+}

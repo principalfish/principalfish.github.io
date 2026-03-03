@@ -40,6 +40,8 @@ Top-level durable insights only.
 - Prefer local vendored assets for static reliability; bundle D3 rather than relying on jsDelivr ESM entrypoints.
 - `server.sh` is the canonical local preview entrypoint and runs required frontend build steps before serving.
 - Shared styles should remain centralized in `site/styles.css` to keep root, bio, and maps pages visually consistent.
+- Topbar is centralized via `site/topbar.js` + `site/topbar.css`; configure per-page behavior with body data attributes instead of duplicating page-specific header markup.
+- `npm run minify:electionmaps` now also builds `site/topbar.min.js` and `site/topbar.min.css`; pages should reference these minified topbar assets for served output.
 
 ## Quality + Risks
 

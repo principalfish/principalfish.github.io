@@ -10,17 +10,11 @@
     />
     <link rel="icon" type="image/png" href="/imgs/logo.png" />
 
+    <link rel="stylesheet" href="../site/topbar.min.css" />
     <link rel="stylesheet" href="../site/styles.min.css" />
   </head>
-  <body class="maps-page">
+  <body class="maps-page" data-topbar-back-href="../">
     <div class="maps-background" aria-hidden="true"></div>
-
-    <div class="maps-topbar">
-      <div class="maps-topbar-inner">
-        <a href="../" class="maps-back-link"><img src="../imgs/principal-fish-silly.svg" alt="" class="maps-back-fish" aria-hidden="true" />← Back home</a>
-        <span class="maps-topbar-label">Election Maps</span>
-      </div>
-    </div>
 
     <main class="site-wrap maps-wrap">
       <header class="maps-header">
@@ -132,7 +126,6 @@
                 <h2 class="maps-panel-title">Vote Totals</h2>
                 <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
               </div>
-              <p id="mapsVoteMeta" class="maps-meta">United Kingdom · turnout —</p>
               <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder">
                 <thead>
                   <tr>
@@ -195,6 +188,7 @@
       </section>
     </main>
 
+    <script type="module" src="../site/topbar.min.js"></script>
     <script type="module" src="./electionmaps.min.js"></script>
   </body>
 </html>

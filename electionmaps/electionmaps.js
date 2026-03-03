@@ -7,7 +7,6 @@ const zoomValue = document.getElementById('mapsZoomValue');
 const seatPreview = document.getElementById('mapsSeatPreview');
 const electionList = document.getElementById('mapsElectionList');
 const subtitle = document.getElementById('mapsSubtitle');
-const voteMeta = document.getElementById('mapsVoteMeta');
 const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
 const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
 const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
@@ -247,9 +246,9 @@ async function fetchResource(url, parser) {
 async function loadPollTrackerMetaIfNeeded() {
   if (pollTrackerMetaLoaded) return;
 
-  try {
-    const payload = await fetchJson(POLL_TRACKER_META_PATH);
-    pollTrackerLatestSnippet = String(payload?.latest_poll_snippet || '').trim();
+    try {
+      const payload = await fetchJson(POLL_TRACKER_META_PATH);
+      pollTrackerLatestSnippet = String(payload?.latest_poll_snippet || '').trim();
   } catch (_error) {
     pollTrackerLatestSnippet = '';
   }
@@ -459,9 +458,9 @@ function getPollTrackerSelectedParties() {
 function renderPollTrackerChart() {
   if (!pollTrackerChartWrap) return;
 
-  const selectedParties = getPollTrackerSelectedParties();
-  const seatsEnabled = Boolean(pollTrackerMetricSeatsInput?.checked);
-  const votePctEnabled = Boolean(pollTrackerMetricVotesInput?.checked);
+    const selectedParties = getPollTrackerSelectedParties();
+    const seatsEnabled = Boolean(pollTrackerMetricSeatsInput?.checked);
+    const votePctEnabled = Boolean(pollTrackerMetricVotesInput?.checked);
 
   pollTrackerChartWrap.innerHTML = '';
   pollTrackerChartWrap.style.position = 'relative';
@@ -704,8 +703,8 @@ function renderPollTrackerChart() {
 function renderPollTrackerPartyControls() {
   if (!pollTrackerPartyControls) return;
 
-  const partyRows = Array.from(pollTrackerSeriesByParty.values())
-    .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
+    const partyRows = Array.from(pollTrackerSeriesByParty.values())
+      .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 
   const normalizePartyName = (name) => String(name || '').trim().toLowerCase();
   const isOtherParty = (name) => /^others?$/.test(normalizePartyName(name));
@@ -1162,11 +1161,19 @@ function syncPredictModeRightColumnLayout() {
 }
 
 function roundPredictShareValue(value) {
-  return Math.round(Number(value || 0) * 10) / 10;
+  return Math.round(Number(value || 0));
 }
 
 function formatPredictShare(value) {
-  return roundPredictShareValue(value).toFixed(1);
+  return String(roundPredictShareValue(value));
+}
+
+function normalizePredictShareMap(sourceMap) {
+  const normalized = new Map();
+  (sourceMap || new Map()).forEach((value, key) => {
+    normalized.set(key, roundPredictShareValue(clampNumber(value, 0, 100)));
+  });
+  return normalized;
 }
 
 function collectPredictPartyKeys() {
@@ -1289,7 +1296,9 @@ function setPredictInputShareValue(regionKey, partyKey, inputValue) {
 }
 
 function getPredictBaselineShare(regionKey, partyKey) {
-  return Number(predictBaselineShareByRegionParty.get(predictInputKey(regionKey, partyKey)) || 0);
+  return roundPredictShareValue(
+    Number(predictBaselineShareByRegionParty.get(predictInputKey(regionKey, partyKey)) || 0)
+  );
 }
 
 function getPredictInputShareValue(regionKey, partyKey) {
@@ -1404,7 +1413,7 @@ function buildPredictBaselineShares(seats) {
     PREDICT_MODELLED_PARTY_KEYS.forEach((partyKey) => {
       const votes = Number(stats.votesByParty.get(partyKey) || 0);
       const share = stats.totalVotes > 0 ? (votes / stats.totalVotes) * 100 : 0;
-      shareMap.set(predictInputKey(regionKey, partyKey), share);
+      shareMap.set(predictInputKey(regionKey, partyKey), roundPredictShareValue(share));
     });
   });
 
@@ -1432,7 +1441,7 @@ function rebuildPredictSwingsFromInputs() {
 
 function resetPredictInputsToBaseline() {
   predictRegionalSwingsByParty = new Map();
-  predictInputByRegionParty = new Map(predictBaselineShareByRegionParty);
+  predictInputByRegionParty = normalizePredictShareMap(predictBaselineShareByRegionParty);
 
   document.querySelectorAll('.maps-predict-grid-input').forEach((input) => {
     const regionKey = input.dataset.regionKey;
@@ -1524,7 +1533,7 @@ function renderPredictGrid() {
       }
       const input = document.createElement('input');
       input.type = 'number';
-      input.step = '0.1';
+      input.step = '1';
       input.min = '0';
       input.max = '100';
       input.className = 'maps-predict-grid-input';
@@ -1587,7 +1596,7 @@ async function ensurePredictBaselineData() {
   predictBaseSeatsByKey = buildSeatIndex(predictBaseSeats);
   predictBaseMapData = mapData;
   predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId);
-  predictBaselineShareByRegionParty = buildPredictBaselineShares(predictBaseSeats);
+  predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(predictBaseSeats));
 
   return true;
 }
@@ -1699,12 +1708,12 @@ async function activatePredictMode() {
       predictBaseSeatsByKey = buildSeatIndex(predictBaseSeats);
       predictBaseMapData = currentMapData;
       predictBaseRegionLabelsByKey = new Map(currentRegionLabelsByKey);
-      predictBaselineShareByRegionParty = buildPredictBaselineShares(predictBaseSeats);
+      predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(predictBaseSeats));
     }
   }
 
   predictRegionalSwingsByParty = new Map();
-  predictInputByRegionParty = new Map(predictBaselineShareByRegionParty);
+  predictInputByRegionParty = normalizePredictShareMap(predictBaselineShareByRegionParty);
   predictEnglandExpanded = false;
   predictColumnPartyKeys = collectPredictPartyKeys();
   renderPredictGrid();
@@ -2423,10 +2432,6 @@ function updateTopSummary(election, summary) {
       subtitle.textContent = election?.type === 'model_uns' ? withLatestPollSubtitle(baseText) : baseText;
     }
   }
-
-  if (voteMeta) {
-    voteMeta.textContent = `United Kingdom · seats ${formatInt(summary.totalSeats)}`;
-  }
 }
 
 function seatNameFromFeature(featureDatum) {
@@ -2894,7 +2899,6 @@ async function init() {
     }
   } catch (error) {
     if (subtitle) subtitle.textContent = 'Failed to load election data';
-    if (voteMeta) voteMeta.textContent = error.message;
     if (seatList) {
       seatList.innerHTML = '<p>Unable to load configured election files.</p>';
     }

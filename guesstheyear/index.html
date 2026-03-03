@@ -6,16 +6,11 @@
     <title>Chronos: The Daily History Guess</title>
     <link href="../site/vendor/bootstrap.min.css" rel="stylesheet">
     <link rel="icon" type="image/png" href="/imgs/logo.png">
+    <link rel="stylesheet" href="../site/topbar.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bluey-page">
+<body class="bluey-page" data-topbar-back-href="../">
 <div class="bluey-background" aria-hidden="true"></div>
-<div class="site-topbar">
-    <div class="site-topbar-inner">
-        <a href="../" class="site-back-link"><img src="../imgs/principal-fish-silly.svg" alt="" class="site-back-fish" aria-hidden="true" />← Back home</a>
-        <span class="site-topbar-label">Chronos</span>
-    </div>
-</div>
 
 <div class="container game-container">
     <header class="text-center mb-4">
@@ -92,6 +87,7 @@
 </div>
 <script src="../site/vendor/confetti.browser.min.js"></script>
 <script src="../site/vendor/bootstrap.bundle.min.js"></script>
+<script type="module" src="../site/topbar.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

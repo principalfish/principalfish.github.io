@@ -308,6 +308,19 @@ a {
   font: 700 0.8rem/1 "DM Sans", "Segoe UI", sans-serif;
 }
 
+.maps-contact-link {
+  color: #334155;
+  text-decoration: none;
+  font: 700 0.82rem/1 "DM Sans", "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+  opacity: 0.88;
+}
+
+.maps-contact-link:hover {
+  text-decoration: underline;
+  opacity: 1;
+}
+
 .maps-wrap {
   width: min(1680px, 98vw);
   padding-top: 1rem;
@@ -436,8 +449,8 @@ a {
 }
 
 .maps-predict-window.maps-predict-window-compact {
-  max-height: 44%;
-  min-height: 260px;
+  max-height: none;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -447,7 +460,7 @@ a {
 }
 
 .maps-predict-window.maps-predict-window-compact .maps-predict-grid {
-  flex: 1;
+  flex: 0 1 auto;
   max-height: none;
 }
 

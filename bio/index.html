@@ -9,13 +9,12 @@
 
     <script src="../site/vendor/tailwindcdn.js"></script>
     <script src="../site/tailwind-config.js"></script>
+    <link rel="stylesheet" href="../site/topbar.min.css" />
     <link rel="stylesheet" href="../site/styles.css" />
   </head>
-  <body class="maps-page">
+  <body class="maps-page" data-topbar-back-href="../">
     <div class="maps-background" aria-hidden="true"></div>
     <main class="site-wrap">
-      <a href="../" class="page-link"><img src="../imgs/principal-fish-silly.svg" alt="" class="page-link-fish" aria-hidden="true" />← Back home</a>
-
       <header class="top-rule" style="margin-top: 1rem;">
         <p class="site-kicker">Profile</p>
         <h1 class="site-title">Bio</h1>
@@ -33,5 +32,6 @@
         </div>
       </section>
     </main>
+    <script type="module" src="../site/topbar.min.js"></script>
   </body>
 </html>

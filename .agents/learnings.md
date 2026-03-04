@@ -46,6 +46,14 @@ Top-level durable insights only.
 - Route/path naming is now `electionmaps` (not `election-maps`); keep links/scripts/exports/docs aligned when making path changes.
 - Mobile UX now uses an off-canvas elections drawer on `max-width: 980px`, implemented with page-local assets (`electionmaps/mobile-sidebar.css` + `electionmaps/mobile-sidebar.js`) so desktop layout stays untouched.
 - Electionmaps mobile UX now works as a unified shell: full-screen election picker, `Map/Seats/Totals` switch, and a bottom-sheet right panel with collapsed/half/full states driven by `maps-mobile-*` classes on `.maps-page`.
+- Predict 2029 input now includes Northern Ireland in rendered rows and share-state validation, and NI seats now consume configured party swings instead of being hard-excluded from swing resolution.
+- For very small screens, keep `maps-predict-grid` horizontally scrollable (`overflow-x: auto`) with `maps-predict-grid-table { width: max-content; min-width: 100%; }` so all user-input columns remain reachable.
+- Predict 2029 now renders a separate Northern Ireland matrix section with dedicated NI party headers (`Sinn Fein`, `DUP`, `Alliance`, `UUP`, `SDLP`) so NI inputs are distinct from GB party columns.
+- NI section headers should follow the same color-swatch-only style as GB; party names are exposed via header hover (`title`) tooltips rather than inline text labels.
+- Predict NI section no longer needs a dedicated heading; use row label alias `Northern Ireland -> N Ireland` and keep first-column width fixed to match adjacent predict matrix sections.
+- For better small-screen predict UX, make input cell widths responsive (`clamp(...)`) and tighten table/input padding so columns shrink first, with horizontal scrolling only as fallback.
+- To align NI and GB predict matrices, set shared CSS vars for first-column and value-column widths on `.maps-predict-grid` and apply them to all table sections; this also lets you reclaim space from an oversized Region column without shrinking numbers.
+- If NI still looks offset against GB, render NI with one blank spacer value column and a blank second header first-cell (no repeated `Region`) so visual column tracks line up while keeping NI-specific party inputs.
 
 ## Data Server
 

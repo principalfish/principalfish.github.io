@@ -434,7 +434,10 @@ a {
 }
 
 .maps-predict-grid {
-  overflow: visible;
+  --maps-predict-region-col-width: 6.55rem;
+  --maps-predict-value-col-width: 3.04rem;
+  overflow-x: auto;
+  overflow-y: visible;
   max-height: none;
   border: 1px solid rgba(15, 23, 42, 0.17);
   border-radius: 8px;
@@ -442,6 +445,16 @@ a {
   padding: 0.38rem;
   scrollbar-width: thin;
   scrollbar-color: rgba(15, 23, 42, 0.32) transparent;
+}
+
+.maps-predict-grid-section + .maps-predict-grid-section {
+  margin-top: 0.58rem;
+}
+
+.maps-predict-grid-section-title {
+  margin: 0 0 0.28rem;
+  font: 700 0.74rem/1.15 "DM Sans", "Segoe UI", sans-serif;
+  color: #1e293b;
 }
 
 .maps-predict-grid::-webkit-scrollbar {
@@ -490,7 +503,7 @@ a {
 
 .maps-predict-window.maps-predict-window-force-scroll .maps-predict-grid {
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   max-height: none;
   min-height: 0;
 }
@@ -520,13 +533,14 @@ a {
 }
 
 .maps-predict-grid-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
 }
 
 .maps-predict-grid-table th,
 .maps-predict-grid-table td {
-  padding: 0.2rem 0.24rem;
+  padding: clamp(0.12rem, 0.42vw, 0.2rem) clamp(0.14rem, 0.5vw, 0.24rem);
   text-align: center;
   border-bottom: 1px solid rgba(15, 23, 42, 0.09);
   background: #f7fbff;
@@ -537,7 +551,15 @@ a {
   text-align: left;
   position: sticky;
   left: 0;
+  width: var(--maps-predict-region-col-width);
+  min-width: var(--maps-predict-region-col-width);
   background: #f7fbff;
+}
+
+.maps-predict-grid-table th:not(:first-child),
+.maps-predict-grid-table td:not(:first-child) {
+  width: var(--maps-predict-value-col-width);
+  min-width: var(--maps-predict-value-col-width);
 }
 
 .maps-predict-grid-table th {
@@ -615,14 +637,31 @@ a {
 }
 
 .maps-predict-grid-input {
-  width: 3.6rem;
+  width: 100%;
   border: 1px solid rgba(15, 23, 42, 0.24);
   border-radius: 6px;
-  padding: 0.16rem 0.2rem;
+  padding: 0.12rem 0.16rem;
   font: 700 0.75rem/1 "DM Sans", "Segoe UI", sans-serif;
   text-align: center;
   color: #0f172a;
   background: #ffffff;
+}
+
+@media (max-width: 560px) {
+  .maps-predict-grid {
+    --maps-predict-region-col-width: 5.9rem;
+    --maps-predict-value-col-width: 2.86rem;
+  }
+
+  .maps-predict-grid-input {
+    width: 100%;
+    padding: 0.08rem 0.12rem;
+  }
+
+  .maps-predict-expand-btn {
+    padding: 0.14rem 0.36rem;
+    font-size: 0.64rem;
+  }
 }
 
 .maps-predict-grid-input:focus {
@@ -640,9 +679,14 @@ a {
   color: #d93025;
 }
 
+.maps-predict-grid-spacer {
+  color: transparent;
+}
+
 .maps-predict-window-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 0.42rem;
 }
 

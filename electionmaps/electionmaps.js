@@ -250,7 +250,13 @@ function decodePredictPayloadV2(encoded) {
 }
 
 const PREDICT_BASE_PARTY_KEYS = ['labour', 'conservative', 'libdems', 'green', 'reform'];
-const PREDICT_MODELLED_PARTY_KEYS = [...PREDICT_BASE_PARTY_KEYS, 'snp', 'plaidcymru'];
+const PREDICT_NI_PARTY_KEYS = ['sinnfein', 'dup', 'alliance', 'uup', 'sdlp'];
+const PREDICT_MODELLED_PARTY_KEYS = [
+  ...PREDICT_BASE_PARTY_KEYS,
+  'snp',
+  'plaidcymru',
+  ...PREDICT_NI_PARTY_KEYS,
+];
 const PREDICT_NAT_COLUMN_KEY = 'nat';
 const PREDICT_ENGLAND_KEY = 'england';
 const PREDICT_SCOTLAND_KEY = 'scotland';
@@ -1341,6 +1347,10 @@ function collectPredictPartyKeys() {
   return [...PREDICT_BASE_PARTY_KEYS, PREDICT_NAT_COLUMN_KEY];
 }
 
+function collectPredictNorthernIrelandPartyKeys() {
+  return [...PREDICT_NI_PARTY_KEYS];
+}
+
 function predictNatPartyKeyForRegion(regionKey) {
   if (isPredictScotlandRegion(regionKey)) return 'snp';
   if (isPredictWalesRegion(regionKey)) return 'plaidcymru';
@@ -1355,6 +1365,10 @@ function resolvePredictInputPartyKey(regionKey, columnPartyKey) {
 }
 
 function collectPredictInputPartyKeysForRegion(regionKey) {
+  if (isPredictNorthernIrelandRegion(regionKey)) {
+    return collectPredictNorthernIrelandPartyKeys();
+  }
+
   const keys = [...PREDICT_BASE_PARTY_KEYS];
   const natPartyKey = predictNatPartyKeyForRegion(regionKey);
   if (natPartyKey) keys.push(natPartyKey);
@@ -1393,6 +1407,7 @@ function collectPredictInputRows() {
   const englishRegions = allRegions.filter((row) => isPredictEnglishRegion(row.regionKey));
   const scotland = allRegions.find((row) => isPredictScotlandRegion(row.regionKey));
   const wales = allRegions.find((row) => isPredictWalesRegion(row.regionKey));
+  const northernIreland = allRegions.find((row) => isPredictNorthernIrelandRegion(row.regionKey));
 
   const rows = [
     {
@@ -1430,6 +1445,14 @@ function collectPredictInputRows() {
       isEnglandRegion: false,
     });
   }
+  if (northernIreland) {
+    rows.push({
+      regionKey: northernIreland.regionKey,
+      regionLabel: northernIreland.regionLabel,
+      isEnglandAggregate: false,
+      isEnglandRegion: false,
+    });
+  }
 
   return rows;
 }
@@ -1437,6 +1460,7 @@ function collectPredictInputRows() {
 function formatPredictRegionLabel(regionLabel) {
   const text = String(regionLabel || '').trim();
   const aliases = {
+    'northern ireland': 'N Ireland',
     'north east england': 'North East',
     'north west england': 'North West',
     'south east england': 'South East',
@@ -1491,8 +1515,12 @@ function collectPredictValidationRows() {
   const rows = [{ regionKey: PREDICT_ENGLAND_KEY, regionLabel: 'England' }];
 
   allRegions.forEach((row) => {
-    if (isPredictNorthernIrelandRegion(row.regionKey)) return;
-    if (isPredictEnglishRegion(row.regionKey) || isPredictScotlandRegion(row.regionKey) || isPredictWalesRegion(row.regionKey)) {
+    if (
+      isPredictEnglishRegion(row.regionKey)
+      || isPredictScotlandRegion(row.regionKey)
+      || isPredictWalesRegion(row.regionKey)
+      || isPredictNorthernIrelandRegion(row.regionKey)
+    ) {
       rows.push({ regionKey: row.regionKey, regionLabel: row.regionLabel });
     }
   });
@@ -1628,7 +1656,7 @@ function validatePredictRowsNotOver100() {
 
 function resolvedPredictSwingValue(seatRegionKey, partyKey) {
   const normalizedSeatRegion = normalizeRegionKey(seatRegionKey);
-  if (!normalizedSeatRegion || isPredictNorthernIrelandRegion(normalizedSeatRegion)) return 0;
+  if (!normalizedSeatRegion) return 0;
 
   const swingMap = ensurePredictPartySwingMap(partyKey);
   const direct = Number(swingMap.get(normalizedSeatRegion) || 0);
@@ -1655,7 +1683,7 @@ function buildPredictBaselineShares(seats) {
 
   (seats || []).forEach((seat) => {
     const regionKey = normalizeRegionKey(seat.region);
-    if (!regionKey || isPredictNorthernIrelandRegion(regionKey)) return;
+    if (!regionKey) return;
 
     const turnout = totalVotesForSeat(seat);
     if (turnout <= 0) return;
@@ -1734,42 +1762,57 @@ function resetPredictInputsToBaseline() {
 function renderPredictGrid() {
   if (!predictGrid) return;
   const regions = collectPredictInputRows();
-  const partyKeys = predictColumnPartyKeys;
 
   predictGrid.innerHTML = '';
   predictOtherCellByRegion = new Map();
 
-  const table = document.createElement('table');
-  table.className = 'maps-predict-grid-table';
+  const renderPredictGridSection = ({ sectionTitle, sectionClassName, sectionRegions, sectionPartyKeys, blankRegionHeader = false }) => {
+    if (!sectionRegions.length) return;
 
-  const thead = document.createElement('thead');
-  const headRow = document.createElement('tr');
+    const sectionWrap = document.createElement('section');
+    sectionWrap.className = `maps-predict-grid-section ${sectionClassName}`.trim();
 
-  const regionTh = document.createElement('th');
-  regionTh.textContent = 'Region';
-  headRow.appendChild(regionTh);
-
-  partyKeys.forEach((partyKey) => {
-    const th = document.createElement('th');
-    if (partyKey === PREDICT_NAT_COLUMN_KEY) {
-      th.title = 'NAT (SNP in Scotland, Plaid Cymru in Wales)';
-      th.innerHTML = '<span class="maps-predict-grid-swatch maps-predict-grid-swatch-nat" aria-hidden="true"></span>';
-    } else {
-      th.title = labelParty(partyKey);
-      th.innerHTML = `<span class="maps-predict-grid-swatch" style="background:${colourParty(partyKey)}" aria-hidden="true"></span>`;
+    if (sectionTitle) {
+      const heading = document.createElement('h4');
+      heading.className = 'maps-predict-grid-section-title';
+      heading.textContent = sectionTitle;
+      sectionWrap.appendChild(heading);
     }
-    headRow.appendChild(th);
-  });
 
-  const totalTh = document.createElement('th');
-  totalTh.title = 'Other';
-  totalTh.innerHTML = '<span class="maps-predict-grid-swatch maps-predict-grid-swatch-other" aria-hidden="true"></span>';
-  headRow.appendChild(totalTh);
-  thead.appendChild(headRow);
-  table.appendChild(thead);
+    const table = document.createElement('table');
+    table.className = 'maps-predict-grid-table';
 
-  const tbody = document.createElement('tbody');
-  regions.forEach((region) => {
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+
+    const regionTh = document.createElement('th');
+    regionTh.textContent = blankRegionHeader ? '' : 'Region';
+    headRow.appendChild(regionTh);
+
+    sectionPartyKeys.forEach((partyKey) => {
+      const th = document.createElement('th');
+      if (!partyKey) {
+        th.title = '';
+        th.innerHTML = '';
+      } else if (partyKey === PREDICT_NAT_COLUMN_KEY) {
+        th.title = 'NAT (SNP in Scotland, Plaid Cymru in Wales)';
+        th.innerHTML = '<span class="maps-predict-grid-swatch maps-predict-grid-swatch-nat" aria-hidden="true"></span>';
+      } else {
+        th.title = labelParty(partyKey);
+        th.innerHTML = `<span class="maps-predict-grid-swatch" style="background:${colourParty(partyKey)}" aria-hidden="true"></span>`;
+      }
+      headRow.appendChild(th);
+    });
+
+    const totalTh = document.createElement('th');
+    totalTh.title = 'Other';
+    totalTh.innerHTML = '<span class="maps-predict-grid-swatch maps-predict-grid-swatch-other" aria-hidden="true"></span>';
+    headRow.appendChild(totalTh);
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    sectionRegions.forEach((region) => {
     const tr = document.createElement('tr');
 
     const labelTd = document.createElement('td');
@@ -1798,7 +1841,15 @@ function renderPredictGrid() {
     }
     tr.appendChild(labelTd);
 
-    partyKeys.forEach((columnPartyKey) => {
+    sectionPartyKeys.forEach((columnPartyKey) => {
+      if (!columnPartyKey) {
+        const td = document.createElement('td');
+        td.className = 'maps-predict-grid-spacer';
+        td.textContent = '';
+        tr.appendChild(td);
+        return;
+      }
+
       const partyKey = resolvePredictInputPartyKey(region.regionKey, columnPartyKey);
       const td = document.createElement('td');
       if (!partyKey) {
@@ -1832,10 +1883,31 @@ function renderPredictGrid() {
     predictOtherCellByRegion.set(region.regionKey, totalTd);
     tr.appendChild(totalTd);
     tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    sectionWrap.appendChild(table);
+    predictGrid.appendChild(sectionWrap);
+  };
+
+  const northernIrelandRegions = regions.filter((region) => isPredictNorthernIrelandRegion(region.regionKey));
+  const gbRegions = regions.filter((region) => !isPredictNorthernIrelandRegion(region.regionKey));
+
+  renderPredictGridSection({
+    sectionTitle: null,
+    sectionClassName: 'maps-predict-grid-section-gb',
+    sectionRegions: gbRegions,
+    sectionPartyKeys: predictColumnPartyKeys,
+    blankRegionHeader: false,
   });
 
-  table.appendChild(tbody);
-  predictGrid.appendChild(table);
+  renderPredictGridSection({
+    sectionTitle: null,
+    sectionClassName: 'maps-predict-grid-section-ni',
+    sectionRegions: northernIrelandRegions,
+    sectionPartyKeys: [...collectPredictNorthernIrelandPartyKeys(), null],
+    blankRegionHeader: true,
+  });
 }
 
 function deactivatePredictMode() {

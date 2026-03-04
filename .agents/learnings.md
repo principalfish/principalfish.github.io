@@ -76,6 +76,7 @@ Top-level durable insights only.
 - For `electionmaps` history-driven route updates (`history.replaceState`), emit explicit GA4 `page_view` events to capture virtual navigation beyond initial page load.
 - Keep `document.title` synchronized with the active `electionmaps` mode/election before calling route-state helpers so virtual GA4 `page_view` events capture the correct `page_title`.
 - For pages with async title updates (`electionmaps`), disable GA4 auto `page_view` (`send_page_view: false`) in `site/ga-setup.js` via pathname detection and emit manual `page_view` after route/title settle to avoid all events collapsing under the default HTML title.
+- NI seat polygons are not stable between `map-1.topo.json` and `map-2.topo.json`: all 17 shared NI seat names have geometry deltas, and one seat is renamed (`Belfast South` -> `Belfast South and Mid Down`).
 - Bio/profile photos added from phone originals can be multi-megabyte JPEGs; keep layout lazy-loaded and plan a web-optimized pass (downscale/WebP) to reduce static page payload.
 - For profile pages, concise copy with fewer dense paragraphs improves scanability and preserves the existing card-style visual rhythm.
 - Contextual inline links (rather than separate CTA blocks) work well for profile prose when pointing to flagship internal pages like `electionmaps/`.
@@ -85,3 +86,5 @@ Top-level durable insights only.
 - Current baseline test status in `data/` is green (`data/run_tests.sh`).
 - Main maintainability risks are large monolithic files (`electionmaps/electionmaps.js`, `data/server.py`, `guesstheyear/script.js`) and should be modularized incrementally.
 - In `data/server.py`, avoid per-request DB engine creation and watch unbounded preview cache growth patterns.
+
+- Seat search in `electionmaps` now uses a custom JS suggestion menu (`.maps-seat-search-menu`) instead of native `datalist`, because mobile browsers can fail to show datalist options reliably; this keeps tap/focus suggestions and Enter selection consistent across desktop and mobile.

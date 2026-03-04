@@ -65,6 +65,10 @@ let currentElectionId = null;
 let currentSeats = [];
 let currentComparisonSeats = [];
 let currentMapData = null;
+let seatSearchNames = [];
+let seatSearchSuggestions = [];
+let seatSearchSuggestionIndex = -1;
+let seatSearchMenuEl = null;
 let predictModeActive = false;
 let predictModeLinkEl = null;
 let predictBaseSeats = [];
@@ -285,6 +289,7 @@ const ZOOM_MAX_SCALE = 10;
 const LEGACY_CLICK_ZOOM_BASE = 0.05;
 const CLICK_ZOOM_DURATION_MS = 1500;
 const RESET_ZOOM_DURATION_MS = 500;
+const MAX_SEAT_SEARCH_SUGGESTIONS = 10;
 let mapInteractionController = {
   zoomBy: () => {},
   reset: () => {},
@@ -2693,26 +2698,91 @@ function buildSeatSearchIndex(seats) {
   });
 
   names.sort((a, b) => a.localeCompare(b));
+  seatSearchNames = names;
   return names;
+}
+
+function ensureSeatSearchMenu() {
+  if (seatSearchMenuEl || !seatSearchInput) return seatSearchMenuEl;
+  const searchGroup = seatSearchInput.closest('.maps-toolbar-group-search') || seatSearchInput.parentElement;
+  if (!searchGroup) return null;
+
+  const menu = document.createElement('div');
+  menu.className = 'maps-seat-search-menu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'listbox');
+  menu.id = 'mapsSeatSearchMenu';
+  searchGroup.appendChild(menu);
+  seatSearchMenuEl = menu;
+  return seatSearchMenuEl;
+}
+
+function hideSeatSearchSuggestions() {
+  seatSearchSuggestionIndex = -1;
+  if (!seatSearchMenuEl) return;
+  seatSearchMenuEl.hidden = true;
+  seatSearchMenuEl.innerHTML = '';
+}
+
+function showSeatSearchSuggestions(query = '') {
+  const menu = ensureSeatSearchMenu();
+  if (!menu) return;
+
+  const queryText = String(query || '').trim().toLowerCase();
+  const startsWithMatches = [];
+  const includesMatches = [];
+  seatSearchNames.forEach((name) => {
+    const lowerName = name.toLowerCase();
+    if (!queryText || lowerName.startsWith(queryText)) {
+      startsWithMatches.push(name);
+      return;
+    }
+    if (lowerName.includes(queryText)) includesMatches.push(name);
+  });
+
+  seatSearchSuggestions = [...startsWithMatches, ...includesMatches].slice(0, MAX_SEAT_SEARCH_SUGGESTIONS);
+  seatSearchSuggestionIndex = -1;
+  menu.innerHTML = '';
+
+  if (!seatSearchSuggestions.length) {
+    menu.hidden = true;
+    return;
+  }
+
+  seatSearchSuggestions.forEach((name, index) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'maps-seat-search-item';
+    item.textContent = name;
+    item.setAttribute('role', 'option');
+    item.dataset.index = String(index);
+    item.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+    });
+    item.addEventListener('click', () => {
+      seatSearchInput.value = name;
+      hideSeatSearchSuggestions();
+      selectSeatBySearchQuery(name);
+    });
+    menu.appendChild(item);
+  });
+
+  menu.hidden = false;
+}
+
+function updateSeatSearchHighlight() {
+  if (!seatSearchMenuEl) return;
+  const options = seatSearchMenuEl.querySelectorAll('.maps-seat-search-item');
+  options.forEach((option) => {
+    const index = Number(option.dataset.index);
+    option.classList.toggle('is-active', index === seatSearchSuggestionIndex);
+  });
 }
 
 function applySeatSearchSuggestions(seatNames) {
   if (!seatSearchInput) return;
-
-  let listEl = document.getElementById('mapsSeatSearchOptions');
-  if (!listEl) {
-    listEl = document.createElement('datalist');
-    listEl.id = 'mapsSeatSearchOptions';
-    document.body.appendChild(listEl);
-  }
-
-  seatSearchInput.setAttribute('list', 'mapsSeatSearchOptions');
-  listEl.innerHTML = '';
-  seatNames.forEach((name) => {
-    const option = document.createElement('option');
-    option.value = name;
-    listEl.appendChild(option);
-  });
+  seatSearchNames = Array.isArray(seatNames) ? [...seatNames] : [];
+  hideSeatSearchSuggestions();
 }
 
 function selectSeatBySearchQuery(query) {
@@ -2749,6 +2819,7 @@ function selectSeatBySearchQuery(query) {
 
 function wireSeatSearch() {
   if (!seatSearchInput || seatSearchInput.dataset.wired === 'true') return;
+  ensureSeatSearchMenu();
 
   let lastSubmittedQuery = '';
   const submitSearch = () => {
@@ -2758,13 +2829,59 @@ function wireSeatSearch() {
     selectSeatBySearchQuery(query);
   };
 
+  seatSearchInput.addEventListener('focus', () => {
+    showSeatSearchSuggestions(seatSearchInput.value);
+  });
+  seatSearchInput.addEventListener('input', () => {
+    showSeatSearchSuggestions(seatSearchInput.value);
+  });
   seatSearchInput.addEventListener('change', submitSearch);
-  seatSearchInput.addEventListener('blur', submitSearch);
+  seatSearchInput.addEventListener('blur', () => {
+    window.setTimeout(() => {
+      hideSeatSearchSuggestions();
+      submitSearch();
+    }, 120);
+  });
   seatSearchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      if (!seatSearchSuggestions.length) {
+        showSeatSearchSuggestions(seatSearchInput.value);
+      }
+      if (!seatSearchSuggestions.length) return;
+      event.preventDefault();
+      seatSearchSuggestionIndex = Math.min(seatSearchSuggestionIndex + 1, seatSearchSuggestions.length - 1);
+      updateSeatSearchHighlight();
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      if (!seatSearchSuggestions.length) return;
+      event.preventDefault();
+      seatSearchSuggestionIndex = Math.max(seatSearchSuggestionIndex - 1, 0);
+      updateSeatSearchHighlight();
+      return;
+    }
+
     if (event.key === 'Enter') {
       event.preventDefault();
+      if (seatSearchSuggestionIndex >= 0 && seatSearchSuggestionIndex < seatSearchSuggestions.length) {
+        const selectedName = seatSearchSuggestions[seatSearchSuggestionIndex];
+        seatSearchInput.value = selectedName;
+      }
+      hideSeatSearchSuggestions();
       submitSearch();
+      return;
     }
+
+    if (event.key === 'Escape') {
+      hideSeatSearchSuggestions();
+    }
+  });
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Node)) return;
+    if (seatSearchInput.contains(event.target)) return;
+    if (seatSearchMenuEl?.contains(event.target)) return;
+    hideSeatSearchSuggestions();
   });
 
   seatSearchInput.dataset.wired = 'true';

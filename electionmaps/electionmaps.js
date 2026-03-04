@@ -90,7 +90,7 @@ const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 
 let pollTrackerMetaLoaded = false;
 let pollTrackerLatestSnippet = '';
-let lastTrackedVirtualPagePath = `${window.location.pathname}${window.location.search}`;
+let lastTrackedVirtualPagePath = '';
 
 function trackVirtualPageView(nextUrl) {
   if (typeof window.gtag !== 'function') return;

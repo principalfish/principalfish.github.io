@@ -74,6 +74,8 @@ Top-level durable insights only.
 - For pages served on multiple hostnames (custom domain, GitHub Pages preview, localhost), set GA4 `gtag('config', ..., { cookie_domain: 'auto' })` to avoid invalid-domain cookie warnings.
 - GA initialization is now runtime-gated in static HTML heads: skip analytics on local/dev hosts (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]`, `.local`, and `file:`).
 - For `electionmaps` history-driven route updates (`history.replaceState`), emit explicit GA4 `page_view` events to capture virtual navigation beyond initial page load.
+- Keep `document.title` synchronized with the active `electionmaps` mode/election before calling route-state helpers so virtual GA4 `page_view` events capture the correct `page_title`.
+- For pages with async title updates (`electionmaps`), disable GA4 auto `page_view` (`send_page_view: false`) in `site/ga-setup.js` via pathname detection and emit manual `page_view` after route/title settle to avoid all events collapsing under the default HTML title.
 - Bio/profile photos added from phone originals can be multi-megabyte JPEGs; keep layout lazy-loaded and plan a web-optimized pass (downscale/WebP) to reduce static page payload.
 - For profile pages, concise copy with fewer dense paragraphs improves scanability and preserves the existing card-style visual rhythm.
 - Contextual inline links (rather than separate CTA blocks) work well for profile prose when pointing to flagship internal pages like `electionmaps/`.

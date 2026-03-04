@@ -19,5 +19,14 @@
   window.dataLayer = window.dataLayer || [];
   window.gtag = function () { window.dataLayer.push(arguments); };
   window.gtag('js', new Date());
-  window.gtag('config', 'G-DF15MKHP0V', { cookie_domain: 'auto' });
+  const pathname = String(window.location.pathname || '').toLowerCase();
+  const isElectionMapsPage =
+    pathname === '/electionmaps'
+    || pathname === '/electionmaps/'
+    || pathname.endsWith('/electionmaps/index.html');
+  const disableAutoPageView = window.__gaDisableAutoPageView === true || isElectionMapsPage;
+  const configOptions = disableAutoPageView
+    ? { cookie_domain: 'auto', send_page_view: false }
+    : { cookie_domain: 'auto' };
+  window.gtag('config', 'G-DF15MKHP0V', configOptions);
 })();

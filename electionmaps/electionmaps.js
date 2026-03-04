@@ -86,6 +86,7 @@ let pollTrackerRangeSelection = 'all';
 
 const POLL_TRACKER_CSV_PATH = 'data/results/model_output_trends.csv';
 const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
+const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 
 let pollTrackerMetaLoaded = false;
 let pollTrackerLatestSnippet = '';
@@ -107,6 +108,11 @@ function trackVirtualPageView(nextUrl) {
     });
   } catch (_error) {
   }
+}
+
+function setMapsPageTitle(contextLabel) {
+  const label = String(contextLabel || '').trim();
+  document.title = label ? `${label} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
 }
 
 function buildRouteSearchParams(view, electionId = null) {
@@ -950,6 +956,7 @@ async function activatePollTrackerMode() {
 
   setPollTrackerLayoutVisible(true);
   await loadPollTrackerMetaIfNeeded();
+  setMapsPageTitle('Poll tracker');
   setSubtitleText('Poll tracker · model output trends', { includeLatestPollSnippet: true });
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
   replaceRouteState('polltracker');
@@ -2071,6 +2078,7 @@ async function activatePredictMode() {
     seatPreview.textContent = 'Predict mode active: edit regional vote shares and click Submit.';
   }
 
+  setMapsPageTitle('Predict 2029');
   replacePredictRouteStateFromInputs();
 
   rebuildPredictSwingsFromInputs();
@@ -2773,6 +2781,7 @@ function syncRightPanelHeightToMap() {
 }
 
 function updateTopSummary(election, summary) {
+  setMapsPageTitle(election?.name);
   const top = summary.parties[0];
   const leadSeats = Number(top?.seats || 0);
   const totalSeats = Number(summary.totalSeats || 0);

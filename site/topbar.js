@@ -15,7 +15,15 @@ if (body && !body.querySelector('.pf-topbar')) {
 
   if (isHome) {
     inner.classList.add('is-home');
-  } else {
+  }
+
+  const left = document.createElement('div');
+  left.className = 'pf-topbar-left';
+
+  const right = document.createElement('div');
+  right.className = 'pf-topbar-right';
+
+  if (!isHome) {
     const backLink = document.createElement('a');
     backLink.href = backHref;
     backLink.className = 'pf-topbar-back-link';
@@ -28,7 +36,7 @@ if (body && !body.querySelector('.pf-topbar')) {
 
     backLink.appendChild(fish);
     backLink.append('← Back home');
-    inner.appendChild(backLink);
+    left.appendChild(backLink);
   }
 
   const contact = document.createElement('a');
@@ -36,7 +44,19 @@ if (body && !body.querySelector('.pf-topbar')) {
   contact.className = 'pf-topbar-contact-link';
   contact.setAttribute('aria-label', 'Contact by email');
   contact.textContent = 'Contact';
-  inner.appendChild(contact);
+  right.appendChild(contact);
+
+  const coffee = document.createElement('a');
+  coffee.href = 'https://buymeacoffee.com/principalfish';
+  coffee.target = '_blank';
+  coffee.rel = 'noopener noreferrer';
+  coffee.className = 'pf-topbar-coffee-link';
+  coffee.setAttribute('aria-label', 'Buy me a coffee (opens in new tab)');
+  coffee.textContent = 'Buy me a coffee';
+  right.appendChild(coffee);
+
+  inner.appendChild(left);
+  inner.appendChild(right);
 
   topbar.appendChild(inner);
 

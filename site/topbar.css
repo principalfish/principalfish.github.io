@@ -14,8 +14,16 @@
   gap: 0.75rem;
 }
 
-.pf-topbar-inner.is-home {
-  justify-content: flex-end;
+.pf-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pf-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .pf-topbar-back-link {

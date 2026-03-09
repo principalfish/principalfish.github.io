@@ -21,6 +21,7 @@ import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -319,6 +320,27 @@ def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year:
     }
 
 
+def iso_date_or_none(value: date | None) -> str | None:
+    if value is None:
+        return None
+    return value.isoformat()
+
+
+def compact_votes_to_dict(compact_rows: list) -> dict[str, float | int]:
+    normalized_votes: dict[str, float | int] = {}
+    for row in compact_rows:
+        if not isinstance(row, list) or len(row) < 2:
+            continue
+        key = str(row[0] or "").strip()
+        if not key:
+            continue
+        vote_value = normalize_vote_total_value(float(row[1] or 0))
+        if float(vote_value) <= 0:
+            continue
+        normalized_votes[key] = vote_value
+    return normalized_votes
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
@@ -507,7 +529,10 @@ def main() -> None:
         default_election_id: str | None = None
         map_files_by_id: dict[str, str] = {}
         data_files_by_election_id: dict[str, str] = {}
+        by_election_files_by_election_id: dict[str, str] = {}
         written_map_ids: set[int] = set()
+        manifest_id_by_db_id: dict[int, str] = {}
+        pending_by_election_rows: list[dict] = []
 
         for election in elections:
             map_row = election.map
@@ -587,9 +612,33 @@ def main() -> None:
             map_files_by_id[str(election.map_id)] = map_relpath
             data_files_by_election_id[election_manifest_id] = f"results/{result_filename}"
             written_map_ids.add(election.map_id)
+            manifest_id_by_db_id[election.id] = election_manifest_id
 
-            manifest_entries.append(
-                {
+            if election.type == ElectionType.by_election:
+                changes = [
+                    {
+                        "seat": seat_row.get("n"),
+                        "winner": seat_row.get("w"),
+                        "votes": compact_votes_to_dict(seat_row.get("p", [])),
+                        "date": iso_date_or_none(election.election_date),
+                        "label": election.name,
+                    }
+                    for seat_row in result_payload.get("seats", [])
+                    if seat_row.get("n")
+                ]
+                pending_by_election_rows.append(
+                    {
+                        "id": election_manifest_id,
+                        "dbId": election.id,
+                        "parentDbId": election.parent_election_id,
+                        "name": election.name,
+                        "year": election.year,
+                        "date": iso_date_or_none(election.election_date),
+                        "changes": changes,
+                    }
+                )
+            else:
+                manifest_entry = {
                     "id": election_manifest_id,
                     "year": election.year,
                     "name": manifest_name_for_election(election),
@@ -598,10 +647,15 @@ def main() -> None:
                     "mapFile": map_relpath,
                     "dataFile": f"results/{result_filename}",
                 }
-            )
+                if election.parent_election_id is not None:
+                    manifest_entry["parentElectionDbId"] = election.parent_election_id
+                if election.election_date is not None:
+                    manifest_entry["date"] = iso_date_or_none(election.election_date)
 
-            if default_election_id is None and election.type == ElectionType.uk_general:
-                default_election_id = election_manifest_id
+                manifest_entries.append(manifest_entry)
+
+                if default_election_id is None and election.type == ElectionType.uk_general:
+                    default_election_id = election_manifest_id
 
         if args.output_file:
             return
@@ -628,6 +682,64 @@ def main() -> None:
         assign_comparison_elections(manifest_entries)
         remove_comparison_for_supplemental_entries(manifest_entries)
 
+        by_elections_by_parent_manifest_id: dict[str, list[dict]] = defaultdict(list)
+        for by_election in pending_by_election_rows:
+            parent_db_id = by_election.get("parentDbId")
+            parent_manifest_id = manifest_id_by_db_id.get(parent_db_id) if parent_db_id is not None else None
+            if not parent_manifest_id:
+                continue
+            by_elections_by_parent_manifest_id[parent_manifest_id].append(by_election)
+
+        for parent_manifest_id, by_rows in sorted(by_elections_by_parent_manifest_id.items()):
+            overlay_filename = f"by-elections-{parent_manifest_id}.json"
+            overlay_relpath = f"results/{overlay_filename}"
+            overlay_path = results_dir / overlay_filename
+
+            changes: list[dict] = []
+            sorted_rows = sorted(
+                by_rows,
+                key=lambda row: (
+                    row.get("date") or "",
+                    int(row.get("year") or 0),
+                    str(row.get("name") or ""),
+                ),
+            )
+            for row in sorted_rows:
+                for change in row.get("changes", []):
+                    if not change.get("seat"):
+                        continue
+                    changes.append(
+                        {
+                            "seat": change.get("seat"),
+                            "winner": change.get("winner"),
+                            "votes": change.get("votes", {}),
+                            "date": row.get("date"),
+                            "label": row.get("name"),
+                        }
+                    )
+
+            overlay_payload = {
+                "schema": "pf-by-elections-v1",
+                "baseElectionId": parent_manifest_id,
+                "changes": changes,
+            }
+
+            if args.dry_run:
+                print(f"Would write by-election overlay: {overlay_path} ({len(changes)} changes)")
+            else:
+                write_json(overlay_path, overlay_payload)
+                print(f"Wrote by-election overlay: {overlay_path} ({len(changes)} changes)")
+
+            by_election_files_by_election_id[parent_manifest_id] = overlay_relpath
+
+        for entry in manifest_entries:
+            parent_db_id = entry.pop("parentElectionDbId", None)
+            if parent_db_id is None:
+                continue
+            parent_manifest_id = manifest_id_by_db_id.get(parent_db_id)
+            if parent_manifest_id:
+                entry["parentElectionId"] = parent_manifest_id
+
         expected_map_filenames = {Path(path).name for path in map_files_by_id.values()}
         if maps_dir.exists():
             for existing_map in maps_dir.glob("*.topo.json"):
@@ -643,6 +755,7 @@ def main() -> None:
             "settings": {
                 "mapFilesById": map_files_by_id,
                 "dataFilesByElectionId": data_files_by_election_id,
+                "byElectionFilesByElectionId": by_election_files_by_election_id,
                 "parties": manifest_parties,
                 "partiesByKey": manifest_parties_by_key,
                 "regionsByMapId": manifest_regions_by_map_id,

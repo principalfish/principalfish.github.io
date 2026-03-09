@@ -42,6 +42,7 @@ const predictGrid = document.getElementById('mapsPredictGrid');
 const predictSubmitButton = document.getElementById('mapsPredictSubmit');
 const predictShareButton = document.getElementById('mapsPredictShare');
 const predictResetAllButton = document.getElementById('mapsPredictResetAll');
+const byElectionToggleButton = document.getElementById('mapsByElectionToggle');
 
 const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
 const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
@@ -55,6 +56,7 @@ let manifestRegionsByMapId = {};
 let voteTotalsExpanded = false;
 let selectedSeatRow = null;
 let activeSeatPathNode = null;
+let currentOpenSeatName = null;
 let currentSeatsByKey = new Map();
 let comparisonSeatsByKey = new Map();
 let currentSeatNameByKey = new Map();
@@ -65,6 +67,9 @@ let currentElectionId = null;
 let currentSeats = [];
 let currentComparisonSeats = [];
 let currentMapData = null;
+let baseElectionSeats = [];
+let defaultComparisonSeats = [];
+let defaultComparisonSummary = null;
 let seatSearchNames = [];
 let seatSearchSuggestions = [];
 let seatSearchSuggestionIndex = -1;
@@ -87,9 +92,13 @@ let pollTrackerDataLoaded = false;
 let pollTrackerTimeline = [];
 let pollTrackerSeriesByParty = new Map();
 let pollTrackerRangeSelection = 'all';
+let byElectionOverlayByElectionId = {};
+let byElectionModeEnabled = false;
+let byElectionAppliedSeatKeys = new Set();
 
 const POLL_TRACKER_CSV_PATH = 'data/results/model_output_trends.csv';
 const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
+const FALLBACK_BY_ELECTION_OVERLAY_PATH = 'data/results/by-elections-since-2024.json';
 const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 
 let pollTrackerMetaLoaded = false;
@@ -260,7 +269,7 @@ function decodePredictPayloadV2(encoded) {
 }
 
 const PREDICT_BASE_PARTY_KEYS = ['labour', 'conservative', 'libdems', 'green', 'reform'];
-const PREDICT_NI_PARTY_KEYS = ['sinnfein', 'dup', 'alliance', 'uup', 'sdlp'];
+const PREDICT_NI_PARTY_KEYS = ['sinnfein', 'dup', 'alliance', 'uu', 'sdlp'];
 const PREDICT_MODELLED_PARTY_KEYS = [
   ...PREDICT_BASE_PARTY_KEYS,
   'snp',
@@ -446,6 +455,33 @@ async function fetchJson(url) {
 
 async function fetchText(url) {
   return fetchResource(url, (response) => response.text());
+}
+
+async function loadByElectionOverlayForElectionIfNeeded(manifest, electionId) {
+  const targetElectionId = String(electionId || '').trim();
+  if (!targetElectionId) return null;
+  if (Object.prototype.hasOwnProperty.call(byElectionOverlayByElectionId, targetElectionId)) {
+    return byElectionOverlayByElectionId[targetElectionId];
+  }
+
+  const byElectionFilesByElectionId = manifest?.settings?.byElectionFilesByElectionId || {};
+  const configuredFile = byElectionFilesByElectionId[targetElectionId];
+  const candidateFiles = [];
+  if (configuredFile) candidateFiles.push(`data/${configuredFile}`);
+  if (targetElectionId === '2024-general') candidateFiles.push(FALLBACK_BY_ELECTION_OVERLAY_PATH);
+
+  for (const filePath of candidateFiles) {
+    try {
+      const rawOverlay = await fetchJson(filePath);
+      const normalized = normalizeByElectionOverlay(rawOverlay, targetElectionId);
+      byElectionOverlayByElectionId[targetElectionId] = normalized;
+      return normalized;
+    } catch (_error) {
+    }
+  }
+
+  byElectionOverlayByElectionId[targetElectionId] = null;
+  return null;
 }
 
 function setPollTrackerNavState(active) {
@@ -1036,6 +1072,89 @@ function normalizeSeats(resultsData) {
   }
 
   return [];
+}
+
+function cloneSeatRecord(seat) {
+  const votes = {};
+  Object.entries(seat?.votes || {}).forEach(([partyKey, value]) => {
+    const voteTotal = Number(value || 0);
+    if (voteTotal <= 0) return;
+    votes[normalizePartyKey(partyKey)] = voteTotal;
+  });
+
+  return {
+    seat: seat?.seat || 'Unknown seat',
+    region: seat?.region || 'unknown',
+    winner: normalizePartyKey(seat?.winner || 'others'),
+    electorate: Number(seat?.electorate || 0),
+    turnout: Number(seat?.turnout || 0),
+    votes,
+    byElection: seat?.byElection ? { ...seat.byElection } : null,
+  };
+}
+
+function normalizeByElectionOverlay(rawOverlay, baseElectionId) {
+  const payload = rawOverlay && typeof rawOverlay === 'object' ? rawOverlay : {};
+  const resolvedBaseElectionId = String(payload.baseElectionId || baseElectionId || '').trim();
+  const changes = Array.isArray(payload.changes) ? payload.changes : [];
+
+  return {
+    baseElectionId: resolvedBaseElectionId,
+    changes: changes
+      .map((change) => {
+        const seat = String(change?.seat || '').trim();
+        if (!seat) return null;
+
+        const winner = normalizePartyKey(change?.winner || 'others');
+        const date = String(change?.date || '').trim();
+        const label = String(change?.label || 'By-election').trim();
+        const votes = {};
+
+        if (change?.votes && typeof change.votes === 'object' && !Array.isArray(change.votes)) {
+          Object.entries(change.votes).forEach(([party, value]) => {
+            const partyKey = normalizePartyKey(party);
+            const total = Number(value || 0);
+            if (total <= 0) return;
+            votes[partyKey] = total;
+          });
+        }
+
+        return {
+          seat,
+          winner,
+          date,
+          label,
+          votes,
+        };
+      })
+      .filter(Boolean),
+  };
+}
+
+function applyByElectionOverlay(baseSeats, overlay) {
+  const nextSeats = baseSeats.map((seat) => cloneSeatRecord(seat));
+  const bySeatKey = new Map(nextSeats.map((seat) => [seatLookupKey(seat.seat), seat]));
+  const changedSeatKeys = new Set();
+
+  (overlay?.changes || []).forEach((change) => {
+    const seatKey = seatLookupKey(change.seat);
+    const seat = bySeatKey.get(seatKey);
+    if (!seat) return;
+
+    const previousWinner = seat.winner || 'others';
+    seat.winner = normalizePartyKey(change.winner || seat.winner || 'others');
+    if (change.votes && Object.keys(change.votes).length > 0) {
+      seat.votes = { ...change.votes };
+    }
+    seat.byElection = {
+      label: String(change.label || 'By-election').trim(),
+      date: String(change.date || '').trim(),
+      previousWinner,
+    };
+    changedSeatKeys.add(seatKey);
+  });
+
+  return { seats: nextSeats, changedSeatKeys };
 }
 
 function summarizeElection(seats) {
@@ -1982,8 +2101,13 @@ function applyPredictModeProjection() {
   window.__mapsComparisonSummary = baselineSummary;
 
   updateTopSummary({ name: 'Predict 2029' }, projectedSummary);
-  renderMapWithViewState();
+  renderMapWithViewState({ preserveZoom: true });
   syncRightPanelHeightToMap();
+
+  if (currentOpenSeatName) {
+    renderSeatPopup(currentOpenSeatName);
+    mapInteractionController.highlightSeat(currentOpenSeatName);
+  }
 }
 
 function projectedSeatForPredictMode(baseSeat) {
@@ -2423,7 +2547,52 @@ function renderChoroplethLegend(choroplethConfig) {
   choroplethLegend.hidden = false;
 }
 
-function renderMapWithViewState() {
+function syncByElectionToggleButton() {
+  if (!byElectionToggleButton) return;
+  const overlay = byElectionOverlayByElectionId[currentElectionId];
+  const hasChanges = Array.isArray(overlay?.changes) && overlay.changes.length > 0;
+  byElectionToggleButton.hidden = currentElectionId !== '2024-general' || !hasChanges;
+  byElectionToggleButton.setAttribute('aria-pressed', byElectionModeEnabled ? 'true' : 'false');
+  byElectionToggleButton.textContent = byElectionModeEnabled ? 'By-elections: On' : 'By-elections: Off';
+}
+
+function refreshElectionSeatStateAndRender() {
+  if (!Array.isArray(baseElectionSeats) || !baseElectionSeats.length) return;
+
+  const overlay = byElectionModeEnabled ? byElectionOverlayByElectionId[currentElectionId] : null;
+  const nextComparisonSeats = byElectionModeEnabled ? baseElectionSeats : defaultComparisonSeats;
+  const nextComparisonSummary = byElectionModeEnabled ? summarizeElection(baseElectionSeats) : defaultComparisonSummary;
+
+  if (overlay) {
+    const patched = applyByElectionOverlay(baseElectionSeats, overlay);
+    currentSeats = patched.seats;
+    byElectionAppliedSeatKeys = patched.changedSeatKeys;
+  } else {
+    currentSeats = baseElectionSeats.map((seat) => cloneSeatRecord(seat));
+    byElectionAppliedSeatKeys = new Set();
+  }
+
+  currentSeatsByKey = buildSeatIndex(currentSeats);
+  currentComparisonSeats = (nextComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
+  comparisonSeatsByKey = buildSeatIndex(currentComparisonSeats);
+
+  const summary = summarizeElection(currentSeats);
+  const currentElection = currentManifest?.elections?.find((entry) => entry.id === currentElectionId) || null;
+  if (currentElection) {
+    updateTopSummary(currentElection, summary);
+  }
+
+  window.__mapsCurrentSummary = summary;
+  window.__mapsComparisonSummary = nextComparisonSummary;
+  renderVoteTotals(summary, nextComparisonSummary, {
+    showVoteTotals: window.__mapsShowVoteTotals !== false,
+  });
+  renderMapWithViewState();
+  syncByElectionToggleButton();
+  syncRightPanelHeightToMap();
+}
+
+function renderMapWithViewState(options = {}) {
   if (!currentMapData) return;
 
   const visibleSeatKeys = buildVisibleSeatKeySet();
@@ -2445,9 +2614,11 @@ function renderMapWithViewState() {
     showVoteTotals: window.__mapsShowVoteTotals !== false,
   });
 
+  const preserveTransform = options.preserveZoom && mapSvg ? d3.zoomTransform(mapSvg) : null;
   renderTopoMap(currentMapData, currentSeats, {
     visibleSeatKeys,
     choroplethConfig,
+    ...(preserveTransform ? { preserveTransform } : {}),
   });
   renderSeatList(visibleSeats, currentComparisonSeats);
   applySeatSearchSuggestions(buildSeatSearchIndex(visibleSeats));
@@ -2461,6 +2632,7 @@ function renderMapWithViewState() {
 function hideSeatPopup() {
   if (!seatPopup) return;
   seatPopup.hidden = true;
+  currentOpenSeatName = null;
 }
 
 function renderSeatPopup(seatName) {
@@ -2472,9 +2644,11 @@ function renderSeatPopup(seatName) {
     hideSeatPopup();
     return;
   }
+  currentOpenSeatName = seatName;
 
   const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
   const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
+  const byElectionMeta = seat.byElection || null;
   const turnout = totalVotesForSeat(seat);
   const majority = seatMajorityStats(seat);
   const showTurnout = currentElectionType !== 'model_uns';
@@ -2482,6 +2656,7 @@ function renderSeatPopup(seatName) {
 
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
+    ${byElectionMeta ? `<span class="maps-popup-meta-item">BY-ELECTION${byElectionMeta.date ? ` (${byElectionMeta.date})` : ''}</span>` : ''}
     ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${colourParty(gainFrom)}"></span></span>` : ''}
     <span class="maps-popup-meta-item">${labelRegion(seat.region)}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showRawMajority ? ` = ${formatInt(majority.raw)}` : ''}</span>
@@ -2642,6 +2817,7 @@ function renderSeatList(seats, comparisonSeats = null) {
     const winnerKey = seat.winner || 'others';
     const comparisonWinnerKey = comparisonWinnerBySeat.get(seatLookupKey(seatName));
     const gainedFrom = comparisonWinnerKey && comparisonWinnerKey !== winnerKey ? comparisonWinnerKey : null;
+    const hasByElection = byElectionAppliedSeatKeys.has(seatKey);
 
     const item = document.createElement('button');
     item.type = 'button';
@@ -2654,6 +2830,7 @@ function renderSeatList(seats, comparisonSeats = null) {
         <span class="maps-seat-name">${seatName}</span>
       </span>
       <span class="maps-seat-meta">
+        ${hasByElection ? '<span class="maps-seat-gain"><span class="maps-seat-gain-label">BY-ELECTION</span></span>' : ''}
         ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${colourParty(gainedFrom)}" title="${labelParty(gainedFrom)}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
       </span>
     `;
@@ -3045,6 +3222,11 @@ function renderTopoMap(mapData, seats, options = {}) {
     zoomBy: (factor) => svg.transition().duration(180).call(zoomBehavior.scaleBy, factor),
     reset: resetZoom,
     clearSelection: clearActiveSeatPath,
+    highlightSeat: (seatName) => {
+      const seatKey = seatLookupKey(seatName);
+      const seatPathNode = seatPathByKey.get(seatKey);
+      if (seatPathNode) setActiveSeatPath(seatPathNode);
+    },
     zoomToSeat: (seatName) => {
       const seatKey = seatLookupKey(seatName);
       const featureDatum = featureBySeat.get(seatKey);
@@ -3118,7 +3300,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     }
   });
 
-  svg.call(zoomBehavior.transform, initialTransform);
+  svg.call(zoomBehavior.transform, options.preserveTransform || initialTransform);
 }
 
 function wirePopupPanels() {
@@ -3206,6 +3388,14 @@ function wireMapInteractions() {
       }
     });
   });
+
+  if (byElectionToggleButton && byElectionToggleButton.dataset.wired !== 'true') {
+    byElectionToggleButton.addEventListener('click', () => {
+      byElectionModeEnabled = !byElectionModeEnabled;
+      refreshElectionSeatStateAndRender();
+    });
+    byElectionToggleButton.dataset.wired = 'true';
+  }
 }
 
 function wirePollTrackerMetricInput(inputEl) {
@@ -3296,39 +3486,38 @@ async function initElectionData() {
   ]);
 
   const seats = normalizeSeats(resultsData);
-  const summary = summarizeElection(seats);
   const showVoteTotals = currentElection.type !== 'model_uns';
   currentElectionType = currentElection.type;
-  currentSeats = seats;
+  baseElectionSeats = seats;
+  currentSeats = seats.map((seat) => cloneSeatRecord(seat));
   currentMapData = mapData;
-  currentSeatsByKey = buildSeatIndex(seats);
+  currentSeatsByKey = buildSeatIndex(currentSeats);
 
-  let comparisonSummary = null;
-  let comparisonSeats = null;
+  defaultComparisonSummary = null;
+  defaultComparisonSeats = [];
   if (currentElection.comparisonElectionId) {
     const comparisonElection = manifest.elections.find((entry) => entry.id === currentElection.comparisonElectionId);
     if (comparisonElection) {
       const { dataFile: comparisonDataFile } = resolveElectionFiles(manifest, comparisonElection);
       const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
-      comparisonSeats = normalizeSeats(comparisonData);
-      comparisonSummary = summarizeElection(comparisonSeats);
+      defaultComparisonSeats = normalizeSeats(comparisonData);
+      defaultComparisonSummary = summarizeElection(defaultComparisonSeats);
     }
   }
 
-  currentComparisonSeats = comparisonSeats || [];
-  comparisonSeatsByKey = buildSeatIndex(comparisonSeats || []);
+  currentComparisonSeats = defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
+  comparisonSeatsByKey = buildSeatIndex(currentComparisonSeats);
+
+  const loadedOverlay = await loadByElectionOverlayForElectionIfNeeded(manifest, currentElection.id);
+  byElectionModeEnabled = currentElection.id === '2024-general'
+    && Array.isArray(loadedOverlay?.changes)
+    && loadedOverlay.changes.length > 0;
 
   populateMapControlOptions();
   syncMapControlStateFromInputs();
 
-  window.__mapsCurrentSummary = summary;
-  window.__mapsComparisonSummary = comparisonSummary;
   window.__mapsShowVoteTotals = showVoteTotals;
-
-  updateTopSummary(currentElection, summary);
-  renderVoteTotals(summary, comparisonSummary, { showVoteTotals });
-  renderMapWithViewState();
-  syncRightPanelHeightToMap();
+  refreshElectionSeatStateAndRender();
 }
 
 async function init() {

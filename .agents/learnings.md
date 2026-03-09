@@ -16,6 +16,9 @@ Top-level durable insights only.
 - Fresh poll imports should include `--include-unimported-parsers` to avoid skipped rows.
 - Current schema expectations: electorate on `seats.electorate`; turnout derived from summed `votes.vote_total`.
 - `data/start_db.sh` assumes local Docker Postgres on port `5432`; local host Postgres conflicts can block startup.
+- By-election rows can be modeled as child elections by setting `elections.parent_election_id` to a base general election and storing event time in `elections.election_date`.
+- `data/scripts/export_non_simulation_elections.py` now emits `settings.byElectionFilesByElectionId` and writes `pf-by-elections-v1` overlays (`results/by-elections-<baseElectionId>.json`) for parent-linked by-elections.
+- Existing databases can be migrated in place for by-election tagging with `data/scripts/migrate_add_election_parent_fields.py` (adds nullable columns + self-FK if missing).
 
 ## UNS + Trends
 
@@ -28,6 +31,8 @@ Top-level durable insights only.
 
 ## Electionmaps
 
+- 2024 map view now supports a `By-elections: On/Off` toolbar toggle that applies seat-level winner/vote overrides from by-election overlay files without adding a new map type.
+- When the by-election toggle is enabled, comparison baseline switches to the original 2024 result so gains/losses represent by-election movement within the current parliament.
 - Maps subtitle now uses stacked span layout by default, so the latest poll snippet line (`maps-subtitle-latest`) appears on a separate line on desktop and mobile.
 - Zoom percentage display is baseline-relative to `INITIAL_MAP_SCALE`, allowing a slightly zoomed-in initial map view while showing `100%` at load.
 - To place map action buttons directly on the map, a page-local override in `electionmaps/index.html` can position `.maps-toolbar` absolutely at top-right (desktop) and remove the viewport top margin to avoid leaving a gap.

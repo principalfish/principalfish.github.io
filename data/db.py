@@ -222,9 +222,19 @@ class Database:
         year: int,
         name: str,
         election_type: ElectionType,
+        *,
+        parent_election_id: int | None = None,
+        election_date: date | None = None,
     ) -> Election:
         with self.session() as s:
-            e = Election(map_id=map_id, year=year, name=name, type=election_type)
+            e = Election(
+                map_id=map_id,
+                parent_election_id=parent_election_id,
+                year=year,
+                election_date=election_date,
+                name=name,
+                type=election_type,
+            )
             s.add(e)
             s.flush()
             election_id = e.id
@@ -251,6 +261,22 @@ class Database:
                 .scalars()
                 .all()
             )
+
+    def get_child_elections(
+        self,
+        parent_election_id: int,
+        *,
+        election_type: ElectionType | None = None,
+    ) -> Sequence[Election]:
+        with self.session() as s:
+            query = (
+                select(Election)
+                .where(Election.parent_election_id == parent_election_id)
+                .order_by(Election.election_date, Election.year, Election.name)
+            )
+            if election_type is not None:
+                query = query.where(Election.type == election_type)
+            return s.execute(query).scalars().all()
 
     # ── votes ─────────────────────────────────────────────────────────────
 

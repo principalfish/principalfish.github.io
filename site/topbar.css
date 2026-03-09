@@ -41,11 +41,13 @@
 }
 
 .pf-topbar-back-link:hover,
-.pf-topbar-contact-link:hover {
+.pf-topbar-contact-link:hover,
+.pf-topbar-coffee-link:hover {
   text-decoration: underline;
 }
 
-.pf-topbar-contact-link {
+.pf-topbar-contact-link,
+.pf-topbar-coffee-link {
   color: #334155;
   text-decoration: none;
   font: 700 0.82rem/1 "DM Sans", "Segoe UI", sans-serif;
@@ -53,7 +55,8 @@
   opacity: 0.88;
 }
 
-.pf-topbar-contact-link:hover {
+.pf-topbar-contact-link:hover,
+.pf-topbar-coffee-link:hover {
   opacity: 1;
 }
 

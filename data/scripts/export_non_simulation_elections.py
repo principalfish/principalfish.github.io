@@ -21,7 +21,6 @@ import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -252,6 +251,16 @@ def assign_comparison_elections(manifest_entries: list[dict]) -> None:
             entry["comparisonElectionId"] = comparison_id
 
 
+OTHERS_PARTY_ID = 7  # "Other" party in the parties table
+
+
+def party_id_for_vote(vote: Vote) -> int:
+    """Returns the party_id integer for a vote. Independents (no party) map to OTHERS_PARTY_ID."""
+    if vote.party is None:
+        return OTHERS_PARTY_ID
+    return vote.party.id
+
+
 def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year: int | None = None) -> dict:
     votes_by_seat: dict[int, list[Vote]] = defaultdict(list)
     for vote in votes:
@@ -262,24 +271,24 @@ def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year:
     for seat in sorted(seats, key=lambda row: row.seat_name):
         seat_votes = sorted(votes_by_seat.get(seat.seat_id, []), key=lambda row: (row.vote_total or 0), reverse=True)
 
-        party_info: dict[str, dict] = {}
+        party_info: dict[int, dict] = {}
         for vote in seat_votes:
-            key = legacy_party_key_for_vote(vote, election_year=election_year)
+            pid = party_id_for_vote(vote)
             vote_total_raw = float(vote.vote_total or 0)
 
-            if key in party_info:
-                combined_total = float(party_info[key]["total"]) + vote_total_raw
-                party_info[key]["total"] = normalize_vote_total_value(combined_total)
-                if not party_info[key].get("name"):
-                    party_info[key]["name"] = vote.candidate_name or (vote.party.name if vote.party else "Other")
+            if pid in party_info:
+                combined_total = float(party_info[pid]["total"]) + vote_total_raw
+                party_info[pid]["total"] = normalize_vote_total_value(combined_total)
+                if not party_info[pid].get("name"):
+                    party_info[pid]["name"] = vote.candidate_name or (vote.party.name if vote.party else "Other")
             else:
-                party_info[key] = {
+                party_info[pid] = {
                     "total": normalize_vote_total_value(vote_total_raw),
                     "name": vote.candidate_name or (vote.party.name if vote.party else "Other"),
                 }
 
         winner_vote = choose_winner(seat_votes)
-        winner_key = legacy_party_key_for_vote(winner_vote, election_year=election_year) if winner_vote else "others"
+        winner_id = party_id_for_vote(winner_vote) if winner_vote else OTHERS_PARTY_ID
 
         ordered_totals = sorted((row.vote_total or 0 for row in seat_votes), reverse=True)
         majority = int(round(ordered_totals[0] - ordered_totals[1])) if len(ordered_totals) >= 2 else 0
@@ -291,11 +300,11 @@ def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year:
 
         compact_party_rows = [
             [
-                party_key,
+                pid,
                 party_data.get("total", 0),
                 party_data.get("name", ""),
             ]
-            for party_key, party_data in sorted(
+            for pid, party_data in sorted(
                 party_info.items(),
                 key=lambda row: float(row[1].get("total", 0)),
                 reverse=True,
@@ -306,7 +315,7 @@ def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year:
             {
                 "n": seat.seat_name,
                 "r": normalize_region_name(seat.region_name),
-                "w": winner_key,
+                "w": winner_id,
                 "e": seat.electorate or 0,
                 "m": max(0, majority),
                 "t": turnout_pct,
@@ -315,15 +324,10 @@ def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year:
         )
 
     return {
-        "schema": "pf-results-v2",
+        "schema": "pf-results-v3",
         "seats": payload_seats,
     }
 
-
-def iso_date_or_none(value: date | None) -> str | None:
-    if value is None:
-        return None
-    return value.isoformat()
 
 
 def compact_votes_to_dict(compact_rows: list) -> dict[str, float | int]:
@@ -620,7 +624,6 @@ def main() -> None:
                         "seat": seat_row.get("n"),
                         "winner": seat_row.get("w"),
                         "votes": compact_votes_to_dict(seat_row.get("p", [])),
-                        "date": iso_date_or_none(election.election_date),
                         "label": election.name,
                     }
                     for seat_row in result_payload.get("seats", [])
@@ -630,10 +633,8 @@ def main() -> None:
                     {
                         "id": election_manifest_id,
                         "dbId": election.id,
-                        "parentDbId": election.parent_election_id,
                         "name": election.name,
                         "year": election.year,
-                        "date": iso_date_or_none(election.election_date),
                         "changes": changes,
                     }
                 )
@@ -647,11 +648,6 @@ def main() -> None:
                     "mapFile": map_relpath,
                     "dataFile": f"results/{result_filename}",
                 }
-                if election.parent_election_id is not None:
-                    manifest_entry["parentElectionDbId"] = election.parent_election_id
-                if election.election_date is not None:
-                    manifest_entry["date"] = iso_date_or_none(election.election_date)
-
                 manifest_entries.append(manifest_entry)
 
                 if default_election_id is None and election.type == ElectionType.uk_general:

@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import csv
 from datetime import date, timedelta
 
 from sqlalchemy import delete, select
 
-from run_uns_model import Database, SimulationConfig, TREND_CACHE_CSV, run_simulation
+from run_uns_model import Database, SimulationConfig, TREND_CACHE_CSV, TREND_CACHE_FIELDS, run_simulation
 from models import Election, ElectionType, Vote
 
 
@@ -28,17 +29,31 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=True,
         help=(
-            "Clear existing model_uns elections/votes and delete the trend cache CSV "
-            "before backfill (default: enabled)."
+            "Clear existing model_uns elections/votes within the specified date range "
+            "and strip matching rows from the trend cache CSV before backfill (default: enabled)."
         ),
     )
     return parser.parse_args()
 
 
-def reset_existing_model_outputs(db: Database) -> tuple[int, int, bool]:
+def reset_existing_model_outputs(
+    db: Database, start_date: date, end_date: date
+) -> tuple[int, int, int]:
+    """Delete model_uns elections in [start_date, end_date] and strip those rows from the trend cache CSV.
+
+    Election names are ``UNS YYYY-MM-DD`` (optionally suffixed ``#N``), so a
+    lexicographic range on the name column correctly isolates the target dates.
+
+    Returns (deleted_elections, deleted_votes, stripped_csv_rows).
+    """
+    upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
+
     with db.session() as session:
         existing_ids = session.execute(
-            select(Election.id).where(Election.type == ElectionType.model_uns)
+            select(Election.id)
+            .where(Election.type == ElectionType.model_uns)
+            .where(Election.name >= f"UNS {start_date.isoformat()}")
+            .where(Election.name < upper_bound)
         ).scalars().all()
 
         if existing_ids:
@@ -52,12 +67,30 @@ def reset_existing_model_outputs(db: Database) -> tuple[int, int, bool]:
             deleted_votes = 0
             deleted_elections = 0
 
-    csv_deleted = False
+    stripped_csv_rows = 0
     if TREND_CACHE_CSV.exists():
-        TREND_CACHE_CSV.unlink()
-        csv_deleted = True
+        kept_rows: list[dict[str, str]] = []
+        with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                raw = str(row.get("as_of_date") or "").strip()
+                try:
+                    row_date = date.fromisoformat(raw)
+                except ValueError:
+                    kept_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
+                    continue
+                if row_date < start_date or row_date > end_date:
+                    kept_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
+                else:
+                    stripped_csv_rows += 1
 
-    return deleted_elections, deleted_votes, csv_deleted
+        if stripped_csv_rows > 0:
+            with TREND_CACHE_CSV.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=TREND_CACHE_FIELDS)
+                writer.writeheader()
+                writer.writerows(kept_rows)
+
+    return deleted_elections, deleted_votes, stripped_csv_rows
 
 
 def main() -> None:
@@ -75,12 +108,14 @@ def main() -> None:
     db = Database()
 
     if args.reset_existing and not args.dry_run:
-        deleted_elections, deleted_votes, csv_deleted = reset_existing_model_outputs(db)
+        deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
+            db, start_date, end_date
+        )
         print(
             "RESET "
             f"deleted_elections={deleted_elections} "
             f"deleted_votes={deleted_votes} "
-            f"deleted_trend_cache_csv={csv_deleted}"
+            f"stripped_csv_rows={stripped_csv_rows}"
         )
     elif args.reset_existing and args.dry_run:
         print("RESET skipped for dry-run mode")
@@ -101,7 +136,7 @@ def main() -> None:
                 output_csv=None,
                 dry_run=args.dry_run,
             )
-            election_name, projected_votes, _, _ = run_simulation(db, cfg)
+            election_name, projected_votes, _, _, _ = run_simulation(db, cfg)
             success_count += 1
 
             if args.progress_every > 0 and success_count % args.progress_every == 0:

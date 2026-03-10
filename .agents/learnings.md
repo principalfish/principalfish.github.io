@@ -86,6 +86,18 @@ Top-level durable insights only.
 - For profile pages, concise copy with fewer dense paragraphs improves scanability and preserves the existing card-style visual rhythm.
 - Contextual inline links (rather than separate CTA blocks) work well for profile prose when pointing to flagship internal pages like `electionmaps/`.
 
+## Electionmaps — core.js module
+
+- `electionmaps/core.js` is an ES module of pure functions (no DOM). All logic shared between `electionmaps.js` and tests lives here.
+- `electionmaps.js` imports from `core.js`; `electionmaps.min.js` is built by esbuild with `--bundle` which inlines `core.js` and marks d3/topojson as external.
+- Test suite lives in `tests/core.test.js` and runs via `npm test` (vitest).
+- Canonical UUP key is `'uu'` (DB export); `'uup'` is an alias in `PARTY_KEY_ALIASES` that normalizes to `'uu'`.
+- v1 predict URL encoding (JSON+base64) was removed — v2 compact format (`2.X.entries`) is the only format; v1 was never in production for more than 30 minutes.
+- Results JSONs now use schema `pf-results-v3` with integer `party_id` values in `w` and `p[0]` fields. Frontend resolves IDs to canonical string keys via `resolvePartyRef(ref, partiesById)`. `normalizeSeats()` takes optional `partiesById` as second arg.
+- `PARTY_LABELS` and `PARTY_COLOURS` constants were removed from JS; `labelParty()` and `colourParty()` now rely entirely on `manifestPartiesByKey` populated from `elections.json`. Both fall back to raw key / grey `#9CA3AF` for unknown parties.
+- DB correctly attributes pre-2024 UKIP votes to party_id=14 and post-2024 Reform votes to party_id=2 — no year-based correction needed at export time.
+- `elections.parent_election_id` and `elections.election_date` columns are intentional by-election schema fields; apply `migrate_add_election_parent_fields.py` to bring a DB up to date before running the full export.
+
 ## Quality + Risks
 
 - Current baseline test status in `data/` is green (`data/run_tests.sh`).
@@ -93,3 +105,9 @@ Top-level durable insights only.
 - In `data/server.py`, avoid per-request DB engine creation and watch unbounded preview cache growth patterns.
 
 - Seat search in `electionmaps` now uses a custom JS suggestion menu (`.maps-seat-search-menu`) instead of native `datalist`, because mobile browsers can fail to show datalist options reliably; this keeps tap/focus suggestions and Enter selection consistent across desktop and mobile.
+
+## UNS model
+
+- `run_simulation()` in `run_uns_model.py` returns 5 values: `(election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage)`. Any caller that unpacks fewer will crash with "too many values to unpack".
+- `run_retrospective_uns.py` had an unpack of only 4 values (missing `latest_poll_usage`) — caused a crash on day 1 of the backfill, after `--reset-existing` had already deleted all existing model_uns elections. Fixed by adding a fifth `_` discard.
+- `--reset-existing` defaults to `True` on `run_retrospective_uns.py` — scoped to `[start_date, end_date]`. Election names are `UNS YYYY-MM-DD` so a lexicographic `name >= "UNS {start}" AND name < "UNS {end+1day}"` correctly isolates the range (ISO dates sort lexicographically; suffixes like `#2` remain within the same day's bucket). CSV rows outside the range are preserved.

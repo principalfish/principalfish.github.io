@@ -1,4 +1,73 @@
 {
+  "opinium": {
+    "pollster_examples": [
+      "Opinium"
+    ],
+    "format_counts": {
+      "xlsx": 21,
+      "pdf": 1,
+      "html": 2,
+      "unknown": 15
+    },
+    "parser_identifiers": [
+      "opinium"
+    ]
+  },
+  "find_out_now": {
+    "pollster_examples": [
+      "Find Out Now"
+    ],
+    "format_counts": {
+      "xlsx": 63,
+      "html": 3,
+      "unknown": 6
+    },
+    "parser_identifiers": [
+      "find_out_now"
+    ]
+  },
+  "survation": {
+    "pollster_examples": [
+      "Survation",
+      "Survation  (MRP)"
+    ],
+    "format_counts": {
+      "download": 1,
+      "xlsx": 8,
+      "unknown": 5,
+      "html": 1
+    },
+    "parser_identifiers": [
+      "survation"
+    ]
+  },
+  "bmg_research": {
+    "pollster_examples": [
+      "BMG Research"
+    ],
+    "format_counts": {
+      "xlsx": 13,
+      "html": 3,
+      "unknown": 1
+    },
+    "parser_identifiers": [
+      "bmg_research"
+    ]
+  },
+  "jl_partners": {
+    "pollster_examples": [
+      "JL Partners"
+    ],
+    "format_counts": {
+      "social_post": 1,
+      "xlsx": 8,
+      "unknown": 2,
+      "html": 3
+    },
+    "parser_identifiers": [
+      "jl_partners"
+    ]
+  },
   "yougov": {
     "pollster_examples": [
       "YouGov",
@@ -13,46 +82,6 @@
       "yougov"
     ]
   },
-  "freshwater_strategy": {
-    "pollster_examples": [
-      "Freshwater Strategy"
-    ],
-    "format_counts": {
-      "html": 1,
-      "xlsx": 4,
-      "unknown": 11
-    },
-    "parser_identifiers": [
-      "freshwater_strategy"
-    ]
-  },
-  "opinium": {
-    "pollster_examples": [
-      "Opinium"
-    ],
-    "format_counts": {
-      "xlsx": 21,
-      "html": 2,
-      "unknown": 15
-    },
-    "parser_identifiers": [
-      "opinium"
-    ]
-  },
-  "find_out_now": {
-    "pollster_examples": [
-      "Find Out Now"
-    ],
-    "format_counts": {
-      "xlsx": 61,
-      "pdf": 1,
-      "html": 3,
-      "unknown": 5
-    },
-    "parser_identifiers": [
-      "find_out_now"
-    ]
-  },
   "more_in_common": {
     "pollster_examples": [
       "More in Common",
@@ -60,13 +89,24 @@
       "More in Common (MRP)"
     ],
     "format_counts": {
-      "xlsx": 61,
+      "xlsx": 62,
       "html": 2,
-      "unknown": 20,
-      "social_post": 1
+      "unknown": 20
     },
     "parser_identifiers": [
       "more_in_common"
+    ]
+  },
+  "freshwater_strategy": {
+    "pollster_examples": [
+      "Freshwater Strategy"
+    ],
+    "format_counts": {
+      "xlsx": 5,
+      "unknown": 10
+    },
+    "parser_identifiers": [
+      "freshwater_strategy"
     ]
   },
   "lord_ashcroft": {
@@ -103,46 +143,6 @@
     },
     "parser_identifiers": [
       "techne"
-    ]
-  },
-  "jl_partners": {
-    "pollster_examples": [
-      "JL Partners"
-    ],
-    "format_counts": {
-      "xlsx": 8,
-      "unknown": 2,
-      "html": 3
-    },
-    "parser_identifiers": [
-      "jl_partners"
-    ]
-  },
-  "bmg_research": {
-    "pollster_examples": [
-      "BMG Research"
-    ],
-    "format_counts": {
-      "xlsx": 12,
-      "html": 3,
-      "unknown": 1
-    },
-    "parser_identifiers": [
-      "bmg_research"
-    ]
-  },
-  "survation": {
-    "pollster_examples": [
-      "Survation",
-      "Survation  (MRP)"
-    ],
-    "format_counts": {
-      "xlsx": 8,
-      "unknown": 5,
-      "html": 1
-    },
-    "parser_identifiers": [
-      "survation"
     ]
   },
   "ipsos": {

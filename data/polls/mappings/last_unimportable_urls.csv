@@ -1,7 +1,6 @@
 parser_identifier,source_url,reason
 bmg_research,https://inews.co.uk/news/politics/reform-nine-point-lead-labour-boost-farage-no10-hopes-3838300,bmg_research-article-page
 find_out_now,https://www.electoralcalculus.co.uk/blogs/pseph_tactical_2025.html,find_out_now-missing-xlsx-url
-more_in_common,https://x.com/LukeTryl/status/1995773549353566658?s=20,more_in_common-social-post
 focaldata,https://www.focaldata.com/blog/16-17-year-olds-want-help-navigating-politics,focaldata-blog-page
 focaldata,https://www.focaldata.com/blog/focaldata-hope-not-hate-uk-general-election-mrp,focaldata-blog-page
 survation,https://www.linkedin.com/pulse/seven-lessons-from-new-38-degrees-x-survation-polling-mcgregor-ey5te,survation-linkedin-page
@@ -44,4 +43,5 @@ bmg_research,https://bmgresearch.com/news/with-a-record-35-vote-share-reform-are
 find_out_now,https://findoutnow.co.uk/blog/voting-intention-1st-october-2025/,find_out_now-missing-xlsx-url
 more_in_common,https://www.moreincommon.org.uk/latest-insights/more-in-common-s-january-mrp/,more_in_common-missing-xlsx-url
 yougov,https://yougov.co.uk/politics/articles/53923-how-would-britain-vote-at-the-start-of-2026,yougov-missing-pdf-url
-find_out_now,https://files.38degrees.org.uk/items/files/000/008/967/original/38_Degrees_National_Briefing_September_2025.pdf,find_out_now-missing-xlsx-url
+opinium,https://files.38degrees.org.uk/items/files/000/008/967/original/38_Degrees_National_Briefing_September_2025.pdf,opinium-missing-xlsx-url
+survation,https://files.survation.com/s/FV20pJPQuCT24Tn/download,survation-missing-xlsx-url

@@ -504,18 +504,18 @@ describe('summarizeElection', () => {
 // ── normalizeSeats ───────────────────────────────────────────────────────────
 
 describe('normalizeSeats', () => {
-  it('parses compact array format (seat.p)', () => {
+  it('parses compact array format (seat.p) — v4 style', () => {
     const raw = {
+      schema: 'pf-results-v4',
       seats: [{
-        n: 'Bristol West', r: 'southwestengland', w: 'labour', e: 72000, t: 0,
-        p: [['labour', 28000, 'Jane Smith'], ['uu', 12000, 'John Doe'], ['reform', 8000, 'X']],
+        n: 'Bristol West', r: 'southwestengland', w: 'labour',
+        p: [['labour', 28000], ['uu', 12000], ['reform', 8000]],
       }],
     };
     const [seat] = normalizeSeats(raw);
     expect(seat.seat).toBe('Bristol West');
     expect(seat.region).toBe('southwestengland');
     expect(seat.winner).toBe('labour');
-    expect(seat.electorate).toBe(72000);
     expect(seat.votes.labour).toBe(28000);
     expect(seat.votes.uu).toBe(12000);
     expect(seat.votes.reform).toBe(8000);
@@ -551,6 +551,18 @@ describe('normalizeSeats', () => {
     const [seat] = normalizeSeats(raw);
     expect(seat.votes.uu).toBe(5000);
     expect(seat.votes.reform).toBe(2000);
+  });
+
+  it('handles p tuples with legacy 3-element format (name in index 2) gracefully', () => {
+    const raw = {
+      seats: [{
+        n: 'X', r: 'r', w: 'labour',
+        p: [['labour', 28000, 'Jane Smith'], ['reform', 8000, 'Some Candidate']],
+      }],
+    };
+    const [seat] = normalizeSeats(raw);
+    expect(seat.votes.labour).toBe(28000);
+    expect(seat.votes.reform).toBe(8000);
   });
 
   it('filters out zero/negative votes in object format', () => {
@@ -629,9 +641,9 @@ describe('resolvePartyRef', () => {
   });
 });
 
-// ── normalizeSeats with integer party refs (pf-results-v3) ───────────────────
+// ── normalizeSeats with integer party refs (pf-results-v4) ───────────────────
 
-describe('normalizeSeats with partiesById (pf-results-v3 format)', () => {
+describe('normalizeSeats with partiesById (pf-results-v4 format)', () => {
   const partiesById = new Map([
     [1, { key: 'labour' }],
     [2, { key: 'reform' }],
@@ -641,10 +653,10 @@ describe('normalizeSeats with partiesById (pf-results-v3 format)', () => {
 
   it('resolves integer winner and p entries to canonical keys', () => {
     const raw = {
-      schema: 'pf-results-v3',
+      schema: 'pf-results-v4',
       seats: [{
-        n: 'Bristol West', r: 'southwestengland', w: 1, e: 0, t: 0,
-        p: [[1, 28000, 'Jane Smith'], [4, 12000, 'John Doe'], [2, 8000, 'X']],
+        n: 'Bristol West', r: 'southwestengland', w: 1,
+        p: [[1, 28000], [4, 12000], [2, 8000]],
       }],
     };
     const [seat] = normalizeSeats(raw, partiesById);
@@ -656,7 +668,7 @@ describe('normalizeSeats with partiesById (pf-results-v3 format)', () => {
 
   it('resolves integer winner when using w field', () => {
     const raw = {
-      seats: [{ n: 'X', r: 'r', w: 7, e: 0, t: 0, p: [[7, 1000, 'Other']] }],
+      seats: [{ n: 'X', r: 'r', w: 7, p: [[7, 1000]] }],
     };
     const [seat] = normalizeSeats(raw, partiesById);
     expect(seat.winner).toBe('others');
@@ -665,7 +677,7 @@ describe('normalizeSeats with partiesById (pf-results-v3 format)', () => {
 
   it('falls back to string representation for unknown integer id', () => {
     const raw = {
-      seats: [{ n: 'X', r: 'r', w: 99, e: 0, t: 0, p: [[99, 500, 'Unknown']] }],
+      seats: [{ n: 'X', r: 'r', w: 99, p: [[99, 500]] }],
     };
     const [seat] = normalizeSeats(raw, partiesById);
     expect(seat.winner).toBe('99');
@@ -674,11 +686,90 @@ describe('normalizeSeats with partiesById (pf-results-v3 format)', () => {
 
   it('still handles string keys when partiesById is provided (backwards compat)', () => {
     const raw = {
-      seats: [{ n: 'X', r: 'r', w: 'labour', e: 0, t: 0, p: [['labour', 5000, 'A']] }],
+      seats: [{ n: 'X', r: 'r', w: 'labour', p: [['labour', 5000]] }],
     };
     const [seat] = normalizeSeats(raw, partiesById);
     expect(seat.winner).toBe('labour');
     expect(seat.votes.labour).toBe(5000);
+  });
+
+  it('electorate and turnout default to 0 when fields absent (v4 omits them)', () => {
+    const raw = {
+      schema: 'pf-results-v4',
+      seats: [{ n: 'X', r: 'r', w: 1, p: [[1, 10000]] }],
+    };
+    const [seat] = normalizeSeats(raw, partiesById);
+    expect(seat.electorate).toBe(0);
+    expect(seat.turnout).toBe(0);
+  });
+});
+
+// ── normalizeSeats with integer region IDs (pf-results-v4) ───────────────────
+
+describe('normalizeSeats with regionsById (pf-results-v4 region IDs)', () => {
+  const partiesById = new Map([[1, { key: 'labour' }], [4, { key: 'conservative' }]]);
+  const regionsById = new Map([
+    [23, 'wales'],
+    [15, 'northwestengland'],
+    [17, 'london'],
+    [22, 'scotland'],
+  ]);
+
+  it('resolves integer r to region key via regionsById', () => {
+    const raw = {
+      schema: 'pf-results-v4',
+      seats: [{ n: 'Aberafan Maesteg', r: 23, w: 1, p: [[1, 17838], [4, 7484]] }],
+    };
+    const [seat] = normalizeSeats(raw, partiesById, regionsById);
+    expect(seat.region).toBe('wales');
+  });
+
+  it('resolves multiple different integer region IDs', () => {
+    const raw = {
+      schema: 'pf-results-v4',
+      seats: [
+        { n: 'Seat A', r: 15, w: 1, p: [[1, 10000]] },
+        { n: 'Seat B', r: 17, w: 1, p: [[1, 8000]] },
+        { n: 'Seat C', r: 22, w: 1, p: [[1, 9000]] },
+      ],
+    };
+    const seats = normalizeSeats(raw, partiesById, regionsById);
+    expect(seats[0].region).toBe('northwestengland');
+    expect(seats[1].region).toBe('london');
+    expect(seats[2].region).toBe('scotland');
+  });
+
+  it('falls back to string "unknown" for region ID not in map', () => {
+    const raw = {
+      seats: [{ n: 'X', r: 999, w: 1, p: [[1, 5000]] }],
+    };
+    const [seat] = normalizeSeats(raw, partiesById, regionsById);
+    expect(seat.region).toBe('unknown');
+  });
+
+  it('still resolves string r when regionsById is provided (backwards compat)', () => {
+    const raw = {
+      seats: [{ n: 'X', r: 'wales', w: 1, p: [[1, 5000]] }],
+    };
+    const [seat] = normalizeSeats(raw, partiesById, regionsById);
+    expect(seat.region).toBe('wales');
+  });
+
+  it('returns string "0" region for r=0 with no regionsById match', () => {
+    const raw = {
+      seats: [{ n: 'X', r: 0, w: 1, p: [[1, 5000]] }],
+    };
+    const [seat] = normalizeSeats(raw, partiesById, regionsById);
+    // 0 is falsy — falls through to String(raw || 'unknown') → 'unknown'
+    expect(seat.region).toBe('unknown');
+  });
+
+  it('works without regionsById — integer r becomes string', () => {
+    const raw = {
+      seats: [{ n: 'X', r: 23, w: 1, p: [[1, 5000]] }],
+    };
+    const [seat] = normalizeSeats(raw, partiesById);
+    expect(seat.region).toBe('23');
   });
 });
 

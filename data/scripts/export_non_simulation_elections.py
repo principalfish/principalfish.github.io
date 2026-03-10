@@ -80,6 +80,7 @@ PARTY_NAME_TO_KEY = {
 class SeatRow:
     seat_id: int
     seat_name: str
+    region_id: int | None
     region_name: str | None
     electorate: int | None
 
@@ -118,9 +119,10 @@ def normalize_region_name(value: str | None) -> str:
 
 
 def normalize_vote_total_value(value: float) -> int | float:
-    if float(value).is_integer():
-        return int(value)
-    return value
+    rounded = round(float(value), 2)
+    if rounded == int(rounded):
+        return int(rounded)
+    return rounded
 
 
 def choose_winner(votes: list[Vote]) -> Vote | None:
@@ -190,32 +192,22 @@ def party_key_for_party(party: Party) -> str:
     return PARTY_NAME_TO_KEY.get(normalized_name, normalized_name)
 
 
-def build_manifest_party_settings(parties: list[Party]) -> tuple[list[dict], dict[str, dict]]:
+def build_manifest_party_settings(parties: list[Party]) -> list[dict]:
     entries: list[dict] = []
-    by_key: dict[str, dict] = {}
 
     for party in sorted(parties, key=lambda row: row.name.lower()):
         key = party_key_for_party(party)
-        entry = {
-            "id": party.id,
-            "key": key,
-            "name": party.name,
-            "shortName": party.short_name,
-            "colour": party.colour,
-        }
-        entries.append(entry)
+        entries.append(
+            {
+                "id": party.id,
+                "key": key,
+                "name": party.name,
+                "shortName": party.short_name,
+                "colour": party.colour,
+            }
+        )
 
-        existing = by_key.get(key)
-        if existing is None:
-            by_key[key] = entry
-            continue
-
-        existing_colour = (existing.get("colour") or "").strip()
-        this_colour = (entry.get("colour") or "").strip()
-        if not existing_colour and this_colour:
-            by_key[key] = entry
-
-    return entries, by_key
+    return entries
 
 
 def build_manifest_regions_by_map_id(regions: list[Region]) -> dict[str, list[dict]]:
@@ -254,6 +246,48 @@ def assign_comparison_elections(manifest_entries: list[dict]) -> None:
 OTHERS_PARTY_ID = 7  # "Other" party in the parties table
 
 
+def convert_legacy_seatinfo_to_v4(
+    legacy_data: dict,
+    party_key_to_id: dict[str, int],
+    region_key_to_id: dict[str, int],
+) -> dict:
+    """Convert a legacy seatInfo/partyInfo keyed-by-seat-name payload to pf-results-v4."""
+    seats_out: list[dict] = []
+
+    for seat_name, value in legacy_data.items():
+        if not isinstance(value, dict) or "seatInfo" not in value:
+            continue
+        seat_info = value["seatInfo"]
+        party_info = value.get("partyInfo") or {}
+
+        region_raw = normalize_region_name(seat_info.get("region") or "")
+        region_id = region_key_to_id.get(region_raw, 0)
+
+        winner_raw = normalize_region_name(seat_info.get("current") or "")
+        winner_id = party_key_to_id.get(winner_raw, OTHERS_PARTY_ID)
+
+        compact: list[list] = []
+        for pkey, pdata in party_info.items():
+            total = normalize_vote_total_value(float(pdata.get("total") or 0))
+            if float(total) <= 0:
+                continue
+            norm_key = normalize_region_name(pkey)
+            pid = party_key_to_id.get(norm_key, OTHERS_PARTY_ID)
+            compact.append([pid, total])
+
+        compact.sort(key=lambda row: float(row[1]), reverse=True)
+
+        seats_out.append({
+            "n": seat_name,
+            "r": region_id,
+            "w": winner_id,
+            "p": compact,
+        })
+
+    seats_out.sort(key=lambda s: s["n"])
+    return {"schema": "pf-results-v4", "seats": seats_out}
+
+
 def party_id_for_vote(vote: Vote) -> int:
     """Returns the party_id integer for a vote. Independents (no party) map to OTHERS_PARTY_ID."""
     if vote.party is None:
@@ -290,41 +324,32 @@ def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year:
         winner_vote = choose_winner(seat_votes)
         winner_id = party_id_for_vote(winner_vote) if winner_vote else OTHERS_PARTY_ID
 
-        ordered_totals = sorted((row.vote_total or 0 for row in seat_votes), reverse=True)
-        majority = int(round(ordered_totals[0] - ordered_totals[1])) if len(ordered_totals) >= 2 else 0
-
         turnout_total = float(sum((row.vote_total or 0) for row in seat_votes))
         turnout_pct = 0.0
         if seat.electorate and seat.electorate > 0:
             turnout_pct = round(100.0 * turnout_total / seat.electorate, 1)
 
         compact_party_rows = [
-            [
-                pid,
-                party_data.get("total", 0),
-                party_data.get("name", ""),
-            ]
+            [pid, party_data.get("total", 0)]
             for pid, party_data in sorted(
                 party_info.items(),
                 key=lambda row: float(row[1].get("total", 0)),
                 reverse=True,
             )
+            if float(party_data.get("total", 0)) > 0
         ]
 
         payload_seats.append(
             {
                 "n": seat.seat_name,
-                "r": normalize_region_name(seat.region_name),
+                "r": seat.region_id or 0,
                 "w": winner_id,
-                "e": seat.electorate or 0,
-                "m": max(0, majority),
-                "t": turnout_pct,
                 "p": compact_party_rows,
             }
         )
 
     return {
-        "schema": "pf-results-v3",
+        "schema": "pf-results-v4",
         "seats": payload_seats,
     }
 
@@ -404,6 +429,8 @@ def apply_supplemental_legacy_elections(
     results_dir: Path,
     legacy_files_dir: Path,
     dry_run: bool,
+    manifest_parties: list[dict] | None = None,
+    manifest_regions_by_map_id: dict[str, list[dict]] | None = None,
 ) -> None:
     for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
         election_id = supplemental["id"]
@@ -422,7 +449,18 @@ def apply_supplemental_legacy_elections(
         if dry_run:
             print(f"Would write supplemental results: {result_path} (from {source_path.name})")
         else:
-            payload = json.loads(source_path.read_text(encoding="utf-8"))
+            raw_payload = json.loads(source_path.read_text(encoding="utf-8"))
+            # Convert legacy seatInfo/partyInfo format to pf-results-v4 if needed
+            if manifest_parties and manifest_regions_by_map_id and raw_payload.get("schema") is None:
+                party_key_to_id = {p["key"]: p["id"] for p in manifest_parties}
+                region_rows = manifest_regions_by_map_id.get(str(map_id)) or []
+                region_key_to_id = {
+                    normalize_region_name(r["name"]): r["id"]
+                    for r in region_rows
+                }
+                payload = convert_legacy_seatinfo_to_v4(raw_payload, party_key_to_id, region_key_to_id)
+            else:
+                payload = raw_payload
             write_json(result_path, payload)
 
         supplemental_entry = {
@@ -431,8 +469,6 @@ def apply_supplemental_legacy_elections(
             "name": supplemental["name"],
             "type": supplemental["type"],
             "mapId": map_id,
-            "mapFile": map_relpath,
-            "dataFile": f"results/{result_filename}",
         }
 
         existing_index = next((idx for idx, entry in enumerate(manifest_entries) if entry.get("id") == election_id), None)
@@ -477,7 +513,7 @@ def main() -> None:
     with db.session() as session:
         parties = session.execute(select(Party)).scalars().all()
         regions = session.execute(select(Region)).scalars().all()
-        manifest_parties, manifest_parties_by_key = build_manifest_party_settings(parties)
+        manifest_parties = build_manifest_party_settings(parties)
         manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
 
         if args.election_name:
@@ -545,14 +581,14 @@ def main() -> None:
 
             if has_electorate:
                 seat_rows = session.execute(
-                    select(Seat.id, Seat.seat_name, Region.name, Seat.electorate)
+                    select(Seat.id, Seat.seat_name, Region.id, Region.name, Seat.electorate)
                     .outerjoin(Region, Region.id == Seat.region_id)
                     .where(Seat.map_id == election.map_id)
                     .order_by(Seat.seat_name)
                 ).all()
             else:
                 seat_rows = session.execute(
-                    select(Seat.id, Seat.seat_name, Region.name)
+                    select(Seat.id, Seat.seat_name, Region.id, Region.name)
                     .outerjoin(Region, Region.id == Seat.region_id)
                     .where(Seat.map_id == election.map_id)
                     .order_by(Seat.seat_name)
@@ -562,8 +598,9 @@ def main() -> None:
                 SeatRow(
                     seat_id=row[0],
                     seat_name=row[1],
-                    region_name=row[2],
-                    electorate=(row[3] if has_electorate else None),
+                    region_id=row[2],
+                    region_name=row[3],
+                    electorate=(row[4] if has_electorate else None),
                 )
                 for row in seat_rows
             ]
@@ -645,8 +682,6 @@ def main() -> None:
                     "name": manifest_name_for_election(election),
                     "type": election.type.value,
                     "mapId": election.map_id,
-                    "mapFile": map_relpath,
-                    "dataFile": f"results/{result_filename}",
                 }
                 manifest_entries.append(manifest_entry)
 
@@ -670,6 +705,8 @@ def main() -> None:
             results_dir=results_dir,
             legacy_files_dir=args.legacy_files_dir,
             dry_run=args.dry_run,
+            manifest_parties=manifest_parties,
+            manifest_regions_by_map_id=manifest_regions_by_map_id,
         )
 
         if default_election_id is None:
@@ -751,9 +788,7 @@ def main() -> None:
             "settings": {
                 "mapFilesById": map_files_by_id,
                 "dataFilesByElectionId": data_files_by_election_id,
-                "byElectionFilesByElectionId": by_election_files_by_election_id,
                 "parties": manifest_parties,
-                "partiesByKey": manifest_parties_by_key,
                 "regionsByMapId": manifest_regions_by_map_id,
             },
             "elections": manifest_entries,

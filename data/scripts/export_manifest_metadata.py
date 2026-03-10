@@ -58,23 +58,23 @@ def main() -> None:
         parties = session.execute(select(Party)).scalars().all()
         regions = session.execute(select(Region)).scalars().all()
 
-    manifest_parties, manifest_parties_by_key = build_manifest_party_settings(parties)
+    manifest_parties = build_manifest_party_settings(parties)
     manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
 
     settings = manifest.get("settings") or {}
     settings["parties"] = manifest_parties
-    settings["partiesByKey"] = manifest_parties_by_key
+    settings.pop("partiesByKey", None)
     settings["regionsByMapId"] = manifest_regions_by_map_id
     manifest["settings"] = settings
 
     if args.dry_run:
         print(f"Would write manifest metadata: {manifest_path}")
-        print(f"parties={len(manifest_parties)} keys={len(manifest_parties_by_key)} maps={len(manifest_regions_by_map_id)}")
+        print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
         return
 
     write_json(manifest_path, manifest)
     print(f"Wrote manifest metadata: {manifest_path}")
-    print(f"parties={len(manifest_parties)} keys={len(manifest_parties_by_key)} maps={len(manifest_regions_by_map_id)}")
+    print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
 
 
 if __name__ == "__main__":

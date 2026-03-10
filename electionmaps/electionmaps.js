@@ -87,6 +87,7 @@ let currentSort = { key: 'seats', direction: 'desc' };
 let currentManifest = null;
 let manifestPartiesByKey = {};
 let manifestPartiesById = new Map();
+let manifestRegionsById = new Map();
 let manifestRegionsByMapId = {};
 let voteTotalsExpanded = false;
 let selectedSeatRow = null;
@@ -203,8 +204,8 @@ function buildPredictShareStateSlots() {
   return slots;
 }
 
-/** Encodes changed predict share values into a compact URL-safe string (v2 format using base-36 slot indices). Returns '' if nothing has changed and England is not expanded. */
-function encodePredictPayloadV2(serializedRows, englandExpanded) {
+/** Encodes changed predict share values into a compact URL-safe string (base-36 slot indices). Returns '' if nothing has changed and England is not expanded. */
+function encodePredictPayload(serializedRows, englandExpanded) {
   const slots = buildPredictShareStateSlots();
   if (!slots.length) return '';
 
@@ -230,8 +231,8 @@ function encodePredictPayloadV2(serializedRows, englandExpanded) {
   return `2.${englandExpanded ? 1 : 0}.${entries.join(',')}`;
 }
 
-/** Decodes a v2 predict payload string into { englandExpanded, rows: [[regionKey, partyKey, value], ...] }, or null on failure. */
-function decodePredictPayloadV2(encoded) {
+/** Decodes a predict payload string into { englandExpanded, rows: [[regionKey, partyKey, value], ...] }, or null on failure. */
+function decodePredictPayload(encoded) {
   const raw = String(encoded || '').trim();
   if (!raw.startsWith('2.')) return null;
 
@@ -1050,28 +1051,32 @@ function resolveElectionFiles(manifest, election) {
   return { mapFile, dataFile };
 }
 
-/** Reads manifest.settings and populates the module-level party lookup maps (manifestPartiesByKey, manifestPartiesById) and manifestRegionsByMapId. */
+/** Reads manifest.settings and populates the module-level party lookup maps (manifestPartiesByKey, manifestPartiesById), manifestRegionsById, and manifestRegionsByMapId. */
 function hydrateManifestSettings(manifest) {
   const settings = manifest?.settings || {};
-  manifestPartiesByKey = settings.partiesByKey || {};
-  manifestPartiesById = new Map();
 
+  // Build partiesByKey and partiesById from the canonical parties array.
+  manifestPartiesByKey = {};
+  manifestPartiesById = new Map();
   const partyRows = Array.isArray(settings.parties) ? settings.parties : [];
   partyRows.forEach((party) => {
     const id = Number(party?.id);
     if (!Number.isFinite(id)) return;
     manifestPartiesById.set(id, party);
+    const key = party?.key;
+    if (key && !manifestPartiesByKey[key]) manifestPartiesByKey[key] = party;
   });
 
-  Object.values(manifestPartiesByKey || {}).forEach((party) => {
-    const id = Number(party?.id);
-    if (!Number.isFinite(id)) return;
-    if (!manifestPartiesById.has(id)) {
-      manifestPartiesById.set(id, party);
-    }
-  });
-
+  // Build integer region ID → normalized region key lookup across all maps.
+  manifestRegionsById = new Map();
   manifestRegionsByMapId = settings.regionsByMapId || {};
+  Object.values(manifestRegionsByMapId).forEach((regionRows) => {
+    (regionRows || []).forEach((region) => {
+      const id = Number(region?.id);
+      if (!Number.isFinite(id)) return;
+      manifestRegionsById.set(id, normalizeRegionKey(region?.name || ''));
+    });
+  });
 }
 
 
@@ -1305,7 +1310,7 @@ function buildPredictShareStatePayload() {
     return '';
   }
 
-  return encodePredictPayloadV2(serializedRows, predictEnglandExpanded);
+  return encodePredictPayload(serializedRows, predictEnglandExpanded);
 }
 
 /** Reads and decodes the 'predict' URL parameter, returning the decoded state object or null. */
@@ -1314,7 +1319,7 @@ function readPredictShareStateFromUrl() {
   const encoded = params.get('predict');
   if (!encoded) return null;
 
-  return decodePredictPayloadV2(encoded);
+  return decodePredictPayload(encoded);
 }
 
 /** Applies a decoded predict share state (from URL) to predictInputByRegionParty, validating regions and parties before setting values. */
@@ -1617,7 +1622,7 @@ async function ensurePredictBaselineData() {
     fetchJson(`data/${dataFile}`),
   ]);
 
-  const seats = normalizeSeats(resultsData, manifestPartiesById);
+  const seats = normalizeSeats(resultsData, manifestPartiesById, manifestRegionsById);
   if (!seats.length) return false;
 
   predictBaseSeats = seats.map((seat) => ({
@@ -3010,7 +3015,7 @@ async function initElectionData() {
     fetchJson(`data/${dataFile}`)
   ]);
 
-  const seats = normalizeSeats(resultsData, manifestPartiesById);
+  const seats = normalizeSeats(resultsData, manifestPartiesById, manifestRegionsById);
   const showVoteTotals = currentElection.type !== 'model_uns';
   currentElectionType = currentElection.type;
   baseElectionSeats = seats;
@@ -3025,7 +3030,7 @@ async function initElectionData() {
     if (comparisonElection) {
       const { dataFile: comparisonDataFile } = resolveElectionFiles(manifest, comparisonElection);
       const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
-      defaultComparisonSeats = normalizeSeats(comparisonData, manifestPartiesById);
+      defaultComparisonSeats = normalizeSeats(comparisonData, manifestPartiesById, manifestRegionsById);
       defaultComparisonSummary = summarizeElection(defaultComparisonSeats);
     }
   }

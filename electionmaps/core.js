@@ -214,72 +214,52 @@ export function resolvePartyRef(ref, partiesById) {
 }
 
 /**
- * Normalizes results data from any supported format into a canonical array of seat objects.
- * Supports the compact array format ({ seats: [...] }), the compact per-seat p[] format,
- * and the legacy object format keyed by seat name with seatInfo/partyInfo sub-objects.
- * When partiesById is provided, integer party references (pf-results-v3) are resolved via the map.
+ * Normalizes results data (pf-results-v4 format) into a canonical array of seat objects.
+ * Supports the compact array format ({ seats: [...] }) and the compact per-seat p[] format.
+ * When partiesById is provided, integer party references are resolved via the map.
+ * When regionsById is provided, integer region IDs are resolved to region keys via the map.
  * @param {object} resultsData - Raw results payload.
  * @param {Map<number, {key: string}>} [partiesById] - Optional manifest party lookup for integer party_id refs.
+ * @param {Map<number, string>} [regionsById] - Optional manifest region lookup for integer region_id refs.
  */
-export function normalizeSeats(resultsData, partiesById) {
-  if (Array.isArray(resultsData?.seats)) {
-    return resultsData.seats.map((seat) => ({
-      seat: seat.seat || seat.n || 'Unknown seat',
-      region: seat.region || seat.r || 'unknown',
-      winner: resolvePartyRef(seat.winner ?? seat.w ?? 'others', partiesById),
-      electorate: Number(seat.electorate ?? seat.e ?? 0),
-      turnout: Number(seat.turnout ?? seat.t ?? 0),
-      votes: (() => {
-        if (seat.votes && typeof seat.votes === 'object' && !Array.isArray(seat.votes)) {
-          const normalizedVotes = {};
-          Object.entries(seat.votes).forEach(([partyKey, voteValue]) => {
-            const normalizedPartyKey = resolvePartyRef(partyKey, partiesById);
-            const voteTotal = Number(voteValue || 0);
-            if (voteTotal <= 0) return;
-            normalizedVotes[normalizedPartyKey] = (normalizedVotes[normalizedPartyKey] || 0) + voteTotal;
-          });
-          return normalizedVotes;
-        }
-        if (Array.isArray(seat.p)) {
-          const compactVotes = {};
-          seat.p.forEach((entry) => {
-            if (!Array.isArray(entry) || entry.length < 2) return;
-            const partyKey = resolvePartyRef(entry[0], partiesById);
-            const voteTotal = Number(entry[1] || 0);
-            if (!partyKey || voteTotal <= 0) return;
-            compactVotes[partyKey] = (compactVotes[partyKey] || 0) + voteTotal;
-          });
-          return compactVotes;
-        }
-        return {};
-      })(),
-    }));
-  }
+export function normalizeSeats(resultsData, partiesById, regionsById) {
+  if (!Array.isArray(resultsData?.seats)) return [];
 
-  // Legacy format: plain object keyed by seat name with seatInfo/partyInfo sub-objects
-  if (resultsData && typeof resultsData === 'object') {
-    return Object.entries(resultsData)
-      .filter(([, value]) => value && typeof value === 'object' && value.seatInfo && value.partyInfo)
-      .map(([seatName, value]) => {
-        const votes = {};
-        Object.entries(value.partyInfo || {}).forEach(([party, info]) => {
-          const voteTotal = Number(info?.total || 0);
+  return resultsData.seats.map((seat) => ({
+    seat: seat.seat || seat.n || 'Unknown seat',
+    region: (() => {
+      const raw = seat.region ?? seat.r;
+      if (typeof raw === 'number' && regionsById?.size) return regionsById.get(raw) || 'unknown';
+      return String(raw || 'unknown');
+    })(),
+    winner: resolvePartyRef(seat.winner ?? seat.w ?? 'others', partiesById),
+    electorate: Number(seat.electorate ?? seat.e ?? 0),
+    turnout: Number(seat.turnout ?? seat.t ?? 0),
+    votes: (() => {
+      if (seat.votes && typeof seat.votes === 'object' && !Array.isArray(seat.votes)) {
+        const normalizedVotes = {};
+        Object.entries(seat.votes).forEach(([partyKey, voteValue]) => {
+          const normalizedPartyKey = resolvePartyRef(partyKey, partiesById);
+          const voteTotal = Number(voteValue || 0);
           if (voteTotal <= 0) return;
-          const partyKey = normalizePartyKey(party);
-          votes[partyKey] = (votes[partyKey] || 0) + voteTotal;
+          normalizedVotes[normalizedPartyKey] = (normalizedVotes[normalizedPartyKey] || 0) + voteTotal;
         });
-        return {
-          seat: seatName,
-          region: value.seatInfo?.region || 'unknown',
-          winner: normalizePartyKey(value.seatInfo?.current || 'others'),
-          electorate: Number(value.seatInfo?.electorate || 0),
-          turnout: Number(value.seatInfo?.turnout || 0),
-          votes,
-        };
-      });
-  }
-
-  return [];
+        return normalizedVotes;
+      }
+      if (Array.isArray(seat.p)) {
+        const compactVotes = {};
+        seat.p.forEach((entry) => {
+          if (!Array.isArray(entry) || entry.length < 2) return;
+          const partyKey = resolvePartyRef(entry[0], partiesById);
+          const voteTotal = Number(entry[1] || 0);
+          if (!partyKey || voteTotal <= 0) return;
+          compactVotes[partyKey] = (compactVotes[partyKey] || 0) + voteTotal;
+        });
+        return compactVotes;
+      }
+      return {};
+    })(),
+  }));
 }
 
 // ── Predict region predicates ────────────────────────────────────────────────

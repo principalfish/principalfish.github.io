@@ -93,7 +93,10 @@ Top-level durable insights only.
 - Test suite lives in `tests/core.test.js` and runs via `npm test` (vitest).
 - Canonical UUP key is `'uu'` (DB export); `'uup'` is an alias in `PARTY_KEY_ALIASES` that normalizes to `'uu'`.
 - v1 predict URL encoding (JSON+base64) was removed — v2 compact format (`2.X.entries`) is the only format; v1 was never in production for more than 30 minutes.
-- Results JSONs now use schema `pf-results-v3` with integer `party_id` values in `w` and `p[0]` fields. Frontend resolves IDs to canonical string keys via `resolvePartyRef(ref, partiesById)`. `normalizeSeats()` takes optional `partiesById` as second arg.
+- Results JSONs now use schema `pf-results-v4` with integer `party_id` values in `w` and `p[0]` fields, integer region IDs in `r`, no `e`/`t` fields, no names in `p` tuples, zero-value party entries omitted, and float values rounded to 2dp. Frontend resolves IDs via `resolvePartyRef(ref, partiesById)` and region IDs via `regionsById`. `normalizeSeats()` takes optional `partiesById` (2nd arg) and `regionsById` (3rd arg).
+- `elections.json` no longer includes `partiesByKey` (built at runtime from `parties`), `byElectionFilesByElectionId`, or `mapFile`/`dataFile` in election entries. File paths are resolved exclusively via `settings.mapFilesById` and `settings.dataFilesByElectionId`.
+- Migration script `data/scripts/migrate_results_to_v4.py` can reformat existing v3 results files without the DB (uses `regionsByMapId` in elections.json to resolve region IDs per mapId).
+- Payload size reduction from v3→v4: ~561 KB across 6 active result files (~57% average reduction). Biggest win is prediction-simulation.json (290KB → 70KB, -76%).
 - `PARTY_LABELS` and `PARTY_COLOURS` constants were removed from JS; `labelParty()` and `colourParty()` now rely entirely on `manifestPartiesByKey` populated from `elections.json`. Both fall back to raw key / grey `#9CA3AF` for unknown parties.
 - DB correctly attributes pre-2024 UKIP votes to party_id=14 and post-2024 Reform votes to party_id=2 — no year-based correction needed at export time.
 - `elections.parent_election_id` and `elections.election_date` columns are intentional by-election schema fields; apply `migrate_add_election_parent_fields.py` to bring a DB up to date before running the full export.

@@ -25,8 +25,9 @@ Use `.agents/01-file-map.md` to locate where functionality lives.
 - The user will explicitly indicate when a new issue starts and when an issue ends.
 - By default, continue updating the active issue file for the current branch.
 - Determine the active issue file from the checked-out branch name (for example, branch `issue-18` maps to `.agents/issues/issue-18.md`).
+- When working on `master` or a branch without an issue number, the user will explicitly state the issue file name to use (for example `issue-19.md`).
 - Create a new issue file only when the user indicates a new issue.
-- File naming convention should match the branch name (for example `issue-13.md`, `feat-poll-ingest.md`).
+- File naming convention should match the branch name or the issue number stated by the user (for example `issue-13.md`, `feat-poll-ingest.md`).
 - Keep the active issue file updated as work progresses (status changes, scope updates, validation notes).
 - If no issue file is needed for a very small issue, no file is required.
 

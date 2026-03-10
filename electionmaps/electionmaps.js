@@ -1,5 +1,41 @@
 import * as d3 from '../site/vendor/d3.v7.esm.js';
 import { feature as topojsonFeature, mesh as topojsonMesh } from '../site/vendor/topojson-client.v3.esm.js';
+import {
+  PREDICT_BASE_PARTY_KEYS,
+  PREDICT_NI_PARTY_KEYS,
+  PREDICT_NAT_COLUMN_KEY,
+  PREDICT_ENGLAND_KEY,
+  formatInt,
+  formatPct,
+  formatSigned,
+  deltaClass,
+  normalizeRegionKey,
+  titleCaseFromRegionKey,
+  normalizePartyKey,
+  seatLookupKey,
+  totalVotesForSeat,
+  seatMajorityStats,
+  seatGainFromPartyKey,
+  secondPlacePartyKey,
+  voteSharePct,
+  buildSeatIndex,
+  summarizeElection,
+  normalizeSeats,
+  isPredictNorthernIrelandRegion,
+  isPredictScotlandRegion,
+  isPredictWalesRegion,
+  isPredictEnglishRegion,
+  roundPredictShareValue,
+  clampNumber,
+  predictInputKey,
+  formatPredictShare,
+  normalizePredictShareMap,
+  resolvePredictInputPartyKey,
+  collectPredictInputPartyKeysForRegion,
+  formatPredictRegionLabel,
+  buildPredictBaselineShares,
+  projectedSeatForPredictMode,
+} from './core.js';
 
 const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
@@ -100,6 +136,7 @@ let pollTrackerMetaLoaded = false;
 let pollTrackerLatestSnippet = '';
 let lastTrackedVirtualPagePath = '';
 
+/** Fires a gtag page_view event for a URL, deduplicating against the last tracked path. */
 function trackVirtualPageView(nextUrl) {
   if (typeof window.gtag !== 'function') return;
 
@@ -118,11 +155,13 @@ function trackVirtualPageView(nextUrl) {
   }
 }
 
+/** Sets the browser tab title, prepending contextLabel when provided. */
 function setMapsPageTitle(contextLabel) {
   const label = String(contextLabel || '').trim();
   document.title = label ? `${label} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
 }
 
+/** Builds a URLSearchParams for the given view, setting/removing the election and predict params as appropriate. */
 function buildRouteSearchParams(view, electionId = null) {
   const params = new URLSearchParams(window.location.search);
   params.set('view', view);
@@ -140,6 +179,7 @@ function buildRouteSearchParams(view, electionId = null) {
   return params;
 }
 
+/** Replaces the current browser history entry with the URL for the given view, then fires a virtual page view. */
 function replaceRouteState(view, electionId = null) {
   const params = buildRouteSearchParams(view, electionId);
   const nextUrl = `${window.location.pathname}?${params.toString()}`;
@@ -147,38 +187,8 @@ function replaceRouteState(view, electionId = null) {
   trackVirtualPageView(nextUrl);
 }
 
-function encodePredictPayload(payload) {
-  try {
-    const json = JSON.stringify(payload);
-    const utf8 = encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_match, byteHex) => {
-      return String.fromCharCode(Number.parseInt(byteHex, 16));
-    });
-    return btoa(utf8)
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/g, '');
-  } catch (_error) {
-    return '';
-  }
-}
 
-function decodePredictPayload(encoded) {
-  try {
-    const safe = String(encoded || '').trim().replace(/-/g, '+').replace(/_/g, '/');
-    if (!safe) return null;
-    const padded = `${safe}${'='.repeat((4 - (safe.length % 4)) % 4)}`;
-    const binary = atob(padded);
-    const percentEncoded = Array.from(binary)
-      .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
-      .join('');
-    const json = decodeURIComponent(percentEncoded);
-    const parsed = JSON.parse(json);
-    return parsed && typeof parsed === 'object' ? parsed : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
+/** Returns an ordered array of [regionKey, partyKey] slot pairs used as the positional index for predict payload encoding. */
 function buildPredictShareStateSlots() {
   const slots = [];
   const rows = collectPredictShareStateRows();
@@ -193,6 +203,7 @@ function buildPredictShareStateSlots() {
   return slots;
 }
 
+/** Encodes changed predict share values into a compact URL-safe string (v2 format using base-36 slot indices). Returns '' if nothing has changed and England is not expanded. */
 function encodePredictPayloadV2(serializedRows, englandExpanded) {
   const slots = buildPredictShareStateSlots();
   if (!slots.length) return '';
@@ -219,6 +230,7 @@ function encodePredictPayloadV2(serializedRows, englandExpanded) {
   return `2.${englandExpanded ? 1 : 0}.${entries.join(',')}`;
 }
 
+/** Decodes a v2 predict payload string into { englandExpanded, rows: [[regionKey, partyKey, value], ...] }, or null on failure. */
 function decodePredictPayloadV2(encoded) {
   const raw = String(encoded || '').trim();
   if (!raw.startsWith('2.')) return null;
@@ -263,19 +275,6 @@ function decodePredictPayloadV2(encoded) {
   };
 }
 
-const PREDICT_BASE_PARTY_KEYS = ['labour', 'conservative', 'libdems', 'green', 'reform'];
-const PREDICT_NI_PARTY_KEYS = ['sinnfein', 'dup', 'alliance', 'uu', 'sdlp'];
-const PREDICT_MODELLED_PARTY_KEYS = [
-  ...PREDICT_BASE_PARTY_KEYS,
-  'snp',
-  'plaidcymru',
-  ...PREDICT_NI_PARTY_KEYS,
-];
-const PREDICT_NAT_COLUMN_KEY = 'nat';
-const PREDICT_ENGLAND_KEY = 'england';
-const PREDICT_SCOTLAND_KEY = 'scotland';
-const PREDICT_WALES_KEY = 'wales';
-const PREDICT_NI_KEY = 'northernireland';
 
 const mapViewState = {
   filterParty: 'all',
@@ -301,6 +300,7 @@ let mapInteractionController = {
   zoomToSeat: () => false,
 };
 
+/** Converts a d3 zoom scale value to a human-readable percentage string relative to the initial map scale. */
 function formatZoomPct(scaleValue) {
   const baselineScale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
   const ratio = Number(scaleValue) / baselineScale;
@@ -308,99 +308,23 @@ function formatZoomPct(scaleValue) {
   return `${Math.round(ratio * 100)}%`;
 }
 
-const PARTY_LABELS = {
-  labour: 'Labour',
-  conservative: 'Conservative',
-  libdems: 'Liberal Democrats',
-  reform: 'Reform UK',
-  ukip: 'UKIP',
-  green: 'Green',
-  snp: 'SNP',
-  plaidcymru: 'Plaid Cymru',
-  dup: 'DUP',
-  sdlp: 'SDLP',
-  uu: 'UUP',
-  uup: 'UUP',
-  sinnfein: 'Sinn Fein',
-  alliance: 'Alliance',
-  others: 'Other'
-};
 
-const PARTY_COLOURS = {
-  labour: '#E4003B',
-  conservative: '#0087DC',
-  libdems: '#FAA61A',
-  reform: '#12B6CF',
-  ukip: '#70147A',
-  green: '#6AB023',
-  snp: '#FDF38E',
-  plaidcymru: '#005B54',
-  dup: '#D46A4C',
-  sdlp: '#2AA82A',
-  uu: '#7BB7EA',
-  uup: '#7BB7EA',
-  sinnfein: '#2D6A4F',
-  alliance: '#F6C744',
-  others: '#9CA3AF'
-};
-
-const PARTY_KEY_ALIASES = {
-  ukindependenceparty: 'ukip',
-  reformuk: 'reform',
-  liberaldemocrats: 'libdems',
-  democraticunionistparty: 'dup',
-  ulsterunionistparty: 'uu',
-  scottishnationalparty: 'snp',
-  other: 'others',
-};
-
-function normalizePartyKey(partyKey) {
-  const raw = String(partyKey || '').trim();
-  if (!raw) return 'others';
-
-  const lower = raw.toLowerCase();
-  if (PARTY_LABELS[lower]) return lower;
-
-  const alnum = lower.replace(/[^a-z0-9]/g, '');
-  if (PARTY_KEY_ALIASES[alnum]) return PARTY_KEY_ALIASES[alnum];
-  if (PARTY_LABELS[alnum]) return alnum;
-
-  return lower;
-}
-
+/** Returns the display label for a party from the manifest, or the raw key if not found. */
 function labelParty(partyKey) {
   const meta = manifestPartiesByKey[partyKey];
   if (meta?.name) return meta.name;
-  return PARTY_LABELS[partyKey] || partyKey;
+  return partyKey;
 }
 
+/** Returns the hex colour for a party from the manifest, or a grey fallback if not found. */
 function colourParty(partyKey) {
   const meta = manifestPartiesByKey[partyKey];
   if (meta?.colour) return meta.colour;
-  return PARTY_COLOURS[partyKey] || '#9CA3AF';
+  return '#9CA3AF';
 }
 
-function formatInt(value) {
-  return Math.round(value).toLocaleString('en-GB');
-}
 
-function formatPct(value) {
-  return Number(value).toFixed(2);
-}
-
-function formatSigned(value, digits = 0) {
-  const num = Number(value || 0);
-  if (Math.abs(num) < 1e-9) return '0';
-  const sign = num > 0 ? '+' : '';
-  return `${sign}${num.toFixed(digits)}`;
-}
-
-function deltaClass(value) {
-  const num = Number(value || 0);
-  if (Math.abs(num) < 1e-9) return 'maps-delta-neutral';
-  return num > 0 ? 'maps-delta-positive' : 'maps-delta-negative';
-}
-
+/** Fetches a URL and passes the Response through the provided parser function. Throws on non-OK status. */
 async function fetchResource(url, parser) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -409,6 +333,7 @@ async function fetchResource(url, parser) {
   return parser(response);
 }
 
+/** Fetches poll tracker metadata (latest snippet text) once per page load. Silently ignores fetch errors. */
 async function loadPollTrackerMetaIfNeeded() {
   if (pollTrackerMetaLoaded) return;
 
@@ -422,6 +347,7 @@ async function loadPollTrackerMetaIfNeeded() {
   pollTrackerMetaLoaded = true;
 }
 
+/** Sets the subtitle element content, optionally appending the latest poll snippet as a secondary span. */
 function setSubtitleText(baseText, options = {}) {
   if (!subtitle) return;
 
@@ -444,20 +370,24 @@ function setSubtitleText(baseText, options = {}) {
   subtitle.appendChild(latestSpan);
 }
 
+/** Fetches and parses a JSON resource from the given URL. */
 async function fetchJson(url) {
   return fetchResource(url, (response) => response.json());
 }
 
+/** Fetches a plain text resource from the given URL. */
 async function fetchText(url) {
   return fetchResource(url, (response) => response.text());
 }
 
 
+/** Toggles the 'active' CSS class on the poll tracker nav button. */
 function setPollTrackerNavState(active) {
   if (!pollTrackerModeLinkEl) return;
   pollTrackerModeLinkEl.classList.toggle('active', active);
 }
 
+/** Shows or hides the poll tracker view, toggling the map stage and right panel visibility accordingly. */
 function setPollTrackerLayoutVisible(active) {
   if (mapsStage) {
     mapsStage.hidden = active;
@@ -477,6 +407,7 @@ function setPollTrackerLayoutVisible(active) {
   }
 }
 
+/** Extracts a YYYY-MM-DD date string from electionName if present, otherwise returns the text or fallbackId as a string. */
 function pollTrackerDateLabel(electionName, fallbackId) {
   const text = String(electionName || '').trim();
   const match = text.match(/(\d{4}-\d{2}-\d{2})/);
@@ -484,6 +415,12 @@ function pollTrackerDateLabel(electionName, fallbackId) {
   return text || String(fallbackId);
 }
 
+/**
+ * Parses the poll tracker CSV into { timeline, seriesByParty, partyMeta }.
+ * Deduplicates rows by date, preferring the highest electionId.
+ * Expands sparse date entries into a dense daily timeline when all entries are ISO dates.
+ * Series values carry forward the last known value for dates with no data.
+ */
 function parsePollTrackerData(csvText) {
   const rows = d3.csvParse(csvText, (row) => {
     const electionId = Number(row.election_id);
@@ -632,12 +569,18 @@ function parsePollTrackerData(csvText) {
   return { timeline: expandedTimeline, seriesByParty, partyMeta };
 }
 
+/** Returns the party key values of all checked party toggle checkboxes in the poll tracker controls. */
 function getPollTrackerSelectedParties() {
   return Array.from(document.querySelectorAll('.maps-polltracker-party-toggle input[type="checkbox"]'))
     .filter((input) => input.checked)
     .map((input) => input.value);
 }
 
+/**
+ * Renders the poll tracker D3 SVG chart into pollTrackerChartWrap.
+ * Draws line series for selected parties with separate left (seats) and right (vote %) axes.
+ * Includes a crosshair tooltip and respects the current date-range selection.
+ */
 function renderPollTrackerChart() {
   if (!pollTrackerChartWrap) return;
 
@@ -883,6 +826,7 @@ function renderPollTrackerChart() {
   pollTrackerChartWrap.appendChild(svg.node());
 }
 
+/** Renders the party toggle checkboxes for the poll tracker, pre-selecting the top parties by latest seats (excluding Others, always including Green). */
 function renderPollTrackerPartyControls() {
   if (!pollTrackerPartyControls) return;
 
@@ -942,6 +886,7 @@ function renderPollTrackerPartyControls() {
   });
 }
 
+/** Fetches and parses the poll tracker CSV once per page load, populating pollTrackerTimeline and pollTrackerSeriesByParty. */
 async function loadPollTrackerDataIfNeeded() {
   if (pollTrackerDataLoaded) return;
 
@@ -953,6 +898,7 @@ async function loadPollTrackerDataIfNeeded() {
   pollTrackerDataLoaded = true;
 }
 
+/** Switches the app into poll tracker mode: deactivates predict mode, loads data, renders controls and chart, and updates the route. */
 async function activatePollTrackerMode() {
   predictModeActive = false;
   setPredictModeNavState(false);
@@ -976,73 +922,8 @@ async function activatePollTrackerMode() {
   renderPollTrackerChart();
 }
 
-function parseLegacySeatObject(resultsObject) {
-  return Object.entries(resultsObject)
-    .filter(([, value]) => value && typeof value === 'object' && value.seatInfo && value.partyInfo)
-    .map(([seatName, value]) => {
-      const votes = {};
-      Object.entries(value.partyInfo || {}).forEach(([party, info]) => {
-        const voteTotal = Number(info?.total || 0);
-        if (voteTotal <= 0) return;
-        const partyKey = normalizePartyKey(party);
-        votes[partyKey] = (votes[partyKey] || 0) + voteTotal;
-      });
 
-      return {
-        seat: seatName,
-        region: value.seatInfo?.region || 'unknown',
-        winner: normalizePartyKey(value.seatInfo?.current || 'others'),
-        electorate: Number(value.seatInfo?.electorate || 0),
-        turnout: Number(value.seatInfo?.turnout || 0),
-        votes
-      };
-    });
-}
-
-function normalizeSeats(resultsData) {
-  if (Array.isArray(resultsData?.seats)) {
-    return resultsData.seats.map((seat) => ({
-      seat: seat.seat || seat.n || 'Unknown seat',
-      region: seat.region || seat.r || 'unknown',
-      winner: normalizePartyKey(seat.winner || seat.w || 'others'),
-      electorate: Number(seat.electorate ?? seat.e ?? 0),
-      turnout: Number(seat.turnout ?? seat.t ?? 0),
-      votes: (() => {
-        if (seat.votes && typeof seat.votes === 'object' && !Array.isArray(seat.votes)) {
-          const normalizedVotes = {};
-          Object.entries(seat.votes).forEach(([partyKey, voteValue]) => {
-            const normalizedPartyKey = normalizePartyKey(partyKey);
-            const voteTotal = Number(voteValue || 0);
-            if (voteTotal <= 0) return;
-            normalizedVotes[normalizedPartyKey] = (normalizedVotes[normalizedPartyKey] || 0) + voteTotal;
-          });
-          return normalizedVotes;
-        }
-
-        if (Array.isArray(seat.p)) {
-          const compactVotes = {};
-          seat.p.forEach((entry) => {
-            if (!Array.isArray(entry) || entry.length < 2) return;
-            const partyKey = normalizePartyKey(entry[0]);
-            const voteTotal = Number(entry[1] || 0);
-            if (!partyKey || voteTotal <= 0) return;
-            compactVotes[partyKey] = (compactVotes[partyKey] || 0) + voteTotal;
-          });
-          return compactVotes;
-        }
-
-        return {};
-      })()
-    }));
-  }
-
-  if (resultsData && typeof resultsData === 'object') {
-    return parseLegacySeatObject(resultsData);
-  }
-
-  return [];
-}
-
+/** Returns a deep-ish copy of a seat object with normalized party keys and only positive vote totals retained. */
 function cloneSeatRecord(seat) {
   const votes = {};
   Object.entries(seat?.votes || {}).forEach(([partyKey, value]) => {
@@ -1061,41 +942,8 @@ function cloneSeatRecord(seat) {
   };
 }
 
-function summarizeElection(seats) {
-  const partyStats = new Map();
-  let electorateSum = 0;
-  let turnoutWeighted = 0;
 
-  seats.forEach((seat) => {
-    const winner = seat.winner || 'others';
-    if (!partyStats.has(winner)) {
-      partyStats.set(winner, { seats: 0, votes: 0 });
-    }
-    partyStats.get(winner).seats += 1;
-
-    Object.entries(seat.votes || {}).forEach(([party, votes]) => {
-      if (!partyStats.has(party)) {
-        partyStats.set(party, { seats: 0, votes: 0 });
-      }
-      partyStats.get(party).votes += Number(votes || 0);
-    });
-
-    if (seat.electorate > 0 && seat.turnout > 0) {
-      electorateSum += seat.electorate;
-      turnoutWeighted += seat.turnout * seat.electorate;
-    }
-  });
-
-  const parties = Array.from(partyStats.entries())
-    .map(([party, stats]) => ({ party, ...stats }))
-    .sort((a, b) => b.seats - a.seats || b.votes - a.votes);
-
-  const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
-  const turnout = electorateSum > 0 ? turnoutWeighted / electorateSum : 0;
-
-  return { parties, totalVotes, turnout, totalSeats: seats.length };
-}
-
+/** Rebuilds the election list nav, inserting Predict 2029 and Poll tracker buttons after the current-prediction entry (or near the top as a fallback). Stores references to predictModeLinkEl and pollTrackerModeLinkEl. */
 function renderElectionLinks(manifest, activeId) {
   if (!electionList) return;
 
@@ -1183,6 +1031,7 @@ function renderElectionLinks(manifest, activeId) {
   }
 }
 
+/** Resolves the mapFile and dataFile paths for an election by checking manifest settings overrides then election-level properties. Throws if either is missing. */
 function resolveElectionFiles(manifest, election) {
   const settings = manifest?.settings || {};
   const mapFilesById = settings.mapFilesById || {};
@@ -1201,6 +1050,7 @@ function resolveElectionFiles(manifest, election) {
   return { mapFile, dataFile };
 }
 
+/** Reads manifest.settings and populates the module-level party lookup maps (manifestPartiesByKey, manifestPartiesById) and manifestRegionsByMapId. */
 function hydrateManifestSettings(manifest) {
   const settings = manifest?.settings || {};
   manifestPartiesByKey = settings.partiesByKey || {};
@@ -1224,10 +1074,8 @@ function hydrateManifestSettings(manifest) {
   manifestRegionsByMapId = settings.regionsByMapId || {};
 }
 
-function normalizeRegionKey(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
 
+/** Returns a Map from normalized region key to display label for the given mapId, built from manifest region metadata. */
 function buildRegionLabelLookup(mapId) {
   const lookup = new Map();
   const regionRows = manifestRegionsByMapId?.[String(mapId)] || [];
@@ -1239,26 +1087,15 @@ function buildRegionLabelLookup(mapId) {
   return lookup;
 }
 
-function titleCaseFromRegionKey(regionKey) {
-  const text = String(regionKey || '').trim();
-  if (!text) return 'Unknown';
-  const spaced = text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/-/g, ' ').replace(/_/g, ' ');
-  if (spaced.includes(' ')) {
-    return spaced
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(' ');
-  }
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
 
+/** Returns the display label for a region, falling back to titleCaseFromRegionKey if not in the current region lookup. */
 function labelRegion(regionKey) {
   const normalized = normalizeRegionKey(regionKey);
   if (!normalized) return 'Unknown';
   return currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
 }
 
+/** Updates currentSort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction. */
 function setSortDirection(sortKey) {
   if (currentSort.key === sortKey) {
     currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -1268,67 +1105,8 @@ function setSortDirection(sortKey) {
   currentSort.direction = sortKey === 'party' ? 'asc' : 'desc';
 }
 
-function buildSeatIndex(seats) {
-  const byKey = new Map();
-  (seats || []).forEach((seat) => {
-    if (!seat?.seat) return;
-    byKey.set(seatLookupKey(seat.seat), seat);
-  });
-  return byKey;
-}
 
-function totalVotesForSeat(seat) {
-  const turnout = Number(seat?.turnout || 0);
-  if (turnout > 0) return turnout;
-  return Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
-}
-
-function seatGainFromPartyKey(currentSeat, comparisonSeat) {
-  const winner = currentSeat?.winner || 'others';
-  const previousWinner = comparisonSeat?.winner || null;
-  if (!previousWinner || previousWinner === winner) return null;
-  return previousWinner;
-}
-
-function sortedSeatVoteRows(seat) {
-  return Object.entries(seat?.votes || {})
-    .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
-    .filter((row) => row.votes > 0)
-    .sort((a, b) => b.votes - a.votes);
-}
-
-function seatMajorityStats(seat) {
-  const voteRows = sortedSeatVoteRows(seat);
-
-  if (voteRows.length < 2) return { pct: 0, raw: 0 };
-  const marginVotes = voteRows[0].votes - voteRows[1].votes;
-  const totalVotes = totalVotesForSeat(seat);
-  if (totalVotes <= 0) return { pct: 0, raw: marginVotes };
-  return {
-    pct: (marginVotes / totalVotes) * 100,
-    raw: marginVotes,
-  };
-}
-
-function secondPlacePartyKey(seat) {
-  const voteRows = sortedSeatVoteRows(seat);
-  if (voteRows.length < 2) return null;
-  return voteRows[1].party;
-}
-
-function clampNumber(value, minimum, maximum) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return minimum;
-  return Math.max(minimum, Math.min(maximum, numeric));
-}
-
-function voteSharePct(seat, partyKey) {
-  const totalVotes = totalVotesForSeat(seat);
-  if (totalVotes <= 0) return 0;
-  const partyVotes = Number(seat?.votes?.[partyKey] || 0);
-  return (partyVotes / totalVotes) * 100;
-}
-
+/** Lazily initializes and returns the per-region swing Map for a party in predictRegionalSwingsByParty. */
 function ensurePredictPartySwingMap(partyKey) {
   if (!predictRegionalSwingsByParty.has(partyKey)) {
     predictRegionalSwingsByParty.set(partyKey, new Map());
@@ -1336,15 +1114,14 @@ function ensurePredictPartySwingMap(partyKey) {
   return predictRegionalSwingsByParty.get(partyKey);
 }
 
-function predictInputKey(regionKey, partyKey) {
-  return `${regionKey}::${partyKey}`;
-}
 
+/** Toggles the 'active' CSS class on the predict mode nav button. */
 function setPredictModeNavState(active) {
   if (!predictModeLinkEl) return;
   predictModeLinkEl.classList.toggle('active', active);
 }
 
+/** Syncs predict window and seat card visibility based on predict mode state, vote totals expansion, and England expansion. */
 function syncPredictModeRightColumnLayout() {
   if (!predictWindow || !seatCard) return;
 
@@ -1362,81 +1139,31 @@ function syncPredictModeRightColumnLayout() {
   predictWindow.classList.toggle('maps-predict-window-force-scroll', forcePredictGridScroll);
 }
 
-function roundPredictShareValue(value) {
-  return Math.round(Number(value || 0));
-}
 
-function formatPredictShare(value) {
-  return String(roundPredictShareValue(value));
-}
-
-function normalizePredictShareMap(sourceMap) {
-  const normalized = new Map();
-  (sourceMap || new Map()).forEach((value, key) => {
-    normalized.set(key, roundPredictShareValue(clampNumber(value, 0, 100)));
-  });
-  return normalized;
-}
-
+/** Returns the GB predict grid column party keys (base parties + 'nat' column). */
 function collectPredictPartyKeys() {
   return [...PREDICT_BASE_PARTY_KEYS, PREDICT_NAT_COLUMN_KEY];
 }
 
+/** Returns the NI predict grid column party keys. */
 function collectPredictNorthernIrelandPartyKeys() {
   return [...PREDICT_NI_PARTY_KEYS];
 }
 
-function predictNatPartyKeyForRegion(regionKey) {
-  if (isPredictScotlandRegion(regionKey)) return 'snp';
-  if (isPredictWalesRegion(regionKey)) return 'plaidcymru';
-  return null;
-}
 
-function resolvePredictInputPartyKey(regionKey, columnPartyKey) {
-  if (columnPartyKey === PREDICT_NAT_COLUMN_KEY) {
-    return predictNatPartyKeyForRegion(regionKey);
-  }
-  return columnPartyKey;
-}
-
-function collectPredictInputPartyKeysForRegion(regionKey) {
-  if (isPredictNorthernIrelandRegion(regionKey)) {
-    return collectPredictNorthernIrelandPartyKeys();
-  }
-
-  const keys = [...PREDICT_BASE_PARTY_KEYS];
-  const natPartyKey = predictNatPartyKeyForRegion(regionKey);
-  if (natPartyKey) keys.push(natPartyKey);
-  return keys;
-}
-
+/** Returns all predict regions as { regionKey, regionLabel } sorted alphabetically by label. */
 function collectPredictAllRegions() {
   return Array.from(predictBaseRegionLabelsByKey.entries())
     .map(([regionKey, regionLabel]) => ({ regionKey, regionLabel }))
     .sort((a, b) => a.regionLabel.localeCompare(b.regionLabel));
 }
 
-function isPredictNorthernIrelandRegion(regionKey) {
-  return normalizeRegionKey(regionKey) === PREDICT_NI_KEY;
-}
 
-function isPredictScotlandRegion(regionKey) {
-  return normalizeRegionKey(regionKey) === PREDICT_SCOTLAND_KEY;
-}
-
-function isPredictWalesRegion(regionKey) {
-  return normalizeRegionKey(regionKey) === PREDICT_WALES_KEY;
-}
-
-function isPredictEnglishRegion(regionKey) {
-  const key = normalizeRegionKey(regionKey);
-  if (!key) return false;
-  if (isPredictNorthernIrelandRegion(key)) return false;
-  if (isPredictScotlandRegion(key)) return false;
-  if (isPredictWalesRegion(key)) return false;
-  return true;
-}
-
+/**
+ * Returns the ordered list of row descriptors for the predict grid:
+ * England aggregate (always first), optionally followed by English sub-regions if expanded,
+ * then Scotland, Wales, and Northern Ireland.
+ */
 function collectPredictInputRows() {
   const allRegions = collectPredictAllRegions();
   const englishRegions = allRegions.filter((row) => isPredictEnglishRegion(row.regionKey));
@@ -1492,51 +1219,41 @@ function collectPredictInputRows() {
   return rows;
 }
 
-function formatPredictRegionLabel(regionLabel) {
-  const text = String(regionLabel || '').trim();
-  const aliases = {
-    'northern ireland': 'N Ireland',
-    'north east england': 'North East',
-    'north west england': 'North West',
-    'south east england': 'South East',
-    'south west england': 'South West',
-    'east of england': 'E of England',
-    'yorkshire and the humber': 'Yorks',
-  };
 
-  const normalized = text.toLowerCase();
-  if (aliases[normalized]) return aliases[normalized];
-  return text;
-}
-
+/** Clamps inputValue to [0, 100], stores it in predictInputByRegionParty, and returns the clamped integer value. */
 function setPredictInputShareValue(regionKey, partyKey, inputValue) {
   const shareValue = roundPredictShareValue(clampNumber(inputValue, 0, 100));
   predictInputByRegionParty.set(predictInputKey(regionKey, partyKey), shareValue);
   return shareValue;
 }
 
+/** Returns the rounded baseline vote share for a region/party from the historical election data. */
 function getPredictBaselineShare(regionKey, partyKey) {
   return roundPredictShareValue(
     Number(predictBaselineShareByRegionParty.get(predictInputKey(regionKey, partyKey)) || 0)
   );
 }
 
+/** Returns the current user-entered predict share for a region/party, falling back to the baseline if not yet entered. */
 function getPredictInputShareValue(regionKey, partyKey) {
   const cached = predictInputByRegionParty.get(predictInputKey(regionKey, partyKey));
   if (Number.isFinite(cached)) return Number(cached);
   return roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey));
 }
 
+/** Returns the sum of all predict input shares for a region (across its modelled parties). */
 function calculatePredictEnteredShareTotal(regionKey) {
   return collectPredictInputPartyKeysForRegion(regionKey).reduce((sum, partyKey) => {
     return sum + Number(getPredictInputShareValue(regionKey, partyKey) || 0);
   }, 0);
 }
 
+/** Returns the implied 'other' share for a region (100 minus the entered parties total). Can be negative if inputs exceed 100%. */
 function calculatePredictOtherShare(regionKey) {
   return roundPredictShareValue(100 - calculatePredictEnteredShareTotal(regionKey));
 }
 
+/** Updates the 'other' display cell for a region in the predict grid, marking it red when the total exceeds 100%. */
 function updatePredictOtherCell(regionKey) {
   const cell = predictOtherCellByRegion.get(regionKey);
   if (!cell) return;
@@ -1545,6 +1262,7 @@ function updatePredictOtherCell(regionKey) {
   cell.classList.toggle('maps-predict-grid-total-over', otherShare < 0);
 }
 
+/** Returns all validation rows: England aggregate plus every English, Scottish, Welsh, and NI region. Used to check that no region exceeds 100%. */
 function collectPredictValidationRows() {
   const allRegions = collectPredictAllRegions();
   const rows = [{ regionKey: PREDICT_ENGLAND_KEY, regionLabel: 'England' }];
@@ -1563,10 +1281,12 @@ function collectPredictValidationRows() {
   return rows;
 }
 
+/** Returns the rows used for URL state serialization (same set as validation rows). */
 function collectPredictShareStateRows() {
   return collectPredictValidationRows();
 }
 
+/** Serializes only the region/party share values that differ from baseline, plus the England expansion flag, into the v2 encoded payload string. Returns '' if nothing has changed. */
 function buildPredictShareStatePayload() {
   const rows = collectPredictShareStateRows();
   const serializedRows = [];
@@ -1585,35 +1305,19 @@ function buildPredictShareStatePayload() {
     return '';
   }
 
-  const compact = encodePredictPayloadV2(serializedRows, predictEnglandExpanded);
-  if (compact) return compact;
-
-  const payload = {
-    v: 1,
-    e: predictEnglandExpanded ? 1 : 0,
-    s: serializedRows,
-  };
-  return encodePredictPayload(payload);
+  return encodePredictPayloadV2(serializedRows, predictEnglandExpanded);
 }
 
+/** Reads and decodes the 'predict' URL parameter, returning the decoded state object or null. */
 function readPredictShareStateFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const encoded = params.get('predict');
   if (!encoded) return null;
 
-  const compact = decodePredictPayloadV2(encoded);
-  if (compact) return compact;
-
-  const payload = decodePredictPayload(encoded);
-  if (!payload || Number(payload.v) !== 1) return null;
-
-  const rows = Array.isArray(payload.s) ? payload.s : [];
-  return {
-    englandExpanded: Number(payload.e) === 1,
-    rows,
-  };
+  return decodePredictPayloadV2(encoded);
 }
 
+/** Applies a decoded predict share state (from URL) to predictInputByRegionParty, validating regions and parties before setting values. */
 function applyPredictShareStateFromUrl(sharedState) {
   if (!sharedState) return;
   predictEnglandExpanded = Boolean(sharedState.englandExpanded);
@@ -1634,6 +1338,7 @@ function applyPredictShareStateFromUrl(sharedState) {
   });
 }
 
+/** Builds the full shareable URL for the current predict scenario, including the encoded payload. */
 function buildPredictShareUrl() {
   const params = buildRouteSearchParams('predict');
   const payload = buildPredictShareStatePayload();
@@ -1646,12 +1351,14 @@ function buildPredictShareUrl() {
   return query ? `${origin}${path}?${query}` : `${origin}${path}`;
 }
 
+/** Updates the browser history entry with the current predict state URL without reloading the page. */
 function replacePredictRouteStateFromInputs() {
   const nextUrl = buildPredictShareUrl();
   window.history.replaceState({}, '', nextUrl);
   trackVirtualPageView(nextUrl);
 }
 
+/** Shares the current predict URL via the Web Share API, falls back to clipboard copy, then to a prompt dialog. */
 async function sharePredictScenario() {
   const shareUrl = buildPredictShareUrl();
   try {
@@ -1678,6 +1385,7 @@ async function sharePredictScenario() {
   window.prompt('Copy your prediction link:', shareUrl);
 }
 
+/** Returns an array of region rows where the entered party shares exceed 100% in total. Empty array means all rows are valid. */
 function validatePredictRowsNotOver100() {
   const invalidRows = collectPredictValidationRows()
     .map((row) => ({
@@ -1689,76 +1397,8 @@ function validatePredictRowsNotOver100() {
   return invalidRows;
 }
 
-function resolvedPredictSwingValue(seatRegionKey, partyKey) {
-  const normalizedSeatRegion = normalizeRegionKey(seatRegionKey);
-  if (!normalizedSeatRegion) return 0;
 
-  const swingMap = ensurePredictPartySwingMap(partyKey);
-  const direct = Number(swingMap.get(normalizedSeatRegion) || 0);
-  if (Math.abs(direct) > 1e-9) return direct;
-
-  if (isPredictEnglishRegion(normalizedSeatRegion)) {
-    return Number(swingMap.get(PREDICT_ENGLAND_KEY) || 0);
-  }
-  return direct;
-}
-
-function buildPredictBaselineShares(seats) {
-  const byRegion = new Map();
-
-  const ensureRegionStats = (regionKey) => {
-    if (!byRegion.has(regionKey)) {
-      byRegion.set(regionKey, {
-        totalVotes: 0,
-        votesByParty: new Map(),
-      });
-    }
-    return byRegion.get(regionKey);
-  };
-
-  (seats || []).forEach((seat) => {
-    const regionKey = normalizeRegionKey(seat.region);
-    if (!regionKey) return;
-
-    const turnout = totalVotesForSeat(seat);
-    if (turnout <= 0) return;
-
-    const regionStats = ensureRegionStats(regionKey);
-    regionStats.totalVotes += turnout;
-
-    PREDICT_MODELLED_PARTY_KEYS.forEach((partyKey) => {
-      const partyVotes = Number(seat?.votes?.[partyKey] || 0);
-      regionStats.votesByParty.set(
-        partyKey,
-        Number(regionStats.votesByParty.get(partyKey) || 0) + partyVotes,
-      );
-    });
-
-    if (isPredictEnglishRegion(regionKey)) {
-      const englandStats = ensureRegionStats(PREDICT_ENGLAND_KEY);
-      englandStats.totalVotes += turnout;
-      PREDICT_MODELLED_PARTY_KEYS.forEach((partyKey) => {
-        const partyVotes = Number(seat?.votes?.[partyKey] || 0);
-        englandStats.votesByParty.set(
-          partyKey,
-          Number(englandStats.votesByParty.get(partyKey) || 0) + partyVotes,
-        );
-      });
-    }
-  });
-
-  const shareMap = new Map();
-  byRegion.forEach((stats, regionKey) => {
-    PREDICT_MODELLED_PARTY_KEYS.forEach((partyKey) => {
-      const votes = Number(stats.votesByParty.get(partyKey) || 0);
-      const share = stats.totalVotes > 0 ? (votes / stats.totalVotes) * 100 : 0;
-      shareMap.set(predictInputKey(regionKey, partyKey), roundPredictShareValue(share));
-    });
-  });
-
-  return shareMap;
-}
-
+/** Recomputes predictRegionalSwingsByParty from current input values versus baseline, removing zero-swing entries. */
 function rebuildPredictSwingsFromInputs() {
   predictRegionalSwingsByParty = new Map();
 
@@ -1778,6 +1418,7 @@ function rebuildPredictSwingsFromInputs() {
   });
 }
 
+/** Resets all predict inputs to baseline values and refreshes grid input elements. */
 function resetPredictInputsToBaseline() {
   predictRegionalSwingsByParty = new Map();
   predictInputByRegionParty = normalizePredictShareMap(predictBaselineShareByRegionParty);
@@ -1794,6 +1435,11 @@ function resetPredictInputsToBaseline() {
   });
 }
 
+/**
+ * Fully rebuilds the predict input grid DOM.
+ * Renders a GB section (England aggregate + optional sub-regions, Scotland, Wales) and a NI section.
+ * Each row contains numeric inputs per party column plus a live-updating 'other' total cell.
+ */
 function renderPredictGrid() {
   if (!predictGrid) return;
   const regions = collectPredictInputRows();
@@ -1945,6 +1591,7 @@ function renderPredictGrid() {
   });
 }
 
+/** Exits predict mode, restores the election view route, and reloads election data if any is available. */
 function deactivatePredictMode() {
   predictModeActive = false;
   setPredictModeNavState(false);
@@ -1957,6 +1604,7 @@ function deactivatePredictMode() {
   });
 }
 
+/** Loads the 2024 general election as the predict baseline if not already loaded. Returns true on success, false if the election is not found in the manifest or returns no seats. */
 async function ensurePredictBaselineData() {
   if (!currentManifest) return false;
 
@@ -1969,7 +1617,7 @@ async function ensurePredictBaselineData() {
     fetchJson(`data/${dataFile}`),
   ]);
 
-  const seats = normalizeSeats(resultsData);
+  const seats = normalizeSeats(resultsData, manifestPartiesById);
   if (!seats.length) return false;
 
   predictBaseSeats = seats.map((seat) => ({
@@ -1984,11 +1632,12 @@ async function ensurePredictBaselineData() {
   return true;
 }
 
+/** Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries. */
 function applyPredictModeProjection() {
   if (!predictModeActive) return;
   if (!predictBaseSeats.length || !predictBaseMapData) return;
 
-  const projectedSeats = predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat));
+  const projectedSeats = predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, predictRegionalSwingsByParty));
   const projectedSummary = summarizeElection(projectedSeats);
   const baselineSummary = summarizeElection(predictBaseSeats);
 
@@ -2014,64 +1663,8 @@ function applyPredictModeProjection() {
   }
 }
 
-function projectedSeatForPredictMode(baseSeat) {
-  const totalVotes = totalVotesForSeat(baseSeat);
-  if (totalVotes <= 0) return { ...baseSeat };
 
-  const regionKey = normalizeRegionKey(baseSeat.region);
-  const baseVotes = baseSeat.votes || {};
-  const baseTrackedShareByParty = new Map();
-  let trackedShareSum = 0;
-
-  PREDICT_MODELLED_PARTY_KEYS.forEach((partyKey) => {
-    const baseShare = totalVotes > 0 ? (Number(baseVotes[partyKey] || 0) / totalVotes) * 100 : 0;
-    baseTrackedShareByParty.set(partyKey, baseShare);
-    trackedShareSum += baseShare;
-  });
-
-  let adjustedTrackedShareSum = 0;
-  const adjustedTrackedShareByParty = new Map();
-  PREDICT_MODELLED_PARTY_KEYS.forEach((partyKey) => {
-    const baseShare = Number(baseTrackedShareByParty.get(partyKey) || 0);
-    const swing = resolvedPredictSwingValue(regionKey, partyKey);
-    const adjusted = Math.max(0, baseShare + swing);
-    adjustedTrackedShareByParty.set(partyKey, adjusted);
-    adjustedTrackedShareSum += adjusted;
-  });
-
-  const adjustedOtherShare = Math.max(0, 100 - adjustedTrackedShareSum);
-  const projectedVotes = {};
-  adjustedTrackedShareByParty.forEach((share, partyKey) => {
-    if (share <= 0) return;
-    projectedVotes[partyKey] = (share / 100) * totalVotes;
-  });
-
-  const nonTrackedEntries = Object.entries(baseVotes)
-    .filter(([partyKey]) => !PREDICT_MODELLED_PARTY_KEYS.includes(partyKey));
-  const nonTrackedVotes = nonTrackedEntries.reduce((sum, [, votes]) => sum + Number(votes || 0), 0);
-
-  if (adjustedOtherShare > 0) {
-    if (nonTrackedVotes > 0) {
-      nonTrackedEntries.forEach(([partyKey, votes]) => {
-        const weight = Number(votes || 0) / nonTrackedVotes;
-        projectedVotes[partyKey] = ((adjustedOtherShare * weight) / 100) * totalVotes;
-      });
-    } else {
-      projectedVotes.others = (adjustedOtherShare / 100) * totalVotes;
-    }
-  }
-
-  const winner = Object.entries(projectedVotes)
-    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0] || baseSeat.winner || 'others';
-
-  return {
-    ...baseSeat,
-    votes: projectedVotes,
-    turnout: totalVotes,
-    winner,
-  };
-}
-
+/** Switches the app into predict mode: loads baseline data if needed, applies any URL-encoded state, renders the grid, and runs the initial projection. */
 async function activatePredictMode() {
   if (!currentSeats.length || !currentMapData) return;
 
@@ -2118,6 +1711,7 @@ async function activatePredictMode() {
   applyPredictModeProjection();
 }
 
+/** Attaches click handlers to the predict submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag. */
 function wirePredictControls() {
   if (!predictWindow || predictWindow.dataset.wired === 'true') return;
 
@@ -2162,6 +1756,7 @@ function wirePredictControls() {
   predictWindow.dataset.wired = 'true';
 }
 
+/** Rebuilds the options on a select element from an array of { value, label } rows, preserving the current selection or falling back to fallbackValue. */
 function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
   if (!selectEl) return;
   const currentValue = selectEl.value;
@@ -2188,6 +1783,7 @@ function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
   if (rows[0]) selectEl.value = rows[0].value;
 }
 
+/** Returns { value, label } rows for all parties appearing as winners or voters in current/comparison seats, sorted by label, with 'all parties…' prepended. */
 function collectPartyKeysForControls() {
   const keys = new Set(['all']);
   currentSeats.forEach((seat) => {
@@ -2205,6 +1801,7 @@ function collectPartyKeysForControls() {
   return [{ value: 'all', label: 'all parties...' }, ...sorted.map((key) => ({ value: key, label: labelParty(key) }))];
 }
 
+/** Returns { value, label } rows for all regions present in current seats, sorted by label, with 'all regions…' prepended. */
 function collectRegionsForControls() {
   const byKey = new Map();
   currentSeats.forEach((seat) => {
@@ -2220,6 +1817,7 @@ function collectRegionsForControls() {
   return [{ value: 'all', label: 'all regions...' }, ...rows];
 }
 
+/** Pushes the current mapViewState values into the DOM filter/choropleth inputs and toggles second-party group visibility. */
 function syncMapControlInputsFromState() {
   if (filterPartySelect) filterPartySelect.value = mapViewState.filterParty;
   if (filterRegionSelect) filterRegionSelect.value = mapViewState.filterRegion;
@@ -2239,6 +1837,7 @@ function syncMapControlInputsFromState() {
   if (choroplethPartySelect) choroplethPartySelect.value = mapViewState.choroplethParty;
 }
 
+/** Reads the DOM filter/choropleth inputs into mapViewState, normalizing and clamping values, then syncs the inputs back. */
 function syncMapControlStateFromInputs() {
   if (filterPartySelect) mapViewState.filterParty = filterPartySelect.value || 'all';
   if (filterRegionSelect) mapViewState.filterRegion = filterRegionSelect.value || 'all';
@@ -2261,6 +1860,7 @@ function syncMapControlStateFromInputs() {
   syncMapControlInputsFromState();
 }
 
+/** Resets all primary filter state (party, region, majority range, gains toggle) to defaults and syncs the controls. */
 function resetPrimaryFilters() {
   mapViewState.filterParty = 'all';
   mapViewState.filterRegion = 'all';
@@ -2271,12 +1871,14 @@ function resetPrimaryFilters() {
   syncMapControlInputsFromState();
 }
 
+/** Resets choropleth type and party to defaults and syncs the controls. */
 function resetChoropleths() {
   mapViewState.choroplethType = 'none';
   mapViewState.choroplethParty = 'all';
   syncMapControlInputsFromState();
 }
 
+/** Rebuilds all select options for party and region filter/choropleth controls from current seat data. */
 function populateMapControlOptions() {
   const partyRows = collectPartyKeysForControls();
   const regionRows = collectRegionsForControls();
@@ -2290,6 +1892,7 @@ function populateMapControlOptions() {
   syncMapControlInputsFromState();
 }
 
+/** Returns true if a seat passes all active primary filters (party, region, majority range, second party, gains-only). */
 function seatMatchesPrimaryFilters(seat, comparisonSeat) {
   if (mapViewState.filterParty !== 'all' && seat.winner !== mapViewState.filterParty) return false;
 
@@ -2314,6 +1917,7 @@ function seatMatchesPrimaryFilters(seat, comparisonSeat) {
   return true;
 }
 
+/** Returns a Set of seat keys for all seats that pass the current primary filters. */
 function buildVisibleSeatKeySet() {
   const keySet = new Set();
 
@@ -2328,6 +1932,7 @@ function buildVisibleSeatKeySet() {
   return keySet;
 }
 
+/** Returns the choropleth metric value for a seat (vote share or vote share change), or null if choropleth is disabled or party is unset. */
 function getChoroplethValue(seat, comparisonSeat) {
   if (mapViewState.choroplethType === 'none') return null;
   const partyKey = mapViewState.choroplethParty;
@@ -2345,6 +1950,12 @@ function getChoroplethValue(seat, comparisonSeat) {
   return null;
 }
 
+/**
+ * Builds the choropleth rendering configuration for visible seats.
+ * Returns { enabled: false } when no choropleth is selected.
+ * For voteShareChange returns a diverging red-white-blue scale; for voteShare returns a white-to-party-colour scale.
+ * Includes valueBySeatKey, toColour, and legend metadata.
+ */
 function buildChoroplethConfig(visibleSeatKeys) {
   if (mapViewState.choroplethType === 'none' || mapViewState.choroplethParty === 'all') return { enabled: false };
   const isDelta = mapViewState.choroplethType === 'voteShareChange';
@@ -2420,6 +2031,7 @@ function buildChoroplethConfig(visibleSeatKeys) {
   };
 }
 
+/** Renders the choropleth colour gradient legend into the legend element, or hides it when choropleth is disabled. */
 function renderChoroplethLegend(choroplethConfig) {
   if (!choroplethLegend) return;
   if (!choroplethConfig?.enabled) {
@@ -2451,6 +2063,7 @@ function renderChoroplethLegend(choroplethConfig) {
   choroplethLegend.hidden = false;
 }
 
+/** Resets current and comparison seat state from base data, recomputes summaries, and triggers a full map + panel re-render. */
 function refreshElectionSeatStateAndRender() {
   if (!Array.isArray(baseElectionSeats) || !baseElectionSeats.length) return;
 
@@ -2474,6 +2087,10 @@ function refreshElectionSeatStateAndRender() {
   syncRightPanelHeightToMap();
 }
 
+/**
+ * Renders the map, seat list, vote totals, and choropleth legend for the current filter/choropleth state.
+ * Accepts { preserveZoom: true } to retain the current pan/zoom transform.
+ */
 function renderMapWithViewState(options = {}) {
   if (!currentMapData) return;
 
@@ -2511,12 +2128,14 @@ function renderMapWithViewState(options = {}) {
   }
 }
 
+/** Hides the seat detail popup and clears the tracked open seat name. */
 function hideSeatPopup() {
   if (!seatPopup) return;
   seatPopup.hidden = true;
   currentOpenSeatName = null;
 }
 
+/** Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked vote share bar chart with comparison deltas. */
 function renderSeatPopup(seatName) {
   if (!seatPopup || !seatPopupTitle || !seatPopupMeta || !seatPopupList) return;
 
@@ -2581,6 +2200,7 @@ function renderSeatPopup(seatName) {
   seatPopup.hidden = false;
 }
 
+/** Returns a sorted copy of party rows according to currentSort (party name alpha, or numeric column with label tiebreak). */
 function sortPartyRows(rows) {
   const multiplier = currentSort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
@@ -2595,6 +2215,7 @@ function sortPartyRows(rows) {
   });
 }
 
+/** Attaches click and keyboard (Enter/Space) handlers to all [data-sort-key] table headers to trigger sort changes via the onSortChanged callback. */
 function wireVoteTotalsSorting(onSortChanged) {
   document.querySelectorAll('th[data-sort-key]').forEach((header) => {
     const sortKey = header.getAttribute('data-sort-key');
@@ -2615,16 +2236,19 @@ function wireVoteTotalsSorting(onSortChanged) {
   });
 }
 
+/** Toggles the 'hide-comparison-cols' class on the vote totals table to show or hide comparison delta columns. */
 function toggleComparisonColumns(showComparison) {
   if (!voteTotalsTable) return;
   voteTotalsTable.classList.toggle('hide-comparison-cols', !showComparison);
 }
 
+/** Toggles the 'hide-vote-total-col' class on the vote totals table to show or hide raw vote count columns. */
 function toggleVoteTotalColumns(showVoteTotals) {
   if (!voteTotalsTable) return;
   voteTotalsTable.classList.toggle('hide-vote-total-col', !showVoteTotals);
 }
 
+/** Renders the vote totals summary table, showing seat counts, vote share, and comparison deltas when a comparisonSummary is provided. Truncates to top 6 rows unless expanded. */
 function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
   if (!voteTotalsBody) return;
   voteTotalsBody.innerHTML = '';
@@ -2682,6 +2306,7 @@ function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
   });
 }
 
+/** Renders up to 300 seat rows sorted alphabetically into the seat list panel. Each row shows the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup. */
 function renderSeatList(seats, comparisonSeats = null) {
   if (!seatList) return;
   seatList.innerHTML = '';
@@ -2727,6 +2352,7 @@ function renderSeatList(seats, comparisonSeats = null) {
   });
 }
 
+/** Marks the seat list row for seatKey as selected (is-selected class) and deselects the previously selected row. */
 function setSelectedSeatRowByKey(seatKey) {
   const nextRow = seatListRowByKey.get(seatKey);
   if (!nextRow) return;
@@ -2738,6 +2364,7 @@ function setSelectedSeatRowByKey(seatKey) {
   selectedSeatRow = nextRow;
 }
 
+/** Builds the module-level seat name search index (seatSearchNames and currentSeatNameByKey) from the provided seats. Returns the sorted name array. */
 function buildSeatSearchIndex(seats) {
   currentSeatNameByKey = new Map();
   const names = [];
@@ -2756,6 +2383,7 @@ function buildSeatSearchIndex(seats) {
   return names;
 }
 
+/** Creates the autocomplete dropdown menu element adjacent to the seat search input if it doesn't exist yet. Returns the element or null if the input is absent. */
 function ensureSeatSearchMenu() {
   if (seatSearchMenuEl || !seatSearchInput) return seatSearchMenuEl;
   const searchGroup = seatSearchInput.closest('.maps-toolbar-group-search') || seatSearchInput.parentElement;
@@ -2771,6 +2399,7 @@ function ensureSeatSearchMenu() {
   return seatSearchMenuEl;
 }
 
+/** Hides the autocomplete dropdown and clears the keyboard suggestion index. */
 function hideSeatSearchSuggestions() {
   seatSearchSuggestionIndex = -1;
   if (!seatSearchMenuEl) return;
@@ -2778,6 +2407,7 @@ function hideSeatSearchSuggestions() {
   seatSearchMenuEl.innerHTML = '';
 }
 
+/** Populates the autocomplete dropdown with up to MAX_SEAT_SEARCH_SUGGESTIONS seat names matching query (starts-with first, then contains). */
 function showSeatSearchSuggestions(query = '') {
   const menu = ensureSeatSearchMenu();
   if (!menu) return;
@@ -2824,6 +2454,7 @@ function showSeatSearchSuggestions(query = '') {
   menu.hidden = false;
 }
 
+/** Updates the keyboard-active (is-active) class on suggestion items to reflect seatSearchSuggestionIndex. */
 function updateSeatSearchHighlight() {
   if (!seatSearchMenuEl) return;
   const options = seatSearchMenuEl.querySelectorAll('.maps-seat-search-item');
@@ -2833,12 +2464,14 @@ function updateSeatSearchHighlight() {
   });
 }
 
+/** Updates the seat name list used for autocomplete suggestions and hides any open dropdown. */
 function applySeatSearchSuggestions(seatNames) {
   if (!seatSearchInput) return;
   seatSearchNames = Array.isArray(seatNames) ? [...seatNames] : [];
   hideSeatSearchSuggestions();
 }
 
+/** Resolves a search query to a seat name (exact → starts-with → contains), zooms the map, selects the list row, and opens the popup. */
 function selectSeatBySearchQuery(query) {
   const rawQuery = String(query || '').trim();
   if (!rawQuery) return;
@@ -2871,6 +2504,7 @@ function selectSeatBySearchQuery(query) {
   if (seatPreview) seatPreview.textContent = `Seat not found on map: ${seatName}`;
 }
 
+/** Attaches all seat search event listeners (focus, input, change, blur, keydown for arrow/enter/escape navigation, outside-click to close). Guards against double-wiring. */
 function wireSeatSearch() {
   if (!seatSearchInput || seatSearchInput.dataset.wired === 'true') return;
   ensureSeatSearchMenu();
@@ -2941,6 +2575,7 @@ function wireSeatSearch() {
   seatSearchInput.dataset.wired = 'true';
 }
 
+/** Sets the right panel's height to match the map stage height so the two columns stay aligned. */
 function syncRightPanelHeightToMap() {
   if (!mapsStage || !mapsPanelRight) return;
 
@@ -2951,6 +2586,7 @@ function syncRightPanelHeightToMap() {
   mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
 }
 
+/** Updates the page title and subtitle with the election name and leading-party majority (or hung-parliament message). */
 function updateTopSummary(election, summary) {
   setMapsPageTitle(election?.name);
   const top = summary.parties[0];
@@ -2971,11 +2607,13 @@ function updateTopSummary(election, summary) {
   }
 }
 
+/** Extracts the seat name from a TopoJSON feature's properties, trying several common property name variations. Returns null if none found. */
 function seatNameFromFeature(featureDatum) {
   const props = featureDatum?.properties || {};
   return props.name || props.seat_name || props.seat || props.constituency || props.Name || null;
 }
 
+/** Returns a Map from seat name (original and lowercase) to winner party key, used for fast map colour lookups. */
 function buildWinnerBySeat(seats) {
   const bySeat = new Map();
   seats.forEach((seat) => {
@@ -2986,10 +2624,8 @@ function buildWinnerBySeat(seats) {
   return bySeat;
 }
 
-function seatLookupKey(seatName) {
-  return String(seatName || '').trim().toLowerCase();
-}
 
+/** Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE. */
 function getInitialZoomTransform(width, height) {
   const scale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
   const tx = width / 2 - scale * (width / 2);
@@ -2997,6 +2633,7 @@ function getInitialZoomTransform(width, height) {
   return d3.zoomIdentity.translate(tx, ty).scale(scale);
 }
 
+/** Computes a d3 zoom transform to zoom into a specific map feature, scaling based on the square-root of its bounding box dimensions. */
 function getLegacySeatZoomTransform(path, featureDatum, width, height) {
   const bounds = path.bounds(featureDatum);
   const dx = Math.max(0, bounds[1][0] - bounds[0][0]);
@@ -3012,6 +2649,12 @@ function getLegacySeatZoomTransform(path, featureDatum, width, height) {
   return d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale);
 }
 
+/**
+ * Renders the full TopoJSON map into mapSvg using D3.
+ * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom and hover handlers,
+ * draws region boundary overlays, and sets up mapInteractionController for external zoom/reset/highlight calls.
+ * Accepts { visibleSeatKeys, choroplethConfig, preserveTransform } in options.
+ */
 function renderTopoMap(mapData, seats, options = {}) {
   if (!mapSvg || !mapContent || !zoomValue) return;
 
@@ -3180,6 +2823,7 @@ function renderTopoMap(mapData, seats, options = {}) {
   svg.call(zoomBehavior.transform, options.preserveTransform || initialTransform);
 }
 
+/** Attaches click handlers to all [data-popup-action] buttons, supporting 'close' and 'toggle' actions on their target panel element. Guards against double-wiring. */
 function wirePopupPanels() {
   document.querySelectorAll('[data-popup-action]').forEach((button) => {
     if (button.dataset.wired === 'true') return;
@@ -3204,6 +2848,7 @@ function wirePopupPanels() {
   });
 }
 
+/** Attaches change handlers to all filter and choropleth inputs, and click handlers to the gains, reset-filters, and reset-choropleths buttons. Guards against double-wiring. */
 function wireMapViewControls() {
   if (filterPartySelect?.dataset.wired === 'true') return;
 
@@ -3250,6 +2895,7 @@ function wireMapViewControls() {
   if (filterPartySelect) filterPartySelect.dataset.wired = 'true';
 }
 
+/** Attaches click handlers to all [data-map-action] buttons for zoom-in, zoom-out, reset-zoom, and reset-view actions. */
 function wireMapInteractions() {
   document.querySelectorAll('[data-map-action]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -3268,6 +2914,7 @@ function wireMapInteractions() {
 
 }
 
+/** Attaches a change handler to a poll tracker metric checkbox that re-renders the chart when poll tracker is active. Guards against double-wiring. */
 function wirePollTrackerMetricInput(inputEl) {
   if (!inputEl || inputEl.dataset.wired === 'true') return;
   inputEl.addEventListener('change', () => {
@@ -3276,6 +2923,7 @@ function wirePollTrackerMetricInput(inputEl) {
   inputEl.dataset.wired = 'true';
 }
 
+/** Wires the seats and vote-% metric inputs and all [data-polltracker-range] range buttons, re-rendering the chart on change. */
 function wirePollTrackerControls() {
   wirePollTrackerMetricInput(pollTrackerMetricSeatsInput);
   wirePollTrackerMetricInput(pollTrackerMetricVotesInput);
@@ -3294,6 +2942,7 @@ function wirePollTrackerControls() {
   });
 }
 
+/** Clears all predict mode module-level state and hides the predict window. */
 function resetPredictModeState() {
   predictModeActive = false;
   predictBaseSeats = [];
@@ -3310,6 +2959,7 @@ function resetPredictModeState() {
   syncPredictModeRightColumnLayout();
 }
 
+/** Clears poll tracker mode state and hides the poll tracker layout. */
 function resetPollTrackerModeState() {
   pollTrackerModeActive = false;
   pollTrackerRangeSelection = 'all';
@@ -3317,6 +2967,11 @@ function resetPollTrackerModeState() {
   syncPredictModeRightColumnLayout();
 }
 
+/**
+ * Bootstraps election data: fetches the manifest, resolves the active election from the URL or defaults,
+ * loads map and results JSON in parallel, optionally loads comparison election data,
+ * populates controls, and triggers the initial render.
+ */
 async function initElectionData() {
   const manifest = await fetchJson('data/elections.json');
   currentManifest = manifest;
@@ -3355,7 +3010,7 @@ async function initElectionData() {
     fetchJson(`data/${dataFile}`)
   ]);
 
-  const seats = normalizeSeats(resultsData);
+  const seats = normalizeSeats(resultsData, manifestPartiesById);
   const showVoteTotals = currentElection.type !== 'model_uns';
   currentElectionType = currentElection.type;
   baseElectionSeats = seats;
@@ -3370,7 +3025,7 @@ async function initElectionData() {
     if (comparisonElection) {
       const { dataFile: comparisonDataFile } = resolveElectionFiles(manifest, comparisonElection);
       const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
-      defaultComparisonSeats = normalizeSeats(comparisonData);
+      defaultComparisonSeats = normalizeSeats(comparisonData, manifestPartiesById);
       defaultComparisonSummary = summarizeElection(defaultComparisonSeats);
     }
   }
@@ -3385,6 +3040,7 @@ async function initElectionData() {
   refreshElectionSeatStateAndRender();
 }
 
+/** Entry point: wires all controls and event listeners, then loads election data and navigates to the correct initial view (election / predict / poll tracker). */
 async function init() {
   wireMapInteractions();
   wirePopupPanels();

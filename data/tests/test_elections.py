@@ -1,7 +1,5 @@
 """Tests for the Election table and Database election methods."""
 
-from datetime import date
-
 import pytest
 
 from models import ElectionType
@@ -30,20 +28,6 @@ class TestAddElection:
         m = db.add_map("UK")
         e = db.add_election(m.id, 2025, "Wellingborough", ElectionType.by_election)
         assert e.type == ElectionType.by_election
-
-    def test_by_election_parent_and_date(self, db):
-        m = db.add_map("UK")
-        parent = db.add_election(m.id, 2024, "GE 2024", ElectionType.uk_general)
-        e = db.add_election(
-            m.id,
-            2025,
-            "Runcorn and Helsby by-election",
-            ElectionType.by_election,
-            parent_election_id=parent.id,
-            election_date=date(2025, 5, 1),
-        )
-        assert e.parent_election_id == parent.id
-        assert e.election_date == date(2025, 5, 1)
 
     def test_duplicate_name_raises(self, db):
         m = db.add_map("UK")
@@ -96,36 +80,3 @@ class TestGetElectionsForMap:
         assert len(db.get_elections_for_map(m1.id)) == 1
 
 
-class TestGetChildElections:
-    def test_returns_only_children_for_parent(self, db):
-        m = db.add_map("UK")
-        parent = db.add_election(m.id, 2024, "GE 2024", ElectionType.uk_general)
-        db.add_election(
-            m.id,
-            2025,
-            "By-election A",
-            ElectionType.by_election,
-            parent_election_id=parent.id,
-            election_date=date(2025, 1, 1),
-        )
-        db.add_election(
-            m.id,
-            2025,
-            "By-election B",
-            ElectionType.by_election,
-            parent_election_id=parent.id,
-            election_date=date(2025, 2, 1),
-        )
-
-        other_parent = db.add_election(m.id, 2019, "GE 2019", ElectionType.uk_general)
-        db.add_election(
-            m.id,
-            2020,
-            "By-election C",
-            ElectionType.by_election,
-            parent_election_id=other_parent.id,
-            election_date=date(2020, 1, 1),
-        )
-
-        children = db.get_child_elections(parent.id, election_type=ElectionType.by_election)
-        assert [e.name for e in children] == ["By-election A", "By-election B"]

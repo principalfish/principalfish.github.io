@@ -41,7 +41,6 @@ LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files"
 SUPPLEMENTAL_LEGACY_ELECTIONS = [
     {
         "id": "2019-general-changed-boundaries",
-        "year": 2019,
         "name": "2019 Election (changed boundaries)",
         "type": ElectionType.uk_general.value,
         "mapId": 2,
@@ -202,7 +201,6 @@ def build_manifest_party_settings(parties: list[Party]) -> list[dict]:
                 "id": party.id,
                 "key": key,
                 "name": party.name,
-                "shortName": party.short_name,
                 "colour": party.colour,
             }
         )
@@ -218,7 +216,6 @@ def build_manifest_regions_by_map_id(regions: list[Region]) -> dict[str, list[di
             {
                 "id": region.id,
                 "name": region.name,
-                "parentId": region.parent_id,
             }
         )
 
@@ -465,7 +462,6 @@ def apply_supplemental_legacy_elections(
 
         supplemental_entry = {
             "id": election_id,
-            "year": int(supplemental["year"]),
             "name": supplemental["name"],
             "type": supplemental["type"],
             "mapId": map_id,
@@ -671,14 +667,12 @@ def main() -> None:
                         "id": election_manifest_id,
                         "dbId": election.id,
                         "name": election.name,
-                        "year": election.year,
                         "changes": changes,
                     }
                 )
             else:
                 manifest_entry = {
                     "id": election_manifest_id,
-                    "year": election.year,
                     "name": manifest_name_for_election(election),
                     "type": election.type.value,
                     "mapId": election.map_id,
@@ -733,7 +727,6 @@ def main() -> None:
                 by_rows,
                 key=lambda row: (
                     row.get("date") or "",
-                    int(row.get("year") or 0),
                     str(row.get("name") or ""),
                 ),
             )

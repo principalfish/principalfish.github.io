@@ -18,6 +18,7 @@
     </div>
 
     <div class="action-grid action-grid-two">
+      <a class="button button-block" href="{{ url_for('by_election_form') }}">Import By-Election</a>
       <form method="post" action="{{ url_for('export_current_simulation') }}" class="inline-form button-form">
         <button type="submit" class="button button-block">Export Simulation JSON</button>
       </form>

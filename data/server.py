@@ -30,6 +30,7 @@ from models import Election, ElectionType, Map, Party, Poll, PollRow, Pollster, 
 from polls.export_poll_rows_csv import build_rows
 from polls.importers import (
     bmg_research_import,
+    by_election_import,
     deltapoll_import,
     find_out_now_import,
     focaldata_import,
@@ -1180,6 +1181,85 @@ def poll_detail_csv(poll_id: int):
         as_attachment=True,
         download_name=f"poll_{poll_id}_rows.csv",
     )
+
+
+# ── by-election import ────────────────────────────────────────────────────
+
+
+@app.route("/by-elections", methods=["GET"])
+def by_election_form():
+    db = _get_db()
+    with db.session() as session:
+        elections = (
+            session.execute(
+                select(Election)
+                .where(Election.type == ElectionType.uk_general)
+                .order_by(Election.year.desc())
+            )
+            .scalars()
+            .all()
+        )
+    return render_template(
+        "by_election_form.html",
+        elections=elections,
+        default_parent=by_election_import.DEFAULT_PARENT_ELECTION_NAME,
+    )
+
+
+@app.route("/by-elections/preview", methods=["POST"])
+def by_election_preview():
+    source_url = (request.form.get("source_url") or "").strip()
+    parent_election_name = (request.form.get("parent_election") or "").strip()
+
+    if not source_url:
+        flash("URL is required.")
+        return redirect(url_for("by_election_form"))
+
+    db = _get_db()
+    try:
+        plan = by_election_import.build_import_plan(
+            db,
+            url=source_url,
+            parent_election_name=parent_election_name,
+        )
+    except Exception as exc:
+        flash(f"Import preview failed: {exc}")
+        return redirect(url_for("by_election_form"))
+
+    token = uuid.uuid4().hex
+    PREVIEW_CACHE[token] = {
+        "type": "by_election",
+        "plan": plan,
+    }
+
+    return render_template(
+        "by_election_preview.html",
+        token=token,
+        plan=plan,
+    )
+
+
+@app.route("/by-elections/confirm/<token>", methods=["POST"])
+def by_election_confirm(token: str):
+    cached = PREVIEW_CACHE.get(token)
+    if cached is None or cached.get("type") != "by_election":
+        flash("Preview expired. Please preview again.")
+        return redirect(url_for("by_election_form"))
+
+    plan = cached["plan"]
+    db = _get_db()
+    try:
+        result = by_election_import.commit_import_plan(db, plan)
+    except Exception as exc:
+        flash(f"Import failed: {exc}")
+        return redirect(url_for("by_election_form"))
+
+    PREVIEW_CACHE.pop(token, None)
+    flash(
+        f"Imported '{result['election_name']}' for {result['seat_name']}: "
+        f"{result['votes_inserted']} votes."
+    )
+    return redirect(url_for("by_election_form"))
 
 
 if __name__ == "__main__":

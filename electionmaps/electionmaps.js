@@ -100,6 +100,7 @@ let seatListRowByKey = new Map();
 let currentRegionLabelsByKey = new Map();
 let currentElectionType = null;
 let currentElectionId = null;
+let currentByElectionSeats = null;
 let currentSeats = [];
 let currentComparisonSeats = [];
 let currentMapData = null;
@@ -991,7 +992,9 @@ function renderElectionLinks(manifest, activeId) {
       electionList.appendChild(predictButton);
       predictModeLinkEl = predictButton;
       insertedPredictLink = true;
+    }
 
+    if (insertedPredictLink && !insertedPollTrackerLink && election.id !== 'current-prediction') {
       const trackerButton = createPollTrackerButton();
       electionList.appendChild(trackerButton);
       pollTrackerModeLinkEl = trackerButton;
@@ -1915,8 +1918,12 @@ function seatMatchesPrimaryFilters(seat, comparisonSeat) {
   }
 
   if (mapViewState.gainsOnly) {
-    const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
-    if (!gainFrom) return false;
+    if (currentByElectionSeats) {
+      if (!currentByElectionSeats.has(seat.seat)) return false;
+    } else {
+      const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
+      if (!gainFrom) return false;
+    }
   }
 
   return true;
@@ -2998,6 +3005,10 @@ async function initElectionData() {
   }
 
   currentElectionId = currentElection.id;
+  currentByElectionSeats = currentElection.byElectionSeats?.length
+    ? new Set(currentElection.byElectionSeats)
+    : null;
+  if (filterGainsButton) filterGainsButton.textContent = currentByElectionSeats ? 'By-elections' : 'Gains';
 
   resetPredictModeState();
   resetPollTrackerModeState();

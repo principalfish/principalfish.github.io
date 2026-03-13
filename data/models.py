@@ -105,8 +105,11 @@ class Election(Base):
     year = Column(Integer, nullable=False)
     name = Column(String, nullable=False, unique=True)
     type = Column(Enum(ElectionType), nullable=False)
+    parent_election_id = Column(Integer, ForeignKey("elections.id"), nullable=True)
+    election_date = Column(Date, nullable=True)
 
     map = relationship("Map", back_populates="elections")
+    parent_election = relationship("Election", remote_side=[id])
     votes = relationship("Vote", back_populates="election", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:

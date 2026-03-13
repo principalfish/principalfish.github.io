@@ -222,6 +222,9 @@ class Database:
         year: int,
         name: str,
         election_type: ElectionType,
+        *,
+        parent_election_id: int | None = None,
+        election_date: "date | None" = None,
     ) -> Election:
         with self.session() as s:
             e = Election(
@@ -229,6 +232,8 @@ class Database:
                 year=year,
                 name=name,
                 type=election_type,
+                parent_election_id=parent_election_id,
+                election_date=election_date,
             )
             s.add(e)
             s.flush()

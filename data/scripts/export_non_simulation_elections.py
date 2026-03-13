@@ -569,7 +569,6 @@ def main() -> None:
         default_election_id: str | None = None
         map_files_by_id: dict[str, str] = {}
         data_files_by_election_id: dict[str, str] = {}
-        by_election_files_by_election_id: dict[str, str] = {}
         written_map_ids: set[int] = set()
         manifest_id_by_db_id: dict[int, str] = {}
         pending_by_election_rows: list[dict] = []
@@ -628,6 +627,30 @@ def main() -> None:
                     print(f"Wrote single result payload: {output_file} ({seat_count} seats)")
                 continue
 
+            # By-elections: collect seat changes only; they are folded into current-parliament.json
+            if election.type == ElectionType.by_election:
+                manifest_id_by_db_id[election.id] = election_manifest_id
+                changes = [
+                    {
+                        "seat": seat_row.get("n"),
+                        "winner": seat_row.get("w"),
+                        "votes": compact_votes_to_dict(seat_row.get("p", [])),
+                    }
+                    for seat_row in result_payload.get("seats", [])
+                    if seat_row.get("n") and seat_row.get("p")  # only seats with actual votes
+                ]
+                pending_by_election_rows.append(
+                    {
+                        "id": election_manifest_id,
+                        "dbId": election.id,
+                        "parentDbId": election.parent_election_id,
+                        "name": election.name,
+                        "date": str(election.election_date) if election.election_date else None,
+                        "changes": changes,
+                    }
+                )
+                continue
+
             map_template_filename = choose_map_template_filename(map_row)
             map_template_path = args.legacy_files_dir / map_template_filename
             map_relpath = f"maps/{map_filename}"
@@ -655,38 +678,16 @@ def main() -> None:
             written_map_ids.add(election.map_id)
             manifest_id_by_db_id[election.id] = election_manifest_id
 
-            if election.type == ElectionType.by_election:
-                changes = [
-                    {
-                        "seat": seat_row.get("n"),
-                        "winner": seat_row.get("w"),
-                        "votes": compact_votes_to_dict(seat_row.get("p", [])),
-                        "label": election.name,
-                    }
-                    for seat_row in result_payload.get("seats", [])
-                    if seat_row.get("n")
-                ]
-                pending_by_election_rows.append(
-                    {
-                        "id": election_manifest_id,
-                        "dbId": election.id,
-                        "parentDbId": election.parent_election_id,
-                        "name": election.name,
-                        "date": str(election.election_date) if election.election_date else None,
-                        "changes": changes,
-                    }
-                )
-            else:
-                manifest_entry = {
-                    "id": election_manifest_id,
-                    "name": manifest_name_for_election(election),
-                    "type": election.type.value,
-                    "mapId": election.map_id,
-                }
-                manifest_entries.append(manifest_entry)
+            manifest_entry = {
+                "id": election_manifest_id,
+                "name": manifest_name_for_election(election),
+                "type": election.type.value,
+                "mapId": election.map_id,
+            }
+            manifest_entries.append(manifest_entry)
 
-                if default_election_id is None and election.type == ElectionType.uk_general:
-                    default_election_id = election_manifest_id
+            if default_election_id is None and election.type == ElectionType.uk_general:
+                default_election_id = election_manifest_id
 
         if args.output_file:
             return
@@ -715,126 +716,92 @@ def main() -> None:
         assign_comparison_elections(manifest_entries)
         remove_comparison_for_supplemental_entries(manifest_entries)
 
-        by_elections_by_parent_manifest_id: dict[str, list[dict]] = defaultdict(list)
-        for by_election in pending_by_election_rows:
-            parent_db_id = by_election.get("parentDbId")
-            parent_manifest_id = manifest_id_by_db_id.get(parent_db_id) if parent_db_id is not None else None
-            if not parent_manifest_id:
-                continue
-            by_elections_by_parent_manifest_id[parent_manifest_id].append(by_election)
+        if pending_by_election_rows:
+            by_elections_by_parent_manifest_id: dict[str, list[dict]] = defaultdict(list)
+            for by_election in pending_by_election_rows:
+                parent_db_id = by_election.get("parentDbId")
+                parent_manifest_id = manifest_id_by_db_id.get(parent_db_id) if parent_db_id is not None else None
+                if not parent_manifest_id:
+                    continue
+                by_elections_by_parent_manifest_id[parent_manifest_id].append(by_election)
 
-        for parent_manifest_id, by_rows in sorted(by_elections_by_parent_manifest_id.items()):
-            overlay_filename = f"by-elections-{parent_manifest_id}.json"
-            overlay_relpath = f"results/{overlay_filename}"
-            overlay_path = results_dir / overlay_filename
+            for parent_manifest_id, by_rows in sorted(by_elections_by_parent_manifest_id.items()):
+                all_changes: list[dict] = []
+                for row in sorted(by_rows, key=lambda row: (row.get("date") or "", str(row.get("name") or ""))):
+                    for change in row.get("changes", []):
+                        if change.get("seat"):
+                            all_changes.append(change)
 
-            changes: list[dict] = []
-            sorted_rows = sorted(
-                by_rows,
-                key=lambda row: (
-                    row.get("date") or "",
-                    str(row.get("name") or ""),
-                ),
-            )
-            for row in sorted_rows:
-                for change in row.get("changes", []):
-                    if not change.get("seat"):
-                        continue
-                    changes.append(
-                        {
-                            "seat": change.get("seat"),
-                            "winner": change.get("winner"),
-                            "votes": change.get("votes", {}),
-                            "date": row.get("date"),
-                            "label": row.get("name"),
-                        }
-                    )
-
-            overlay_payload = {
-                "schema": "pf-by-elections-v1",
-                "baseElectionId": parent_manifest_id,
-                "changes": changes,
-            }
-
-            if args.dry_run:
-                print(f"Would write by-election overlay: {overlay_path} ({len(changes)} changes)")
-            else:
-                write_json(overlay_path, overlay_payload)
-                print(f"Wrote by-election overlay: {overlay_path} ({len(changes)} changes)")
-
-            by_election_files_by_election_id[parent_manifest_id] = overlay_relpath
-
-            # Generate composite "Current Parliament" results file
-            parent_data_relpath = data_files_by_election_id.get(parent_manifest_id)
-            if parent_data_relpath:
+                parent_data_relpath = data_files_by_election_id.get(parent_manifest_id)
+                if not parent_data_relpath:
+                    continue
                 parent_result_path = output_root / parent_data_relpath
-                if parent_result_path.exists():
-                    parent_payload = json.loads(parent_result_path.read_text(encoding="utf-8"))
-                    composite_seats = {
-                        seat_row["n"]: dict(seat_row)
-                        for seat_row in parent_payload.get("seats", [])
-                    }
+                if not parent_result_path.exists():
+                    continue
 
-                    for change in changes:
-                        seat_name = change.get("seat")
-                        if seat_name and seat_name in composite_seats:
-                            seat_entry = composite_seats[seat_name]
-                            if change.get("winner") is not None:
-                                seat_entry["w"] = change["winner"]
-                            change_votes = change.get("votes", {})
-                            if change_votes:
-                                seat_entry["p"] = [
-                                    [int(pid), v]
-                                    for pid, v in sorted(
-                                        change_votes.items(),
-                                        key=lambda item: float(item[1]),
-                                        reverse=True,
-                                    )
-                                    if float(v) > 0
-                                ]
+                parent_payload = json.loads(parent_result_path.read_text(encoding="utf-8"))
+                composite_seats = {
+                    seat_row["n"]: dict(seat_row)
+                    for seat_row in parent_payload.get("seats", [])
+                }
 
-                    composite_payload = {
-                        "schema": "pf-results-v4",
-                        "seats": sorted(composite_seats.values(), key=lambda s: s["n"]),
-                    }
+                for change in all_changes:
+                    seat_name = change.get("seat")
+                    if seat_name and seat_name in composite_seats:
+                        seat_entry = composite_seats[seat_name]
+                        if change.get("winner") is not None:
+                            seat_entry["w"] = change["winner"]
+                        change_votes = change.get("votes", {})
+                        if change_votes:
+                            seat_entry["p"] = [
+                                [int(pid), v]
+                                for pid, v in sorted(
+                                    change_votes.items(),
+                                    key=lambda item: float(item[1]),
+                                    reverse=True,
+                                )
+                                if float(v) > 0
+                            ]
 
-                    composite_filename = f"current-parliament-{parent_manifest_id}.json"
-                    composite_relpath = f"results/{composite_filename}"
-                    composite_path = results_dir / composite_filename
-                    composite_manifest_id = f"current-parliament-{parent_manifest_id}"
+                composite_payload = {
+                    "schema": "pf-results-v4",
+                    "seats": sorted(composite_seats.values(), key=lambda s: s["n"]),
+                }
 
-                    if args.dry_run:
-                        print(f"Would write composite: {composite_path} ({len(composite_seats)} seats, {len(changes)} overrides)")
-                    else:
-                        write_json(composite_path, composite_payload)
-                        print(f"Wrote composite: {composite_path} ({len(composite_seats)} seats, {len(changes)} overrides)")
+                composite_filename = "current-parliament.json"
+                composite_path = results_dir / composite_filename
+                composite_manifest_id = "current-parliament"
 
-                    data_files_by_election_id[composite_manifest_id] = composite_relpath
+                if args.dry_run:
+                    print(f"Would write composite: {composite_path} ({len(composite_seats)} seats, {len(all_changes)} overrides)")
+                else:
+                    write_json(composite_path, composite_payload)
+                    print(f"Wrote composite: {composite_path} ({len(composite_seats)} seats, {len(all_changes)} overrides)")
 
-                    # Find the parent election's mapId
-                    parent_entry = next(
-                        (e for e in manifest_entries if e.get("id") == parent_manifest_id),
-                        None,
-                    )
-                    parent_map_id = parent_entry["mapId"] if parent_entry else 2
+                data_files_by_election_id[composite_manifest_id] = f"results/{composite_filename}"
 
-                    composite_entry = {
-                        "id": composite_manifest_id,
-                        "name": "Current Parliament",
-                        "type": ElectionType.uk_general.value,
-                        "mapId": parent_map_id,
-                        "comparisonElectionId": parent_manifest_id,
-                    }
+                parent_entry = next(
+                    (e for e in manifest_entries if e.get("id") == parent_manifest_id),
+                    None,
+                )
+                parent_map_id = parent_entry["mapId"] if parent_entry else 2
 
-                    # Insert before the parent GE in manifest entries
-                    parent_index = next(
-                        (idx for idx, e in enumerate(manifest_entries) if e.get("id") == parent_manifest_id),
-                        0,
-                    )
-                    manifest_entries.insert(parent_index, composite_entry)
+                composite_entry = {
+                    "id": composite_manifest_id,
+                    "name": "Current Parliament",
+                    "type": ElectionType.uk_general.value,
+                    "mapId": parent_map_id,
+                    "comparisonElectionId": parent_manifest_id,
+                    "byElectionSeats": [change["seat"] for change in all_changes],
+                }
 
-                    # Make Current Parliament the default election
-                    default_election_id = composite_manifest_id
+                # Insert after current-prediction so it appears below "Predict 2029" in the UI
+                prediction_index = next(
+                    (idx for idx, e in enumerate(manifest_entries) if e.get("id") == "current-prediction"),
+                    -1,
+                )
+                manifest_entries.insert(prediction_index + 1, composite_entry)
+                default_election_id = composite_manifest_id
 
         for entry in manifest_entries:
             parent_db_id = entry.pop("parentElectionDbId", None)

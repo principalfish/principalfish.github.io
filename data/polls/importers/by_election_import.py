@@ -56,6 +56,7 @@ PARTY_NAME_MAP: dict[str, str] = {
     "uup": "Ulster Unionist Party",
     "independent": "Other",
     "speaker": "Other",
+    "liberal": "Other",
 }
 
 MONTH_MAP = {
@@ -100,17 +101,32 @@ def fetch_wikipedia_html(url: str) -> str:
 
 
 def parse_election_date(soup: BeautifulSoup) -> date | None:
-    """Extract election date from the infobox."""
+    """Extract election date from the infobox.
+
+    Wikipedia by-election infoboxes embed the date in a <b> tag inside an
+    infobox-subheader cell rather than a labelled th/td row, so we try both
+    approaches: first the labelled row, then any bold text in the infobox.
+    """
     infobox = soup.find("table", class_="infobox")
     if not infobox:
         return None
 
+    # Approach 1: labelled row (e.g. general election pages)
     for row in infobox.find_all("tr"):
         header = row.find("th")
         if header and "date" in header.get_text(strip=True).lower():
             cell = row.find("td")
             if cell:
-                return _parse_date_text(cell.get_text(strip=True))
+                result = _parse_date_text(cell.get_text(strip=True))
+                if result:
+                    return result
+
+    # Approach 2: bold text in infobox-subheader cell (by-election pages)
+    for bold in infobox.find_all("b"):
+        result = _parse_date_text(bold.get_text(strip=True))
+        if result:
+            return result
+
     return None
 
 
@@ -190,15 +206,25 @@ def parse_results_table(soup: BeautifulSoup) -> list[ParsedCandidate]:
         rows = table.find_all("tr")[1:]  # skip header
         for row in rows:
             cells = row.find_all(["td", "th"])
-            if len(cells) < max(filter(None, [party_col, candidate_col, votes_col]), default=0) + 1:
+
+            # Skip summary/footer rows that have fewer cells than the header
+            # (e.g. "Majority", "Turnout", "Rejected ballots" rows)
+            if len(cells) < len(headers):
                 continue
+
+            # Data rows often have an extra leading colour-swatch td that shifts
+            # all columns right by 1 relative to the header indices.
+            row_offset = len(cells) - len(headers)
 
             party_text = _extract_party_from_row(cells, party_col, headers)
             if not party_text:
                 continue
 
-            candidate_text = cells[candidate_col].get_text(strip=True) if candidate_col is not None and candidate_col < len(cells) else ""
-            votes_text = cells[votes_col].get_text(strip=True) if votes_col is not None and votes_col < len(cells) else "0"
+            eff_candidate_col = (candidate_col + row_offset) if candidate_col is not None else None
+            eff_votes_col = (votes_col + row_offset) if votes_col is not None else None
+
+            candidate_text = cells[eff_candidate_col].get_text(strip=True) if eff_candidate_col is not None and eff_candidate_col < len(cells) else ""
+            votes_text = cells[eff_votes_col].get_text(strip=True) if eff_votes_col is not None and eff_votes_col < len(cells) else "0"
 
             # Clean votes text (remove commas, footnote refs)
             votes_clean = re.sub(r"[^\d]", "", votes_text)
@@ -206,7 +232,7 @@ def parse_results_table(soup: BeautifulSoup) -> list[ParsedCandidate]:
                 continue
 
             # Check if this candidate won (bold text or checkmark)
-            elected = bool(row.find("b") and candidate_col is not None and cells[candidate_col].find("b"))
+            elected = bool(row.find("b") and eff_candidate_col is not None and cells[eff_candidate_col].find("b"))
             # Also check for ✓ or tick mark
             row_text = row.get_text()
             if "✓" in row_text or "✔" in row_text or "Yes" in row_text:

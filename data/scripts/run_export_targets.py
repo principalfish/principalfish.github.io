@@ -81,7 +81,7 @@ def main() -> None:
     with db.session() as session:
         elections = session.execute(
             select(Election)
-            .where(Election.type.in_([ElectionType.uk_general, ElectionType.by_election]))
+            .where(Election.type == ElectionType.uk_general)
             .order_by(Election.year.desc(), Election.name.asc())
         ).scalars().all()
 

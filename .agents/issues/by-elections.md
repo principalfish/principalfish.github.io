@@ -92,3 +92,4 @@ No JS changes were made for this feature (manifest-driven), but rebuild if the m
 - Import additional by-elections as they occur (repeat step 3)
 - Re-run export (step 4) after each batch of imports to regenerate the composite
 - The overlay file (`pf-by-elections-v1` schema) is also written but not used by the frontend — it's an intermediate artifact
+- **Independent/Other distinction** — the old legacy format distinguished `"other"` (named individual, e.g. Corbyn) from `"others"` (minor candidate aggregate), but both currently collapse to `party_id=7` in pf-results-v4. To restore this: add a new party row (e.g. "Independent") and patch the 8 affected 2024 GE seats, plus update the by-election importer and export logic. Deferred.

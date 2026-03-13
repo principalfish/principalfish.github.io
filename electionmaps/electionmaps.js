@@ -828,37 +828,29 @@ function renderPollTrackerChart() {
   pollTrackerChartWrap.appendChild(svg.node());
 }
 
-/** Renders the party toggle checkboxes for the poll tracker, pre-selecting the top parties by latest seats (excluding Others, always including Green). */
+/** Renders the party toggle checkboxes for the poll tracker, pre-selecting a fixed set of the main UK parties (Reform, Labour, Conservative, Lib Dems, Green, SNP). */
 function renderPollTrackerPartyControls() {
   if (!pollTrackerPartyControls) return;
 
-    const partyRows = Array.from(pollTrackerSeriesByParty.values())
-      .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
+  const partyRows = Array.from(pollTrackerSeriesByParty.values())
+    .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 
   const normalizePartyName = (name) => String(name || '').trim().toLowerCase();
-  const isOtherParty = (name) => /^others?$/.test(normalizePartyName(name));
-  const isGreenParty = (name) => normalizePartyName(name) === 'green';
 
-  const defaultSelectedPartyKeys = partyRows
-    .filter((row) => !isOtherParty(row.partyName))
-    .slice(0, 6)
-    .map((row) => row.partyKey);
+  /** Returns true if the party name matches one of the fixed default UK parties. */
+  const isDefaultParty = (name) => {
+    const n = normalizePartyName(name);
+    return n.includes('reform') ||
+           n.includes('labour') ||
+           n.includes('conservative') ||
+           n.includes('liberal democrat') || n.includes('lib dem') ||
+           n === 'green' ||
+           n.includes('snp') || n.includes('scottish national');
+  };
 
-  const greenRow = partyRows.find((row) => isGreenParty(row.partyName));
-  if (greenRow && !defaultSelectedPartyKeys.includes(greenRow.partyKey)) {
-    const removableIndex = defaultSelectedPartyKeys.findIndex((key) => key !== greenRow.partyKey);
-    if (removableIndex >= 0) {
-      defaultSelectedPartyKeys.splice(removableIndex, 1);
-    } else if (defaultSelectedPartyKeys.length >= 6) {
-      defaultSelectedPartyKeys.pop();
-    }
-
-    if (defaultSelectedPartyKeys.length < 6) {
-      defaultSelectedPartyKeys.push(greenRow.partyKey);
-    }
-  }
-
-  const defaultSelectedPartySet = new Set(defaultSelectedPartyKeys);
+  const defaultSelectedPartySet = new Set(
+    partyRows.filter((row) => isDefaultParty(row.partyName)).map((row) => row.partyKey)
+  );
 
   pollTrackerPartyControls.innerHTML = '';
 

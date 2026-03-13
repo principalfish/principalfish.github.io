@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from pathlib import Path
 
 from sqlalchemy import delete, select
@@ -60,6 +61,22 @@ def reset_existing_model_outputs(db: Database, output_path: Path) -> tuple[int, 
         csv_deleted = True
 
     return deleted_elections, deleted_votes, csv_deleted
+
+
+_UNS_DATE_RE = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
+
+
+def _as_of_date_from_election(election: Election) -> str:
+    """Extracts the as_of_date string from a model_uns election.
+
+    UNS elections are named "UNS YYYY-MM-DD", so we parse the date from the
+    name. Falls back to YYYY-01-01 (using election.year) if the name does not
+    match the expected format.
+    """
+    m = _UNS_DATE_RE.search(election.name or "")
+    if m:
+        return m.group(1)
+    return f"{election.year:04d}-01-01"
 
 
 def main() -> None:
@@ -135,7 +152,7 @@ def main() -> None:
                     {
                         "election_id": str(election.id),
                         "election_name": election.name,
-                        "as_of_date": f"{election.year:04d}-01-01",
+                        "as_of_date": _as_of_date_from_election(election),
                         "party_id": str(party_id),
                         "party_name": party_name_by_id.get(party_id, str(party_id)),
                         "party_colour": party_colour_by_id.get(party_id, ""),

@@ -172,6 +172,10 @@ function setupGame() {
     if (mode === 'daily') {
         // Daily mode already set currentChallenge above
     } else {
+        if (allChallenges.length === 0) {
+            console.error('[setupGame] allChallenges is empty — challenges.json may have failed to load');
+            return;
+        }
         currentChallenge = allChallenges[Math.floor(Math.random() * allChallenges.length)];
         document.getElementById('mode-badge').innerText = "Infinite Mode";
     }
@@ -243,16 +247,15 @@ function getDisplayName(challenge) {
     
     if (t === 'century') {
         const century = Math.floor(y / 100) + 1;
-        const s = ["th", "st", "nd", "rd"], v = century % 100;
-        const suffix = s[(v - 20) % 10] || s[v] || s[0];
-        return `The ${century}${suffix} Century ${e}`;
+        return `The ${century}${getOrdinalSuffix(century)} Century ${e}`;
     }
 }
 
 function getOrdinalSuffix(n) {
-    let s = ["th", "st", "nd", "rd"],
-        v = n % 100;
-    return s[(v - 20) % 10] || s[v] || s[0];
+    const v = n % 100;
+    if (v >= 11 && v <= 13) return 'th';
+    const ones = n % 10;
+    return ['th', 'st', 'nd', 'rd'][ones] || 'th';
 }
 
 function showHint() {
@@ -646,9 +649,7 @@ function formatHistoryDate(year, era, timeframe) {
     
     if (timeframe === 'century') {
         const cent = Math.floor(year / 100) + 1;
-        const s = ["th", "st", "nd", "rd"], v = cent % 100;
-        const suffix = s[(v - 20) % 10] || s[v] || s[0];
-        return `${cent}${suffix} Century ${era}`;
+        return `${cent}${getOrdinalSuffix(cent)} Century ${era}`;
     }
     return `${year} ${era}`;
 }
@@ -664,8 +665,16 @@ function calculateStreak(history) {
     // Using a Set handles cases where a user might have two entries for one day
     const uniqueDates = [...new Set(dailyWins.map(g => g.d))];
     
+    // Filter out any malformed date entries before sorting
+    const DD_MM_YYYY = /^\d{2}\/\d{2}\/\d{4}$/;
+    const validDates = uniqueDates.filter(d => {
+        if (DD_MM_YYYY.test(d)) return true;
+        console.warn('[calculateStreak] skipping malformed date:', d);
+        return false;
+    });
+
     // Sort by converting DD/MM/YYYY to comparable format
-    uniqueDates.sort((a, b) => {
+    validDates.sort((a, b) => {
         const [dayA, monthA, yearA] = a.split('/').map(Number);
         const [dayB, monthB, yearB] = b.split('/').map(Number);
         const dateA = new Date(yearA, monthA - 1, dayA);
@@ -687,18 +696,18 @@ function calculateStreak(history) {
 
     // 3. Check if the most recent win is today OR yesterday
     // If the most recent win is older than yesterday, the streak is dead.
-    if (uniqueDates[0] !== todayStr && uniqueDates[0] !== yesterdayStr) {
+    if (validDates[0] !== todayStr && validDates[0] !== yesterdayStr) {
         currentStreak = 0;
         return;
     }
 
     // 4. Walk through the sorted dates and count consecutive days
     // Parse DD/MM/YYYY format
-    const parts = uniqueDates[0].split('/');
+    const parts = validDates[0].split('/');
     let expectedDate = new Date(parts[2], parts[1] - 1, parts[0]);
     expectedDate.setHours(0, 0, 0, 0); // Normalize to midnight
 
-    for (let dateStr of uniqueDates) {
+    for (let dateStr of validDates) {
         const dateParts = dateStr.split('/');
         const actualDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
         actualDate.setHours(0, 0, 0, 0); // Normalize to midnight

@@ -75,10 +75,10 @@ PARTY_KEY_TO_NAME = {
     "sdlp": "SDLP",
     "sinnfein": "Sinn Féin",
     "snp": "Scottish National Party",
-    "ukip": "Reform UK",
+    "ukip": "UK Independence Party",
     "uu": "Ulster Unionist Party",
     "other": "Other",
-    "others": "Other",
+    "others": "Others",
 }
 
 
@@ -98,10 +98,7 @@ def normalize_name(value: str) -> str:
 
 
 def normalize_party_key(party_key: str) -> str:
-    normalized = normalize_name(party_key)
-    if normalized == "others":
-        return "other"
-    return normalized
+    return normalize_name(party_key)
 
 
 def humanize_party_name(party_key: str) -> str:

@@ -101,6 +101,16 @@ Top-level durable insights only.
 - `elections.parent_election_id` and `elections.election_date` columns are intentional by-election schema fields; apply `migrate_add_election_parent_fields.py` to bring a DB up to date before running the full export.
 - By-election import is available via the local data console (`/by-elections`) — paste a Wikipedia by-election URL, preview scraped candidates, and confirm to insert. The scraper module is `data/polls/importers/by_election_import.py`.
 
+## Party data — other vs others
+
+- `"other"` (singular) = named independent candidate with specific name and typically substantial votes (e.g. Corbyn, Bercow, Hermon).
+- `"others"` (plural) = catch-all aggregate of smaller/unmodelled parties.
+- Both are now distinct DB parties (IDs 7 and 15 respectively) and export as separate keys. The `other → others` alias was removed from `PARTY_KEY_ALIASES` in `core.js` so they remain separate in the frontend; both still use the same grey colour (#808080) so the visual appearance is identical, but vote percentages are correct.
+- The 2024 source JSON (`2024election.json`) had 7 seats where `seatInfo.current` was incorrectly `"others"` instead of `"other"` for named independent winners; these were corrected in the source file.
+- `OTHERS_PARTY_ID` in `export_non_simulation_elections.py` is now resolved dynamically at startup via `db.get_party_by_name("Others")` rather than hardcoded — ensures correctness after party table changes.
+- Re-importing historical elections requires deleting existing vote rows first (the importer refuses duplicates). Safe sequence: `DELETE FROM votes WHERE election_id IN (...)`, then re-run importer.
+- `cloneSeatRecord` in `electionmaps.js` must use `+=` accumulation (not `=` assignment) when building the normalised votes map, so that keys that collapse to the same normalised form are summed, not overwritten.
+
 ## Quality + Risks
 
 - Current baseline test status in `data/` is green (`data/run_tests.sh`).

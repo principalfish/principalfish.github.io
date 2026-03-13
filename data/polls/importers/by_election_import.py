@@ -54,9 +54,9 @@ PARTY_NAME_MAP: dict[str, str] = {
     "sdlp": "SDLP",
     "ulster unionist party": "Ulster Unionist Party",
     "uup": "Ulster Unionist Party",
-    "independent": "Other",
-    "speaker": "Other",
-    "liberal": "Other",
+    "independent": "Others",
+    "speaker": "Others",
+    "liberal": "Others",
 }
 
 MONTH_MAP = {
@@ -308,7 +308,7 @@ def _map_party_name(raw_name: str) -> str:
         if key in normalized or normalized in key:
             return value
 
-    return "Other"
+    return "Others"
 
 
 def build_import_plan(

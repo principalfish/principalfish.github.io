@@ -499,6 +499,18 @@ describe('summarizeElection', () => {
     expect(summary.totalSeats).toBe(0);
     expect(summary.totalVotes).toBe(0);
   });
+
+  it('merges "other" into "others" for seats and votes', () => {
+    const seats = [
+      { winner: 'other', votes: { other: 24120, labour: 15000 }, electorate: 0, turnout: 0 },
+      { winner: 'others', votes: { others: 500, labour: 10000 }, electorate: 0, turnout: 0 },
+    ];
+    const { parties } = summarizeElection(seats);
+    expect(parties.find((p) => p.party === 'other')).toBeUndefined();
+    const othersRow = parties.find((p) => p.party === 'others');
+    expect(othersRow.seats).toBe(2);
+    expect(othersRow.votes).toBe(24620);
+  });
 });
 
 // ── normalizeSeats ───────────────────────────────────────────────────────────

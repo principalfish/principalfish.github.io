@@ -70,7 +70,7 @@ PARTY_NAME_TO_KEY = {
     "sinnfein": "sinnfein",
     "scottishnationalparty": "snp",
     "ulsterunionistparty": "uu",
-    "other": "others",
+    "other": "other",
     "others": "others",
 }
 
@@ -244,7 +244,7 @@ def assign_comparison_elections(manifest_entries: list[dict]) -> None:
             entry["comparisonElectionId"] = comparison_id
 
 
-OTHERS_PARTY_ID = 7  # "Other" party in the parties table
+OTHERS_PARTY_ID: int  # Set at startup by resolving the "Others" party from the DB
 
 
 def convert_legacy_seatinfo_to_v4(
@@ -506,7 +506,12 @@ def main() -> None:
     maps_dir = output_root / "maps"
     results_dir = output_root / "results"
 
+    global OTHERS_PARTY_ID
     db = Database()
+    others_party = db.get_party_by_name("Others")
+    if others_party is None:
+        raise RuntimeError("'Others' party not found in DB — run import_parties.py first")
+    OTHERS_PARTY_ID = others_party.id
     seat_columns = {column["name"] for column in inspect(db.engine).get_columns("seats")}
     has_electorate = "electorate" in seat_columns
 

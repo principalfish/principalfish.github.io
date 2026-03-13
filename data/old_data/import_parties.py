@@ -38,6 +38,7 @@ PARTY_DEFINITIONS = (
     {"name": "Labour", "colour": "#E4003B"},
     {"name": "Liberal Democrats", "colour": "#FAA61A"},
     {"name": "Other", "colour": "#808080"},
+    {"name": "Others", "colour": "#808080"},
     {"name": "Plaid Cymru", "colour": "#005B54"},
     {"name": "Reform UK", "colour": "#12B6CF"},
     {"name": "SDLP", "colour": "#2AA82C"},

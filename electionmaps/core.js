@@ -13,7 +13,6 @@ export const PARTY_KEY_ALIASES = {
   ulsterunionistparty: 'uu',
   uup: 'uu',
   scottishnationalparty: 'snp',
-  other: 'others',
 };
 
 // ── Predict constants ────────────────────────────────────────────────────────
@@ -168,13 +167,14 @@ export function summarizeElection(seats) {
   let turnoutWeighted = 0;
 
   seats.forEach((seat) => {
-    const winner = seat.winner || 'others';
+    const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
     if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
     partyStats.get(winner).seats += 1;
 
     Object.entries(seat.votes || {}).forEach(([party, votes]) => {
-      if (!partyStats.has(party)) partyStats.set(party, { seats: 0, votes: 0 });
-      partyStats.get(party).votes += Number(votes || 0);
+      const key = party === 'other' ? 'others' : party;
+      if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
+      partyStats.get(key).votes += Number(votes || 0);
     });
 
     if (seat.electorate > 0 && seat.turnout > 0) {

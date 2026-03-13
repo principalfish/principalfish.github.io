@@ -931,7 +931,7 @@ function cloneSeatRecord(seat) {
   Object.entries(seat?.votes || {}).forEach(([partyKey, value]) => {
     const voteTotal = Number(value || 0);
     if (voteTotal <= 0) return;
-    votes[normalizePartyKey(partyKey)] = voteTotal;
+    votes[normalizePartyKey(partyKey)] = (votes[normalizePartyKey(partyKey)] || 0) + voteTotal;
   });
 
   return {

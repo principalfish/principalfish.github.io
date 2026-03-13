@@ -1793,14 +1793,15 @@ function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
 
 /** Returns { value, label } rows for all parties appearing as winners or voters in current/comparison seats, sorted by label, with 'all parties…' prepended. */
 function collectPartyKeysForControls() {
+  const mergeKey = (key) => (key === 'other' ? 'others' : key);
   const keys = new Set(['all']);
   currentSeats.forEach((seat) => {
-    keys.add(seat.winner || 'others');
-    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(partyKey));
+    keys.add(mergeKey(seat.winner || 'others'));
+    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
   });
   currentComparisonSeats.forEach((seat) => {
-    keys.add(seat.winner || 'others');
-    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(partyKey));
+    keys.add(mergeKey(seat.winner || 'others'));
+    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
   });
 
   const sorted = Array.from(keys).filter((key) => key !== 'all')
@@ -1902,7 +1903,10 @@ function populateMapControlOptions() {
 
 /** Returns true if a seat passes all active primary filters (party, region, majority range, second party, gains-only). */
 function seatMatchesPrimaryFilters(seat, comparisonSeat) {
-  if (mapViewState.filterParty !== 'all' && seat.winner !== mapViewState.filterParty) return false;
+  if (mapViewState.filterParty !== 'all') {
+    const winner = seat.winner === 'other' ? 'others' : seat.winner;
+    if (winner !== mapViewState.filterParty) return false;
+  }
 
   if (mapViewState.filterRegion !== 'all') {
     const seatRegion = normalizeRegionKey(seat.region);

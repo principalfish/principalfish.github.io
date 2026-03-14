@@ -13,7 +13,7 @@
 
     <link rel="stylesheet" href="../site/topbar.min.css" />
     <link rel="stylesheet" href="../site/styles.min.css" />
-    <link rel="stylesheet" href="./mobile-sidebar.css" />
+    <link rel="stylesheet" href="./mobile-sidebar.min.css" />
   </head>
   <body class="maps-page" data-topbar-back-href="../">
     <div class="maps-background" aria-hidden="true"></div>
@@ -39,6 +39,7 @@
           <nav id="mapsElectionList" class="maps-election-list" aria-label="Election years"></nav>
         </aside>
         <button type="button" id="mapsSidebarOverlay" class="maps-mobile-sidebar-overlay" aria-label="Close elections menu" hidden></button>
+        <button type="button" id="mapsPopupOverlay" class="maps-popup-overlay" aria-label="Close panel" hidden></button>
 
         <section class="maps-main" aria-label="Map and election insights">
           <section class="maps-stage" aria-label="Zoomable map stage">
@@ -203,6 +204,6 @@
 
     <script type="module" src="../site/topbar.min.js"></script>
     <script type="module" src="./electionmaps.min.js"></script>
-    <script type="module" src="./mobile-sidebar.js"></script>
+    <script type="module" src="./mobile-sidebar.min.js"></script>
   </body>
 </html>

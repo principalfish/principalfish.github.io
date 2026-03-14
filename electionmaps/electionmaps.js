@@ -289,8 +289,9 @@ const mapViewState = {
   choroplethParty: 'all',
 };
 const INITIAL_MAP_SCALE = 1.2;
+const INITIAL_MAP_SCALE_MOBILE = 1.6;
 const ZOOM_MIN_SCALE = 1;
-const ZOOM_MAX_SCALE = 10;
+const ZOOM_MAX_SCALE = 12.5;
 const LEGACY_CLICK_ZOOM_BASE = 0.05;
 const CLICK_ZOOM_DURATION_MS = 1500;
 const RESET_ZOOM_DURATION_MS = 500;
@@ -2583,9 +2584,15 @@ function wireSeatSearch() {
   seatSearchInput.dataset.wired = 'true';
 }
 
-/** Sets the right panel's height to match the map stage height so the two columns stay aligned. */
+/** Sets the right panel's height to match the map stage height so the two columns stay aligned. On mobile the panel stacks below the map so no height sync is needed. */
 function syncRightPanelHeightToMap() {
   if (!mapsStage || !mapsPanelRight) return;
+
+  if (window.innerWidth <= 980) {
+    mapsPanelRight.style.height = '';
+    mapsPanelRight.style.maxHeight = '';
+    return;
+  }
 
   const stageHeight = mapsStage.getBoundingClientRect().height;
   if (!Number.isFinite(stageHeight) || stageHeight <= 0) return;
@@ -2633,9 +2640,10 @@ function buildWinnerBySeat(seats) {
 }
 
 
-/** Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE. */
+/** Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE (or INITIAL_MAP_SCALE_MOBILE on narrow screens). */
 function getInitialZoomTransform(width, height) {
-  const scale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
+  const isMobile = window.innerWidth <= 980;
+  const scale = Math.max(1, Number(isMobile ? INITIAL_MAP_SCALE_MOBILE : INITIAL_MAP_SCALE) || 1);
   const tx = width / 2 - scale * (width / 2);
   const ty = height / 2 - scale * (height / 2);
   return d3.zoomIdentity.translate(tx, ty).scale(scale);
@@ -2831,8 +2839,21 @@ function renderTopoMap(mapData, seats, options = {}) {
   svg.call(zoomBehavior.transform, options.preserveTransform || initialTransform);
 }
 
-/** Attaches click handlers to all [data-popup-action] buttons, supporting 'close' and 'toggle' actions on their target panel element. Guards against double-wiring. */
+/** Attaches click handlers to all [data-popup-action] buttons, supporting 'close' and 'toggle' actions on their target panel element. On mobile shows/hides a backdrop overlay. Guards against double-wiring. */
 function wirePopupPanels() {
+  const popupOverlay = document.getElementById('mapsPopupOverlay');
+
+  /** Closes all popup panels and hides the backdrop overlay. */
+  function closeAllPopups() {
+    document.querySelectorAll('.maps-control-popup').forEach((p) => { p.hidden = true; });
+    if (popupOverlay) popupOverlay.hidden = true;
+  }
+
+  if (popupOverlay && popupOverlay.dataset.wired !== 'true') {
+    popupOverlay.addEventListener('click', closeAllPopups);
+    popupOverlay.dataset.wired = 'true';
+  }
+
   document.querySelectorAll('[data-popup-action]').forEach((button) => {
     if (button.dataset.wired === 'true') return;
 
@@ -2843,12 +2864,15 @@ function wirePopupPanels() {
       if (!panel) return;
 
       if (action === 'close') {
-        panel.hidden = true;
+        closeAllPopups();
         return;
       }
 
       if (action === 'toggle') {
-        panel.hidden = !panel.hidden;
+        const willShow = panel.hidden;
+        closeAllPopups();
+        panel.hidden = !willShow;
+        if (popupOverlay) popupOverlay.hidden = !willShow;
       }
     });
 

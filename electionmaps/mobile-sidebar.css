@@ -1,5 +1,6 @@
 .maps-mobile-sidebar-toggle,
-.maps-mobile-sidebar-overlay {
+.maps-mobile-sidebar-overlay,
+.maps-popup-overlay {
   display: none;
 }
 
@@ -79,5 +80,54 @@
 
   .maps-page.maps-mobile-sidebar-open {
     overflow: hidden;
+  }
+
+  .maps-control-popup {
+    width: 100%;
+  }
+
+  .maps-popup-overlay:not([hidden]) {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    background: rgba(15, 23, 42, 0.42);
+    cursor: pointer;
+    display: block;
+  }
+
+  .maps-panel-right {
+    height: auto;
+    min-height: unset;
+    overflow: visible;
+  }
+
+  .maps-seat-card {
+    flex: unset;
+    min-height: unset;
+  }
+
+  .maps-predict-window {
+    overflow: auto;
+  }
+
+  .maps-predict-window.maps-predict-window-compact {
+    display: block;
+    min-height: 0;
+  }
+
+  .maps-predict-window.maps-predict-window-compact .maps-predict-window-body {
+    display: block;
+    min-height: 0;
+  }
+
+  .maps-predict-window.maps-predict-window-compact .maps-predict-grid {
+    flex: unset;
+  }
+
+  .maps-seat-list {
+    max-height: min(52vh, 430px);
   }
 }

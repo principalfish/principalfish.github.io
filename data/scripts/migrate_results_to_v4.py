@@ -104,7 +104,6 @@ def convert_legacy_to_v4_seats(
         region_key = normalize_region_key(seat_info.get("region") or "")
         region_id = region_key_to_id.get(region_key, 0)
 
-        winner_key = normalize_region_key("")  # placeholder
         winner_raw = seat_info.get("current") or ""
         winner_key_norm = re.sub(r"[^a-z0-9]", "", winner_raw.lower())
         winner_id = party_key_to_id.get(winner_key_norm, 0)

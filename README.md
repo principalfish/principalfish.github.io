@@ -265,8 +265,8 @@ The webpage (`electionmaps/electionmaps.js`) resolves files from `settings` usin
 
 ### Results schema
 
-- Exported result payloads use compact schema `pf-results-v2`:
-	- top-level: `{"schema":"pf-results-v2","seats":[...]}`
+- Exported result payloads use compact schema `pf-results-v4`:
+	- top-level: `{"schema":"pf-results-v4","seats":[...]}`
 	- seat keys: `n` (seat name), `r` (region), `w` (winner), `e` (electorate), `m` (majority), `t` (turnout), `p` (party rows)
 	- party row: `[partyKey, total, name]`
 - Frontend loader supports both compact and legacy result formats.

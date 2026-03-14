@@ -19,6 +19,21 @@
 - After any JS change, regenerate the minified file from the repo root: `npm run minify:electionmaps`
 - This also minifies `site/topbar.js` and CSS — safe to run any time.
 
+## CSS/JS asset strategy
+
+- Source files: `site/styles.css`, `site/topbar.js`, `site/topbar.css`, `electionmaps/electionmaps.js`, `electionmaps/mobile-sidebar.js/.css`
+- Minified outputs are committed and referenced from HTML — always edit source files, never minified.
+- `electionmaps/index.html` loads minified versions of all assets (`.min.css`, `.min.js`).
+- Root `index.html` and `bio/index.html` load non-minified `styles.css` but minified topbar (`topbar.min.js`).
+- `site/vendor/` contains vendored D3, TopoJSON, and confetti; built with `npm run vendor:d3`.
+
+## Frontend tests
+
+- Location: `tests/core.test.js` — unit tests for pure functions in `electionmaps/core.js`
+- Runner: `vitest`
+- Commands: `npm test` (single run), `npm run test:watch` (watch mode)
+- Run from repo root before committing JS changes.
+
 ## Durable rules
 
 - Keep shared visual primitives centralized in `site/styles.css`.

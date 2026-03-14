@@ -503,3 +503,408 @@ export function projectedSeatForPredictMode(baseSeat, swingsByParty) {
   return { ...baseSeat, votes: projectedVotes, turnout: totalVotes, winner };
 }
 
+// ── Seat / feature utilities ──────────────────────────────────────────────────
+
+/**
+ * Extracts the seat name from a TopoJSON feature's properties.
+ * Tries `name`, `seat_name`, `seat`, `constituency`, and `Name` in order.
+ * Returns null if none of the known properties are present.
+ */
+export function seatNameFromFeature(featureDatum) {
+  const props = featureDatum?.properties || {};
+  return props.name || props.seat_name || props.seat || props.constituency || props.Name || null;
+}
+
+/**
+ * Returns a Map from seat name to winner party key for fast map colour lookups.
+ * Each seat is stored under both its original name and a lowercase variant.
+ * Seats without a `seat` property are skipped. Winner defaults to `'others'` if missing.
+ */
+export function buildWinnerBySeat(seats) {
+  const bySeat = new Map();
+  seats.forEach((seat) => {
+    if (!seat?.seat) return;
+    bySeat.set(seat.seat, seat.winner || 'others');
+    bySeat.set(String(seat.seat).toLowerCase(), seat.winner || 'others');
+  });
+  return bySeat;
+}
+
+/**
+ * Returns a deep-ish copy of a seat record with normalised party keys.
+ * Zero-vote and negative-vote entries are filtered out.
+ * Duplicate keys that collapse after normalisation are summed.
+ * Numeric fields (`electorate`, `turnout`) are coerced to numbers.
+ */
+export function cloneSeatRecord(seat) {
+  const votes = {};
+  Object.entries(seat?.votes || {}).forEach(([partyKey, value]) => {
+    const voteTotal = Number(value || 0);
+    if (voteTotal <= 0) return;
+    votes[normalizePartyKey(partyKey)] = (votes[normalizePartyKey(partyKey)] || 0) + voteTotal;
+  });
+
+  return {
+    seat: seat?.seat || 'Unknown seat',
+    region: seat?.region || 'unknown',
+    winner: normalizePartyKey(seat?.winner || 'others'),
+    electorate: Number(seat?.electorate || 0),
+    turnout: Number(seat?.turnout || 0),
+    votes,
+  };
+}
+
+/**
+ * Extracts a YYYY-MM-DD date string from an election name when present.
+ * Returns the trimmed name when no date is found, or the stringified fallbackId when the name is empty.
+ */
+export function pollTrackerDateLabel(electionName, fallbackId) {
+  const text = String(electionName || '').trim();
+  const match = text.match(/(\d{4}-\d{2}-\d{2})/);
+  if (match?.[1]) return match[1];
+  return text || String(fallbackId);
+}
+
+// ── Predict payload encode / decode ──────────────────────────────────────────
+
+/**
+ * Encodes changed predict share values into a compact URL-safe base-36 string.
+ * `slots` is an ordered array of [regionKey, partyKey] pairs defining the slot index space.
+ * Returns `''` if nothing has changed and `englandExpanded` is false.
+ */
+export function encodePredictPayload(serializedRows, englandExpanded, slots) {
+  if (!slots.length) return '';
+
+  const slotIndexByKey = new Map(
+    slots.map(([regionKey, partyKey], index) => [`${regionKey}::${partyKey}`, index])
+  );
+
+  const entries = [];
+  serializedRows.forEach((entry) => {
+    if (!Array.isArray(entry) || entry.length < 3) return;
+    const regionKey = String(entry[0] || '');
+    const partyKey = String(entry[1] || '');
+    const slotIndex = slotIndexByKey.get(`${regionKey}::${partyKey}`);
+    if (!Number.isInteger(slotIndex) || slotIndex < 0) return;
+
+    const value = Math.round(Number(entry[2]));
+    if (!Number.isFinite(value) || value < 0 || value > 100) return;
+
+    entries.push(`${slotIndex.toString(36)}-${value.toString(36)}`);
+  });
+
+  if (!entries.length && !englandExpanded) return '';
+  return `2.${englandExpanded ? 1 : 0}.${entries.join(',')}`;
+}
+
+/**
+ * Decodes a predict payload string into `{ englandExpanded, rows: [[regionKey, partyKey, value], ...] }`.
+ * `slots` is the same ordered [regionKey, partyKey] array used during encoding.
+ * Returns null on any parse failure or when slots are unavailable.
+ */
+export function decodePredictPayload(encoded, slots) {
+  const raw = String(encoded || '').trim();
+  if (!raw.startsWith('2.')) return null;
+
+  const parts = raw.split('.');
+  if (parts.length < 2 || parts[0] !== '2') return null;
+
+  const englandExpanded = parts[1] === '1';
+  const rowsPart = parts.slice(2).join('.').trim();
+  if (!rowsPart) {
+    return {
+      englandExpanded,
+      rows: [],
+    };
+  }
+
+  if (!slots.length) return null;
+
+  const rows = [];
+  rowsPart.split(',').forEach((chunk) => {
+    const token = String(chunk || '').trim();
+    if (!token) return;
+
+    const [indexToken, valueToken] = token.split('-');
+    if (!indexToken || !valueToken) return;
+
+    const slotIndex = Number.parseInt(indexToken, 36);
+    const value = Number.parseInt(valueToken, 36);
+    if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= slots.length) return;
+    if (!Number.isInteger(value) || value < 0 || value > 100) return;
+
+    const slot = slots[slotIndex];
+    if (!Array.isArray(slot) || slot.length < 2) return;
+
+    rows.push([slot[0], slot[1], value]);
+  });
+
+  return {
+    englandExpanded,
+    rows,
+  };
+}
+
+// ── Map / region utilities ────────────────────────────────────────────────────
+
+/**
+ * Returns a Map from normalised region key to display label for the given mapId.
+ * Built from the manifest's region metadata object keyed by map ID.
+ * Regions whose names normalise to an empty string are skipped.
+ */
+export function buildRegionLabelLookup(mapId, regionsByMapId) {
+  const lookup = new Map();
+  const regionRows = regionsByMapId?.[String(mapId)] || [];
+  regionRows.forEach((region) => {
+    const key = normalizeRegionKey(region?.name || '');
+    if (!key) return;
+    lookup.set(key, region.name);
+  });
+  return lookup;
+}
+
+// ── Seat filter utilities ─────────────────────────────────────────────────────
+
+/**
+ * Returns true when a seat passes all active primary filters.
+ * `filterState` mirrors the mapViewState shape: `{ filterParty, filterRegion, majorityMin, majorityMax, filterSecondParty, gainsOnly }`.
+ * `byElectionSeats` is a Set of seat names for by-election gain filtering, or null to use the comparison seat method.
+ */
+export function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
+  if (filterState.filterParty !== 'all') {
+    const winner = seat.winner === 'other' ? 'others' : seat.winner;
+    if (winner !== filterState.filterParty) return false;
+  }
+
+  if (filterState.filterRegion !== 'all') {
+    const seatRegion = normalizeRegionKey(seat.region);
+    if (seatRegion !== filterState.filterRegion) return false;
+  }
+
+  const majority = seatMajorityStats(seat).pct;
+  if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
+
+  if (filterState.filterSecondParty !== 'all') {
+    const secondParty = secondPlacePartyKey(seat);
+    if (secondParty !== filterState.filterSecondParty) return false;
+  }
+
+  if (filterState.gainsOnly) {
+    if (byElectionSeats) {
+      if (!byElectionSeats.has(seat.seat)) return false;
+    } else {
+      const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
+      if (!gainFrom) return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Returns a Set of seat lookup keys for all seats that pass the current primary filters.
+ * `comparisonSeatsByKey` is a Map from seatLookupKey to comparison seat object.
+ * `filterState` and `byElectionSeats` are forwarded to `seatMatchesPrimaryFilters`.
+ */
+export function buildVisibleSeatKeySet(seats, comparisonSeatsByKey, filterState, byElectionSeats) {
+  const keySet = new Set();
+  seats.forEach((seat) => {
+    const seatKey = seatLookupKey(seat.seat);
+    const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
+    if (seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats)) {
+      keySet.add(seatKey);
+    }
+  });
+  return keySet;
+}
+
+/**
+ * Returns the choropleth metric value for a seat, or null when choropleth is disabled.
+ * `choroplethType` is `'voteShare'`, `'voteShareChange'`, or `'none'`.
+ * `choroplethParty` is a party key or `'all'`.
+ * Returns null when the type is `'none'`, the party is unset/`'all'`, or no comparison seat is available for a change metric.
+ */
+export function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethParty) {
+  if (choroplethType === 'none') return null;
+  if (!choroplethParty || choroplethParty === 'all') return null;
+
+  if (choroplethType === 'voteShareChange') {
+    if (!comparisonSeat) return null;
+    return voteSharePct(seat, choroplethParty) - voteSharePct(comparisonSeat, choroplethParty);
+  }
+
+  if (choroplethType === 'voteShare') {
+    return voteSharePct(seat, choroplethParty);
+  }
+
+  return null;
+}
+
+// ── Election file resolution ──────────────────────────────────────────────────
+
+/**
+ * Resolves the mapFile and dataFile paths for an election.
+ * Checks manifest settings overrides (by mapId / electionId) first, then falls back to
+ * election-level properties. Throws if either file path cannot be determined.
+ */
+export function resolveElectionFiles(manifest, election) {
+  const settings = manifest?.settings || {};
+  const mapFilesById = settings.mapFilesById || {};
+  const dataFilesByElectionId = settings.dataFilesByElectionId || {};
+
+  const mapFileFromSettings = election?.mapId != null ? mapFilesById[String(election.mapId)] : undefined;
+  const dataFileFromSettings = dataFilesByElectionId[election.id];
+
+  const mapFile = mapFileFromSettings || election.mapFile;
+  const dataFile = dataFileFromSettings || election.dataFile;
+
+  if (!mapFile || !dataFile) {
+    throw new Error(`Missing file configuration for election ${election?.id || 'unknown'}`);
+  }
+
+  return { mapFile, dataFile };
+}
+
+// ── Predict share lookups ─────────────────────────────────────────────────────
+
+/**
+ * Returns the rounded baseline vote share for a region/party from the historical election data Map.
+ * `baselineMap` is keyed by `predictInputKey(regionKey, partyKey)`. Returns 0 when not found.
+ */
+export function getPredictBaselineShare(regionKey, partyKey, baselineMap) {
+  return roundPredictShareValue(
+    Number(baselineMap.get(predictInputKey(regionKey, partyKey)) || 0)
+  );
+}
+
+/**
+ * Returns the current user-entered predict share for a region/party.
+ * Falls back to the baseline share when no input has been entered.
+ * `inputMap` is keyed by `predictInputKey`; `baselineMap` is the historical baseline.
+ */
+export function getPredictInputShareValue(regionKey, partyKey, inputMap, baselineMap) {
+  const cached = inputMap.get(predictInputKey(regionKey, partyKey));
+  if (Number.isFinite(cached)) return Number(cached);
+  return roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey, baselineMap));
+}
+
+/**
+ * Returns the sum of all predict input shares for a region across its modelled parties.
+ * Uses `inputMap` for entered values, falling back to `baselineMap`.
+ */
+export function calculatePredictEnteredShareTotal(regionKey, inputMap, baselineMap) {
+  return collectPredictInputPartyKeysForRegion(regionKey).reduce((sum, partyKey) => {
+    return sum + Number(getPredictInputShareValue(regionKey, partyKey, inputMap, baselineMap) || 0);
+  }, 0);
+}
+
+/**
+ * Returns the implied 'other' share for a region: `100 - sum of entered party shares`, rounded.
+ * Can be negative when inputs exceed 100%.
+ */
+export function calculatePredictOtherShare(regionKey, inputMap, baselineMap) {
+  return roundPredictShareValue(100 - calculatePredictEnteredShareTotal(regionKey, inputMap, baselineMap));
+}
+
+// ── Predict region collection ─────────────────────────────────────────────────
+
+/**
+ * Returns all predict regions as `{ regionKey, regionLabel }` sorted alphabetically by label.
+ * `baseRegionLabelsByKey` is a Map from normalised region key to display label.
+ */
+export function collectPredictAllRegions(baseRegionLabelsByKey) {
+  return Array.from(baseRegionLabelsByKey.entries())
+    .map(([regionKey, regionLabel]) => ({ regionKey, regionLabel }))
+    .sort((a, b) => a.regionLabel.localeCompare(b.regionLabel));
+}
+
+/**
+ * Returns all validation rows: the England aggregate row first, then every English, Scottish,
+ * Welsh, and NI region from `baseRegionLabelsByKey`. Used to check no region exceeds 100%.
+ */
+export function collectPredictValidationRows(baseRegionLabelsByKey) {
+  const allRegions = collectPredictAllRegions(baseRegionLabelsByKey);
+  const rows = [{ regionKey: PREDICT_ENGLAND_KEY, regionLabel: 'England' }];
+
+  allRegions.forEach((row) => {
+    if (
+      isPredictEnglishRegion(row.regionKey)
+      || isPredictScotlandRegion(row.regionKey)
+      || isPredictWalesRegion(row.regionKey)
+      || isPredictNorthernIrelandRegion(row.regionKey)
+    ) {
+      rows.push({ regionKey: row.regionKey, regionLabel: row.regionLabel });
+    }
+  });
+
+  return rows;
+}
+
+/**
+ * Returns the rows used for URL state serialization — the same set as validation rows.
+ * Alias for `collectPredictValidationRows`.
+ */
+export function collectPredictShareStateRows(baseRegionLabelsByKey) {
+  return collectPredictValidationRows(baseRegionLabelsByKey);
+}
+
+/**
+ * Returns the ordered list of row descriptors for the predict grid.
+ * England aggregate is always first. English sub-regions follow when `englandExpanded` is true.
+ * Scotland, Wales, and Northern Ireland are appended when present in `baseRegionLabelsByKey`.
+ * Each row carries `{ regionKey, regionLabel, isEnglandAggregate, isEnglandRegion }`.
+ */
+export function collectPredictInputRows(baseRegionLabelsByKey, englandExpanded) {
+  const allRegions = collectPredictAllRegions(baseRegionLabelsByKey);
+  const englishRegions = allRegions.filter((row) => isPredictEnglishRegion(row.regionKey));
+  const scotland = allRegions.find((row) => isPredictScotlandRegion(row.regionKey));
+  const wales = allRegions.find((row) => isPredictWalesRegion(row.regionKey));
+  const northernIreland = allRegions.find((row) => isPredictNorthernIrelandRegion(row.regionKey));
+
+  const rows = [
+    {
+      regionKey: PREDICT_ENGLAND_KEY,
+      regionLabel: 'England',
+      isEnglandAggregate: true,
+      isEnglandRegion: false,
+    },
+  ];
+
+  if (englandExpanded) {
+    englishRegions.forEach((row) => {
+      rows.push({
+        regionKey: row.regionKey,
+        regionLabel: row.regionLabel,
+        isEnglandAggregate: false,
+        isEnglandRegion: true,
+      });
+    });
+  }
+
+  if (scotland) {
+    rows.push({
+      regionKey: scotland.regionKey,
+      regionLabel: scotland.regionLabel,
+      isEnglandAggregate: false,
+      isEnglandRegion: false,
+    });
+  }
+  if (wales) {
+    rows.push({
+      regionKey: wales.regionKey,
+      regionLabel: wales.regionLabel,
+      isEnglandAggregate: false,
+      isEnglandRegion: false,
+    });
+  }
+  if (northernIreland) {
+    rows.push({
+      regionKey: northernIreland.regionKey,
+      regionLabel: northernIreland.regionLabel,
+      isEnglandAggregate: false,
+      isEnglandRegion: false,
+    });
+  }
+
+  return rows;
+}

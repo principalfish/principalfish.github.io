@@ -46,7 +46,31 @@ import {
   buildPredictBaselineShares,
   resolvedSwingValue,
   projectedSeatForPredictMode,
+  // Seat / feature utilities
+  seatNameFromFeature,
+  buildWinnerBySeat,
+  cloneSeatRecord,
+  pollTrackerDateLabel,
   // URL encode/decode
+  encodePredictPayload,
+  decodePredictPayload,
+  // Map / region / filter utilities
+  buildRegionLabelLookup,
+  seatMatchesPrimaryFilters,
+  buildVisibleSeatKeySet,
+  getChoroplethValue,
+  // Election file resolution
+  resolveElectionFiles,
+  // Predict share lookups
+  getPredictBaselineShare,
+  getPredictInputShareValue,
+  calculatePredictEnteredShareTotal,
+  calculatePredictOtherShare,
+  // Predict region collection
+  collectPredictAllRegions,
+  collectPredictValidationRows,
+  collectPredictShareStateRows,
+  collectPredictInputRows,
 } from '../electionmaps/core.js';
 
 // ── normalizePartyKey ────────────────────────────────────────────────────────
@@ -1167,6 +1191,714 @@ describe('projectedSeatForPredictMode', () => {
     const projected = projectedSeatForPredictMode(niSeat, swingsByParty);
     // england swing should NOT apply to NI seat — uu share unchanged
     expect(projected.votes.uu).toBeCloseTo(15000, 0);
+  });
+});
+
+// ── seatNameFromFeature ───────────────────────────────────────────────────────
+
+describe('seatNameFromFeature', () => {
+  it('returns name property when present', () => {
+    expect(seatNameFromFeature({ properties: { name: 'Oxford East' } })).toBe('Oxford East');
+  });
+
+  it('falls back to seat_name when name is absent', () => {
+    expect(seatNameFromFeature({ properties: { seat_name: 'Oxford East' } })).toBe('Oxford East');
+  });
+
+  it('falls back to seat then constituency then Name in order', () => {
+    expect(seatNameFromFeature({ properties: { seat: 'Oxford East' } })).toBe('Oxford East');
+    expect(seatNameFromFeature({ properties: { constituency: 'Oxford East' } })).toBe('Oxford East');
+    expect(seatNameFromFeature({ properties: { Name: 'Oxford East' } })).toBe('Oxford East');
+  });
+
+  it('prefers name over all other properties', () => {
+    expect(seatNameFromFeature({
+      properties: { name: 'Primary', seat_name: 'Secondary', constituency: 'Tertiary' },
+    })).toBe('Primary');
+  });
+
+  it('returns null when no known property exists', () => {
+    expect(seatNameFromFeature({ properties: { unknown: 'foo' } })).toBeNull();
+  });
+
+  it('returns null for null input', () => {
+    expect(seatNameFromFeature(null)).toBeNull();
+  });
+
+  it('returns null for missing properties object', () => {
+    expect(seatNameFromFeature({})).toBeNull();
+  });
+});
+
+// ── buildWinnerBySeat ─────────────────────────────────────────────────────────
+
+describe('buildWinnerBySeat', () => {
+  it('maps seat name to winner party key', () => {
+    const map = buildWinnerBySeat([{ seat: 'Oxford East', winner: 'labour' }]);
+    expect(map.get('Oxford East')).toBe('labour');
+  });
+
+  it('also stores a lowercase variant of the seat name', () => {
+    const map = buildWinnerBySeat([{ seat: 'Oxford East', winner: 'labour' }]);
+    expect(map.get('oxford east')).toBe('labour');
+  });
+
+  it('defaults winner to others when winner field is missing', () => {
+    const map = buildWinnerBySeat([{ seat: 'Oxford East' }]);
+    expect(map.get('Oxford East')).toBe('others');
+  });
+
+  it('skips seats without a seat property', () => {
+    const map = buildWinnerBySeat([{ winner: 'labour' }]);
+    expect(map.size).toBe(0);
+  });
+
+  it('handles multiple seats', () => {
+    const map = buildWinnerBySeat([
+      { seat: 'Oxford East', winner: 'labour' },
+      { seat: 'Windsor', winner: 'conservative' },
+    ]);
+    expect(map.get('Windsor')).toBe('conservative');
+    expect(map.get('windsor')).toBe('conservative');
+    expect(map.size).toBe(4);
+  });
+
+  it('returns an empty Map for an empty array', () => {
+    expect(buildWinnerBySeat([]).size).toBe(0);
+  });
+});
+
+// ── cloneSeatRecord ───────────────────────────────────────────────────────────
+
+describe('cloneSeatRecord', () => {
+  const seat = {
+    seat: 'Oxford East',
+    region: 'SouthEastEngland',
+    winner: 'labour',
+    electorate: 72000,
+    turnout: 48000,
+    votes: { labour: 22000, conservative: 15000, libdems: 8000 },
+  };
+
+  it('returns a new object, not the same reference', () => {
+    expect(cloneSeatRecord(seat)).not.toBe(seat);
+  });
+
+  it('preserves seat, region, electorate, and turnout', () => {
+    const clone = cloneSeatRecord(seat);
+    expect(clone.seat).toBe('Oxford East');
+    expect(clone.region).toBe('SouthEastEngland');
+    expect(clone.electorate).toBe(72000);
+    expect(clone.turnout).toBe(48000);
+  });
+
+  it('normalizes the winner via normalizePartyKey', () => {
+    const clone = cloneSeatRecord({ ...seat, winner: 'Labour' });
+    expect(clone.winner).toBe('labour');
+  });
+
+  it('filters out zero-vote entries', () => {
+    const clone = cloneSeatRecord({ ...seat, votes: { labour: 22000, conservative: 0 } });
+    expect(clone.votes.conservative).toBeUndefined();
+    expect(clone.votes.labour).toBe(22000);
+  });
+
+  it('filters out negative-vote entries', () => {
+    const clone = cloneSeatRecord({ ...seat, votes: { labour: 22000, conservative: -1 } });
+    expect(clone.votes.conservative).toBeUndefined();
+  });
+
+  it('normalizes party keys in votes', () => {
+    const clone = cloneSeatRecord({ ...seat, votes: { Labour: 22000 } });
+    expect(clone.votes.labour).toBe(22000);
+    expect(clone.votes.Labour).toBeUndefined();
+  });
+
+  it('sums duplicate keys that collapse after normalisation', () => {
+    // 'reformuk' normalises to 'reform'; both entries should be summed
+    const clone = cloneSeatRecord({ ...seat, votes: { reform: 5000, reformuk: 3000 } });
+    expect(clone.votes.reform).toBe(8000);
+  });
+
+  it('falls back to defaults for null input', () => {
+    const clone = cloneSeatRecord(null);
+    expect(clone.seat).toBe('Unknown seat');
+    expect(clone.region).toBe('unknown');
+    expect(clone.winner).toBe('others');
+    expect(clone.electorate).toBe(0);
+    expect(clone.turnout).toBe(0);
+    expect(clone.votes).toEqual({});
+  });
+});
+
+// ── pollTrackerDateLabel ──────────────────────────────────────────────────────
+
+describe('pollTrackerDateLabel', () => {
+  it('extracts YYYY-MM-DD date from election name', () => {
+    expect(pollTrackerDateLabel('General Election 2024-07-04', 99)).toBe('2024-07-04');
+  });
+
+  it('extracts date when embedded in UNS label', () => {
+    expect(pollTrackerDateLabel('UNS 2024-07-04 model', 99)).toBe('2024-07-04');
+  });
+
+  it('returns the trimmed name when no date is present', () => {
+    expect(pollTrackerDateLabel('  General Election  ', 99)).toBe('General Election');
+  });
+
+  it('returns stringified fallbackId when name is empty', () => {
+    expect(pollTrackerDateLabel('', 42)).toBe('42');
+  });
+
+  it('returns stringified fallbackId when name is null', () => {
+    expect(pollTrackerDateLabel(null, 7)).toBe('7');
+  });
+
+  it('returns the date even when other numbers appear in the name', () => {
+    expect(pollTrackerDateLabel('2019 Election 2024-07-04', 0)).toBe('2024-07-04');
+  });
+});
+
+// ── encodePredictPayload / decodePredictPayload ───────────────────────────────
+
+describe('encodePredictPayload / decodePredictPayload', () => {
+  // Minimal slot list covering two regions and two parties each
+  const slots = [
+    ['england', 'labour'],
+    ['england', 'conservative'],
+    ['scotland', 'labour'],
+    ['scotland', 'snp'],
+  ];
+
+  it('returns empty string when no rows and englandExpanded is false', () => {
+    expect(encodePredictPayload([], false, slots)).toBe('');
+  });
+
+  it('encodes englandExpanded: true even with no changed rows', () => {
+    const encoded = encodePredictPayload([], true, slots);
+    expect(encoded).toMatch(/^2\.1\./);
+  });
+
+  it('round-trips a single changed row', () => {
+    const rows = [['england', 'labour', 45]];
+    const encoded = encodePredictPayload(rows, false, slots);
+    const decoded = decodePredictPayload(encoded, slots);
+    expect(decoded).not.toBeNull();
+    expect(decoded.englandExpanded).toBe(false);
+    expect(decoded.rows).toEqual([['england', 'labour', 45]]);
+  });
+
+  it('round-trips multiple rows and preserves englandExpanded', () => {
+    const rows = [
+      ['england', 'labour', 38],
+      ['scotland', 'snp', 42],
+    ];
+    const encoded = encodePredictPayload(rows, true, slots);
+    const decoded = decodePredictPayload(encoded, slots);
+    expect(decoded.englandExpanded).toBe(true);
+    expect(decoded.rows).toEqual(expect.arrayContaining([
+      ['england', 'labour', 38],
+      ['scotland', 'snp', 42],
+    ]));
+    expect(decoded.rows).toHaveLength(2);
+  });
+
+  it('returns null for malformed input', () => {
+    expect(decodePredictPayload('garbage', slots)).toBeNull();
+    expect(decodePredictPayload('', slots)).toBeNull();
+    expect(decodePredictPayload(null, slots)).toBeNull();
+    expect(decodePredictPayload('1.0.', slots)).toBeNull();
+  });
+
+  it('returns { englandExpanded, rows: [] } for a payload with no entries', () => {
+    const decoded = decodePredictPayload('2.0.', slots);
+    expect(decoded).toEqual({ englandExpanded: false, rows: [] });
+  });
+
+  it('ignores row entries with out-of-range slot indices', () => {
+    // slot index 'zz' in base-36 is way beyond our 4-slot list
+    const decoded = decodePredictPayload('2.0.zz-a', slots);
+    expect(decoded).not.toBeNull();
+    expect(decoded.rows).toHaveLength(0);
+  });
+
+  it('ignores row entries for unknown region/party pairs', () => {
+    // slot index 0 is england::labour — passing an unknown key in serializedRows skips it
+    const rows = [['unknown', 'party', 50]];
+    const encoded = encodePredictPayload(rows, false, slots);
+    expect(encoded).toBe('');
+  });
+
+  it('ignores values outside [0, 100] during encoding', () => {
+    const rows = [['england', 'labour', 150]];
+    const encoded = encodePredictPayload(rows, false, slots);
+    expect(encoded).toBe('');
+  });
+
+  it('returns empty string when slots array is empty', () => {
+    expect(encodePredictPayload([['england', 'labour', 40]], false, [])).toBe('');
+  });
+
+  it('returns null when decoding with an empty slots array', () => {
+    const encoded = encodePredictPayload([['england', 'labour', 40]], false, slots);
+    expect(decodePredictPayload(encoded, [])).toBeNull();
+  });
+});
+
+// ── buildRegionLabelLookup ────────────────────────────────────────────────────
+
+describe('buildRegionLabelLookup', () => {
+  const regionsByMapId = {
+    'uk2024': [
+      { name: 'South East England' },
+      { name: 'North West England' },
+      { name: 'Scotland' },
+    ],
+  };
+
+  it('returns a Map from normalised region key to display label', () => {
+    const map = buildRegionLabelLookup('uk2024', regionsByMapId);
+    expect(map.get('southeastengland')).toBe('South East England');
+    expect(map.get('scotland')).toBe('Scotland');
+  });
+
+  it('covers all provided regions', () => {
+    const map = buildRegionLabelLookup('uk2024', regionsByMapId);
+    expect(map.size).toBe(3);
+  });
+
+  it('returns an empty Map for an unknown mapId', () => {
+    const map = buildRegionLabelLookup('unknown', regionsByMapId);
+    expect(map.size).toBe(0);
+  });
+
+  it('returns an empty Map when regionsByMapId is null', () => {
+    expect(buildRegionLabelLookup('uk2024', null).size).toBe(0);
+  });
+
+  it('skips regions whose name normalises to an empty string', () => {
+    const sparse = { 'x': [{ name: '' }, { name: 'London' }] };
+    const map = buildRegionLabelLookup('x', sparse);
+    expect(map.size).toBe(1);
+    expect(map.get('london')).toBe('London');
+  });
+});
+
+// ── seatMatchesPrimaryFilters ─────────────────────────────────────────────────
+
+describe('seatMatchesPrimaryFilters', () => {
+  const seat = {
+    seat: 'Oxford East',
+    region: 'South East England',
+    winner: 'labour',
+    votes: { labour: 22000, conservative: 15000, libdems: 8000 },
+  };
+  const comparisonSeat = {
+    seat: 'Oxford East',
+    region: 'South East England',
+    winner: 'conservative',
+    votes: { labour: 14000, conservative: 20000, libdems: 8000 },
+  };
+  const openFilters = {
+    filterParty: 'all',
+    filterRegion: 'all',
+    majorityMin: 0,
+    majorityMax: 100,
+    filterSecondParty: 'all',
+    gainsOnly: false,
+  };
+
+  it('returns true when all filters are open', () => {
+    expect(seatMatchesPrimaryFilters(seat, null, openFilters, null)).toBe(true);
+  });
+
+  it('filters by winner party', () => {
+    const f = { ...openFilters, filterParty: 'labour' };
+    expect(seatMatchesPrimaryFilters(seat, null, f, null)).toBe(true);
+    expect(seatMatchesPrimaryFilters({ ...seat, winner: 'conservative' }, null, f, null)).toBe(false);
+  });
+
+  it('normalises "other" winner to "others" for party filter', () => {
+    const f = { ...openFilters, filterParty: 'others' };
+    expect(seatMatchesPrimaryFilters({ ...seat, winner: 'other' }, null, f, null)).toBe(true);
+  });
+
+  it('filters by region', () => {
+    const f = { ...openFilters, filterRegion: 'southeastengland' };
+    expect(seatMatchesPrimaryFilters(seat, null, f, null)).toBe(true);
+    expect(seatMatchesPrimaryFilters({ ...seat, region: 'Scotland' }, null, f, null)).toBe(false);
+  });
+
+  it('filters by majority range', () => {
+    // labour majority: (22000-15000)/45000 ≈ 15.6%
+    expect(seatMatchesPrimaryFilters(seat, null, { ...openFilters, majorityMin: 10, majorityMax: 20 }, null)).toBe(true);
+    expect(seatMatchesPrimaryFilters(seat, null, { ...openFilters, majorityMin: 20, majorityMax: 50 }, null)).toBe(false);
+  });
+
+  it('filters by second party', () => {
+    const f = { ...openFilters, filterSecondParty: 'conservative' };
+    expect(seatMatchesPrimaryFilters(seat, null, f, null)).toBe(true);
+    expect(seatMatchesPrimaryFilters(seat, null, { ...openFilters, filterSecondParty: 'libdems' }, null)).toBe(false);
+  });
+
+  it('gainsOnly: uses byElectionSeats Set when provided', () => {
+    const f = { ...openFilters, gainsOnly: true };
+    const byElection = new Set(['Oxford East']);
+    expect(seatMatchesPrimaryFilters(seat, null, f, byElection)).toBe(true);
+    expect(seatMatchesPrimaryFilters({ ...seat, seat: 'Windsor' }, null, f, byElection)).toBe(false);
+  });
+
+  it('gainsOnly: falls back to seatGainFromPartyKey when byElectionSeats is null', () => {
+    const f = { ...openFilters, gainsOnly: true };
+    // seat changed hands (labour won, comparison shows conservative won) → gain
+    expect(seatMatchesPrimaryFilters(seat, comparisonSeat, f, null)).toBe(true);
+    // seat unchanged (labour won both times) → not a gain
+    const sameWinner = { ...comparisonSeat, winner: 'labour' };
+    expect(seatMatchesPrimaryFilters(seat, sameWinner, f, null)).toBe(false);
+  });
+});
+
+// ── buildVisibleSeatKeySet ────────────────────────────────────────────────────
+
+describe('buildVisibleSeatKeySet', () => {
+  const seats = [
+    { seat: 'Oxford East', region: 'southeastengland', winner: 'labour', votes: { labour: 22000, conservative: 15000 } },
+    { seat: 'Windsor', region: 'southeastengland', winner: 'conservative', votes: { conservative: 20000, labour: 10000 } },
+    { seat: 'Edinburgh North', region: 'scotland', winner: 'snp', votes: { snp: 18000, labour: 9000 } },
+  ];
+  const comparisonMap = new Map();
+  const openFilters = {
+    filterParty: 'all', filterRegion: 'all',
+    majorityMin: 0, majorityMax: 100,
+    filterSecondParty: 'all', gainsOnly: false,
+  };
+
+  it('returns all seat keys when all filters are open', () => {
+    const keys = buildVisibleSeatKeySet(seats, comparisonMap, openFilters, null);
+    expect(keys.size).toBe(3);
+  });
+
+  it('returns only matching seat keys when a party filter is active', () => {
+    const f = { ...openFilters, filterParty: 'labour' };
+    const keys = buildVisibleSeatKeySet(seats, comparisonMap, f, null);
+    expect(keys.size).toBe(1);
+    expect(keys.has('oxford east')).toBe(true);
+  });
+
+  it('returns only matching seat keys when a region filter is active', () => {
+    const f = { ...openFilters, filterRegion: 'scotland' };
+    const keys = buildVisibleSeatKeySet(seats, comparisonMap, f, null);
+    expect(keys.size).toBe(1);
+    expect(keys.has('edinburgh north')).toBe(true);
+  });
+
+  it('returns an empty Set when no seats match', () => {
+    const f = { ...openFilters, filterParty: 'greens' };
+    expect(buildVisibleSeatKeySet(seats, comparisonMap, f, null).size).toBe(0);
+  });
+});
+
+// ── getChoroplethValue ────────────────────────────────────────────────────────
+
+describe('getChoroplethValue', () => {
+  const seat = { votes: { labour: 20000, conservative: 15000 }, turnout: 35000 };
+  const comparison = { votes: { labour: 15000, conservative: 20000 }, turnout: 35000 };
+
+  it('returns null when choroplethType is none', () => {
+    expect(getChoroplethValue(seat, comparison, 'none', 'labour')).toBeNull();
+  });
+
+  it('returns null when choroplethParty is all', () => {
+    expect(getChoroplethValue(seat, comparison, 'voteShare', 'all')).toBeNull();
+  });
+
+  it('returns null when choroplethParty is falsy', () => {
+    expect(getChoroplethValue(seat, comparison, 'voteShare', '')).toBeNull();
+  });
+
+  it('returns vote share percentage for voteShare type', () => {
+    // labour: 20000 / 35000 ≈ 57.14%
+    const val = getChoroplethValue(seat, null, 'voteShare', 'labour');
+    expect(val).toBeCloseTo(57.14, 1);
+  });
+
+  it('returns null for voteShareChange when comparisonSeat is null', () => {
+    expect(getChoroplethValue(seat, null, 'voteShareChange', 'labour')).toBeNull();
+  });
+
+  it('returns the vote share change for voteShareChange type', () => {
+    // labour: 57.14% now vs 42.86% before → change ≈ +14.28
+    const val = getChoroplethValue(seat, comparison, 'voteShareChange', 'labour');
+    expect(val).toBeCloseTo(14.28, 0);
+  });
+
+  it('returns null for an unknown choroplethType', () => {
+    expect(getChoroplethValue(seat, comparison, 'unknown', 'labour')).toBeNull();
+  });
+});
+
+// ── resolveElectionFiles ──────────────────────────────────────────────────────
+
+describe('resolveElectionFiles', () => {
+  const manifest = {
+    settings: {
+      mapFilesById: { '1': 'maps/uk2024.json' },
+      dataFilesByElectionId: { '42': 'results/2024.json' },
+    },
+  };
+  const election = { id: '42', mapId: 1 };
+
+  it('returns mapFile and dataFile from manifest settings', () => {
+    expect(resolveElectionFiles(manifest, election)).toEqual({
+      mapFile: 'maps/uk2024.json',
+      dataFile: 'results/2024.json',
+    });
+  });
+
+  it('falls back to election.mapFile when mapId has no settings entry', () => {
+    const e = { id: '42', mapId: 99, mapFile: 'maps/fallback.json' };
+    const { mapFile } = resolveElectionFiles(manifest, e);
+    expect(mapFile).toBe('maps/fallback.json');
+  });
+
+  it('falls back to election.dataFile when id has no settings entry', () => {
+    const e = { id: '99', mapId: 1, dataFile: 'results/fallback.json' };
+    const { dataFile } = resolveElectionFiles(manifest, e);
+    expect(dataFile).toBe('results/fallback.json');
+  });
+
+  it('throws when mapFile cannot be resolved', () => {
+    const e = { id: '42', mapId: 99 };
+    expect(() => resolveElectionFiles(manifest, e)).toThrow(/Missing file configuration/);
+  });
+
+  it('throws when dataFile cannot be resolved', () => {
+    const e = { id: '99', mapId: 1 };
+    expect(() => resolveElectionFiles(manifest, e)).toThrow(/Missing file configuration/);
+  });
+
+  it('handles missing manifest settings gracefully', () => {
+    const e = { id: '1', mapFile: 'a.json', dataFile: 'b.json' };
+    expect(resolveElectionFiles({}, e)).toEqual({ mapFile: 'a.json', dataFile: 'b.json' });
+  });
+});
+
+// ── getPredictBaselineShare ───────────────────────────────────────────────────
+
+describe('getPredictBaselineShare', () => {
+  const baselineMap = new Map([
+    ['england::labour', 45.7],
+    ['england::conservative', 35.2],
+  ]);
+
+  it('returns the rounded baseline share for a known region/party', () => {
+    expect(getPredictBaselineShare('england', 'labour', baselineMap)).toBe(46);
+  });
+
+  it('returns 0 when the key is not in the map', () => {
+    expect(getPredictBaselineShare('scotland', 'snp', baselineMap)).toBe(0);
+  });
+
+  it('rounds fractional values', () => {
+    expect(getPredictBaselineShare('england', 'conservative', baselineMap)).toBe(35);
+  });
+});
+
+// ── getPredictInputShareValue ─────────────────────────────────────────────────
+
+describe('getPredictInputShareValue', () => {
+  const baselineMap = new Map([['england::labour', 45]]);
+  const inputMap = new Map([['england::labour', 50]]);
+  const emptyInput = new Map();
+
+  it('returns the input value when present in inputMap', () => {
+    expect(getPredictInputShareValue('england', 'labour', inputMap, baselineMap)).toBe(50);
+  });
+
+  it('falls back to the baseline when key is absent from inputMap', () => {
+    expect(getPredictInputShareValue('england', 'labour', emptyInput, baselineMap)).toBe(45);
+  });
+
+  it('returns 0 when absent from both maps', () => {
+    expect(getPredictInputShareValue('scotland', 'snp', emptyInput, new Map())).toBe(0);
+  });
+});
+
+// ── calculatePredictEnteredShareTotal ─────────────────────────────────────────
+
+describe('calculatePredictEnteredShareTotal', () => {
+  // For 'england' (GB region), parties are the base predict party keys
+  const inputMap = new Map([
+    ['england::labour', 38],
+    ['england::conservative', 28],
+    ['england::libdems', 12],
+    ['england::reform', 14],
+    ['england::green', 6],
+  ]);
+  const baselineMap = new Map();
+
+  it('sums all party shares for a region', () => {
+    const total = calculatePredictEnteredShareTotal('england', inputMap, baselineMap);
+    expect(total).toBe(38 + 28 + 12 + 14 + 6);
+  });
+
+  it('returns 0 when both maps are empty', () => {
+    expect(calculatePredictEnteredShareTotal('england', new Map(), new Map())).toBe(0);
+  });
+});
+
+// ── calculatePredictOtherShare ────────────────────────────────────────────────
+
+describe('calculatePredictOtherShare', () => {
+  it('returns 100 when no shares are entered', () => {
+    expect(calculatePredictOtherShare('england', new Map(), new Map())).toBe(100);
+  });
+
+  it('returns 0 when shares sum exactly to 100', () => {
+    const inputMap = new Map([
+      ['england::labour', 40],
+      ['england::conservative', 30],
+      ['england::libdems', 15],
+      ['england::reform', 10],
+      ['england::green', 5],
+    ]);
+    expect(calculatePredictOtherShare('england', inputMap, new Map())).toBe(0);
+  });
+
+  it('returns a negative value when shares exceed 100', () => {
+    const inputMap = new Map([
+      ['england::labour', 60],
+      ['england::conservative', 60],
+    ]);
+    expect(calculatePredictOtherShare('england', inputMap, new Map())).toBeLessThan(0);
+  });
+});
+
+// ── collectPredictAllRegions ──────────────────────────────────────────────────
+
+describe('collectPredictAllRegions', () => {
+  const regionMap = new Map([
+    ['southwestengland', 'South West England'],
+    ['scotland', 'Scotland'],
+    ['northwestengland', 'North West England'],
+  ]);
+
+  it('returns { regionKey, regionLabel } entries sorted by label', () => {
+    const result = collectPredictAllRegions(regionMap);
+    expect(result.map((r) => r.regionLabel)).toEqual([
+      'North West England',
+      'Scotland',
+      'South West England',
+    ]);
+  });
+
+  it('returns the correct regionKey for each entry', () => {
+    const result = collectPredictAllRegions(regionMap);
+    expect(result[0]).toEqual({ regionKey: 'northwestengland', regionLabel: 'North West England' });
+  });
+
+  it('returns an empty array for an empty map', () => {
+    expect(collectPredictAllRegions(new Map())).toEqual([]);
+  });
+});
+
+// ── collectPredictValidationRows ──────────────────────────────────────────────
+
+describe('collectPredictValidationRows', () => {
+  const regionMap = new Map([
+    ['southeastengland', 'South East England'],
+    ['scotland', 'Scotland'],
+    ['wales', 'Wales'],
+    ['northernireland', 'Northern Ireland'],
+  ]);
+
+  it('always includes the England aggregate row first', () => {
+    const rows = collectPredictValidationRows(regionMap);
+    expect(rows[0].regionKey).toBe('england');
+    expect(rows[0].regionLabel).toBe('England');
+  });
+
+  it('includes English, Scottish, Welsh, and NI regions', () => {
+    const rows = collectPredictValidationRows(regionMap);
+    const keys = rows.map((r) => r.regionKey);
+    expect(keys).toContain('southeastengland');
+    expect(keys).toContain('scotland');
+    expect(keys).toContain('wales');
+    expect(keys).toContain('northernireland');
+  });
+
+  it('does not duplicate the England aggregate', () => {
+    const rows = collectPredictValidationRows(regionMap);
+    expect(rows.filter((r) => r.regionKey === 'england')).toHaveLength(1);
+  });
+});
+
+// ── collectPredictShareStateRows ──────────────────────────────────────────────
+
+describe('collectPredictShareStateRows', () => {
+  const regionMap = new Map([['scotland', 'Scotland']]);
+
+  it('returns the same result as collectPredictValidationRows', () => {
+    expect(collectPredictShareStateRows(regionMap)).toEqual(
+      collectPredictValidationRows(regionMap)
+    );
+  });
+});
+
+// ── collectPredictInputRows ───────────────────────────────────────────────────
+
+describe('collectPredictInputRows', () => {
+  const regionMap = new Map([
+    ['southeastengland', 'South East England'],
+    ['northwestengland', 'North West England'],
+    ['scotland', 'Scotland'],
+    ['wales', 'Wales'],
+    ['northernireland', 'Northern Ireland'],
+  ]);
+
+  it('always has England aggregate as the first row', () => {
+    const rows = collectPredictInputRows(regionMap, false);
+    expect(rows[0]).toEqual({
+      regionKey: 'england',
+      regionLabel: 'England',
+      isEnglandAggregate: true,
+      isEnglandRegion: false,
+    });
+  });
+
+  it('does not include English sub-regions when englandExpanded is false', () => {
+    const rows = collectPredictInputRows(regionMap, false);
+    expect(rows.some((r) => r.isEnglandRegion)).toBe(false);
+  });
+
+  it('includes English sub-regions when englandExpanded is true', () => {
+    const rows = collectPredictInputRows(regionMap, true);
+    const subRegions = rows.filter((r) => r.isEnglandRegion);
+    expect(subRegions.length).toBe(2);
+    expect(subRegions.every((r) => !r.isEnglandAggregate)).toBe(true);
+  });
+
+  it('always includes Scotland, Wales, and NI when present in the map', () => {
+    const rows = collectPredictInputRows(regionMap, false);
+    const keys = rows.map((r) => r.regionKey);
+    expect(keys).toContain('scotland');
+    expect(keys).toContain('wales');
+    expect(keys).toContain('northernireland');
+  });
+
+  it('Scotland, Wales, NI rows have isEnglandAggregate and isEnglandRegion both false', () => {
+    const rows = collectPredictInputRows(regionMap, false);
+    ['scotland', 'wales', 'northernireland'].forEach((key) => {
+      const row = rows.find((r) => r.regionKey === key);
+      expect(row.isEnglandAggregate).toBe(false);
+      expect(row.isEnglandRegion).toBe(false);
+    });
+  });
+
+  it('returns only England aggregate when the map has no known regions', () => {
+    const rows = collectPredictInputRows(new Map(), false);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].isEnglandAggregate).toBe(true);
   });
 });
 

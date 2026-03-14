@@ -4,7 +4,6 @@ import {
   PREDICT_BASE_PARTY_KEYS,
   PREDICT_NI_PARTY_KEYS,
   PREDICT_NAT_COLUMN_KEY,
-  PREDICT_ENGLAND_KEY,
   formatInt,
   formatPct,
   formatSigned,
@@ -16,15 +15,10 @@ import {
   totalVotesForSeat,
   seatMajorityStats,
   seatGainFromPartyKey,
-  secondPlacePartyKey,
-  voteSharePct,
   buildSeatIndex,
   summarizeElection,
   normalizeSeats,
   isPredictNorthernIrelandRegion,
-  isPredictScotlandRegion,
-  isPredictWalesRegion,
-  isPredictEnglishRegion,
   roundPredictShareValue,
   clampNumber,
   predictInputKey,
@@ -35,6 +29,23 @@ import {
   formatPredictRegionLabel,
   buildPredictBaselineShares,
   projectedSeatForPredictMode,
+  seatNameFromFeature,
+  buildWinnerBySeat,
+  cloneSeatRecord,
+  pollTrackerDateLabel,
+  encodePredictPayload,
+  decodePredictPayload,
+  buildRegionLabelLookup,
+  buildVisibleSeatKeySet,
+  getChoroplethValue,
+  resolveElectionFiles,
+  getPredictBaselineShare,
+  getPredictInputShareValue,
+  calculatePredictEnteredShareTotal,
+  calculatePredictOtherShare,
+  collectPredictValidationRows,
+  collectPredictShareStateRows,
+  collectPredictInputRows,
 } from './core.js';
 
 const mapSvg = document.querySelector('.maps-svg');
@@ -193,7 +204,7 @@ function replaceRouteState(view, electionId = null) {
 /** Returns an ordered array of [regionKey, partyKey] slot pairs used as the positional index for predict payload encoding. */
 function buildPredictShareStateSlots() {
   const slots = [];
-  const rows = collectPredictShareStateRows();
+  const rows = collectPredictShareStateRows(predictBaseRegionLabelsByKey);
 
   rows.forEach((row) => {
     const regionKey = row.regionKey;
@@ -203,78 +214,6 @@ function buildPredictShareStateSlots() {
   });
 
   return slots;
-}
-
-/** Encodes changed predict share values into a compact URL-safe string (base-36 slot indices). Returns '' if nothing has changed and England is not expanded. */
-function encodePredictPayload(serializedRows, englandExpanded) {
-  const slots = buildPredictShareStateSlots();
-  if (!slots.length) return '';
-
-  const slotIndexByKey = new Map(
-    slots.map(([regionKey, partyKey], index) => [`${regionKey}::${partyKey}`, index])
-  );
-
-  const entries = [];
-  serializedRows.forEach((entry) => {
-    if (!Array.isArray(entry) || entry.length < 3) return;
-    const regionKey = String(entry[0] || '');
-    const partyKey = String(entry[1] || '');
-    const slotIndex = slotIndexByKey.get(`${regionKey}::${partyKey}`);
-    if (!Number.isInteger(slotIndex) || slotIndex < 0) return;
-
-    const value = Math.round(Number(entry[2]));
-    if (!Number.isFinite(value) || value < 0 || value > 100) return;
-
-    entries.push(`${slotIndex.toString(36)}-${value.toString(36)}`);
-  });
-
-  if (!entries.length && !englandExpanded) return '';
-  return `2.${englandExpanded ? 1 : 0}.${entries.join(',')}`;
-}
-
-/** Decodes a predict payload string into { englandExpanded, rows: [[regionKey, partyKey, value], ...] }, or null on failure. */
-function decodePredictPayload(encoded) {
-  const raw = String(encoded || '').trim();
-  if (!raw.startsWith('2.')) return null;
-
-  const parts = raw.split('.');
-  if (parts.length < 2 || parts[0] !== '2') return null;
-
-  const englandExpanded = parts[1] === '1';
-  const rowsPart = parts.slice(2).join('.').trim();
-  if (!rowsPart) {
-    return {
-      englandExpanded,
-      rows: [],
-    };
-  }
-
-  const slots = buildPredictShareStateSlots();
-  if (!slots.length) return null;
-
-  const rows = [];
-  rowsPart.split(',').forEach((chunk) => {
-    const token = String(chunk || '').trim();
-    if (!token) return;
-
-    const [indexToken, valueToken] = token.split('-');
-    if (!indexToken || !valueToken) return;
-
-    const slotIndex = Number.parseInt(indexToken, 36);
-    const value = Number.parseInt(valueToken, 36);
-    if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= slots.length) return;
-    if (!Number.isInteger(value) || value < 0 || value > 100) return;
-
-    const slot = slots[slotIndex];
-    if (!Array.isArray(slot) || slot.length < 2) return;
-
-    rows.push([slot[0], slot[1], value]);
-  });
-
-  return {
-    englandExpanded,
-    rows,
-  };
 }
 
 
@@ -410,13 +349,6 @@ function setPollTrackerLayoutVisible(active) {
   }
 }
 
-/** Extracts a YYYY-MM-DD date string from electionName if present, otherwise returns the text or fallbackId as a string. */
-function pollTrackerDateLabel(electionName, fallbackId) {
-  const text = String(electionName || '').trim();
-  const match = text.match(/(\d{4}-\d{2}-\d{2})/);
-  if (match?.[1]) return match[1];
-  return text || String(fallbackId);
-}
 
 /**
  * Parses the poll tracker CSV into { timeline, seriesByParty, partyMeta }.
@@ -918,25 +850,6 @@ async function activatePollTrackerMode() {
 }
 
 
-/** Returns a deep-ish copy of a seat object with normalized party keys and only positive vote totals retained. */
-function cloneSeatRecord(seat) {
-  const votes = {};
-  Object.entries(seat?.votes || {}).forEach(([partyKey, value]) => {
-    const voteTotal = Number(value || 0);
-    if (voteTotal <= 0) return;
-    votes[normalizePartyKey(partyKey)] = (votes[normalizePartyKey(partyKey)] || 0) + voteTotal;
-  });
-
-  return {
-    seat: seat?.seat || 'Unknown seat',
-    region: seat?.region || 'unknown',
-    winner: normalizePartyKey(seat?.winner || 'others'),
-    electorate: Number(seat?.electorate || 0),
-    turnout: Number(seat?.turnout || 0),
-    votes,
-  };
-}
-
 
 /** Rebuilds the election list nav, inserting Predict 2029 and Poll tracker buttons after the current-prediction entry (or near the top as a fallback). Stores references to predictModeLinkEl and pollTrackerModeLinkEl. */
 function renderElectionLinks(manifest, activeId) {
@@ -1028,24 +941,6 @@ function renderElectionLinks(manifest, activeId) {
   }
 }
 
-/** Resolves the mapFile and dataFile paths for an election by checking manifest settings overrides then election-level properties. Throws if either is missing. */
-function resolveElectionFiles(manifest, election) {
-  const settings = manifest?.settings || {};
-  const mapFilesById = settings.mapFilesById || {};
-  const dataFilesByElectionId = settings.dataFilesByElectionId || {};
-
-  const mapFileFromSettings = election?.mapId != null ? mapFilesById[String(election.mapId)] : undefined;
-  const dataFileFromSettings = dataFilesByElectionId[election.id];
-
-  const mapFile = mapFileFromSettings || election.mapFile;
-  const dataFile = dataFileFromSettings || election.dataFile;
-
-  if (!mapFile || !dataFile) {
-    throw new Error(`Missing file configuration for election ${election?.id || 'unknown'}`);
-  }
-
-  return { mapFile, dataFile };
-}
 
 /** Reads manifest.settings and populates the module-level party lookup maps (manifestPartiesByKey, manifestPartiesById), manifestRegionsById, and manifestRegionsByMapId. */
 function hydrateManifestSettings(manifest) {
@@ -1075,18 +970,6 @@ function hydrateManifestSettings(manifest) {
   });
 }
 
-
-/** Returns a Map from normalized region key to display label for the given mapId, built from manifest region metadata. */
-function buildRegionLabelLookup(mapId) {
-  const lookup = new Map();
-  const regionRows = manifestRegionsByMapId?.[String(mapId)] || [];
-  regionRows.forEach((region) => {
-    const key = normalizeRegionKey(region?.name || '');
-    if (!key) return;
-    lookup.set(key, region.name);
-  });
-  return lookup;
-}
 
 
 /** Returns the display label for a region, falling back to titleCaseFromRegionKey if not in the current region lookup. */
@@ -1152,75 +1035,6 @@ function collectPredictNorthernIrelandPartyKeys() {
 }
 
 
-/** Returns all predict regions as { regionKey, regionLabel } sorted alphabetically by label. */
-function collectPredictAllRegions() {
-  return Array.from(predictBaseRegionLabelsByKey.entries())
-    .map(([regionKey, regionLabel]) => ({ regionKey, regionLabel }))
-    .sort((a, b) => a.regionLabel.localeCompare(b.regionLabel));
-}
-
-
-/**
- * Returns the ordered list of row descriptors for the predict grid:
- * England aggregate (always first), optionally followed by English sub-regions if expanded,
- * then Scotland, Wales, and Northern Ireland.
- */
-function collectPredictInputRows() {
-  const allRegions = collectPredictAllRegions();
-  const englishRegions = allRegions.filter((row) => isPredictEnglishRegion(row.regionKey));
-  const scotland = allRegions.find((row) => isPredictScotlandRegion(row.regionKey));
-  const wales = allRegions.find((row) => isPredictWalesRegion(row.regionKey));
-  const northernIreland = allRegions.find((row) => isPredictNorthernIrelandRegion(row.regionKey));
-
-  const rows = [
-    {
-      regionKey: PREDICT_ENGLAND_KEY,
-      regionLabel: 'England',
-      isEnglandAggregate: true,
-      isEnglandRegion: false,
-    },
-  ];
-
-  if (predictEnglandExpanded) {
-    englishRegions.forEach((row) => {
-      rows.push({
-        regionKey: row.regionKey,
-        regionLabel: row.regionLabel,
-        isEnglandAggregate: false,
-        isEnglandRegion: true,
-      });
-    });
-  }
-
-  if (scotland) {
-    rows.push({
-      regionKey: scotland.regionKey,
-      regionLabel: scotland.regionLabel,
-      isEnglandAggregate: false,
-      isEnglandRegion: false,
-    });
-  }
-  if (wales) {
-    rows.push({
-      regionKey: wales.regionKey,
-      regionLabel: wales.regionLabel,
-      isEnglandAggregate: false,
-      isEnglandRegion: false,
-    });
-  }
-  if (northernIreland) {
-    rows.push({
-      regionKey: northernIreland.regionKey,
-      regionLabel: northernIreland.regionLabel,
-      isEnglandAggregate: false,
-      isEnglandRegion: false,
-    });
-  }
-
-  return rows;
-}
-
-
 /** Clamps inputValue to [0, 100], stores it in predictInputByRegionParty, and returns the clamped integer value. */
 function setPredictInputShareValue(regionKey, partyKey, inputValue) {
   const shareValue = roundPredictShareValue(clampNumber(inputValue, 0, 100));
@@ -1228,75 +1042,27 @@ function setPredictInputShareValue(regionKey, partyKey, inputValue) {
   return shareValue;
 }
 
-/** Returns the rounded baseline vote share for a region/party from the historical election data. */
-function getPredictBaselineShare(regionKey, partyKey) {
-  return roundPredictShareValue(
-    Number(predictBaselineShareByRegionParty.get(predictInputKey(regionKey, partyKey)) || 0)
-  );
-}
-
-/** Returns the current user-entered predict share for a region/party, falling back to the baseline if not yet entered. */
-function getPredictInputShareValue(regionKey, partyKey) {
-  const cached = predictInputByRegionParty.get(predictInputKey(regionKey, partyKey));
-  if (Number.isFinite(cached)) return Number(cached);
-  return roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey));
-}
-
-/** Returns the sum of all predict input shares for a region (across its modelled parties). */
-function calculatePredictEnteredShareTotal(regionKey) {
-  return collectPredictInputPartyKeysForRegion(regionKey).reduce((sum, partyKey) => {
-    return sum + Number(getPredictInputShareValue(regionKey, partyKey) || 0);
-  }, 0);
-}
-
-/** Returns the implied 'other' share for a region (100 minus the entered parties total). Can be negative if inputs exceed 100%. */
-function calculatePredictOtherShare(regionKey) {
-  return roundPredictShareValue(100 - calculatePredictEnteredShareTotal(regionKey));
-}
 
 /** Updates the 'other' display cell for a region in the predict grid, marking it red when the total exceeds 100%. */
 function updatePredictOtherCell(regionKey) {
   const cell = predictOtherCellByRegion.get(regionKey);
   if (!cell) return;
-  const otherShare = calculatePredictOtherShare(regionKey);
+  const otherShare = calculatePredictOtherShare(regionKey, predictInputByRegionParty, predictBaselineShareByRegionParty);
   cell.textContent = formatPredictShare(otherShare);
   cell.classList.toggle('maps-predict-grid-total-over', otherShare < 0);
 }
 
-/** Returns all validation rows: England aggregate plus every English, Scottish, Welsh, and NI region. Used to check that no region exceeds 100%. */
-function collectPredictValidationRows() {
-  const allRegions = collectPredictAllRegions();
-  const rows = [{ regionKey: PREDICT_ENGLAND_KEY, regionLabel: 'England' }];
-
-  allRegions.forEach((row) => {
-    if (
-      isPredictEnglishRegion(row.regionKey)
-      || isPredictScotlandRegion(row.regionKey)
-      || isPredictWalesRegion(row.regionKey)
-      || isPredictNorthernIrelandRegion(row.regionKey)
-    ) {
-      rows.push({ regionKey: row.regionKey, regionLabel: row.regionLabel });
-    }
-  });
-
-  return rows;
-}
-
-/** Returns the rows used for URL state serialization (same set as validation rows). */
-function collectPredictShareStateRows() {
-  return collectPredictValidationRows();
-}
 
 /** Serializes only the region/party share values that differ from baseline, plus the England expansion flag, into the v2 encoded payload string. Returns '' if nothing has changed. */
 function buildPredictShareStatePayload() {
-  const rows = collectPredictShareStateRows();
+  const rows = collectPredictShareStateRows(predictBaseRegionLabelsByKey);
   const serializedRows = [];
 
   rows.forEach((row) => {
     const regionKey = row.regionKey;
     collectPredictInputPartyKeysForRegion(regionKey).forEach((partyKey) => {
-      const inputValue = roundPredictShareValue(getPredictInputShareValue(regionKey, partyKey));
-      const baselineValue = roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey));
+      const inputValue = roundPredictShareValue(getPredictInputShareValue(regionKey, partyKey, predictInputByRegionParty, predictBaselineShareByRegionParty));
+      const baselineValue = roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey, predictBaselineShareByRegionParty));
       if (inputValue === baselineValue) return;
       serializedRows.push([regionKey, partyKey, inputValue]);
     });
@@ -1306,7 +1072,7 @@ function buildPredictShareStatePayload() {
     return '';
   }
 
-  return encodePredictPayload(serializedRows, predictEnglandExpanded);
+  return encodePredictPayload(serializedRows, predictEnglandExpanded, buildPredictShareStateSlots());
 }
 
 /** Reads and decodes the 'predict' URL parameter, returning the decoded state object or null. */
@@ -1315,7 +1081,7 @@ function readPredictShareStateFromUrl() {
   const encoded = params.get('predict');
   if (!encoded) return null;
 
-  return decodePredictPayload(encoded);
+  return decodePredictPayload(encoded, buildPredictShareStateSlots());
 }
 
 /** Applies a decoded predict share state (from URL) to predictInputByRegionParty, validating regions and parties before setting values. */
@@ -1323,7 +1089,7 @@ function applyPredictShareStateFromUrl(sharedState) {
   if (!sharedState) return;
   predictEnglandExpanded = Boolean(sharedState.englandExpanded);
 
-  const validRows = new Set(collectPredictShareStateRows().map((row) => row.regionKey));
+  const validRows = new Set(collectPredictShareStateRows(predictBaseRegionLabelsByKey).map((row) => row.regionKey));
 
   (sharedState.rows || []).forEach((entry) => {
     if (!Array.isArray(entry) || entry.length < 3) return;
@@ -1388,10 +1154,10 @@ async function sharePredictScenario() {
 
 /** Returns an array of region rows where the entered party shares exceed 100% in total. Empty array means all rows are valid. */
 function validatePredictRowsNotOver100() {
-  const invalidRows = collectPredictValidationRows()
+  const invalidRows = collectPredictValidationRows(predictBaseRegionLabelsByKey)
     .map((row) => ({
       ...row,
-      total: roundPredictShareValue(calculatePredictEnteredShareTotal(row.regionKey)),
+      total: roundPredictShareValue(calculatePredictEnteredShareTotal(row.regionKey, predictInputByRegionParty, predictBaselineShareByRegionParty)),
     }))
     .filter((row) => row.total > 100);
 
@@ -1403,11 +1169,11 @@ function validatePredictRowsNotOver100() {
 function rebuildPredictSwingsFromInputs() {
   predictRegionalSwingsByParty = new Map();
 
-  const rows = collectPredictInputRows();
+  const rows = collectPredictInputRows(predictBaseRegionLabelsByKey, predictEnglandExpanded);
   rows.forEach((row) => {
     collectPredictInputPartyKeysForRegion(row.regionKey).forEach((partyKey) => {
-      const baseline = getPredictBaselineShare(row.regionKey, partyKey);
-      const inputShare = getPredictInputShareValue(row.regionKey, partyKey);
+      const baseline = getPredictBaselineShare(row.regionKey, partyKey, predictBaselineShareByRegionParty);
+      const inputShare = getPredictInputShareValue(row.regionKey, partyKey, predictInputByRegionParty, predictBaselineShareByRegionParty);
       const swing = inputShare - baseline;
       const swingMap = ensurePredictPartySwingMap(partyKey);
       if (Math.abs(swing) < 1e-9) {
@@ -1431,7 +1197,7 @@ function resetPredictInputsToBaseline() {
       input.value = '0';
       return;
     }
-    input.value = formatPredictShare(getPredictInputShareValue(regionKey, partyKey));
+    input.value = formatPredictShare(getPredictInputShareValue(regionKey, partyKey, predictInputByRegionParty, predictBaselineShareByRegionParty));
     updatePredictOtherCell(regionKey);
   });
 }
@@ -1443,7 +1209,7 @@ function resetPredictInputsToBaseline() {
  */
 function renderPredictGrid() {
   if (!predictGrid) return;
-  const regions = collectPredictInputRows();
+  const regions = collectPredictInputRows(predictBaseRegionLabelsByKey, predictEnglandExpanded);
 
   predictGrid.innerHTML = '';
   predictOtherCellByRegion = new Map();
@@ -1548,7 +1314,7 @@ function renderPredictGrid() {
       input.className = 'maps-predict-grid-input';
       input.dataset.regionKey = region.regionKey;
       input.dataset.partyKey = partyKey;
-      input.value = formatPredictShare(getPredictInputShareValue(region.regionKey, partyKey));
+      input.value = formatPredictShare(getPredictInputShareValue(region.regionKey, partyKey, predictInputByRegionParty, predictBaselineShareByRegionParty));
       input.addEventListener('change', () => {
         const nextValue = setPredictInputShareValue(region.regionKey, partyKey, input.value);
         input.value = formatPredictShare(nextValue);
@@ -1560,8 +1326,8 @@ function renderPredictGrid() {
 
     const totalTd = document.createElement('td');
     totalTd.className = 'maps-predict-grid-total';
-    totalTd.textContent = formatPredictShare(calculatePredictOtherShare(region.regionKey));
-    totalTd.classList.toggle('maps-predict-grid-total-over', calculatePredictOtherShare(region.regionKey) < 0);
+    totalTd.textContent = formatPredictShare(calculatePredictOtherShare(region.regionKey, predictInputByRegionParty, predictBaselineShareByRegionParty));
+    totalTd.classList.toggle('maps-predict-grid-total-over', calculatePredictOtherShare(region.regionKey, predictInputByRegionParty, predictBaselineShareByRegionParty) < 0);
     predictOtherCellByRegion.set(region.regionKey, totalTd);
     tr.appendChild(totalTd);
     tbody.appendChild(tr);
@@ -1627,7 +1393,7 @@ async function ensurePredictBaselineData() {
   }));
   predictBaseSeatsByKey = buildSeatIndex(predictBaseSeats);
   predictBaseMapData = mapData;
-  predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId);
+  predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId, manifestRegionsByMapId);
   predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(predictBaseSeats));
 
   return true;
@@ -1894,70 +1660,6 @@ function populateMapControlOptions() {
   syncMapControlInputsFromState();
 }
 
-/** Returns true if a seat passes all active primary filters (party, region, majority range, second party, gains-only). */
-function seatMatchesPrimaryFilters(seat, comparisonSeat) {
-  if (mapViewState.filterParty !== 'all') {
-    const winner = seat.winner === 'other' ? 'others' : seat.winner;
-    if (winner !== mapViewState.filterParty) return false;
-  }
-
-  if (mapViewState.filterRegion !== 'all') {
-    const seatRegion = normalizeRegionKey(seat.region);
-    if (seatRegion !== mapViewState.filterRegion) return false;
-  }
-
-  const majority = seatMajorityStats(seat).pct;
-  if (majority < mapViewState.majorityMin || majority > mapViewState.majorityMax) return false;
-
-  if (mapViewState.filterSecondParty !== 'all') {
-    const secondParty = secondPlacePartyKey(seat);
-    if (secondParty !== mapViewState.filterSecondParty) return false;
-  }
-
-  if (mapViewState.gainsOnly) {
-    if (currentByElectionSeats) {
-      if (!currentByElectionSeats.has(seat.seat)) return false;
-    } else {
-      const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
-      if (!gainFrom) return false;
-    }
-  }
-
-  return true;
-}
-
-/** Returns a Set of seat keys for all seats that pass the current primary filters. */
-function buildVisibleSeatKeySet() {
-  const keySet = new Set();
-
-  currentSeats.forEach((seat) => {
-    const seatKey = seatLookupKey(seat.seat);
-    const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
-    const visible = seatMatchesPrimaryFilters(seat, comparisonSeat);
-
-    if (visible) keySet.add(seatKey);
-  });
-
-  return keySet;
-}
-
-/** Returns the choropleth metric value for a seat (vote share or vote share change), or null if choropleth is disabled or party is unset. */
-function getChoroplethValue(seat, comparisonSeat) {
-  if (mapViewState.choroplethType === 'none') return null;
-  const partyKey = mapViewState.choroplethParty;
-  if (!partyKey || partyKey === 'all') return null;
-
-  if (mapViewState.choroplethType === 'voteShareChange') {
-    if (!comparisonSeat) return null;
-    return voteSharePct(seat, partyKey) - voteSharePct(comparisonSeat, partyKey);
-  }
-
-  if (mapViewState.choroplethType === 'voteShare') {
-    return voteSharePct(seat, partyKey);
-  }
-
-  return null;
-}
 
 /**
  * Builds the choropleth rendering configuration for visible seats.
@@ -1976,7 +1678,7 @@ function buildChoroplethConfig(visibleSeatKeys) {
     const seatKey = seatLookupKey(seat.seat);
     if (!visibleSeatKeys.has(seatKey)) return;
     const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
-    const value = getChoroplethValue(seat, comparisonSeat);
+    const value = getChoroplethValue(seat, comparisonSeat, mapViewState.choroplethType, mapViewState.choroplethParty);
     if (!Number.isFinite(value)) return;
     valueBySeatKey.set(seatKey, value);
     values.push(value);
@@ -2103,7 +1805,7 @@ function refreshElectionSeatStateAndRender() {
 function renderMapWithViewState(options = {}) {
   if (!currentMapData) return;
 
-  const visibleSeatKeys = buildVisibleSeatKeySet();
+  const visibleSeatKeys = buildVisibleSeatKeySet(currentSeats, comparisonSeatsByKey, mapViewState, currentByElectionSeats);
   const visibleSeats = currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
   const visibleComparisonSeats = Array.from(visibleSeatKeys)
     .map((seatKey) => comparisonSeatsByKey.get(seatKey))
@@ -2622,23 +2324,6 @@ function updateTopSummary(election, summary) {
   }
 }
 
-/** Extracts the seat name from a TopoJSON feature's properties, trying several common property name variations. Returns null if none found. */
-function seatNameFromFeature(featureDatum) {
-  const props = featureDatum?.properties || {};
-  return props.name || props.seat_name || props.seat || props.constituency || props.Name || null;
-}
-
-/** Returns a Map from seat name (original and lowercase) to winner party key, used for fast map colour lookups. */
-function buildWinnerBySeat(seats) {
-  const bySeat = new Map();
-  seats.forEach((seat) => {
-    if (!seat?.seat) return;
-    bySeat.set(seat.seat, seat.winner || 'others');
-    bySeat.set(String(seat.seat).toLowerCase(), seat.winner || 'others');
-  });
-  return bySeat;
-}
-
 
 /** Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE (or INITIAL_MAP_SCALE_MOBILE on narrow screens). */
 function getInitialZoomTransform(width, height) {
@@ -3033,7 +2718,7 @@ async function initElectionData() {
   resetPredictModeState();
   resetPollTrackerModeState();
 
-  currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId);
+  currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId, manifestRegionsByMapId);
 
   renderElectionLinks(manifest, currentElection.id);
   setPredictModeNavState(false);

@@ -149,7 +149,11 @@ let pollTrackerMetaLoaded = false;
 let pollTrackerLatestSnippet = '';
 let lastTrackedVirtualPagePath = '';
 
-/** Fires a gtag page_view event for a URL, deduplicating against the last tracked path. */
+/**
+ * Fires a gtag page_view event for a URL, deduplicating against the last tracked path.
+ * @param {string} nextUrl - Full URL string to track; parsed to extract pathname and search.
+ * @returns {void}
+ */
 function trackVirtualPageView(nextUrl) {
   if (typeof window.gtag !== 'function') return;
 
@@ -168,13 +172,22 @@ function trackVirtualPageView(nextUrl) {
   }
 }
 
-/** Sets the browser tab title, prepending contextLabel when provided. */
+/**
+ * Sets the browser tab title, prepending contextLabel when provided.
+ * @param {string|null} contextLabel - Optional label to prepend (e.g. election name or mode name).
+ * @returns {void}
+ */
 function setMapsPageTitle(contextLabel) {
   const label = String(contextLabel || '').trim();
   document.title = label ? `${label} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
 }
 
-/** Builds a URLSearchParams for the given view, setting/removing the election and predict params as appropriate. */
+/**
+ * Builds a URLSearchParams for the given view, setting/removing the election and predict params as appropriate.
+ * @param {string} view - View name to set ('election', 'predict', or 'polltracker').
+ * @param {string|null} [electionId=null] - Election ID to include; falls back to currentElectionId if null.
+ * @returns {URLSearchParams} Updated search params with view, election, and predict params adjusted.
+ */
 function buildRouteSearchParams(view, electionId = null) {
   const params = new URLSearchParams(window.location.search);
   params.set('view', view);
@@ -192,7 +205,12 @@ function buildRouteSearchParams(view, electionId = null) {
   return params;
 }
 
-/** Replaces the current browser history entry with the URL for the given view, then fires a virtual page view. */
+/**
+ * Replaces the current browser history entry with the URL for the given view, then fires a virtual page view.
+ * @param {string} view - View name ('election', 'predict', or 'polltracker').
+ * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to currentElectionId.
+ * @returns {void}
+ */
 function replaceRouteState(view, electionId = null) {
   const params = buildRouteSearchParams(view, electionId);
   const nextUrl = `${window.location.pathname}?${params.toString()}`;
@@ -200,8 +218,10 @@ function replaceRouteState(view, electionId = null) {
   trackVirtualPageView(nextUrl);
 }
 
-
-/** Returns an ordered array of [regionKey, partyKey] slot pairs used as the positional index for predict payload encoding. */
+/**
+ * Returns an ordered array of [regionKey, partyKey] slot pairs used as the positional index for predict payload encoding.
+ * @returns {Array<[string, string]>} Ordered slot pairs matching the serialization order used by encodePredictPayload/decodePredictPayload.
+ */
 function buildPredictShareStateSlots() {
   const slots = [];
   const rows = collectPredictShareStateRows(predictBaseRegionLabelsByKey);
@@ -215,7 +235,6 @@ function buildPredictShareStateSlots() {
 
   return slots;
 }
-
 
 const mapViewState = {
   filterParty: 'all',
@@ -242,7 +261,11 @@ let mapInteractionController = {
   zoomToSeat: () => false,
 };
 
-/** Converts a d3 zoom scale value to a human-readable percentage string relative to the initial map scale. */
+/**
+ * Converts a d3 zoom scale value to a human-readable percentage string relative to the initial map scale.
+ * @param {number} scaleValue - Raw d3 zoom transform scale value.
+ * @returns {string} Percentage string relative to INITIAL_MAP_SCALE (e.g. '150%').
+ */
 function formatZoomPct(scaleValue) {
   const baselineScale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
   const ratio = Number(scaleValue) / baselineScale;
@@ -250,23 +273,35 @@ function formatZoomPct(scaleValue) {
   return `${Math.round(ratio * 100)}%`;
 }
 
-
-/** Returns the display label for a party from the manifest, or the raw key if not found. */
+/**
+ * Returns the display label for a party from the manifest, or the raw key if not found.
+ * @param {string} partyKey - Canonical party key to look up.
+ * @returns {string} Human-readable party name from manifest settings, or the raw key as fallback.
+ */
 function labelParty(partyKey) {
   const meta = manifestPartiesByKey[partyKey];
   if (meta?.name) return meta.name;
   return partyKey;
 }
 
-/** Returns the hex colour for a party from the manifest, or a grey fallback if not found. */
+/**
+ * Returns the hex colour for a party from the manifest, or a grey fallback if not found.
+ * @param {string} partyKey - Canonical party key to look up.
+ * @returns {string} Hex colour string from manifest settings (e.g. '#d50000'), or '#9CA3AF' if not found.
+ */
 function colourParty(partyKey) {
   const meta = manifestPartiesByKey[partyKey];
   if (meta?.colour) return meta.colour;
   return '#9CA3AF';
 }
 
-
-/** Fetches a URL and passes the Response through the provided parser function. Throws on non-OK status. */
+/**
+ * Fetches a URL and passes the Response through the provided parser function. Throws on non-OK status.
+ * @param {string} url - URL to fetch.
+ * @param {function(Response): Promise<*>} parser - Function that receives the Response and returns a parsed value.
+ * @returns {Promise<*>} Resolved value returned by the parser function.
+ * @throws {Error} When the response status is not OK.
+ */
 async function fetchResource(url, parser) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -275,7 +310,10 @@ async function fetchResource(url, parser) {
   return parser(response);
 }
 
-/** Fetches poll tracker metadata (latest snippet text) once per page load. Silently ignores fetch errors. */
+/**
+ * Fetches poll tracker metadata (latest snippet text) once per page load. Silently ignores fetch errors.
+ * @returns {Promise<void>}
+ */
 async function loadPollTrackerMetaIfNeeded() {
   if (pollTrackerMetaLoaded) return;
 
@@ -289,7 +327,12 @@ async function loadPollTrackerMetaIfNeeded() {
   pollTrackerMetaLoaded = true;
 }
 
-/** Sets the subtitle element content, optionally appending the latest poll snippet as a secondary span. */
+/**
+ * Sets the subtitle element content, optionally appending the latest poll snippet as a secondary span.
+ * @param {string} baseText - Primary subtitle text to display.
+ * @param {{includeLatestPollSnippet?: boolean}} [options={}] - Options; set includeLatestPollSnippet to true to append the cached poll snippet.
+ * @returns {void}
+ */
 function setSubtitleText(baseText, options = {}) {
   if (!subtitle) return;
 
@@ -312,24 +355,39 @@ function setSubtitleText(baseText, options = {}) {
   subtitle.appendChild(latestSpan);
 }
 
-/** Fetches and parses a JSON resource from the given URL. */
+/**
+ * Fetches and parses a JSON resource from the given URL.
+ * @param {string} url - URL of the JSON resource.
+ * @returns {Promise<*>} Parsed JSON value.
+ */
 async function fetchJson(url) {
   return fetchResource(url, (response) => response.json());
 }
 
-/** Fetches a plain text resource from the given URL. */
+/**
+ * Fetches a plain text resource from the given URL.
+ * @param {string} url - URL of the text resource.
+ * @returns {Promise<string>} Raw text content of the response.
+ */
 async function fetchText(url) {
   return fetchResource(url, (response) => response.text());
 }
 
-
-/** Toggles the 'active' CSS class on the poll tracker nav button. */
+/**
+ * Toggles the 'active' CSS class on the poll tracker nav button.
+ * @param {boolean} active - True to mark the button active, false to remove the class.
+ * @returns {void}
+ */
 function setPollTrackerNavState(active) {
   if (!pollTrackerModeLinkEl) return;
   pollTrackerModeLinkEl.classList.toggle('active', active);
 }
 
-/** Shows or hides the poll tracker view, toggling the map stage and right panel visibility accordingly. */
+/**
+ * Shows or hides the poll tracker view, toggling the map stage and right panel visibility accordingly.
+ * @param {boolean} active - True to show the poll tracker layout and hide the map stage; false to restore the map layout.
+ * @returns {void}
+ */
 function setPollTrackerLayoutVisible(active) {
   if (mapsStage) {
     mapsStage.hidden = active;
@@ -349,12 +407,13 @@ function setPollTrackerLayoutVisible(active) {
   }
 }
 
-
 /**
  * Parses the poll tracker CSV into { timeline, seriesByParty, partyMeta }.
  * Deduplicates rows by date, preferring the highest electionId.
  * Expands sparse date entries into a dense daily timeline when all entries are ISO dates.
  * Series values carry forward the last known value for dates with no data.
+ * @param {string} csvText - Raw CSV text from the poll tracker data file.
+ * @returns {{timeline: Array<{dateKey: string, electionId: number, sortValue: string, label: string, dateValue: Date|null}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>, partyMeta: Map<string, {name: string, colour: string}>}} Parsed poll tracker data.
  */
 function parsePollTrackerData(csvText) {
   const rows = d3.csvParse(csvText, (row) => {
@@ -504,7 +563,10 @@ function parsePollTrackerData(csvText) {
   return { timeline: expandedTimeline, seriesByParty, partyMeta };
 }
 
-/** Returns the party key values of all checked party toggle checkboxes in the poll tracker controls. */
+/**
+ * Returns the party key values of all checked party toggle checkboxes in the poll tracker controls.
+ * @returns {string[]} Array of party key strings for all currently checked party toggle inputs.
+ */
 function getPollTrackerSelectedParties() {
   return Array.from(document.querySelectorAll('.maps-polltracker-party-toggle input[type="checkbox"]'))
     .filter((input) => input.checked)
@@ -515,6 +577,7 @@ function getPollTrackerSelectedParties() {
  * Renders the poll tracker D3 SVG chart into pollTrackerChartWrap.
  * Draws line series for selected parties with separate left (seats) and right (vote %) axes.
  * Includes a crosshair tooltip and respects the current date-range selection.
+ * @returns {void}
  */
 function renderPollTrackerChart() {
   if (!pollTrackerChartWrap) return;
@@ -761,7 +824,10 @@ function renderPollTrackerChart() {
   pollTrackerChartWrap.appendChild(svg.node());
 }
 
-/** Renders the party toggle checkboxes for the poll tracker, pre-selecting a fixed set of the main UK parties (Reform, Labour, Conservative, Lib Dems, Green, SNP). */
+/**
+ * Renders the party toggle checkboxes for the poll tracker, pre-selecting a fixed set of the main UK parties (Reform, Labour, Conservative, Lib Dems, Green, SNP).
+ * @returns {void}
+ */
 function renderPollTrackerPartyControls() {
   if (!pollTrackerPartyControls) return;
 
@@ -813,7 +879,10 @@ function renderPollTrackerPartyControls() {
   });
 }
 
-/** Fetches and parses the poll tracker CSV once per page load, populating pollTrackerTimeline and pollTrackerSeriesByParty. */
+/**
+ * Fetches and parses the poll tracker CSV once per page load, populating pollTrackerTimeline and pollTrackerSeriesByParty.
+ * @returns {Promise<void>}
+ */
 async function loadPollTrackerDataIfNeeded() {
   if (pollTrackerDataLoaded) return;
 
@@ -825,7 +894,10 @@ async function loadPollTrackerDataIfNeeded() {
   pollTrackerDataLoaded = true;
 }
 
-/** Switches the app into poll tracker mode: deactivates predict mode, loads data, renders controls and chart, and updates the route. */
+/**
+ * Switches the app into poll tracker mode: deactivates predict mode, loads data, renders controls and chart, and updates the route.
+ * @returns {Promise<void>}
+ */
 async function activatePollTrackerMode() {
   predictModeActive = false;
   setPredictModeNavState(false);
@@ -849,9 +921,12 @@ async function activatePollTrackerMode() {
   renderPollTrackerChart();
 }
 
-
-
-/** Rebuilds the election list nav, inserting Predict 2029 and Poll tracker buttons after the current-prediction entry (or near the top as a fallback). Stores references to predictModeLinkEl and pollTrackerModeLinkEl. */
+/**
+ * Rebuilds the election list nav, inserting Predict 2029 and Poll tracker buttons after the current-prediction entry (or near the top as a fallback). Stores references to predictModeLinkEl and pollTrackerModeLinkEl.
+ * @param {object} manifest - Elections manifest object with an `elections` array.
+ * @param {string|null} activeId - ID of the currently active election, used to highlight the active nav item.
+ * @returns {void}
+ */
 function renderElectionLinks(manifest, activeId) {
   if (!electionList) return;
 
@@ -941,8 +1016,11 @@ function renderElectionLinks(manifest, activeId) {
   }
 }
 
-
-/** Reads manifest.settings and populates the module-level party lookup maps (manifestPartiesByKey, manifestPartiesById), manifestRegionsById, and manifestRegionsByMapId. */
+/**
+ * Reads manifest.settings and populates the module-level party lookup maps (manifestPartiesByKey, manifestPartiesById), manifestRegionsById, and manifestRegionsByMapId.
+ * @param {object} manifest - Elections manifest object with a `settings` property containing parties and regionsByMapId.
+ * @returns {void}
+ */
 function hydrateManifestSettings(manifest) {
   const settings = manifest?.settings || {};
 
@@ -970,16 +1048,22 @@ function hydrateManifestSettings(manifest) {
   });
 }
 
-
-
-/** Returns the display label for a region, falling back to titleCaseFromRegionKey if not in the current region lookup. */
+/**
+ * Returns the display label for a region, falling back to titleCaseFromRegionKey if not in the current region lookup.
+ * @param {string} regionKey - Raw or normalized region key.
+ * @returns {string} Human-readable region label from the current region map, or a title-cased derivation as fallback.
+ */
 function labelRegion(regionKey) {
   const normalized = normalizeRegionKey(regionKey);
   if (!normalized) return 'Unknown';
   return currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
 }
 
-/** Updates currentSort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction. */
+/**
+ * Updates currentSort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
+ * @param {string} sortKey - Column key to sort by (e.g. 'seats', 'votes', 'party').
+ * @returns {void}
+ */
 function setSortDirection(sortKey) {
   if (currentSort.key === sortKey) {
     currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -989,8 +1073,11 @@ function setSortDirection(sortKey) {
   currentSort.direction = sortKey === 'party' ? 'asc' : 'desc';
 }
 
-
-/** Lazily initializes and returns the per-region swing Map for a party in predictRegionalSwingsByParty. */
+/**
+ * Lazily initializes and returns the per-region swing Map for a party in predictRegionalSwingsByParty.
+ * @param {string} partyKey - Party key to look up or initialize a swing map for.
+ * @returns {Map<string, number>} Map from region key to swing value for the given party.
+ */
 function ensurePredictPartySwingMap(partyKey) {
   if (!predictRegionalSwingsByParty.has(partyKey)) {
     predictRegionalSwingsByParty.set(partyKey, new Map());
@@ -998,14 +1085,20 @@ function ensurePredictPartySwingMap(partyKey) {
   return predictRegionalSwingsByParty.get(partyKey);
 }
 
-
-/** Toggles the 'active' CSS class on the predict mode nav button. */
+/**
+ * Toggles the 'active' CSS class on the predict mode nav button.
+ * @param {boolean} active - True to mark the button active, false to remove the class.
+ * @returns {void}
+ */
 function setPredictModeNavState(active) {
   if (!predictModeLinkEl) return;
   predictModeLinkEl.classList.toggle('active', active);
 }
 
-/** Syncs predict window and seat card visibility based on predict mode state, vote totals expansion, and England expansion. */
+/**
+ * Syncs predict window and seat card visibility based on predict mode state, vote totals expansion, and England expansion.
+ * @returns {void}
+ */
 function syncPredictModeRightColumnLayout() {
   if (!predictWindow || !seatCard) return;
 
@@ -1023,27 +1116,40 @@ function syncPredictModeRightColumnLayout() {
   predictWindow.classList.toggle('maps-predict-window-force-scroll', forcePredictGridScroll);
 }
 
-
-/** Returns the GB predict grid column party keys (base parties + 'nat' column). */
+/**
+ * Returns the GB predict grid column party keys (base parties + 'nat' column).
+ * @returns {string[]} Array of column party keys for the GB section of the predict grid.
+ */
 function collectPredictPartyKeys() {
   return [...PREDICT_BASE_PARTY_KEYS, PREDICT_NAT_COLUMN_KEY];
 }
 
-/** Returns the NI predict grid column party keys. */
+/**
+ * Returns the NI predict grid column party keys.
+ * @returns {string[]} Array of party keys for the Northern Ireland section of the predict grid.
+ */
 function collectPredictNorthernIrelandPartyKeys() {
   return [...PREDICT_NI_PARTY_KEYS];
 }
 
-
-/** Clamps inputValue to [0, 100], stores it in predictInputByRegionParty, and returns the clamped integer value. */
+/**
+ * Clamps inputValue to [0, 100], stores it in predictInputByRegionParty, and returns the clamped integer value.
+ * @param {string} regionKey - Normalized region key.
+ * @param {string} partyKey - Party key.
+ * @param {number|string} inputValue - Raw input value from the user (may be a string from an input element).
+ * @returns {number} Clamped and rounded integer share value that was stored.
+ */
 function setPredictInputShareValue(regionKey, partyKey, inputValue) {
   const shareValue = roundPredictShareValue(clampNumber(inputValue, 0, 100));
   predictInputByRegionParty.set(predictInputKey(regionKey, partyKey), shareValue);
   return shareValue;
 }
 
-
-/** Updates the 'other' display cell for a region in the predict grid, marking it red when the total exceeds 100%. */
+/**
+ * Updates the 'other' display cell for a region in the predict grid, marking it red when the total exceeds 100%.
+ * @param {string} regionKey - Normalized region key whose other-share cell should be refreshed.
+ * @returns {void}
+ */
 function updatePredictOtherCell(regionKey) {
   const cell = predictOtherCellByRegion.get(regionKey);
   if (!cell) return;
@@ -1052,8 +1158,10 @@ function updatePredictOtherCell(regionKey) {
   cell.classList.toggle('maps-predict-grid-total-over', otherShare < 0);
 }
 
-
-/** Serializes only the region/party share values that differ from baseline, plus the England expansion flag, into the v2 encoded payload string. Returns '' if nothing has changed. */
+/**
+ * Serializes only the region/party share values that differ from baseline, plus the England expansion flag, into the v2 encoded payload string. Returns '' if nothing has changed.
+ * @returns {string} Encoded predict payload string for use in the URL, or '' when no changes have been made.
+ */
 function buildPredictShareStatePayload() {
   const rows = collectPredictShareStateRows(predictBaseRegionLabelsByKey);
   const serializedRows = [];
@@ -1075,7 +1183,10 @@ function buildPredictShareStatePayload() {
   return encodePredictPayload(serializedRows, predictEnglandExpanded, buildPredictShareStateSlots());
 }
 
-/** Reads and decodes the 'predict' URL parameter, returning the decoded state object or null. */
+/**
+ * Reads and decodes the 'predict' URL parameter, returning the decoded state object or null.
+ * @returns {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} Decoded predict state, or null if the parameter is absent or malformed.
+ */
 function readPredictShareStateFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const encoded = params.get('predict');
@@ -1084,7 +1195,11 @@ function readPredictShareStateFromUrl() {
   return decodePredictPayload(encoded, buildPredictShareStateSlots());
 }
 
-/** Applies a decoded predict share state (from URL) to predictInputByRegionParty, validating regions and parties before setting values. */
+/**
+ * Applies a decoded predict share state (from URL) to predictInputByRegionParty, validating regions and parties before setting values.
+ * @param {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} sharedState - Decoded predict state as returned by readPredictShareStateFromUrl; no-op if null.
+ * @returns {void}
+ */
 function applyPredictShareStateFromUrl(sharedState) {
   if (!sharedState) return;
   predictEnglandExpanded = Boolean(sharedState.englandExpanded);
@@ -1105,7 +1220,10 @@ function applyPredictShareStateFromUrl(sharedState) {
   });
 }
 
-/** Builds the full shareable URL for the current predict scenario, including the encoded payload. */
+/**
+ * Builds the full shareable URL for the current predict scenario, including the encoded payload.
+ * @returns {string} Absolute URL string with the current predict state encoded in the query string.
+ */
 function buildPredictShareUrl() {
   const params = buildRouteSearchParams('predict');
   const payload = buildPredictShareStatePayload();
@@ -1118,14 +1236,20 @@ function buildPredictShareUrl() {
   return query ? `${origin}${path}?${query}` : `${origin}${path}`;
 }
 
-/** Updates the browser history entry with the current predict state URL without reloading the page. */
+/**
+ * Updates the browser history entry with the current predict state URL without reloading the page.
+ * @returns {void}
+ */
 function replacePredictRouteStateFromInputs() {
   const nextUrl = buildPredictShareUrl();
   window.history.replaceState({}, '', nextUrl);
   trackVirtualPageView(nextUrl);
 }
 
-/** Shares the current predict URL via the Web Share API, falls back to clipboard copy, then to a prompt dialog. */
+/**
+ * Shares the current predict URL via the Web Share API, falls back to clipboard copy, then to a prompt dialog.
+ * @returns {Promise<void>}
+ */
 async function sharePredictScenario() {
   const shareUrl = buildPredictShareUrl();
   try {
@@ -1152,7 +1276,10 @@ async function sharePredictScenario() {
   window.prompt('Copy your prediction link:', shareUrl);
 }
 
-/** Returns an array of region rows where the entered party shares exceed 100% in total. Empty array means all rows are valid. */
+/**
+ * Returns an array of region rows where the entered party shares exceed 100% in total. Empty array means all rows are valid.
+ * @returns {Array<{regionKey: string, regionLabel: string, total: number}>} Array of invalid region rows with their computed totals; empty when all regions are valid.
+ */
 function validatePredictRowsNotOver100() {
   const invalidRows = collectPredictValidationRows(predictBaseRegionLabelsByKey)
     .map((row) => ({
@@ -1164,8 +1291,10 @@ function validatePredictRowsNotOver100() {
   return invalidRows;
 }
 
-
-/** Recomputes predictRegionalSwingsByParty from current input values versus baseline, removing zero-swing entries. */
+/**
+ * Recomputes predictRegionalSwingsByParty from current input values versus baseline, removing zero-swing entries.
+ * @returns {void}
+ */
 function rebuildPredictSwingsFromInputs() {
   predictRegionalSwingsByParty = new Map();
 
@@ -1185,7 +1314,10 @@ function rebuildPredictSwingsFromInputs() {
   });
 }
 
-/** Resets all predict inputs to baseline values and refreshes grid input elements. */
+/**
+ * Resets all predict inputs to baseline values and refreshes grid input elements.
+ * @returns {void}
+ */
 function resetPredictInputsToBaseline() {
   predictRegionalSwingsByParty = new Map();
   predictInputByRegionParty = normalizePredictShareMap(predictBaselineShareByRegionParty);
@@ -1206,6 +1338,7 @@ function resetPredictInputsToBaseline() {
  * Fully rebuilds the predict input grid DOM.
  * Renders a GB section (England aggregate + optional sub-regions, Scotland, Wales) and a NI section.
  * Each row contains numeric inputs per party column plus a live-updating 'other' total cell.
+ * @returns {void}
  */
 function renderPredictGrid() {
   if (!predictGrid) return;
@@ -1358,7 +1491,10 @@ function renderPredictGrid() {
   });
 }
 
-/** Exits predict mode, restores the election view route, and reloads election data if any is available. */
+/**
+ * Exits predict mode, restores the election view route, and reloads election data if any is available.
+ * @returns {void}
+ */
 function deactivatePredictMode() {
   predictModeActive = false;
   setPredictModeNavState(false);
@@ -1371,7 +1507,10 @@ function deactivatePredictMode() {
   });
 }
 
-/** Loads the 2024 general election as the predict baseline if not already loaded. Returns true on success, false if the election is not found in the manifest or returns no seats. */
+/**
+ * Loads the 2024 general election as the predict baseline if not already loaded. Returns true on success, false if the election is not found in the manifest or returns no seats.
+ * @returns {Promise<boolean>} True if the baseline was loaded successfully, false if the election could not be found or yielded no seats.
+ */
 async function ensurePredictBaselineData() {
   if (!currentManifest) return false;
 
@@ -1399,7 +1538,10 @@ async function ensurePredictBaselineData() {
   return true;
 }
 
-/** Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries. */
+/**
+ * Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries.
+ * @returns {void}
+ */
 function applyPredictModeProjection() {
   if (!predictModeActive) return;
   if (!predictBaseSeats.length || !predictBaseMapData) return;
@@ -1430,8 +1572,10 @@ function applyPredictModeProjection() {
   }
 }
 
-
-/** Switches the app into predict mode: loads baseline data if needed, applies any URL-encoded state, renders the grid, and runs the initial projection. */
+/**
+ * Switches the app into predict mode: loads baseline data if needed, applies any URL-encoded state, renders the grid, and runs the initial projection.
+ * @returns {Promise<void>}
+ */
 async function activatePredictMode() {
   if (!currentSeats.length || !currentMapData) return;
 
@@ -1478,7 +1622,10 @@ async function activatePredictMode() {
   applyPredictModeProjection();
 }
 
-/** Attaches click handlers to the predict submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag. */
+/**
+ * Attaches click handlers to the predict submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag.
+ * @returns {void}
+ */
 function wirePredictControls() {
   if (!predictWindow || predictWindow.dataset.wired === 'true') return;
 
@@ -1523,7 +1670,13 @@ function wirePredictControls() {
   predictWindow.dataset.wired = 'true';
 }
 
-/** Rebuilds the options on a select element from an array of { value, label } rows, preserving the current selection or falling back to fallbackValue. */
+/**
+ * Rebuilds the options on a select element from an array of { value, label } rows, preserving the current selection or falling back to fallbackValue.
+ * @param {HTMLSelectElement|null} selectEl - The select element to repopulate.
+ * @param {Array<{value: string, label: string}>} rows - Option rows to render.
+ * @param {string} [fallbackValue='all'] - Value to select when the previously selected value is no longer available.
+ * @returns {void}
+ */
 function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
   if (!selectEl) return;
   const currentValue = selectEl.value;
@@ -1550,7 +1703,10 @@ function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
   if (rows[0]) selectEl.value = rows[0].value;
 }
 
-/** Returns { value, label } rows for all parties appearing as winners or voters in current/comparison seats, sorted by label, with 'all parties…' prepended. */
+/**
+ * Returns { value, label } rows for all parties appearing as winners or voters in current/comparison seats, sorted by label, with 'all parties…' prepended.
+ * @returns {Array<{value: string, label: string}>} Option rows for party filter and choropleth selects.
+ */
 function collectPartyKeysForControls() {
   const mergeKey = (key) => (key === 'other' ? 'others' : key);
   const keys = new Set(['all']);
@@ -1569,7 +1725,10 @@ function collectPartyKeysForControls() {
   return [{ value: 'all', label: 'all parties...' }, ...sorted.map((key) => ({ value: key, label: labelParty(key) }))];
 }
 
-/** Returns { value, label } rows for all regions present in current seats, sorted by label, with 'all regions…' prepended. */
+/**
+ * Returns { value, label } rows for all regions present in current seats, sorted by label, with 'all regions…' prepended.
+ * @returns {Array<{value: string, label: string}>} Option rows for the region filter select.
+ */
 function collectRegionsForControls() {
   const byKey = new Map();
   currentSeats.forEach((seat) => {
@@ -1585,7 +1744,10 @@ function collectRegionsForControls() {
   return [{ value: 'all', label: 'all regions...' }, ...rows];
 }
 
-/** Pushes the current mapViewState values into the DOM filter/choropleth inputs and toggles second-party group visibility. */
+/**
+ * Pushes the current mapViewState values into the DOM filter/choropleth inputs and toggles second-party group visibility.
+ * @returns {void}
+ */
 function syncMapControlInputsFromState() {
   if (filterPartySelect) filterPartySelect.value = mapViewState.filterParty;
   if (filterRegionSelect) filterRegionSelect.value = mapViewState.filterRegion;
@@ -1605,7 +1767,10 @@ function syncMapControlInputsFromState() {
   if (choroplethPartySelect) choroplethPartySelect.value = mapViewState.choroplethParty;
 }
 
-/** Reads the DOM filter/choropleth inputs into mapViewState, normalizing and clamping values, then syncs the inputs back. */
+/**
+ * Reads the DOM filter/choropleth inputs into mapViewState, normalizing and clamping values, then syncs the inputs back.
+ * @returns {void}
+ */
 function syncMapControlStateFromInputs() {
   if (filterPartySelect) mapViewState.filterParty = filterPartySelect.value || 'all';
   if (filterRegionSelect) mapViewState.filterRegion = filterRegionSelect.value || 'all';
@@ -1628,7 +1793,10 @@ function syncMapControlStateFromInputs() {
   syncMapControlInputsFromState();
 }
 
-/** Resets all primary filter state (party, region, majority range, gains toggle) to defaults and syncs the controls. */
+/**
+ * Resets all primary filter state (party, region, majority range, gains toggle) to defaults and syncs the controls.
+ * @returns {void}
+ */
 function resetPrimaryFilters() {
   mapViewState.filterParty = 'all';
   mapViewState.filterRegion = 'all';
@@ -1639,14 +1807,20 @@ function resetPrimaryFilters() {
   syncMapControlInputsFromState();
 }
 
-/** Resets choropleth type and party to defaults and syncs the controls. */
+/**
+ * Resets choropleth type and party to defaults and syncs the controls.
+ * @returns {void}
+ */
 function resetChoropleths() {
   mapViewState.choroplethType = 'none';
   mapViewState.choroplethParty = 'all';
   syncMapControlInputsFromState();
 }
 
-/** Rebuilds all select options for party and region filter/choropleth controls from current seat data. */
+/**
+ * Rebuilds all select options for party and region filter/choropleth controls from current seat data.
+ * @returns {void}
+ */
 function populateMapControlOptions() {
   const partyRows = collectPartyKeysForControls();
   const regionRows = collectRegionsForControls();
@@ -1660,12 +1834,13 @@ function populateMapControlOptions() {
   syncMapControlInputsFromState();
 }
 
-
 /**
  * Builds the choropleth rendering configuration for visible seats.
  * Returns { enabled: false } when no choropleth is selected.
  * For voteShareChange returns a diverging red-white-blue scale; for voteShare returns a white-to-party-colour scale.
  * Includes valueBySeatKey, toColour, and legend metadata.
+ * @param {Set<string>} visibleSeatKeys - Set of seat lookup keys currently passing the active filters.
+ * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
   if (mapViewState.choroplethType === 'none' || mapViewState.choroplethParty === 'all') return { enabled: false };
@@ -1742,7 +1917,11 @@ function buildChoroplethConfig(visibleSeatKeys) {
   };
 }
 
-/** Renders the choropleth colour gradient legend into the legend element, or hides it when choropleth is disabled. */
+/**
+ * Renders the choropleth colour gradient legend into the legend element, or hides it when choropleth is disabled.
+ * @param {{enabled: boolean, legend?: object, legendText?: string}} choroplethConfig - Choropleth config as returned by buildChoroplethConfig.
+ * @returns {void}
+ */
 function renderChoroplethLegend(choroplethConfig) {
   if (!choroplethLegend) return;
   if (!choroplethConfig?.enabled) {
@@ -1774,7 +1953,10 @@ function renderChoroplethLegend(choroplethConfig) {
   choroplethLegend.hidden = false;
 }
 
-/** Resets current and comparison seat state from base data, recomputes summaries, and triggers a full map + panel re-render. */
+/**
+ * Resets current and comparison seat state from base data, recomputes summaries, and triggers a full map + panel re-render.
+ * @returns {void}
+ */
 function refreshElectionSeatStateAndRender() {
   if (!Array.isArray(baseElectionSeats) || !baseElectionSeats.length) return;
 
@@ -1801,6 +1983,8 @@ function refreshElectionSeatStateAndRender() {
 /**
  * Renders the map, seat list, vote totals, and choropleth legend for the current filter/choropleth state.
  * Accepts { preserveZoom: true } to retain the current pan/zoom transform.
+ * @param {{preserveZoom?: boolean}} [options={}] - Rendering options; set preserveZoom to true to keep the current d3 zoom transform.
+ * @returns {void}
  */
 function renderMapWithViewState(options = {}) {
   if (!currentMapData) return;
@@ -1839,14 +2023,21 @@ function renderMapWithViewState(options = {}) {
   }
 }
 
-/** Hides the seat detail popup and clears the tracked open seat name. */
+/**
+ * Hides the seat detail popup and clears the tracked open seat name.
+ * @returns {void}
+ */
 function hideSeatPopup() {
   if (!seatPopup) return;
   seatPopup.hidden = true;
   currentOpenSeatName = null;
 }
 
-/** Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked vote share bar chart with comparison deltas. */
+/**
+ * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked vote share bar chart with comparison deltas.
+ * @param {string} seatName - Display name of the seat to show; looked up in currentSeatsByKey.
+ * @returns {void}
+ */
 function renderSeatPopup(seatName) {
   if (!seatPopup || !seatPopupTitle || !seatPopupMeta || !seatPopupList) return;
 
@@ -1911,7 +2102,11 @@ function renderSeatPopup(seatName) {
   seatPopup.hidden = false;
 }
 
-/** Returns a sorted copy of party rows according to currentSort (party name alpha, or numeric column with label tiebreak). */
+/**
+ * Returns a sorted copy of party rows according to currentSort (party name alpha, or numeric column with label tiebreak).
+ * @param {Array<object>} rows - Party summary rows with a `party` key and numeric fields matching sort key names.
+ * @returns {Array<object>} New sorted array of party rows.
+ */
 function sortPartyRows(rows) {
   const multiplier = currentSort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
@@ -1926,7 +2121,11 @@ function sortPartyRows(rows) {
   });
 }
 
-/** Attaches click and keyboard (Enter/Space) handlers to all [data-sort-key] table headers to trigger sort changes via the onSortChanged callback. */
+/**
+ * Attaches click and keyboard (Enter/Space) handlers to all [data-sort-key] table headers to trigger sort changes via the onSortChanged callback.
+ * @param {function(): void} onSortChanged - Callback invoked after the sort direction is updated; typically re-renders the vote totals table.
+ * @returns {void}
+ */
 function wireVoteTotalsSorting(onSortChanged) {
   document.querySelectorAll('th[data-sort-key]').forEach((header) => {
     const sortKey = header.getAttribute('data-sort-key');
@@ -1947,19 +2146,33 @@ function wireVoteTotalsSorting(onSortChanged) {
   });
 }
 
-/** Toggles the 'hide-comparison-cols' class on the vote totals table to show or hide comparison delta columns. */
+/**
+ * Toggles the 'hide-comparison-cols' class on the vote totals table to show or hide comparison delta columns.
+ * @param {boolean} showComparison - True to show comparison columns, false to hide them.
+ * @returns {void}
+ */
 function toggleComparisonColumns(showComparison) {
   if (!voteTotalsTable) return;
   voteTotalsTable.classList.toggle('hide-comparison-cols', !showComparison);
 }
 
-/** Toggles the 'hide-vote-total-col' class on the vote totals table to show or hide raw vote count columns. */
+/**
+ * Toggles the 'hide-vote-total-col' class on the vote totals table to show or hide raw vote count columns.
+ * @param {boolean} showVoteTotals - True to show the raw vote count column, false to hide it.
+ * @returns {void}
+ */
 function toggleVoteTotalColumns(showVoteTotals) {
   if (!voteTotalsTable) return;
   voteTotalsTable.classList.toggle('hide-vote-total-col', !showVoteTotals);
 }
 
-/** Renders the vote totals summary table, showing seat counts, vote share, and comparison deltas when a comparisonSummary is provided. Truncates to top 6 rows unless expanded. */
+/**
+ * Renders the vote totals summary table, showing seat counts, vote share, and comparison deltas when a comparisonSummary is provided. Truncates to top 6 rows unless expanded.
+ * @param {{parties: Array<object>, totalVotes: number}} summary - Current election summary as returned by summarizeElection.
+ * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary=null] - Optional comparison summary for rendering delta columns.
+ * @param {{showVoteTotals?: boolean}} [options={}] - Rendering options; showVoteTotals controls raw vote count column visibility.
+ * @returns {void}
+ */
 function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
   if (!voteTotalsBody) return;
   voteTotalsBody.innerHTML = '';
@@ -2017,7 +2230,12 @@ function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
   });
 }
 
-/** Renders up to 300 seat rows sorted alphabetically into the seat list panel. Each row shows the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup. */
+/**
+ * Renders up to 300 seat rows sorted alphabetically into the seat list panel. Each row shows the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup.
+ * @param {Array<object>} seats - Visible seat objects to render in the list.
+ * @param {Array<object>|null} [comparisonSeats=null] - Optional comparison seats used to show gain-from indicators.
+ * @returns {void}
+ */
 function renderSeatList(seats, comparisonSeats = null) {
   if (!seatList) return;
   seatList.innerHTML = '';
@@ -2063,7 +2281,11 @@ function renderSeatList(seats, comparisonSeats = null) {
   });
 }
 
-/** Marks the seat list row for seatKey as selected (is-selected class) and deselects the previously selected row. */
+/**
+ * Marks the seat list row for seatKey as selected (is-selected class) and deselects the previously selected row.
+ * @param {string} seatKey - Normalized seat lookup key identifying which row to select.
+ * @returns {void}
+ */
 function setSelectedSeatRowByKey(seatKey) {
   const nextRow = seatListRowByKey.get(seatKey);
   if (!nextRow) return;
@@ -2075,7 +2297,11 @@ function setSelectedSeatRowByKey(seatKey) {
   selectedSeatRow = nextRow;
 }
 
-/** Builds the module-level seat name search index (seatSearchNames and currentSeatNameByKey) from the provided seats. Returns the sorted name array. */
+/**
+ * Builds the module-level seat name search index (seatSearchNames and currentSeatNameByKey) from the provided seats. Returns the sorted name array.
+ * @param {Array<object>} seats - Array of seat objects with a `seat` name property.
+ * @returns {string[]} Sorted array of seat name strings for autocomplete use.
+ */
 function buildSeatSearchIndex(seats) {
   currentSeatNameByKey = new Map();
   const names = [];
@@ -2094,7 +2320,10 @@ function buildSeatSearchIndex(seats) {
   return names;
 }
 
-/** Creates the autocomplete dropdown menu element adjacent to the seat search input if it doesn't exist yet. Returns the element or null if the input is absent. */
+/**
+ * Creates the autocomplete dropdown menu element adjacent to the seat search input if it doesn't exist yet. Returns the element or null if the input is absent.
+ * @returns {HTMLElement|null} The autocomplete menu element, or null if the seat search input is not in the DOM.
+ */
 function ensureSeatSearchMenu() {
   if (seatSearchMenuEl || !seatSearchInput) return seatSearchMenuEl;
   const searchGroup = seatSearchInput.closest('.maps-toolbar-group-search') || seatSearchInput.parentElement;
@@ -2110,7 +2339,10 @@ function ensureSeatSearchMenu() {
   return seatSearchMenuEl;
 }
 
-/** Hides the autocomplete dropdown and clears the keyboard suggestion index. */
+/**
+ * Hides the autocomplete dropdown and clears the keyboard suggestion index.
+ * @returns {void}
+ */
 function hideSeatSearchSuggestions() {
   seatSearchSuggestionIndex = -1;
   if (!seatSearchMenuEl) return;
@@ -2118,7 +2350,11 @@ function hideSeatSearchSuggestions() {
   seatSearchMenuEl.innerHTML = '';
 }
 
-/** Populates the autocomplete dropdown with up to MAX_SEAT_SEARCH_SUGGESTIONS seat names matching query (starts-with first, then contains). */
+/**
+ * Populates the autocomplete dropdown with up to MAX_SEAT_SEARCH_SUGGESTIONS seat names matching query (starts-with first, then contains).
+ * @param {string} [query=''] - Search string to match against; empty string shows all names up to the limit.
+ * @returns {void}
+ */
 function showSeatSearchSuggestions(query = '') {
   const menu = ensureSeatSearchMenu();
   if (!menu) return;
@@ -2165,7 +2401,10 @@ function showSeatSearchSuggestions(query = '') {
   menu.hidden = false;
 }
 
-/** Updates the keyboard-active (is-active) class on suggestion items to reflect seatSearchSuggestionIndex. */
+/**
+ * Updates the keyboard-active (is-active) class on suggestion items to reflect seatSearchSuggestionIndex.
+ * @returns {void}
+ */
 function updateSeatSearchHighlight() {
   if (!seatSearchMenuEl) return;
   const options = seatSearchMenuEl.querySelectorAll('.maps-seat-search-item');
@@ -2175,14 +2414,22 @@ function updateSeatSearchHighlight() {
   });
 }
 
-/** Updates the seat name list used for autocomplete suggestions and hides any open dropdown. */
+/**
+ * Updates the seat name list used for autocomplete suggestions and hides any open dropdown.
+ * @param {string[]} seatNames - New array of seat name strings to use for autocomplete.
+ * @returns {void}
+ */
 function applySeatSearchSuggestions(seatNames) {
   if (!seatSearchInput) return;
   seatSearchNames = Array.isArray(seatNames) ? [...seatNames] : [];
   hideSeatSearchSuggestions();
 }
 
-/** Resolves a search query to a seat name (exact → starts-with → contains), zooms the map, selects the list row, and opens the popup. */
+/**
+ * Resolves a search query to a seat name (exact → starts-with → contains), zooms the map, selects the list row, and opens the popup.
+ * @param {string} query - Raw search string as entered by the user.
+ * @returns {void}
+ */
 function selectSeatBySearchQuery(query) {
   const rawQuery = String(query || '').trim();
   if (!rawQuery) return;
@@ -2215,7 +2462,10 @@ function selectSeatBySearchQuery(query) {
   if (seatPreview) seatPreview.textContent = `Seat not found on map: ${seatName}`;
 }
 
-/** Attaches all seat search event listeners (focus, input, change, blur, keydown for arrow/enter/escape navigation, outside-click to close). Guards against double-wiring. */
+/**
+ * Attaches all seat search event listeners (focus, input, change, blur, keydown for arrow/enter/escape navigation, outside-click to close). Guards against double-wiring.
+ * @returns {void}
+ */
 function wireSeatSearch() {
   if (!seatSearchInput || seatSearchInput.dataset.wired === 'true') return;
   ensureSeatSearchMenu();
@@ -2286,7 +2536,10 @@ function wireSeatSearch() {
   seatSearchInput.dataset.wired = 'true';
 }
 
-/** Sets the right panel's height to match the map stage height so the two columns stay aligned. On mobile the panel stacks below the map so no height sync is needed. */
+/**
+ * Sets the right panel's height to match the map stage height so the two columns stay aligned. On mobile the panel stacks below the map so no height sync is needed.
+ * @returns {void}
+ */
 function syncRightPanelHeightToMap() {
   if (!mapsStage || !mapsPanelRight) return;
 
@@ -2303,7 +2556,12 @@ function syncRightPanelHeightToMap() {
   mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
 }
 
-/** Updates the page title and subtitle with the election name and leading-party majority (or hung-parliament message). */
+/**
+ * Updates the page title and subtitle with the election name and leading-party majority (or hung-parliament message).
+ * @param {object} election - Election entry object with a `name` and optionally a `type` property.
+ * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} summary - Election summary as returned by summarizeElection.
+ * @returns {void}
+ */
 function updateTopSummary(election, summary) {
   setMapsPageTitle(election?.name);
   const top = summary.parties[0];
@@ -2324,8 +2582,12 @@ function updateTopSummary(election, summary) {
   }
 }
 
-
-/** Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE (or INITIAL_MAP_SCALE_MOBILE on narrow screens). */
+/**
+ * Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE (or INITIAL_MAP_SCALE_MOBILE on narrow screens).
+ * @param {number} width - SVG viewport width in pixels.
+ * @param {number} height - SVG viewport height in pixels.
+ * @returns {object} d3 zoom identity transform scaled and translated to centre the map.
+ */
 function getInitialZoomTransform(width, height) {
   const isMobile = window.innerWidth <= 980;
   const scale = Math.max(1, Number(isMobile ? INITIAL_MAP_SCALE_MOBILE : INITIAL_MAP_SCALE) || 1);
@@ -2334,7 +2596,14 @@ function getInitialZoomTransform(width, height) {
   return d3.zoomIdentity.translate(tx, ty).scale(scale);
 }
 
-/** Computes a d3 zoom transform to zoom into a specific map feature, scaling based on the square-root of its bounding box dimensions. */
+/**
+ * Computes a d3 zoom transform to zoom into a specific map feature, scaling based on the square-root of its bounding box dimensions.
+ * @param {object} path - d3 geo path generator used to compute the feature's bounding box.
+ * @param {object} featureDatum - GeoJSON feature to zoom to.
+ * @param {number} width - SVG viewport width in pixels.
+ * @param {number} height - SVG viewport height in pixels.
+ * @returns {object} d3 zoom identity transform targeting the feature centre with a scale derived from its size.
+ */
 function getLegacySeatZoomTransform(path, featureDatum, width, height) {
   const bounds = path.bounds(featureDatum);
   const dx = Math.max(0, bounds[1][0] - bounds[0][0]);
@@ -2355,6 +2624,10 @@ function getLegacySeatZoomTransform(path, featureDatum, width, height) {
  * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom and hover handlers,
  * draws region boundary overlays, and sets up mapInteractionController for external zoom/reset/highlight calls.
  * Accepts { visibleSeatKeys, choroplethConfig, preserveTransform } in options.
+ * @param {object} mapData - TopoJSON topology object with a single named objects entry.
+ * @param {Array<object>} seats - Current seat objects used to determine winner colours.
+ * @param {{visibleSeatKeys?: Set<string>, choroplethConfig?: object, preserveTransform?: object}} [options={}] - Rendering options including filter visibility, choropleth config, and optional preserved zoom transform.
+ * @returns {void}
  */
 function renderTopoMap(mapData, seats, options = {}) {
   if (!mapSvg || !mapContent || !zoomValue) return;
@@ -2524,7 +2797,10 @@ function renderTopoMap(mapData, seats, options = {}) {
   svg.call(zoomBehavior.transform, options.preserveTransform || initialTransform);
 }
 
-/** Attaches click handlers to all [data-popup-action] buttons, supporting 'close' and 'toggle' actions on their target panel element. On mobile shows/hides a backdrop overlay. Guards against double-wiring. */
+/**
+ * Attaches click handlers to all [data-popup-action] buttons, supporting 'close' and 'toggle' actions on their target panel element. On mobile shows/hides a backdrop overlay. Guards against double-wiring.
+ * @returns {void}
+ */
 function wirePopupPanels() {
   const popupOverlay = document.getElementById('mapsPopupOverlay');
 
@@ -2565,7 +2841,10 @@ function wirePopupPanels() {
   });
 }
 
-/** Attaches change handlers to all filter and choropleth inputs, and click handlers to the gains, reset-filters, and reset-choropleths buttons. Guards against double-wiring. */
+/**
+ * Attaches change handlers to all filter and choropleth inputs, and click handlers to the gains, reset-filters, and reset-choropleths buttons. Guards against double-wiring.
+ * @returns {void}
+ */
 function wireMapViewControls() {
   if (filterPartySelect?.dataset.wired === 'true') return;
 
@@ -2612,7 +2891,10 @@ function wireMapViewControls() {
   if (filterPartySelect) filterPartySelect.dataset.wired = 'true';
 }
 
-/** Attaches click handlers to all [data-map-action] buttons for zoom-in, zoom-out, reset-zoom, and reset-view actions. */
+/**
+ * Attaches click handlers to all [data-map-action] buttons for zoom-in, zoom-out, reset-zoom, and reset-view actions.
+ * @returns {void}
+ */
 function wireMapInteractions() {
   document.querySelectorAll('[data-map-action]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -2631,7 +2913,11 @@ function wireMapInteractions() {
 
 }
 
-/** Attaches a change handler to a poll tracker metric checkbox that re-renders the chart when poll tracker is active. Guards against double-wiring. */
+/**
+ * Attaches a change handler to a poll tracker metric checkbox that re-renders the chart when poll tracker is active. Guards against double-wiring.
+ * @param {HTMLInputElement|null} inputEl - The checkbox input element to wire; no-op if null or already wired.
+ * @returns {void}
+ */
 function wirePollTrackerMetricInput(inputEl) {
   if (!inputEl || inputEl.dataset.wired === 'true') return;
   inputEl.addEventListener('change', () => {
@@ -2640,7 +2926,10 @@ function wirePollTrackerMetricInput(inputEl) {
   inputEl.dataset.wired = 'true';
 }
 
-/** Wires the seats and vote-% metric inputs and all [data-polltracker-range] range buttons, re-rendering the chart on change. */
+/**
+ * Wires the seats and vote-% metric inputs and all [data-polltracker-range] range buttons, re-rendering the chart on change.
+ * @returns {void}
+ */
 function wirePollTrackerControls() {
   wirePollTrackerMetricInput(pollTrackerMetricSeatsInput);
   wirePollTrackerMetricInput(pollTrackerMetricVotesInput);
@@ -2659,7 +2948,10 @@ function wirePollTrackerControls() {
   });
 }
 
-/** Clears all predict mode module-level state and hides the predict window. */
+/**
+ * Clears all predict mode module-level state and hides the predict window.
+ * @returns {void}
+ */
 function resetPredictModeState() {
   predictModeActive = false;
   predictBaseSeats = [];
@@ -2676,7 +2968,10 @@ function resetPredictModeState() {
   syncPredictModeRightColumnLayout();
 }
 
-/** Clears poll tracker mode state and hides the poll tracker layout. */
+/**
+ * Clears poll tracker mode state and hides the poll tracker layout.
+ * @returns {void}
+ */
 function resetPollTrackerModeState() {
   pollTrackerModeActive = false;
   pollTrackerRangeSelection = 'all';
@@ -2688,6 +2983,7 @@ function resetPollTrackerModeState() {
  * Bootstraps election data: fetches the manifest, resolves the active election from the URL or defaults,
  * loads map and results JSON in parallel, optionally loads comparison election data,
  * populates controls, and triggers the initial render.
+ * @returns {Promise<void>}
  */
 async function initElectionData() {
   const manifest = await fetchJson('data/elections.json');
@@ -2761,7 +3057,10 @@ async function initElectionData() {
   refreshElectionSeatStateAndRender();
 }
 
-/** Entry point: wires all controls and event listeners, then loads election data and navigates to the correct initial view (election / predict / poll tracker). */
+/**
+ * Entry point: wires all controls and event listeners, then loads election data and navigates to the correct initial view (election / predict / poll tracker).
+ * @returns {Promise<void>}
+ */
 async function init() {
   wireMapInteractions();
   wirePopupPanels();

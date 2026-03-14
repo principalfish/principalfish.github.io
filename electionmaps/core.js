@@ -32,7 +32,11 @@ export const PREDICT_NI_KEY = 'northernireland';
 
 // ── Party normalization ──────────────────────────────────────────────────────
 
-/** Normalizes a raw party key string to a canonical lowercase key, applying aliases where needed. Returns 'others' for empty input. */
+/**
+ * Normalizes a raw party key string to a canonical lowercase key, applying aliases where needed. Returns 'others' for empty input.
+ * @param {string} partyKey - Raw party key string, potentially mixed-case or containing special characters.
+ * @returns {string} Canonical lowercase party key with aliases applied, or 'others' for empty input.
+ */
 export function normalizePartyKey(partyKey) {
   const raw = String(partyKey || '').trim();
   if (!raw) return 'others';
@@ -46,17 +50,30 @@ export function normalizePartyKey(partyKey) {
 
 // ── Formatting ───────────────────────────────────────────────────────────────
 
-/** Rounds value to the nearest integer and formats it with GB locale thousands separators. */
+/**
+ * Rounds value to the nearest integer and formats it with GB locale thousands separators.
+ * @param {number} value - Numeric value to format.
+ * @returns {string} Rounded integer as a locale-formatted string (e.g. '1,234').
+ */
 export function formatInt(value) {
   return Math.round(value).toLocaleString('en-GB');
 }
 
-/** Formats value as a percentage string to two decimal places. */
+/**
+ * Formats value as a percentage string to two decimal places.
+ * @param {number} value - Numeric percentage value.
+ * @returns {string} Value formatted to two decimal places (e.g. '42.35').
+ */
 export function formatPct(value) {
   return Number(value).toFixed(2);
 }
 
-/** Formats value with an explicit '+' prefix for positive numbers and the specified decimal digits. Returns '0' for values within floating-point epsilon of zero. */
+/**
+ * Formats value with an explicit '+' prefix for positive numbers and the specified decimal digits. Returns '0' for values within floating-point epsilon of zero.
+ * @param {number} value - Numeric value to format with sign.
+ * @param {number} [digits=0] - Number of decimal places to include.
+ * @returns {string} Sign-prefixed string (e.g. '+3', '-1.50'), or '0' for near-zero values.
+ */
 export function formatSigned(value, digits = 0) {
   const num = Number(value || 0);
   if (Math.abs(num) < 1e-9) return '0';
@@ -64,7 +81,11 @@ export function formatSigned(value, digits = 0) {
   return `${sign}${num.toFixed(digits)}`;
 }
 
-/** Returns a CSS class name reflecting whether value is positive, negative, or neutral. */
+/**
+ * Returns a CSS class name reflecting whether value is positive, negative, or neutral.
+ * @param {number} value - Numeric delta value.
+ * @returns {string} One of 'maps-delta-positive', 'maps-delta-negative', or 'maps-delta-neutral'.
+ */
 export function deltaClass(value) {
   const num = Number(value || 0);
   if (Math.abs(num) < 1e-9) return 'maps-delta-neutral';
@@ -73,12 +94,20 @@ export function deltaClass(value) {
 
 // ── Region normalization ─────────────────────────────────────────────────────
 
-/** Converts a region name to a lowercase alphanumeric key with all non-alphanumeric characters removed. */
+/**
+ * Converts a region name to a lowercase alphanumeric key with all non-alphanumeric characters removed.
+ * @param {string} value - Raw region name or key string.
+ * @returns {string} Lowercase alphanumeric string suitable for use as a lookup key.
+ */
 export function normalizeRegionKey(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-/** Converts a region key or name to title case, splitting on camelCase boundaries, hyphens, and underscores. Returns 'Unknown' for empty input. */
+/**
+ * Converts a region key or name to title case, splitting on camelCase boundaries, hyphens, and underscores. Returns 'Unknown' for empty input.
+ * @param {string} regionKey - Region key or name to convert.
+ * @returns {string} Title-cased display label (e.g. 'North West England'), or 'Unknown' for empty input.
+ */
 export function titleCaseFromRegionKey(regionKey) {
   const text = String(regionKey || '').trim();
   if (!text) return 'Unknown';
@@ -95,19 +124,31 @@ export function titleCaseFromRegionKey(regionKey) {
 
 // ── Seat utilities ───────────────────────────────────────────────────────────
 
-/** Returns a trimmed, lowercase string suitable for use as a seat lookup key. */
+/**
+ * Returns a trimmed, lowercase string suitable for use as a seat lookup key.
+ * @param {string} seatName - Raw seat name.
+ * @returns {string} Trimmed lowercase seat name for use in Map lookups.
+ */
 export function seatLookupKey(seatName) {
   return String(seatName || '').trim().toLowerCase();
 }
 
-/** Returns the total votes cast in a seat, using the explicit turnout field if available, otherwise summing all party vote totals. */
+/**
+ * Returns the total votes cast in a seat, using the explicit turnout field if available, otherwise summing all party vote totals.
+ * @param {object} seat - Seat object with optional `turnout` number and `votes` object.
+ * @returns {number} Total votes cast in the seat.
+ */
 export function totalVotesForSeat(seat) {
   const turnout = Number(seat?.turnout || 0);
   if (turnout > 0) return turnout;
   return Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
 }
 
-/** Returns an array of { party, votes } objects for a seat, sorted descending by vote count, excluding parties with zero votes. */
+/**
+ * Returns an array of { party, votes } objects for a seat, sorted descending by vote count, excluding parties with zero votes.
+ * @param {object} seat - Seat object with a `votes` map of party key to vote count.
+ * @returns {Array<{party: string, votes: number}>} Sorted array of party vote entries, highest first.
+ */
 export function sortedSeatVoteRows(seat) {
   return Object.entries(seat?.votes || {})
     .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
@@ -115,7 +156,11 @@ export function sortedSeatVoteRows(seat) {
     .sort((a, b) => b.votes - a.votes);
 }
 
-/** Returns { pct, raw } for the winning majority in a seat: pct as a percentage of total votes, raw as the vote margin between first and second place. */
+/**
+ * Returns { pct, raw } for the winning majority in a seat: pct as a percentage of total votes, raw as the vote margin between first and second place.
+ * @param {object} seat - Seat object with a `votes` map and optional `turnout`.
+ * @returns {{pct: number, raw: number}} Majority as a percentage of total votes and as a raw vote count.
+ */
 export function seatMajorityStats(seat) {
   const voteRows = sortedSeatVoteRows(seat);
   if (voteRows.length < 2) return { pct: 0, raw: 0 };
@@ -125,7 +170,12 @@ export function seatMajorityStats(seat) {
   return { pct: (marginVotes / totalVotes) * 100, raw: marginVotes };
 }
 
-/** Returns the previous winner's party key if the seat changed hands between comparisonSeat and currentSeat, or null if there was no change or no comparison available. */
+/**
+ * Returns the previous winner's party key if the seat changed hands between comparisonSeat and currentSeat, or null if there was no change or no comparison available.
+ * @param {object} currentSeat - The seat in its current state, with a `winner` property.
+ * @param {object|null} comparisonSeat - The seat in its comparison state, or null if no comparison is available.
+ * @returns {string|null} The previous winner's party key if a gain occurred, otherwise null.
+ */
 export function seatGainFromPartyKey(currentSeat, comparisonSeat) {
   const winner = currentSeat?.winner || 'others';
   const previousWinner = comparisonSeat?.winner || null;
@@ -133,7 +183,11 @@ export function seatGainFromPartyKey(currentSeat, comparisonSeat) {
   return previousWinner;
 }
 
-/** Builds a Map from seatLookupKey to seat object for fast seat lookups. */
+/**
+ * Builds a Map from seatLookupKey to seat object for fast seat lookups.
+ * @param {Array<object>} seats - Array of seat objects, each with a `seat` name property.
+ * @returns {Map<string, object>} Map from lowercase seat name key to seat object.
+ */
 export function buildSeatIndex(seats) {
   const byKey = new Map();
   (seats || []).forEach((seat) => {
@@ -143,14 +197,23 @@ export function buildSeatIndex(seats) {
   return byKey;
 }
 
-/** Returns the party key of the second-place finisher in a seat, or null if fewer than two parties have votes. */
+/**
+ * Returns the party key of the second-place finisher in a seat, or null if fewer than two parties have votes.
+ * @param {object} seat - Seat object with a `votes` map.
+ * @returns {string|null} Party key of the second-place finisher, or null if unavailable.
+ */
 export function secondPlacePartyKey(seat) {
   const voteRows = sortedSeatVoteRows(seat);
   if (voteRows.length < 2) return null;
   return voteRows[1].party;
 }
 
-/** Returns the vote share percentage (0–100) for partyKey in the given seat. Returns 0 if total votes are zero. */
+/**
+ * Returns the vote share percentage (0–100) for partyKey in the given seat. Returns 0 if total votes are zero.
+ * @param {object} seat - Seat object with a `votes` map and optional `turnout`.
+ * @param {string} partyKey - The party whose vote share to calculate.
+ * @returns {number} Vote share as a percentage in the range [0, 100].
+ */
 export function voteSharePct(seat, partyKey) {
   const totalVotes = totalVotesForSeat(seat);
   if (totalVotes <= 0) return 0;
@@ -160,7 +223,11 @@ export function voteSharePct(seat, partyKey) {
 
 // ── Election summary ─────────────────────────────────────────────────────────
 
-/** Aggregates seats and votes across all constituencies, returning { parties, totalVotes, turnout, totalSeats }. Parties are sorted by seats descending then votes descending. Turnout is electorate-weighted. */
+/**
+ * Aggregates seats and votes across all constituencies, returning { parties, totalVotes, turnout, totalSeats }. Parties are sorted by seats descending then votes descending. Turnout is electorate-weighted.
+ * @param {Array<object>} seats - Array of seat objects with `winner`, `votes`, `electorate`, and `turnout` properties.
+ * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}} Aggregated election summary.
+ */
 export function summarizeElection(seats) {
   const partyStats = new Map();
   let electorateSum = 0;
@@ -218,9 +285,10 @@ export function resolvePartyRef(ref, partiesById) {
  * Supports the compact array format ({ seats: [...] }) and the compact per-seat p[] format.
  * When partiesById is provided, integer party references are resolved via the map.
  * When regionsById is provided, integer region IDs are resolved to region keys via the map.
- * @param {object} resultsData - Raw results payload.
+ * @param {object} resultsData - Raw results payload with a `seats` array.
  * @param {Map<number, {key: string}>} [partiesById] - Optional manifest party lookup for integer party_id refs.
  * @param {Map<number, string>} [regionsById] - Optional manifest region lookup for integer region_id refs.
+ * @returns {Array<{seat: string, region: string, winner: string, electorate: number, turnout: number, votes: object}>} Normalized seat objects.
  */
 export function normalizeSeats(resultsData, partiesById, regionsById) {
   if (!Array.isArray(resultsData?.seats)) return [];
@@ -264,22 +332,38 @@ export function normalizeSeats(resultsData, partiesById, regionsById) {
 
 // ── Predict region predicates ────────────────────────────────────────────────
 
-/** Returns true if regionKey normalizes to the Northern Ireland predict region. */
+/**
+ * Returns true if regionKey normalizes to the Northern Ireland predict region.
+ * @param {string} regionKey - Region key or name to test.
+ * @returns {boolean} True when the normalized key matches the Northern Ireland predict region.
+ */
 export function isPredictNorthernIrelandRegion(regionKey) {
   return normalizeRegionKey(regionKey) === PREDICT_NI_KEY;
 }
 
-/** Returns true if regionKey normalizes to the Scotland predict region. */
+/**
+ * Returns true if regionKey normalizes to the Scotland predict region.
+ * @param {string} regionKey - Region key or name to test.
+ * @returns {boolean} True when the normalized key matches the Scotland predict region.
+ */
 export function isPredictScotlandRegion(regionKey) {
   return normalizeRegionKey(regionKey) === PREDICT_SCOTLAND_KEY;
 }
 
-/** Returns true if regionKey normalizes to the Wales predict region. */
+/**
+ * Returns true if regionKey normalizes to the Wales predict region.
+ * @param {string} regionKey - Region key or name to test.
+ * @returns {boolean} True when the normalized key matches the Wales predict region.
+ */
 export function isPredictWalesRegion(regionKey) {
   return normalizeRegionKey(regionKey) === PREDICT_WALES_KEY;
 }
 
-/** Returns true if regionKey is a non-empty, non-NI, non-Scotland, non-Wales region (i.e. an English region). */
+/**
+ * Returns true if regionKey is a non-empty, non-NI, non-Scotland, non-Wales region (i.e. an English region).
+ * @param {string} regionKey - Region key or name to test.
+ * @returns {boolean} True when the region is non-empty and does not match any of the named devolved/NI regions.
+ */
 export function isPredictEnglishRegion(regionKey) {
   const key = normalizeRegionKey(regionKey);
   if (!key) return false;
@@ -291,29 +375,52 @@ export function isPredictEnglishRegion(regionKey) {
 
 // ── Predict baseline shares ──────────────────────────────────────────────────
 
-/** Rounds a predict vote share value to the nearest integer. */
+/**
+ * Rounds a predict vote share value to the nearest integer.
+ * @param {number} value - Vote share value (typically 0–100).
+ * @returns {number} Rounded integer share value.
+ */
 export function roundPredictShareValue(value) {
   return Math.round(Number(value || 0));
 }
 
-/** Clamps value to [minimum, maximum]. Returns minimum if value is not finite. */
+/**
+ * Clamps value to [minimum, maximum]. Returns minimum if value is not finite.
+ * @param {number} value - Value to clamp.
+ * @param {number} minimum - Lower bound (inclusive).
+ * @param {number} maximum - Upper bound (inclusive).
+ * @returns {number} Clamped numeric value within [minimum, maximum].
+ */
 export function clampNumber(value, minimum, maximum) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return minimum;
   return Math.max(minimum, Math.min(maximum, numeric));
 }
 
-/** Returns the composite Map key string used to store predict inputs: `${regionKey}::${partyKey}`. */
+/**
+ * Returns the composite Map key string used to store predict inputs: `${regionKey}::${partyKey}`.
+ * @param {string} regionKey - Normalized region key.
+ * @param {string} partyKey - Party key.
+ * @returns {string} Composite key in the form `regionKey::partyKey`.
+ */
 export function predictInputKey(regionKey, partyKey) {
   return `${regionKey}::${partyKey}`;
 }
 
-/** Formats a predict share value as an integer string. */
+/**
+ * Formats a predict share value as an integer string.
+ * @param {number} value - Vote share value to format.
+ * @returns {string} Rounded integer share as a string (e.g. '42').
+ */
 export function formatPredictShare(value) {
   return String(roundPredictShareValue(value));
 }
 
-/** Returns a new Map with all values rounded and clamped to [0, 100]. */
+/**
+ * Returns a new Map with all values rounded and clamped to [0, 100].
+ * @param {Map<string, number>} sourceMap - Source Map of predict share values to normalize.
+ * @returns {Map<string, number>} New Map with the same keys and values rounded and clamped to [0, 100].
+ */
 export function normalizePredictShareMap(sourceMap) {
   const normalized = new Map();
   (sourceMap || new Map()).forEach((value, key) => {
@@ -322,7 +429,11 @@ export function normalizePredictShareMap(sourceMap) {
   return normalized;
 }
 
-/** Returns the nationalist party key for a region ('snp' for Scotland, 'plaidcymru' for Wales, null otherwise). */
+/**
+ * Returns the nationalist party key for a region ('snp' for Scotland, 'plaidcymru' for Wales, null otherwise).
+ * @param {string} regionKey - Normalized or raw region key.
+ * @returns {string|null} Nationalist party key for the region, or null if no nationalist party applies.
+ */
 export function predictNatPartyKeyForRegion(regionKey) {
   if (isPredictScotlandRegion(regionKey)) return 'snp';
   if (isPredictWalesRegion(regionKey)) return 'plaidcymru';
@@ -331,7 +442,12 @@ export function predictNatPartyKeyForRegion(regionKey) {
 
 export const PREDICT_NAT_COLUMN_KEY = 'nat';
 
-/** Resolves a grid column party key to the actual party key for a given region. The 'nat' column maps to SNP or Plaid Cymru depending on region, and null if not applicable. */
+/**
+ * Resolves a grid column party key to the actual party key for a given region. The 'nat' column maps to SNP or Plaid Cymru depending on region, and null if not applicable.
+ * @param {string} regionKey - Normalized region key used to resolve the nationalist party.
+ * @param {string} columnPartyKey - Column party key, which may be the special 'nat' sentinel or a direct party key.
+ * @returns {string|null} Resolved party key, or null when the 'nat' column has no applicable party for the region.
+ */
 export function resolvePredictInputPartyKey(regionKey, columnPartyKey) {
   if (columnPartyKey === PREDICT_NAT_COLUMN_KEY) {
     return predictNatPartyKeyForRegion(regionKey);
@@ -339,7 +455,11 @@ export function resolvePredictInputPartyKey(regionKey, columnPartyKey) {
   return columnPartyKey;
 }
 
-/** Returns the list of party keys for which predict inputs are shown for a given region (NI parties for NI, base + optional nationalist party for GB). */
+/**
+ * Returns the list of party keys for which predict inputs are shown for a given region (NI parties for NI, base + optional nationalist party for GB).
+ * @param {string} regionKey - Normalized region key.
+ * @returns {string[]} Array of party keys for which predict input cells should be rendered.
+ */
 export function collectPredictInputPartyKeysForRegion(regionKey) {
   if (isPredictNorthernIrelandRegion(regionKey)) {
     return [...PREDICT_NI_PARTY_KEYS];
@@ -350,7 +470,11 @@ export function collectPredictInputPartyKeysForRegion(regionKey) {
   return keys;
 }
 
-/** Returns a shortened display label for a predict region, applying known abbreviations (e.g. 'Northern Ireland' → 'N Ireland'). */
+/**
+ * Returns a shortened display label for a predict region, applying known abbreviations (e.g. 'Northern Ireland' → 'N Ireland').
+ * @param {string} regionLabel - Full region display label.
+ * @returns {string} Abbreviated label if a known alias exists, otherwise the original label.
+ */
 export function formatPredictRegionLabel(regionLabel) {
   const text = String(regionLabel || '').trim();
   const aliases = {
@@ -372,6 +496,8 @@ export function formatPredictRegionLabel(regionLabel) {
  * For each modelled party and region, calculates votes / total regional votes × 100.
  * English sub-regions also accumulate into the 'england' aggregate key.
  * Returns a Map keyed by `${regionKey}::${partyKey}` with rounded integer share values.
+ * @param {Array<object>} seats - Array of normalized seat objects with `region` and `votes` properties.
+ * @returns {Map<string, number>} Map keyed by `regionKey::partyKey` with rounded integer share values (0–100).
  */
 export function buildPredictBaselineShares(seats) {
   const byRegion = new Map();
@@ -431,6 +557,10 @@ export function buildPredictBaselineShares(seats) {
 /**
  * Looks up the swing value for a party in a region from swingsByParty (Map<partyKey, Map<regionKey, swing>>).
  * Falls back to the 'england' aggregate swing for English sub-regions if no direct entry is found.
+ * @param {string} normalizedSeatRegion - Normalized region key for the seat being projected.
+ * @param {string} partyKey - Party key to look up swing for.
+ * @param {Map<string, Map<string, number>>} swingsByParty - Map from party key to a Map of region key to swing value.
+ * @returns {number} Swing value (percentage point delta) for the party in the region, or 0 if not found.
  */
 export function resolvedSwingValue(normalizedSeatRegion, partyKey, swingsByParty) {
   if (!normalizedSeatRegion) return 0;
@@ -449,6 +579,9 @@ export function resolvedSwingValue(normalizedSeatRegion, partyKey, swingsByParty
  * Modelled party shares are adjusted by their region's swing; remaining share is redistributed
  * proportionally to non-modelled parties (or assigned to 'others' if none exist).
  * Returns a new seat object with updated votes, turnout, and winner.
+ * @param {object} baseSeat - Baseline seat object with `region`, `votes`, and `turnout`.
+ * @param {Map<string, Map<string, number>>} swingsByParty - Map from party key to regional swing values.
+ * @returns {object} New seat object with projected `votes`, `turnout`, and `winner`.
  */
 export function projectedSeatForPredictMode(baseSeat, swingsByParty) {
   const totalVotes = totalVotesForSeat(baseSeat);
@@ -509,6 +642,8 @@ export function projectedSeatForPredictMode(baseSeat, swingsByParty) {
  * Extracts the seat name from a TopoJSON feature's properties.
  * Tries `name`, `seat_name`, `seat`, `constituency`, and `Name` in order.
  * Returns null if none of the known properties are present.
+ * @param {object} featureDatum - A TopoJSON feature object with a `properties` map.
+ * @returns {string|null} Seat name extracted from feature properties, or null if not found.
  */
 export function seatNameFromFeature(featureDatum) {
   const props = featureDatum?.properties || {};
@@ -519,6 +654,8 @@ export function seatNameFromFeature(featureDatum) {
  * Returns a Map from seat name to winner party key for fast map colour lookups.
  * Each seat is stored under both its original name and a lowercase variant.
  * Seats without a `seat` property are skipped. Winner defaults to `'others'` if missing.
+ * @param {Array<object>} seats - Array of seat objects with `seat` and `winner` properties.
+ * @returns {Map<string, string>} Map from seat name (original and lowercase) to winner party key.
  */
 export function buildWinnerBySeat(seats) {
   const bySeat = new Map();
@@ -535,6 +672,8 @@ export function buildWinnerBySeat(seats) {
  * Zero-vote and negative-vote entries are filtered out.
  * Duplicate keys that collapse after normalisation are summed.
  * Numeric fields (`electorate`, `turnout`) are coerced to numbers.
+ * @param {object} seat - Raw seat object with `seat`, `region`, `winner`, `electorate`, `turnout`, and `votes` properties.
+ * @returns {{seat: string, region: string, winner: string, electorate: number, turnout: number, votes: object}} Normalised copy of the seat record.
  */
 export function cloneSeatRecord(seat) {
   const votes = {};
@@ -557,6 +696,9 @@ export function cloneSeatRecord(seat) {
 /**
  * Extracts a YYYY-MM-DD date string from an election name when present.
  * Returns the trimmed name when no date is found, or the stringified fallbackId when the name is empty.
+ * @param {string} electionName - Election name string, which may contain an ISO date.
+ * @param {number|string} fallbackId - Fallback identifier used when the name is empty.
+ * @returns {string} ISO date string if found in the name, the trimmed name otherwise, or stringified fallbackId for empty names.
  */
 export function pollTrackerDateLabel(electionName, fallbackId) {
   const text = String(electionName || '').trim();
@@ -571,6 +713,10 @@ export function pollTrackerDateLabel(electionName, fallbackId) {
  * Encodes changed predict share values into a compact URL-safe base-36 string.
  * `slots` is an ordered array of [regionKey, partyKey] pairs defining the slot index space.
  * Returns `''` if nothing has changed and `englandExpanded` is false.
+ * @param {Array<[string, string, number]>} serializedRows - Array of [regionKey, partyKey, value] triples for values that differ from baseline.
+ * @param {boolean} englandExpanded - Whether the England sub-region rows are expanded in the UI.
+ * @param {Array<[string, string]>} slots - Ordered array of [regionKey, partyKey] pairs defining the encoding index space.
+ * @returns {string} Encoded payload string (e.g. '2.0.1a-2c,3f-1b'), or '' if no changes and englandExpanded is false.
  */
 export function encodePredictPayload(serializedRows, englandExpanded, slots) {
   if (!slots.length) return '';
@@ -601,6 +747,9 @@ export function encodePredictPayload(serializedRows, englandExpanded, slots) {
  * Decodes a predict payload string into `{ englandExpanded, rows: [[regionKey, partyKey, value], ...] }`.
  * `slots` is the same ordered [regionKey, partyKey] array used during encoding.
  * Returns null on any parse failure or when slots are unavailable.
+ * @param {string} encoded - Encoded payload string as produced by encodePredictPayload.
+ * @param {Array<[string, string]>} slots - Ordered array of [regionKey, partyKey] pairs matching those used during encoding.
+ * @returns {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} Decoded state object, or null on parse failure.
  */
 export function decodePredictPayload(encoded, slots) {
   const raw = String(encoded || '').trim();
@@ -651,6 +800,9 @@ export function decodePredictPayload(encoded, slots) {
  * Returns a Map from normalised region key to display label for the given mapId.
  * Built from the manifest's region metadata object keyed by map ID.
  * Regions whose names normalise to an empty string are skipped.
+ * @param {string|number} mapId - Map identifier used to look up region metadata in regionsByMapId.
+ * @param {object} regionsByMapId - Manifest settings object mapping map ID strings to arrays of region metadata objects.
+ * @returns {Map<string, string>} Map from normalized region key to display label.
  */
 export function buildRegionLabelLookup(mapId, regionsByMapId) {
   const lookup = new Map();
@@ -669,6 +821,11 @@ export function buildRegionLabelLookup(mapId, regionsByMapId) {
  * Returns true when a seat passes all active primary filters.
  * `filterState` mirrors the mapViewState shape: `{ filterParty, filterRegion, majorityMin, majorityMax, filterSecondParty, gainsOnly }`.
  * `byElectionSeats` is a Set of seat names for by-election gain filtering, or null to use the comparison seat method.
+ * @param {object} seat - Current seat object to test against the filters.
+ * @param {object|null} comparisonSeat - Comparison seat for gains filtering; may be null if no comparison is available.
+ * @param {{filterParty: string, filterRegion: string, majorityMin: number, majorityMax: number, filterSecondParty: string, gainsOnly: boolean}} filterState - Active filter configuration.
+ * @param {Set<string>|null} byElectionSeats - Set of seat names that are by-election gains, or null to use comparison-seat gain detection.
+ * @returns {boolean} True if the seat passes all currently active filters.
  */
 export function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
   if (filterState.filterParty !== 'all') {
@@ -705,6 +862,11 @@ export function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byE
  * Returns a Set of seat lookup keys for all seats that pass the current primary filters.
  * `comparisonSeatsByKey` is a Map from seatLookupKey to comparison seat object.
  * `filterState` and `byElectionSeats` are forwarded to `seatMatchesPrimaryFilters`.
+ * @param {Array<object>} seats - Array of seat objects to filter.
+ * @param {Map<string, object>} comparisonSeatsByKey - Map from seat lookup key to comparison seat, used for gains filtering.
+ * @param {{filterParty: string, filterRegion: string, majorityMin: number, majorityMax: number, filterSecondParty: string, gainsOnly: boolean}} filterState - Active filter configuration.
+ * @param {Set<string>|null} byElectionSeats - Set of by-election seat names, or null to use comparison-based gain detection.
+ * @returns {Set<string>} Set of seat lookup keys for all seats that pass the active filters.
  */
 export function buildVisibleSeatKeySet(seats, comparisonSeatsByKey, filterState, byElectionSeats) {
   const keySet = new Set();
@@ -723,6 +885,11 @@ export function buildVisibleSeatKeySet(seats, comparisonSeatsByKey, filterState,
  * `choroplethType` is `'voteShare'`, `'voteShareChange'`, or `'none'`.
  * `choroplethParty` is a party key or `'all'`.
  * Returns null when the type is `'none'`, the party is unset/`'all'`, or no comparison seat is available for a change metric.
+ * @param {object} seat - Current seat object.
+ * @param {object|null} comparisonSeat - Comparison seat for delta calculations; may be null.
+ * @param {string} choroplethType - Choropleth type: 'voteShare', 'voteShareChange', or 'none'.
+ * @param {string} choroplethParty - Party key to compute the metric for, or 'all' to disable.
+ * @returns {number|null} Choropleth metric value, or null when the choropleth is inactive or data is unavailable.
  */
 export function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethParty) {
   if (choroplethType === 'none') return null;
@@ -746,6 +913,10 @@ export function getChoroplethValue(seat, comparisonSeat, choroplethType, choropl
  * Resolves the mapFile and dataFile paths for an election.
  * Checks manifest settings overrides (by mapId / electionId) first, then falls back to
  * election-level properties. Throws if either file path cannot be determined.
+ * @param {object} manifest - Full elections manifest object with a `settings` property.
+ * @param {object} election - Election entry object with `id`, `mapId`, `mapFile`, and `dataFile` properties.
+ * @returns {{mapFile: string, dataFile: string}} Resolved file paths for the map and results data.
+ * @throws {Error} When either the mapFile or dataFile path cannot be determined for the election.
  */
 export function resolveElectionFiles(manifest, election) {
   const settings = manifest?.settings || {};
@@ -770,6 +941,10 @@ export function resolveElectionFiles(manifest, election) {
 /**
  * Returns the rounded baseline vote share for a region/party from the historical election data Map.
  * `baselineMap` is keyed by `predictInputKey(regionKey, partyKey)`. Returns 0 when not found.
+ * @param {string} regionKey - Normalized region key.
+ * @param {string} partyKey - Party key.
+ * @param {Map<string, number>} baselineMap - Map of `regionKey::partyKey` to baseline share values.
+ * @returns {number} Rounded integer baseline share for the region/party, or 0 if not found.
  */
 export function getPredictBaselineShare(regionKey, partyKey, baselineMap) {
   return roundPredictShareValue(
@@ -781,6 +956,11 @@ export function getPredictBaselineShare(regionKey, partyKey, baselineMap) {
  * Returns the current user-entered predict share for a region/party.
  * Falls back to the baseline share when no input has been entered.
  * `inputMap` is keyed by `predictInputKey`; `baselineMap` is the historical baseline.
+ * @param {string} regionKey - Normalized region key.
+ * @param {string} partyKey - Party key.
+ * @param {Map<string, number>} inputMap - Map of user-entered share values keyed by `regionKey::partyKey`.
+ * @param {Map<string, number>} baselineMap - Map of historical baseline share values keyed by `regionKey::partyKey`.
+ * @returns {number} Current user-entered share if set, otherwise the rounded baseline share.
  */
 export function getPredictInputShareValue(regionKey, partyKey, inputMap, baselineMap) {
   const cached = inputMap.get(predictInputKey(regionKey, partyKey));
@@ -791,6 +971,10 @@ export function getPredictInputShareValue(regionKey, partyKey, inputMap, baselin
 /**
  * Returns the sum of all predict input shares for a region across its modelled parties.
  * Uses `inputMap` for entered values, falling back to `baselineMap`.
+ * @param {string} regionKey - Normalized region key.
+ * @param {Map<string, number>} inputMap - Map of user-entered share values.
+ * @param {Map<string, number>} baselineMap - Map of historical baseline share values.
+ * @returns {number} Sum of all entered party shares for the region.
  */
 export function calculatePredictEnteredShareTotal(regionKey, inputMap, baselineMap) {
   return collectPredictInputPartyKeysForRegion(regionKey).reduce((sum, partyKey) => {
@@ -801,6 +985,10 @@ export function calculatePredictEnteredShareTotal(regionKey, inputMap, baselineM
 /**
  * Returns the implied 'other' share for a region: `100 - sum of entered party shares`, rounded.
  * Can be negative when inputs exceed 100%.
+ * @param {string} regionKey - Normalized region key.
+ * @param {Map<string, number>} inputMap - Map of user-entered share values.
+ * @param {Map<string, number>} baselineMap - Map of historical baseline share values.
+ * @returns {number} Implied 'other' share as a rounded integer; negative when total inputs exceed 100.
  */
 export function calculatePredictOtherShare(regionKey, inputMap, baselineMap) {
   return roundPredictShareValue(100 - calculatePredictEnteredShareTotal(regionKey, inputMap, baselineMap));
@@ -811,6 +999,8 @@ export function calculatePredictOtherShare(regionKey, inputMap, baselineMap) {
 /**
  * Returns all predict regions as `{ regionKey, regionLabel }` sorted alphabetically by label.
  * `baseRegionLabelsByKey` is a Map from normalised region key to display label.
+ * @param {Map<string, string>} baseRegionLabelsByKey - Map from normalized region key to display label.
+ * @returns {Array<{regionKey: string, regionLabel: string}>} All regions sorted alphabetically by display label.
  */
 export function collectPredictAllRegions(baseRegionLabelsByKey) {
   return Array.from(baseRegionLabelsByKey.entries())
@@ -821,6 +1011,8 @@ export function collectPredictAllRegions(baseRegionLabelsByKey) {
 /**
  * Returns all validation rows: the England aggregate row first, then every English, Scottish,
  * Welsh, and NI region from `baseRegionLabelsByKey`. Used to check no region exceeds 100%.
+ * @param {Map<string, string>} baseRegionLabelsByKey - Map from normalized region key to display label.
+ * @returns {Array<{regionKey: string, regionLabel: string}>} Ordered array of region rows for validation.
  */
 export function collectPredictValidationRows(baseRegionLabelsByKey) {
   const allRegions = collectPredictAllRegions(baseRegionLabelsByKey);
@@ -843,6 +1035,8 @@ export function collectPredictValidationRows(baseRegionLabelsByKey) {
 /**
  * Returns the rows used for URL state serialization — the same set as validation rows.
  * Alias for `collectPredictValidationRows`.
+ * @param {Map<string, string>} baseRegionLabelsByKey - Map from normalized region key to display label.
+ * @returns {Array<{regionKey: string, regionLabel: string}>} Ordered array of region rows for URL state serialization.
  */
 export function collectPredictShareStateRows(baseRegionLabelsByKey) {
   return collectPredictValidationRows(baseRegionLabelsByKey);
@@ -853,6 +1047,9 @@ export function collectPredictShareStateRows(baseRegionLabelsByKey) {
  * England aggregate is always first. English sub-regions follow when `englandExpanded` is true.
  * Scotland, Wales, and Northern Ireland are appended when present in `baseRegionLabelsByKey`.
  * Each row carries `{ regionKey, regionLabel, isEnglandAggregate, isEnglandRegion }`.
+ * @param {Map<string, string>} baseRegionLabelsByKey - Map from normalized region key to display label.
+ * @param {boolean} englandExpanded - Whether English sub-regions should be included after the England aggregate row.
+ * @returns {Array<{regionKey: string, regionLabel: string, isEnglandAggregate: boolean, isEnglandRegion: boolean}>} Ordered row descriptors for the predict input grid.
  */
 export function collectPredictInputRows(baseRegionLabelsByKey, englandExpanded) {
   const allRegions = collectPredictAllRegions(baseRegionLabelsByKey);

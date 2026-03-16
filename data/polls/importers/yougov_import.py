@@ -173,6 +173,109 @@ def extract_pdf_text(pdf_url: str) -> str:
         return "\n".join((page.extract_text() or "") for page in reader.pages)
 
 
+_OLD_FORMAT_REGIONAL_INDICES = {
+    "Wales": -6,
+    "Scotland": -5,
+    "North": -4,
+    "Midlands": -3,
+    "London": -2,
+    "Rest of South": -1,
+}
+
+_ENGLAND_REGION_ORDER = ["North", "Midlands", "London", "Rest of South"]
+
+
+def _parse_old_format_rows(
+    lines: list[str],
+    row_labels: list[str],
+) -> dict[str, dict[str, float]]:
+    """Old PDF format: last 6 values of each cross-tab row are the 6 regions."""
+    result: dict[str, dict[str, float]] = {}
+    for line in lines:
+        matched_label = None
+        for label in row_labels:
+            if line.startswith(f"{label} "):
+                matched_label = label
+                break
+        if matched_label is None:
+            continue
+        values = [int(v) for v in re.findall(r"-?\d+", line)]
+        if len(values) < 6:
+            continue
+        party_name = PARTY_NAME_MAP[matched_label]
+        result[party_name] = {
+            region: float(values[index])
+            for region, index in _OLD_FORMAT_REGIONAL_INDICES.items()
+        }
+    return result
+
+
+def _parse_new_format(
+    section: str,
+    lines: list[str],
+    row_labels: list[str],
+) -> dict[str, dict[str, float]]:
+    """New PDF format: Wales/Scotland from MRP cross-tab rows (-2/-1),
+    England regions from the separate 'Region in England' unlabelled table."""
+    # Step 1: Wales and Scotland — first occurrence of each party (MRP headline rows)
+    wales_scotland: dict[str, dict[str, float]] = {}
+    party_order: list[str] = []
+    for line in lines:
+        matched_label = None
+        for label in row_labels:
+            if line.startswith(f"{label} "):
+                matched_label = label
+                break
+        if matched_label is None:
+            continue
+        values = [int(v) for v in re.findall(r"-?\d+", line)]
+        if len(values) < 3:
+            continue
+        party_name = PARTY_NAME_MAP[matched_label]
+        if party_name not in wales_scotland:
+            wales_scotland[party_name] = {
+                "Wales": float(values[-2]),
+                "Scotland": float(values[-1]),
+            }
+            party_order.append(party_name)
+
+    # Step 2: England regions — unlabelled table after "% % % %" in the region block
+    block_match = re.search(r"North\s+Midlands\s+London\s+Rest of\s*\n?\s*South", section)
+    if block_match is None:
+        raise ValueError("Could not find England regions table in new-format PDF")
+    pct_match = re.compile(r"%\s+%\s+%\s+%").search(section, block_match.end())
+    if pct_match is None:
+        raise ValueError("Could not find '% % % %' header in England regions table")
+
+    england_regions: dict[str, dict[str, float]] = {}
+    party_idx = 0
+    for line in section[pct_match.end():].splitlines():
+        if party_idx >= len(party_order):
+            break
+        line = line.strip()
+        if not line:
+            continue
+        values = re.findall(r"\d+", line)
+        if len(values) == 4:
+            party_name = party_order[party_idx]
+            england_regions[party_name] = {
+                region: float(values[i])
+                for i, region in enumerate(_ENGLAND_REGION_ORDER)
+            }
+            party_idx += 1
+
+    if len(england_regions) != len(party_order):
+        raise ValueError(
+            f"England regions table incomplete: expected {len(party_order)} parties, "
+            f"got {len(england_regions)}"
+        )
+
+    return {
+        party_name: {**wales_scotland[party_name], **england_regions[party_name]}
+        for party_name in party_order
+    }
+
+
 def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
     start_marker = "Westminster Voting Intention"
     end_marker = "Now, thinking specifically"
@@ -184,38 +287,12 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
 
     section = full_text[start_index:end_index]
     lines = [line.strip() for line in section.splitlines() if line.strip()]
-
-    regional_indices = {
-        "Wales": -6,
-        "Scotland": -5,
-        "North": -4,
-        "Midlands": -3,
-        "London": -2,
-        "Rest of South": -1,
-    }
-
     row_labels = sorted(PARTY_NAME_MAP.keys(), key=len, reverse=True)
-    result: dict[str, dict[str, float]] = {}
 
-    for line in lines:
-        matched_label = None
-        for label in row_labels:
-            if line.startswith(f"{label} "):
-                matched_label = label
-                break
-
-        if matched_label is None:
-            continue
-
-        values = [int(value) for value in re.findall(r"-?\d+", line)]
-        if len(values) < 6:
-            continue
-
-        party_name = PARTY_NAME_MAP[matched_label]
-        result[party_name] = {
-            region: float(values[index])
-            for region, index in regional_indices.items()
-        }
+    if "Region in England" in section:
+        result = _parse_new_format(section, lines, row_labels)
+    else:
+        result = _parse_old_format_rows(lines, row_labels)
 
     missing_parties = [p for p in PARTY_NAME_MAP.values() if p not in result]
     if missing_parties:

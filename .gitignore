@@ -8,7 +8,7 @@ __pycache__/
 *$py.class
 
 
-election_data/*
+data/election_data/*
 
 /guesstheyear/*.db-wal
 /guesstheyear/*.db-shm

@@ -8,6 +8,7 @@ Before changing code, read `.agents/` docs relevant to the area:
 
 - `.agents/00-overview.md`
 - `.agents/01-file-map.md` (file mapping)
+- `.agents/coding-standards.md` (documentation, testing, and code quality standards — always apply)
 - Area docs (data core, imports, polls, UNS, tests, guesstheyear, etc.)
 
 Use `.agents/01-file-map.md` to locate where functionality lives.

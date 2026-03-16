@@ -1192,6 +1192,586 @@ describe('projectedSeatForPredictMode', () => {
     // england swing should NOT apply to NI seat — uu share unchanged
     expect(projected.votes.uu).toBeCloseTo(15000, 0);
   });
+
+  it('normalizes projected votes to totalVotes when swings push shares over 100%', () => {
+    // UUP base 60%, SF base 40% in this NI seat → both modelled
+    // Apply +60pp swing to UUP and -20pp to SF → projected: UUP 120%, SF 20% (sum 140%)
+    // After normalization total votes should still equal 25000
+    const niSeat = {
+      seat: 'Fermanagh South Tyrone', region: 'northernireland', winner: 'uu', turnout: 0,
+      votes: { uu: 15000, sinnfein: 10000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('uu', new Map([['northernireland', 60]]));
+    swingsByParty.set('sinnfein', new Map([['northernireland', -20]]));
+    const projected = projectedSeatForPredictMode(niSeat, swingsByParty);
+    const totalProjected = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(totalProjected).toBeCloseTo(25000, 0);
+    expect(projected.turnout).toBe(25000);
+    expect(projected.winner).toBe('uu');
+    Object.values(projected.votes).forEach((v) => {
+      expect((Number(v) / projected.turnout) * 100).toBeLessThanOrEqual(100);
+    });
+  });
+
+  // ── Scotland / Wales / NI region-specific tests ───────────────────────────
+
+  it('applies SNP swing in a Scotland seat and changes winner', () => {
+    // SNP base 37.5% (15k/40k), Labour base 50% (20k/40k)
+    // +20pp SNP swing → SNP 57.5% > Labour 50% → SNP wins
+    const seat = {
+      seat: 'Edinburgh East', region: 'scotland', winner: 'labour', turnout: 0,
+      votes: { labour: 20000, snp: 15000, conservative: 5000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('snp', new Map([['scotland', 20]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    expect(projected.winner).toBe('snp');
+    expect(projected.votes.snp).toBeGreaterThan(projected.votes.labour);
+    const total = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(total).toBeCloseTo(40000, 0);
+  });
+
+  it('applies Plaid Cymru swing in a Wales seat and changes winner', () => {
+    // Plaid base 50% (15k/30k), Labour base 33.3% (10k/30k)
+    // -30pp Plaid swing → Plaid 20%, Labour 33.3% → Labour wins
+    const seat = {
+      seat: 'Ceredigion Preseli', region: 'wales', winner: 'plaidcymru', turnout: 0,
+      votes: { plaidcymru: 15000, labour: 10000, libdems: 5000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('plaidcymru', new Map([['wales', -30]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    expect(projected.winner).toBe('labour');
+    const total = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(total).toBeCloseTo(30000, 0);
+  });
+
+  it('does not apply england-level swing to a Scotland seat', () => {
+    const seat = {
+      seat: 'Glasgow East', region: 'scotland', winner: 'labour', turnout: 0,
+      votes: { labour: 20000, snp: 15000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('snp', new Map([['england', 30]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    // england fallback only applies to English sub-regions — SNP unchanged
+    expect(projected.votes.snp).toBeCloseTo(15000, 0);
+    expect(projected.winner).toBe('labour');
+  });
+
+  it('applies england-level swing as fallback for an English sub-region', () => {
+    // Conservative base 22.2% (10k/45k) in Northwest seat
+    // +20pp via england aggregate → Conservative 42.2% → more votes
+    const seat = {
+      seat: 'Manchester Central', region: 'northwest', winner: 'labour', turnout: 0,
+      votes: { labour: 30000, conservative: 10000, libdems: 5000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('conservative', new Map([['england', 20]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    expect(projected.votes.conservative).toBeGreaterThan(10000);
+    const total = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(total).toBeCloseTo(45000, 0);
+  });
+
+  it('handles NI multi-party mixed swings (DUP down, Alliance up)', () => {
+    // DUP base 40% (16k), SF base 35% (14k), Alliance base 15% (6k), SDLP 10% (4k)
+    // DUP -10pp → 30%, Alliance +15pp → 30% — turnout preserved
+    const seat = {
+      seat: 'Belfast North', region: 'northernireland', winner: 'dup', turnout: 0,
+      votes: { dup: 16000, sinnfein: 14000, alliance: 6000, sdlp: 4000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('dup', new Map([['northernireland', -10]]));
+    swingsByParty.set('alliance', new Map([['northernireland', 15]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    expect(projected.votes.dup).toBeLessThan(16000);
+    expect(projected.votes.alliance).toBeGreaterThan(6000);
+    const total = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(total).toBeCloseTo(40000, 0);
+  });
+
+  it('redistributes freed share to non-modelled parties when modelled parties shrink', () => {
+    // Labour 50% (30k), Conservative 33.3% (20k), Independent 16.7% (10k) — total 60k
+    // Independent is NOT in PREDICT_MODELLED_PARTY_KEYS
+    // Labour -10pp → adjustedTrackedShareSum drops → adjustedOtherShare grows → Independent gains
+    const seat = {
+      seat: 'Hereford', region: 'westmidlands', winner: 'labour', turnout: 0,
+      votes: { labour: 30000, conservative: 20000, independent_joe: 10000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('labour', new Map([['westmidlands', -10]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    expect(projected.votes.independent_joe).toBeGreaterThan(10000);
+    const total = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(total).toBeCloseTo(60000, 0);
+  });
+
+  it('assigns zero to non-modelled parties when modelled shares exceed 100%', () => {
+    // Labour 50% (30k), Conservative 33.3% (20k), Independent 16.7% (10k) — total 60k
+    // Labour +40pp → adjusted modelled sum > 100% → adjustedOtherShare clamped to 0
+    // Independent should get no votes
+    const seat = {
+      seat: 'Birmingham Hall Green', region: 'westmidlands', winner: 'labour', turnout: 0,
+      votes: { labour: 30000, conservative: 20000, independent_ali: 10000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('labour', new Map([['westmidlands', 40]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    expect(projected.votes.independent_ali ?? 0).toBe(0);
+    expect(projected.winner).toBe('labour');
+    const total = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(total).toBeCloseTo(60000, 0);
+  });
+
+  it('normalizes correctly when multiple GB parties all receive large positive swings', () => {
+    // England seat: Labour 30% (15k), Conservative 40% (20k), LibDems 20% (10k), Reform 10% (5k) — total 50k
+    // Conservative +40pp, Labour +30pp → projected modelled sum > 100%
+    // All vote % must remain ≤ 100% after normalization
+    const seat = {
+      seat: 'Swindon North', region: 'southwestengland', winner: 'conservative', turnout: 0,
+      votes: { labour: 15000, conservative: 20000, libdems: 10000, reform: 5000 },
+    };
+    const swingsByParty = new Map();
+    swingsByParty.set('conservative', new Map([['southwestengland', 40]]));
+    swingsByParty.set('labour', new Map([['southwestengland', 30]]));
+    const projected = projectedSeatForPredictMode(seat, swingsByParty);
+    const total = Object.values(projected.votes).reduce((s, v) => s + Number(v || 0), 0);
+    expect(total).toBeCloseTo(50000, 0);
+    Object.values(projected.votes).forEach((v) => {
+      expect((Number(v) / projected.turnout) * 100).toBeLessThanOrEqual(100);
+    });
+  });
+
+  // ── Exact vote arithmetic ─────────────────────────────────────────────────
+  // Seat used throughout: Labour 60% (30k), Conservative 30% (15k), Reform 10% (5k) — total 50k
+
+  describe('exact vote arithmetic', () => {
+    const seat = {
+      seat: 'Bristol West', region: 'southwestengland', winner: 'labour', turnout: 0,
+      votes: { labour: 30000, conservative: 15000, reform: 5000 },
+    };
+
+    it('computes exact Labour vote reduction for a -10pp swing', () => {
+      // Labour 60% -10pp → 50% → 25000 votes
+      const swingsByParty = new Map([['labour', new Map([['southwestengland', -10]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.labour).toBeCloseTo(25000, 1);
+    });
+
+    it('computes exact Conservative vote increase for a +10pp swing (paired with Labour -10pp to keep sum at 100%)', () => {
+      // Conservative 30% +10pp → 40% → 20000 votes; Labour -10pp keeps total modelled share at 100%
+      const swingsByParty = new Map([
+        ['conservative', new Map([['southwestengland', 10]])],
+        ['labour', new Map([['southwestengland', -10]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.conservative).toBeCloseTo(20000, 1);
+    });
+
+    it('applies simultaneous swings to two parties independently', () => {
+      // Labour -5pp → 55% (27500), Reform +5pp → 15% (7500)
+      // adjustedTrackedShareSum = 55+30+15 = 100% → no normalization
+      const swingsByParty = new Map([
+        ['labour', new Map([['southwestengland', -5]])],
+        ['reform', new Map([['southwestengland', 5]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.labour).toBeCloseTo(27500, 1);
+      expect(projected.votes.reform).toBeCloseTo(7500, 1);
+      expect(projected.votes.conservative).toBeCloseTo(15000, 1);
+    });
+
+    it('applies a sub-1pp fractional swing correctly', () => {
+      // Labour 60% -0.5pp → 59.5% → 29750 votes; total modelled = 99.5% → no normalization
+      const swingsByParty = new Map([['labour', new Map([['southwestengland', -0.5]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.labour).toBeCloseTo(29750, 0);
+    });
+
+    it('produces an "others" bucket for freed share when all parties are modelled', () => {
+      // Labour 60% -10pp → 50%; all three parties modelled; freed 10% → others
+      // adjustedTrackedShareSum = 50+30+10 = 90%, no non-tracked → others = 5000
+      const swingsByParty = new Map([['labour', new Map([['southwestengland', -10]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.others).toBeCloseTo(5000, 1);
+    });
+
+    it('total projected votes always equals totalVotes (no swing)', () => {
+      const projected = projectedSeatForPredictMode(seat, new Map());
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+    });
+
+    it('total projected votes always equals totalVotes (with swing under 100%)', () => {
+      const swingsByParty = new Map([['labour', new Map([['southwestengland', -15]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+    });
+
+    it('total projected votes always equals totalVotes (with swing over 100%)', () => {
+      const swingsByParty = new Map([['conservative', new Map([['southwestengland', 50]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+    });
+  });
+
+  // ── Winner determination ──────────────────────────────────────────────────
+
+  describe('winner determination', () => {
+    const seat = {
+      seat: 'Bristol West', region: 'southwestengland', winner: 'labour', turnout: 0,
+      votes: { labour: 30000, conservative: 15000, reform: 5000 },
+    };
+
+    it('winner stays Labour with a small Conservative swing that does not overtake', () => {
+      // Conservative +20pp → 50%, Labour 60% — Labour still leads
+      const swingsByParty = new Map([['conservative', new Map([['southwestengland', 20]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.winner).toBe('labour');
+    });
+
+    it('winner flips to Conservative when swing is large enough to overtake (over-100% case)', () => {
+      // Conservative +35pp → 65%, Labour stays 60%; modelled sum > 100% so normalize
+      // After normalization Conservative (32500) still > Labour (30000) pre-scale,
+      // so Conservative wins regardless: 32500/67500 > 30000/67500
+      const swingsByParty = new Map([['conservative', new Map([['southwestengland', 35]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.winner).toBe('conservative');
+    });
+
+    it('winner flips to Reform when it gets a very large positive swing', () => {
+      // Reform +65pp → 75%, Labour 60%, Conservative 30%; sum > 100% → normalize
+      // Reform projected = 37500, Labour = 30000 → Reform wins
+      const swingsByParty = new Map([['reform', new Map([['southwestengland', 65]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.winner).toBe('reform');
+    });
+
+    it('winner becomes "others" when all modelled parties are clamped to 0 and no non-tracked parties exist', () => {
+      const swingsByParty = new Map([
+        ['labour', new Map([['southwestengland', -100]])],
+        ['conservative', new Map([['southwestengland', -100]])],
+        ['reform', new Map([['southwestengland', -100]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.winner).toBe('others');
+    });
+
+    it('preserves winner from baseSeat when all parties produce zero projected votes (empty projectedVotes)', () => {
+      // Contrived: pass a seat with 0 votes so we hit the early return
+      const emptySeat = { seat: 'X', region: 'southwestengland', winner: 'labour', turnout: 0, votes: {} };
+      const projected = projectedSeatForPredictMode(emptySeat, new Map());
+      expect(projected.winner).toBe('labour');
+    });
+  });
+
+  // ── Non-modelled party redistribution ────────────────────────────────────
+
+  describe('non-modelled party redistribution', () => {
+    it('single non-modelled party receives freed share exactly', () => {
+      // Labour 50% (25k), Conservative 20% (10k), ukip 30% (15k) — total 50k
+      // ukip is non-modelled; Labour -10pp → adjustedTrackedShareSum=60%, adjustedOtherShare=40%
+      // ukip gets 40% of 50k = 20000
+      const seat = {
+        seat: 'Clacton', region: 'eastofengland', winner: 'ukip', turnout: 0,
+        votes: { labour: 25000, conservative: 10000, ukip: 15000 },
+      };
+      const swingsByParty = new Map([['labour', new Map([['eastofengland', -10]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.ukip).toBeCloseTo(20000, 1);
+    });
+
+    it('two non-modelled parties share freed votes in proportion to their baseline', () => {
+      // Labour 50% (25k), Conservative 20% (10k), ukip 20% (10k), ind 10% (5k) — total 50k
+      // Labour -10pp → adjustedTrackedShareSum=60%, adjustedOtherShare=40%
+      // nonTrackedVotes = 15k; ukip weight=2/3, ind weight=1/3
+      // ukip gets (40*2/3)% * 50k = 13333.3, ind gets (40*1/3)% * 50k = 6666.7
+      const seat = {
+        seat: 'Thurrock', region: 'eastofengland', winner: 'labour', turnout: 0,
+        votes: { labour: 25000, conservative: 10000, ukip: 10000, ind: 5000 },
+      };
+      const swingsByParty = new Map([['labour', new Map([['eastofengland', -10]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.ukip).toBeCloseTo(13333, 0);
+      expect(projected.votes.ind).toBeCloseTo(6667, 0);
+      // Proportional ratio preserved
+      expect(projected.votes.ukip / projected.votes.ind).toBeCloseTo(2, 2);
+    });
+
+    it('non-modelled party with zero baseline is not weighted — freed share goes to synthetic others instead', () => {
+      // Labour 50% (25k), Conservative 50% (25k), ind 0 — total 50k
+      // Labour -10pp; adjustedOtherShare=10%; nonTrackedVotes=0 → projectedVotes.others created
+      const seat = {
+        seat: 'X', region: 'eastofengland', winner: 'conservative', turnout: 0,
+        votes: { labour: 25000, conservative: 25000, ind: 0 },
+      };
+      const swingsByParty = new Map([['labour', new Map([['eastofengland', -10]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.ind ?? 0).toBe(0);
+      expect(projected.votes.others).toBeCloseTo(5000, 1);
+    });
+
+    it('non-modelled party wins seat when all modelled parties are clamped to zero', () => {
+      // Labour 50% (25k), Conservative 30% (15k), ukip 20% (10k) — total 50k
+      // Both modelled → 0; adjustedOtherShare=100%; ukip gets all 50k
+      const seat = {
+        seat: 'Clacton', region: 'eastofengland', winner: 'labour', turnout: 0,
+        votes: { labour: 25000, conservative: 15000, ukip: 10000 },
+      };
+      const swingsByParty = new Map([
+        ['labour', new Map([['eastofengland', -100]])],
+        ['conservative', new Map([['eastofengland', -100]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.ukip).toBeCloseTo(50000, 0);
+      expect(projected.winner).toBe('ukip');
+    });
+
+    it('non-modelled parties get zero votes when modelled shares exceed 100%', () => {
+      // adjustedOtherShare is clamped to 0; non-tracked parties are not added to projectedVotes
+      const seat = {
+        seat: 'X', region: 'eastofengland', winner: 'labour', turnout: 0,
+        votes: { labour: 25000, conservative: 15000, ukip: 10000 },
+      };
+      const swingsByParty = new Map([['labour', new Map([['eastofengland', 50]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // Labour 50%+50=100%, Conservative 30%; sum=130% > 100% → adjustedOtherShare=0
+      expect(projected.votes.ukip ?? 0).toBe(0);
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+    });
+  });
+
+  // ── Region swing fallback logic ───────────────────────────────────────────
+
+  describe('region swing fallback', () => {
+    it('direct sub-region swing takes precedence over england aggregate', () => {
+      // Northwest-specific Labour swing = +20pp; england aggregate = -30pp
+      // Direct entry should win → Labour gains votes
+      const seat = {
+        seat: 'Manchester Gorton', region: 'northwest', winner: 'labour', turnout: 0,
+        votes: { labour: 30000, conservative: 15000, reform: 5000 },
+      };
+      const swingsByParty = new Map([
+        ['labour', new Map([['northwest', 20], ['england', -30]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // Labour should increase (direct +20pp used, not england -30pp)
+      expect(projected.votes.labour).toBeGreaterThan(30000);
+    });
+
+    it('england aggregate is used when no direct sub-region entry exists', () => {
+      const seat = {
+        seat: 'Manchester Gorton', region: 'northwest', winner: 'labour', turnout: 0,
+        votes: { labour: 30000, conservative: 15000, reform: 5000 },
+      };
+      const swingsByParty = new Map([
+        ['labour', new Map([['england', -20]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // Labour 60% -20pp → 40% → 20000
+      expect(projected.votes.labour).toBeCloseTo(20000, 1);
+    });
+
+    it('Wales seat does not use england aggregate swing', () => {
+      const seat = {
+        seat: 'Cardiff Central', region: 'wales', winner: 'labour', turnout: 0,
+        votes: { labour: 20000, conservative: 15000, plaidcymru: 15000 },
+      };
+      const swingsByParty = new Map([
+        ['labour', new Map([['england', -20]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // Wales is not English → england fallback ignored → Labour unchanged
+      expect(projected.votes.labour).toBeCloseTo(20000, 1);
+    });
+
+    it('Scotland seat does not use england aggregate swing', () => {
+      const seat = {
+        seat: 'Dundee East', region: 'scotland', winner: 'snp', turnout: 0,
+        votes: { snp: 25000, labour: 15000, conservative: 10000 },
+      };
+      const swingsByParty = new Map([
+        ['snp', new Map([['england', 30]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // Scotland is not English → england fallback ignored → SNP unchanged
+      expect(projected.votes.snp).toBeCloseTo(25000, 1);
+    });
+
+    it('NI seat does not use england aggregate swing for a GB party', () => {
+      const seat = {
+        seat: 'Belfast East', region: 'northernireland', winner: 'dup', turnout: 0,
+        votes: { dup: 20000, alliance: 15000, sinnfein: 10000 },
+      };
+      const swingsByParty = new Map([
+        ['alliance', new Map([['england', 25]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // NI is not English → england fallback ignored → Alliance unchanged
+      expect(projected.votes.alliance).toBeCloseTo(15000, 1);
+    });
+
+    it('party absent from swingsByParty gets zero swing', () => {
+      // Labour has no entry at all; Conservative -10pp (negative keeps modelled sum ≤ 100%)
+      const seat = {
+        seat: 'Bath', region: 'southwestengland', winner: 'libdems', turnout: 0,
+        votes: { libdems: 25000, labour: 15000, conservative: 10000 },
+      };
+      const swingsByParty = new Map([
+        ['conservative', new Map([['southwestengland', -10]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // Labour has no swing entry → its votes should be exactly unchanged
+      expect(projected.votes.labour).toBeCloseTo(15000, 1);
+    });
+
+    it('direct swing of exactly 0 falls through to england aggregate', () => {
+      // A manually set zero entry (unusual but possible in tests) should not count as a direct match
+      // because resolvedSwingValue uses Math.abs(direct) > 1e-9 as the guard
+      const seat = {
+        seat: 'Norwich North', region: 'eastofengland', winner: 'labour', turnout: 0,
+        votes: { labour: 30000, conservative: 15000, reform: 5000 },
+      };
+      const swingsByParty = new Map([
+        ['labour', new Map([['eastofengland', 0], ['england', -10]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      // Direct 0 is ignored; england -10pp used → Labour 60%-10 = 50% → 25000
+      expect(projected.votes.labour).toBeCloseTo(25000, 1);
+    });
+  });
+
+  // ── Normalization when shares exceed 100% ────────────────────────────────
+
+  describe('normalization when modelled shares exceed 100%', () => {
+    const seat = {
+      seat: 'Bristol West', region: 'southwestengland', winner: 'labour', turnout: 0,
+      votes: { labour: 30000, conservative: 15000, reform: 5000 },
+    };
+
+    it('does not alter votes when sum is exactly 100%', () => {
+      // No swings → no normalization path triggered
+      const projected = projectedSeatForPredictMode(seat, new Map());
+      expect(projected.votes.labour).toBeCloseTo(30000, 1);
+      expect(projected.votes.conservative).toBeCloseTo(15000, 1);
+      expect(projected.votes.reform).toBeCloseTo(5000, 1);
+    });
+
+    it('normalizes correctly for a sum just over 100% (101%)', () => {
+      // Conservative +1pp → 31%; sum of modelled = 60+31+10 = 101%
+      // scale = 50000/50500 ≈ 0.99010
+      const swingsByParty = new Map([['conservative', new Map([['southwestengland', 1]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+      expect(projected.winner).toBe('labour');
+    });
+
+    it('normalizes correctly for a sum far over 100% (200%)', () => {
+      // Conservative +70pp → 100%; Labour 60%, Reform 10% → sum = 170%
+      const swingsByParty = new Map([['conservative', new Map([['southwestengland', 70]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+    });
+
+    it('winner order is preserved after normalization', () => {
+      // Conservative +35pp → 65% vs Labour 60% → Conservative wins pre- and post-normalization
+      const swingsByParty = new Map([['conservative', new Map([['southwestengland', 35]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.winner).toBe('conservative');
+      expect(projected.votes.conservative).toBeGreaterThan(projected.votes.labour);
+    });
+
+    it('all per-party vote percentages stay ≤ 100% after normalization', () => {
+      // All parties get large positive swings
+      const swingsByParty = new Map([
+        ['labour', new Map([['southwestengland', 50]])],
+        ['conservative', new Map([['southwestengland', 50]])],
+        ['reform', new Map([['southwestengland', 50]])],
+      ]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      Object.values(projected.votes).forEach((v) => {
+        expect((Number(v) / projected.turnout) * 100).toBeLessThanOrEqual(100);
+      });
+    });
+  });
+
+  // ── Modelled party with zero baseline ────────────────────────────────────
+
+  describe('modelled party with zero baseline in the seat', () => {
+    it('a modelled party absent from the baseline gains votes when given a positive swing', () => {
+      // Reform is not in this Scotland seat — baseline share = 0%
+      // Reform +20pp → projected Reform share = 20%, causes over-100% → normalized
+      const seat = {
+        seat: 'Edinburgh North', region: 'scotland', winner: 'labour', turnout: 0,
+        votes: { labour: 30000, snp: 20000 },
+      };
+      const swingsByParty = new Map([['reform', new Map([['scotland', 20]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(Number(projected.votes.reform || 0)).toBeGreaterThan(0);
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+    });
+
+    it('a modelled party absent from the baseline stays at zero with a negative swing', () => {
+      // SNP not in this England seat; SNP -20pp → adjusted = max(0, 0-20) = 0 → no votes
+      const seat = {
+        seat: 'Bristol West', region: 'southwestengland', winner: 'labour', turnout: 0,
+        votes: { labour: 30000, conservative: 15000, reform: 5000 },
+      };
+      const swingsByParty = new Map([['snp', new Map([['southwestengland', -20]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(projected.votes.snp ?? 0).toBe(0);
+    });
+
+    it('Green party absent from a seat gains votes proportionally when given a positive swing', () => {
+      const seat = {
+        seat: 'Cheltenham', region: 'southwestengland', winner: 'libdems', turnout: 0,
+        votes: { libdems: 25000, labour: 15000, conservative: 10000 },
+      };
+      const swingsByParty = new Map([['green', new Map([['southwestengland', 15]])]]);
+      const projected = projectedSeatForPredictMode(seat, swingsByParty);
+      expect(Number(projected.votes.green || 0)).toBeGreaterThan(0);
+      const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+      expect(total).toBeCloseTo(50000, 0);
+    });
+  });
+
+  // ── Turnout invariant across scenarios ───────────────────────────────────
+
+  describe('turnout invariant', () => {
+    const seat = {
+      seat: 'Bristol West', region: 'southwestengland', winner: 'labour', turnout: 0,
+      votes: { labour: 30000, conservative: 15000, reform: 5000 },
+    };
+
+    const scenarios = [
+      ['no swings', new Map()],
+      ['small swing', new Map([['labour', new Map([['southwestengland', -5]])]])],
+      ['large swing under 100%', new Map([['labour', new Map([['southwestengland', -30]])]])],
+      ['swing that exceeds 100%', new Map([['conservative', new Map([['southwestengland', 60]])]])],
+      ['all parties clamped to 0', new Map([
+        ['labour', new Map([['southwestengland', -100]])],
+        ['conservative', new Map([['southwestengland', -100]])],
+        ['reform', new Map([['southwestengland', -100]])],
+      ])],
+    ];
+
+    scenarios.forEach(([label, swingsByParty]) => {
+      it(`total projected votes equals totalVotes for: ${label}`, () => {
+        const projected = projectedSeatForPredictMode(seat, swingsByParty);
+        const total = Object.values(projected.votes).reduce((s, v) => s + Number(v), 0);
+        expect(total).toBeCloseTo(50000, 0);
+        expect(projected.turnout).toBe(50000);
+      });
+    });
+  });
 });
 
 // ── seatNameFromFeature ───────────────────────────────────────────────────────

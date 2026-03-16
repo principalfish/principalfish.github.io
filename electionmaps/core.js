@@ -630,6 +630,14 @@ export function projectedSeatForPredictMode(baseSeat, swingsByParty) {
     }
   }
 
+  const projectedTotal = Object.values(projectedVotes).reduce((s, v) => s + Number(v || 0), 0);
+  if (projectedTotal > 0 && Math.abs(projectedTotal - totalVotes) > 1e-6) {
+    const scale = totalVotes / projectedTotal;
+    Object.keys(projectedVotes).forEach((k) => {
+      projectedVotes[k] = projectedVotes[k] * scale;
+    });
+  }
+
   const winner = Object.entries(projectedVotes)
     .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0] || baseSeat.winner || 'others';
 

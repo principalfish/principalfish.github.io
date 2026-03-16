@@ -22,6 +22,7 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Sequence
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR.parent
@@ -38,7 +39,7 @@ REPO_ROOT = DATA_DIR.parent
 OUTPUT_ROOT_DEFAULT = REPO_ROOT / "electionmaps" / "data"
 LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files"
 
-SUPPLEMENTAL_LEGACY_ELECTIONS = [
+SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
     {
         "id": "2019-general-changed-boundaries",
         "name": "2019 Election (changed boundaries)",
@@ -124,7 +125,7 @@ def normalize_vote_total_value(value: float) -> int | float:
     return rounded
 
 
-def choose_winner(votes: list[Vote]) -> Vote | None:
+def choose_winner(votes: Sequence[Vote]) -> Vote | None:
     elected = [vote for vote in votes if vote.elected]
     if elected:
         return sorted(elected, key=lambda vote: (vote.vote_total or 0), reverse=True)[0]
@@ -191,8 +192,8 @@ def party_key_for_party(party: Party) -> str:
     return PARTY_NAME_TO_KEY.get(normalized_name, normalized_name)
 
 
-def build_manifest_party_settings(parties: list[Party]) -> list[dict]:
-    entries: list[dict] = []
+def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
 
     for party in sorted(parties, key=lambda row: row.name.lower()):
         key = party_key_for_party(party)
@@ -208,8 +209,8 @@ def build_manifest_party_settings(parties: list[Party]) -> list[dict]:
     return entries
 
 
-def build_manifest_regions_by_map_id(regions: list[Region]) -> dict[str, list[dict]]:
-    regions_by_map_id: dict[str, list[dict]] = defaultdict(list)
+def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, list[dict[str, Any]]]:
+    regions_by_map_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
     for region in sorted(regions, key=lambda row: (row.map_id, row.name.lower(), row.id)):
         regions_by_map_id[str(region.map_id)].append(
@@ -222,7 +223,7 @@ def build_manifest_regions_by_map_id(regions: list[Region]) -> dict[str, list[di
     return dict(regions_by_map_id)
 
 
-def assign_comparison_elections(manifest_entries: list[dict]) -> None:
+def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     latest_general_id = next(
         (entry["id"] for entry in manifest_entries if entry.get("type") == ElectionType.uk_general.value),
         None,
@@ -248,12 +249,12 @@ OTHERS_PARTY_ID: int  # Set at startup by resolving the "Others" party from the 
 
 
 def convert_legacy_seatinfo_to_v4(
-    legacy_data: dict,
+    legacy_data: dict[str, Any],
     party_key_to_id: dict[str, int],
     region_key_to_id: dict[str, int],
-) -> dict:
+) -> dict[str, Any]:
     """Convert a legacy seatInfo/partyInfo keyed-by-seat-name payload to pf-results-v4."""
-    seats_out: list[dict] = []
+    seats_out: list[dict[str, Any]] = []
 
     for seat_name, value in legacy_data.items():
         if not isinstance(value, dict) or "seatInfo" not in value:
@@ -267,7 +268,7 @@ def convert_legacy_seatinfo_to_v4(
         winner_raw = normalize_region_name(seat_info.get("current") or "")
         winner_id = party_key_to_id.get(winner_raw, OTHERS_PARTY_ID)
 
-        compact: list[list] = []
+        compact: list[list[Any]] = []
         for pkey, pdata in party_info.items():
             total = normalize_vote_total_value(float(pdata.get("total") or 0))
             if float(total) <= 0:
@@ -296,17 +297,17 @@ def party_id_for_vote(vote: Vote) -> int:
     return vote.party.id
 
 
-def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year: int | None = None) -> dict:
+def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_year: int | None = None) -> dict[str, Any]:
     votes_by_seat: dict[int, list[Vote]] = defaultdict(list)
     for vote in votes:
         votes_by_seat[vote.seat_id].append(vote)
 
-    payload_seats: list[dict] = []
+    payload_seats: list[dict[str, Any]] = []
 
     for seat in sorted(seats, key=lambda row: row.seat_name):
         seat_votes = sorted(votes_by_seat.get(seat.seat_id, []), key=lambda row: (row.vote_total or 0), reverse=True)
 
-        party_info: dict[int, dict] = {}
+        party_info: dict[int, dict[str, Any]] = {}
         for vote in seat_votes:
             pid = party_id_for_vote(vote)
             vote_total_raw = float(vote.vote_total or 0)
@@ -356,7 +357,7 @@ def build_result_payload(seats: list[SeatRow], votes: list[Vote], election_year:
 
 
 
-def compact_votes_to_dict(compact_rows: list) -> dict[str, float | int]:
+def compact_votes_to_dict(compact_rows: list[Any]) -> dict[str, float | int]:
     normalized_votes: dict[str, float | int] = {}
     for row in compact_rows:
         if not isinstance(row, list) or len(row) < 2:
@@ -371,7 +372,7 @@ def compact_votes_to_dict(compact_rows: list) -> dict[str, float | int]:
     return normalized_votes
 
 
-def write_json(path: Path, payload: dict) -> None:
+def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
@@ -424,14 +425,14 @@ def parse_args() -> argparse.Namespace:
 
 
 def apply_supplemental_legacy_elections(
-    manifest_entries: list[dict],
+    manifest_entries: list[dict[str, Any]],
     map_files_by_id: dict[str, str],
     data_files_by_election_id: dict[str, str],
     results_dir: Path,
     legacy_files_dir: Path,
     dry_run: bool,
-    manifest_parties: list[dict] | None = None,
-    manifest_regions_by_map_id: dict[str, list[dict]] | None = None,
+    manifest_parties: list[dict[str, Any]] | None = None,
+    manifest_regions_by_map_id: dict[str, list[dict[str, Any]]] | None = None,
 ) -> None:
     for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
         election_id = supplemental["id"]
@@ -484,7 +485,7 @@ def apply_supplemental_legacy_elections(
         manifest_entries.insert(insert_index, supplemental_entry)
 
 
-def remove_comparison_for_supplemental_entries(manifest_entries: list[dict]) -> None:
+def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> None:
     ids_without_comparison = {
         supplemental["id"]
         for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS
@@ -570,13 +571,13 @@ def main() -> None:
         if args.output_file and len(elections) != 1:
             raise RuntimeError("--output-file supports exactly one target election")
 
-        manifest_entries: list[dict] = []
+        manifest_entries: list[dict[str, Any]] = []
         default_election_id: str | None = None
         map_files_by_id: dict[str, str] = {}
         data_files_by_election_id: dict[str, str] = {}
         written_map_ids: set[int] = set()
         manifest_id_by_db_id: dict[int, str] = {}
-        pending_by_election_rows: list[dict] = []
+        pending_by_election_rows: list[dict[str, Any]] = []
 
         for election in elections:
             map_row = election.map
@@ -591,7 +592,7 @@ def main() -> None:
                     .order_by(Seat.seat_name)
                 ).all()
             else:
-                seat_rows = session.execute(
+                seat_rows = session.execute(  # type: ignore[assignment]
                     select(Seat.id, Seat.seat_name, Region.id, Region.name)
                     .outerjoin(Region, Region.id == Seat.region_id)
                     .where(Seat.map_id == election.map_id)
@@ -722,7 +723,7 @@ def main() -> None:
         remove_comparison_for_supplemental_entries(manifest_entries)
 
         if pending_by_election_rows:
-            by_elections_by_parent_manifest_id: dict[str, list[dict]] = defaultdict(list)
+            by_elections_by_parent_manifest_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
             for by_election in pending_by_election_rows:
                 parent_db_id = by_election.get("parentDbId")
                 parent_manifest_id = manifest_id_by_db_id.get(parent_db_id) if parent_db_id is not None else None
@@ -731,7 +732,7 @@ def main() -> None:
                 by_elections_by_parent_manifest_id[parent_manifest_id].append(by_election)
 
             for parent_manifest_id, by_rows in sorted(by_elections_by_parent_manifest_id.items()):
-                all_changes: list[dict] = []
+                all_changes: list[dict[str, Any]] = []
                 for row in sorted(by_rows, key=lambda row: (row.get("date") or "", str(row.get("name") or ""))):
                     for change in row.get("changes", []):
                         if change.get("seat"):

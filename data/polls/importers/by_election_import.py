@@ -16,17 +16,20 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-from bs4 import BeautifulSoup
+from typing import Any
+
+from bs4 import BeautifulSoup, Tag
+from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import ElectionType
+from polls.import_types import ByElectionImportResult
 
 DEFAULT_PARENT_ELECTION_NAME = "2024 General Election"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -66,16 +69,18 @@ MONTH_MAP = {
 }
 
 
-@dataclass
-class ParsedCandidate:
+class ParsedCandidate(BaseModel):
+    """A candidate result parsed from a Wikipedia by-election page."""
+
     party_name: str
     candidate_name: str
-    votes: int
+    votes: int = Field(ge=0)
     elected: bool
 
 
-@dataclass
-class ByElectionImportPlan:
+class ByElectionImportPlan(BaseModel):
+    """Full import plan for a by-election: seat, candidates, and party IDs."""
+
     url: str
     constituency_name: str
     election_date: date | None
@@ -86,7 +91,7 @@ class ByElectionImportPlan:
     map_id: int
     seat_id: int | None
     seat_name_matched: str | None
-    party_id_by_name: dict[str, int] = field(default_factory=dict)
+    party_id_by_name: dict[str, int] = Field(default_factory=dict)
 
 
 def normalize_name(value: str) -> str:
@@ -97,7 +102,8 @@ def normalize_name(value: str) -> str:
 def fetch_wikipedia_html(url: str) -> str:
     req = Request(url, headers={"User-Agent": "ElectionMapsBot/1.0"})
     with urlopen(req, timeout=15) as response:
-        return response.read().decode("utf-8")
+        data: bytes = response.read()
+        return data.decode("utf-8")
 
 
 def parse_election_date(soup: BeautifulSoup) -> date | None:
@@ -108,7 +114,7 @@ def parse_election_date(soup: BeautifulSoup) -> date | None:
     approaches: first the labelled row, then any bold text in the infobox.
     """
     infobox = soup.find("table", class_="infobox")
-    if not infobox:
+    if not infobox or not isinstance(infobox, Tag):
         return None
 
     # Approach 1: labelled row (e.g. general election pages)
@@ -266,7 +272,7 @@ def _find_column(headers: list[str], keywords: list[str]) -> int | None:
     return None
 
 
-def _extract_party_from_row(cells: list, party_col: int | None, headers: list[str]) -> str | None:
+def _extract_party_from_row(cells: list[Any], party_col: int | None, headers: list[str]) -> str | None:
     """Extract party name from a results table row.
 
     Wikipedia results tables often have a narrow colour cell before the party name cell.
@@ -290,10 +296,10 @@ def _extract_party_from_row(cells: list, party_col: int | None, headers: list[st
     if link:
         text = link.get_text(strip=True)
 
-    if not text or text.lower() in ("", "n/a"):
+    if not text or str(text).lower() in ("", "n/a"):
         return None
 
-    return text
+    return str(text)
 
 
 def _map_party_name(raw_name: str) -> str:
@@ -375,7 +381,7 @@ def build_import_plan(
 def commit_import_plan(
     db: Database,
     plan: ByElectionImportPlan,
-) -> dict:
+) -> ByElectionImportResult:
     if not plan.seat_id:
         raise ValueError(f"No seat matched for constituency '{plan.constituency_name}'")
 
@@ -409,12 +415,12 @@ def commit_import_plan(
         )
         votes_inserted += 1
 
-    return {
-        "election_id": election.id,
-        "election_name": election.name,
-        "seat_name": plan.seat_name_matched,
-        "votes_inserted": votes_inserted,
-    }
+    return ByElectionImportResult(
+        election_id=election.id,
+        election_name=election.name,
+        seat_name=plan.seat_name_matched or "",
+        votes_inserted=votes_inserted,
+    )
 
 
 def main() -> None:
@@ -455,7 +461,7 @@ def main() -> None:
         return
 
     result = commit_import_plan(db, plan)
-    print(f"\nImported: election #{result['election_id']}, {result['votes_inserted']} votes")
+    print(f"\nImported: election #{result.election_id}, {result.votes_inserted} votes")
 
 
 if __name__ == "__main__":

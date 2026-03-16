@@ -25,6 +25,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUT_ROOT = REPO_ROOT / "electionmaps" / "data"
@@ -42,7 +43,7 @@ def normalize_vote_total(value: float) -> int | float:
     return rounded
 
 
-def build_region_key_to_id_by_map(manifest: dict) -> dict[int, dict[str, int]]:
+def build_region_key_to_id_by_map(manifest: dict[str, Any]) -> dict[int, dict[str, int]]:
     """Build per-mapId mapping from normalized region key to region ID."""
     by_map: dict[int, dict[str, int]] = {}
     for map_id_str, region_rows in (manifest.get("settings") or {}).get("regionsByMapId", {}).items():
@@ -56,7 +57,7 @@ def build_region_key_to_id_by_map(manifest: dict) -> dict[int, dict[str, int]]:
     return by_map
 
 
-def build_party_key_to_id(manifest: dict) -> dict[str, int]:
+def build_party_key_to_id(manifest: dict[str, Any]) -> dict[str, int]:
     """Build a mapping from canonical party key to party ID from elections.json parties array."""
     return {
         p["key"]: p["id"]
@@ -65,7 +66,7 @@ def build_party_key_to_id(manifest: dict) -> dict[str, int]:
     }
 
 
-def build_results_file_to_map_id(manifest: dict) -> dict[str, int]:
+def build_results_file_to_map_id(manifest: dict[str, Any]) -> dict[str, int]:
     """Build a mapping from results filename to mapId."""
     settings = manifest.get("settings") or {}
     data_files = settings.get("dataFilesByElectionId") or {}
@@ -89,10 +90,10 @@ def build_results_file_to_map_id(manifest: dict) -> dict[str, int]:
 
 
 def convert_legacy_to_v4_seats(
-    data: dict,
+    data: dict[str, Any],
     region_key_to_id: dict[str, int],
     party_key_to_id: dict[str, int],
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Convert legacy seatInfo/partyInfo keyed-by-name format to v4 seats list."""
     new_seats = []
     for seat_name, value in data.items():
@@ -182,7 +183,7 @@ def migrate_results_file(
                     continue
                 compact.append([pid, total])
 
-            new_seat: dict = {
+            new_seat: dict[str, Any] = {
                 "n": seat.get("n") or seat.get("seat") or "",
                 "r": region_id,
                 "w": seat.get("w") if seat.get("w") is not None else seat.get("winner"),

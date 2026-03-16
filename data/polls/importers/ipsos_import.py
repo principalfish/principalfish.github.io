@@ -6,12 +6,12 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from dataclasses import dataclass
 from datetime import date
 from io import BytesIO
 from pathlib import Path
 from urllib.request import Request, urlopen
 
+from pydantic import BaseModel, Field
 from pypdf import PdfReader
 from sqlalchemy import select
 
@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.import_types import PollImportResult
 
 DEFAULT_PDF_URL = "https://www.ipsos.com/sites/default/files/ct/news/documents/2026-01/politmkp_w1jan2026web1.pdf"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -54,26 +55,29 @@ REGION_COLUMN_ORDER = [
 ]
 
 
-@dataclass
-class ParsedPoll:
-    sample_size: int
+class ParsedPoll(BaseModel):
+    """Parsed poll data extracted from source."""
+
+    sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_percentages: dict[str, float]
     party_region_percentages: dict[str, dict[str, float]]
 
 
-@dataclass
-class PlannedPollRow:
+class PlannedPollRow(BaseModel):
+    """A single poll row planned for DB insertion."""
+
     party_id: int
     party_name: str
     region_id: int | None
     region_name: str
-    percentage: float
+    percentage: float = Field(ge=0, le=100)
 
 
-@dataclass
-class ImportPlan:
+class ImportPlan(BaseModel):
+    """Full import plan: pollster, poll metadata, and rows."""
+
     pollster_identifier: str
     pollster_name: str
     pollster_id: int | None
@@ -285,7 +289,7 @@ def _parse_party_region_percentages(lines: list[str]) -> dict[str, dict[str, flo
             continue
 
         parsed[canonical_party] = {
-            REGION_COLUMN_ORDER[position]: float(macro_values[position])
+            REGION_COLUMN_ORDER[position]: float(macro_values[position])  # type: ignore[arg-type]
             for position in range(len(REGION_COLUMN_ORDER))
         }
 
@@ -416,7 +420,7 @@ def commit_import_plan(
     plan: ImportPlan,
     *,
     replace_rows: bool = False,
-) -> dict[str, int | bool]:
+) -> PollImportResult:
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -459,19 +463,19 @@ def commit_import_plan(
         ).scalars().all()
 
         if existing_rows and not replace_rows:
-            return {
-                "created_pollster": created_pollster,
-                "created_poll": created_poll_row,
-                "poll_id": poll_id,
-                "inserted_rows": 0,
-                "replaced_rows": 0,
-                "skipped_existing_rows": True,
-            }
+            return PollImportResult(
+                created_pollster=created_pollster,
+                created_poll=created_poll_row,
+                poll_id=poll_id,
+                inserted_rows=0,
+                replaced_rows=0,
+                skipped_existing_rows=True,
+            )
 
         replaced_rows = 0
         if existing_rows and replace_rows:
-            for row in existing_rows:
-                session.delete(row)
+            for existing_row in existing_rows:
+                session.delete(existing_row)
                 replaced_rows += 1
 
         for row in plan.rows:
@@ -484,14 +488,14 @@ def commit_import_plan(
                 )
             )
 
-    return {
-        "created_pollster": created_pollster,
-        "created_poll": created_poll_row,
-        "poll_id": poll_id,
-        "inserted_rows": len(plan.rows),
-        "replaced_rows": replaced_rows,
-        "skipped_existing_rows": False,
-    }
+    return PollImportResult(
+        created_pollster=created_pollster,
+        created_poll=created_poll_row,
+        poll_id=poll_id,
+        inserted_rows=len(plan.rows),
+        replaced_rows=replaced_rows,
+        skipped_existing_rows=False,
+    )
 
 
 def _cli_preview(plan: ImportPlan) -> None:
@@ -546,25 +550,25 @@ def main() -> None:
         return
 
     result = commit_import_plan(db, plan, replace_rows=args.replace_rows)
-    if result["created_pollster"]:
+    if result.created_pollster:
         print(f"created pollster: {args.pollster_identifier}")
     else:
         print(f"pollster exists: {args.pollster_identifier}")
 
-    if result["created_poll"]:
-        print(f"created poll: {result['poll_id']}")
+    if result.created_poll:
+        print(f"created poll: {result.poll_id}")
     else:
-        print(f"poll exists: {result['poll_id']}")
+        print(f"poll exists: {result.poll_id}")
 
-    if result["skipped_existing_rows"]:
+    if result.skipped_existing_rows:
         print(
-            f"poll {result['poll_id']} already has rows; "
+            f"poll {result.poll_id} already has rows; "
             "use --replace-rows to overwrite"
         )
     else:
-        if result["replaced_rows"]:
-            print(f"deleted existing rows: {result['replaced_rows']}")
-        print(f"inserted poll rows: {result['inserted_rows']}")
+        if result.replaced_rows:
+            print(f"deleted existing rows: {result.replaced_rows}")
+        print(f"inserted poll rows: {result.inserted_rows}")
 
 
 if __name__ == "__main__":

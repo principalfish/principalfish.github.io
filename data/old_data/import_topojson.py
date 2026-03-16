@@ -14,6 +14,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from shapely.geometry import MultiPolygon, Polygon, shape
 
@@ -38,7 +39,7 @@ REGION_DISPLAY_NAMES = {
 }
 
 
-def decode_topojson(topo: dict, object_name: str) -> list[dict]:
+def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, Any]]:
     """Decode a TopoJSON topology into a list of GeoJSON-like feature dicts."""
     transform = topo.get("transform")
     arcs = topo["arcs"]
@@ -62,14 +63,14 @@ def decode_topojson(topo: dict, object_name: str) -> list[dict]:
     else:
         decoded_arcs = arcs
 
-    def decode_arc_index(idx):
+    def decode_arc_index(idx: int) -> list[list[float]]:
         if idx >= 0:
             return decoded_arcs[idx][:]
         else:
             return decoded_arcs[~idx][::-1]
 
-    def decode_ring(ring_indices):
-        coords = []
+    def decode_ring(ring_indices: list[int]) -> list[list[float]]:
+        coords: list[list[float]] = []
         for idx in ring_indices:
             arc_coords = decode_arc_index(idx)
             coords.extend(arc_coords if not coords else arc_coords[1:])
@@ -80,6 +81,7 @@ def decode_topojson(topo: dict, object_name: str) -> list[dict]:
     for geom in obj["geometries"]:
         props = geom.get("properties", {})
         geom_type = geom["type"]
+        coordinates: list[Any]
         if geom_type == "Polygon":
             coordinates = [decode_ring(ring) for ring in geom["arcs"]]
             geo = {"type": "Polygon", "coordinates": coordinates}
@@ -95,7 +97,7 @@ def decode_topojson(topo: dict, object_name: str) -> list[dict]:
     return features
 
 
-def ensure_multipolygon(geojson_geom: dict) -> MultiPolygon:
+def ensure_multipolygon(geojson_geom: dict[str, Any]) -> MultiPolygon:
     """Convert a GeoJSON geometry dict to a Shapely MultiPolygon."""
     geom = shape(geojson_geom)
     if isinstance(geom, Polygon):

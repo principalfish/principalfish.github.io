@@ -27,11 +27,12 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from db import Database
-from models import ElectionType, Party
+from models import ElectionType, Map, Party, Seat
 
 
 POST_2022_MAP_NAME_CANDIDATES = (
@@ -108,7 +109,7 @@ def humanize_party_name(party_key: str) -> str:
     return " ".join(part.title() for part in re.split(r"[_\-\s]+", party_key) if part)
 
 
-def choose_map(db: Database, map_name: str | None, map_candidates: tuple[str, ...], label: str) -> object:
+def choose_map(db: Database, map_name: str | None, map_candidates: tuple[str, ...], label: str) -> Map:
     if map_name:
         selected = db.get_map_by_name(map_name)
         if selected is None:
@@ -140,7 +141,7 @@ def ensure_party(db: Database, cache: dict[str, Party], party_key: str) -> Party
     return existing
 
 
-def pick_winner_key(current_key: str, party_info: dict) -> str:
+def pick_winner_key(current_key: str, party_info: dict[str, Any]) -> str:
     target = normalize_party_key(current_key)
     for key in party_info:
         if normalize_party_key(key) == target:
@@ -196,7 +197,7 @@ def main() -> None:
         "post": choose_map(db, post_map_name, POST_2022_MAP_NAME_CANDIDATES, "post-2022"),
     }
 
-    seats_cache: dict[int, tuple[dict[str, object], dict[str, object]]] = {}
+    seats_cache: dict[int, tuple[dict[str, Seat], dict[str, Seat]]] = {}
     party_cache: dict[str, Party] = {}
     overall = ImportStats()
 
@@ -291,6 +292,7 @@ def main() -> None:
                 elected = party_key == winner_key
 
                 if not args.dry_run:
+                    assert election is not None
                     db.add_vote(
                         election.id,
                         seat.id,

@@ -1,4 +1,4 @@
-sqlalchemy>=2.0
+sqlalchemy[mypy]>=2.0
 geoalchemy2>=0.15
 psycopg2-binary>=2.9
 shapely>=2.0
@@ -8,3 +8,8 @@ beautifulsoup4>=4.12
 lxml>=5.0
 openpyxl>=3.1
 xlrd>=2.0
+pydantic>=2.0
+pydantic-settings>=2.0
+mypy>=1.9
+types-Flask
+types-beautifulsoup4

@@ -1,15 +1,23 @@
-import os
-from dataclasses import dataclass
+from pydantic import Field, computed_field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-@dataclass
-class DatabaseConfig:
-    host: str = "localhost"
-    port: int = 5432
-    database: str = "election_maps"
-    user: str = "election_maps"
-    password: str = "election_maps_dev"
+class DatabaseConfig(BaseSettings):
+    """Database connection configuration loaded from environment variables.
 
+    Reads DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD from the environment,
+    falling back to local development defaults when not set.
+    """
+
+    model_config = SettingsConfigDict(extra="ignore")
+
+    host: str = Field(default="localhost", validation_alias="DB_HOST")
+    port: int = Field(default=5432, validation_alias="DB_PORT")
+    database: str = Field(default="election_maps", validation_alias="DB_NAME")
+    user: str = Field(default="election_maps", validation_alias="DB_USER")
+    password: str = Field(default="election_maps_dev", validation_alias="DB_PASSWORD")
+
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def url(self) -> str:
         return (
@@ -19,10 +27,5 @@ class DatabaseConfig:
 
     @classmethod
     def from_env(cls) -> "DatabaseConfig":
-        return cls(
-            host=os.getenv("DB_HOST", "localhost"),
-            port=int(os.getenv("DB_PORT", "5432")),
-            database=os.getenv("DB_NAME", "election_maps"),
-            user=os.getenv("DB_USER", "election_maps"),
-            password=os.getenv("DB_PASSWORD", "election_maps_dev"),
-        )
+        """Load configuration from environment variables."""
+        return cls()

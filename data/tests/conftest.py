@@ -6,6 +6,7 @@ are completely isolated from each other.
 """
 
 import sys
+from collections.abc import Generator
 from pathlib import Path
 
 # Ensure the parent data/ package is importable from tests/
@@ -20,7 +21,7 @@ TEST_DB_NAME = "election_maps_test"
 
 
 @pytest.fixture()
-def db() -> Database:
+def db() -> Generator[Database, None, None]:
     """Provide a Database instance with clean tables for every test.
     Uses the dedicated test database so real data is never touched."""
     config = DatabaseConfig.from_env()

@@ -2,7 +2,7 @@
 """Refresh Wikipedia mappings and import mapped polls with implemented parsers.
 
 Run from data root:
-  ../election_data/bin/python polls/update_mapping_and_import_new.py
+  ./election_data/bin/python polls/update_mapping_and_import_new.py
 """
 
 from __future__ import annotations
@@ -181,8 +181,8 @@ def main() -> int:
     registry = load_registry()
     rows = iter_mapping_rows()
 
-    summary = Counter()
-    skipped_planned = Counter()
+    summary: Counter[str] = Counter()
+    skipped_planned: Counter[str] = Counter()
     seen_urls: set[str] = set()
     failures: list[tuple[str, str, int]] = []
     unimportable_rows: list[tuple[str, str, str]] = []

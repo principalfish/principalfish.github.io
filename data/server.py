@@ -13,9 +13,11 @@ import sys
 import uuid
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from flask import (
     Flask,
+    Response,
     flash,
     redirect,
     render_template,
@@ -23,6 +25,10 @@ from flask import (
     send_file,
     url_for,
 )
+from flask.typing import ResponseReturnValue
+from werkzeug.wrappers import Response as WerkzeugResponse
+from pydantic import BaseModel, Field, ValidationError, model_validator
+from typing_extensions import TypedDict
 from sqlalchemy import delete, func, select
 
 from db import Database
@@ -43,6 +49,46 @@ from polls.importers import (
     yougov_import,
 )
 
+class ModelRunForm(BaseModel):
+    """Validated form data for POST /models/run."""
+
+    map_name: str
+    baseline_election_name: str
+    as_of_days_back: int = Field(ge=0)
+    since_days_back: int = Field(ge=0)
+    half_life_days: float = Field(gt=0)
+    output_csv: str = ""
+    dry_run: bool = False
+
+    @model_validator(mode="after")
+    def check_since_gte_as_of(self) -> "ModelRunForm":
+        if self.since_days_back < self.as_of_days_back:
+            raise ValueError("Since-days-back must be >= as-of-days-back")
+        return self
+
+
+class PollImportForm(BaseModel):
+    """Validated form data for POST /import/preview."""
+
+    pollster_identifier: str
+    source_url: str
+
+
+class ByElectionPreviewForm(BaseModel):
+    """Validated form data for POST /by-elections/preview."""
+
+    source_url: str
+    parent_election: str = ""
+
+
+class ImporterMeta(TypedDict):
+    """Metadata for a poll importer entry in IMPORTERS."""
+
+    label: str
+    module: Any
+    url_arg: str
+
+
 DATA_DIR = Path(__file__).resolve().parent
 REPO_ROOT = DATA_DIR.parent
 TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
@@ -57,7 +103,7 @@ UNS_NAME_DATE_PATTERN = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
 app = Flask(__name__, template_folder=str(TEMPLATE_DIR), static_folder=str(STATIC_DIR))
 app.config["SECRET_KEY"] = "local-polls-dev-key"
 
-IMPORTERS = {
+IMPORTERS: dict[str, ImporterMeta] = {
     "yougov": {
         "label": "YouGov",
         "module": yougov_import,
@@ -115,7 +161,7 @@ IMPORTERS = {
     },
 }
 
-PREVIEW_CACHE: dict[str, dict] = {}
+PREVIEW_CACHE: dict[str, dict[str, Any]] = {}
 _DB: Database | None = None
 
 
@@ -216,12 +262,12 @@ def _model_arg_explanations() -> list[dict[str, str]]:
 
 
 @app.route("/")
-def home():
+def home() -> str:
     return render_template("home.html")
 
 
 @app.route("/update-polls", methods=["POST"])
-def update_polls():
+def update_polls() -> str | WerkzeugResponse:
     if not UPDATE_POLLS_SCRIPT.exists():
         flash(f"Update script not found: {UPDATE_POLLS_SCRIPT}")
         return redirect(url_for("home"))
@@ -247,7 +293,7 @@ def update_polls():
 
 
 @app.route("/exports/current-simulation", methods=["POST"])
-def export_current_simulation():
+def export_current_simulation() -> str | WerkzeugResponse:
     if not EXPORT_ELECTION_SCRIPT.exists():
         flash(f"Export script not found: {EXPORT_ELECTION_SCRIPT}")
         return redirect(url_for("home"))
@@ -280,7 +326,7 @@ def export_current_simulation():
 
 
 @app.route("/models/run", methods=["GET"])
-def model_run_form():
+def model_run_form() -> str:
     db = _get_db()
     return render_template(
         "model_run.html",
@@ -300,38 +346,25 @@ def model_run_form():
 
 
 @app.route("/models/run", methods=["POST"])
-def model_run_execute():
-    map_name = (request.form.get("map_name") or "").strip()
-    baseline_election_name = (request.form.get("baseline_election_name") or "").strip()
-    as_of_days_back = (request.form.get("as_of_days_back") or "").strip()
-    since_days_back = (request.form.get("since_days_back") or "").strip()
-    half_life_days = (request.form.get("half_life_days") or "").strip()
-    output_csv = (request.form.get("output_csv") or "").strip()
-    dry_run_value = (request.form.get("dry_run") or "true").strip().lower()
-
+def model_run_execute() -> str | WerkzeugResponse:
+    raw_form = {key: (val or "").strip() for key, val in request.form.items()}
     form_values = {
-        "map_name": map_name,
-        "baseline_election_name": baseline_election_name,
-        "as_of_days_back": as_of_days_back,
-        "since_days_back": since_days_back,
-        "half_life_days": half_life_days,
-        "output_csv": output_csv,
-        "dry_run": dry_run_value,
+        "map_name": raw_form.get("map_name", ""),
+        "baseline_election_name": raw_form.get("baseline_election_name", ""),
+        "as_of_days_back": raw_form.get("as_of_days_back", ""),
+        "since_days_back": raw_form.get("since_days_back", ""),
+        "half_life_days": raw_form.get("half_life_days", ""),
+        "output_csv": raw_form.get("output_csv", ""),
+        "dry_run": raw_form.get("dry_run", "true"),
     }
 
     db = _get_db()
     choices = _choices_for_model_form(db)
 
     try:
-        as_of_days_back_int = int(as_of_days_back)
-        since_days_back_int = int(since_days_back)
-        if as_of_days_back_int < 0 or since_days_back_int < 0:
-            raise ValueError("Day values must be zero or greater")
-        if since_days_back_int < as_of_days_back_int:
-            raise ValueError("Since-days-back must be greater than or equal to as-of-days-back")
-        float(half_life_days)
-    except ValueError as exc:
-        flash(f"Invalid model argument value: {exc}")
+        form = ModelRunForm.model_validate(raw_form)
+    except ValidationError as exc:
+        flash(f"Invalid model argument value: {exc.errors()[0]['msg']}")
         return render_template(
             "model_run.html",
             choices=choices,
@@ -344,19 +377,19 @@ def model_run_execute():
         sys.executable,
         str(UNS_MODEL_SCRIPT),
         "--map-name",
-        map_name,
+        form.map_name,
         "--baseline-election-name",
-        baseline_election_name,
+        form.baseline_election_name,
         "--as-of-days-back",
-        str(as_of_days_back_int),
+        str(form.as_of_days_back),
         "--since-days-back",
-        str(since_days_back_int),
+        str(form.since_days_back),
         "--half-life-days",
-        half_life_days,
+        str(form.half_life_days),
     ]
-    if output_csv:
-        command.extend(["--output-csv", output_csv])
-    if dry_run_value == "true":
+    if form.output_csv:
+        command.extend(["--output-csv", form.output_csv])
+    if form.dry_run:
         command.append("--dry-run")
 
     result = subprocess.run(
@@ -368,7 +401,7 @@ def model_run_execute():
     )
 
     export_result = None
-    if dry_run_value != "true" and result.returncode == 0:
+    if not form.dry_run and result.returncode == 0:
         if not EXPORT_ELECTION_SCRIPT.exists():
             export_result = {
                 "command": "",
@@ -416,7 +449,7 @@ def model_run_execute():
 
 
 @app.route("/models/outputs", methods=["GET"])
-def model_outputs():
+def model_outputs() -> str:
     show_all = (request.args.get("show") or "").strip().lower() == "all"
     default_limit = 10
 
@@ -464,7 +497,7 @@ def model_outputs():
             }
 
         trend_labels: list[str] = []
-        party_series: dict[str, dict[str, object]] = {}
+        party_series: dict[str, dict[str, Any]] = {}
 
         if UNS_TREND_CACHE_CSV.exists():
             election_name_by_date: dict[date, str] = {}
@@ -482,7 +515,7 @@ def model_outputs():
                 dated_rows.append((as_of_value, election_id, row))
 
             as_of_dates_sorted = sorted({as_of_value for as_of_value, _, _ in dated_rows})
-            election_index = {as_of_value: idx for idx, as_of_value in enumerate(as_of_dates_sorted)}
+            election_index: dict[date | int, int] = {as_of_value: idx for idx, as_of_value in enumerate(as_of_dates_sorted)}
 
             deduped_rows: dict[tuple[str, date], tuple[int, dict[str, str]]] = {}
             for as_of_value, election_id, row in dated_rows:
@@ -506,7 +539,7 @@ def model_outputs():
                 series = party_series.get(party_key)
                 if series is None:
                     series = {
-                        "label": party_name_by_id.get(party_id_int, party_key),
+                        "label": party_name_by_id.get(party_id_int, party_key) if party_id_int is not None else party_key,
                         "colour": party_colour_by_id.get(party_id_int) if party_id_int is not None else None,
                         "seats": [0] * len(as_of_dates_sorted),
                         "vote_totals": [0.0] * len(as_of_dates_sorted),
@@ -517,7 +550,7 @@ def model_outputs():
                 idx = election_index[as_of_value]
                 series["seats"][idx] = int(float(row.get("seats_won") or "0"))
                 vote_pct_raw = row.get("vote_pct")
-                if vote_pct_raw not in (None, ""):
+                if vote_pct_raw not in (None, "") and vote_pct_raw is not None:
                     series["vote_pct"][idx] = float(vote_pct_raw)
 
             trend_labels = [election_name_by_date.get(as_of_value, as_of_value.isoformat()) for as_of_value in as_of_dates_sorted]
@@ -666,7 +699,7 @@ def model_outputs():
 
 
 @app.route("/models/outputs/<int:election_id>", methods=["GET"])
-def model_output_detail(election_id: int):
+def model_output_detail(election_id: int) -> str | WerkzeugResponse:
     page = request.args.get("page", default=1, type=int) or 1
     page_size = 50
 
@@ -712,14 +745,14 @@ def model_output_detail(election_id: int):
             for party in session.execute(select(Party)).scalars().all()
         }
 
-        baseline_votes: list[tuple[Vote, Seat]] = []
+        baseline_votes: list[Any] = []
         if baseline_election is not None:
-            baseline_votes = session.execute(
+            baseline_votes = list(session.execute(
                 select(Vote, Seat)
                 .join(Seat, Vote.seat_id == Seat.id)
                 .where(Vote.election_id == baseline_election.id)
                 .order_by(Vote.seat_id.asc(), Vote.vote_total.desc())
-            ).all()
+            ).all())
 
         region_name_by_id = {
             region.id: region.name
@@ -782,7 +815,7 @@ def model_output_detail(election_id: int):
     for party_id, baseline_wins in baseline_seats_won_by_party.items():
         if party_id not in party_totals:
             party_totals[party_id] = {
-                "party_name": party_name_by_id.get(party_id, "Other"),
+                "party_name": party_name_by_id.get(party_id, "Other") if party_id is not None else "Other",
                 "seats_won": 0,
             }
 
@@ -790,13 +823,13 @@ def model_output_detail(election_id: int):
     total_baseline_vote = sum(baseline_vote_totals_by_party.values())
 
     for seat_id in sorted(votes_by_seat.keys(), key=lambda sid: votes_by_seat[sid][0][1].seat_name):
-        votes = votes_by_seat[seat_id]
-        winner_vote, winner_seat, winner_party = max(votes, key=lambda item: float(item[0].vote_total or 0.0))
+        seat_votes: list[tuple[Vote, Seat, Party | None]] = votes_by_seat[seat_id]
+        winner_vote, winner_seat, winner_party = max(seat_votes, key=lambda item: float(item[0].vote_total or 0.0))
         current_winner = winner_party.name if winner_party is not None else (winner_vote.candidate_name or "Other")
         baseline_winner_party_id = seats_baseline_winner_by_seat.get(seat_id)
         baseline_winner_name = "Unknown"
         if baseline_winner_party_id is not None:
-            for _, _, party in votes:
+            for _, _, party in seat_votes:
                 if party is not None and party.id == baseline_winner_party_id:
                     baseline_winner_name = party.name
                     break
@@ -851,7 +884,7 @@ def model_output_detail(election_id: int):
             }
             for party_id, row in party_totals.items()
         ],
-        key=lambda row: (-row["seats_won"], row["party_name"]),
+        key=lambda row: (-int(row["seats_won"]), str(row["party_name"])),
     )
 
     region_party_keys = set(current_region_party_totals.keys()) | set(baseline_region_party_totals.keys())
@@ -871,7 +904,7 @@ def model_output_detail(election_id: int):
             if baseline_total > 0
             else 0.0
         )
-        party_name = party_name_by_id.get(party_id, "Other")
+        party_name = party_name_by_id.get(party_id, "Other") if party_id is not None else "Other"
         region_name = region_name_by_id.get(region_id, "National") if region_id is not None else "National"
         region_names.add(region_name)
         party_names.add(party_name)
@@ -912,7 +945,7 @@ def model_output_detail(election_id: int):
 
 
 @app.route("/models/outputs/<int:election_id>/delete", methods=["POST"])
-def delete_model_output(election_id: int):
+def delete_model_output(election_id: int) -> str | WerkzeugResponse:
     db = _get_db()
     with db.session() as session:
         election = session.execute(
@@ -929,7 +962,7 @@ def delete_model_output(election_id: int):
 
         deleted_votes = session.execute(
             delete(Vote).where(Vote.election_id == election.id)
-        ).rowcount or 0
+        ).rowcount or 0  # type: ignore[attr-defined]
         session.delete(election)
 
     flash(f"Deleted model output #{election_id} and {deleted_votes} vote rows.")
@@ -937,7 +970,7 @@ def delete_model_output(election_id: int):
 
 
 @app.route("/models/outputs/delete-selected", methods=["POST"])
-def delete_selected_model_outputs():
+def delete_selected_model_outputs() -> str | WerkzeugResponse:
     raw_ids = request.form.getlist("election_ids")
     parsed_ids: list[int] = []
     for value in raw_ids:
@@ -967,10 +1000,10 @@ def delete_selected_model_outputs():
 
         deleted_votes = session.execute(
             delete(Vote).where(Vote.election_id.in_(existing_ids))
-        ).rowcount or 0
+        ).rowcount or 0  # type: ignore[attr-defined]
         deleted_elections = session.execute(
             delete(Election).where(Election.id.in_(existing_ids))
-        ).rowcount or 0
+        ).rowcount or 0  # type: ignore[attr-defined]
 
     flash(
         f"Deleted {deleted_elections} model outputs and {deleted_votes} vote rows."
@@ -979,7 +1012,7 @@ def delete_selected_model_outputs():
 
 
 @app.route("/import", methods=["GET"])
-def import_poll_form():
+def import_poll_form() -> str:
     return render_template(
         "import_form.html",
         pollsters=[{"identifier": key, "name": meta["label"]} for key, meta in IMPORTERS.items()],
@@ -987,13 +1020,15 @@ def import_poll_form():
 
 
 @app.route("/import/preview", methods=["POST"])
-def import_poll_preview():
-    pollster_identifier = (request.form.get("pollster_identifier") or "").strip()
-    source_url = (request.form.get("source_url") or "").strip()
-
-    if not pollster_identifier or not source_url:
+def import_poll_preview() -> str | WerkzeugResponse:
+    try:
+        form = PollImportForm.model_validate(request.form.to_dict())
+    except ValidationError:
         flash("Pollster and URL are required.")
         return redirect(url_for("import_poll_form"))
+
+    pollster_identifier = form.pollster_identifier
+    source_url = form.source_url
 
     importer = IMPORTERS.get(pollster_identifier)
     if importer is None:
@@ -1032,7 +1067,7 @@ def import_poll_preview():
 
 
 @app.route("/import/confirm/<token>", methods=["POST"])
-def import_poll_confirm(token: str):
+def import_poll_confirm(token: str) -> str | WerkzeugResponse:
     cached = PREVIEW_CACHE.get(token)
     if cached is None:
         flash("Preview expired. Please preview again.")
@@ -1052,18 +1087,18 @@ def import_poll_confirm(token: str):
 
     PREVIEW_CACHE.pop(token, None)
 
-    if result["skipped_existing_rows"]:
+    if result.skipped_existing_rows:
         flash("Poll already had rows, so nothing was inserted.")
     else:
         flash(
-            f"Import complete. Poll #{result['poll_id']}, inserted {result['inserted_rows']} rows."
+            f"Import complete. Poll #{result.poll_id}, inserted {result.inserted_rows} rows."
         )
 
-    return redirect(url_for("poll_detail", poll_id=result["poll_id"]))
+    return redirect(url_for("poll_detail", poll_id=result.poll_id))
 
 
 @app.route("/polls", methods=["GET"])
-def poll_list():
+def poll_list() -> str:
     db = _get_db()
     with db.session() as session:
         polls = session.execute(
@@ -1072,12 +1107,13 @@ def poll_list():
             .order_by(Poll.fieldwork_end.desc(), Poll.id.desc())
         ).all()
 
-        row_counts = dict(
-            session.execute(
+        row_counts: dict[int, int] = {
+            poll_id: count
+            for poll_id, count in session.execute(
                 select(PollRow.poll_id, func.count(PollRow.id))
                 .group_by(PollRow.poll_id)
             ).all()
-        )
+        }
 
     items = [
         {
@@ -1097,7 +1133,7 @@ def poll_list():
 
 
 @app.route("/polls/<int:poll_id>", methods=["GET"])
-def poll_detail(poll_id: int):
+def poll_detail(poll_id: int) -> str | WerkzeugResponse:
     db = _get_db()
 
     with db.session() as session:
@@ -1148,7 +1184,7 @@ def poll_detail(poll_id: int):
 
 
 @app.route("/polls/<int:poll_id>/csv", methods=["GET"])
-def poll_detail_csv(poll_id: int):
+def poll_detail_csv(poll_id: int) -> str | WerkzeugResponse:
     db = _get_db()
     rows = build_rows(db, poll_id)
 
@@ -1179,7 +1215,7 @@ def poll_detail_csv(poll_id: int):
         io.BytesIO(stream.getvalue().encode("utf-8")),
         mimetype="text/csv",
         as_attachment=True,
-        download_name=f"poll_{poll_id}_rows.csv",
+        download_name=f"poll_{poll_id}_rows.csv",  # type: ignore[call-arg]
     )
 
 
@@ -1187,7 +1223,7 @@ def poll_detail_csv(poll_id: int):
 
 
 @app.route("/by-elections", methods=["GET"])
-def by_election_form():
+def by_election_form() -> str:
     db = _get_db()
     with db.session() as session:
         elections = (
@@ -1207,13 +1243,15 @@ def by_election_form():
 
 
 @app.route("/by-elections/preview", methods=["POST"])
-def by_election_preview():
-    source_url = (request.form.get("source_url") or "").strip()
-    parent_election_name = (request.form.get("parent_election") or "").strip()
-
-    if not source_url:
+def by_election_preview() -> str | WerkzeugResponse:
+    try:
+        form = ByElectionPreviewForm.model_validate(request.form.to_dict())
+    except ValidationError:
         flash("URL is required.")
         return redirect(url_for("by_election_form"))
+
+    source_url = form.source_url
+    parent_election_name = form.parent_election
 
     db = _get_db()
     try:
@@ -1240,7 +1278,7 @@ def by_election_preview():
 
 
 @app.route("/by-elections/confirm/<token>", methods=["POST"])
-def by_election_confirm(token: str):
+def by_election_confirm(token: str) -> str | WerkzeugResponse:
     cached = PREVIEW_CACHE.get(token)
     if cached is None or cached.get("type") != "by_election":
         flash("Preview expired. Please preview again.")
@@ -1256,8 +1294,8 @@ def by_election_confirm(token: str):
 
     PREVIEW_CACHE.pop(token, None)
     flash(
-        f"Imported '{result['election_name']}' for {result['seat_name']}: "
-        f"{result['votes_inserted']} votes."
+        f"Imported '{result.election_name}' for {result.seat_name}: "
+        f"{result.votes_inserted} votes."
     )
     return redirect(url_for("by_election_form"))
 

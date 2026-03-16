@@ -135,28 +135,28 @@ def main() -> None:
         for record in records:
             region_name = str(record["region"]).strip()
             key = normalize_name(region_name)
-            population = parse_population(record["population"])  # type: ignore[arg-type]
+            population = parse_population(record["population"])
 
-            region = region_by_name.get(key)
-            if region is None:
+            matched = region_by_name.get(key)
+            if matched is None:
                 print(f"- missing region: {region_name}")
                 missing += 1
                 continue
 
-            if region.population == population:
-                print(f"- unchanged: {region.name} ({population})")
+            if matched.population == population:
+                print(f"- unchanged: {matched.name} ({population})")
                 unchanged += 1
                 continue
 
             if args.dry_run:
                 print(
-                    f"- [dry-run] would update: {region.name} "
-                    f"({region.population} -> {population})"
+                    f"- [dry-run] would update: {matched.name} "
+                    f"({matched.population} -> {population})"
                 )
                 updated += 1
                 continue
 
-            db_region = session.get(Region, region.id)
+            db_region = session.get(Region, matched.id)
             if db_region is not None:
                 db_region.population = population
                 print(

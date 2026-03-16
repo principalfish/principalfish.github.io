@@ -2,9 +2,11 @@
 
 import pytest
 
+from db import Database
+
 
 class TestAddRegion:
-    def test_basic(self, db):
+    def test_basic(self, db: Database) -> None:
         m = db.add_map("UK")
         region = db.add_region(m.id, "England")
         assert region.id is not None
@@ -12,40 +14,40 @@ class TestAddRegion:
         assert region.map_id == m.id
         assert region.parent_id is None
 
-    def test_hierarchical(self, db):
+    def test_hierarchical(self, db: Database) -> None:
         m = db.add_map("UK")
         england = db.add_region(m.id, "England")
         london = db.add_region(m.id, "London", parent_id=england.id)
         assert london.parent_id == england.id
 
-    def test_population(self, db):
+    def test_population(self, db: Database) -> None:
         m = db.add_map("UK")
         region = db.add_region(m.id, "Scotland", population=5430000)
         assert region.population == 5430000
 
-    def test_invalid_map_raises(self, db):
+    def test_invalid_map_raises(self, db: Database) -> None:
         with pytest.raises(Exception):
             db.add_region(9999, "Nowhere")
 
 
 class TestGetRegion:
-    def test_by_id(self, db):
+    def test_by_id(self, db: Database) -> None:
         m = db.add_map("UK")
         created = db.add_region(m.id, "Scotland")
         fetched = db.get_region(created.id)
         assert fetched is not None
         assert fetched.name == "Scotland"
 
-    def test_missing_returns_none(self, db):
+    def test_missing_returns_none(self, db: Database) -> None:
         assert db.get_region(9999) is None
 
 
 class TestGetRegionsForMap:
-    def test_empty(self, db):
+    def test_empty(self, db: Database) -> None:
         m = db.add_map("Empty")
         assert db.get_regions_for_map(m.id) == []
 
-    def test_filters_by_map(self, db):
+    def test_filters_by_map(self, db: Database) -> None:
         m1 = db.add_map("Map A")
         m2 = db.add_map("Map B")
         db.add_region(m1.id, "Region 1")
@@ -54,7 +56,7 @@ class TestGetRegionsForMap:
         assert len(db.get_regions_for_map(m1.id)) == 2
         assert len(db.get_regions_for_map(m2.id)) == 1
 
-    def test_alphabetical_order(self, db):
+    def test_alphabetical_order(self, db: Database) -> None:
         m = db.add_map("UK")
         db.add_region(m.id, "Wales")
         db.add_region(m.id, "England")

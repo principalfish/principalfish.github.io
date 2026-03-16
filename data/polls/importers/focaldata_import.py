@@ -6,20 +6,22 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from dataclasses import dataclass
 from datetime import date
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 
 from openpyxl import load_workbook
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.import_types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://3959436.fs1.hubspotusercontent-na1.net/hubfs/3959436/Marketing%20content/Focaldata_January%20VI%20tables%2c%2016-19%20Jan%202026.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -59,25 +61,28 @@ PARTY_NAME_MAP = {
 }
 
 
-@dataclass
-class ParsedPoll:
-    sample_size: int
+class ParsedPoll(BaseModel):
+    """Parsed poll data extracted from source."""
+
+    sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_macro_percentages: dict[str, dict[str, float]]
 
 
-@dataclass
-class PlannedPollRow:
+class PlannedPollRow(BaseModel):
+    """A single poll row planned for DB insertion."""
+
     party_id: int
     party_name: str
     region_id: int | None
     region_name: str
-    percentage: float
+    percentage: float = Field(ge=0, le=100)
 
 
-@dataclass
-class ImportPlan:
+class ImportPlan(BaseModel):
+    """Full import plan: pollster, poll metadata, and rows."""
+
     pollster_identifier: str
     pollster_name: str
     pollster_id: int | None
@@ -205,7 +210,7 @@ def _google_sheet_export_url(url: str) -> str | None:
     return export
 
 
-def extract_workbook(xlsx_url: str):
+def extract_workbook(xlsx_url: str) -> Any:
     candidate_urls = [xlsx_url]
     gs_export = _google_sheet_export_url(xlsx_url)
     if gs_export:
@@ -240,7 +245,7 @@ def _cell_text(value: object) -> str:
 def _to_percentage(value: object) -> float:
     if value is None:
         raise ValueError("Encountered empty percentage cell")
-    number = float(value)
+    number = float(value)  # type: ignore[arg-type]
     pct = number * 100.0 if 0.0 <= number <= 1.0 else number
     return float(int(round(pct)))
 
@@ -279,7 +284,7 @@ def _canonical_party(label: str) -> str | None:
     return None
 
 
-def _parse_info_sheet(workbook, default_year: int, fieldwork_label: str | None = None) -> tuple[date, date, int]:
+def _parse_info_sheet(workbook: Any, default_year: int, fieldwork_label: str | None = None) -> tuple[date, date, int]:
     sheet = workbook["Info"] if "Info" in workbook.sheetnames else workbook[workbook.sheetnames[0]]
 
     fieldwork_raw = None
@@ -349,7 +354,7 @@ def _parse_info_sheet(workbook, default_year: int, fieldwork_label: str | None =
     return fieldwork_start, fieldwork_end, sample_size
 
 
-def _find_tables_sheet(workbook):
+def _find_tables_sheet(workbook: Any) -> Any:
     for name in workbook.sheetnames:
         lowered = name.lower()
         if lowered == "tables" or "table" in lowered or "voting intention" in lowered or "respondents" in lowered:
@@ -357,7 +362,7 @@ def _find_tables_sheet(workbook):
     raise ValueError("Could not find tables sheet")
 
 
-def _find_vi_section_start(sheet) -> int:
+def _find_vi_section_start(sheet: Any) -> int:
     for row in range(1, min(sheet.max_row, 500) + 1):
         value = _cell_text(sheet.cell(row, 1).value).lower()
         if "combined voting intention" in value and "excluding" in value:
@@ -376,7 +381,7 @@ def _find_vi_section_start(sheet) -> int:
     raise ValueError("Could not find voting intention section in tables sheet")
 
 
-def _parse_party_macro_percentages(workbook) -> dict[str, dict[str, float]]:
+def _parse_party_macro_percentages(workbook: Any) -> dict[str, dict[str, float]]:
     sheet = _find_tables_sheet(workbook)
     start_row = _find_vi_section_start(sheet)
 
@@ -463,7 +468,7 @@ def _parse_party_macro_percentages(workbook) -> dict[str, dict[str, float]]:
 
 
 def parse_poll(
-    workbook,
+    workbook: Any,
     *,
     source_url: str,
     year_hint: int | None = None,
@@ -597,7 +602,7 @@ def commit_import_plan(
     plan: ImportPlan,
     *,
     replace_rows: bool = False,
-) -> dict[str, int | bool]:
+) -> PollImportResult:
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -640,19 +645,19 @@ def commit_import_plan(
         ).scalars().all()
 
         if existing_rows and not replace_rows:
-            return {
-                "created_pollster": created_pollster,
-                "created_poll": created_poll_row,
-                "poll_id": poll_id,
-                "inserted_rows": 0,
-                "replaced_rows": 0,
-                "skipped_existing_rows": True,
-            }
+            return PollImportResult(
+                created_pollster=created_pollster,
+                created_poll=created_poll_row,
+                poll_id=poll_id,
+                inserted_rows=0,
+                replaced_rows=0,
+                skipped_existing_rows=True,
+            )
 
         replaced_rows = 0
         if existing_rows and replace_rows:
-            for row in existing_rows:
-                session.delete(row)
+            for existing_row in existing_rows:
+                session.delete(existing_row)
                 replaced_rows += 1
 
         for row in plan.rows:
@@ -665,14 +670,14 @@ def commit_import_plan(
                 )
             )
 
-    return {
-        "created_pollster": created_pollster,
-        "created_poll": created_poll_row,
-        "poll_id": poll_id,
-        "inserted_rows": len(plan.rows),
-        "replaced_rows": replaced_rows,
-        "skipped_existing_rows": False,
-    }
+    return PollImportResult(
+        created_pollster=created_pollster,
+        created_poll=created_poll_row,
+        poll_id=poll_id,
+        inserted_rows=len(plan.rows),
+        replaced_rows=replaced_rows,
+        skipped_existing_rows=False,
+    )
 
 
 def _cli_preview(plan: ImportPlan) -> None:
@@ -729,25 +734,25 @@ def main() -> None:
         return
 
     result = commit_import_plan(db, plan, replace_rows=args.replace_rows)
-    if result["created_pollster"]:
+    if result.created_pollster:
         print(f"created pollster: {args.pollster_identifier}")
     else:
         print(f"pollster exists: {args.pollster_identifier}")
 
-    if result["created_poll"]:
-        print(f"created poll: {result['poll_id']}")
+    if result.created_poll:
+        print(f"created poll: {result.poll_id}")
     else:
-        print(f"poll exists: {result['poll_id']}")
+        print(f"poll exists: {result.poll_id}")
 
-    if result["skipped_existing_rows"]:
+    if result.skipped_existing_rows:
         print(
-            f"poll {result['poll_id']} already has rows; "
+            f"poll {result.poll_id} already has rows; "
             "use --replace-rows to overwrite"
         )
     else:
-        if result["replaced_rows"]:
-            print(f"deleted existing rows: {result['replaced_rows']}")
-        print(f"inserted poll rows: {result['inserted_rows']}")
+        if result.replaced_rows:
+            print(f"deleted existing rows: {result.replaced_rows}")
+        print(f"inserted poll rows: {result.inserted_rows}")
 
 
 if __name__ == "__main__":

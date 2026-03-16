@@ -12,6 +12,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import delete, select, text
 
@@ -31,7 +32,7 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from db import Database
-from models import Election, ElectionType, Vote
+from models import Election, ElectionType, Map, Region, Vote
 
 
 @dataclass
@@ -49,6 +50,7 @@ class SimulationConfig:
 class SeatRef:
     id: int
     region_id: int | None
+    seat_name: str = ""
 
 
 @dataclass
@@ -186,10 +188,10 @@ def delete_model_uns_for_as_of_date(db: Database, as_of_date: date) -> tuple[int
         if not existing_ids:
             return 0, 0
 
-        deleted_votes = session.execute(
+        deleted_votes = session.execute(  # type: ignore[attr-defined]
             delete(Vote).where(Vote.election_id.in_(existing_ids))
         ).rowcount or 0
-        deleted_elections = session.execute(
+        deleted_elections = session.execute(  # type: ignore[attr-defined]
             delete(Election).where(Election.id.in_(existing_ids))
         ).rowcount or 0
 
@@ -202,7 +204,7 @@ def weighted_average(weighted_sum: float, total_weight: float) -> float | None:
     return weighted_sum / total_weight
 
 
-def resolve_simulation_scope(db: Database, cfg: SimulationConfig):
+def resolve_simulation_scope(db: Database, cfg: SimulationConfig) -> tuple[Map, Election, date]:
     poll_map = db.get_map_by_name(cfg.map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {cfg.map_name}")
@@ -227,7 +229,7 @@ def fetch_seat_refs(db: Database, map_id: int) -> list[SeatRef]:
         rows = session.execute(
             text(
                 """
-                SELECT id, region_id
+                SELECT id, region_id, seat_name
                 FROM seats
                 WHERE map_id = :map_id
                 ORDER BY seat_name
@@ -236,10 +238,19 @@ def fetch_seat_refs(db: Database, map_id: int) -> list[SeatRef]:
             {"map_id": map_id},
         ).fetchall()
 
-    return [SeatRef(id=int(row.id), region_id=row.region_id) for row in rows]
+    return [SeatRef(id=int(row.id), region_id=row.region_id, seat_name=str(row.seat_name or "")) for row in rows]
 
 
-def build_reference_data(db: Database, map_id: int):
+def build_reference_data(db: Database, map_id: int) -> tuple[
+    list[SeatRef],
+    Any,
+    dict[int, SeatRef],
+    dict[int, Region],
+    dict[int, int | None],
+    dict[int, str],
+    dict[int, float],
+    dict[int, str],
+]:
     seats = fetch_seat_refs(db, map_id)
     regions = db.get_regions_for_map(map_id)
     seat_by_id = {seat.id: seat for seat in seats}
@@ -269,7 +280,12 @@ def build_reference_data(db: Database, map_id: int):
     )
 
 
-def build_baseline_vote_state(db: Database, baseline_election_id: int, region_by_seat_id: dict[int, int | None]):
+def build_baseline_vote_state(db: Database, baseline_election_id: int, region_by_seat_id: dict[int, int | None]) -> tuple[
+    dict[int, dict[int, float]],
+    dict[int, float],
+    dict[int, float],
+    dict[int, dict[int, float]],
+]:
     baseline_votes = db.get_votes_for_election(baseline_election_id)
     if not baseline_votes:
         raise ValueError("Baseline election has no votes")
@@ -331,7 +347,7 @@ def aggregate_poll_shares(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
-):
+) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], Any]:
     polls = db.get_polls_for_map(map_id)
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
@@ -420,15 +436,15 @@ def write_trend_cache_meta(
 
 
 def compute_region_diffs(
-    seats,
-    region_by_id: dict[int, object],
+    seats: list[SeatRef],
+    region_by_id: dict[int, Region],
     party_name_by_id: dict[int, str],
     national_party_totals: dict[int, float],
     weighted_sums: dict[tuple[int | None, int], float],
     total_weights: dict[tuple[int | None, int], float],
     baseline_national_shares: dict[int, float],
     baseline_region_shares: dict[int, dict[int, float]],
-):
+) -> tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]]:
     party_universe: set[int] = set(national_party_totals.keys())
     party_universe.update(party_id for _, party_id in weighted_sums.keys())
     region_ids = sorted({seat.region_id for seat in seats if seat.region_id is not None})
@@ -453,7 +469,7 @@ def compute_region_diffs(
                 current_region_shares[region_id][party_id] = avg
 
     region_swings: dict[int, dict[int, float]] = defaultdict(dict)
-    region_diff_rows: list[dict[str, object]] = []
+    region_diff_rows: list[dict[str, Any]] = []
     for region_id in region_ids:
         region_name = region_by_id[region_id].name if region_id in region_by_id else str(region_id)
         for party_id in sorted(party_universe, key=lambda party: party_name_by_id.get(party, "")):
@@ -487,9 +503,9 @@ def project_seat_votes(
     party_universe: set[int],
     region_swings: dict[int, dict[int, float]],
     party_name_by_id: dict[int, str],
-):
-    projected_votes: list[dict[str, object]] = []
-    winners_by_party: Counter = Counter()
+) -> tuple[list[dict[str, Any]], Counter[str]]:
+    projected_votes: list[dict[str, Any]] = []
+    winners_by_party: Counter[str] = Counter()
 
     for seat_id, base_vote_totals in seat_party_vote_totals.items():
         seat_total = sum(base_vote_totals.values())
@@ -502,7 +518,7 @@ def project_seat_votes(
         }
 
         region_id = region_by_seat_id.get(seat_id)
-        swing_for_region = region_swings.get(region_id, {})
+        swing_for_region = region_swings.get(region_id, {}) if region_id is not None else {}
 
         projection_raw: dict[int, float] = {}
         for party_id in party_universe:
@@ -521,7 +537,7 @@ def project_seat_votes(
             party_id: (value / projection_sum) * 100.0
             for party_id, value in projection_raw.items()
         }
-        winner_party_id = max(normalized, key=normalized.get)
+        winner_party_id = max(normalized, key=lambda k: normalized.get(k, 0.0))
         winners_by_party[party_name_by_id.get(winner_party_id, str(winner_party_id))] += 1
 
         for party_id, pct in normalized.items():
@@ -539,9 +555,9 @@ def project_seat_votes(
 
 def write_output_csvs(
     output_csv: str,
-    projected_votes: list[dict[str, object]],
-    region_diff_rows: list[dict[str, object]],
-    seat_by_id: dict[int, object],
+    projected_votes: list[dict[str, Any]],
+    region_diff_rows: list[dict[str, Any]],
+    seat_by_id: dict[int, SeatRef],
     party_name_by_id: dict[int, str],
 ) -> None:
     output_path = Path(output_csv)
@@ -600,7 +616,7 @@ def persist_projection(
     map_id: int,
     as_of_date: date,
     election_name: str,
-    projected_votes: list[dict[str, object]],
+    projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
 ) -> tuple[str, int]:
     ensure_model_uns_enum_value(db)
@@ -630,7 +646,7 @@ def update_trend_cache_csv(
     election_id: int,
     election_name: str,
     as_of_date: date,
-    projected_votes: list[dict[str, object]],
+    projected_votes: list[dict[str, Any]],
 ) -> None:
     TREND_CACHE_CSV.parent.mkdir(parents=True, exist_ok=True)
 
@@ -729,7 +745,7 @@ def update_trend_cache_csv(
 def run_simulation(
     db: Database,
     cfg: SimulationConfig,
-) -> tuple[str, list[dict[str, object]], list[dict[str, object]], Counter, LatestPollUsage | None]:
+) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], Counter[str], LatestPollUsage | None]:
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date
 
@@ -872,7 +888,7 @@ def main() -> None:
             print(f"- {party_name}: {seats}")
 
         print("Weighted regional diffs (swing) snapshot:")
-        by_region: dict[str, list[dict[str, object]]] = defaultdict(list)
+        by_region: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for row in region_diff_rows:
             by_region[str(row["region_name"])].append(row)
 

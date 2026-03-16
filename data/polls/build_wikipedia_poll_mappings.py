@@ -20,6 +20,7 @@ import re
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
@@ -52,7 +53,8 @@ def fetch_html(url: str) -> str:
         },
     )
     with urlopen(req) as response:
-        return response.read().decode("utf-8", errors="replace")
+        data: bytes = response.read()
+        return data.decode("utf-8", errors="replace")
 
 
 def normalize_pollster_name(value: str) -> str:
@@ -107,7 +109,8 @@ def parse_ref_numeric_id(ref_href: str) -> str:
 def extract_reference_url_map(soup: BeautifulSoup) -> dict[str, str]:
     ref_map: dict[str, str] = {}
     for li in soup.select("li[id^=cite_note-]"):
-        li_id = li.get("id", "")
+        raw_li_id = li.get("id", "")
+        li_id = raw_li_id if isinstance(raw_li_id, str) else ""
         match = re.search(r"cite_note-(\d+)", li_id)
         if not match:
             continue
@@ -119,7 +122,8 @@ def extract_reference_url_map(soup: BeautifulSoup) -> dict[str, str]:
             or li.select_one("a.external")
         )
         if external_link and external_link.get("href"):
-            ref_map[ref_id] = external_link.get("href", "")
+            raw_href = external_link.get("href", "")
+            ref_map[ref_id] = raw_href if isinstance(raw_href, str) else ""
     return ref_map
 
 
@@ -151,7 +155,7 @@ def extract_national_poll_rows(soup: BeautifulSoup, ref_map: dict[str, str]) -> 
 
     rows: list[dict[str, str]] = []
 
-    node = headline.parent
+    node: Any = headline.parent
     current_year = ""
     while node is not None:
         node = node.find_next_sibling()
@@ -203,7 +207,8 @@ def extract_national_poll_rows(soup: BeautifulSoup, ref_map: dict[str, str]) -> 
             citation_id = ""
             source_url = ""
             for ref_link in ref_links:
-                href = ref_link.get("href", "")
+                raw_href = ref_link.get("href", "")
+                href = raw_href if isinstance(raw_href, str) else ""
                 ref_id = parse_ref_numeric_id(href)
                 if ref_id and ref_id in ref_map:
                     citation_id = ref_id
@@ -213,7 +218,8 @@ def extract_national_poll_rows(soup: BeautifulSoup, ref_map: dict[str, str]) -> 
             if not source_url:
                 row_ref_links = tr.select("a[href*='cite_note-']")
                 for ref_link in row_ref_links:
-                    href = ref_link.get("href", "")
+                    raw_href = ref_link.get("href", "")
+                    href = raw_href if isinstance(raw_href, str) else ""
                     ref_id = parse_ref_numeric_id(href)
                     if ref_id and ref_id in ref_map:
                         citation_id = ref_id
@@ -286,7 +292,7 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
         for row in mapped_rows:
             writer.writerow(asdict(row))
 
-    profile: dict[str, dict] = {}
+    profile: dict[str, dict[str, Any]] = {}
     for row in mapped_rows:
         key = normalize_pollster_name(row.pollster_label)
         entry = profile.setdefault(
@@ -301,7 +307,7 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
         entry["format_counts"][row.format_family] += 1
         entry["parser_identifiers"].add(row.parser_identifier)
 
-    serializable_profile: dict[str, dict] = {}
+    serializable_profile: dict[str, dict[str, Any]] = {}
     for key, value in profile.items():
         serializable_profile[key] = {
             "pollster_examples": sorted(value["pollster_examples"]),

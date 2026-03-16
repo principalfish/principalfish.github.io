@@ -9,8 +9,8 @@ HOST_PORT="5432"
 AUTO_STOP_LOCAL_POSTGRES="${AUTO_STOP_LOCAL_POSTGRES:-1}"
 ALLOW_SUDO_PROMPT="${ALLOW_SUDO_PROMPT:-1}"
 
-if [[ -x ../election_data/bin/python ]]; then
-  PYTHON=../election_data/bin/python
+if [[ -x ./election_data/bin/python ]]; then
+  PYTHON=./election_data/bin/python
 else
   PYTHON=python3
 fi

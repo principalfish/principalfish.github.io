@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import date
-from typing import Generator, Sequence
+from typing import Any, Generator, Sequence
 
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import MultiPolygon, shape
@@ -81,7 +81,9 @@ class Database:
             s.add(party)
             s.flush()
             party_id = party.id
-        return self.get_party(party_id)
+        result = self.get_party(party_id)
+        assert result is not None
+        return result
 
     def get_party(self, party_id: int) -> Party | None:
         with self.session() as s:
@@ -103,7 +105,9 @@ class Database:
             s.add(m)
             s.flush()
             map_id = m.id
-        return self.get_map(map_id)
+        result = self.get_map(map_id)
+        assert result is not None
+        return result
 
     def get_map(self, map_id: int) -> Map | None:
         with self.session() as s:
@@ -137,7 +141,9 @@ class Database:
             s.add(r)
             s.flush()
             region_id = r.id
-        return self.get_region(region_id)
+        result = self.get_region(region_id)
+        assert result is not None
+        return result
 
     def get_region(self, region_id: int) -> Region | None:
         with self.session() as s:
@@ -162,7 +168,7 @@ class Database:
         *,
         region_id: int | None = None,
         electorate: int | None = None,
-        geometry: MultiPolygon | dict | None = None,
+        geometry: MultiPolygon | dict[str, Any] | None = None,
     ) -> Seat:
         geom_col = None
         if geometry is not None:
@@ -181,7 +187,9 @@ class Database:
             s.add(seat)
             s.flush()
             seat_id = seat.id
-        return self.get_seat(seat_id)
+        result = self.get_seat(seat_id)
+        assert result is not None
+        return result
 
     def get_seat(self, seat_id: int) -> Seat | None:
         with self.session() as s:
@@ -238,7 +246,9 @@ class Database:
             s.add(e)
             s.flush()
             election_id = e.id
-        return self.get_election(election_id)
+        result = self.get_election(election_id)
+        assert result is not None
+        return result
 
     def get_election(self, election_id: int) -> Election | None:
         with self.session() as s:
@@ -286,7 +296,9 @@ class Database:
             s.add(v)
             s.flush()
             vote_id = v.id
-        return self.get_vote(vote_id)
+        result = self.get_vote(vote_id)
+        assert result is not None
+        return result
 
     def get_vote(self, vote_id: int) -> Vote | None:
         with self.session() as s:
@@ -347,7 +359,7 @@ class Database:
 
     def bulk_add_votes(
         self,
-        votes: list[dict],
+        votes: list[dict[str, Any]],
     ) -> int:
         """Insert many votes at once. Each dict should have keys matching
         Vote columns (election_id, seat_id, party_id, …). Returns count."""
@@ -359,7 +371,7 @@ class Database:
 
     def bulk_add_seats(
         self,
-        seats: list[dict],
+        seats: list[dict[str, Any]],
     ) -> int:
         """Insert many seats at once. Geometry values can be GeoJSON dicts
         or Shapely objects. Returns count."""
@@ -394,7 +406,9 @@ class Database:
             s.add(p)
             s.flush()
             pid = p.id
-        return self.get_pollster(pid)
+        result = self.get_pollster(pid)
+        assert result is not None
+        return result
 
     def get_pollster(self, pollster_id: int) -> Pollster | None:
         with self.session() as s:
@@ -434,7 +448,9 @@ class Database:
             s.add(poll)
             s.flush()
             poll_id = poll.id
-        return self.get_poll(poll_id)
+        result = self.get_poll(poll_id)
+        assert result is not None
+        return result
 
     def get_poll(self, poll_id: int) -> Poll | None:
         with self.session() as s:
@@ -484,7 +500,9 @@ class Database:
             s.add(row)
             s.flush()
             row_id = row.id
-        return self.get_poll_row(row_id)
+        result = self.get_poll_row(row_id)
+        assert result is not None
+        return result
 
     def get_poll_row(self, row_id: int) -> PollRow | None:
         with self.session() as s:
@@ -502,7 +520,7 @@ class Database:
                 .all()
             )
 
-    def bulk_add_poll_rows(self, rows: list[dict]) -> int:
+    def bulk_add_poll_rows(self, rows: list[dict[str, Any]]) -> int:
         """Insert many poll rows at once. Returns count."""
         with self.session() as s:
             objs = [PollRow(**r) for r in rows]

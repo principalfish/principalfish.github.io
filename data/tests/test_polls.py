@@ -1,20 +1,22 @@
 """Tests for Pollster, Poll, PollRow tables and Database polling methods."""
 
 from datetime import date
+from typing import Any
 
 import pytest
 
-from models import ElectionType
+from db import Database
+from models import Map, Party, Pollster
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-def _make_pollster(db, identifier="yougov_2024"):
+def _make_pollster(db: Database, identifier: str = "yougov_2024") -> Pollster:
     return db.add_pollster("YouGov", identifier)
 
 
-def _make_poll_scaffold(db):
+def _make_poll_scaffold(db: Database) -> tuple[Pollster, Map, Party, Party]:
     """Create pollster + map + parties used by most polling tests."""
     pollster = _make_pollster(db)
     m = db.add_map("UK")
@@ -27,57 +29,57 @@ def _make_poll_scaffold(db):
 
 
 class TestAddPollster:
-    def test_basic(self, db):
+    def test_basic(self, db: Database) -> None:
         p = _make_pollster(db)
         assert p.id is not None
         assert p.name == "YouGov"
         assert p.identifier == "yougov_2024"
         assert p.weight == 1.0
 
-    def test_custom_weight(self, db):
+    def test_custom_weight(self, db: Database) -> None:
         p = db.add_pollster("Survation", "survation_v2", weight=0.8)
         assert p.weight == pytest.approx(0.8)
 
-    def test_regions_mapping(self, db):
+    def test_regions_mapping(self, db: Database) -> None:
         mapping = "South:12,13,14\nScotland:2"
         p = db.add_pollster("YouGov", "yougov_regions", regions_mapping=mapping)
         assert p.regions_mapping == mapping
 
-    def test_duplicate_identifier_raises(self, db):
+    def test_duplicate_identifier_raises(self, db: Database) -> None:
         _make_pollster(db, "yougov_v1")
         with pytest.raises(Exception):
             _make_pollster(db, "yougov_v1")
 
-    def test_same_name_different_identifier(self, db):
+    def test_same_name_different_identifier(self, db: Database) -> None:
         db.add_pollster("YouGov", "yougov_v1")
         db.add_pollster("YouGov", "yougov_v2")
         assert len(db.get_all_pollsters()) == 2
 
 
 class TestGetPollster:
-    def test_by_id(self, db):
+    def test_by_id(self, db: Database) -> None:
         created = _make_pollster(db)
         fetched = db.get_pollster(created.id)
         assert fetched is not None
         assert fetched.name == "YouGov"
 
-    def test_missing_returns_none(self, db):
+    def test_missing_returns_none(self, db: Database) -> None:
         assert db.get_pollster(9999) is None
 
-    def test_by_identifier(self, db):
+    def test_by_identifier(self, db: Database) -> None:
         _make_pollster(db, "yougov_2024")
         fetched = db.get_pollster_by_identifier("yougov_2024")
         assert fetched is not None
 
-    def test_by_identifier_missing(self, db):
+    def test_by_identifier_missing(self, db: Database) -> None:
         assert db.get_pollster_by_identifier("nope") is None
 
 
 class TestGetAllPollsters:
-    def test_empty(self, db):
+    def test_empty(self, db: Database) -> None:
         assert db.get_all_pollsters() == []
 
-    def test_alphabetical(self, db):
+    def test_alphabetical(self, db: Database) -> None:
         db.add_pollster("Survation", "surv")
         db.add_pollster("Deltapoll", "delta")
         pollsters = db.get_all_pollsters()
@@ -88,7 +90,7 @@ class TestGetAllPollsters:
 
 
 class TestAddPoll:
-    def test_basic(self, db):
+    def test_basic(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(
             pollster.id, m.id,
@@ -102,7 +104,7 @@ class TestAddPoll:
         assert poll.fieldwork_end == date(2026, 2, 12)
         assert poll.sample_size == 1500
 
-    def test_source_url(self, db):
+    def test_source_url(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         url = "https://example.com/poll.pdf"
         poll = db.add_poll(
@@ -115,51 +117,51 @@ class TestAddPoll:
         )
         assert poll.source_url == url
 
-    def test_no_sample_size(self, db):
+    def test_no_sample_size(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 1, 1), date(2026, 1, 1))
         assert poll.sample_size is None
 
-    def test_single_day_poll(self, db):
+    def test_single_day_poll(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 12), date(2026, 2, 12))
         assert poll.fieldwork_start == poll.fieldwork_end
 
-    def test_invalid_pollster_raises(self, db):
+    def test_invalid_pollster_raises(self, db: Database) -> None:
         m = db.add_map("UK")
         with pytest.raises(Exception):
             db.add_poll(9999, m.id, date(2026, 1, 1), date(2026, 1, 1))
 
-    def test_invalid_map_raises(self, db):
+    def test_invalid_map_raises(self, db: Database) -> None:
         pollster = _make_pollster(db)
         with pytest.raises(Exception):
             db.add_poll(pollster.id, 9999, date(2026, 1, 1), date(2026, 1, 1))
 
 
 class TestGetPoll:
-    def test_by_id(self, db):
+    def test_by_id(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         created = db.add_poll(pollster.id, m.id, date(2026, 2, 1), date(2026, 2, 3))
         fetched = db.get_poll(created.id)
         assert fetched is not None
 
-    def test_missing_returns_none(self, db):
+    def test_missing_returns_none(self, db: Database) -> None:
         assert db.get_poll(9999) is None
 
 
 class TestGetPollsForMap:
-    def test_empty(self, db):
+    def test_empty(self, db: Database) -> None:
         m = db.add_map("UK")
         assert db.get_polls_for_map(m.id) == []
 
-    def test_ordered_by_fieldwork_end_desc(self, db):
+    def test_ordered_by_fieldwork_end_desc(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         db.add_poll(pollster.id, m.id, date(2026, 1, 1), date(2026, 1, 3))
         db.add_poll(pollster.id, m.id, date(2026, 2, 1), date(2026, 2, 5))
         polls = db.get_polls_for_map(m.id)
         assert polls[0].fieldwork_end > polls[1].fieldwork_end
 
-    def test_filters_by_map(self, db):
+    def test_filters_by_map(self, db: Database) -> None:
         pollster = _make_pollster(db)
         m1 = db.add_map("Map A")
         m2 = db.add_map("Map B")
@@ -169,7 +171,7 @@ class TestGetPollsForMap:
 
 
 class TestGetPollsByPollster:
-    def test_filters(self, db):
+    def test_filters(self, db: Database) -> None:
         p1 = db.add_pollster("YouGov", "yg")
         p2 = db.add_pollster("Survation", "surv")
         m = db.add_map("UK")
@@ -184,7 +186,7 @@ class TestGetPollsByPollster:
 
 
 class TestAddPollRow:
-    def test_national(self, db):
+    def test_national(self, db: Database) -> None:
         pollster, m, lab, con = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
         row = db.add_poll_row(poll.id, lab.id, 42.5)
@@ -194,33 +196,33 @@ class TestAddPollRow:
         assert row.percentage == pytest.approx(42.5)
         assert row.region_id is None  # national
 
-    def test_regional(self, db):
+    def test_regional(self, db: Database) -> None:
         pollster, m, lab, _ = _make_poll_scaffold(db)
         region = db.add_region(m.id, "Scotland")
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
         row = db.add_poll_row(poll.id, lab.id, 30.0, region_id=region.id)
         assert row.region_id == region.id
 
-    def test_invalid_poll_raises(self, db):
+    def test_invalid_poll_raises(self, db: Database) -> None:
         lab = db.add_party("Labour")
         with pytest.raises(Exception):
             db.add_poll_row(9999, lab.id, 40.0)
 
 
 class TestGetPollRow:
-    def test_by_id(self, db):
+    def test_by_id(self, db: Database) -> None:
         pollster, m, lab, _ = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
         created = db.add_poll_row(poll.id, lab.id, 40.0)
         fetched = db.get_poll_row(created.id)
         assert fetched is not None
 
-    def test_missing(self, db):
+    def test_missing(self, db: Database) -> None:
         assert db.get_poll_row(9999) is None
 
 
 class TestGetRowsForPoll:
-    def test_ordered_by_percentage_desc(self, db):
+    def test_ordered_by_percentage_desc(self, db: Database) -> None:
         pollster, m, lab, con = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
         db.add_poll_row(poll.id, con.id, 22.0)
@@ -229,17 +231,17 @@ class TestGetRowsForPoll:
         assert len(rows) == 2
         assert rows[0].percentage > rows[1].percentage
 
-    def test_empty(self, db):
+    def test_empty(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
         assert db.get_rows_for_poll(poll.id) == []
 
 
 class TestBulkAddPollRows:
-    def test_inserts_many(self, db):
+    def test_inserts_many(self, db: Database) -> None:
         pollster, m, lab, con = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
-        rows = [
+        rows: list[dict[str, Any]] = [
             {"poll_id": poll.id, "party_id": lab.id, "percentage": 42.0},
             {"poll_id": poll.id, "party_id": con.id, "percentage": 24.0},
         ]

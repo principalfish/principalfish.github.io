@@ -144,7 +144,7 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         raise ValueError("Fieldwork line not found in PDF")
 
     pattern = re.compile(
-        r"Fieldwork\s+dates\s*[-:]\s*[A-Za-z]+\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s+([A-Za-z.]+))?\s+to\s+[A-Za-z]+\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z.]+)\s+(20\d{2})",
+        r"Fieldwork\s+dates\s*[-:]\s*[A-Za-z]+\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s+([A-Za-z.]+))?\s+to\s+[A-Za-z]+\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z.]+)(?:\s*\([^)]*\))?\s+(20\d{2})",
         re.IGNORECASE,
     )
     match = pattern.search(fieldwork_line)
@@ -250,6 +250,47 @@ def _parse_percentage_tokens(raw_line: str) -> list[float | None]:
     return tokens
 
 
+def _has_eight_consecutive_nones(tokens: list[float | None]) -> bool:
+    """Return True if the token list contains 8 consecutive None values.
+
+    This is the signature of the March 2026+ extended column layout, where the
+    ONS area supergroup columns are suppressed (small bases) and appear as a
+    contiguous block of Nones in the middle of each party percentage row.
+    """
+    count = 0
+    for token in tokens:
+        if token is None:
+            count += 1
+            if count >= 8:
+                return True
+        else:
+            count = 0
+    return False
+
+
+def _extract_region_values(tokens: list[float | None]) -> list[float] | None:
+    """Extract 6 regional percentage values from a parsed token list.
+
+    Handles two column layouts that appear in different Ipsos PDF editions:
+    - Standard layout: regional columns at tokens[-14:-8] = [Wales, Scotland,
+      London, South excl London, Midlands incl E of England, North excl Scotland]
+    - Extended layout (from March 2026): 8 consecutive suppressed ONS area
+      supergroup columns appear in the middle of the row; a new Greater England
+      column was also inserted. Regional columns are at positions [-9], [-8],
+      skip [-7] (Greater England), then [-6], [-5], [-4], [-3]. Suppressed
+      regions (None) are treated as 0%.
+    """
+    if _has_eight_consecutive_nones(tokens):
+        extended = [tokens[i] for i in (-9, -8, -6, -5, -4, -3)]
+        return [float(v) if v is not None else 0.0 for v in extended]
+
+    standard = tokens[-14:-8]
+    if len(standard) == 6 and not any(v is None for v in standard):
+        return [float(v) for v in standard]  # type: ignore[arg-type]
+
+    return None
+
+
 def _parse_party_region_percentages(lines: list[str]) -> dict[str, dict[str, float]]:
     start_idx = next(
         (
@@ -280,16 +321,22 @@ def _parse_party_region_percentages(lines: list[str]) -> dict[str, dict[str, flo
         if canonical_party is None:
             continue
 
+        # Take the first valid match per party to avoid cross-tab contamination:
+        # PDFs with multiple cross-tabs under "likely to vote" can produce multiple
+        # matches, and subsequent tables use different column layouts.
+        if canonical_party in parsed:
+            continue
+
         tokens = _parse_percentage_tokens(next_line)
         if len(tokens) < 14:
             continue
 
-        macro_values = tokens[-14:-8]
-        if len(macro_values) != 6 or any(value is None for value in macro_values):
+        region_values = _extract_region_values(tokens)
+        if region_values is None:
             continue
 
         parsed[canonical_party] = {
-            REGION_COLUMN_ORDER[position]: float(macro_values[position])  # type: ignore[arg-type]
+            REGION_COLUMN_ORDER[position]: region_values[position]
             for position in range(len(REGION_COLUMN_ORDER))
         }
 

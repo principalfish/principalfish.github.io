@@ -34,6 +34,13 @@ if str(DATA_DIR) not in sys.path:
 from db import Database
 from models import Election, ElectionType, Map, Region, Vote
 
+# Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
+# so that poll data reported under "Other" is applied to the same party that holds the
+# ~555 baseline seats.  Without this alias, "Other" accumulates a large positive swing
+# (polls show ~5 % vs a near-zero baseline) while "Others" keeps a zero swing, producing
+# spurious "Others" wins in the seat projection.
+PARTY_ID_ALIASES: dict[int, int] = {7: 15}
+
 
 @dataclass
 class SimulationConfig:
@@ -300,7 +307,7 @@ def build_baseline_vote_state(db: Database, baseline_election_id: int, region_by
         if vote.vote_total is None or vote.party_id is None:
             continue
         seat_id = vote.seat_id
-        party_id = vote.party_id
+        party_id = PARTY_ID_ALIASES.get(vote.party_id, vote.party_id)
         value = float(vote.vote_total)
         seat_party_vote_totals[seat_id][party_id] += value
 
@@ -392,7 +399,8 @@ def aggregate_poll_shares(
         for row in rows:
             if row.party_id is None:
                 continue
-            key = (row.region_id, row.party_id)
+            party_id = PARTY_ID_ALIASES.get(row.party_id, row.party_id)
+            key = (row.region_id, party_id)
             weighted_sums[key] += float(row.percentage) * poll_weight
             total_weights[key] += poll_weight
 
@@ -900,7 +908,7 @@ def main() -> None:
             "Green",
             "Scottish National Party",
             "Plaid Cymru",
-            "Other",
+            "Others",
         }
 
         for region_name in sorted(by_region.keys()):

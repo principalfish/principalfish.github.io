@@ -1,6 +1,14 @@
-"""Shared pydantic result models for poll and by-election importers."""
+"""Shared pydantic result models and helpers for poll and by-election importers."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
 
 from pydantic import BaseModel
+
+_MODEL_SCRIPT = Path(__file__).resolve().parents[1] / "models" / "uns" / "run_uns_model.py"
 
 
 class PollImportResult(BaseModel):
@@ -21,3 +29,16 @@ class ByElectionImportResult(BaseModel):
     election_name: str
     seat_name: str
     votes_inserted: int
+
+
+def run_uns_model() -> None:
+    """Run the UNS model unconditionally."""
+    subprocess.run([sys.executable, str(_MODEL_SCRIPT)], check=True)
+
+
+def maybe_run_uns_model(result: PollImportResult) -> None:
+    """Run the UNS model after a poll import if rows were actually written."""
+    if not (result.created_poll or result.inserted_rows or result.replaced_rows):
+        return
+    print("\nRunning UNS model...")
+    run_uns_model()

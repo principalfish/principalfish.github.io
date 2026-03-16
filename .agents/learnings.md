@@ -97,6 +97,11 @@ Top-level durable insights only.
 - Re-importing historical elections requires deleting existing vote rows first (the importer refuses duplicates). Safe sequence: `DELETE FROM votes WHERE election_id IN (...)`, then re-run importer.
 - `cloneSeatRecord` in `electionmaps.js` must use `+=` accumulation (not `=` assignment) when building the normalised votes map, so that keys that collapse to the same normalised form are summed, not overwritten.
 
+## Find Out Now importer
+
+- The FON XLSX has multiple sheets: "Cover page", "Headline VI", "Turnout", "Voting", "Squeeze". The parser reads from **"Headline VI"** — the DK-excluded, likely-voters filtered table (values sum to ~100% per region). The "Voting" sheet has raw percentages including don't-knows (summing to ~60%), so values there look lower. Checking the "Voting" sheet will produce misleading "wrong" values; always verify against "Headline VI".
+- Regional sub-samples (especially Wales, ~80 filtered respondents) have high variance; apparently outlier values (e.g. Wales Other=13%) may be genuine headline figures from the source, not parsing errors.
+
 ## Quality + Risks
 
 - Current baseline test status in `data/` is green (`data/run_tests.sh`).
@@ -147,4 +152,19 @@ Top-level durable insights only.
 
 - `run_simulation()` in `run_uns_model.py` returns 5 values: `(election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage)`. Any caller that unpacks fewer will crash with "too many values to unpack".
 - `run_retrospective_uns.py` had an unpack of only 4 values (missing `latest_poll_usage`) — caused a crash on day 1 of the backfill, after `--reset-existing` had already deleted all existing model_uns elections. Fixed by adding a fifth `_` discard.
+## Ipsos importer — regional column layout
+
+- Ipsos PDF column structure changed between Jan 2026 and March 2026: March 2026 PDFs added 8 ONS area supergroup columns (all suppressed as `-**`) creating a block of 8 consecutive Nones in the middle of each party percentage token row. A new "Greater England" region column was also inserted between Scotland and London.
+- Detection: if a party pct token row contains 8 consecutive None values, use the "extended" layout (positions `[-9], [-8], skip [-7]=Greater England, [-6], [-5], [-4], [-3]`). Otherwise fall back to the "standard" layout (`tokens[-14:-8]`).
+- Suppressed regions (Wales/Scotland for England-centric parties, England regions for SNP) produce None tokens in the extended layout — treat these as 0.0.
+- The parser must take the FIRST valid match per party to prevent cross-tab contamination: March 2026 PDFs have multiple "combined voting intention - likely to vote" cross-tabs within the 220-line window; subsequent tables use different column layouts that accidentally produce valid-looking (but wrong) values under the standard format.
+- Ipsos fieldwork date strings sometimes include parenthetical annotations like `(TBC CHECK)` before the year — the regex already handles this via `(?:\s*\([^)]*\))?` before the year group.
+
 - `--reset-existing` defaults to `True` on `run_retrospective_uns.py` — scoped to `[start_date, end_date]`. Election names are `UNS YYYY-MM-DD` so a lexicographic `name >= "UNS {start}" AND name < "UNS {end+1day}"` correctly isolates the range (ISO dates sort lexicographically; suffixes like `#2` remain within the same day's bucket). CSV rows outside the range are preserved.
+
+## UNS model — Other vs Others alias
+
+- Poll importers report voting intention under "Other" (party_id=7, 8 named-independent winners in 2024 GE, ~1% national baseline).
+- "Others" (party_id=15) holds the 555-seat catch-all aggregate with a much larger total baseline vote share; no poll rows ever target id=15.
+- Without aliasing, the UNS model computed a massive positive swing for "Other" (polls ~5% vs ~1% baseline) while "Others" had zero swing. Combined with the seat projection logic this caused "Others" to win spurious seats.
+- Fix: `PARTY_ID_ALIASES = {7: 15}` applied in both `build_baseline_vote_state` and `aggregate_poll_shares`. All baseline votes and poll shares for id=7 are now accumulated under id=15, so the combined party participates in the model as a single entity with correct swing calculation.

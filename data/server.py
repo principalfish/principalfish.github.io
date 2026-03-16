@@ -34,6 +34,7 @@ from sqlalchemy import delete, func, select
 from db import Database
 from models import Election, ElectionType, Map, Party, Poll, PollRow, Pollster, Region, Seat, Vote
 from polls.export_poll_rows_csv import build_rows
+from polls.import_types import maybe_run_uns_model
 from polls.importers import (
     bmg_research_import,
     by_election_import,
@@ -1076,6 +1077,7 @@ def import_poll_confirm(token: str) -> str | WerkzeugResponse:
     pollster_identifier = cached["pollster_identifier"]
     plan = cached["plan"]
     replace_rows = request.form.get("replace_rows") == "on"
+    run_model = request.form.get("run_model") == "on"
 
     db = _get_db()
     module = IMPORTERS[pollster_identifier]["module"]
@@ -1093,6 +1095,12 @@ def import_poll_confirm(token: str) -> str | WerkzeugResponse:
         flash(
             f"Import complete. Poll #{result.poll_id}, inserted {result.inserted_rows} rows."
         )
+        if run_model:
+            try:
+                maybe_run_uns_model(result)
+                flash("UNS model updated.")
+            except Exception as exc:
+                flash(f"Warning: UNS model run failed: {exc}")
 
     return redirect(url_for("poll_detail", poll_id=result.poll_id))
 

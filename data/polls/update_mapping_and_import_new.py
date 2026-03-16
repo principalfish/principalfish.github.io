@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from db import Database
 from models import Poll, Pollster
+from polls.import_types import run_uns_model
 
 MAPPINGS_DIR = ROOT_DIR / "polls" / "mappings"
 MAPPING_CSV = MAPPINGS_DIR / "wikipedia_national_polls_mapping.csv"
@@ -303,6 +304,10 @@ def main() -> int:
         print("\nFailed import rows:")
         for parser_identifier, source_url, code in failures:
             print(f"- [{parser_identifier}] (exit {code}) {source_url}")
+
+    if summary["import_attempted"] > 0:
+        print("\n== Run UNS model ==")
+        run_uns_model()
 
     return 1 if failures else 0
 

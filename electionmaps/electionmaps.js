@@ -2205,7 +2205,7 @@ function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
   });
 
   const sortedRows = sortPartyRows(rows);
-  const visibleRows = voteTotalsExpanded ? sortedRows : sortedRows.slice(0, 6);
+  const visibleRows = voteTotalsExpanded ? sortedRows : sortedRows.slice(0, 7);
 
   if (voteTotalsToggle) {
     const canExpand = sortedRows.length > 6;

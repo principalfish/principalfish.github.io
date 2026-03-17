@@ -20,17 +20,17 @@ Use `.agents/01-file-map.md` to locate where functionality lives.
 - Implement the smallest safe change that resolves the issue.
 - Validate with focused checks/tests/queries.
 
-## 2.5) Maintain issue files (not per prompt)
+## 2.5) Maintain branch files (not per prompt)
 
-- Issue files in `.agents/issues/` are issue-level, not prompt-level.
-- The user will explicitly indicate when a new issue starts and when an issue ends.
-- By default, continue updating the active issue file for the current branch.
-- Determine the active issue file from the checked-out branch name (for example, branch `issue-18` maps to `.agents/issues/issue-18.md`).
-- When working on `master` or a branch without an issue number, the user will explicitly state the issue file name to use (for example `issue-19.md`).
-- Create a new issue file only when the user indicates a new issue.
-- File naming convention should match the branch name or the issue number stated by the user (for example `issue-13.md`, `feat-poll-ingest.md`).
-- Keep the active issue file updated as work progresses (status changes, scope updates, validation notes).
-- If no issue file is needed for a very small issue, no file is required.
+- Branch files in `.agents/issues/` track work at the branch level, not the prompt level.
+- The user will explicitly indicate when a new branch file starts and when work ends.
+- By default, continue updating the active branch file for the current branch.
+- Determine the active branch file from the checked-out branch name (for example, branch `mobile` maps to `.agents/issues/mobile.md`).
+- When working on `master` or when the user specifies a file name explicitly, use that name.
+- Create a new branch file only when the user indicates new work is starting.
+- File naming convention matches the branch name (for example `mobile.md`, `feat-poll-ingest.md`).
+- Keep the active branch file updated as work progresses (status changes, scope updates, validation notes).
+- If no branch file is needed for a very small task, no file is required.
 
 ## 3) Update learnings after every task
 

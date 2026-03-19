@@ -452,6 +452,12 @@ function parsePollTrackerData(csvText) {
   const byParty = new Map();
   const partyMeta = new Map();
 
+  /**
+   * Returns value unchanged if it is an ISO date string, otherwise returns fallback as a string.
+   * @param {string} value - Candidate sort value.
+   * @param {string|number} fallback - Fallback value used when value is not an ISO date.
+   * @returns {string} ISO date string or stringified fallback.
+   */
   const toDateSortValue = (value, fallback) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
     return String(fallback);
@@ -493,6 +499,11 @@ function parsePollTrackerData(csvText) {
     });
 
   const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  /**
+   * Parses an ISO date string into a UTC Date, or returns null if the input does not match ISO_DATE_RE.
+   * @param {string} value - String to parse.
+   * @returns {Date|null} UTC Date object, or null on invalid/non-ISO input.
+   */
   const parseIsoDate = (value) => {
     const text = String(value || '').trim();
     if (!ISO_DATE_RE.test(text)) return null;
@@ -500,6 +511,11 @@ function parsePollTrackerData(csvText) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  /**
+   * Formats a UTC Date as a zero-padded ISO date string (YYYY-MM-DD).
+   * @param {Date} value - UTC Date to format.
+   * @returns {string} ISO date string derived from UTC year/month/day components.
+   */
   const formatIsoDate = (value) => {
     const year = value.getUTCFullYear();
     const month = String(value.getUTCMonth() + 1).padStart(2, '0');
@@ -728,6 +744,14 @@ function renderPollTrackerChart() {
     .x((value, index) => (useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index)))
     .y((value) => yVotePct(value));
 
+  /**
+   * Positions and populates the crosshair tooltip for a pointer event on a series path.
+   * Reads the current pointer position, bisects the visible timeline to find the nearest data point,
+   * updates the crosshair line, and sets the tooltip HTML and position.
+   * @param {PointerEvent} event - The DOM pointer event from the SVG path element.
+   * @param {{partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>}} series - The series being hovered.
+   * @returns {void}
+   */
   const showTrackerTooltip = (event, series) => {
     const [pointerX] = d3.pointer(event, svg.node());
     const plotX = pointerX - margin.left;
@@ -774,6 +798,7 @@ function renderPollTrackerChart() {
     tooltip.hidden = false;
   };
 
+  /** Hides the crosshair tooltip and fades the crosshair line. */
   const hideTrackerTooltip = () => {
     tooltip.hidden = true;
     crosshairLine.attr('opacity', 0);
@@ -838,6 +863,7 @@ function renderPollTrackerPartyControls() {
   const partyRows = Array.from(pollTrackerSeriesByParty.values())
     .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 
+  /** @param {string} name - Party name to normalize. @returns {string} Lowercased, trimmed party name. */
   const normalizePartyName = (name) => String(name || '').trim().toLowerCase();
 
   /** Returns true if the party name matches one of the fixed default UK parties. */
@@ -1351,6 +1377,17 @@ function renderPredictGrid() {
   predictGrid.innerHTML = '';
   predictOtherCellByRegion = new Map();
 
+  /**
+   * Renders a single section (GB or NI) of the predict input grid into predictGrid.
+   * Creates a labelled table with one row per region and one numeric input column per party key.
+   * @param {object} params - Section rendering parameters.
+   * @param {string|null} params.sectionTitle - Optional section heading text.
+   * @param {string} params.sectionClassName - CSS class name applied to the section wrapper element.
+   * @param {Array<{regionKey: string, regionLabel: string, isEnglandAggregate?: boolean, isEnglandRegion?: boolean}>} params.sectionRegions - Region rows to render.
+   * @param {Array<string|null>} params.sectionPartyKeys - Ordered party key columns; null entries render blank spacer cells.
+   * @param {boolean} [params.blankRegionHeader=false] - If true, omits the 'Region' text from the header row.
+   * @returns {void}
+   */
   const renderPredictGridSection = ({ sectionTitle, sectionClassName, sectionRegions, sectionPartyKeys, blankRegionHeader = false }) => {
     if (!sectionRegions.length) return;
 
@@ -2169,6 +2206,7 @@ function wireVoteTotalsSorting(onSortChanged) {
     const sortKey = header.getAttribute('data-sort-key');
     if (!sortKey) return;
 
+    /** Updates sort direction for sortKey and invokes the onSortChanged callback. */
     const trigger = () => {
       setSortDirection(sortKey);
       onSortChanged();
@@ -2509,6 +2547,10 @@ function wireSeatSearch() {
   ensureSeatSearchMenu();
 
   let lastSubmittedQuery = '';
+  /**
+   * Reads the current search input value and calls selectSeatBySearchQuery, deduplicating against the last submitted query.
+   * @returns {void}
+   */
   const submitSearch = () => {
     const query = String(seatSearchInput.value || '').trim();
     if (!query || query === lastSubmittedQuery) return;
@@ -2724,17 +2766,28 @@ function renderTopoMap(mapData, seats, options = {}) {
   svg.call(zoomBehavior);
   const initialTransform = getInitialZoomTransform(width, height);
 
+  /**
+   * Animates the map zoom to centre on a GeoJSON feature using the legacy seat zoom transform.
+   * @param {object} featureDatum - GeoJSON feature to zoom to.
+   * @returns {void}
+   */
   const zoomToFeature = (featureDatum) => {
     const targetTransform = getLegacySeatZoomTransform(path, featureDatum, width, height);
     svg.transition().duration(CLICK_ZOOM_DURATION_MS).call(zoomBehavior.transform, targetTransform);
   };
 
+  /** Removes the active highlight class from the currently active seat path and clears the reference. */
   const clearActiveSeatPath = () => {
     if (!activeSeatPathNode) return;
     d3.select(activeSeatPathNode).classed('maps-region-path-active', false);
     activeSeatPathNode = null;
   };
 
+  /**
+   * Sets pathNode as the active seat path, removing the highlight from any previously active path and raising pathNode to the front.
+   * @param {SVGPathElement} pathNode - The SVG path element to activate.
+   * @returns {void}
+   */
   const setActiveSeatPath = (pathNode) => {
     if (!pathNode) return;
     if (activeSeatPathNode && activeSeatPathNode !== pathNode) {
@@ -2744,6 +2797,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     d3.select(pathNode).classed('maps-region-path-active', true).raise();
   };
 
+  /** Hides the seat popup, clears the active path highlight, and animates the map back to the initial zoom transform. */
   const resetZoom = () => {
     hideSeatPopup();
     clearActiveSeatPath();
@@ -2894,6 +2948,7 @@ function wirePopupPanels() {
 function wireMapViewControls() {
   if (filterPartySelect?.dataset.wired === 'true') return;
 
+  /** Reads all filter/choropleth input values into state and re-renders the map. */
   const applyFromInputs = () => {
     syncMapControlStateFromInputs();
     renderMapWithViewState();

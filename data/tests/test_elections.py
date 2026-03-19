@@ -7,6 +7,8 @@ from models import ElectionType
 
 
 class TestAddElection:
+    """Tests for Database.add_election — creation, typing, and uniqueness constraints."""
+
     def test_basic(self, db: Database) -> None:
         m = db.add_map("UK")
         e = db.add_election(m.id, 2024, "GE 2024", ElectionType.uk_general)
@@ -42,6 +44,8 @@ class TestAddElection:
 
 
 class TestGetElection:
+    """Tests for Database.get_election and get_election_by_name lookups."""
+
     def test_by_id(self, db: Database) -> None:
         m = db.add_map("UK")
         created = db.add_election(m.id, 2019, "GE 2019", ElectionType.uk_general)
@@ -62,6 +66,8 @@ class TestGetElection:
 
 
 class TestGetElectionsForMap:
+    """Tests for Database.get_elections_for_map — ordering and map isolation."""
+
     def test_empty(self, db: Database) -> None:
         m = db.add_map("UK")
         assert db.get_elections_for_map(m.id) == []

@@ -29,6 +29,11 @@ DEFAULT_OUTPUT_DIR = DATA_DIR.parent / "electionmaps" / "data" / "results"
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for the export runner.
+
+    Returns:
+        Parsed namespace with `exporter`, `output_dir`, `python`, and `dry_run` fields.
+    """
     parser = argparse.ArgumentParser(
         description="Invoke exporter for each election and latest prediction simulation"
     )
@@ -59,6 +64,12 @@ def parse_args() -> argparse.Namespace:
 
 
 def run_command(command: list[str], dry_run: bool) -> None:
+    """Print and optionally execute a shell command.
+
+    Args:
+        command: List of command tokens to execute.
+        dry_run: If True, print the command but do not execute it.
+    """
     print("$", " ".join(command))
     if dry_run:
         return
@@ -66,6 +77,7 @@ def run_command(command: list[str], dry_run: bool) -> None:
 
 
 def main() -> None:
+    """Entry point: export each UK general election and the current prediction simulation to JSON."""
     args = parse_args()
     exporter_path = args.exporter.resolve()
     output_dir = args.output_dir.resolve()

@@ -3,7 +3,16 @@ import sqlite3
 
 app = Flask(__name__)
 
-def get_db():
+def get_db() -> sqlite3.Connection:
+    """Open and return a connection to the Wikipedia history database.
+
+    Configures the connection with ``sqlite3.Row`` as the row factory so that
+    rows can be accessed by column name as well as by index.
+
+    Returns:
+        sqlite3.Connection: An open connection to ``wikipedia_history.db`` with
+            ``row_factory`` set to ``sqlite3.Row``.
+    """
     conn = sqlite3.connect('wikipedia_history.db')
     conn.row_factory = sqlite3.Row
     return conn
@@ -127,11 +136,38 @@ HTML_TEMPLATE = """
 """
 
 @app.route('/')
-def index():
+def index() -> str:
+    """Render the Guess The Year game page.
+
+    Route:
+        GET /
+
+    Returns:
+        str: The fully rendered HTML page produced from ``HTML_TEMPLATE``.
+    """
     return render_template_string(HTML_TEMPLATE)
 
 @app.route('/api/challenge')
 def challenge():
+    """Return a random challenge for the Guess The Year game.
+
+    Route:
+        GET /api/challenge
+
+    Queries the ``events`` table in ``wikipedia_history.db`` to select a random
+    year/era combination that has at least three associated events, then fetches
+    up to five of those events at random to use as in-game clues.
+
+    Returns:
+        flask.Response: A JSON response (HTTP 200) with the following keys:
+
+            - ``year`` (int): The target year.
+            - ``era`` (str): ``"AD"`` or ``"BC"``.
+            - ``timeframe_type`` (str): Granularity of the challenge, one of
+              ``"year"``, ``"decade"``, or ``"century"``.
+            - ``events`` (list[str]): Up to five historical event descriptions
+              drawn at random from the matching rows.
+    """
     conn = get_db()
     # Find a random year that has at least 3 events for a better game
     row = conn.execute('''

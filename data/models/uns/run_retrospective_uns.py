@@ -14,6 +14,22 @@ from models import Election, ElectionType, Vote
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the retrospective UNS backfill runner.
+
+    Returns:
+        argparse.Namespace with the following attributes:
+            map_name (str): Name of the constituency map to use.
+            baseline_election_name (str): Name of the baseline election for UNS calculation.
+            start_date (str): ISO date string (YYYY-MM-DD) for the first simulation date.
+            end_date (str): ISO date string (YYYY-MM-DD) for the last simulation date.
+            lookback_days (int): Non-negative number of days of poll history to include.
+            half_life_days (float): Positive exponential decay half-life for poll weighting.
+            dry_run (bool): If True, simulate without writing to the database or CSV.
+            continue_on_error (bool): If True, log errors and proceed; if False, re-raise.
+            progress_every (int): Print a progress line every N successes (0 to disable).
+            reset_existing (bool): If True, delete existing model_uns outputs in the date
+                range and strip matching rows from the trend cache CSV before backfilling.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", default="UK Constituencies post 2022")
     parser.add_argument("--baseline-election-name", default="2024 General Election")
@@ -39,12 +55,22 @@ def parse_args() -> argparse.Namespace:
 def reset_existing_model_outputs(
     db: Database, start_date: date, end_date: date
 ) -> tuple[int, int, int]:
-    """Delete model_uns elections in [start_date, end_date] and strip those rows from the trend cache CSV.
+    """Delete model_uns elections in [start_date, end_date] and strip matching rows from the trend cache CSV.
 
-    Election names are ``UNS YYYY-MM-DD`` (optionally suffixed ``#N``), so a
-    lexicographic range on the name column correctly isolates the target dates.
+    Election names follow the pattern ``UNS YYYY-MM-DD`` (optionally suffixed
+    ``#N``), so a lexicographic range on the name column correctly isolates the
+    target dates. The trend cache CSV is rewritten in place with the matching
+    rows removed; if no rows fall in the range the file is left unchanged.
 
-    Returns (deleted_elections, deleted_votes, stripped_csv_rows).
+    Args:
+        db: Open Database instance used to execute delete statements.
+        start_date: Inclusive lower bound of the date range to clear.
+        end_date: Inclusive upper bound of the date range to clear.
+
+    Returns:
+        A 3-tuple ``(deleted_elections, deleted_votes, stripped_csv_rows)``
+        where each element is the count of rows removed from its respective
+        store.
     """
     upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
 
@@ -94,6 +120,21 @@ def reset_existing_model_outputs(
 
 
 def main() -> None:
+    """Entry point for the retrospective UNS backfill runner.
+
+    Parses CLI arguments, optionally resets existing model_uns outputs for the
+    requested date range, then iterates day-by-day calling ``run_simulation``
+    for each date. Progress lines are printed every ``--progress-every``
+    successes and a summary is printed on completion. Failures are collected
+    and printed at the end; if ``--continue-on-error`` is not set the first
+    error is re-raised immediately.
+
+    Raises:
+        ValueError: If ``end-date`` is before ``start-date``, ``lookback-days``
+            is negative, or ``half-life-days`` is not greater than zero.
+        Exception: Any exception raised by ``run_simulation`` is re-raised when
+            ``--continue-on-error`` is not set.
+    """
     args = parse_args()
 
     start_date = date.fromisoformat(args.start_date)

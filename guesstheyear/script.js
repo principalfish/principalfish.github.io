@@ -9,31 +9,73 @@ let guessHistory = [];
 let won = false;
 let currentStreak = 0;
 
+/**
+ * Compute a deterministic daily challenge index from a date string.
+ *
+ * Hashes seedSource character-by-character using a polynomial roll (multiplier 31),
+ * then derives a non-negative seed and maps it into [0, challengeCount).
+ *
+ * @param {string} seedSource - Date string used as the hash input (e.g. today's toDateString()).
+ * @param {number} challengeCount - Total number of available challenges.
+ * @returns {number} Index into the challenges array for today's daily challenge.
+ */
 function getDailyChallengeIndex(seedSource, challengeCount) {
     const hash = Array.from(seedSource).reduce((sum, char) => Math.imul(31, sum) + char.charCodeAt(0) | 0, 0);
     const seed = Math.abs((hash * 12) + 912);
     return seed % challengeCount;
 }
 
+/**
+ * Build the localStorage key used to persist the daily game state.
+ *
+ * @param {string} seedSource - Date string identifying the current day.
+ * @returns {string} The localStorage key for this day's save, e.g. ``"chronos_save_Mon Mar 18 2026"``.
+ */
 function getDailySaveKey(seedSource) {
     return 'chronos_save_' + seedSource;
 }
 
+/**
+ * Read and parse the daily game state from localStorage.
+ *
+ * @param {string} seedSource - Date string identifying the current day.
+ * @returns {Object|null} The parsed game state object, or null if no save exists for this day.
+ */
 function loadDailyGameState(seedSource) {
     const raw = localStorage.getItem(getDailySaveKey(seedSource));
     if (!raw) return null;
     return JSON.parse(raw);
 }
 
+/**
+ * Serialise and write the daily game state to localStorage.
+ *
+ * @param {string} seedSource - Date string identifying the current day.
+ * @param {Object} gameState - Game state object containing guesses, attempts, won flag,
+ *   guessHistory, and visibleFacts.
+ * @returns {void}
+ */
 function saveDailyGameState(seedSource, gameState) {
     localStorage.setItem(getDailySaveKey(seedSource), JSON.stringify(gameState));
 }
 
+/**
+ * Determine whether a daily game is finished (won or out of attempts).
+ *
+ * @param {Object|null} gameState - Saved game state, or null if no save exists.
+ * @returns {boolean} True if the player has won or has no attempts remaining; false otherwise.
+ */
 function isDailyGameFinished(gameState) {
     if (!gameState) return false;
     return gameState.won || gameState.attempts <= 0;
 }
 
+/**
+ * Enable or disable the year input, era select, and guess button controls.
+ *
+ * @param {boolean} disabled - Pass true to disable all guess controls, false to re-enable them.
+ * @returns {void}
+ */
 function setGuessControlsDisabled(disabled) {
     document.getElementById('guessYear').disabled = disabled;
     document.getElementById('guessEra').disabled = disabled;
@@ -41,6 +83,18 @@ function setGuessControlsDisabled(disabled) {
     if (guessBtn) guessBtn.disabled = disabled;
 }
 
+/**
+ * Initialise the game: load challenges, determine mode, and restore any saved state.
+ *
+ * Fetches challenges.json, cleans up stale daily saves, reads the URL mode parameter
+ * (daily or infinite), and loads the easy-mode preference.  In infinite mode, redirects
+ * to daily if today's daily has not yet been completed.  In daily mode, restores a saved
+ * game if one exists; if the game was already finished, shows the already-played screen
+ * and disables controls.  Calls setupGame() to render the initial fact cards.
+ *
+ * @async
+ * @returns {Promise<void>} Resolves when initialisation is complete or the page redirects.
+ */
 async function init() {
 try {
     const response = await fetch('challenges.json');
@@ -92,7 +146,15 @@ try {
 }
 }
 
-// Clean up old daily save games (keep only today's)
+/**
+ * Remove all chronos_save_* localStorage entries except today's save.
+ *
+ * Iterates over all localStorage keys, collects every key that starts with
+ * ``"chronos_save_"`` and is not today's key, then removes them.  Logs the
+ * count of removed entries to the console if any were found.
+ *
+ * @returns {void}
+ */
 function cleanupOldDailySaves() {
     const today = new Date().toDateString();
     const todayKey = 'chronos_save_' + today;
@@ -115,13 +177,28 @@ function cleanupOldDailySaves() {
     }
 }
 
-// Save the preference
+/**
+ * Persist the current easy-mode toggle state to localStorage.
+ *
+ * Reads the ``easyModeToggle`` checkbox and writes its boolean value under
+ * the key ``"chronos_easy_mode"``.
+ *
+ * @returns {void}
+ */
 function saveEasyModePref() {
     const isEasy = document.getElementById('easyModeToggle').checked;
     localStorage.setItem('chronos_easy_mode', isEasy);
 }
 
-// Load the preference on startup
+/**
+ * Restore the easy-mode toggle state from localStorage on startup.
+ *
+ * Reads ``"chronos_easy_mode"`` from localStorage and, if present, sets the
+ * ``easyModeToggle`` checkbox accordingly (the stored value is a string, so it
+ * is compared to ``"true"``).
+ *
+ * @returns {void}
+ */
 function loadEasyModePref() {
     const savedPref = localStorage.getItem('chronos_easy_mode');
     if (savedPref !== null) {
@@ -130,6 +207,15 @@ function loadEasyModePref() {
     }
 }
 
+/**
+ * Switch to the result view and display a countdown to the next daily challenge.
+ *
+ * Hides the game view, reveals the result view and the "View Results" button, sets
+ * the result title to "Daily Complete!", injects a countdown timer element, and
+ * starts the countdown via startTimer().
+ *
+ * @returns {void}
+ */
 function showAlreadyPlayed() {
     document.getElementById('game-view').classList.add('hidden');
     document.getElementById('result-view').classList.remove('hidden');
@@ -144,12 +230,28 @@ function showAlreadyPlayed() {
     startTimer();
 }
 
-// --- Countdown Timer Logic ---
+/**
+ * Start the countdown timer that ticks every second until midnight.
+ *
+ * Calls updateTimer() immediately for the first render, then schedules it to run
+ * every 1000 ms via setInterval.
+ *
+ * @returns {void}
+ */
 function startTimer() {
     updateTimer();
     setInterval(updateTimer, 1000);
 }
 
+/**
+ * Compute the time remaining until midnight and update the #timer element.
+ *
+ * Calculates the difference between now and the start of tomorrow, formats it as
+ * HH:MM:SS, and writes it to the ``#timer`` element's innerText.  Does nothing if
+ * the element is not present in the DOM.
+ *
+ * @returns {void}
+ */
 function updateTimer() {
     const timerEl = document.getElementById('timer');
     if (!timerEl) return;
@@ -168,6 +270,15 @@ function updateTimer() {
     timerEl.innerText = `${hours}:${mins}:${secs}`;
 }
 
+/**
+ * Select the challenge for the current mode and render the fact cards.
+ *
+ * In daily mode the challenge was already set by init(); in infinite mode a random
+ * challenge is selected from allChallenges and the mode badge is updated.  Calls
+ * renderFacts() to display the initial set of cards.
+ *
+ * @returns {void}
+ */
 function setupGame() {
     if (mode === 'daily') {
         // Daily mode already set currentChallenge above
@@ -184,6 +295,16 @@ function setupGame() {
 
 let visibleFacts = 1; // Start with one fact
 
+/**
+ * Render the fact cards for the current challenge into the facts area.
+ *
+ * Clears the ``#facts-area`` element and rebuilds it with a timeframe label and one
+ * ``event-card`` div per fact.  Facts beyond the current visibleFacts index are given
+ * the ``hidden`` class.  Only the first sentence of each fact is shown.  Appends a
+ * "Reveal another clue" hint button if more facts remain hidden.
+ *
+ * @returns {void}
+ */
 function renderFacts() {
     const factsArea = document.getElementById('facts-area');
     if (!factsArea || !currentChallenge) return;
@@ -210,6 +331,14 @@ function renderFacts() {
     }
 }
 
+/**
+ * Re-render the entire guess history from the in-memory guesses array.
+ *
+ * Clears the ``#feedback-list`` element and prepends a styled feedback row for each
+ * entry in the guesses array.  Used when restoring a saved game on page load.
+ *
+ * @returns {void}
+ */
 function renderSavedGuesses() {
     const feedbackList = document.getElementById('feedback-list');
     if (!feedbackList) return;
@@ -235,6 +364,16 @@ function renderSavedGuesses() {
     });
 }
 
+/**
+ * Format a human-readable label for a challenge's answer.
+ *
+ * Returns "Year: Y ERA" for year challenges, "The Xs ERA" for decade challenges, or
+ * "The Nth Century ERA" for century challenges.
+ *
+ * @param {Object} challenge - Challenge object with properties y (number), e (string),
+ *   and t (string: 'year' | 'decade' | 'century').
+ * @returns {string} Formatted display name for the challenge's answer.
+ */
 function getDisplayName(challenge) {
     const { y, e, t } = challenge;
     
@@ -251,6 +390,14 @@ function getDisplayName(challenge) {
     }
 }
 
+/**
+ * Return the English ordinal suffix for a positive integer.
+ *
+ * Handles the 11th/12th/13th special cases correctly.
+ *
+ * @param {number} n - A positive integer.
+ * @returns {string} One of 'st', 'nd', 'rd', or 'th'.
+ */
 function getOrdinalSuffix(n) {
     const v = n % 100;
     if (v >= 11 && v <= 13) return 'th';
@@ -258,6 +405,14 @@ function getOrdinalSuffix(n) {
     return ['th', 'st', 'nd', 'rd'][ones] || 'th';
 }
 
+/**
+ * Reveal the next hidden fact card and remove the hint button if no more are hidden.
+ *
+ * Unhides the fact card at the current visibleFacts index, increments visibleFacts, and
+ * removes the ``#hint-btn`` element once all facts are visible.
+ *
+ * @returns {void}
+ */
 function showHint() {
     const nextFact = document.getElementById(`fact-${visibleFacts}`);
     if (nextFact) {
@@ -270,7 +425,20 @@ function showHint() {
     }
 }
 
-function handleGuess() {  
+/**
+ * Handle a player's guess: validate input, compute the year difference, check for a win,
+ * update the UI, and persist state.
+ *
+ * Reads the year and era from the form controls.  Converts both the guess and the target
+ * to signed absolute year values (BC years become negative) to compute the absolute
+ * distance, accounting for decade/century ranges and the absence of a Year 0.  Appends a
+ * styled feedback row to ``#feedback-list``, deducts an attempt on a miss, and saves the
+ * game state to localStorage in daily mode.  Triggers endGame() on win (after a 1.2 s
+ * delay) or when attempts reach zero.
+ *
+ * @returns {void}
+ */
+function handleGuess() {
 if (isGameOver) return;
 
 const gYearInput = document.getElementById('guessYear');
@@ -381,6 +549,16 @@ feedbackList.prepend(item);
     }
 }
 
+/**
+ * Map a year difference (and win status) to a feedback label, colour, and emoji.
+ *
+ * Thresholds: 0 = Correct, 1-2 = Burning, 3-10 = Hot, 11-40 = Warm,
+ * 41-200 = Chilly, 201-1000 = Cold, 1000+ = Freezing.
+ *
+ * @param {number} diff - Absolute difference in years between the guess and the target range.
+ * @param {boolean} won - True if the guess fell within the valid answer range.
+ * @returns {{label: string, color: string, emoji: string}} Configuration object for the feedback row.
+ */
 function getFeedbackConfig(diff, won) {
     if (won || diff === 0) {
         return { label: "Correct!", color: "#198754", emoji: "✅" };
@@ -410,6 +588,16 @@ function getFeedbackConfig(diff, won) {
     return { label: "1000+ yrs (Freezing)", color: "#6c757d", emoji: "🌌" };
 }
 
+/**
+ * Append a feedback row to the ``#feedback-list`` element.
+ *
+ * Creates a div with the guess year/era and the feedback label, coloured according to cfg.
+ *
+ * @param {number} year - The guessed year value.
+ * @param {string} era - The guessed era ('AD' or 'BC').
+ * @param {{label: string, color: string, emoji: string}} cfg - Feedback configuration from getFeedbackConfig.
+ * @returns {void}
+ */
 function addFeedbackUI(year, era, cfg) {
     const row = document.createElement('div');
     row.className = 'guess-row';
@@ -418,6 +606,19 @@ function addFeedbackUI(year, era, cfg) {
     document.getElementById('feedback-list').prepend(row);
 }
 
+/**
+ * Transition to the result view and record the game outcome.
+ *
+ * Displays the target year, sets the result title (Victory or Time's Up), applies the
+ * victory card style, and launches fireworks on a real win.  Updates the streak counter.
+ * In daily mode, starts the countdown timer.  Saves the result to history unless
+ * isRestoring is true (i.e. the result view is being rebuilt after a page reload).
+ *
+ * @param {boolean} winStatus - True if the player won, false if they ran out of attempts.
+ * @param {boolean} [isRestoring=false] - True when rebuilding the result view from saved state;
+ *   suppresses history writes and fireworks.
+ * @returns {void}
+ */
 function endGame(winStatus, isRestoring = false) {
     if (!currentChallenge) return;
 
@@ -467,6 +668,14 @@ function endGame(winStatus, isRestoring = false) {
     if (mode === 'daily') startTimer();
 }
 
+/**
+ * Switch to the game view, hiding the result view.
+ *
+ * Disables guess controls if the game is already over (so the player can review
+ * their guesses without being able to submit new ones).
+ *
+ * @returns {void}
+ */
 function viewGame() {
     document.getElementById('result-view').classList.add('hidden');
     document.getElementById('game-view').classList.remove('hidden');
@@ -478,11 +687,25 @@ function viewGame() {
     }
 }
 
+/**
+ * Switch to the result view, hiding the game view.
+ *
+ * @returns {void}
+ */
 function viewResults() {
     document.getElementById('game-view').classList.add('hidden');
     document.getElementById('result-view').classList.remove('hidden');
 }
 
+/**
+ * Append the current game's result to the persistent history in localStorage.
+ *
+ * Reads ``"chronos_history_v3"``, pushes a new record containing the date (DD/MM/YYYY),
+ * year, era, timeframe type, win status, guess count, and mode, then writes it back.
+ *
+ * @param {boolean} wonStatus - True if the player won the game.
+ * @returns {void}
+ */
 function saveHistory(wonStatus) {
     const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
     const today = new Date();
@@ -501,6 +724,16 @@ function saveHistory(wonStatus) {
     localStorage.setItem('chronos_history_v3', JSON.stringify(history));
 }
 
+/**
+ * Copy the game result as an emoji string to the clipboard.
+ *
+ * Builds a share message containing the mode, emoji sequence, score out of 8, and the
+ * current page URL.  In daily mode, falls back to the saved daily result from localStorage
+ * if the in-memory guessHistory is empty (e.g. when sharing after a page reload).
+ * Shows a confirmation alert on success.
+ *
+ * @returns {void}
+ */
 function shareResult() {
     let finalWon = won;
     let emojis = guessHistory.join('');
@@ -529,17 +762,36 @@ function shareResult() {
     });
 }
 
-// Load fireworks preference
+/**
+ * Read the saved fireworks intensity preference from localStorage.
+ *
+ * @returns {string} The stored preference value ('low', 'high', or 'extreme'),
+ *   defaulting to 'low' if none has been saved.
+ */
 function loadFireworksPref() {
     return localStorage.getItem('chronos_fireworks_mode') || 'low';
 }
 
-// Save fireworks preference
+/**
+ * Persist the chosen fireworks intensity preference to localStorage.
+ *
+ * @param {string} mode - One of 'low', 'high', or 'extreme'.
+ * @returns {void}
+ */
 function saveFireworksPref(mode) {
     localStorage.setItem('chronos_fireworks_mode', mode);
 }
 
-// Update your toggleHistory function's modal footer or top
+/**
+ * Build and display the history modal with game stats, game tables, and fireworks settings.
+ *
+ * Reads ``"chronos_history_v3"`` from localStorage, calculates the current streak, splits
+ * history into daily and infinite sub-lists, constructs the stats header, tab-pane HTML
+ * (daily table, infinite table, fireworks settings), and a clear-data button, then injects
+ * the result into ``#history-content`` and shows the Bootstrap modal.
+ *
+ * @returns {void}
+ */
 function toggleHistory() {
     const history = JSON.parse(localStorage.getItem('chronos_history_v3') || '[]');
     calculateStreak(history); 
@@ -610,6 +862,17 @@ function toggleHistory() {
     new bootstrap.Modal(document.getElementById('historyModal')).show();
 }
 
+/**
+ * Build an HTML table string from a history array.
+ *
+ * Each row shows the play date, the formatted target (year/decade/century), and
+ * the result (number of guesses or "Failed") with an appropriate badge colour.
+ * Returns a placeholder message if the array is empty.
+ *
+ * @param {Array<Object>} data - Array of history record objects with properties d (date string),
+ *   y (year), e (era), t (timeframe), w (won boolean), s (guess count).
+ * @returns {string} HTML string containing a ``<table>`` element, or a "No games played" message.
+ */
 function generateTable(data) {
     if (!data || data.length === 0) return "<p class='text-center p-3 text-muted'>No games played yet.</p>";
     
@@ -639,6 +902,18 @@ function generateTable(data) {
     return t + '</tbody></table>';
 }
 
+/**
+ * Format a year/era/timeframe combination for display in the history table.
+ *
+ * Returns "Y ERA" for year challenges, "Xs ERA" for decades (rounded to the decade
+ * start), and "Nth Century ERA" for century challenges.  Falls back to "Y ERA" for
+ * unrecognised timeframe values.
+ *
+ * @param {number} year - The numeric year value stored in the history record.
+ * @param {string} era - 'AD' or 'BC'.
+ * @param {string} timeframe - 'year', 'decade', or 'century'.
+ * @returns {string} Human-readable date label for the history table.
+ */
 function formatHistoryDate(year, era, timeframe) {
     if (timeframe === 'year') return `${year} ${era}`;
     
@@ -654,6 +929,16 @@ function formatHistoryDate(year, era, timeframe) {
     return `${year} ${era}`;
 }
 
+/**
+ * Compute the current consecutive daily win streak and store it in currentStreak.
+ *
+ * Filters to daily wins, extracts unique DD/MM/YYYY dates, sorts them newest-first,
+ * validates the format, and checks that the most recent win was today or yesterday
+ * before counting backwards.  Sets the global currentStreak variable.
+ *
+ * @param {Array<Object>} history - Full history array from ``"chronos_history_v3"``.
+ * @returns {void}
+ */
 function calculateStreak(history) {
     // 1. Get only successful Daily wins
     const dailyWins = history.filter(g => g.m === 'daily' && g.w === true);
@@ -724,6 +1009,15 @@ function calculateStreak(history) {
     currentStreak = streak;
 }
 
+/**
+ * Prompt the user for confirmation, then wipe all Chronos localStorage data.
+ *
+ * Removes the fixed known keys (history, daily result, preferences, current save) and
+ * also iterates over all keys to remove any remaining ``chronos_save_*`` entries.
+ * Redirects to the daily mode URL after clearing.
+ *
+ * @returns {void}
+ */
 function clearAllData() {
     if (confirm("Are you sure? This will delete ALL history, streaks, and saved games!")) {
         // Clear all known keys
@@ -753,6 +1047,15 @@ function clearAllData() {
     }
 }
 
+/**
+ * Route the player to an appropriate next game after finishing.
+ *
+ * In daily mode, navigates to infinite mode.  In infinite mode, checks if today's daily
+ * game is available or in progress and redirects to daily; otherwise resets the infinite
+ * game state in place via resetGameState().
+ *
+ * @returns {void}
+ */
 function playAgain() {
     // If we are in Daily mode and finished, 'Play Again' should take us to Infinite
     if (mode === 'daily') {
@@ -780,6 +1083,15 @@ function playAgain() {
     }
 }
 
+/**
+ * Reset all game variables and UI elements for a fresh infinite-mode game.
+ *
+ * Resets attempts to 8, clears guessHistory, won, visibleFacts, and isGameOver,
+ * restores the attempts counter display, clears the feedback list and guess input,
+ * re-enables guess controls, and calls setupGame() to pick a new challenge.
+ *
+ * @returns {void}
+ */
 function resetGameState() {
     // Reset variables
     attempts = 8;
@@ -799,6 +1111,14 @@ function resetGameState() {
     // Pick a new challenge
     setupGame();
 }
+/**
+ * Launch the confetti celebration effect at the intensity stored in the fireworks preference.
+ *
+ * Reads the saved fireworks mode and delegates to launchFireworksLow(), launchFireworksHigh(),
+ * or launchFireworksExtreme().
+ *
+ * @returns {void}
+ */
 function launchFireworks() {
     const fireworksMode = loadFireworksPref();
     
@@ -811,6 +1131,13 @@ function launchFireworks() {
     }
 }
 
+/**
+ * Run a gentle 5-second confetti celebration (low intensity).
+ *
+ * Fires a slow shimmer throughout and two gentle bursts at 1.5 s and 3 s.
+ *
+ * @returns {void}
+ */
 function launchFireworksLow() {
     // Enhanced gentle celebration for 5 seconds
     const duration = 5 * 1000;
@@ -848,6 +1175,15 @@ function launchFireworksLow() {
     });
 }
 
+/**
+ * Run a dramatic 12-second confetti celebration (high intensity).
+ *
+ * Plays through four acts: a gentle shimmer opening, heavy cannon blasts at 3-6 s,
+ * rapid side-fire flanking from 6 s, a grand finale barrage from 8.5 s, and a
+ * climactic grand-slam burst with 500 particles and a screen flash at 12 s.
+ *
+ * @returns {void}
+ */
 function launchFireworksHigh() {
     const duration = 12 * 1000; // Increased to 12 seconds for the full symphony
     const animationEnd = Date.now() + duration;
@@ -958,6 +1294,16 @@ setTimeout(() => {
 }, 12000); // Triggers at the 12-second mark
 }
 
+/**
+ * Run an over-the-top 20-second confetti celebration (extreme intensity).
+ *
+ * Five escalating phases: overwhelming triple-shimmer opening, mega cannon blasts with
+ * screen colour pulses at 2-8 s, quadruple-corner flanking from 8 s, absolute chaos
+ * with random explosions from 12 s, a triple grand finale at 16-18 s, and a
+ * four-corner ultimate finale with 1000-particle bursts from 19.5 s to 21.5 s.
+ *
+ * @returns {void}
+ */
 function launchFireworksExtreme() {
     const duration = 20 * 1000; // Extended to 20 seconds of pure chaos
     const animationEnd = Date.now() + duration;

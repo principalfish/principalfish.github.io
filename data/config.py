@@ -20,6 +20,12 @@ class DatabaseConfig(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def url(self) -> str:
+        """Return a SQLAlchemy-compatible PostgreSQL connection URL.
+
+        Returns:
+            str: Connection URL in the form
+                ``postgresql://user:password@host:port/database``.
+        """
         return (
             f"postgresql://{self.user}:{self.password}"
             f"@{self.host}:{self.port}/{self.database}"

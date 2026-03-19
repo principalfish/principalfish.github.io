@@ -96,6 +96,21 @@ def clean_event_text(text, target_year):
     return text
 
 def export_challenges(db_path, output_file):
+    """Read events from SQLite, clean them, deduplicate decade/century entries, and write a JSON challenges file.
+
+    Connects to the database at db_path, groups events by year/era/timeframe, applies
+    clean_event_text to each raw fact, discards entries with fewer than 3 clean facts,
+    randomly samples up to 5 facts per entry, deduplicates decade and century groups so
+    only one representative entry per decade/century is emitted, and writes the resulting
+    list to output_file as JSON.  Summary and quality statistics are printed to stdout.
+
+    Args:
+        db_path (str): Path to the SQLite database file containing an ``events`` table.
+        output_file (str): Destination path for the JSON challenges file to write.
+
+    Returns:
+        None
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -179,5 +194,16 @@ def export_challenges(db_path, output_file):
 
     conn.close()
 
-if __name__ == "__main__":
+def main():
+    """Entry point: export challenges from the default database to challenges.json.
+
+    Calls export_challenges with the standard database path (``wikipedia_history.db``)
+    and output path (``challenges.json``).
+
+    Returns:
+        None
+    """
     export_challenges('wikipedia_history.db', 'challenges.json')
+
+if __name__ == "__main__":
+    main()

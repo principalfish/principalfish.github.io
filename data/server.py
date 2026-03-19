@@ -167,6 +167,7 @@ _DB: Database | None = None
 
 
 def _get_db() -> Database:
+    """Return the module-level Database singleton, creating it on first call."""
     global _DB
     if _DB is None:
         _DB = Database()
@@ -174,6 +175,17 @@ def _get_db() -> Database:
 
 
 def _trend_row_as_of_date(row: dict[str, str]) -> date | None:
+    """Derive the authoritative as-of date for a trend CSV row.
+
+    Prefers the date embedded in the `election_name` field (pattern 'UNS YYYY-MM-DD').
+    Falls back to parsing the `as_of_date` column directly.
+
+    Args:
+        row: A single row from the UNS trend cache CSV as a string dict.
+
+    Returns:
+        Parsed date object, or None if no valid date can be derived.
+    """
     election_name = str(row.get("election_name") or "").strip()
     name_match = UNS_NAME_DATE_PATTERN.search(election_name)
     if name_match:
@@ -192,6 +204,15 @@ def _trend_row_as_of_date(row: dict[str, str]) -> date | None:
 
 
 def _choices_for_model_form(db: Database) -> dict[str, object]:
+    """Build the dropdown choices dict used to populate the model run form.
+
+    Args:
+        db: Active Database instance.
+
+    Returns:
+        Dict with keys: `map_names`, `election_options`, `as_of_days_back`,
+        `since_days_back`, `half_life_days`, `output_csv_options`, `dry_run_options`.
+    """
     maps = db.get_all_maps()
 
     with db.session() as session:
@@ -230,6 +251,11 @@ def _choices_for_model_form(db: Database) -> dict[str, object]:
 
 
 def _model_arg_explanations() -> list[dict[str, str]]:
+    """Return human-readable explanations for each UNS model CLI argument.
+
+    Returns:
+        List of dicts with `flag` and `description` keys, one per model argument.
+    """
     return [
         {
             "flag": "--map-name",
@@ -264,11 +290,13 @@ def _model_arg_explanations() -> list[dict[str, str]]:
 
 @app.route("/")
 def home() -> str:
+    """GET / — Render the home dashboard."""
     return render_template("home.html")
 
 
 @app.route("/update-polls", methods=["POST"])
 def update_polls() -> str | WerkzeugResponse:
+    """POST /update-polls — Run update_polls.sh and render its stdout/stderr output."""
     if not UPDATE_POLLS_SCRIPT.exists():
         flash(f"Update script not found: {UPDATE_POLLS_SCRIPT}")
         return redirect(url_for("home"))
@@ -295,6 +323,7 @@ def update_polls() -> str | WerkzeugResponse:
 
 @app.route("/exports/current-simulation", methods=["POST"])
 def export_current_simulation() -> str | WerkzeugResponse:
+    """POST /exports/current-simulation — Export the latest UNS prediction simulation to JSON."""
     if not EXPORT_ELECTION_SCRIPT.exists():
         flash(f"Export script not found: {EXPORT_ELECTION_SCRIPT}")
         return redirect(url_for("home"))
@@ -328,6 +357,7 @@ def export_current_simulation() -> str | WerkzeugResponse:
 
 @app.route("/models/run", methods=["GET"])
 def model_run_form() -> str:
+    """GET /models/run — Render the UNS model run form with default values."""
     db = _get_db()
     return render_template(
         "model_run.html",
@@ -348,6 +378,20 @@ def model_run_form() -> str:
 
 @app.route("/models/run", methods=["POST"])
 def model_run_execute() -> str | WerkzeugResponse:
+    """POST /models/run — Validate the model form, invoke run_uns_model.py, and auto-export on success.
+
+    Form parameters (all required):
+        map_name (str): Name of the constituency map.
+        baseline_election_name (str): Name of the election providing seat-level baseline votes.
+        as_of_days_back (int, >=0): Poll cut-off offset from today in days.
+        since_days_back (int, >=as_of_days_back): How far back in days to include polls from.
+        half_life_days (float, >0): Time-decay half-life for poll weighting.
+        output_csv (str, optional): File path for seat-projection CSV output.
+        dry_run (str): 'true' to preview without writing to DB; 'false' to commit.
+
+    Returns:
+        Rendered model_run.html with run output, or redirects with flash on validation error.
+    """
     raw_form = {key: (val or "").strip() for key, val in request.form.items()}
     form_values = {
         "map_name": raw_form.get("map_name", ""),
@@ -451,6 +495,14 @@ def model_run_execute() -> str | WerkzeugResponse:
 
 @app.route("/models/outputs", methods=["GET"])
 def model_outputs() -> str:
+    """GET /models/outputs — List UNS model output elections with trend chart data.
+
+    Query parameters:
+        show (str, optional): Pass 'all' to show every model output; otherwise the 10 most recent.
+
+    Returns:
+        Rendered model_outputs.html with seat/vote trend datasets for Chart.js.
+    """
     show_all = (request.args.get("show") or "").strip().lower() == "all"
     default_limit = 10
 
@@ -701,6 +753,17 @@ def model_outputs() -> str:
 
 @app.route("/models/outputs/<int:election_id>", methods=["GET"])
 def model_output_detail(election_id: int) -> str | WerkzeugResponse:
+    """GET /models/outputs/<election_id> — Show detailed seat and vote breakdown for one UNS output.
+
+    Args:
+        election_id: Primary key of the ElectionType.model_uns election row.
+
+    Query parameters:
+        page (int, optional): Page number for paginated seat list (default 1, page size 50).
+
+    Returns:
+        Rendered model_output_detail.html, or redirect to model_outputs on invalid ID.
+    """
     page = request.args.get("page", default=1, type=int) or 1
     page_size = 50
 
@@ -947,6 +1010,14 @@ def model_output_detail(election_id: int) -> str | WerkzeugResponse:
 
 @app.route("/models/outputs/<int:election_id>/delete", methods=["POST"])
 def delete_model_output(election_id: int) -> str | WerkzeugResponse:
+    """POST /models/outputs/<election_id>/delete — Delete a UNS model output election and its votes.
+
+    Args:
+        election_id: Primary key of the ElectionType.model_uns election to delete.
+
+    Returns:
+        Redirect to model_outputs with a flash message indicating rows deleted.
+    """
     db = _get_db()
     with db.session() as session:
         election = session.execute(
@@ -972,6 +1043,14 @@ def delete_model_output(election_id: int) -> str | WerkzeugResponse:
 
 @app.route("/models/outputs/delete-selected", methods=["POST"])
 def delete_selected_model_outputs() -> str | WerkzeugResponse:
+    """POST /models/outputs/delete-selected — Bulk-delete selected UNS model output elections.
+
+    Form parameters:
+        election_ids (list[str]): One or more election IDs to delete (multi-value form field).
+
+    Returns:
+        Redirect to model_outputs with a flash message. Flashes an error if no valid IDs provided.
+    """
     raw_ids = request.form.getlist("election_ids")
     parsed_ids: list[int] = []
     for value in raw_ids:
@@ -1014,6 +1093,7 @@ def delete_selected_model_outputs() -> str | WerkzeugResponse:
 
 @app.route("/import", methods=["GET"])
 def import_poll_form() -> str:
+    """GET /import — Render the poll import form with available pollster options."""
     return render_template(
         "import_form.html",
         pollsters=[{"identifier": key, "name": meta["label"]} for key, meta in IMPORTERS.items()],
@@ -1022,6 +1102,16 @@ def import_poll_form() -> str:
 
 @app.route("/import/preview", methods=["POST"])
 def import_poll_preview() -> str | WerkzeugResponse:
+    """POST /import/preview — Fetch and parse a poll source URL and cache an import plan.
+
+    Form parameters:
+        pollster_identifier (str): Key identifying the importer (e.g. 'yougov', 'ipsos').
+        source_url (str): URL of the raw poll document (PDF or XLSX depending on importer).
+
+    Returns:
+        Rendered import_preview.html with the parsed plan and a one-time token,
+        or redirects with a flash message on validation/parse error.
+    """
     try:
         form = PollImportForm.model_validate(request.form.to_dict())
     except ValidationError:
@@ -1069,6 +1159,18 @@ def import_poll_preview() -> str | WerkzeugResponse:
 
 @app.route("/import/confirm/<token>", methods=["POST"])
 def import_poll_confirm(token: str) -> str | WerkzeugResponse:
+    """POST /import/confirm/<token> — Commit a previewed poll import to the database.
+
+    Args:
+        token: One-time hex token identifying the cached import plan.
+
+    Form parameters:
+        replace_rows (str, optional): 'on' to replace existing poll rows if the poll already exists.
+        run_model (str, optional): 'on' to trigger an automatic UNS model run after import.
+
+    Returns:
+        Redirect to poll_detail on success, or to import_poll_form on error or expired token.
+    """
     cached = PREVIEW_CACHE.get(token)
     if cached is None:
         flash("Preview expired. Please preview again.")
@@ -1107,6 +1209,7 @@ def import_poll_confirm(token: str) -> str | WerkzeugResponse:
 
 @app.route("/polls", methods=["GET"])
 def poll_list() -> str:
+    """GET /polls — List all polls ordered by fieldwork end date descending with row counts."""
     db = _get_db()
     with db.session() as session:
         polls = session.execute(
@@ -1142,6 +1245,14 @@ def poll_list() -> str:
 
 @app.route("/polls/<int:poll_id>", methods=["GET"])
 def poll_detail(poll_id: int) -> str | WerkzeugResponse:
+    """GET /polls/<poll_id> — Show party×region percentage matrix for a single poll.
+
+    Args:
+        poll_id: Primary key of the Poll row.
+
+    Returns:
+        Rendered poll_detail.html, or redirect to poll_list if the poll is not found.
+    """
     db = _get_db()
 
     with db.session() as session:
@@ -1193,6 +1304,14 @@ def poll_detail(poll_id: int) -> str | WerkzeugResponse:
 
 @app.route("/polls/<int:poll_id>/csv", methods=["GET"])
 def poll_detail_csv(poll_id: int) -> str | WerkzeugResponse:
+    """GET /polls/<poll_id>/csv — Download all poll rows for a poll as a CSV attachment.
+
+    Args:
+        poll_id: Primary key of the Poll row.
+
+    Returns:
+        CSV file response (MIME type text/csv) with poll metadata and party percentages per row.
+    """
     db = _get_db()
     rows = build_rows(db, poll_id)
 
@@ -1232,6 +1351,7 @@ def poll_detail_csv(poll_id: int) -> str | WerkzeugResponse:
 
 @app.route("/by-elections", methods=["GET"])
 def by_election_form() -> str:
+    """GET /by-elections — Render the by-election import form with available parent elections."""
     db = _get_db()
     with db.session() as session:
         elections = (
@@ -1252,6 +1372,15 @@ def by_election_form() -> str:
 
 @app.route("/by-elections/preview", methods=["POST"])
 def by_election_preview() -> str | WerkzeugResponse:
+    """POST /by-elections/preview — Fetch and parse a by-election results URL and cache an import plan.
+
+    Form parameters:
+        source_url (str): URL pointing to the by-election results page.
+        parent_election (str, optional): Name of the parent general election to use as baseline.
+
+    Returns:
+        Rendered by_election_preview.html with parsed plan and token, or redirects on error.
+    """
     try:
         form = ByElectionPreviewForm.model_validate(request.form.to_dict())
     except ValidationError:
@@ -1287,6 +1416,14 @@ def by_election_preview() -> str | WerkzeugResponse:
 
 @app.route("/by-elections/confirm/<token>", methods=["POST"])
 def by_election_confirm(token: str) -> str | WerkzeugResponse:
+    """POST /by-elections/confirm/<token> — Commit a previewed by-election import to the database.
+
+    Args:
+        token: One-time hex token identifying the cached by-election import plan.
+
+    Returns:
+        Redirect to by_election_form with a flash message on success or error.
+    """
     cached = PREVIEW_CACHE.get(token)
     if cached is None or cached.get("type") != "by_election":
         flash("Preview expired. Please preview again.")

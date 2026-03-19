@@ -50,6 +50,7 @@ Top-level durable insights only.
 - Predict 2029 input includes Northern Ireland in rendered rows and share-state validation; NI seats consume configured party swings (not hard-excluded).
 - Predict 2029 renders a separate NI matrix section with dedicated NI party headers; NI section headers use color-swatch-only style with party names in `title` tooltips.
 - For small-screen predict UX, keep `maps-predict-grid` horizontally scrollable (`overflow-x: auto`) with `maps-predict-grid-table { width: max-content; min-width: 100%; }`; use `clamp(...)` on input cell widths so columns shrink before scrolling kicks in.
+- `electionmaps.js` uses a named-closure pattern for inner helpers (e.g. `zoomToFeature`, `clearActiveSeatPath`, `setActiveSeatPath`, `resetZoom` inside `renderTopoMap`; `showTrackerTooltip`/`hideTrackerTooltip` inside `renderPollTrackerChart`; `renderPredictGridSection` inside `renderPredictGrid`; `submitSearch` inside `wireSeatSearch`). These all warrant JSDoc at definition sites since they have parameters or non-trivial side effects. Anonymous inline event-handler arrow functions (`.addEventListener('click', () => {...})`) do not require JSDoc.
 
 ## Data Server
 

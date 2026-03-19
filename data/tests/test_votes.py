@@ -22,6 +22,8 @@ def _make_election(db: Database) -> tuple[Map, Seat, Election]:
 
 
 class TestSeatElectorate:
+    """Covers Database.set_seat_electorate — setting, clearing, and missing-seat handling."""
+
     def test_set_and_get(self, db: Database) -> None:
         _, seat, _ = _make_election(db)
         updated = db.set_seat_electorate(seat.id, 70000)
@@ -42,6 +44,8 @@ class TestSeatElectorate:
 
 
 class TestTurnoutDerivation:
+    """Covers Database.get_turnout_for_seat_election — summing votes and empty-seat handling."""
+
     def test_get_turnout_for_seat_election(self, db: Database) -> None:
         _, seat, election = _make_election(db)
         db.add_vote(election.id, seat.id, vote_total=100)
@@ -58,6 +62,8 @@ class TestTurnoutDerivation:
 
 
 class TestAddVote:
+    """Covers Database.add_vote — with party, independent candidate, and model-run float totals."""
+
     def test_with_party(self, db: Database) -> None:
         _, seat, election = _make_election(db)
         party = db.add_party("Labour", short_name="Lab")
@@ -97,6 +103,8 @@ class TestAddVote:
 
 
 class TestGetVote:
+    """Covers Database.get_vote — lookup by id and missing-id behaviour."""
+
     def test_by_id(self, db: Database) -> None:
         _, seat, election = _make_election(db)
         created = db.add_vote(election.id, seat.id, candidate_name="Test")
@@ -108,6 +116,8 @@ class TestGetVote:
 
 
 class TestGetVotesForSeatElection:
+    """Covers Database.get_votes_for_seat_election — descending vote order and empty result."""
+
     def test_ordered_by_vote_desc(self, db: Database) -> None:
         _, seat, election = _make_election(db)
         p1 = db.add_party("A")
@@ -125,6 +135,8 @@ class TestGetVotesForSeatElection:
 
 
 class TestGetVotesForElection:
+    """Covers Database.get_votes_for_election — returning all votes across seats and empty result."""
+
     def test_returns_all(self, db: Database) -> None:
         m, seat, election = _make_election(db)
         seat2 = db.add_seat(m.id, "Bath")
@@ -139,6 +151,8 @@ class TestGetVotesForElection:
 
 
 class TestGetWinner:
+    """Covers Database.get_winner_for_seat — elected candidate, no elected flag, and no votes."""
+
     def test_winner(self, db: Database) -> None:
         _, seat, election = _make_election(db)
         p = db.add_party("Lab")
@@ -163,6 +177,8 @@ class TestGetWinner:
 
 
 class TestBulkAddVotes:
+    """Covers Database.bulk_add_votes — inserting multiple vote rows in one call."""
+
     def test_inserts_many(self, db: Database) -> None:
         _, seat, election = _make_election(db)
         p = db.add_party("Labour")
@@ -177,6 +193,8 @@ class TestBulkAddVotes:
 
 
 class TestBulkAddSeats:
+    """Covers Database.bulk_add_seats — inserting multiple seat rows including with geometry."""
+
     def test_inserts_many(self, db: Database) -> None:
         m = db.add_map("UK")
         seats: list[dict[str, Any]] = [

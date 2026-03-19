@@ -33,10 +33,19 @@ ELECTIONS_JSON = OUTPUT_ROOT / "elections.json"
 
 
 def normalize_region_key(value: str) -> str:
+    """Return a lowercase alphanumeric key from a raw region name string."""
     return re.sub(r"[^a-z0-9]", "", (value or "").lower())
 
 
 def normalize_vote_total(value: float) -> int | float:
+    """Round a vote total to 2 decimal places, returning an int if the result is whole.
+
+    Args:
+        value: Raw vote count, possibly a float.
+
+    Returns:
+        Rounded integer if the value has no fractional part; rounded float otherwise.
+    """
     rounded = round(float(value), 2)
     if rounded == int(rounded):
         return int(rounded)
@@ -229,12 +238,18 @@ def migrate_elections_json(path: Path, dry_run: bool) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for the migration script.
+
+    Returns:
+        Parsed namespace with `dry_run` bool flag.
+    """
     parser = argparse.ArgumentParser(description="Migrate election results files to v4 format")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without writing")
     return parser.parse_args()
 
 
 def main() -> None:
+    """Entry point: load elections.json, migrate all results files and elections.json to v4."""
     args = parse_args()
 
     manifest = json.loads(ELECTIONS_JSON.read_text(encoding="utf-8"))

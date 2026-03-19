@@ -93,6 +93,15 @@ class ImportPlan(BaseModel):
 
 
 def _month_number(month_text: str) -> int | None:
+    """Convert a month name or abbreviation to its calendar number.
+
+    Args:
+        month_text: Month name or abbreviation, e.g. "Jan", "January", "feb.".
+            Case-insensitive; trailing periods are stripped.
+
+    Returns:
+        Integer month number (1–12), or None if the text is not recognised.
+    """
     cleaned = month_text.strip().lower().rstrip(".")
     month_map = {
         "jan": 1,
@@ -124,6 +133,17 @@ def _month_number(month_text: str) -> int | None:
 
 
 def _fetch_bytes(url: str) -> bytes:
+    """Fetch the raw byte content of a URL with a browser-like User-Agent.
+
+    Args:
+        url: Absolute URL to fetch.
+
+    Returns:
+        Raw response body as bytes.
+
+    Raises:
+        urllib.error.URLError: If the request fails or times out (60 s limit).
+    """
     req = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
     with urlopen(req, timeout=60) as response:
         data: bytes = response.read()
@@ -131,6 +151,22 @@ def _fetch_bytes(url: str) -> bytes:
 
 
 def _resolve_pdf_url(source_url: str) -> str:
+    """Resolve a direct PDF URL or scrape the first PDF link from an HTML page.
+
+    If ``source_url`` already ends with ``.pdf`` it is returned unchanged.
+    Otherwise the page is fetched and all ``<a href>`` anchors are inspected;
+    the first absolute URL ending in ``.pdf`` is returned.
+
+    Args:
+        source_url: Either a direct ``.pdf`` URL or an HTML page that links to
+            a Deltapoll PDF.
+
+    Returns:
+        Absolute URL of the resolved PDF file.
+
+    Raises:
+        ValueError: If ``source_url`` is an HTML page but no PDF link is found.
+    """
     lower = source_url.lower()
     if lower.endswith(".pdf"):
         return source_url
@@ -155,6 +191,24 @@ def _resolve_pdf_url(source_url: str) -> str:
 
 
 def _extract_pdf_text(pdf_url: str) -> str:
+    """Download a PDF and return its full extracted text.
+
+    If ``pdf_url`` points to a Wayback Machine snapshot without the ``if_``
+    flag, an alternative URL with the flag is tried first so that the raw PDF
+    bytes (not an HTML wrapper) are returned.
+
+    Args:
+        pdf_url: URL of the PDF to fetch.  May be a direct host URL or a
+            Wayback Machine URL (``web.archive.org/web/...``).
+
+    Returns:
+        Concatenated text extracted from every page of the PDF, pages joined
+        by newlines.
+
+    Raises:
+        ValueError: If no candidate URL returns a valid PDF payload
+            (i.e. bytes starting with ``%PDF``).
+    """
     candidate_urls = [pdf_url]
     if "web.archive.org/web/" in pdf_url and "if_/" not in pdf_url:
         candidate_urls.append(
@@ -179,10 +233,47 @@ def _extract_pdf_text(pdf_url: str) -> str:
 
 
 def _extract_lines(pdf_text: str) -> list[str]:
+    """Split extracted PDF text into non-empty, stripped lines.
+
+    Args:
+        pdf_text: Raw text returned by :func:`_extract_pdf_text`.
+
+    Returns:
+        List of non-empty strings with leading/trailing whitespace removed.
+    """
     return [line.strip() for line in pdf_text.splitlines() if line.strip()]
 
 
 def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
+    """Parse the fieldwork date range from PDF lines.
+
+    Locates the line beginning with ``Fieldwork:`` and tries four date-range
+    formats in order:
+
+    1. Cross-month with explicit year on both sides:
+       ``Fieldwork: 30 December 2025 to 2 January 2026``
+    2. Cross-month without year on the start side:
+       ``Fieldwork: 30 December to 2 January 2026``
+    3. Same-month hyphen range:
+       ``Fieldwork: 3-5 January 2026``
+    4. Same-month ``to`` range:
+       ``Fieldwork: 3 to 5 January 2026``
+
+    Ordinal suffixes (``st``, ``nd``, ``rd``, ``th``) and em/en dashes are
+    normalised before matching.  When the start month is later in the year than
+    the end month the start year is set to ``year_end - 1``.
+
+    Args:
+        lines: Non-empty lines extracted from the Deltapoll PDF.
+
+    Returns:
+        A ``(fieldwork_start, fieldwork_end)`` tuple of :class:`datetime.date`
+        objects.
+
+    Raises:
+        ValueError: If no ``Fieldwork:`` line is found, if month names cannot
+            be resolved, or if none of the four patterns match.
+    """
     fieldwork_line = next((line for line in lines if line.lower().startswith("fieldwork:")), None)
     if fieldwork_line is None:
         raise ValueError("Fieldwork line not found in Deltapoll PDF")
@@ -242,6 +333,21 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
 
 
 def _parse_sample_size(lines: list[str]) -> int:
+    """Parse the poll sample size from PDF lines.
+
+    Locates the line beginning with ``Sample Size:`` and extracts the first
+    run of digits, stripping any thousands separators or surrounding text.
+
+    Args:
+        lines: Non-empty lines extracted from the Deltapoll PDF.
+
+    Returns:
+        Sample size as a positive integer.
+
+    Raises:
+        ValueError: If no ``Sample Size:`` line is found or if no digits can
+            be extracted from it.
+    """
     sample_line = next((line for line in lines if line.lower().startswith("sample size:")), None)
     if sample_line is None:
         raise ValueError("Sample Size line not found in Deltapoll PDF")
@@ -252,6 +358,18 @@ def _parse_sample_size(lines: list[str]) -> int:
 
 
 def _canonical_party_from_line(line: str) -> str | None:
+    """Return the canonical party name if a line starts with a known party label.
+
+    Collapses internal whitespace before checking against
+    :data:`PARTY_LABEL_TO_CANONICAL` keys.
+
+    Args:
+        line: A single line of text from the Deltapoll PDF.
+
+    Returns:
+        Canonical party name string (e.g. ``"Liberal Democrats"``), or
+        ``None`` if the line does not start with any recognised label.
+    """
     normalized = " ".join(line.strip().split())
     for raw, canonical in PARTY_LABEL_TO_CANONICAL.items():
         if normalized.startswith(raw):
@@ -260,6 +378,28 @@ def _canonical_party_from_line(line: str) -> str | None:
 
 
 def _extract_party_order_and_national(lines: list[str]) -> tuple[list[str], dict[str, float]]:
+    """Extract the national vote-share table from the Q1 voting-intention section.
+
+    Scans for the first line containing ``voting intention`` (case-insensitive)
+    and reads up to 60 subsequent lines, collecting party rows in document
+    order.  Stops after 8 parties.  ``"Other"`` is always appended with a
+    default of ``0.0`` if not found in the table.
+
+    Args:
+        lines: Non-empty lines extracted from the Deltapoll PDF.
+
+    Returns:
+        A two-element tuple ``(party_order, national)`` where:
+
+        - ``party_order`` is a list of canonical party name strings in the
+          order they appear in the PDF.
+        - ``national`` is a dict mapping each canonical party name to its
+          national vote-share percentage as a float.
+
+    Raises:
+        ValueError: If the voting-intention section cannot be located, or if
+            any of the seven required core parties are absent from the table.
+    """
     start_idx = next(
         (
             i
@@ -307,6 +447,32 @@ def _extract_party_order_and_national(lines: list[str]) -> tuple[list[str], dict
 
 
 def _parse_regional_from_block(lines: list[str], party_order: list[str]) -> dict[str, dict[str, float]]:
+    """Parse the macro-regional vote-share block from the Deltapoll PDF.
+
+    Looks for a header line containing the full region sequence
+    ``"total london rest of south midlands north wales scotland"``
+    (case-insensitive), then reads up to 35 subsequent lines and collects
+    rows of exactly 8 integers whose values are all in ``[0, 100]``.
+    Columns 0–5 map to Total, London, Rest of South, Midlands, North, Wales,
+    Scotland; the Total column is discarded.
+
+    If a party appears in ``party_order`` but no corresponding data row was
+    found, all its macro-region values default to ``0.0``.
+
+    Args:
+        lines: Non-empty lines extracted from the Deltapoll PDF.
+        party_order: Canonical party names in the order they appear in the
+            national table, as returned by
+            :func:`_extract_party_order_and_national`.
+
+    Returns:
+        Nested dict ``{party_name: {macro_region: percentage}}`` where
+        macro-region keys are the six strings in :data:`MACRO_ORDER`.
+
+    Raises:
+        ValueError: If the regional header line cannot be found, or if fewer
+            rows are parsed than ``len(party_order) - 1``.
+    """
     header_idx = next(
         (
             idx
@@ -348,6 +514,28 @@ def _parse_regional_from_block(lines: list[str], party_order: list[str]) -> dict
 
 
 def parse_poll(pdf_text: str) -> ParsedPoll:
+    """Parse a Deltapoll PDF text into a structured :class:`ParsedPoll`.
+
+    Extracts sample size, fieldwork dates, national vote shares, and
+    macro-regional vote shares.  If regional parsing fails for any reason the
+    regional data for all parties is silently set to empty dicts (national-only
+    import continues uninterrupted).
+
+    Args:
+        pdf_text: Full text extracted from the Deltapoll PDF, as returned by
+            :func:`_extract_pdf_text`.
+
+    Returns:
+        A :class:`ParsedPoll` containing sample size, fieldwork start/end
+        dates, and a nested ``party_region_percentages`` dict of the form
+        ``{party_name: {region_key: percentage}}``.  The special key
+        :data:`NATIONAL_KEY` (``"__national__"``) holds the national figure;
+        remaining keys are macro-region names from :data:`MACRO_ORDER`.
+
+    Raises:
+        ValueError: Propagated from the underlying parse helpers if mandatory
+            fields (fieldwork, sample size, national table) cannot be found.
+    """
     lines = _extract_lines(pdf_text)
     sample_size = _parse_sample_size(lines)
     fieldwork_start, fieldwork_end = _parse_fieldwork(lines)
@@ -372,6 +560,20 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
 
 
 def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+    """Look up a poll that matches the parsed metadata exactly.
+
+    Matches on pollster, map, fieldwork start/end, and sample size.
+
+    Args:
+        db: Open :class:`Database` instance.
+        pollster_id: Primary key of the pollster row.
+        map_id: Primary key of the constituency map row.
+        parsed: Parsed poll data whose dates and sample size are used as
+            filter criteria.
+
+    Returns:
+        The matching :class:`Poll` ORM instance, or ``None`` if not found.
+    """
     with db.session() as session:
         return session.execute(
             select(Poll).where(
@@ -391,6 +593,31 @@ def build_import_plan(
     map_name: str = DEFAULT_MAP_NAME,
     pollster_identifier: str = DEFAULT_POLLSTER_IDENTIFIER,
 ) -> ImportPlan:
+    """Fetch, parse, and plan a Deltapoll import without writing to the DB.
+
+    Resolves the PDF URL from ``source_url``, parses the poll, looks up all
+    required DB entities (map, regions, pollster, parties), and builds the
+    complete set of :class:`PlannedPollRow` objects — one national row and one
+    row per internal region for each party.  Nothing is written to the
+    database.
+
+    Args:
+        db: Open :class:`Database` instance.
+        source_url: Direct PDF URL or HTML page URL from which a PDF link can
+            be scraped.  Defaults to :data:`DEFAULT_SOURCE_URL`.
+        map_name: Name of the constituency map used to resolve region IDs.
+            Defaults to :data:`DEFAULT_MAP_NAME`.
+        pollster_identifier: Identifier string for the Deltapoll pollster row.
+            Defaults to :data:`DEFAULT_POLLSTER_IDENTIFIER`.
+
+    Returns:
+        A fully populated :class:`ImportPlan` describing what would be created
+        or updated if :func:`commit_import_plan` is called.
+
+    Raises:
+        ValueError: If the map, any required region, or any required party is
+            not found in the database, or if PDF parsing fails.
+    """
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
@@ -475,6 +702,29 @@ def commit_import_plan(
     *,
     replace_rows: bool = False,
 ) -> PollImportResult:
+    """Write a previously built :class:`ImportPlan` to the database.
+
+    Creates the pollster and/or poll records if they do not already exist.
+    If the poll already exists its ``source_url`` is updated if it has
+    changed.  Poll rows are inserted unless they already exist; if
+    ``replace_rows`` is ``True`` all existing rows are deleted first.
+
+    Args:
+        db: Open :class:`Database` instance.
+        plan: Import plan produced by :func:`build_import_plan`.
+        replace_rows: If ``True``, delete any existing :class:`PollRow` records
+            for the poll before inserting the new ones.  If ``False`` and rows
+            already exist, insertion is skipped entirely.  Defaults to
+            ``False``.
+
+    Returns:
+        A :class:`PollImportResult` summarising what was created, inserted,
+        replaced, or skipped.
+
+    Raises:
+        ValueError: If the pollster lookup fails unexpectedly after
+            ``plan.pollster_exists`` is ``True``.
+    """
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -553,6 +803,14 @@ def commit_import_plan(
 
 
 def _cli_preview(plan: ImportPlan) -> None:
+    """Print a human-readable dry-run summary of an import plan to stdout.
+
+    Shows the parsed fieldwork dates and sample size, whether the pollster and
+    poll already exist, and up to 30 of the planned poll rows.
+
+    Args:
+        plan: Import plan to preview, as returned by :func:`build_import_plan`.
+    """
     print(
         "Parsed poll: "
         f"fieldwork={plan.parsed.fieldwork_start} to {plan.parsed.fieldwork_end}, "
@@ -577,6 +835,23 @@ def _cli_preview(plan: ImportPlan) -> None:
 
 
 def main() -> None:
+    """CLI entry point for the Deltapoll importer.
+
+    Parses command-line arguments, fetches and parses the source PDF, and
+    either prints a dry-run preview or commits the import to the database.
+
+    Command-line arguments:
+
+    - ``--source-url`` (str, optional): PDF or HTML page URL to import from.
+      Defaults to :data:`DEFAULT_SOURCE_URL`.
+    - ``--map-name`` (str, optional): Constituency map name used to resolve
+      region IDs.  Defaults to :data:`DEFAULT_MAP_NAME`.
+    - ``--pollster-identifier`` (str, optional): Pollster identifier string.
+      Defaults to :data:`DEFAULT_POLLSTER_IDENTIFIER`.
+    - ``--replace-rows`` (flag): Delete existing poll rows before inserting
+      new ones.  Omitting this flag skips insertion if rows already exist.
+    - ``--dry-run`` (flag): Print the import plan without writing to the DB.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-url", default=DEFAULT_SOURCE_URL)
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME)

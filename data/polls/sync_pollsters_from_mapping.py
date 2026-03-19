@@ -23,6 +23,20 @@ MAPPING_CSV = Path(__file__).resolve().parent / "mappings" / "wikipedia_national
 
 
 def dedupe_mapping_rows() -> list[dict[str, str]]:
+    """Read the Wikipedia national polls mapping CSV and return one row per unique parser identifier.
+
+    Deduplicates rows by ``parser_identifier``, selecting the most frequently
+    occurring ``pollster_label`` for each identifier (ties broken alphabetically).
+    Rows missing a ``parser_identifier`` are silently skipped.
+
+    Returns:
+        A list of row dicts sorted by ``parser_identifier``, each containing at
+        minimum the keys ``parser_identifier`` and ``pollster_label`` (the latter
+        set to the preferred label, or an empty string when no label was found).
+
+    Raises:
+        FileNotFoundError: If ``MAPPING_CSV`` does not exist on disk.
+    """
     if not MAPPING_CSV.exists():
         raise FileNotFoundError(f"Mapping file not found: {MAPPING_CSV}")
 
@@ -52,6 +66,24 @@ def dedupe_mapping_rows() -> list[dict[str, str]]:
 
 
 def main() -> None:
+    """Sync pollster rows from the Wikipedia mapping CSV into the database.
+
+    Reads all unique ``parser_identifier`` values from the mapping CSV via
+    :func:`dedupe_mapping_rows`, then for each identifier:
+
+    - Skips it if a pollster with that identifier already exists in the DB.
+    - Creates a new pollster row (using the preferred ``pollster_label`` as the
+      display name, falling back to the identifier itself) when ``--apply`` is
+      passed.
+    - Prints a dry-run summary of what *would* be created when ``--apply`` is
+      omitted (the default mode).
+
+    Prints a summary table of unique pollsters found, existing rows, and rows
+    created (or that would be created in dry-run mode).
+
+    Side effects:
+        Writes new ``Pollster`` rows to the database when ``--apply`` is set.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true", help="Write inserts to DB")
     args = parser.parse_args()

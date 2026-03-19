@@ -35,6 +35,19 @@ REGISTRY_OUT = OUT_DIR / "parser_registry.json"
 
 @dataclass
 class PollSourceRow:
+    """A single row of poll source metadata extracted from the Wikipedia polling table.
+
+    Attributes:
+        date_label: Raw date text from the Wikipedia table cell (e.g. "1–3 Jan").
+        year_label: Four-digit year string inferred from the surrounding h3 heading (e.g. "2025").
+        pollster_label: Cleaned pollster name as it appears in the table.
+        citation_id: Numeric Wikipedia citation reference ID (e.g. "42"), empty if none found.
+        source_url: Resolved external URL from the citation, empty if not found.
+        format_family: Inferred file/page format of the source (e.g. "pdf", "xlsx", "html").
+        parser_identifier: Canonical snake_case key used to identify the parser for this pollster.
+        notes: Human-readable caveats, e.g. "missing citation/source url".
+    """
+
     date_label: str
     year_label: str
     pollster_label: str
@@ -46,6 +59,17 @@ class PollSourceRow:
 
 
 def fetch_html(url: str) -> str:
+    """Fetch the HTML content of a URL, setting a browser-like User-Agent header.
+
+    Args:
+        url: The fully-qualified URL to fetch.
+
+    Returns:
+        The response body decoded as UTF-8 (with replacement for invalid bytes).
+
+    Raises:
+        urllib.error.URLError: If the request fails due to a network or HTTP error.
+    """
     req = Request(
         url,
         headers={
@@ -58,6 +82,20 @@ def fetch_html(url: str) -> str:
 
 
 def normalize_pollster_name(value: str) -> str:
+    """Normalise a raw Wikipedia pollster label to a canonical snake_case identifier.
+
+    Strips citation brackets, parenthetical qualifiers, punctuation, and excess
+    whitespace, then lowercases and underscores the result.  A set of hard-coded
+    aliases resolves common multi-word or ambiguous pollster names (e.g. any
+    variant containing "yougov" maps to ``"yougov"``).
+
+    Args:
+        value: Raw pollster label text as scraped from the Wikipedia table cell.
+
+    Returns:
+        A canonical snake_case pollster key suitable for use as a parser identifier
+        (e.g. ``"yougov"``, ``"more_in_common"``, ``"bmg_research"``).
+    """
     cleaned = re.sub(r"\[[^\]]+\]", "", value)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     cleaned = re.sub(r"\(.*?\)", "", cleaned).strip()
@@ -96,10 +134,29 @@ def normalize_pollster_name(value: str) -> str:
 
 
 def clean_text(value: str) -> str:
+    """Collapse runs of whitespace in a string and strip leading/trailing whitespace.
+
+    Args:
+        value: Arbitrary text, typically extracted from a BeautifulSoup element.
+
+    Returns:
+        The input with all whitespace sequences replaced by a single space and
+        surrounding whitespace removed.
+    """
     return re.sub(r"\s+", " ", value).strip()
 
 
 def parse_ref_numeric_id(ref_href: str) -> str:
+    """Extract the numeric citation ID from a Wikipedia cite-note anchor href.
+
+    Args:
+        ref_href: An anchor href string such as ``"#cite_note-123"`` or a full
+            URL containing such a fragment.
+
+    Returns:
+        The numeric ID string (e.g. ``"123"``), or an empty string if the href
+        does not match the expected ``cite_note-<digits>`` pattern.
+    """
     # '#cite_note-123' -> '123'
     raw = ref_href.split("#")[-1]
     match = re.search(r"cite_note-(\d+)", raw)
@@ -107,6 +164,19 @@ def parse_ref_numeric_id(ref_href: str) -> str:
 
 
 def extract_reference_url_map(soup: BeautifulSoup) -> dict[str, str]:
+    """Build a mapping from Wikipedia citation numeric IDs to their external URLs.
+
+    Scans all ``<li id="cite_note-N">`` elements in the page and resolves the
+    first external link (``<a class="external ...">``) found within each one.
+
+    Args:
+        soup: A parsed BeautifulSoup document for the full Wikipedia page.
+
+    Returns:
+        A dict mapping numeric citation ID strings (e.g. ``"42"``) to the
+        corresponding external source URL string.  Entries without a resolvable
+        external link are omitted.
+    """
     ref_map: dict[str, str] = {}
     for li in soup.select("li[id^=cite_note-]"):
         raw_li_id = li.get("id", "")
@@ -128,6 +198,19 @@ def extract_reference_url_map(soup: BeautifulSoup) -> dict[str, str]:
 
 
 def infer_format_family(url: str) -> str:
+    """Infer the broad file/page format of a poll source URL.
+
+    Checks the URL path extension and hostname patterns to classify the source
+    into one of a fixed set of format families.
+
+    Args:
+        url: The fully-qualified source URL to classify.
+
+    Returns:
+        One of ``"pdf"``, ``"xlsx"``, ``"xlsb"``, ``"xls"``, ``"google_sheet"``,
+        ``"social_post"``, ``"download"``, or ``"html"`` (the default when no
+        more specific pattern matches).
+    """
     lower = url.lower()
 
     path = urlparse(lower).path
@@ -149,6 +232,28 @@ def infer_format_family(url: str) -> str:
 
 
 def extract_national_poll_rows(soup: BeautifulSoup, ref_map: dict[str, str]) -> list[dict[str, str]]:
+    """Extract poll rows from the "National poll results" section of the Wikipedia page.
+
+    Walks sibling nodes after the ``#National_poll_results`` heading, collecting
+    rows from all ``wikitable`` tables until the next ``<h2>`` heading.  Year
+    context is tracked from intervening ``<h3>`` headings.  Rows are filtered to
+    GB/UK area polls only; event rows and election baseline rows are skipped.
+
+    Citation references are resolved first from the pollster cell, then from
+    anywhere else in the row, using the provided ``ref_map``.
+
+    Args:
+        soup: A parsed BeautifulSoup document for the full Wikipedia page.
+        ref_map: Mapping from numeric citation ID strings to external URLs, as
+            returned by :func:`extract_reference_url_map`.
+
+    Returns:
+        A list of dicts, each with keys ``"date_label"``, ``"year_label"``,
+        ``"pollster_label"``, ``"citation_id"``, and ``"source_url"``.
+
+    Raises:
+        ValueError: If the ``#National_poll_results`` section cannot be found.
+    """
     headline = soup.find(id="National_poll_results")
     if headline is None:
         raise ValueError("Could not find National poll results section")
@@ -248,6 +353,21 @@ def extract_national_poll_rows(soup: BeautifulSoup, ref_map: dict[str, str]) -> 
 
 
 def assign_parser_identifiers(rows: list[dict[str, str]]) -> list[PollSourceRow]:
+    """Enrich raw poll row dicts with format and parser metadata.
+
+    For each row, normalises the pollster label to a canonical parser identifier,
+    infers the source format family from the URL, and records a note when the
+    source URL is absent.
+
+    Args:
+        rows: List of raw poll row dicts as returned by
+            :func:`extract_national_poll_rows`.  Each dict must contain at least
+            ``"date_label"``, ``"pollster_label"``, and ``"citation_id"`` keys;
+            ``"year_label"`` and ``"source_url"`` are optional.
+
+    Returns:
+        A list of :class:`PollSourceRow` instances with all fields populated.
+    """
     out: list[PollSourceRow] = []
     for row in rows:
         pollster_key = normalize_pollster_name(row["pollster_label"])
@@ -272,6 +392,23 @@ def assign_parser_identifiers(rows: list[dict[str, str]]) -> list[PollSourceRow]
 
 
 def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
+    """Write all output files from the mapped poll rows.
+
+    Creates the output directory if necessary, then writes three files:
+
+    * ``wikipedia_national_polls_mapping.csv`` — one CSV row per
+      :class:`PollSourceRow`, with all fields as columns.
+    * ``pollster_parser_profiles.json`` — per-pollster summary keyed by
+      canonical parser identifier, containing example label variants, a count
+      of observed format families, and the set of parser identifiers seen.
+    * ``parser_registry.json`` — mapping from each distinct parser identifier to
+      its implementing module path and implementation status (``"implemented"``
+      or ``"planned"``).
+
+    Args:
+        mapped_rows: List of :class:`PollSourceRow` instances as returned by
+            :func:`assign_parser_identifiers`.
+    """
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     with CSV_OUT.open("w", encoding="utf-8", newline="") as handle:
@@ -386,6 +523,12 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
 
 
 def main() -> None:
+    """Orchestrate the full Wikipedia poll mapping pipeline.
+
+    Fetches the Wikipedia UK opinion polling page, extracts poll rows from the
+    national results section, assigns parser identifiers, writes all output
+    files, and prints a summary to stdout.
+    """
     html = fetch_html(WIKI_URL)
     soup = BeautifulSoup(html, "lxml")
 

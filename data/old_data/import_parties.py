@@ -57,6 +57,21 @@ ACRONYM_PARTIES = {
 
 
 def generate_short_name(name: str) -> str:
+    """Generate a short identifier for a party name.
+
+    Applies the following rules in order:
+    - If the name is already all-uppercase and at most 6 characters, return it as-is.
+    - If the name is in ``ACRONYM_PARTIES``, return an acronym formed from the
+      initial letters of significant words (excluding "and", "of", "the").
+    - Otherwise, strip diacritics, remove non-alphanumeric characters, and
+      return the result lowercased.
+
+    Args:
+        name: The full party name (e.g. ``"Scottish National Party"``).
+
+    Returns:
+        A compact short name string (e.g. ``"SNP"`` or ``"labour"``).
+    """
     if name.isupper() and len(name) <= 6:
         return name
 
@@ -78,6 +93,30 @@ def upsert_party(
     dry_run: bool,
     skip_existing: bool,
 ) -> str:
+    """Insert or update a single party row in the database.
+
+    Looks up the party by ``name``. If it does not exist, creates it. If it
+    exists and ``skip_existing`` is ``False``, updates ``short_name`` and
+    ``colour`` when they differ from the stored values. All writes are skipped
+    when ``dry_run`` is ``True``; a descriptive preview string is returned
+    instead.
+
+    Args:
+        db: Active ``Database`` instance used for queries and writes.
+        name: Full party name, used as the lookup key (e.g. ``"Labour"``).
+        short_name: Computed short identifier to store (e.g. ``"labour"``).
+        colour: Hex colour string for the party (e.g. ``"#E4003B"``), or
+            ``None`` if no colour is defined.
+        dry_run: If ``True``, skip all database writes and return a preview
+            message prefixed with ``[dry-run]``.
+        skip_existing: If ``True``, leave existing rows untouched and return
+            a ``"skipped existing"`` message.
+
+    Returns:
+        A human-readable status string describing the action taken or
+        previewed, e.g. ``"created: Labour ..."``, ``"updated: Labour ..."``,
+        ``"skipped existing: Labour"``, or ``"unchanged: Labour"``.
+    """
     existing = db.get_party_by_name(name)
 
     if existing is None:
@@ -120,6 +159,17 @@ def upsert_party(
 
 
 def drop_long_name_column(db: Database, dry_run: bool) -> None:
+    """Remove the obsolete ``long_name`` column from the ``parties`` table.
+
+    Executes ``ALTER TABLE IF EXISTS parties DROP COLUMN IF EXISTS long_name``
+    directly against the database engine. The statement is idempotent: it
+    silently does nothing if the column does not exist.
+
+    Args:
+        db: Active ``Database`` instance whose engine is used for the DDL
+            statement.
+        dry_run: If ``True``, print the would-be SQL without executing it.
+    """
     statement = "ALTER TABLE IF EXISTS parties DROP COLUMN IF EXISTS long_name"
     if dry_run:
         print(f"- [dry-run] would run: {statement}")
@@ -131,6 +181,18 @@ def drop_long_name_column(db: Database, dry_run: bool) -> None:
 
 
 def main() -> None:
+    """Entry point for the party import script.
+
+    Parses command-line arguments, initialises the database, runs schema
+    cleanup (dropping the obsolete ``long_name`` column), then upserts every
+    entry in ``PARTY_DEFINITIONS``. Prints a per-party status line and a
+    summary of created/updated/unchanged counts on completion.
+
+    CLI flags:
+        --dry-run: Preview all inserts and updates without writing to the DB.
+        --skip-existing: Leave existing party rows untouched; only insert new
+            ones.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dry-run",

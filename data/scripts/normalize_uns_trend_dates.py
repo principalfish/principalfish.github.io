@@ -23,6 +23,12 @@ UNS_NAME_DATE_PATTERN = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for the date normalization script.
+
+    Returns:
+        Parsed namespace with `csv_path`, `manifest_path`, `skip_party_id_normalize`,
+        `dry_run`, and `no_backup` fields.
+    """
     parser = argparse.ArgumentParser(description="Normalize UNS trend cache as_of_date values")
     parser.add_argument(
         "--csv-path",
@@ -55,6 +61,14 @@ def parse_args() -> argparse.Namespace:
 
 
 def _safe_iso_date(raw: str) -> str | None:
+    """Parse a raw date string and return it as an ISO 8601 date string, or None if invalid.
+
+    Args:
+        raw: Raw date string to parse (expected ISO format YYYY-MM-DD).
+
+    Returns:
+        ISO date string (e.g. '2024-07-04'), or None if the input is empty or not a valid date.
+    """
     value = (raw or "").strip()
     if not value:
         return None
@@ -65,6 +79,17 @@ def _safe_iso_date(raw: str) -> str | None:
 
 
 def _canonical_date_for_row(row: dict[str, str]) -> str | None:
+    """Derive the authoritative ISO date for a trend CSV row.
+
+    Prefers the date encoded in `election_name` (format: 'UNS YYYY-MM-DD').
+    Falls back to the `as_of_date` column if no match is found.
+
+    Args:
+        row: A single CSV row as a dict of column name to string value.
+
+    Returns:
+        ISO date string if a valid date can be resolved, otherwise None.
+    """
     election_name = (row.get("election_name") or "").strip()
     match = UNS_NAME_DATE_PATTERN.search(election_name)
     if match:
@@ -76,6 +101,17 @@ def _canonical_date_for_row(row: dict[str, str]) -> str | None:
 
 
 def _load_manifest_party_ids(manifest_path: Path) -> dict[str, str]:
+    """Load a casefold-name → party_id string mapping from elections.json.
+
+    Args:
+        manifest_path: Path to the elections.json manifest file.
+
+    Returns:
+        Dict mapping lowercased party name to string party ID (e.g. {'labour': '1'}).
+
+    Raises:
+        FileNotFoundError: If manifest_path does not exist.
+    """
     if not manifest_path.exists():
         raise FileNotFoundError(f"Manifest not found: {manifest_path}")
 
@@ -95,6 +131,7 @@ def _load_manifest_party_ids(manifest_path: Path) -> dict[str, str]:
 
 
 def main() -> None:
+    """Entry point: read the trend CSV, normalize as_of_date and optionally party_id, then write."""
     args = parse_args()
     csv_path = args.csv_path.resolve()
     manifest_path = args.manifest_path.resolve()

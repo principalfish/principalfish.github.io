@@ -5,6 +5,16 @@ import time
 import re
 
 def setup_database():
+    """Create the SQLite database and events table if they do not already exist.
+
+    Opens (or creates) ``wikipedia_history.db`` in the current directory, enables
+    WAL journal mode for safer concurrent access, and creates the ``events`` table
+    with columns: id, year, era, timeframe_type, event, source_page.
+
+    Returns:
+        tuple[sqlite3.Connection, sqlite3.Cursor]: A (conn, cursor) pair ready for
+        querying and inserting rows.
+    """
     conn = sqlite3.connect('wikipedia_history.db')
     cursor = conn.cursor()
     cursor.execute('PRAGMA journal_mode=WAL;')
@@ -51,6 +61,23 @@ def get_timeframe_info(year, era):
         return title, None, "century", range((century-1)*100 + 1, (century*100) + 1)
 
 def get_year_events(page_title):
+    """Fetch a Wikipedia page via the API and extract list items from event sections.
+
+    Queries the Wikipedia REST API for the section list of the given page, filters to
+    sections whose titles contain recognised event keywords (e.g. "Events", "By place",
+    "January – March") while excluding non-content sections (References, Sources, etc.),
+    then fetches the HTML for each valid section and collects all ``<li>`` text items that
+    are at least 25 characters long and not already seen.  Citation superscripts and
+    bracketed references are removed before collecting each item.
+
+    Args:
+        page_title (str): The Wikipedia page title to fetch (e.g. ``"AD_1066"`` or
+            ``"1066"``).
+
+    Returns:
+        list[str]: A list of cleaned event strings extracted from the page, or an empty
+        list if the page does not exist or an error occurs.
+    """
     URL = "https://en.wikipedia.org/w/api.php"
     headers = {'User-Agent': 'HistoryGameParser/1.0 (contact@email.com)'}
     
@@ -102,6 +129,25 @@ def get_year_events(page_title):
         return []
 
 def scrape_range(year_range, era, conn, cursor):
+    """Iterate over a range of years, fetch Wikipedia events, and insert rows into the DB.
+
+    For each year in year_range, calls get_timeframe_info to determine the Wikipedia
+    page title and timeframe type, skips the year if it already has rows in the database,
+    calls get_year_events (with fallback title if the primary returns nothing), and bulk-
+    inserts one row per event per year covered by the timeframe (e.g. all years in a
+    decade or century).  Commits after each successful fetch.  A 0.1-second sleep is
+    added between requests to respect Wikipedia's rate limits.
+
+    Args:
+        year_range (range): The sequence of years to process (e.g. ``range(1, 2027)``).
+        era (str): Either ``"AD"`` or ``"BC"``, used for DB lookups and page title
+            construction.
+        conn (sqlite3.Connection): Open database connection used for committing.
+        cursor (sqlite3.Cursor): Database cursor used for queries and inserts.
+
+    Returns:
+        None
+    """
     for year in year_range:
         primary_title, fallback_title, t_type, y_range = get_timeframe_info(year, era)
         
@@ -147,6 +193,14 @@ def scrape_range(year_range, era, conn, cursor):
         time.sleep(0.1)
 
 def main():
+    """Entry point: set up the database and scrape Wikipedia events for AD and BC years.
+
+    Creates the database via setup_database, then calls scrape_range for AD years 1–2026
+    and BC years 1–4000 in sequence.  Closes the database connection on completion.
+
+    Returns:
+        None
+    """
     conn, cursor = setup_database()
     
     print("--- Starting AD Scraping ---")

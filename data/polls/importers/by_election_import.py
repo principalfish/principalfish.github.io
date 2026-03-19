@@ -95,11 +95,39 @@ class ByElectionImportPlan(BaseModel):
 
 
 def normalize_name(value: str) -> str:
+    """Normalise a name string for fuzzy matching.
+
+    Lowercases the value, replaces ``&`` with ``and``, and strips all
+    non-alphanumeric characters so that names like "Runcorn & Helsby" and
+    "Runcorn and Helsby" compare as equal.
+
+    Args:
+        value: The raw name string to normalise.
+
+    Returns:
+        Normalised lowercase alphanumeric string with no whitespace or
+        punctuation.
+    """
     value = value.lower().replace("&", "and")
     return re.sub(r"[^a-z0-9]", "", value)
 
 
 def fetch_wikipedia_html(url: str) -> str:
+    """Fetch the HTML content of a Wikipedia page.
+
+    Sends a GET request with a bot User-Agent header to avoid being blocked
+    by Wikipedia's default rate limiting rules.
+
+    Args:
+        url: The Wikipedia page URL to fetch.
+
+    Returns:
+        The decoded UTF-8 HTML content of the page.
+
+    Raises:
+        urllib.error.URLError: If the request fails or the 15-second timeout
+            is exceeded.
+    """
     req = Request(url, headers={"User-Agent": "ElectionMapsBot/1.0"})
     with urlopen(req, timeout=15) as response:
         data: bytes = response.read()
@@ -187,7 +215,23 @@ def parse_election_name_from_title(soup: BeautifulSoup) -> str:
 
 
 def parse_results_table(soup: BeautifulSoup) -> list[ParsedCandidate]:
-    """Parse the election results table from the Wikipedia page."""
+    """Parse candidate results from the first matching wikitable on the page.
+
+    Searches all ``wikitable`` elements for one that has both a "candidate"
+    column and a "votes" column. Handles Wikipedia's common layout quirk where
+    a leading colour-swatch ``<td>`` shifts data columns right relative to the
+    header indices.
+
+    If no candidate is marked as elected (via bold name or a tick mark in the
+    row text), the candidate with the highest vote count is marked elected.
+
+    Args:
+        soup: Parsed BeautifulSoup tree of the Wikipedia by-election page.
+
+    Returns:
+        List of :class:`ParsedCandidate` instances, one per valid data row.
+        Returns an empty list if no matching table is found.
+    """
     candidates: list[ParsedCandidate] = []
 
     # Find all wikitables and look for the one with vote results
@@ -265,6 +309,15 @@ def parse_results_table(soup: BeautifulSoup) -> list[ParsedCandidate]:
 
 
 def _find_column(headers: list[str], keywords: list[str]) -> int | None:
+    """Find the index of the first header containing any of the given keywords.
+
+    Args:
+        headers: Lowercased column header strings from the table.
+        keywords: Substrings to search for within each header.
+
+    Returns:
+        Index of the first matching header, or None if no match is found.
+    """
     for i, h in enumerate(headers):
         for kw in keywords:
             if kw in h:
@@ -324,6 +377,25 @@ def build_import_plan(
     parent_election_name: str = DEFAULT_PARENT_ELECTION_NAME,
     map_name: str = DEFAULT_MAP_NAME,
 ) -> ByElectionImportPlan:
+    """Fetch and parse a Wikipedia by-election page, then resolve DB references.
+
+    Scrapes the Wikipedia page at *url*, parses the results table and infobox,
+    and resolves the constituency name against seats in the named map. Does not
+    write anything to the database.
+
+    Args:
+        db: Open database connection used for seat, party, and election
+            lookups.
+        url: Wikipedia URL of the by-election article.
+        parent_election_name: Name of the parent general election to link the
+            by-election to. Defaults to ``DEFAULT_PARENT_ELECTION_NAME``.
+        map_name: Name of the map whose seat list is searched to match the
+            constituency. Defaults to ``DEFAULT_MAP_NAME``.
+
+    Returns:
+        A :class:`ByElectionImportPlan` containing all parsed data and
+        resolved DB IDs, ready to be passed to :func:`commit_import_plan`.
+    """
     html = fetch_wikipedia_html(url)
     soup = BeautifulSoup(html, "lxml")
 
@@ -382,6 +454,24 @@ def commit_import_plan(
     db: Database,
     plan: ByElectionImportPlan,
 ) -> ByElectionImportResult:
+    """Write a parsed by-election plan to the database.
+
+    Inserts one Election row (type ``by_election``) and one Vote row per
+    candidate in *plan*. Does not perform any scraping or HTML parsing.
+
+    Args:
+        db: Open database connection to write to.
+        plan: Import plan produced by :func:`build_import_plan`.
+
+    Returns:
+        A :class:`ByElectionImportResult` summarising the inserted election
+        and vote rows.
+
+    Raises:
+        ValueError: If no seat was matched for the constituency, no candidates
+            were parsed, or an election with the same name already exists in
+            the database.
+    """
     if not plan.seat_id:
         raise ValueError(f"No seat matched for constituency '{plan.constituency_name}'")
 
@@ -424,6 +514,21 @@ def commit_import_plan(
 
 
 def main() -> None:
+    """CLI entry point for the by-election importer.
+
+    Parses command-line arguments, builds an import plan from a Wikipedia URL,
+    prints a human-readable summary of parsed data, and — unless ``--dry-run``
+    is passed — commits the plan to the database.
+
+    CLI arguments:
+        --url (str, required): Wikipedia by-election article URL.
+        --parent-election (str, optional): Name of the parent general election;
+            defaults to ``DEFAULT_PARENT_ELECTION_NAME``.
+        --map-name (str, optional): Map name used for seat matching; defaults
+            to ``DEFAULT_MAP_NAME``.
+        --dry-run (flag): If set, parse and print only — no database writes
+            are performed.
+    """
     parser = argparse.ArgumentParser(description="Import a by-election from Wikipedia")
     parser.add_argument("--url", required=True, help="Wikipedia by-election URL")
     parser.add_argument(

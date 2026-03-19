@@ -25,12 +25,22 @@ from db import Database
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for the UKIP/Reform split script.
+
+    Returns:
+        Parsed namespace with a `dry_run` bool flag.
+    """
     parser = argparse.ArgumentParser(description="Split UKIP and Reform UK party usage in DB")
     parser.add_argument("--dry-run", action="store_true", help="Show planned updates without writing")
     return parser.parse_args()
 
 
 def main() -> None:
+    """Entry point: look up party IDs and reassign votes/poll_rows to UKIP or Reform by year.
+
+    Pre-2024 rows currently assigned to Reform are moved to UKIP; 2024+ rows currently
+    assigned to UKIP are moved to Reform. Creates the UKIP party row if it doesn't exist.
+    """
     args = parse_args()
     db = Database()
 

@@ -103,10 +103,43 @@ class ImportPlan(BaseModel):
 
 
 def normalize_name(value: str) -> str:
+    """Normalise a region or party name for case-insensitive lookup.
+
+    Strips leading/trailing whitespace, collapses internal whitespace to single
+    spaces, and lowercases the result.
+
+    Args:
+        value: Raw name string to normalise.
+
+    Returns:
+        Lowercased, whitespace-normalised version of the input.
+    """
     return " ".join(value.strip().split()).lower()
 
 
 def parse_fieldwork(value: str) -> tuple[date, date]:
+    """Parse a fieldwork date-range string into a start and end date.
+
+    Handles two common YouGov formats:
+    - Same-month range: ``"3-7 February 2025"``
+    - Cross-month range: ``"28 January - 3 February 2025"``
+
+    En-dashes (``–``) are normalised to hyphens before matching.  The start
+    year is derived from the end year; if the start month is later than the end
+    month the start year is decremented by one to handle year boundaries.
+
+    Args:
+        value: Raw fieldwork string as extracted from the PDF, e.g.
+            ``"Fieldwork: 3–7 February 2025"``.
+
+    Returns:
+        A ``(fieldwork_start, fieldwork_end)`` tuple of :class:`datetime.date`
+        objects.
+
+    Raises:
+        ValueError: If the string does not match either supported pattern, or
+            if a month name cannot be resolved.
+    """
     normalized_value = re.sub(r"\s+", " ", value.strip().replace("–", "-"))
 
     cross_month_pattern = re.compile(
@@ -163,6 +196,21 @@ def parse_fieldwork(value: str) -> tuple[date, date]:
 
 
 def extract_pdf_text(pdf_url: str) -> str:
+    """Download a PDF from ``pdf_url`` and return its full extracted text.
+
+    The PDF is written to a temporary file so that :class:`pypdf.PdfReader`
+    can read it by path.  Text from all pages is joined with newlines.
+
+    Args:
+        pdf_url: Fully-qualified HTTP/HTTPS URL of the YouGov PDF document.
+
+    Returns:
+        Concatenated text content of all pages in the PDF.
+
+    Raises:
+        urllib.error.URLError: If the PDF cannot be fetched.
+        pypdf.errors.PdfReadError: If the file is not a valid PDF.
+    """
     with urlopen(pdf_url) as response:
         payload = response.read()
 
@@ -189,7 +237,23 @@ def _parse_old_format_rows(
     lines: list[str],
     row_labels: list[str],
 ) -> dict[str, dict[str, float]]:
-    """Old PDF format: last 6 values of each cross-tab row are the 6 regions."""
+    """Parse regional vote shares from the older YouGov PDF cross-tab layout.
+
+    In the old format each party row contains a series of integer percentages;
+    the last six values correspond to the six macro regions in the order defined
+    by ``_OLD_FORMAT_REGIONAL_INDICES`` (Wales, Scotland, North, Midlands,
+    London, Rest of South).
+
+    Args:
+        lines: Stripped, non-empty lines from the Westminster VI section.
+        row_labels: Party label strings to match against line prefixes, sorted
+            longest-first to avoid partial matches.
+
+    Returns:
+        Mapping of canonical party name to a dict of macro-region name →
+        vote-share percentage (as a float).  Parties whose row contains fewer
+        than six numbers are silently skipped.
+    """
     result: dict[str, dict[str, float]] = {}
     for line in lines:
         matched_label = None
@@ -215,8 +279,34 @@ def _parse_new_format(
     lines: list[str],
     row_labels: list[str],
 ) -> dict[str, dict[str, float]]:
-    """New PDF format: Wales/Scotland from MRP cross-tab rows (-2/-1),
-    England regions from the separate 'Region in England' unlabelled table."""
+    """Parse regional vote shares from the newer YouGov PDF layout.
+
+    The newer format splits regional data across two sub-tables:
+
+    1. **Wales and Scotland** — taken from the penultimate and final integer
+       values of each party's MRP headline cross-tab row.
+    2. **England regions** (North, Midlands, London, Rest of South) — taken
+       from an unlabelled four-column table that appears after a
+       ``"% % % %"`` header within the ``"Region in England"`` block.
+
+    Parties are matched in the order they first appear in the cross-tab rows,
+    and the same order is used to consume rows from the England table.
+
+    Args:
+        section: Raw text of the Westminster VI section of the PDF.
+        lines: Stripped, non-empty lines from ``section``.
+        row_labels: Party label strings to match against line prefixes, sorted
+            longest-first to avoid partial matches.
+
+    Returns:
+        Mapping of canonical party name to a dict of macro-region name →
+        vote-share percentage (as a float).
+
+    Raises:
+        ValueError: If the England regions header or ``"% % % %"`` marker
+            cannot be located, or if the England table contains fewer party
+            rows than were found in the cross-tab.
+    """
     # Step 1: Wales and Scotland — first occurrence of each party (MRP headline rows)
     wales_scotland: dict[str, dict[str, float]] = {}
     party_order: list[str] = []
@@ -277,6 +367,26 @@ def _parse_new_format(
 
 
 def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
+    """Extract per-region vote shares from the Westminster VI section of the PDF.
+
+    Isolates the relevant section between the ``"Westminster Voting Intention"``
+    and ``"Now, thinking specifically"`` markers, then delegates to either
+    :func:`_parse_new_format` (when a ``"Region in England"`` sub-table is
+    present) or :func:`_parse_old_format_rows`.
+
+    Args:
+        full_text: Complete text content extracted from the YouGov PDF.
+
+    Returns:
+        Mapping of canonical party name to a dict of macro-region name →
+        vote-share percentage (as a float).  All parties in
+        ``PARTY_NAME_MAP`` must be present.
+
+    Raises:
+        ValueError: If the Westminster VI section cannot be isolated, or if
+            any party defined in ``PARTY_NAME_MAP`` is absent from the parsed
+            result.
+    """
     start_marker = "Westminster Voting Intention"
     end_marker = "Now, thinking specifically"
 
@@ -302,10 +412,37 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
 
 
 def _normalize_percentage(value: float) -> float:
+    """Round a percentage to the nearest integer and return it as a float.
+
+    Args:
+        value: Raw percentage value, e.g. ``34.6``.
+
+    Returns:
+        The value rounded to the nearest whole number, returned as a
+        :class:`float` to satisfy the ``PlannedPollRow.percentage`` field type.
+    """
     return float(int(round(value)))
 
 
 def parse_poll(pdf_text: str) -> ParsedPoll:
+    """Parse a complete :class:`ParsedPoll` from raw YouGov PDF text.
+
+    Extracts the sample size, fieldwork date range, and per-region party
+    vote shares by delegating to :func:`parse_fieldwork` and
+    :func:`parse_headline_vi_table`.
+
+    Args:
+        pdf_text: Full text content of the YouGov PDF as returned by
+            :func:`extract_pdf_text`.
+
+    Returns:
+        A :class:`ParsedPoll` containing the sample size, fieldwork dates, and
+        party macro-region percentages.
+
+    Raises:
+        ValueError: If the sample size or fieldwork window cannot be found in
+            the text, or if the headline VI table cannot be parsed.
+    """
     sample_match = re.search(r"Sample Size:\s*([0-9,]+)", pdf_text)
     if not sample_match:
         raise ValueError("Sample size not found in PDF")
@@ -332,6 +469,20 @@ def _find_existing_poll(
     map_id: int,
     parsed: ParsedPoll,
 ) -> Poll | None:
+    """Look up an existing Poll row matching the given pollster, map, and dates.
+
+    Matches on pollster ID, map ID, fieldwork start and end dates, and sample
+    size.  Returns the first match or ``None`` if no match exists.
+
+    Args:
+        db: Active :class:`Database` instance.
+        pollster_id: Primary key of the pollster to match.
+        map_id: Primary key of the constituency map to match.
+        parsed: Parsed poll data supplying fieldwork dates and sample size.
+
+    Returns:
+        The matching :class:`Poll` ORM object, or ``None`` if not found.
+    """
     with db.session() as session:
         return session.execute(
             select(Poll).where(
@@ -351,6 +502,30 @@ def build_import_plan(
     map_name: str = DEFAULT_MAP_NAME,
     pollster_identifier: str = DEFAULT_POLLSTER_IDENTIFIER,
 ) -> ImportPlan:
+    """Build a full :class:`ImportPlan` from a YouGov PDF without writing to the DB.
+
+    Downloads and parses the PDF, resolves all DB references (map, regions,
+    pollster, parties), and assembles the complete set of :class:`PlannedPollRow`
+    objects.  No data is written; call :func:`commit_import_plan` to persist.
+
+    Args:
+        db: Active :class:`Database` instance.
+        pdf_url: URL of the YouGov PDF to import.  Defaults to
+            ``DEFAULT_PDF_URL``.
+        map_name: Name of the constituency map to associate the poll with.
+            Defaults to ``DEFAULT_MAP_NAME``.
+        pollster_identifier: Slug identifier for the pollster record.
+            Defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+
+    Returns:
+        A fully-populated :class:`ImportPlan` describing what will be created
+        or updated when :func:`commit_import_plan` is called.
+
+    Raises:
+        ValueError: If the map is not found, any required region is missing
+            from the map, any party in ``PARTY_NAME_MAP`` is absent from the
+            database, or the PDF cannot be parsed.
+    """
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
@@ -439,6 +614,32 @@ def commit_import_plan(
     *,
     replace_rows: bool = False,
 ) -> PollImportResult:
+    """Persist an :class:`ImportPlan` to the database.
+
+    Creates the pollster and/or poll records if they do not yet exist, then
+    inserts the planned poll rows.  If rows already exist for the poll:
+
+    - By default (``replace_rows=False``) the existing rows are left untouched
+      and the result reports ``skipped_existing_rows=True``.
+    - When ``replace_rows=True`` the existing rows are deleted before new ones
+      are inserted.
+
+    The pollster's ``regions_mapping`` is updated in place if it has changed.
+    The poll's ``source_url`` is updated in place if it has changed.
+
+    Args:
+        db: Active :class:`Database` instance.
+        plan: Import plan produced by :func:`build_import_plan`.
+        replace_rows: If ``True``, delete existing :class:`PollRow` records for
+            the poll before inserting new ones.  Defaults to ``False``.
+
+    Returns:
+        A :class:`PollImportResult` summarising what was created, replaced, or
+        skipped.
+
+    Raises:
+        ValueError: If the pollster lookup fails unexpectedly during commit.
+    """
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -521,6 +722,15 @@ def commit_import_plan(
 
 
 def _cli_preview(plan: ImportPlan) -> None:
+    """Print a dry-run summary of an :class:`ImportPlan` to stdout.
+
+    Displays the parsed fieldwork dates and sample size, whether the pollster
+    and poll already exist, and each row that would be inserted.  Nothing is
+    written to the database.
+
+    Args:
+        plan: Import plan to preview, as returned by :func:`build_import_plan`.
+    """
     print(
         "Parsed poll: "
         f"fieldwork={plan.parsed.fieldwork_start} to {plan.parsed.fieldwork_end}, "
@@ -545,6 +755,22 @@ def _cli_preview(plan: ImportPlan) -> None:
 
 
 def main() -> None:
+    """CLI entry point for the YouGov poll importer.
+
+    Parses command-line arguments, fetches and parses the specified PDF, and
+    either prints a dry-run preview or commits the import to the database.
+
+    Command-line arguments:
+        --pdf-url (str): URL of the YouGov PDF to import.
+            Defaults to ``DEFAULT_PDF_URL``.
+        --map-name (str): Name of the constituency map to use.
+            Defaults to ``DEFAULT_MAP_NAME``.
+        --pollster-identifier (str): Slug identifier for the pollster.
+            Defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+        --replace-rows (flag): Delete existing poll rows before inserting new
+            ones.  Off by default.
+        --dry-run (flag): Print the import plan without writing to the database.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--pdf-url", default=DEFAULT_PDF_URL)
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME)

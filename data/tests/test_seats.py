@@ -7,6 +7,8 @@ from db import Database
 
 
 class TestAddSeat:
+    """Covers Database.add_seat — creation, optional region, geometry inputs, and invalid-map rejection."""
+
     def test_basic(self, db: Database) -> None:
         m = db.add_map("UK")
         seat = db.add_seat(m.id, "Holborn and St Pancras")
@@ -42,6 +44,8 @@ class TestAddSeat:
 
 
 class TestGetSeat:
+    """Covers Database.get_seat — lookup by id and missing-id behaviour."""
+
     def test_by_id(self, db: Database) -> None:
         m = db.add_map("UK")
         created = db.add_seat(m.id, "Bristol West")
@@ -54,6 +58,8 @@ class TestGetSeat:
 
 
 class TestGetSeatsForMap:
+    """Covers Database.get_seats_for_map — filtering by map and alphabetical ordering."""
+
     def test_empty(self, db: Database) -> None:
         m = db.add_map("Empty")
         assert db.get_seats_for_map(m.id) == []
@@ -67,6 +73,8 @@ class TestGetSeatsForMap:
 
 
 class TestSeatGeometry:
+    """Covers Database.get_seat_geometry — roundtrip fidelity, missing seat, and seat with no geometry."""
+
     def test_roundtrip(self, db: Database) -> None:
         m = db.add_map("UK")
         original = MultiPolygon([box(-0.13, 51.52, -0.10, 51.54)])

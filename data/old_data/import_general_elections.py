@@ -50,6 +50,16 @@ FILES_DIR = Path(__file__).resolve().parent / "files"
 
 @dataclass(frozen=True)
 class ElectionImportSpec:
+    """Specification for a single general election import.
+
+    Attributes:
+        year: The election year (e.g. 2024).
+        name: Human-readable election name stored in the database (e.g. "2024 General Election").
+        filename: JSON data file name relative to FILES_DIR.
+        map_group: Either "pre" (pre-2019 boundaries) or "post" (post-2022 boundaries),
+            used to select the correct map when matching seats.
+    """
+
     year: int
     name: str
     filename: str
@@ -85,6 +95,16 @@ PARTY_KEY_TO_NAME = {
 
 @dataclass
 class ImportStats:
+    """Accumulated counters for a single election import pass.
+
+    Attributes:
+        seats_seen: Total number of seat entries processed from the JSON file.
+        seats_matched: Seats successfully matched to a database Seat record.
+        seats_unmatched: Seats that could not be matched to any database Seat record.
+        seat_electorates_updated: Number of Seat rows whose electorate count was written.
+        votes_inserted: Number of Vote rows inserted into the database.
+    """
+
     seats_seen: int = 0
     seats_matched: int = 0
     seats_unmatched: int = 0
@@ -93,16 +113,51 @@ class ImportStats:
 
 
 def normalize_name(value: str) -> str:
+    """Normalise a name string for fuzzy matching.
+
+    Lowercases the input, replaces ``&`` with ``and``, then strips every
+    character that is not a lowercase ASCII letter or digit.
+
+    Args:
+        value: The raw name string to normalise.
+
+    Returns:
+        A lowercased, alphanumeric-only version of the input suitable for
+        comparison with other normalised names.
+    """
     value = value.lower().replace("&", "and")
     value = re.sub(r"[^a-z0-9]", "", value)
     return value
 
 
 def normalize_party_key(party_key: str) -> str:
+    """Normalise a party key for consistent lookup in caches and mappings.
+
+    Delegates to :func:`normalize_name` so that party keys are compared in a
+    case-insensitive, punctuation-free form.
+
+    Args:
+        party_key: Raw party key string as it appears in the JSON data file.
+
+    Returns:
+        Normalised party key (lowercase, alphanumeric only).
+    """
     return normalize_name(party_key)
 
 
 def humanize_party_name(party_key: str) -> str:
+    """Convert a raw party key into a human-readable party name.
+
+    Looks up the normalised key in ``PARTY_KEY_TO_NAME`` first. If no mapping
+    exists, splits the key on underscores, hyphens, and whitespace and
+    title-cases each token to produce a fallback display name.
+
+    Args:
+        party_key: Raw party key string as it appears in the JSON data file.
+
+    Returns:
+        A human-readable party name string (e.g. ``"Liberal Democrats"``).
+    """
     key = normalize_party_key(party_key)
     if key in PARTY_KEY_TO_NAME:
         return PARTY_KEY_TO_NAME[key]
@@ -110,6 +165,26 @@ def humanize_party_name(party_key: str) -> str:
 
 
 def choose_map(db: Database, map_name: str | None, map_candidates: tuple[str, ...], label: str) -> Map:
+    """Resolve a Map record by explicit name or by trying a list of candidate names.
+
+    If ``map_name`` is provided it is used as an exact lookup; an error is raised
+    if no map with that name exists. Otherwise each name in ``map_candidates`` is
+    tried in order and the first match is returned.
+
+    Args:
+        db: Active database connection used to look up map records.
+        map_name: Explicit map name override, or ``None`` to use the candidate list.
+        map_candidates: Ordered tuple of map names to try when ``map_name`` is not given.
+        label: Human-readable label for the map group (e.g. ``"pre-2019"``), used
+            in error messages only.
+
+    Returns:
+        The matched :class:`~models.Map` database record.
+
+    Raises:
+        ValueError: If ``map_name`` is provided but not found, or if none of the
+            candidate names match an existing map.
+    """
     if map_name:
         selected = db.get_map_by_name(map_name)
         if selected is None:
@@ -129,6 +204,21 @@ def choose_map(db: Database, map_name: str | None, map_candidates: tuple[str, ..
 
 
 def ensure_party(db: Database, cache: dict[str, Party], party_key: str) -> Party:
+    """Return the Party record for ``party_key``, creating it if necessary.
+
+    Uses ``cache`` (keyed on normalised party key) to avoid redundant database
+    lookups within a single import run. If the party is not in the cache it is
+    looked up by display name; if still not found it is inserted into the database.
+
+    Args:
+        db: Active database connection used to look up or insert the party.
+        cache: Mutable mapping of normalised party key to :class:`~models.Party`,
+            shared across calls for the same import run.
+        party_key: Raw party key string as it appears in the JSON data file.
+
+    Returns:
+        The :class:`~models.Party` database record, newly created or pre-existing.
+    """
     normalized_key = normalize_party_key(party_key)
     if normalized_key in cache:
         return cache[normalized_key]
@@ -142,6 +232,22 @@ def ensure_party(db: Database, cache: dict[str, Party], party_key: str) -> Party
 
 
 def pick_winner_key(current_key: str, party_info: dict[str, Any]) -> str:
+    """Determine the winning party key for a seat from its JSON party data.
+
+    First attempts to find a key in ``party_info`` whose normalised form matches
+    the normalised ``current_key`` (the declared winner in ``seatInfo.current``).
+    If no exact normalised match is found, falls back to the party with the highest
+    ``"total"`` vote count in ``party_info``.
+
+    Args:
+        current_key: The party key recorded as the seat winner in ``seatInfo.current``.
+        party_info: Mapping of raw party key to candidate data dict, as parsed from
+            the ``partyInfo`` field of the election JSON file. Each value is expected
+            to be a dict containing at least a ``"total"`` key with a numeric vote count.
+
+    Returns:
+        The raw party key string from ``party_info`` that corresponds to the winner.
+    """
     target = normalize_party_key(current_key)
     for key in party_info:
         if normalize_party_key(key) == target:
@@ -154,6 +260,33 @@ def pick_winner_key(current_key: str, party_info: dict[str, Any]) -> str:
 
 
 def main() -> None:
+    """Entry point for the general election import script.
+
+    Parses CLI arguments, resolves the correct boundary maps, and iterates over
+    the selected :data:`ELECTION_SPECS`. For each spec the corresponding JSON
+    file is read, each seat is matched against the database by name (with a
+    normalised fallback), and vote rows are inserted. Progress and summary
+    statistics are printed to stdout.
+
+    CLI arguments:
+        --map-name (str, optional): Override the map lookup for all elections with
+            an explicit map name.
+        --map-name-pre (str, optional): Override the map name used for 2010/2015/
+            2017/2019 imports only.
+        --map-name-post (str, optional): Override the map name used for 2024 imports only.
+        --only-year (int, optional, repeatable): Restrict import to one or more
+            years; valid values are 2010, 2015, 2017, 2019, 2024.
+        --dry-run (flag): Parse and match data without writing anything to the database.
+        --skip-existing (flag): Skip any election that already has vote rows in the
+            database instead of raising an error.
+
+    Raises:
+        ValueError: If no election specs are selected, or if a required map cannot
+            be resolved.
+        FileNotFoundError: If a JSON data file for a selected election year is missing.
+        RuntimeError: If an election already has vote data and ``--skip-existing`` is
+            not set.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", help="Override map lookup for all elections by explicit map name")
     parser.add_argument("--map-name-pre", help="Override map name for 2010/2015/2017/2019 imports")

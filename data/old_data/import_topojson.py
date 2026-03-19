@@ -40,7 +40,28 @@ REGION_DISPLAY_NAMES = {
 
 
 def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, Any]]:
-    """Decode a TopoJSON topology into a list of GeoJSON-like feature dicts."""
+    """Decode a TopoJSON topology into a list of GeoJSON-like feature dicts.
+
+    Applies the quantization transform (if present) to dequantize arc coordinates,
+    then reconstructs Polygon and MultiPolygon geometries from arc indices.
+
+    Args:
+        topo: A parsed TopoJSON document as a dict, containing at minimum
+            ``arcs`` and ``objects`` keys, and optionally a ``transform``
+            key with ``scale`` and ``translate`` sub-keys.
+        object_name: The key within ``topo["objects"]`` whose geometries
+            should be decoded (e.g. ``"map"``).
+
+    Returns:
+        A list of feature dicts, each with ``"properties"`` (copied from the
+        TopoJSON geometry) and ``"geometry"`` (a GeoJSON-style dict with
+        ``"type"`` and ``"coordinates"``).
+
+    Raises:
+        ValueError: If a geometry has a type other than ``"Polygon"`` or
+            ``"MultiPolygon"``.
+        KeyError: If ``object_name`` is not present in ``topo["objects"]``.
+    """
     transform = topo.get("transform")
     arcs = topo["arcs"]
 
@@ -64,12 +85,39 @@ def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, An
         decoded_arcs = arcs
 
     def decode_arc_index(idx: int) -> list[list[float]]:
+        """Return the decoded coordinate sequence for a single arc index.
+
+        Negative indices (per the TopoJSON spec) reference the arc in reverse,
+        with the bitwise complement used to recover the forward index.
+
+        Args:
+            idx: Arc index. Non-negative values reference the arc directly;
+                negative values reference the same arc in reverse order.
+
+        Returns:
+            A copy of the coordinate list for the referenced arc, reversed
+            if ``idx`` is negative.
+        """
         if idx >= 0:
             return decoded_arcs[idx][:]
         else:
             return decoded_arcs[~idx][::-1]
 
     def decode_ring(ring_indices: list[int]) -> list[list[float]]:
+        """Assemble a polygon ring from a sequence of arc indices.
+
+        Concatenates the coordinate sequences of the referenced arcs in order,
+        dropping the duplicate first point of each subsequent arc so that
+        the ring is a continuous, non-repeating coordinate list.
+
+        Args:
+            ring_indices: Ordered list of arc indices (possibly negative)
+                that together form one closed polygon ring.
+
+        Returns:
+            A flat list of ``[longitude, latitude]`` coordinate pairs
+            forming the ring.
+        """
         coords: list[list[float]] = []
         for idx in ring_indices:
             arc_coords = decode_arc_index(idx)
@@ -98,7 +146,20 @@ def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, An
 
 
 def ensure_multipolygon(geojson_geom: dict[str, Any]) -> MultiPolygon:
-    """Convert a GeoJSON geometry dict to a Shapely MultiPolygon."""
+    """Convert a GeoJSON geometry dict to a Shapely MultiPolygon.
+
+    If the geometry is already a MultiPolygon it is returned unchanged.
+    A plain Polygon is wrapped in a single-member MultiPolygon so that
+    all seats have a uniform geometry type in the database.
+
+    Args:
+        geojson_geom: A GeoJSON geometry dict with at minimum ``"type"``
+            and ``"coordinates"`` keys. Must represent a ``Polygon`` or
+            ``MultiPolygon``.
+
+    Returns:
+        A Shapely ``MultiPolygon`` instance representing the same geometry.
+    """
     geom = shape(geojson_geom)
     if isinstance(geom, Polygon):
         geom = MultiPolygon([geom])
@@ -106,7 +167,25 @@ def ensure_multipolygon(geojson_geom: dict[str, Any]) -> MultiPolygon:
 
 
 def import_file(db: Database, filepath: str, map_name: str, skip_existing: bool) -> None:
-    """Import a single TopoJSON file into the database."""
+    """Import a single TopoJSON file into the database.
+
+    Creates a map record, deduplicates and creates region records from the
+    ``region`` property of each feature, then inserts one seat row per
+    feature with its associated MultiPolygon geometry.
+
+    If the map already exists and ``skip_existing`` is ``True``, the file
+    is silently skipped.  If the map already exists and ``skip_existing``
+    is ``False``, a duplicate map record will be created.
+
+    Args:
+        db: An open ``Database`` session used for all inserts.
+        filepath: Absolute or relative path to the TopoJSON ``.json`` file
+            to import.
+        map_name: Human-readable name to assign to the created map record
+            (e.g. ``"UK Constituencies pre 2019"``).
+        skip_existing: When ``True``, skip this file if a map with
+            ``map_name`` already exists in the database.
+    """
     print(f"\nImporting {filepath} as '{map_name}'...")
 
     existing_map = db.get_map_by_name(map_name)
@@ -146,6 +225,17 @@ def import_file(db: Database, filepath: str, map_name: str, skip_existing: bool)
 
 
 def main() -> None:
+    """Parse CLI arguments and run the TopoJSON import pipeline.
+
+    Initialises the database, then calls :func:`import_file` for each of
+    the two canonical map files (pre-2019 and post-2022 constituency
+    boundaries).  Prints a summary of maps, regions, and seats after the
+    import completes.
+
+    CLI flags:
+        --skip-existing: Skip any map whose name already exists in the
+            database rather than creating a duplicate.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--skip-existing",

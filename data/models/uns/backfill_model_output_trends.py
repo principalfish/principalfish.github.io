@@ -15,6 +15,17 @@ from models import Election, ElectionType, Map, Party, Vote
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the backfill script.
+
+    Returns:
+        Parsed argument namespace with the following attributes:
+            output_csv: Path string for the trend cache CSV to write.
+            map_name: Optional map name to restrict backfill to a single map;
+                None means all model_uns elections are processed.
+            reset_existing: If True, delete existing model_uns elections and
+                votes from the DB and remove the existing trend cache CSV
+                before writing new output.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output-csv",
@@ -39,6 +50,18 @@ def parse_args() -> argparse.Namespace:
 
 
 def reset_existing_model_outputs(db: Database, output_path: Path) -> tuple[int, int, bool]:
+    """Delete all model_uns elections and associated votes from the database, and remove the trend cache CSV.
+
+    Args:
+        db: Database instance used to open a session for the delete operations.
+        output_path: Path to the trend cache CSV file; deleted if it exists.
+
+    Returns:
+        A three-element tuple:
+            - deleted_elections: Number of Election rows deleted.
+            - deleted_votes: Number of Vote rows deleted.
+            - csv_deleted: True if the CSV file existed and was removed, False otherwise.
+    """
     with db.session() as session:
         existing_ids = session.execute(
             select(Election.id).where(Election.type == ElectionType.model_uns)
@@ -80,6 +103,23 @@ def _as_of_date_from_election(election: Election) -> str:
 
 
 def main() -> None:
+    """Backfill the model output trend cache CSV from persisted model_uns elections.
+
+    Reads all model_uns elections from the database (optionally filtered by map
+    name), aggregates per-party vote totals and seat counts for each election,
+    and writes one CSV row per party per election to the trend cache file.
+
+    Elections whose seat distribution is identical to the previous election are
+    skipped to avoid duplicating unchanged snapshots in the trend cache.
+
+    Side effects:
+        - If ``--reset-existing`` is set, deletes all model_uns Election and
+          Vote rows from the database and removes the existing CSV before
+          writing new output.
+        - Writes (or overwrites) the trend cache CSV at the path given by
+          ``--output-csv`` (default: ``TREND_CACHE_CSV`` from run_uns_model).
+        - Prints progress and summary lines to stdout.
+    """
     args = parse_args()
     output_path = Path(args.output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)

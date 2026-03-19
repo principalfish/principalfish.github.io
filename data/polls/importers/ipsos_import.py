@@ -93,6 +93,15 @@ class ImportPlan(BaseModel):
 
 
 def _month_number(month_text: str) -> int | None:
+    """Convert a month name or abbreviation to its calendar number.
+
+    Args:
+        month_text: Month name or abbreviation (e.g. "Jan", "January", "Sept.").
+            Case-insensitive; trailing periods are stripped.
+
+    Returns:
+        Integer month number 1–12, or None if the text is not recognised.
+    """
     month_map = {
         "jan": 1,
         "january": 1,
@@ -123,6 +132,22 @@ def _month_number(month_text: str) -> int | None:
 
 
 def extract_pdf_text(pdf_url: str) -> str:
+    """Fetch a PDF from a URL and extract its full text content.
+
+    Sends an HTTP GET request with a browser-like User-Agent header, validates
+    that the response body is a valid PDF (starts with ``%PDF``), then extracts
+    and concatenates the text from every page.
+
+    Args:
+        pdf_url: Fully-qualified URL of the PDF to download.
+
+    Returns:
+        Concatenated text of all pages, joined by newlines.
+
+    Raises:
+        ValueError: If the response body is not a valid PDF.
+        urllib.error.URLError: If the HTTP request fails.
+    """
     req = Request(pdf_url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
     with urlopen(req) as response:
         payload = response.read()
@@ -135,10 +160,36 @@ def extract_pdf_text(pdf_url: str) -> str:
 
 
 def _extract_lines(pdf_text: str) -> list[str]:
+    """Split raw PDF text into non-empty, stripped lines.
+
+    Args:
+        pdf_text: Full text extracted from a PDF document.
+
+    Returns:
+        List of non-blank lines with leading/trailing whitespace removed.
+    """
     return [line.strip() for line in pdf_text.splitlines() if line.strip()]
 
 
 def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
+    """Parse fieldwork start and end dates from PDF lines.
+
+    Searches for a line containing "Fieldwork dates" and extracts the date
+    range using a regex. Handles cross-month ranges (e.g. "31 January to
+    3 February 2026") by inferring that the start year is one less than the
+    end year when the start month is later in the calendar than the end month.
+
+    Args:
+        lines: Non-empty, stripped lines from the PDF text.
+
+    Returns:
+        A ``(fieldwork_start, fieldwork_end)`` tuple of :class:`datetime.date`
+        objects.
+
+    Raises:
+        ValueError: If no fieldwork line is found, or the date pattern does
+            not match, or a month name cannot be parsed.
+    """
     fieldwork_line = next((line for line in lines if "fieldwork dates" in line.lower()), None)
     if fieldwork_line is None:
         raise ValueError("Fieldwork line not found in PDF")
@@ -167,6 +218,20 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
 
 
 def _parse_sample_size(lines: list[str]) -> int:
+    """Parse the unweighted sample size from PDF lines.
+
+    Searches for a line containing "unweighted total" or "unweighted sample"
+    and extracts the first 3-to-6-digit number found on that line.
+
+    Args:
+        lines: Non-empty, stripped lines from the PDF text.
+
+    Returns:
+        The unweighted sample size as a positive integer.
+
+    Raises:
+        ValueError: If no matching line is found or no number can be extracted.
+    """
     sample_line = next(
         (
             line
@@ -185,6 +250,18 @@ def _parse_sample_size(lines: list[str]) -> int:
 
 
 def _line_percentage(line: str) -> float | None:
+    """Extract the first percentage value from a line of text.
+
+    Matches patterns of the form ``<digits>%`` (with optional whitespace
+    between the digits and the percent sign) and returns the first match as
+    a float.
+
+    Args:
+        line: A single line of text, typically from a PDF page.
+
+    Returns:
+        The first percentage value found as a float, or None if no match.
+    """
     matches = re.findall(r"(\d{1,2})\s*%", line)
     if not matches:
         return None
@@ -192,6 +269,23 @@ def _line_percentage(line: str) -> float | None:
 
 
 def _parse_party_percentages(lines: list[str]) -> dict[str, float]:
+    """Parse national voting intention percentages for each party.
+
+    Scans from the "combined voting intention - all" section header and
+    matches lines against ``PARTY_LINE_MAP``. If a percentage is not found
+    on the party name line itself, the immediately following line is also
+    checked.
+
+    Args:
+        lines: Non-empty, stripped lines from the PDF text.
+
+    Returns:
+        Dict mapping canonical party name to its national percentage (0–100).
+
+    Raises:
+        ValueError: If the section header is not found or any party percentage
+            is missing.
+    """
     start_idx = next(
         (
             index
@@ -229,6 +323,24 @@ def _parse_party_percentages(lines: list[str]) -> dict[str, float]:
 
 
 def _parse_percentage_tokens(raw_line: str) -> list[float | None]:
+    """Tokenise a compacted percentage row from a regional cross-tab table.
+
+    Removes all whitespace from the line and then greedily scans for two
+    token types:
+
+    - ``<digits>%`` → parsed as a float percentage value.
+    - ``-`` or ``-s`` → treated as a suppressed/missing cell (``None``).
+
+    Any other characters are skipped.
+
+    Args:
+        raw_line: A single line of text containing percentage values and
+            suppression markers, as extracted from a PDF cross-tab row.
+
+    Returns:
+        Ordered list of tokens; each element is either a float percentage
+        or ``None`` for a suppressed cell.
+    """
     compact = "".join(raw_line.split())
     tokens: list[float | None] = []
     index = 0
@@ -292,6 +404,30 @@ def _extract_region_values(tokens: list[float | None]) -> list[float] | None:
 
 
 def _parse_party_region_percentages(lines: list[str]) -> dict[str, dict[str, float]]:
+    """Parse regional voting intention percentages for each party.
+
+    Scans from the "combined voting intention - likely to vote" section header
+    (up to 220 lines ahead) looking for party name lines whose immediately
+    following line contains ``%`` values. Delegates token extraction and region
+    column layout detection to ``_parse_percentage_tokens`` and
+    ``_extract_region_values``.
+
+    Only the first match per party is recorded to avoid picking up duplicate
+    cross-tabs from the same PDF with incompatible column layouts.
+
+    Optional parties (SNP, Plaid Cymru, Other) that are absent from the PDF
+    are defaulted to 0% in all regions. If fewer than 5 parties are found the
+    section is treated as absent and an empty dict is returned.
+
+    Args:
+        lines: Non-empty, stripped lines from the PDF text.
+
+    Returns:
+        Dict mapping canonical party name to a dict of
+        ``{macro_region_name: percentage}`` for each region in
+        ``REGION_COLUMN_ORDER``. Returns an empty dict if the section is not
+        present or is too sparse.
+    """
     start_idx = next(
         (
             index
@@ -353,6 +489,22 @@ def _parse_party_region_percentages(lines: list[str]) -> dict[str, dict[str, flo
 
 
 def parse_poll(pdf_text: str) -> ParsedPoll:
+    """Parse all structured poll data from raw Ipsos PDF text.
+
+    Orchestrates the individual parse helpers to extract sample size, fieldwork
+    dates, national party percentages, and regional party percentages.
+
+    Args:
+        pdf_text: Full text content of an Ipsos PDF, as returned by
+            :func:`extract_pdf_text`.
+
+    Returns:
+        A :class:`ParsedPoll` instance populated with all extracted data.
+
+    Raises:
+        ValueError: If any required section or value cannot be parsed from the
+            text (propagated from the individual parse helpers).
+    """
     lines = _extract_lines(pdf_text)
     sample_size = _parse_sample_size(lines)
     fieldwork_start, fieldwork_end = _parse_fieldwork(lines)
@@ -368,6 +520,20 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
 
 
 def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+    """Look up an existing poll row matching the parsed poll's key fields.
+
+    Matches on pollster, map, fieldwork start/end dates, and sample size.
+
+    Args:
+        db: Active :class:`Database` instance.
+        pollster_id: Primary key of the pollster in the database.
+        map_id: Primary key of the constituency map in the database.
+        parsed: Parsed poll data containing the fieldwork dates and sample size
+            to match against.
+
+    Returns:
+        The matching :class:`Poll` ORM instance, or ``None`` if not found.
+    """
     with db.session() as session:
         return session.execute(
             select(Poll).where(
@@ -387,6 +553,34 @@ def build_import_plan(
     map_name: str = DEFAULT_MAP_NAME,
     pollster_identifier: str = DEFAULT_POLLSTER_IDENTIFIER,
 ) -> ImportPlan:
+    """Fetch an Ipsos PDF and build a complete import plan without writing to the DB.
+
+    Downloads the PDF, parses it, resolves pollster/map/party/region records
+    from the database, and assembles the full set of :class:`PlannedPollRow`
+    objects (national + regional) that would be inserted on commit.
+
+    All required parties must already exist in the database; call the party
+    importer first if they are missing.
+
+    Args:
+        db: Active :class:`Database` instance.
+        pdf_url: URL of the Ipsos PDF to import. Defaults to
+            ``DEFAULT_PDF_URL``.
+        map_name: Name of the constituency map to associate with the poll.
+            Defaults to ``DEFAULT_MAP_NAME``.
+        pollster_identifier: Identifier string for the Ipsos pollster record.
+            Defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+
+    Returns:
+        A fully-populated :class:`ImportPlan` describing what would be created
+        or updated on commit, including whether the pollster and poll already
+        exist.
+
+    Raises:
+        ValueError: If the map is not found, any party is missing from the
+            database, or any internal region referenced by
+            ``MACRO_REGION_TO_INTERNAL`` is absent.
+    """
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
@@ -468,6 +662,31 @@ def commit_import_plan(
     *,
     replace_rows: bool = False,
 ) -> PollImportResult:
+    """Write an import plan to the database.
+
+    Creates the pollster if it does not exist, creates the poll record if it
+    does not exist (or updates ``source_url`` if it does), and inserts the
+    planned poll rows. If rows already exist for the poll:
+
+    - With ``replace_rows=False`` (default): skips insertion and sets
+      ``skipped_existing_rows=True`` in the result.
+    - With ``replace_rows=True``: deletes all existing rows before inserting
+      the new ones.
+
+    Args:
+        db: Active :class:`Database` instance.
+        plan: Import plan produced by :func:`build_import_plan`.
+        replace_rows: If ``True``, delete existing poll rows before inserting.
+            Defaults to ``False``.
+
+    Returns:
+        A :class:`PollImportResult` summarising what was created, inserted, or
+        skipped.
+
+    Raises:
+        ValueError: If the pollster lookup fails during commit (should not
+            occur under normal conditions).
+    """
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -546,6 +765,14 @@ def commit_import_plan(
 
 
 def _cli_preview(plan: ImportPlan) -> None:
+    """Print a dry-run preview of an import plan to stdout.
+
+    Displays the parsed poll metadata, whether the pollster and poll records
+    already exist, and the full list of rows that would be inserted.
+
+    Args:
+        plan: Import plan produced by :func:`build_import_plan`.
+    """
     print(
         "Parsed poll: "
         f"fieldwork={plan.parsed.fieldwork_start} to {plan.parsed.fieldwork_end}, "
@@ -570,6 +797,22 @@ def _cli_preview(plan: ImportPlan) -> None:
 
 
 def main() -> None:
+    """CLI entry point for the Ipsos poll importer.
+
+    Parses command-line arguments, fetches and parses the Ipsos PDF, and
+    either prints a dry-run preview or commits the import plan to the database.
+
+    Command-line arguments:
+
+    - ``--pdf-url`` (str, optional): URL of the Ipsos PDF to import.
+      Defaults to ``DEFAULT_PDF_URL``.
+    - ``--map-name`` (str, optional): Name of the constituency map.
+      Defaults to ``DEFAULT_MAP_NAME``.
+    - ``--pollster-identifier`` (str, optional): Pollster identifier string.
+      Defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+    - ``--replace-rows`` (flag): Delete existing poll rows before inserting.
+    - ``--dry-run`` (flag): Print a preview without writing to the database.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--pdf-url", default=DEFAULT_PDF_URL)
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME)

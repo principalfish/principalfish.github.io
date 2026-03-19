@@ -78,6 +78,17 @@ PARTY_NAME_TO_KEY = {
 
 @dataclass(frozen=True)
 class SeatRow:
+    """Lightweight projection of a seat record used during result export.
+
+    Attributes:
+        seat_id: Primary key of the seat in the DB.
+        seat_name: Human-readable seat name (used as the result key).
+        region_id: Foreign key of the seat's region, or None if unset.
+        region_name: Display name of the region, or None if unset.
+        electorate: Registered electorate size used for turnout calculation,
+            or None if the seats table has no electorate column.
+    """
+
     seat_id: int
     seat_name: str
     region_id: int | None
@@ -86,10 +97,27 @@ class SeatRow:
 
 
 def normalize_token(value: str) -> str:
+    """Strip all non-alphanumeric characters and lowercase the result.
+
+    Args:
+        value: Arbitrary string to normalise.
+
+    Returns:
+        Lowercased string containing only ASCII letters and digits.
+    """
     return re.sub(r"[^a-z0-9]", "", value.lower())
 
 
 def slugify(value: str) -> str:
+    """Convert a string to a URL-safe slug using hyphens as separators.
+
+    Args:
+        value: Arbitrary string to slugify.
+
+    Returns:
+        Lowercased hyphen-separated slug. Falls back to ``"election"`` if the
+        input contains no alphanumeric characters.
+    """
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug or "election"
 

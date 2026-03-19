@@ -6,6 +6,8 @@ from db import Database
 
 
 class TestAddParty:
+    """Tests for Database.add_party — creation, optional fields, and uniqueness constraint."""
+
     def test_basic(self, db: Database) -> None:
         party = db.add_party("Labour")
         assert party.id is not None
@@ -32,6 +34,8 @@ class TestAddParty:
 
 
 class TestGetParty:
+    """Tests for Database.get_party and get_party_by_name lookups."""
+
     def test_by_id(self, db: Database) -> None:
         created = db.add_party("Tory", short_name="Con")
         fetched = db.get_party(created.id)
@@ -52,6 +56,8 @@ class TestGetParty:
 
 
 class TestGetAllParties:
+    """Tests for Database.get_all_parties — empty list and alphabetical ordering."""
+
     def test_empty(self, db: Database) -> None:
         assert db.get_all_parties() == []
 

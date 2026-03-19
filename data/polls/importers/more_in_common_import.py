@@ -106,10 +106,21 @@ class ImportPlan(BaseModel):
 
 
 def normalize_name(value: str) -> str:
+    """Collapse internal whitespace and lowercase a string for comparison."""
     return " ".join(value.strip().split()).lower()
 
 
 def _month_number(month_text: str) -> int | None:
+    """Convert a month name or abbreviation to its 1-based integer index.
+
+    Args:
+        month_text: Month name or abbreviation, e.g. ``"Jan"``, ``"january"``,
+            ``"Feb."``.  Case-insensitive; trailing periods are ignored.
+
+    Returns:
+        Integer month number (1–12), or ``None`` if the string is not
+        recognised.
+    """
     cleaned = month_text.strip().lower().rstrip(".")
     month_map = {
         "jan": 1,
@@ -141,6 +152,30 @@ def _month_number(month_text: str) -> int | None:
 
 
 def parse_fieldwork(value: str, *, default_year: int | None = None) -> tuple[date, date]:
+    """Parse a human-readable fieldwork date string into a start/end date pair.
+
+    Handles several common formats used in More in Common XLSX files:
+
+    - Cross-month ranges: ``"28 Jan - 3 Feb 2025"``
+    - Same-month ranges with year: ``"3-7 February 2025"``
+    - Same-month ranges without year: ``"3-7 February"`` (requires ``default_year``)
+    - Single days with year: ``"5 March 2025"``
+    - Single days without year: ``"5 March"`` (requires ``default_year``)
+
+    En-dashes and em-dashes are normalised to hyphens before matching.
+
+    Args:
+        value: Raw fieldwork date string extracted from the workbook.
+        default_year: Year to use when the string contains no four-digit year.
+            Optional; if ``None`` and the string has no year, parsing fails.
+
+    Returns:
+        Tuple of ``(fieldwork_start, fieldwork_end)`` as :class:`datetime.date`
+        objects.  For a single-day poll both elements are the same date.
+
+    Raises:
+        ValueError: If the string does not match any recognised pattern.
+    """
     normalized = re.sub(r"\s+", " ", value.strip().replace("–", "-").replace("—", "-"))
 
     cross_month_pattern = re.compile(
@@ -209,17 +244,50 @@ def parse_fieldwork(value: str, *, default_year: int | None = None) -> tuple[dat
 
 
 def extract_workbook(xlsx_url: str) -> Any:
+    """Download an XLSX file from a URL and return the parsed openpyxl workbook.
+
+    Args:
+        xlsx_url: Fully-qualified URL pointing to the XLSX file.
+
+    Returns:
+        An openpyxl ``Workbook`` object with ``data_only=True`` (formula
+        results are read instead of formula strings).
+    """
     payload = urlopen(xlsx_url).read()
     return load_workbook(filename=BytesIO(payload), data_only=True)
 
 
 def _cell_text(value: object) -> str:
+    """Return the string representation of a cell value, stripped of whitespace.
+
+    Args:
+        value: Raw cell value from openpyxl (may be ``None``, ``int``,
+            ``float``, ``str``, or other types).
+
+    Returns:
+        Stripped string, or an empty string if ``value`` is ``None``.
+    """
     if value is None:
         return ""
     return str(value).strip()
 
 
 def _find_label_value(ws: Any, label_fragment: str) -> str | None:
+    """Search a worksheet for a label and return the first non-empty value to its right.
+
+    Scans rows 1–44 and columns 1–7 for a cell whose text contains
+    ``label_fragment`` (case-insensitive).  Once found, checks up to three
+    cells to the right and returns the first non-empty one.
+
+    Args:
+        ws: An openpyxl ``Worksheet`` object.
+        label_fragment: Substring to search for in cell text, e.g.
+            ``"Fieldwork"`` or ``"Sample size"``.
+
+    Returns:
+        The text of the first non-empty cell to the right of the label, or
+        ``None`` if no match is found.
+    """
     needle = label_fragment.lower()
     for row in range(1, 45):
         for col in range(1, 8):
@@ -235,6 +303,18 @@ def _find_label_value(ws: Any, label_fragment: str) -> str | None:
 
 
 def _as_int(value: str) -> int:
+    """Extract a non-negative integer from a string by stripping non-digit characters.
+
+    Args:
+        value: Raw string that may contain formatting characters such as commas
+            or spaces (e.g. ``"1,234"`` or ``"n=2000"``).
+
+    Returns:
+        Integer parsed from the digit characters in ``value``.
+
+    Raises:
+        ValueError: If ``value`` contains no digit characters.
+    """
     digits = re.sub(r"[^0-9]", "", value)
     if not digits:
         raise ValueError(f"Could not parse sample size from value: {value!r}")
@@ -242,6 +322,21 @@ def _as_int(value: str) -> int:
 
 
 def _to_percentage(value: object) -> float:
+    """Convert a cell value to a rounded percentage (0–100 scale).
+
+    Values already in the 0–100 range are used as-is; values in the 0–1
+    range (as stored by Excel for proportions) are multiplied by 100.  The
+    result is rounded to the nearest whole number.
+
+    Args:
+        value: Raw cell value from openpyxl.  Must be castable to ``float``.
+
+    Returns:
+        Percentage as a whole-number ``float`` (e.g. ``42.0``).
+
+    Raises:
+        ValueError: If ``value`` is ``None``.
+    """
     if value is None:
         raise ValueError("Encountered empty percentage cell")
     number = float(value)  # type: ignore[arg-type]
@@ -250,6 +345,15 @@ def _to_percentage(value: object) -> float:
 
 
 def _infer_year_from_url(xlsx_url: str) -> int | None:
+    """Extract the first four-digit year (20xx) found in a URL string.
+
+    Args:
+        xlsx_url: URL of the XLSX file, e.g.
+            ``"https://example.com/media/voting-intention-10-feb-2025.xlsx"``.
+
+    Returns:
+        Integer year, or ``None`` if no ``20xx`` pattern is found.
+    """
     matches = re.findall(r"(20\d{2})", xlsx_url)
     if not matches:
         return None
@@ -261,6 +365,22 @@ def _infer_fieldwork_from_source_url(
     *,
     default_year: int | None,
 ) -> tuple[date, date] | None:
+    """Attempt to derive a fieldwork date from patterns embedded in the XLSX URL.
+
+    Used as a fallback when no explicit fieldwork label is found in the
+    workbook.  Looks for patterns such as
+    ``voting-intention-february-10`` or ``voting-intention-february10``
+    in the URL (case-insensitive).
+
+    Args:
+        source_url: URL of the XLSX file.
+        default_year: Year to assign to the parsed date.  If ``None`` the
+            function returns ``None`` immediately.
+
+    Returns:
+        Tuple of ``(fieldwork_start, fieldwork_end)`` with both elements set
+        to the same single day, or ``None`` if no match is found.
+    """
     if default_year is None:
         return None
 
@@ -302,7 +422,35 @@ def _infer_fieldwork_from_source_url(
 
 
 def _find_headline_sheet(workbook: Any) -> tuple[Any, int]:
+    """Locate the headline voting-intention worksheet and its header row.
+
+    First pass: finds a sheet containing both ``"All"`` and
+    ``"East Midlands"`` column headers, prioritising sheets whose names
+    suggest they are the headline voting-intention tab.
+
+    Second pass (fallback): relaxes the regional requirement and accepts any
+    sheet that has an ``"All"`` column alongside known party labels.
+
+    Args:
+        workbook: An openpyxl ``Workbook`` object.
+
+    Returns:
+        Tuple of ``(worksheet, header_row_number)`` where ``header_row_number``
+        is the 1-based row index of the column-header row.
+
+    Raises:
+        ValueError: If no suitable sheet or header row can be found.
+    """
     def _sheet_priority(sheet_name: str) -> tuple[int, str]:
+        """Return a sort key that ranks sheets by name relevance.
+
+        Args:
+            sheet_name: Name of the worksheet to rank.
+
+        Returns:
+            Tuple of ``(priority_int, lowered_name)`` where a lower integer
+            means higher priority.
+        """
         lowered = sheet_name.lower()
         if "votingintention (headline)" in lowered:
             return (0, lowered)
@@ -339,6 +487,36 @@ def parse_poll(
     source_url: str,
     fieldwork_year_hint: int | None = None,
 ) -> ParsedPoll:
+    """Extract structured poll data from an openpyxl workbook.
+
+    Searches the workbook for the headline voting-intention sheet and
+    extracts sample size, fieldwork dates, and per-party/per-region vote
+    share percentages.
+
+    Fieldwork dates are resolved in priority order:
+    1. ``"Fieldwork"`` label found in the cover page or first sheet.
+    2. Month/day pattern embedded in ``source_url`` combined with the
+       inferred or hinted year.
+
+    Sample size is resolved in priority order:
+    1. ``"Sample size"`` label found in the cover page or first sheet.
+    2. ``"Unweighted n"`` or ``"Weighted n"`` row in the headline table.
+
+    Args:
+        workbook: An openpyxl ``Workbook`` object (``data_only=True``).
+        source_url: URL the workbook was downloaded from; used for year and
+            date inference when metadata labels are absent.
+        fieldwork_year_hint: Override the year inferred from ``source_url``
+            when the URL contains no year.  Optional.
+
+    Returns:
+        A :class:`ParsedPoll` containing sample size, fieldwork date range,
+        and a mapping of canonical party name → region name → percentage.
+
+    Raises:
+        ValueError: If fieldwork dates, sample size, required region columns,
+            or required party rows cannot be found.
+    """
     default_year = fieldwork_year_hint if fieldwork_year_hint is not None else _infer_year_from_url(source_url)
 
     sheet, header_row = _find_headline_sheet(workbook)
@@ -451,6 +629,20 @@ def _find_existing_poll(
     map_id: int,
     parsed: ParsedPoll,
 ) -> Poll | None:
+    """Look up an existing Poll row that matches the parsed poll's key fields.
+
+    Matches on pollster, map, fieldwork start/end dates, and sample size.
+
+    Args:
+        db: Active :class:`Database` instance.
+        pollster_id: Primary key of the pollster in the database.
+        map_id: Primary key of the map in the database.
+        parsed: Parsed poll data whose fieldwork dates and sample size are
+            used as match criteria.
+
+    Returns:
+        The matching :class:`Poll` row, or ``None`` if no match exists.
+    """
     with db.session() as session:
         return session.execute(
             select(Poll).where(
@@ -471,6 +663,34 @@ def build_import_plan(
     pollster_identifier: str = DEFAULT_POLLSTER_IDENTIFIER,
     fieldwork_year_hint: int | None = None,
 ) -> ImportPlan:
+    """Download and parse an XLSX poll, then build a full import plan.
+
+    Downloads the workbook, parses poll metadata and vote shares, resolves
+    database IDs for the map, regions, parties, and pollster, and assembles
+    the complete set of :class:`PlannedPollRow` objects ready for insertion.
+
+    No writes are made to the database; call :func:`commit_import_plan` to
+    apply the plan.
+
+    Args:
+        db: Active :class:`Database` instance.
+        xlsx_url: URL of the More in Common XLSX file to import.  Defaults
+            to :data:`DEFAULT_XLSX_URL`.
+        map_name: Name of the constituency map to associate with this poll.
+            Must already exist in the database.  Defaults to
+            :data:`DEFAULT_MAP_NAME`.
+        pollster_identifier: Stable string identifier for the pollster row.
+            Defaults to :data:`DEFAULT_POLLSTER_IDENTIFIER`.
+        fieldwork_year_hint: Explicit year to use when the XLSX URL contains
+            no four-digit year.  Optional.
+
+    Returns:
+        An :class:`ImportPlan` describing what would be created or updated.
+
+    Raises:
+        ValueError: If the map is not found, required parties are absent from
+            the database, or the workbook cannot be parsed.
+    """
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
@@ -564,6 +784,30 @@ def commit_import_plan(
     *,
     replace_rows: bool = False,
 ) -> PollImportResult:
+    """Write an import plan to the database, creating or updating records as needed.
+
+    Creates the pollster if it does not exist, or updates its
+    ``regions_mapping`` if it has changed.  Creates the poll if it does not
+    exist, or updates its ``source_url`` if it has changed.
+
+    By default, if the poll already has rows the function skips insertion and
+    sets ``skipped_existing_rows=True`` in the result.  Pass
+    ``replace_rows=True`` to delete existing rows before inserting.
+
+    Args:
+        db: Active :class:`Database` instance.
+        plan: Import plan produced by :func:`build_import_plan`.
+        replace_rows: When ``True``, delete all existing :class:`PollRow`
+            records for the poll before inserting new ones.  Defaults to
+            ``False``.
+
+    Returns:
+        A :class:`PollImportResult` summarising what was created, replaced,
+        or skipped.
+
+    Raises:
+        ValueError: If the pollster lookup fails unexpectedly during commit.
+    """
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -646,6 +890,14 @@ def commit_import_plan(
 
 
 def _cli_preview(plan: ImportPlan) -> None:
+    """Print a dry-run summary of an import plan to stdout.
+
+    Outputs the parsed poll metadata, whether the pollster and poll already
+    exist, and each row that would be inserted.  No database changes are made.
+
+    Args:
+        plan: Import plan to preview.
+    """
     print(
         "Parsed poll: "
         f"fieldwork={plan.parsed.fieldwork_start} to {plan.parsed.fieldwork_end}, "
@@ -670,6 +922,23 @@ def _cli_preview(plan: ImportPlan) -> None:
 
 
 def main() -> None:
+    """CLI entry point for importing a More in Common XLSX poll.
+
+    Parses command-line arguments, builds an import plan, and either prints
+    a dry-run preview or commits the plan to the database.
+
+    Command-line arguments:
+        --xlsx-url (str): URL of the More in Common XLSX file.
+            Defaults to :data:`DEFAULT_XLSX_URL`.
+        --map-name (str): Name of the constituency map in the database.
+            Defaults to :data:`DEFAULT_MAP_NAME`.
+        --pollster-identifier (str): Stable identifier for the pollster.
+            Defaults to :data:`DEFAULT_POLLSTER_IDENTIFIER`.
+        --fieldwork-year-hint (int): Optional year override used when the URL
+            contains no four-digit year.
+        --replace-rows: If set, delete existing poll rows before inserting.
+        --dry-run: If set, print a preview and exit without writing to the DB.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--xlsx-url", default=DEFAULT_XLSX_URL)
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME)

@@ -1,3 +1,24 @@
+/**
+ * Topbar injection script.
+ *
+ * Procedural script that builds and inserts the `.pf-topbar` navigation bar
+ * into the page on first load. The bar is only injected once — if `.pf-topbar`
+ * already exists in the DOM the script exits immediately.
+ *
+ * Config is read from `body.dataset.*` attributes:
+ *   - `data-topbar-home`       — when `'true'`, suppresses the back link and
+ *                                adds the `is-home` modifier class.
+ *   - `data-topbar-back-href`  — href for the back link (default: `'../'`).
+ *   - `data-topbar-email`      — contact email address
+ *                                (default: `'principalfish@gmail.com'`).
+ *   - `data-topbar-subject`    — pre-filled mailto subject line
+ *                                (default: `'Principal Fish enquiry'`).
+ *
+ * Positioning: if the first child element of `<body>` carries the class
+ * `maps-background` or `bluey-background`, the topbar is inserted immediately
+ * after it (so the background fills behind the bar). Otherwise it is prepended
+ * as the first element of `<body>`.
+ */
 const body = document.body;
 
 if (body && !body.querySelector('.pf-topbar')) {

@@ -96,6 +96,15 @@ class ImportPlan(BaseModel):
 
 
 def _month_number(month_text: str) -> int | None:
+    """Convert a month name or abbreviation to its calendar number.
+
+    Args:
+        month_text: Month name or abbreviation (e.g. "Jan", "January", "jan.").
+            Case-insensitive; trailing periods are stripped.
+
+    Returns:
+        Integer month number 1–12, or None if the text is not recognised.
+    """
     cleaned = month_text.strip().lower().rstrip(".")
     month_map = {
         "jan": 1,
@@ -127,6 +136,17 @@ def _month_number(month_text: str) -> int | None:
 
 
 def _fetch_bytes(url: str) -> bytes:
+    """Fetch the raw bytes at a URL, sending a browser-like User-Agent header.
+
+    Args:
+        url: Absolute URL to fetch.
+
+    Returns:
+        Raw response body as bytes.
+
+    Raises:
+        urllib.error.URLError: If the request fails (network error, HTTP error, etc.).
+    """
     request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
     with urlopen(request) as response:
         data: bytes = response.read()
@@ -134,6 +154,23 @@ def _fetch_bytes(url: str) -> bytes:
 
 
 def _resolve_xls_url(source_url: str) -> str:
+    """Resolve the direct XLS/XLSX download URL from a source URL.
+
+    If ``source_url`` already points to an XLS or XLSX file it is returned
+    unchanged.  Otherwise the HTML at that URL is fetched and the first
+    ``<a href>`` link ending in ``.xls`` or ``.xlsx`` is returned.
+
+    Args:
+        source_url: URL of either an XLS/XLSX file or an HTML page that links
+            to one.
+
+    Returns:
+        Absolute URL of the XLS or XLSX file.
+
+    Raises:
+        ValueError: If no XLS/XLSX link can be found in the HTML page.
+        urllib.error.URLError: If fetching the HTML page fails.
+    """
     lower = source_url.lower()
     if lower.endswith(".xls") or lower.endswith(".xlsx"):
         return source_url
@@ -159,10 +196,30 @@ def _resolve_xls_url(source_url: str) -> str:
 
 
 def _as_text(value: object) -> str:
+    """Convert a cell value to a stripped string, returning empty string for None.
+
+    Args:
+        value: Raw cell value from xlrd (may be str, float, int, or None).
+
+    Returns:
+        String representation of the value with leading/trailing whitespace
+        removed, or an empty string if ``value`` is None.
+    """
     return str(value).strip() if value is not None else ""
 
 
 def _as_int(value: object) -> int:
+    """Extract an integer from a cell value by stripping all non-digit characters.
+
+    Args:
+        value: Raw cell value (e.g. "1,234" or 1234.0).
+
+    Returns:
+        Integer parsed from the digit characters in the string representation.
+
+    Raises:
+        ValueError: If no digit characters are present in the value.
+    """
     digits = re.sub(r"[^0-9]", "", _as_text(value))
     if not digits:
         raise ValueError(f"Could not parse integer value from {value!r}")
@@ -170,6 +227,23 @@ def _as_int(value: object) -> int:
 
 
 def _find_fieldwork(sheet: xlrd.sheet.Sheet) -> tuple[date, date]:
+    """Locate the fieldwork date range in the first sheet of the workbook.
+
+    Scans the first 30 rows of column A for a cell matching the pattern
+    ``Fieldwork: D-D Month YYYY`` (ordinal suffixes such as "st", "nd", "rd",
+    "th" are accepted).
+
+    Args:
+        sheet: The xlrd sheet to search (typically sheet index 0).
+
+    Returns:
+        A ``(fieldwork_start, fieldwork_end)`` tuple of ``date`` objects.  Both
+        dates share the same month and year; only the day differs.
+
+    Raises:
+        ValueError: If no fieldwork line is found, or if the month name cannot
+            be parsed.
+    """
     pattern = re.compile(
         r"Fieldwork:\s*(\d{1,2})(?:st|nd|rd|th)?\s*-\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(20\d{2})",
         re.IGNORECASE,
@@ -194,6 +268,21 @@ def _find_fieldwork(sheet: xlrd.sheet.Sheet) -> tuple[date, date]:
 
 
 def _find_sample_size(sheet: xlrd.sheet.Sheet) -> int:
+    """Find and return the poll sample size from the workbook's first sheet.
+
+    Scans the first 30 rows looking for a cell in column A containing
+    "sample size" (reads the value from column A) or "weighted sample"
+    (reads the value from column B).
+
+    Args:
+        sheet: The xlrd sheet to search (typically sheet index 0).
+
+    Returns:
+        Sample size as a positive integer.
+
+    Raises:
+        ValueError: If no sample-size row is found in the first 30 rows.
+    """
     for row_idx in range(min(30, sheet.nrows)):
         label = _as_text(sheet.cell_value(row_idx, 0)).lower()
         if "sample size" in label:
@@ -204,6 +293,19 @@ def _find_sample_size(sheet: xlrd.sheet.Sheet) -> int:
 
 
 def _find_vi_block_start(sheet: xlrd.sheet.Sheet) -> int:
+    """Return the row index of the "CURRENT WESTMINSTER VOTING INTENTION" header.
+
+    The search is case-insensitive and scans the entire sheet.
+
+    Args:
+        sheet: The xlrd sheet to search.
+
+    Returns:
+        Zero-based row index of the header row.
+
+    Raises:
+        ValueError: If the header row is not found anywhere in the sheet.
+    """
     for row_idx in range(sheet.nrows):
         label = _as_text(sheet.cell_value(row_idx, 0)).lower()
         if "current westminster voting intention" in label:
@@ -212,6 +314,17 @@ def _find_vi_block_start(sheet: xlrd.sheet.Sheet) -> int:
 
 
 def _canonical_party(label: str) -> str | None:
+    """Map a raw party label from the workbook to the canonical internal party name.
+
+    Performs a case-insensitive substring match against ``PARTY_NAME_MAP`` keys.
+
+    Args:
+        label: Raw party label string as read from an XLS cell.
+
+    Returns:
+        Canonical party name string (a value from ``PARTY_NAME_MAP``), or None
+        if no matching entry is found.
+    """
     normalized = " ".join(label.strip().split()).lower()
     for marker, canonical in PARTY_NAME_MAP.items():
         if marker.lower() in normalized:
@@ -220,6 +333,23 @@ def _canonical_party(label: str) -> str | None:
 
 
 def _parse_party_percentages(sheet: xlrd.sheet.Sheet) -> dict[str, float]:
+    """Parse national voting-intention percentages for each party from the sheet.
+
+    Locates the "CURRENT WESTMINSTER VOTING INTENTION" block, then reads up to
+    40 rows beneath it.  Each row whose column-A label maps to a canonical party
+    name contributes one entry.  Percentages are rounded to the nearest integer
+    and stored as floats.  Stops early once all 8 required parties are found.
+
+    Args:
+        sheet: The xlrd sheet containing the voting-intention block.
+
+    Returns:
+        Dict mapping canonical party name to rounded percentage (0.0–100.0).
+
+    Raises:
+        ValueError: If any of the 8 required party rows are absent, or if the
+            voting-intention block header is not found.
+    """
     start_idx = _find_vi_block_start(sheet)
     parsed: dict[str, float] = {}
 
@@ -259,6 +389,18 @@ def _parse_party_percentages(sheet: xlrd.sheet.Sheet) -> dict[str, float]:
 
 
 def _find_region_columns(sheet: xlrd.sheet.Sheet) -> dict[int, str]:
+    """Identify the column indices that correspond to known UK regions.
+
+    Scans the first 40 rows searching for a header row that contains at least 8
+    recognised region names (matched against ``SOURCE_REGION_TO_INTERNAL``).
+
+    Args:
+        sheet: The xlrd sheet to scan (typically the "values" sheet).
+
+    Returns:
+        Dict mapping column index to internal region name for every recognised
+        region column found, or an empty dict if fewer than 8 are found.
+    """
     for row_idx in range(min(40, sheet.nrows)):
         columns: dict[int, str] = {}
         for col_idx in range(sheet.ncols):
@@ -274,6 +416,20 @@ def _find_region_columns(sheet: xlrd.sheet.Sheet) -> dict[int, str]:
 
 
 def _find_weighted_sample_row(sheet: xlrd.sheet.Sheet) -> int:
+    """Return the row index of the "Weighted Sample" denominator row.
+
+    Scans the first 40 rows for a column-A cell whose text (lowercased) equals
+    ``"weighted sample"`` exactly.
+
+    Args:
+        sheet: The xlrd sheet to search (typically the "values" sheet).
+
+    Returns:
+        Zero-based row index of the weighted-sample row.
+
+    Raises:
+        ValueError: If the row is not found in the first 40 rows.
+    """
     for row_idx in range(min(40, sheet.nrows)):
         label = _as_text(sheet.cell_value(row_idx, 0)).lower()
         if label == "weighted sample":
@@ -282,6 +438,20 @@ def _find_weighted_sample_row(sheet: xlrd.sheet.Sheet) -> int:
 
 
 def _to_float(value: object) -> float:
+    """Safely convert a cell value to a float, returning 0.0 for blank cells.
+
+    Args:
+        value: Raw cell value from xlrd (may be None, empty string, int, float,
+            or a numeric string).
+
+    Returns:
+        Float representation of the value, or 0.0 if the value is None or
+        an empty string.
+
+    Raises:
+        ValueError: If the value is a non-empty string that cannot be parsed as
+            a float.
+    """
     if value in (None, ""):
         return 0.0
     if isinstance(value, (int, float)):
@@ -293,6 +463,22 @@ def _to_float(value: object) -> float:
 
 
 def _parse_party_region_percentages(values_sheet: xlrd.sheet.Sheet) -> dict[str, dict[str, float]]:
+    """Parse regional voting-intention percentages for each party from the values sheet.
+
+    Locates the region header columns and the weighted-sample denominator row,
+    then reads the voting-intention block and calculates each party's percentage
+    within each region as ``(numerator / weighted_sample) * 100``, rounded to
+    the nearest integer.
+
+    Args:
+        values_sheet: The xlrd sheet that contains regional breakdowns
+            (the sheet whose name contains "values", or sheet 0 as fallback).
+
+    Returns:
+        Nested dict of ``{canonical_party_name: {internal_region_name: percentage}}``.
+        Returns an empty dict if fewer than 8 region columns are found or if no
+        column has a positive weighted-sample denominator.
+    """
     region_columns = _find_region_columns(values_sheet)
     if not region_columns:
         return {}
@@ -336,6 +522,24 @@ def _parse_party_region_percentages(values_sheet: xlrd.sheet.Sheet) -> dict[str,
 
 
 def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
+    """Download and parse a Lord Ashcroft XLS/XLSX workbook into a ``ParsedPoll``.
+
+    The workbook must contain at least one sheet.  If any sheet name contains
+    "values" (case-insensitive) it is used for regional breakdowns; otherwise
+    sheet 0 is used for both national and regional data.
+
+    Args:
+        xls_url: Direct URL to an XLS or XLSX file.
+
+    Returns:
+        ``ParsedPoll`` instance populated with sample size, fieldwork dates,
+        national party percentages, and (where available) regional breakdowns.
+
+    Raises:
+        ValueError: If the workbook has no sheets, or if required data blocks
+            are missing (fieldwork line, sample size, party rows).
+        urllib.error.URLError: If the download fails.
+    """
     payload = _fetch_bytes(xls_url)
     workbook = xlrd.open_workbook(file_contents=payload)
     if workbook.nsheets == 0:
@@ -366,6 +570,20 @@ def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
 
 
 def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+    """Query the database for a poll matching the given pollster, map, and dates.
+
+    The lookup is exact on pollster ID, map ID, fieldwork start/end dates, and
+    sample size.
+
+    Args:
+        db: Open ``Database`` instance.
+        pollster_id: Primary-key ID of the pollster row.
+        map_id: Primary-key ID of the electoral map row.
+        parsed: Parsed poll data supplying fieldwork dates and sample size.
+
+    Returns:
+        The matching ``Poll`` ORM object, or None if no match is found.
+    """
     with db.session() as session:
         return session.execute(
             select(Poll).where(
@@ -385,6 +603,32 @@ def build_import_plan(
     map_name: str = DEFAULT_MAP_NAME,
     pollster_identifier: str = DEFAULT_POLLSTER_IDENTIFIER,
 ) -> ImportPlan:
+    """Fetch and parse a Lord Ashcroft poll, then build a dry-run import plan.
+
+    Resolves the XLS URL from ``source_url``, parses the workbook, validates
+    that all required parties and regions exist in the database, and constructs
+    a complete ``ImportPlan`` describing what would be written without actually
+    writing anything.
+
+    Args:
+        db: Open ``Database`` instance used for map, party, and region lookups.
+        source_url: URL of either the XLS/XLSX file directly or an HTML page
+            that links to it.  Defaults to ``DEFAULT_SOURCE_URL``.
+        map_name: Name of the electoral map in the database (e.g.
+            ``"UK Constituencies post 2022"``).  Defaults to
+            ``DEFAULT_MAP_NAME``.
+        pollster_identifier: Internal identifier for the pollster (e.g.
+            ``"lord_ashcroft"``).  Defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+
+    Returns:
+        ``ImportPlan`` containing pollster metadata, parsed poll data, and the
+        full list of ``PlannedPollRow`` objects ready for DB insertion.
+
+    Raises:
+        ValueError: If the map, any required party, or any referenced region is
+            not found in the database.
+        urllib.error.URLError: If fetching the source URL or XLS file fails.
+    """
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
@@ -464,6 +708,28 @@ def commit_import_plan(
     *,
     replace_rows: bool = False,
 ) -> PollImportResult:
+    """Execute an import plan, writing the pollster, poll, and poll rows to the DB.
+
+    If the pollster does not yet exist it is created.  If the poll does not yet
+    exist it is created; if it exists the ``source_url`` is updated if it has
+    changed.  Poll rows are inserted unless rows already exist for this poll and
+    ``replace_rows`` is False, in which case the existing rows are left intact
+    and the result is marked as skipped.
+
+    Args:
+        db: Open ``Database`` instance for all DB writes.
+        plan: ``ImportPlan`` produced by ``build_import_plan``.
+        replace_rows: If True, delete any existing ``PollRow`` records for this
+            poll before inserting the new rows.  Defaults to False.
+
+    Returns:
+        ``PollImportResult`` summarising what was created, inserted, replaced,
+        or skipped.
+
+    Raises:
+        ValueError: If ``plan.pollster_exists`` is True but the pollster cannot
+            be found during the commit (indicates a race condition or stale plan).
+    """
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -542,6 +808,14 @@ def commit_import_plan(
 
 
 def _cli_preview(plan: ImportPlan) -> None:
+    """Print a human-readable dry-run summary of an import plan to stdout.
+
+    Outputs parsed poll metadata, whether the pollster and poll already exist,
+    and a line for every row that would be inserted.
+
+    Args:
+        plan: ``ImportPlan`` to summarise.
+    """
     print(
         "Parsed poll: "
         f"fieldwork={plan.parsed.fieldwork_start} to {plan.parsed.fieldwork_end}, "
@@ -566,6 +840,23 @@ def _cli_preview(plan: ImportPlan) -> None:
 
 
 def main() -> None:
+    """CLI entry point for the Lord Ashcroft poll importer.
+
+    Parses command-line arguments, fetches and parses the poll workbook, and
+    either prints a dry-run preview or commits the import to the database.
+
+    Command-line arguments:
+        --source-url: URL of the Lord Ashcroft poll HTML page or XLS/XLSX file.
+            Optional; defaults to ``DEFAULT_SOURCE_URL``.
+        --map-name: Name of the electoral map in the database.  Optional;
+            defaults to ``DEFAULT_MAP_NAME``.
+        --pollster-identifier: Internal pollster identifier string.  Optional;
+            defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+        --replace-rows: Flag; if set, existing poll rows are deleted before
+            inserting the newly parsed rows.
+        --dry-run: Flag; if set, print a preview of the import plan and exit
+            without writing to the database.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-url", default=DEFAULT_SOURCE_URL)
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME)

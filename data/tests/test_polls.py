@@ -13,6 +13,7 @@ from models import Map, Party, Pollster
 
 
 def _make_pollster(db: Database, identifier: str = "yougov_2024") -> Pollster:
+    """Create and return a YouGov Pollster row with the given identifier."""
     return db.add_pollster("YouGov", identifier)
 
 
@@ -29,6 +30,8 @@ def _make_poll_scaffold(db: Database) -> tuple[Pollster, Map, Party, Party]:
 
 
 class TestAddPollster:
+    """Tests for Database.add_pollster — creation, optional fields, and identifier uniqueness."""
+
     def test_basic(self, db: Database) -> None:
         p = _make_pollster(db)
         assert p.id is not None
@@ -57,6 +60,8 @@ class TestAddPollster:
 
 
 class TestGetPollster:
+    """Tests for Database.get_pollster and get_pollster_by_identifier."""
+
     def test_by_id(self, db: Database) -> None:
         created = _make_pollster(db)
         fetched = db.get_pollster(created.id)
@@ -76,6 +81,8 @@ class TestGetPollster:
 
 
 class TestGetAllPollsters:
+    """Tests for Database.get_all_pollsters — result ordering."""
+
     def test_empty(self, db: Database) -> None:
         assert db.get_all_pollsters() == []
 
@@ -90,6 +97,8 @@ class TestGetAllPollsters:
 
 
 class TestAddPoll:
+    """Tests for Database.add_poll — creation, optional fields, and FK validation."""
+
     def test_basic(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         poll = db.add_poll(
@@ -139,6 +148,8 @@ class TestAddPoll:
 
 
 class TestGetPoll:
+    """Tests for Database.get_poll — lookup by id."""
+
     def test_by_id(self, db: Database) -> None:
         pollster, m, _, _ = _make_poll_scaffold(db)
         created = db.add_poll(pollster.id, m.id, date(2026, 2, 1), date(2026, 2, 3))
@@ -150,6 +161,8 @@ class TestGetPoll:
 
 
 class TestGetPollsForMap:
+    """Tests for Database.get_polls_for_map — ordering and map-level isolation."""
+
     def test_empty(self, db: Database) -> None:
         m = db.add_map("UK")
         assert db.get_polls_for_map(m.id) == []
@@ -171,6 +184,8 @@ class TestGetPollsForMap:
 
 
 class TestGetPollsByPollster:
+    """Tests for Database.get_polls_by_pollster — filtering by pollster."""
+
     def test_filters(self, db: Database) -> None:
         p1 = db.add_pollster("YouGov", "yg")
         p2 = db.add_pollster("Survation", "surv")
@@ -186,6 +201,8 @@ class TestGetPollsByPollster:
 
 
 class TestAddPollRow:
+    """Tests for Database.add_poll_row — national and regional rows, and FK validation."""
+
     def test_national(self, db: Database) -> None:
         pollster, m, lab, con = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
@@ -210,6 +227,8 @@ class TestAddPollRow:
 
 
 class TestGetPollRow:
+    """Tests for Database.get_poll_row — lookup by id."""
+
     def test_by_id(self, db: Database) -> None:
         pollster, m, lab, _ = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
@@ -222,6 +241,8 @@ class TestGetPollRow:
 
 
 class TestGetRowsForPoll:
+    """Tests for Database.get_rows_for_poll — result ordering."""
+
     def test_ordered_by_percentage_desc(self, db: Database) -> None:
         pollster, m, lab, con = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))
@@ -238,6 +259,8 @@ class TestGetRowsForPoll:
 
 
 class TestBulkAddPollRows:
+    """Tests for Database.bulk_add_poll_rows."""
+
     def test_inserts_many(self, db: Database) -> None:
         pollster, m, lab, con = _make_poll_scaffold(db)
         poll = db.add_poll(pollster.id, m.id, date(2026, 2, 10), date(2026, 2, 12))

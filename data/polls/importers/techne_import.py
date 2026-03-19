@@ -78,6 +78,15 @@ class ImportPlan(BaseModel):
 
 
 def _month_number(month_text: str) -> int | None:
+    """Convert a month name or abbreviation to its integer (1–12).
+
+    Args:
+        month_text: Month name or abbreviation, e.g. ``"January"``, ``"jan"``,
+            ``"Feb."``. Case-insensitive; trailing periods are stripped.
+
+    Returns:
+        Integer month number (1–12), or ``None`` if the text is not recognised.
+    """
     month_map = {
         "jan": 1,
         "january": 1,
@@ -108,6 +117,24 @@ def _month_number(month_text: str) -> int | None:
 
 
 def _infer_year(pdf_url: str, fallback: int | None = None) -> int:
+    """Infer the poll year from a PDF URL.
+
+    Looks for a four-digit year of the form ``20xx`` first as a path segment
+    (``/2026/``) and then anywhere in the URL string.  If no year is found and
+    a ``fallback`` is provided that value is returned; otherwise a
+    :class:`ValueError` is raised.
+
+    Args:
+        pdf_url: Full URL string of the Techne PDF.
+        fallback: Optional year to return when no year can be found in the URL.
+
+    Returns:
+        Four-digit calendar year as an integer.
+
+    Raises:
+        ValueError: If no year pattern is found in the URL and no fallback is
+            provided.
+    """
     match = re.search(r"/(20\d{2})/", pdf_url)
     if match:
         return int(match.group(1))
@@ -120,6 +147,23 @@ def _infer_year(pdf_url: str, fallback: int | None = None) -> int:
 
 
 def extract_pdf_text(pdf_url: str) -> str:
+    """Fetch a PDF from a URL and extract its full text content.
+
+    Attempts the given URL directly; if it is a Wayback Machine URL without
+    the ``if_`` raw-content flag the flag variant is also tried as a fallback.
+    The raw PDF bytes are written to a temporary file and parsed with
+    :class:`pypdf.PdfReader`.
+
+    Args:
+        pdf_url: HTTP(S) URL pointing to the PDF file.
+
+    Returns:
+        Concatenated text extracted from every page of the PDF, joined by
+        newlines.
+
+    Raises:
+        ValueError: If no candidate URL returns a valid PDF payload.
+    """
     candidate_urls = [pdf_url]
     if "web.archive.org/web/" in pdf_url and "if_/" not in pdf_url:
         candidate_urls.append(pdf_url.replace("/web/", "/web/").replace("/https://", "if_/https://", 1))
@@ -147,6 +191,26 @@ def extract_pdf_text(pdf_url: str) -> str:
 
 
 def _parse_fieldwork(pdf_text: str, year: int) -> tuple[date, date]:
+    """Parse the fieldwork date window from PDF text.
+
+    Looks for a pattern of the form ``FIELDWORK: Month DD - Month DD`` (ordinal
+    suffixes such as ``st``/``nd``/``rd``/``th`` are accepted).  When the start
+    month is numerically later than the end month the start year is assumed to
+    be ``year - 1`` (i.e. the window crosses a year boundary).
+
+    Args:
+        pdf_text: Full text extracted from the Techne PDF.
+        year: The calendar year inferred from the PDF URL, used as the end year
+            of the fieldwork window.
+
+    Returns:
+        A two-tuple ``(fieldwork_start, fieldwork_end)`` of :class:`datetime.date`
+        objects.
+
+    Raises:
+        ValueError: If the fieldwork pattern is not found in the text, or if a
+            month name cannot be recognised.
+    """
     pattern = re.compile(
         r"FIELDWORK:\s*([A-Za-z]+)\s*(\d{1,2})(?:st|nd|rd|th)?\s*-\s*([A-Za-z]+)\s*(\d{1,2})(?:st|nd|rd|th)?",
         re.IGNORECASE,
@@ -167,6 +231,17 @@ def _parse_fieldwork(pdf_text: str, year: int) -> tuple[date, date]:
 
 
 def _parse_sample_size(pdf_text: str) -> int:
+    """Extract the unweighted sample size from PDF text.
+
+    Args:
+        pdf_text: Full text extracted from the Techne PDF.
+
+    Returns:
+        Unweighted sample size as a positive integer.
+
+    Raises:
+        ValueError: If the ``Unweighted Sample`` figure cannot be found.
+    """
     match = re.search(r"Unweighted Sample\s*(\d{3,5})", pdf_text)
     if not match:
         raise ValueError("Unweighted sample size not found in PDF")
@@ -174,6 +249,21 @@ def _parse_sample_size(pdf_text: str) -> int:
 
 
 def _party_percentage_from_line(line: str) -> float:
+    """Extract the headline (weighted) percentage from a party result line.
+
+    Techne PDFs typically present two percentage values per party per line —
+    the first is unweighted and the second is weighted.  This function returns
+    the second (weighted) value.
+
+    Args:
+        line: A single text line containing at least two ``XX%`` tokens.
+
+    Returns:
+        The second percentage value on the line as a float.
+
+    Raises:
+        ValueError: If fewer than two percentage tokens are found on the line.
+    """
     values = [int(v) for v in re.findall(r"(\d{1,2})%", line)]
     if len(values) < 2:
         raise ValueError(f"Could not parse headline percentages from line: {line!r}")
@@ -181,7 +271,39 @@ def _party_percentage_from_line(line: str) -> float:
 
 
 def _parse_party_percentages(pdf_text: str) -> dict[str, float]:
+    """Parse party vote-share percentages from the full PDF text.
+
+    First attempts to isolate the ``[all cases]`` voting-intention block and
+    extract values from it.  If fewer than five parties are found there the
+    entire PDF text is searched as a fallback.  Optional regional parties
+    (SNP, Plaid Cymru, Other) default to ``0.0`` when absent.
+
+    Args:
+        pdf_text: Full text extracted from the Techne PDF.
+
+    Returns:
+        Dict mapping canonical party name (as defined in ``PARTY_NAME_MAP``)
+        to its weighted vote-share percentage as a float.
+
+    Raises:
+        ValueError: If any required party (Conservative, Labour, Liberal
+            Democrats, Reform UK, Green, Scottish National Party, Plaid Cymru,
+            Other) is missing after parsing.
+    """
     def _extract(text: str) -> dict[str, float]:
+        """Extract canonical party percentages from a block of text.
+
+        Scans ``text`` for each raw party name in ``PARTY_NAME_MAP`` and
+        captures the second ``XX%`` token on the matching line as the weighted
+        figure.  Later occurrences of the same raw party name take precedence.
+
+        Args:
+            text: Arbitrary text block to search (full PDF text or a sub-block).
+
+        Returns:
+            Dict mapping canonical party name to weighted percentage float.
+            Parties not found in ``text`` are omitted.
+        """
         extracted: dict[str, float] = {}
         for raw_party, canonical_party in PARTY_NAME_MAP.items():
             party_pattern = re.compile(
@@ -227,6 +349,21 @@ def _parse_party_percentages(pdf_text: str) -> dict[str, float]:
 
 
 def parse_poll(pdf_text: str, *, inferred_year: int) -> ParsedPoll:
+    """Orchestrate parsing of all fields from PDF text into a :class:`ParsedPoll`.
+
+    Args:
+        pdf_text: Full text extracted from the Techne PDF.
+        inferred_year: Calendar year inferred from the PDF URL, used to
+            resolve fieldwork dates that span a year boundary.
+
+    Returns:
+        A :class:`ParsedPoll` instance populated with sample size, fieldwork
+        dates, and party percentages.
+
+    Raises:
+        ValueError: Propagated from the underlying parse helpers if any
+            required field cannot be extracted.
+    """
     sample_size = _parse_sample_size(pdf_text)
     fieldwork_start, fieldwork_end = _parse_fieldwork(pdf_text, inferred_year)
     party_percentages = _parse_party_percentages(pdf_text)
@@ -239,6 +376,20 @@ def parse_poll(pdf_text: str, *, inferred_year: int) -> ParsedPoll:
 
 
 def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: ParsedPoll) -> Poll | None:
+    """Look up an existing poll that matches the given key fields.
+
+    Matches on pollster, map, fieldwork start/end dates, and sample size.
+
+    Args:
+        db: Active :class:`Database` connection.
+        pollster_id: Primary key of the pollster row.
+        map_id: Primary key of the constituency map row.
+        parsed: Parsed poll data containing the fieldwork dates and sample size
+            used as lookup keys.
+
+    Returns:
+        The matching :class:`Poll` ORM object, or ``None`` if no match is found.
+    """
     with db.session() as session:
         return session.execute(
             select(Poll).where(
@@ -259,6 +410,33 @@ def build_import_plan(
     pollster_identifier: str = DEFAULT_POLLSTER_IDENTIFIER,
     year_hint: int | None = None,
 ) -> ImportPlan:
+    """Fetch, parse, and validate a Techne poll PDF, returning an :class:`ImportPlan`.
+
+    Downloads the PDF from ``pdf_url``, extracts text, parses poll metadata and
+    party percentages, resolves pollster/map/party references from the database,
+    and constructs a dry-run-safe plan describing every write that would be
+    performed.  No data is written to the database by this function.
+
+    Args:
+        db: Active :class:`Database` connection.
+        pdf_url: HTTP(S) URL of the Techne PDF to import.  Defaults to
+            ``DEFAULT_PDF_URL``.
+        map_name: Name of the constituency map row to associate the poll with.
+            Defaults to ``DEFAULT_MAP_NAME``.
+        pollster_identifier: Short identifier string for the pollster (e.g.
+            ``"techne"``).  Defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+        year_hint: Optional fallback year to use when the year cannot be
+            inferred from ``pdf_url``.
+
+    Returns:
+        A fully populated :class:`ImportPlan` describing the pollster, poll
+        metadata, and per-party :class:`PlannedPollRow` objects.
+
+    Raises:
+        ValueError: If the map name is not found in the database, the year
+            cannot be inferred and no hint is supplied, any required party is
+            absent from the database, or PDF parsing fails.
+    """
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
@@ -322,6 +500,35 @@ def commit_import_plan(
     *,
     replace_rows: bool = False,
 ) -> PollImportResult:
+    """Write an :class:`ImportPlan` to the database.
+
+    Creates the pollster and poll rows if they do not already exist.  Inserts
+    :class:`PollRow` records for every party in the plan.  If rows already
+    exist for the poll they are skipped unless ``replace_rows`` is ``True``,
+    in which case existing rows are deleted before insertion.
+
+    Side effects:
+        - May create a new :class:`Pollster` row.
+        - May create a new :class:`Poll` row; updates ``source_url`` on an
+          existing poll if it has changed.
+        - Deletes existing :class:`PollRow` records when ``replace_rows`` is
+          ``True``.
+        - Inserts new :class:`PollRow` records.
+
+    Args:
+        db: Active :class:`Database` connection.
+        plan: The :class:`ImportPlan` produced by :func:`build_import_plan`.
+        replace_rows: When ``True``, delete any pre-existing rows for the poll
+            before inserting the new ones.  Defaults to ``False``.
+
+    Returns:
+        A :class:`PollImportResult` summarising what was created, replaced, or
+        skipped.
+
+    Raises:
+        ValueError: If the pollster lookup fails unexpectedly during commit
+            (should not occur under normal operation).
+    """
     if plan.pollster_exists:
         pollster = db.get_pollster_by_identifier(plan.pollster_identifier)
         if pollster is None:
@@ -400,6 +607,14 @@ def commit_import_plan(
 
 
 def _cli_preview(plan: ImportPlan) -> None:
+    """Print a human-readable dry-run preview of an :class:`ImportPlan` to stdout.
+
+    Displays parsed poll metadata (fieldwork window, sample size), whether the
+    pollster and poll already exist, and the rows that would be inserted.
+
+    Args:
+        plan: The :class:`ImportPlan` to preview.
+    """
     print(
         "Parsed poll: "
         f"fieldwork={plan.parsed.fieldwork_start} to {plan.parsed.fieldwork_end}, "
@@ -424,6 +639,26 @@ def _cli_preview(plan: ImportPlan) -> None:
 
 
 def main() -> None:
+    """CLI entry point for importing a Techne poll from a PDF URL.
+
+    Parses command-line arguments, fetches and parses the PDF, then either
+    prints a dry-run preview (``--dry-run``) or commits the import to the
+    database.
+
+    CLI arguments:
+        --pdf-url (str, optional): URL of the Techne PDF to import.
+            Defaults to ``DEFAULT_PDF_URL``.
+        --map-name (str, optional): Name of the constituency map to use.
+            Defaults to ``DEFAULT_MAP_NAME``.
+        --pollster-identifier (str, optional): Short pollster identifier.
+            Defaults to ``DEFAULT_POLLSTER_IDENTIFIER``.
+        --year-hint (int, optional): Fallback year when it cannot be inferred
+            from the PDF URL.
+        --replace-rows (flag): Delete existing poll rows before inserting new
+            ones.
+        --dry-run (flag): Print a preview of what would be imported without
+            writing to the database.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--pdf-url", default=DEFAULT_PDF_URL)
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME)

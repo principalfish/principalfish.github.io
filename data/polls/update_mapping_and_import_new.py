@@ -57,6 +57,15 @@ PARSER_EXPECTED_EXT = {
 
 
 def run_step(command: list[str], label: str) -> None:
+    """Run a subprocess command, printing a labelled header and the command before executing.
+
+    Args:
+        command: The command and its arguments to pass to subprocess.run.
+        label: A short human-readable label printed as a section header before the command.
+
+    Raises:
+        subprocess.CalledProcessError: If the subprocess exits with a non-zero return code.
+    """
     print(f"\n== {label} ==")
     printable = " ".join(command)
     print(f"$ {printable}")
@@ -64,6 +73,20 @@ def run_step(command: list[str], label: str) -> None:
 
 
 def load_registry() -> dict[str, dict[str, str | None]]:
+    """Load the parser registry from the JSON file on disk.
+
+    Reads ``PARSER_REGISTRY_JSON`` and returns a mapping from parser identifier
+    to a dict with ``"module"`` and ``"status"`` keys. Missing keys in the raw
+    JSON are normalised to ``None``.
+
+    Returns:
+        A dict keyed by parser identifier string, where each value is a dict
+        with keys ``"module"`` (str or None) and ``"status"`` (str or None).
+
+    Raises:
+        FileNotFoundError: If ``PARSER_REGISTRY_JSON`` does not exist.
+        json.JSONDecodeError: If the file is not valid JSON.
+    """
     with PARSER_REGISTRY_JSON.open("r", encoding="utf-8") as handle:
         raw = json.load(handle)
     return {
@@ -76,6 +99,19 @@ def load_registry() -> dict[str, dict[str, str | None]]:
 
 
 def iter_mapping_rows() -> list[dict[str, str]]:
+    """Load all rows from the Wikipedia national polls mapping CSV.
+
+    Reads ``MAPPING_CSV`` and returns rows in reverse order so that the most
+    recently added entries (appended at the bottom of the CSV) are processed
+    first.
+
+    Returns:
+        A list of dicts, one per CSV row, keyed by column header. The list is
+        in reverse file order (newest rows first).
+
+    Raises:
+        FileNotFoundError: If ``MAPPING_CSV`` does not exist.
+    """
     with MAPPING_CSV.open("r", encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     rows.reverse()
@@ -83,6 +119,21 @@ def iter_mapping_rows() -> list[dict[str, str]]:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for this script.
+
+    Supported flags:
+
+    - ``--continue-on-error``: Optional boolean flag. When set, an importer
+      subprocess failure is logged and skipped rather than re-raised, allowing
+      the remaining mapping rows to be processed.
+    - ``--include-unimported-parsers``: Optional boolean flag. When set,
+      parser identifiers that have no existing polls in the database are still
+      attempted, rather than being silently skipped.
+
+    Returns:
+        An ``argparse.Namespace`` with attributes ``continue_on_error`` (bool)
+        and ``include_unimported_parsers`` (bool).
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--continue-on-error",
@@ -98,6 +149,17 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_existing_source_urls() -> set[str]:
+    """Return the set of all non-null ``source_url`` values already in the polls table.
+
+    Opens a database session, queries every distinct ``Poll.source_url`` that
+    is not NULL, strips surrounding whitespace from each value, and returns
+    the results as a set.  Used to skip mapping rows whose poll has already
+    been imported.
+
+    Returns:
+        A set of stripped URL strings drawn from the ``source_url`` column of
+        the ``polls`` table.
+    """
     db = Database()
     with db.session() as session:
         values = session.execute(select(Poll.source_url).where(Poll.source_url.is_not(None))).scalars().all()
@@ -105,6 +167,16 @@ def load_existing_source_urls() -> set[str]:
 
 
 def load_parsers_with_existing_polls() -> set[str]:
+    """Return the set of pollster identifiers that have at least one poll in the database.
+
+    Joins the ``pollsters`` and ``polls`` tables and collects every distinct
+    ``Pollster.identifier`` that is linked to at least one ``Poll`` row.  Used
+    to gate imports so that parsers with no historical data are skipped unless
+    ``--include-unimported-parsers`` is set.
+
+    Returns:
+        A set of stripped pollster identifier strings.
+    """
     db = Database()
     with db.session() as session:
         identifiers = session.execute(
@@ -114,6 +186,18 @@ def load_parsers_with_existing_polls() -> set[str]:
 
 
 def write_unimportable_report(rows: list[tuple[str, str, str]]) -> None:
+    """Write a CSV report of mapping rows that were skipped as unimportable.
+
+    Creates (or overwrites) ``UNIMPORTABLE_REPORT_CSV`` with one row per entry
+    in ``rows``.  The output file has three columns: ``parser_identifier``,
+    ``source_url``, and ``reason``.
+
+    Args:
+        rows: A list of 3-tuples of the form
+            ``(parser_identifier, source_url, reason)`` where each element is
+            a non-empty string.  ``reason`` is the classifier label returned by
+            :func:`classify_unimportable_url`.
+    """
     MAPPINGS_DIR.mkdir(parents=True, exist_ok=True)
     with UNIMPORTABLE_REPORT_CSV.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
@@ -132,6 +216,28 @@ def write_unimportable_report(rows: list[tuple[str, str, str]]) -> None:
 
 
 def classify_unimportable_url(parser_identifier: str, source_url: str) -> str | None:
+    """Classify a mapping URL that cannot be directly imported by its parser.
+
+    Checks a set of known patterns (wrong file type, wrapper pages, social
+    media links, etc.) and returns a short classifier label if the URL matches,
+    or ``None`` if the URL looks importable.
+
+    Parser-specific checks are applied first, followed by generic checks for
+    Wayback Machine wrapper URLs, Office viewer wrapper URLs, and URLs that
+    lack the expected file extension for the given parser.
+
+    Args:
+        parser_identifier: The parser identifier string (e.g. ``"yougov"``,
+            ``"bmg_research"``).  Must be a non-empty string.
+        source_url: The raw source URL from the mapping CSV.  Must be a
+            non-empty string.
+
+    Returns:
+        A short classifier label string (e.g. ``"wayback-wrapper"``,
+        ``"yougov-missing-pdf-url"``) if the URL is unimportable, or ``None``
+        if no known unimportable pattern is matched and the URL should be
+        attempted.
+    """
     lower = source_url.lower()
 
     if parser_identifier == "more_in_common":
@@ -169,6 +275,37 @@ def classify_unimportable_url(parser_identifier: str, source_url: str) -> str | 
 
 
 def main() -> int:
+    """Orchestrate the full mapping-refresh and poll-import pipeline.
+
+    Execution steps:
+
+    1. Rebuild ``wikipedia_national_polls_mapping.csv`` from Wikipedia via
+       ``polls/build_wikipedia_poll_mappings.py``.
+    2. Sync pollster rows from the mapping via
+       ``polls/sync_pollsters_from_mapping.py --apply``.
+    3. Load already-imported source URLs and parser identifiers from the DB to
+       avoid duplicate work.
+    4. Iterate over every mapping row (newest first) and, for each row that is
+       new, has an implemented parser, and has an importable URL, invoke the
+       appropriate importer subprocess.
+    5. Write a CSV report of all rows skipped as unimportable.
+    6. If at least one poll was successfully imported, re-run the UNS model.
+    7. Print a summary of counts for each outcome category.
+
+    Rows are skipped when they are duplicates, already in the database, belong
+    to a parser with no prior imports (unless ``--include-unimported-parsers``
+    is set), have an unimportable URL, or have an unknown/unimplemented parser.
+
+    Returns:
+        ``0`` if all attempted imports succeeded (or none were attempted),
+        ``1`` if one or more importer subprocesses failed.
+
+    Raises:
+        subprocess.CalledProcessError: If an importer subprocess fails and
+            ``--continue-on-error`` was not supplied.
+        RuntimeError: If a mapping row's parser has no entry in
+            ``PARSER_URL_ARGS``.
+    """
     args = parse_args()
     python_bin = sys.executable
 

@@ -1,4 +1,4 @@
-- generate claude processes for planning, commit review, documentation
+- generate claude processes for commit review, documentation
 - make everything very well documented
 - look at data-online branch and test + merge
 - look into supabase plan

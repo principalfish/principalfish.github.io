@@ -25,6 +25,18 @@ from db import Database
 
 
 def main() -> None:
+    """Apply schema migrations to add poll/region columns.
+
+    Opens a database session and issues three idempotent ``ALTER TABLE … ADD
+    COLUMN IF NOT EXISTS`` statements:
+
+    - ``regions.population`` (``INTEGER``, nullable)
+    - ``pollsters.regions_mapping`` (``TEXT``, nullable)
+    - ``polls.source_url`` (``TEXT``, nullable)
+
+    Safe to run multiple times; existing columns are left unchanged.
+    Prints a confirmation message on success.
+    """
     db = Database()
 
     with db.session() as s:

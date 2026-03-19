@@ -32,6 +32,27 @@ from models import Pollster
 
 
 def normalize_mapping_text(raw_text: str) -> str:
+    """Parse and normalise a regions-mapping text block.
+
+    Strips blank lines and comment lines (lines starting with ``#``), validates
+    that every remaining line has the form ``RegionLabel:id1,id2,...``, and
+    returns the cleaned text with one mapping per line.
+
+    Args:
+        raw_text: Raw contents of a regions-mapping file. Each non-blank,
+            non-comment line must contain exactly one colon separating a
+            non-empty region label from a non-empty comma-separated list of
+            region IDs (e.g. ``South:1,2,3``).
+
+    Returns:
+        Normalised mapping string with leading/trailing whitespace stripped
+        from each line, joined by newlines.
+
+    Raises:
+        ValueError: If any non-blank, non-comment line is missing a colon,
+            has an empty region label, or has an empty region-IDs field.
+        ValueError: If the input contains no valid mapping lines at all.
+    """
     lines: list[str] = []
     for raw_line in raw_text.splitlines():
         line = raw_line.strip()
@@ -55,6 +76,32 @@ def normalize_mapping_text(raw_text: str) -> str:
 
 
 def main() -> None:
+    """CLI entry point: set a pollster's regions_mapping from a text file.
+
+    Reads the mapping text file specified by ``--input``, normalises it via
+    :func:`normalize_mapping_text`, looks up the pollster by
+    ``--pollster-identifier``, and writes the new ``regions_mapping`` value to
+    the database.  If ``--dry-run`` is passed the intended change is printed
+    but no write is made.  If the existing mapping already matches the file
+    contents the script exits early with a no-op message.
+
+    Command-line arguments:
+        --pollster-identifier (str, required): Identifier of the pollster
+            record to update (e.g. ``yougov``).
+        --input (str, required): Path to the regions-mapping text file.
+            Each non-blank, non-comment line must have the form
+            ``RegionLabel:id1,id2,...``.
+        --dry-run (flag, optional): Preview the update without writing to
+            the database.
+
+    Raises:
+        FileNotFoundError: If the file at ``--input`` does not exist.
+        ValueError: If the input file contains invalid mapping lines (see
+            :func:`normalize_mapping_text`).
+        ValueError: If no pollster is found for the given identifier.
+        ValueError: If the pollster row cannot be retrieved by ID when
+            opening a write session.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pollster-identifier",

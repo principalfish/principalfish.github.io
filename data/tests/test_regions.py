@@ -6,6 +6,8 @@ from db import Database
 
 
 class TestAddRegion:
+    """Covers Database.add_region — creation, hierarchy, population, and invalid-map rejection."""
+
     def test_basic(self, db: Database) -> None:
         m = db.add_map("UK")
         region = db.add_region(m.id, "England")
@@ -31,6 +33,8 @@ class TestAddRegion:
 
 
 class TestGetRegion:
+    """Covers Database.get_region — lookup by id and missing-id behaviour."""
+
     def test_by_id(self, db: Database) -> None:
         m = db.add_map("UK")
         created = db.add_region(m.id, "Scotland")
@@ -43,6 +47,8 @@ class TestGetRegion:
 
 
 class TestGetRegionsForMap:
+    """Covers Database.get_regions_for_map — filtering by map and alphabetical ordering."""
+
     def test_empty(self, db: Database) -> None:
         m = db.add_map("Empty")
         assert db.get_regions_for_map(m.id) == []

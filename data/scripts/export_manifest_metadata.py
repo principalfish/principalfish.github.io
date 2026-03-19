@@ -32,6 +32,15 @@ from export_non_simulation_elections import (
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the metadata export script.
+
+    Returns:
+        Parsed argument namespace with the following attributes:
+            output_root (Path): Directory containing ``elections.json``.
+                Defaults to ``OUTPUT_ROOT_DEFAULT`` from
+                ``export_non_simulation_elections``.
+            dry_run (bool): When True, preview actions without writing any files.
+    """
     parser = argparse.ArgumentParser(description="Export parties/regions metadata into elections manifest")
     parser.add_argument(
         "--output-root",
@@ -44,6 +53,20 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Load parties and regions from the database and update the elections manifest.
+
+    Reads ``elections.json`` from the resolved output root, queries all
+    ``Party`` and ``Region`` rows, rebuilds ``settings.parties`` and
+    ``settings.regionsByMapId`` using helpers from
+    ``export_non_simulation_elections``, removes the legacy
+    ``settings.partiesByKey`` key, and writes the manifest back in place.
+
+    In dry-run mode the file is not written; a summary is printed instead.
+
+    Raises:
+        FileNotFoundError: If ``elections.json`` does not exist at the
+            resolved output path.
+    """
     args = parse_args()
     output_root = args.output_root.resolve()
     manifest_path = output_root / "elections.json"

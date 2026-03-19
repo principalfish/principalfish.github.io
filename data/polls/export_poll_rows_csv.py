@@ -25,6 +25,20 @@ from models import Party, Poll, PollRow, Pollster, Region
 
 
 def resolve_poll(db: Database, poll_id: int | None) -> Poll:
+    """Resolve a Poll record by ID, or fall back to the latest poll.
+
+    Args:
+        db: Active Database connection.
+        poll_id: Optional positive integer poll ID. If None, the poll with the
+            highest ID is returned.
+
+    Returns:
+        The matching Poll ORM instance.
+
+    Raises:
+        ValueError: If poll_id is provided but no matching poll exists, or if
+            poll_id is None and the database contains no polls.
+    """
     if poll_id is not None:
         poll = db.get_poll(poll_id)
         if poll is None:
@@ -39,6 +53,26 @@ def resolve_poll(db: Database, poll_id: int | None) -> Poll:
 
 
 def build_rows(db: Database, poll_id: int) -> list[dict[str, object]]:
+    """Build a flat list of CSV-ready dicts for all PollRows belonging to a poll.
+
+    Each dict represents one PollRow joined with its Party and Region, plus
+    denormalised Poll and Pollster metadata. Rows are ordered by party name
+    then region name. National rows (no region) use the region_name value
+    ``"National"`` and a null region_id.
+
+    Args:
+        db: Active Database connection.
+        poll_id: Positive integer ID of the poll to export.
+
+    Returns:
+        A list of dicts with keys: poll_id, pollster_id, pollster_identifier,
+        pollster_name, map_id, fieldwork_start (ISO date string), fieldwork_end
+        (ISO date string), sample_size, source_url, region_id, region_name,
+        party_id, party_name, percentage.
+
+    Raises:
+        ValueError: If no poll with poll_id exists in the database.
+    """
     with db.session() as session:
         poll = session.get(Poll, poll_id)
         if poll is None:
@@ -81,6 +115,19 @@ def build_rows(db: Database, poll_id: int) -> list[dict[str, object]]:
 
 
 def main() -> None:
+    """Parse CLI arguments, export poll rows to CSV, and write output.
+
+    CLI arguments:
+        --poll-id (int, optional): ID of the poll to export. Defaults to the
+            poll with the highest ID in the database.
+        --output (str, optional): Destination file path for the CSV. Use ``-``
+            to write to stdout (default). Parent directories are created
+            automatically if they do not exist.
+
+    Side effects:
+        Writes a UTF-8 CSV file to the specified path, or emits CSV to stdout.
+        Prints a confirmation line to stdout when writing to a file.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--poll-id", type=int, default=None, help="Poll id to export")
     parser.add_argument(

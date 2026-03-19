@@ -44,6 +44,24 @@ PARTY_ID_ALIASES: dict[int, int] = {7: 15}
 
 @dataclass
 class SimulationConfig:
+    """Configuration parameters for a single UNS simulation run.
+
+    Attributes:
+        map_name: Display name of the electoral map used to look up seats and regions.
+        baseline_election_name: Display name of the election whose actual results form
+            the vote-share and seat baseline.
+        as_of_date: Upper bound for poll fieldwork end dates; the simulation projects
+            the state of play as of this date.
+        since_date: Lower bound for poll fieldwork end dates; only polls whose
+            fieldwork ended on or after this date are included.
+        half_life_days: Exponential decay half-life in days applied when weighting
+            polls by recency. Larger values give older polls more weight.
+        output_csv: Optional filesystem path for writing the projected seat CSV.
+            If None, no CSV is written.
+        dry_run: If True, perform all calculations but skip DB writes and trend
+            cache updates.
+    """
+
     map_name: str
     baseline_election_name: str
     as_of_date: date
@@ -55,6 +73,15 @@ class SimulationConfig:
 
 @dataclass
 class SeatRef:
+    """Lightweight reference to a seat row fetched from the database.
+
+    Attributes:
+        id: Primary key of the seat.
+        region_id: ID of the region this seat belongs to, or None if the seat
+            has no region assignment.
+        seat_name: Human-readable display name of the seat.
+    """
+
     id: int
     region_id: int | None
     seat_name: str = ""
@@ -62,12 +89,33 @@ class SeatRef:
 
 @dataclass
 class LatestPollUsage:
+    """Records metadata about the most recent poll consumed during a simulation run.
+
+    Used to populate the trend cache metadata JSON and the summary snippet printed
+    at the end of each run.
+
+    Attributes:
+        pollster: Name of the polling company that conducted the poll.
+        fieldwork_start: First day of the fieldwork period (inclusive).
+        fieldwork_end: Last day of the fieldwork period (inclusive).
+    """
+
     pollster: str
     fieldwork_start: date
     fieldwork_end: date
 
 
 def existing_trend_dates() -> set[date]:
+    """Return all ``as_of_date`` values already present in the trend cache CSV.
+
+    Reads ``TREND_CACHE_CSV`` and collects every unique date value found in the
+    ``as_of_date`` column. Rows with a missing or unparseable date are silently
+    skipped.
+
+    Returns:
+        A set of ``date`` objects for which trend data has already been written.
+        Returns an empty set if the cache file does not exist.
+    """
     if not TREND_CACHE_CSV.exists():
         return set()
 
@@ -86,6 +134,21 @@ def existing_trend_dates() -> set[date]:
 
 
 def dates_to_run_for_cfg(cfg: SimulationConfig) -> list[date]:
+    """Determine which simulation dates must be run for the given configuration.
+
+    In dry-run mode only ``cfg.as_of_date`` is returned.
+
+    Otherwise the function compares the existing trend cache dates against
+    ``cfg.as_of_date`` and returns any calendar-day gaps between the most-recent
+    cached date and ``cfg.as_of_date``. If there are no gaps the list contains
+    only ``cfg.as_of_date``.
+
+    Args:
+        cfg: The simulation configuration, used for ``as_of_date`` and ``dry_run``.
+
+    Returns:
+        An ordered list of dates to simulate, oldest first.
+    """
     if cfg.dry_run:
         return [cfg.as_of_date]
 
@@ -108,6 +171,34 @@ def dates_to_run_for_cfg(cfg: SimulationConfig) -> list[date]:
 
 
 def parse_args() -> SimulationConfig:
+    """Parse CLI arguments and return a populated SimulationConfig.
+
+    Recognised flags:
+
+    - ``--map-name`` (str, default ``"UK Constituencies post 2022"``): electoral
+      map to simulate against.
+    - ``--baseline-election-name`` (str, default ``"2024 General Election"``):
+      name of the baseline election.
+    - ``--as-of-days-back`` (int ≥ 0, default ``0``): compute ``as_of_date`` as
+      today minus this many days. Ignored if ``--as-of-date`` is supplied.
+    - ``--since-days-back`` (int ≥ 0, default ``30``): compute ``since_date`` as
+      today minus this many days. Ignored if ``--since-date`` is supplied.
+    - ``--as-of-date`` (ISO date string ``YYYY-MM-DD``, optional): explicit
+      upper-bound date for poll inclusion.
+    - ``--since-date`` (ISO date string ``YYYY-MM-DD``, optional): explicit
+      lower-bound date for poll inclusion. Must be ≤ ``as_of_date``.
+    - ``--half-life-days`` (float, default ``30.0``): exponential decay half-life
+      for poll recency weighting.
+    - ``--output-csv`` (str, optional): path for the projected seat output CSV.
+    - ``--dry-run`` (flag): skip all DB writes and trend cache updates.
+
+    Returns:
+        A ``SimulationConfig`` populated from the parsed arguments.
+
+    Raises:
+        SystemExit: via ``argparse`` if ``--since-date``/``--since-days-back``
+            resolves to a date later than ``as_of_date``.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", default="UK Constituencies post 2022")
     parser.add_argument("--baseline-election-name", default="2024 General Election")
@@ -150,6 +241,16 @@ def parse_args() -> SimulationConfig:
 
 
 def ensure_model_uns_enum_value(db: Database) -> None:
+    """Add ``'model_uns'`` to the PostgreSQL ``electiontype`` enum if it is absent.
+
+    This is a no-op for non-PostgreSQL database engines. When running against
+    PostgreSQL, the function introspects ``pg_enum`` and issues an
+    ``ALTER TYPE electiontype ADD VALUE`` statement only when the value is
+    missing, preventing duplicate-value errors on repeated runs.
+
+    Args:
+        db: The active database connection wrapper.
+    """
     if db.engine.dialect.name != "postgresql":
         return
 
@@ -171,6 +272,19 @@ def ensure_model_uns_enum_value(db: Database) -> None:
 
 
 def unique_election_name(db: Database, base_name: str) -> str:
+    """Return a name that does not already exist in the elections table.
+
+    If ``base_name`` is already taken, appends ``" #2"``, ``" #3"``, … until a
+    free name is found.
+
+    Args:
+        db: The active database connection wrapper.
+        base_name: The preferred election name.
+
+    Returns:
+        Either ``base_name`` (if unused) or ``base_name + " #N"`` for the
+        smallest ``N ≥ 2`` that is not yet in use.
+    """
     if db.get_election_by_name(base_name) is None:
         return base_name
 
@@ -183,6 +297,20 @@ def unique_election_name(db: Database, base_name: str) -> str:
 
 
 def delete_model_uns_for_as_of_date(db: Database, as_of_date: date) -> tuple[int, int]:
+    """Delete all ``model_uns`` elections (and their votes) for a given date.
+
+    Matches elections of type ``model_uns`` whose name starts with
+    ``"UNS {as_of_date}"`` and bulk-deletes their ``Vote`` rows before removing
+    the ``Election`` rows.
+
+    Args:
+        db: The active database connection wrapper.
+        as_of_date: The date whose simulation output should be removed.
+
+    Returns:
+        A ``(deleted_elections, deleted_votes)`` tuple with the row counts for
+        each delete operation. Both are ``0`` if no matching elections exist.
+    """
     base_name = f"UNS {as_of_date.isoformat()}"
 
     with db.session() as session:
@@ -206,12 +334,41 @@ def delete_model_uns_for_as_of_date(db: Database, as_of_date: date) -> tuple[int
 
 
 def weighted_average(weighted_sum: float, total_weight: float) -> float | None:
+    """Compute a weighted average from pre-aggregated numerator and denominator.
+
+    Args:
+        weighted_sum: Sum of (value × weight) across all observations.
+        total_weight: Sum of weights across all observations.
+
+    Returns:
+        The weighted average ``weighted_sum / total_weight``, or ``None`` if
+        ``total_weight`` is zero or negative.
+    """
     if total_weight <= 0:
         return None
     return weighted_sum / total_weight
 
 
 def resolve_simulation_scope(db: Database, cfg: SimulationConfig) -> tuple[Map, Election, date]:
+    """Validate config references and resolve the map, baseline election, and since_date.
+
+    Looks up the map and baseline election by name. If ``cfg.since_date`` is the
+    sentinel ``date(1900, 1, 1)``, replaces it with the first day of the baseline
+    election year.
+
+    Args:
+        db: The active database connection wrapper.
+        cfg: The simulation configuration providing map name, baseline election
+            name, and since_date.
+
+    Returns:
+        A ``(poll_map, baseline, since_date)`` triple where ``since_date`` may
+        have been adjusted from the sentinel value.
+
+    Raises:
+        ValueError: If the map is not found, the baseline election is not found,
+            or the baseline election's ``map_id`` does not match the resolved map.
+    """
     poll_map = db.get_map_by_name(cfg.map_name)
     if poll_map is None:
         raise ValueError(f"Map not found: {cfg.map_name}")
@@ -232,6 +389,18 @@ def resolve_simulation_scope(db: Database, cfg: SimulationConfig) -> tuple[Map, 
 
 
 def fetch_seat_refs(db: Database, map_id: int) -> list[SeatRef]:
+    """Fetch all seat rows for a map and return them as ``SeatRef`` objects.
+
+    Queries the ``seats`` table filtered by ``map_id`` and ordered by
+    ``seat_name``.
+
+    Args:
+        db: The active database connection wrapper.
+        map_id: Primary key of the electoral map.
+
+    Returns:
+        A list of ``SeatRef`` instances, one per seat on the map.
+    """
     with db.session() as session:
         rows = session.execute(
             text(
@@ -258,6 +427,33 @@ def build_reference_data(db: Database, map_id: int) -> tuple[
     dict[int, float],
     dict[int, str],
 ]:
+    """Load all static reference data needed to run a simulation for a given map.
+
+    Fetches seats, regions, parties, and pollsters from the database and builds
+    several lookup dictionaries used throughout the simulation pipeline.
+
+    Args:
+        db: The active database connection wrapper.
+        map_id: Primary key of the electoral map.
+
+    Returns:
+        An 8-tuple containing:
+
+        - **seats** (``list[SeatRef]``): all seats on the map.
+        - **regions** (``Any``): raw region objects returned by
+          ``db.get_regions_for_map``.
+        - **seat_by_id** (``dict[int, SeatRef]``): seats keyed by seat ID.
+        - **region_by_id** (``dict[int, Region]``): regions keyed by region ID.
+        - **region_by_seat_id** (``dict[int, int | None]``): maps seat ID to its
+          region ID (``None`` for unassigned seats).
+        - **party_name_by_id** (``dict[int, str]``): party display names keyed by
+          party ID.
+        - **pollster_weight_by_id** (``dict[int, float]``): pollster credibility
+          weights keyed by pollster ID; defaults to ``1.0`` for unweighted
+          pollsters.
+        - **pollster_name_by_id** (``dict[int, str]``): pollster display names
+          keyed by pollster ID.
+    """
     seats = fetch_seat_refs(db, map_id)
     regions = db.get_regions_for_map(map_id)
     seat_by_id = {seat.id: seat for seat in seats}
@@ -293,6 +489,35 @@ def build_baseline_vote_state(db: Database, baseline_election_id: int, region_by
     dict[int, float],
     dict[int, dict[int, float]],
 ]:
+    """Compute per-seat, national, and regional vote-share baselines from a baseline election.
+
+    Aggregates raw vote totals from the baseline election's ``Vote`` rows into
+    several baseline structures used to derive swings. Party ID aliases defined
+    in ``PARTY_ID_ALIASES`` are applied before aggregation.
+
+    Args:
+        db: The active database connection wrapper.
+        baseline_election_id: Primary key of the baseline election.
+        region_by_seat_id: Maps seat ID to its region ID (``None`` for
+            unassigned seats).
+
+    Returns:
+        A 4-tuple containing:
+
+        - **seat_party_vote_totals** (``dict[int, dict[int, float]]``): raw vote
+          totals keyed by ``seat_id`` then ``party_id``.
+        - **national_party_totals** (``dict[int, float]``): summed raw votes
+          across all seats, keyed by ``party_id``.
+        - **baseline_national_shares** (``dict[int, float]``): national vote
+          share percentages (0–100) keyed by ``party_id``.
+        - **baseline_region_shares** (``dict[int, dict[int, float]]``): regional
+          vote share percentages (0–100) keyed by ``region_id`` then
+          ``party_id``.
+
+    Raises:
+        ValueError: If the baseline election has no vote rows, or if no
+            seat-party vote totals could be derived.
+    """
     baseline_votes = db.get_votes_for_election(baseline_election_id)
     if not baseline_votes:
         raise ValueError("Baseline election has no votes")
@@ -355,6 +580,40 @@ def aggregate_poll_shares(
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
 ) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], Any]:
+    """Compute time-decayed, pollster-weighted average vote shares from recent polls.
+
+    For each poll whose fieldwork end date falls in ``[since_date, as_of_date]``,
+    a combined weight is computed as ``exp(-λ × days_since) × pollster_weight``
+    where ``λ = ln(2) / half_life_days``. Vote-share percentages from each poll
+    row are accumulated into ``weighted_sums`` and ``total_weights`` keyed by
+    ``(region_id, party_id)`` — ``region_id`` is ``None`` for national-level rows.
+
+    Party ID aliases defined in ``PARTY_ID_ALIASES`` are applied before
+    accumulation.
+
+    Args:
+        db: The active database connection wrapper.
+        map_id: Primary key of the electoral map; used to fetch relevant polls.
+        since_date: Lower bound for poll fieldwork end date (inclusive).
+        as_of_date: Upper bound for poll fieldwork end date (inclusive); also the
+            reference date for decay calculation.
+        half_life_days: Exponential decay half-life in days. Must be positive;
+            values ≤ 0 are clamped to ``0.001`` internally.
+        pollster_weight_by_id: Credibility weight per pollster ID; missing entries
+            default to ``1.0``.
+        pollster_name_by_id: Display name per pollster ID; used when recording
+            ``LatestPollUsage``.
+
+    Returns:
+        A 3-tuple containing:
+
+        - **weighted_sums** (``dict[tuple[int | None, int], float]``): accumulated
+          ``percentage × weight`` values keyed by ``(region_id, party_id)``.
+        - **total_weights** (``dict[tuple[int | None, int], float]``): accumulated
+          weights keyed by ``(region_id, party_id)``.
+        - **latest_poll_usage** (``LatestPollUsage | None``): metadata about the
+          most recent poll included, or ``None`` if no polls were consumed.
+    """
     polls = db.get_polls_for_map(map_id)
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
@@ -408,6 +667,18 @@ def aggregate_poll_shares(
 
 
 def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:
+    """Format a human-readable description of the latest poll used in a simulation.
+
+    Args:
+        latest_poll_usage: Metadata about the most recent poll, or ``None`` if
+            no polls were consumed.
+
+    Returns:
+        A string of the form ``"Latest poll used: <Pollster> (<date>)"`` where
+        ``<date>`` is either a single ISO date (if start == end) or a range
+        ``"YYYY-MM-DD to YYYY-MM-DD"``. Returns an empty string if
+        ``latest_poll_usage`` is ``None``.
+    """
     if latest_poll_usage is None:
         return ""
 
@@ -422,6 +693,30 @@ def write_trend_cache_meta(
     since_date: date,
     latest_poll_usage: LatestPollUsage | None,
 ) -> None:
+    """Overwrite the trend cache metadata JSON with the current simulation's metadata.
+
+    Creates ``TREND_CACHE_META_JSON`` (and any missing parent directories) with a
+    JSON object containing the simulation date range and latest-poll information.
+
+    The written JSON has the following structure::
+
+        {
+            "as_of_date": "YYYY-MM-DD",
+            "since_date": "YYYY-MM-DD",
+            "latest_poll_snippet": "<human-readable string>",
+            "latest_poll": {
+                "pollster": "<name>",
+                "fieldwork_start": "YYYY-MM-DD",
+                "fieldwork_end": "YYYY-MM-DD"
+            } | null
+        }
+
+    Args:
+        as_of_date: The simulation's upper-bound date.
+        since_date: The simulation's lower-bound date for poll inclusion.
+        latest_poll_usage: Metadata about the most recent poll used, or ``None``
+            if no polls were consumed.
+    """
     TREND_CACHE_META_JSON.parent.mkdir(parents=True, exist_ok=True)
 
     payload = {
@@ -453,6 +748,40 @@ def compute_region_diffs(
     baseline_national_shares: dict[int, float],
     baseline_region_shares: dict[int, dict[int, float]],
 ) -> tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]]:
+    """Derive per-region poll-vs-baseline swings for every party.
+
+    For each region present on the map, computes the difference between the
+    weighted-average poll share (falling back to the national poll average when
+    no regional poll rows are available) and the baseline share (falling back to
+    the national baseline when no regional baseline exists).
+
+    Args:
+        seats: All seats on the map, used to enumerate region IDs.
+        region_by_id: Region display names keyed by region ID.
+        party_name_by_id: Party display names keyed by party ID.
+        national_party_totals: Raw national vote totals from the baseline election,
+            keyed by party ID. Used to define the party universe.
+        weighted_sums: Accumulated ``percentage × weight`` values from polls,
+            keyed by ``(region_id, party_id)`` (``None`` region = national).
+        total_weights: Accumulated poll weights, keyed by
+            ``(region_id, party_id)``.
+        baseline_national_shares: National vote-share percentages from the
+            baseline election, keyed by party ID.
+        baseline_region_shares: Regional vote-share percentages from the baseline
+            election, keyed by region ID then party ID.
+
+    Returns:
+        A 3-tuple containing:
+
+        - **party_universe** (``set[int]``): union of all party IDs present in
+          the baseline and in the polls.
+        - **region_swings** (``dict[int, dict[int, float]]``): swing in
+          percentage points keyed by region ID then party ID.
+        - **region_diff_rows** (``list[dict[str, Any]]``): flat list of per-
+          region/party diff records suitable for CSV export, each with keys
+          ``region_id``, ``region_name``, ``party_id``, ``party_name``,
+          ``baseline_share``, ``weighted_share``, and ``swing``.
+    """
     party_universe: set[int] = set(national_party_totals.keys())
     party_universe.update(party_id for _, party_id in weighted_sums.keys())
     region_ids = sorted({seat.region_id for seat in seats if seat.region_id is not None})
@@ -512,6 +841,35 @@ def project_seat_votes(
     region_swings: dict[int, dict[int, float]],
     party_name_by_id: dict[int, str],
 ) -> tuple[list[dict[str, Any]], Counter[str]]:
+    """Apply regional swings to baseline seat vote-shares and project a winner per seat.
+
+    For each seat, converts baseline raw vote totals to shares, adds the
+    region-level swing for every party (clamped to zero), normalises the result
+    to sum to 100 %, and records the party with the highest projected share as
+    the winner.
+
+    Seats with a zero or negative baseline total are skipped.
+
+    Args:
+        seat_party_vote_totals: Raw baseline vote totals keyed by seat ID then
+            party ID.
+        region_by_seat_id: Maps seat ID to its region ID (``None`` for
+            unassigned seats).
+        party_universe: Complete set of party IDs to include in projections.
+        region_swings: Swing in percentage points keyed by region ID then party
+            ID.
+        party_name_by_id: Party display names keyed by party ID.
+
+    Returns:
+        A 2-tuple containing:
+
+        - **projected_votes** (``list[dict[str, Any]]``): one record per
+          seat/party combination with keys ``seat_id``, ``party_id``,
+          ``vote_total`` (normalised percentage, 0–100), and ``elected``
+          (``True`` for the projected winner).
+        - **winners_by_party** (``Counter[str]``): count of projected seat wins
+          keyed by party display name.
+    """
     projected_votes: list[dict[str, Any]] = []
     winners_by_party: Counter[str] = Counter()
 
@@ -568,6 +926,29 @@ def write_output_csvs(
     seat_by_id: dict[int, SeatRef],
     party_name_by_id: dict[int, str],
 ) -> None:
+    """Write projected seat votes and regional diffs to CSV files.
+
+    Creates (or overwrites) two files:
+
+    1. ``output_csv`` — one row per seat/party with columns ``seat_id``,
+       ``seat_name``, ``party_id``, ``party_name``, ``predicted_pct``
+       (4 decimal places), ``elected``.
+    2. A sibling file named ``<stem>_regional_diffs<suffix>`` — one row per
+       region/party with columns ``region_id``, ``region_name``, ``party_id``,
+       ``party_name``, ``baseline_share``, ``weighted_share``, ``swing``
+       (all shares formatted to 4 decimal places).
+
+    Parent directories are created automatically if they do not exist.
+
+    Args:
+        output_csv: Filesystem path for the projected seat output CSV.
+        projected_votes: Seat/party projection records as produced by
+            ``project_seat_votes``.
+        region_diff_rows: Regional diff records as produced by
+            ``compute_region_diffs``.
+        seat_by_id: Seat display names keyed by seat ID.
+        party_name_by_id: Party display names keyed by party ID.
+    """
     output_path = Path(output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as handle:
@@ -627,6 +1008,25 @@ def persist_projection(
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
 ) -> tuple[str, int]:
+    """Create a ``model_uns`` election row and bulk-insert all projected vote rows.
+
+    Ensures the ``model_uns`` enum value exists (PostgreSQL only), then creates
+    the election and bulk-inserts one ``Vote`` row per seat/party projection.
+
+    Args:
+        db: The active database connection wrapper.
+        map_id: Primary key of the electoral map the election belongs to.
+        as_of_date: The simulation date; used as the election year source.
+        election_name: Display name for the new election row.
+        projected_votes: Seat/party projection records as produced by
+            ``project_seat_votes``.
+        party_name_by_id: Party display names keyed by party ID; used to
+            populate ``candidate_name`` on each vote row.
+
+    Returns:
+        A ``(election_name, election_id)`` tuple with the persisted election's
+        display name and primary key.
+    """
     ensure_model_uns_enum_value(db)
     election = db.add_election(
         map_id,
@@ -656,6 +1056,25 @@ def update_trend_cache_csv(
     as_of_date: date,
     projected_votes: list[dict[str, Any]],
 ) -> None:
+    """Merge this simulation's results into the trend cache CSV.
+
+    Reads the existing ``TREND_CACHE_CSV``, strips any rows for ``as_of_date``
+    or ``election_id``, then appends new rows summarising seat counts and
+    normalised vote percentages per party. The combined rows are sorted by
+    ``(election_id, party_id)`` before being written back.
+
+    **Deduplication logic**: if the new seat snapshot (the multiset of
+    party-seat-count pairs) is identical to that of the immediately preceding
+    cached date, the new rows are omitted and a ``TREND_CACHE_SKIP`` message is
+    printed instead.
+
+    Args:
+        election_id: Primary key of the newly persisted election.
+        election_name: Display name of the newly persisted election.
+        as_of_date: Simulation date; rows for this date are replaced.
+        projected_votes: Seat/party projection records as produced by
+            ``project_seat_votes``.
+    """
     TREND_CACHE_CSV.parent.mkdir(parents=True, exist_ok=True)
 
     vote_totals_by_party: dict[int, float] = defaultdict(float)
@@ -669,6 +1088,17 @@ def update_trend_cache_csv(
     total_votes = sum(vote_totals_by_party.values())
 
     def seat_snapshot_from_rows(rows: list[dict[str, str]]) -> tuple[tuple[int, int], ...]:
+        """Build a sorted snapshot tuple from CSV row dicts.
+
+        Args:
+            rows: List of CSV row dicts containing ``party_id`` and
+                ``seats_won`` string fields.
+
+        Returns:
+            A sorted tuple of ``(party_id, seats_won)`` pairs for parties with
+            at least one seat. Rows with missing or non-integer values are
+            silently skipped.
+        """
         snapshot: dict[int, int] = {}
         for row in rows:
             try:
@@ -682,6 +1112,15 @@ def update_trend_cache_csv(
         return tuple(sorted(snapshot.items()))
 
     def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
+        """Build a sorted snapshot tuple from a party-seat-count dict.
+
+        Args:
+            seat_counts: Mapping of party ID to projected seat count.
+
+        Returns:
+            A sorted tuple of ``(party_id, seats)`` pairs for parties with at
+            least one seat.
+        """
         return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
 
     existing_rows: list[dict[str, str]] = []
@@ -754,6 +1193,38 @@ def run_simulation(
     db: Database,
     cfg: SimulationConfig,
 ) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], Counter[str], LatestPollUsage | None]:
+    """Run a full UNS simulation for a single date and optionally persist results.
+
+    Orchestrates the complete simulation pipeline:
+
+    1. Resolves the map, baseline election, and effective since_date.
+    2. Loads reference data (seats, regions, parties, pollsters).
+    3. Builds baseline vote-share structures from the baseline election.
+    4. Aggregates time-decayed, pollster-weighted poll shares.
+    5. Computes per-region poll-vs-baseline swings.
+    6. Projects seat winners by applying swings to baseline seat shares.
+    7. Optionally writes output CSVs (always, if ``cfg.output_csv`` is set).
+    8. In non-dry-run mode: deletes any prior model_uns rows for the date,
+       persists the new election and votes, and updates the trend cache CSV and
+       metadata JSON.
+
+    Args:
+        db: The active database connection wrapper.
+        cfg: Simulation configuration for a single ``as_of_date``.
+
+    Returns:
+        A 5-tuple containing:
+
+        - **election_name** (``str``): display name of the persisted (or
+          hypothetical, in dry-run mode) election.
+        - **projected_votes** (``list[dict[str, Any]]``): seat/party projection
+          records.
+        - **region_diff_rows** (``list[dict[str, Any]]``): regional diff records.
+        - **winners_by_party** (``Counter[str]``): projected seat counts keyed by
+          party name.
+        - **latest_poll_usage** (``LatestPollUsage | None``): the most recent poll
+          consumed, or ``None`` if no polls were available.
+    """
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date
 
@@ -847,6 +1318,14 @@ def run_simulation(
 
 
 def main() -> None:
+    """CLI entry point: parse arguments, determine dates to simulate, and run each.
+
+    Calls ``parse_args`` to obtain base configuration, then ``dates_to_run_for_cfg``
+    to determine which dates need simulation (including automatic backfill of any
+    gap between the most-recent cached date and ``as_of_date``). For each date a
+    fresh ``SimulationConfig`` is derived with the appropriate ``since_date``
+    offset, ``run_simulation`` is called, and a summary is printed to stdout.
+    """
     cfg = parse_args()
     db = Database()
 

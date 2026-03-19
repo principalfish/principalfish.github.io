@@ -6,6 +6,8 @@ from db import Database
 
 
 class TestAddMap:
+    """Tests for Database.add_map — creation and uniqueness constraint."""
+
     def test_basic(self, db: Database) -> None:
         m = db.add_map("UK 2024")
         assert m.id is not None
@@ -18,6 +20,8 @@ class TestAddMap:
 
 
 class TestGetMap:
+    """Tests for Database.get_map and get_map_by_name lookups."""
+
     def test_by_id(self, db: Database) -> None:
         created = db.add_map("UK 2019")
         fetched = db.get_map(created.id)
@@ -36,6 +40,8 @@ class TestGetMap:
 
 
 class TestGetAllMaps:
+    """Tests for Database.get_all_maps — empty list and alphabetical ordering."""
+
     def test_empty(self, db: Database) -> None:
         assert db.get_all_maps() == []
 

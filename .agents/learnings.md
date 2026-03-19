@@ -36,6 +36,12 @@ Top-level durable insights only.
 - Zoom percentage display is baseline-relative to `INITIAL_MAP_SCALE`, allowing a slightly zoomed-in initial map view while showing `100%` at load.
 - Keep layout rules in `site/styles.css` (not page-local `<style>` in `electionmaps/index.html`) for maintainability, then run `npm run minify:electionmaps` so `site/styles.min.css` picks up the change.
 - Runtime architecture is manifest-driven (`electionmaps/data/elections.json`) with data resolved by configured map/result file mappings.
+- New election types can be added to `elections.json` (e.g. `eu_referendum`) and handled with `currentElectionType` checks in `electionmaps.js`. The choropleth system (`buildChoroplethConfig`) can be extended with a type-specific early-return to always show a custom diverging scale regardless of UI state.
+- The 2016 EU Referendum data (per-constituency leave/remain %) was recovered from git history (`54a5c74b`) and converted to `pf-results-v4` format using `leave% × 100` as pseudo vote counts; percentages display correctly, raw counts are suppressed via the `eu_referendum` type check.
+- For eu_referendum: default choropleth is a diverging scale (remain gold → white → leave navy) keyed on `voteSharePct(seat, 'leave')` with domain `[minLeave, 50, maxLeave]` for saturation. User can override via Choropleths panel; override is active when `choroplethType !== 'none' && choroplethParty !== 'all'`.
+- NI constituencies are hidden for eu_referendum by returning the map background colour (`#dce4ea`) for both fill and stroke in the render path, gated on `isPredictNorthernIrelandRegion(seat.region)`.
+- Per-election UI toggles (gains button, vote share change option, data info button) are set on election load using `currentElection.type === 'eu_referendum'`; returning `null` from `.attr('stroke', ...)` safely defers to CSS for all other elections.
+- Data credit: Chris Hanretty, "Areal interpolation and the UK's referendum on EU membership", JEPOP. DOI: 10.1080/17457289.2017.1287081.
 - Exported results use compact schema `pf-results-v2`; frontend supports compact and legacy normalization.
 - Keep map interaction state centralized and re-render from canonical seat datasets to avoid stale filters/search/highlights.
 - Route/path naming is now `electionmaps` (not `election-maps`); keep links/scripts/exports/docs aligned when making path changes.

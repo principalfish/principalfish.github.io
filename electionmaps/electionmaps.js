@@ -38,6 +38,7 @@ import {
   buildRegionLabelLookup,
   buildVisibleSeatKeySet,
   getChoroplethValue,
+  voteSharePct,
   resolveElectionFiles,
   getPredictBaselineShare,
   getPredictInputShareValue,
@@ -93,6 +94,9 @@ const predictResetAllButton = document.getElementById('mapsPredictResetAll');
 const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
 const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
 const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
+const choroplethsButton = document.getElementById('mapsChoroplethsBtn');
+const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
+const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 
 let currentSort = { key: 'seats', direction: 'desc' };
 let currentManifest = null;
@@ -1843,6 +1847,39 @@ function populateMapControlOptions() {
  * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
+  if (currentElectionType === 'eu_referendum' && (mapViewState.choroplethType === 'none' || mapViewState.choroplethParty === 'all')) {
+    const valueBySeatKey = new Map();
+    const values = [];
+    currentSeats.forEach((seat) => {
+      const seatKey = seatLookupKey(seat.seat);
+      if (!visibleSeatKeys.has(seatKey)) return;
+      if (isPredictNorthernIrelandRegion(seat.region)) return;
+      const v = voteSharePct(seat, 'leave');
+      valueBySeatKey.set(seatKey, v);
+      values.push(v);
+    });
+    const minLeave = Math.min(...values);
+    const maxLeave = Math.max(...values);
+    const scale = d3.scaleLinear()
+      .domain([minLeave, 50, maxLeave])
+      .range(['#F4A11D', '#f8fbff', '#1D3565']);
+    return {
+      enabled: true,
+      valueBySeatKey,
+      toColour: (value) => scale(value),
+      legend: {
+        isDelta: true,
+        title: 'Leave vote share',
+        startColour: '#F4A11D',
+        midColour: '#f8fbff',
+        endColour: '#1D3565',
+        minLabel: `${formatPct(minLeave)}%`,
+        midLabel: '50%',
+        maxLabel: `${formatPct(maxLeave)}%`,
+      },
+    };
+  }
+
   if (mapViewState.choroplethType === 'none' || mapViewState.choroplethParty === 'all') return { enabled: false };
   const isDelta = mapViewState.choroplethType === 'voteShareChange';
 
@@ -2053,8 +2090,9 @@ function renderSeatPopup(seatName) {
   const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
   const turnout = totalVotesForSeat(seat);
   const majority = seatMajorityStats(seat);
-  const showTurnout = currentElectionType !== 'model_uns';
-  const showRawMajority = currentElectionType !== 'model_uns';
+  const isReferendum = currentElectionType === 'eu_referendum';
+  const showTurnout = currentElectionType !== 'model_uns' && !isReferendum;
+  const showRawMajority = currentElectionType !== 'model_uns' && !isReferendum;
 
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
@@ -2752,6 +2790,10 @@ function renderTopoMap(mapData, seats, options = {}) {
       const seatName = seatNameFromFeature(datum);
       if (!seatName) return colourParty('others');
       const seatKey = seatLookupKey(seatName);
+      if (currentElectionType === 'eu_referendum' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
+        return '#dce4ea';
+      }
+
       const seat = currentSeatsByKey.get(seatKey);
       if (!seat) return colourParty('others');
 
@@ -2766,6 +2808,10 @@ function renderTopoMap(mapData, seats, options = {}) {
 
       const winner = winnerBySeat.get(seatName) || winnerBySeat.get(seatLookupKey(seatName)) || 'others';
       return colourParty(winner);
+    })
+    .attr('stroke', (datum) => {
+      if (currentElectionType !== 'eu_referendum') return null;
+      return isPredictNorthernIrelandRegion(datum.properties?.region) ? '#dce4ea' : null;
     })
     .on('mouseenter', (event, datum) => {
       const seatName = seatNameFromFeature(datum);
@@ -3009,7 +3055,10 @@ async function initElectionData() {
   currentByElectionSeats = currentElection.byElectionSeats?.length
     ? new Set(currentElection.byElectionSeats)
     : null;
-  if (filterGainsButton) filterGainsButton.textContent = currentByElectionSeats ? 'By-elections' : 'Gains';
+  if (filterGainsButton) {
+    filterGainsButton.textContent = currentByElectionSeats ? 'By-elections' : 'Gains';
+    filterGainsButton.hidden = currentElection.type === 'eu_referendum';
+  }
 
   resetPredictModeState();
   resetPollTrackerModeState();
@@ -3028,7 +3077,13 @@ async function initElectionData() {
   ]);
 
   const seats = normalizeSeats(resultsData, manifestPartiesById, manifestRegionsById);
-  const showVoteTotals = currentElection.type !== 'model_uns';
+  const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.type !== 'eu_referendum';
+  const isReferendumType = currentElection.type === 'eu_referendum';
+  if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
+  if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
+  if (isReferendumType && mapViewState.choroplethType === 'voteShareChange') {
+    mapViewState.choroplethType = 'none';
+  }
   currentElectionType = currentElection.type;
   baseElectionSeats = seats;
   currentSeats = seats.map((seat) => cloneSeatRecord(seat));

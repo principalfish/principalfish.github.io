@@ -6,7 +6,7 @@
 
 ## Core files
 
-- `app.py`, `wiki.py`
+- `app.py`, `wiki.py`, `export.py`
 - `index.html`, `script.js`, `styles.css`
 - `challenges.json`, `wikipedia_history.db`
 

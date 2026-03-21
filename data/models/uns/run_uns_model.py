@@ -18,6 +18,9 @@ from sqlalchemy import delete, select, text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = DATA_DIR.parent
+SCRIPTS_DIR = DATA_DIR / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
 TREND_CACHE_CSV = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.csv"
 TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
 TREND_CACHE_FIELDS = [
@@ -31,8 +34,10 @@ TREND_CACHE_FIELDS = [
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
+from config import DatabaseConfig
 from db import Database
 from models import Election, ElectionType, Map, Region, Vote
+from archive_old_model_runs import archive_old_runs, DEFAULT_SQLITE_PATH
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
 # so that poll data reported under "Other" is applied to the same party that holds the
@@ -209,6 +214,11 @@ def parse_args() -> SimulationConfig:
     parser.add_argument("--half-life-days", type=float, default=30.0)
     parser.add_argument("--output-csv", default=None)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--no-archive",
+        action="store_true",
+        help="Skip auto-archiving model runs older than 30 days after simulation completes.",
+    )
     args = parser.parse_args()
 
     today = date.today()
@@ -237,7 +247,7 @@ def parse_args() -> SimulationConfig:
         half_life_days=args.half_life_days,
         output_csv=args.output_csv,
         dry_run=args.dry_run,
-    )
+    ), args.no_archive
 
 
 def ensure_model_uns_enum_value(db: Database) -> None:
@@ -1033,6 +1043,7 @@ def persist_projection(
         as_of_date.year,
         election_name,
         ElectionType.model_uns,
+        election_date=as_of_date,
     )
 
     payload = [
@@ -1326,8 +1337,10 @@ def main() -> None:
     fresh ``SimulationConfig`` is derived with the appropriate ``since_date``
     offset, ``run_simulation`` is called, and a summary is printed to stdout.
     """
-    cfg = parse_args()
-    db = Database()
+    cfg, no_archive = parse_args()
+    # Model runs always use local postgres — never Supabase.
+    # This keeps simulation data out of the remote DB entirely.
+    db = Database(DatabaseConfig.local())
 
     run_dates = dates_to_run_for_cfg(cfg)
     if len(run_dates) > 1:
@@ -1404,6 +1417,10 @@ def main() -> None:
                 for row in rows
             )
             print(f"- {region_name}: {summary}")
+
+    if not no_archive and not cfg.dry_run:
+        print("\nAuto-archiving all model runs to SQLite...")
+        archive_old_runs(db, archive_all=True)
 
 
 if __name__ == "__main__":

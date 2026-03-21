@@ -1,17 +1,81 @@
 #!/usr/bin/env python3
-"""Backfill model output trend cache CSV from persisted model_uns elections."""
+"""Backfill model output trend cache CSV from persisted model_uns elections.
+
+By default reads from both PostgreSQL (live runs) and the local SQLite archive
+(model_uns.db). Pass --no-sqlite to read from PostgreSQL only.
+"""
 
 from __future__ import annotations
 
 import argparse
 import csv
 import re
+import sqlite3
+from dataclasses import dataclass
 from pathlib import Path
 
 from sqlalchemy import delete, select
 
 from run_uns_model import Database, TREND_CACHE_CSV
 from models import Election, ElectionType, Map, Party, Vote
+
+# Default path for the SQLite archive, relative to the data/ directory
+_MODELS_UNS_DIR = Path(__file__).resolve().parent
+_DATA_DIR = _MODELS_UNS_DIR.parent.parent  # data/models/uns -> data/models -> data
+DEFAULT_SQLITE_PATH = _DATA_DIR / "model_uns.db"
+
+
+@dataclass
+class _ElectionRec:
+    """Unified election record, sourced from either PostgreSQL or SQLite."""
+
+    id: int
+    name: str
+    year: int
+    # (party_id, vote_total, elected) tuples
+    vote_rows: list[tuple[int | None, float | None, bool]]
+
+
+def _load_sqlite_elections(sqlite_path: Path, map_name: str | None) -> list[_ElectionRec]:
+    """Load model_uns elections and their votes from the SQLite archive.
+
+    Args:
+        sqlite_path: Path to the SQLite archive file.
+        map_name: If set, only elections whose map_id matches this name are
+            returned. Because map names are not stored in the SQLite archive,
+            this filter is best-effort and ignored when not possible to apply.
+
+    Returns:
+        List of _ElectionRec instances ordered by id ascending.
+    """
+    if not sqlite_path.exists():
+        return []
+
+    results: list[_ElectionRec] = []
+    with sqlite3.connect(sqlite_path) as conn:
+        conn.row_factory = sqlite3.Row
+        elections = conn.execute(
+            "SELECT id, map_id, year, name FROM elections ORDER BY id ASC"
+        ).fetchall()
+
+        for e in elections:
+            votes = conn.execute(
+                "SELECT party_id, vote_total, elected FROM votes WHERE election_id = ?",
+                (e["id"],),
+            ).fetchall()
+            results.append(
+                _ElectionRec(
+                    id=e["id"],
+                    name=e["name"],
+                    year=e["year"],
+                    vote_rows=[
+                        (v["party_id"], v["vote_total"], bool(v["elected"]))
+                        for v in votes
+                    ],
+                )
+            )
+
+    return results
 
 
 def parse_args() -> argparse.Namespace:
@@ -25,6 +89,9 @@ def parse_args() -> argparse.Namespace:
             reset_existing: If True, delete existing model_uns elections and
                 votes from the DB and remove the existing trend cache CSV
                 before writing new output.
+            sqlite_path: Path to the SQLite archive file.
+            include_sqlite: If True (the default), also read elections from
+                the SQLite archive when rebuilding the trend cache.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -44,6 +111,20 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Delete existing model_uns elections and votes, and remove the existing "
             "trend cache CSV before writing output (default: disabled)."
+        ),
+    )
+    parser.add_argument(
+        "--sqlite-path",
+        default=str(DEFAULT_SQLITE_PATH),
+        help=f"Path to SQLite archive file (default: {DEFAULT_SQLITE_PATH})",
+    )
+    parser.add_argument(
+        "--include-sqlite",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Include elections from the SQLite archive when rebuilding the trend cache "
+            "(default: enabled). Pass --no-sqlite to read from PostgreSQL only."
         ),
     )
     return parser.parse_args()
@@ -89,25 +170,100 @@ def reset_existing_model_outputs(db: Database, output_path: Path) -> tuple[int, 
 _UNS_DATE_RE = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
 
 
-def _as_of_date_from_election(election: Election) -> str:
-    """Extracts the as_of_date string from a model_uns election.
+def _as_of_date_from_name(name: str, year: int) -> str:
+    """Extract the as_of_date string from a model_uns election name and year.
 
-    UNS elections are named "UNS YYYY-MM-DD", so we parse the date from the
-    name. Falls back to YYYY-01-01 (using election.year) if the name does not
-    match the expected format.
+    UNS elections are named "UNS YYYY-MM-DD", so the date is parsed from the
+    name. Falls back to YYYY-01-01 (using year) if the name does not match.
     """
-    m = _UNS_DATE_RE.search(election.name or "")
+    m = _UNS_DATE_RE.search(name)
     if m:
         return m.group(1)
-    return f"{election.year:04d}-01-01"
+    return f"{year:04d}-01-01"
+
+
+def _process_election_recs(
+    recs: list[_ElectionRec],
+    party_name_by_id: dict[int, str],
+    party_colour_by_id: dict[int, str],
+) -> tuple[list[dict[str, str]], int]:
+    """Convert a sorted list of election records into trend CSV row dicts.
+
+    Consecutive elections with identical seat distributions are skipped to
+    keep the trend cache compact.
+
+    Args:
+        recs: Election records in chronological order (oldest first).
+        party_name_by_id: Mapping of party_id → party name.
+        party_colour_by_id: Mapping of party_id → hex colour string.
+
+    Returns:
+        Tuple of (rows_out, skipped_count) where rows_out is a list of CSV
+        row dicts and skipped_count is the number of elections skipped because
+        their seat distribution was identical to the previous one.
+    """
+    rows_out: list[dict[str, str]] = []
+    previous_seat_snapshot: tuple[tuple[int, int], ...] | None = None
+    skipped_elections = 0
+
+    for rec in recs:
+        vote_totals_by_party: dict[int, float] = {}
+        seats_by_party: dict[int, int] = {}
+
+        for party_id, vote_total, elected in rec.vote_rows:
+            if party_id is None:
+                continue
+            vote_totals_by_party[party_id] = (
+                vote_totals_by_party.get(party_id, 0.0) + float(vote_total or 0.0)
+            )
+            if elected:
+                seats_by_party[party_id] = seats_by_party.get(party_id, 0) + 1
+
+        current_seat_snapshot = tuple(
+            sorted(
+                (int(pid), int(seats))
+                for pid, seats in seats_by_party.items()
+                if int(seats) > 0
+            )
+        )
+        if previous_seat_snapshot is not None and current_seat_snapshot == previous_seat_snapshot:
+            skipped_elections += 1
+            continue
+        previous_seat_snapshot = current_seat_snapshot
+
+        total_votes = sum(vote_totals_by_party.values())
+
+        for party_id in sorted(
+            vote_totals_by_party.keys(), key=lambda key: party_name_by_id.get(key, "")
+        ):
+            rows_out.append(
+                {
+                    "election_id": str(rec.id),
+                    "election_name": rec.name,
+                    "as_of_date": _as_of_date_from_name(rec.name, rec.year),
+                    "party_id": str(party_id),
+                    "party_name": party_name_by_id.get(party_id, str(party_id)),
+                    "party_colour": party_colour_by_id.get(party_id, ""),
+                    "seats_won": str(seats_by_party.get(party_id, 0)),
+                    "vote_total_sum": f"{vote_totals_by_party.get(party_id, 0.0):.6f}",
+                    "vote_pct": (
+                        f"{((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0):.6f}"
+                        if total_votes > 0
+                        else "0.000000"
+                    ),
+                }
+            )
+
+    return rows_out, skipped_elections
 
 
 def main() -> None:
     """Backfill the model output trend cache CSV from persisted model_uns elections.
 
-    Reads all model_uns elections from the database (optionally filtered by map
-    name), aggregates per-party vote totals and seat counts for each election,
-    and writes one CSV row per party per election to the trend cache file.
+    Reads model_uns elections from PostgreSQL and (by default) the local SQLite
+    archive, merges them in chronological order, aggregates per-party vote
+    totals and seat counts, and writes one CSV row per party per election to
+    the trend cache file.
 
     Elections whose seat distribution is identical to the previous election are
     skipped to avoid duplicating unchanged snapshots in the trend cache.
@@ -135,6 +291,17 @@ def main() -> None:
             f"deleted_trend_cache_csv={csv_deleted}"
         )
 
+    all_recs: list[_ElectionRec] = []
+
+    # Load archived elections from SQLite
+    if args.include_sqlite:
+        sqlite_path = Path(args.sqlite_path)
+        sqlite_recs = _load_sqlite_elections(sqlite_path, args.map_name)
+        if sqlite_recs:
+            print(f"Loaded {len(sqlite_recs)} elections from SQLite ({sqlite_path})")
+        all_recs.extend(sqlite_recs)
+
+    # Load live elections from PostgreSQL
     with db.session() as session:
         party_rows = session.execute(select(Party)).scalars().all()
         party_name_by_id = {party.id: party.name for party in party_rows}
@@ -156,55 +323,33 @@ def main() -> None:
                 .order_by(Election.id.asc())
             )
 
-        elections = session.execute(election_query).scalars().all()
+        pg_elections = session.execute(election_query).scalars().all()
 
-        rows_out: list[dict[str, str]] = []
-        previous_seat_snapshot: tuple[tuple[int, int], ...] | None = None
-        skipped_elections = 0
-        for election in elections:
+        pg_recs: list[_ElectionRec] = []
+        for election in pg_elections:
             vote_rows = session.execute(
                 select(Vote.party_id, Vote.vote_total, Vote.elected)
                 .where(Vote.election_id == election.id)
             ).all()
-
-            vote_totals_by_party: dict[int, float] = {}
-            seats_by_party: dict[int, int] = {}
-
-            for party_id, vote_total, elected in vote_rows:
-                if party_id is None:
-                    continue
-                vote_totals_by_party[party_id] = vote_totals_by_party.get(party_id, 0.0) + float(vote_total or 0.0)
-                if bool(elected):
-                    seats_by_party[party_id] = seats_by_party.get(party_id, 0) + 1
-
-            current_seat_snapshot = tuple(
-                sorted((int(party_id), int(seats)) for party_id, seats in seats_by_party.items() if int(seats) > 0)
-            )
-            if previous_seat_snapshot is not None and current_seat_snapshot == previous_seat_snapshot:
-                skipped_elections += 1
-                continue
-            previous_seat_snapshot = current_seat_snapshot
-
-            total_votes = sum(vote_totals_by_party.values())
-
-            for party_id in sorted(vote_totals_by_party.keys(), key=lambda key: party_name_by_id.get(key, "")):
-                rows_out.append(
-                    {
-                        "election_id": str(election.id),
-                        "election_name": election.name,
-                        "as_of_date": _as_of_date_from_election(election),
-                        "party_id": str(party_id),
-                        "party_name": party_name_by_id.get(party_id, str(party_id)),
-                        "party_colour": party_colour_by_id.get(party_id, ""),
-                        "seats_won": str(seats_by_party.get(party_id, 0)),
-                        "vote_total_sum": f"{vote_totals_by_party.get(party_id, 0.0):.6f}",
-                        "vote_pct": (
-                            f"{((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0):.6f}"
-                            if total_votes > 0
-                            else "0.000000"
-                        ),
-                    }
+            pg_recs.append(
+                _ElectionRec(
+                    id=election.id,
+                    name=election.name or "",
+                    year=election.year,
+                    vote_rows=[(pid, vt, bool(el)) for pid, vt, el in vote_rows],
                 )
+            )
+
+    if pg_recs:
+        print(f"Loaded {len(pg_recs)} elections from PostgreSQL")
+    all_recs.extend(pg_recs)
+
+    # Sort all records chronologically by the date in their name
+    all_recs.sort(key=lambda r: _as_of_date_from_name(r.name, r.year))
+
+    rows_out, skipped_elections = _process_election_recs(
+        all_recs, party_name_by_id, party_colour_by_id
+    )
 
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(

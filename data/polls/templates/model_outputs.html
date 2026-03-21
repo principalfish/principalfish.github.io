@@ -61,19 +61,21 @@
                     type="checkbox"
                     class="model-select"
                     name="election_ids"
-                    value="{{ output.election_id }}"
+                    value="{{ 'sqlite:' + output.election_id|string if output.source == 'sqlite' else output.election_id }}"
                   />
                 </td>
-                <td>{{ output.election_id }}</td>
+                <td>{{ output.election_id }}{% if output.source == 'sqlite' %} <small>(archived)</small>{% endif %}</td>
                 <td>{{ output.name }}</td>
                 <td>{{ output.year }}</td>
                 <td>{{ output.map_name }}</td>
                 <td>{{ output.vote_rows }}</td>
                 <td>
                   <div class="table-actions">
+                    {% if output.source != 'sqlite' %}
                     <a class="button" href="{{ url_for('model_output_detail', election_id=output.election_id) }}">View Model</a>
-                    <form method="post" action="{{ url_for('delete_model_output', election_id=output.election_id) }}" class="inline-form">
-                      <button type="submit" class="button button-danger">Delete Model</button>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('delete_sqlite_model_output', election_id=output.election_id) if output.source == 'sqlite' else url_for('delete_model_output', election_id=output.election_id) }}" class="inline-form">
+                      <button type="submit" class="button button-danger">Delete</button>
                     </form>
                   </div>
                 </td>

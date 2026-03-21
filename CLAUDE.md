@@ -51,14 +51,18 @@ Include:
 - Promote durable operational behavior/caveats into overview docs (e.g. `.agents/00-overview.md` and area docs), not only into learnings.
 - Keep `README.md` user-facing; keep deeper internal notes in `.agents/`.
 
-## 5) Practical standards
+## 5) Security rules
+
+**NEVER read `.env` files.** They contain secrets. Use `.env.example` or `config.py` to understand what variables are needed.
+
+## 6) Practical standards
 
 - Prefer existing scripts and entrypoints over inventing new flows.
 - Respect current DB schema and import pipelines unless task explicitly changes them.
 - For `data/` tasks, verify environment assumptions (DB running, correct port/user/password, env active).
 - For poll imports, be explicit about flags (`--include-unimported-parsers` on fresh DB).
 
-## 6) Git branch and commit workflow
+## 7) Git branch and commit workflow
 
 - Do not create new branches or push any branch without explicit user approval in the current conversation.
 - Create a dedicated branch per task; do not work directly on `main`.

@@ -9,8 +9,11 @@ __pycache__/
 
 
 data/election_data/*
+data/model_uns.db
 
 /guesstheyear/*.db-wal
 /guesstheyear/*.db-shm
 
 node_modules/
+
+.env

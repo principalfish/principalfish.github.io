@@ -23,7 +23,6 @@
 - `export_manifest_metadata.py` — metadata-only manifest refresh without re-exporting result files
 - `run_export_targets.py` — wrapper that exports all elections plus the latest simulation in one pass
 - `migrate_results_to_v4.py` — reformats on-disk result files from v3 → v4 schema without a DB round-trip
-- `migrate_add_election_parent_fields.py` — migration to add `parent_election_id` / `election_date` columns for by-elections
 - `normalize_uns_trend_dates.py` — normalises trend timeline date fields after import
 - `split_ukip_reform_parties.py` — one-time split of historical UKIP/Reform vote rows
 

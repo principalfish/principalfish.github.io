@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
-from polls.import_types import PollImportResult
+from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://3959436.fs1.hubspotusercontent-na1.net/hubfs/3959436/Marketing%20content/Focaldata_January%20VI%20tables%2c%2016-19%20Jan%202026.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -912,7 +912,7 @@ def commit_import_plan(
             new ones. Defaults to ``False``.
 
     Returns:
-        A :class:`~polls.import_types.PollImportResult` summarising what was
+        A :class:`~polls.importers.types.PollImportResult` summarising what was
         created, replaced, or skipped.
 
     Raises:

@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from db import Database
 from models import ElectionType, Map, Party, Seat
@@ -45,7 +45,7 @@ PRE_2019_MAP_NAME_CANDIDATES = (
     "UK Constituencies pre-2019",
 )
 
-FILES_DIR = Path(__file__).resolve().parent / "files"
+FILES_DIR = Path(__file__).resolve().parent.parent / "files"
 
 
 @dataclass(frozen=True)

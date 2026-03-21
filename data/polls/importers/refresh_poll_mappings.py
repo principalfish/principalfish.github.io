@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
-"""Build poll source mappings from the Wikipedia UK polling page.
+"""Refresh Wikipedia poll mappings and sync pollsters to the database.
 
 This script:
 1) Scrapes the "National poll results" table rows (since 2024 election onward)
 2) Resolves citation references to source URLs
 3) Classifies source format (pdf/xlsx/html/etc.)
 4) Suggests canonical parser identifiers per pollster
+5) Creates any missing Pollster rows in the database (dry-run by default)
 
 Outputs:
 - polls/mappings/wikipedia_national_polls_mapping.csv
-- polls/mappings/pollster_parser_profiles.json
+- polls/mappings/parser_registry.json
+
+Usage:
+  python polls/importers/refresh_poll_mappings.py            # build files, dry-run pollster sync
+  python polls/importers/refresh_poll_mappings.py --apply    # build files and write pollsters to DB
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import re
-from collections import Counter, defaultdict
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -26,10 +32,13 @@ from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup, Tag
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from db import Database
+
 WIKI_URL = "https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election"
-OUT_DIR = Path(__file__).resolve().parent / "mappings"
+OUT_DIR = Path(__file__).resolve().parent.parent / "mappings"
 CSV_OUT = OUT_DIR / "wikipedia_national_polls_mapping.csv"
-JSON_OUT = OUT_DIR / "pollster_parser_profiles.json"
 REGISTRY_OUT = OUT_DIR / "parser_registry.json"
 
 
@@ -391,16 +400,13 @@ def assign_parser_identifiers(rows: list[dict[str, str]]) -> list[PollSourceRow]
     return out
 
 
-def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
-    """Write all output files from the mapped poll rows.
+def write_mapping_files(mapped_rows: list[PollSourceRow]) -> None:
+    """Write all mapping output files from the mapped poll rows.
 
-    Creates the output directory if necessary, then writes three files:
+    Creates the output directory if necessary, then writes two files:
 
     * ``wikipedia_national_polls_mapping.csv`` — one CSV row per
       :class:`PollSourceRow`, with all fields as columns.
-    * ``pollster_parser_profiles.json`` — per-pollster summary keyed by
-      canonical parser identifier, containing example label variants, a count
-      of observed format families, and the set of parser identifiers seen.
     * ``parser_registry.json`` — mapping from each distinct parser identifier to
       its implementing module path and implementation status (``"implemented"``
       or ``"planned"``).
@@ -428,32 +434,6 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
         writer.writeheader()
         for row in mapped_rows:
             writer.writerow(asdict(row))
-
-    profile: dict[str, dict[str, Any]] = {}
-    for row in mapped_rows:
-        key = normalize_pollster_name(row.pollster_label)
-        entry = profile.setdefault(
-            key,
-            {
-                "pollster_examples": set(),
-                "format_counts": Counter(),
-                "parser_identifiers": set(),
-            },
-        )
-        entry["pollster_examples"].add(row.pollster_label)
-        entry["format_counts"][row.format_family] += 1
-        entry["parser_identifiers"].add(row.parser_identifier)
-
-    serializable_profile: dict[str, dict[str, Any]] = {}
-    for key, value in profile.items():
-        serializable_profile[key] = {
-            "pollster_examples": sorted(value["pollster_examples"]),
-            "format_counts": dict(value["format_counts"]),
-            "parser_identifiers": sorted(value["parser_identifiers"]),
-        }
-
-    with JSON_OUT.open("w", encoding="utf-8") as handle:
-        json.dump(serializable_profile, handle, indent=2, ensure_ascii=False)
 
     parser_registry: dict[str, dict[str, str | None]] = {}
     for parser_id in sorted({row.parser_identifier for row in mapped_rows}):
@@ -522,20 +502,104 @@ def write_outputs(mapped_rows: list[PollSourceRow]) -> None:
         json.dump(parser_registry, handle, indent=2, ensure_ascii=False)
 
 
+def dedupe_by_identifier(mapped_rows: list[PollSourceRow]) -> list[PollSourceRow]:
+    """Return one representative row per unique parser_identifier.
+
+    Selects the most frequently occurring pollster_label for each identifier
+    (ties broken alphabetically).
+
+    Args:
+        mapped_rows: Full list of mapped poll rows.
+
+    Returns:
+        A sorted list of unique rows, one per parser_identifier.
+    """
+    by_identifier: dict[str, PollSourceRow] = {}
+    label_counts: dict[str, dict[str, int]] = {}
+    for row in mapped_rows:
+        identifier = row.parser_identifier
+        if not identifier:
+            continue
+        if identifier not in by_identifier:
+            by_identifier[identifier] = row
+            label_counts[identifier] = {}
+        if row.pollster_label:
+            label_counts[identifier][row.pollster_label] = label_counts[identifier].get(row.pollster_label, 0) + 1
+
+    for identifier, row in by_identifier.items():
+        labels = label_counts.get(identifier, {})
+        if labels:
+            preferred = sorted(labels.items(), key=lambda item: (-item[1], item[0]))[0][0]
+            by_identifier[identifier] = PollSourceRow(
+                date_label=row.date_label,
+                year_label=row.year_label,
+                pollster_label=preferred,
+                citation_id=row.citation_id,
+                source_url=row.source_url,
+                format_family=row.format_family,
+                parser_identifier=row.parser_identifier,
+                notes=row.notes,
+            )
+
+    return sorted(by_identifier.values(), key=lambda r: r.parser_identifier)
+
+
+def sync_pollsters(mapped_rows: list[PollSourceRow], apply: bool) -> None:
+    """Create missing Pollster rows in the database from the mapped poll rows.
+
+    Args:
+        mapped_rows: Full list of mapped poll rows.
+        apply: If True, writes new pollster rows to the DB. If False, prints
+            a dry-run summary of what would be created.
+    """
+    db = Database()
+    unique_rows = dedupe_by_identifier(mapped_rows)
+
+    created = 0
+    existing = 0
+
+    for row in unique_rows:
+        identifier = row.parser_identifier
+        existing_pollster = db.get_pollster_by_identifier(identifier)
+        if existing_pollster is not None:
+            print(f"- exists: {identifier}")
+            existing += 1
+            continue
+
+        pollster_name = row.pollster_label or identifier
+        if apply:
+            db.add_pollster(name=pollster_name, identifier=identifier)
+            print(f"- created: {identifier} ({pollster_name})")
+        else:
+            print(f"- [dry-run] would create: {identifier} ({pollster_name})")
+        created += 1
+
+    print("\n--- Pollster Sync Summary ---")
+    print(f"Unique pollsters (parser identifiers): {len(unique_rows)}")
+    print(f"Existing: {existing}")
+    print(f"Created: {created}")
+    if not apply:
+        print("Dry-run mode: no database writes")
+
+
 def main() -> None:
-    """Orchestrate the full Wikipedia poll mapping pipeline.
+    """Orchestrate the full Wikipedia poll mapping and pollster sync pipeline.
 
     Fetches the Wikipedia UK opinion polling page, extracts poll rows from the
     national results section, assigns parser identifiers, writes all output
-    files, and prints a summary to stdout.
+    files, then syncs any missing pollsters to the database.
     """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--apply", action="store_true", help="Write new pollster rows to DB (default: dry-run)")
+    args = parser.parse_args()
+
     html = fetch_html(WIKI_URL)
     soup = BeautifulSoup(html, "lxml")
 
     ref_map = extract_reference_url_map(soup)
     raw_rows = extract_national_poll_rows(soup, ref_map)
     mapped_rows = assign_parser_identifiers(raw_rows)
-    write_outputs(mapped_rows)
+    write_mapping_files(mapped_rows)
 
     with_urls = sum(1 for row in mapped_rows if row.source_url)
     variants = len({row.parser_identifier for row in mapped_rows})
@@ -543,8 +607,10 @@ def main() -> None:
     print(f"Wrote {len(mapped_rows)} mapped rows to {CSV_OUT}")
     print(f"Rows with source URL: {with_urls}")
     print(f"Unique parser identifiers: {variants}")
-    print(f"Wrote pollster profile summary: {JSON_OUT}")
     print(f"Wrote parser registry: {REGISTRY_OUT}")
+
+    print("\n== Pollster sync ==")
+    sync_pollsters(mapped_rows, apply=args.apply)
 
 
 if __name__ == "__main__":

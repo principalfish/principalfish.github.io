@@ -4,11 +4,11 @@ Scrapes the results table and infobox from a Wikipedia by-election article,
 then inserts an Election (type=by_election) with Vote rows for each candidate.
 
 Usage from CLI:
-    python polls/importers/by_election_import.py \
+    python scripts/by_election_import.py \
         --url https://en.wikipedia.org/wiki/2025_Runcorn_and_Helsby_by-election \
         --parent-election "2024 General Election"
 
-    python polls/importers/by_election_import.py --url <URL> --dry-run
+    python scripts/by_election_import.py --url <URL> --dry-run
 """
 
 from __future__ import annotations
@@ -25,11 +25,10 @@ from typing import Any
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel, Field
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from db import Database
 from models import ElectionType
-from polls.import_types import ByElectionImportResult
 
 DEFAULT_PARENT_ELECTION_NAME = "2024 General Election"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -92,6 +91,22 @@ class ByElectionImportPlan(BaseModel):
     seat_id: int | None
     seat_name_matched: str | None
     party_id_by_name: dict[str, int] = Field(default_factory=dict)
+
+
+class ByElectionImportResult(BaseModel):
+    """Return value of commit_import_plan for by-election imports.
+
+    Attributes:
+        election_id: Database ID of the inserted Election row.
+        election_name: Human-readable name for the election.
+        seat_name: Name of the constituency.
+        votes_inserted: Number of vote records inserted.
+    """
+
+    election_id: int
+    election_name: str
+    seat_name: str
+    votes_inserted: int
 
 
 def normalize_name(value: str) -> str:

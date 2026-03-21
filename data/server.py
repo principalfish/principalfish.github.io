@@ -34,11 +34,9 @@ from sqlalchemy import delete, func, select
 
 from db import Database
 from models import Election, ElectionType, Map, Party, Poll, PollRow, Pollster, Region, Seat, Vote
-from polls.export_poll_rows_csv import build_rows
-from polls.import_types import maybe_run_uns_model
+from scripts import by_election_import
 from polls.importers import (
     bmg_research_import,
-    by_election_import,
     deltapoll_import,
     find_out_now_import,
     focaldata_import,
@@ -1281,7 +1279,8 @@ def import_poll_confirm(token: str) -> str | WerkzeugResponse:
         )
         if run_model:
             try:
-                maybe_run_uns_model(result)
+                if result.created_poll or result.inserted_rows or result.replaced_rows:
+                    subprocess.run([sys.executable, str(UNS_MODEL_SCRIPT)], check=True)
                 flash("UNS model updated.")
             except Exception as exc:
                 flash(f"Warning: UNS model run failed: {exc}")
@@ -1395,7 +1394,39 @@ def poll_detail_csv(poll_id: int) -> str | WerkzeugResponse:
         CSV file response (MIME type text/csv) with poll metadata and party percentages per row.
     """
     db = _get_db()
-    rows = build_rows(db, poll_id)
+    with db.session() as session:
+        poll = session.get(Poll, poll_id)
+        if poll is None:
+            return Response("Poll not found", status=404)
+        pollster = session.get(Pollster, poll.pollster_id)
+        pollster_name = pollster.name if pollster is not None else ""
+        pollster_identifier = pollster.identifier if pollster is not None else ""
+        query = (
+            select(PollRow, Party, Region)
+            .join(Party, PollRow.party_id == Party.id)
+            .outerjoin(Region, PollRow.region_id == Region.id)
+            .where(PollRow.poll_id == poll_id)
+            .order_by(Party.name, Region.name)
+        )
+        rows = [
+            {
+                "poll_id": poll.id,
+                "pollster_id": poll.pollster_id,
+                "pollster_identifier": pollster_identifier,
+                "pollster_name": pollster_name,
+                "map_id": poll.map_id,
+                "fieldwork_start": poll.fieldwork_start.isoformat(),
+                "fieldwork_end": poll.fieldwork_end.isoformat(),
+                "sample_size": poll.sample_size,
+                "source_url": poll.source_url,
+                "region_id": pr.region_id,
+                "region_name": region.name if region is not None else "National",
+                "party_id": party.id,
+                "party_name": party.name,
+                "percentage": pr.percentage,
+            }
+            for pr, party, region in session.execute(query).all()
+        ]
 
     fieldnames = [
         "poll_id",

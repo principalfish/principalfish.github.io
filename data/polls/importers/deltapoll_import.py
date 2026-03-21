@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
-from polls.import_types import PollImportResult
+from polls.importers.types import PollImportResult
 
 DEFAULT_SOURCE_URL = "https://deltapoll.co.uk/wp-content/uploads/2026/01/260105_Deltapoll-Mirror-pdf.pdf"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

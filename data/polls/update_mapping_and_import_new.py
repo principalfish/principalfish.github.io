@@ -22,12 +22,10 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from db import Database
 from models import Poll, Pollster
-from polls.import_types import run_uns_model
 
 MAPPINGS_DIR = ROOT_DIR / "polls" / "mappings"
 MAPPING_CSV = MAPPINGS_DIR / "wikipedia_national_polls_mapping.csv"
 PARSER_REGISTRY_JSON = MAPPINGS_DIR / "parser_registry.json"
-UNIMPORTABLE_REPORT_CSV = MAPPINGS_DIR / "last_unimportable_urls.csv"
 
 PARSER_URL_ARGS = {
     "yougov": "--pdf-url",
@@ -185,35 +183,6 @@ def load_parsers_with_existing_polls() -> set[str]:
     return {identifier.strip() for identifier in identifiers if isinstance(identifier, str) and identifier.strip()}
 
 
-def write_unimportable_report(rows: list[tuple[str, str, str]]) -> None:
-    """Write a CSV report of mapping rows that were skipped as unimportable.
-
-    Creates (or overwrites) ``UNIMPORTABLE_REPORT_CSV`` with one row per entry
-    in ``rows``.  The output file has three columns: ``parser_identifier``,
-    ``source_url``, and ``reason``.
-
-    Args:
-        rows: A list of 3-tuples of the form
-            ``(parser_identifier, source_url, reason)`` where each element is
-            a non-empty string.  ``reason`` is the classifier label returned by
-            :func:`classify_unimportable_url`.
-    """
-    MAPPINGS_DIR.mkdir(parents=True, exist_ok=True)
-    with UNIMPORTABLE_REPORT_CSV.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(
-            handle,
-            fieldnames=["parser_identifier", "source_url", "reason"],
-        )
-        writer.writeheader()
-        for parser_identifier, source_url, reason in rows:
-            writer.writerow(
-                {
-                    "parser_identifier": parser_identifier,
-                    "source_url": source_url,
-                    "reason": reason,
-                }
-            )
-
 
 def classify_unimportable_url(parser_identifier: str, source_url: str) -> str | None:
     """Classify a mapping URL that cannot be directly imported by its parser.
@@ -309,8 +278,7 @@ def main() -> int:
     args = parse_args()
     python_bin = sys.executable
 
-    run_step([python_bin, "polls/build_wikipedia_poll_mappings.py"], "Refresh mapping from Wikipedia")
-    run_step([python_bin, "polls/sync_pollsters_from_mapping.py", "--apply"], "Sync pollsters")
+    run_step([python_bin, "polls/importers/refresh_poll_mappings.py", "--apply"], "Refresh mapping from Wikipedia and sync pollsters")
     existing_source_urls = load_existing_source_urls()
     parsers_with_polls = load_parsers_with_existing_polls()
     print(f"Loaded {len(existing_source_urls)} existing poll source URLs from database")
@@ -434,9 +402,6 @@ def main() -> int:
         for reason in sorted(url_reason_counts):
             print(f"- {reason}: {url_reason_counts[reason]}")
 
-    write_unimportable_report(unimportable_rows)
-    print(f"\nWrote unimportable URL report: {UNIMPORTABLE_REPORT_CSV} ({len(unimportable_rows)} rows)")
-
     if failures:
         print("\nFailed import rows:")
         for parser_identifier, source_url, code in failures:
@@ -444,7 +409,7 @@ def main() -> int:
 
     if summary["import_attempted"] > 0:
         print("\n== Run UNS model ==")
-        run_uns_model()
+        subprocess.run([sys.executable, str(ROOT_DIR / "models" / "uns" / "run_uns_model.py")], check=True)
 
     return 1 if failures else 0
 

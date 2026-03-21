@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
-from polls.import_types import PollImportResult
+from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://cms.findoutnow.co.uk/app/uploads/2026/02/11th-February-VI-Find-Out-Now.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

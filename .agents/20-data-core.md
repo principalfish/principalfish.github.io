@@ -19,12 +19,9 @@
 
 ## Export scripts (`data/scripts/`)
 
-- `export_non_simulation_elections.py` — primary exporter for all non-model elections; emits result JSON and by-election overlays
-- `export_manifest_metadata.py` — metadata-only manifest refresh without re-exporting result files
-- `run_export_targets.py` — wrapper that exports all elections plus the latest simulation in one pass
-- `migrate_results_to_v4.py` — reformats on-disk result files from v3 → v4 schema without a DB round-trip
-- `normalize_uns_trend_dates.py` — normalises trend timeline date fields after import
-- `split_ukip_reform_parties.py` — one-time split of historical UKIP/Reform vote rows
+- `export_non_simulation_elections.py` — primary exporter; run with no flags to export all elections + manifest, `--metadata-only` to update only `settings.parties`/`settings.regionsByMapId` in `elections.json`, or `--election-name`/`--current-simulation` for a single target
+- `archive_old_model_runs.py` — archives old `model_uns` elections to SQLite; called automatically by `run_uns_model.py`
+- `by_election_import.py` — Wikipedia scraper for by-election results; used by `server.py` via import
 
 ## Operational notes
 

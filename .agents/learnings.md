@@ -12,7 +12,12 @@ Top-level durable insights only.
 
 ## Data + DB
 
-- The base import sequence is: topojson -> parties -> general elections.
+- The base import sequence is: topojson → parties → general elections → region populations. Run via `data/old_data/import_all.sh`. Scripts live in `old_data/scripts/`.
+- `build_wikipedia_poll_mappings.py` and `sync_pollsters_from_mapping.py` were merged into `data/polls/importers/refresh_poll_mappings.py`. The merged script scrapes Wikipedia, writes mapping files, then syncs pollsters to DB in one pass (no CSV re-read between steps). `update_mapping_and_import_new.py` now calls it with `--apply`.
+- `polls/import_types.py` was deleted: `PollImportResult` moved to `polls/importers/types.py`; `ByElectionImportResult` inlined into `scripts/by_election_import.py`; UNS subprocess calls inlined at their call sites.
+- `polls/export_poll_rows_csv.py` deleted; `build_rows` logic inlined into `server.py`'s `/polls/<id>/csv` route.
+- `scripts/export_manifest_metadata.py` and `scripts/run_export_targets.py` merged into `export_non_simulation_elections.py` as `--metadata-only` flag; no-flags mode already covers what `run_export_targets` did.
+- `scripts/by_election_import.py` moved from `polls/importers/` — it's not a poll importer, it's used by the server and can be run standalone.
 - Fresh poll imports should include `--include-unimported-parsers` to avoid skipped rows.
 - Current schema expectations: electorate on `seats.electorate`; turnout derived from summed `votes.vote_total`.
 - `data/start_db.sh` assumes local Docker Postgres on port `5432`; local host Postgres conflicts can block startup.
@@ -56,6 +61,19 @@ Top-level durable insights only.
 
 - Local UNS runs from `data/server.py` now auto-export the latest simulation payload to `electionmaps/data/results/prediction-simulation.json` after successful non-dry-run execution, using `data/scripts/export_non_simulation_elections.py --current-simulation`.
 - Data console home now includes a manual export-only action (`/exports/current-simulation`) so `prediction-simulation.json` can be refreshed independently of running the model.
+
+## Supabase migration + SQLite archive
+
+- Core election/poll data lives in Supabase (hosted PostgreSQL). Model simulation runs (`type = 'model_uns'`) stay entirely local: written to local Docker postgres, immediately archived to SQLite (`SQLITE_DATABASE_PATH` env var), then deleted from postgres. Supabase never holds simulation runs.
+- **pydantic-settings env var priority**: `BaseSettings.__init__` kwargs are overridden by env vars — passing `supabase_region=None` to `cls()` doesn't work if `SUPABASE_REGION` is set. Use `model_construct()` to bypass env var reading entirely (e.g. `DatabaseConfig.local()`).
+- **Supabase session pooler**: use `aws-1-eu-west-1.pooler.supabase.com` (not the direct `db.xxx.supabase.co` host). Direct connection is IPv6-only; session pooler is IPv4-accessible. Username format must be `postgres.<project-ref>` (not just `postgres`) for Supavisor SNI routing.
+- **WSL2 IPv6 routing**: `getent ahostsv4 <host>` resolves a CNAME chain to an IPv4 address. Pass it as `hostaddr=` in libpq key=value connection strings — `hostaddr` in a URI query string is silently ignored by libpq.
+- **PostGIS in Supabase**: installed in `extensions` schema, not `public`. Strip `public.geometry` → `geometry` with `sed -i 's/public\.geometry/geometry/g'` on schema dumps before importing.
+- **pg_dump version mismatch**: run `docker exec <container> pg_dump` to match the server's version (v16 inside Docker vs v15 on host).
+- **`--disable-triggers`**: Supabase postgres user cannot disable system triggers. Remove this flag; COPY commands succeed anyway.
+- **`election_date` on model_uns elections**: pass `election_date=as_of_date` to `db.add_election()`; existing NULLs fixable with `UPDATE elections SET election_date = CAST(substring(name FROM 5 FOR 10) AS date) WHERE type = 'model_uns' AND election_date IS NULL AND name ~ '^UNS \d{4}-\d{2}-\d{2}'`.
+- **SQLite LIMIT interpolation**: `f" LIMIT {int(limit)}"` is the standard workaround — sqlite3 doesn't support `?` placeholders for LIMIT. Always cast to `int` to guard against accidental injection.
+- **Supabase RLS**: all tables have Row Level Security enabled (deny all public API access by default). The postgres user bypasses RLS so server-side connections work without policy changes.
 
 ## Frontend + Assets
 

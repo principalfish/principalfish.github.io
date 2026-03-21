@@ -175,70 +175,78 @@ def dates_to_run_for_cfg(cfg: SimulationConfig) -> list[date]:
     return [cfg.as_of_date]
 
 
-def parse_args() -> SimulationConfig:
-    """Parse CLI arguments and return a populated SimulationConfig.
+def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for single-date or retrospective simulation mode.
 
-    Recognised flags:
+    Single-date flags (default mode):
 
-    - ``--map-name`` (str, default ``"UK Constituencies post 2022"``): electoral
-      map to simulate against.
-    - ``--baseline-election-name`` (str, default ``"2024 General Election"``):
-      name of the baseline election.
-    - ``--as-of-days-back`` (int ≥ 0, default ``0``): compute ``as_of_date`` as
-      today minus this many days. Ignored if ``--as-of-date`` is supplied.
-    - ``--since-days-back`` (int ≥ 0, default ``30``): compute ``since_date`` as
-      today minus this many days. Ignored if ``--since-date`` is supplied.
-    - ``--as-of-date`` (ISO date string ``YYYY-MM-DD``, optional): explicit
-      upper-bound date for poll inclusion.
-    - ``--since-date`` (ISO date string ``YYYY-MM-DD``, optional): explicit
-      lower-bound date for poll inclusion. Must be ≤ ``as_of_date``.
-    - ``--half-life-days`` (float, default ``30.0``): exponential decay half-life
-      for poll recency weighting.
-    - ``--output-csv`` (str, optional): path for the projected seat output CSV.
-    - ``--dry-run`` (flag): skip all DB writes and trend cache updates.
+    - ``--as-of-date`` (ISO date, optional): upper-bound date for poll inclusion.
+    - ``--as-of-days-back`` (int ≥ 0, default 0): fallback when ``--as-of-date`` absent.
+    - ``--since-date`` (ISO date, optional): lower-bound date for poll inclusion.
+    - ``--since-days-back`` (int ≥ 0, default 30): fallback when ``--since-date`` absent.
+    - ``--output-csv`` (str, optional): path for projected seat output CSV.
+    - ``--no-archive`` (flag): skip auto-archiving after simulation.
 
-    Returns:
-        A ``SimulationConfig`` populated from the parsed arguments.
+    Retrospective mode (triggered by ``--start-date`` + ``--end-date``):
 
-    Raises:
-        SystemExit: via ``argparse`` if ``--since-date``/``--since-days-back``
-            resolves to a date later than ``as_of_date``.
+    - ``--start-date`` (ISO date): first date to simulate.
+    - ``--end-date`` (ISO date): last date to simulate.
+    - ``--lookback-days`` (int ≥ 0, default 365): poll history window per date.
+    - ``--reset-existing`` / ``--no-reset-existing``: clear existing model_uns outputs
+      in the date range before backfilling (default: enabled).
+    - ``--continue-on-error`` (flag): log errors and continue rather than raising.
+    - ``--progress-every`` (int, default 25): print progress every N successes.
+
+    Shared flags:
+
+    - ``--map-name``, ``--baseline-election-name``, ``--half-life-days``, ``--dry-run``.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", default="UK Constituencies post 2022")
     parser.add_argument("--baseline-election-name", default="2024 General Election")
+    parser.add_argument("--half-life-days", type=float, default=30.0)
+    parser.add_argument("--dry-run", action="store_true")
+    # Single-date flags
     parser.add_argument("--as-of-days-back", type=int, default=0)
     parser.add_argument("--since-days-back", type=int, default=30)
     parser.add_argument("--as-of-date", default=None)
     parser.add_argument("--since-date", default=None)
-    parser.add_argument("--half-life-days", type=float, default=30.0)
     parser.add_argument("--output-csv", default=None)
-    parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
         "--no-archive",
         action="store_true",
         help="Skip auto-archiving model runs older than 30 days after simulation completes.",
     )
-    args = parser.parse_args()
+    # Retrospective mode flags
+    parser.add_argument("--start-date", default=None, help="First date for retrospective backfill (YYYY-MM-DD)")
+    parser.add_argument("--end-date", default=None, help="Last date for retrospective backfill (YYYY-MM-DD)")
+    parser.add_argument("--lookback-days", type=int, default=365)
+    parser.add_argument(
+        "--reset-existing",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Clear existing model_uns outputs in the date range before backfilling (default: enabled)",
+    )
+    parser.add_argument("--continue-on-error", action="store_true")
+    parser.add_argument("--progress-every", type=int, default=25)
+    return parser.parse_args()
 
+
+def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
+    """Construct a SimulationConfig from parsed single-date CLI arguments."""
     today = date.today()
-    as_of_days_back = max(0, int(args.as_of_days_back))
-    since_days_back = max(0, int(args.since_days_back))
-
     as_of_date = (
         date.fromisoformat(args.as_of_date)
         if args.as_of_date
-        else today - timedelta(days=as_of_days_back)
+        else today - timedelta(days=max(0, int(args.as_of_days_back)))
     )
     since_date = (
         date.fromisoformat(args.since_date)
         if args.since_date
-        else today - timedelta(days=since_days_back)
+        else today - timedelta(days=max(0, int(args.since_days_back)))
     )
-
     if since_date > as_of_date:
-        parser.error("--since-days-back/--since-date must be older than or equal to as-of")
-
+        raise ValueError("--since-days-back/--since-date must be older than or equal to as-of")
     return SimulationConfig(
         map_name=args.map_name,
         baseline_election_name=args.baseline_election_name,
@@ -247,7 +255,148 @@ def parse_args() -> SimulationConfig:
         half_life_days=args.half_life_days,
         output_csv=args.output_csv,
         dry_run=args.dry_run,
-    ), args.no_archive
+    )
+
+
+def reset_existing_model_outputs(
+    db: Database, start_date: date, end_date: date
+) -> tuple[int, int, int]:
+    """Delete model_uns elections in [start_date, end_date] and strip matching rows from the trend cache CSV.
+
+    Election names follow the pattern ``UNS YYYY-MM-DD``, so a lexicographic
+    range on the name column correctly isolates the target dates. The trend
+    cache CSV is rewritten in place with matching rows removed.
+
+    Args:
+        db: Open Database instance.
+        start_date: Inclusive lower bound of the date range to clear.
+        end_date: Inclusive upper bound of the date range to clear.
+
+    Returns:
+        A 3-tuple ``(deleted_elections, deleted_votes, stripped_csv_rows)``.
+    """
+    upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
+
+    with db.session() as session:
+        existing_ids = session.execute(
+            select(Election.id)
+            .where(Election.type == ElectionType.model_uns)
+            .where(Election.name >= f"UNS {start_date.isoformat()}")
+            .where(Election.name < upper_bound)
+        ).scalars().all()
+
+        if existing_ids:
+            deleted_votes = session.execute(
+                delete(Vote).where(Vote.election_id.in_(existing_ids))
+            ).rowcount or 0  # type: ignore[attr-defined]
+            deleted_elections = session.execute(
+                delete(Election).where(Election.id.in_(existing_ids))
+            ).rowcount or 0  # type: ignore[attr-defined]
+        else:
+            deleted_votes = 0
+            deleted_elections = 0
+
+    stripped_csv_rows = 0
+    if TREND_CACHE_CSV.exists():
+        kept_rows: list[dict[str, str]] = []
+        with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                raw = str(row.get("as_of_date") or "").strip()
+                try:
+                    row_date = date.fromisoformat(raw)
+                except ValueError:
+                    kept_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
+                    continue
+                if row_date < start_date or row_date > end_date:
+                    kept_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
+                else:
+                    stripped_csv_rows += 1
+
+        if stripped_csv_rows > 0:
+            with TREND_CACHE_CSV.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=TREND_CACHE_FIELDS)
+                writer.writeheader()
+                writer.writerows(kept_rows)
+
+    return deleted_elections, deleted_votes, stripped_csv_rows
+
+
+def run_retrospective(db: Database, args: argparse.Namespace) -> None:
+    """Run daily UNS simulations across a date range for retrospective backfill.
+
+    Args:
+        db: Open Database instance.
+        args: Parsed CLI arguments containing start_date, end_date, lookback_days,
+            half_life_days, reset_existing, continue_on_error, progress_every,
+            dry_run, map_name, and baseline_election_name.
+    """
+    start_date = date.fromisoformat(args.start_date)
+    end_date = date.fromisoformat(args.end_date)
+
+    if end_date < start_date:
+        raise ValueError("--end-date must be on or after --start-date")
+    if args.lookback_days < 0:
+        raise ValueError("--lookback-days must be zero or greater")
+    if args.half_life_days <= 0:
+        raise ValueError("--half-life-days must be greater than zero")
+
+    if args.reset_existing and not args.dry_run:
+        deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
+            db, start_date, end_date
+        )
+        print(
+            f"RESET deleted_elections={deleted_elections} "
+            f"deleted_votes={deleted_votes} "
+            f"stripped_csv_rows={stripped_csv_rows}"
+        )
+    elif args.reset_existing and args.dry_run:
+        print("RESET skipped for dry-run mode")
+
+    current = start_date
+    success_count = 0
+    failed_count = 0
+    failures: list[tuple[str, str]] = []
+
+    while current <= end_date:
+        try:
+            cfg = SimulationConfig(
+                map_name=args.map_name,
+                baseline_election_name=args.baseline_election_name,
+                as_of_date=current,
+                since_date=current - timedelta(days=args.lookback_days),
+                half_life_days=args.half_life_days,
+                output_csv=None,
+                dry_run=args.dry_run,
+            )
+            election_name, projected_votes, _, _, _ = run_simulation(db, cfg)
+            success_count += 1
+
+            if args.progress_every > 0 and success_count % args.progress_every == 0:
+                print(
+                    f"PROGRESS success={success_count} failed={failed_count} "
+                    f"as_of={current.isoformat()} election={election_name} "
+                    f"rows={len(projected_votes)}"
+                )
+        except Exception as exc:
+            failed_count += 1
+            failures.append((current.isoformat(), str(exc)))
+            print(f"ERROR as_of={current.isoformat()} err={exc}")
+            if not args.continue_on_error:
+                raise
+
+        current += timedelta(days=1)
+
+    print("SUMMARY")
+    print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
+    print(f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
+    print(f"DRY_RUN={args.dry_run}")
+    print(f"SUCCESS={success_count} FAILED={failed_count}")
+
+    if failures:
+        print("FAILURES")
+        for when, message in failures:
+            print(f"{when}\t{message}")
 
 
 def ensure_model_uns_enum_value(db: Database) -> None:
@@ -1329,18 +1478,23 @@ def run_simulation(
 
 
 def main() -> None:
-    """CLI entry point: parse arguments, determine dates to simulate, and run each.
+    """CLI entry point: parse arguments and run single-date or retrospective simulation.
 
-    Calls ``parse_args`` to obtain base configuration, then ``dates_to_run_for_cfg``
-    to determine which dates need simulation (including automatic backfill of any
-    gap between the most-recent cached date and ``as_of_date``). For each date a
-    fresh ``SimulationConfig`` is derived with the appropriate ``since_date``
-    offset, ``run_simulation`` is called, and a summary is printed to stdout.
+    Pass ``--start-date`` and ``--end-date`` for retrospective backfill mode.
+    Without those flags, runs a single-date simulation (with automatic backfill
+    of any gap between the most-recent cached date and ``as_of_date``).
     """
-    cfg, no_archive = parse_args()
+    args = parse_args()
     # Model runs always use local postgres — never Supabase.
     # This keeps simulation data out of the remote DB entirely.
     db = Database(DatabaseConfig.local())
+
+    if args.start_date and args.end_date:
+        run_retrospective(db, args)
+        return
+
+    cfg = _build_config_from_args(args)
+    no_archive = args.no_archive
 
     run_dates = dates_to_run_for_cfg(cfg)
     if len(run_dates) > 1:

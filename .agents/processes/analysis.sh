@@ -64,26 +64,24 @@ COMMIT_LOG="$(git -C "$REPO_ROOT" log --oneline -"$NUM_COMMITS")"
 COMMIT_DIFF="$(git -C "$REPO_ROOT" diff HEAD~"$NUM_COMMITS"...HEAD)"
 CHANGED_FILES="$(git -C "$REPO_ROOT" diff --name-only HEAD~"$NUM_COMMITS"...HEAD)"
 
-# Collect handler source: Flask routes in data/server.py and any JS event handlers
+# Collect handler source: only include files that appear in the diff
 HANDLER_SOURCE=""
-if [[ -f "$REPO_ROOT/data/server.py" ]]; then
-  HANDLER_SOURCE+=$'\n\n--- data/server.py (full) ---\n'
-  HANDLER_SOURCE+="$(cat "$REPO_ROOT/data/server.py")"
-fi
-for js_file in \
+for handler_file in \
+  "$REPO_ROOT/data/server.py" \
   "$REPO_ROOT/electionmaps/electionmaps.js" \
   "$REPO_ROOT/electionmaps/core.js" \
   "$REPO_ROOT/site/main.js" \
   "$REPO_ROOT/guesstheyear/app.py" \
   "$REPO_ROOT/guesstheyear/script.js"; do
-  if [[ -f "$js_file" ]]; then
-    rel="${js_file#$REPO_ROOT/}"
+  [[ -f "$handler_file" ]] || continue
+  rel="${handler_file#$REPO_ROOT/}"
+  if echo "$CHANGED_FILES" | grep -qF "$rel"; then
     HANDLER_SOURCE+=$'\n\n'"--- $rel (full) ---"$'\n'
-    HANDLER_SOURCE+="$(cat "$js_file")"
+    HANDLER_SOURCE+="$(cat "$handler_file")"
   fi
 done
 
-# Collect test files for spec coverage check
+# Collect test files: only include files related to changed paths
 TEST_SOURCE=""
 for test_glob in \
   "$REPO_ROOT/data/tests/"*.py \
@@ -92,24 +90,38 @@ for test_glob in \
   for f in $test_glob; do
     [[ -f "$f" ]] || continue
     rel="${f#$REPO_ROOT/}"
-    TEST_SOURCE+=$'\n\n'"--- $rel ---"$'\n'
-    TEST_SOURCE+="$(cat "$f")"
+    # Include if any changed file shares a directory prefix with this test
+    changed_dir="$(echo "$CHANGED_FILES" | awk -F/ '{print $1}' | sort -u)"
+    test_dir="$(echo "$rel" | awk -F/ '{print $1}')"
+    if echo "$changed_dir" | grep -qF "$test_dir"; then
+      TEST_SOURCE+=$'\n\n'"--- $rel ---"$'\n'
+      TEST_SOURCE+="$(cat "$f")"
+    fi
   done
 done
 
-# Collect agent docs for context
+# Collect agent docs: always include core docs; include area docs only if relevant
 AGENT_DOCS=""
 for doc in \
   "$REPO_ROOT/.agents/00-overview.md" \
-  "$REPO_ROOT/.agents/coding-standards.md" \
-  "$REPO_ROOT/.agents/20-data-core.md" \
-  "$REPO_ROOT/.agents/22-data-polls.md" \
-  "$REPO_ROOT/.agents/23-data-uns.md"; do
+  "$REPO_ROOT/.agents/coding-standards.md"; do
   [[ -f "$doc" ]] || continue
   rel="${doc#$REPO_ROOT/}"
   AGENT_DOCS+=$'\n\n'"--- $rel ---"$'\n'
   AGENT_DOCS+="$(cat "$doc")"
 done
+# Include data-specific docs only when data/ files changed
+if echo "$CHANGED_FILES" | grep -q '^data/'; then
+  for doc in \
+    "$REPO_ROOT/.agents/20-data-core.md" \
+    "$REPO_ROOT/.agents/22-data-polls.md" \
+    "$REPO_ROOT/.agents/23-data-uns.md"; do
+    [[ -f "$doc" ]] || continue
+    rel="${doc#$REPO_ROOT/}"
+    AGENT_DOCS+=$'\n\n'"--- $rel ---"$'\n'
+    AGENT_DOCS+="$(cat "$doc")"
+  done
+fi
 
 # --- Build prompt ---
 PROMPT="$(cat <<PROMPT
@@ -226,7 +238,7 @@ echo "---"
   echo ""
   echo "_Commits reviewed: ${NUM_COMMITS} | Issue: ${ISSUE_FILE} | $(date '+%Y-%m-%d %H:%M')_"
   echo ""
-  "$CLAUDE" -p "$PROMPT"
+  printf '%s' "$PROMPT" | "$CLAUDE" -p
 } | tee "$OUTPUT_FILE"
 
 echo ""

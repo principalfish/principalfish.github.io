@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
-from polls.import_types import PollImportResult
+from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://bmgresearch.com/wp-content/uploads/2026/02/january-2026-omnibus-tables-for-the-i.xlsx"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
@@ -832,7 +832,7 @@ def commit_import_plan(
             result will have ``skipped_existing_rows=True``.
 
     Returns:
-        A :class:`~polls.import_types.PollImportResult` summarising what was
+        A :class:`~polls.importers.types.PollImportResult` summarising what was
         created, replaced, inserted, or skipped.
 
     Raises:

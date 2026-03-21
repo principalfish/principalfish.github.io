@@ -24,7 +24,7 @@ TEST_DB_NAME = "election_maps_test"
 def db() -> Generator[Database, None, None]:
     """Provide a Database instance with clean tables for every test.
     Uses the dedicated test database so real data is never touched."""
-    config = DatabaseConfig.from_env()
+    config = DatabaseConfig.local()
     config.database = TEST_DB_NAME
     database = Database(config)
     database.drop_tables()

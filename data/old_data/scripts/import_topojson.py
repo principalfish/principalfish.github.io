@@ -18,7 +18,7 @@ from typing import Any
 
 from shapely.geometry import MultiPolygon, Polygon, shape
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from db import Database
 
@@ -244,7 +244,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    base = Path(__file__).resolve().parent / "files"
+    base = Path(__file__).resolve().parent.parent / "files"
     db = Database()
     db.create_tables()
 

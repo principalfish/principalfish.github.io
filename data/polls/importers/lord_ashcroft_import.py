@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
-from polls.import_types import PollImportResult
+from polls.importers.types import PollImportResult
 
 DEFAULT_SOURCE_URL = "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that-britain-is-broken/"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

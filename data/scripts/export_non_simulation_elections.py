@@ -9,8 +9,9 @@ Outputs:
 Usage:
     python data/scripts/export_non_simulation_elections.py
     python data/scripts/export_non_simulation_elections.py --dry-run
-        python data/scripts/export_non_simulation_elections.py --election-name "2019 General Election"
-        python data/scripts/export_non_simulation_elections.py --current-simulation --output-file /tmp/current-simulation.json
+    python data/scripts/export_non_simulation_elections.py --election-name "2019 General Election"
+    python data/scripts/export_non_simulation_elections.py --current-simulation --output-file /tmp/current-simulation.json
+    python data/scripts/export_non_simulation_elections.py --metadata-only
 """
 
 from __future__ import annotations
@@ -420,6 +421,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Export only the latest model_uns election",
     )
+    target_group.add_argument(
+        "--metadata-only",
+        action="store_true",
+        help="Update only settings.parties and settings.regionsByMapId in elections.json",
+    )
     parser.add_argument(
         "--output-root",
         type=Path,
@@ -534,6 +540,31 @@ def main() -> None:
     output_root = args.output_root.resolve()
     maps_dir = output_root / "maps"
     results_dir = output_root / "results"
+
+    if args.metadata_only:
+        manifest_path = output_root / "elections.json"
+        if not manifest_path.exists():
+            raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        db = Database()
+        with db.session() as session:
+            parties = session.execute(select(Party)).scalars().all()
+            regions = session.execute(select(Region)).scalars().all()
+        manifest_parties = build_manifest_party_settings(parties)
+        manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
+        settings = manifest.get("settings") or {}
+        settings["parties"] = manifest_parties
+        settings.pop("partiesByKey", None)
+        settings["regionsByMapId"] = manifest_regions_by_map_id
+        manifest["settings"] = settings
+        if args.dry_run:
+            print(f"Would write manifest metadata: {manifest_path}")
+            print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
+        else:
+            write_json(manifest_path, manifest)
+            print(f"Wrote manifest metadata: {manifest_path}")
+            print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
+        return
 
     global OTHERS_PARTY_ID
     db = Database()

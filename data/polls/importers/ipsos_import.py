@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
-from polls.import_types import PollImportResult
+from polls.importers.types import PollImportResult
 
 DEFAULT_PDF_URL = "https://www.ipsos.com/sites/default/files/ct/news/documents/2026-01/politmkp_w1jan2026web1.pdf"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"

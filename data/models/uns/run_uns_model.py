@@ -344,6 +344,12 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
         args: Parsed CLI arguments containing start_date, end_date, lookback_days,
             half_life_days, reset_existing, continue_on_error, progress_every,
             dry_run, map_name, and baseline_election_name.
+
+    Raises:
+        ValueError: If ``end_date`` is before ``start_date``, ``lookback_days``
+            is negative, or ``half_life_days`` is not positive.
+        Exception: Re-raises any exception thrown by ``run_simulation`` for a
+            given date when ``args.continue_on_error`` is ``False``.
     """
     start_date = date.fromisoformat(args.start_date)
     end_date = date.fromisoformat(args.end_date)
@@ -1398,6 +1404,11 @@ def run_simulation(
           party name.
         - **latest_poll_usage** (``LatestPollUsage | None``): the most recent poll
           consumed, or ``None`` if no polls were available.
+
+    Raises:
+        ValueError: If the map or baseline election cannot be found, if the
+            baseline election's map does not match the configured map, or if the
+            baseline election has no vote rows.
     """
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date

@@ -155,6 +155,12 @@ def parse_election_date(soup: BeautifulSoup) -> date | None:
     Wikipedia by-election infoboxes embed the date in a <b> tag inside an
     infobox-subheader cell rather than a labelled th/td row, so we try both
     approaches: first the labelled row, then any bold text in the infobox.
+
+    Args:
+        soup: Parsed BeautifulSoup tree of the Wikipedia by-election page.
+
+    Returns:
+        The parsed election date, or None if no date could be extracted.
     """
     infobox = soup.find("table", class_="infobox")
     if not infobox or not isinstance(infobox, Tag):
@@ -180,7 +186,16 @@ def parse_election_date(soup: BeautifulSoup) -> date | None:
 
 
 def _parse_date_text(text: str) -> date | None:
-    """Parse a date string like '6 March 2025' or 'March 6, 2025'."""
+    """Parse a date string like '6 March 2025' or 'March 6, 2025'.
+
+    Tries UK format (day month year) first, then US format (month day year).
+
+    Args:
+        text: Raw text that may contain a date, e.g. from an infobox cell.
+
+    Returns:
+        The parsed date, or None if no recognisable date pattern is found.
+    """
     # UK format: 6 March 2025
     match = re.search(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})", text)
     if match:
@@ -205,7 +220,18 @@ def _parse_date_text(text: str) -> date | None:
 
 
 def parse_constituency_name(soup: BeautifulSoup) -> str:
-    """Extract constituency name from the page title or infobox."""
+    """Extract constituency name from the page title or infobox.
+
+    Strips the year and "by-election" suffix from titles of the form
+    "2025 Runcorn and Helsby by-election". Falls back to the full cleaned
+    title, then "Unknown" if no ``<title>`` tag is present.
+
+    Args:
+        soup: Parsed BeautifulSoup tree of the Wikipedia by-election page.
+
+    Returns:
+        The constituency name, or ``"Unknown"`` if it cannot be determined.
+    """
     title_tag = soup.find("title")
     if title_tag:
         title = title_tag.get_text(strip=True)
@@ -220,7 +246,18 @@ def parse_constituency_name(soup: BeautifulSoup) -> str:
 
 
 def parse_election_name_from_title(soup: BeautifulSoup) -> str:
-    """Extract the full election name from the page title."""
+    """Extract the full election name from the page title.
+
+    Strips the " - Wikipedia" suffix and returns the remainder verbatim,
+    e.g. ``"2025 Runcorn and Helsby by-election"``.
+
+    Args:
+        soup: Parsed BeautifulSoup tree of the Wikipedia by-election page.
+
+    Returns:
+        The full election name from the page title, or
+        ``"Unknown by-election"`` if no ``<title>`` tag is present.
+    """
     title_tag = soup.find("title")
     if title_tag:
         title = title_tag.get_text(strip=True)
@@ -343,8 +380,21 @@ def _find_column(headers: list[str], keywords: list[str]) -> int | None:
 def _extract_party_from_row(cells: list[Any], party_col: int | None, headers: list[str]) -> str | None:
     """Extract party name from a results table row.
 
-    Wikipedia results tables often have a narrow colour cell before the party name cell.
-    If the detected party_col cell is very short (just a colour swatch), use the next cell.
+    Wikipedia results tables often have a narrow colour cell before the party
+    name cell. If the detected ``party_col`` cell is very short (just a colour
+    swatch), the next cell is used instead. Prefers the text of a hyperlink
+    inside the cell when one is present.
+
+    Args:
+        cells: All ``<td>``/``<th>`` elements from the row.
+        party_col: Header-relative index of the party column, or None if not
+            found.
+        headers: Lowercased column header strings (used by the caller for
+            context; not directly accessed here).
+
+    Returns:
+        The party name string, or None if the column index is missing or the
+        cell contains no usable text.
     """
     if party_col is None:
         return None
@@ -371,7 +421,18 @@ def _extract_party_from_row(cells: list[Any], party_col: int | None, headers: li
 
 
 def _map_party_name(raw_name: str) -> str:
-    """Map a raw Wikipedia party name to our canonical name."""
+    """Map a raw Wikipedia party name to our canonical name.
+
+    Tries an exact lowercase match against ``PARTY_NAME_MAP`` first, then a
+    partial (substring) match in either direction. Falls back to ``"Others"``
+    for any name that cannot be matched.
+
+    Args:
+        raw_name: Party name as scraped from Wikipedia (any case).
+
+    Returns:
+        Canonical party name string, or ``"Others"`` if no match is found.
+    """
     normalized = raw_name.strip().lower()
     # Direct match
     if normalized in PARTY_NAME_MAP:

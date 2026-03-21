@@ -239,7 +239,7 @@ echo "---"
   echo ""
   echo "_Scope: ${SCAN_SCOPE} | $(date '+%Y-%m-%d %H:%M')_"
   echo ""
-  "$CLAUDE" -p "$PROMPT" --allowedTools "Read"
+  printf '%s\n' "$PROMPT" | "$CLAUDE" -p --allowedTools "Read"
 } | tee "$OUTPUT_FILE"
 
 echo ""

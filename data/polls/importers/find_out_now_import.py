@@ -58,7 +58,20 @@ REGION_HEADER_TO_INTERNAL = {
 NATIONAL_KEY = "__national__"
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    Attributes:
+        sample_size: Total number of respondents (must be > 0).
+        fieldwork_start: First day of the fieldwork period.
+        fieldwork_end: Last day of the fieldwork period.
+        party_region_percentages: Nested mapping of canonical party name to a
+            dict of region key → vote-share percentage.  The outer keys are
+            canonical party names (as defined in ``PARTY_NAME_MAP``).  Each
+            inner dict contains one entry per region using the internal region
+            name (as defined in ``REGION_HEADER_TO_INTERNAL``) plus a special
+            ``NATIONAL_KEY`` (``"__national__"``) entry for the national
+            all-regions figure.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
@@ -122,7 +135,27 @@ class PlannedPollRow(BaseModel):
 
 
 class ImportPlan(BaseModel):
-    """Full import plan: pollster, poll metadata, and rows."""
+    """Full import plan: pollster, poll metadata, and rows.
+
+    Attributes:
+        pollster_identifier: Unique string identifier for the pollster record
+            (e.g. ``"find_out_now"``).
+        pollster_name: Human-readable pollster name.
+        pollster_id: Database primary key of the pollster, or ``None`` if the
+            pollster does not yet exist.
+        pollster_exists: ``True`` if the pollster was found in the database.
+        regions_mapping: Newline-delimited string of ``"region_name:region_id"``
+            pairs (one per line, sorted by name) used to update the pollster's
+            ``regions_mapping`` column.
+        map_id: Database primary key of the constituency map.
+        map_name: Human-readable name of the constituency map.
+        source_url: URL of the source XLSX file.
+        parsed: Parsed poll data extracted from the workbook.
+        poll_id: Database primary key of the existing poll record, or ``None``
+            if no matching poll was found.
+        poll_exists: ``True`` if a matching poll was found in the database.
+        rows: Ordered list of poll rows planned for insertion.
+    """
 
     pollster_identifier: str
     pollster_name: str

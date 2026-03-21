@@ -33,6 +33,11 @@ DEFAULT_ARCHIVE_DAYS = 30
 
 
 def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
+    """Create the elections and votes tables in the SQLite archive if they do not exist.
+
+    Args:
+        conn: Open SQLite connection to the archive database file.
+    """
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS elections (
             id INTEGER PRIMARY KEY,
@@ -55,6 +60,12 @@ def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for the archive script.
+
+    Returns:
+        Parsed namespace with attributes: ``sqlite_path`` (str), ``archive_days`` (int),
+        ``all`` (bool), and ``dry_run`` (bool).
+    """
     parser = argparse.ArgumentParser(
         description="Archive model_uns runs older than N days from PostgreSQL to SQLite"
     )
@@ -211,6 +222,10 @@ def archive_old_runs(
 
 
 def main() -> None:
+    """Entry point for the archive script.
+
+    Parses CLI arguments and delegates to :func:`archive_old_runs`.
+    """
     args = parse_args()
     db = Database(DatabaseConfig.local())
     archive_old_runs(

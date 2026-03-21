@@ -175,6 +175,15 @@ def _as_of_date_from_name(name: str, year: int) -> str:
 
     UNS elections are named "UNS YYYY-MM-DD", so the date is parsed from the
     name. Falls back to YYYY-01-01 (using year) if the name does not match.
+
+    Args:
+        name: Election name string, expected to contain a date in the form
+            "UNS YYYY-MM-DD".
+        year: Four-digit election year used as a fallback when the date cannot
+            be parsed from name.
+
+    Returns:
+        ISO date string in the form "YYYY-MM-DD".
     """
     m = _UNS_DATE_RE.search(name)
     if m:

@@ -63,6 +63,14 @@ class ModelRunForm(BaseModel):
 
     @model_validator(mode="after")
     def check_since_gte_as_of(self) -> "ModelRunForm":
+        """Validate that since_days_back is not narrower than as_of_days_back.
+
+        Returns:
+            The validated ModelRunForm instance.
+
+        Raises:
+            ValueError: If since_days_back is less than as_of_days_back.
+        """
         if self.since_days_back < self.as_of_days_back:
             raise ValueError("Since-days-back must be >= as-of-days-back")
         return self
@@ -299,7 +307,16 @@ def home() -> str:
 
 @app.route("/update-polls", methods=["POST"])
 def update_polls() -> str | WerkzeugResponse:
-    """POST /update-polls — Run update_polls.sh and render its stdout/stderr output."""
+    """POST /update-polls — Run update_polls.sh and render its stdout/stderr output.
+
+    Side effects:
+        Executes ``update_polls.sh`` as a subprocess (timeout 1800 s), which may
+        write new poll data to the database.
+
+    Returns:
+        Rendered command_result.html showing stdout, stderr, and return code,
+        or a redirect to home with a flash message if the script is not found.
+    """
     if not UPDATE_POLLS_SCRIPT.exists():
         flash(f"Update script not found: {UPDATE_POLLS_SCRIPT}")
         return redirect(url_for("home"))
@@ -326,7 +343,17 @@ def update_polls() -> str | WerkzeugResponse:
 
 @app.route("/exports/current-simulation", methods=["POST"])
 def export_current_simulation() -> str | WerkzeugResponse:
-    """POST /exports/current-simulation — Export the latest UNS prediction simulation to JSON."""
+    """POST /exports/current-simulation — Export the latest UNS prediction simulation to JSON.
+
+    Side effects:
+        Executes ``export_non_simulation_elections.py --current-simulation`` as a
+        subprocess (timeout 900 s), which writes the prediction JSON to
+        ``electionmaps/data/results/prediction-simulation.json``.
+
+    Returns:
+        Rendered command_result.html showing stdout, stderr, and return code,
+        or a redirect to home with a flash message if the export script is not found.
+    """
     if not EXPORT_ELECTION_SCRIPT.exists():
         flash(f"Export script not found: {EXPORT_ELECTION_SCRIPT}")
         return redirect(url_for("home"))
@@ -497,13 +524,25 @@ def model_run_execute() -> str | WerkzeugResponse:
 
 
 def _sqlite_model_elections(limit: int | None = None) -> list[dict[str, Any]]:
-    """Return model_uns elections from the local SQLite archive as output item dicts."""
+    """Return model_uns elections from the local SQLite archive as output item dicts.
+
+    Args:
+        limit: Maximum number of rows to return, ordered by election_date descending.
+            Pass ``None`` to return all rows.
+
+    Returns:
+        List of dicts with keys ``election_id``, ``name``, ``year``, ``map_name``
+        (always ``"—"`` for SQLite rows), ``vote_rows``, and ``source`` (``"sqlite"``).
+        Returns an empty list if the archive file does not exist or has no rows.
+    """
     if not SQLITE_ARCHIVE_PATH.exists():
         return []
     with sqlite3.connect(SQLITE_ARCHIVE_PATH) as conn:
         conn.row_factory = sqlite3.Row
         query = "SELECT id, name, year, election_date FROM elections ORDER BY election_date DESC"
         if limit is not None:
+            # f-string intentional: sqlite3 doesn't support ? placeholders for LIMIT.
+            # Value is server-computed (integer arithmetic), never user-supplied.
             query += f" LIMIT {int(limit)}"
         elections = conn.execute(query).fetchall()
         if not elections:
@@ -1093,7 +1132,19 @@ def delete_model_output(election_id: int) -> str | WerkzeugResponse:
 
 @app.route("/models/outputs/sqlite/<int:election_id>/delete", methods=["POST"])
 def delete_sqlite_model_output(election_id: int) -> str | WerkzeugResponse:
-    """POST /models/outputs/sqlite/<election_id>/delete — Delete a model run from the SQLite archive."""
+    """POST /models/outputs/sqlite/<election_id>/delete — Delete a model run from the SQLite archive.
+
+    Args:
+        election_id: Primary key of the election row in the SQLite archive to delete.
+
+    Side effects:
+        Deletes the matching row from the ``elections`` table and all associated rows
+        from the ``votes`` table in the SQLite archive.
+
+    Returns:
+        Redirect to model_outputs with a flash message indicating rows deleted,
+        or a flash error redirect if the archive file does not exist.
+    """
     if not SQLITE_ARCHIVE_PATH.exists():
         flash("SQLite archive not found.")
         return redirect(url_for("model_outputs"))

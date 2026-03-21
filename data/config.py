@@ -63,7 +63,11 @@ class DatabaseConfig(BaseSettings):
 
     @classmethod
     def from_env(cls) -> "DatabaseConfig":
-        """Load configuration from environment variables."""
+        """Load configuration from environment variables.
+
+        Returns:
+            DatabaseConfig: A new instance populated from the current environment.
+        """
         return cls()
 
     @classmethod
@@ -73,6 +77,9 @@ class DatabaseConfig(BaseSettings):
         Uses model_construct to bypass pydantic-settings env var reading entirely,
         so SUPABASE_* vars in the environment are never picked up.
         Use this in scripts that must always write to local postgres (e.g. model runners).
+
+        Returns:
+            DatabaseConfig: A config instance with hardcoded local Docker defaults.
         """
         return cls.model_construct(
             supabase_region=None,

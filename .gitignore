@@ -1,20 +1,37 @@
+# ── OS / editor ───────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
 
+# ── Secrets & credentials ─────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+id_rsa
+*.p12
+
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
-**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
 *$py.class
-
-
-data/election_data/*
-data/model_uns.db
+*.egg-info/
+.pytest_cache/
 .coverage
 
-/guesstheyear/*.db-wal
-/guesstheyear/*.db-shm
-
+# ── Node ──────────────────────────────────────────────────────────────────────
 node_modules/
 
-.env
+# ── Data & databases ──────────────────────────────────────────────────────────
+data/election_data/*
+data/*.db
+*.db-wal
+*.db-shm
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+
+# ── Project outputs (stay local) ──────────────────────────────────────────────
+.agents/analysis/

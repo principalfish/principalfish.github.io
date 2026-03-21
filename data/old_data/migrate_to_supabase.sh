@@ -52,8 +52,9 @@ else
     _sb_ipv4="$_sb_host"
 fi
 
-# key=value connection string used for psql calls (hostaddr + sslmode honoured here)
-SUPABASE_CONN="host=${_sb_host} hostaddr=${_sb_ipv4} port=${_sb_port} dbname=${_sb_dbname} user=${_sb_user} password=${_sb_password} sslmode=require"
+# key=value connection string used for psql calls (hostaddr + sslmode honoured here).
+# Password is passed via PGPASSWORD env var to avoid it appearing in the process table.
+SUPABASE_CONN="host=${_sb_host} hostaddr=${_sb_ipv4} port=${_sb_port} dbname=${_sb_dbname} user=${_sb_user} sslmode=require"
 
 echo "==> Dumping schema from local DB (via Docker container to match server version)..."
 docker exec "$DOCKER_CONTAINER" pg_dump \
@@ -78,12 +79,12 @@ docker exec "$DOCKER_CONTAINER" pg_dump \
 
 echo "==> Applying schema to Supabase..."
 echo "    (Errors about existing types/extensions from Supabase defaults can be ignored)"
-psql "$SUPABASE_CONN" \
+PGPASSWORD="$_sb_password" psql "$SUPABASE_CONN" \
     --file="$SCHEMA_DUMP" \
     2>&1 | grep -v "^SET$" | grep -v "^$" || true
 
 echo "==> Importing data into Supabase..."
-psql "$SUPABASE_CONN" \
+PGPASSWORD="$_sb_password" psql "$SUPABASE_CONN" \
     --file="$DATA_DUMP"
 
 echo ""

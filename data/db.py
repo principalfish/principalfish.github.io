@@ -41,7 +41,7 @@ class Database:
                 variables via DatabaseConfig.from_env().
         """
         self.config = config or DatabaseConfig.from_env()
-        self.engine = create_engine(self.config.url, echo=False)
+        self.engine = create_engine(self.config.url, echo=False, hide_parameters=True)
         self._session_factory = sessionmaker(
             bind=self.engine, expire_on_commit=False
         )

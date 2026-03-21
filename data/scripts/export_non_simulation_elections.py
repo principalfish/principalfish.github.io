@@ -124,6 +124,23 @@ def slugify(value: str) -> str:
 
 
 def legacy_party_key_for_vote(vote: Vote, election_year: int | None = None) -> str:
+    """Resolve the legacy party key string for a vote row.
+
+    Checks ``vote.party.short_name`` first, then falls back to
+    ``vote.party.name``.  Handles the Reform UK / UKIP split: the same party
+    is keyed as ``"reform"`` for 2024+ elections and ``"ukip"`` for earlier
+    ones.
+
+    Args:
+        vote: Vote ORM row, with ``party`` relationship eagerly loaded.
+        election_year: Four-digit year of the parent election, used to
+            distinguish Reform UK from UKIP.  Pass ``None`` when unknown.
+
+    Returns:
+        Normalised party key string (e.g. ``"labour"``, ``"reform"``).
+        Falls back to the normalised party name if no mapping is found.
+        Returns ``"others"`` when ``vote.party`` is ``None``.
+    """
     if vote.party is None:
         return "others"
 
@@ -142,12 +159,37 @@ def legacy_party_key_for_vote(vote: Vote, election_year: int | None = None) -> s
 
 
 def normalize_region_name(value: str | None) -> str:
+    """Convert a region display name to a compact lowercase key.
+
+    Slugifies the value and removes all hyphens, producing a single lowercase
+    word suitable for use as a dict key (e.g. ``"East Midlands"`` →
+    ``"eastmidlands"``).
+
+    Args:
+        value: Raw region name string, or ``None``.
+
+    Returns:
+        Compact lowercase key string.  Returns ``"unknown"`` when ``value``
+        is ``None`` or empty.
+    """
     if not value:
         return "unknown"
     return slugify(value).replace("-", "")
 
 
 def normalize_vote_total_value(value: float) -> int | float:
+    """Round a vote total and collapse whole numbers to ``int``.
+
+    Rounds to two decimal places; if the result is a whole number it is
+    returned as ``int`` to keep JSON output compact.
+
+    Args:
+        value: Raw vote total (may be a float from the DB or a calculation).
+
+    Returns:
+        ``int`` when the rounded value has no fractional part, otherwise a
+        ``float`` rounded to two decimal places.
+    """
     rounded = round(float(value), 2)
     if rounded == int(rounded):
         return int(rounded)
@@ -155,6 +197,18 @@ def normalize_vote_total_value(value: float) -> int | float:
 
 
 def choose_winner(votes: Sequence[Vote]) -> Vote | None:
+    """Select the winning vote row from a list of votes for a single seat.
+
+    Prefers rows explicitly marked ``elected=True``; if multiple such rows
+    exist (data anomaly), the one with the highest ``vote_total`` wins.
+    Falls back to the highest ``vote_total`` when no row is marked elected.
+
+    Args:
+        votes: All Vote rows for a single seat, in any order.
+
+    Returns:
+        The winning Vote row, or ``None`` if ``votes`` is empty.
+    """
     elected = [vote for vote in votes if vote.elected]
     if elected:
         return sorted(elected, key=lambda vote: (vote.vote_total or 0), reverse=True)[0]
@@ -164,6 +218,18 @@ def choose_winner(votes: Sequence[Vote]) -> Vote | None:
 
 
 def choose_map_template_filename(map_row: Map) -> str:
+    """Return the legacy map template filename appropriate for a map row.
+
+    Selects the post-2022 boundary file (``650map_new.json``) when the map
+    name contains ``"post 2022"`` or ``"2024"``; falls back to
+    ``650map.json`` for older boundaries.
+
+    Args:
+        map_row: Map ORM row whose ``name`` is used for detection.
+
+    Returns:
+        Filename string (without directory prefix) of the template to use.
+    """
     name = map_row.name.lower()
     if "post 2022" in name or "2024" in name:
         return "650map_new.json"
@@ -171,10 +237,34 @@ def choose_map_template_filename(map_row: Map) -> str:
 
 
 def map_filename_for_map_id(map_id: int) -> str:
+    """Return the TopoJSON output filename for the given map primary key.
+
+    Args:
+        map_id: Primary key of the Map row.
+
+    Returns:
+        Filename string of the form ``"map-{map_id}.topo.json"``.
+    """
     return f"map-{map_id}.topo.json"
 
 
 def file_stem_for_election(election: Election) -> str:
+    """Derive the output JSON filename stem for an election.
+
+    Special cases:
+    - ``model_uns`` elections → ``"prediction-simulation"``
+    - UK general elections matching ``"{year} General Election"`` →
+      ``"uk-general-{year}"``
+    - All others → ``"{type}-{year}-{name}"`` slugified.
+
+    Args:
+        election: Election ORM row with ``type``, ``name``, and ``year``
+            populated.
+
+    Returns:
+        Filename stem string (no extension) used to construct the results
+        JSON path under ``electionmaps/data/results/``.
+    """
     if election.type == ElectionType.model_uns:
         return "prediction-simulation"
 
@@ -187,6 +277,22 @@ def file_stem_for_election(election: Election) -> str:
 
 
 def manifest_id_for_election(election: Election) -> str:
+    """Derive the stable manifest ``id`` string for an election.
+
+    Special cases:
+    - ``model_uns`` elections → ``"current-prediction"``
+    - UK general elections matching ``"{year} General Election"`` →
+      ``"{year}-general"``
+    - All others → ``"{year}-{name}"`` slugified.
+
+    Args:
+        election: Election ORM row with ``type``, ``name``, and ``year``
+            populated.
+
+    Returns:
+        Stable string identifier used as the ``id`` field in
+        ``elections.json``.
+    """
     if election.type == ElectionType.model_uns:
         return "current-prediction"
 
@@ -197,12 +303,36 @@ def manifest_id_for_election(election: Election) -> str:
 
 
 def manifest_name_for_election(election: Election) -> str:
+    """Return the human-readable display name for an election in the manifest.
+
+    Args:
+        election: Election ORM row.
+
+    Returns:
+        ``"Current prediction"`` for ``model_uns`` elections; otherwise the
+        election's ``name`` field verbatim.
+    """
     if election.type == ElectionType.model_uns:
         return "Current prediction"
     return election.name
 
 
 def party_key_for_party(party: Party) -> str:
+    """Resolve the canonical party key string for a Party row.
+
+    Checks ``party.short_name`` first (preferred), then falls back to
+    ``party.name``.  Handles UKIP / Reform UK disambiguation (always maps
+    to ``"ukip"`` or ``"reform"`` based on the normalised name, without
+    year context).
+
+    Args:
+        party: Party ORM row with ``short_name`` and ``name`` populated.
+
+    Returns:
+        Canonical party key string (e.g. ``"labour"``, ``"reform"``).
+        Falls back to the normalised party name when no explicit mapping
+        exists.
+    """
     short_name = (party.short_name or "").strip()
     if short_name:
         normalized_short = normalize_token(short_name)
@@ -222,6 +352,18 @@ def party_key_for_party(party: Party) -> str:
 
 
 def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, Any]]:
+    """Build the ``settings.parties`` list for the elections manifest.
+
+    Each entry contains the DB ``id``, resolved ``key``, display ``name``,
+    and ``colour`` for one party, sorted alphabetically by name.
+
+    Args:
+        parties: All Party ORM rows to include.
+
+    Returns:
+        List of dicts with keys ``id``, ``key``, ``name``, ``colour``,
+        sorted by lowercased party name.
+    """
     entries: list[dict[str, Any]] = []
 
     for party in sorted(parties, key=lambda row: row.name.lower()):
@@ -239,6 +381,19 @@ def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, An
 
 
 def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, list[dict[str, Any]]]:
+    """Build the ``settings.regionsByMapId`` dict for the elections manifest.
+
+    Groups regions by their ``map_id``, sorted within each group by name
+    then by primary key.  Keys are string map IDs so the output is valid
+    JSON.
+
+    Args:
+        regions: All Region ORM rows to include.
+
+    Returns:
+        Dict mapping string map ID to a list of ``{"id": int, "name": str}``
+        dicts, sorted by ``(map_id, name, id)``.
+    """
     regions_by_map_id: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
     for region in sorted(regions, key=lambda row: (row.map_id, row.name.lower(), row.id)):
@@ -253,6 +408,20 @@ def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, lis
 
 
 def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
+    """Populate ``comparisonElectionId`` for each manifest entry in-place.
+
+    Rules applied in order:
+    - Entries that already have ``comparisonElectionId`` set are skipped.
+    - ``model_uns`` entries compare against the most recent UK general
+      election in the list.
+    - All other entries compare against the next entry in the list (i.e.
+      the chronologically preceding election).
+    - The last entry in the list receives no comparison.
+
+    Args:
+        manifest_entries: List of manifest election dicts, ordered newest
+            first.  Modified in-place.
+    """
     latest_general_id = next(
         (entry["id"] for entry in manifest_entries if entry.get("type") == ElectionType.uk_general.value),
         None,
@@ -282,7 +451,27 @@ def convert_legacy_seatinfo_to_v4(
     party_key_to_id: dict[str, int],
     region_key_to_id: dict[str, int],
 ) -> dict[str, Any]:
-    """Convert a legacy seatInfo/partyInfo keyed-by-seat-name payload to pf-results-v4."""
+    """Convert a legacy seatInfo/partyInfo keyed-by-seat-name payload to pf-results-v4.
+
+    The legacy format is a dict of ``{seat_name: {"seatInfo": {...},
+    "partyInfo": {...}}}``; this function converts it to the compact
+    ``pf-results-v4`` schema used by the current electionmaps JS.
+
+    Args:
+        legacy_data: Dict keyed by seat name, each value containing
+            ``"seatInfo"`` (with ``"region"`` and ``"current"`` keys) and
+            optionally ``"partyInfo"`` (party-key → ``{"total": float}``).
+        party_key_to_id: Mapping from normalised party key string to
+            integer party ID, used to resolve winner and per-party IDs.
+        region_key_to_id: Mapping from normalised region key string to
+            integer region ID.
+
+    Returns:
+        Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` where
+        each seat entry has keys ``n`` (name), ``r`` (region ID), ``w``
+        (winner party ID), and ``p`` (list of ``[party_id, vote_total]``
+        rows sorted descending by votes).
+    """
     seats_out: list[dict[str, Any]] = []
 
     for seat_name, value in legacy_data.items():
@@ -327,6 +516,26 @@ def party_id_for_vote(vote: Vote) -> int:
 
 
 def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_year: int | None = None) -> dict[str, Any]:
+    """Build a ``pf-results-v4`` result payload for a single election.
+
+    Groups votes by seat, aggregates multiple candidate rows for the same
+    party within a seat, determines the winner, and computes turnout where
+    electorate data is available.
+
+    Args:
+        seats: All SeatRow projections for the election's map.
+        votes: All Vote ORM rows for the election, with ``party``
+            relationship eagerly loaded.
+        election_year: Four-digit year of the election, forwarded to
+            ``legacy_party_key_for_vote`` for Reform UK / UKIP resolution.
+            Pass ``None`` when unknown.
+
+    Returns:
+        Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` where
+        each seat entry has keys ``n`` (name), ``r`` (region ID), ``w``
+        (winner party ID), and ``p`` (list of ``[party_id, vote_total]``
+        rows sorted descending by votes, zero-total parties excluded).
+    """
     votes_by_seat: dict[int, list[Vote]] = defaultdict(list)
     for vote in votes:
         votes_by_seat[vote.seat_id].append(vote)
@@ -387,6 +596,20 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
 
 
 def compact_votes_to_dict(compact_rows: list[Any]) -> dict[str, float | int]:
+    """Convert a compact ``[party_id, vote_total]`` list to a keyed dict.
+
+    Skips malformed rows (not a two-element list), rows with empty/missing
+    keys, and rows with zero or negative vote totals.
+
+    Args:
+        compact_rows: List of ``[party_id_str, vote_total]`` entries as
+            stored in the ``"p"`` field of a ``pf-results-v4`` seat record.
+
+    Returns:
+        Dict mapping string party ID to normalised vote total
+        (``int`` when whole, ``float`` otherwise).  Only positive-total
+        parties are included.
+    """
     normalized_votes: dict[str, float | int] = {}
     for row in compact_rows:
         if not isinstance(row, list) or len(row) < 2:
@@ -402,12 +625,46 @@ def compact_votes_to_dict(compact_rows: list[Any]) -> dict[str, float | int]:
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
+    """Serialise a dict to a compact JSON file, creating parent dirs as needed.
+
+    Uses ``ensure_ascii=False`` and no spacing separators to minimise file
+    size while preserving non-ASCII characters.
+
+    Args:
+        path: Destination file path.  Parent directories are created if
+            they do not exist.
+        payload: JSON-serialisable dict to write.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate command-line arguments.
+
+    Mutually exclusive target flags:
+    - ``--election-name NAME``: export only the named election.
+    - ``--current-simulation``: export only the latest ``model_uns`` election.
+    - ``--metadata-only``: refresh only ``settings.parties`` and
+      ``settings.regionsByMapId`` in the existing ``elections.json``.
+
+    Other flags:
+    - ``--output-root PATH``: override the default output directory
+      (``electionmaps/data``).
+    - ``--legacy-files-dir PATH``: override the directory containing legacy
+      map template files.
+    - ``--dry-run``: print planned actions without writing any files.
+    - ``--output-file PATH``: write a single election result payload to this
+      path; requires ``--election-name`` or ``--current-simulation``.
+
+    Returns:
+        Parsed ``argparse.Namespace`` object.
+
+    Raises:
+        SystemExit: If ``--output-file`` is given without ``--election-name``
+            or ``--current-simulation``.
+    """
     parser = argparse.ArgumentParser(description="Export non-simulation elections to electionmaps/data")
     target_group = parser.add_mutually_exclusive_group()
     target_group.add_argument(
@@ -468,6 +725,32 @@ def apply_supplemental_legacy_elections(
     manifest_parties: list[dict[str, Any]] | None = None,
     manifest_regions_by_map_id: dict[str, list[dict[str, Any]]] | None = None,
 ) -> None:
+    """Write result files and inject manifest entries for supplemental legacy elections.
+
+    Iterates over ``SUPPLEMENTAL_LEGACY_ELECTIONS``, reads the source JSON
+    from ``legacy_files_dir``, optionally converts legacy ``seatInfo``
+    payloads to ``pf-results-v4``, writes the result file, and inserts or
+    updates the corresponding entry in ``manifest_entries``.
+
+    Args:
+        manifest_entries: Manifest election list to update in-place.
+        map_files_by_id: ``{str(map_id): relpath}`` dict updated in-place
+            with any new map references.
+        data_files_by_election_id: ``{election_id: relpath}`` dict updated
+            in-place with the supplemental result paths.
+        results_dir: Absolute path to the ``results/`` output directory.
+        legacy_files_dir: Directory containing legacy source JSON files.
+        dry_run: When ``True``, print planned writes instead of executing
+            them.
+        manifest_parties: Party settings list (used for legacy conversion).
+            Pass ``None`` to skip conversion and write the raw payload.
+        manifest_regions_by_map_id: Region settings dict (used for legacy
+            conversion).  Pass ``None`` to skip conversion.
+
+    Raises:
+        FileNotFoundError: If a supplemental source file does not exist
+            under ``legacy_files_dir``.
+    """
     for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
         election_id = supplemental["id"]
         map_id = int(supplemental["mapId"])
@@ -520,6 +803,15 @@ def apply_supplemental_legacy_elections(
 
 
 def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> None:
+    """Strip ``comparisonElectionId`` from supplemental entries flagged ``noComparison``.
+
+    After ``assign_comparison_elections`` has run, this pass removes the
+    comparison field from supplemental legacy elections that have
+    ``"noComparison": True`` in ``SUPPLEMENTAL_LEGACY_ELECTIONS``.
+
+    Args:
+        manifest_entries: Manifest election list to modify in-place.
+    """
     ids_without_comparison = {
         supplemental["id"]
         for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS
@@ -534,6 +826,25 @@ def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, 
 
 
 def main() -> None:
+    """Entry point: export elections from the DB to electionmaps static data files.
+
+    Reads all relevant elections (or a subset selected by CLI flags) from the
+    database, writes per-election ``pf-results-v4`` JSON files under
+    ``electionmaps/data/results/``, copies map TopoJSON templates to
+    ``electionmaps/data/maps/``, builds the composite ``current-parliament``
+    result by folding in by-election changes, and writes the top-level
+    ``electionmaps/data/elections.json`` manifest.
+
+    Behaviour is controlled by parsed CLI arguments (see ``parse_args``).
+    Exits without writing any files when ``--dry-run`` is set.
+
+    Raises:
+        FileNotFoundError: If a required map template or legacy source file
+            is missing.
+        RuntimeError: If the ``"Others"`` party is absent from the DB, a
+            required election is not found, or ``--output-file`` is used
+            with more than one matching election.
+    """
     args = parse_args()
     single_election_mode = bool(args.election_name or args.current_simulation)
 

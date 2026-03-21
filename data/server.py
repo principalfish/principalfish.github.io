@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import math
+import os
 import re
 import shlex
 import sqlite3
@@ -91,12 +92,12 @@ class ImporterMeta(TypedDict):
 
 DATA_DIR = Path(__file__).resolve().parent
 SQLITE_ARCHIVE_PATH = Path(
-    __import__("os").environ.get("SQLITE_DATABASE_PATH", str(DATA_DIR / "model_uns.db"))
+    os.environ.get("SQLITE_DATABASE_PATH", str(DATA_DIR / "model_uns.db"))
 )
 REPO_ROOT = DATA_DIR.parent
 TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
-UPDATE_POLLS_SCRIPT = DATA_DIR / "update_polls.sh"
+UPDATE_POLLS_SCRIPT = DATA_DIR / "polls" / "update_polls.sh"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "uns" / "run_uns_model.py"
 EXPORT_ELECTION_SCRIPT = DATA_DIR / "scripts" / "export_non_simulation_elections.py"
 PREDICTION_SIMULATION_OUTPUT = REPO_ROOT / "electionmaps" / "data" / "results" / "prediction-simulation.json"
@@ -535,7 +536,7 @@ def model_outputs() -> str:
     """GET /models/outputs — List UNS model output elections with trend chart data.
 
     Query parameters:
-        show (str, optional): Pass 'all' to show every model output; otherwise the 10 most recent.
+        show (str, optional): Pass 'all' to show every model output; otherwise the 30 most recent.
 
     Returns:
         Rendered model_outputs.html with seat/vote trend datasets for Chart.js.
@@ -1094,7 +1095,7 @@ def delete_model_output(election_id: int) -> str | WerkzeugResponse:
 def delete_sqlite_model_output(election_id: int) -> str | WerkzeugResponse:
     """POST /models/outputs/sqlite/<election_id>/delete — Delete a model run from the SQLite archive."""
     if not SQLITE_ARCHIVE_PATH.exists():
-        flash(f"SQLite archive not found.")
+        flash("SQLite archive not found.")
         return redirect(url_for("model_outputs"))
     with sqlite3.connect(SQLITE_ARCHIVE_PATH) as conn:
         deleted_votes = conn.execute(
@@ -1281,7 +1282,7 @@ def import_poll_confirm(token: str) -> str | WerkzeugResponse:
             try:
                 if result.created_poll or result.inserted_rows or result.replaced_rows:
                     subprocess.run([sys.executable, str(UNS_MODEL_SCRIPT)], check=True)
-                flash("UNS model updated.")
+                    flash("UNS model updated.")
             except Exception as exc:
                 flash(f"Warning: UNS model run failed: {exc}")
 

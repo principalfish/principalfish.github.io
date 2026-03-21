@@ -95,6 +95,11 @@ def archive_old_runs(
     that auto-archive after each run to keep the rolling window small.
 
     Args:
+        db: Database instance connected to the local PostgreSQL.
+        archive_days: Archive runs whose ``election_date`` is older than this many days.
+            Ignored when ``archive_all=True``.
+        sqlite_path: Path to the SQLite file to write archived elections into.
+        dry_run: If True, print what would be archived without writing anything.
         archive_all: If True, archive every model_uns run regardless of age.
     """
     cutoff = date.today() - timedelta(days=archive_days)
@@ -112,10 +117,13 @@ def archive_old_runs(
             print(f"No model_uns elections before {cutoff} to archive.")
             return
 
-        print(
-            f"Found {len(elections_to_archive)} elections to archive "
-            f"(election_date < {cutoff})"
-        )
+        if archive_all:
+            print(f"Found {len(elections_to_archive)} elections to archive (all runs)")
+        else:
+            print(
+                f"Found {len(elections_to_archive)} elections to archive "
+                f"(election_date < {cutoff})"
+            )
 
         if dry_run:
             for e in elections_to_archive:

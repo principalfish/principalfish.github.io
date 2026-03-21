@@ -43,7 +43,7 @@ def _load_sqlite_elections(sqlite_path: Path, map_name: str | None) -> list[_Ele
         sqlite_path: Path to the SQLite archive file.
         map_name: If set, only elections whose map_id matches this name are
             returned. Because map names are not stored in the SQLite archive,
-            this filter is best-effort and ignored when not possible to apply.
+            this filter is not applied to SQLite elections.
 
     Returns:
         List of _ElectionRec instances ordered by id ascending.
@@ -124,7 +124,7 @@ def parse_args() -> argparse.Namespace:
         default=True,
         help=(
             "Include elections from the SQLite archive when rebuilding the trend cache "
-            "(default: enabled). Pass --no-sqlite to read from PostgreSQL only."
+            "(default: enabled). Pass --no-include-sqlite to read from PostgreSQL only."
         ),
     )
     return parser.parse_args()

@@ -215,7 +215,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-archive",
         action="store_true",
-        help="Skip auto-archiving model runs older than 30 days after simulation completes.",
+        help="Skip auto-archiving model runs to SQLite after simulation completes.",
     )
     # Retrospective mode flags
     parser.add_argument("--start-date", default=None, help="First date for retrospective backfill (YYYY-MM-DD)")
@@ -233,7 +233,21 @@ def parse_args() -> argparse.Namespace:
 
 
 def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
-    """Construct a SimulationConfig from parsed single-date CLI arguments."""
+    """Construct a SimulationConfig from parsed single-date CLI arguments.
+
+    Parses ``--as-of-date``/``--as-of-days-back`` and ``--since-date``/``--since-days-back``
+    into concrete dates, validates ordering, and populates a ``SimulationConfig``.
+
+    Args:
+        args: Parsed argument namespace from :func:`parse_args`.
+
+    Returns:
+        A ``SimulationConfig`` with ``as_of_date``, ``since_date``, and other
+        simulation parameters populated from the CLI arguments.
+
+    Raises:
+        ValueError: If ``since_date`` is later than ``as_of_date``.
+    """
     today = date.today()
     as_of_date = (
         date.fromisoformat(args.as_of_date)
@@ -1574,7 +1588,7 @@ def main() -> None:
 
     if not no_archive and not cfg.dry_run:
         print("\nAuto-archiving all model runs to SQLite...")
-        archive_old_runs(db, archive_all=True)
+        archive_old_runs(db)
 
 
 if __name__ == "__main__":

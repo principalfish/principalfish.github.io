@@ -183,7 +183,6 @@ def load_parsers_with_existing_polls() -> set[str]:
     return {identifier.strip() for identifier in identifiers if isinstance(identifier, str) and identifier.strip()}
 
 
-
 def classify_unimportable_url(parser_identifier: str, source_url: str) -> str | None:
     """Classify a mapping URL that cannot be directly imported by its parser.
 

@@ -27,8 +27,7 @@ Top-level durable insights only.
 
 ## UNS + Trends
 
-- `run_retrospective_uns.py` resets existing model outputs by default in non-dry-run mode; use `--no-reset-existing` to preserve prior output.
-- `run_uns_model.py` now enforces same-date overwrite and can auto-backfill missing dates, preventing duplicate same-day model outputs.
+- `run_uns_model.py` now enforces same-date overwrite and can auto-backfill missing dates, preventing duplicate same-day model outputs. Retrospective range mode (`--start-date`/`--end-date`) resets existing outputs in that range by default; use `--no-reset-existing` to preserve prior output.
 - `run_uns_model.py` trend-cache writes now skip appending a new date when the full seat snapshot is unchanged from the latest prior date (`TREND_CACHE_SKIP`).
 - `backfill_model_output_trends.py` now also skips consecutive model elections with unchanged full seat snapshots, so rebuilt trend CSVs stay compact by default.
 - Trend timelines should use canonical UNS date semantics (`UNS YYYY-MM-DD` / normalized `as_of_date`) to avoid chart drift.
@@ -110,7 +109,7 @@ Top-level durable insights only.
 - `PARTY_LABELS` and `PARTY_COLOURS` constants were removed from JS; `labelParty()` and `colourParty()` now rely entirely on `manifestPartiesByKey` populated from `elections.json`. Both fall back to raw key / grey `#9CA3AF` for unknown parties.
 - DB correctly attributes pre-2024 UKIP votes to party_id=14 and post-2024 Reform votes to party_id=2 — no year-based correction needed at export time.
 - `elections.parent_election_id` and `elections.election_date` columns are intentional by-election schema fields; apply `migrate_add_election_parent_fields.py` to bring a DB up to date before running the full export.
-- By-election import is available via the local data console (`/by-elections`) — paste a Wikipedia by-election URL, preview scraped candidates, and confirm to insert. The scraper module is `data/polls/importers/by_election_import.py`.
+- By-election import is available via the local data console (`/by-elections`) — paste a Wikipedia by-election URL, preview scraped candidates, and confirm to insert. The scraper module is `data/scripts/by_election_import.py`.
 
 ## Party data — other vs others
 
@@ -126,6 +125,10 @@ Top-level durable insights only.
 
 - The FON XLSX has multiple sheets: "Cover page", "Headline VI", "Turnout", "Voting", "Squeeze". The parser reads from **"Headline VI"** — the DK-excluded, likely-voters filtered table (values sum to ~100% per region). The "Voting" sheet has raw percentages including don't-knows (summing to ~60%), so values there look lower. Checking the "Voting" sheet will produce misleading "wrong" values; always verify against "Headline VI".
 - Regional sub-samples (especially Wales, ~80 filtered respondents) have high variance; apparently outlier values (e.g. Wales Other=13%) may be genuine headline figures from the source, not parsing errors.
+
+## Tests — DB safety
+
+- **`conftest.py` must use `DatabaseConfig.local()`**, not `DatabaseConfig.from_env()`. `from_env()` picks up `SUPABASE_*` vars from `.env`, and the `url` computed field hardcodes `/postgres` for Supabase — `config.database = TEST_DB_NAME` is silently ignored. Tests then call `drop_tables()` against production Supabase. The fix is `config = DatabaseConfig.local()` which bypasses all env vars entirely.
 
 ## Quality + Risks
 
@@ -156,7 +159,7 @@ Top-level durable insights only.
 - `-> dict:` return type is similarly rejected; use `-> dict[str, Any]:`.
 - `list[list]` → `list[list[Any]]`; bare `list` parameter → `list[Any]`.
 - Functions accepting SQLAlchemy `.scalars().all()` results (which return `Sequence[T]`) should declare `Sequence[T]` not `list[T]` as the parameter type.
-- Scripts in `data/scripts/` that import from each other (e.g. `from export_non_simulation_elections import ...`) will produce a "cannot find module" error under `explicit_package_bases = True`; the per-module `ignore_missing_imports = True` workaround does NOT reliably suppress this in mypy 1.19.x. Instead, add `mypy_path = scripts` to `[mypy]` so mypy can resolve the module directly from the scripts directory.
+- Scripts in `data/scripts/` that import from each other (e.g. `from export_non_simulation_elections import ...`) will produce a "cannot find module" error under `explicit_package_bases = True`; adding `mypy_path = scripts` causes files to be found twice (as both `scripts.foo` and bare `foo`), producing duplicate-module errors. Use per-module `[mypy-module_name] ignore_missing_imports = True` stubs instead.
 - Module-level constants whose values mix types (e.g. `str | int | bool`) should be explicitly annotated as `list[dict[str, Any]]` to avoid overly-narrow inferred types that cause failures when used as `Path` arguments or string keys.
 
 ## Typing — models.py / SQLAlchemy
@@ -176,7 +179,6 @@ Top-level durable insights only.
 ## UNS model
 
 - `run_simulation()` in `run_uns_model.py` returns 5 values: `(election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage)`. Any caller that unpacks fewer will crash with "too many values to unpack".
-- `run_retrospective_uns.py` had an unpack of only 4 values (missing `latest_poll_usage`) — caused a crash on day 1 of the backfill, after `--reset-existing` had already deleted all existing model_uns elections. Fixed by adding a fifth `_` discard.
 ## Ipsos importer — regional column layout
 
 - Ipsos PDF column structure changed between Jan 2026 and March 2026: March 2026 PDFs added 8 ONS area supergroup columns (all suppressed as `-**`) creating a block of 8 consecutive Nones in the middle of each party percentage token row. A new "Greater England" region column was also inserted between Scotland and London.
@@ -185,7 +187,13 @@ Top-level durable insights only.
 - The parser must take the FIRST valid match per party to prevent cross-tab contamination: March 2026 PDFs have multiple "combined voting intention - likely to vote" cross-tabs within the 220-line window; subsequent tables use different column layouts that accidentally produce valid-looking (but wrong) values under the standard format.
 - Ipsos fieldwork date strings sometimes include parenthetical annotations like `(TBC CHECK)` before the year — the regex already handles this via `(?:\s*\([^)]*\))?` before the year group.
 
-- `--reset-existing` defaults to `True` on `run_retrospective_uns.py` — scoped to `[start_date, end_date]`. Election names are `UNS YYYY-MM-DD` so a lexicographic `name >= "UNS {start}" AND name < "UNS {end+1day}"` correctly isolates the range (ISO dates sort lexicographically; suffixes like `#2` remain within the same day's bucket). CSV rows outside the range are preserved.
+- `--reset-existing` in `run_uns_model.py` retrospective mode (`--start-date`/`--end-date`) defaults to `True` and is scoped to `[start_date, end_date]`. Election names are `UNS YYYY-MM-DD` so a lexicographic `name >= "UNS {start}" AND name < "UNS {end+1day}"` correctly isolates the range (ISO dates sort lexicographically; suffixes like `#2` remain within the same day's bucket). CSV rows outside the range are preserved.
+
+## Post-consolidate fixes
+
+- `UPDATE_POLLS_SCRIPT` in `server.py` must point to `DATA_DIR / "polls" / "update_polls.sh"` — `update_polls.sh` moved from `data/` root to `data/polls/` in the consolidate commit; the constant was not updated.
+- `archive_old_runs(db, archive_all=True)` in `run_uns_model.py` immediately archived the just-persisted run, breaking the detail view. Changed to `archive_old_runs(db)` (default 30-day window) so the most-recent run is preserved in Postgres.
+- `data/scripts/` lacked `__init__.py`, making it an implicit namespace package (inconsistent with `data/polls/importers/`). Added empty `__init__.py` and a `[mypy-scripts.*]` ignore entry in `mypy.ini`.
 
 ## UNS model — Other vs Others alias
 

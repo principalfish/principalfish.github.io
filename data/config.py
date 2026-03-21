@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Load .env from repo root (parent of this file's directory).
 # python-dotenv expands variable references (e.g. $DB_PASSWORD) so
 # composite values like DATABASE_URL=$USER:$PASSWORD@... work correctly.
-# override=False means already-exported shell variables take precedence.
+# override=True means .env values take precedence over already-exported shell variables.
 load_dotenv(Path(__file__).resolve().parent.parent / ".env", override=True)
 
 
@@ -42,8 +42,8 @@ class DatabaseConfig(BaseSettings):
     def url(self) -> str:
         """Return a SQLAlchemy-compatible PostgreSQL connection URL.
 
-        If SUPABASE_HOST and SUPABASE_USER are set, constructs a Supabase
-        session-pooler URL using DB_PASSWORD.
+        If SUPABASE_REGION and SUPABASE_DB_USERNAME are set, constructs a Supabase
+        session-pooler URL using SUPABASE_DB_PASSWORD.
         Otherwise falls back to the local DB_* variables.
 
         Returns:

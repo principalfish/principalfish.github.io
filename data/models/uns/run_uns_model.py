@@ -22,16 +22,8 @@ REPO_ROOT = DATA_DIR.parent
 SCRIPTS_DIR = DATA_DIR / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
-TREND_CACHE_CSV = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.csv"
+TREND_CACHE_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.json"
 TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
-TREND_CACHE_FIELDS = [
-    "election_id",
-    "election_name",
-    "as_of_date",
-    "party_id",
-    "seats_won",
-    "vote_pct",
-]
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
@@ -136,30 +128,30 @@ class LatestPollUsage:
 
 
 def existing_trend_dates() -> set[date]:
-    """Return all ``as_of_date`` values already present in the trend cache CSV.
+    """Return all ``as_of_date`` values already present in the trend cache JSON.
 
-    Reads ``TREND_CACHE_CSV`` and collects every unique date value found in the
-    ``as_of_date`` column. Rows with a missing or unparseable date are silently
+    Reads ``TREND_CACHE_JSON`` and collects every unique date value found in the
+    ``as_of_date`` field. Entries with a missing or unparseable date are silently
     skipped.
 
     Returns:
         A set of ``date`` objects for which trend data has already been written.
         Returns an empty set if the cache file does not exist.
     """
-    if not TREND_CACHE_CSV.exists():
+    if not TREND_CACHE_JSON.exists():
         return set()
 
     dates: set[date] = set()
-    with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            raw = str(row.get("as_of_date") or "").strip()
-            if not raw:
-                continue
-            try:
-                dates.add(date.fromisoformat(raw))
-            except ValueError:
-                continue
+    with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+        entries = json.load(handle)
+    for entry in entries:
+        raw = str(entry.get("as_of_date") or "").strip()
+        if not raw:
+            continue
+        try:
+            dates.add(date.fromisoformat(raw))
+        except ValueError:
+            continue
     return dates
 
 
@@ -334,30 +326,28 @@ def reset_existing_model_outputs(
                 ).rowcount or 0
                 conn.commit()
 
-    stripped_csv_rows = 0
-    if TREND_CACHE_CSV.exists():
-        kept_rows: list[dict[str, str]] = []
-        with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                raw = str(row.get("as_of_date") or "").strip()
-                try:
-                    row_date = date.fromisoformat(raw)
-                except ValueError:
-                    kept_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
-                    continue
-                if row_date < start_date or row_date > end_date:
-                    kept_rows.append({field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS})
-                else:
-                    stripped_csv_rows += 1
+    stripped_json_entries = 0
+    if TREND_CACHE_JSON.exists():
+        with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+            entries = json.load(handle)
+        kept_entries = []
+        for entry in entries:
+            raw = str(entry.get("as_of_date") or "").strip()
+            try:
+                entry_date = date.fromisoformat(raw)
+            except ValueError:
+                kept_entries.append(entry)
+                continue
+            if entry_date < start_date or entry_date > end_date:
+                kept_entries.append(entry)
+            else:
+                stripped_json_entries += 1
 
-        if stripped_csv_rows > 0:
-            with TREND_CACHE_CSV.open("w", encoding="utf-8", newline="") as handle:
-                writer = csv.DictWriter(handle, fieldnames=TREND_CACHE_FIELDS)
-                writer.writeheader()
-                writer.writerows(kept_rows)
+        if stripped_json_entries > 0:
+            with TREND_CACHE_JSON.open("w", encoding="utf-8") as handle:
+                json.dump(kept_entries, handle, separators=(",", ":"))
 
-    return deleted_elections, deleted_votes, stripped_csv_rows
+    return deleted_elections, deleted_votes, stripped_json_entries
 
 
 def run_retrospective(db: Database, args: argparse.Namespace) -> None:
@@ -1202,32 +1192,32 @@ def persist_projection(
     return election_name, int(election_id)
 
 
-def update_trend_cache_csv(
+def update_trend_cache_json(
     election_id: int,
     election_name: str,
     as_of_date: date,
     projected_votes: list[dict[str, Any]],
 ) -> None:
-    """Merge this simulation's results into the trend cache CSV.
+    """Merge this simulation's results into the trend cache JSON.
 
-    Reads the existing ``TREND_CACHE_CSV``, strips any rows for ``as_of_date``
-    or ``election_id``, then appends new rows summarising seat counts and
-    normalised vote percentages per party. The combined rows are sorted by
-    ``(election_id, party_id)`` before being written back.
+    Reads the existing ``TREND_CACHE_JSON``, strips any entry for ``as_of_date``
+    or ``election_id``, then appends a new entry summarising seat counts and
+    normalised vote percentages per party. The combined entries are sorted by
+    ``election_id`` before being written back.
 
     **Deduplication logic**: if the new seat snapshot (the multiset of
     party-seat-count pairs) is identical to that of the immediately preceding
-    cached date, the new rows are omitted and a ``TREND_CACHE_SKIP`` message is
+    cached date, the new entry is omitted and a ``TREND_CACHE_SKIP`` message is
     printed instead.
 
     Args:
         election_id: Primary key of the newly persisted election.
         election_name: Display name of the newly persisted election.
-        as_of_date: Simulation date; rows for this date are replaced.
+        as_of_date: Simulation date; any existing entry for this date is replaced.
         projected_votes: Seat/party projection records as produced by
             ``project_seat_votes``.
     """
-    TREND_CACHE_CSV.parent.mkdir(parents=True, exist_ok=True)
+    TREND_CACHE_JSON.parent.mkdir(parents=True, exist_ok=True)
 
     vote_totals_by_party: dict[int, float] = defaultdict(float)
     seats_by_party: dict[int, int] = defaultdict(int)
@@ -1239,88 +1229,64 @@ def update_trend_cache_csv(
 
     total_votes = sum(vote_totals_by_party.values())
 
-    def seat_snapshot_from_rows(rows: list[dict[str, str]]) -> tuple[tuple[int, int], ...]:
-        """Build a sorted snapshot tuple from CSV row dicts.
-
-        Args:
-            rows: List of CSV row dicts containing ``party_id`` and
-                ``seats_won`` string fields.
-
-        Returns:
-            A sorted tuple of ``(party_id, seats_won)`` pairs for parties with
-            at least one seat. Rows with missing or non-integer values are
-            silently skipped.
-        """
+    def seat_snapshot_from_entry(entry: dict) -> tuple[tuple[int, int], ...]:
+        """Build a sorted snapshot tuple from a JSON entry's parties map."""
         snapshot: dict[int, int] = {}
-        for row in rows:
+        for pid_str, pdata in (entry.get("parties") or {}).items():
             try:
-                party_id = int(str(row.get("party_id") or "0"))
-                seats_won = int(str(row.get("seats_won") or "0"))
-            except ValueError:
+                party_id = int(pid_str)
+                seats = int(pdata.get("s") or 0)
+            except (ValueError, TypeError):
                 continue
-            if party_id <= 0 or seats_won <= 0:
-                continue
-            snapshot[party_id] = seats_won
+            if party_id > 0 and seats > 0:
+                snapshot[party_id] = seats
         return tuple(sorted(snapshot.items()))
 
     def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
-        """Build a sorted snapshot tuple from a party-seat-count dict.
-
-        Args:
-            seat_counts: Mapping of party ID to projected seat count.
-
-        Returns:
-            A sorted tuple of ``(party_id, seats)`` pairs for parties with at
-            least one seat.
-        """
+        """Build a sorted snapshot tuple from a party-seat-count dict."""
         return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
 
-    existing_rows: list[dict[str, str]] = []
-    rows_by_date: dict[date, list[dict[str, str]]] = defaultdict(list)
-    if TREND_CACHE_CSV.exists():
-        with TREND_CACHE_CSV.open("r", encoding="utf-8", newline="") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                if str(row.get("as_of_date") or "").strip() == as_of_date.isoformat():
-                    continue
-                if int(row.get("election_id", "0") or "0") == election_id:
-                    continue
-                normalized_row = {field: str(row.get(field) or "") for field in TREND_CACHE_FIELDS}
-                existing_rows.append(normalized_row)
-                try:
-                    parsed_date = date.fromisoformat(str(normalized_row.get("as_of_date") or ""))
-                except ValueError:
-                    continue
-                if parsed_date < as_of_date:
-                    rows_by_date[parsed_date].append(normalized_row)
+    existing_entries: list[dict] = []
+    entries_by_date: dict[date, dict] = {}
+    if TREND_CACHE_JSON.exists():
+        with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+            entries = json.load(handle)
+        for entry in entries:
+            if str(entry.get("as_of_date") or "").strip() == as_of_date.isoformat():
+                continue
+            if int(entry.get("election_id") or 0) == election_id:
+                continue
+            existing_entries.append(entry)
+            try:
+                parsed_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
+            except ValueError:
+                continue
+            if parsed_date < as_of_date:
+                entries_by_date[parsed_date] = entry
 
-    new_rows = []
-    for party_id in sorted(vote_totals_by_party.keys()):
-        new_rows.append(
-            {
-                "election_id": str(election_id),
-                "election_name": election_name,
-                "as_of_date": as_of_date.isoformat(),
-                "party_id": str(party_id),
-                "seats_won": str(seats_by_party.get(party_id, 0)),
-                "vote_pct": (
-                    f"{((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0):.6f}"
-                    if total_votes > 0
-                    else "0.000000"
-                ),
+    new_entry = {
+        "election_id": election_id,
+        "election_name": election_name,
+        "as_of_date": as_of_date.isoformat(),
+        "parties": {
+            str(party_id): {
+                "s": seats_by_party.get(party_id, 0),
+                "v": round((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0, 6) if total_votes > 0 else 0.0,
             }
-        )
+            for party_id in sorted(vote_totals_by_party.keys())
+        },
+    }
 
-    previous_date = max(rows_by_date.keys(), default=None)
+    previous_date = max(entries_by_date.keys(), default=None)
     previous_snapshot = (
-        seat_snapshot_from_rows(rows_by_date[previous_date])
+        seat_snapshot_from_entry(entries_by_date[previous_date])
         if previous_date is not None
         else tuple()
     )
     current_snapshot = seat_snapshot_from_party_counts(seats_by_party)
 
     if previous_date is not None and current_snapshot == previous_snapshot:
-        combined = existing_rows
+        combined = existing_entries
         print(
             "TREND_CACHE_SKIP "
             f"as_of_date={as_of_date.isoformat()} "
@@ -1328,17 +1294,12 @@ def update_trend_cache_csv(
             f"previous_date={previous_date.isoformat()}"
         )
     else:
-        combined = existing_rows + new_rows
+        combined = existing_entries + [new_entry]
 
-    combined.sort(key=lambda row: (int(row["election_id"]), int(row.get("party_id") or "0")))
+    combined.sort(key=lambda e: int(e.get("election_id") or 0))
 
-    with TREND_CACHE_CSV.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(
-            handle,
-            fieldnames=TREND_CACHE_FIELDS,
-        )
-        writer.writeheader()
-        writer.writerows(combined)
+    with TREND_CACHE_JSON.open("w", encoding="utf-8") as handle:
+        json.dump(combined, handle, separators=(",", ":"))
 
 
 def run_simulation(
@@ -1457,7 +1418,7 @@ def run_simulation(
         party_name_by_id,
     )
 
-    update_trend_cache_csv(
+    update_trend_cache_json(
         persisted_election_id,
         persisted_name,
         cfg.as_of_date,

@@ -145,7 +145,7 @@ let pollTrackerTimeline = [];
 let pollTrackerSeriesByParty = new Map();
 let pollTrackerRangeSelection = 'all';
 
-const POLL_TRACKER_CSV_PATH = 'data/results/model_output_trends.csv';
+const POLL_TRACKER_DATA_PATH = 'data/results/model_output_trends.json';
 const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
 const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 
@@ -416,37 +416,38 @@ function setPollTrackerLayoutVisible(active) {
  * Deduplicates rows by date, preferring the highest electionId.
  * Expands sparse date entries into a dense daily timeline when all entries are ISO dates.
  * Series values carry forward the last known value for dates with no data.
- * @param {string} csvText - Raw CSV text from the poll tracker data file.
+ * @param {Array} data - Parsed JSON array from the poll tracker data file.
  * @returns {{timeline: Array<{dateKey: string, electionId: number, sortValue: string, label: string, dateValue: Date|null}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>, partyMeta: Map<string, {name: string, colour: string}>}} Parsed poll tracker data.
  */
-function parsePollTrackerData(csvText) {
-  const rows = d3.csvParse(csvText, (row) => {
-    const electionId = Number(row.election_id);
-    const partyId = Number(row.party_id);
-    const seats = Number(row.seats_won);
-    const votePct = Number(row.vote_pct);
-    if (!Number.isFinite(electionId)) return null;
-    if (!Number.isFinite(partyId)) return null;
-    if (!Number.isFinite(seats) || !Number.isFinite(votePct)) return null;
-
-    const electionName = String(row.election_name || '');
-    const asOfDateRaw = String(row.as_of_date || '').trim();
+function parsePollTrackerData(data) {
+  const rows = [];
+  for (const entry of data) {
+    const electionId = Number(entry.election_id);
+    if (!Number.isFinite(electionId)) continue;
+    const electionName = String(entry.election_name || '');
+    const asOfDateRaw = String(entry.as_of_date || '').trim();
     const unsDateMatch = electionName.match(/UNS\s+(\d{4}-\d{2}-\d{2})/);
-    const manifestParty = manifestPartiesById.get(partyId);
-    const normalizedPartyKey = normalizePartyKey(manifestParty?.key || manifestParty?.name || String(partyId));
-    const partyName = manifestParty?.name || labelParty(normalizedPartyKey) || `Party ${partyId}`;
-
-    return {
-      electionId,
-      partyId,
-      partyKey: String(partyId),
-      asOfDate: unsDateMatch?.[1] || asOfDateRaw,
-      electionName,
-      partyName,
-      seats,
-      votePct,
-    };
-  }).filter(Boolean);
+    const asOfDate = unsDateMatch?.[1] || asOfDateRaw;
+    for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
+      const partyId = Number(partyIdStr);
+      const seats = Number(pdata.s);
+      const votePct = Number(pdata.v);
+      if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
+      const manifestParty = manifestPartiesById.get(partyId);
+      const normalizedPartyKey = normalizePartyKey(manifestParty?.key || manifestParty?.name || String(partyId));
+      const partyName = manifestParty?.name || labelParty(normalizedPartyKey) || `Party ${partyId}`;
+      rows.push({
+        electionId,
+        partyId,
+        partyKey: String(partyId),
+        asOfDate,
+        electionName,
+        partyName,
+        seats,
+        votePct,
+      });
+    }
+  }
 
   const timelineByDateKey = new Map();
   const byParty = new Map();
@@ -916,8 +917,8 @@ function renderPollTrackerPartyControls() {
 async function loadPollTrackerDataIfNeeded() {
   if (pollTrackerDataLoaded) return;
 
-  const csvText = await fetchText(POLL_TRACKER_CSV_PATH);
-  const parsed = parsePollTrackerData(csvText);
+  const data = await fetchJson(POLL_TRACKER_DATA_PATH);
+  const parsed = parsePollTrackerData(data);
 
   pollTrackerTimeline = parsed.timeline;
   pollTrackerSeriesByParty = parsed.seriesByParty;

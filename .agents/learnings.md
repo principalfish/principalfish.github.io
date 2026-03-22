@@ -31,7 +31,7 @@ Top-level durable insights only.
 - `run_uns_model.py` trend-cache writes now skip appending a new date when the full seat snapshot is unchanged from the latest prior date (`TREND_CACHE_SKIP`).
 - `backfill_model_output_trends.py` now also skips consecutive model elections with unchanged full seat snapshots, so rebuilt trend CSVs stay compact by default.
 - Trend timelines should use canonical UNS date semantics (`UNS YYYY-MM-DD` / normalized `as_of_date`) to avoid chart drift.
-- `electionmaps/data/results/model_output_trends.csv` can be safely reduced by dropping consecutive dates whose full seat snapshot is unchanged; these often represent no-new-poll periods and add chart noise/size.
+- `model_output_trends` is now JSON (`model_output_trends.json`), not CSV. Format: one object per model run with `{election_id, election_name, as_of_date, parties: {party_id: {seats, vote_pct}}}`. Writer is `update_trend_cache_json` in `run_uns_model.py`; readers are `existing_trend_dates`, the strip-date delete block in `run_uns_model.py`, and the trend chart block in `data/server.py`. JS parser is `parsePollTrackerData` in `electionmaps.js` (loads via `fetchJson`). The old CSV (`model_output_trends.csv`) is no longer used and can be deleted.
 
 ## Electionmaps
 

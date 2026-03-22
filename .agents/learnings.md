@@ -63,7 +63,10 @@ Top-level durable insights only.
 
 ## Supabase migration + SQLite archive
 
-- Core election/poll data lives in Supabase (hosted PostgreSQL). Model simulation runs (`type = 'model_uns'`) stay entirely local: written to local Docker postgres, immediately archived to SQLite (`SQLITE_DATABASE_PATH` env var), then deleted from postgres. Supabase never holds simulation runs.
+- Core election/poll data lives in Supabase (hosted PostgreSQL). Model simulation runs (`type = 'model_uns'`) stay entirely local: written directly to SQLite (`SQLITE_DATABASE_PATH` env var, default `data/model_uns.db`). Neither Supabase nor local Docker Postgres ever holds simulation runs.
+- **`seats` and `votes` not in original migration**: The initial Supabase migration omitted these tables (likely PostGIS geometry failure on `seats`). Both have now been migrated. Future schema dumps for `seats` require `SET search_path TO public, extensions;` inserted after the `set_config('search_path', '', false)` line in the pg_dump output — PostGIS geometry lives in `extensions` schema in Supabase, not `public`.
+- **Model reads from Supabase, writes to SQLite**: `run_uns_model.py` `main()` uses `DatabaseConfig.from_env()` (Supabase) for all reads. `persist_projection` writes directly to SQLite. Local Docker Postgres is no longer used by the model.
+- **Import trigger uses `max(poll_date, meta_as_of_date)`**: `update_mapping_and_import_new.py` passes `--as-of-date max(latest_poll_fieldwork_end, current_trend_as_of_date)` to the model after a successful import. This ensures the model re-runs the latest trend date (updating the page text) even when the new poll's fieldwork_end is behind the existing trend frontier.
 - **pydantic-settings env var priority**: `BaseSettings.__init__` kwargs are overridden by env vars — passing `supabase_region=None` to `cls()` doesn't work if `SUPABASE_REGION` is set. Use `model_construct()` to bypass env var reading entirely (e.g. `DatabaseConfig.local()`).
 - **Supabase session pooler**: use `aws-1-eu-west-1.pooler.supabase.com` (not the direct `db.xxx.supabase.co` host). Direct connection is IPv6-only; session pooler is IPv4-accessible. Username format must be `postgres.<project-ref>` (not just `postgres`) for Supavisor SNI routing.
 - **WSL2 IPv6 routing**: `getent ahostsv4 <host>` resolves a CNAME chain to an IPv4 address. Pass it as `hostaddr=` in libpq key=value connection strings — `hostaddr` in a URI query string is silently ignored by libpq.
@@ -192,7 +195,7 @@ Top-level durable insights only.
 ## Post-consolidate fixes
 
 - `UPDATE_POLLS_SCRIPT` in `server.py` must point to `DATA_DIR / "polls" / "update_polls.sh"` — `update_polls.sh` moved from `data/` root to `data/polls/` in the consolidate commit; the constant was not updated.
-- `archive_old_runs(db, archive_all=True)` in `run_uns_model.py` immediately archived the just-persisted run, breaking the detail view. Changed to `archive_old_runs(db)` (default 30-day window) so the most-recent run is preserved in Postgres.
+- `run_uns_model.py` now writes model runs directly to SQLite (via `persist_projection`) — no PostgreSQL involvement. `archive_old_model_runs.py` is retained as a one-off migration tool but is no longer called from the model runner.
 - `data/scripts/` lacked `__init__.py`, making it an implicit namespace package (inconsistent with `data/polls/importers/`). Added empty `__init__.py` and a `[mypy-scripts.*]` ignore entry in `mypy.ini`.
 
 ## UNS model — Other vs Others alias

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Migrate local Docker PostgreSQL database to Supabase.
 #
-# Run AFTER archive_old_model_runs.py so old simulation data is already
-# in model_uns.db and won't be transferred to Supabase.
+# Simulation data (model_uns elections/votes) lives only in model_uns.db (SQLite)
+# and is never in PostgreSQL, so it will not be transferred to Supabase.
 #
 # Prerequisites:
 #   - Local Docker DB must be running (./data/start_db.sh)

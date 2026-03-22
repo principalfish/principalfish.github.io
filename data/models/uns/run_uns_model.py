@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import math
+import sqlite3
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -14,7 +15,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import text
 
 DATA_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = DATA_DIR.parent
@@ -36,8 +37,32 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database
-from models import Election, ElectionType, Map, Region, Vote
-from archive_old_model_runs import archive_old_runs, DEFAULT_SQLITE_PATH
+from models import Election, Map, Region
+import os
+
+DEFAULT_SQLITE_PATH = Path(os.environ.get("SQLITE_DATABASE_PATH", str(DATA_DIR / "model_uns.db")))
+
+
+def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS elections (
+            id INTEGER PRIMARY KEY,
+            map_id INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            election_date TEXT
+        );
+        CREATE TABLE IF NOT EXISTS votes (
+            id INTEGER PRIMARY KEY,
+            election_id INTEGER NOT NULL,
+            seat_id INTEGER NOT NULL,
+            party_id INTEGER,
+            candidate_name TEXT,
+            vote_total REAL,
+            elected INTEGER DEFAULT 0
+        );
+    """)
+    conn.commit()
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
 # so that poll data reported under "Other" is applied to the same party that holds the
@@ -212,11 +237,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--as-of-date", default=None)
     parser.add_argument("--since-date", default=None)
     parser.add_argument("--output-csv", default=None)
-    parser.add_argument(
-        "--no-archive",
-        action="store_true",
-        help="Skip auto-archiving model runs to SQLite after simulation completes.",
-    )
     # Retrospective mode flags
     parser.add_argument("--start-date", default=None, help="First date for retrospective backfill (YYYY-MM-DD)")
     parser.add_argument("--end-date", default=None, help="Last date for retrospective backfill (YYYY-MM-DD)")
@@ -273,42 +293,46 @@ def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
 
 
 def reset_existing_model_outputs(
-    db: Database, start_date: date, end_date: date
+    start_date: date, end_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
 ) -> tuple[int, int, int]:
-    """Delete model_uns elections in [start_date, end_date] and strip matching rows from the trend cache CSV.
+    """Delete model_uns elections in [start_date, end_date] from SQLite and strip matching rows from the trend cache CSV.
 
     Election names follow the pattern ``UNS YYYY-MM-DD``, so a lexicographic
     range on the name column correctly isolates the target dates. The trend
     cache CSV is rewritten in place with matching rows removed.
 
     Args:
-        db: Open Database instance.
         start_date: Inclusive lower bound of the date range to clear.
         end_date: Inclusive upper bound of the date range to clear.
+        sqlite_path: Path to the SQLite archive file.
 
     Returns:
         A 3-tuple ``(deleted_elections, deleted_votes, stripped_csv_rows)``.
     """
+    start_name = f"UNS {start_date.isoformat()}"
     upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
 
-    with db.session() as session:
-        existing_ids = session.execute(
-            select(Election.id)
-            .where(Election.type == ElectionType.model_uns)
-            .where(Election.name >= f"UNS {start_date.isoformat()}")
-            .where(Election.name < upper_bound)
-        ).scalars().all()
+    deleted_elections = 0
+    deleted_votes = 0
 
-        if existing_ids:
-            deleted_votes = session.execute(
-                delete(Vote).where(Vote.election_id.in_(existing_ids))
-            ).rowcount or 0  # type: ignore[attr-defined]
-            deleted_elections = session.execute(
-                delete(Election).where(Election.id.in_(existing_ids))
-            ).rowcount or 0  # type: ignore[attr-defined]
-        else:
-            deleted_votes = 0
-            deleted_elections = 0
+    if sqlite_path.exists():
+        with sqlite3.connect(sqlite_path) as conn:
+            election_ids = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT id FROM elections WHERE name >= ? AND name < ?",
+                    (start_name, upper_bound),
+                ).fetchall()
+            ]
+            if election_ids:
+                placeholders = ",".join("?" * len(election_ids))
+                deleted_votes = conn.execute(
+                    f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
+                ).rowcount or 0
+                deleted_elections = conn.execute(
+                    f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
+                ).rowcount or 0
+                conn.commit()
 
     stripped_csv_rows = 0
     if TREND_CACHE_CSV.exists():
@@ -363,7 +387,7 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
     if args.reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
-            db, start_date, end_date
+            start_date, end_date
         )
         print(
             f"RESET deleted_elections={deleted_elections} "
@@ -419,95 +443,44 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
             print(f"{when}\t{message}")
 
 
-def ensure_model_uns_enum_value(db: Database) -> None:
-    """Add ``'model_uns'`` to the PostgreSQL ``electiontype`` enum if it is absent.
 
-    This is a no-op for non-PostgreSQL database engines. When running against
-    PostgreSQL, the function introspects ``pg_enum`` and issues an
-    ``ALTER TYPE electiontype ADD VALUE`` statement only when the value is
-    missing, preventing duplicate-value errors on repeated runs.
+def delete_model_uns_for_as_of_date(as_of_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH) -> tuple[int, int]:
+    """Delete all model_uns elections (and their votes) for a given date from SQLite.
 
-    Args:
-        db: The active database connection wrapper.
-    """
-    if db.engine.dialect.name != "postgresql":
-        return
-
-    with db.session() as session:
-        labels = session.execute(
-            text(
-                """
-                SELECT e.enumlabel
-                FROM pg_type t
-                JOIN pg_enum e ON t.oid = e.enumtypid
-                WHERE t.typname = :enum_type
-                """
-            ),
-            {"enum_type": "electiontype"},
-        ).fetchall()
-        existing = {row[0] for row in labels}
-        if "model_uns" not in existing:
-            session.execute(text("ALTER TYPE electiontype ADD VALUE 'model_uns'"))
-
-
-def unique_election_name(db: Database, base_name: str) -> str:
-    """Return a name that does not already exist in the elections table.
-
-    If ``base_name`` is already taken, appends ``" #2"``, ``" #3"``, … until a
-    free name is found.
+    Matches elections whose name starts with ``"UNS {as_of_date}"`` and
+    deletes their vote rows before removing the election rows.
 
     Args:
-        db: The active database connection wrapper.
-        base_name: The preferred election name.
-
-    Returns:
-        Either ``base_name`` (if unused) or ``base_name + " #N"`` for the
-        smallest ``N ≥ 2`` that is not yet in use.
-    """
-    if db.get_election_by_name(base_name) is None:
-        return base_name
-
-    suffix = 2
-    while True:
-        candidate = f"{base_name} #{suffix}"
-        if db.get_election_by_name(candidate) is None:
-            return candidate
-        suffix += 1
-
-
-def delete_model_uns_for_as_of_date(db: Database, as_of_date: date) -> tuple[int, int]:
-    """Delete all ``model_uns`` elections (and their votes) for a given date.
-
-    Matches elections of type ``model_uns`` whose name starts with
-    ``"UNS {as_of_date}"`` and bulk-deletes their ``Vote`` rows before removing
-    the ``Election`` rows.
-
-    Args:
-        db: The active database connection wrapper.
         as_of_date: The date whose simulation output should be removed.
+        sqlite_path: Path to the SQLite archive file.
 
     Returns:
-        A ``(deleted_elections, deleted_votes)`` tuple with the row counts for
-        each delete operation. Both are ``0`` if no matching elections exist.
+        A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
+        matching elections exist or the file does not exist.
     """
+    if not sqlite_path.exists():
+        return 0, 0
+
     base_name = f"UNS {as_of_date.isoformat()}"
 
-    with db.session() as session:
-        existing_ids = session.execute(
-            select(Election.id)
-            .where(Election.type == ElectionType.model_uns)
-            .where(Election.name.like(f"{base_name}%"))
-        ).scalars().all()
-
-        if not existing_ids:
+    with sqlite3.connect(sqlite_path) as conn:
+        election_ids = [
+            row[0]
+            for row in conn.execute(
+                "SELECT id FROM elections WHERE name LIKE ?", (f"{base_name}%",)
+            ).fetchall()
+        ]
+        if not election_ids:
             return 0, 0
 
-        deleted_votes = session.execute(  # type: ignore[attr-defined]
-            delete(Vote).where(Vote.election_id.in_(existing_ids))
+        placeholders = ",".join("?" * len(election_ids))
+        deleted_votes = conn.execute(
+            f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
         ).rowcount or 0
-        deleted_elections = session.execute(  # type: ignore[attr-defined]
-            delete(Election).where(Election.id.in_(existing_ids))
+        deleted_elections = conn.execute(
+            f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
         ).rowcount or 0
+        conn.commit()
 
     return int(deleted_elections), int(deleted_votes)
 
@@ -1180,20 +1153,16 @@ def write_output_csvs(
 
 
 def persist_projection(
-    db: Database,
     map_id: int,
     as_of_date: date,
     election_name: str,
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
+    sqlite_path: Path = DEFAULT_SQLITE_PATH,
 ) -> tuple[str, int]:
-    """Create a ``model_uns`` election row and bulk-insert all projected vote rows.
-
-    Ensures the ``model_uns`` enum value exists (PostgreSQL only), then creates
-    the election and bulk-inserts one ``Vote`` row per seat/party projection.
+    """Create a model_uns election row and bulk-insert all projected vote rows into SQLite.
 
     Args:
-        db: The active database connection wrapper.
         map_id: Primary key of the electoral map the election belongs to.
         as_of_date: The simulation date; used as the election year source.
         election_name: Display name for the new election row.
@@ -1201,33 +1170,36 @@ def persist_projection(
             ``project_seat_votes``.
         party_name_by_id: Party display names keyed by party ID; used to
             populate ``candidate_name`` on each vote row.
+        sqlite_path: Path to the SQLite file to write into.
 
     Returns:
         A ``(election_name, election_id)`` tuple with the persisted election's
         display name and primary key.
     """
-    ensure_model_uns_enum_value(db)
-    election = db.add_election(
-        map_id,
-        as_of_date.year,
-        election_name,
-        ElectionType.model_uns,
-        election_date=as_of_date,
-    )
-
-    payload = [
-        {
-            "election_id": election.id,
-            "seat_id": int(row["seat_id"]),
-            "party_id": int(row["party_id"]),
-            "candidate_name": party_name_by_id.get(int(row["party_id"]), ""),
-            "vote_total": float(row["vote_total"]),
-            "elected": bool(row["elected"]),
-        }
-        for row in projected_votes
-    ]
-    db.bulk_add_votes(payload)
-    return election.name, int(election.id)
+    with sqlite3.connect(sqlite_path) as conn:
+        ensure_sqlite_schema(conn)
+        cursor = conn.execute(
+            "INSERT INTO elections (map_id, year, name, election_date) VALUES (?, ?, ?, ?)",
+            (map_id, as_of_date.year, election_name, as_of_date.isoformat()),
+        )
+        election_id = cursor.lastrowid
+        conn.executemany(
+            "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, vote_total, elected) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    election_id,
+                    int(row["seat_id"]),
+                    int(row["party_id"]),
+                    party_name_by_id.get(int(row["party_id"]), ""),
+                    float(row["vote_total"]),
+                    int(bool(row["elected"])),
+                )
+                for row in projected_votes
+            ],
+        )
+        conn.commit()
+    return election_name, int(election_id)
 
 
 def update_trend_cache_csv(
@@ -1475,10 +1447,9 @@ def run_simulation(
     if cfg.dry_run:
         return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
-    delete_model_uns_for_as_of_date(db, cfg.as_of_date)
+    delete_model_uns_for_as_of_date(cfg.as_of_date)
 
     persisted_name, persisted_election_id = persist_projection(
-        db,
         poll_map.id,
         cfg.as_of_date,
         election_name,
@@ -1510,16 +1481,15 @@ def main() -> None:
     of any gap between the most-recent cached date and ``as_of_date``).
     """
     args = parse_args()
-    # Model runs always use local postgres — never Supabase.
-    # This keeps simulation data out of the remote DB entirely.
-    db = Database(DatabaseConfig.local())
+    # Read polls and elections from Supabase. Model runs are written to
+    # SQLite only — Supabase never receives simulation data.
+    db = Database(DatabaseConfig.from_env())
 
     if args.start_date and args.end_date:
         run_retrospective(db, args)
         return
 
     cfg = _build_config_from_args(args)
-    no_archive = args.no_archive
 
     run_dates = dates_to_run_for_cfg(cfg)
     if len(run_dates) > 1:
@@ -1597,9 +1567,6 @@ def main() -> None:
             )
             print(f"- {region_name}: {summary}")
 
-    if not no_archive and not cfg.dry_run:
-        print("\nAuto-archiving all model runs to SQLite...")
-        archive_old_runs(db)
 
 
 if __name__ == "__main__":

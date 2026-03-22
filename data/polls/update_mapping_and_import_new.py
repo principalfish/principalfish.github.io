@@ -13,6 +13,7 @@ import json
 import subprocess
 import sys
 from collections import Counter
+from datetime import date
 from pathlib import Path
 
 from sqlalchemy import select
@@ -407,8 +408,32 @@ def main() -> int:
             print(f"- [{parser_identifier}] (exit {code}) {source_url}")
 
     if summary["import_attempted"] > 0:
+        db = Database()
+        with db.session() as session:
+            max_poll_date: date | None = session.execute(
+                select(Poll.fieldwork_end).order_by(Poll.fieldwork_end.desc()).limit(1)
+            ).scalar()
+
+        # Also check the current trend meta so we re-run that date too when
+        # a new poll lands behind the existing trend frontier.
+        meta_as_of_date: date | None = None
+        meta_path = ROOT_DIR.parent / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
+        if meta_path.exists():
+            try:
+                raw = json.loads(meta_path.read_text()).get("as_of_date", "")
+                meta_as_of_date = date.fromisoformat(raw) if raw else None
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        candidate_dates = [d for d in (max_poll_date, meta_as_of_date) if d is not None]
+        as_of_date = max(candidate_dates).isoformat() if candidate_dates else None
+
         print("\n== Run UNS model ==")
-        subprocess.run([sys.executable, str(ROOT_DIR / "models" / "uns" / "run_uns_model.py")], check=True)
+        cmd = [sys.executable, str(ROOT_DIR / "models" / "uns" / "run_uns_model.py")]
+        if as_of_date:
+            cmd += ["--as-of-date", as_of_date]
+            print(f"As-of date: {as_of_date}")
+        subprocess.run(cmd, cwd=ROOT_DIR, check=True)
 
     return 1 if failures else 0
 

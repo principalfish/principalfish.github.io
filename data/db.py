@@ -5,13 +5,15 @@ reading / writing election map data.
 
 from __future__ import annotations
 
+import sys
 from contextlib import contextmanager
 from datetime import date
 from typing import Any, Generator, Sequence
 
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import MultiPolygon, shape
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, event, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import DatabaseConfig
@@ -33,6 +35,19 @@ from models import (
 class Database:
     """Thin wrapper around SQLAlchemy for the electionmaps schema."""
 
+    # FK-dependency order for backup replication: insert parents before children.
+    _FK_PRIORITY: dict[type, int] = {
+        Party: 0,
+        Map: 1,
+        Region: 2,
+        Seat: 3,
+        Election: 4,
+        Vote: 5,
+        Pollster: 6,
+        Poll: 7,
+        PollRow: 8,
+    }
+
     def __init__(self, config: DatabaseConfig | None = None) -> None:
         """Initialise the database connection from config.
 
@@ -46,6 +61,20 @@ class Database:
             bind=self.engine, expire_on_commit=False
         )
 
+        # When Supabase is the primary, also wire up local Postgres as a backup.
+        # Backup writes happen automatically after each successful primary commit.
+        self._backup_session_factory = None
+        if (
+            self.config.supabase_region
+            and self.config.supabase_db_username
+            and self.config.supabase_db_password
+        ):
+            _backup_cfg = DatabaseConfig.local()
+            _backup_engine = create_engine(_backup_cfg.url, echo=False, hide_parameters=True)
+            self._backup_session_factory = sessionmaker(
+                bind=_backup_engine, expire_on_commit=False
+            )
+
     # ── lifecycle ─────────────────────────────────────────────────────────
 
     def create_tables(self) -> None:
@@ -58,16 +87,83 @@ class Database:
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
-        """Context-managed session with automatic commit / rollback."""
+        """Context-managed session with automatic commit / rollback.
+
+        When Supabase is the primary and a local backup is configured, all
+        new and dirty objects are replicated to local Postgres after each
+        successful commit.
+
+        Objects are accumulated via a ``before_flush`` listener so that
+        explicit ``s.flush()`` calls inside the session body (which clear
+        ``s.new`` / ``s.dirty``) don't cause objects to be missed.
+        """
         s = self._session_factory()
+        flushed: list[Any] = []
+
+        if self._backup_session_factory:
+            @event.listens_for(s, "before_flush")
+            def _(session: Session, *_: Any) -> None:
+                flushed.extend(session.new)
+                flushed.extend(session.dirty)
+
         try:
             yield s
             s.commit()
+            if self._backup_session_factory and flushed:
+                self._replicate_to_backup(flushed)
         except Exception:
             s.rollback()
             raise
         finally:
             s.close()
+
+    def _replicate_to_backup(self, objects: list[Any]) -> None:
+        """Merge a list of ORM objects into the local backup database.
+
+        Objects are sorted by FK dependency order before merging so that
+        parent rows are always present before their children. Failures are
+        logged to stderr and swallowed — the primary has already committed,
+        so a backup failure must not propagate.
+
+        Args:
+            objects: ORM instances that were committed to the primary.
+        """
+        # Group by type so we can upsert each group in FK-dependency order,
+        # committing each group before moving to its children.
+        groups: dict[type, list[Any]] = {}
+        for obj in objects:
+            groups.setdefault(type(obj), []).append(obj)
+        ordered_types = sorted(groups, key=lambda t: self._FK_PRIORITY.get(t, 99))
+
+        try:
+            bs = self._backup_session_factory()
+            try:
+                for t in ordered_types:
+                    rows = [
+                        {c.key: getattr(obj, c.key) for c in t.__table__.columns}
+                        for obj in groups[t]
+                    ]
+                    # Use INSERT … ON CONFLICT DO UPDATE (true SQL upsert) so
+                    # that existing rows are updated rather than raising a
+                    # duplicate-key error, regardless of session identity map state.
+                    non_pk_cols = [c.key for c in t.__table__.columns if not c.primary_key]
+                    stmt = pg_insert(t.__table__).values(rows)
+                    if non_pk_cols:
+                        stmt = stmt.on_conflict_do_update(
+                            index_elements=["id"],
+                            set_={col: stmt.excluded[col] for col in non_pk_cols},
+                        )
+                    else:
+                        stmt = stmt.on_conflict_do_nothing()
+                    bs.execute(stmt)
+                    bs.commit()  # commit each type group before moving to children
+            except Exception as exc:
+                bs.rollback()
+                print(f"Warning: local backup write failed: {exc}", file=sys.stderr)
+            finally:
+                bs.close()
+        except Exception as exc:
+            print(f"Warning: could not connect to local backup: {exc}", file=sys.stderr)
 
     # ── parties ───────────────────────────────────────────────────────────
 

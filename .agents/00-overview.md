@@ -12,6 +12,7 @@
 2. Start DB via `data/start_db.sh`
 3. Run base imports (`old_data`)
 4. Run poll imports (`polls/update_mapping_and_import_new.py`)
+   - When Supabase is configured, automatically syncs poll data to local Postgres backup after each import run (`scripts/sync_to_local_backup.py`). Pass `--skip-local-backup` to disable.
 5. Run model scripts (`data/models/uns/*`)
 
 ## Durable caveats

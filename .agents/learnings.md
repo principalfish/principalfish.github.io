@@ -56,6 +56,15 @@ Top-level durable insights only.
 - For small-screen predict UX, keep `maps-predict-grid` horizontally scrollable (`overflow-x: auto`) with `maps-predict-grid-table { width: max-content; min-width: 100%; }`; use `clamp(...)` on input cell widths so columns shrink before scrolling kicks in.
 - `electionmaps.js` uses a named-closure pattern for inner helpers (e.g. `zoomToFeature`, `clearActiveSeatPath`, `setActiveSeatPath`, `resetZoom` inside `renderTopoMap`; `showTrackerTooltip`/`hideTrackerTooltip` inside `renderPollTrackerChart`; `renderPredictGridSection` inside `renderPredictGrid`; `submitSearch` inside `wireSeatSearch`). These all warrant JSDoc at definition sites since they have parameters or non-trivial side effects. Anonymous inline event-handler arrow functions (`.addEventListener('click', () => {...})`) do not require JSDoc.
 
+## Supabase backup sync
+
+- Local backup is handled session-level in `Database.session()` (`data/db.py`): after every successful primary commit, newly written/updated objects are replicated to local Postgres automatically. No manual sync calls needed anywhere.
+- Auto-backup is enabled when all three `SUPABASE_*` env vars are set; disabled when local Postgres is the primary. Backup failures only emit a `Warning:` to stderr — they never fail the import.
+- FK dependency order for replication: `Party → Map → Region → Seat → Election → Vote → Pollster → Poll → PollRow` (class-level `_FK_PRIORITY` dict on `Database`).
+- `expire_on_commit=False` on the primary session factory is essential — it keeps attribute values accessible after `s.commit()` so IDs assigned by the DB can be read for backup.
+- `data/scripts/sync_to_local_backup.py` is a **manual recovery tool** for full resyncs. It syncs all 9 tables (parties → maps → regions → seats → elections → votes → pollsters → polls → poll_rows) in FK order. Use `--truncate` when local IDs have diverged from Supabase (e.g. after running `import_all.sh` locally, which assigns different IDs). Without `--truncate`, it does a safe upsert merge.
+- Sync order is Pollster → Poll → PollRow to satisfy FK dependencies. The local DB must already have maps + parties loaded for FK constraints to pass.
+
 ## Data Server
 
 - Local UNS runs from `data/server.py` now auto-export the latest simulation payload to `electionmaps/data/results/prediction-simulation.json` after successful non-dry-run execution, using `data/scripts/export_non_simulation_elections.py --current-simulation`.

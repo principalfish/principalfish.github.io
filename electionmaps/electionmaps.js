@@ -2952,7 +2952,7 @@ function wireMapViewControls() {
   /** Reads all filter/choropleth input values into state and re-renders the map. */
   const applyFromInputs = () => {
     syncMapControlStateFromInputs();
-    renderMapWithViewState();
+    renderMapWithViewState({ preserveZoom: true });
   };
 
   [
@@ -2972,21 +2972,21 @@ function wireMapViewControls() {
     filterGainsButton.addEventListener('click', () => {
       mapViewState.gainsOnly = !mapViewState.gainsOnly;
       syncMapControlInputsFromState();
-      renderMapWithViewState();
+      renderMapWithViewState({ preserveZoom: true });
     });
   }
 
   if (filtersResetButton) {
     filtersResetButton.addEventListener('click', () => {
       resetPrimaryFilters();
-      renderMapWithViewState();
+      renderMapWithViewState({ preserveZoom: true });
     });
   }
 
   if (choroplethsResetButton) {
     choroplethsResetButton.addEventListener('click', () => {
       resetChoropleths();
-      renderMapWithViewState();
+      renderMapWithViewState({ preserveZoom: true });
     });
   }
 

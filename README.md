@@ -215,20 +215,20 @@ Use scripts under `data/scripts/` to generate static files for `electionmaps/`.
 From repo root:
 
 ```bash
-./election_data/bin/python data/scripts/export_non_simulation_elections.py
+./election_data/bin/python data/scripts/export_elections.py
 ```
 
 Dry-run:
 
 ```bash
-./election_data/bin/python data/scripts/export_non_simulation_elections.py --dry-run
+./election_data/bin/python data/scripts/export_elections.py --dry-run
 ```
 
 ### Targeted exports
 
 ```bash
-./election_data/bin/python data/scripts/export_non_simulation_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
-./election_data/bin/python data/scripts/export_non_simulation_elections.py --current-simulation --output-file /tmp/current-simulation.json
+./election_data/bin/python data/scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
+./election_data/bin/python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
 
 ### Wrapper export (all elections + latest simulation)

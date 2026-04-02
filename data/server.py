@@ -108,7 +108,7 @@ TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
 UPDATE_POLLS_SCRIPT = DATA_DIR / "polls" / "update_polls.sh"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "uns" / "run_uns_model.py"
-EXPORT_ELECTION_SCRIPT = DATA_DIR / "scripts" / "export_non_simulation_elections.py"
+EXPORT_ELECTION_SCRIPT = DATA_DIR / "scripts" / "export_elections.py"
 PREDICTION_SIMULATION_OUTPUT = REPO_ROOT / "electionmaps" / "data" / "results" / "prediction-simulation.json"
 UNS_TREND_CACHE_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.json"
 UNS_NAME_DATE_PATTERN = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
@@ -347,7 +347,7 @@ def export_current_simulation() -> str | WerkzeugResponse:
     """POST /exports/current-simulation — Export the latest UNS prediction simulation to JSON.
 
     Side effects:
-        Executes ``export_non_simulation_elections.py --current-simulation`` as a
+        Executes ``export_elections.py --current-simulation`` as a
         subprocess (timeout 900 s), which writes the prediction JSON to
         ``electionmaps/data/results/prediction-simulation.json``.
 
@@ -1326,6 +1326,13 @@ def import_poll_confirm(token: str) -> str | WerkzeugResponse:
                 if result.created_poll or result.inserted_rows or result.replaced_rows:
                     subprocess.run([sys.executable, str(UNS_MODEL_SCRIPT)], check=True)
                     flash("UNS model updated.")
+                    if EXPORT_ELECTION_SCRIPT.exists():
+                        subprocess.run(
+                            [sys.executable, str(EXPORT_ELECTION_SCRIPT),
+                             "--current-simulation", "--output-file", str(PREDICTION_SIMULATION_OUTPUT)],
+                            cwd=str(DATA_DIR), timeout=900, check=True,
+                        )
+                        flash("Prediction simulation exported.")
             except Exception as exc:
                 flash(f"Warning: UNS model run failed: {exc}")
 

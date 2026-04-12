@@ -15,20 +15,63 @@ export const PARTY_KEY_ALIASES = {
   scottishnationalparty: 'snp',
 };
 
+// ── Party display helpers ─────────────────────────────────────────────────────
+
+/**
+ * Returns the display label for a party from the manifest, or the raw key if not found.
+ * @param {object} partiesByKey - Manifest parties object keyed by party key.
+ * @param {string} partyKey - Canonical party key to look up.
+ * @returns {string} Human-readable party name, or the raw key as fallback.
+ */
+export function labelParty(partiesByKey, partyKey) {
+  const meta = partiesByKey[partyKey];
+  if (meta?.name) return meta.name;
+  return partyKey;
+}
+
+/**
+ * Returns the hex colour for a party from the manifest, or a grey fallback if not found.
+ * @param {object} partiesByKey - Manifest parties object keyed by party key.
+ * @param {string} partyKey - Canonical party key to look up.
+ * @returns {string} Hex colour string (e.g. '#d50000'), or '#9CA3AF' if not found.
+ */
+export function colourParty(partiesByKey, partyKey) {
+  const meta = partiesByKey[partyKey];
+  if (meta?.colour) return meta.colour;
+  return '#9CA3AF';
+}
+
 // ── Predict constants ────────────────────────────────────────────────────────
 
 export const PREDICT_BASE_PARTY_KEYS = ['labour', 'conservative', 'libdems', 'green', 'reform'];
 export const PREDICT_NI_PARTY_KEYS = ['sinnfein', 'dup', 'alliance', 'uu', 'sdlp'];
+export const PREDICT_HOLYROOD_PARTY_KEYS = [
+  'snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform',
+];
 export const PREDICT_MODELLED_PARTY_KEYS = [
   ...PREDICT_BASE_PARTY_KEYS,
   'snp',
   'plaidcymru',
+  'scottishgreens',
+  'alba',
   ...PREDICT_NI_PARTY_KEYS,
 ];
 export const PREDICT_ENGLAND_KEY = 'england';
 export const PREDICT_SCOTLAND_KEY = 'scotland';
 export const PREDICT_WALES_KEY = 'wales';
 export const PREDICT_NI_KEY = 'northernireland';
+
+// ── List seat utilities ──────────────────────────────────────────────────────
+
+/**
+ * Returns true if the seat name is a regional list seat (e.g. "Glasgow List 1").
+ * List seats have no map geometry and appear only in the seat list panel.
+ * @param {string} seatName - Seat name to test.
+ * @returns {boolean}
+ */
+export function isListSeat(seatName) {
+  return /\bList\s+\d+$/i.test(seatName);
+}
 
 // ── Party normalization ──────────────────────────────────────────────────────
 
@@ -49,6 +92,19 @@ export function normalizePartyKey(partyKey) {
 }
 
 // ── Formatting ───────────────────────────────────────────────────────────────
+
+/**
+ * Escapes HTML special characters in a string for safe insertion into innerHTML.
+ * @param {string} str - String to escape.
+ * @returns {string} HTML-escaped string.
+ */
+export function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 /**
  * Rounds value to the nearest integer and formats it with GB locale thousands separators.
@@ -228,25 +284,51 @@ export function voteSharePct(seat, partyKey) {
  * @param {Array<object>} seats - Array of seat objects with `winner`, `votes`, `electorate`, and `turnout` properties.
  * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}} Aggregated election summary.
  */
-export function summarizeElection(seats) {
+export function summarizeElection(seats, { mode = 'all' } = {}) {
   const partyStats = new Map();
+  const listRegionPartyCountSeen = new Set();
   let electorateSum = 0;
   let turnoutWeighted = 0;
 
   seats.forEach((seat) => {
+    const isList = isListSeat(seat.seat);
+
+    // Mode filtering: skip seats that don't belong to the requested view.
+    if (mode === 'constituency' && isList) return;
+    if (mode === 'list' && !isList) return;
+
     const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
     if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
     partyStats.get(winner).seats += 1;
 
-    Object.entries(seat.votes || {}).forEach(([party, votes]) => {
-      const key = party === 'other' ? 'others' : party;
-      if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
-      partyStats.get(key).votes += Number(votes || 0);
-    });
+    // In 'all' mode, only accumulate votes from constituency seats. List seats
+    // use a separate ballot paper, so combining both would double-count the
+    // electorate and produce meaningless vote-share percentages.
+    //
+    // In 'list' mode, all seats within the same region share identical vote
+    // totals (each region's list votes are stored on every seat in that region).
+    // Only count votes for the first list seat encountered per region to avoid
+    // multiplying regional totals by the number of seats.
+    const includeVotes = mode !== 'all' || !isList;
 
-    if (seat.electorate > 0 && seat.turnout > 0) {
-      electorateSum += seat.electorate;
-      turnoutWeighted += seat.turnout * seat.electorate;
+    if (includeVotes) {
+      Object.entries(seat.votes || {}).forEach(([party, votes]) => {
+        const key = party === 'other' ? 'others' : party;
+        if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
+        // In list mode, each party's regional vote total is duplicated across all
+        // seats they won in the region. Only count it once per (region, party) pair.
+        if (mode === 'list') {
+          const seenKey = `${normalizeRegionKey(seat.region)}\x00${key}`;
+          if (listRegionPartyCountSeen.has(seenKey)) return;
+          listRegionPartyCountSeen.add(seenKey);
+        }
+        partyStats.get(key).votes += Number(votes || 0);
+      });
+
+      if (seat.electorate > 0 && seat.turnout > 0) {
+        electorateSum += seat.electorate;
+        turnoutWeighted += seat.turnout * seat.electorate;
+      }
     }
   });
 
@@ -547,6 +629,23 @@ export function buildPredictBaselineShares(seats) {
       const share = stats.totalVotes > 0 ? (votes / stats.totalVotes) * 100 : 0;
       shareMap.set(`${regionKey}::${partyKey}`, roundPredictShareValue(share));
     });
+
+    // Rounding individual shares can push the total above 100. When that
+    // happens, subtract 1 from the smallest non-zero party to keep the
+    // baseline row at exactly 100 and avoid a spurious -1 in the "other" column.
+    const roundedSum = PREDICT_MODELLED_PARTY_KEYS.reduce(
+      (sum, pk) => sum + (shareMap.get(`${regionKey}::${pk}`) || 0), 0,
+    );
+    if (roundedSum > 100) {
+      let minKey = null;
+      let minVal = Infinity;
+      PREDICT_MODELLED_PARTY_KEYS.forEach((pk) => {
+        const k = `${regionKey}::${pk}`;
+        const v = shareMap.get(k) || 0;
+        if (v > 0 && v < minVal) { minVal = v; minKey = k; }
+      });
+      if (minKey) shareMap.set(minKey, minVal - (roundedSum - 100));
+    }
   });
 
   return shareMap;
@@ -644,6 +743,137 @@ export function projectedSeatForPredictMode(baseSeat, swingsByParty) {
   return { ...baseSeat, votes: projectedVotes, turnout: totalVotes, winner };
 }
 
+/**
+ * Runs D'Hondt seat allocation for one Holyrood region.
+ * @param {Map<string, number>} votesByPartyKey - List vote totals per party key.
+ * @param {number} nSeats - Number of list seats to allocate.
+ * @param {Map<string, number>} constWinsByPartyKey - Constituency wins per party (deducted during allocation).
+ * @returns {string[]} Ordered array of winning party keys, one entry per seat allocated.
+ */
+export function dhondt(votesByPartyKey, nSeats, constWinsByPartyKey = new Map()) {
+  const listSeatsWon = new Map();
+  for (const key of votesByPartyKey.keys()) listSeatsWon.set(key, 0);
+
+  const winners = [];
+  for (let i = 0; i < nSeats; i++) {
+    let bestParty = null;
+    let bestQuotient = -Infinity;
+    for (const [party, votes] of votesByPartyKey) {
+      if (votes <= 0) continue;
+      const totalSeats = (listSeatsWon.get(party) || 0) + (constWinsByPartyKey.get(party) || 0);
+      const quotient = votes / (totalSeats + 1);
+      if (quotient > bestQuotient) {
+        bestQuotient = quotient;
+        bestParty = party;
+      }
+    }
+    if (bestParty !== null) {
+      listSeatsWon.set(bestParty, (listSeatsWon.get(bestParty) || 0) + 1);
+      winners.push(bestParty);
+    }
+  }
+  return winners;
+}
+
+/**
+ * Computes the unweighted arithmetic mean of baseline shares across all regions for each party.
+ *
+ * @param {Map<string, number>} baselineShareByRegionParty - Map keyed by predictInputKey(regionKey, partyKey).
+ * @param {string[]} partyKeys - Party keys to include.
+ * @param {string[]} regionKeys - Region keys to average over.
+ * @returns {Map<string, number>} Map of partyKey → unweighted mean share (0–100).
+ */
+export function buildHolyroodNationalBaselines(baselineShareByRegionParty, partyKeys, regionKeys) {
+  const result = new Map();
+  for (const partyKey of partyKeys) {
+    let total = 0;
+    let count = 0;
+    for (const regionKey of regionKeys) {
+      const share = baselineShareByRegionParty.get(predictInputKey(regionKey, partyKey));
+      if (share != null) { total += share; count++; }
+    }
+    result.set(partyKey, count > 0 ? total / count : 0);
+  }
+  return result;
+}
+
+/**
+ * Projects Holyrood seats using a two-pass AMS model.
+ *
+ * Pass 1 uses constSwingsByParty for FPTP constituency seats.
+ * Pass 2 uses listSwingsByParty (falls back to constSwingsByParty if null) for D'Hondt list seats.
+ * Constituency wins from Pass 1 are seeded into the D'Hondt divisors.
+ *
+ * @param {object[]} baseSeats - Baseline seat records.
+ * @param {Map<string, Map<string, number>>} constSwingsByParty - Constituency swings: partyKey → regionKey → swing pp.
+ * @param {Map<string, Map<string, number>>|null} [listSwingsByParty=null] - List swings; falls back to constSwingsByParty if null/empty.
+ * @returns {object[]} Projected seat records.
+ */
+export function projectHolyroodSeats(baseSeats, constSwingsByParty, listSwingsByParty = null) {
+  const effectiveListSwings = (listSwingsByParty && listSwingsByParty.size > 0) ? listSwingsByParty : constSwingsByParty;
+
+  const constBaseSeats = baseSeats.filter((s) => !isListSeat(s.seat));
+  const listBaseSeats = baseSeats.filter((s) => isListSeat(s.seat));
+
+  // Pass 1: project constituency seats with FPTP swing
+  const projectedConst = constBaseSeats.map((s) => projectedSeatForPredictMode(s, constSwingsByParty));
+
+  // Count constituency wins per region per party
+  const constWinsByRegion = new Map(); // normalizedRegionKey → Map<partyKey, count>
+  for (const seat of projectedConst) {
+    const rk = normalizeRegionKey(seat.region);
+    if (!constWinsByRegion.has(rk)) constWinsByRegion.set(rk, new Map());
+    const wins = constWinsByRegion.get(rk);
+    if (seat.winner) wins.set(seat.winner, (wins.get(seat.winner) || 0) + 1);
+  }
+
+  // Group list seats by region
+  const listByRegion = new Map();
+  for (const s of listBaseSeats) {
+    const rk = normalizeRegionKey(s.region);
+    if (!listByRegion.has(rk)) listByRegion.set(rk, []);
+    listByRegion.get(rk).push(s);
+  }
+
+  // Pass 2: D'Hondt allocation per region using list swings
+  const projectedList = [];
+  for (const [rk, regionListSeats] of listByRegion) {
+    const voteSumByParty = new Map();
+    const projectedRegionList = regionListSeats.map((s) => projectedSeatForPredictMode(s, effectiveListSwings));
+    // All list seats in a region share identical vote totals (each seat stores the full regional
+    // vote as a duplicate). Accumulate from the first seat only to avoid 7× inflation.
+    const firstProj = projectedRegionList[0];
+    for (const [partyKey, voteCount] of Object.entries(firstProj?.votes || {})) {
+      voteSumByParty.set(partyKey, Number(voteCount || 0));
+    }
+
+    const constWins = constWinsByRegion.get(rk) || new Map();
+    const listWinners = dhondt(voteSumByParty, regionListSeats.length, constWins);
+
+    projectedRegionList.forEach((proj, idx) => {
+      projectedList.push({ ...proj, winner: listWinners[idx] || null });
+    });
+  }
+
+  return [...projectedConst, ...projectedList];
+}
+
+/**
+ * Returns all regions from baseRegionLabelsByKey as predict input rows.
+ * Used for Holyrood predict mode where regions are the 8 Holyrood electoral regions
+ * rather than the Westminster England/Scotland/Wales/NI groupings.
+ * @param {Map<string, string>} baseRegionLabelsByKey - Map from normalized region key to display label.
+ * @returns {Array<{regionKey: string, regionLabel: string, isEnglandAggregate: boolean, isEnglandRegion: boolean}>}
+ */
+export function collectHolyroodPredictInputRows(baseRegionLabelsByKey) {
+  return Array.from(baseRegionLabelsByKey.entries()).map(([regionKey, regionLabel]) => ({
+    regionKey,
+    regionLabel,
+    isEnglandAggregate: false,
+    isEnglandRegion: false,
+  }));
+}
+
 // ── Seat / feature utilities ──────────────────────────────────────────────────
 
 /**
@@ -673,6 +903,41 @@ export function buildWinnerBySeat(seats) {
     bySeat.set(String(seat.seat).toLowerCase(), seat.winner || 'others');
   });
   return bySeat;
+}
+
+/**
+ * Builds a per-region summary from a mixed constituency+list seat array.
+ * Returns a Map keyed by region label → { dominantParty, seatsByParty, votesByParty, listSeats }.
+ * dominantParty = party with the most total seats; ties broken by list vote total.
+ * @param {Array<object>} seats - Normalised seat objects with `seat`, `region`, `winner`, `votes` properties.
+ * @returns {Map<string, {dominantParty: string, seatsByParty: object, votesByParty: object, listSeats: Array}>}
+ */
+export function buildRegionSummary(seats) {
+  const regions = new Map();
+  for (const seat of seats) {
+    const region = seat.region || 'unknown';
+    if (!regions.has(region)) {
+      regions.set(region, { seatsByParty: {}, votesByParty: {}, listSeats: [] });
+    }
+    const r = regions.get(region);
+    const winner = seat.winner || 'others';
+    r.seatsByParty[winner] = (r.seatsByParty[winner] || 0) + 1;
+    // Note: list seats each store the full regional vote total by design, so votesByParty
+    // will be multiplied by the number of list seats per region. This is acceptable here
+    // as votesByParty is only used for relative tie-breaking (dominantParty), not absolute totals.
+    for (const [party, votes] of Object.entries(seat.votes || {})) {
+      r.votesByParty[party] = (r.votesByParty[party] || 0) + votes;
+    }
+    if (isListSeat(seat.seat)) r.listSeats.push(seat);
+  }
+  for (const [, r] of regions) {
+    const sorted = Object.entries(r.seatsByParty).sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return (r.votesByParty[b[0]] || 0) - (r.votesByParty[a[0]] || 0);
+    });
+    r.dominantParty = sorted[0]?.[0] || 'others';
+  }
+  return regions;
 }
 
 /**
@@ -1113,3 +1378,273 @@ export function collectPredictInputRows(baseRegionLabelsByKey, englandExpanded) 
 
   return rows;
 }
+
+// ── Poll tracker parsing ──────────────────────────────────────────────────────
+
+/**
+ * Parses poll tracker JSON into { timeline, seriesByParty, partyMeta }.
+ * Deduplicates rows by date, preferring the highest electionId.
+ * Expands sparse date entries into a dense daily timeline when all entries are ISO dates.
+ * Series values carry forward the last known value for dates with no data.
+ * @param {Array} data - Parsed JSON array from the poll tracker data file.
+ * @param {Map<number, {key?: string, name?: string, colour?: string}>} partiesById - Manifest party lookup keyed by integer party ID.
+ * @returns {{timeline: Array<{dateKey: string, electionId: number, sortValue: string, label: string, dateValue: Date|null}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>, partyMeta: Map<string, {name: string, colour: string}>}} Parsed poll tracker data.
+ */
+export function parsePollTrackerData(data, partiesById) {
+  const rows = [];
+  for (const entry of data) {
+    const electionId = Number(entry.election_id);
+    if (!Number.isFinite(electionId)) continue;
+    const electionName = String(entry.election_name || '');
+    const asOfDateRaw = String(entry.as_of_date || '').trim();
+    const unsDateMatch = electionName.match(/UNS\s+(\d{4}-\d{2}-\d{2})/);
+    const asOfDate = unsDateMatch?.[1] || asOfDateRaw;
+    for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
+      const partyId = Number(partyIdStr);
+      const seats = Number(pdata.s);
+      const votePct = Number(pdata.v);
+      if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
+      const manifestParty = partiesById?.get(partyId);
+      const normalizedPartyKey = normalizePartyKey(manifestParty?.key || manifestParty?.name || String(partyId));
+      const partyName = manifestParty?.name || normalizedPartyKey || `Party ${partyId}`;
+      rows.push({
+        electionId,
+        partyId,
+        partyKey: String(partyId),
+        asOfDate,
+        electionName,
+        partyName,
+        seats,
+        votePct,
+      });
+    }
+  }
+
+  const timelineByDateKey = new Map();
+  const byParty = new Map();
+  const partyMeta = new Map();
+
+  /**
+   * Returns value unchanged if it is an ISO date string, otherwise returns fallback as a string.
+   * @param {string} value - Candidate sort value.
+   * @param {string|number} fallback - Fallback value used when value is not an ISO date.
+   * @returns {string} ISO date string or stringified fallback.
+   */
+  const toDateSortValue = (value, fallback) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    return String(fallback);
+  };
+
+  rows.forEach((row) => {
+    const dateKey = row.asOfDate || pollTrackerDateLabel(row.electionName, row.electionId);
+    const existingTimelineEntry = timelineByDateKey.get(dateKey);
+    if (!existingTimelineEntry || row.electionId > existingTimelineEntry.electionId) {
+      timelineByDateKey.set(dateKey, {
+        dateKey,
+        electionId: row.electionId,
+        sortValue: toDateSortValue(dateKey, row.electionId),
+        label: row.asOfDate || pollTrackerDateLabel(row.electionName, row.electionId),
+      });
+    }
+
+    if (!byParty.has(row.partyKey)) byParty.set(row.partyKey, new Map());
+    const byDateKey = byParty.get(row.partyKey);
+    const existingPartyDateRow = byDateKey.get(dateKey);
+    if (!existingPartyDateRow || row.electionId > existingPartyDateRow.electionId) {
+      byDateKey.set(dateKey, row);
+    }
+
+    if (!partyMeta.has(row.partyKey)) {
+      const manifestParty = Number.isFinite(row.partyId) ? partiesById?.get(row.partyId) : null;
+      partyMeta.set(row.partyKey, {
+        name: row.partyName,
+        colour: manifestParty?.colour || '#9CA3AF',
+      });
+    }
+  });
+
+  const timeline = Array.from(timelineByDateKey.values())
+    .sort((a, b) => {
+      if (a.sortValue === b.sortValue) return a.electionId - b.electionId;
+      return a.sortValue.localeCompare(b.sortValue);
+    });
+
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  /**
+   * Parses an ISO date string into a UTC Date, or returns null if the input does not match ISO_DATE_RE.
+   * @param {string} value - String to parse.
+   * @returns {Date|null} UTC Date object, or null on invalid/non-ISO input.
+   */
+  const parseIsoDate = (value) => {
+    const text = String(value || '').trim();
+    if (!ISO_DATE_RE.test(text)) return null;
+    const parsed = new Date(`${text}T00:00:00Z`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  /**
+   * Formats a UTC Date as a zero-padded ISO date string (YYYY-MM-DD).
+   * @param {Date} value - UTC Date to format.
+   * @returns {string} ISO date string derived from UTC year/month/day components.
+   */
+  const formatIsoDate = (value) => {
+    const year = value.getUTCFullYear();
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const allTimelineDates = timeline
+    .map((entry) => parseIsoDate(entry.dateKey || entry.label))
+    .filter(Boolean)
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  const shouldExpandDailyTimeline = allTimelineDates.length === timeline.length && timeline.length > 1;
+  const expandedTimeline = shouldExpandDailyTimeline
+    ? (() => {
+        const start = allTimelineDates[0];
+        const end = allTimelineDates[allTimelineDates.length - 1];
+        const entries = [];
+        const current = new Date(start.getTime());
+        while (current.getTime() <= end.getTime()) {
+          const iso = formatIsoDate(current);
+          const existing = timelineByDateKey.get(iso);
+          entries.push({
+            dateKey: iso,
+            electionId: existing?.electionId || 0,
+            sortValue: iso,
+            label: iso,
+            dateValue: new Date(current.getTime()),
+          });
+          current.setUTCDate(current.getUTCDate() + 1);
+        }
+        return entries;
+      })()
+    : timeline.map((entry) => ({
+        ...entry,
+        dateValue: parseIsoDate(entry.dateKey || entry.label),
+      }));
+
+  const seriesByParty = new Map();
+  byParty.forEach((rowsByDateKey, partyKey) => {
+    const seats = [];
+    const votePct = [];
+    let lastSeats = null;
+    let lastVotePct = null;
+    expandedTimeline.forEach((entry) => {
+      const row = rowsByDateKey.get(entry.dateKey);
+      if (row) {
+        lastSeats = Number(row.seats || 0);
+        lastVotePct = Number(row.votePct || 0);
+      }
+      seats.push(lastSeats);
+      votePct.push(lastVotePct);
+    });
+
+    seriesByParty.set(partyKey, {
+      partyKey,
+      partyName: partyMeta.get(partyKey)?.name || partyKey,
+      colour: partyMeta.get(partyKey)?.colour || '#9CA3AF',
+      seats,
+      votePct,
+      latestSeats: Number(seats[seats.length - 1] || 0),
+    });
+  });
+
+  return { timeline: expandedTimeline, seriesByParty, partyMeta };
+}
+
+// ── Holyrood predict share resolution ────────────────────────────────────────
+
+export const HOLYROOD_NATIONAL_KEY = 'national';
+
+/**
+ * @param {'overall'|'constituency'|'list'} pass
+ * @param {Map<string,number>} constBaseline
+ * @param {Map<string,number>} listBaseline
+ * @returns {Map<string,number>}
+ */
+function holyroodBaselineForPass(pass, constBaseline, listBaseline) {
+  return pass === 'list' ? listBaseline : constBaseline;
+}
+
+/**
+ * @param {'overall'|'constituency'|'list'} pass
+ * @param {Map<string,number>} nationalBaseline
+ * @param {Map<string,number>} nationalListBaseline
+ * @returns {Map<string,number>}
+ */
+function holyroodNationalBaselineForPass(pass, nationalBaseline, nationalListBaseline) {
+  return pass === 'list' ? nationalListBaseline : nationalBaseline;
+}
+
+/**
+ * Resolves the share for a region/party from a single tab input map, applying national UNS if
+ * no region-level override exists.
+ * @param {string} regionKey
+ * @param {string} partyKey
+ * @param {Map<string,number>} tabMap - Input map for the tab being resolved.
+ * @param {'overall'|'constituency'|'list'} pass
+ * @param {object} state - { constBaseline, listBaseline, nationalBaseline, nationalListBaseline }
+ * @returns {number|null} Resolved share, or null if the tab map has no entry for this party.
+ */
+export function resolvedTabShare(regionKey, partyKey, tabMap, pass, state) {
+  const regionKey_ = predictInputKey(regionKey, partyKey);
+  if (tabMap.has(regionKey_)) return tabMap.get(regionKey_);
+  const natKey = predictInputKey(HOLYROOD_NATIONAL_KEY, partyKey);
+  if (tabMap.has(natKey)) {
+    const nationalInput = tabMap.get(natKey);
+    const nationalBase = holyroodNationalBaselineForPass(pass, state.nationalBaseline, state.nationalListBaseline).get(partyKey) ?? 0;
+    const regionalBase = getPredictBaselineShare(regionKey, partyKey, holyroodBaselineForPass(pass, state.constBaseline, state.listBaseline));
+    return roundPredictShareValue(clampNumber(regionalBase + (nationalInput - nationalBase), 0, 100));
+  }
+  return null;
+}
+
+/**
+ * Returns the effective resolved share for a region/party for a given pass.
+ * Resolution order: tab-specific (region override → national UNS) → regional baseline.
+ * @param {string} regionKey
+ * @param {string} partyKey
+ * @param {'constituency'|'list'} pass
+ * @param {object} state - { constBaseline, listBaseline, nationalBaseline, nationalListBaseline, constInput, listInput }
+ * @returns {number} Share (0–100).
+ */
+export function resolvedHolyroodShare(regionKey, partyKey, pass, state) {
+  if (pass !== 'constituency' && pass !== 'list') throw new Error(`Unknown pass: ${pass}`);
+  const tabMap = pass === 'list' ? state.listInput : state.constInput;
+  const tabVal = resolvedTabShare(regionKey, partyKey, tabMap, pass, state);
+  if (tabVal !== null) return tabVal;
+  return getPredictBaselineShare(regionKey, partyKey, holyroodBaselineForPass(pass, state.constBaseline, state.listBaseline));
+}
+
+/**
+ * Calculates the 'other' share for the national row of a Holyrood predict tab.
+ * @param {Map<string,number>} tabMap - Tab input map.
+ * @param {'overall'|'constituency'|'list'} pass
+ * @param {string[]} partyKeys - Column party keys for the tab.
+ * @param {object} state - { nationalBaseline, nationalListBaseline }
+ * @returns {number}
+ */
+export function holyroodNationalOtherShare(tabMap, pass, partyKeys, state) {
+  const natBaselines = holyroodNationalBaselineForPass(pass, state.nationalBaseline, state.nationalListBaseline);
+  const total = partyKeys.reduce((sum, pk) => {
+    const natKey = predictInputKey(HOLYROOD_NATIONAL_KEY, pk);
+    return sum + (tabMap.has(natKey) ? tabMap.get(natKey) : (natBaselines.get(pk) ?? 0));
+  }, 0);
+  return roundPredictShareValue(100 - total);
+}
+
+/**
+ * Calculates the 'other' share for a region row using resolved values for the given pass.
+ * @param {string} regionKey
+ * @param {'overall'|'constituency'|'list'} pass
+ * @param {string[]} partyKeys - Column party keys for the tab.
+ * @param {object} state - Full Holyrood predict state (passed to resolvedHolyroodShare).
+ * @returns {number}
+ */
+export function holyroodResolvedOtherShare(regionKey, pass, partyKeys, state) {
+  const total = partyKeys.reduce((sum, pk) => sum + resolvedHolyroodShare(regionKey, pk, pass, state), 0);
+  return roundPredictShareValue(100 - total);
+}
+

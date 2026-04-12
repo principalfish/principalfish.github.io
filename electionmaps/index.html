@@ -35,7 +35,10 @@
 
       <section class="maps-app" aria-label="Election maps application layout">
         <aside id="mapsLeftPanel" class="maps-panel maps-panel-left" aria-label="Election selection">
-          <h2 class="maps-panel-title">Elections</h2>
+          <div class="maps-parliament-tabs" role="tablist" aria-label="Parliament selection">
+            <a class="maps-parliament-tab" data-parliament="westminster" href="?parliament=westminster">Westminster</a>
+            <a class="maps-parliament-tab" data-parliament="holyrood" href="?parliament=holyrood">Scotland</a>
+          </div>
           <nav id="mapsElectionList" class="maps-election-list" aria-label="Election years"></nav>
         </aside>
         <button type="button" id="mapsSidebarOverlay" class="maps-mobile-sidebar-overlay" aria-label="Close elections menu" hidden></button>
@@ -121,6 +124,27 @@
 
             <div id="mapsChoroplethLegend" class="maps-choropleth-legend" hidden></div>
 
+            <article id="mapsRegionCard" class="maps-region-card" hidden aria-label="List seats by region">
+              <table class="maps-region-table" aria-label="List seats by region">
+                <thead>
+                  <tr class="maps-region-table-header-row">
+                    <th class="maps-region-table-th">Region</th>
+                    <th class="maps-region-table-th maps-region-table-th-seats">
+                      Seats
+                      <button type="button" id="mapsRegionCardToggle" class="maps-region-card-toggle" aria-label="Toggle region list">▼</button>
+                    </th>
+                  </tr>
+                  <tr class="maps-region-table-collapsed-row">
+                    <th class="maps-region-table-th maps-region-table-th-collapsed" colspan="2">
+                      Show Regional Seats
+                      <button type="button" id="mapsRegionCardToggle2" class="maps-region-card-toggle maps-region-card-toggle--show" aria-label="Show region list">▶</button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="mapsRegionTableBody"></tbody>
+              </table>
+            </article>
+
             <div id="mapsViewport" class="maps-viewport" aria-label="Map viewport">
               <div class="maps-zoom-overlay" aria-label="Map zoom controls">
                 <button type="button" class="maps-icon-btn" data-map-action="zoom-out" aria-label="Zoom out">−</button>
@@ -151,6 +175,7 @@
                 <h2 class="maps-panel-title">Vote Totals</h2>
                 <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
               </div>
+              <nav class="maps-vote-tabs" id="mapsVoteTotalsTabNav" hidden aria-label="Vote totals view"></nav>
               <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder">
                 <thead>
                   <tr>
@@ -159,7 +184,7 @@
                     <th class="comparison-col">±</th>
                     <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
                     <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
-                    <th class="comparison-col">±</th>
+                    <th class="comparison-col vote-pct-comparison-col">±</th>
                   </tr>
                 </thead>
                 <tbody id="mapsVoteTotalsBody"></tbody>
@@ -168,10 +193,14 @@
 
             <article id="mapsPredictWindow" class="maps-predict-window" hidden aria-label="Predict 2029 input">
               <header class="maps-predict-window-head">
-                <h3 class="maps-predict-window-title">User Input (uniform swing)</h3>
+                <div class="maps-predict-window-title-group">
+                  <h3 class="maps-predict-window-title">User Input (uniform swing)</h3>
+                </div>
+                <button type="button" id="mapsPredictCollapse" class="maps-inline-btn" aria-label="Collapse user input">▲</button>
               </header>
               <div class="maps-predict-window-body">
-                <div id="mapsPredictGrid" class="maps-predict-grid" aria-label="Regional swing matrix"></div>
+                <nav id="mapsPredictTabNav" class="maps-predict-tabs" hidden aria-label="Predict input tabs"></nav>
+<div id="mapsPredictGrid" class="maps-predict-grid" aria-label="Regional swing matrix"></div>
                 <div class="maps-predict-window-actions">
                   <button type="button" id="mapsPredictSubmit" class="maps-apply-btn">Submit</button>
                   <button type="button" id="mapsPredictShare" class="maps-apply-btn">Share</button>
@@ -181,7 +210,10 @@
             </article>
 
             <article class="maps-card maps-seat-card" id="mapsSeatCard">
-              <h2 class="maps-panel-title">Seats</h2>
+              <div class="maps-card-head">
+                <h2 class="maps-panel-title">Seats</h2>
+                <nav class="maps-seat-view-tabs" id="mapsSeatViewTabNav" hidden aria-label="Seat view"></nav>
+              </div>
               <p id="mapsSeatPreview" class="maps-meta">Hover a region on the map to preview selection.</p>
               <div id="mapsSeatList" class="maps-seat-list" aria-label="Seat list placeholder">
                 <p>Loading seats…</p>

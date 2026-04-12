@@ -2,12 +2,12 @@
 Import seats from TopoJSON files into the election maps database.
 
 Usage:
-    python old_data/import_topojson.py
-    python old_data/import_topojson.py --skip-existing
+    python old_data/scripts/westminster/import_topojson.py
+    python old_data/scripts/westminster/import_topojson.py --skip-existing
 
 Loads:
-    - old_data/files/650map.json     → map "UK Constituencies pre 2019"
-    - old_data/files/650map_new.json → map "UK Constituencies post 2022"
+    - old_data/files/westminster/650map.json     → map "UK Constituencies pre 2019"
+    - old_data/files/westminster/650map_new.json → map "UK Constituencies post 2022"
 """
 
 import argparse
@@ -18,7 +18,7 @@ from typing import Any
 
 from shapely.geometry import MultiPolygon, Polygon, shape
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database
 
@@ -244,7 +244,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    base = Path(__file__).resolve().parent.parent / "files"
+    base = Path(__file__).resolve().parents[2] / "files" / "westminster"
     db = Database()
     db.create_tables()
 

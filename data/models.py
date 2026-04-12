@@ -33,12 +33,20 @@ class ElectionType(enum.Enum):
         by_election: A UK by-election for a single seat.
         model_run: A modelled/projected election result (e.g. UNS projection).
         model_uns: A uniform national swing model run.
+        holyrood_uns: A Holyrood uniform national swing model run.
+        holyrood_general: A Scottish Parliament (Holyrood) general election
+            covering FPTP constituency seats.
+        holyrood_list: Regional list seat allocations for a Scottish Parliament
+            election, computed via d'Hondt from the regional list vote.
     """
 
     uk_general = "uk_general"
     by_election = "by_election"
     model_run = "model_run"
     model_uns = "model_uns"
+    holyrood_uns = "holyrood_uns"
+    holyrood_general = "holyrood_general"
+    holyrood_list = "holyrood_list"
 
 
 # ── Tables ───────────────────────────────────────────────────────────────────
@@ -81,6 +89,9 @@ class Map(Base):
     Attributes:
         id: Auto-incrementing primary key.
         name: Unique human-readable map name.
+        parliament: Which parliament this map covers. One of ``"westminster"``
+            (UK Parliament) or ``"holyrood"`` (Scottish Parliament). Defaults
+            to ``"westminster"``.
         regions: All ``Region`` records belonging to this map.
         seats: All ``Seat`` records belonging to this map.
         elections: All ``Election`` records associated with this map.
@@ -90,6 +101,7 @@ class Map(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    parliament: Mapped[str] = mapped_column(String, nullable=False, server_default="westminster")
 
     regions: Mapped[list["Region"]] = relationship("Region", back_populates="map", cascade="all, delete-orphan")
     seats: Mapped[list["Seat"]] = relationship("Seat", back_populates="map", cascade="all, delete-orphan")
@@ -180,7 +192,7 @@ class Election(Base):
 
     An election represents a single contest across some or all seats within a
     map. This includes real elections (``uk_general``, ``by_election``) and
-    synthetic model runs (``model_run``, ``model_uns``). Model runs typically
+    synthetic model runs (``model_run``, ``model_uns``, ``holyrood_uns``). Model runs typically
     reference a real parent election via ``parent_election_id``.
 
     Attributes:
@@ -246,7 +258,7 @@ class Vote(Base):
     election_id: Mapped[int] = mapped_column(Integer, ForeignKey("elections.id"), nullable=False)
     seat_id: Mapped[int] = mapped_column(Integer, ForeignKey("seats.id"), nullable=False)
     party_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("parties.id"), nullable=True)  # nullable for independents
-    candidate_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # empty for model_run/model_uns elections
+    candidate_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # empty for model_run/model_uns/holyrood_uns elections
     vote_total: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     elected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

@@ -42,6 +42,7 @@ def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
             map_id INTEGER NOT NULL,
             year INTEGER NOT NULL,
             name TEXT NOT NULL,
+            election_type TEXT NOT NULL DEFAULT 'model_uns',
             election_date TEXT
         );
         CREATE TABLE IF NOT EXISTS votes (
@@ -54,6 +55,10 @@ def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
             elected INTEGER DEFAULT 0
         );
     """)
+    # Add election_type column to existing databases that lack it.
+    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(elections)").fetchall()}
+    if "election_type" not in existing_cols:
+        conn.execute("ALTER TABLE elections ADD COLUMN election_type TEXT NOT NULL DEFAULT 'model_uns'")
     conn.commit()
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
@@ -1169,8 +1174,8 @@ def persist_projection(
     with sqlite3.connect(sqlite_path) as conn:
         ensure_sqlite_schema(conn)
         cursor = conn.execute(
-            "INSERT INTO elections (map_id, year, name, election_date) VALUES (?, ?, ?, ?)",
-            (map_id, as_of_date.year, election_name, as_of_date.isoformat()),
+            "INSERT INTO elections (map_id, year, name, election_type, election_date) VALUES (?, ?, ?, ?, ?)",
+            (map_id, as_of_date.year, election_name, "model_uns", as_of_date.isoformat()),
         )
         election_id = cursor.lastrowid
         conn.executemany(

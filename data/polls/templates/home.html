@@ -23,5 +23,11 @@
         <button type="submit" class="button button-block">Export Simulation JSON</button>
       </form>
     </div>
+
+    <div class="action-grid action-grid-two">
+      <form method="post" action="{{ url_for('holyrood_import_polls') }}" class="inline-form button-form">
+        <button type="submit" class="button button-block">Import Scottish Polls</button>
+      </form>
+    </div>
   </section>
 {% endblock %}

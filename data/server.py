@@ -37,7 +37,7 @@ from sqlalchemy import delete, func, select
 from db import Database
 from models import Election, ElectionType, Map, Party, Poll, PollRow, Pollster, Region, Seat, Vote
 from scripts import by_election_import
-from polls.importers import (
+from polls.importers.westminster import (
     bmg_research_import,
     deltapoll_import,
     find_out_now_import,
@@ -107,14 +107,16 @@ REPO_ROOT = DATA_DIR.parent
 TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
 UPDATE_POLLS_SCRIPT = DATA_DIR / "polls" / "update_polls.sh"
-UNS_MODEL_SCRIPT = DATA_DIR / "models" / "uns" / "run_uns_model.py"
-EXPORT_ELECTION_SCRIPT = DATA_DIR / "scripts" / "export_non_simulation_elections.py"
+UNS_MODEL_SCRIPT = DATA_DIR / "models" / "westminster" / "run_uns_model.py"
+HOLYROOD_IMPORT_SCRIPT = DATA_DIR / "polls" / "importers" / "holyrood" / "holyrood_wikipedia_import.py"
+HOLYROOD_MODEL_SCRIPT = DATA_DIR / "models" / "holyrood" / "run_holyrood_uns_model.py"
+EXPORT_ELECTION_SCRIPT = DATA_DIR / "scripts" / "export_elections.py"
 PREDICTION_SIMULATION_OUTPUT = REPO_ROOT / "electionmaps" / "data" / "results" / "prediction-simulation.json"
 UNS_TREND_CACHE_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.json"
 UNS_NAME_DATE_PATTERN = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
 
 app = Flask(__name__, template_folder=str(TEMPLATE_DIR), static_folder=str(STATIC_DIR))
-app.config["SECRET_KEY"] = "local-polls-dev-key"
+app.config["SECRET_KEY"] = os.environ.get("POLLS_SECRET_KEY", "local-polls-dev-key")
 
 IMPORTERS: dict[str, ImporterMeta] = {
     "yougov": {
@@ -252,8 +254,8 @@ def _choices_for_model_form(db: Database) -> dict[str, object]:
         "half_life_days": [7.0, 14.0, 21.0, 30.0, 45.0, 60.0, 90.0],
         "output_csv_options": [
             "",
-            f"models/uns/output/uns_{today}.csv",
-            "models/uns/output/uns_latest.csv",
+            f"models/westminster/output/uns_{today}.csv",
+            "models/westminster/output/uns_latest.csv",
         ],
         "dry_run_options": [
             {"value": "true", "label": "Yes (preview only)"},
@@ -342,12 +344,63 @@ def update_polls() -> str | WerkzeugResponse:
     )
 
 
+@app.route("/holyrood/import-polls", methods=["POST"])
+def holyrood_import_polls() -> str | WerkzeugResponse:
+    """POST /holyrood/import-polls — Import new Scottish Parliament polls from Wikipedia and re-run the Holyrood model.
+
+    Side effects:
+        Runs holyrood_wikipedia_import.py (idempotent — skips existing polls),
+        then runs run_holyrood_uns_model.py to update the projection.
+
+    Returns:
+        Rendered command_result.html showing combined stdout, stderr, and return code.
+    """
+    for script in (HOLYROOD_IMPORT_SCRIPT, HOLYROOD_MODEL_SCRIPT):
+        if not script.exists():
+            flash(f"Script not found: {script}")
+            return redirect(url_for("home"))
+
+    combined_stdout: list[str] = []
+    combined_stderr: list[str] = []
+    return_code = 0
+
+    for script, label, extra_args in [
+        (HOLYROOD_IMPORT_SCRIPT, "Import Scottish constituency polls from Wikipedia", []),
+        (HOLYROOD_IMPORT_SCRIPT, "Import Scottish list polls from Wikipedia", ["--ballot", "list"]),
+        (HOLYROOD_MODEL_SCRIPT, "Run Holyrood UNS model", []),
+    ]:
+        result = subprocess.run(
+            [sys.executable, str(script), *extra_args],
+            cwd=str(DATA_DIR),
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        combined_stdout.append(f"=== {label} ===\n{result.stdout}")
+        if result.stderr:
+            combined_stderr.append(f"=== {label} ===\n{result.stderr}")
+        if result.returncode != 0:
+            return_code = result.returncode
+            break
+
+    return render_template(
+        "command_result.html",
+        title="Import Scottish Polls",
+        command=f"holyrood_wikipedia_import.py → run_holyrood_uns_model.py",
+        stdout="\n".join(combined_stdout),
+        stderr="\n".join(combined_stderr),
+        return_code=return_code,
+        back_endpoint="home",
+        back_label="Back to home",
+    )
+
+
 @app.route("/exports/current-simulation", methods=["POST"])
 def export_current_simulation() -> str | WerkzeugResponse:
     """POST /exports/current-simulation — Export the latest UNS prediction simulation to JSON.
 
     Side effects:
-        Executes ``export_non_simulation_elections.py --current-simulation`` as a
+        Executes ``export_elections.py --current-simulation`` as a
         subprocess (timeout 900 s), which writes the prediction JSON to
         ``electionmaps/data/results/prediction-simulation.json``.
 
@@ -1326,6 +1379,13 @@ def import_poll_confirm(token: str) -> str | WerkzeugResponse:
                 if result.created_poll or result.inserted_rows or result.replaced_rows:
                     subprocess.run([sys.executable, str(UNS_MODEL_SCRIPT)], check=True)
                     flash("UNS model updated.")
+                    if EXPORT_ELECTION_SCRIPT.exists():
+                        subprocess.run(
+                            [sys.executable, str(EXPORT_ELECTION_SCRIPT),
+                             "--current-simulation", "--output-file", str(PREDICTION_SIMULATION_OUTPUT)],
+                            cwd=str(DATA_DIR), timeout=900, check=True,
+                        )
+                        flash("Prediction simulation exported.")
             except Exception as exc:
                 flash(f"Warning: UNS model run failed: {exc}")
 

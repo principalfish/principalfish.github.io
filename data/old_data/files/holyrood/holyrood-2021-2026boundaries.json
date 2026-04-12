@@ -1,0 +1,1726 @@
+{
+  "Aberdeen Central": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14217
+      },
+      "conservative": {
+        "total": 7623
+      },
+      "labour": {
+        "total": 6294
+      },
+      "green": {
+        "total": 2087
+      },
+      "libdems": {
+        "total": 1417
+      },
+      "others": {
+        "total": 34
+      }
+    }
+  },
+  "Aberdeen Donside": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18514
+      },
+      "conservative": {
+        "total": 9488
+      },
+      "labour": {
+        "total": 5505
+      },
+      "libdems": {
+        "total": 2162
+      },
+      "others": {
+        "total": 39
+      }
+    }
+  },
+  "Aberdeen Deeside and North Kincardine": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16500
+      },
+      "conservative": {
+        "total": 14829
+      },
+      "labour": {
+        "total": 4505
+      },
+      "libdems": {
+        "total": 2889
+      },
+      "others": {
+        "total": 42
+      }
+    }
+  },
+  "Aberdeenshire East": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17390
+      },
+      "conservative": {
+        "total": 15596
+      },
+      "libdems": {
+        "total": 3226
+      },
+      "labour": {
+        "total": 2755
+      },
+      "others": {
+        "total": 43
+      }
+    }
+  },
+  "Banffshire and Buchan Coast": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 15837
+      },
+      "conservative": {
+        "total": 14970
+      },
+      "labour": {
+        "total": 2314
+      },
+      "libdems": {
+        "total": 1241
+      },
+      "others": {
+        "total": 37
+      }
+    }
+  },
+  "Aberdeenshire West": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 19709
+      },
+      "snp": {
+        "total": 16319
+      },
+      "libdems": {
+        "total": 3363
+      },
+      "labour": {
+        "total": 2382
+      },
+      "others": {
+        "total": 31
+      }
+    }
+  },
+  "Airdrie": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16139
+      },
+      "labour": {
+        "total": 10671
+      },
+      "conservative": {
+        "total": 4422
+      },
+      "libdems": {
+        "total": 562
+      },
+      "others": {
+        "total": 33
+      }
+    }
+  },
+  "Almond Valley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 22313
+      },
+      "labour": {
+        "total": 10377
+      },
+      "conservative": {
+        "total": 6841
+      },
+      "libdems": {
+        "total": 1575
+      },
+      "others": {
+        "total": 25
+      }
+    }
+  },
+  "Bathgate": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20084
+      },
+      "labour": {
+        "total": 11108
+      },
+      "conservative": {
+        "total": 8343
+      },
+      "libdems": {
+        "total": 1873
+      },
+      "others": {
+        "total": 34
+      }
+    }
+  },
+  "Angus North and Mearns": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17144
+      },
+      "conservative": {
+        "total": 13635
+      },
+      "labour": {
+        "total": 2686
+      },
+      "libdems": {
+        "total": 1804
+      },
+      "others": {
+        "total": 35
+      }
+    }
+  },
+  "Angus South": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19568
+      },
+      "conservative": {
+        "total": 13451
+      },
+      "labour": {
+        "total": 3625
+      },
+      "libdems": {
+        "total": 1964
+      },
+      "others": {
+        "total": 44
+      }
+    }
+  },
+  "Argyll and Bute": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16608
+      },
+      "conservative": {
+        "total": 7645
+      },
+      "libdems": {
+        "total": 6874
+      },
+      "labour": {
+        "total": 2436
+      },
+      "others": {
+        "total": 423
+      }
+    }
+  },
+  "Ayr": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18881
+      },
+      "conservative": {
+        "total": 18711
+      },
+      "labour": {
+        "total": 4766
+      },
+      "libdems": {
+        "total": 808
+      }
+    }
+  },
+  "Caithness, Sutherland and Ross": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 15889
+      },
+      "libdems": {
+        "total": 13298
+      },
+      "conservative": {
+        "total": 5170
+      },
+      "labour": {
+        "total": 2016
+      },
+      "others": {
+        "total": 461
+      }
+    }
+  },
+  "Carrick, Cumnock and Doon Valley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 15240
+      },
+      "conservative": {
+        "total": 10903
+      },
+      "labour": {
+        "total": 8604
+      },
+      "libdems": {
+        "total": 875
+      }
+    }
+  },
+  "Clackmannanshire and Dunblane": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17933
+      },
+      "conservative": {
+        "total": 9887
+      },
+      "labour": {
+        "total": 8763
+      },
+      "libdems": {
+        "total": 1299
+      },
+      "others": {
+        "total": 26
+      }
+    }
+  },
+  "Clydebank and Milngavie": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17784
+      },
+      "labour": {
+        "total": 12511
+      },
+      "conservative": {
+        "total": 4152
+      },
+      "libdems": {
+        "total": 2986
+      },
+      "others": {
+        "total": 220
+      }
+    }
+  },
+  "Dumbarton": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 17827
+      },
+      "snp": {
+        "total": 16345
+      },
+      "conservative": {
+        "total": 3206
+      },
+      "libdems": {
+        "total": 677
+      },
+      "others": {
+        "total": 183
+      }
+    }
+  },
+  "Clydesdale": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17596
+      },
+      "conservative": {
+        "total": 13018
+      },
+      "labour": {
+        "total": 8960
+      },
+      "libdems": {
+        "total": 1144
+      }
+    }
+  },
+  "Coatbridge and Chryston": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20577
+      },
+      "labour": {
+        "total": 11140
+      },
+      "conservative": {
+        "total": 3028
+      },
+      "libdems": {
+        "total": 622
+      },
+      "others": {
+        "total": 43
+      }
+    }
+  },
+  "Cowdenbeath": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16499
+      },
+      "labour": {
+        "total": 10486
+      },
+      "conservative": {
+        "total": 4758
+      },
+      "green": {
+        "total": 1344
+      },
+      "libdems": {
+        "total": 1088
+      },
+      "others": {
+        "total": 25
+      }
+    }
+  },
+  "Cumbernauld and Kilsyth": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19633
+      },
+      "labour": {
+        "total": 9792
+      },
+      "conservative": {
+        "total": 3375
+      },
+      "libdems": {
+        "total": 678
+      },
+      "others": {
+        "total": 86
+      }
+    }
+  },
+  "Cunninghame North": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18227
+      },
+      "conservative": {
+        "total": 10451
+      },
+      "labour": {
+        "total": 7536
+      },
+      "libdems": {
+        "total": 967
+      },
+      "others": {
+        "total": 29
+      }
+    }
+  },
+  "Cunninghame South": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17704
+      },
+      "labour": {
+        "total": 8391
+      },
+      "conservative": {
+        "total": 7588
+      },
+      "libdems": {
+        "total": 822
+      },
+      "others": {
+        "total": 318
+      }
+    }
+  },
+  "Dumfriesshire": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 19487
+      },
+      "snp": {
+        "total": 15421
+      },
+      "labour": {
+        "total": 4671
+      },
+      "libdems": {
+        "total": 1314
+      }
+    }
+  },
+  "Dundee City East": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19230
+      },
+      "labour": {
+        "total": 5893
+      },
+      "conservative": {
+        "total": 5630
+      },
+      "libdems": {
+        "total": 1431
+      },
+      "others": {
+        "total": 29
+      }
+    }
+  },
+  "Dundee City West": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19818
+      },
+      "labour": {
+        "total": 6899
+      },
+      "conservative": {
+        "total": 3327
+      },
+      "libdems": {
+        "total": 1269
+      },
+      "others": {
+        "total": 20
+      }
+    }
+  },
+  "Dunfermline": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20048
+      },
+      "labour": {
+        "total": 11384
+      },
+      "conservative": {
+        "total": 6314
+      },
+      "libdems": {
+        "total": 3196
+      },
+      "others": {
+        "total": 38
+      }
+    }
+  },
+  "East Kilbride": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 21149
+      },
+      "labour": {
+        "total": 12477
+      },
+      "conservative": {
+        "total": 5923
+      },
+      "libdems": {
+        "total": 1217
+      },
+      "others": {
+        "total": 40
+      }
+    }
+  },
+  "East Lothian Coast and Lammermuirs": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 15370
+      },
+      "labour": {
+        "total": 14361
+      },
+      "conservative": {
+        "total": 8101
+      },
+      "libdems": {
+        "total": 1340
+      }
+    }
+  },
+  "Edinburgh Eastern, Musselburgh and Tranent": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17205
+      },
+      "labour": {
+        "total": 11083
+      },
+      "conservative": {
+        "total": 5523
+      },
+      "libdems": {
+        "total": 1459
+      },
+      "others": {
+        "total": 28
+      }
+    }
+  },
+  "Eastwood": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 17911
+      },
+      "snp": {
+        "total": 15695
+      },
+      "labour": {
+        "total": 6759
+      },
+      "others": {
+        "total": 1352
+      },
+      "libdems": {
+        "total": 911
+      }
+    }
+  },
+  "Edinburgh Central": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17363
+      },
+      "labour": {
+        "total": 12003
+      },
+      "conservative": {
+        "total": 10029
+      },
+      "green": {
+        "total": 2791
+      },
+      "libdems": {
+        "total": 2572
+      },
+      "others": {
+        "total": 273
+      }
+    }
+  },
+  "Edinburgh Northern": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16290
+      },
+      "libdems": {
+        "total": 7296
+      },
+      "labour": {
+        "total": 6511
+      },
+      "conservative": {
+        "total": 4996
+      },
+      "green": {
+        "total": 3347
+      },
+      "others": {
+        "total": 100
+      }
+    }
+  },
+  "Edinburgh North Western": {
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": null
+    },
+    "partyInfo": {
+      "libdems": {
+        "total": 19949
+      },
+      "snp": {
+        "total": 14123
+      },
+      "conservative": {
+        "total": 3647
+      },
+      "labour": {
+        "total": 2809
+      },
+      "green": {
+        "total": 374
+      },
+      "others": {
+        "total": 58
+      }
+    }
+  },
+  "Edinburgh Southern": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16875
+      },
+      "labour": {
+        "total": 14467
+      },
+      "conservative": {
+        "total": 5797
+      },
+      "libdems": {
+        "total": 1926
+      },
+      "others": {
+        "total": 46
+      },
+      "green": {
+        "total": 10
+      }
+    }
+  },
+  "Edinburgh North Eastern and Leith": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20529
+      },
+      "labour": {
+        "total": 10473
+      },
+      "conservative": {
+        "total": 4914
+      },
+      "green": {
+        "total": 3515
+      },
+      "libdems": {
+        "total": 1855
+      },
+      "others": {
+        "total": 50
+      }
+    }
+  },
+  "Edinburgh South Western": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16886
+      },
+      "conservative": {
+        "total": 11462
+      },
+      "labour": {
+        "total": 9766
+      },
+      "libdems": {
+        "total": 2286
+      },
+      "others": {
+        "total": 75
+      }
+    }
+  },
+  "Ettrick, Roxburgh and Berwickshire": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 18564
+      },
+      "snp": {
+        "total": 11701
+      },
+      "libdems": {
+        "total": 2352
+      },
+      "labour": {
+        "total": 2050
+      },
+      "green": {
+        "total": 1084
+      },
+      "others": {
+        "total": 290
+      }
+    }
+  },
+  "Falkirk East and Linlithgow": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20127
+      },
+      "labour": {
+        "total": 11533
+      },
+      "conservative": {
+        "total": 8230
+      },
+      "libdems": {
+        "total": 1212
+      },
+      "others": {
+        "total": 836
+      }
+    }
+  },
+  "Falkirk West": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 22753
+      },
+      "labour": {
+        "total": 10600
+      },
+      "conservative": {
+        "total": 7971
+      },
+      "libdems": {
+        "total": 1188
+      },
+      "others": {
+        "total": 208
+      }
+    }
+  },
+  "Galloway and West Dumfries": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 17486
+      },
+      "snp": {
+        "total": 14851
+      },
+      "labour": {
+        "total": 2932
+      },
+      "green": {
+        "total": 970
+      },
+      "libdems": {
+        "total": 948
+      }
+    }
+  },
+  "Glasgow Anniesland": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18597
+      },
+      "labour": {
+        "total": 11556
+      },
+      "conservative": {
+        "total": 3900
+      },
+      "libdems": {
+        "total": 1138
+      },
+      "green": {
+        "total": 802
+      },
+      "others": {
+        "total": 29
+      }
+    }
+  },
+  "Glasgow Kelvin and Maryhill": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16072
+      },
+      "labour": {
+        "total": 8854
+      },
+      "green": {
+        "total": 4324
+      },
+      "conservative": {
+        "total": 2619
+      },
+      "libdems": {
+        "total": 852
+      },
+      "others": {
+        "total": 32
+      }
+    }
+  },
+  "Glasgow Cathcart and Pollok": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 21157
+      },
+      "labour": {
+        "total": 11674
+      },
+      "conservative": {
+        "total": 3318
+      },
+      "libdems": {
+        "total": 880
+      },
+      "green": {
+        "total": 666
+      },
+      "others": {
+        "total": 116
+      }
+    }
+  },
+  "Glasgow Southside": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 23517
+      },
+      "labour": {
+        "total": 12324
+      },
+      "conservative": {
+        "total": 2895
+      },
+      "libdems": {
+        "total": 783
+      },
+      "green": {
+        "total": 73
+      },
+      "others": {
+        "total": 66
+      }
+    }
+  },
+  "Glasgow Central": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 21593
+      },
+      "labour": {
+        "total": 12131
+      },
+      "green": {
+        "total": 4175
+      },
+      "conservative": {
+        "total": 3787
+      },
+      "libdems": {
+        "total": 952
+      },
+      "others": {
+        "total": 66
+      }
+    }
+  },
+  "Glasgow Easterhouse and Springburn": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17946
+      },
+      "labour": {
+        "total": 9590
+      },
+      "conservative": {
+        "total": 2792
+      },
+      "green": {
+        "total": 1629
+      },
+      "libdems": {
+        "total": 596
+      },
+      "others": {
+        "total": 19
+      }
+    }
+  },
+  "Renfrewshire North and Cardonald": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19543
+      },
+      "labour": {
+        "total": 11618
+      },
+      "conservative": {
+        "total": 7077
+      },
+      "libdems": {
+        "total": 917
+      },
+      "green": {
+        "total": 595
+      },
+      "others": {
+        "total": 79
+      }
+    }
+  },
+  "Glasgow Baillieston and Shettleston": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16036
+      },
+      "labour": {
+        "total": 8696
+      },
+      "conservative": {
+        "total": 3589
+      },
+      "green": {
+        "total": 830
+      },
+      "libdems": {
+        "total": 611
+      },
+      "others": {
+        "total": 14
+      }
+    }
+  },
+  "Inverclyde": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20965
+      },
+      "labour": {
+        "total": 12274
+      },
+      "conservative": {
+        "total": 3931
+      },
+      "libdems": {
+        "total": 1103
+      },
+      "others": {
+        "total": 777
+      }
+    }
+  },
+  "Hamilton, Larkhall and Stonehouse": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16761
+      },
+      "labour": {
+        "total": 12179
+      },
+      "conservative": {
+        "total": 6332
+      },
+      "libdems": {
+        "total": 1012
+      },
+      "others": {
+        "total": 51
+      }
+    }
+  },
+  "Inverness and Nairn": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20128
+      },
+      "conservative": {
+        "total": 11710
+      },
+      "labour": {
+        "total": 4960
+      },
+      "libdems": {
+        "total": 2671
+      },
+      "green": {
+        "total": 2435
+      },
+      "others": {
+        "total": 610
+      }
+    }
+  },
+  "Skye, Lochaber and Badenoch": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 25857
+      },
+      "conservative": {
+        "total": 9300
+      },
+      "libdems": {
+        "total": 6999
+      },
+      "labour": {
+        "total": 4265
+      },
+      "others": {
+        "total": 1250
+      },
+      "green": {
+        "total": 201
+      }
+    }
+  },
+  "Kilmarnock and Irvine Valley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18922
+      },
+      "labour": {
+        "total": 8602
+      },
+      "conservative": {
+        "total": 7328
+      },
+      "libdems": {
+        "total": 812
+      }
+    }
+  },
+  "Kirkcaldy": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18417
+      },
+      "labour": {
+        "total": 10586
+      },
+      "conservative": {
+        "total": 4891
+      },
+      "libdems": {
+        "total": 1015
+      },
+      "others": {
+        "total": 27
+      }
+    }
+  },
+  "Mid Fife and Glenrothes": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18115
+      },
+      "labour": {
+        "total": 7881
+      },
+      "conservative": {
+        "total": 4500
+      },
+      "libdems": {
+        "total": 1789
+      },
+      "others": {
+        "total": 24
+      }
+    }
+  },
+  "Midlothian North": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 15822
+      },
+      "labour": {
+        "total": 9455
+      },
+      "conservative": {
+        "total": 5329
+      },
+      "libdems": {
+        "total": 1290
+      },
+      "green": {
+        "total": 141
+      },
+      "others": {
+        "total": 23
+      }
+    }
+  },
+  "Midlothian South, Tweeddale and Lauderdale": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18514
+      },
+      "conservative": {
+        "total": 12134
+      },
+      "labour": {
+        "total": 5057
+      },
+      "libdems": {
+        "total": 2444
+      },
+      "green": {
+        "total": 2013
+      }
+    }
+  },
+  "Moray": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19984
+      },
+      "conservative": {
+        "total": 16821
+      },
+      "labour": {
+        "total": 2972
+      },
+      "libdems": {
+        "total": 1165
+      },
+      "others": {
+        "total": 204
+      }
+    }
+  },
+  "Motherwell and Wishaw": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18156
+      },
+      "labour": {
+        "total": 10343
+      },
+      "conservative": {
+        "total": 4472
+      },
+      "libdems": {
+        "total": 557
+      },
+      "others": {
+        "total": 173
+      }
+    }
+  },
+  "Na h-Eileanan an Iar": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 7454
+      },
+      "labour": {
+        "total": 4013
+      },
+      "conservative": {
+        "total": 2116
+      },
+      "others": {
+        "total": 571
+      },
+      "libdems": {
+        "total": 353
+      }
+    }
+  },
+  "Fife North East": {
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": null
+    },
+    "partyInfo": {
+      "libdems": {
+        "total": 22163
+      },
+      "snp": {
+        "total": 14715
+      },
+      "conservative": {
+        "total": 2323
+      },
+      "labour": {
+        "total": 1056
+      },
+      "others": {
+        "total": 32
+      }
+    }
+  },
+  "Orkney Islands": {
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": null
+    },
+    "partyInfo": {
+      "libdems": {
+        "total": 7238
+      },
+      "snp": {
+        "total": 3369
+      },
+      "conservative": {
+        "total": 699
+      },
+      "labour": {
+        "total": 290
+      },
+      "others": {
+        "total": 87
+      }
+    }
+  },
+  "Paisley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18682
+      },
+      "labour": {
+        "total": 12095
+      },
+      "conservative": {
+        "total": 4027
+      },
+      "green": {
+        "total": 1554
+      },
+      "libdems": {
+        "total": 1188
+      },
+      "others": {
+        "total": 10
+      }
+    }
+  },
+  "Renfrewshire West and Levern Valley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19804
+      },
+      "labour": {
+        "total": 11782
+      },
+      "conservative": {
+        "total": 6170
+      },
+      "libdems": {
+        "total": 956
+      },
+      "green": {
+        "total": 30
+      },
+      "others": {
+        "total": 26
+      }
+    }
+  },
+  "Perthshire North": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20959
+      },
+      "conservative": {
+        "total": 16800
+      },
+      "labour": {
+        "total": 2485
+      },
+      "libdems": {
+        "total": 1956
+      },
+      "others": {
+        "total": 26
+      }
+    }
+  },
+  "Perthshire South and Kinross-shire": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19027
+      },
+      "conservative": {
+        "total": 17185
+      },
+      "labour": {
+        "total": 2782
+      },
+      "libdems": {
+        "total": 2669
+      },
+      "others": {
+        "total": 17
+      }
+    }
+  },
+  "Rutherglen and Cambuslang": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 20250
+      },
+      "labour": {
+        "total": 15084
+      },
+      "conservative": {
+        "total": 3663
+      },
+      "libdems": {
+        "total": 1112
+      },
+      "others": {
+        "total": 35
+      }
+    }
+  },
+  "Shetland Islands": {
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": null
+    },
+    "partyInfo": {
+      "libdems": {
+        "total": 5803
+      },
+      "snp": {
+        "total": 4997
+      },
+      "conservative": {
+        "total": 503
+      },
+      "labour": {
+        "total": 424
+      },
+      "others": {
+        "total": 116
+      }
+    }
+  },
+  "Stirling": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18453
+      },
+      "conservative": {
+        "total": 12053
+      },
+      "labour": {
+        "total": 6085
+      },
+      "libdems": {
+        "total": 1361
+      },
+      "others": {
+        "total": 15
+      }
+    }
+  },
+  "Strathkelvin and Bearsden": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 21064
+      },
+      "conservative": {
+        "total": 9580
+      },
+      "labour": {
+        "total": 8510
+      },
+      "libdems": {
+        "total": 6675
+      },
+      "others": {
+        "total": 18
+      }
+    }
+  },
+  "Uddingston and Bellshill": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17952
+      },
+      "labour": {
+        "total": 12646
+      },
+      "conservative": {
+        "total": 4569
+      },
+      "libdems": {
+        "total": 821
+      },
+      "others": {
+        "total": 34
+      }
+    }
+  }
+}

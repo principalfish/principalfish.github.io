@@ -439,57 +439,57 @@ def write_mapping_files(mapped_rows: list[PollSourceRow]) -> None:
     for parser_id in sorted({row.parser_identifier for row in mapped_rows}):
         if parser_id == "yougov":
             parser_registry[parser_id] = {
-                "module": "polls.importers.yougov_import",
+                "module": "polls.importers.westminster.yougov_import",
                 "status": "implemented",
             }
         elif parser_id == "find_out_now":
             parser_registry[parser_id] = {
-                "module": "polls.importers.find_out_now_import",
+                "module": "polls.importers.westminster.find_out_now_import",
                 "status": "implemented",
             }
         elif parser_id == "more_in_common":
             parser_registry[parser_id] = {
-                "module": "polls.importers.more_in_common_import",
+                "module": "polls.importers.westminster.more_in_common_import",
                 "status": "implemented",
             }
         elif parser_id == "techne":
             parser_registry[parser_id] = {
-                "module": "polls.importers.techne_import",
+                "module": "polls.importers.westminster.techne_import",
                 "status": "implemented",
             }
         elif parser_id == "opinium":
             parser_registry[parser_id] = {
-                "module": "polls.importers.opinium_import",
+                "module": "polls.importers.westminster.opinium_import",
                 "status": "implemented",
             }
         elif parser_id == "bmg_research":
             parser_registry[parser_id] = {
-                "module": "polls.importers.bmg_research_import",
+                "module": "polls.importers.westminster.bmg_research_import",
                 "status": "implemented",
             }
         elif parser_id == "focaldata":
             parser_registry[parser_id] = {
-                "module": "polls.importers.focaldata_import",
+                "module": "polls.importers.westminster.focaldata_import",
                 "status": "implemented",
             }
         elif parser_id == "survation":
             parser_registry[parser_id] = {
-                "module": "polls.importers.survation_import",
+                "module": "polls.importers.westminster.survation_import",
                 "status": "implemented",
             }
         elif parser_id == "deltapoll":
             parser_registry[parser_id] = {
-                "module": "polls.importers.deltapoll_import",
+                "module": "polls.importers.westminster.deltapoll_import",
                 "status": "implemented",
             }
         elif parser_id == "ipsos":
             parser_registry[parser_id] = {
-                "module": "polls.importers.ipsos_import",
+                "module": "polls.importers.westminster.ipsos_import",
                 "status": "implemented",
             }
         elif parser_id == "lord_ashcroft":
             parser_registry[parser_id] = {
-                "module": "polls.importers.lord_ashcroft_import",
+                "module": "polls.importers.westminster.lord_ashcroft_import",
                 "status": "implemented",
             }
         else:

@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
-"""Export non-simulation elections into electionmaps static data files.
+"""Export elections into electionmaps static data files.
 
 Outputs:
     - electionmaps/data/results/*.json (legacy seatInfo/partyInfo shape)
         - electionmaps/data/maps/*.topo.json (TopoJSON map per map_id)
-        - electionmaps/data/elections.json (manifest consumed by electionmaps/electionmaps.js)
+        - electionmaps/data/map-modes.json (manifest consumed by electionmaps/electionmaps.js)
 
 Usage:
-    python data/scripts/export_non_simulation_elections.py
-    python data/scripts/export_non_simulation_elections.py --dry-run
-    python data/scripts/export_non_simulation_elections.py --election-name "2019 General Election"
-    python data/scripts/export_non_simulation_elections.py --current-simulation --output-file /tmp/current-simulation.json
-    python data/scripts/export_non_simulation_elections.py --metadata-only
+    python data/scripts/export_elections.py
+    python data/scripts/export_elections.py --dry-run
+    python data/scripts/export_elections.py --election-name "2019 General Election"
+    python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
+    python data/scripts/export_elections.py --metadata-only
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import sqlite3
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
@@ -36,9 +38,13 @@ from sqlalchemy.orm import joinedload
 from db import Database
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 
+DEFAULT_SQLITE_PATH = Path(
+    os.environ.get("SQLITE_DATABASE_PATH", str(DATA_DIR / "model_uns.db"))
+)
+
 REPO_ROOT = DATA_DIR.parent
 OUTPUT_ROOT_DEFAULT = REPO_ROOT / "electionmaps" / "data"
-LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files"
+LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files" / "westminster"
 
 SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
     {
@@ -60,6 +66,8 @@ SUPPLEMENTAL_LEGACY_ELECTION_NAMES = {
 
 
 PARTY_NAME_TO_KEY = {
+    "alba": "alba",
+    "albaparty": "alba",
     "alliance": "alliance",
     "conservative": "conservative",
     "democraticunionistparty": "dup",
@@ -68,6 +76,8 @@ PARTY_NAME_TO_KEY = {
     "liberaldemocrats": "libdems",
     "plaidcymru": "plaidcymru",
     "reformuk": "reform",
+    "scottishgreens": "scottishgreens",
+    "scottishgreensscottishgreens": "scottishgreens",
     "sdlp": "sdlp",
     "sinnfein": "sinnfein",
     "scottishnationalparty": "snp",
@@ -273,6 +283,10 @@ def file_stem_for_election(election: Election) -> str:
         year = general_match.group(1)
         return f"uk-general-{year}"
 
+    holyrood_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election", election.name)
+    if election.type == ElectionType.holyrood_general and holyrood_match:
+        return f"holyrood-general-{holyrood_match.group(1)}"
+
     return slugify(f"{election.type.value}-{election.year}-{election.name}")
 
 
@@ -291,7 +305,7 @@ def manifest_id_for_election(election: Election) -> str:
 
     Returns:
         Stable string identifier used as the ``id`` field in
-        ``elections.json``.
+        ``map-modes.json``.
     """
     if election.type == ElectionType.model_uns:
         return "current-prediction"
@@ -299,6 +313,11 @@ def manifest_id_for_election(election: Election) -> str:
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
     if election.type == ElectionType.uk_general and general_match:
         return f"{general_match.group(1)}-general"
+
+    holyrood_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election", election.name)
+    if election.type == ElectionType.holyrood_general and holyrood_match:
+        return f"{holyrood_match.group(1)}-holyrood"
+
     return slugify(f"{election.year}-{election.name}")
 
 
@@ -414,9 +433,11 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     - Entries that already have ``comparisonElectionId`` set are skipped.
     - ``model_uns`` entries compare against the most recent UK general
       election in the list.
-    - All other entries compare against the next entry in the list (i.e.
-      the chronologically preceding election).
-    - The last entry in the list receives no comparison.
+    - All other entries compare against the next entry in the list with the
+      same ``parliament`` value (i.e. the chronologically preceding election
+      in the same parliament).  This prevents Westminster elections from
+      being compared against Holyrood elections and vice versa.
+    - The last entry in each parliament receives no comparison.
 
     Args:
         manifest_entries: List of manifest election dicts, ordered newest
@@ -436,8 +457,12 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
 
         if entry.get("type") == ElectionType.model_uns:
             comparison_id = latest_general_id
-        elif index + 1 < len(manifest_entries):
-            comparison_id = manifest_entries[index + 1]["id"]
+        else:
+            parliament = entry.get("parliament")
+            for later_entry in manifest_entries[index + 1:]:
+                if later_entry.get("parliament") == parliament:
+                    comparison_id = later_entry["id"]
+                    break
 
         if comparison_id:
             entry["comparisonElectionId"] = comparison_id
@@ -535,6 +560,8 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
         each seat entry has keys ``n`` (name), ``r`` (region ID), ``w``
         (winner party ID), and ``p`` (list of ``[party_id, vote_total]``
         rows sorted descending by votes, zero-total parties excluded).
+        Seats with no votes at all are omitted (relevant for Holyrood maps
+        where constituency and list seats coexist).
     """
     votes_by_seat: dict[int, list[Vote]] = defaultdict(list)
     for vote in votes:
@@ -560,6 +587,9 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
                     "total": normalize_vote_total_value(vote_total_raw),
                     "name": vote.candidate_name or (vote.party.name if vote.party else "Other"),
                 }
+
+        if not seat_votes:
+            continue
 
         winner_vote = choose_winner(seat_votes)
         winner_id = party_id_for_vote(winner_vote) if winner_vote else OTHERS_PARTY_ID
@@ -647,7 +677,7 @@ def parse_args() -> argparse.Namespace:
     - ``--election-name NAME``: export only the named election.
     - ``--current-simulation``: export only the latest ``model_uns`` election.
     - ``--metadata-only``: refresh only ``settings.parties`` and
-      ``settings.regionsByMapId`` in the existing ``elections.json``.
+      ``settings.regionsByMapId`` in the existing ``map-modes.json``.
 
     Other flags:
     - ``--output-root PATH``: override the default output directory
@@ -681,13 +711,13 @@ def parse_args() -> argparse.Namespace:
     target_group.add_argument(
         "--metadata-only",
         action="store_true",
-        help="Update only settings.parties and settings.regionsByMapId in elections.json",
+        help="Update only settings.parties and settings.regionsByMapId in map-modes.json",
     )
     parser.add_argument(
         "--output-root",
         type=Path,
         default=OUTPUT_ROOT_DEFAULT,
-        help="Output directory containing elections.json, maps/, results/",
+        help="Output directory containing map-modes.json, maps/, results/",
     )
     parser.add_argument(
         "--legacy-files-dir",
@@ -787,6 +817,7 @@ def apply_supplemental_legacy_elections(
             "name": supplemental["name"],
             "type": supplemental["type"],
             "mapId": map_id,
+            "parliament": supplemental.get("parliament", "westminster"),
         }
 
         existing_index = next((idx for idx, entry in enumerate(manifest_entries) if entry.get("id") == election_id), None)
@@ -825,6 +856,93 @@ def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, 
             entry.pop("comparisonElectionId", None)
 
 
+def build_result_payload_from_sqlite(
+    seats: list[SeatRow],
+    sqlite_election_id: int,
+    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+) -> dict[str, Any]:
+    """Build a ``pf-results-v4`` result payload from SQLite votes.
+
+    Reads votes for the given election from the local SQLite archive and
+    combines them with seat metadata from Supabase (passed in via *seats*).
+
+    Args:
+        seats: SeatRow projections from the Supabase ``seats`` table.
+        sqlite_election_id: Primary key of the election in the SQLite DB.
+        sqlite_path: Path to the SQLite database file.
+
+    Returns:
+        Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` in the
+        same shape as ``build_result_payload``.
+    """
+    with sqlite3.connect(sqlite_path) as conn:
+        conn.row_factory = sqlite3.Row
+        vote_rows = conn.execute(
+            "SELECT seat_id, party_id, candidate_name, vote_total, elected "
+            "FROM votes WHERE election_id = ?",
+            (sqlite_election_id,),
+        ).fetchall()
+
+    votes_by_seat: dict[int, list[dict]] = defaultdict(list)
+    for row in vote_rows:
+        votes_by_seat[row["seat_id"]].append(dict(row))
+
+    payload_seats: list[dict[str, Any]] = []
+
+    for seat in sorted(seats, key=lambda s: s.seat_name):
+        seat_votes = sorted(
+            votes_by_seat.get(seat.seat_id, []),
+            key=lambda r: (r.get("vote_total") or 0),
+            reverse=True,
+        )
+
+        party_info: dict[int, float] = {}
+        for v in seat_votes:
+            pid = v["party_id"] or OTHERS_PARTY_ID
+            party_info[pid] = party_info.get(pid, 0) + float(v.get("vote_total") or 0)
+
+        # Winner: prefer explicitly elected rows, else highest vote total
+        elected_rows = [v for v in seat_votes if v.get("elected")]
+        if elected_rows:
+            winner_row = max(elected_rows, key=lambda r: (r.get("vote_total") or 0))
+        elif seat_votes:
+            winner_row = seat_votes[0]
+        else:
+            winner_row = None
+        winner_id = (winner_row["party_id"] or OTHERS_PARTY_ID) if winner_row else OTHERS_PARTY_ID
+
+        compact = [
+            [pid, normalize_vote_total_value(total)]
+            for pid, total in sorted(party_info.items(), key=lambda x: x[1], reverse=True)
+            if total > 0
+        ]
+
+        payload_seats.append({
+            "n": seat.seat_name,
+            "r": seat.region_id or 0,
+            "w": winner_id,
+            "p": compact,
+        })
+
+    return {"schema": "pf-results-v4", "seats": payload_seats}
+
+
+def get_latest_sqlite_model_uns(sqlite_path: Path = DEFAULT_SQLITE_PATH) -> dict[str, Any] | None:
+    """Return metadata for the latest model_uns election in SQLite, or None."""
+    if not sqlite_path.exists():
+        return None
+    with sqlite3.connect(sqlite_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT id, map_id, year, name, election_date "
+            "FROM elections WHERE election_type = 'model_uns' "
+            "ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+    if row is None:
+        return None
+    return dict(row)
+
+
 def main() -> None:
     """Entry point: export elections from the DB to electionmaps static data files.
 
@@ -833,7 +951,7 @@ def main() -> None:
     ``electionmaps/data/results/``, copies map TopoJSON templates to
     ``electionmaps/data/maps/``, builds the composite ``current-parliament``
     result by folding in by-election changes, and writes the top-level
-    ``electionmaps/data/elections.json`` manifest.
+    ``electionmaps/data/map-modes.json`` manifest.
 
     Behaviour is controlled by parsed CLI arguments (see ``parse_args``).
     Exits without writing any files when ``--dry-run`` is set.
@@ -853,7 +971,7 @@ def main() -> None:
     results_dir = output_root / "results"
 
     if args.metadata_only:
-        manifest_path = output_root / "elections.json"
+        manifest_path = output_root / "map-modes.json"
         if not manifest_path.exists():
             raise FileNotFoundError(f"Manifest not found: {manifest_path}")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -901,20 +1019,69 @@ def main() -> None:
             if not elections:
                 raise RuntimeError(f"Election not found: {args.election_name}")
         elif args.current_simulation:
-            latest_simulation = session.execute(
-                select(Election)
-                .where(Election.type == ElectionType.model_uns)
-                .options(joinedload(Election.map))
-                .order_by(Election.id.desc())
-                .limit(1)
-            ).scalars().first()
-            if latest_simulation is None:
-                raise RuntimeError("No model_uns elections found for --current-simulation")
-            elections = [latest_simulation]
+            # Read the latest model_uns election from local SQLite archive
+            sqlite_election = get_latest_sqlite_model_uns()
+            if sqlite_election is None:
+                raise RuntimeError("No model_uns elections found in SQLite for --current-simulation")
+
+            map_id = sqlite_election["map_id"]
+
+            if has_electorate:
+                seat_rows = session.execute(
+                    select(Seat.id, Seat.seat_name, Region.id, Region.name, Seat.electorate)
+                    .outerjoin(Region, Region.id == Seat.region_id)
+                    .where(Seat.map_id == map_id)
+                    .order_by(Seat.seat_name)
+                ).all()
+            else:
+                seat_rows = session.execute(  # type: ignore[assignment]
+                    select(Seat.id, Seat.seat_name, Region.id, Region.name)
+                    .outerjoin(Region, Region.id == Seat.region_id)
+                    .where(Seat.map_id == map_id)
+                    .order_by(Seat.seat_name)
+                ).all()
+
+            seats = [
+                SeatRow(
+                    seat_id=row[0],
+                    seat_name=row[1],
+                    region_id=row[2],
+                    region_name=row[3],
+                    electorate=(row[4] if has_electorate else None),
+                )
+                for row in seat_rows
+            ]
+
+            result_payload = build_result_payload_from_sqlite(
+                seats, sqlite_election["id"]
+            )
+
+            if args.output_file:
+                output_file = args.output_file.resolve()
+                seat_count = len(result_payload.get("seats", []))
+                if args.dry_run:
+                    print(f"Would write simulation payload: {output_file} ({seat_count} seats from SQLite)")
+                else:
+                    write_json(output_file, result_payload)
+                    print(f"Wrote simulation payload: {output_file} ({seat_count} seats from SQLite election '{sqlite_election['name']}')")
+            else:
+                # Write to default results dir
+                result_path = args.output_root.resolve() / "results" / "prediction-simulation.json"
+                seat_count = len(result_payload.get("seats", []))
+                if args.dry_run:
+                    print(f"Would write simulation: {result_path} ({seat_count} seats from SQLite)")
+                else:
+                    write_json(result_path, result_payload)
+                    print(f"Wrote simulation: {result_path} ({seat_count} seats from SQLite election '{sqlite_election['name']}')")
+            return
         else:
             elections = session.execute(
                 select(Election)
-                .where(Election.type.in_([ElectionType.uk_general, ElectionType.by_election]))
+                .where(Election.type.in_([
+                    ElectionType.uk_general,
+                    ElectionType.by_election,
+                    ElectionType.holyrood_general,
+                ]))
                 .options(joinedload(Election.map))
                 .order_by(Election.year.desc(), Election.name.asc())
             ).scalars().all()
@@ -926,7 +1093,7 @@ def main() -> None:
             ]
 
             if not elections:
-                raise RuntimeError("No non-simulation elections found (uk_general/by_election)")
+                raise RuntimeError("No non-simulation elections found (uk_general/by_election/holyrood_general)")
 
             latest_simulation = session.execute(
                 select(Election)
@@ -980,11 +1147,30 @@ def main() -> None:
                 for row in seat_rows
             ]
 
-            votes = session.execute(
+            votes = list(session.execute(
                 select(Vote)
                 .where(Vote.election_id == election.id)
                 .options(joinedload(Vote.party))
-            ).scalars().all()
+            ).scalars().all())
+
+            # For Holyrood general elections, also fetch votes from the linked list election
+            # so that all 129 seats (73 constituency + 56 list) appear in one results file.
+            if election.type == ElectionType.holyrood_general:
+                list_election = session.execute(
+                    select(Election)
+                    .where(
+                        Election.parent_election_id == election.id,
+                        Election.type == ElectionType.holyrood_list,
+                    )
+                    .options(joinedload(Election.map))
+                ).scalars().first()
+                if list_election is not None:
+                    list_votes = session.execute(
+                        select(Vote)
+                        .where(Vote.election_id == list_election.id)
+                        .options(joinedload(Vote.party))
+                    ).scalars().all()
+                    votes = votes + list(list_votes)
 
             stem = file_stem_for_election(election)
             result_filename = f"{stem}.json"
@@ -1027,38 +1213,61 @@ def main() -> None:
                 )
                 continue
 
-            map_template_filename = choose_map_template_filename(map_row)
-            map_template_path = args.legacy_files_dir / map_template_filename
+            is_holyrood_map = getattr(map_row, "parliament", "westminster") == "holyrood"
             map_relpath = f"maps/{map_filename}"
-
-            if not map_template_path.exists():
-                raise FileNotFoundError(
-                    f"Map template not found for map '{map_row.name}': {map_template_path}"
-                )
-
             result_path = results_dir / result_filename
             map_path = maps_dir / map_filename
 
-            if args.dry_run:
-                print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
-                if election.map_id not in written_map_ids:
-                    print(f"Would write map: {map_path} (template {map_template_filename})")
+            if is_holyrood_map:
+                # The TopoJSON for Holyrood maps is written by the boundaries import script
+                # and lives directly in maps/. We only need to verify it exists.
+                if args.dry_run:
+                    print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
+                    if election.map_id not in written_map_ids:
+                        print(f"Holyrood map already in place: {map_path}")
+                else:
+                    write_json(result_path, result_payload)
+                    if election.map_id not in written_map_ids and not map_path.exists():
+                        print(f"WARNING: Holyrood map not found at {map_path} — run import_holyrood_boundaries.py first")
             else:
-                write_json(result_path, result_payload)
-                if election.map_id not in written_map_ids:
-                    map_payload = json.loads(map_template_path.read_text(encoding="utf-8"))
-                    write_json(map_path, map_payload)
+                map_template_filename = choose_map_template_filename(map_row)
+                map_template_path = args.legacy_files_dir / map_template_filename
+
+                if not map_template_path.exists():
+                    raise FileNotFoundError(
+                        f"Map template not found for map '{map_row.name}': {map_template_path}"
+                    )
+
+                if args.dry_run:
+                    print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
+                    if election.map_id not in written_map_ids:
+                        print(f"Would write map: {map_path} (template {map_template_filename})")
+                else:
+                    write_json(result_path, result_payload)
+                    if election.map_id not in written_map_ids:
+                        map_payload = json.loads(map_template_path.read_text(encoding="utf-8"))
+                        write_json(map_path, map_payload)
 
             map_files_by_id[str(election.map_id)] = map_relpath
             data_files_by_election_id[election_manifest_id] = f"results/{result_filename}"
             written_map_ids.add(election.map_id)
             manifest_id_by_db_id[election.id] = election_manifest_id
 
+            # Holyrood elections with non-standard names (e.g. remapped boundary elections)
+            # are exported to disk for model use but excluded from the UI manifest.
+            is_standard_holyrood = election.type != ElectionType.holyrood_general or bool(
+                re.fullmatch(r"\d{4}\s+Scottish Parliament Election", election.name)
+            )
+            if not is_standard_holyrood:
+                continue
+
+            parliament = getattr(map_row, "parliament", "westminster")
             manifest_entry = {
                 "id": election_manifest_id,
                 "name": manifest_name_for_election(election),
                 "type": election.type.value,
                 "mapId": election.map_id,
+                "parliament": parliament,
             }
             manifest_entries.append(manifest_entry)
 
@@ -1167,6 +1376,7 @@ def main() -> None:
                     "name": "Current Parliament",
                     "type": ElectionType.uk_general.value,
                     "mapId": parent_map_id,
+                    "parliament": "westminster",
                     "comparisonElectionId": parent_manifest_id,
                     "byElectionSeats": [change["seat"] for change in all_changes],
                 }
@@ -1204,13 +1414,45 @@ def main() -> None:
                 "regionsByMapId": manifest_regions_by_map_id,
         }
 
+        manifest_path = output_root / "map-modes.json"
+        existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+
+        # Re-insert any holyrood_uns or model_uns prediction entry from the existing
+        # manifest, provided its data file still exists on disk.  This lets the model write
+        # the entry once and have it survive subsequent full export runs without needing a
+        # DB record (the westminster model writes to SQLite only; Supabase never receives
+        # simulation data).
+        existing_by_id = {e.get("id"): e for e in existing.get("elections", [])}
+        existing_data_files = existing.get("settings", {}).get("dataFilesByElectionId", {})
+        for entry_id, entry in existing_by_id.items():
+            entry_type = entry.get("type")
+            if entry_type not in ("holyrood_uns", "model_uns"):
+                continue
+            if entry_id in {e["id"] for e in manifest_entries}:
+                continue  # already present (shouldn't happen, but be safe)
+            data_file = existing_data_files.get(entry_id)
+            if data_file and (output_root / data_file).exists():
+                if entry_type == "model_uns":
+                    # Insert at the top of the westminster elections (index 0)
+                    insert_at = 0
+                else:
+                    # Insert before the first holyrood election in the rebuilt list
+                    insert_at = next(
+                        (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
+                        len(manifest_entries),
+                    )
+                manifest_entries.insert(insert_at, entry)
+                data_files_by_election_id[entry_id] = data_file
+                settings["dataFilesByElectionId"] = data_files_by_election_id
+
         manifest_payload = {
             "defaultElection": default_election_id,
             "settings": settings,
             "elections": manifest_entries,
+            "parliamentFeatures": existing.get("parliamentFeatures", {}),
+            "mapModes": existing.get("mapModes", {}),
         }
 
-        manifest_path = output_root / "elections.json"
         if args.dry_run:
             print(f"Would write manifest: {manifest_path} ({len(manifest_entries)} elections)")
         else:

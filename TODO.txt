@@ -1,3 +1,16 @@
-continue active chat 
-possible to make model_output_trends.csv much smaller by doing party->vote mapping
-scottish parliamentary
+
+reset database ids
+model_uns -> westminster_uns
+
+redo data back end structure
+- ballot type on poll
+- general folder structure needs a rethink
+- regions mapping server any purpose?
+- UI needs thought
+
+election maps
+- make country agnostic - all in map-nodes
+- more in core.js
+
+
+dont forget to use copilot at some point

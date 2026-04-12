@@ -20,8 +20,8 @@ from run_uns_model import Database, TREND_CACHE_CSV
 from models import Election, ElectionType, Map, Party, Vote
 
 # Default path for the SQLite archive, relative to the data/ directory
-_MODELS_UNS_DIR = Path(__file__).resolve().parent
-_DATA_DIR = _MODELS_UNS_DIR.parent.parent  # data/models/uns -> data/models -> data
+_MODELS_WESTMINSTER_DIR = Path(__file__).resolve().parent
+_DATA_DIR = _MODELS_WESTMINSTER_DIR.parent.parent  # data/models/westminster -> data/models -> data
 DEFAULT_SQLITE_PATH = _DATA_DIR / "model_uns.db"
 
 

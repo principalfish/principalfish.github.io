@@ -31,6 +31,7 @@ from models import Party
 
 
 PARTY_DEFINITIONS = (
+    {"name": "Alba Party", "colour": "#005EB8"},
     {"name": "Alliance", "colour": "#F6CB2F"},
     {"name": "Conservative", "colour": "#0087DC"},
     {"name": "Democratic Unionist Party", "colour": "#D46A4C"},
@@ -42,6 +43,7 @@ PARTY_DEFINITIONS = (
     {"name": "Plaid Cymru", "colour": "#005B54"},
     {"name": "Reform UK", "colour": "#12B6CF"},
     {"name": "SDLP", "colour": "#2AA82C"},
+    {"name": "Scottish Greens", "colour": "#63BB46"},
     {"name": "Scottish National Party", "colour": "#FFF95D"},
     {"name": "Sinn Féin", "colour": "#326760"},
     {"name": "Ulster Unionist Party", "colour": "#48A5EE"},

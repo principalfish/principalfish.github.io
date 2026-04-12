@@ -46,6 +46,8 @@ import {
   buildPredictBaselineShares,
   resolvedSwingValue,
   projectedSeatForPredictMode,
+  // Holyrood utilities
+  isListSeat,
   // Seat / feature utilities
   seatNameFromFeature,
   buildWinnerBySeat,
@@ -71,6 +73,7 @@ import {
   collectPredictValidationRows,
   collectPredictShareStateRows,
   collectPredictInputRows,
+  buildRegionSummary,
 } from '../electionmaps/core.js';
 
 // ── normalizePartyKey ────────────────────────────────────────────────────────
@@ -2482,3 +2485,186 @@ describe('collectPredictInputRows', () => {
   });
 });
 
+
+// ── buildRegionSummary ────────────────────────────────────────────────────────
+
+describe('buildRegionSummary', () => {
+  const makeConstSeat = (seat, region, winner, votes = {}) => ({ seat, region, winner, votes });
+  const makeListSeat = (seat, region, winner, votes = {}) => ({ seat: `${region} List ${seat}`, region, winner, votes });
+
+  it('counts seats by party per region', () => {
+    const seats = [
+      makeConstSeat('Aberdeen North', 'North East Scotland', 'snp'),
+      makeConstSeat('Aberdeen South', 'North East Scotland', 'conservative'),
+      makeListSeat(1, 'North East Scotland', 'conservative'),
+    ];
+    const summary = buildRegionSummary(seats);
+    expect(summary.get('North East Scotland').seatsByParty.snp).toBe(1);
+    expect(summary.get('North East Scotland').seatsByParty.conservative).toBe(2);
+  });
+
+  it('sets dominantParty to party with most seats', () => {
+    const seats = [
+      makeConstSeat('A', 'Lothian', 'snp'),
+      makeConstSeat('B', 'Lothian', 'snp'),
+      makeConstSeat('C', 'Lothian', 'labour'),
+    ];
+    expect(buildRegionSummary(seats).get('Lothian').dominantParty).toBe('snp');
+  });
+
+  it('breaks ties by list vote total', () => {
+    const seats = [
+      makeConstSeat('A', 'Glasgow', 'snp', { snp: 50000 }),
+      makeConstSeat('B', 'Glasgow', 'labour', { labour: 80000 }),
+    ];
+    // Tied on seats (1 each); labour has more votes → labour wins
+    expect(buildRegionSummary(seats).get('Glasgow').dominantParty).toBe('labour');
+  });
+
+  it('partitions list seats into listSeats array', () => {
+    const seats = [
+      makeConstSeat('Dundee East', 'Mid Scotland and Fife', 'snp'),
+      makeListSeat(1, 'Mid Scotland and Fife', 'conservative'),
+      makeListSeat(2, 'Mid Scotland and Fife', 'snp'),
+    ];
+    const r = buildRegionSummary(seats).get('Mid Scotland and Fife');
+    expect(r.listSeats).toHaveLength(2);
+    expect(r.listSeats.every((s) => s.seat.includes('List'))).toBe(true);
+  });
+
+  it('accumulates votesByParty across all seats in a region', () => {
+    const seats = [
+      makeConstSeat('X', 'Central Scotland', 'snp', { snp: 10000, labour: 5000 }),
+      makeConstSeat('Y', 'Central Scotland', 'snp', { snp: 8000, labour: 3000 }),
+    ];
+    const r = buildRegionSummary(seats).get('Central Scotland');
+    expect(r.votesByParty.snp).toBe(18000);
+    expect(r.votesByParty.labour).toBe(8000);
+  });
+
+  it('handles seats with no region as unknown', () => {
+    const seats = [makeConstSeat('Mystery', undefined, 'others')];
+    expect(buildRegionSummary(seats).has('unknown')).toBe(true);
+  });
+});
+
+// ── isListSeat ───────────────────────────────────────────────────────────────
+
+describe('isListSeat', () => {
+  it('matches standard list seat names', () => {
+    expect(isListSeat('Glasgow List 1')).toBe(true);
+    expect(isListSeat('West Scotland List 7')).toBe(true);
+    expect(isListSeat('Highlands and Islands List 10')).toBe(true);
+    expect(isListSeat('Central Scotland List 1')).toBe(true);
+  });
+
+  it('is case-insensitive', () => {
+    expect(isListSeat('Glasgow list 1')).toBe(true);
+    expect(isListSeat('Glasgow LIST 3')).toBe(true);
+  });
+
+  it('does not match regular constituency seats', () => {
+    expect(isListSeat('Glasgow North')).toBe(false);
+    expect(isListSeat('Aberdeen Central')).toBe(false);
+    expect(isListSeat('Edinburgh South West')).toBe(false);
+  });
+
+  it('does not match seats where "List" appears but not at the end as "List N"', () => {
+    expect(isListSeat('Listed Place')).toBe(false);
+    expect(isListSeat('List Road')).toBe(false);
+    expect(isListSeat('Glasgow List')).toBe(false); // no trailing digit
+  });
+
+  it('returns false for empty string', () => {
+    expect(isListSeat('')).toBe(false);
+  });
+});
+
+// ── summarizeElection — mode parameter ──────────────────────────────────────
+
+describe('summarizeElection mode parameter', () => {
+  const constSeat = (winner, votes, region = 'Lothian') => ({
+    seat: 'Edinburgh Central',
+    winner,
+    votes,
+    electorate: 0,
+    turnout: 0,
+    region,
+  });
+
+  const listSeat = (n, winner, votes, region = 'Lothian') => ({
+    seat: `${region} List ${n}`,
+    winner,
+    votes,
+    electorate: 0,
+    turnout: 0,
+    region,
+  });
+
+  const mixedSeats = [
+    constSeat('snp', { snp: 20000, labour: 10000 }),
+    constSeat('labour', { labour: 18000, snp: 9000 }),
+    listSeat(1, 'snp', { snp: 100000, labour: 60000, conservative: 40000 }),
+    listSeat(2, 'labour', { snp: 100000, labour: 60000, conservative: 40000 }),
+  ];
+
+  it('mode=constituency counts only constituency seats and votes', () => {
+    const { parties } = summarizeElection(mixedSeats, { mode: 'constituency' });
+    expect(parties.find((p) => p.party === 'snp').seats).toBe(1);
+    expect(parties.find((p) => p.party === 'labour').seats).toBe(1);
+    // list vote totals not included
+    expect(parties.find((p) => p.party === 'conservative')).toBeUndefined();
+    expect(parties.find((p) => p.party === 'snp').votes).toBe(29000);
+  });
+
+  it('mode=list counts only list seats and deduplicates votes by region', () => {
+    const { parties } = summarizeElection(mixedSeats, { mode: 'list' });
+    // constituency seats excluded from seat counts
+    expect(parties.find((p) => p.party === 'snp').seats).toBe(1);
+    expect(parties.find((p) => p.party === 'labour').seats).toBe(1);
+    // regional votes counted once per (region, party), not once per seat slot
+    expect(parties.find((p) => p.party === 'snp').votes).toBe(100000);
+    expect(parties.find((p) => p.party === 'labour').votes).toBe(60000);
+    expect(parties.find((p) => p.party === 'conservative').votes).toBe(40000);
+  });
+
+  it('mode=all counts seats from both types but votes from constituency only', () => {
+    const { parties } = summarizeElection(mixedSeats, { mode: 'all' });
+    expect(parties.find((p) => p.party === 'snp').seats).toBe(2);
+    expect(parties.find((p) => p.party === 'labour').seats).toBe(2);
+    // list votes excluded from totals
+    expect(parties.find((p) => p.party === 'conservative')).toBeUndefined();
+    expect(parties.find((p) => p.party === 'snp').votes).toBe(29000);
+  });
+
+  it('mode=list deduplicates across multiple seats in same region', () => {
+    const seats = [
+      listSeat(1, 'snp', { snp: 80000, labour: 50000 }, 'Glasgow'),
+      listSeat(2, 'snp', { snp: 80000, labour: 50000 }, 'Glasgow'),
+      listSeat(3, 'labour', { snp: 80000, labour: 50000 }, 'Glasgow'),
+    ];
+    const { parties } = summarizeElection(seats, { mode: 'list' });
+    expect(parties.find((p) => p.party === 'snp').votes).toBe(80000);
+    expect(parties.find((p) => p.party === 'labour').votes).toBe(50000);
+  });
+
+  it('mode=constituency calculates turnout from constituency seats only', () => {
+    const seats = [
+      { seat: 'Edinburgh Central', winner: 'snp', votes: { snp: 20000 }, electorate: 50000, turnout: 0.6, region: 'Lothian' },
+      { seat: 'Lothian List 1', winner: 'labour', votes: { labour: 60000 }, electorate: 200000, turnout: 0.7, region: 'Lothian' },
+    ];
+    const { turnout } = summarizeElection(seats, { mode: 'constituency' });
+    // Only the constituency seat contributes: 0.6 * 50000 / 50000 = 0.6
+    expect(turnout).toBeCloseTo(0.6, 5);
+  });
+
+  it('mode=list calculates turnout from list seats only', () => {
+    const seats = [
+      { seat: 'Edinburgh Central', winner: 'snp', votes: { snp: 20000 }, electorate: 50000, turnout: 0.6, region: 'Lothian' },
+      { seat: 'Lothian List 1', winner: 'labour', votes: { labour: 60000 }, electorate: 200000, turnout: 0.7, region: 'Lothian' },
+    ];
+    const { turnout } = summarizeElection(seats, { mode: 'list' });
+    // Only the list seat contributes: 0.7 * 200000 / 200000 = 0.7
+    expect(turnout).toBeCloseTo(0.7, 5);
+  });
+});

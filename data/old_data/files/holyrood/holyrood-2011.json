@@ -1,0 +1,1978 @@
+{
+  "Glasgow Southside": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 12306,
+        "name": "Nicola Sturgeon[a]"
+      },
+      "labour": {
+        "total": 7957,
+        "name": "Stephen Curran"
+      },
+      "conservative": {
+        "total": 1733,
+        "name": "David Meikle"
+      },
+      "libdems": {
+        "total": 612,
+        "name": "Kenn Elder"
+      },
+      "others": {
+        "total": 17,
+        "name": "Independent"
+      }
+    }
+  },
+  "North East Fife": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11029,
+        "name": "Roderick Campbell"
+      },
+      "libdems": {
+        "total": 8437,
+        "name": "Iain Smith[a]"
+      },
+      "conservative": {
+        "total": 5618,
+        "name": "Miles Briggs"
+      },
+      "labour": {
+        "total": 3613,
+        "name": "Colin Davidson"
+      },
+      "others": {
+        "total": 979,
+        "name": "Mike Scott-Hayward"
+      }
+    }
+  },
+  "Edinburgh Central": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 9480,
+        "name": "Marco Biagi"
+      },
+      "labour": {
+        "total": 9243,
+        "name": "Labour"
+      },
+      "libdems": {
+        "total": 5937,
+        "name": "Alex Cole-Hamilton"
+      },
+      "conservative": {
+        "total": 4354,
+        "name": "Conservative"
+      },
+      "others": {
+        "total": 1988,
+        "name": "Independent"
+      }
+    }
+  },
+  "Ayr": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 12997,
+        "name": "John Scott[a]"
+      },
+      "snp": {
+        "total": 11884,
+        "name": "Chic Brodie[b]"
+      },
+      "labour": {
+        "total": 7779,
+        "name": "Gordon McKenzie"
+      },
+      "libdems": {
+        "total": 713,
+        "name": "Eileen Taylor"
+      }
+    }
+  },
+  "East Lothian": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12536,
+        "name": "Labour"
+      },
+      "snp": {
+        "total": 12385,
+        "name": "David Berry"
+      },
+      "conservative": {
+        "total": 5344,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 1912,
+        "name": "Ettie Spencer"
+      }
+    }
+  },
+  "Stirling": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14858,
+        "name": "Bruce Crawford[a]"
+      },
+      "labour": {
+        "total": 9188,
+        "name": "John Hendry"
+      },
+      "conservative": {
+        "total": 4610,
+        "name": "Neil Benny"
+      },
+      "libdems": {
+        "total": 1296,
+        "name": "Graham Reed"
+      },
+      "others": {
+        "total": 55,
+        "name": "Independent"
+      }
+    }
+  },
+  "Uddingston and Bellshill": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 11531,
+        "name": "Michael McMahon[a]"
+      },
+      "snp": {
+        "total": 10817,
+        "name": "Richard Lyle[b]"
+      },
+      "conservative": {
+        "total": 2117,
+        "name": "Mark Brown"
+      },
+      "libdems": {
+        "total": 530,
+        "name": "Fraser MacGregor"
+      },
+      "others": {
+        "total": 103,
+        "name": "Independent"
+      }
+    }
+  },
+  "Caithness, Sutherland and Ross": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13843,
+        "name": "Rob Gibson[a]"
+      },
+      "libdems": {
+        "total": 6385,
+        "name": "Robbie Rowantree"
+      },
+      "labour": {
+        "total": 5438,
+        "name": "John MacKay"
+      },
+      "conservative": {
+        "total": 2934,
+        "name": "Edward Mountain"
+      }
+    }
+  },
+  "Argyll and Bute": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13390,
+        "name": "Michael Russell[a]"
+      },
+      "conservative": {
+        "total": 4847,
+        "name": "Jamie McGrigor[a]"
+      },
+      "labour": {
+        "total": 4041,
+        "name": "Mick Rice"
+      },
+      "libdems": {
+        "total": 3220,
+        "name": "Alison Hay"
+      },
+      "others": {
+        "total": 542,
+        "name": "Independent"
+      }
+    }
+  },
+  "Banffshire and Buchan Coast": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16812,
+        "name": "Stewart Stevenson[a]"
+      },
+      "conservative": {
+        "total": 4592,
+        "name": "Michael Watt"
+      },
+      "labour": {
+        "total": 2642,
+        "name": "Alan Duffill"
+      },
+      "libdems": {
+        "total": 958,
+        "name": "Galen Milne"
+      }
+    }
+  },
+  "Aberdeen Donside": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14790,
+        "name": "Brian Adam[b]"
+      },
+      "labour": {
+        "total": 7615,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 2166,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 1606,
+        "name": "Millie McLeod"
+      },
+      "others": {
+        "total": 371,
+        "name": "Independent"
+      }
+    }
+  },
+  "Clydesdale": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14931,
+        "name": "Aileen Campbell[a]"
+      },
+      "labour": {
+        "total": 10715,
+        "name": "Karen Gillon[b]"
+      },
+      "conservative": {
+        "total": 4291,
+        "name": "Colin McGavigan"
+      }
+    }
+  },
+  "Falkirk East": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14302,
+        "name": "Angus MacDonald"
+      },
+      "labour": {
+        "total": 10767,
+        "name": "Cathy Peattie[a]"
+      },
+      "conservative": {
+        "total": 2372,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 727,
+        "name": "Ross Laird"
+      },
+      "others": {
+        "total": 81,
+        "name": "Independent"
+      }
+    }
+  },
+  "Clydebank and Milngavie": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 12278,
+        "name": "Gil Paterson[a]"
+      },
+      "labour": {
+        "total": 11564,
+        "name": "Des McNulty[b]"
+      },
+      "conservative": {
+        "total": 2758,
+        "name": "Alice Struthers"
+      },
+      "libdems": {
+        "total": 1769,
+        "name": "John Duncan"
+      },
+      "others": {
+        "total": 30,
+        "name": "Independent"
+      }
+    }
+  },
+  "East Kilbride": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14359,
+        "name": "Linda Fabiani[a]"
+      },
+      "labour": {
+        "total": 12410,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 2260,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 468,
+        "name": "Douglas Herbison"
+      },
+      "others": {
+        "total": 414,
+        "name": "John Houston"
+      }
+    }
+  },
+  "Renfrewshire North and West": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11510,
+        "name": "Derek Mackay"
+      },
+      "labour": {
+        "total": 9946,
+        "name": "Stuart Clark"
+      },
+      "conservative": {
+        "total": 5489,
+        "name": "Annabel Goldie[a]"
+      },
+      "libdems": {
+        "total": 550,
+        "name": "Andrew Page"
+      },
+      "others": {
+        "total": 50,
+        "name": "Independent"
+      }
+    }
+  },
+  "Perthshire South and Kinross-shire": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16073,
+        "name": "Roseanna Cunningham[b]"
+      },
+      "conservative": {
+        "total": 8907,
+        "name": "Liz Smith[c]"
+      },
+      "labour": {
+        "total": 3980,
+        "name": "Patricia Duncan"
+      },
+      "libdems": {
+        "total": 2256,
+        "name": "Willie Robertson"
+      },
+      "others": {
+        "total": 55,
+        "name": "Independent"
+      }
+    }
+  },
+  "Airdrie and Shotts": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11984,
+        "name": "Alex Neil"
+      },
+      "labour": {
+        "total": 9983,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 1396,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 531,
+        "name": "John Love"
+      },
+      "others": {
+        "total": 80,
+        "name": "Independent"
+      }
+    }
+  },
+  "Carrick, Cumnock and Doon Valley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13250,
+        "name": "Adam Ingram[a]"
+      },
+      "labour": {
+        "total": 10669,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 4160,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 624,
+        "name": "Andrew Chamberlain"
+      }
+    }
+  },
+  "Glasgow Kelvin": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 10640,
+        "name": "Sandra White[a]"
+      },
+      "labour": {
+        "total": 9758,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 1845,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 1900,
+        "name": "Natalie McKee"
+      },
+      "others": {
+        "total": 405,
+        "name": "Independent"
+      }
+    }
+  },
+  "Aberdeen South and North Kincardine": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11947,
+        "name": "Maureen Watt[a]"
+      },
+      "labour": {
+        "total": 5624,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 4058,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 4994,
+        "name": "John Sleigh"
+      },
+      "others": {
+        "total": 1816,
+        "name": "Independent"
+      }
+    }
+  },
+  "Dumbarton": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12562,
+        "name": "Jackie Baillie[a]"
+      },
+      "snp": {
+        "total": 10923,
+        "name": "Iain Robertson"
+      },
+      "conservative": {
+        "total": 3395,
+        "name": "Graham Smith"
+      },
+      "libdems": {
+        "total": 858,
+        "name": "Helen Watt"
+      },
+      "others": {
+        "total": 770,
+        "name": "Independent"
+      }
+    }
+  },
+  "Aberdeenshire West": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 12186,
+        "name": "Dennis Robertson"
+      },
+      "libdems": {
+        "total": 8074,
+        "name": "Mike Rumbles[a]"
+      },
+      "conservative": {
+        "total": 6027,
+        "name": "Nanette Milne[a]"
+      },
+      "labour": {
+        "total": 2349,
+        "name": "Jean Morrison"
+      },
+      "others": {
+        "total": 70,
+        "name": "Independent"
+      }
+    }
+  },
+  "Edinburgh Southern": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 9947,
+        "name": "Jim Eadie"
+      },
+      "labour": {
+        "total": 9254,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 6298,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 8297,
+        "name": "Mike Pringle[a]"
+      },
+      "others": {
+        "total": 2472,
+        "name": "Independent"
+      }
+    }
+  },
+  "Dumfriesshire": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12624,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 9468,
+        "name": "Conservative"
+      },
+      "snp": {
+        "total": 8384,
+        "name": "Aileen Orr"
+      },
+      "libdems": {
+        "total": 1419,
+        "name": "Richard Brodie"
+      }
+    }
+  },
+  "Eastwood": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12662,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 10650,
+        "name": "Conservative"
+      },
+      "snp": {
+        "total": 7777,
+        "name": "Stewart Maxwell[b]"
+      },
+      "libdems": {
+        "total": 835,
+        "name": "Gordon Cochrane"
+      },
+      "others": {
+        "total": 24,
+        "name": "Independent"
+      }
+    }
+  },
+  "Galloway and West Dumfries": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 11071,
+        "name": "Alex Fergusson[a]"
+      },
+      "snp": {
+        "total": 10209,
+        "name": "Aileen McLeod[b]"
+      },
+      "labour": {
+        "total": 7954,
+        "name": "Willie Scobie"
+      },
+      "libdems": {
+        "total": 763,
+        "name": "Joe Rosiejak"
+      }
+    }
+  },
+  "Edinburgh Western": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11965,
+        "name": "Colin Keir"
+      },
+      "libdems": {
+        "total": 9276,
+        "name": "Margaret Smith[a]"
+      },
+      "labour": {
+        "total": 7164,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 5047,
+        "name": "Conservative"
+      },
+      "others": {
+        "total": 2707,
+        "name": "Independent"
+      }
+    }
+  },
+  "Edinburgh Pentlands": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11197,
+        "name": "Gordon MacDonald"
+      },
+      "conservative": {
+        "total": 9439,
+        "name": "Conservative"
+      },
+      "labour": {
+        "total": 7993,
+        "name": "Labour"
+      },
+      "others": {
+        "total": 2206,
+        "name": "Independent"
+      },
+      "libdems": {
+        "total": 1420,
+        "name": "Simon Clark"
+      }
+    }
+  },
+  "Angus North and Mearns": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13660,
+        "name": "Nigel Don[a]"
+      },
+      "conservative": {
+        "total": 6374,
+        "name": "Alex Johnstone[a]"
+      },
+      "labour": {
+        "total": 3160,
+        "name": "Kevin Hutchens"
+      },
+      "libdems": {
+        "total": 1726,
+        "name": "Sanjay Samani"
+      }
+    }
+  },
+  "Moray": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16817,
+        "name": "Richard Lochhead[a]"
+      },
+      "conservative": {
+        "total": 5873,
+        "name": "Douglas Ross"
+      },
+      "labour": {
+        "total": 3580,
+        "name": "Kieron Green"
+      },
+      "libdems": {
+        "total": 1327,
+        "name": "Jamie Paterson"
+      },
+      "others": {
+        "total": 999,
+        "name": "Donald Gatt"
+      }
+    }
+  },
+  "Perthshire North": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 18219,
+        "name": "John Swinney[a]"
+      },
+      "conservative": {
+        "total": 7866,
+        "name": "Murdo Fraser[b]"
+      },
+      "labour": {
+        "total": 2672,
+        "name": "Pete Cheema"
+      },
+      "libdems": {
+        "total": 1196,
+        "name": "Victor Clements"
+      },
+      "others": {
+        "total": 42,
+        "name": "Independent"
+      }
+    }
+  },
+  "Coatbridge and Chryston": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12161,
+        "name": "Elaine Smith"
+      },
+      "snp": {
+        "total": 9420,
+        "name": "John Wilson"
+      },
+      "conservative": {
+        "total": 1317,
+        "name": "Jason Lingiah"
+      },
+      "libdems": {
+        "total": 381,
+        "name": "Rod Ackland"
+      },
+      "others": {
+        "total": 85,
+        "name": "Independent"
+      }
+    }
+  },
+  "Cumbernauld and Kilsyth": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13595,
+        "name": "Jamie Hepburn"
+      },
+      "labour": {
+        "total": 10136,
+        "name": "Cathie Craigie"
+      },
+      "conservative": {
+        "total": 1156,
+        "name": "James Boswell"
+      },
+      "libdems": {
+        "total": 367,
+        "name": "Martin Oliver"
+      },
+      "others": {
+        "total": 156,
+        "name": "Independent"
+      }
+    }
+  },
+  "Falkirk West": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 15607,
+        "name": "Michael Matheson[a]"
+      },
+      "labour": {
+        "total": 9862,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 2086,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 644,
+        "name": "Callum Chomczuk"
+      },
+      "others": {
+        "total": 97,
+        "name": "Independent"
+      }
+    }
+  },
+  "Hamilton, Larkhall and Stonehouse": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 12202,
+        "name": "Christina McKelvie[a]"
+      },
+      "labour": {
+        "total": 9989,
+        "name": "Tom McCabe[a]"
+      },
+      "conservative": {
+        "total": 2547,
+        "name": "Margaret Mitchell[a]"
+      },
+      "libdems": {
+        "total": 616,
+        "name": "Ewan Hoyle"
+      },
+      "others": {
+        "total": 88,
+        "name": "Hugh O'Donnell"
+      }
+    }
+  },
+  "Motherwell and Wishaw": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 10713,
+        "name": "John Pentland"
+      },
+      "snp": {
+        "total": 10126,
+        "name": "Clare Adamson[a]"
+      },
+      "conservative": {
+        "total": 1753,
+        "name": "Robert Burgess"
+      },
+      "libdems": {
+        "total": 367,
+        "name": "Beverley Hope"
+      },
+      "others": {
+        "total": 61,
+        "name": "Independent"
+      }
+    }
+  },
+  "Glasgow Anniesland": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 10329,
+        "name": "Bill Kidd[a]"
+      },
+      "labour": {
+        "total": 10322,
+        "name": "Bill Butler[b]"
+      },
+      "conservative": {
+        "total": 2011,
+        "name": "Matthew Smith"
+      },
+      "libdems": {
+        "total": 1000,
+        "name": "Paul McGarry"
+      },
+      "others": {
+        "total": 27,
+        "name": "Independent"
+      }
+    }
+  },
+  "Glasgow Cathcart": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11918,
+        "name": "James Dornan"
+      },
+      "labour": {
+        "total": 10326,
+        "name": "Charlie Gordon[a]"
+      },
+      "conservative": {
+        "total": 2410,
+        "name": "Richard Sullivan"
+      },
+      "libdems": {
+        "total": 1118,
+        "name": "Eileen Baxendale"
+      },
+      "others": {
+        "total": 450,
+        "name": "Independent"
+      }
+    }
+  },
+  "Glasgow Maryhill and Springburn": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 9884,
+        "name": "Patricia Ferguson[a]"
+      },
+      "snp": {
+        "total": 8592,
+        "name": "Bob Doris[b]"
+      },
+      "conservative": {
+        "total": 1222,
+        "name": "Stephanie Murray"
+      },
+      "libdems": {
+        "total": 833,
+        "name": "Sophie Bridger"
+      },
+      "others": {
+        "total": 27,
+        "name": "Independent"
+      }
+    }
+  },
+  "Glasgow Pollok": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 10875,
+        "name": "Labour Co-op"
+      },
+      "snp": {
+        "total": 10252,
+        "name": "Chris Stephens"
+      },
+      "conservative": {
+        "total": 1298,
+        "name": "Andrew Morrison"
+      },
+      "libdems": {
+        "total": 490,
+        "name": "Isabel Nelson"
+      },
+      "others": {
+        "total": 25,
+        "name": "Independent"
+      }
+    }
+  },
+  "Glasgow Provan": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 10037,
+        "name": "Paul Martin[a]"
+      },
+      "snp": {
+        "total": 7958,
+        "name": "Anne McLaughlin[b]"
+      },
+      "conservative": {
+        "total": 777,
+        "name": "Majid Hussain"
+      },
+      "libdems": {
+        "total": 413,
+        "name": "Michael O'Donnell"
+      },
+      "others": {
+        "total": 1,
+        "name": "Independent"
+      }
+    }
+  },
+  "Glasgow Shettleston": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 10128,
+        "name": "John Mason"
+      },
+      "labour": {
+        "total": 9542,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 1163,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 371,
+        "name": "Ruaraidh Dobson"
+      },
+      "others": {
+        "total": 26,
+        "name": "Independent"
+      }
+    }
+  },
+  "Rutherglen": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12489,
+        "name": "Labour Co-op"
+      },
+      "snp": {
+        "total": 10710,
+        "name": "James McGuigan"
+      },
+      "conservative": {
+        "total": 2096,
+        "name": "Martyn McIntyre"
+      },
+      "libdems": {
+        "total": 1174,
+        "name": "Lisa Strachan"
+      },
+      "others": {
+        "total": 633,
+        "name": "Independent"
+      }
+    }
+  },
+  "Inverness and Nairn": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16870,
+        "name": "Fergus Ewing[a]"
+      },
+      "labour": {
+        "total": 7125,
+        "name": "David Stewart[b]"
+      },
+      "conservative": {
+        "total": 3797,
+        "name": "Mary Scanlon[b]"
+      },
+      "libdems": {
+        "total": 3763,
+        "name": "Christine Jardine"
+      },
+      "others": {
+        "total": 530,
+        "name": "Ross Durance"
+      }
+    }
+  },
+  "Na h-Eileanan an Iar": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 8496,
+        "name": "Alasdair Allan[a]"
+      },
+      "labour": {
+        "total": 3724,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 563,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 228,
+        "name": "Peter Morrison"
+      }
+    }
+  },
+  "Orkney": {
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": null
+    },
+    "partyInfo": {
+      "libdems": {
+        "total": 2912,
+        "name": "Liam McArthur[a]"
+      },
+      "others": {
+        "total": 2052,
+        "name": "Independent"
+      },
+      "snp": {
+        "total": 2044,
+        "name": "Donna Heddle"
+      },
+      "conservative": {
+        "total": 686,
+        "name": "Jamie Halcro Johnston"
+      },
+      "labour": {
+        "total": 458,
+        "name": "William Sharkey"
+      }
+    }
+  },
+  "Shetland": {
+    "seatInfo": {
+      "current": "libdems",
+      "electorate": null
+    },
+    "partyInfo": {
+      "libdems": {
+        "total": 4462,
+        "name": "Tavish Scott[a]"
+      },
+      "others": {
+        "total": 2845,
+        "name": "Independent"
+      },
+      "snp": {
+        "total": 1134,
+        "name": "Jean Urquhart"
+      },
+      "labour": {
+        "total": 620,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 330,
+        "name": "Conservative"
+      }
+    }
+  },
+  "Skye, Lochaber and Badenoch": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14737,
+        "name": "David Thompson[a]"
+      },
+      "libdems": {
+        "total": 9742,
+        "name": "Alan MacRae"
+      },
+      "labour": {
+        "total": 4112,
+        "name": "Linda Stewart"
+      },
+      "conservative": {
+        "total": 2834,
+        "name": "Kerensa Carr"
+      },
+      "others": {
+        "total": 490,
+        "name": "Independent"
+      }
+    }
+  },
+  "Almond Valley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16704,
+        "name": "Angela Constance[a]"
+      },
+      "labour": {
+        "total": 11162,
+        "name": "Laurence Fitzpatrick"
+      },
+      "conservative": {
+        "total": 1886,
+        "name": "Andrew Hardie"
+      },
+      "others": {
+        "total": 1282,
+        "name": "Independent"
+      },
+      "libdems": {
+        "total": 656,
+        "name": "Emma Sykes"
+      }
+    }
+  },
+  "Edinburgh Eastern": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14552,
+        "name": "Kenny MacAskill[a]"
+      },
+      "labour": {
+        "total": 12319,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 2630,
+        "name": "Conservative"
+      },
+      "others": {
+        "total": 2313,
+        "name": "Independent"
+      },
+      "libdems": {
+        "total": 1227,
+        "name": "Martin Veart"
+      }
+    }
+  },
+  "Edinburgh Northern and Leith": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12858,
+        "name": "Labour"
+      },
+      "snp": {
+        "total": 12263,
+        "name": "Shirley-Anne Somerville[a]"
+      },
+      "conservative": {
+        "total": 2928,
+        "name": "Conservative"
+      },
+      "others": {
+        "total": 2157,
+        "name": "Independent"
+      },
+      "libdems": {
+        "total": 2836,
+        "name": "Dan Farthing"
+      }
+    }
+  },
+  "Linlithgow": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 17027,
+        "name": "Fiona Hyslop[a]"
+      },
+      "labour": {
+        "total": 12936,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 2646,
+        "name": "Conservative"
+      },
+      "others": {
+        "total": 1644,
+        "name": "Independent"
+      },
+      "libdems": {
+        "total": 1015,
+        "name": "Jennifer Lang"
+      }
+    }
+  },
+  "Midlothian North and Musselburgh": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14079,
+        "name": "Colin Beattie"
+      },
+      "labour": {
+        "total": 11083,
+        "name": "Bernard Harkins"
+      },
+      "conservative": {
+        "total": 2541,
+        "name": "Scott Douglas"
+      },
+      "others": {
+        "total": 1963,
+        "name": "Independent"
+      },
+      "libdems": {
+        "total": 1254,
+        "name": "Ian Younger"
+      }
+    }
+  },
+  "Clackmannanshire and Dunblane": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13253,
+        "name": "Keith Brown[a]"
+      },
+      "labour": {
+        "total": 9644,
+        "name": "Richard Simpson[a]"
+      },
+      "conservative": {
+        "total": 3501,
+        "name": "Callum Campbell"
+      },
+      "libdems": {
+        "total": 1018,
+        "name": "Tim Brett"
+      },
+      "others": {
+        "total": 35,
+        "name": "Independent"
+      }
+    }
+  },
+  "Cowdenbeath": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 11926,
+        "name": "Helen Eadie[a]"
+      },
+      "snp": {
+        "total": 10679,
+        "name": "Ian Chisholm"
+      },
+      "conservative": {
+        "total": 1792,
+        "name": "Belinda Don"
+      },
+      "libdems": {
+        "total": 997,
+        "name": "Keith Legg"
+      },
+      "others": {
+        "total": 57,
+        "name": "Independent"
+      }
+    }
+  },
+  "Dunfermline": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 11010,
+        "name": "Bill Walker"
+      },
+      "labour": {
+        "total": 10420,
+        "name": "Alex Rowley"
+      },
+      "libdems": {
+        "total": 5776,
+        "name": "Jim Tolson[a]"
+      },
+      "conservative": {
+        "total": 2093,
+        "name": "James Reekie"
+      },
+      "others": {
+        "total": 56,
+        "name": "Independent"
+      }
+    }
+  },
+  "Kirkcaldy": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 12579,
+        "name": "David Torrance"
+      },
+      "labour": {
+        "total": 12397,
+        "name": "Marilyn Livingstone[a]"
+      },
+      "conservative": {
+        "total": 2007,
+        "name": "Ian McFarlane"
+      },
+      "others": {
+        "total": 717,
+        "name": "Independent"
+      },
+      "libdems": {
+        "total": 820,
+        "name": "John Mainland"
+      }
+    }
+  },
+  "Mid Fife and Glenrothes": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13761,
+        "name": "Tricia Marwick[a]"
+      },
+      "labour": {
+        "total": 9573,
+        "name": "Claire Baker[a]"
+      },
+      "conservative": {
+        "total": 1676,
+        "name": "Allan Smith"
+      },
+      "libdems": {
+        "total": 630,
+        "name": "Callum Leslie"
+      },
+      "others": {
+        "total": 316,
+        "name": "Independent"
+      }
+    }
+  },
+  "Aberdeen Central": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 10058,
+        "name": "Kevin Stewart"
+      },
+      "labour": {
+        "total": 9441,
+        "name": "Labour"
+      },
+      "conservative": {
+        "total": 3100,
+        "name": "Conservative"
+      },
+      "libdems": {
+        "total": 2349,
+        "name": "Sheila Thomson"
+      }
+    }
+  },
+  "Aberdeenshire East": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 19533,
+        "name": "Alex Salmond[a]"
+      },
+      "libdems": {
+        "total": 4238,
+        "name": "Alison McInnes[a]"
+      },
+      "conservative": {
+        "total": 4211,
+        "name": "Conservative"
+      },
+      "labour": {
+        "total": 2304,
+        "name": "Labour"
+      },
+      "others": {
+        "total": 124,
+        "name": "Independent"
+      }
+    }
+  },
+  "Angus South": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16164,
+        "name": "Graeme Dey"
+      },
+      "conservative": {
+        "total": 5581,
+        "name": "Hughie Campbell Adamson"
+      },
+      "labour": {
+        "total": 3703,
+        "name": "William Campbell"
+      },
+      "libdems": {
+        "total": 874,
+        "name": "Clive Sneddon"
+      }
+    }
+  },
+  "Dundee City East": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16541,
+        "name": "Shona Robison[a]"
+      },
+      "labour": {
+        "total": 5862,
+        "name": "Mohammed Asif"
+      },
+      "conservative": {
+        "total": 2550,
+        "name": "Brian Docherty"
+      },
+      "libdems": {
+        "total": 800,
+        "name": "Allan Petrie"
+      }
+    }
+  },
+  "Dundee City West": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14089,
+        "name": "Joe FitzPatrick[a]"
+      },
+      "labour": {
+        "total": 7684,
+        "name": "Richard McCready"
+      },
+      "conservative": {
+        "total": 1625,
+        "name": "Colin Stewart"
+      },
+      "libdems": {
+        "total": 1063,
+        "name": "Allison Burns"
+      }
+    }
+  },
+  "Ettrick, Roxburgh and Berwickshire": {
+    "seatInfo": {
+      "current": "conservative",
+      "electorate": null
+    },
+    "partyInfo": {
+      "conservative": {
+        "total": 12933,
+        "name": "Conservative"
+      },
+      "snp": {
+        "total": 7599,
+        "name": "Paul Wheelhouse[b]"
+      },
+      "libdems": {
+        "total": 4990,
+        "name": "Euan Robson"
+      },
+      "labour": {
+        "total": 2986,
+        "name": "Labour"
+      },
+      "others": {
+        "total": 308,
+        "name": "Independent"
+      }
+    }
+  },
+  "Kilmarnock and Irvine Valley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 16964,
+        "name": "Willie Coffey[a]"
+      },
+      "labour": {
+        "total": 10971,
+        "name": "Matt McLaughlin"
+      },
+      "conservative": {
+        "total": 3309,
+        "name": "Grant Fergusson"
+      },
+      "libdems": {
+        "total": 614,
+        "name": "Robbie Simpson"
+      }
+    }
+  },
+  "Midlothian South, Tweeddale and Lauderdale": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 13855,
+        "name": "Christine Grahame[a]"
+      },
+      "libdems": {
+        "total": 8931,
+        "name": "Jeremy Purvis[b]"
+      },
+      "labour": {
+        "total": 5312,
+        "name": "Ian Miller"
+      },
+      "conservative": {
+        "total": 3743,
+        "name": "Peter Duncan"
+      }
+    }
+  },
+  "Cunninghame North": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 15539,
+        "name": "Kenneth Gibson[a]"
+      },
+      "labour": {
+        "total": 9422,
+        "name": "Allan Wilson"
+      },
+      "conservative": {
+        "total": 4032,
+        "name": "Maurice Golden"
+      },
+      "libdems": {
+        "total": 543,
+        "name": "Malika Punukollu"
+      },
+      "others": {
+        "total": 23,
+        "name": "Independent"
+      }
+    }
+  },
+  "Cunninghame South": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 10993,
+        "name": "Margaret Burgess"
+      },
+      "labour": {
+        "total": 8645,
+        "name": "Irene Oldfather[a]"
+      },
+      "conservative": {
+        "total": 1871,
+        "name": "Alistair Haw"
+      },
+      "libdems": {
+        "total": 547,
+        "name": "Ruby Kirkwood"
+      },
+      "others": {
+        "total": 17,
+        "name": "Independent"
+      }
+    }
+  },
+  "Greenock and Inverclyde": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12387,
+        "name": "Duncan McNeil[a]"
+      },
+      "snp": {
+        "total": 11876,
+        "name": "Stuart McMillan[b]"
+      },
+      "conservative": {
+        "total": 2011,
+        "name": "Graeme Brooks"
+      },
+      "libdems": {
+        "total": 1934,
+        "name": "Ross Finnie[b]"
+      },
+      "others": {
+        "total": 12,
+        "name": "Independent"
+      }
+    }
+  },
+  "Paisley": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 10913,
+        "name": "George Adam"
+      },
+      "labour": {
+        "total": 10665,
+        "name": "Ewan Williams"
+      },
+      "conservative": {
+        "total": 2229,
+        "name": "Gordon McCaskill"
+      },
+      "libdems": {
+        "total": 1783,
+        "name": "Eileen McCartin"
+      },
+      "others": {
+        "total": 158,
+        "name": "Independent"
+      }
+    }
+  },
+  "Renfrewshire South": {
+    "seatInfo": {
+      "current": "labour",
+      "electorate": null
+    },
+    "partyInfo": {
+      "labour": {
+        "total": 12943,
+        "name": "Hugh Henry[a]"
+      },
+      "snp": {
+        "total": 10356,
+        "name": "Andy Doig"
+      },
+      "conservative": {
+        "total": 2917,
+        "name": "Alistair Campbell"
+      },
+      "libdems": {
+        "total": 702,
+        "name": "Gordon Anderson"
+      },
+      "others": {
+        "total": 47,
+        "name": "Independent"
+      }
+    }
+  },
+  "Strathkelvin and Bearsden": {
+    "seatInfo": {
+      "current": "snp",
+      "electorate": null
+    },
+    "partyInfo": {
+      "snp": {
+        "total": 14258,
+        "name": "Fiona McLeod"
+      },
+      "labour": {
+        "total": 12456,
+        "name": "David Whitton[a]"
+      },
+      "conservative": {
+        "total": 4438,
+        "name": "Stephanie Fraser"
+      },
+      "libdems": {
+        "total": 2600,
+        "name": "Gordon Macdonald"
+      },
+      "others": {
+        "total": 30,
+        "name": "Independent"
+      }
+    }
+  }
+}

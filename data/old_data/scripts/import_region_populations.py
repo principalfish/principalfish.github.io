@@ -6,8 +6,8 @@ Supported inputs:
 - JSON list of objects: [{"region": "Scotland", "population": 5430000}, ...]
 
 Usage:
-    python old_data/import_region_populations.py --map-name "UK Constituencies post 2022" --input old_data/files/region_populations.csv
-    python old_data/import_region_populations.py --map-name "UK Constituencies post 2022" --input old_data/files/region_populations.json --dry-run
+    python old_data/scripts/import_region_populations.py --map-name "UK Constituencies post 2022" --input old_data/files/westminster/region_populations.csv
+    python old_data/scripts/import_region_populations.py --map-name "UK Constituencies post 2022" --input old_data/files/westminster/region_populations.json --dry-run
 
 Notes:
 - Region name matching is case-insensitive after trimming whitespace.

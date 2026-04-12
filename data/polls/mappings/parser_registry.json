@@ -1,14 +1,14 @@
 {
   "bmg_research": {
-    "module": "polls.importers.bmg_research_import",
+    "module": "polls.importers.westminster.bmg_research_import",
     "status": "implemented"
   },
   "deltapoll": {
-    "module": "polls.importers.deltapoll_import",
+    "module": "polls.importers.westminster.deltapoll_import",
     "status": "implemented"
   },
   "find_out_now": {
-    "module": "polls.importers.find_out_now_import",
+    "module": "polls.importers.westminster.find_out_now_import",
     "status": "implemented"
   },
   "find_out_now_electoral_calculus": {
@@ -16,7 +16,7 @@
     "status": "planned"
   },
   "focaldata": {
-    "module": "polls.importers.focaldata_import",
+    "module": "polls.importers.westminster.focaldata_import",
     "status": "implemented"
   },
   "freshwater_strategy": {
@@ -28,7 +28,7 @@
     "status": "planned"
   },
   "ipsos": {
-    "module": "polls.importers.ipsos_import",
+    "module": "polls.importers.westminster.ipsos_import",
     "status": "implemented"
   },
   "jl_partners": {
@@ -36,7 +36,7 @@
     "status": "planned"
   },
   "lord_ashcroft": {
-    "module": "polls.importers.lord_ashcroft_import",
+    "module": "polls.importers.westminster.lord_ashcroft_import",
     "status": "implemented"
   },
   "merlin_strategy": {
@@ -44,11 +44,11 @@
     "status": "planned"
   },
   "more_in_common": {
-    "module": "polls.importers.more_in_common_import",
+    "module": "polls.importers.westminster.more_in_common_import",
     "status": "implemented"
   },
   "opinium": {
-    "module": "polls.importers.opinium_import",
+    "module": "polls.importers.westminster.opinium_import",
     "status": "implemented"
   },
   "stack_data_strategy": {
@@ -60,11 +60,11 @@
     "status": "planned"
   },
   "survation": {
-    "module": "polls.importers.survation_import",
+    "module": "polls.importers.westminster.survation_import",
     "status": "implemented"
   },
   "techne": {
-    "module": "polls.importers.techne_import",
+    "module": "polls.importers.westminster.techne_import",
     "status": "implemented"
   },
   "verian": {
@@ -80,7 +80,7 @@
     "status": "planned"
   },
   "yougov": {
-    "module": "polls.importers.yougov_import",
+    "module": "polls.importers.westminster.yougov_import",
     "status": "implemented"
   }
 }

@@ -1,0 +1,181 @@
+{
+  "Central Scotland": {
+    "regionVotes": {
+      "snp": 148399,
+      "labour": 77623,
+      "conservative": 59896,
+      "green": 19512,
+      "libdems": 6337,
+      "alba": 5345,
+      "reform": 650,
+      "others": 9730
+    },
+    "seats": {
+      "snp": 0,
+      "labour": 3,
+      "conservative": 3,
+      "green": 1
+    },
+    "constituencySeatsWon": {
+      "snp": 9
+    }
+  },
+  "Glasgow": {
+    "regionVotes": {
+      "snp": 133917,
+      "labour": 74088,
+      "conservative": 37027,
+      "green": 36114,
+      "libdems": 6079,
+      "alba": 5408,
+      "reform": 543,
+      "others": 11868
+    },
+    "seats": {
+      "snp": 0,
+      "labour": 4,
+      "conservative": 2,
+      "green": 1
+    },
+    "constituencySeatsWon": {
+      "snp": 9
+    }
+  },
+  "Highlands and Islands": {
+    "regionVotes": {
+      "snp": 96433,
+      "conservative": 60779,
+      "libdems": 26771,
+      "labour": 22713,
+      "green": 17729,
+      "alba": 3828,
+      "reform": 547,
+      "others": 10121
+    },
+    "seats": {
+      "snp": 1,
+      "conservative": 4,
+      "libdems": 0,
+      "labour": 1,
+      "green": 1
+    },
+    "constituencySeatsWon": {
+      "snp": 6,
+      "libdems": 2
+    }
+  },
+  "Lothian": {
+    "regionVotes": {
+      "snp": 141478,
+      "conservative": 78595,
+      "labour": 76689,
+      "green": 49984,
+      "libdems": 28433,
+      "alba": 6141,
+      "reform": 810,
+      "others": 12196
+    },
+    "seats": {
+      "snp": 0,
+      "conservative": 3,
+      "labour": 2,
+      "green": 2,
+      "libdems": 0
+    },
+    "constituencySeatsWon": {
+      "snp": 8,
+      "labour": 1,
+      "libdems": 1
+    }
+  },
+  "Mid Scotland and Fife": {
+    "regionVotes": {
+      "snp": 136825,
+      "conservative": 85909,
+      "labour": 52626,
+      "green": 28654,
+      "libdems": 25489,
+      "alba": 5893,
+      "reform": 808,
+      "others": 7855
+    },
+    "seats": {
+      "snp": 0,
+      "conservative": 4,
+      "labour": 2,
+      "green": 1,
+      "libdems": 0
+    },
+    "constituencySeatsWon": {
+      "libdems": 1,
+      "snp": 8
+    }
+  },
+  "North East Scotland": {
+    "regionVotes": {
+      "snp": 147910,
+      "conservative": 110555,
+      "labour": 41062,
+      "green": 22735,
+      "libdems": 18051,
+      "alba": 8269,
+      "reform": 1056,
+      "others": 11719
+    },
+    "seats": {
+      "snp": 0,
+      "conservative": 4,
+      "labour": 2,
+      "green": 1,
+      "libdems": 0
+    },
+    "constituencySeatsWon": {
+      "snp": 9,
+      "conservative": 1
+    }
+  },
+  "South Scotland": {
+    "regionVotes": {
+      "snp": 136741,
+      "conservative": 121730,
+      "labour": 57236,
+      "green": 18964,
+      "libdems": 12422,
+      "alba": 3896,
+      "reform": 779,
+      "others": 12080
+    },
+    "seats": {
+      "snp": 1,
+      "conservative": 3,
+      "labour": 3
+    },
+    "constituencySeatsWon": {
+      "snp": 7,
+      "conservative": 3
+    }
+  },
+  "West Scotland": {
+    "regionVotes": {
+      "snp": 152671,
+      "labour": 83782,
+      "conservative": 82640,
+      "green": 26632,
+      "libdems": 13570,
+      "alba": 6133,
+      "reform": 600,
+      "others": 11659
+    },
+    "seats": {
+      "snp": 0,
+      "labour": 3,
+      "conservative": 3,
+      "green": 1
+    },
+    "constituencySeatsWon": {
+      "snp": 6,
+      "labour": 1,
+      "conservative": 1
+    }
+  }
+}

@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from pypdf import PdfReader
 from sqlalchemy import select
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster

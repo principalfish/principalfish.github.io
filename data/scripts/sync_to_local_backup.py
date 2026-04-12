@@ -196,13 +196,15 @@ def main() -> int:
             print("Truncating local tables...")
             _truncate_all(backup_db)
 
-        for model_class, label in _SYNC_TABLES:
+        total = sum(
             _sync_table(primary_db, backup_db, model_class, label, dry_run=args.dry_run)
+            for model_class, label in _SYNC_TABLES
+        )
     except Exception as exc:
         print(f"Sync failed: {exc}", file=sys.stderr)
         return 1
 
-    print("Sync complete.")
+    print(f"Sync complete{suffix}: {total} rows total.")
     return 0
 
 

@@ -140,10 +140,10 @@ Wrapper script alternative:
 
 ## 6) Run UNS retrospective
 
-From `data/models/uns/`:
+From `data/models/westminster/`:
 
 ```bash
-cd data/models/uns
+cd data/models/westminster
 ../../../election_data/bin/python run_retrospective_uns.py --continue-on-error
 ```
 

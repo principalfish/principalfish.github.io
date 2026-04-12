@@ -359,6 +359,13 @@ a {
   content: none;
 }
 
+.maps-election-countdown {
+  margin: 0.3rem 0 0;
+  color: #16a34a;
+  font: 700 0.92rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
 .maps-app {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);

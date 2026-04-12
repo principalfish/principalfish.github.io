@@ -77,6 +77,7 @@ const seatViewTabNav = document.getElementById('mapsSeatViewTabNav');
 const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
 const seatList = document.getElementById('mapsSeatList');
+const mapsTitle = document.querySelector('.maps-title');
 const mapsStage = document.querySelector('.maps-stage');
 const mapsPanelRight = document.querySelector('.maps-panel-right');
 const mapsMain = document.querySelector('.maps-main');
@@ -217,11 +218,14 @@ function trackVirtualPageView(nextUrl) {
 /**
  * Sets the browser tab title, prepending contextLabel when provided.
  * @param {string|null} contextLabel - Optional label to prepend (e.g. election name or mode name).
+ * @param {string|null} [parliament=null] - Parliament key ('holyrood' | 'westminster' | null).
  * @returns {void}
  */
-function setMapsPageTitle(contextLabel) {
+function setMapsPageTitle(contextLabel, parliament = null) {
   const label = String(contextLabel || '').trim();
-  document.title = label ? `${label} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
+  const parlLabel = parliament ? parliament[0].toUpperCase() + parliament.slice(1) : null;
+  const suffix = parlLabel ? `${parlLabel} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
+  document.title = label ? `${label} | ${suffix}` : suffix;
 }
 
 /**
@@ -815,7 +819,7 @@ async function activatePollTrackerMode() {
 
   setPollTrackerLayoutVisible(true);
   await loadPollTrackerMetaIfNeeded();
-  setMapsPageTitle('Poll tracker');
+  setMapsPageTitle('Poll tracker', 'westminster');
   setSubtitleText('Poll tracker · model output trends', { includeLatestPollSnippet: true });
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
   replaceRouteState('polltracker');
@@ -826,13 +830,18 @@ async function activatePollTrackerMode() {
 }
 
 /**
- * Sets the active class on parliament tab links to match currentParliament.
+ * Sets the active class on parliament tab links to match currentParliament, and updates the page
+ * h1 to suffix the parliament name (Westminster / Holyrood).
  * @returns {void}
  */
 function updateParliamentTabsUI() {
   document.querySelectorAll('[data-parliament]').forEach((tab) => {
     tab.classList.toggle('active', tab.dataset.parliament === currentParliament);
   });
+  if (mapsTitle && currentParliament) {
+    const label = currentParliament[0].toUpperCase() + currentParliament.slice(1);
+    mapsTitle.textContent = `UK Election Maps · ${label}`;
+  }
 }
 
 /** Toggles vote percentage column visibility on the totals table. */
@@ -1932,7 +1941,7 @@ function applyPredictModeProjection() {
   window.__mapsComparisonSummary = baselineSummary;
 
   const predictLabel = `Predict ${predictElectionYear()}`;
-  updateTopSummary({ name: predictLabel }, projectedSummary);
+  updateTopSummary({ name: predictLabel, parliament: currentParliament }, projectedSummary);
   renderMapWithViewState({ preserveZoom: true });
   syncRightPanelHeightToMap();
 
@@ -2013,7 +2022,6 @@ async function activatePredictMode() {
     seatPreview.textContent = 'Predict mode active: edit regional vote shares and click Submit.';
   }
 
-  setMapsPageTitle(`Predict ${predictElectionYear()}`);
   replacePredictRouteStateFromInputs();
 
   rebuildPredictSwingsFromInputs();
@@ -3168,7 +3176,7 @@ function syncRightPanelHeightToMap() {
  * @returns {void}
  */
 function updateTopSummary(election, summary) {
-  setMapsPageTitle(election?.name);
+  setMapsPageTitle(election?.name, election?.parliament);
   const top = summary.parties[0];
   const leadSeats = Number(top?.seats || 0);
   const totalSeats = Number(summary.totalSeats || 0);

@@ -116,6 +116,7 @@ const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
 const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
+const electionCountdownEl = document.getElementById('mapsElectionCountdown');
 
 let currentSort = { key: 'seats', direction: 'desc' };
 let currentManifest = null;
@@ -176,6 +177,7 @@ let predictHolyroodConstSwingsByParty = new Map(); // partyKey → Map<regionKey
 let predictHolyroodListSwingsByParty = new Map();  // partyKey → Map<regionKey, swing>
 let pollTrackerModeActive = false;
 let pollTrackerModeLinkEl = null;
+let countdownIntervalId = null; // setInterval handle for the election countdown ticker
 let currentParliament = '';
 let pollTrackerDataLoaded = false;
 let pollTrackerTimeline = [];
@@ -416,6 +418,61 @@ function setSubtitleText(baseText, options = {}) {
   latestSpan.className = 'maps-subtitle-latest';
   latestSpan.textContent = latestPollSnippet;
   subtitle.appendChild(latestSpan);
+}
+
+// 7 May 2026, 07:00 BST = 06:00 UTC
+const HOLYROOD_ELECTION_DATE = new Date('2026-05-07T06:00:00Z');
+
+/**
+ * Formats a millisecond duration as "Xd Xh Xm Xs".
+ * @param {number} ms - Milliseconds remaining (must be > 0).
+ * @returns {string} Formatted countdown string.
+ */
+function formatCountdown(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
+
+/**
+ * Shows or hides the election countdown element based on the current election type and mode.
+ * Starts a 1-second interval tick when visible; clears it when hidden or after election day.
+ * Visible only when currentElectionType is 'holyrood_uns' and poll tracker is not active.
+ * @returns {void}
+ */
+function updateElectionCountdown() {
+  if (!electionCountdownEl) return;
+
+  const shouldShow = currentElectionType === 'holyrood_uns' && !pollTrackerModeActive;
+
+  if (countdownIntervalId !== null) {
+    clearInterval(countdownIntervalId);
+    countdownIntervalId = null;
+  }
+
+  if (!shouldShow) {
+    electionCountdownEl.hidden = true;
+    return;
+  }
+
+  const tick = () => {
+    const msLeft = HOLYROOD_ELECTION_DATE - Date.now();
+    if (msLeft <= 0) {
+      electionCountdownEl.hidden = true;
+      // Clear and null the handle so updateElectionCountdown can safely restart if called again.
+      clearInterval(countdownIntervalId);
+      countdownIntervalId = null;
+      return;
+    }
+    electionCountdownEl.textContent = `${formatCountdown(msLeft)} · Holyrood election · 7 May 2026`;
+    electionCountdownEl.hidden = false;
+  };
+
+  tick();
+  countdownIntervalId = setInterval(tick, 1000);
 }
 
 /**
@@ -812,6 +869,7 @@ async function activatePollTrackerMode() {
   if (predictWindow) predictWindow.hidden = true;
 
   pollTrackerModeActive = true;
+  updateElectionCountdown();
   document.querySelectorAll('.maps-election-item.active').forEach((node) => {
     node.classList.remove('active');
   });
@@ -1929,6 +1987,7 @@ function applyPredictModeProjection() {
   const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
 
   currentElectionType = currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
+  updateElectionCountdown();
   currentSeats = projectedSeats;
   currentSeatsByKey = buildSeatIndex(projectedSeats);
   currentComparisonSeats = predictBaseSeats;
@@ -3729,6 +3788,7 @@ async function initElectionData() {
     mapViewState.choroplethType = 'none';
   }
   currentElectionType = currentElection.type;
+  updateElectionCountdown();
   baseElectionSeats = seats;
   currentSeats = seats.map((seat) => cloneSeatRecord(seat));
   currentMapData = mapData;

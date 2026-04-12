@@ -7,10 +7,13 @@ redo data back end structure
 - general folder structure needs a rethink
 - regions mapping server any purpose?
 - UI needs thought
+- make brexit part of general export (check party ids are accurate)
 
 election maps
 - make country agnostic - all in map-nodes
 - more in core.js
+
+
 
 
 dont forget to use copilot at some point

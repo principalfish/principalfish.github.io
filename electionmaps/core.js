@@ -1579,16 +1579,16 @@ function holyroodNationalBaselineForPass(pass, nationalBaseline, nationalListBas
 }
 
 /**
- * Resolves the share for a region/party from a single tab input map, applying national UNS if
- * no region-level override exists.
+ * Raw (unrounded) resolved share for a region/party from a single tab input map, applying
+ * national UNS if no region-level override exists.
  * @param {string} regionKey
  * @param {string} partyKey
  * @param {Map<string,number>} tabMap - Input map for the tab being resolved.
  * @param {'overall'|'constituency'|'list'} pass
  * @param {object} state - { constBaseline, listBaseline, nationalBaseline, nationalListBaseline }
- * @returns {number|null} Resolved share, or null if the tab map has no entry for this party.
+ * @returns {number|null} Resolved share (may be fractional), or null if the tab map has no entry.
  */
-export function resolvedTabShare(regionKey, partyKey, tabMap, pass, state) {
+function resolvedTabShareRaw(regionKey, partyKey, tabMap, pass, state) {
   const regionKey_ = predictInputKey(regionKey, partyKey);
   if (tabMap.has(regionKey_)) return tabMap.get(regionKey_);
   const natKey = predictInputKey(HOLYROOD_NATIONAL_KEY, partyKey);
@@ -1596,13 +1596,44 @@ export function resolvedTabShare(regionKey, partyKey, tabMap, pass, state) {
     const nationalInput = tabMap.get(natKey);
     const nationalBase = holyroodNationalBaselineForPass(pass, state.nationalBaseline, state.nationalListBaseline).get(partyKey) ?? 0;
     const regionalBase = getPredictBaselineShare(regionKey, partyKey, holyroodBaselineForPass(pass, state.constBaseline, state.listBaseline));
-    return roundPredictShareValue(clampNumber(regionalBase + (nationalInput - nationalBase), 0, 100));
+    return clampNumber(regionalBase + (nationalInput - nationalBase), 0, 100);
   }
   return null;
 }
 
 /**
- * Returns the effective resolved share for a region/party for a given pass.
+ * Resolves the share for a region/party from a single tab input map, applying national UNS if
+ * no region-level override exists. Returns a rounded integer.
+ * @param {string} regionKey
+ * @param {string} partyKey
+ * @param {Map<string,number>} tabMap - Input map for the tab being resolved.
+ * @param {'overall'|'constituency'|'list'} pass
+ * @param {object} state - { constBaseline, listBaseline, nationalBaseline, nationalListBaseline }
+ * @returns {number|null} Resolved share as a rounded integer, or null if the tab map has no entry.
+ */
+export function resolvedTabShare(regionKey, partyKey, tabMap, pass, state) {
+  const raw = resolvedTabShareRaw(regionKey, partyKey, tabMap, pass, state);
+  return raw !== null ? roundPredictShareValue(raw) : null;
+}
+
+/**
+ * Raw (unrounded) resolved share for a region/party for a given pass.
+ * @param {string} regionKey
+ * @param {string} partyKey
+ * @param {'constituency'|'list'} pass
+ * @param {object} state
+ * @returns {number} Share (0–100), possibly fractional.
+ */
+function resolvedHolyroodShareRaw(regionKey, partyKey, pass, state) {
+  if (pass !== 'constituency' && pass !== 'list') throw new Error(`Unknown pass: ${pass}`);
+  const tabMap = pass === 'list' ? state.listInput : state.constInput;
+  const tabVal = resolvedTabShareRaw(regionKey, partyKey, tabMap, pass, state);
+  if (tabVal !== null) return tabVal;
+  return getPredictBaselineShare(regionKey, partyKey, holyroodBaselineForPass(pass, state.constBaseline, state.listBaseline));
+}
+
+/**
+ * Returns the effective resolved share for a region/party for a given pass, as a rounded integer.
  * Resolution order: tab-specific (region override → national UNS) → regional baseline.
  * @param {string} regionKey
  * @param {string} partyKey
@@ -1611,11 +1642,7 @@ export function resolvedTabShare(regionKey, partyKey, tabMap, pass, state) {
  * @returns {number} Share (0–100).
  */
 export function resolvedHolyroodShare(regionKey, partyKey, pass, state) {
-  if (pass !== 'constituency' && pass !== 'list') throw new Error(`Unknown pass: ${pass}`);
-  const tabMap = pass === 'list' ? state.listInput : state.constInput;
-  const tabVal = resolvedTabShare(regionKey, partyKey, tabMap, pass, state);
-  if (tabVal !== null) return tabVal;
-  return getPredictBaselineShare(regionKey, partyKey, holyroodBaselineForPass(pass, state.constBaseline, state.listBaseline));
+  return roundPredictShareValue(resolvedHolyroodShareRaw(regionKey, partyKey, pass, state));
 }
 
 /**
@@ -1637,6 +1664,8 @@ export function holyroodNationalOtherShare(tabMap, pass, partyKeys, state) {
 
 /**
  * Calculates the 'other' share for a region row using resolved values for the given pass.
+ * Sums raw (unrounded) shares before rounding the result, so that independent per-party
+ * rounding cannot push the total above 100 and produce a spurious negative 'other'.
  * @param {string} regionKey
  * @param {'overall'|'constituency'|'list'} pass
  * @param {string[]} partyKeys - Column party keys for the tab.
@@ -1644,7 +1673,7 @@ export function holyroodNationalOtherShare(tabMap, pass, partyKeys, state) {
  * @returns {number}
  */
 export function holyroodResolvedOtherShare(regionKey, pass, partyKeys, state) {
-  const total = partyKeys.reduce((sum, pk) => sum + resolvedHolyroodShare(regionKey, pk, pass, state), 0);
+  const total = partyKeys.reduce((sum, pk) => sum + resolvedHolyroodShareRaw(regionKey, pk, pass, state), 0);
   return roundPredictShareValue(100 - total);
 }
 

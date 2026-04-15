@@ -3260,6 +3260,55 @@ async function lookupPostcode(postcode) {
 }
 
 /**
+ * Attaches event listeners to the postcode search input. On Enter or blur, calls
+ * lookupPostcode and passes the result to selectSeatBySearchQuery. Shows an inline
+ * error if the lookup fails. Disables the input during fetch. Guards against double-wiring.
+ * @returns {void}
+ */
+function wirePostcodeSearch() {
+  if (!postcodeSearchInput || postcodeSearchInput.dataset.wired === 'true') return;
+
+  let lastSubmittedPostcode = '';
+
+  /**
+   * Reads the postcode input, runs the lookup, and selects the resolved seat.
+   * Deduplicates against the last submitted value to avoid double-fetching on blur after Enter.
+   * @returns {void}
+   */
+  const submitPostcode = async () => {
+    const query = postcodeSearchInput.value.trim();
+    if (!query || query === lastSubmittedPostcode) return;
+    lastSubmittedPostcode = query;
+    console.log('DEBUG: wirePostcodeSearch submit', query);
+    postcodeSearchInput.disabled = true;
+    clearPostcodeError();
+    const constituencyName = await lookupPostcode(query);
+    postcodeSearchInput.disabled = false;
+    if (constituencyName) {
+      selectSeatBySearchQuery(constituencyName);
+    } else {
+      showPostcodeError('Postcode not found');
+    }
+  };
+
+  postcodeSearchInput.addEventListener('input', () => {
+    lastSubmittedPostcode = '';
+    clearPostcodeError();
+  });
+  postcodeSearchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitPostcode();
+    }
+  });
+  postcodeSearchInput.addEventListener('blur', () => {
+    window.setTimeout(submitPostcode, 120);
+  });
+
+  postcodeSearchInput.dataset.wired = 'true';
+}
+
+/**
  * Attaches all seat search event listeners (focus, input, change, blur, keydown for arrow/enter/escape navigation, outside-click to close). Guards against double-wiring.
  * @returns {void}
  */
@@ -3956,6 +4005,7 @@ async function init() {
   wirePredictControls();
   wirePollTrackerControls();
   wireSeatSearch();
+  wirePostcodeSearch();
   if (seatPopupClose) {
     seatPopupClose.addEventListener('click', () => {
       hideSeatPopup();

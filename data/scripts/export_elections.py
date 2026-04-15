@@ -1426,7 +1426,7 @@ def main() -> None:
         existing_data_files = existing.get("settings", {}).get("dataFilesByElectionId", {})
         for entry_id, entry in existing_by_id.items():
             entry_type = entry.get("type")
-            if entry_type not in ("holyrood_uns", "model_uns"):
+            if entry_type not in ("holyrood_uns", "model_uns", "eu_referendum"):
                 continue
             if entry_id in {e["id"] for e in manifest_entries}:
                 continue  # already present (shouldn't happen, but be safe)
@@ -1435,8 +1435,14 @@ def main() -> None:
                 if entry_type == "model_uns":
                     # Insert at the top of the westminster elections (index 0)
                     insert_at = 0
-                else:
+                elif entry_type == "holyrood_uns":
                     # Insert before the first holyrood election in the rebuilt list
+                    insert_at = next(
+                        (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
+                        len(manifest_entries),
+                    )
+                else:
+                    # Append at the end of the westminster elections, before holyrood
                     insert_at = next(
                         (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
                         len(manifest_entries),

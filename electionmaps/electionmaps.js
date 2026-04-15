@@ -155,7 +155,7 @@ let seatSearchNames = [];
 let seatSearchSuggestions = [];
 let seatSearchSuggestionIndex = -1;
 let seatSearchMenuEl = null;
-let postcodeErrorTimeout = null;
+let postcodeErrorTimeout = null; // Timer ID for the postcode error flash; cleared when dismissed early.
 let predictModeActive = false;
 let predictModeLinkEl = null;
 let predictBaseSeats = [];
@@ -193,6 +193,8 @@ const POLL_TRACKER_DATA_PATH = 'data/results/model_output_trends.json';
 const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
 const HOLYROOD_PREDICTION_META_PATH = 'data/results/holyrood-prediction-meta.json';
 const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
+// Canonical map name strings used to route postcode lookups to the correct
+// postcodes.io endpoint and to identify whether postcode search is supported.
 const WESTMINSTER_OLD_MAP_NAME = 'westminster-2010';
 const WESTMINSTER_NEW_MAP_NAME = 'westminster-2024';
 const HOLYROOD_OLD_MAP_NAME = 'holyrood-2021';
@@ -204,26 +206,26 @@ const HOLYROOD_NEW_MAP_NAME = 'holyrood-2026';
 // combined name — best-guess only, since the boundary changed at the postcode level.
 const HOLYROOD_2021_TO_2026_NAME = {
   'Aberdeen South and North Kincardine': 'Aberdeen Deeside and North Kincardine',
-  'Airdrie and Shotts':                  'Airdrie',
-  'East Lothian':                        'East Lothian Coast and Lammermuirs',
-  'Edinburgh Eastern':                   'Edinburgh Eastern, Musselburgh and Tranent',
-  'Edinburgh Northern and Leith':        'Edinburgh North Eastern and Leith',
-  'Edinburgh Pentlands':                 'Edinburgh South Western',
-  'Edinburgh Western':                   'Edinburgh North Western',
-  'Falkirk East':                        'Falkirk East and Linlithgow',
-  'Glasgow Cathcart':                    'Glasgow Cathcart and Pollok',
-  'Glasgow Kelvin':                      'Glasgow Kelvin and Maryhill',
-  'Glasgow Maryhill and Springburn':     'Glasgow Kelvin and Maryhill',
-  'Glasgow Pollok':                      'Glasgow Cathcart and Pollok',
-  'Glasgow Provan':                      'Glasgow Easterhouse and Springburn',
-  'Glasgow Shettleston':                 'Glasgow Baillieston and Shettleston',
-  'Greenock and Inverclyde':             'Inverclyde',
-  'Linlithgow':                          'Falkirk East and Linlithgow',
-  'Midlothian North and Musselburgh':    'Midlothian North',
-  'North East Fife':                     'Fife North East',
-  'Renfrewshire North and West':         'Renfrewshire North and Cardonald',
-  'Renfrewshire South':                  'Renfrewshire West and Levern Valley',
-  'Rutherglen':                          'Rutherglen and Cambuslang',
+  'Airdrie and Shotts': 'Airdrie',
+  'East Lothian': 'East Lothian Coast and Lammermuirs',
+  'Edinburgh Eastern': 'Edinburgh Eastern, Musselburgh and Tranent',
+  'Edinburgh Northern and Leith': 'Edinburgh North Eastern and Leith',
+  'Edinburgh Pentlands': 'Edinburgh South Western',
+  'Edinburgh Western': 'Edinburgh North Western',
+  'Falkirk East': 'Falkirk East and Linlithgow',
+  'Glasgow Cathcart': 'Glasgow Cathcart and Pollok',
+  'Glasgow Kelvin': 'Glasgow Kelvin and Maryhill',
+  'Glasgow Maryhill and Springburn': 'Glasgow Kelvin and Maryhill',
+  'Glasgow Pollok': 'Glasgow Cathcart and Pollok',
+  'Glasgow Provan': 'Glasgow Easterhouse and Springburn',
+  'Glasgow Shettleston': 'Glasgow Baillieston and Shettleston',
+  'Greenock and Inverclyde': 'Inverclyde',
+  'Linlithgow': 'Falkirk East and Linlithgow',
+  'Midlothian North and Musselburgh': 'Midlothian North',
+  'North East Fife': 'Fife North East',
+  'Renfrewshire North and West': 'Renfrewshire North and Cardonald',
+  'Renfrewshire South': 'Renfrewshire West and Levern Valley',
+  'Rutherglen': 'Rutherglen and Cambuslang',
 };
 
 let pollTrackerMetaLoaded = false;

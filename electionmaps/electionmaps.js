@@ -153,6 +153,7 @@ let seatSearchNames = [];
 let seatSearchSuggestions = [];
 let seatSearchSuggestionIndex = -1;
 let seatSearchMenuEl = null;
+let postcodeErrorTimeout = null;
 let predictModeActive = false;
 let predictModeLinkEl = null;
 let predictBaseSeats = [];
@@ -3190,21 +3191,41 @@ function updatePostcodeSearchVisibility() {
  * @param {string} msg - The error text to display.
  * @returns {void}
  */
+/**
+ * Flashes an error message inside the postcode input for 2 seconds, then clears the
+ * input so the placeholder is shown again. The input is made readonly during the flash
+ * to prevent accidental edits. Cancels any in-flight error flash before starting a new one.
+ * @param {string} msg - The error text to display in the input.
+ * @returns {void}
+ */
 function showPostcodeError(msg) {
-  if (!postcodeSearchGroup) return;
+  if (!postcodeSearchInput) return;
   clearPostcodeError();
-  const span = document.createElement('span');
-  span.className = 'maps-postcode-error';
-  span.textContent = msg;
-  postcodeSearchGroup.appendChild(span);
+  postcodeSearchInput.value = msg;
+  postcodeSearchInput.readOnly = true;
+  postcodeSearchInput.classList.add('is-postcode-error');
+  postcodeErrorTimeout = window.setTimeout(() => {
+    postcodeSearchInput.readOnly = false;
+    postcodeSearchInput.value = '';
+    postcodeSearchInput.classList.remove('is-postcode-error');
+    postcodeErrorTimeout = null;
+  }, 2000);
 }
 
 /**
- * Removes any inline postcode error message. No-op if none exists.
+ * Cancels any active postcode error flash and removes the error style.
+ * Does not restore the input value — caller is responsible for that if needed.
  * @returns {void}
  */
 function clearPostcodeError() {
-  postcodeSearchGroup?.querySelector('.maps-postcode-error')?.remove();
+  if (postcodeErrorTimeout) {
+    clearTimeout(postcodeErrorTimeout);
+    postcodeErrorTimeout = null;
+  }
+  if (postcodeSearchInput) {
+    postcodeSearchInput.readOnly = false;
+    postcodeSearchInput.classList.remove('is-postcode-error');
+  }
 }
 
 /**
@@ -3218,14 +3239,17 @@ async function lookupPostcode(postcode) {
   const mapId = getPostcodeMapId();
   if (!mapId) return null;
 
-  const normalised = postcode.trim().toUpperCase().replace(/\s+/g, ' ');
+  // Strip all whitespace then re-insert the canonical space before the inward code
+  // (always the last 3 characters). Both endpoints require this format.
+  const stripped = postcode.trim().toUpperCase().replace(/\s+/g, '');
+  const normalised = stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
 
   let url = '';
   let resultProperty = '';
 
   switch (getMapName(mapId)) {
     case HOLYROOD_NEW_MAP_NAME:
-      url = `https://api.postcodes.io/scottish-postcodes/${encodeURIComponent(normalised)}`;
+      url = `https://api.postcodes.io/scotland/postcodes/${encodeURIComponent(normalised)}`;
       resultProperty = 'scottish_parliamentary_constituency';
       break;
     case WESTMINSTER_NEW_MAP_NAME:
@@ -3291,6 +3315,15 @@ function wirePostcodeSearch() {
     }
   };
 
+  postcodeSearchInput.addEventListener('focus', () => {
+    // If the error flash is showing, dismiss it and restore the original value
+    // so the user can immediately retype without clearing "Postcode not found" manually.
+    if (postcodeSearchInput.readOnly) {
+      clearPostcodeError();
+      postcodeSearchInput.value = '';
+      lastSubmittedPostcode = '';
+    }
+  });
   postcodeSearchInput.addEventListener('input', () => {
     lastSubmittedPostcode = '';
     clearPostcodeError();

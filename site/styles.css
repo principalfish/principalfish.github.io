@@ -1926,6 +1926,10 @@ a {
   }
 }
 
+#maps-postcode-search.is-postcode-error {
+  color: #dc2626;
+}
+
 @media (max-width: 980px) {
   .maps-app {
     grid-template-columns: 1fr;

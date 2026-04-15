@@ -190,6 +190,10 @@ const POLL_TRACKER_DATA_PATH = 'data/results/model_output_trends.json';
 const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
 const HOLYROOD_PREDICTION_META_PATH = 'data/results/holyrood-prediction-meta.json';
 const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
+const WESTMINSTER_OLD_MAP_NAME = 'westminster-2010';
+const WESTMINSTER_NEW_MAP_NAME = 'westminster-2024';
+const HOLYROOD_OLD_MAP_NAME = 'holyrood-2021';
+const HOLYROOD_NEW_MAP_NAME = 'holyrood-2026';
 
 let pollTrackerMetaLoaded = false;
 let pollTrackerLatestSnippet = '';
@@ -3134,21 +3138,35 @@ function selectSeatBySearchQuery(query) {
 }
 
 /**
- * Shows or hides the postcode search group based on the current election's mapId.
- * Only mapId 2 (Westminster 2024 boundaries) and mapId 12 (Holyrood 2026 boundaries)
- * are supported by postcodes.io. Clears the input and any error state when hiding.
- * @returns {void}
+ * Returns a descriptive name for a map ID. Checks the manifest first (in case a name
+ * field is added later), then falls back to the known map name constants.
+ * @param {number} mapId
+ * @returns {string|null}
  */
+function getMapName(mapId) {
+  const manifestName = currentManifest?.mapModes?.[String(mapId)]?.name;
+  if (manifestName) return manifestName;
+  const knownNames = {
+    1: WESTMINSTER_OLD_MAP_NAME,
+    2: WESTMINSTER_NEW_MAP_NAME,
+    11: HOLYROOD_OLD_MAP_NAME,
+    12: HOLYROOD_NEW_MAP_NAME,
+  };
+  return knownNames[mapId] ?? null;
+}
+
 /**
  * Returns the mapId for the current election if it supports postcode lookup, otherwise null.
- * mapId 2 (Westminster 2024 boundaries) and mapId 12 (Holyrood 2026 boundaries) are supported.
- * Use as a boolean check (null = unsupported) or to select the correct postcodes.io endpoint.
+ * Only the current Westminster and Holyrood boundary maps are supported.
+ * Use as a boolean check (null = unsupported) or to pass to lookupPostcode.
  * @returns {number|null}
  */
 function getPostcodeMapId() {
   const currentElection = currentManifest?.elections?.find((e) => e.id === currentElectionId);
   const mapId = currentElection?.mapId;
-  return mapId === 2 || mapId === 12 ? mapId : null;
+  if (mapId == null) return null;
+  const name = getMapName(mapId);
+  return name === WESTMINSTER_NEW_MAP_NAME || name === HOLYROOD_NEW_MAP_NAME ? mapId : null;
 }
 
 /**
@@ -3163,6 +3181,81 @@ function updatePostcodeSearchVisibility() {
   if (!visible && postcodeSearchInput) {
     postcodeSearchInput.value = '';
     clearPostcodeError();
+  }
+}
+
+/**
+ * Displays an inline error message below the postcode search input.
+ * Replaces any existing error. No-op if postcodeSearchGroup is absent.
+ * @param {string} msg - The error text to display.
+ * @returns {void}
+ */
+function showPostcodeError(msg) {
+  if (!postcodeSearchGroup) return;
+  clearPostcodeError();
+  const span = document.createElement('span');
+  span.className = 'maps-postcode-error';
+  span.textContent = msg;
+  postcodeSearchGroup.appendChild(span);
+}
+
+/**
+ * Removes any inline postcode error message. No-op if none exists.
+ * @returns {void}
+ */
+function clearPostcodeError() {
+  postcodeSearchGroup?.querySelector('.maps-postcode-error')?.remove();
+}
+
+/**
+ * Looks up a postcode via the postcodes.io API and returns the constituency name,
+ * or null if the postcode is not found or the current map does not support lookup.
+ * Selects the Westminster or Scottish endpoint based on the current election's mapId.
+ * @param {string} postcode - The raw postcode string entered by the user.
+ * @returns {Promise<string|null>} The constituency name, or null on failure.
+ */
+async function lookupPostcode(postcode) {
+  const mapId = getPostcodeMapId();
+  if (!mapId) return null;
+
+  const normalised = postcode.trim().toUpperCase().replace(/\s+/g, ' ');
+
+  let url = '';
+  let resultProperty = '';
+
+  switch (getMapName(mapId)) {
+    case HOLYROOD_NEW_MAP_NAME:
+      url = `https://api.postcodes.io/scottish-postcodes/${encodeURIComponent(normalised)}`;
+      resultProperty = 'scottish_parliamentary_constituency';
+      break;
+    case WESTMINSTER_NEW_MAP_NAME:
+      url = `https://api.postcodes.io/postcodes/${encodeURIComponent(normalised)}`;
+      resultProperty = 'parliamentary_constituency_2024';
+      break;
+    default:
+      return null;
+  }
+
+  try {
+    console.log('DEBUG: postcode lookup', url);
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const constituencyName = data?.result?.[resultProperty] ?? null;
+
+    if (!constituencyName) return null;
+
+    // Verify the returned name matches a seat in the current index.
+    const seatKey = seatLookupKey(constituencyName);
+    if (!currentSeatNameByKey.has(seatKey)) {
+      console.warn('DEBUG: postcode resolved to', constituencyName, '— no matching seat key', seatKey);
+    } else {
+      console.log('DEBUG: postcode resolved to', constituencyName, '→ seat key', seatKey);
+    }
+
+    return constituencyName;
+  } catch {
+    return null;
   }
 }
 

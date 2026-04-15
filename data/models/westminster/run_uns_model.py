@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import math
+import re
 import sqlite3
 import sys
 from collections import Counter, defaultdict
@@ -133,30 +134,44 @@ class LatestPollUsage:
 
 
 def existing_trend_dates() -> set[date]:
-    """Return all ``as_of_date`` values already present in the trend cache JSON.
+    """Return all ``as_of_date`` values that have already been simulated.
 
-    Reads ``TREND_CACHE_JSON`` and collects every unique date value found in the
-    ``as_of_date`` field. Entries with a missing or unparseable date are silently
-    skipped.
+    Combines dates from the trend cache JSON with dates derived from the SQLite
+    archive. The JSON only contains dates whose seat snapshot differed from the
+    previous entry (duplicates are skipped), so using it alone would cause
+    gap-filling re-runs for those skipped dates on the next import. The SQLite
+    archive records every run regardless of deduplication, so including it gives
+    a complete picture of which dates have already been processed.
 
     Returns:
-        A set of ``date`` objects for which trend data has already been written.
-        Returns an empty set if the cache file does not exist.
+        A set of ``date`` objects for which a simulation has already been run.
+        Returns an empty set if neither source exists.
     """
-    if not TREND_CACHE_JSON.exists():
-        return set()
-
     dates: set[date] = set()
-    with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
-        entries = json.load(handle)
-    for entry in entries:
-        raw = str(entry.get("as_of_date") or "").strip()
-        if not raw:
-            continue
-        try:
-            dates.add(date.fromisoformat(raw))
-        except ValueError:
-            continue
+
+    if TREND_CACHE_JSON.exists():
+        with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+            entries = json.load(handle)
+        for entry in entries:
+            raw = str(entry.get("as_of_date") or "").strip()
+            if not raw:
+                continue
+            try:
+                dates.add(date.fromisoformat(raw))
+            except ValueError:
+                continue
+
+    if DEFAULT_SQLITE_PATH.exists():
+        with sqlite3.connect(DEFAULT_SQLITE_PATH) as conn:
+            rows = conn.execute("SELECT name FROM elections").fetchall()
+        for (name,) in rows:
+            m = re.match(r"UNS (\d{4}-\d{2}-\d{2})", name or "")
+            if m:
+                try:
+                    dates.add(date.fromisoformat(m.group(1)))
+                except ValueError:
+                    continue
+
     return dates
 
 
@@ -1430,12 +1445,6 @@ def run_simulation(
         projected_votes,
     )
 
-    write_trend_cache_meta(
-        cfg.as_of_date,
-        cfg.since_date,
-        latest_poll_usage,
-    )
-
     return persisted_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
 
@@ -1557,6 +1566,27 @@ def main() -> None:
             )
             print(f"- {region_name}: {summary}")
 
+    # Write meta once for cfg.as_of_date (the capped latest-poll date).
+    # If that date was not in run_dates (already cached from a prior run),
+    # re-run the poll aggregation in dry-run mode to get latest_poll_usage.
+    if cfg.as_of_date not in run_dates:
+        meta_cfg = SimulationConfig(
+            map_name=cfg.map_name,
+            baseline_election_name=cfg.baseline_election_name,
+            as_of_date=cfg.as_of_date,
+            since_date=cfg.as_of_date - timedelta(days=lookback_days),
+            half_life_days=cfg.half_life_days,
+            output_csv=cfg.output_csv,
+            dry_run=True,
+        )
+        _, _, _, _, latest_poll_usage = run_simulation(db, meta_cfg)
+
+    if not cfg.dry_run:
+        write_trend_cache_meta(
+            cfg.as_of_date,
+            cfg.as_of_date - timedelta(days=lookback_days),
+            latest_poll_usage,
+        )
 
 
 if __name__ == "__main__":

@@ -1457,6 +1457,30 @@ def main() -> None:
 
     cfg = _build_config_from_args(args)
 
+    # Cap as_of_date at the most recent poll fieldwork end for the map so that
+    # the model does not run past the point where poll data actually exists.
+    # Decay-only drift between the last poll date and today produces meaningless
+    # movement in the trend chart.
+    latest_map = db.get_map_by_name(cfg.map_name)
+    if latest_map is not None:
+        polls = db.get_polls_for_map(latest_map.id)
+        if polls:
+            latest_poll_date = max(p.fieldwork_end for p in polls)
+            if cfg.as_of_date > latest_poll_date:
+                print(
+                    f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
+                    f"to latest poll date {latest_poll_date.isoformat()}"
+                )
+                cfg = SimulationConfig(
+                    map_name=cfg.map_name,
+                    baseline_election_name=cfg.baseline_election_name,
+                    as_of_date=latest_poll_date,
+                    since_date=min(cfg.since_date, latest_poll_date),
+                    half_life_days=cfg.half_life_days,
+                    output_csv=cfg.output_csv,
+                    dry_run=cfg.dry_run,
+                )
+
     run_dates = dates_to_run_for_cfg(cfg)
     if len(run_dates) > 1:
         print(

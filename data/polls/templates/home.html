@@ -27,6 +27,11 @@
     <div class="action-grid action-grid-two">
       <form method="post" action="{{ url_for('holyrood_import_polls') }}" class="inline-form button-form">
         <button type="submit" class="button button-block">Import Scottish Polls</button>
+        <small>
+          Constituency: {{ holyrood_latest_constituency or '—' }}
+          &nbsp;|&nbsp;
+          List: {{ holyrood_latest_list or '—' }}
+        </small>
       </form>
     </div>
   </section>

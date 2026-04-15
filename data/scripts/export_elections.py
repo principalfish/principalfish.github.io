@@ -1451,6 +1451,11 @@ def main() -> None:
                 data_files_by_election_id[entry_id] = data_file
                 settings["dataFilesByElectionId"] = data_files_by_election_id
 
+        # Use current-holyrood-prediction as the default if it is present in the manifest
+        holyrood_prediction_id = "current-holyrood-prediction"
+        if any(e.get("id") == holyrood_prediction_id for e in manifest_entries):
+            default_election_id = holyrood_prediction_id
+
         manifest_payload = {
             "defaultElection": default_election_id,
             "settings": settings,

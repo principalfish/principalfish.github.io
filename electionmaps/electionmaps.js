@@ -3220,12 +3220,6 @@ function updatePostcodeSearchVisibility() {
 }
 
 /**
- * Displays an inline error message below the postcode search input.
- * Replaces any existing error. No-op if postcodeSearchGroup is absent.
- * @param {string} msg - The error text to display.
- * @returns {void}
- */
-/**
  * Flashes an error message inside the postcode input for 2 seconds, then clears the
  * input so the placeholder is shown again. The input is made readonly during the flash
  * to prevent accidental edits. Cancels any in-flight error flash before starting a new one.
@@ -3278,10 +3272,11 @@ async function lookupPostcode(postcode) {
   const stripped = postcode.trim().toUpperCase().replace(/\s+/g, '');
   const normalised = stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
 
+  const mapName = getMapName(mapId);
   let url = '';
   let resultProperty = '';
 
-  switch (getMapName(mapId)) {
+  switch (mapName) {
     case HOLYROOD_NEW_MAP_NAME:
       url = `https://api.postcodes.io/scotland/postcodes/${encodeURIComponent(normalised)}`;
       resultProperty = 'scottish_parliamentary_constituency';
@@ -3308,8 +3303,9 @@ async function lookupPostcode(postcode) {
 
     // If the returned name has no match in the current seat index, try the
     // Holyrood 2021→2026 boundary mapping as a best-guess fallback.
+    // Only applied on Holyrood to avoid false rewrites on Westminster lookups.
     const seatKey = seatLookupKey(constituencyName);
-    if (!currentSeatNameByKey.has(seatKey)) {
+    if (!currentSeatNameByKey.has(seatKey) && mapName === HOLYROOD_NEW_MAP_NAME) {
       const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
       if (mapped) return mapped;
     }

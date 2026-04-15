@@ -76,6 +76,8 @@ const voteTotalsTabNav = document.getElementById('mapsVoteTotalsTabNav');
 const seatViewTabNav = document.getElementById('mapsSeatViewTabNav');
 const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
+const postcodeSearchInput = document.getElementById('maps-postcode-search');
+const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
 const seatList = document.getElementById('mapsSeatList');
 const mapsTitle = document.querySelector('.maps-title');
 const mapsStage = document.querySelector('.maps-stage');
@@ -2512,6 +2514,7 @@ function renderMapWithViewState(options = {}) {
   updateVoteTotalsTabsUI();
   renderSeatViewTabs(mapConfig);
   updateSeatViewTabsUI();
+  updatePostcodeSearchVisibility();
 
   window.__mapsVisibleSeats = visibleSeats;
   window.__mapsVisibleComparisonSeats = visibleComparisonSeats;
@@ -3128,6 +3131,39 @@ function selectSeatBySearchQuery(query) {
   }
 
   if (seatPreview) seatPreview.textContent = `Seat not found on map: ${seatName}`;
+}
+
+/**
+ * Shows or hides the postcode search group based on the current election's mapId.
+ * Only mapId 2 (Westminster 2024 boundaries) and mapId 12 (Holyrood 2026 boundaries)
+ * are supported by postcodes.io. Clears the input and any error state when hiding.
+ * @returns {void}
+ */
+/**
+ * Returns the mapId for the current election if it supports postcode lookup, otherwise null.
+ * mapId 2 (Westminster 2024 boundaries) and mapId 12 (Holyrood 2026 boundaries) are supported.
+ * Use as a boolean check (null = unsupported) or to select the correct postcodes.io endpoint.
+ * @returns {number|null}
+ */
+function getPostcodeMapId() {
+  const currentElection = currentManifest?.elections?.find((e) => e.id === currentElectionId);
+  const mapId = currentElection?.mapId;
+  return mapId === 2 || mapId === 12 ? mapId : null;
+}
+
+/**
+ * Shows or hides the postcode search group based on whether the current election supports
+ * postcode lookup. Clears the input and any error state when hiding.
+ * @returns {void}
+ */
+function updatePostcodeSearchVisibility() {
+  if (!postcodeSearchGroup) return;
+  const visible = getPostcodeMapId() !== null;
+  postcodeSearchGroup.hidden = !visible;
+  if (!visible && postcodeSearchInput) {
+    postcodeSearchInput.value = '';
+    clearPostcodeError();
+  }
 }
 
 /**

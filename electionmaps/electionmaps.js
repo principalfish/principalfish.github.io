@@ -78,6 +78,8 @@ const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
 const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
+const postcodeWarningBtn = document.getElementById('mapsPostcodeWarningBtn');
+const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel');
 const seatList = document.getElementById('mapsSeatList');
 const mapsTitle = document.querySelector('.maps-title');
 const mapsStage = document.querySelector('.maps-stage');
@@ -195,6 +197,34 @@ const WESTMINSTER_OLD_MAP_NAME = 'westminster-2010';
 const WESTMINSTER_NEW_MAP_NAME = 'westminster-2024';
 const HOLYROOD_OLD_MAP_NAME = 'holyrood-2021';
 const HOLYROOD_NEW_MAP_NAME = 'holyrood-2026';
+
+// Maps old 2021 Holyrood constituency names (as returned by postcodes.io) to their
+// 2026 boundary equivalents. Used as a fallback when a returned name has no match
+// in the current seat data. Where two old seats merged into one, both map to the new
+// combined name — best-guess only, since the boundary changed at the postcode level.
+const HOLYROOD_2021_TO_2026_NAME = {
+  'Aberdeen South and North Kincardine': 'Aberdeen Deeside and North Kincardine',
+  'Airdrie and Shotts':                  'Airdrie',
+  'East Lothian':                        'East Lothian Coast and Lammermuirs',
+  'Edinburgh Eastern':                   'Edinburgh Eastern, Musselburgh and Tranent',
+  'Edinburgh Northern and Leith':        'Edinburgh North Eastern and Leith',
+  'Edinburgh Pentlands':                 'Edinburgh South Western',
+  'Edinburgh Western':                   'Edinburgh North Western',
+  'Falkirk East':                        'Falkirk East and Linlithgow',
+  'Glasgow Cathcart':                    'Glasgow Cathcart and Pollok',
+  'Glasgow Kelvin':                      'Glasgow Kelvin and Maryhill',
+  'Glasgow Maryhill and Springburn':     'Glasgow Kelvin and Maryhill',
+  'Glasgow Pollok':                      'Glasgow Cathcart and Pollok',
+  'Glasgow Provan':                      'Glasgow Easterhouse and Springburn',
+  'Glasgow Shettleston':                 'Glasgow Baillieston and Shettleston',
+  'Greenock and Inverclyde':             'Inverclyde',
+  'Linlithgow':                          'Falkirk East and Linlithgow',
+  'Midlothian North and Musselburgh':    'Midlothian North',
+  'North East Fife':                     'Fife North East',
+  'Renfrewshire North and West':         'Renfrewshire North and Cardonald',
+  'Renfrewshire South':                  'Renfrewshire West and Levern Valley',
+  'Rutherglen':                          'Rutherglen and Cambuslang',
+};
 
 let pollTrackerMetaLoaded = false;
 let pollTrackerLatestSnippet = '';
@@ -3177,8 +3207,12 @@ function getPostcodeMapId() {
  */
 function updatePostcodeSearchVisibility() {
   if (!postcodeSearchGroup) return;
-  const visible = getPostcodeMapId() !== null;
+  const mapId = getPostcodeMapId();
+  const visible = mapId !== null;
+  const isHolyrood = mapId === 12;
   postcodeSearchGroup.hidden = !visible;
+  if (postcodeWarningBtn) postcodeWarningBtn.hidden = !isHolyrood;
+  if (!isHolyrood && postcodeWarningPanel) postcodeWarningPanel.hidden = true;
   if (!visible && postcodeSearchInput) {
     postcodeSearchInput.value = '';
     clearPostcodeError();
@@ -3265,13 +3299,23 @@ async function lookupPostcode(postcode) {
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
-    const constituencyName = data?.result?.[resultProperty] ?? null;
+    const rawName = data?.result?.[resultProperty] ?? null;
 
-    if (!constituencyName) return null;
+    if (!rawName) return null;
 
-    // Verify the returned name matches a seat in the current index.
+    // Normalise accented characters to ASCII so names like "Ynys Môn" match
+    // our seat data which stores the unaccented form "Ynys Mon".
+    const constituencyName = rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    // If the returned name has no match in the current seat index, try the
+    // Holyrood 2021→2026 boundary mapping as a best-guess fallback.
     const seatKey = seatLookupKey(constituencyName);
     if (!currentSeatNameByKey.has(seatKey)) {
+      const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
+      if (mapped) {
+        console.log('DEBUG: postcode resolved to', constituencyName, '— remapped to', mapped);
+        return mapped;
+      }
       console.warn('DEBUG: postcode resolved to', constituencyName, '— no matching seat key', seatKey);
     } else {
       console.log('DEBUG: postcode resolved to', constituencyName, '→ seat key', seatKey);

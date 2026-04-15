@@ -61,6 +61,7 @@
               <div class="maps-toolbar-group maps-toolbar-group-postcode" hidden>
                 <label for="maps-postcode-search" class="maps-search-label">Postcode</label>
                 <input id="maps-postcode-search" type="text" placeholder="type a postcode" autocomplete="off" />
+                <button type="button" id="mapsPostcodeWarningBtn" class="maps-postcode-warning-btn" data-popup-action="toggle" data-popup-target="mapsPostcodeWarningPanel" aria-label="Postcode accuracy warning" hidden>!</button>
               </div>
             </div>
 
@@ -122,6 +123,42 @@
                 <div class="maps-control-popup-body">
                   <p>With thanks to Chris Hanretty for the data. More info <a href="https://medium.com/@chrishanretty/final-estimates-of-the-leave-vote-or-areal-interpolation-and-the-uks-referendum-on-eu-membership-5490b6cab878#.4u4zxiklb" target="_blank" rel="noopener">here</a>.</p>
                   <p>"Areal interpolation and the UK's referendum on EU membership", Chris Hanretty, <em>Journal of Elections, Public Opinion and Parties</em>. <a href="http://dx.doi.org/10.1080/17457289.2017.1287081" target="_blank" rel="noopener">Link</a></p>
+                </div>
+              </article>
+
+              <article id="mapsPostcodeWarningPanel" class="maps-control-popup maps-postcode-warning-panel" hidden>
+                <header class="maps-control-popup-head">
+                  <h3 class="maps-control-popup-title">Postcode accuracy</h3>
+                  <button type="button" class="maps-control-popup-close" data-popup-action="close" data-popup-target="mapsPostcodeWarningPanel" aria-label="Close postcode warning">X</button>
+                </header>
+                <div class="maps-control-popup-body">
+                  <p>Postcode lookup uses <a href="https://postcodes.io" target="_blank" rel="noopener">postcodes.io</a>, which currently maps postcodes to <strong>2021 Holyrood boundaries</strong>. This map uses <strong>2026 boundaries</strong>, so postcodes in the following seats may resolve to the wrong constituency:</p>
+                  <table class="maps-postcode-warning-table">
+                    <thead><tr><th>2021 name (API)</th><th>2026 name (this map)</th></tr></thead>
+                    <tbody>
+                      <tr><td>Aberdeen South and North Kincardine</td><td>Aberdeen Deeside and North Kincardine</td></tr>
+                      <tr><td>Airdrie and Shotts</td><td>Airdrie / Coatbridge and Chryston</td></tr>
+                      <tr><td>East Lothian</td><td>East Lothian Coast and Lammermuirs</td></tr>
+                      <tr><td>Edinburgh Eastern</td><td>Edinburgh Eastern, Musselburgh and Tranent</td></tr>
+                      <tr><td>Edinburgh Northern and Leith</td><td>Edinburgh North Eastern and Leith</td></tr>
+                      <tr><td>Edinburgh Pentlands</td><td>Edinburgh South Western</td></tr>
+                      <tr><td>Edinburgh Western</td><td>Edinburgh North Western</td></tr>
+                      <tr><td>Falkirk East</td><td>Falkirk East and Linlithgow</td></tr>
+                      <tr><td>Glasgow Cathcart</td><td>Glasgow Cathcart and Pollok</td></tr>
+                      <tr><td>Glasgow Kelvin</td><td>Glasgow Kelvin and Maryhill</td></tr>
+                      <tr><td>Glasgow Maryhill and Springburn</td><td>Glasgow Kelvin and Maryhill</td></tr>
+                      <tr><td>Glasgow Pollok</td><td>Glasgow Cathcart and Pollok</td></tr>
+                      <tr><td>Glasgow Provan</td><td>Glasgow Easterhouse and Springburn</td></tr>
+                      <tr><td>Glasgow Shettleston</td><td>Glasgow Baillieston and Shettleston</td></tr>
+                      <tr><td>Greenock and Inverclyde</td><td>Inverclyde</td></tr>
+                      <tr><td>Linlithgow</td><td>Falkirk East and Linlithgow</td></tr>
+                      <tr><td>Midlothian North and Musselburgh</td><td>Midlothian North</td></tr>
+                      <tr><td>North East Fife</td><td>Fife North East</td></tr>
+                      <tr><td>Renfrewshire North and West</td><td>Renfrewshire North and Cardonald</td></tr>
+                      <tr><td>Renfrewshire South</td><td>Renfrewshire West and Levern Valley</td></tr>
+                      <tr><td>Rutherglen</td><td>Rutherglen and Cambuslang</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </article>
 

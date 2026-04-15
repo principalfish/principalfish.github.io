@@ -3295,7 +3295,6 @@ async function lookupPostcode(postcode) {
   }
 
   try {
-    console.log('DEBUG: postcode lookup', url);
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
@@ -3312,13 +3311,7 @@ async function lookupPostcode(postcode) {
     const seatKey = seatLookupKey(constituencyName);
     if (!currentSeatNameByKey.has(seatKey)) {
       const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
-      if (mapped) {
-        console.log('DEBUG: postcode resolved to', constituencyName, '— remapped to', mapped);
-        return mapped;
-      }
-      console.warn('DEBUG: postcode resolved to', constituencyName, '— no matching seat key', seatKey);
-    } else {
-      console.log('DEBUG: postcode resolved to', constituencyName, '→ seat key', seatKey);
+      if (mapped) return mapped;
     }
 
     return constituencyName;
@@ -3347,7 +3340,6 @@ function wirePostcodeSearch() {
     const query = postcodeSearchInput.value.trim();
     if (!query || query === lastSubmittedPostcode) return;
     lastSubmittedPostcode = query;
-    console.log('DEBUG: wirePostcodeSearch submit', query);
     postcodeSearchInput.disabled = true;
     clearPostcodeError();
     const constituencyName = await lookupPostcode(query);

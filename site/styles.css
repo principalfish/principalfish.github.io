@@ -1920,6 +1920,10 @@ a {
     width: auto;
     margin-left: auto;
   }
+
+  .maps-toolbar-group-postcode {
+    order: 2;
+  }
 }
 
 @media (max-width: 980px) {

@@ -2009,6 +2009,59 @@ async function ensurePredictBaselineData() {
 }
 
 /**
+ * Loads and caches per-region vote shares from the current model prediction election's data
+ * file (model_uns for Westminster, holyrood_uns for Holyrood). Results are stored in
+ * predictCurrentSimulationConstShares and predictCurrentSimulationListShares. Returns true on
+ * success, false if the election cannot be found or yields no seats.
+ * @returns {Promise<boolean>} True if simulation data was loaded successfully.
+ */
+async function ensurePredictCurrentSimulationData() {
+  if (predictCurrentSimulationLoaded) return true;
+  if (!currentManifest) return false;
+
+  const parlConfig = parliamentFeaturesConfig[currentParliament] ?? {};
+  const simulationId = parlConfig.predictAnchorElectionId
+    ?? currentManifest.elections.find(
+      (e) => e.parliament === currentParliament
+        && (e.type === 'model_uns' || e.type === 'holyrood_uns'),
+    )?.id;
+  if (!simulationId) return false;
+
+  const simulationElection = currentManifest.elections.find((e) => e.id === simulationId);
+  if (!simulationElection) return false;
+
+  const { dataFile } = resolveElectionFiles(currentManifest, simulationElection);
+  const resultsData = await fetchJson(`data/${dataFile}`);
+
+  const seats = normalizeSeats(resultsData, manifestPartiesById, manifestRegionsById);
+  if (!seats.length) return false;
+
+  if (currentParliament === 'holyrood') {
+    const constSeats = seats.filter((s) => !isListSeat(s.seat));
+    const seenListRegions = new Set();
+    const deduplicatedListSeats = seats.filter((s) => {
+      if (!isListSeat(s.seat)) return false;
+      if (seenListRegions.has(s.region)) return false;
+      seenListRegions.add(s.region);
+      return true;
+    });
+    predictCurrentSimulationConstShares = normalizePredictShareMap(
+      buildPredictBaselineShares(constSeats),
+    );
+    predictCurrentSimulationListShares = normalizePredictShareMap(
+      buildPredictBaselineShares(deduplicatedListSeats),
+    );
+  } else {
+    predictCurrentSimulationConstShares = normalizePredictShareMap(
+      buildPredictBaselineShares(seats),
+    );
+  }
+
+  predictCurrentSimulationLoaded = true;
+  return true;
+}
+
+/**
  * Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries.
  * @returns {void}
  */

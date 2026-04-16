@@ -180,6 +180,11 @@ let predictBaselineConstShareByRegionParty = new Map(); // constituency-only bas
 let predictBaselineListShareByRegionParty = new Map();  // list-only baselines (deduplicated 1 per region)
 let predictHolyroodConstSwingsByParty = new Map(); // partyKey → Map<regionKey, swing>
 let predictHolyroodListSwingsByParty = new Map();  // partyKey → Map<regionKey, swing>
+// Current prediction simulation cache — derived from the model_uns/holyrood_uns election data
+// file and used by the Apply prediction button to pre-fill the predict grid.
+let predictCurrentSimulationLoaded = false;
+let predictCurrentSimulationConstShares = new Map(); // Westminster: per-region shares; Holyrood: per-region constituency shares
+let predictCurrentSimulationListShares = new Map();  // Holyrood list-pass per-region shares only
 let pollTrackerModeActive = false;
 let pollTrackerModeLinkEl = null;
 let countdownIntervalId = null; // setInterval handle for the election countdown ticker
@@ -3950,6 +3955,9 @@ function resetPredictModeState() {
   predictHolyroodListSwingsByParty = new Map();
   predictNationalBaselines = new Map();
   predictNationalListBaselines = new Map();
+  predictCurrentSimulationLoaded = false;
+  predictCurrentSimulationConstShares = new Map();
+  predictCurrentSimulationListShares = new Map();
   if (predictWindow) predictWindow.hidden = true;
   syncPredictModeRightColumnLayout();
 }

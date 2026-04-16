@@ -2031,8 +2031,13 @@ async function ensurePredictCurrentSimulationData() {
   const simulationElection = currentManifest.elections.find((e) => e.id === simulationId);
   if (!simulationElection) return false;
 
-  const { dataFile } = resolveElectionFiles(currentManifest, simulationElection);
-  const resultsData = await fetchJson(`data/${dataFile}`);
+  let resultsData;
+  try {
+    const { dataFile } = resolveElectionFiles(currentManifest, simulationElection);
+    resultsData = await fetchJson(`data/${dataFile}`);
+  } catch {
+    return false;
+  }
 
   const seats = normalizeSeats(resultsData, manifestPartiesById, manifestRegionsById);
   if (!seats.length) return false;
@@ -2065,27 +2070,15 @@ async function ensurePredictCurrentSimulationData() {
 }
 
 /**
- * Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries.
+ * Commits a projected seat array as the current map state and re-renders.
+ * Shared between applyPredictModeProjection (swing-based) and applyCurrentPredictionToInputs
+ * (direct seat load). Callers are responsible for computing projectedSeats before calling.
+ * @param {Array} projectedSeats - Projected seat objects to display.
+ * @param {Object} projectedSummary - Pre-computed summary for projectedSeats.
+ * @param {Object} baselineSummary - Pre-computed summary for the baseline seats.
  * @returns {void}
  */
-function applyPredictModeProjection() {
-  if (!predictModeActive) return;
-  if (!predictBaseSeats.length || !predictBaseMapData) return;
-
-  const hasHolyroodSwings =
-    [...predictHolyroodConstSwingsByParty.values()].some((m) => m.size > 0) ||
-    [...predictHolyroodListSwingsByParty.values()].some((m) => m.size > 0);
-  const hasWestminsterSwings = predictRegionalSwingsByParty.size > 0;
-  const projectedSeats = currentParliament === 'holyrood'
-    ? hasHolyroodSwings
-      ? projectHolyroodSeats(predictBaseSeats, predictHolyroodConstSwingsByParty, predictHolyroodListSwingsByParty)
-      : predictBaseSeats.slice()
-    : hasWestminsterSwings
-      ? predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, predictRegionalSwingsByParty))
-      : predictBaseSeats.slice();
-  const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
-  const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
-
+function commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary) {
   currentElectionType = currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
   updateElectionCountdown();
   currentSeats = projectedSeats;
@@ -2108,6 +2101,31 @@ function applyPredictModeProjection() {
     renderSeatPopup(currentOpenSeatName);
     mapInteractionController.highlightSeat(currentOpenSeatName);
   }
+}
+
+/**
+ * Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries.
+ * @returns {void}
+ */
+function applyPredictModeProjection() {
+  if (!predictModeActive) return;
+  if (!predictBaseSeats.length || !predictBaseMapData) return;
+
+  const hasHolyroodSwings =
+    [...predictHolyroodConstSwingsByParty.values()].some((m) => m.size > 0) ||
+    [...predictHolyroodListSwingsByParty.values()].some((m) => m.size > 0);
+  const hasWestminsterSwings = predictRegionalSwingsByParty.size > 0;
+  const projectedSeats = currentParliament === 'holyrood'
+    ? hasHolyroodSwings
+      ? projectHolyroodSeats(predictBaseSeats, predictHolyroodConstSwingsByParty, predictHolyroodListSwingsByParty)
+      : predictBaseSeats.slice()
+    : hasWestminsterSwings
+      ? predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, predictRegionalSwingsByParty))
+      : predictBaseSeats.slice();
+  const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
+  const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
+
+  commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
 }
 
 /**
@@ -2203,12 +2221,6 @@ async function applyCurrentPredictionToInputs() {
     return;
   }
 
-  console.log('DEBUG: applyCurrentPredictionToInputs — loading prediction seats', {
-    seats: predictCurrentSimulationSeats.length,
-    constEntries: predictCurrentSimulationConstShares.size,
-    listEntries: predictCurrentSimulationListShares.size,
-  });
-
   if (currentParliament === 'holyrood') {
     predictConstInputByRegionParty = new Map(predictCurrentSimulationConstShares);
     predictListInputByRegionParty = new Map(predictCurrentSimulationListShares);
@@ -2219,34 +2231,12 @@ async function applyCurrentPredictionToInputs() {
   // Load the prediction seats directly rather than re-projecting from the derived
   // regional shares, so the map reflects the exact model output rather than an
   // approximation produced by the simplified UNS projection.
-  const projectedSeats = predictCurrentSimulationSeats;
+  const projectedSeats = predictCurrentSimulationSeats.map((s) => ({ ...s, votes: { ...(s.votes || {}) } }));
   const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
   const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
 
-  currentElectionType = currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
-  updateElectionCountdown();
-  currentSeats = projectedSeats;
-  currentSeatsByKey = buildSeatIndex(projectedSeats);
-  currentComparisonSeats = predictBaseSeats;
-  comparisonSeatsByKey = predictBaseSeatsByKey;
-  currentMapData = predictBaseMapData;
-  currentRegionLabelsByKey = predictBaseRegionLabelsByKey;
-
-  window.__mapsShowVoteTotals = false;
-  window.__mapsCurrentSummary = projectedSummary;
-  window.__mapsComparisonSummary = baselineSummary;
-
-  const predictLabel = `Predict ${predictElectionYear()}`;
-  updateTopSummary({ name: predictLabel, parliament: currentParliament }, projectedSummary);
   renderPredictGrid();
-  renderMapWithViewState({ preserveZoom: true });
-  syncRightPanelHeightToMap();
-
-  if (currentOpenSeatName) {
-    renderSeatPopup(currentOpenSeatName);
-    mapInteractionController.highlightSeat(currentOpenSeatName);
-  }
-
+  commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
   replacePredictRouteStateFromInputs();
 }
 

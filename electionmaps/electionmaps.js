@@ -183,6 +183,7 @@ let predictHolyroodListSwingsByParty = new Map();  // partyKey → Map<regionKey
 // Current prediction simulation cache — derived from the model_uns/holyrood_uns election data
 // file and used by the Apply prediction button to pre-fill the predict grid.
 let predictCurrentSimulationLoaded = false;
+let predictCurrentSimulationSeats = [];              // normalized seats from the prediction data file
 let predictCurrentSimulationConstShares = new Map(); // Westminster: per-region shares; Holyrood: per-region constituency shares
 let predictCurrentSimulationListShares = new Map();  // Holyrood list-pass per-region shares only
 let pollTrackerModeActive = false;
@@ -2036,6 +2037,8 @@ async function ensurePredictCurrentSimulationData() {
   const seats = normalizeSeats(resultsData, manifestPartiesById, manifestRegionsById);
   if (!seats.length) return false;
 
+  predictCurrentSimulationSeats = seats;
+
   if (currentParliament === 'holyrood') {
     const constSeats = seats.filter((s) => !isListSeat(s.seat));
     const seenListRegions = new Set();
@@ -2185,11 +2188,12 @@ async function activatePredictMode() {
 }
 
 /**
- * Loads the current model prediction's per-region vote shares and applies them to the predict
- * grid inputs, then re-renders the grid and runs the projection. For Westminster, replaces
- * predictInputByRegionParty with the simulation shares. For Holyrood, replaces the constituency
- * and list input maps with the simulation shares (region-keyed entries only; the national row
- * is left blank so it continues to display baseline averages).
+ * Loads the current model prediction's seats directly onto the map and populates the predict
+ * grid inputs with the corresponding per-region vote shares. Seats are taken directly from the
+ * prediction data file rather than re-projected through the simplified UNS, so the map reflects
+ * the exact model output. For Westminster, replaces predictInputByRegionParty with the simulation
+ * shares. For Holyrood, replaces the constituency and list input maps (region-keyed entries only;
+ * the national row is left blank so it continues to display baseline averages).
  * @returns {Promise<void>}
  */
 async function applyCurrentPredictionToInputs() {
@@ -2199,7 +2203,8 @@ async function applyCurrentPredictionToInputs() {
     return;
   }
 
-  console.log('DEBUG: applyCurrentPredictionToInputs — applying simulation shares', {
+  console.log('DEBUG: applyCurrentPredictionToInputs — loading prediction seats', {
+    seats: predictCurrentSimulationSeats.length,
     constEntries: predictCurrentSimulationConstShares.size,
     listEntries: predictCurrentSimulationListShares.size,
   });
@@ -2211,9 +2216,37 @@ async function applyCurrentPredictionToInputs() {
     predictInputByRegionParty = new Map(predictCurrentSimulationConstShares);
   }
 
+  // Load the prediction seats directly rather than re-projecting from the derived
+  // regional shares, so the map reflects the exact model output rather than an
+  // approximation produced by the simplified UNS projection.
+  const projectedSeats = predictCurrentSimulationSeats;
+  const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
+  const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
+
+  currentElectionType = currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
+  updateElectionCountdown();
+  currentSeats = projectedSeats;
+  currentSeatsByKey = buildSeatIndex(projectedSeats);
+  currentComparisonSeats = predictBaseSeats;
+  comparisonSeatsByKey = predictBaseSeatsByKey;
+  currentMapData = predictBaseMapData;
+  currentRegionLabelsByKey = predictBaseRegionLabelsByKey;
+
+  window.__mapsShowVoteTotals = false;
+  window.__mapsCurrentSummary = projectedSummary;
+  window.__mapsComparisonSummary = baselineSummary;
+
+  const predictLabel = `Predict ${predictElectionYear()}`;
+  updateTopSummary({ name: predictLabel, parliament: currentParliament }, projectedSummary);
   renderPredictGrid();
-  rebuildPredictSwingsFromInputs();
-  applyPredictModeProjection();
+  renderMapWithViewState({ preserveZoom: true });
+  syncRightPanelHeightToMap();
+
+  if (currentOpenSeatName) {
+    renderSeatPopup(currentOpenSeatName);
+    mapInteractionController.highlightSeat(currentOpenSeatName);
+  }
+
   replacePredictRouteStateFromInputs();
 }
 
@@ -4051,6 +4084,7 @@ function resetPredictModeState() {
   predictNationalBaselines = new Map();
   predictNationalListBaselines = new Map();
   predictCurrentSimulationLoaded = false;
+  predictCurrentSimulationSeats = [];
   predictCurrentSimulationConstShares = new Map();
   predictCurrentSimulationListShares = new Map();
   if (predictWindow) predictWindow.hidden = true;

@@ -2185,6 +2185,39 @@ async function activatePredictMode() {
 }
 
 /**
+ * Loads the current model prediction's per-region vote shares and applies them to the predict
+ * grid inputs, then re-renders the grid and runs the projection. For Westminster, replaces
+ * predictInputByRegionParty with the simulation shares. For Holyrood, replaces the constituency
+ * and list input maps with the simulation shares (region-keyed entries only; the national row
+ * is left blank so it continues to display baseline averages).
+ * @returns {Promise<void>}
+ */
+async function applyCurrentPredictionToInputs() {
+  const loaded = await ensurePredictCurrentSimulationData();
+  if (!loaded) {
+    window.alert('Current prediction data is not available.');
+    return;
+  }
+
+  console.log('DEBUG: applyCurrentPredictionToInputs — applying simulation shares', {
+    constEntries: predictCurrentSimulationConstShares.size,
+    listEntries: predictCurrentSimulationListShares.size,
+  });
+
+  if (currentParliament === 'holyrood') {
+    predictConstInputByRegionParty = new Map(predictCurrentSimulationConstShares);
+    predictListInputByRegionParty = new Map(predictCurrentSimulationListShares);
+  } else {
+    predictInputByRegionParty = new Map(predictCurrentSimulationConstShares);
+  }
+
+  renderPredictGrid();
+  rebuildPredictSwingsFromInputs();
+  applyPredictModeProjection();
+  replacePredictRouteStateFromInputs();
+}
+
+/**
  * Attaches click handlers to the predict submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag.
  * @returns {void}
  */

@@ -29,6 +29,8 @@ import {
   summarizeElection,
   normalizeSeats,
   isPredictNorthernIrelandRegion,
+  isPredictEnglishRegion,
+  PREDICT_ENGLAND_KEY,
   roundPredictShareValue,
   clampNumber,
   predictInputKey,
@@ -172,6 +174,7 @@ let predictOtherCellByRegion = new Map();
 // Each tab stores predictInputKey(regionKey, partyKey) → share, where regionKey may be
 // 'national' (applies as UNS to all regions) or a specific region key (overrides national).
 let predictHolyroodTab = 'constituency'; // 'constituency' | 'list'
+let predictHolyroodRegionsExpanded = false;
 let predictConstInputByRegionParty = new Map();    // national + region overrides for constituency pass
 let predictListInputByRegionParty = new Map();     // national + region overrides for list pass
 let predictNationalBaselines = new Map();              // partyKey → avg national constituency baseline share
@@ -1212,7 +1215,7 @@ function syncPredictModeRightColumnLayout() {
   const predictCollapsed = predictWindow.classList.contains('maps-predict-window--collapsed');
   const hideSeatCard = predictVisible && !predictCollapsed;
   const forcePredictGridScroll = predictVisible && !predictCollapsed &&
-    (predictEnglandExpanded || currentParliament === 'holyrood');
+    (predictEnglandExpanded || (currentParliament === 'holyrood' && predictHolyroodRegionsExpanded));
   seatCard.hidden = hideSeatCard;
   seatCard.style.display = hideSeatCard ? 'none' : '';
 
@@ -1361,7 +1364,35 @@ function renderHolyroodTabGrid(tabMap, pass) {
   const natTr = document.createElement('tr');
   const natLabelTd = document.createElement('td');
   natLabelTd.className = 'maps-predict-grid-region maps-predict-grid-region-national';
-  natLabelTd.textContent = 'National';
+  const natToggle = document.createElement('button');
+  natToggle.type = 'button';
+  natToggle.className = 'maps-predict-expand-btn';
+  natToggle.textContent = predictHolyroodRegionsExpanded ? 'Hide regions' : 'Show regions';
+  natToggle.addEventListener('click', () => {
+    if (predictHolyroodRegionsExpanded) {
+      // Collapsing: national becomes source of truth — clear region entries from both maps.
+      for (const map of [predictConstInputByRegionParty, predictListInputByRegionParty]) {
+        for (const key of Array.from(map.keys())) {
+          if (key.split('::')[0] !== HOLYROOD_NATIONAL_KEY) map.delete(key);
+        }
+      }
+    } else {
+      // Expanding: regions become source of truth — clear national entries from both maps.
+      for (const map of [predictConstInputByRegionParty, predictListInputByRegionParty]) {
+        for (const key of Array.from(map.keys())) {
+          if (key.split('::')[0] === HOLYROOD_NATIONAL_KEY) map.delete(key);
+        }
+      }
+    }
+    predictHolyroodRegionsExpanded = !predictHolyroodRegionsExpanded;
+    renderPredictGrid();
+    syncPredictModeRightColumnLayout();
+  });
+  const natLabelWrap = document.createElement('div');
+  natLabelWrap.className = 'maps-predict-region-label-wrap';
+  natLabelWrap.innerHTML = '<span>National</span>';
+  natLabelWrap.appendChild(natToggle);
+  natLabelTd.appendChild(natLabelWrap);
   natTr.appendChild(natLabelTd);
 
   const natBaselines = pass === 'list' ? predictNationalListBaselines : predictNationalBaselines;
@@ -1375,27 +1406,31 @@ function renderHolyroodTabGrid(tabMap, pass) {
     input.dataset.regionKey = HOLYROOD_NATIONAL_KEY;
     input.dataset.partyKey = pk;
     input.value = formatPredictShare(currentVal);
-    input.addEventListener('change', () => {
-      const raw = input.value.trim();
-      if (raw === '') {
-        tabMap.delete(natKey);
-        input.value = formatPredictShare(natBaselines.get(pk) ?? 0);
-      } else {
-        const val = roundPredictShareValue(clampNumber(raw, 0, 100));
-        input.value = formatPredictShare(val);
-        tabMap.set(natKey, val);
-      }
-      // Refresh national other
-      const natOtherCell = predictOtherCellByRegion.get(HOLYROOD_NATIONAL_KEY);
-      if (natOtherCell) {
-        const other = holyroodNationalOtherShare(tabMap, pass);
-        natOtherCell.textContent = formatPredictShare(other);
-        natOtherCell.classList.toggle('maps-predict-grid-total-over', other < 0);
-      }
-      // Region rows are not updated on national change — they only update when
-      // explicitly edited. The national UNS is applied via resolvedHolyroodShare
-      // at submit time, not reflected live in region displays.
-    });
+    if (predictHolyroodRegionsExpanded) {
+      input.disabled = true;
+    } else {
+      input.addEventListener('change', () => {
+        const raw = input.value.trim();
+        if (raw === '') {
+          tabMap.delete(natKey);
+          input.value = formatPredictShare(natBaselines.get(pk) ?? 0);
+        } else {
+          const val = roundPredictShareValue(clampNumber(raw, 0, 100));
+          input.value = formatPredictShare(val);
+          tabMap.set(natKey, val);
+        }
+        // Refresh national other
+        const natOtherCell = predictOtherCellByRegion.get(HOLYROOD_NATIONAL_KEY);
+        if (natOtherCell) {
+          const other = holyroodNationalOtherShare(tabMap, pass);
+          natOtherCell.textContent = formatPredictShare(other);
+          natOtherCell.classList.toggle('maps-predict-grid-total-over', other < 0);
+        }
+        // Region rows are not updated on national change — they only update when
+        // explicitly edited. The national UNS is applied via resolvedHolyroodShare
+        // at submit time, not reflected live in region displays.
+      });
+    }
     td.appendChild(input);
     natTr.appendChild(td);
   });
@@ -1410,6 +1445,14 @@ function renderHolyroodTabGrid(tabMap, pass) {
   tbody.appendChild(natTr);
 
   // ── Region rows ──
+  if (!predictHolyroodRegionsExpanded) {
+    table.appendChild(tbody);
+    const wrap = document.createElement('section');
+    wrap.className = 'maps-predict-grid-section maps-predict-grid-section-holyrood';
+    wrap.appendChild(table);
+    predictGrid.appendChild(wrap);
+    return;
+  }
   regions.forEach((region) => {
     const tr = document.createElement('tr');
     const labelTd = document.createElement('td');
@@ -1866,6 +1909,22 @@ function renderPredictGrid() {
       toggleButton.className = 'maps-predict-expand-btn';
       toggleButton.textContent = predictEnglandExpanded ? 'Hide regions' : 'Show regions';
       toggleButton.addEventListener('click', () => {
+        if (predictEnglandExpanded) {
+          // Collapsing: England aggregate becomes source of truth — clear sub-region entries
+          // so stale region values cannot bleed into England-aggregate swing calculations.
+          for (const key of Array.from(predictInputByRegionParty.keys())) {
+            const regionKey = key.split('::')[0];
+            if (regionKey !== PREDICT_ENGLAND_KEY && isPredictEnglishRegion(regionKey)) {
+              predictInputByRegionParty.delete(key);
+            }
+          }
+        } else {
+          // Expanding: sub-regions become source of truth — clear all England aggregate entries
+          // (including parties outside predictColumnPartyKeys from simulation data).
+          for (const key of Array.from(predictInputByRegionParty.keys())) {
+            if (key.split('::')[0] === PREDICT_ENGLAND_KEY) predictInputByRegionParty.delete(key);
+          }
+        }
         predictEnglandExpanded = !predictEnglandExpanded;
         renderPredictGrid();
         syncPredictModeRightColumnLayout();
@@ -1910,11 +1969,15 @@ function renderPredictGrid() {
       input.dataset.regionKey = region.regionKey;
       input.dataset.partyKey = partyKey;
       input.value = formatPredictShare(getPredictInputShareValue(region.regionKey, partyKey, predictInputByRegionParty, predictBaselineShareByRegionParty));
-      input.addEventListener('change', () => {
-        const nextValue = setPredictInputShareValue(region.regionKey, partyKey, input.value);
-        input.value = formatPredictShare(nextValue);
-        updatePredictOtherCell(region.regionKey);
-      });
+      if (region.isEnglandAggregate && predictEnglandExpanded) {
+        input.disabled = true;
+      } else {
+        input.addEventListener('change', () => {
+          const nextValue = setPredictInputShareValue(region.regionKey, partyKey, input.value);
+          input.value = formatPredictShare(nextValue);
+          updatePredictOtherCell(region.regionKey);
+        });
+      }
       td.appendChild(input);
       tr.appendChild(td);
     });
@@ -2167,6 +2230,7 @@ async function activatePredictMode() {
 
   if (currentParliament === 'holyrood') {
     predictHolyroodTab = 'constituency';
+    predictHolyroodRegionsExpanded = false;
     predictConstInputByRegionParty = new Map();
     predictListInputByRegionParty = new Map();
     predictHolyroodConstSwingsByParty = new Map();
@@ -2222,9 +2286,44 @@ async function applyCurrentPredictionToInputs() {
   }
 
   if (currentParliament === 'holyrood') {
-    predictConstInputByRegionParty = new Map(predictCurrentSimulationConstShares);
-    predictListInputByRegionParty = new Map(predictCurrentSimulationListShares);
+    predictConstInputByRegionParty = new Map(
+      predictHolyroodRegionsExpanded ? predictCurrentSimulationConstShares : [],
+    );
+    predictListInputByRegionParty = new Map(
+      predictHolyroodRegionsExpanded ? predictCurrentSimulationListShares : [],
+    );
+    if (!predictHolyroodRegionsExpanded) {
+      // Collapsed: national is source of truth — set national entries only.
+      const regionKeys = Array.from(predictBaseRegionLabelsByKey.keys());
+      const constNationals = buildHolyroodNationalBaselines(
+        predictCurrentSimulationConstShares, predictColumnPartyKeys, regionKeys,
+      );
+      const listNationals = buildHolyroodNationalBaselines(
+        predictCurrentSimulationListShares, predictColumnPartyKeys, regionKeys,
+      );
+      for (const pk of predictColumnPartyKeys) {
+        predictConstInputByRegionParty.set(
+          predictInputKey(HOLYROOD_NATIONAL_KEY, pk),
+          roundPredictShareValue(constNationals.get(pk) ?? 0),
+        );
+        predictListInputByRegionParty.set(
+          predictInputKey(HOLYROOD_NATIONAL_KEY, pk),
+          roundPredictShareValue(listNationals.get(pk) ?? 0),
+        );
+      }
+    }
+  } else if (predictEnglandExpanded) {
+    // Expanded: sub-regions are source of truth. Populate sub-region entries only;
+    // omit the England aggregate so the disabled row shows no stale override.
+    predictInputByRegionParty = new Map();
+    for (const [key, value] of predictCurrentSimulationConstShares) {
+      const regionKey = key.split('::')[0];
+      if (regionKey !== PREDICT_ENGLAND_KEY) {
+        predictInputByRegionParty.set(key, value);
+      }
+    }
   } else {
+    // Collapsed: England aggregate is source of truth. Set all entries including aggregate.
     predictInputByRegionParty = new Map(predictCurrentSimulationConstShares);
   }
 
@@ -4068,6 +4167,7 @@ function resetPredictModeState() {
   predictRegionalSwingsByParty = new Map();
   // Holyrood-specific state
   predictHolyroodTab = 'constituency';
+  predictHolyroodRegionsExpanded = false;
   predictConstInputByRegionParty = new Map();
   predictListInputByRegionParty = new Map();
   predictBaselineConstShareByRegionParty = new Map();

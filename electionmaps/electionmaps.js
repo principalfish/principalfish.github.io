@@ -2231,7 +2231,10 @@ async function applyCurrentPredictionToInputs() {
   // Load the prediction seats directly rather than re-projecting from the derived
   // regional shares, so the map reflects the exact model output rather than an
   // approximation produced by the simplified UNS projection.
-  const projectedSeats = predictCurrentSimulationSeats.map((s) => ({ ...s, votes: { ...(s.votes || {}) } }));
+  const projectedSeats = predictCurrentSimulationSeats.map((s) => ({
+    ...s,
+    votes: { ...(s.votes || {}) },
+  }));
   const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
   const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
 

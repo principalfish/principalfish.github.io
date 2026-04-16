@@ -788,6 +788,13 @@ a {
   box-shadow: 0 0 0 2px rgba(31, 59, 90, 0.15);
 }
 
+.maps-predict-grid-input:disabled {
+  background: rgba(15, 23, 42, 0.06);
+  color: rgba(15, 23, 42, 0.35);
+  border-color: rgba(15, 23, 42, 0.12);
+  cursor: not-allowed;
+}
+
 .maps-predict-tabs {
   display: flex;
   gap: 0.3rem;

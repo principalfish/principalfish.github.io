@@ -180,6 +180,12 @@ let predictBaselineConstShareByRegionParty = new Map(); // constituency-only bas
 let predictBaselineListShareByRegionParty = new Map();  // list-only baselines (deduplicated 1 per region)
 let predictHolyroodConstSwingsByParty = new Map(); // partyKey → Map<regionKey, swing>
 let predictHolyroodListSwingsByParty = new Map();  // partyKey → Map<regionKey, swing>
+// Current prediction simulation cache — derived from the model_uns/holyrood_uns election data
+// file and used by the Apply prediction button to pre-fill the predict grid.
+let predictCurrentSimulationLoaded = false;
+let predictCurrentSimulationSeats = [];              // normalized seats from the prediction data file
+let predictCurrentSimulationConstShares = new Map(); // Westminster: per-region shares; Holyrood: per-region constituency shares
+let predictCurrentSimulationListShares = new Map();  // Holyrood list-pass per-region shares only
 let pollTrackerModeActive = false;
 let pollTrackerModeLinkEl = null;
 let countdownIntervalId = null; // setInterval handle for the election countdown ticker
@@ -2004,27 +2010,75 @@ async function ensurePredictBaselineData() {
 }
 
 /**
- * Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries.
+ * Loads and caches per-region vote shares from the current model prediction election's data
+ * file (model_uns for Westminster, holyrood_uns for Holyrood). Results are stored in
+ * predictCurrentSimulationConstShares and predictCurrentSimulationListShares. Returns true on
+ * success, false if the election cannot be found or yields no seats.
+ * @returns {Promise<boolean>} True if simulation data was loaded successfully.
+ */
+async function ensurePredictCurrentSimulationData() {
+  if (predictCurrentSimulationLoaded) return true;
+  if (!currentManifest) return false;
+
+  const parlConfig = parliamentFeaturesConfig[currentParliament] ?? {};
+  const simulationId = parlConfig.predictAnchorElectionId
+    ?? currentManifest.elections.find(
+      (e) => e.parliament === currentParliament
+        && (e.type === 'model_uns' || e.type === 'holyrood_uns'),
+    )?.id;
+  if (!simulationId) return false;
+
+  const simulationElection = currentManifest.elections.find((e) => e.id === simulationId);
+  if (!simulationElection) return false;
+
+  let resultsData;
+  try {
+    const { dataFile } = resolveElectionFiles(currentManifest, simulationElection);
+    resultsData = await fetchJson(`data/${dataFile}`);
+  } catch {
+    return false;
+  }
+
+  const seats = normalizeSeats(resultsData, manifestPartiesById, manifestRegionsById);
+  if (!seats.length) return false;
+
+  predictCurrentSimulationSeats = seats;
+
+  if (currentParliament === 'holyrood') {
+    const constSeats = seats.filter((s) => !isListSeat(s.seat));
+    const seenListRegions = new Set();
+    const deduplicatedListSeats = seats.filter((s) => {
+      if (!isListSeat(s.seat)) return false;
+      if (seenListRegions.has(s.region)) return false;
+      seenListRegions.add(s.region);
+      return true;
+    });
+    predictCurrentSimulationConstShares = normalizePredictShareMap(
+      buildPredictBaselineShares(constSeats),
+    );
+    predictCurrentSimulationListShares = normalizePredictShareMap(
+      buildPredictBaselineShares(deduplicatedListSeats),
+    );
+  } else {
+    predictCurrentSimulationConstShares = normalizePredictShareMap(
+      buildPredictBaselineShares(seats),
+    );
+  }
+
+  predictCurrentSimulationLoaded = true;
+  return true;
+}
+
+/**
+ * Commits a projected seat array as the current map state and re-renders.
+ * Shared between applyPredictModeProjection (swing-based) and applyCurrentPredictionToInputs
+ * (direct seat load). Callers are responsible for computing projectedSeats before calling.
+ * @param {Array} projectedSeats - Projected seat objects to display.
+ * @param {Object} projectedSummary - Pre-computed summary for projectedSeats.
+ * @param {Object} baselineSummary - Pre-computed summary for the baseline seats.
  * @returns {void}
  */
-function applyPredictModeProjection() {
-  if (!predictModeActive) return;
-  if (!predictBaseSeats.length || !predictBaseMapData) return;
-
-  const hasHolyroodSwings =
-    [...predictHolyroodConstSwingsByParty.values()].some((m) => m.size > 0) ||
-    [...predictHolyroodListSwingsByParty.values()].some((m) => m.size > 0);
-  const hasWestminsterSwings = predictRegionalSwingsByParty.size > 0;
-  const projectedSeats = currentParliament === 'holyrood'
-    ? hasHolyroodSwings
-      ? projectHolyroodSeats(predictBaseSeats, predictHolyroodConstSwingsByParty, predictHolyroodListSwingsByParty)
-      : predictBaseSeats.slice()
-    : hasWestminsterSwings
-      ? predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, predictRegionalSwingsByParty))
-      : predictBaseSeats.slice();
-  const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
-  const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
-
+function commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary) {
   currentElectionType = currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
   updateElectionCountdown();
   currentSeats = projectedSeats;
@@ -2047,6 +2101,31 @@ function applyPredictModeProjection() {
     renderSeatPopup(currentOpenSeatName);
     mapInteractionController.highlightSeat(currentOpenSeatName);
   }
+}
+
+/**
+ * Applies current regional swings to the baseline seats, updates module state, and re-renders the map and summaries.
+ * @returns {void}
+ */
+function applyPredictModeProjection() {
+  if (!predictModeActive) return;
+  if (!predictBaseSeats.length || !predictBaseMapData) return;
+
+  const hasHolyroodSwings =
+    [...predictHolyroodConstSwingsByParty.values()].some((m) => m.size > 0) ||
+    [...predictHolyroodListSwingsByParty.values()].some((m) => m.size > 0);
+  const hasWestminsterSwings = predictRegionalSwingsByParty.size > 0;
+  const projectedSeats = currentParliament === 'holyrood'
+    ? hasHolyroodSwings
+      ? projectHolyroodSeats(predictBaseSeats, predictHolyroodConstSwingsByParty, predictHolyroodListSwingsByParty)
+      : predictBaseSeats.slice()
+    : hasWestminsterSwings
+      ? predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, predictRegionalSwingsByParty))
+      : predictBaseSeats.slice();
+  const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
+  const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
+
+  commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
 }
 
 /**
@@ -2127,11 +2206,58 @@ async function activatePredictMode() {
 }
 
 /**
- * Attaches click handlers to the predict submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag.
+ * Loads the current model prediction's seats directly onto the map and populates the predict
+ * grid inputs with the corresponding per-region vote shares. Seats are taken directly from the
+ * prediction data file rather than re-projected through the simplified UNS, so the map reflects
+ * the exact model output. For Westminster, replaces predictInputByRegionParty with the simulation
+ * shares. For Holyrood, replaces the constituency and list input maps (region-keyed entries only;
+ * the national row is left blank so it continues to display baseline averages).
+ * @returns {Promise<void>}
+ */
+async function applyCurrentPredictionToInputs() {
+  const loaded = await ensurePredictCurrentSimulationData();
+  if (!loaded) {
+    window.alert('Current prediction data is not available.');
+    return;
+  }
+
+  if (currentParliament === 'holyrood') {
+    predictConstInputByRegionParty = new Map(predictCurrentSimulationConstShares);
+    predictListInputByRegionParty = new Map(predictCurrentSimulationListShares);
+  } else {
+    predictInputByRegionParty = new Map(predictCurrentSimulationConstShares);
+  }
+
+  // Load the prediction seats directly rather than re-projecting from the derived
+  // regional shares, so the map reflects the exact model output rather than an
+  // approximation produced by the simplified UNS projection.
+  const projectedSeats = predictCurrentSimulationSeats.map((s) => ({
+    ...s,
+    votes: { ...(s.votes || {}) },
+  }));
+  const projectedSummary = summarizeElection(projectedSeats, { mode: voteTotalsMode });
+  const baselineSummary = summarizeElection(predictBaseSeats, { mode: voteTotalsMode });
+
+  renderPredictGrid();
+  commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
+  replacePredictRouteStateFromInputs();
+}
+
+/**
+ * Attaches click handlers to the predict apply, submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag.
  * @returns {void}
  */
 function wirePredictControls() {
   if (!predictWindow || predictWindow.dataset.wired === 'true') return;
+
+  const predictApplyButton = document.getElementById('mapsPredictApply');
+  if (predictApplyButton) {
+    predictApplyButton.addEventListener('click', () => {
+      applyCurrentPredictionToInputs().catch((error) => {
+        console.error(error);
+      });
+    });
+  }
 
   if (predictSubmitButton) {
     predictSubmitButton.addEventListener('click', () => {
@@ -3950,6 +4076,10 @@ function resetPredictModeState() {
   predictHolyroodListSwingsByParty = new Map();
   predictNationalBaselines = new Map();
   predictNationalListBaselines = new Map();
+  predictCurrentSimulationLoaded = false;
+  predictCurrentSimulationSeats = [];
+  predictCurrentSimulationConstShares = new Map();
+  predictCurrentSimulationListShares = new Map();
   if (predictWindow) predictWindow.hidden = true;
   syncPredictModeRightColumnLayout();
 }

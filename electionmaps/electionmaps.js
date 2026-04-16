@@ -2218,11 +2218,20 @@ async function applyCurrentPredictionToInputs() {
 }
 
 /**
- * Attaches click handlers to the predict submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag.
+ * Attaches click handlers to the predict apply, submit, share, reset, and close buttons. Guards against double-wiring with a dataset flag.
  * @returns {void}
  */
 function wirePredictControls() {
   if (!predictWindow || predictWindow.dataset.wired === 'true') return;
+
+  const predictApplyButton = document.getElementById('mapsPredictApply');
+  if (predictApplyButton) {
+    predictApplyButton.addEventListener('click', () => {
+      applyCurrentPredictionToInputs().catch((error) => {
+        console.error(error);
+      });
+    });
+  }
 
   if (predictSubmitButton) {
     predictSubmitButton.addEventListener('click', () => {

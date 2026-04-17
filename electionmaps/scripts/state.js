@@ -2,6 +2,11 @@
 // All modules import this object and mutate its properties directly.
 // A single shared object reference means every importer sees the same state.
 
+export let manifest = null;
+
+/** Sets the manifest and is the only way to reassign the exported binding. */
+export function setManifest(m) { manifest = m; }
+
 export const state = {
   // Sort / UI / totals
   currentSort: { key: 'seats', direction: 'desc' },
@@ -14,7 +19,6 @@ export const state = {
   currentOpenSeatName: null,
 
   // Manifest
-  currentManifest: null,
   manifestPartiesByKey: {},
   manifestPartiesById: new Map(),
   manifestRegionsById: new Map(),

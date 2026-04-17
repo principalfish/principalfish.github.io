@@ -5,7 +5,11 @@
 export let manifest = null;
 
 /** Sets the manifest and is the only way to reassign the exported binding. */
-export function setManifest(m) { manifest = m; }
+export function setManifest(m) {
+  m.mapModes ??= {};
+  m.parliamentFeatures ??= {};
+  manifest = m;
+}
 
 export const state = {
   // Sort / UI / totals
@@ -23,8 +27,6 @@ export const state = {
   manifestPartiesById: new Map(),
   manifestRegionsById: new Map(),
   manifestRegionsByMapId: {},
-  mapModesById: {},
-  parliamentFeaturesConfig: {},
   currentParliament: '',
 
   // Election / seat data

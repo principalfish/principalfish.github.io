@@ -27,8 +27,7 @@ import { fetchJson } from './scripts/utils.js';
  */
 async function initElectionData() {
   setManifest(await fetchJson('data/map-modes.json'));
-  state.mapModesById = manifest.mapModes ?? {};
-  state.parliamentFeaturesConfig = manifest.parliamentFeatures ?? {};
+  
   hydrateManifestSettings(manifest);
   await Promise.all([loadPollTrackerMetaIfNeeded(), loadHolyroodPredictionMetaIfNeeded()]);
   const params = new URLSearchParams(window.location.search);
@@ -40,7 +39,7 @@ async function initElectionData() {
   const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
   let currentElection = parliamentElections.find((e) => e.id === requestedId);
   if (!currentElection) {
-    const parlConfig = state.parliamentFeaturesConfig[state.currentParliament] ?? {};
+    const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
     const anchorId = parlConfig.predictAnchorElectionId;
     currentElection =
       (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
@@ -3156,7 +3155,7 @@ function renderElectionLinks(manifest, activeId) {
   };
 
   const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
-  const parlConfig = state.parliamentFeaturesConfig[state.currentParliament] ?? {};
+  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
   const hasPredictMode = parlConfig.features?.includes('predict') ?? false;
   const hasPollTracker = parlConfig.features?.includes('pollTracker') ?? false;
   const predictAnchorId = parlConfig.predictAnchorElectionId ?? null;
@@ -4130,7 +4129,7 @@ function renderPredictGrid() {
 async function ensurePredictBaselineData() {
   if (!manifest) return false;
 
-  const parlConfig = state.parliamentFeaturesConfig[state.currentParliament] ?? {};
+  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
   const baselineId = parlConfig.predictBaselineElectionId ?? parlConfig.predictAnchorElectionId ?? '2024-general';
   const baselineElection = manifest.elections.find((entry) => entry.id === baselineId);
   if (!baselineElection) return false;
@@ -4167,7 +4166,7 @@ async function ensurePredictCurrentSimulationData() {
   if (state.predictCurrentSimulationLoaded) return true;
   if (!manifest) return false;
 
-  const parlConfig = state.parliamentFeaturesConfig[state.currentParliament] ?? {};
+  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
   const simulationId = parlConfig.predictAnchorElectionId
     ?? manifest.elections.find(
       (e) => e.parliament === state.currentParliament
@@ -4755,7 +4754,7 @@ function refreshElectionSeatStateAndRender() {
   state.comparisonSeatsByKey = buildSeatIndex(state.currentComparisonSeats);
 
   const currentElectionEntry = manifest?.elections?.find((e) => e.id === state.currentElectionId);
-  const mapConfig = state.mapModesById[String(currentElectionEntry?.mapId)];
+  const mapConfig = manifest.mapModes[String(currentElectionEntry?.mapId)];
   state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
   state.currentSeatView = mapConfig?.seatViews?.[0]?.id ?? 'seats';
   const summary = summarizeElection(state.currentSeats);
@@ -4787,7 +4786,7 @@ function renderMapWithViewState(options = {}) {
   const choroplethConfig = buildChoroplethConfig(visibleSeatKeys);
 
   const currentElection = manifest?.elections?.find((e) => e.id === state.currentElectionId);
-  const mapConfig = state.mapModesById[String(currentElection?.mapId)];
+  const mapConfig = manifest.mapModes[String(currentElection?.mapId)];
 
   state.hiddenVoteTotalsParties = new Set(mapConfig?.hiddenVoteTotalsParties ?? []);
   renderVoteTotalsTabs(mapConfig);

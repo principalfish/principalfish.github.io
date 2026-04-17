@@ -28,7 +28,6 @@ import { fetchJson } from './scripts/utils.js';
 async function initElectionData() {
   setManifest(await fetchJson('data/map-modes.json'));
   
-  hydrateManifestSettings(manifest);
   await Promise.all([loadPollTrackerMetaIfNeeded(), loadHolyroodPredictionMetaIfNeeded()]);
   const params = new URLSearchParams(window.location.search);
   const requestedId = params.get('election');
@@ -1797,12 +1796,8 @@ function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethPart
  * @throws {Error} When either the mapFile or dataFile path cannot be determined for the election.
  */
 function resolveElectionFiles(manifest, election) {
-  const settings = manifest?.settings || {};
-  const mapFilesById = settings.mapFilesById || {};
-  const dataFilesByElectionId = settings.dataFilesByElectionId || {};
-
-  const mapFileFromSettings = election?.mapId != null ? mapFilesById[String(election.mapId)] : undefined;
-  const dataFileFromSettings = dataFilesByElectionId[election.id];
+  const mapFileFromSettings = election?.mapId != null ? manifest.files.mapsById[String(election.mapId)] : undefined;
+  const dataFileFromSettings = manifest.files.electionsById[election.id];
 
   const mapFile = mapFileFromSettings || election.mapFile;
   const dataFile = dataFileFromSettings || election.dataFile;
@@ -3218,38 +3213,6 @@ function renderElectionLinks(manifest, activeId) {
     }
     state.pollTrackerModeLinkEl = trackerButton;
   }
-}
-
-/**
- * Reads manifest.settings and populates the module-level party lookup maps (state.manifestPartiesByKey, state.manifestPartiesById), state.manifestRegionsById, and state.manifestRegionsByMapId.
- * @param {object} manifest - Elections manifest object with a `settings` property containing parties and regionsByMapId.
- * @returns {void}
- */
-function hydrateManifestSettings(manifest) {
-  const settings = manifest?.settings || {};
-
-  // Build partiesByKey and partiesById from the canonical parties array.
-  state.manifestPartiesByKey = {};
-  state.manifestPartiesById = new Map();
-  const partyRows = Array.isArray(settings.parties) ? settings.parties : [];
-  partyRows.forEach((party) => {
-    const id = Number(party?.id);
-    if (!Number.isFinite(id)) return;
-    state.manifestPartiesById.set(id, party);
-    const key = party?.key;
-    if (key && !state.manifestPartiesByKey[key]) state.manifestPartiesByKey[key] = party;
-  });
-
-  // Build integer region ID → normalized region key lookup across all maps.
-  state.manifestRegionsById = new Map();
-  state.manifestRegionsByMapId = settings.regionsByMapId || {};
-  Object.values(state.manifestRegionsByMapId).forEach((regionRows) => {
-    (regionRows || []).forEach((region) => {
-      const id = Number(region?.id);
-      if (!Number.isFinite(id)) return;
-      state.manifestRegionsById.set(id, normalizeRegionKey(region?.name || ''));
-    });
-  });
 }
 
 /**

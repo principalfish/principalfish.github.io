@@ -2,13 +2,57 @@
 // All modules import this object and mutate its properties directly.
 // A single shared object reference means every importer sees the same state.
 
+import { normalizeRegionKey } from './core.js';
+
 export let manifest = null;
 
-/** Sets the manifest and is the only way to reassign the exported binding. */
+/**
+ * Sets the manifest, normalises missing top-level fields, and hydrates all
+ * party and region lookup maps on state. The only way to reassign the exported binding.
+ * @param {object} m - Raw manifest object from map-modes.json.
+ * @returns {void}
+ */
 export function setManifest(m) {
-  m.mapModes ??= {};
-  m.parliamentFeatures ??= {};
   manifest = m;
+  hydrateManifestSettings();
+}
+
+/**
+ * Normalises missing manifest fields and populates party and region lookup maps
+ * from the manifest's top-level `parties` array and per-map `regions` in `mapModes`.
+ * @returns {void}
+ */
+function hydrateManifestSettings() {
+  manifest.mapModes ??= {};
+  manifest.parliamentFeatures ??= {};
+  manifest.parties ??= [];
+  manifest.files ??= {};
+  manifest.files.mapsById ??= {};
+  manifest.files.electionsById ??= {};
+
+  // Build partiesByKey and partiesById from the top-level parties array.
+  state.manifestPartiesByKey = {};
+  state.manifestPartiesById = new Map();
+  manifest.parties.forEach((party) => {
+    const id = Number(party?.id);
+    if (!Number.isFinite(id)) return;
+    state.manifestPartiesById.set(id, party);
+    const key = party?.key;
+    if (key && !state.manifestPartiesByKey[key]) state.manifestPartiesByKey[key] = party;
+  });
+
+  // Build region lookups from the regions array on each mapModes entry.
+  state.manifestRegionsById = new Map();
+  state.manifestRegionsByMapId = {};
+  Object.entries(manifest.mapModes).forEach(([mapId, mapMode]) => {
+    const regionRows = mapMode.regions || [];
+    state.manifestRegionsByMapId[mapId] = regionRows;
+    regionRows.forEach((region) => {
+      const id = Number(region?.id);
+      if (!Number.isFinite(id)) return;
+      state.manifestRegionsById.set(id, normalizeRegionKey(region?.name || ''));
+    });
+  });
 }
 
 export const state = {

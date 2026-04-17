@@ -65,6 +65,17 @@ import {
   escapeHtml,
 } from './core.js';
 
+// =====================================================================
+// REFACTORED — submodule imports above; orchestration code lifts here
+// =====================================================================
+
+// (empty — code is added here as it is refactored)
+
+// =====================================================================
+// BELOW HERE: UNREFACTORED LEGACY CODE
+// Extract to a submodule or lift above the banner. Do not add new code.
+// =====================================================================
+
 const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');

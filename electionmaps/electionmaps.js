@@ -5,7 +5,7 @@ import {
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { state, manifest, setManifest } from './scripts/state.js';
-import { fetchJson } from './scripts/utils.js';
+import { fetchJson, normalizeRegionKey } from './scripts/utils.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -56,7 +56,7 @@ async function initElectionData() {
     : null;
   if (filterGainsButton) {
     filterGainsButton.textContent = state.currentByElectionSeats ? 'By-elections' : 'Gains';
-    filterGainsButton.hidden = currentElection.type === 'eu_referendum';
+    filterGainsButton.hidden = currentElection.id === 'eu-referendum-2016';
   }
 
   resetPredictModeState();
@@ -76,8 +76,8 @@ async function initElectionData() {
   ]);
 
   const seats = normalizeSeats(resultsData, state.manifestPartiesById, state.manifestRegionsById);
-  const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.type !== 'eu_referendum';
-  const isReferendumType = currentElection.type === 'eu_referendum';
+  const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.id !== 'eu-referendum-2016';
+  const isReferendumType = currentElection.id === 'eu-referendum-2016';
   if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
   if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
   if (isReferendumType && state.mapViewState.choroplethType === 'voteShareChange') {
@@ -754,14 +754,6 @@ function deltaClass(value) {
 
 // ── Region normalization ─────────────────────────────────────────────────────
 
-/**
- * Converts a region name to a lowercase alphanumeric key with all non-alphanumeric characters removed.
- * @param {string} value - Raw region name or key string.
- * @returns {string} Lowercase alphanumeric string suitable for use as a lookup key.
- */
-function normalizeRegionKey(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
 
 /**
  * Converts a region key or name to title case, splitting on camelCase boundaries, hyphens, and underscores. Returns 'Unknown' for empty input.
@@ -4093,7 +4085,7 @@ async function ensurePredictBaselineData() {
   if (!manifest) return false;
 
   const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
-  const baselineId = parlConfig.predictBaselineElectionId ?? parlConfig.predictAnchorElectionId ?? '2024-general';
+  const baselineId = parlConfig.predictBaselineElectionId;
   const baselineElection = manifest.elections.find((entry) => entry.id === baselineId);
   if (!baselineElection) return false;
 
@@ -4130,11 +4122,7 @@ async function ensurePredictCurrentSimulationData() {
   if (!manifest) return false;
 
   const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
-  const simulationId = parlConfig.predictAnchorElectionId
-    ?? manifest.elections.find(
-      (e) => e.parliament === state.currentParliament
-        && (e.type === 'model_uns' || e.type === 'holyrood_uns'),
-    )?.id;
+  const simulationId = parlConfig.predictAnchorElectionId;
   if (!simulationId) return false;
 
   const simulationElection = manifest.elections.find((e) => e.id === simulationId);
@@ -4561,7 +4549,7 @@ function populateMapControlOptions() {
  * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
-  if (state.currentElectionType === 'eu_referendum' && (state.mapViewState.choroplethType === 'none' || state.mapViewState.choroplethParty === 'all')) {
+  if (state.currentElectionId === 'eu-referendum-2016' && (state.mapViewState.choroplethType === 'none' || state.mapViewState.choroplethParty === 'all')) {
     const valueBySeatKey = new Map();
     const values = [];
     state.currentSeats.forEach((seat) => {
@@ -4848,7 +4836,7 @@ function renderSeatPopup(seatName) {
   const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
   const turnout = totalVotesForSeat(seat);
   const majority = seatMajorityStats(seat);
-  const isReferendum = state.currentElectionType === 'eu_referendum';
+  const isReferendum = state.currentElectionId === 'eu-referendum-2016';
   const showTurnout = state.currentElectionType !== 'model_uns' && !isReferendum;
   const showRawMajority = state.currentElectionType !== 'model_uns' && !isReferendum;
 
@@ -5734,7 +5722,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       const seatName = seatNameFromFeature(datum);
       if (!seatName) return colourParty('others');
       const seatKey = seatLookupKey(seatName);
-      if (state.currentElectionType === 'eu_referendum' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
+      if (state.currentElectionId === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
         return '#dce4ea';
       }
 
@@ -5754,7 +5742,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       return colourParty(winner);
     })
     .attr('stroke', (datum) => {
-      if (state.currentElectionType !== 'eu_referendum') return null;
+      if (state.currentElectionId !== 'eu-referendum-2016') return null;
       return isPredictNorthernIrelandRegion(datum.properties?.region) ? '#dce4ea' : null;
     })
     .on('mouseenter', (_event, datum) => {

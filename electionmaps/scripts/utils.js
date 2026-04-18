@@ -21,3 +21,12 @@ async function fetchResource(url, parser) {
 export async function fetchJson(url) {
   return fetchResource(url, (response) => response.json());
 }
+
+/**
+ * Converts a region name to a lowercase alphanumeric key with all non-alphanumeric characters removed.
+ * @param {string} value - Raw region name or key string.
+ * @returns {string} Lowercase alphanumeric string suitable for use as a lookup key.
+ */
+export function normalizeRegionKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}

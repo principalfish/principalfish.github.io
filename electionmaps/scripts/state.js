@@ -2,7 +2,7 @@
 // All modules import this object and mutate its properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import { normalizeRegionKey } from './core.js';
+import { normalizeRegionKey } from './utils.js';
 
 export let manifest = null;
 

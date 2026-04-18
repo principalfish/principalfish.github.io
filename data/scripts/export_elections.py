@@ -1411,8 +1411,14 @@ def main() -> None:
                         print(f"Removed stale map: {existing_map}")
 
         files = {
+            "elections": {
                 "mapsById": map_files_by_id,
                 "electionsById": data_files_by_election_id,
+            },
+            "meta": existing.get("files", {}).get("meta", {
+                "westminster": "results/model_output_trends_meta.json",
+                "holyrood": "results/holyrood-prediction-meta.json",
+            }),
         }
 
         manifest_path = output_root / "map-modes.json"
@@ -1426,7 +1432,7 @@ def main() -> None:
         # elections like 2021-holyrood-2026) are also preserved here — they are exported to
         # disk by the main loop but excluded from manifest_entries by the standard-name filter.
         existing_by_id = {e.get("id"): e for e in existing.get("elections", [])}
-        existing_data_files = existing.get("files", {}).get("electionsById", {})
+        existing_data_files = existing.get("files", {}).get("elections", {}).get("electionsById", {})
         PRESERVE_TYPES = ("holyrood_uns", "model_uns", "eu_referendum", "holyrood_general")
         for entry_id, entry in existing_by_id.items():
             entry_type = entry.get("type")
@@ -1454,7 +1460,7 @@ def main() -> None:
                     )
                 manifest_entries.insert(insert_at, entry)
                 data_files_by_election_id[entry_id] = data_file
-                files["electionsById"] = data_files_by_election_id
+                files["elections"]["electionsById"] = data_files_by_election_id
 
         # Use current-holyrood-prediction as the default if it is present in the manifest
         holyrood_prediction_id = "current-holyrood-prediction"

@@ -6,6 +6,35 @@ import { normalizeRegionKey } from './utils.js';
 
 export let manifest = null;
 
+let _searchParams = null;
+
+/**
+ * Initialises shared state for a page load: sets the manifest and captures URL search params.
+ * @param {object} manifestData - Raw manifest object from map-modes.json.
+ * @returns {void}
+ */
+export function initState(manifestData) {
+  setManifest(manifestData);
+  _searchParams = new URLSearchParams(window.location.search);
+}
+
+/**
+ * Returns the value of a URL search param captured at page init, or null if not present.
+ * @param {string} key - Query parameter name.
+ * @returns {string|null}
+ */
+export function getSearchParam(key) {
+  return _searchParams?.get(key) ?? null;
+}
+
+/**
+ * Returns a URLSearchParams object parsed from the current page URL.
+ * @returns {URLSearchParams}
+ */
+export function getSearchParams() {
+  return new URLSearchParams(window.location.search);
+}
+
 /**
  * Sets the manifest, normalises missing top-level fields, and hydrates all
  * party and region lookup maps on state. The only way to reassign the exported binding.

@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { state, manifest, setManifest } from './scripts/state.js';
+import { state, manifest, initState, getSearchParam, getSearchParams } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
 
 // =====================================================================
@@ -26,12 +26,10 @@ import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './script
  * @returns {Promise<void>}
  */
 async function initElectionData() {
-  setManifest(await fetchJson('data/map-modes.json'));
-  
-  const params = new URLSearchParams(window.location.search);
-  const requestedId = params.get('election');
+  initState(await fetchJson('data/map-modes.json'));
+  const requestedId = getSearchParam('election');
   const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
-  state.currentParliament = params.get('parliament') || defaultParliament;
+  state.currentParliament = getSearchParam('parliament') || defaultParliament;
   updateParliamentTabsUI();
   await loadParliamentMetaIfNeeded();
 
@@ -111,7 +109,7 @@ async function initElectionData() {
   window.__mapsShowVoteTotals = showVoteTotals;
   refreshElectionSeatStateAndRender();
 
-  const routeView = String(params.get('view') || 'election').toLowerCase();
+  const routeView = String(getSearchParam('view') || 'election').toLowerCase();
 
   if (routeView === 'predict') {
     await activatePredictMode();
@@ -2401,7 +2399,7 @@ function setMapsPageTitle(contextLabel, parliament = null) {
  * @returns {URLSearchParams} Updated search params with view, election, and predict params adjusted.
  */
 function buildRouteSearchParams(view, electionId = null) {
-  const params = new URLSearchParams(window.location.search);
+  const params = getSearchParams();
   params.set('view', view);
   if (view !== 'predict') params.delete('predict');
 
@@ -3600,8 +3598,7 @@ function buildPredictShareStatePayload() {
  * @returns {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} Decoded predict state, or null if the parameter is absent or malformed.
  */
 function readPredictShareStateFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const encoded = params.get('predict');
+  const encoded = getSearchParam('predict');
   if (!encoded) return null;
 
   // Peek the englandExpanded flag from the payload before building slots so that

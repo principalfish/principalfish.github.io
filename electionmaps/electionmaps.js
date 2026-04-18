@@ -62,7 +62,7 @@ async function initElectionData() {
   resetPredictModeState();
   resetPollTrackerModeState();
 
-  state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId, manifest.regionsByMapId);
+  state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId);
 
   renderElectionLinks(manifest, currentElection.id);
   setPredictModeNavState(false);
@@ -75,7 +75,7 @@ async function initElectionData() {
     fetchJson(`data/${dataFile}`),
   ]);
 
-  const seats = normalizeSeats(resultsData, manifest.partiesById, manifest.regionsById);
+  const seats = normalizeSeats(resultsData);
   const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.id !== 'eu-referendum-2016';
   const isReferendumType = currentElection.id === 'eu-referendum-2016';
   if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
@@ -97,7 +97,7 @@ async function initElectionData() {
     if (comparisonElection) {
       const { dataFile: comparisonDataFile } = resolveElectionFiles(manifest, comparisonElection);
       const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
-      state.defaultComparisonSeats = normalizeSeats(comparisonData, manifest.partiesById, manifest.regionsById);
+      state.defaultComparisonSeats = normalizeSeats(comparisonData);
       state.defaultComparisonSummary = summarizeElection(state.defaultComparisonSeats);
     }
   }
@@ -942,24 +942,24 @@ function resolvePartyRef(ref, partiesById) {
  * @param {Map<number, string>} [regionsById] - Optional manifest region lookup for integer region_id refs.
  * @returns {Array<{seat: string, region: string, winner: string, electorate: number, turnout: number, votes: object}>} Normalized seat objects.
  */
-function normalizeSeats(resultsData, partiesById, regionsById) {
+function normalizeSeats(resultsData) {
   if (!Array.isArray(resultsData?.seats)) return [];
 
   return resultsData.seats.map((seat) => ({
     seat: seat.seat || seat.n || 'Unknown seat',
     region: (() => {
       const raw = seat.region ?? seat.r;
-      if (typeof raw === 'number' && regionsById?.size) return regionsById.get(raw) || 'unknown';
+      if (typeof raw === 'number' && manifest.regionsById?.size) return manifest.regionsById.get(raw) || 'unknown';
       return String(raw || 'unknown');
     })(),
-    winner: resolvePartyRef(seat.winner ?? seat.w ?? 'others', partiesById),
+    winner: resolvePartyRef(seat.winner ?? seat.w ?? 'others', manifest.partiesById),
     electorate: Number(seat.electorate ?? seat.e ?? 0),
     turnout: Number(seat.turnout ?? seat.t ?? 0),
     votes: (() => {
       if (seat.votes && typeof seat.votes === 'object' && !Array.isArray(seat.votes)) {
         const normalizedVotes = {};
         Object.entries(seat.votes).forEach(([partyKey, voteValue]) => {
-          const normalizedPartyKey = resolvePartyRef(partyKey, partiesById);
+          const normalizedPartyKey = resolvePartyRef(partyKey, manifest.partiesById);
           const voteTotal = Number(voteValue || 0);
           if (voteTotal <= 0) return;
           normalizedVotes[normalizedPartyKey] = (normalizedVotes[normalizedPartyKey] || 0) + voteTotal;
@@ -970,7 +970,7 @@ function normalizeSeats(resultsData, partiesById, regionsById) {
         const compactVotes = {};
         seat.p.forEach((entry) => {
           if (!Array.isArray(entry) || entry.length < 2) return;
-          const partyKey = resolvePartyRef(entry[0], partiesById);
+          const partyKey = resolvePartyRef(entry[0], manifest.partiesById);
           const voteTotal = Number(entry[1] || 0);
           if (!partyKey || voteTotal <= 0) return;
           compactVotes[partyKey] = (compactVotes[partyKey] || 0) + voteTotal;
@@ -1647,9 +1647,9 @@ function decodePredictPayload(encoded, slots) {
  * @param {object} regionsByMapId - Manifest settings object mapping map ID strings to arrays of region metadata objects.
  * @returns {Map<string, string>} Map from normalized region key to display label.
  */
-function buildRegionLabelLookup(mapId, regionsByMapId) {
+function buildRegionLabelLookup(mapId) {
   const lookup = new Map();
-  const regionRows = regionsByMapId?.[String(mapId)] || [];
+  const regionRows = manifest.regionsByMapId?.[String(mapId)] || [];
   regionRows.forEach((region) => {
     const key = normalizeRegionKey(region?.name || '');
     if (!key) return;
@@ -1956,7 +1956,8 @@ function collectPredictInputRows(baseRegionLabelsByKey, englandExpanded) {
  * @param {Map<number, {key?: string, name?: string, colour?: string}>} partiesById - Manifest party lookup keyed by integer party ID.
  * @returns {{timeline: Array<{dateKey: string, electionId: number, sortValue: string, label: string, dateValue: Date|null}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>, partyMeta: Map<string, {name: string, colour: string}>}} Parsed poll tracker data.
  */
-function parsePollTrackerData(data, partiesById) {
+function parsePollTrackerData(data) {
+  const partiesById = manifest.partiesById;
   const rows = [];
   for (const entry of data) {
     const electionId = Number(entry.election_id);
@@ -2955,7 +2956,7 @@ async function loadPollTrackerDataIfNeeded() {
   if (state.pollTrackerDataLoaded) return;
 
   const data = await fetchJson(POLL_TRACKER_DATA_PATH);
-  const parsed = parsePollTrackerData(data, manifest.partiesById);
+  const parsed = parsePollTrackerData(data);
 
   state.pollTrackerTimeline = parsed.timeline;
   state.pollTrackerSeriesByParty = parsed.seriesByParty;
@@ -4064,7 +4065,7 @@ async function ensurePredictBaselineData() {
     fetchJson(`data/${dataFile}`),
   ]);
 
-  const seats = normalizeSeats(resultsData, manifest.partiesById, manifest.regionsById);
+  const seats = normalizeSeats(resultsData);
   if (!seats.length) return false;
 
   state.predictBaseSeats = seats.map((seat) => ({
@@ -4073,7 +4074,7 @@ async function ensurePredictBaselineData() {
   }));
   state.predictBaseSeatsByKey = buildSeatIndex(state.predictBaseSeats);
   state.predictBaseMapData = mapData;
-  state.predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId, manifest.regionsByMapId);
+  state.predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId);
   state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(state.predictBaseSeats));
 
   return true;
@@ -4105,7 +4106,7 @@ async function ensurePredictCurrentSimulationData() {
     return false;
   }
 
-  const seats = normalizeSeats(resultsData, manifest.partiesById, manifest.regionsById);
+  const seats = normalizeSeats(resultsData);
   if (!seats.length) return false;
 
   state.predictCurrentSimulationSeats = seats;

@@ -287,6 +287,10 @@ def file_stem_for_election(election: Election) -> str:
     if election.type == ElectionType.holyrood_general and holyrood_match:
         return f"holyrood-general-{holyrood_match.group(1)}"
 
+    holyrood_boundaries_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election \(\d{4} Boundaries\)", election.name)
+    if election.type == ElectionType.holyrood_general and holyrood_boundaries_match:
+        return f"holyrood-general-{holyrood_boundaries_match.group(1)}-changed-boundaries"
+
     return slugify(f"{election.type.value}-{election.year}-{election.name}")
 
 
@@ -1418,28 +1422,32 @@ def main() -> None:
         # manifest, provided its data file still exists on disk.  This lets the model write
         # the entry once and have it survive subsequent full export runs without needing a
         # DB record (the westminster model writes to SQLite only; Supabase never receives
-        # simulation data).
+        # simulation data).  Non-standard holyrood_general elections (e.g. remapped-boundary
+        # elections like 2021-holyrood-2026) are also preserved here — they are exported to
+        # disk by the main loop but excluded from manifest_entries by the standard-name filter.
         existing_by_id = {e.get("id"): e for e in existing.get("elections", [])}
         existing_data_files = existing.get("files", {}).get("electionsById", {})
+        PRESERVE_TYPES = ("holyrood_uns", "model_uns", "eu_referendum", "holyrood_general")
         for entry_id, entry in existing_by_id.items():
             entry_type = entry.get("type")
-            if entry_type not in ("holyrood_uns", "model_uns", "eu_referendum"):
+            if entry_type not in PRESERVE_TYPES:
                 continue
             if entry_id in {e["id"] for e in manifest_entries}:
-                continue  # already present (shouldn't happen, but be safe)
+                continue  # already present
             data_file = existing_data_files.get(entry_id)
             if data_file and (output_root / data_file).exists():
                 if entry_type == "model_uns":
                     # Insert at the top of the westminster elections (index 0)
                     insert_at = 0
-                elif entry_type == "holyrood_uns":
-                    # Insert before the first holyrood election in the rebuilt list
+                elif entry_type in ("holyrood_uns", "holyrood_general"):
+                    # Insert before the first holyrood election already in the list,
+                    # or at the end if none present yet
                     insert_at = next(
                         (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
                         len(manifest_entries),
                     )
                 else:
-                    # Append at the end of the westminster elections, before holyrood
+                    # eu_referendum and others: before holyrood block
                     insert_at = next(
                         (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
                         len(manifest_entries),

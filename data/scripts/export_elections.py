@@ -676,8 +676,8 @@ def parse_args() -> argparse.Namespace:
     Mutually exclusive target flags:
     - ``--election-name NAME``: export only the named election.
     - ``--current-simulation``: export only the latest ``model_uns`` election.
-    - ``--metadata-only``: refresh only ``settings.parties`` and
-      ``settings.regionsByMapId`` in the existing ``map-modes.json``.
+    - ``--metadata-only``: refresh only ``parties`` and per-map ``regions``
+      in the existing ``map-modes.json``.
 
     Other flags:
     - ``--output-root PATH``: override the default output directory
@@ -711,7 +711,7 @@ def parse_args() -> argparse.Namespace:
     target_group.add_argument(
         "--metadata-only",
         action="store_true",
-        help="Update only settings.parties and settings.regionsByMapId in map-modes.json",
+        help="Update only parties and per-map regions in map-modes.json",
     )
     parser.add_argument(
         "--output-root",
@@ -981,11 +981,10 @@ def main() -> None:
             regions = session.execute(select(Region)).scalars().all()
         manifest_parties = build_manifest_party_settings(parties)
         manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
-        settings = manifest.get("settings") or {}
-        settings["parties"] = manifest_parties
-        settings.pop("partiesByKey", None)
-        settings["regionsByMapId"] = manifest_regions_by_map_id
-        manifest["settings"] = settings
+        manifest["parties"] = manifest_parties
+        for map_id, regions_list in manifest_regions_by_map_id.items():
+            if str(map_id) in manifest.get("mapModes", {}):
+                manifest["mapModes"][str(map_id)]["regions"] = regions_list
         if args.dry_run:
             print(f"Would write manifest metadata: {manifest_path}")
             print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
@@ -1407,11 +1406,9 @@ def main() -> None:
                         existing_map.unlink()
                         print(f"Removed stale map: {existing_map}")
 
-        settings = {
-                "mapFilesById": map_files_by_id,
-                "dataFilesByElectionId": data_files_by_election_id,
-                "parties": manifest_parties,
-                "regionsByMapId": manifest_regions_by_map_id,
+        files = {
+                "mapsById": map_files_by_id,
+                "electionsById": data_files_by_election_id,
         }
 
         manifest_path = output_root / "map-modes.json"
@@ -1423,7 +1420,7 @@ def main() -> None:
         # DB record (the westminster model writes to SQLite only; Supabase never receives
         # simulation data).
         existing_by_id = {e.get("id"): e for e in existing.get("elections", [])}
-        existing_data_files = existing.get("settings", {}).get("dataFilesByElectionId", {})
+        existing_data_files = existing.get("files", {}).get("electionsById", {})
         for entry_id, entry in existing_by_id.items():
             entry_type = entry.get("type")
             if entry_type not in ("holyrood_uns", "model_uns", "eu_referendum"):
@@ -1449,7 +1446,7 @@ def main() -> None:
                     )
                 manifest_entries.insert(insert_at, entry)
                 data_files_by_election_id[entry_id] = data_file
-                settings["dataFilesByElectionId"] = data_files_by_election_id
+                files["electionsById"] = data_files_by_election_id
 
         # Use current-holyrood-prediction as the default if it is present in the manifest
         holyrood_prediction_id = "current-holyrood-prediction"
@@ -1458,10 +1455,11 @@ def main() -> None:
 
         manifest_payload = {
             "defaultElection": default_election_id,
-            "settings": settings,
             "elections": manifest_entries,
             "parliamentFeatures": existing.get("parliamentFeatures", {}),
             "mapModes": existing.get("mapModes", {}),
+            "files": files,
+            "parties": manifest_parties,
         }
 
         if args.dry_run:

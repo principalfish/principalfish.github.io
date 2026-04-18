@@ -27,8 +27,10 @@ function hydrateManifestSettings() {
   manifest.parliamentFeatures ??= {};
   manifest.parties ??= [];
   manifest.files ??= {};
-  manifest.files.mapsById ??= {};
-  manifest.files.electionsById ??= {};
+  manifest.files.elections ??= {};
+  manifest.files.elections.mapsById ??= {};
+  manifest.files.elections.electionsById ??= {};
+  manifest.files.meta ??= {};
 
   // manifest.partiesByKey — plain object keyed by party.key string (e.g. "labour").
   // Used for display lookups: name and colour given a key already known from seat data.
@@ -155,9 +157,7 @@ export const state = {
   pollTrackerTimeline: [],
   pollTrackerSeriesByParty: new Map(),
   pollTrackerRangeSelection: 'all',
-  pollTrackerMetaLoaded: false,
-  pollTrackerLatestSnippet: '',
-  holyroodPredictionSnippet: '',
+  predictionSnippet: null,
 
   // Misc
   countdownIntervalId: null,

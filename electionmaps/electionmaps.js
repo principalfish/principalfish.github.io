@@ -28,12 +28,12 @@ import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './script
 async function initElectionData() {
   setManifest(await fetchJson('data/map-modes.json'));
   
-  await Promise.all([loadPollTrackerMetaIfNeeded(), loadHolyroodPredictionMetaIfNeeded()]);
   const params = new URLSearchParams(window.location.search);
   const requestedId = params.get('election');
   const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
   state.currentParliament = params.get('parliament') || defaultParliament;
   updateParliamentTabsUI();
+  await loadParliamentMetaIfNeeded();
 
   const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
   let currentElection = parliamentElections.find((e) => e.id === requestedId);
@@ -119,6 +119,22 @@ async function initElectionData() {
     await activatePollTrackerMode();
   } else {
     replaceRouteState('election');
+  }
+}
+
+/**
+ * Fetches the metadata snippet for the current parliament once per page load. Silently ignores fetch errors.
+ * Uses state.currentParliament to select the correct meta file from manifest.files.meta.
+ * @returns {Promise<void>}
+ */
+async function loadParliamentMetaIfNeeded() {
+  const metaPath = manifest.files.meta[state.currentParliament];
+  if (!metaPath || state.predictionSnippet !== null) return;
+  try {
+    const payload = await fetchJson(`data/${metaPath}`);
+    state.predictionSnippet = String(payload?.latest_poll_snippet || '').trim();
+  } catch (_error) {
+    state.predictionSnippet = '';
   }
 }
 
@@ -1756,14 +1772,14 @@ function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethPart
  * Resolves the mapFile and dataFile paths for an election.
  * Checks manifest settings overrides (by mapId / electionId) first, then falls back to
  * election-level properties. Throws if either file path cannot be determined.
- * @param {object} manifest - Full elections manifest object with a `settings` property.
+ * @param {object} manifest - Full elections manifest object with a `files` property.
  * @param {object} election - Election entry object with `id`, `mapId`, `mapFile`, and `dataFile` properties.
  * @returns {{mapFile: string, dataFile: string}} Resolved file paths for the map and results data.
  * @throws {Error} When either the mapFile or dataFile path cannot be determined for the election.
  */
 function resolveElectionFiles(manifest, election) {
-  const mapFileFromSettings = election?.mapId != null ? manifest.files.mapsById[String(election.mapId)] : undefined;
-  const dataFileFromSettings = manifest.files.electionsById[election.id];
+  const mapFileFromSettings = election?.mapId != null ? manifest.files.elections.mapsById[String(election.mapId)] : undefined;
+  const dataFileFromSettings = manifest.files.elections.electionsById[election.id];
 
   const mapFile = mapFileFromSettings || election.mapFile;
   const dataFile = dataFileFromSettings || election.dataFile;
@@ -2305,8 +2321,6 @@ const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 const electionCountdownEl = document.getElementById('mapsElectionCountdown');
 
 const POLL_TRACKER_DATA_PATH = 'data/results/model_output_trends.json';
-const POLL_TRACKER_META_PATH = 'data/results/model_output_trends_meta.json';
-const HOLYROOD_PREDICTION_META_PATH = 'data/results/holyrood-prediction-meta.json';
 const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 // Canonical map name strings used to route postcode lookups to the correct
 // postcodes.io endpoint and to identify whether postcode search is supported.
@@ -2473,49 +2487,15 @@ function formatZoomPct(scaleValue) {
 
 
 /**
- * Fetches Holyrood prediction metadata (latest poll snippet) once per page load. Silently ignores fetch errors.
- * @returns {Promise<void>}
- */
-async function loadHolyroodPredictionMetaIfNeeded() {
-  if (state.holyroodPredictionSnippet) return;
-  try {
-    const payload = await fetchJson(HOLYROOD_PREDICTION_META_PATH);
-    state.holyroodPredictionSnippet = String(payload?.latest_poll_snippet || '').trim();
-  } catch (_error) {
-    state.holyroodPredictionSnippet = '';
-  }
-}
-
-/**
- * Fetches poll tracker metadata (latest snippet text) once per page load. Silently ignores fetch errors.
- * @returns {Promise<void>}
- */
-async function loadPollTrackerMetaIfNeeded() {
-  if (state.pollTrackerMetaLoaded) return;
-
-    try {
-      const payload = await fetchJson(POLL_TRACKER_META_PATH);
-      state.pollTrackerLatestSnippet = String(payload?.latest_poll_snippet || '').trim();
-  } catch (_error) {
-    state.pollTrackerLatestSnippet = '';
-  }
-
-  state.pollTrackerMetaLoaded = true;
-}
-
-/**
  * Sets the subtitle element content, optionally appending the latest poll snippet as a secondary span.
  * @param {string} baseText - Primary subtitle text to display.
- * @param {{includeLatestPollSnippet?: boolean, snippetOverride?: string}} [options={}] - Options.
+ * @param {{includeSnippet?: boolean}} [options={}] - Options.
  * @returns {void}
  */
 function setSubtitleText(baseText, options = {}) {
   if (!subtitle) return;
 
-  const includeLatestPollSnippet = options.includeLatestPollSnippet === true;
-  const latestPollSnippet = options.snippetOverride != null
-    ? String(options.snippetOverride).trim()
-    : includeLatestPollSnippet ? String(state.pollTrackerLatestSnippet || '').trim() : '';
+  const latestPollSnippet = options.includeSnippet ? String(state.predictionSnippet || '').trim() : '';
 
   subtitle.textContent = '';
   subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
@@ -2980,9 +2960,9 @@ async function activatePollTrackerMode() {
   setPollTrackerNavState(true);
 
   setPollTrackerLayoutVisible(true);
-  await loadPollTrackerMetaIfNeeded();
+  await loadParliamentMetaIfNeeded();
   setMapsPageTitle('Poll tracker', 'westminster');
-  setSubtitleText('Poll tracker · model output trends', { includeLatestPollSnippet: true });
+  setSubtitleText('Poll tracker · model output trends', { includeSnippet: true });
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
   replaceRouteState('polltracker');
 
@@ -5491,11 +5471,7 @@ function updateTopSummary(election, summary) {
   const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
 
   if (subtitle) {
-    const isHolyroodPrediction = election?.type === 'holyrood_uns';
-    const isWestminsterPrediction = election?.type === 'model_uns';
-    const subtitleOptions = isHolyroodPrediction
-      ? { snippetOverride: state.holyroodPredictionSnippet }
-      : { includeLatestPollSnippet: isWestminsterPrediction };
+    const subtitleOptions = { includeSnippet: Boolean(election?.model) };
     if (hasMajority) {
       const baseText = `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`;
       setSubtitleText(baseText, subtitleOptions);

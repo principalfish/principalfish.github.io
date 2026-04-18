@@ -1,3 +1,5 @@
+import { manifest } from './state.js';
+
 /**
  * Fetches a URL and passes the Response through the provided parser function. Throws on non-OK status.
  * @param {string} url - URL to fetch.
@@ -29,4 +31,24 @@ export async function fetchJson(url) {
  */
 export function normalizeRegionKey(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Returns the display label for a party from the manifest, or the raw key if not found.
+ * @param {string} partyKey - Canonical party key (e.g. "labour").
+ * @returns {string} Human-readable party name, or the raw key as fallback.
+ */
+export function labelParty(partyKey) {
+  const meta = manifest?.partiesByKey?.[partyKey];
+  return meta?.name ?? partyKey;
+}
+
+/**
+ * Returns the hex colour for a party from the manifest, or a grey fallback if not found.
+ * @param {string} partyKey - Canonical party key (e.g. "labour").
+ * @returns {string} Hex colour string (e.g. '#d50000'), or '#9CA3AF' if not found.
+ */
+export function colourParty(partyKey) {
+  const meta = manifest?.partiesByKey?.[partyKey];
+  return meta?.colour ?? '#9CA3AF';
 }

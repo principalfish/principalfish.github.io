@@ -30,27 +30,33 @@ function hydrateManifestSettings() {
   manifest.files.mapsById ??= {};
   manifest.files.electionsById ??= {};
 
-  // Build partiesByKey and partiesById from the top-level parties array.
-  state.manifestPartiesByKey = {};
-  state.manifestPartiesById = new Map();
+  // manifest.partiesByKey — plain object keyed by party.key string (e.g. "labour").
+  // Used for display lookups: name and colour given a key already known from seat data.
+  // manifest.partiesById — Map keyed by numeric party.id from the DB.
+  // Used during data normalisation to resolve raw [partyId, votes] pairs into party keys.
+  manifest.partiesByKey = {};
+  manifest.partiesById = new Map();
   manifest.parties.forEach((party) => {
     const id = Number(party?.id);
     if (!Number.isFinite(id)) return;
-    state.manifestPartiesById.set(id, party);
+    manifest.partiesById.set(id, party);
     const key = party?.key;
-    if (key && !state.manifestPartiesByKey[key]) state.manifestPartiesByKey[key] = party;
+    if (key && !manifest.partiesByKey[key]) manifest.partiesByKey[key] = party;
   });
 
-  // Build region lookups from the regions array on each mapModes entry.
-  state.manifestRegionsById = new Map();
-  state.manifestRegionsByMapId = {};
+  // manifest.regionsById — Map keyed by numeric region.id.
+  // Used during seat normalisation to resolve a region ID to its normalised key string.
+  // manifest.regionsByMapId — plain object keyed by mapId string.
+  // Used to build per-election region label lookups for the filter UI.
+  manifest.regionsById = new Map();
+  manifest.regionsByMapId = {};
   Object.entries(manifest.mapModes).forEach(([mapId, mapMode]) => {
     const regionRows = mapMode.regions || [];
-    state.manifestRegionsByMapId[mapId] = regionRows;
+    manifest.regionsByMapId[mapId] = regionRows;
     regionRows.forEach((region) => {
       const id = Number(region?.id);
       if (!Number.isFinite(id)) return;
-      state.manifestRegionsById.set(id, normalizeRegionKey(region?.name || ''));
+      manifest.regionsById.set(id, normalizeRegionKey(region?.name || ''));
     });
   });
 }
@@ -67,10 +73,6 @@ export const state = {
   currentOpenSeatName: null,
 
   // Manifest
-  manifestPartiesByKey: {},
-  manifestPartiesById: new Map(),
-  manifestRegionsById: new Map(),
-  manifestRegionsByMapId: {},
   currentParliament: '',
 
   // Election / seat data

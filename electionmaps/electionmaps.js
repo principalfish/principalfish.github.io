@@ -5,7 +5,7 @@ import {
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { state, manifest, setManifest } from './scripts/state.js';
-import { fetchJson, normalizeRegionKey } from './scripts/utils.js';
+import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -62,7 +62,7 @@ async function initElectionData() {
   resetPredictModeState();
   resetPollTrackerModeState();
 
-  state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId, state.manifestRegionsByMapId);
+  state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId, manifest.regionsByMapId);
 
   renderElectionLinks(manifest, currentElection.id);
   setPredictModeNavState(false);
@@ -75,7 +75,7 @@ async function initElectionData() {
     fetchJson(`data/${dataFile}`),
   ]);
 
-  const seats = normalizeSeats(resultsData, state.manifestPartiesById, state.manifestRegionsById);
+  const seats = normalizeSeats(resultsData, manifest.partiesById, manifest.regionsById);
   const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.id !== 'eu-referendum-2016';
   const isReferendumType = currentElection.id === 'eu-referendum-2016';
   if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
@@ -97,7 +97,7 @@ async function initElectionData() {
     if (comparisonElection) {
       const { dataFile: comparisonDataFile } = resolveElectionFiles(manifest, comparisonElection);
       const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
-      state.defaultComparisonSeats = normalizeSeats(comparisonData, state.manifestPartiesById, state.manifestRegionsById);
+      state.defaultComparisonSeats = normalizeSeats(comparisonData, manifest.partiesById, manifest.regionsById);
       state.defaultComparisonSummary = summarizeElection(state.defaultComparisonSeats);
     }
   }
@@ -618,32 +618,6 @@ const PARTY_KEY_ALIASES = {
   uup: 'uu',
   scottishnationalparty: 'snp',
 };
-
-// ── Party display helpers ─────────────────────────────────────────────────────
-
-/**
- * Returns the display label for a party from the manifest, or the raw key if not found.
- * @param {object} partiesByKey - Manifest parties object keyed by party key.
- * @param {string} partyKey - Canonical party key to look up.
- * @returns {string} Human-readable party name, or the raw key as fallback.
- */
-function coreLabelParty(partiesByKey, partyKey) {
-  const meta = partiesByKey[partyKey];
-  if (meta?.name) return meta.name;
-  return partyKey;
-}
-
-/**
- * Returns the hex colour for a party from the manifest, or a grey fallback if not found.
- * @param {object} partiesByKey - Manifest parties object keyed by party key.
- * @param {string} partyKey - Canonical party key to look up.
- * @returns {string} Hex colour string (e.g. '#d50000'), or '#9CA3AF' if not found.
- */
-function coreColourParty(partiesByKey, partyKey) {
-  const meta = partiesByKey[partyKey];
-  if (meta?.colour) return meta.colour;
-  return '#9CA3AF';
-}
 
 // ── Predict constants ────────────────────────────────────────────────────────
 
@@ -2495,11 +2469,6 @@ function formatZoomPct(scaleValue) {
   return `${Math.round(ratio * 100)}%`;
 }
 
-/** @param {string} partyKey @returns {string} */
-function labelParty(partyKey) { return coreLabelParty(state.manifestPartiesByKey, partyKey); }
-
-/** @param {string} partyKey @returns {string} */
-function colourParty(partyKey) { return coreColourParty(state.manifestPartiesByKey, partyKey); }
 
 
 /**
@@ -2986,7 +2955,7 @@ async function loadPollTrackerDataIfNeeded() {
   if (state.pollTrackerDataLoaded) return;
 
   const data = await fetchJson(POLL_TRACKER_DATA_PATH);
-  const parsed = parsePollTrackerData(data, state.manifestPartiesById);
+  const parsed = parsePollTrackerData(data, manifest.partiesById);
 
   state.pollTrackerTimeline = parsed.timeline;
   state.pollTrackerSeriesByParty = parsed.seriesByParty;
@@ -4095,7 +4064,7 @@ async function ensurePredictBaselineData() {
     fetchJson(`data/${dataFile}`),
   ]);
 
-  const seats = normalizeSeats(resultsData, state.manifestPartiesById, state.manifestRegionsById);
+  const seats = normalizeSeats(resultsData, manifest.partiesById, manifest.regionsById);
   if (!seats.length) return false;
 
   state.predictBaseSeats = seats.map((seat) => ({
@@ -4104,7 +4073,7 @@ async function ensurePredictBaselineData() {
   }));
   state.predictBaseSeatsByKey = buildSeatIndex(state.predictBaseSeats);
   state.predictBaseMapData = mapData;
-  state.predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId, state.manifestRegionsByMapId);
+  state.predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId, manifest.regionsByMapId);
   state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(state.predictBaseSeats));
 
   return true;
@@ -4136,7 +4105,7 @@ async function ensurePredictCurrentSimulationData() {
     return false;
   }
 
-  const seats = normalizeSeats(resultsData, state.manifestPartiesById, state.manifestRegionsById);
+  const seats = normalizeSeats(resultsData, manifest.partiesById, manifest.regionsById);
   if (!seats.length) return false;
 
   state.predictCurrentSimulationSeats = seats;

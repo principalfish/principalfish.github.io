@@ -4,46 +4,29 @@
 
 import { normalizeRegionKey } from './utils.js';
 
+// ─── Init ────────────────────────────────────────────────────────────────────
+
 export let manifest = null;
 
-let _searchParams = null;
-
 /**
- * Initialises shared state for a page load: sets the manifest and captures URL search params.
+ * Initialises shared state for a page load: sets the manifest, hydrates lookup maps,
+ * and resolves initial URL params into state.
  * @param {object} manifestData - Raw manifest object from map-modes.json.
  * @returns {void}
  */
 export function initState(manifestData) {
-  setManifest(manifestData);
-  _searchParams = new URLSearchParams(window.location.search);
+  manifest = manifestData;
+  hydrateManifestSettings();
+  parseSearchParams();
 }
 
 /**
- * Returns the value of a URL search param captured at page init, or null if not present.
- * @param {string} key - Query parameter name.
- * @returns {string|null}
- */
-export function getSearchParam(key) {
-  return _searchParams?.get(key) ?? null;
-}
-
-/**
- * Returns a URLSearchParams object parsed from the current page URL.
- * @returns {URLSearchParams}
- */
-export function getSearchParams() {
-  return new URLSearchParams(window.location.search);
-}
-
-/**
- * Sets the manifest, normalises missing top-level fields, and hydrates all
- * party and region lookup maps on state. The only way to reassign the exported binding.
- * @param {object} m - Raw manifest object from map-modes.json.
+ * Resolves initial URL search params into state. Reads from the current page URL.
  * @returns {void}
  */
-export function setManifest(m) {
-  manifest = m;
-  hydrateManifestSettings();
+function parseSearchParams() {
+  const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
+  state.currentParliament = getSearchParam('parliament') || defaultParliament;
 }
 
 /**
@@ -91,6 +74,27 @@ function hydrateManifestSettings() {
     });
   });
 }
+
+// ─── Search params ────────────────────────────────────────────────────────────
+
+/**
+ * Returns a URLSearchParams object parsed from the current page URL.
+ * @returns {URLSearchParams}
+ */
+export function getSearchParams() {
+  return new URLSearchParams(window.location.search);
+}
+
+/**
+ * Returns the value of a URL search param from the current page URL, or null if not present.
+ * @param {string} key - Query parameter name.
+ * @returns {string|null}
+ */
+export function getSearchParam(key) {
+  return getSearchParams().get(key);
+}
+
+// ─── Application state ────────────────────────────────────────────────────────
 
 export const state = {
   // Sort / UI / totals

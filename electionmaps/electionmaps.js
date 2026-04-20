@@ -27,10 +27,8 @@ import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './script
  */
 async function initElectionData() {
   initState(await fetchJson('data/map-modes.json'));
-  const requestedId = getSearchParam('election');
-  const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
-  state.currentParliament = getSearchParam('parliament') || defaultParliament;
   updateParliamentTabsUI();
+  const requestedId = getSearchParam('election');
   await loadParliamentMetaIfNeeded();
 
   const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);

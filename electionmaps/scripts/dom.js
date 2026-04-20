@@ -9,18 +9,28 @@ const mapsTitle = document.querySelector('.maps-title');
  * @returns {void}
  */
 export function updateLeftBar({ onPredict, onPollTracker } = {}) {
-  updateParliamentTabsUI();
+  renderTitle();
+  renderParliamentTabs();
   renderElectionLinks(onPredict, onPollTracker);
 }
 
-function updateParliamentTabsUI() {
+/**
+ * Updates the page h1 to suffix the current parliament name (e.g. "UK Election Maps · Westminster").
+ * @returns {void}
+ */
+function renderTitle() {
+  const label = state.currentParliament[0].toUpperCase() + state.currentParliament.slice(1);
+  mapsTitle.textContent = `UK Election Maps · ${label}`;
+}
+
+/**
+ * Highlights the active parliament tab by toggling the 'active' class on all [data-parliament] elements.
+ * @returns {void}
+ */
+function renderParliamentTabs() {
   document.querySelectorAll('[data-parliament]').forEach((tab) => {
     tab.classList.toggle('active', tab.dataset.parliament === state.currentParliament);
   });
-  if (mapsTitle && state.currentParliament) {
-    const label = state.currentParliament[0].toUpperCase() + state.currentParliament.slice(1);
-    mapsTitle.textContent = `UK Election Maps · ${label}`;
-  }
 }
 
 /**

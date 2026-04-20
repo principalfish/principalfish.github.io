@@ -17,16 +17,8 @@ export let manifest = null;
 export function initState(manifestData) {
   manifest = manifestData;
   hydrateManifestSettings();
-  parseSearchParams();
-}
-
-/**
- * Resolves initial URL search params into state. Reads from the current page URL.
- * @returns {void}
- */
-function parseSearchParams() {
   const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
-  state.currentParliament = getSearchParam('parliament') || defaultParliament;
+  _state.currentParliament = getSearchParam('parliament') || defaultParliament;
 }
 
 /**
@@ -96,7 +88,7 @@ export function getSearchParam(key) {
 
 // ─── Application state ────────────────────────────────────────────────────────
 
-export const state = {
+export const _state = {
   // Sort / UI / totals
   currentSort: { key: 'seats', direction: 'desc' },
   voteTotalsExpanded: false,
@@ -196,3 +188,5 @@ export const state = {
   countdownIntervalId: null,
   lastTrackedVirtualPagePath: '',
 };
+
+export const state = {};

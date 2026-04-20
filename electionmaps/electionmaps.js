@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { state, manifest, initState, getSearchParam, getSearchParams } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
 
 // =====================================================================
@@ -26,15 +26,15 @@ import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './script
  * @returns {Promise<void>}
  */
 async function initElectionData() {
+  // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
   initState(await fetchJson('data/map-modes.json'));
   updateParliamentTabsUI();
   const requestedId = getSearchParam('election');
-  await loadParliamentMetaIfNeeded();
 
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
+  const parliamentElections = manifest.elections.filter((e) => e.parliament === _state.currentParliament);
   let currentElection = parliamentElections.find((e) => e.id === requestedId);
   if (!currentElection) {
-    const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
+    const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
     const anchorId = parlConfig.predictAnchorElectionId;
     currentElection =
       (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
@@ -46,61 +46,68 @@ async function initElectionData() {
     throw new Error('No elections configured in data/map-modes.json');
   }
 
-  state.currentElectionId = currentElection.id;
-  state.currentByElectionSeats = currentElection.byElectionSeats?.length
+  _state.currentElectionId = currentElection.id;
+  _state.currentElectionType = currentElection.type;
+  _state.currentByElectionSeats = currentElection.byElectionSeats?.length
     ? new Set(currentElection.byElectionSeats)
     : null;
-  if (filterGainsButton) {
-    filterGainsButton.textContent = state.currentByElectionSeats ? 'By-elections' : 'Gains';
-    filterGainsButton.hidden = currentElection.id === 'eu-referendum-2016';
-  }
-
+  _state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId);
+  _state.defaultComparisonSummary = null;
+  _state.defaultComparisonSeats = [];
   resetPredictModeState();
   resetPollTrackerModeState();
 
-  state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId);
-
+  if (filterGainsButton) {
+    filterGainsButton.textContent = _state.currentByElectionSeats ? 'By-elections' : 'Gains';
+    filterGainsButton.hidden = currentElection.id === 'eu-referendum-2016';
+  }
+  const isReferendumType = currentElection.id === 'eu-referendum-2016';
+  if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
+  if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
+  if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
+    _state.mapViewState.choroplethType = 'none';
+  }
   renderElectionLinks(manifest, currentElection.id);
   setPredictModeNavState(false);
   setPollTrackerNavState(false);
 
+  // Fetch 2 (parallel):
+  //   - map topology (TopoJSON SVG paths for every seat)
+  //   - election results (seat outcomes, vote totals, party breakdowns)
+  //   - prediction snippet text (model elections only — subtitle label from files.meta)
   const { mapFile, dataFile } = resolveElectionFiles(manifest, currentElection);
-
   const [mapData, resultsData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
+    ...(currentElection.model ? [
+      fetchJson(`data/${manifest.files.meta[_state.currentParliament]}`)
+        .then((p) => { _state.predictionSnippet = String(p?.latest_poll_snippet || '').trim(); })
+        .catch(() => { _state.predictionSnippet = ''; }),
+    ] : []),
   ]);
 
   const seats = normalizeSeats(resultsData);
-  const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.id !== 'eu-referendum-2016';
-  const isReferendumType = currentElection.id === 'eu-referendum-2016';
-  if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
-  if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
-  if (isReferendumType && state.mapViewState.choroplethType === 'voteShareChange') {
-    state.mapViewState.choroplethType = 'none';
-  }
-  state.currentElectionType = currentElection.type;
-  updateElectionCountdown();
-  state.baseElectionSeats = seats;
-  state.currentSeats = seats.map((seat) => cloneSeatRecord(seat));
-  state.currentMapData = mapData;
-  state.currentSeatsByKey = buildSeatIndex(state.currentSeats);
+  _state.baseElectionSeats = seats;
+  _state.currentSeats = seats.map((seat) => cloneSeatRecord(seat));
+  _state.currentMapData = mapData;
+  _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
 
-  state.defaultComparisonSummary = null;
-  state.defaultComparisonSeats = [];
+  // Fetch 3 (conditional, sequential): comparison election results for swing calculations
   if (currentElection.comparisonElectionId) {
     const comparisonElection = manifest.elections.find((entry) => entry.id === currentElection.comparisonElectionId);
     if (comparisonElection) {
       const { dataFile: comparisonDataFile } = resolveElectionFiles(manifest, comparisonElection);
       const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
-      state.defaultComparisonSeats = normalizeSeats(comparisonData);
-      state.defaultComparisonSummary = summarizeElection(state.defaultComparisonSeats);
+      _state.defaultComparisonSeats = normalizeSeats(comparisonData);
+      _state.defaultComparisonSummary = summarizeElection(_state.defaultComparisonSeats);
     }
   }
 
-  state.currentComparisonSeats = state.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
-  state.comparisonSeatsByKey = buildSeatIndex(state.currentComparisonSeats);
+  _state.currentComparisonSeats = _state.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
+  _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
+  const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.id !== 'eu-referendum-2016';
+  updateElectionCountdown();
   populateMapControlOptions();
   syncMapControlStateFromInputs();
 
@@ -109,6 +116,7 @@ async function initElectionData() {
 
   const routeView = String(getSearchParam('view') || 'election').toLowerCase();
 
+  // Fetch 4 (conditional): predict baseline + simulation data, or poll tracker trend data
   if (routeView === 'predict') {
     await activatePredictMode();
   } else if (routeView === 'polltracker') {
@@ -120,17 +128,17 @@ async function initElectionData() {
 
 /**
  * Fetches the metadata snippet for the current parliament once per page load. Silently ignores fetch errors.
- * Uses state.currentParliament to select the correct meta file from manifest.files.meta.
+ * Uses _state.currentParliament to select the correct meta file from manifest.files.meta.
  * @returns {Promise<void>}
  */
 async function loadParliamentMetaIfNeeded() {
-  const metaPath = manifest.files.meta[state.currentParliament];
-  if (!metaPath || state.predictionSnippet !== null) return;
+  const metaPath = manifest.files.meta[_state.currentParliament];
+  if (!metaPath || _state.predictionSnippet !== null) return;
   try {
     const payload = await fetchJson(`data/${metaPath}`);
-    state.predictionSnippet = String(payload?.latest_poll_snippet || '').trim();
+    _state.predictionSnippet = String(payload?.latest_poll_snippet || '').trim();
   } catch (_error) {
-    state.predictionSnippet = '';
+    _state.predictionSnippet = '';
   }
 }
 
@@ -189,11 +197,11 @@ function wireMapInteractions() {
   document.querySelectorAll('[data-map-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.getAttribute('data-map-action');
-      if (action === 'zoom-in') state.mapInteractionController.zoomBy(1.2);
-      if (action === 'zoom-out') state.mapInteractionController.zoomBy(0.83);
-      if (action === 'reset-zoom') state.mapInteractionController.reset();
+      if (action === 'zoom-in') _state.mapInteractionController.zoomBy(1.2);
+      if (action === 'zoom-out') _state.mapInteractionController.zoomBy(0.83);
+      if (action === 'reset-zoom') _state.mapInteractionController.reset();
       if (action === 'reset-view') {
-        state.mapInteractionController.reset();
+        _state.mapInteractionController.reset();
         resetPrimaryFilters();
         resetChoropleths();
         renderMapWithViewState();
@@ -279,7 +287,7 @@ function wireMapViewControls() {
 
   if (filterGainsButton) {
     filterGainsButton.addEventListener('click', () => {
-      state.mapViewState.gainsOnly = !state.mapViewState.gainsOnly;
+      _state.mapViewState.gainsOnly = !_state.mapViewState.gainsOnly;
       syncMapControlInputsFromState();
       renderMapWithViewState({ preserveZoom: true });
     });
@@ -374,7 +382,7 @@ function wirePredictControls() {
 function wirePollTrackerMetricInput(inputEl) {
   if (!inputEl || inputEl.dataset.wired === 'true') return;
   inputEl.addEventListener('change', () => {
-    if (state.pollTrackerModeActive) renderPollTrackerChart();
+    if (_state.pollTrackerModeActive) renderPollTrackerChart();
   });
   inputEl.dataset.wired = 'true';
 }
@@ -393,11 +401,11 @@ function wirePollTrackerControls() {
     if (button.dataset.wired === 'true') return;
     button.addEventListener('click', () => {
       const nextRange = button.getAttribute('data-polltracker-range') || 'all';
-      state.pollTrackerRangeSelection = nextRange;
+      _state.pollTrackerRangeSelection = nextRange;
       document.querySelectorAll('[data-polltracker-range]').forEach((candidate) => {
         candidate.classList.toggle('is-active', candidate.getAttribute('data-polltracker-range') === nextRange);
       });
-      if (state.pollTrackerModeActive) renderPollTrackerChart();
+      if (_state.pollTrackerModeActive) renderPollTrackerChart();
     });
     button.dataset.wired = 'true';
   });
@@ -440,28 +448,28 @@ function wireSeatSearch() {
   });
   seatSearchInput.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowDown') {
-      if (!state.seatSearchSuggestions.length) {
+      if (!_state.seatSearchSuggestions.length) {
         showSeatSearchSuggestions(seatSearchInput.value);
       }
-      if (!state.seatSearchSuggestions.length) return;
+      if (!_state.seatSearchSuggestions.length) return;
       event.preventDefault();
-      state.seatSearchSuggestionIndex = Math.min(state.seatSearchSuggestionIndex + 1, state.seatSearchSuggestions.length - 1);
+      _state.seatSearchSuggestionIndex = Math.min(_state.seatSearchSuggestionIndex + 1, _state.seatSearchSuggestions.length - 1);
       updateSeatSearchHighlight();
       return;
     }
 
     if (event.key === 'ArrowUp') {
-      if (!state.seatSearchSuggestions.length) return;
+      if (!_state.seatSearchSuggestions.length) return;
       event.preventDefault();
-      state.seatSearchSuggestionIndex = Math.max(state.seatSearchSuggestionIndex - 1, 0);
+      _state.seatSearchSuggestionIndex = Math.max(_state.seatSearchSuggestionIndex - 1, 0);
       updateSeatSearchHighlight();
       return;
     }
 
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (state.seatSearchSuggestionIndex >= 0 && state.seatSearchSuggestionIndex < state.seatSearchSuggestions.length) {
-        const selectedName = state.seatSearchSuggestions[state.seatSearchSuggestionIndex];
+      if (_state.seatSearchSuggestionIndex >= 0 && _state.seatSearchSuggestionIndex < _state.seatSearchSuggestions.length) {
+        const selectedName = _state.seatSearchSuggestions[_state.seatSearchSuggestionIndex];
         seatSearchInput.value = selectedName;
       }
       hideSeatSearchSuggestions();
@@ -476,7 +484,7 @@ function wireSeatSearch() {
   document.addEventListener('click', (event) => {
     if (!(event.target instanceof Node)) return;
     if (seatSearchInput.contains(event.target)) return;
-    if (state.seatSearchMenuEl?.contains(event.target)) return;
+    if (_state.seatSearchMenuEl?.contains(event.target)) return;
     hideSeatSearchSuggestions();
   });
 
@@ -549,7 +557,7 @@ function wireSeatPopup() {
   if (!seatPopupClose) return;
   seatPopupClose.addEventListener('click', () => {
     hideSeatPopup();
-    state.mapInteractionController.clearSelection?.();
+    _state.mapInteractionController.clearSelection?.();
   });
 }
 
@@ -561,7 +569,7 @@ function wireSeatPopup() {
 function wireVoteTotalsToggle() {
   if (!voteTotalsToggle) return;
   voteTotalsToggle.addEventListener('click', () => {
-    state.voteTotalsExpanded = !state.voteTotalsExpanded;
+    _state.voteTotalsExpanded = !_state.voteTotalsExpanded;
     if (!window.__mapsCurrentSummary) return;
     renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null, {
       showVoteTotals: window.__mapsShowVoteTotals !== false,
@@ -578,7 +586,7 @@ function wireVoteTotalsToggle() {
 function wireWindowResize() {
   window.addEventListener('resize', () => {
     syncRightPanelHeightToMap();
-    if (state.pollTrackerModeActive) renderPollTrackerChart();
+    if (_state.pollTrackerModeActive) renderPollTrackerChart();
   });
 }
 
@@ -616,7 +624,7 @@ function wireVoteTotalsSorting(onSortChanged) {
 
 /**
  * Pure utility functions extracted from electionmaps.js for testability.
- * No DOM dependencies, no module-level state.
+ * No DOM dependencies, no module-level _state.
  */
 
 // ── Party constants ──────────────────────────────────────────────────────────
@@ -2365,9 +2373,9 @@ function trackVirtualPageView(nextUrl) {
   try {
     const parsed = new URL(nextUrl, window.location.origin);
     const pagePath = `${parsed.pathname}${parsed.search}`;
-    if (pagePath === state.lastTrackedVirtualPagePath) return;
+    if (pagePath === _state.lastTrackedVirtualPagePath) return;
 
-    state.lastTrackedVirtualPagePath = pagePath;
+    _state.lastTrackedVirtualPagePath = pagePath;
     window.gtag('event', 'page_view', {
       page_location: parsed.toString(),
       page_path: pagePath,
@@ -2393,7 +2401,7 @@ function setMapsPageTitle(contextLabel, parliament = null) {
 /**
  * Builds a URLSearchParams for the given view, setting/removing the election and predict params as appropriate.
  * @param {string} view - View name to set ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to include; falls back to state.currentElectionId if null.
+ * @param {string|null} [electionId=null] - Election ID to include; falls back to _state.currentElectionId if null.
  * @returns {URLSearchParams} Updated search params with view, election, and predict params adjusted.
  */
 function buildRouteSearchParams(view, electionId = null) {
@@ -2406,7 +2414,7 @@ function buildRouteSearchParams(view, electionId = null) {
     return params;
   }
 
-  const selectedElectionId = electionId || state.currentElectionId;
+  const selectedElectionId = electionId || _state.currentElectionId;
   if (selectedElectionId) {
     params.set('election', selectedElectionId);
   }
@@ -2416,7 +2424,7 @@ function buildRouteSearchParams(view, electionId = null) {
 /**
  * Replaces the current browser history entry with the URL for the given view, then fires a virtual page view.
  * @param {string} view - View name ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to state.currentElectionId.
+ * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to _state.currentElectionId.
  * @returns {void}
  */
 function replaceRouteState(view, electionId = null) {
@@ -2434,7 +2442,7 @@ function buildPredictShareStateSlots() {
   const rows = currentPredictInputRows();
   const slots = [];
 
-  if (state.currentParliament === 'holyrood') {
+  if (_state.currentParliament === 'holyrood') {
     ['c', 'l'].forEach((prefix) => {
       rows.forEach((row) => {
         predictPartyKeysForRegion(row.regionKey).forEach((partyKey) => {
@@ -2442,7 +2450,7 @@ function buildPredictShareStateSlots() {
         });
       });
       // National row slots added after region rows to preserve existing slot indices.
-      state.predictColumnPartyKeys.forEach((partyKey) => {
+      _state.predictColumnPartyKeys.forEach((partyKey) => {
         slots.push([`${prefix}:${HOLYROOD_NATIONAL_KEY}`, partyKey]);
       });
     });
@@ -2491,7 +2499,7 @@ function formatZoomPct(scaleValue) {
 function setSubtitleText(baseText, options = {}) {
   if (!subtitle) return;
 
-  const latestPollSnippet = options.includeSnippet ? String(state.predictionSnippet || '').trim() : '';
+  const latestPollSnippet = options.includeSnippet ? String(_state.predictionSnippet || '').trim() : '';
 
   subtitle.textContent = '';
   subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
@@ -2529,17 +2537,17 @@ function formatCountdown(ms) {
 /**
  * Shows or hides the election countdown element based on the current election type and mode.
  * Starts a 1-second interval tick when visible; clears it when hidden or after election day.
- * Visible only when state.currentElectionType is 'holyrood_uns' and poll tracker is not active.
+ * Visible only when _state.currentElectionType is 'holyrood_uns' and poll tracker is not active.
  * @returns {void}
  */
 function updateElectionCountdown() {
   if (!electionCountdownEl) return;
 
-  const shouldShow = state.currentElectionType === 'holyrood_uns' && !state.pollTrackerModeActive;
+  const shouldShow = _state.currentElectionType === 'holyrood_uns' && !_state.pollTrackerModeActive;
 
-  if (state.countdownIntervalId !== null) {
-    clearInterval(state.countdownIntervalId);
-    state.countdownIntervalId = null;
+  if (_state.countdownIntervalId !== null) {
+    clearInterval(_state.countdownIntervalId);
+    _state.countdownIntervalId = null;
   }
 
   if (!shouldShow) {
@@ -2552,8 +2560,8 @@ function updateElectionCountdown() {
     if (msLeft <= 0) {
       electionCountdownEl.hidden = true;
       // Clear and null the handle so updateElectionCountdown can safely restart if called again.
-      clearInterval(state.countdownIntervalId);
-      state.countdownIntervalId = null;
+      clearInterval(_state.countdownIntervalId);
+      _state.countdownIntervalId = null;
       return;
     }
     electionCountdownEl.textContent = `${formatCountdown(msLeft)} · Holyrood election · 7 May 2026`;
@@ -2561,7 +2569,7 @@ function updateElectionCountdown() {
   };
 
   tick();
-  state.countdownIntervalId = setInterval(tick, 1000);
+  _state.countdownIntervalId = setInterval(tick, 1000);
 }
 
 /**
@@ -2570,8 +2578,8 @@ function updateElectionCountdown() {
  * @returns {void}
  */
 function setPollTrackerNavState(active) {
-  if (!state.pollTrackerModeLinkEl) return;
-  state.pollTrackerModeLinkEl.classList.toggle('active', active);
+  if (!_state.pollTrackerModeLinkEl) return;
+  _state.pollTrackerModeLinkEl.classList.toggle('active', active);
 }
 
 /**
@@ -2624,7 +2632,7 @@ function renderPollTrackerChart() {
   pollTrackerChartWrap.innerHTML = '';
   pollTrackerChartWrap.style.position = 'relative';
 
-  if (!state.pollTrackerTimeline.length) {
+  if (!_state.pollTrackerTimeline.length) {
     pollTrackerChartWrap.innerHTML = '<div class="maps-polltracker-empty">No poll tracker data available.</div>';
     return;
   }
@@ -2634,14 +2642,14 @@ function renderPollTrackerChart() {
     return;
   }
 
-  const rangeSize = state.pollTrackerRangeSelection === 'all'
-    ? state.pollTrackerTimeline.length
-    : Number(state.pollTrackerRangeSelection);
+  const rangeSize = _state.pollTrackerRangeSelection === 'all'
+    ? _state.pollTrackerTimeline.length
+    : Number(_state.pollTrackerRangeSelection);
   const windowSize = Number.isFinite(rangeSize) && rangeSize > 0
-    ? Math.min(rangeSize, state.pollTrackerTimeline.length)
-    : state.pollTrackerTimeline.length;
-  const windowStart = Math.max(0, state.pollTrackerTimeline.length - windowSize);
-  const visibleTimeline = state.pollTrackerTimeline.slice(windowStart);
+    ? Math.min(rangeSize, _state.pollTrackerTimeline.length)
+    : _state.pollTrackerTimeline.length;
+  const windowStart = Math.max(0, _state.pollTrackerTimeline.length - windowSize);
+  const visibleTimeline = _state.pollTrackerTimeline.slice(windowStart);
 
   const width = Math.max(760, pollTrackerChartWrap.clientWidth - 8);
   const height = 520;
@@ -2673,7 +2681,7 @@ function renderPollTrackerChart() {
       .range([0, innerWidth]);
 
   const selectedSeries = selectedParties
-    .map((partyKey) => state.pollTrackerSeriesByParty.get(partyKey))
+    .map((partyKey) => _state.pollTrackerSeriesByParty.get(partyKey))
     .filter(Boolean)
     .map((series) => ({
       ...series,
@@ -2875,7 +2883,7 @@ function renderPollTrackerChart() {
 function renderPollTrackerPartyControls() {
   if (!pollTrackerPartyControls) return;
 
-  const partyRows = Array.from(state.pollTrackerSeriesByParty.values())
+  const partyRows = Array.from(_state.pollTrackerSeriesByParty.values())
     .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 
   /** @param {string} name - Party name to normalize. @returns {string} Lowercased, trimmed party name. */
@@ -2925,18 +2933,18 @@ function renderPollTrackerPartyControls() {
 }
 
 /**
- * Fetches and parses the poll tracker CSV once per page load, populating state.pollTrackerTimeline and state.pollTrackerSeriesByParty.
+ * Fetches and parses the poll tracker CSV once per page load, populating _state.pollTrackerTimeline and _state.pollTrackerSeriesByParty.
  * @returns {Promise<void>}
  */
 async function loadPollTrackerDataIfNeeded() {
-  if (state.pollTrackerDataLoaded) return;
+  if (_state.pollTrackerDataLoaded) return;
 
   const data = await fetchJson(POLL_TRACKER_DATA_PATH);
   const parsed = parsePollTrackerData(data);
 
-  state.pollTrackerTimeline = parsed.timeline;
-  state.pollTrackerSeriesByParty = parsed.seriesByParty;
-  state.pollTrackerDataLoaded = true;
+  _state.pollTrackerTimeline = parsed.timeline;
+  _state.pollTrackerSeriesByParty = parsed.seriesByParty;
+  _state.pollTrackerDataLoaded = true;
 }
 
 /**
@@ -2944,11 +2952,11 @@ async function loadPollTrackerDataIfNeeded() {
  * @returns {Promise<void>}
  */
 async function activatePollTrackerMode() {
-  state.predictModeActive = false;
+  _state.predictModeActive = false;
   setPredictModeNavState(false);
   if (predictWindow) predictWindow.hidden = true;
 
-  state.pollTrackerModeActive = true;
+  _state.pollTrackerModeActive = true;
   updateElectionCountdown();
   document.querySelectorAll('.maps-election-item.active').forEach((node) => {
     node.classList.remove('active');
@@ -2968,16 +2976,16 @@ async function activatePollTrackerMode() {
 }
 
 /**
- * Sets the active class on parliament tab links to match state.currentParliament, and updates the page
+ * Sets the active class on parliament tab links to match _state.currentParliament, and updates the page
  * h1 to suffix the parliament name (Westminster / Holyrood).
  * @returns {void}
  */
 function updateParliamentTabsUI() {
   document.querySelectorAll('[data-parliament]').forEach((tab) => {
-    tab.classList.toggle('active', tab.dataset.parliament === state.currentParliament);
+    tab.classList.toggle('active', tab.dataset.parliament === _state.currentParliament);
   });
-  if (mapsTitle && state.currentParliament) {
-    const label = state.currentParliament[0].toUpperCase() + state.currentParliament.slice(1);
+  if (mapsTitle && _state.currentParliament) {
+    const label = _state.currentParliament[0].toUpperCase() + _state.currentParliament.slice(1);
     mapsTitle.textContent = `UK Election Maps · ${label}`;
   }
 }
@@ -2988,10 +2996,10 @@ function toggleVotePctColumns(show) {
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !show);
 }
 
-/** Sets the active class on vote-totals tab buttons to match state.voteTotalsMode. */
+/** Sets the active class on vote-totals tab buttons to match _state.voteTotalsMode. */
 function updateVoteTotalsTabsUI() {
   voteTotalsTabNav?.querySelectorAll('[data-vote-tab]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.voteTab === state.voteTotalsMode);
+    btn.classList.toggle('active', btn.dataset.voteTab === _state.voteTotalsMode);
   });
 }
 
@@ -3007,13 +3015,13 @@ function renderVoteTotalsTabs(mapConfig) {
     btn.dataset.voteTab = view.id;
     btn.textContent = view.label;
     btn.addEventListener('click', () => {
-      state.voteTotalsMode = view.id;
+      _state.voteTotalsMode = view.id;
       updateVoteTotalsTabsUI();
       const seats = window.__mapsVisibleSeats || [];
       const compSeats = window.__mapsVisibleComparisonSeats || [];
-      const showVotes = state.voteTotalsMode !== 'all';
-      const summary = summarizeElection(seats, { mode: state.voteTotalsMode });
-      const compSummary = compSeats.length ? summarizeElection(compSeats, { mode: state.voteTotalsMode }) : null;
+      const showVotes = _state.voteTotalsMode !== 'all';
+      const summary = summarizeElection(seats, { mode: _state.voteTotalsMode });
+      const compSummary = compSeats.length ? summarizeElection(compSeats, { mode: _state.voteTotalsMode }) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
       window.__mapsShowVoteTotals = showVotes;
@@ -3025,10 +3033,10 @@ function renderVoteTotalsTabs(mapConfig) {
   });
 }
 
-/** Sets the active class on seat-view tab buttons to match state.currentSeatView. */
+/** Sets the active class on seat-view tab buttons to match _state.currentSeatView. */
 function updateSeatViewTabsUI() {
   seatViewTabNav?.querySelectorAll('[data-seat-view]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.seatView === state.currentSeatView);
+    btn.classList.toggle('active', btn.dataset.seatView === _state.currentSeatView);
   });
 }
 
@@ -3044,7 +3052,7 @@ function renderSeatViewTabs(mapConfig) {
     btn.dataset.seatView = view.id;
     btn.textContent = view.label;
     btn.addEventListener('click', () => {
-      state.currentSeatView = view.id;
+      _state.currentSeatView = view.id;
       updateSeatViewTabsUI();
       renderMapWithViewState({ preserveZoom: true });
     });
@@ -3053,7 +3061,7 @@ function renderSeatViewTabs(mapConfig) {
 }
 
 /**
- * Rebuilds the election list nav, inserting Predict 2029 and Poll tracker buttons after the current-prediction entry (or near the top as a fallback). Stores references to state.predictModeLinkEl and state.pollTrackerModeLinkEl.
+ * Rebuilds the election list nav, inserting Predict 2029 and Poll tracker buttons after the current-prediction entry (or near the top as a fallback). Stores references to _state.predictModeLinkEl and _state.pollTrackerModeLinkEl.
  * @param {object} manifest - Elections manifest object with an `elections` array.
  * @param {string|null} activeId - ID of the currently active election, used to highlight the active nav item.
  * @returns {void}
@@ -3065,7 +3073,7 @@ function renderElectionLinks(manifest, activeId) {
     const predictButton = document.createElement('button');
     predictButton.type = 'button';
     predictButton.className = 'maps-election-item';
-    predictButton.textContent = state.currentParliament === 'holyrood' ? 'Predict 2026' : 'Predict 2029';
+    predictButton.textContent = _state.currentParliament === 'holyrood' ? 'Predict 2026' : 'Predict 2029';
     predictButton.addEventListener('click', () => {
       activatePredictMode().catch((error) => {
         console.error(error);
@@ -3087,20 +3095,20 @@ function renderElectionLinks(manifest, activeId) {
     return trackerButton;
   };
 
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
-  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
+  const parliamentElections = manifest.elections.filter((e) => e.parliament === _state.currentParliament);
+  const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
   const hasPredictMode = parlConfig.features?.includes('predict') ?? false;
   const hasPollTracker = parlConfig.features?.includes('pollTracker') ?? false;
   const predictAnchorId = parlConfig.predictAnchorElectionId ?? null;
 
   electionList.innerHTML = '';
-  state.predictModeLinkEl = null;
-  state.pollTrackerModeLinkEl = null;
+  _state.predictModeLinkEl = null;
+  _state.pollTrackerModeLinkEl = null;
   let insertedPredictLink = false;
   let insertedPollTrackerLink = false;
   parliamentElections.forEach((election) => {
     const link = document.createElement('a');
-    link.href = `?view=election&election=${encodeURIComponent(election.id)}&parliament=${state.currentParliament}`;
+    link.href = `?view=election&election=${encodeURIComponent(election.id)}&parliament=${_state.currentParliament}`;
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
     link.textContent = election.name;
     electionList.appendChild(link);
@@ -3108,14 +3116,14 @@ function renderElectionLinks(manifest, activeId) {
     if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
       const predictButton = createPredictButton();
       electionList.appendChild(predictButton);
-      state.predictModeLinkEl = predictButton;
+      _state.predictModeLinkEl = predictButton;
       insertedPredictLink = true;
     }
 
     if (hasPollTracker && insertedPredictLink && !insertedPollTrackerLink && election.id !== predictAnchorId) {
       const trackerButton = createPollTrackerButton();
       electionList.appendChild(trackerButton);
-      state.pollTrackerModeLinkEl = trackerButton;
+      _state.pollTrackerModeLinkEl = trackerButton;
       insertedPollTrackerLink = true;
     }
   });
@@ -3127,7 +3135,7 @@ function renderElectionLinks(manifest, activeId) {
     } else {
       electionList.appendChild(predictButton);
     }
-    state.predictModeLinkEl = predictButton;
+    _state.predictModeLinkEl = predictButton;
 
     if (hasPollTracker && !insertedPollTrackerLink) {
       const trackerButton = createPollTrackerButton();
@@ -3137,19 +3145,19 @@ function renderElectionLinks(manifest, activeId) {
       } else {
         electionList.appendChild(trackerButton);
       }
-      state.pollTrackerModeLinkEl = trackerButton;
+      _state.pollTrackerModeLinkEl = trackerButton;
       insertedPollTrackerLink = true;
     }
   }
 
   if (hasPollTracker && !insertedPollTrackerLink) {
     const trackerButton = createPollTrackerButton();
-    if (state.predictModeLinkEl && state.predictModeLinkEl.nextSibling) {
-      electionList.insertBefore(trackerButton, state.predictModeLinkEl.nextSibling);
+    if (_state.predictModeLinkEl && _state.predictModeLinkEl.nextSibling) {
+      electionList.insertBefore(trackerButton, _state.predictModeLinkEl.nextSibling);
     } else {
       electionList.appendChild(trackerButton);
     }
-    state.pollTrackerModeLinkEl = trackerButton;
+    _state.pollTrackerModeLinkEl = trackerButton;
   }
 }
 
@@ -3161,34 +3169,34 @@ function renderElectionLinks(manifest, activeId) {
 function labelRegion(regionKey) {
   const normalized = normalizeRegionKey(regionKey);
   if (!normalized) return 'Unknown';
-  const label = state.currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
+  const label = _state.currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
   return label.replace(/ and /gi, ' & ');
 }
 
 /**
- * Updates state.currentSort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
+ * Updates _state.currentSort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
  * @param {string} sortKey - Column key to sort by (e.g. 'seats', 'votes', 'party').
  * @returns {void}
  */
 function setSortDirection(sortKey) {
-  if (state.currentSort.key === sortKey) {
-    state.currentSort.direction = state.currentSort.direction === 'asc' ? 'desc' : 'asc';
+  if (_state.currentSort.key === sortKey) {
+    _state.currentSort.direction = _state.currentSort.direction === 'asc' ? 'desc' : 'asc';
     return;
   }
-  state.currentSort.key = sortKey;
-  state.currentSort.direction = sortKey === 'party' ? 'asc' : 'desc';
+  _state.currentSort.key = sortKey;
+  _state.currentSort.direction = sortKey === 'party' ? 'asc' : 'desc';
 }
 
 /**
- * Lazily initializes and returns the per-region swing Map for a party in state.predictRegionalSwingsByParty.
+ * Lazily initializes and returns the per-region swing Map for a party in _state.predictRegionalSwingsByParty.
  * @param {string} partyKey - Party key to look up or initialize a swing map for.
  * @returns {Map<string, number>} Map from region key to swing value for the given party.
  */
 function ensurePredictPartySwingMap(partyKey) {
-  if (!state.predictRegionalSwingsByParty.has(partyKey)) {
-    state.predictRegionalSwingsByParty.set(partyKey, new Map());
+  if (!_state.predictRegionalSwingsByParty.has(partyKey)) {
+    _state.predictRegionalSwingsByParty.set(partyKey, new Map());
   }
-  return state.predictRegionalSwingsByParty.get(partyKey);
+  return _state.predictRegionalSwingsByParty.get(partyKey);
 }
 
 /**
@@ -3197,8 +3205,8 @@ function ensurePredictPartySwingMap(partyKey) {
  * @returns {void}
  */
 function setPredictModeNavState(active) {
-  if (!state.predictModeLinkEl) return;
-  state.predictModeLinkEl.classList.toggle('active', active);
+  if (!_state.predictModeLinkEl) return;
+  _state.predictModeLinkEl.classList.toggle('active', active);
 }
 
 /**
@@ -3208,14 +3216,14 @@ function setPredictModeNavState(active) {
 function syncPredictModeRightColumnLayout() {
   if (!predictWindow || !seatCard) return;
 
-  const predictVisible = state.predictModeActive && !state.pollTrackerModeActive;
+  const predictVisible = _state.predictModeActive && !_state.pollTrackerModeActive;
   predictWindow.hidden = !predictVisible;
   predictWindow.style.display = predictVisible ? '' : 'none';
 
   const predictCollapsed = predictWindow.classList.contains('maps-predict-window--collapsed');
   const hideSeatCard = predictVisible && !predictCollapsed;
   const forcePredictGridScroll = predictVisible && !predictCollapsed &&
-    (state.predictEnglandExpanded || (state.currentParliament === 'holyrood' && state.predictHolyroodRegionsExpanded));
+    (_state.predictEnglandExpanded || (_state.currentParliament === 'holyrood' && _state.predictHolyroodRegionsExpanded));
   seatCard.hidden = hideSeatCard;
   seatCard.style.display = hideSeatCard ? 'none' : '';
 
@@ -3229,22 +3237,22 @@ function syncPredictModeRightColumnLayout() {
  * @returns {string[]} Array of column party keys for the GB section of the predict grid.
  */
 function collectPredictPartyKeys() {
-  if (state.currentParliament === 'holyrood') return [...PREDICT_HOLYROOD_PARTY_KEYS];
+  if (_state.currentParliament === 'holyrood') return [...PREDICT_HOLYROOD_PARTY_KEYS];
   return [...PREDICT_BASE_PARTY_KEYS, PREDICT_NAT_COLUMN_KEY];
 }
 
 function currentPredictInputRows() {
-  if (state.currentParliament === 'holyrood') return collectHolyroodPredictInputRows(state.predictBaseRegionLabelsByKey);
-  return collectPredictInputRows(state.predictBaseRegionLabelsByKey, state.predictEnglandExpanded);
+  if (_state.currentParliament === 'holyrood') return collectHolyroodPredictInputRows(_state.predictBaseRegionLabelsByKey);
+  return collectPredictInputRows(_state.predictBaseRegionLabelsByKey, _state.predictEnglandExpanded);
 }
 
 function predictPartyKeysForRegion(regionKey) {
-  if (state.currentParliament === 'holyrood') return state.predictColumnPartyKeys;
+  if (_state.currentParliament === 'holyrood') return _state.predictColumnPartyKeys;
   return collectPredictInputPartyKeysForRegion(regionKey);
 }
 
 function predictElectionYear() {
-  return state.currentParliament === 'holyrood' ? '2026' : '2029';
+  return _state.currentParliament === 'holyrood' ? '2026' : '2029';
 }
 
 /**
@@ -3256,7 +3264,7 @@ function collectPredictNorthernIrelandPartyKeys() {
 }
 
 /**
- * Clamps inputValue to [0, 100], stores it in state.predictInputByRegionParty, and returns the clamped integer value.
+ * Clamps inputValue to [0, 100], stores it in _state.predictInputByRegionParty, and returns the clamped integer value.
  * @param {string} regionKey - Normalized region key.
  * @param {string} partyKey - Party key.
  * @param {number|string} inputValue - Raw input value from the user (may be a string from an input element).
@@ -3264,7 +3272,7 @@ function collectPredictNorthernIrelandPartyKeys() {
  */
 function setPredictInputShareValue(regionKey, partyKey, inputValue) {
   const shareValue = roundPredictShareValue(clampNumber(inputValue, 0, 100));
-  state.predictInputByRegionParty.set(predictInputKey(regionKey, partyKey), shareValue);
+  _state.predictInputByRegionParty.set(predictInputKey(regionKey, partyKey), shareValue);
   return shareValue;
 }
 
@@ -3273,12 +3281,12 @@ function setPredictInputShareValue(regionKey, partyKey, inputValue) {
 /** Builds the Holyrood predict state object from current module globals. */
 function holyroodPredictState() {
   return {
-    constBaseline: state.predictBaselineConstShareByRegionParty,
-    listBaseline: state.predictBaselineListShareByRegionParty,
-    nationalBaseline: state.predictNationalBaselines,
-    nationalListBaseline: state.predictNationalListBaselines,
-    constInput: state.predictConstInputByRegionParty,
-    listInput: state.predictListInputByRegionParty,
+    constBaseline: _state.predictBaselineConstShareByRegionParty,
+    listBaseline: _state.predictBaselineListShareByRegionParty,
+    nationalBaseline: _state.predictNationalBaselines,
+    nationalListBaseline: _state.predictNationalListBaselines,
+    constInput: _state.predictConstInputByRegionParty,
+    listInput: _state.predictListInputByRegionParty,
   };
 }
 
@@ -3287,12 +3295,12 @@ function resolvedHolyroodShare(regionKey, partyKey, pass) {
 }
 
 function holyroodNationalOtherShare(tabMap, pass) {
-  return coreHolyroodNationalOtherShare(tabMap, pass, state.predictColumnPartyKeys, holyroodPredictState());
+  return coreHolyroodNationalOtherShare(tabMap, pass, _state.predictColumnPartyKeys, holyroodPredictState());
 }
 
 
 function holyroodResolvedOtherShare(regionKey, pass) {
-  return coreHolyroodResolvedOtherShare(regionKey, pass, state.predictColumnPartyKeys, holyroodPredictState());
+  return coreHolyroodResolvedOtherShare(regionKey, pass, _state.predictColumnPartyKeys, holyroodPredictState());
 }
 
 /**
@@ -3309,10 +3317,10 @@ function renderHolyroodPredictTabs() {
   tabs.forEach(({ key, label }) => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `maps-predict-tab-btn${state.predictHolyroodTab === key ? ' active' : ''}`;
+    btn.className = `maps-predict-tab-btn${_state.predictHolyroodTab === key ? ' active' : ''}`;
     btn.textContent = label;
     btn.addEventListener('click', () => {
-      state.predictHolyroodTab = key;
+      _state.predictHolyroodTab = key;
       renderHolyroodPredictTabs();
       renderPredictGrid();
     });
@@ -3333,7 +3341,7 @@ function renderHolyroodPredictTabs() {
 function renderHolyroodTabGrid(tabMap, pass) {
   if (!predictGrid) return;
   predictGrid.innerHTML = '';
-  state.predictOtherCellByRegion = new Map();
+  _state.predictOtherCellByRegion = new Map();
 
   const regions = currentPredictInputRows();
   const table = document.createElement('table');
@@ -3345,7 +3353,7 @@ function renderHolyroodTabGrid(tabMap, pass) {
   const regionTh = document.createElement('th');
   regionTh.textContent = 'Region';
   headRow.appendChild(regionTh);
-  state.predictColumnPartyKeys.forEach((pk) => {
+  _state.predictColumnPartyKeys.forEach((pk) => {
     const th = document.createElement('th');
     th.title = labelParty(pk);
     th.innerHTML = `<span class="maps-predict-grid-swatch" style="background:${colourParty(pk)}" aria-hidden="true"></span>`;
@@ -3367,24 +3375,24 @@ function renderHolyroodTabGrid(tabMap, pass) {
   const natToggle = document.createElement('button');
   natToggle.type = 'button';
   natToggle.className = 'maps-predict-expand-btn';
-  natToggle.textContent = state.predictHolyroodRegionsExpanded ? 'Hide regions' : 'Show regions';
+  natToggle.textContent = _state.predictHolyroodRegionsExpanded ? 'Hide regions' : 'Show regions';
   natToggle.addEventListener('click', () => {
-    if (state.predictHolyroodRegionsExpanded) {
+    if (_state.predictHolyroodRegionsExpanded) {
       // Collapsing: national becomes source of truth — clear region entries from both maps.
-      for (const map of [state.predictConstInputByRegionParty, state.predictListInputByRegionParty]) {
+      for (const map of [_state.predictConstInputByRegionParty, _state.predictListInputByRegionParty]) {
         for (const key of Array.from(map.keys())) {
           if (key.split('::')[0] !== HOLYROOD_NATIONAL_KEY) map.delete(key);
         }
       }
     } else {
       // Expanding: regions become source of truth — clear national entries from both maps.
-      for (const map of [state.predictConstInputByRegionParty, state.predictListInputByRegionParty]) {
+      for (const map of [_state.predictConstInputByRegionParty, _state.predictListInputByRegionParty]) {
         for (const key of Array.from(map.keys())) {
           if (key.split('::')[0] === HOLYROOD_NATIONAL_KEY) map.delete(key);
         }
       }
     }
-    state.predictHolyroodRegionsExpanded = !state.predictHolyroodRegionsExpanded;
+    _state.predictHolyroodRegionsExpanded = !_state.predictHolyroodRegionsExpanded;
     renderPredictGrid();
     syncPredictModeRightColumnLayout();
   });
@@ -3395,8 +3403,8 @@ function renderHolyroodTabGrid(tabMap, pass) {
   natLabelTd.appendChild(natLabelWrap);
   natTr.appendChild(natLabelTd);
 
-  const natBaselines = pass === 'list' ? state.predictNationalListBaselines : state.predictNationalBaselines;
-  state.predictColumnPartyKeys.forEach((pk) => {
+  const natBaselines = pass === 'list' ? _state.predictNationalListBaselines : _state.predictNationalBaselines;
+  _state.predictColumnPartyKeys.forEach((pk) => {
     const natKey = predictInputKey(HOLYROOD_NATIONAL_KEY, pk);
     const currentVal = tabMap.has(natKey) ? tabMap.get(natKey) : (natBaselines.get(pk) ?? 0);
     const td = document.createElement('td');
@@ -3406,7 +3414,7 @@ function renderHolyroodTabGrid(tabMap, pass) {
     input.dataset.regionKey = HOLYROOD_NATIONAL_KEY;
     input.dataset.partyKey = pk;
     input.value = formatPredictShare(currentVal);
-    if (state.predictHolyroodRegionsExpanded) {
+    if (_state.predictHolyroodRegionsExpanded) {
       input.disabled = true;
     } else {
       input.addEventListener('change', () => {
@@ -3420,7 +3428,7 @@ function renderHolyroodTabGrid(tabMap, pass) {
           tabMap.set(natKey, val);
         }
         // Refresh national other
-        const natOtherCell = state.predictOtherCellByRegion.get(HOLYROOD_NATIONAL_KEY);
+        const natOtherCell = _state.predictOtherCellByRegion.get(HOLYROOD_NATIONAL_KEY);
         if (natOtherCell) {
           const other = holyroodNationalOtherShare(tabMap, pass);
           natOtherCell.textContent = formatPredictShare(other);
@@ -3440,12 +3448,12 @@ function renderHolyroodTabGrid(tabMap, pass) {
   const natOther = holyroodNationalOtherShare(tabMap, pass);
   natOtherTd.textContent = formatPredictShare(natOther);
   natOtherTd.classList.toggle('maps-predict-grid-total-over', natOther < 0);
-  state.predictOtherCellByRegion.set(HOLYROOD_NATIONAL_KEY, natOtherTd);
+  _state.predictOtherCellByRegion.set(HOLYROOD_NATIONAL_KEY, natOtherTd);
   natTr.appendChild(natOtherTd);
   tbody.appendChild(natTr);
 
   // ── Region rows ──
-  if (!state.predictHolyroodRegionsExpanded) {
+  if (!_state.predictHolyroodRegionsExpanded) {
     table.appendChild(tbody);
     const wrap = document.createElement('section');
     wrap.className = 'maps-predict-grid-section maps-predict-grid-section-holyrood';
@@ -3460,8 +3468,8 @@ function renderHolyroodTabGrid(tabMap, pass) {
     labelTd.textContent = formatPredictRegionLabel(region.regionLabel);
     tr.appendChild(labelTd);
 
-    const passBaselineMap = pass === 'list' ? state.predictBaselineListShareByRegionParty : state.predictBaselineConstShareByRegionParty;
-    state.predictColumnPartyKeys.forEach((pk) => {
+    const passBaselineMap = pass === 'list' ? _state.predictBaselineListShareByRegionParty : _state.predictBaselineConstShareByRegionParty;
+    _state.predictColumnPartyKeys.forEach((pk) => {
       const regionInputKey = predictInputKey(region.regionKey, pk);
       const hasRegionOverride = tabMap.has(regionInputKey);
       const baselineVal = getPredictBaselineShare(region.regionKey, pk, passBaselineMap);
@@ -3486,9 +3494,9 @@ function renderHolyroodTabGrid(tabMap, pass) {
           tabMap.set(regionInputKey, val);
           input.classList.remove('maps-predict-grid-input--inherited');
         }
-        const otherCell = state.predictOtherCellByRegion.get(region.regionKey);
+        const otherCell = _state.predictOtherCellByRegion.get(region.regionKey);
         if (otherCell) {
-          const total = state.predictColumnPartyKeys.reduce((sum, p) => {
+          const total = _state.predictColumnPartyKeys.reduce((sum, p) => {
             const k = predictInputKey(region.regionKey, p);
             return sum + (tabMap.has(k) ? tabMap.get(k) : getPredictBaselineShare(region.regionKey, p, passBaselineMap));
           }, 0);
@@ -3503,14 +3511,14 @@ function renderHolyroodTabGrid(tabMap, pass) {
 
     const otherTd = document.createElement('td');
     otherTd.className = 'maps-predict-grid-total';
-    const displayedTotal = state.predictColumnPartyKeys.reduce((sum, p) => {
+    const displayedTotal = _state.predictColumnPartyKeys.reduce((sum, p) => {
       const k = predictInputKey(region.regionKey, p);
       return sum + (tabMap.has(k) ? tabMap.get(k) : getPredictBaselineShare(region.regionKey, p, passBaselineMap));
     }, 0);
     const other = roundPredictShareValue(100 - displayedTotal);
     otherTd.textContent = formatPredictShare(other);
     otherTd.classList.toggle('maps-predict-grid-total-over', other < 0);
-    state.predictOtherCellByRegion.set(region.regionKey, otherTd);
+    _state.predictOtherCellByRegion.set(region.regionKey, otherTd);
     tr.appendChild(otherTd);
     tbody.appendChild(tr);
   });
@@ -3528,9 +3536,9 @@ function renderHolyroodTabGrid(tabMap, pass) {
  * @returns {void}
  */
 function updatePredictOtherCell(regionKey) {
-  const cell = state.predictOtherCellByRegion.get(regionKey);
+  const cell = _state.predictOtherCellByRegion.get(regionKey);
   if (!cell) return;
-  const otherShare = calculatePredictOtherShare(regionKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty);
+  const otherShare = calculatePredictOtherShare(regionKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty);
   cell.textContent = formatPredictShare(otherShare);
   cell.classList.toggle('maps-predict-grid-total-over', otherShare < 0);
 }
@@ -3540,12 +3548,12 @@ function updatePredictOtherCell(regionKey) {
  * @returns {string} Encoded predict payload string for use in the URL, or '' when no changes have been made.
  */
 function buildPredictShareStatePayload() {
-  if (state.currentParliament === 'holyrood') {
+  if (_state.currentParliament === 'holyrood') {
     const rows = currentPredictInputRows();
     const serializedRows = [];
     const passes = [
-      { prefix: 'c', inputMap: state.predictConstInputByRegionParty, baseline: state.predictBaselineConstShareByRegionParty },
-      { prefix: 'l', inputMap: state.predictListInputByRegionParty, baseline: state.predictBaselineListShareByRegionParty },
+      { prefix: 'c', inputMap: _state.predictConstInputByRegionParty, baseline: _state.predictBaselineConstShareByRegionParty },
+      { prefix: 'l', inputMap: _state.predictListInputByRegionParty, baseline: _state.predictBaselineListShareByRegionParty },
     ];
     passes.forEach(({ prefix, inputMap, baseline }) => {
       rows.forEach((row) => {
@@ -3558,8 +3566,8 @@ function buildPredictShareStatePayload() {
         });
       });
       // Serialize national row values.
-      const natBaselines = prefix === 'l' ? state.predictNationalListBaselines : state.predictNationalBaselines;
-      state.predictColumnPartyKeys.forEach((partyKey) => {
+      const natBaselines = prefix === 'l' ? _state.predictNationalListBaselines : _state.predictNationalBaselines;
+      _state.predictColumnPartyKeys.forEach((partyKey) => {
         const natInputKey = predictInputKey(HOLYROOD_NATIONAL_KEY, partyKey);
         const inputValue = roundPredictShareValue(inputMap.has(natInputKey) ? inputMap.get(natInputKey) : (natBaselines.get(partyKey) ?? 0));
         const baselineValue = roundPredictShareValue(natBaselines.get(partyKey) ?? 0);
@@ -3577,18 +3585,18 @@ function buildPredictShareStatePayload() {
   rows.forEach((row) => {
     const regionKey = row.regionKey;
     predictPartyKeysForRegion(regionKey).forEach((partyKey) => {
-      const inputValue = roundPredictShareValue(getPredictInputShareValue(regionKey, partyKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty));
-      const baselineValue = roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey, state.predictBaselineShareByRegionParty));
+      const inputValue = roundPredictShareValue(getPredictInputShareValue(regionKey, partyKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty));
+      const baselineValue = roundPredictShareValue(getPredictBaselineShare(regionKey, partyKey, _state.predictBaselineShareByRegionParty));
       if (inputValue === baselineValue) return;
       serializedRows.push([regionKey, partyKey, inputValue]);
     });
   });
 
-  if (!serializedRows.length && !state.predictEnglandExpanded) {
+  if (!serializedRows.length && !_state.predictEnglandExpanded) {
     return '';
   }
 
-  return encodePredictPayload(serializedRows, state.predictEnglandExpanded, buildPredictShareStateSlots());
+  return encodePredictPayload(serializedRows, _state.predictEnglandExpanded, buildPredictShareStateSlots());
 }
 
 /**
@@ -3603,23 +3611,23 @@ function readPredictShareStateFromUrl() {
   // slot indices match those used during encoding (expanded vs collapsed differ).
   const parts = encoded.split('.');
   const peekExpanded = parts.length >= 2 && parts[0] === '2' && parts[1] === '1';
-  const savedExpanded = state.predictEnglandExpanded;
-  state.predictEnglandExpanded = peekExpanded;
+  const savedExpanded = _state.predictEnglandExpanded;
+  _state.predictEnglandExpanded = peekExpanded;
   const slots = buildPredictShareStateSlots();
-  state.predictEnglandExpanded = savedExpanded;
+  _state.predictEnglandExpanded = savedExpanded;
 
   return decodePredictPayload(encoded, slots);
 }
 
 /**
- * Applies a decoded predict share state (from URL) to state.predictInputByRegionParty, validating regions and parties before setting values.
+ * Applies a decoded predict share state (from URL) to _state.predictInputByRegionParty, validating regions and parties before setting values.
  * @param {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} sharedState - Decoded predict state as returned by readPredictShareStateFromUrl; no-op if null.
  * @returns {void}
  */
 function applyPredictShareStateFromUrl(sharedState) {
   if (!sharedState) return;
 
-  if (state.currentParliament === 'holyrood') {
+  if (_state.currentParliament === 'holyrood') {
     const validRows = new Set([...currentPredictInputRows().map((row) => row.regionKey), HOLYROOD_NATIONAL_KEY]);
     const validParties = new Set(predictPartyKeysForRegion(HOLYROOD_NATIONAL_KEY));
     (sharedState.rows || []).forEach((entry) => {
@@ -3632,13 +3640,13 @@ function applyPredictShareStateFromUrl(sharedState) {
       const regionKey = prefixedKey.slice(colonIdx + 1);
       if (!validRows.has(regionKey)) return;
       if (!validParties.has(partyKey)) return;
-      const inputMap = pass === 'l' ? state.predictListInputByRegionParty : state.predictConstInputByRegionParty;
+      const inputMap = pass === 'l' ? _state.predictListInputByRegionParty : _state.predictConstInputByRegionParty;
       inputMap.set(predictInputKey(regionKey, partyKey), roundPredictShareValue(clampNumber(entry[2], 0, 100)));
     });
     return;
   }
 
-  state.predictEnglandExpanded = Boolean(sharedState.englandExpanded);
+  _state.predictEnglandExpanded = Boolean(sharedState.englandExpanded);
   const validRows = new Set(currentPredictInputRows().map((row) => row.regionKey));
 
   (sharedState.rows || []).forEach((entry) => {
@@ -3716,11 +3724,11 @@ async function sharePredictScenario() {
  * @returns {Array<{regionKey: string, regionLabel: string, total: number}>} Array of invalid region rows with their computed totals; empty when all regions are valid.
  */
 function validatePredictRowsNotOver100() {
-  if (state.currentParliament === 'holyrood') {
+  if (_state.currentParliament === 'holyrood') {
     const invalid = [];
     // Validate both passes — either can be over 100% regardless of which tab is active.
     ['constituency', 'list'].forEach((pass) => {
-      const tabMap = pass === 'list' ? state.predictListInputByRegionParty : state.predictConstInputByRegionParty;
+      const tabMap = pass === 'list' ? _state.predictListInputByRegionParty : _state.predictConstInputByRegionParty;
       const passLabel = pass === 'list' ? ' (List)' : ' (Constituency)';
       const natOther = holyroodNationalOtherShare(tabMap, pass);
       if (natOther < 0) {
@@ -3729,7 +3737,7 @@ function validatePredictRowsNotOver100() {
       currentPredictInputRows().forEach((row) => {
         if (holyroodResolvedOtherShare(row.regionKey, pass) < 0) {
           const total = roundPredictShareValue(
-            state.predictColumnPartyKeys.reduce((sum, pk) => sum + resolvedHolyroodShare(row.regionKey, pk, pass), 0)
+            _state.predictColumnPartyKeys.reduce((sum, pk) => sum + resolvedHolyroodShare(row.regionKey, pk, pass), 0)
           );
           invalid.push({ ...row, regionLabel: `${row.regionLabel}${passLabel}`, total });
         }
@@ -3740,7 +3748,7 @@ function validatePredictRowsNotOver100() {
   return currentPredictInputRows()
     .map((row) => ({
       ...row,
-      total: roundPredictShareValue(calculatePredictEnteredShareTotal(row.regionKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty)),
+      total: roundPredictShareValue(calculatePredictEnteredShareTotal(row.regionKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty)),
     }))
     .filter((row) => row.total > 100);
 }
@@ -3748,41 +3756,41 @@ function validatePredictRowsNotOver100() {
 /**
  * Recomputes swing maps from current input values versus baseline, removing zero-swing entries.
  * For Holyrood: builds separate const and list swing maps from the three-tab stores.
- * For Westminster: rebuilds state.predictRegionalSwingsByParty from state.predictInputByRegionParty as before.
+ * For Westminster: rebuilds _state.predictRegionalSwingsByParty from _state.predictInputByRegionParty as before.
  * @returns {void}
  */
 function rebuildPredictSwingsFromInputs() {
-  if (state.currentParliament === 'holyrood') {
-    state.predictHolyroodConstSwingsByParty = new Map();
-    state.predictHolyroodListSwingsByParty = new Map();
+  if (_state.currentParliament === 'holyrood') {
+    _state.predictHolyroodConstSwingsByParty = new Map();
+    _state.predictHolyroodListSwingsByParty = new Map();
 
     const rows = currentPredictInputRows();
     rows.forEach((row) => {
-      state.predictColumnPartyKeys.forEach((partyKey) => {
+      _state.predictColumnPartyKeys.forEach((partyKey) => {
         // Constituency swing — measured against constituency baseline
-        const constBaseline = getPredictBaselineShare(row.regionKey, partyKey, state.predictBaselineConstShareByRegionParty);
+        const constBaseline = getPredictBaselineShare(row.regionKey, partyKey, _state.predictBaselineConstShareByRegionParty);
         const constShare = resolvedHolyroodShare(row.regionKey, partyKey, 'constituency');
         const constSwing = constShare - constBaseline;
-        if (!state.predictHolyroodConstSwingsByParty.has(partyKey)) state.predictHolyroodConstSwingsByParty.set(partyKey, new Map());
-        if (Math.abs(constSwing) >= 1e-9) state.predictHolyroodConstSwingsByParty.get(partyKey).set(row.regionKey, constSwing);
+        if (!_state.predictHolyroodConstSwingsByParty.has(partyKey)) _state.predictHolyroodConstSwingsByParty.set(partyKey, new Map());
+        if (Math.abs(constSwing) >= 1e-9) _state.predictHolyroodConstSwingsByParty.get(partyKey).set(row.regionKey, constSwing);
 
         // List swing — measured against list baseline
-        const listBaseline = getPredictBaselineShare(row.regionKey, partyKey, state.predictBaselineListShareByRegionParty);
+        const listBaseline = getPredictBaselineShare(row.regionKey, partyKey, _state.predictBaselineListShareByRegionParty);
         const listShare = resolvedHolyroodShare(row.regionKey, partyKey, 'list');
         const listSwing = listShare - listBaseline;
-        if (!state.predictHolyroodListSwingsByParty.has(partyKey)) state.predictHolyroodListSwingsByParty.set(partyKey, new Map());
-        if (Math.abs(listSwing) >= 1e-9) state.predictHolyroodListSwingsByParty.get(partyKey).set(row.regionKey, listSwing);
+        if (!_state.predictHolyroodListSwingsByParty.has(partyKey)) _state.predictHolyroodListSwingsByParty.set(partyKey, new Map());
+        if (Math.abs(listSwing) >= 1e-9) _state.predictHolyroodListSwingsByParty.get(partyKey).set(row.regionKey, listSwing);
       });
     });
     return;
   }
 
-  state.predictRegionalSwingsByParty = new Map();
+  _state.predictRegionalSwingsByParty = new Map();
   const rows = currentPredictInputRows();
   rows.forEach((row) => {
     predictPartyKeysForRegion(row.regionKey).forEach((partyKey) => {
-      const baseline = getPredictBaselineShare(row.regionKey, partyKey, state.predictBaselineShareByRegionParty);
-      const inputShare = getPredictInputShareValue(row.regionKey, partyKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty);
+      const baseline = getPredictBaselineShare(row.regionKey, partyKey, _state.predictBaselineShareByRegionParty);
+      const inputShare = getPredictInputShareValue(row.regionKey, partyKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty);
       const swing = inputShare - baseline;
       const swingMap = ensurePredictPartySwingMap(partyKey);
       if (Math.abs(swing) < 1e-9) {
@@ -3797,23 +3805,23 @@ function rebuildPredictSwingsFromInputs() {
 /**
  * Resets all predict inputs to baseline values and re-renders the grid.
  * For Holyrood: clears the three tab stores and returns to the Overall tab.
- * For Westminster: resets state.predictInputByRegionParty and refreshes inputs in-place.
+ * For Westminster: resets _state.predictInputByRegionParty and refreshes inputs in-place.
  * @returns {void}
  */
 function resetPredictInputsToBaseline() {
-  if (state.currentParliament === 'holyrood') {
-    state.predictHolyroodTab = 'constituency';
-    state.predictConstInputByRegionParty = new Map();
-    state.predictListInputByRegionParty = new Map();
-    state.predictHolyroodConstSwingsByParty = new Map();
-    state.predictHolyroodListSwingsByParty = new Map();
+  if (_state.currentParliament === 'holyrood') {
+    _state.predictHolyroodTab = 'constituency';
+    _state.predictConstInputByRegionParty = new Map();
+    _state.predictListInputByRegionParty = new Map();
+    _state.predictHolyroodConstSwingsByParty = new Map();
+    _state.predictHolyroodListSwingsByParty = new Map();
     renderHolyroodPredictTabs();
     renderPredictGrid();
     return;
   }
 
-  state.predictRegionalSwingsByParty = new Map();
-  state.predictInputByRegionParty = normalizePredictShareMap(state.predictBaselineShareByRegionParty);
+  _state.predictRegionalSwingsByParty = new Map();
+  _state.predictInputByRegionParty = normalizePredictShareMap(_state.predictBaselineShareByRegionParty);
 
   document.querySelectorAll('.maps-predict-grid-input').forEach((input) => {
     const regionKey = input.dataset.regionKey;
@@ -3822,7 +3830,7 @@ function resetPredictInputsToBaseline() {
       input.value = '0';
       return;
     }
-    input.value = formatPredictShare(getPredictInputShareValue(regionKey, partyKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty));
+    input.value = formatPredictShare(getPredictInputShareValue(regionKey, partyKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty));
     updatePredictOtherCell(regionKey);
   });
 }
@@ -3838,7 +3846,7 @@ function renderPredictGrid() {
   const regions = currentPredictInputRows();
 
   predictGrid.innerHTML = '';
-  state.predictOtherCellByRegion = new Map();
+  _state.predictOtherCellByRegion = new Map();
 
   /**
    * Renders a single section (GB or NI) of the predict input grid into predictGrid.
@@ -3906,25 +3914,25 @@ function renderPredictGrid() {
       const toggleButton = document.createElement('button');
       toggleButton.type = 'button';
       toggleButton.className = 'maps-predict-expand-btn';
-      toggleButton.textContent = state.predictEnglandExpanded ? 'Hide regions' : 'Show regions';
+      toggleButton.textContent = _state.predictEnglandExpanded ? 'Hide regions' : 'Show regions';
       toggleButton.addEventListener('click', () => {
-        if (state.predictEnglandExpanded) {
+        if (_state.predictEnglandExpanded) {
           // Collapsing: England aggregate becomes source of truth — clear sub-region entries
           // so stale region values cannot bleed into England-aggregate swing calculations.
-          for (const key of Array.from(state.predictInputByRegionParty.keys())) {
+          for (const key of Array.from(_state.predictInputByRegionParty.keys())) {
             const regionKey = key.split('::')[0];
             if (regionKey !== PREDICT_ENGLAND_KEY && isPredictEnglishRegion(regionKey)) {
-              state.predictInputByRegionParty.delete(key);
+              _state.predictInputByRegionParty.delete(key);
             }
           }
         } else {
           // Expanding: sub-regions become source of truth — clear all England aggregate entries
-          // (including parties outside state.predictColumnPartyKeys from simulation data).
-          for (const key of Array.from(state.predictInputByRegionParty.keys())) {
-            if (key.split('::')[0] === PREDICT_ENGLAND_KEY) state.predictInputByRegionParty.delete(key);
+          // (including parties outside _state.predictColumnPartyKeys from simulation data).
+          for (const key of Array.from(_state.predictInputByRegionParty.keys())) {
+            if (key.split('::')[0] === PREDICT_ENGLAND_KEY) _state.predictInputByRegionParty.delete(key);
           }
         }
-        state.predictEnglandExpanded = !state.predictEnglandExpanded;
+        _state.predictEnglandExpanded = !_state.predictEnglandExpanded;
         renderPredictGrid();
         syncPredictModeRightColumnLayout();
       });
@@ -3967,8 +3975,8 @@ function renderPredictGrid() {
       input.className = 'maps-predict-grid-input';
       input.dataset.regionKey = region.regionKey;
       input.dataset.partyKey = partyKey;
-      input.value = formatPredictShare(getPredictInputShareValue(region.regionKey, partyKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty));
-      if (region.isEnglandAggregate && state.predictEnglandExpanded) {
+      input.value = formatPredictShare(getPredictInputShareValue(region.regionKey, partyKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty));
+      if (region.isEnglandAggregate && _state.predictEnglandExpanded) {
         input.disabled = true;
       } else {
         input.addEventListener('change', () => {
@@ -3983,9 +3991,9 @@ function renderPredictGrid() {
 
     const totalTd = document.createElement('td');
     totalTd.className = 'maps-predict-grid-total';
-    totalTd.textContent = formatPredictShare(calculatePredictOtherShare(region.regionKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty));
-    totalTd.classList.toggle('maps-predict-grid-total-over', calculatePredictOtherShare(region.regionKey, state.predictInputByRegionParty, state.predictBaselineShareByRegionParty) < 0);
-    state.predictOtherCellByRegion.set(region.regionKey, totalTd);
+    totalTd.textContent = formatPredictShare(calculatePredictOtherShare(region.regionKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty));
+    totalTd.classList.toggle('maps-predict-grid-total-over', calculatePredictOtherShare(region.regionKey, _state.predictInputByRegionParty, _state.predictBaselineShareByRegionParty) < 0);
+    _state.predictOtherCellByRegion.set(region.regionKey, totalTd);
     tr.appendChild(totalTd);
     tbody.appendChild(tr);
     });
@@ -3995,10 +4003,10 @@ function renderPredictGrid() {
     predictGrid.appendChild(sectionWrap);
   };
 
-  if (state.currentParliament === 'holyrood') {
-    const tabMap = state.predictHolyroodTab === 'list' ? state.predictListInputByRegionParty
-      : state.predictConstInputByRegionParty;
-    renderHolyroodTabGrid(tabMap, state.predictHolyroodTab);
+  if (_state.currentParliament === 'holyrood') {
+    const tabMap = _state.predictHolyroodTab === 'list' ? _state.predictListInputByRegionParty
+      : _state.predictConstInputByRegionParty;
+    renderHolyroodTabGrid(tabMap, _state.predictHolyroodTab);
     return;
   } else {
     const northernIrelandRegions = regions.filter((region) => isPredictNorthernIrelandRegion(region.regionKey));
@@ -4008,7 +4016,7 @@ function renderPredictGrid() {
       sectionTitle: null,
       sectionClassName: 'maps-predict-grid-section-gb',
       sectionRegions: gbRegions,
-      sectionPartyKeys: state.predictColumnPartyKeys,
+      sectionPartyKeys: _state.predictColumnPartyKeys,
       blankRegionHeader: false,
     });
 
@@ -4029,7 +4037,7 @@ function renderPredictGrid() {
 async function ensurePredictBaselineData() {
   if (!manifest) return false;
 
-  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
+  const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
   const baselineId = parlConfig.predictBaselineElectionId;
   const baselineElection = manifest.elections.find((entry) => entry.id === baselineId);
   if (!baselineElection) return false;
@@ -4043,14 +4051,14 @@ async function ensurePredictBaselineData() {
   const seats = normalizeSeats(resultsData);
   if (!seats.length) return false;
 
-  state.predictBaseSeats = seats.map((seat) => ({
+  _state.predictBaseSeats = seats.map((seat) => ({
     ...seat,
     votes: { ...(seat.votes || {}) },
   }));
-  state.predictBaseSeatsByKey = buildSeatIndex(state.predictBaseSeats);
-  state.predictBaseMapData = mapData;
-  state.predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId);
-  state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(state.predictBaseSeats));
+  _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
+  _state.predictBaseMapData = mapData;
+  _state.predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId);
+  _state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(_state.predictBaseSeats));
 
   return true;
 }
@@ -4058,15 +4066,15 @@ async function ensurePredictBaselineData() {
 /**
  * Loads and caches per-region vote shares from the current model prediction election's data
  * file (model_uns for Westminster, holyrood_uns for Holyrood). Results are stored in
- * state.predictCurrentSimulationConstShares and state.predictCurrentSimulationListShares. Returns true on
+ * _state.predictCurrentSimulationConstShares and _state.predictCurrentSimulationListShares. Returns true on
  * success, false if the election cannot be found or yields no seats.
  * @returns {Promise<boolean>} True if simulation data was loaded successfully.
  */
 async function ensurePredictCurrentSimulationData() {
-  if (state.predictCurrentSimulationLoaded) return true;
+  if (_state.predictCurrentSimulationLoaded) return true;
   if (!manifest) return false;
 
-  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
+  const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
   const simulationId = parlConfig.predictAnchorElectionId;
   if (!simulationId) return false;
 
@@ -4084,9 +4092,9 @@ async function ensurePredictCurrentSimulationData() {
   const seats = normalizeSeats(resultsData);
   if (!seats.length) return false;
 
-  state.predictCurrentSimulationSeats = seats;
+  _state.predictCurrentSimulationSeats = seats;
 
-  if (state.currentParliament === 'holyrood') {
+  if (_state.currentParliament === 'holyrood') {
     const constSeats = seats.filter((s) => !isListSeat(s.seat));
     const seenListRegions = new Set();
     const deduplicatedListSeats = seats.filter((s) => {
@@ -4095,19 +4103,19 @@ async function ensurePredictCurrentSimulationData() {
       seenListRegions.add(s.region);
       return true;
     });
-    state.predictCurrentSimulationConstShares = normalizePredictShareMap(
+    _state.predictCurrentSimulationConstShares = normalizePredictShareMap(
       buildPredictBaselineShares(constSeats),
     );
-    state.predictCurrentSimulationListShares = normalizePredictShareMap(
+    _state.predictCurrentSimulationListShares = normalizePredictShareMap(
       buildPredictBaselineShares(deduplicatedListSeats),
     );
   } else {
-    state.predictCurrentSimulationConstShares = normalizePredictShareMap(
+    _state.predictCurrentSimulationConstShares = normalizePredictShareMap(
       buildPredictBaselineShares(seats),
     );
   }
 
-  state.predictCurrentSimulationLoaded = true;
+  _state.predictCurrentSimulationLoaded = true;
   return true;
 }
 
@@ -4121,27 +4129,27 @@ async function ensurePredictCurrentSimulationData() {
  * @returns {void}
  */
 function commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary) {
-  state.currentElectionType = state.currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
+  _state.currentElectionType = _state.currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
   updateElectionCountdown();
-  state.currentSeats = projectedSeats;
-  state.currentSeatsByKey = buildSeatIndex(projectedSeats);
-  state.currentComparisonSeats = state.predictBaseSeats;
-  state.comparisonSeatsByKey = state.predictBaseSeatsByKey;
-  state.currentMapData = state.predictBaseMapData;
-  state.currentRegionLabelsByKey = state.predictBaseRegionLabelsByKey;
+  _state.currentSeats = projectedSeats;
+  _state.currentSeatsByKey = buildSeatIndex(projectedSeats);
+  _state.currentComparisonSeats = _state.predictBaseSeats;
+  _state.comparisonSeatsByKey = _state.predictBaseSeatsByKey;
+  _state.currentMapData = _state.predictBaseMapData;
+  _state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
 
   window.__mapsShowVoteTotals = false;
   window.__mapsCurrentSummary = projectedSummary;
   window.__mapsComparisonSummary = baselineSummary;
 
   const predictLabel = `Predict ${predictElectionYear()}`;
-  updateTopSummary({ name: predictLabel, parliament: state.currentParliament }, projectedSummary);
+  updateTopSummary({ name: predictLabel, parliament: _state.currentParliament }, projectedSummary);
   renderMapWithViewState({ preserveZoom: true });
   syncRightPanelHeightToMap();
 
-  if (state.currentOpenSeatName) {
-    renderSeatPopup(state.currentOpenSeatName);
-    state.mapInteractionController.highlightSeat(state.currentOpenSeatName);
+  if (_state.currentOpenSeatName) {
+    renderSeatPopup(_state.currentOpenSeatName);
+    _state.mapInteractionController.highlightSeat(_state.currentOpenSeatName);
   }
 }
 
@@ -4150,22 +4158,22 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
  * @returns {void}
  */
 function applyPredictModeProjection() {
-  if (!state.predictModeActive) return;
-  if (!state.predictBaseSeats.length || !state.predictBaseMapData) return;
+  if (!_state.predictModeActive) return;
+  if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) return;
 
   const hasHolyroodSwings =
-    [...state.predictHolyroodConstSwingsByParty.values()].some((m) => m.size > 0) ||
-    [...state.predictHolyroodListSwingsByParty.values()].some((m) => m.size > 0);
-  const hasWestminsterSwings = state.predictRegionalSwingsByParty.size > 0;
-  const projectedSeats = state.currentParliament === 'holyrood'
+    [..._state.predictHolyroodConstSwingsByParty.values()].some((m) => m.size > 0) ||
+    [..._state.predictHolyroodListSwingsByParty.values()].some((m) => m.size > 0);
+  const hasWestminsterSwings = _state.predictRegionalSwingsByParty.size > 0;
+  const projectedSeats = _state.currentParliament === 'holyrood'
     ? hasHolyroodSwings
-      ? projectHolyroodSeats(state.predictBaseSeats, state.predictHolyroodConstSwingsByParty, state.predictHolyroodListSwingsByParty)
-      : state.predictBaseSeats.slice()
+      ? projectHolyroodSeats(_state.predictBaseSeats, _state.predictHolyroodConstSwingsByParty, _state.predictHolyroodListSwingsByParty)
+      : _state.predictBaseSeats.slice()
     : hasWestminsterSwings
-      ? state.predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, state.predictRegionalSwingsByParty))
-      : state.predictBaseSeats.slice();
-  const projectedSummary = summarizeElection(projectedSeats, { mode: state.voteTotalsMode });
-  const baselineSummary = summarizeElection(state.predictBaseSeats, { mode: state.voteTotalsMode });
+      ? _state.predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, _state.predictRegionalSwingsByParty))
+      : _state.predictBaseSeats.slice();
+  const projectedSummary = summarizeElection(projectedSeats, { mode: _state.voteTotalsMode });
+  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: _state.voteTotalsMode });
 
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
 }
@@ -4175,59 +4183,59 @@ function applyPredictModeProjection() {
  * @returns {Promise<void>}
  */
 async function activatePredictMode() {
-  if (!state.currentSeats.length || !state.currentMapData) return;
+  if (!_state.currentSeats.length || !_state.currentMapData) return;
 
-  state.pollTrackerModeActive = false;
+  _state.pollTrackerModeActive = false;
   setPollTrackerNavState(false);
   setPollTrackerLayoutVisible(false);
 
-  state.predictModeActive = true;
+  _state.predictModeActive = true;
   document.querySelectorAll('.maps-election-item.active').forEach((node) => {
     node.classList.remove('active');
   });
   setPredictModeNavState(true);
   syncPredictModeRightColumnLayout();
 
-  if (!state.predictBaseSeats.length || !state.predictBaseMapData) {
+  if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {
     const loaded2024 = await ensurePredictBaselineData();
     if (!loaded2024) {
-      state.predictBaseSeats = state.currentSeats.map((seat) => ({
+      _state.predictBaseSeats = _state.currentSeats.map((seat) => ({
         ...seat,
         votes: { ...(seat.votes || {}) },
       }));
-      state.predictBaseSeatsByKey = buildSeatIndex(state.predictBaseSeats);
-      state.predictBaseMapData = state.currentMapData;
-      state.predictBaseRegionLabelsByKey = new Map(state.currentRegionLabelsByKey);
-      state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(state.predictBaseSeats));
+      _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
+      _state.predictBaseMapData = _state.currentMapData;
+      _state.predictBaseRegionLabelsByKey = new Map(_state.currentRegionLabelsByKey);
+      _state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(_state.predictBaseSeats));
     }
   }
 
-  state.predictRegionalSwingsByParty = new Map();
-  state.predictInputByRegionParty = normalizePredictShareMap(state.predictBaselineShareByRegionParty);
-  state.predictEnglandExpanded = false;
-  state.predictColumnPartyKeys = collectPredictPartyKeys();
+  _state.predictRegionalSwingsByParty = new Map();
+  _state.predictInputByRegionParty = normalizePredictShareMap(_state.predictBaselineShareByRegionParty);
+  _state.predictEnglandExpanded = false;
+  _state.predictColumnPartyKeys = collectPredictPartyKeys();
 
-  if (state.currentParliament === 'holyrood') {
-    state.predictHolyroodTab = 'constituency';
-    state.predictHolyroodRegionsExpanded = false;
-    state.predictConstInputByRegionParty = new Map();
-    state.predictListInputByRegionParty = new Map();
-    state.predictHolyroodConstSwingsByParty = new Map();
-    state.predictHolyroodListSwingsByParty = new Map();
-    const regionKeys = Array.from(state.predictBaseRegionLabelsByKey.keys());
+  if (_state.currentParliament === 'holyrood') {
+    _state.predictHolyroodTab = 'constituency';
+    _state.predictHolyroodRegionsExpanded = false;
+    _state.predictConstInputByRegionParty = new Map();
+    _state.predictListInputByRegionParty = new Map();
+    _state.predictHolyroodConstSwingsByParty = new Map();
+    _state.predictHolyroodListSwingsByParty = new Map();
+    const regionKeys = Array.from(_state.predictBaseRegionLabelsByKey.keys());
     // Build separate constituency and list baseline share maps
-    const constSeats = state.predictBaseSeats.filter((s) => !isListSeat(s.seat));
+    const constSeats = _state.predictBaseSeats.filter((s) => !isListSeat(s.seat));
     const seenListRegions = new Set();
-    const deduplicatedListSeats = state.predictBaseSeats.filter((s) => {
+    const deduplicatedListSeats = _state.predictBaseSeats.filter((s) => {
       if (!isListSeat(s.seat)) return false;
       if (seenListRegions.has(s.region)) return false;
       seenListRegions.add(s.region);
       return true;
     });
-    state.predictBaselineConstShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(constSeats));
-    state.predictBaselineListShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(deduplicatedListSeats));
-    state.predictNationalBaselines = buildHolyroodNationalBaselines(state.predictBaselineConstShareByRegionParty, state.predictColumnPartyKeys, regionKeys);
-    state.predictNationalListBaselines = buildHolyroodNationalBaselines(state.predictBaselineListShareByRegionParty, state.predictColumnPartyKeys, regionKeys);
+    _state.predictBaselineConstShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(constSeats));
+    _state.predictBaselineListShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(deduplicatedListSeats));
+    _state.predictNationalBaselines = buildHolyroodNationalBaselines(_state.predictBaselineConstShareByRegionParty, _state.predictColumnPartyKeys, regionKeys);
+    _state.predictNationalListBaselines = buildHolyroodNationalBaselines(_state.predictBaselineListShareByRegionParty, _state.predictColumnPartyKeys, regionKeys);
     renderHolyroodPredictTabs();
     applyPredictShareStateFromUrl(readPredictShareStateFromUrl());
   } else {
@@ -4252,7 +4260,7 @@ async function activatePredictMode() {
  * Loads the current model prediction's seats directly onto the map and populates the predict
  * grid inputs with the corresponding per-region vote shares. Seats are taken directly from the
  * prediction data file rather than re-projected through the simplified UNS, so the map reflects
- * the exact model output. For Westminster, replaces state.predictInputByRegionParty with the simulation
+ * the exact model output. For Westminster, replaces _state.predictInputByRegionParty with the simulation
  * shares. For Holyrood, replaces the constituency and list input maps (region-keyed entries only;
  * the national row is left blank so it continues to display baseline averages).
  * @returns {Promise<void>}
@@ -4264,57 +4272,57 @@ async function applyCurrentPredictionToInputs() {
     return;
   }
 
-  if (state.currentParliament === 'holyrood') {
-    state.predictConstInputByRegionParty = new Map(
-      state.predictHolyroodRegionsExpanded ? state.predictCurrentSimulationConstShares : [],
+  if (_state.currentParliament === 'holyrood') {
+    _state.predictConstInputByRegionParty = new Map(
+      _state.predictHolyroodRegionsExpanded ? _state.predictCurrentSimulationConstShares : [],
     );
-    state.predictListInputByRegionParty = new Map(
-      state.predictHolyroodRegionsExpanded ? state.predictCurrentSimulationListShares : [],
+    _state.predictListInputByRegionParty = new Map(
+      _state.predictHolyroodRegionsExpanded ? _state.predictCurrentSimulationListShares : [],
     );
-    if (!state.predictHolyroodRegionsExpanded) {
+    if (!_state.predictHolyroodRegionsExpanded) {
       // Collapsed: national is source of truth — set national entries only.
-      const regionKeys = Array.from(state.predictBaseRegionLabelsByKey.keys());
+      const regionKeys = Array.from(_state.predictBaseRegionLabelsByKey.keys());
       const constNationals = buildHolyroodNationalBaselines(
-        state.predictCurrentSimulationConstShares, state.predictColumnPartyKeys, regionKeys,
+        _state.predictCurrentSimulationConstShares, _state.predictColumnPartyKeys, regionKeys,
       );
       const listNationals = buildHolyroodNationalBaselines(
-        state.predictCurrentSimulationListShares, state.predictColumnPartyKeys, regionKeys,
+        _state.predictCurrentSimulationListShares, _state.predictColumnPartyKeys, regionKeys,
       );
-      for (const pk of state.predictColumnPartyKeys) {
-        state.predictConstInputByRegionParty.set(
+      for (const pk of _state.predictColumnPartyKeys) {
+        _state.predictConstInputByRegionParty.set(
           predictInputKey(HOLYROOD_NATIONAL_KEY, pk),
           roundPredictShareValue(constNationals.get(pk) ?? 0),
         );
-        state.predictListInputByRegionParty.set(
+        _state.predictListInputByRegionParty.set(
           predictInputKey(HOLYROOD_NATIONAL_KEY, pk),
           roundPredictShareValue(listNationals.get(pk) ?? 0),
         );
       }
     }
-  } else if (state.predictEnglandExpanded) {
+  } else if (_state.predictEnglandExpanded) {
     // Expanded: sub-regions are source of truth. Populate sub-region entries only;
     // omit the England aggregate so the disabled row shows no stale override.
-    state.predictInputByRegionParty = new Map();
-    for (const [key, value] of state.predictCurrentSimulationConstShares) {
+    _state.predictInputByRegionParty = new Map();
+    for (const [key, value] of _state.predictCurrentSimulationConstShares) {
       const regionKey = key.split('::')[0];
       if (regionKey !== PREDICT_ENGLAND_KEY) {
-        state.predictInputByRegionParty.set(key, value);
+        _state.predictInputByRegionParty.set(key, value);
       }
     }
   } else {
     // Collapsed: England aggregate is source of truth. Set all entries including aggregate.
-    state.predictInputByRegionParty = new Map(state.predictCurrentSimulationConstShares);
+    _state.predictInputByRegionParty = new Map(_state.predictCurrentSimulationConstShares);
   }
 
   // Load the prediction seats directly rather than re-projecting from the derived
   // regional shares, so the map reflects the exact model output rather than an
   // approximation produced by the simplified UNS projection.
-  const projectedSeats = state.predictCurrentSimulationSeats.map((s) => ({
+  const projectedSeats = _state.predictCurrentSimulationSeats.map((s) => ({
     ...s,
     votes: { ...(s.votes || {}) },
   }));
-  const projectedSummary = summarizeElection(projectedSeats, { mode: state.voteTotalsMode });
-  const baselineSummary = summarizeElection(state.predictBaseSeats, { mode: state.voteTotalsMode });
+  const projectedSummary = summarizeElection(projectedSeats, { mode: _state.voteTotalsMode });
+  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: _state.voteTotalsMode });
 
   renderPredictGrid();
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
@@ -4361,11 +4369,11 @@ function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
 function collectPartyKeysForControls() {
   const mergeKey = (key) => (key === 'other' ? 'others' : key);
   const keys = new Set(['all']);
-  state.currentSeats.forEach((seat) => {
+  _state.currentSeats.forEach((seat) => {
     keys.add(mergeKey(seat.winner || 'others'));
     Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
   });
-  state.currentComparisonSeats.forEach((seat) => {
+  _state.currentComparisonSeats.forEach((seat) => {
     keys.add(mergeKey(seat.winner || 'others'));
     Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
   });
@@ -4382,7 +4390,7 @@ function collectPartyKeysForControls() {
  */
 function collectRegionsForControls() {
   const byKey = new Map();
-  state.currentSeats.forEach((seat) => {
+  _state.currentSeats.forEach((seat) => {
     const key = normalizeRegionKey(seat.region);
     if (!key) return;
     if (!byKey.has(key)) byKey.set(key, labelRegion(seat.region));
@@ -4396,50 +4404,50 @@ function collectRegionsForControls() {
 }
 
 /**
- * Pushes the current state.mapViewState values into the DOM filter/choropleth inputs and toggles second-party group visibility.
+ * Pushes the current _state.mapViewState values into the DOM filter/choropleth inputs and toggles second-party group visibility.
  * @returns {void}
  */
 function syncMapControlInputsFromState() {
-  if (filterPartySelect) filterPartySelect.value = state.mapViewState.filterParty;
-  if (filterRegionSelect) filterRegionSelect.value = state.mapViewState.filterRegion;
+  if (filterPartySelect) filterPartySelect.value = _state.mapViewState.filterParty;
+  if (filterRegionSelect) filterRegionSelect.value = _state.mapViewState.filterRegion;
 
-  const showSecondPlaceFilter = state.mapViewState.filterParty !== 'all';
+  const showSecondPlaceFilter = _state.mapViewState.filterParty !== 'all';
   if (filterSecondPartyGroup) filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
   if (!showSecondPlaceFilter) {
-    state.mapViewState.filterSecondParty = 'all';
+    _state.mapViewState.filterSecondParty = 'all';
   }
-  if (filterSecondPartySelect) filterSecondPartySelect.value = state.mapViewState.filterSecondParty;
+  if (filterSecondPartySelect) filterSecondPartySelect.value = _state.mapViewState.filterSecondParty;
 
-  if (filterMajorityMinInput) filterMajorityMinInput.value = String(state.mapViewState.majorityMin);
-  if (filterMajorityMaxInput) filterMajorityMaxInput.value = String(state.mapViewState.majorityMax);
-  if (filterGainsButton) filterGainsButton.classList.toggle('is-active', state.mapViewState.gainsOnly);
+  if (filterMajorityMinInput) filterMajorityMinInput.value = String(_state.mapViewState.majorityMin);
+  if (filterMajorityMaxInput) filterMajorityMaxInput.value = String(_state.mapViewState.majorityMax);
+  if (filterGainsButton) filterGainsButton.classList.toggle('is-active', _state.mapViewState.gainsOnly);
 
-  if (choroplethTypeSelect) choroplethTypeSelect.value = state.mapViewState.choroplethType;
-  if (choroplethPartySelect) choroplethPartySelect.value = state.mapViewState.choroplethParty;
+  if (choroplethTypeSelect) choroplethTypeSelect.value = _state.mapViewState.choroplethType;
+  if (choroplethPartySelect) choroplethPartySelect.value = _state.mapViewState.choroplethParty;
 }
 
 /**
- * Reads the DOM filter/choropleth inputs into state.mapViewState, normalizing and clamping values, then syncs the inputs back.
+ * Reads the DOM filter/choropleth inputs into _state.mapViewState, normalizing and clamping values, then syncs the inputs back.
  * @returns {void}
  */
 function syncMapControlStateFromInputs() {
-  if (filterPartySelect) state.mapViewState.filterParty = filterPartySelect.value || 'all';
-  if (filterRegionSelect) state.mapViewState.filterRegion = filterRegionSelect.value || 'all';
-  if (state.mapViewState.filterParty === 'all') {
-    state.mapViewState.filterSecondParty = 'all';
+  if (filterPartySelect) _state.mapViewState.filterParty = filterPartySelect.value || 'all';
+  if (filterRegionSelect) _state.mapViewState.filterRegion = filterRegionSelect.value || 'all';
+  if (_state.mapViewState.filterParty === 'all') {
+    _state.mapViewState.filterSecondParty = 'all';
   } else if (filterSecondPartySelect) {
-    state.mapViewState.filterSecondParty = filterSecondPartySelect.value || 'all';
+    _state.mapViewState.filterSecondParty = filterSecondPartySelect.value || 'all';
   }
-  if (filterMajorityMinInput) state.mapViewState.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
-  if (filterMajorityMaxInput) state.mapViewState.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
-  if (state.mapViewState.majorityMin > state.mapViewState.majorityMax) {
-    const swap = state.mapViewState.majorityMin;
-    state.mapViewState.majorityMin = state.mapViewState.majorityMax;
-    state.mapViewState.majorityMax = swap;
+  if (filterMajorityMinInput) _state.mapViewState.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
+  if (filterMajorityMaxInput) _state.mapViewState.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
+  if (_state.mapViewState.majorityMin > _state.mapViewState.majorityMax) {
+    const swap = _state.mapViewState.majorityMin;
+    _state.mapViewState.majorityMin = _state.mapViewState.majorityMax;
+    _state.mapViewState.majorityMax = swap;
   }
 
-  if (choroplethTypeSelect) state.mapViewState.choroplethType = choroplethTypeSelect.value || 'none';
-  if (choroplethPartySelect) state.mapViewState.choroplethParty = choroplethPartySelect.value || 'all';
+  if (choroplethTypeSelect) _state.mapViewState.choroplethType = choroplethTypeSelect.value || 'none';
+  if (choroplethPartySelect) _state.mapViewState.choroplethParty = choroplethPartySelect.value || 'all';
 
   syncMapControlInputsFromState();
 }
@@ -4449,12 +4457,12 @@ function syncMapControlStateFromInputs() {
  * @returns {void}
  */
 function resetPrimaryFilters() {
-  state.mapViewState.filterParty = 'all';
-  state.mapViewState.filterRegion = 'all';
-  state.mapViewState.filterSecondParty = 'all';
-  state.mapViewState.majorityMin = 0;
-  state.mapViewState.majorityMax = 100;
-  state.mapViewState.gainsOnly = false;
+  _state.mapViewState.filterParty = 'all';
+  _state.mapViewState.filterRegion = 'all';
+  _state.mapViewState.filterSecondParty = 'all';
+  _state.mapViewState.majorityMin = 0;
+  _state.mapViewState.majorityMax = 100;
+  _state.mapViewState.gainsOnly = false;
   syncMapControlInputsFromState();
 }
 
@@ -4463,8 +4471,8 @@ function resetPrimaryFilters() {
  * @returns {void}
  */
 function resetChoropleths() {
-  state.mapViewState.choroplethType = 'none';
-  state.mapViewState.choroplethParty = 'all';
+  _state.mapViewState.choroplethType = 'none';
+  _state.mapViewState.choroplethParty = 'all';
   syncMapControlInputsFromState();
 }
 
@@ -4494,10 +4502,10 @@ function populateMapControlOptions() {
  * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
-  if (state.currentElectionId === 'eu-referendum-2016' && (state.mapViewState.choroplethType === 'none' || state.mapViewState.choroplethParty === 'all')) {
+  if (_state.currentElectionId === 'eu-referendum-2016' && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
     const valueBySeatKey = new Map();
     const values = [];
-    state.currentSeats.forEach((seat) => {
+    _state.currentSeats.forEach((seat) => {
       const seatKey = seatLookupKey(seat.seat);
       if (!visibleSeatKeys.has(seatKey)) return;
       if (isPredictNorthernIrelandRegion(seat.region)) return;
@@ -4527,17 +4535,17 @@ function buildChoroplethConfig(visibleSeatKeys) {
     };
   }
 
-  if (state.mapViewState.choroplethType === 'none' || state.mapViewState.choroplethParty === 'all') return { enabled: false };
-  const isDelta = state.mapViewState.choroplethType === 'voteShareChange';
+  if (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all') return { enabled: false };
+  const isDelta = _state.mapViewState.choroplethType === 'voteShareChange';
 
   const valueBySeatKey = new Map();
   const values = [];
 
-  state.currentSeats.forEach((seat) => {
+  _state.currentSeats.forEach((seat) => {
     const seatKey = seatLookupKey(seat.seat);
     if (!visibleSeatKeys.has(seatKey)) return;
-    const comparisonSeat = state.comparisonSeatsByKey.get(seatKey) || null;
-    const value = getChoroplethValue(seat, comparisonSeat, state.mapViewState.choroplethType, state.mapViewState.choroplethParty);
+    const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
+    const value = getChoroplethValue(seat, comparisonSeat, _state.mapViewState.choroplethType, _state.mapViewState.choroplethParty);
     if (!Number.isFinite(value)) return;
     valueBySeatKey.set(seatKey, value);
     values.push(value);
@@ -4545,8 +4553,8 @@ function buildChoroplethConfig(visibleSeatKeys) {
 
   if (!values.length) return { enabled: false };
 
-  const selectedPartyLabel = labelParty(state.mapViewState.choroplethParty);
-  const selectedPartyColour = colourParty(state.mapViewState.choroplethParty);
+  const selectedPartyLabel = labelParty(_state.mapViewState.choroplethParty);
+  const selectedPartyColour = colourParty(_state.mapViewState.choroplethParty);
   const legendBase = {
     party: selectedPartyLabel,
     isDelta,
@@ -4642,49 +4650,49 @@ function renderChoroplethLegend(choroplethConfig) {
  * @returns {void}
  */
 function refreshElectionSeatStateAndRender() {
-  if (!Array.isArray(state.baseElectionSeats) || !state.baseElectionSeats.length) return;
+  if (!Array.isArray(_state.baseElectionSeats) || !_state.baseElectionSeats.length) return;
 
-  state.currentSeats = state.baseElectionSeats.map((seat) => cloneSeatRecord(seat));
-  state.currentSeatsByKey = buildSeatIndex(state.currentSeats);
-  state.currentComparisonSeats = (state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
-  state.comparisonSeatsByKey = buildSeatIndex(state.currentComparisonSeats);
+  _state.currentSeats = _state.baseElectionSeats.map((seat) => cloneSeatRecord(seat));
+  _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
+  _state.currentComparisonSeats = (_state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
+  _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
-  const currentElectionEntry = manifest?.elections?.find((e) => e.id === state.currentElectionId);
+  const currentElectionEntry = manifest?.elections?.find((e) => e.id === _state.currentElectionId);
   const mapConfig = manifest.mapModes[String(currentElectionEntry?.mapId)];
-  state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
-  state.currentSeatView = mapConfig?.seatViews?.[0]?.id ?? 'seats';
-  const summary = summarizeElection(state.currentSeats);
-  const currentElection = manifest?.elections?.find((entry) => entry.id === state.currentElectionId) || null;
+  _state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
+  _state.currentSeatView = mapConfig?.seatViews?.[0]?.id ?? 'seats';
+  const summary = summarizeElection(_state.currentSeats);
+  const currentElection = manifest?.elections?.find((entry) => entry.id === _state.currentElectionId) || null;
   if (currentElection) {
     updateTopSummary(currentElection, summary);
   }
 
   window.__mapsCurrentSummary = summary;
-  window.__mapsComparisonSummary = state.defaultComparisonSummary;
+  window.__mapsComparisonSummary = _state.defaultComparisonSummary;
   renderMapWithViewState();
   syncRightPanelHeightToMap();
 }
 
 /**
- * Renders the map, seat list, vote totals, and choropleth legend for the current filter/choropleth state.
+ * Renders the map, seat list, vote totals, and choropleth legend for the current filter/choropleth _state.
  * Accepts { preserveZoom: true } to retain the current pan/zoom transform.
  * @param {{preserveZoom?: boolean}} [options={}] - Rendering options; set preserveZoom to true to keep the current d3 zoom transform.
  * @returns {void}
  */
 function renderMapWithViewState(options = {}) {
-  if (!state.currentMapData) return;
+  if (!_state.currentMapData) return;
 
-  const visibleSeatKeys = buildVisibleSeatKeySet(state.currentSeats, state.comparisonSeatsByKey, state.mapViewState, state.currentByElectionSeats);
-  const visibleSeats = state.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
+  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, _state.currentByElectionSeats);
+  const visibleSeats = _state.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
   const visibleComparisonSeats = Array.from(visibleSeatKeys)
-    .map((seatKey) => state.comparisonSeatsByKey.get(seatKey))
+    .map((seatKey) => _state.comparisonSeatsByKey.get(seatKey))
     .filter(Boolean);
   const choroplethConfig = buildChoroplethConfig(visibleSeatKeys);
 
-  const currentElection = manifest?.elections?.find((e) => e.id === state.currentElectionId);
+  const currentElection = manifest?.elections?.find((e) => e.id === _state.currentElectionId);
   const mapConfig = manifest.mapModes[String(currentElection?.mapId)];
 
-  state.hiddenVoteTotalsParties = new Set(mapConfig?.hiddenVoteTotalsParties ?? []);
+  _state.hiddenVoteTotalsParties = new Set(mapConfig?.hiddenVoteTotalsParties ?? []);
   renderVoteTotalsTabs(mapConfig);
   updateVoteTotalsTabsUI();
   renderSeatViewTabs(mapConfig);
@@ -4695,10 +4703,10 @@ function renderMapWithViewState(options = {}) {
   window.__mapsVisibleComparisonSeats = visibleComparisonSeats;
 
   const hasMultipleVoteViews = (mapConfig?.voteTotalsViews?.length ?? 0) > 1;
-  const showVotes = !hasMultipleVoteViews || state.voteTotalsMode !== 'all';
-  const filteredSummary = summarizeElection(visibleSeats, { mode: state.voteTotalsMode });
-  const filteredComparisonSummary = state.currentComparisonSeats.length
-    ? summarizeElection(visibleComparisonSeats, { mode: state.voteTotalsMode })
+  const showVotes = !hasMultipleVoteViews || _state.voteTotalsMode !== 'all';
+  const filteredSummary = summarizeElection(visibleSeats, { mode: _state.voteTotalsMode });
+  const filteredComparisonSummary = _state.currentComparisonSeats.length
+    ? summarizeElection(visibleComparisonSeats, { mode: _state.voteTotalsMode })
     : null;
 
   window.__mapsCurrentSummary = filteredSummary;
@@ -4714,12 +4722,12 @@ function renderMapWithViewState(options = {}) {
   const mapId = String(currentElection?.mapId ?? '');
 
   // Pass regionSummary (list seats) for Holyrood elections that have list seats.
-  const hasRegionTable = state.currentSeats.some((s) => isListSeat(s.seat));
+  const hasRegionTable = _state.currentSeats.some((s) => isListSeat(s.seat));
   const regionSummary = hasRegionTable
-    ? buildRegionSummary(state.currentSeats.filter((s) => isListSeat(s.seat)))
+    ? buildRegionSummary(_state.currentSeats.filter((s) => isListSeat(s.seat)))
     : null;
 
-  renderTopoMap(state.currentMapData, state.currentSeats, {
+  renderTopoMap(_state.currentMapData, _state.currentSeats, {
     visibleSeatKeys,
     choroplethConfig,
     ...(preserveTransform ? { preserveTransform } : {}),
@@ -4733,7 +4741,7 @@ function renderMapWithViewState(options = {}) {
   const filteredSeats = hasRegionTable
     ? visibleSeats.filter((s) => !isListSeat(s.seat))
     : visibleSeats;
-  renderSeatList(filteredSeats, state.currentComparisonSeats, {});
+  renderSeatList(filteredSeats, _state.currentComparisonSeats, {});
 
   applySeatSearchSuggestions(buildSeatSearchIndex(filteredSeats));
   renderChoroplethLegend(choroplethConfig);
@@ -4742,10 +4750,10 @@ function renderMapWithViewState(options = {}) {
     let previewText;
     if (hasRegionTable) {
       const visibleConst = visibleSeats.filter((s) => !isListSeat(s.seat));
-      const totalConst = state.currentSeats.filter((s) => !isListSeat(s.seat));
+      const totalConst = _state.currentSeats.filter((s) => !isListSeat(s.seat));
       previewText = `Showing ${formatInt(visibleConst.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
-      previewText = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(state.currentSeats.length)} seats.`;
+      previewText = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(_state.currentSeats.length)} seats.`;
     }
     seatPreview.textContent = previewText;
   }
@@ -4758,32 +4766,32 @@ function renderMapWithViewState(options = {}) {
 function hideSeatPopup() {
   if (!seatPopup) return;
   seatPopup.hidden = true;
-  state.currentOpenSeatName = null;
+  _state.currentOpenSeatName = null;
 }
 
 /**
  * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked vote share bar chart with comparison deltas.
- * @param {string} seatName - Display name of the seat to show; looked up in state.currentSeatsByKey.
+ * @param {string} seatName - Display name of the seat to show; looked up in _state.currentSeatsByKey.
  * @returns {void}
  */
 function renderSeatPopup(seatName) {
   if (!seatPopup || !seatPopupTitle || !seatPopupMeta || !seatPopupList) return;
 
   const seatKey = seatLookupKey(seatName);
-  const seat = state.currentSeatsByKey.get(seatKey);
+  const seat = _state.currentSeatsByKey.get(seatKey);
   if (!seat) {
     hideSeatPopup();
     return;
   }
-  state.currentOpenSeatName = seatName;
+  _state.currentOpenSeatName = seatName;
 
-  const comparisonSeat = state.comparisonSeatsByKey.get(seatKey) || null;
+  const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
   const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
   const turnout = totalVotesForSeat(seat);
   const majority = seatMajorityStats(seat);
-  const isReferendum = state.currentElectionId === 'eu-referendum-2016';
-  const showTurnout = state.currentElectionType !== 'model_uns' && !isReferendum;
-  const showRawMajority = state.currentElectionType !== 'model_uns' && !isReferendum;
+  const isReferendum = _state.currentElectionId === 'eu-referendum-2016';
+  const showTurnout = _state.currentElectionType !== 'model_uns' && !isReferendum;
+  const showRawMajority = _state.currentElectionType !== 'model_uns' && !isReferendum;
 
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
@@ -4832,19 +4840,19 @@ function renderSeatPopup(seatName) {
 }
 
 /**
- * Returns a sorted copy of party rows according to state.currentSort (party name alpha, or numeric column with label tiebreak).
+ * Returns a sorted copy of party rows according to _state.currentSort (party name alpha, or numeric column with label tiebreak).
  * @param {Array<object>} rows - Party summary rows with a `party` key and numeric fields matching sort key names.
  * @returns {Array<object>} New sorted array of party rows.
  */
 function sortPartyRows(rows) {
-  const multiplier = state.currentSort.direction === 'asc' ? 1 : -1;
+  const multiplier = _state.currentSort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
-    if (state.currentSort.key === 'party') {
+    if (_state.currentSort.key === 'party') {
       return multiplier * labelParty(a.party).localeCompare(labelParty(b.party));
     }
 
-    const av = Number(a[state.currentSort.key] || 0);
-    const bv = Number(b[state.currentSort.key] || 0);
+    const av = Number(a[_state.currentSort.key] || 0);
+    const bv = Number(b[_state.currentSort.key] || 0);
     if (av !== bv) return multiplier * (av - bv);
     // Tiebreak by vote share descending, then party name
     const voteDiff = Number(b.votePct || 0) - Number(a.votePct || 0);
@@ -4911,14 +4919,14 @@ function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
     };
   });
 
-  const sortedRows = sortPartyRows(rows).filter((r) => !state.hiddenVoteTotalsParties.has(r.party));
-  const visibleRows = state.voteTotalsExpanded ? sortedRows : sortedRows.slice(0, 7);
+  const sortedRows = sortPartyRows(rows).filter((r) => !_state.hiddenVoteTotalsParties.has(r.party));
+  const visibleRows = _state.voteTotalsExpanded ? sortedRows : sortedRows.slice(0, 7);
 
   if (voteTotalsToggle) {
     const canExpand = sortedRows.length > 7;
     voteTotalsToggle.hidden = !canExpand;
     if (canExpand) {
-      voteTotalsToggle.textContent = state.voteTotalsExpanded ? 'Show fewer' : 'Show all';
+      voteTotalsToggle.textContent = _state.voteTotalsExpanded ? 'Show fewer' : 'Show all';
     }
   }
 
@@ -4945,7 +4953,7 @@ function renderRegionPopup(regionKey, regionSummary) {
   const data = regionSummary.get(regionKey);
   if (!data) return;
 
-  state.currentOpenSeatName = null;
+  _state.currentOpenSeatName = null;
   seatPopupTitle.textContent = `${labelRegion(regionKey)} List Vote`;
 
   const totalSeats = Object.values(data.seatsByParty).reduce((a, b) => a + b, 0);
@@ -5002,7 +5010,7 @@ function renderRegionTable(regionSummary) {
     const tr = document.createElement('tr');
     tr.className = 'maps-region-table-row';
     tr.addEventListener('click', () => {
-      state.mapInteractionController.flashRegion(regionKey);
+      _state.mapInteractionController.flashRegion(regionKey);
       renderRegionPopup(regionKey, regionSummary);
     });
 
@@ -5056,8 +5064,8 @@ function renderRegionTable(regionSummary) {
 function renderSeatList(seats, comparisonSeats = null) {
   if (!seatList) return;
   seatList.innerHTML = '';
-  state.selectedSeatRow = null;
-  state.seatListRowByKey = new Map();
+  _state.selectedSeatRow = null;
+  _state.seatListRowByKey = new Map();
 
   const comparisonWinnerBySeat = comparisonSeats ? buildWinnerBySeat(comparisonSeats) : new Map();
 
@@ -5087,14 +5095,14 @@ function renderSeatList(seats, comparisonSeats = null) {
     item.addEventListener('click', () => {
       setSelectedSeatRowByKey(seatKey);
 
-      const zoomed = state.mapInteractionController.zoomToSeat(seatName);
+      const zoomed = _state.mapInteractionController.zoomToSeat(seatName);
       if (seatPreview) {
         seatPreview.textContent = zoomed ? `Selected: ${seatName}` : `Seat not found on map: ${seatName}`;
       }
       renderSeatPopup(seatName);
     });
 
-    state.seatListRowByKey.set(seatKey, item);
+    _state.seatListRowByKey.set(seatKey, item);
     seatList.appendChild(item);
   };
 
@@ -5107,36 +5115,36 @@ function renderSeatList(seats, comparisonSeats = null) {
  * @returns {void}
  */
 function setSelectedSeatRowByKey(seatKey) {
-  const nextRow = state.seatListRowByKey.get(seatKey);
+  const nextRow = _state.seatListRowByKey.get(seatKey);
   if (!nextRow) return;
 
-  if (state.selectedSeatRow && state.selectedSeatRow !== nextRow) {
-    state.selectedSeatRow.classList.remove('is-selected');
+  if (_state.selectedSeatRow && _state.selectedSeatRow !== nextRow) {
+    _state.selectedSeatRow.classList.remove('is-selected');
   }
   nextRow.classList.add('is-selected');
-  state.selectedSeatRow = nextRow;
+  _state.selectedSeatRow = nextRow;
 }
 
 /**
- * Builds the module-level seat name search index (state.seatSearchNames and state.currentSeatNameByKey) from the provided seats. Returns the sorted name array.
+ * Builds the module-level seat name search index (_state.seatSearchNames and _state.currentSeatNameByKey) from the provided seats. Returns the sorted name array.
  * @param {Array<object>} seats - Array of seat objects with a `seat` name property.
  * @returns {string[]} Sorted array of seat name strings for autocomplete use.
  */
 function buildSeatSearchIndex(seats) {
-  state.currentSeatNameByKey = new Map();
+  _state.currentSeatNameByKey = new Map();
   const names = [];
 
   (seats || []).forEach((seat) => {
     const seatName = String(seat?.seat || '').trim();
     if (!seatName) return;
     const key = seatLookupKey(seatName);
-    if (state.currentSeatNameByKey.has(key)) return;
-    state.currentSeatNameByKey.set(key, seatName);
+    if (_state.currentSeatNameByKey.has(key)) return;
+    _state.currentSeatNameByKey.set(key, seatName);
     names.push(seatName);
   });
 
   names.sort((a, b) => a.localeCompare(b));
-  state.seatSearchNames = names;
+  _state.seatSearchNames = names;
   return names;
 }
 
@@ -5145,7 +5153,7 @@ function buildSeatSearchIndex(seats) {
  * @returns {HTMLElement|null} The autocomplete menu element, or null if the seat search input is not in the DOM.
  */
 function ensureSeatSearchMenu() {
-  if (state.seatSearchMenuEl || !seatSearchInput) return state.seatSearchMenuEl;
+  if (_state.seatSearchMenuEl || !seatSearchInput) return _state.seatSearchMenuEl;
   const searchGroup = seatSearchInput.closest('.maps-toolbar-group-search') || seatSearchInput.parentElement;
   if (!searchGroup) return null;
 
@@ -5155,8 +5163,8 @@ function ensureSeatSearchMenu() {
   menu.setAttribute('role', 'listbox');
   menu.id = 'mapsSeatSearchMenu';
   searchGroup.appendChild(menu);
-  state.seatSearchMenuEl = menu;
-  return state.seatSearchMenuEl;
+  _state.seatSearchMenuEl = menu;
+  return _state.seatSearchMenuEl;
 }
 
 /**
@@ -5164,10 +5172,10 @@ function ensureSeatSearchMenu() {
  * @returns {void}
  */
 function hideSeatSearchSuggestions() {
-  state.seatSearchSuggestionIndex = -1;
-  if (!state.seatSearchMenuEl) return;
-  state.seatSearchMenuEl.hidden = true;
-  state.seatSearchMenuEl.innerHTML = '';
+  _state.seatSearchSuggestionIndex = -1;
+  if (!_state.seatSearchMenuEl) return;
+  _state.seatSearchMenuEl.hidden = true;
+  _state.seatSearchMenuEl.innerHTML = '';
 }
 
 /**
@@ -5182,7 +5190,7 @@ function showSeatSearchSuggestions(query = '') {
   const queryText = String(query || '').trim().toLowerCase();
   const startsWithMatches = [];
   const includesMatches = [];
-  state.seatSearchNames.forEach((name) => {
+  _state.seatSearchNames.forEach((name) => {
     const lowerName = name.toLowerCase();
     if (!queryText || lowerName.startsWith(queryText)) {
       startsWithMatches.push(name);
@@ -5191,16 +5199,16 @@ function showSeatSearchSuggestions(query = '') {
     if (lowerName.includes(queryText)) includesMatches.push(name);
   });
 
-  state.seatSearchSuggestions = [...startsWithMatches, ...includesMatches].slice(0, MAX_SEAT_SEARCH_SUGGESTIONS);
-  state.seatSearchSuggestionIndex = -1;
+  _state.seatSearchSuggestions = [...startsWithMatches, ...includesMatches].slice(0, MAX_SEAT_SEARCH_SUGGESTIONS);
+  _state.seatSearchSuggestionIndex = -1;
   menu.innerHTML = '';
 
-  if (!state.seatSearchSuggestions.length) {
+  if (!_state.seatSearchSuggestions.length) {
     menu.hidden = true;
     return;
   }
 
-  state.seatSearchSuggestions.forEach((name, index) => {
+  _state.seatSearchSuggestions.forEach((name, index) => {
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'maps-seat-search-item';
@@ -5222,15 +5230,15 @@ function showSeatSearchSuggestions(query = '') {
 }
 
 /**
- * Updates the keyboard-active (is-active) class on suggestion items to reflect state.seatSearchSuggestionIndex.
+ * Updates the keyboard-active (is-active) class on suggestion items to reflect _state.seatSearchSuggestionIndex.
  * @returns {void}
  */
 function updateSeatSearchHighlight() {
-  if (!state.seatSearchMenuEl) return;
-  const options = state.seatSearchMenuEl.querySelectorAll('.maps-seat-search-item');
+  if (!_state.seatSearchMenuEl) return;
+  const options = _state.seatSearchMenuEl.querySelectorAll('.maps-seat-search-item');
   options.forEach((option) => {
     const index = Number(option.dataset.index);
-    option.classList.toggle('is-active', index === state.seatSearchSuggestionIndex);
+    option.classList.toggle('is-active', index === _state.seatSearchSuggestionIndex);
   });
 }
 
@@ -5241,7 +5249,7 @@ function updateSeatSearchHighlight() {
  */
 function applySeatSearchSuggestions(seatNames) {
   if (!seatSearchInput) return;
-  state.seatSearchNames = Array.isArray(seatNames) ? [...seatNames] : [];
+  _state.seatSearchNames = Array.isArray(seatNames) ? [...seatNames] : [];
   hideSeatSearchSuggestions();
 }
 
@@ -5255,12 +5263,12 @@ function selectSeatBySearchQuery(query) {
   if (!rawQuery) return;
 
   const directKey = seatLookupKey(rawQuery);
-  let seatName = state.currentSeatNameByKey.get(directKey) || null;
+  let seatName = _state.currentSeatNameByKey.get(directKey) || null;
 
   if (!seatName) {
     const queryLower = rawQuery.toLowerCase();
-    seatName = Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().startsWith(queryLower))
-      || Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().includes(queryLower))
+    seatName = Array.from(_state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().startsWith(queryLower))
+      || Array.from(_state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().includes(queryLower))
       || null;
   }
 
@@ -5270,7 +5278,7 @@ function selectSeatBySearchQuery(query) {
   }
 
   const seatKey = seatLookupKey(seatName);
-  const zoomed = state.mapInteractionController.zoomToSeat(seatName);
+  const zoomed = _state.mapInteractionController.zoomToSeat(seatName);
   if (zoomed) {
     setSelectedSeatRowByKey(seatKey);
     renderSeatPopup(seatName);
@@ -5307,7 +5315,7 @@ function getMapName(mapId) {
  * @returns {number|null}
  */
 function getPostcodeMapId() {
-  const currentElection = manifest?.elections?.find((e) => e.id === state.currentElectionId);
+  const currentElection = manifest?.elections?.find((e) => e.id === _state.currentElectionId);
   const mapId = currentElection?.mapId;
   if (mapId == null) return null;
   const name = getMapName(mapId);
@@ -5346,11 +5354,11 @@ function showPostcodeError(msg) {
   postcodeSearchInput.value = msg;
   postcodeSearchInput.readOnly = true;
   postcodeSearchInput.classList.add('is-postcode-error');
-  state.postcodeErrorTimeout = window.setTimeout(() => {
+  _state.postcodeErrorTimeout = window.setTimeout(() => {
     postcodeSearchInput.readOnly = false;
     postcodeSearchInput.value = '';
     postcodeSearchInput.classList.remove('is-postcode-error');
-    state.postcodeErrorTimeout = null;
+    _state.postcodeErrorTimeout = null;
   }, 2000);
 }
 
@@ -5360,9 +5368,9 @@ function showPostcodeError(msg) {
  * @returns {void}
  */
 function clearPostcodeError() {
-  if (state.postcodeErrorTimeout) {
-    clearTimeout(state.postcodeErrorTimeout);
-    state.postcodeErrorTimeout = null;
+  if (_state.postcodeErrorTimeout) {
+    clearTimeout(_state.postcodeErrorTimeout);
+    _state.postcodeErrorTimeout = null;
   }
   if (postcodeSearchInput) {
     postcodeSearchInput.readOnly = false;
@@ -5419,7 +5427,7 @@ async function lookupPostcode(postcode) {
     // Holyrood 2021→2026 boundary mapping as a best-guess fallback.
     // Only applied on Holyrood to avoid false rewrites on Westminster lookups.
     const seatKey = seatLookupKey(constituencyName);
-    if (!state.currentSeatNameByKey.has(seatKey) && mapName === HOLYROOD_NEW_MAP_NAME) {
+    if (!_state.currentSeatNameByKey.has(seatKey) && mapName === HOLYROOD_NEW_MAP_NAME) {
       const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
       if (mapped) return mapped;
     }
@@ -5517,7 +5525,7 @@ function getLegacySeatZoomTransform(path, featureDatum, width, height) {
 /**
  * Renders the full TopoJSON map into mapSvg using D3.
  * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom and hover handlers,
- * draws region boundary overlays, and sets up state.mapInteractionController for external zoom/reset/highlight calls.
+ * draws region boundary overlays, and sets up _state.mapInteractionController for external zoom/reset/highlight calls.
  * Accepts { visibleSeatKeys, choroplethConfig, preserveTransform } in options.
  * @param {object} mapData - TopoJSON topology object with a single named objects entry.
  * @param {Array<object>} seats - Current seat objects used to determine winner colours.
@@ -5553,7 +5561,7 @@ function renderTopoMap(mapData, seats, options = {}) {
   const choroplethConfig = options.choroplethConfig || { enabled: false };
   const featureBySeat = new Map();
   const seatPathByKey = new Map();
-  state.activeSeatPathNode = null;
+  _state.activeSeatPathNode = null;
 
   features.forEach((featureDatum) => {
     const seatName = seatNameFromFeature(featureDatum);
@@ -5590,9 +5598,9 @@ function renderTopoMap(mapData, seats, options = {}) {
 
   /** Removes the active highlight class from the currently active seat path and clears the reference. */
   const clearActiveSeatPath = () => {
-    if (!state.activeSeatPathNode) return;
-    d3.select(state.activeSeatPathNode).classed('maps-region-path-active', false);
-    state.activeSeatPathNode = null;
+    if (!_state.activeSeatPathNode) return;
+    d3.select(_state.activeSeatPathNode).classed('maps-region-path-active', false);
+    _state.activeSeatPathNode = null;
   };
 
   /**
@@ -5602,10 +5610,10 @@ function renderTopoMap(mapData, seats, options = {}) {
    */
   const setActiveSeatPath = (pathNode) => {
     if (!pathNode) return;
-    if (state.activeSeatPathNode && state.activeSeatPathNode !== pathNode) {
-      d3.select(state.activeSeatPathNode).classed('maps-region-path-active', false);
+    if (_state.activeSeatPathNode && _state.activeSeatPathNode !== pathNode) {
+      d3.select(_state.activeSeatPathNode).classed('maps-region-path-active', false);
     }
-    state.activeSeatPathNode = pathNode;
+    _state.activeSeatPathNode = pathNode;
     d3.select(pathNode).classed('maps-region-path-active', true).raise();
   };
 
@@ -5616,7 +5624,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     svg.transition().duration(RESET_ZOOM_DURATION_MS).call(zoomBehavior.transform, initialTransform);
   };
 
-  state.mapInteractionController = {
+  _state.mapInteractionController = {
     zoomBy: (factor) => svg.transition().duration(180).call(zoomBehavior.scaleBy, factor),
     reset: resetZoom,
     clearSelection: clearActiveSeatPath,
@@ -5663,11 +5671,11 @@ function renderTopoMap(mapData, seats, options = {}) {
       const seatName = seatNameFromFeature(datum);
       if (!seatName) return colourParty('others');
       const seatKey = seatLookupKey(seatName);
-      if (state.currentElectionId === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
+      if (_state.currentElectionId === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
         return '#dce4ea';
       }
 
-      const seat = state.currentSeatsByKey.get(seatKey);
+      const seat = _state.currentSeatsByKey.get(seatKey);
       if (!seat) return colourParty('others');
 
       if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) {
@@ -5683,7 +5691,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       return colourParty(winner);
     })
     .attr('stroke', (datum) => {
-      if (state.currentElectionId !== 'eu-referendum-2016') return null;
+      if (_state.currentElectionId !== 'eu-referendum-2016') return null;
       return isPredictNorthernIrelandRegion(datum.properties?.region) ? '#dce4ea' : null;
     })
     .on('mouseenter', (_event, datum) => {
@@ -5723,7 +5731,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     const flashLayer = zoomLayer.append('g').attr('class', 'maps-region-flash-layer');
 
     // Flash animation: draw a temporary merged-region path that pulses and disappears.
-    state.mapInteractionController.flashRegion = (regionKey) => {
+    _state.mapInteractionController.flashRegion = (regionKey) => {
       const geoms = geometriesByRegion.get(regionKey);
       if (!geoms) return;
       const merged = topojsonMerge(mapData, geoms);
@@ -5750,32 +5758,32 @@ function renderTopoMap(mapData, seats, options = {}) {
  * @returns {void}
  */
 function resetPredictModeState() {
-  state.predictModeActive = false;
-  state.predictBaseSeats = [];
-  state.predictBaseSeatsByKey = new Map();
-  state.predictBaseMapData = null;
-  state.predictBaseRegionLabelsByKey = new Map();
-  state.predictColumnPartyKeys = [];
-  state.predictInputByRegionParty = new Map();
-  state.predictBaselineShareByRegionParty = new Map();
-  state.predictOtherCellByRegion = new Map();
-  state.predictEnglandExpanded = false;
-  state.predictRegionalSwingsByParty = new Map();
+  _state.predictModeActive = false;
+  _state.predictBaseSeats = [];
+  _state.predictBaseSeatsByKey = new Map();
+  _state.predictBaseMapData = null;
+  _state.predictBaseRegionLabelsByKey = new Map();
+  _state.predictColumnPartyKeys = [];
+  _state.predictInputByRegionParty = new Map();
+  _state.predictBaselineShareByRegionParty = new Map();
+  _state.predictOtherCellByRegion = new Map();
+  _state.predictEnglandExpanded = false;
+  _state.predictRegionalSwingsByParty = new Map();
   // Holyrood-specific state
-  state.predictHolyroodTab = 'constituency';
-  state.predictHolyroodRegionsExpanded = false;
-  state.predictConstInputByRegionParty = new Map();
-  state.predictListInputByRegionParty = new Map();
-  state.predictBaselineConstShareByRegionParty = new Map();
-  state.predictBaselineListShareByRegionParty = new Map();
-  state.predictHolyroodConstSwingsByParty = new Map();
-  state.predictHolyroodListSwingsByParty = new Map();
-  state.predictNationalBaselines = new Map();
-  state.predictNationalListBaselines = new Map();
-  state.predictCurrentSimulationLoaded = false;
-  state.predictCurrentSimulationSeats = [];
-  state.predictCurrentSimulationConstShares = new Map();
-  state.predictCurrentSimulationListShares = new Map();
+  _state.predictHolyroodTab = 'constituency';
+  _state.predictHolyroodRegionsExpanded = false;
+  _state.predictConstInputByRegionParty = new Map();
+  _state.predictListInputByRegionParty = new Map();
+  _state.predictBaselineConstShareByRegionParty = new Map();
+  _state.predictBaselineListShareByRegionParty = new Map();
+  _state.predictHolyroodConstSwingsByParty = new Map();
+  _state.predictHolyroodListSwingsByParty = new Map();
+  _state.predictNationalBaselines = new Map();
+  _state.predictNationalListBaselines = new Map();
+  _state.predictCurrentSimulationLoaded = false;
+  _state.predictCurrentSimulationSeats = [];
+  _state.predictCurrentSimulationConstShares = new Map();
+  _state.predictCurrentSimulationListShares = new Map();
   if (predictWindow) predictWindow.hidden = true;
   syncPredictModeRightColumnLayout();
 }
@@ -5785,8 +5793,8 @@ function resetPredictModeState() {
  * @returns {void}
  */
 function resetPollTrackerModeState() {
-  state.pollTrackerModeActive = false;
-  state.pollTrackerRangeSelection = 'all';
+  _state.pollTrackerModeActive = false;
+  _state.pollTrackerRangeSelection = 'all';
   setPollTrackerLayoutVisible(false);
   syncPredictModeRightColumnLayout();
 }

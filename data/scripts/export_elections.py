@@ -1443,11 +1443,8 @@ def main() -> None:
             data_file = existing_data_files.get(entry_id)
             if data_file and (output_root / data_file).exists():
                 if entry_type == "model_uns":
-                    # Insert at the top of the westminster elections (index 0)
                     insert_at = 0
                 elif entry_type in ("holyrood_uns", "holyrood_general"):
-                    # Insert before the first holyrood election already in the list,
-                    # or at the end if none present yet
                     insert_at = next(
                         (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
                         len(manifest_entries),

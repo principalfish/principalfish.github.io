@@ -1,4 +1,4 @@
-import { manifest, _state } from './state.js';
+import { manifest, _state, state } from './state.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
@@ -15,10 +15,10 @@ export function updateLeftBar({ onPredict, onPollTracker } = {}) {
 
 function updateParliamentTabsUI() {
   document.querySelectorAll('[data-parliament]').forEach((tab) => {
-    tab.classList.toggle('active', tab.dataset.parliament === _state.currentParliament);
+    tab.classList.toggle('active', tab.dataset.parliament === state.currentParliament);
   });
-  if (mapsTitle && _state.currentParliament) {
-    const label = _state.currentParliament[0].toUpperCase() + _state.currentParliament.slice(1);
+  if (mapsTitle && state.currentParliament) {
+    const label = state.currentParliament[0].toUpperCase() + state.currentParliament.slice(1);
     mapsTitle.textContent = `UK Election Maps · ${label}`;
   }
 }
@@ -32,14 +32,14 @@ function updateParliamentTabsUI() {
  * @returns {void}
  */
 function renderElectionLinks(onPredict, onPollTracker) {
-  const activeId = _state.currentElectionId;
+  const activeId = _state.pollTrackerModeActive ? null : state.currentElection?.id;
   if (!electionList) return;
 
   const createPredictButton = () => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'maps-election-item';
-    btn.textContent = _state.currentParliament === 'holyrood' ? 'Predict 2026' : 'Predict 2029';
+    btn.textContent = state.currentParliament === 'holyrood' ? 'Predict 2026' : 'Predict 2029';
     if (onPredict) btn.addEventListener('click', () => onPredict().catch(console.error));
     return btn;
   };
@@ -53,8 +53,8 @@ function renderElectionLinks(onPredict, onPollTracker) {
     return btn;
   };
 
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === _state.currentParliament);
-  const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
+  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
+  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
   const hasPredictMode = parlConfig.features?.includes('predict') ?? false;
   const hasPollTracker = parlConfig.features?.includes('pollTracker') ?? false;
   const predictAnchorId = parlConfig.predictAnchorElectionId ?? null;
@@ -66,7 +66,7 @@ function renderElectionLinks(onPredict, onPollTracker) {
   let insertedPollTrackerLink = false;
   parliamentElections.forEach((election) => {
     const link = document.createElement('a');
-    link.href = `?view=election&election=${encodeURIComponent(election.id)}&parliament=${_state.currentParliament}`;
+    link.href = `?view=election&election=${encodeURIComponent(election.id)}&parliament=${state.currentParliament}`;
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
     link.textContent = election.name;
     electionList.appendChild(link);

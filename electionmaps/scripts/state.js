@@ -17,8 +17,41 @@ export let manifest = null;
 export function initState(manifestData) {
   manifest = manifestData;
   hydrateManifestSettings();
+  setState();
+}
+
+/**
+ * Resolves URL params and manifest defaults into the shared state object.
+ * Called once per page load by initState, after the manifest is hydrated.
+ * Throws if no elections are configured for the resolved parliament.
+ * @returns {void}
+ */
+function setState() {
   const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
-  _state.currentParliament = getSearchParam('parliament') || defaultParliament;
+  state.currentParliament = getSearchParam('parliament') || defaultParliament;
+
+  const requestedId = getSearchParam('election');
+  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
+  let currentElection = parliamentElections.find((e) => e.id === requestedId);
+  if (!currentElection) {
+    const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
+    const anchorId = parlConfig.predictAnchorElectionId;
+    currentElection =
+      (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
+      || parliamentElections.find((e) => e.id === manifest.defaultElection)
+      || parliamentElections[0];
+  }
+
+  if (!currentElection) {
+    throw new Error('No elections configured in data/map-modes.json');
+  }
+
+  state.currentElection = {
+    ...currentElection,
+    byElectionSeatsSet: currentElection.byElectionSeats?.length
+      ? new Set(currentElection.byElectionSeats)
+      : null,
+  };
 }
 
 /**
@@ -99,9 +132,6 @@ export const _state = {
   activeSeatPathNode: null,
   currentOpenSeatName: null,
 
-  // Manifest
-  currentParliament: '',
-
   // Election / seat data
   currentSeats: [],
   currentComparisonSeats: [],
@@ -113,9 +143,6 @@ export const _state = {
   currentSeatNameByKey: new Map(),
   seatListRowByKey: new Map(),
   currentRegionLabelsByKey: new Map(),
-  currentElectionType: null,
-  currentElectionId: null,
-  currentByElectionSeats: null,
   currentMapData: null,
 
   // Map filters / choropleth
@@ -189,4 +216,30 @@ export const _state = {
   lastTrackedVirtualPagePath: '',
 };
 
-export const state = {};
+// ─── Current ─────────────────────────────────────────────────────────────────
+
+/**
+ * Current election context — updated on every election navigation.
+ * Imported by any module that needs to read the active election identity.
+ */
+export const state = {
+  /**
+   * The currently loaded election, spread from its manifest entry with one computed addition.
+   * Null before the first load. Sub-properties:
+   * - id {string} — unique election key (e.g. 'general-election-2024')
+   * - name {string} — display label shown in the nav
+   * - type {string} — 'uk_general' | 'holyrood_general' | 'holyrood_uns' | 'model_uns';
+   *     mutated to 'model_uns' or 'holyrood_uns' when predict mode activates
+   * - parliament {string} — 'westminster' | 'holyrood'
+   * - mapId {number} — key into manifest.mapModes for topology and region config
+   * - model {boolean|undefined} — true only on prediction elections; gates snippet fetch and predict mode
+   * - comparisonElectionId {string|undefined} — id of the election used for swing data
+   * - byElectionSeats {string[]|undefined} — raw constituency name list from the manifest
+   * - byElectionSeatsSet {Set<string>|null} — computed Set of byElectionSeats for O(1) lookup; null if none
+   */
+  currentElection: null,
+
+  /** Parliament key for the currently active parliament tab ('westminster' | 'holyrood').
+   * Resolved from the ?parliament= URL param on load, falling back to the manifest defaultElection's parliament. */
+  currentParliament: '',
+};

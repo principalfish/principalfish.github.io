@@ -47,27 +47,7 @@ async function initPollTracker() {
 }
 
 async function initElection(view) {
-  const requestedId = getSearchParam('election');
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === _state.currentParliament);
-  let currentElection = parliamentElections.find((e) => e.id === requestedId);
-  if (!currentElection) {
-    const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
-    const anchorId = parlConfig.predictAnchorElectionId;
-    currentElection =
-      (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
-      || parliamentElections.find((e) => e.id === manifest.defaultElection)
-      || parliamentElections[0];
-  }
-
-  if (!currentElection) {
-    throw new Error('No elections configured in data/map-modes.json');
-  }
-
-  _state.currentElectionId = currentElection.id;
-  _state.currentElectionType = currentElection.type;
-  _state.currentByElectionSeats = currentElection.byElectionSeats?.length
-    ? new Set(currentElection.byElectionSeats)
-    : null;
+  const currentElection = state.currentElection;
   _state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId);
   _state.defaultComparisonSummary = null;
   _state.defaultComparisonSeats = [];
@@ -75,7 +55,7 @@ async function initElection(view) {
   resetPollTrackerModeState();
 
   if (filterGainsButton) {
-    filterGainsButton.textContent = _state.currentByElectionSeats ? 'By-elections' : 'Gains';
+    filterGainsButton.textContent = state.currentElection.byElectionSeatsSet ? 'By-elections' : 'Gains';
     filterGainsButton.hidden = currentElection.id === 'eu-referendum-2016';
   }
   const isReferendumType = currentElection.id === 'eu-referendum-2016';
@@ -96,7 +76,7 @@ async function initElection(view) {
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
     ...(currentElection.model ? [
-      fetchJson(`data/${manifest.files.meta[_state.currentParliament]}`)
+      fetchJson(`data/${manifest.files.meta[state.currentParliament]}`)
         .then((p) => { _state.predictionSnippet = String(p?.latest_poll_snippet || '').trim(); })
         .catch(() => { _state.predictionSnippet = ''; }),
     ] : []),
@@ -140,11 +120,11 @@ async function initElection(view) {
 
 /**
  * Fetches the metadata snippet for the current parliament once per page load. Silently ignores fetch errors.
- * Uses _state.currentParliament to select the correct meta file from manifest.files.meta.
+ * Uses state.currentParliament to select the correct meta file from manifest.files.meta.
  * @returns {Promise<void>}
  */
 async function loadParliamentMetaIfNeeded() {
-  const metaPath = manifest.files.meta[_state.currentParliament];
+  const metaPath = manifest.files.meta[state.currentParliament];
   if (!metaPath || _state.predictionSnippet !== null) return;
   try {
     const payload = await fetchJson(`data/${metaPath}`);
@@ -2411,7 +2391,7 @@ function setMapsPageTitle(contextLabel, parliament = null) {
 /**
  * Builds a URLSearchParams for the given view, setting/removing the election and predict params as appropriate.
  * @param {string} view - View name to set ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to include; falls back to _state.currentElectionId if null.
+ * @param {string|null} [electionId=null] - Election ID to include; falls back to state.currentElection?.id if null.
  * @returns {URLSearchParams} Updated search params with view, election, and predict params adjusted.
  */
 function buildRouteSearchParams(view, electionId = null) {
@@ -2424,7 +2404,7 @@ function buildRouteSearchParams(view, electionId = null) {
     return params;
   }
 
-  const selectedElectionId = electionId || _state.currentElectionId;
+  const selectedElectionId = electionId || state.currentElection?.id;
   if (selectedElectionId) {
     params.set('election', selectedElectionId);
   }
@@ -2434,7 +2414,7 @@ function buildRouteSearchParams(view, electionId = null) {
 /**
  * Replaces the current browser history entry with the URL for the given view, then fires a virtual page view.
  * @param {string} view - View name ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to _state.currentElectionId.
+ * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to state.currentElection?.id.
  * @returns {void}
  */
 function replaceRouteState(view, electionId = null) {
@@ -2452,7 +2432,7 @@ function buildPredictShareStateSlots() {
   const rows = currentPredictInputRows();
   const slots = [];
 
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     ['c', 'l'].forEach((prefix) => {
       rows.forEach((row) => {
         predictPartyKeysForRegion(row.regionKey).forEach((partyKey) => {
@@ -2547,13 +2527,13 @@ function formatCountdown(ms) {
 /**
  * Shows or hides the election countdown element based on the current election type and mode.
  * Starts a 1-second interval tick when visible; clears it when hidden or after election day.
- * Visible only when _state.currentElectionType is 'holyrood_uns' and poll tracker is not active.
+ * Visible only when state.currentElection.type is 'holyrood_uns' and poll tracker is not active.
  * @returns {void}
  */
 function updateElectionCountdown() {
   if (!electionCountdownEl) return;
 
-  const shouldShow = _state.currentElectionType === 'holyrood_uns' && !_state.pollTrackerModeActive;
+  const shouldShow = state.currentElection.type === 'holyrood_uns' && !_state.pollTrackerModeActive;
 
   if (_state.countdownIntervalId !== null) {
     clearInterval(_state.countdownIntervalId);
@@ -3117,7 +3097,7 @@ function syncPredictModeRightColumnLayout() {
   const predictCollapsed = predictWindow.classList.contains('maps-predict-window--collapsed');
   const hideSeatCard = predictVisible && !predictCollapsed;
   const forcePredictGridScroll = predictVisible && !predictCollapsed &&
-    (_state.predictEnglandExpanded || (_state.currentParliament === 'holyrood' && _state.predictHolyroodRegionsExpanded));
+    (_state.predictEnglandExpanded || (state.currentParliament === 'holyrood' && _state.predictHolyroodRegionsExpanded));
   seatCard.hidden = hideSeatCard;
   seatCard.style.display = hideSeatCard ? 'none' : '';
 
@@ -3131,22 +3111,22 @@ function syncPredictModeRightColumnLayout() {
  * @returns {string[]} Array of column party keys for the GB section of the predict grid.
  */
 function collectPredictPartyKeys() {
-  if (_state.currentParliament === 'holyrood') return [...PREDICT_HOLYROOD_PARTY_KEYS];
+  if (state.currentParliament === 'holyrood') return [...PREDICT_HOLYROOD_PARTY_KEYS];
   return [...PREDICT_BASE_PARTY_KEYS, PREDICT_NAT_COLUMN_KEY];
 }
 
 function currentPredictInputRows() {
-  if (_state.currentParliament === 'holyrood') return collectHolyroodPredictInputRows(_state.predictBaseRegionLabelsByKey);
+  if (state.currentParliament === 'holyrood') return collectHolyroodPredictInputRows(_state.predictBaseRegionLabelsByKey);
   return collectPredictInputRows(_state.predictBaseRegionLabelsByKey, _state.predictEnglandExpanded);
 }
 
 function predictPartyKeysForRegion(regionKey) {
-  if (_state.currentParliament === 'holyrood') return _state.predictColumnPartyKeys;
+  if (state.currentParliament === 'holyrood') return _state.predictColumnPartyKeys;
   return collectPredictInputPartyKeysForRegion(regionKey);
 }
 
 function predictElectionYear() {
-  return _state.currentParliament === 'holyrood' ? '2026' : '2029';
+  return state.currentParliament === 'holyrood' ? '2026' : '2029';
 }
 
 /**
@@ -3442,7 +3422,7 @@ function updatePredictOtherCell(regionKey) {
  * @returns {string} Encoded predict payload string for use in the URL, or '' when no changes have been made.
  */
 function buildPredictShareStatePayload() {
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     const rows = currentPredictInputRows();
     const serializedRows = [];
     const passes = [
@@ -3521,7 +3501,7 @@ function readPredictShareStateFromUrl() {
 function applyPredictShareStateFromUrl(sharedState) {
   if (!sharedState) return;
 
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     const validRows = new Set([...currentPredictInputRows().map((row) => row.regionKey), HOLYROOD_NATIONAL_KEY]);
     const validParties = new Set(predictPartyKeysForRegion(HOLYROOD_NATIONAL_KEY));
     (sharedState.rows || []).forEach((entry) => {
@@ -3618,7 +3598,7 @@ async function sharePredictScenario() {
  * @returns {Array<{regionKey: string, regionLabel: string, total: number}>} Array of invalid region rows with their computed totals; empty when all regions are valid.
  */
 function validatePredictRowsNotOver100() {
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     const invalid = [];
     // Validate both passes — either can be over 100% regardless of which tab is active.
     ['constituency', 'list'].forEach((pass) => {
@@ -3654,7 +3634,7 @@ function validatePredictRowsNotOver100() {
  * @returns {void}
  */
 function rebuildPredictSwingsFromInputs() {
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     _state.predictHolyroodConstSwingsByParty = new Map();
     _state.predictHolyroodListSwingsByParty = new Map();
 
@@ -3703,7 +3683,7 @@ function rebuildPredictSwingsFromInputs() {
  * @returns {void}
  */
 function resetPredictInputsToBaseline() {
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     _state.predictHolyroodTab = 'constituency';
     _state.predictConstInputByRegionParty = new Map();
     _state.predictListInputByRegionParty = new Map();
@@ -3897,7 +3877,7 @@ function renderPredictGrid() {
     predictGrid.appendChild(sectionWrap);
   };
 
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     const tabMap = _state.predictHolyroodTab === 'list' ? _state.predictListInputByRegionParty
       : _state.predictConstInputByRegionParty;
     renderHolyroodTabGrid(tabMap, _state.predictHolyroodTab);
@@ -3931,7 +3911,7 @@ function renderPredictGrid() {
 async function ensurePredictBaselineData() {
   if (!manifest) return false;
 
-  const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
+  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
   const baselineId = parlConfig.predictBaselineElectionId;
   const baselineElection = manifest.elections.find((entry) => entry.id === baselineId);
   if (!baselineElection) return false;
@@ -3968,7 +3948,7 @@ async function ensurePredictCurrentSimulationData() {
   if (_state.predictCurrentSimulationLoaded) return true;
   if (!manifest) return false;
 
-  const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
+  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
   const simulationId = parlConfig.predictAnchorElectionId;
   if (!simulationId) return false;
 
@@ -3988,7 +3968,7 @@ async function ensurePredictCurrentSimulationData() {
 
   _state.predictCurrentSimulationSeats = seats;
 
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     const constSeats = seats.filter((s) => !isListSeat(s.seat));
     const seenListRegions = new Set();
     const deduplicatedListSeats = seats.filter((s) => {
@@ -4023,7 +4003,7 @@ async function ensurePredictCurrentSimulationData() {
  * @returns {void}
  */
 function commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary) {
-  _state.currentElectionType = _state.currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
+  state.currentElection.type = state.currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
   updateElectionCountdown();
   _state.currentSeats = projectedSeats;
   _state.currentSeatsByKey = buildSeatIndex(projectedSeats);
@@ -4037,7 +4017,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   window.__mapsComparisonSummary = baselineSummary;
 
   const predictLabel = `Predict ${predictElectionYear()}`;
-  updateTopSummary({ name: predictLabel, parliament: _state.currentParliament }, projectedSummary);
+  updateTopSummary({ name: predictLabel, parliament: state.currentParliament }, projectedSummary);
   renderMapWithViewState({ preserveZoom: true });
   syncRightPanelHeightToMap();
 
@@ -4059,7 +4039,7 @@ function applyPredictModeProjection() {
     [..._state.predictHolyroodConstSwingsByParty.values()].some((m) => m.size > 0) ||
     [..._state.predictHolyroodListSwingsByParty.values()].some((m) => m.size > 0);
   const hasWestminsterSwings = _state.predictRegionalSwingsByParty.size > 0;
-  const projectedSeats = _state.currentParliament === 'holyrood'
+  const projectedSeats = state.currentParliament === 'holyrood'
     ? hasHolyroodSwings
       ? projectHolyroodSeats(_state.predictBaseSeats, _state.predictHolyroodConstSwingsByParty, _state.predictHolyroodListSwingsByParty)
       : _state.predictBaseSeats.slice()
@@ -4109,7 +4089,7 @@ async function activatePredictMode() {
   _state.predictEnglandExpanded = false;
   _state.predictColumnPartyKeys = collectPredictPartyKeys();
 
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     _state.predictHolyroodTab = 'constituency';
     _state.predictHolyroodRegionsExpanded = false;
     _state.predictConstInputByRegionParty = new Map();
@@ -4166,7 +4146,7 @@ async function applyCurrentPredictionToInputs() {
     return;
   }
 
-  if (_state.currentParliament === 'holyrood') {
+  if (state.currentParliament === 'holyrood') {
     _state.predictConstInputByRegionParty = new Map(
       _state.predictHolyroodRegionsExpanded ? _state.predictCurrentSimulationConstShares : [],
     );
@@ -4396,7 +4376,7 @@ function populateMapControlOptions() {
  * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
-  if (_state.currentElectionId === 'eu-referendum-2016' && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
+  if (state.currentElection?.id === 'eu-referendum-2016' && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
     const valueBySeatKey = new Map();
     const values = [];
     _state.currentSeats.forEach((seat) => {
@@ -4551,14 +4531,12 @@ function refreshElectionSeatStateAndRender() {
   _state.currentComparisonSeats = (_state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
-  const currentElectionEntry = manifest?.elections?.find((e) => e.id === _state.currentElectionId);
-  const mapConfig = manifest.mapModes[String(currentElectionEntry?.mapId)];
+  const mapConfig = manifest.mapModes[String(state.currentElection?.mapId)];
   _state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
   _state.currentSeatView = mapConfig?.seatViews?.[0]?.id ?? 'seats';
   const summary = summarizeElection(_state.currentSeats);
-  const currentElection = manifest?.elections?.find((entry) => entry.id === _state.currentElectionId) || null;
-  if (currentElection) {
-    updateTopSummary(currentElection, summary);
+  if (state.currentElection) {
+    updateTopSummary(state.currentElection, summary);
   }
 
   window.__mapsCurrentSummary = summary;
@@ -4576,15 +4554,14 @@ function refreshElectionSeatStateAndRender() {
 function renderMapWithViewState(options = {}) {
   if (!_state.currentMapData) return;
 
-  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, _state.currentByElectionSeats);
+  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, state.currentElection.byElectionSeatsSet);
   const visibleSeats = _state.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
   const visibleComparisonSeats = Array.from(visibleSeatKeys)
     .map((seatKey) => _state.comparisonSeatsByKey.get(seatKey))
     .filter(Boolean);
   const choroplethConfig = buildChoroplethConfig(visibleSeatKeys);
 
-  const currentElection = manifest?.elections?.find((e) => e.id === _state.currentElectionId);
-  const mapConfig = manifest.mapModes[String(currentElection?.mapId)];
+  const mapConfig = manifest.mapModes[String(state.currentElection?.mapId)];
 
   _state.hiddenVoteTotalsParties = new Set(mapConfig?.hiddenVoteTotalsParties ?? []);
   renderVoteTotalsTabs(mapConfig);
@@ -4683,9 +4660,9 @@ function renderSeatPopup(seatName) {
   const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
   const turnout = totalVotesForSeat(seat);
   const majority = seatMajorityStats(seat);
-  const isReferendum = _state.currentElectionId === 'eu-referendum-2016';
-  const showTurnout = _state.currentElectionType !== 'model_uns' && !isReferendum;
-  const showRawMajority = _state.currentElectionType !== 'model_uns' && !isReferendum;
+  const isReferendum = state.currentElection?.id === 'eu-referendum-2016';
+  const showTurnout = state.currentElection.type !== 'model_uns' && !isReferendum;
+  const showRawMajority = state.currentElection.type !== 'model_uns' && !isReferendum;
 
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
@@ -5209,8 +5186,7 @@ function getMapName(mapId) {
  * @returns {number|null}
  */
 function getPostcodeMapId() {
-  const currentElection = manifest?.elections?.find((e) => e.id === _state.currentElectionId);
-  const mapId = currentElection?.mapId;
+  const mapId = state.currentElection?.mapId;
   if (mapId == null) return null;
   const name = getMapName(mapId);
   return name === WESTMINSTER_NEW_MAP_NAME || name === HOLYROOD_NEW_MAP_NAME ? mapId : null;
@@ -5565,7 +5541,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       const seatName = seatNameFromFeature(datum);
       if (!seatName) return colourParty('others');
       const seatKey = seatLookupKey(seatName);
-      if (_state.currentElectionId === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
+      if (state.currentElection?.id === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
         return '#dce4ea';
       }
 
@@ -5585,7 +5561,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       return colourParty(winner);
     })
     .attr('stroke', (datum) => {
-      if (_state.currentElectionId !== 'eu-referendum-2016') return null;
+      if (state.currentElection?.id !== 'eu-referendum-2016') return null;
       return isPredictNorthernIrelandRegion(datum.properties?.region) ? '#dce4ea' : null;
     })
     .on('mouseenter', (_event, datum) => {

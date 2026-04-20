@@ -6,6 +6,7 @@ import {
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { _state, state, manifest, initState, getSearchParam, getSearchParams } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
+import { updateLeft } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -29,7 +30,6 @@ async function initElectionData() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
   initState(await fetchJson('data/map-modes.json'));
   const view = String(getSearchParam('view') || 'election').toLowerCase();
-  updateParliamentTabsUI();
   if (view === 'polltracker') {
     await initPollTracker();
   } else {
@@ -38,7 +38,7 @@ async function initElectionData() {
 }
 
 async function initPollTracker() {
-  renderElectionLinks(manifest, null);
+  updateLeft(null, { onPredict: activatePredictMode, onPollTracker: activatePollTrackerMode });
   resetPredictModeState();
   resetPollTrackerModeState();
   setPredictModeNavState(false);
@@ -84,7 +84,7 @@ async function initElection(view) {
   if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
     _state.mapViewState.choroplethType = 'none';
   }
-  renderElectionLinks(manifest, currentElection.id);
+  updateLeft(currentElection.id, { onPredict: activatePredictMode, onPollTracker: activatePollTrackerMode });
   setPredictModeNavState(false);
   setPollTrackerNavState(false);
 
@@ -2283,7 +2283,6 @@ const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');
 const seatPreview = document.getElementById('mapsSeatPreview');
-const electionList = document.getElementById('mapsElectionList');
 const subtitle = document.getElementById('mapsSubtitle');
 const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
 const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
@@ -2297,7 +2296,6 @@ const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-po
 const postcodeWarningBtn = document.getElementById('mapsPostcodeWarningBtn');
 const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel');
 const seatList = document.getElementById('mapsSeatList');
-const mapsTitle = document.querySelector('.maps-title');
 const mapsStage = document.querySelector('.maps-stage');
 const mapsPanelRight = document.querySelector('.maps-panel-right');
 const mapsMain = document.querySelector('.maps-main');
@@ -2988,21 +2986,6 @@ async function activatePollTrackerMode() {
   renderPollTrackerChart();
 }
 
-/**
- * Sets the active class on parliament tab links to match _state.currentParliament, and updates the page
- * h1 to suffix the parliament name (Westminster / Holyrood).
- * @returns {void}
- */
-function updateParliamentTabsUI() {
-  document.querySelectorAll('[data-parliament]').forEach((tab) => {
-    tab.classList.toggle('active', tab.dataset.parliament === _state.currentParliament);
-  });
-  if (mapsTitle && _state.currentParliament) {
-    const label = _state.currentParliament[0].toUpperCase() + _state.currentParliament.slice(1);
-    mapsTitle.textContent = `UK Election Maps · ${label}`;
-  }
-}
-
 /** Toggles vote percentage column visibility on the totals table. */
 function toggleVotePctColumns(show) {
   if (!voteTotalsTable) return;
@@ -3071,107 +3054,6 @@ function renderSeatViewTabs(mapConfig) {
     });
     seatViewTabNav.appendChild(btn);
   });
-}
-
-/**
- * Rebuilds the election list nav, inserting Predict 2029 and Poll tracker buttons after the current-prediction entry (or near the top as a fallback). Stores references to _state.predictModeLinkEl and _state.pollTrackerModeLinkEl.
- * @param {object} manifest - Elections manifest object with an `elections` array.
- * @param {string|null} activeId - ID of the currently active election, used to highlight the active nav item.
- * @returns {void}
- */
-function renderElectionLinks(manifest, activeId) {
-  if (!electionList) return;
-
-  const createPredictButton = () => {
-    const predictButton = document.createElement('button');
-    predictButton.type = 'button';
-    predictButton.className = 'maps-election-item';
-    predictButton.textContent = _state.currentParliament === 'holyrood' ? 'Predict 2026' : 'Predict 2029';
-    predictButton.addEventListener('click', () => {
-      activatePredictMode().catch((error) => {
-        console.error(error);
-      });
-    });
-    return predictButton;
-  };
-
-  const createPollTrackerButton = () => {
-    const trackerButton = document.createElement('button');
-    trackerButton.type = 'button';
-    trackerButton.className = 'maps-election-item';
-    trackerButton.textContent = 'Poll tracker';
-    trackerButton.addEventListener('click', () => {
-      activatePollTrackerMode().catch((error) => {
-        console.error(error);
-      });
-    });
-    return trackerButton;
-  };
-
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === _state.currentParliament);
-  const parlConfig = manifest.parliamentFeatures[_state.currentParliament] ?? {};
-  const hasPredictMode = parlConfig.features?.includes('predict') ?? false;
-  const hasPollTracker = parlConfig.features?.includes('pollTracker') ?? false;
-  const predictAnchorId = parlConfig.predictAnchorElectionId ?? null;
-
-  electionList.innerHTML = '';
-  _state.predictModeLinkEl = null;
-  _state.pollTrackerModeLinkEl = null;
-  let insertedPredictLink = false;
-  let insertedPollTrackerLink = false;
-  parliamentElections.forEach((election) => {
-    const link = document.createElement('a');
-    link.href = `?view=election&election=${encodeURIComponent(election.id)}&parliament=${_state.currentParliament}`;
-    link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
-    link.textContent = election.name;
-    electionList.appendChild(link);
-
-    if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
-      const predictButton = createPredictButton();
-      electionList.appendChild(predictButton);
-      _state.predictModeLinkEl = predictButton;
-      insertedPredictLink = true;
-    }
-
-    if (hasPollTracker && insertedPredictLink && !insertedPollTrackerLink && election.id !== predictAnchorId) {
-      const trackerButton = createPollTrackerButton();
-      electionList.appendChild(trackerButton);
-      _state.pollTrackerModeLinkEl = trackerButton;
-      insertedPollTrackerLink = true;
-    }
-  });
-
-  if (hasPredictMode && !insertedPredictLink) {
-    const predictButton = createPredictButton();
-    if (electionList.children.length > 0) {
-      electionList.insertBefore(predictButton, electionList.children[1] || null);
-    } else {
-      electionList.appendChild(predictButton);
-    }
-    _state.predictModeLinkEl = predictButton;
-
-    if (hasPollTracker && !insertedPollTrackerLink) {
-      const trackerButton = createPollTrackerButton();
-      const predictIndex = Array.from(electionList.children).indexOf(predictButton);
-      if (predictIndex >= 0 && electionList.children[predictIndex + 1]) {
-        electionList.insertBefore(trackerButton, electionList.children[predictIndex + 1]);
-      } else {
-        electionList.appendChild(trackerButton);
-      }
-      _state.pollTrackerModeLinkEl = trackerButton;
-      insertedPollTrackerLink = true;
-    }
-  }
-
-  if (hasPollTracker && !insertedPollTrackerLink) {
-    const trackerButton = createPollTrackerButton();
-    if (_state.predictModeLinkEl && _state.predictModeLinkEl.nextSibling) {
-      electionList.insertBefore(trackerButton, _state.predictModeLinkEl.nextSibling);
-    } else {
-      electionList.appendChild(trackerButton);
-    }
-    _state.pollTrackerModeLinkEl = trackerButton;
-  }
 }
 
 /**

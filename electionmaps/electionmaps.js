@@ -28,9 +28,26 @@ import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './script
 async function initElectionData() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
   initState(await fetchJson('data/map-modes.json'));
+  const view = String(getSearchParam('view') || 'election').toLowerCase();
   updateParliamentTabsUI();
-  const requestedId = getSearchParam('election');
+  if (view === 'polltracker') {
+    await initPollTracker();
+  } else {
+    await initElection(view);
+  }
+}
 
+async function initPollTracker() {
+  renderElectionLinks(manifest, null);
+  resetPredictModeState();
+  resetPollTrackerModeState();
+  setPredictModeNavState(false);
+  setPollTrackerNavState(false);
+  await activatePollTrackerMode();
+}
+
+async function initElection(view) {
+  const requestedId = getSearchParam('election');
   const parliamentElections = manifest.elections.filter((e) => e.parliament === _state.currentParliament);
   let currentElection = parliamentElections.find((e) => e.id === requestedId);
   if (!currentElection) {
@@ -114,13 +131,9 @@ async function initElectionData() {
   window.__mapsShowVoteTotals = showVoteTotals;
   refreshElectionSeatStateAndRender();
 
-  const routeView = String(getSearchParam('view') || 'election').toLowerCase();
-
-  // Fetch 4 (conditional): predict baseline + simulation data, or poll tracker trend data
-  if (routeView === 'predict') {
+  // Fetch 4 (conditional): predict baseline + simulation data
+  if (view === 'predict') {
     await activatePredictMode();
-  } else if (routeView === 'polltracker') {
-    await activatePollTrackerMode();
   } else {
     replaceRouteState('election');
   }

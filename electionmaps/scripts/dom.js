@@ -1,4 +1,4 @@
-import { manifest, _state, state } from './state.js';
+import { manifest, _state, state, getPredictAnchorElectionId, getParlFeatures } from './state.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
@@ -54,10 +54,10 @@ function renderElectionLinks(onPredict, onPollTracker) {
   };
 
   const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
-  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
-  const hasPredictMode = parlConfig.features?.includes('predict') ?? false;
-  const hasPollTracker = parlConfig.features?.includes('pollTracker') ?? false;
-  const predictAnchorId = parlConfig.predictAnchorElectionId ?? null;
+  const features = getParlFeatures();
+  const hasPredictMode = features?.includes('predict') ?? false;
+  const hasPollTracker = features?.includes('pollTracker') ?? false;
+  const predictAnchorId = getPredictAnchorElectionId() ?? null;
 
   electionList.innerHTML = '';
   _state.predictModeLinkEl = null;

@@ -21,35 +21,6 @@ export function initState(manifestData) {
 }
 
 /**
- * Resolves URL params and manifest defaults into the shared state object.
- * Called once per page load by initState, after the manifest is hydrated.
- * Throws if no elections are configured for the resolved parliament.
- * @returns {void}
- */
-function setState() {
-  const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
-  state.currentParliament = getSearchParam('parliament') || defaultParliament;
-
-  const requestedId = getSearchParam('election');
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
-  let currentElection = parliamentElections.find((e) => e.id === requestedId);
-  if (!currentElection) {
-    const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
-    const anchorId = parlConfig.predictAnchorElectionId;
-    currentElection =
-      (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
-      || parliamentElections.find((e) => e.id === manifest.defaultElection)
-      || parliamentElections[0];
-  }
-
-  if (!currentElection) {
-    throw new Error('No elections configured in data/map-modes.json');
-  }
-
-  state.currentElection = { ...currentElection };
-}
-
-/**
  * Normalises missing manifest fields and populates party and region lookup maps
  * from the manifest's top-level `parties` array and per-map `regions` in `mapModes`.
  * @returns {void}
@@ -238,6 +209,34 @@ export const state = {
   currentParliament: '',
 };
 
+/**
+ * Resolves URL params and manifest defaults into the shared state object.
+ * Called once per page load by initState, after the manifest is hydrated.
+ * Throws if no elections are configured for the resolved parliament.
+ * @returns {void}
+ */
+function setState() {
+  const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
+  state.currentParliament = getSearchParam('parliament') || defaultParliament;
+
+  const requestedId = getSearchParam('election');
+  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
+  let currentElection = parliamentElections.find((e) => e.id === requestedId);
+  if (!currentElection) {
+    const anchorId = getPredictAnchorElectionId();
+    currentElection =
+      (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
+      || parliamentElections.find((e) => e.id === manifest.defaultElection)
+      || parliamentElections[0];
+  }
+
+  if (!currentElection) {
+    throw new Error('No elections configured in data/map-modes.json');
+  }
+
+  state.currentElection = { ...currentElection };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -256,4 +255,32 @@ export function getElectionFromId(id) {
 export function getByElectionSeatsSet() {
   const seats = state.currentElection?.byElectionSeats;
   return seats?.length ? new Set(seats) : null;
+}
+
+function getParlConfig() {
+  return manifest.parliamentFeatures[state.currentParliament] ?? {};
+}
+
+/**
+ * Returns the predict anchor election id for the current parliament, or undefined if not set.
+ * @returns {string|undefined}
+ */
+export function getPredictAnchorElectionId() {
+  return getParlConfig().predictAnchorElectionId;
+}
+
+/**
+ * Returns the predict baseline election id for the current parliament, or undefined if not set.
+ * @returns {string|undefined}
+ */
+export function getPredictBaselineElectionId() {
+  return getParlConfig().predictBaselineElectionId;
+}
+
+/**
+ * Returns the features array for the current parliament, or undefined if not set.
+ * @returns {string[]|undefined}
+ */
+export function getParlFeatures() {
+  return getParlConfig().features;
 }

@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
 import { updateLeftBar } from './scripts/dom.js';
 
@@ -3910,9 +3910,7 @@ function renderPredictGrid() {
 async function ensurePredictBaselineData() {
   if (!manifest) return false;
 
-  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
-  const baselineId = parlConfig.predictBaselineElectionId;
-  const baselineElection = getElectionFromId(baselineId);
+  const baselineElection = getElectionFromId(getPredictBaselineElectionId());
   if (!baselineElection) return false;
 
   const { mapFile, dataFile } = resolveElectionFiles(baselineElection);
@@ -3947,11 +3945,8 @@ async function ensurePredictCurrentSimulationData() {
   if (_state.predictCurrentSimulationLoaded) return true;
   if (!manifest) return false;
 
-  const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
-  const simulationId = parlConfig.predictAnchorElectionId;
-  if (!simulationId) return false;
-
-  const simulationElection = getElectionFromId(simulationId);
+  const simulationElection = getElectionFromId(getPredictAnchorElectionId());
+  if (!simulationElection) return false;
   if (!simulationElection) return false;
 
   let resultsData;

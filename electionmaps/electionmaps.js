@@ -6,7 +6,7 @@ import {
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { _state, state, manifest, initState, getSearchParam, getSearchParams } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
-import { updateLeft } from './scripts/dom.js';
+import { updateLeftBar } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -35,10 +35,10 @@ async function initElectionData() {
   } else {
     await initElection(view);
   }
+  updateLeftBar({ onPredict: activatePredictMode, onPollTracker: activatePollTrackerMode });
 }
 
 async function initPollTracker() {
-  updateLeft(null, { onPredict: activatePredictMode, onPollTracker: activatePollTrackerMode });
   resetPredictModeState();
   resetPollTrackerModeState();
   setPredictModeNavState(false);
@@ -84,7 +84,6 @@ async function initElection(view) {
   if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
     _state.mapViewState.choroplethType = 'none';
   }
-  updateLeft(currentElection.id, { onPredict: activatePredictMode, onPollTracker: activatePollTrackerMode });
   setPredictModeNavState(false);
   setPollTrackerNavState(false);
 

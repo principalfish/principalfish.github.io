@@ -5,13 +5,12 @@ const mapsTitle = document.querySelector('.maps-title');
 
 /**
  * Updates the left panel: highlights the active parliament tab and rebuilds the election list nav.
- * @param {string|null} activeId - ID of the currently active election, or null for no active item.
  * @param {{ onPredict?: function, onPollTracker?: function }} callbacks - Click handlers for mode buttons.
  * @returns {void}
  */
-export function updateLeft(activeId, { onPredict, onPollTracker } = {}) {
+export function updateLeftBar({ onPredict, onPollTracker } = {}) {
   updateParliamentTabsUI();
-  renderElectionLinks(activeId, onPredict, onPollTracker);
+  renderElectionLinks(onPredict, onPollTracker);
 }
 
 function updateParliamentTabsUI() {
@@ -28,12 +27,12 @@ function updateParliamentTabsUI() {
  * Rebuilds the election list nav, inserting Predict and Poll tracker buttons after the
  * current-prediction entry (or near the top as a fallback). Stores references to
  * _state.predictModeLinkEl and _state.pollTrackerModeLinkEl.
- * @param {string|null} activeId - ID of the currently active election, or null for no active item.
  * @param {function|undefined} onPredict - Click handler for the Predict button.
  * @param {function|undefined} onPollTracker - Click handler for the Poll tracker button.
  * @returns {void}
  */
-function renderElectionLinks(activeId, onPredict, onPollTracker) {
+function renderElectionLinks(onPredict, onPollTracker) {
+  const activeId = _state.currentElectionId;
   if (!electionList) return;
 
   const createPredictButton = () => {

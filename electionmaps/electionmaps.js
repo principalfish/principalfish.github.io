@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
 import { updateLeftBar } from './scripts/dom.js';
 
@@ -47,8 +47,7 @@ async function initPollTracker() {
 }
 
 async function initElection(view) {
-  const currentElection = state.currentElection;
-  _state.currentRegionLabelsByKey = buildRegionLabelLookup(currentElection.mapId);
+  _state.currentRegionLabelsByKey = buildRegionLabelLookup(state.currentElection.mapId);
   _state.defaultComparisonSummary = null;
   _state.defaultComparisonSeats = [];
   resetPredictModeState();
@@ -56,9 +55,9 @@ async function initElection(view) {
 
   if (filterGainsButton) {
     filterGainsButton.textContent = state.currentElection.byElectionSeatsSet ? 'By-elections' : 'Gains';
-    filterGainsButton.hidden = currentElection.id === 'eu-referendum-2016';
+    filterGainsButton.hidden = state.currentElection.id === 'eu-referendum-2016';
   }
-  const isReferendumType = currentElection.id === 'eu-referendum-2016';
+  const isReferendumType = state.currentElection.id === 'eu-referendum-2016';
   if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
   if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
   if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
@@ -71,11 +70,11 @@ async function initElection(view) {
   //   - map topology (TopoJSON SVG paths for every seat)
   //   - election results (seat outcomes, vote totals, party breakdowns)
   //   - prediction snippet text (model elections only — subtitle label from files.meta)
-  const { mapFile, dataFile } = resolveElectionFiles(manifest, currentElection);
+  const { mapFile, dataFile } = resolveElectionFiles(state.currentElection);
   const [mapData, resultsData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
-    ...(currentElection.model ? [
+    ...(state.currentElection.model ? [
       fetchJson(`data/${manifest.files.meta[state.currentParliament]}`)
         .then((p) => { _state.predictionSnippet = String(p?.latest_poll_snippet || '').trim(); })
         .catch(() => { _state.predictionSnippet = ''; }),
@@ -89,10 +88,10 @@ async function initElection(view) {
   _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
 
   // Fetch 3 (conditional, sequential): comparison election results for swing calculations
-  if (currentElection.comparisonElectionId) {
-    const comparisonElection = manifest.elections.find((entry) => entry.id === currentElection.comparisonElectionId);
+  if (state.currentElection.comparisonElectionId) {
+    const comparisonElection = getElectionFromId(state.currentElection.comparisonElectionId);
     if (comparisonElection) {
-      const { dataFile: comparisonDataFile } = resolveElectionFiles(manifest, comparisonElection);
+      const { dataFile: comparisonDataFile } = resolveElectionFiles(comparisonElection);
       const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
       _state.defaultComparisonSeats = normalizeSeats(comparisonData);
       _state.defaultComparisonSummary = summarizeElection(_state.defaultComparisonSeats);
@@ -102,7 +101,7 @@ async function initElection(view) {
   _state.currentComparisonSeats = _state.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
-  const showVoteTotals = currentElection.type !== 'model_uns' && currentElection.id !== 'eu-referendum-2016';
+  const showVoteTotals = state.currentElection.type !== 'model_uns' && state.currentElection.id !== 'eu-referendum-2016';
   updateElectionCountdown();
   populateMapControlOptions();
   syncMapControlStateFromInputs();
@@ -1773,7 +1772,7 @@ function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethPart
  * @returns {{mapFile: string, dataFile: string}} Resolved file paths for the map and results data.
  * @throws {Error} When either the mapFile or dataFile path cannot be determined for the election.
  */
-function resolveElectionFiles(manifest, election) {
+function resolveElectionFiles(election) {
   const mapFileFromSettings = election?.mapId != null ? manifest.files.elections.mapsById[String(election.mapId)] : undefined;
   const dataFileFromSettings = manifest.files.elections.electionsById[election.id];
 
@@ -2391,7 +2390,7 @@ function setMapsPageTitle(contextLabel, parliament = null) {
 /**
  * Builds a URLSearchParams for the given view, setting/removing the election and predict params as appropriate.
  * @param {string} view - View name to set ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to include; falls back to state.currentElection?.id if null.
+ * @param {string|null} [electionId=null] - Election ID to include; falls back to state.currentElection.id if null.
  * @returns {URLSearchParams} Updated search params with view, election, and predict params adjusted.
  */
 function buildRouteSearchParams(view, electionId = null) {
@@ -2404,7 +2403,7 @@ function buildRouteSearchParams(view, electionId = null) {
     return params;
   }
 
-  const selectedElectionId = electionId || state.currentElection?.id;
+  const selectedElectionId = electionId || state.currentElection.id;
   if (selectedElectionId) {
     params.set('election', selectedElectionId);
   }
@@ -2414,7 +2413,7 @@ function buildRouteSearchParams(view, electionId = null) {
 /**
  * Replaces the current browser history entry with the URL for the given view, then fires a virtual page view.
  * @param {string} view - View name ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to state.currentElection?.id.
+ * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to state.currentElection.id.
  * @returns {void}
  */
 function replaceRouteState(view, electionId = null) {
@@ -3913,10 +3912,10 @@ async function ensurePredictBaselineData() {
 
   const parlConfig = manifest.parliamentFeatures[state.currentParliament] ?? {};
   const baselineId = parlConfig.predictBaselineElectionId;
-  const baselineElection = manifest.elections.find((entry) => entry.id === baselineId);
+  const baselineElection = getElectionFromId(baselineId);
   if (!baselineElection) return false;
 
-  const { mapFile, dataFile } = resolveElectionFiles(manifest, baselineElection);
+  const { mapFile, dataFile } = resolveElectionFiles(baselineElection);
   const [mapData, resultsData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
@@ -3952,12 +3951,12 @@ async function ensurePredictCurrentSimulationData() {
   const simulationId = parlConfig.predictAnchorElectionId;
   if (!simulationId) return false;
 
-  const simulationElection = manifest.elections.find((e) => e.id === simulationId);
+  const simulationElection = getElectionFromId(simulationId);
   if (!simulationElection) return false;
 
   let resultsData;
   try {
-    const { dataFile } = resolveElectionFiles(manifest, simulationElection);
+    const { dataFile } = resolveElectionFiles(simulationElection);
     resultsData = await fetchJson(`data/${dataFile}`);
   } catch {
     return false;
@@ -4376,7 +4375,7 @@ function populateMapControlOptions() {
  * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
-  if (state.currentElection?.id === 'eu-referendum-2016' && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
+  if (state.currentElection.id === 'eu-referendum-2016' && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
     const valueBySeatKey = new Map();
     const values = [];
     _state.currentSeats.forEach((seat) => {
@@ -4531,13 +4530,11 @@ function refreshElectionSeatStateAndRender() {
   _state.currentComparisonSeats = (_state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
-  const mapConfig = manifest.mapModes[String(state.currentElection?.mapId)];
+  const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
   _state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
   _state.currentSeatView = mapConfig?.seatViews?.[0]?.id ?? 'seats';
   const summary = summarizeElection(_state.currentSeats);
-  if (state.currentElection) {
-    updateTopSummary(state.currentElection, summary);
-  }
+  updateTopSummary(state.currentElection, summary);
 
   window.__mapsCurrentSummary = summary;
   window.__mapsComparisonSummary = _state.defaultComparisonSummary;
@@ -4561,7 +4558,7 @@ function renderMapWithViewState(options = {}) {
     .filter(Boolean);
   const choroplethConfig = buildChoroplethConfig(visibleSeatKeys);
 
-  const mapConfig = manifest.mapModes[String(state.currentElection?.mapId)];
+  const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
 
   _state.hiddenVoteTotalsParties = new Set(mapConfig?.hiddenVoteTotalsParties ?? []);
   renderVoteTotalsTabs(mapConfig);
@@ -4590,7 +4587,7 @@ function renderMapWithViewState(options = {}) {
   });
 
   const preserveTransform = options.preserveZoom && mapSvg ? d3.zoomTransform(mapSvg) : null;
-  const mapId = String(currentElection?.mapId ?? '');
+  const mapId = String(state.currentElection.mapId ?? '');
 
   // Pass regionSummary (list seats) for Holyrood elections that have list seats.
   const hasRegionTable = _state.currentSeats.some((s) => isListSeat(s.seat));
@@ -4660,7 +4657,7 @@ function renderSeatPopup(seatName) {
   const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
   const turnout = totalVotesForSeat(seat);
   const majority = seatMajorityStats(seat);
-  const isReferendum = state.currentElection?.id === 'eu-referendum-2016';
+  const isReferendum = state.currentElection.id === 'eu-referendum-2016';
   const showTurnout = state.currentElection.type !== 'model_uns' && !isReferendum;
   const showRawMajority = state.currentElection.type !== 'model_uns' && !isReferendum;
 
@@ -5186,7 +5183,7 @@ function getMapName(mapId) {
  * @returns {number|null}
  */
 function getPostcodeMapId() {
-  const mapId = state.currentElection?.mapId;
+  const mapId = state.currentElection.mapId;
   if (mapId == null) return null;
   const name = getMapName(mapId);
   return name === WESTMINSTER_NEW_MAP_NAME || name === HOLYROOD_NEW_MAP_NAME ? mapId : null;
@@ -5541,7 +5538,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       const seatName = seatNameFromFeature(datum);
       if (!seatName) return colourParty('others');
       const seatKey = seatLookupKey(seatName);
-      if (state.currentElection?.id === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
+      if (state.currentElection.id === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
         return '#dce4ea';
       }
 
@@ -5561,7 +5558,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       return colourParty(winner);
     })
     .attr('stroke', (datum) => {
-      if (state.currentElection?.id !== 'eu-referendum-2016') return null;
+      if (state.currentElection.id !== 'eu-referendum-2016') return null;
       return isPredictNorthernIrelandRegion(datum.properties?.region) ? '#dce4ea' : null;
     })
     .on('mouseenter', (_event, datum) => {

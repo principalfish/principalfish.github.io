@@ -243,3 +243,14 @@ export const state = {
    * Resolved from the ?parliament= URL param on load, falling back to the manifest defaultElection's parliament. */
   currentParliament: '',
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the manifest election entry for the given id, or undefined if not found.
+ * @param {string} id - Election id to look up.
+ * @returns {object|undefined}
+ */
+export function getElectionFromId(id) {
+  return manifest.elections.find((e) => e.id === id);
+}

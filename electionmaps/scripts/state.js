@@ -46,12 +46,7 @@ function setState() {
     throw new Error('No elections configured in data/map-modes.json');
   }
 
-  state.currentElection = {
-    ...currentElection,
-    byElectionSeatsSet: currentElection.byElectionSeats?.length
-      ? new Set(currentElection.byElectionSeats)
-      : null,
-  };
+  state.currentElection = { ...currentElection };
 }
 
 /**
@@ -234,8 +229,7 @@ export const state = {
    * - mapId {number} — key into manifest.mapModes for topology and region config
    * - model {boolean|undefined} — true only on prediction elections; gates snippet fetch and predict mode
    * - comparisonElectionId {string|undefined} — id of the election used for swing data
-   * - byElectionSeats {string[]|undefined} — raw constituency name list from the manifest
-   * - byElectionSeatsSet {Set<string>|null} — computed Set of byElectionSeats for O(1) lookup; null if none
+   * - byElectionSeats {string[]|undefined} — constituency name list from the manifest; use getByElectionSeatsSet() for Set form
    */
   currentElection: null,
 
@@ -253,4 +247,13 @@ export const state = {
  */
 export function getElectionFromId(id) {
   return manifest.elections.find((e) => e.id === id);
+}
+
+/**
+ * Returns a Set of by-election constituency names for the current election, or null if none.
+ * @returns {Set<string>|null}
+ */
+export function getByElectionSeatsSet() {
+  const seats = state.currentElection?.byElectionSeats;
+  return seats?.length ? new Set(seats) : null;
 }

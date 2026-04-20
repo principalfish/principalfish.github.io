@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
 import { updateLeftBar } from './scripts/dom.js';
 
@@ -54,7 +54,7 @@ async function initElection(view) {
   resetPollTrackerModeState();
 
   if (filterGainsButton) {
-    filterGainsButton.textContent = state.currentElection.byElectionSeatsSet ? 'By-elections' : 'Gains';
+    filterGainsButton.textContent = getByElectionSeatsSet() ? 'By-elections' : 'Gains';
     filterGainsButton.hidden = state.currentElection.id === 'eu-referendum-2016';
   }
   const isReferendumType = state.currentElection.id === 'eu-referendum-2016';
@@ -4551,7 +4551,7 @@ function refreshElectionSeatStateAndRender() {
 function renderMapWithViewState(options = {}) {
   if (!_state.currentMapData) return;
 
-  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, state.currentElection.byElectionSeatsSet);
+  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, getByElectionSeatsSet());
   const visibleSeats = _state.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
   const visibleComparisonSeats = Array.from(visibleSeatKeys)
     .map((seatKey) => _state.comparisonSeatsByKey.get(seatKey))

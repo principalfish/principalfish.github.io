@@ -297,6 +297,22 @@ export function electionUrl(electionId) {
   return `?view=election&election=${encodeURIComponent(electionId)}&parliament=${state.currentParliament}`;
 }
 
+/**
+ * Returns the URL to enter predict mode for the current parliament.
+ * @returns {string} Query string URL.
+ */
+export function predictUrl() {
+  return `?view=predict&parliament=${state.currentParliament}`;
+}
+
+/**
+ * Returns the URL to enter poll tracker mode for the current parliament.
+ * @returns {string} Query string URL.
+ */
+export function pollTrackerUrl() {
+  return `?view=polltracker&parliament=${state.currentParliament}`;
+}
+
 // ─── Mode setters ─────────────────────────────────────────────────────────────
 
 /**

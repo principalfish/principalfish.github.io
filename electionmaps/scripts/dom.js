@@ -1,29 +1,18 @@
-import { manifest, _state, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown, electionUrl } from './state.js';
+import { manifest, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown, electionUrl, predictUrl, pollTrackerUrl } from './state.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
 const electionCountdownEl = document.getElementById('mapsElectionCountdown');
 
-// ─── Nav ──────────────────────────────────────────────────────────────────────
-
-const nav = {
-  /** The rendered Predict button element in the election list, or null when not present. */
-  predictModeLink: null,
-  /** The rendered Poll tracker button element in the election list, or null when not present. */
-  pollTrackerModeLink: null,
-};
-
-
 /**
- * Updates the left panel: highlights the active parliament tab and rebuilds the election list nav.
- * @param {{ onPredict?: function, onPollTracker?: function }} callbacks - Click handlers for mode buttons.
+ * Updates the title area: the page h1 and the election countdown.
+ * TODO: migrate subtitle text (parliament description, latest poll) here.
  * @returns {void}
  */
-export function updateLeftBar({ onPredict, onPollTracker } = {}) {
+export function updateTitle() {
   renderTitle();
+  // TODO: migrate subtitle text (parliament description, latest poll, countdown) here
   renderCountdown();
-  renderParliamentTabs();
-  renderElectionLinks(onPredict, onPollTracker);
 }
 
 /**
@@ -33,6 +22,16 @@ export function updateLeftBar({ onPredict, onPollTracker } = {}) {
 function renderTitle() {
   const label = state.currentParliament[0].toUpperCase() + state.currentParliament.slice(1);
   mapsTitle.textContent = `UK Election Maps · ${label}`;
+}
+
+/**
+ * Updates the left panel: highlights the active parliament tab and rebuilds the election list nav.
+ * @param {{ onPredict?: function, onPollTracker?: function }} callbacks - Click handlers for mode buttons.
+ * @returns {void}
+ */
+export function updateLeftBar() {
+  renderParliamentTabs();
+  renderElectionLinks();
 }
 
 /**
@@ -46,34 +45,12 @@ function renderParliamentTabs() {
 }
 
 /**
- * Rebuilds the election list nav, inserting Predict and Poll tracker buttons after the
- * current-prediction entry (or near the top as a fallback). Stores references to
- * nav.predictModeLink and nav.pollTrackerModeLink.
- * @param {function|undefined} onPredict - Click handler for the Predict button.
- * @param {function|undefined} onPollTracker - Click handler for the Poll tracker button.
+ * Rebuilds the election list nav, inserting Predict and Poll tracker links after the
+ * current-prediction entry.
  * @returns {void}
  */
-export function renderElectionLinks(onPredict, onPollTracker) {
+function renderElectionLinks() {
   const activeId = (state.pollTrackerModeActive || state.predictModeActive) ? null : state.currentElection.id;
-
-  const createPredictButton = () => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'maps-election-item';
-    const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
-    btn.textContent = `Predict ${nextElectionYear ?? ''}`;
-    if (onPredict) btn.addEventListener('click', () => onPredict().catch(console.error));
-    return btn;
-  };
-
-  const createPollTrackerButton = () => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'maps-election-item';
-    btn.textContent = 'Poll tracker';
-    if (onPollTracker) btn.addEventListener('click', () => onPollTracker().catch(console.error));
-    return btn;
-  };
 
   const features = manifest.parliamentFeatures[state.currentParliament]?.features ?? [];
   const hasPredictMode = features.includes('predict');
@@ -81,8 +58,6 @@ export function renderElectionLinks(onPredict, onPollTracker) {
   const predictAnchorId = getPredictAnchorElectionId() ?? null;
 
   electionList.innerHTML = '';
-  nav.predictModeLink = null;
-  nav.pollTrackerModeLink = null;
   let insertedPredictLink = false;
   let insertedPollTrackerLink = false;
   state.parliamentElections.forEach((election) => {
@@ -93,17 +68,20 @@ export function renderElectionLinks(onPredict, onPollTracker) {
     electionList.appendChild(link);
 
     if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
-      const predictButton = createPredictButton();
-      if (state.predictModeActive) predictButton.classList.add('active');
-      electionList.appendChild(predictButton);
-      nav.predictModeLink = predictButton;
+      const predictLink = document.createElement('a');
+      predictLink.href = predictUrl();
+      predictLink.className = `maps-election-item${state.predictModeActive ? ' active' : ''}`;
+      const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
+      predictLink.textContent = `Predict ${nextElectionYear ?? ''}`;
+      electionList.appendChild(predictLink);
       insertedPredictLink = true;
 
       if (hasPollTracker && !insertedPollTrackerLink) {
-        const trackerButton = createPollTrackerButton();
-        if (state.pollTrackerModeActive) trackerButton.classList.add('active');
-        electionList.appendChild(trackerButton);
-        nav.pollTrackerModeLink = trackerButton;
+        const trackerLink = document.createElement('a');
+        trackerLink.href = pollTrackerUrl();
+        trackerLink.className = `maps-election-item${state.pollTrackerModeActive ? ' active' : ''}`;
+        trackerLink.textContent = 'Poll tracker';
+        electionList.appendChild(trackerLink);
         insertedPollTrackerLink = true;
       }
     }
@@ -137,7 +115,7 @@ function formatCountdown(ms) {
  * Visible only when state.currentElection.type is 'holyrood_uns' and poll tracker is not active.
  * @returns {void}
  */
-export function renderCountdown() {
+function renderCountdown() {
   if (!electionCountdownEl) return;
 
   const shouldShow = shouldShowCountdown();

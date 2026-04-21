@@ -6,7 +6,7 @@ import {
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPredictActive, setPollTrackerActive } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
-import { updateLeftBar, renderElectionLinks } from './scripts/dom.js';
+import { updateTitle, updateLeftBar } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -31,15 +31,12 @@ async function initElectionData() {
   initState(await fetchJson('data/map-modes.json'));
   const view = getSearchParam('view') || 'election';
   if (view === 'polltracker') {
-    await initPollTracker();
+    await activatePollTrackerMode();
   } else {
     await initElection(view);
   }
-  updateLeftBar({ onPredict: activatePredictMode, onPollTracker: activatePollTrackerMode });
-}
-
-async function initPollTracker() {
-  await activatePollTrackerMode();
+  updateTitle();
+  updateLeftBar();
 }
 
 async function initElection(view) {
@@ -2851,7 +2848,6 @@ async function loadPollTrackerDataIfNeeded() {
 async function activatePollTrackerMode() {
   if (predictWindow) predictWindow.hidden = true;
   setPollTrackerActive(true);
-  renderElectionLinks(activatePredictMode, activatePollTrackerMode);
 
   setPollTrackerLayoutVisible(true);
   await loadParliamentMetaIfNeeded();
@@ -3945,7 +3941,6 @@ async function activatePredictMode() {
 
   setPredictActive(true);
   setPollTrackerLayoutVisible(false);
-  renderElectionLinks(activatePredictMode, activatePollTrackerMode);
   syncPredictModeRightColumnLayout();
 
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {

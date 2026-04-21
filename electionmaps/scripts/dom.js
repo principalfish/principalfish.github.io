@@ -1,8 +1,17 @@
-import { manifest, _state, state, getPredictAnchorElectionId, getParlFeatures, HOLYROOD_ELECTION_DATE, shouldShowCountdown } from './state.js';
+import { manifest, _state, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown, electionUrl } from './state.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
 const electionCountdownEl = document.getElementById('mapsElectionCountdown');
+
+// ─── Nav ──────────────────────────────────────────────────────────────────────
+
+const nav = {
+  /** The rendered Predict button element in the election list, or null when not present. */
+  predictModeLink: null,
+  /** The rendered Poll tracker button element in the election list, or null when not present. */
+  pollTrackerModeLink: null,
+};
 
 
 /**
@@ -39,20 +48,20 @@ function renderParliamentTabs() {
 /**
  * Rebuilds the election list nav, inserting Predict and Poll tracker buttons after the
  * current-prediction entry (or near the top as a fallback). Stores references to
- * _state.predictModeLinkEl and _state.pollTrackerModeLinkEl.
+ * nav.predictModeLink and nav.pollTrackerModeLink.
  * @param {function|undefined} onPredict - Click handler for the Predict button.
  * @param {function|undefined} onPollTracker - Click handler for the Poll tracker button.
  * @returns {void}
  */
-function renderElectionLinks(onPredict, onPollTracker) {
-  const activeId = _state.pollTrackerModeActive ? null : state.currentElection?.id;
-  if (!electionList) return;
+export function renderElectionLinks(onPredict, onPollTracker) {
+  const activeId = (state.pollTrackerModeActive || state.predictModeActive) ? null : state.currentElection.id;
 
   const createPredictButton = () => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'maps-election-item';
-    btn.textContent = state.currentParliament === 'holyrood' ? 'Predict 2026' : 'Predict 2029';
+    const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
+    btn.textContent = `Predict ${nextElectionYear ?? ''}`;
     if (onPredict) btn.addEventListener('click', () => onPredict().catch(console.error));
     return btn;
   };
@@ -66,70 +75,39 @@ function renderElectionLinks(onPredict, onPollTracker) {
     return btn;
   };
 
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
-  const features = getParlFeatures();
-  const hasPredictMode = features?.includes('predict') ?? false;
-  const hasPollTracker = features?.includes('pollTracker') ?? false;
+  const features = manifest.parliamentFeatures[state.currentParliament]?.features ?? [];
+  const hasPredictMode = features.includes('predict');
+  const hasPollTracker = features.includes('pollTracker');
   const predictAnchorId = getPredictAnchorElectionId() ?? null;
 
   electionList.innerHTML = '';
-  _state.predictModeLinkEl = null;
-  _state.pollTrackerModeLinkEl = null;
+  nav.predictModeLink = null;
+  nav.pollTrackerModeLink = null;
   let insertedPredictLink = false;
   let insertedPollTrackerLink = false;
-  parliamentElections.forEach((election) => {
+  state.parliamentElections.forEach((election) => {
     const link = document.createElement('a');
-    link.href = `?view=election&election=${encodeURIComponent(election.id)}&parliament=${state.currentParliament}`;
+    link.href = electionUrl(election.id);
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
     link.textContent = election.name;
     electionList.appendChild(link);
 
     if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
       const predictButton = createPredictButton();
+      if (state.predictModeActive) predictButton.classList.add('active');
       electionList.appendChild(predictButton);
-      _state.predictModeLinkEl = predictButton;
+      nav.predictModeLink = predictButton;
       insertedPredictLink = true;
-    }
 
-    if (hasPollTracker && insertedPredictLink && !insertedPollTrackerLink && election.id !== predictAnchorId) {
-      const trackerButton = createPollTrackerButton();
-      electionList.appendChild(trackerButton);
-      _state.pollTrackerModeLinkEl = trackerButton;
-      insertedPollTrackerLink = true;
+      if (hasPollTracker && !insertedPollTrackerLink) {
+        const trackerButton = createPollTrackerButton();
+        if (state.pollTrackerModeActive) trackerButton.classList.add('active');
+        electionList.appendChild(trackerButton);
+        nav.pollTrackerModeLink = trackerButton;
+        insertedPollTrackerLink = true;
+      }
     }
   });
-
-  if (hasPredictMode && !insertedPredictLink) {
-    const predictButton = createPredictButton();
-    if (electionList.children.length > 0) {
-      electionList.insertBefore(predictButton, electionList.children[1] || null);
-    } else {
-      electionList.appendChild(predictButton);
-    }
-    _state.predictModeLinkEl = predictButton;
-
-    if (hasPollTracker && !insertedPollTrackerLink) {
-      const trackerButton = createPollTrackerButton();
-      const predictIndex = Array.from(electionList.children).indexOf(predictButton);
-      if (predictIndex >= 0 && electionList.children[predictIndex + 1]) {
-        electionList.insertBefore(trackerButton, electionList.children[predictIndex + 1]);
-      } else {
-        electionList.appendChild(trackerButton);
-      }
-      _state.pollTrackerModeLinkEl = trackerButton;
-      insertedPollTrackerLink = true;
-    }
-  }
-
-  if (hasPollTracker && !insertedPollTrackerLink) {
-    const trackerButton = createPollTrackerButton();
-    if (_state.predictModeLinkEl && _state.predictModeLinkEl.nextSibling) {
-      electionList.insertBefore(trackerButton, _state.predictModeLinkEl.nextSibling);
-    } else {
-      electionList.appendChild(trackerButton);
-    }
-    _state.pollTrackerModeLinkEl = trackerButton;
-  }
 }
 
 // ─── Countdown ────────────────────────────────────────────────────────────────

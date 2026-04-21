@@ -122,14 +122,16 @@
         "pollTracker"
       ],
       "predictAnchorElectionId": "current-prediction",
-      "predictBaselineElectionId": "2024-general"
+      "predictBaselineElectionId": "2024-general",
+      "nextElectionYear": 2029
     },
     "holyrood": {
       "features": [
         "predict"
       ],
       "predictAnchorElectionId": "current-holyrood-prediction",
-      "predictBaselineElectionId": "2021-holyrood-2026"
+      "predictBaselineElectionId": "2021-holyrood-2026",
+      "nextElectionYear": 2026
     }
   },
   "mapModes": {

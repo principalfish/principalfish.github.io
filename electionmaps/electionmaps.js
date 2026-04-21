@@ -4,9 +4,9 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPredictActive, setPollTrackerActive } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
-import { updateLeftBar } from './scripts/dom.js';
+import { updateLeftBar, renderElectionLinks } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -29,7 +29,7 @@ import { updateLeftBar } from './scripts/dom.js';
 async function initElectionData() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
   initState(await fetchJson('data/map-modes.json'));
-  const view = String(getSearchParam('view') || 'election').toLowerCase();
+  const view = getSearchParam('view') || 'election';
   if (view === 'polltracker') {
     await initPollTracker();
   } else {
@@ -41,8 +41,6 @@ async function initElectionData() {
 async function initPollTracker() {
   resetPredictModeState();
   resetPollTrackerModeState();
-  setPredictModeNavState(false);
-  setPollTrackerNavState(false);
   await activatePollTrackerMode();
 }
 
@@ -63,9 +61,6 @@ async function initElection(view) {
   if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
     _state.mapViewState.choroplethType = 'none';
   }
-  setPredictModeNavState(false);
-  setPollTrackerNavState(false);
-
   // Fetch 2 (parallel):
   //   - map topology (TopoJSON SVG paths for every seat)
   //   - election results (seat outcomes, vote totals, party breakdowns)
@@ -132,23 +127,6 @@ async function loadParliamentMetaIfNeeded() {
   }
 }
 
-// =====================================================================
-// DOM
-// =====================================================================
-
-/**
- * Displays a fatal load error in the UI when initElectionData() fails: sets the subtitle
- * to an error message, shows a fallback message in the seat list, and logs to the console.
- * @param {unknown} error - The caught error to log.
- * @returns {void}
- */
-function displayInitError(error) {
-  setSubtitleText('Failed to load election data');
-  if (seatList) {
-    seatList.innerHTML = '<p>Unable to load configured election files.</p>';
-  }
-  console.error(error);
-}
 
 // =====================================================================
 // WIRE CONTROLS
@@ -372,7 +350,7 @@ function wirePredictControls() {
 function wirePollTrackerMetricInput(inputEl) {
   if (!inputEl || inputEl.dataset.wired === 'true') return;
   inputEl.addEventListener('change', () => {
-    if (_state.pollTrackerModeActive) renderPollTrackerChart();
+    if (state.pollTrackerModeActive) renderPollTrackerChart();
   });
   inputEl.dataset.wired = 'true';
 }
@@ -395,7 +373,7 @@ function wirePollTrackerControls() {
       document.querySelectorAll('[data-polltracker-range]').forEach((candidate) => {
         candidate.classList.toggle('is-active', candidate.getAttribute('data-polltracker-range') === nextRange);
       });
-      if (_state.pollTrackerModeActive) renderPollTrackerChart();
+      if (state.pollTrackerModeActive) renderPollTrackerChart();
     });
     button.dataset.wired = 'true';
   });
@@ -576,7 +554,7 @@ function wireVoteTotalsToggle() {
 function wireWindowResize() {
   window.addEventListener('resize', () => {
     syncRightPanelHeightToMap();
-    if (_state.pollTrackerModeActive) renderPollTrackerChart();
+    if (state.pollTrackerModeActive) renderPollTrackerChart();
   });
 }
 
@@ -2504,15 +2482,7 @@ function setSubtitleText(baseText, options = {}) {
 }
 
 
-/**
- * Toggles the 'active' CSS class on the poll tracker nav button.
- * @param {boolean} active - True to mark the button active, false to remove the class.
- * @returns {void}
- */
-function setPollTrackerNavState(active) {
-  if (!_state.pollTrackerModeLinkEl) return;
-  _state.pollTrackerModeLinkEl.classList.toggle('active', active);
-}
+
 
 /**
  * Shows or hides the poll tracker view, toggling the map stage and right panel visibility accordingly.
@@ -2884,15 +2854,9 @@ async function loadPollTrackerDataIfNeeded() {
  * @returns {Promise<void>}
  */
 async function activatePollTrackerMode() {
-  _state.predictModeActive = false;
-  setPredictModeNavState(false);
   if (predictWindow) predictWindow.hidden = true;
-
-  _state.pollTrackerModeActive = true;
-  document.querySelectorAll('.maps-election-item.active').forEach((node) => {
-    node.classList.remove('active');
-  });
-  setPollTrackerNavState(true);
+  setPollTrackerActive(true);
+  renderElectionLinks(activatePredictMode, activatePollTrackerMode);
 
   setPollTrackerLayoutVisible(true);
   await loadParliamentMetaIfNeeded();
@@ -3015,23 +2979,13 @@ function ensurePredictPartySwingMap(partyKey) {
 }
 
 /**
- * Toggles the 'active' CSS class on the predict mode nav button.
- * @param {boolean} active - True to mark the button active, false to remove the class.
- * @returns {void}
- */
-function setPredictModeNavState(active) {
-  if (!_state.predictModeLinkEl) return;
-  _state.predictModeLinkEl.classList.toggle('active', active);
-}
-
-/**
  * Syncs predict window and seat card visibility based on predict mode state, vote totals expansion, and England expansion.
  * @returns {void}
  */
 function syncPredictModeRightColumnLayout() {
   if (!predictWindow || !seatCard) return;
 
-  const predictVisible = _state.predictModeActive && !_state.pollTrackerModeActive;
+  const predictVisible = state.predictModeActive && !state.pollTrackerModeActive;
   predictWindow.hidden = !predictVisible;
   predictWindow.style.display = predictVisible ? '' : 'none';
 
@@ -3967,7 +3921,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
  * @returns {void}
  */
 function applyPredictModeProjection() {
-  if (!_state.predictModeActive) return;
+  if (!state.predictModeActive) return;
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) return;
 
   const hasHolyroodSwings =
@@ -3994,15 +3948,9 @@ function applyPredictModeProjection() {
 async function activatePredictMode() {
   if (!_state.currentSeats.length || !_state.currentMapData) return;
 
-  _state.pollTrackerModeActive = false;
-  setPollTrackerNavState(false);
+  setPredictActive(true);
   setPollTrackerLayoutVisible(false);
-
-  _state.predictModeActive = true;
-  document.querySelectorAll('.maps-election-item.active').forEach((node) => {
-    node.classList.remove('active');
-  });
-  setPredictModeNavState(true);
+  renderElectionLinks(activatePredictMode, activatePollTrackerMode);
   syncPredictModeRightColumnLayout();
 
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {
@@ -5561,7 +5509,7 @@ function renderTopoMap(mapData, seats, options = {}) {
  * @returns {void}
  */
 function resetPredictModeState() {
-  _state.predictModeActive = false;
+  setPredictActive(false);
   _state.predictBaseSeats = [];
   _state.predictBaseSeatsByKey = new Map();
   _state.predictBaseMapData = null;
@@ -5596,7 +5544,7 @@ function resetPredictModeState() {
  * @returns {void}
  */
 function resetPollTrackerModeState() {
-  _state.pollTrackerModeActive = false;
+  setPollTrackerActive(false);
   _state.pollTrackerRangeSelection = 'all';
   setPollTrackerLayoutVisible(false);
   syncPredictModeRightColumnLayout();
@@ -5612,7 +5560,8 @@ async function init() {
   try {
     await initElectionData();
   } catch (error) {
-    displayInitError(error);
+    setSubtitleText('Failed to load election data');
+    console.error(error);
   }
 }
 

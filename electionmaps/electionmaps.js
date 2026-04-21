@@ -39,8 +39,6 @@ async function initElectionData() {
 }
 
 async function initPollTracker() {
-  resetPredictModeState();
-  resetPollTrackerModeState();
   await activatePollTrackerMode();
 }
 
@@ -48,9 +46,6 @@ async function initElection(view) {
   _state.currentRegionLabelsByKey = buildRegionLabelLookup(state.currentElection.mapId);
   _state.defaultComparisonSummary = null;
   _state.defaultComparisonSeats = [];
-  resetPredictModeState();
-  resetPollTrackerModeState();
-
   if (filterGainsButton) {
     filterGainsButton.textContent = getByElectionSeatsSet() ? 'By-elections' : 'Gains';
     filterGainsButton.hidden = state.currentElection.id === 'eu-referendum-2016';
@@ -5502,52 +5497,6 @@ function renderTopoMap(mapData, seats, options = {}) {
   });
 
   svg.call(zoomBehavior.transform, options.preserveTransform || initialTransform);
-}
-
-/**
- * Clears all predict mode module-level state and hides the predict window.
- * @returns {void}
- */
-function resetPredictModeState() {
-  setPredictActive(false);
-  _state.predictBaseSeats = [];
-  _state.predictBaseSeatsByKey = new Map();
-  _state.predictBaseMapData = null;
-  _state.predictBaseRegionLabelsByKey = new Map();
-  _state.predictColumnPartyKeys = [];
-  _state.predictInputByRegionParty = new Map();
-  _state.predictBaselineShareByRegionParty = new Map();
-  _state.predictOtherCellByRegion = new Map();
-  _state.predictEnglandExpanded = false;
-  _state.predictRegionalSwingsByParty = new Map();
-  // Holyrood-specific state
-  _state.predictHolyroodTab = 'constituency';
-  _state.predictHolyroodRegionsExpanded = false;
-  _state.predictConstInputByRegionParty = new Map();
-  _state.predictListInputByRegionParty = new Map();
-  _state.predictBaselineConstShareByRegionParty = new Map();
-  _state.predictBaselineListShareByRegionParty = new Map();
-  _state.predictHolyroodConstSwingsByParty = new Map();
-  _state.predictHolyroodListSwingsByParty = new Map();
-  _state.predictNationalBaselines = new Map();
-  _state.predictNationalListBaselines = new Map();
-  _state.predictCurrentSimulationLoaded = false;
-  _state.predictCurrentSimulationSeats = [];
-  _state.predictCurrentSimulationConstShares = new Map();
-  _state.predictCurrentSimulationListShares = new Map();
-  if (predictWindow) predictWindow.hidden = true;
-  syncPredictModeRightColumnLayout();
-}
-
-/**
- * Clears poll tracker mode state and hides the poll tracker layout.
- * @returns {void}
- */
-function resetPollTrackerModeState() {
-  setPollTrackerActive(false);
-  _state.pollTrackerRangeSelection = 'all';
-  setPollTrackerLayoutVisible(false);
-  syncPredictModeRightColumnLayout();
 }
 
 /**

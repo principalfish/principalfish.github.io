@@ -178,7 +178,6 @@ export const _state = {
   predictionSnippet: null,
 
   // Misc
-  countdownIntervalId: null,
   lastTrackedVirtualPagePath: '',
 };
 
@@ -283,4 +282,19 @@ export function getPredictBaselineElectionId() {
  */
 export function getParlFeatures() {
   return getParlConfig().features;
+}
+
+// ─── Active election ──────────────────────────────────────────────────────────
+
+/** Scheduled polling date for the 2026 Holyrood election: 7 May 2026, 07:00 BST (06:00 UTC). */
+export const HOLYROOD_ELECTION_DATE = new Date('2026-05-07T06:00:00Z');
+
+/**
+ * Returns true when the election countdown should be visible.
+ * The countdown shows only for the Holyrood UNS prediction when poll tracker mode is not active.
+ * @returns {boolean}
+ */
+export function shouldShowCountdown() {
+  // TODO: generalise to support countdown for multiple concurrent elections
+  return state.currentElection.type === 'holyrood_uns';
 }

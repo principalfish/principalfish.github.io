@@ -6,7 +6,7 @@ import {
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPredictActive, setPollTrackerActive } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
-import { updateTitle, updateLeftBar, setSubtitleText } from './scripts/dom.js';
+import { updateTitle, updateLeftBar } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -5167,8 +5167,7 @@ function updateTopSummary(election, summary) {
   const subtitleText = hasMajority
     ? `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`
     : `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
-  setSubtitleText(subtitleText);
-  updateTitle();
+  updateTitle(subtitleText);
 }
 
 /**
@@ -5449,7 +5448,7 @@ async function init() {
   try {
     await initElectionData();
   } catch (error) {
-    updateTitle(true);
+    updateTitle('', true);
     console.error(error);
   }
 }

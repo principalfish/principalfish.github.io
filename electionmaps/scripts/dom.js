@@ -7,28 +7,15 @@ const subtitle = document.getElementById('mapsSubtitle');
 
 // ─── Subtitle ─────────────────────────────────────────────────────────────────
 
-/** Full subtitle text set by updateTopSummary once election results have loaded. Empty until then. */
-let subtitleText = '';
-
 /**
- * Stores the full subtitle string computed from election results. Call this before updateTitle
- * so that renderSubtitleText picks up the latest value. Not needed for poll tracker or error
- * states, which derive their text from state.view / the error flag directly.
- * @param {string} text - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
- * @returns {void}
- */
-export function setSubtitleText(text) {
-  subtitleText = text;
-}
-
-/**
- * Renders the subtitle element. Derives text and snippet behaviour from current state:
- * poll tracker view uses a fixed label with snippet; election view uses subtitleText
- * (falling back to the election name before results load) with snippet for model elections.
+ * Renders the subtitle element. Derives snippet behaviour from current state:
+ * poll tracker view uses a fixed label with snippet; election view uses the provided
+ * text (falling back to the election name before results load) with snippet for model elections.
+ * @param {string} [text=''] - Subtitle string; omit on early init to fall back to election name.
  * @param {boolean} [error=false] - When true, displays a load-failure message instead.
  * @returns {void}
  */
-function renderSubtitleText(error = false) {
+function renderSubtitleText(text = '', error = false) {
   if (!subtitle) return;
 
   let baseText;
@@ -41,12 +28,12 @@ function renderSubtitleText(error = false) {
     baseText = 'Poll tracker · model output trends';
     includeSnippet = true;
   } else {
-    baseText = subtitleText || state.currentElection?.name || '';
+    baseText = text || state.currentElection?.name || '';
     includeSnippet = Boolean(state.currentElection?.model);
   }
 
   subtitle.textContent = '';
- 
+
   const mainSpan = document.createElement('span');
   mainSpan.className = 'maps-subtitle-main';
   mainSpan.textContent = String(baseText || '').trim();
@@ -64,14 +51,16 @@ function renderSubtitleText(error = false) {
 
 /**
  * Updates the title area: the page h1, subtitle, and election countdown.
- * Called early in init (subtitle shows election name only) and again after results load
- * (subtitle shows the full summary set by setSubtitleText). Pass error=true on load failure.
+ * Called early in init (text omitted — subtitle falls back to election name) and again
+ * after results load with the full summary string. Pass error=true on load failure.
+ * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
+ *   TODO: once election summary data is held in state, derive this internally and remove the param.
  * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
  * @returns {void}
  */
-export function updateTitle(error = false) {
+export function updateTitle(text = '', error = false) {
   renderTitle();
-  renderSubtitleText(error);
+  renderSubtitleText(text, error);
   renderCountdown();
 }
 

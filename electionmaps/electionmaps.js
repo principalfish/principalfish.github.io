@@ -6,7 +6,7 @@ import {
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPredictActive, setPollTrackerActive } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
-import { updateTitle, updateLeftBar } from './scripts/dom.js';
+import { updateTitle, updateLeftBar, setSubtitleText } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -30,13 +30,15 @@ async function initElectionData() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
   const view = getSearchParam('view') || 'election';
   await initState(await fetchJson('data/map-modes.json'), view);
+  updateLeftBar();
+  // Render early with the election name only — subtitle will be overwritten with full summary
+  // text (majority / hung parliament) once election results have loaded below.
+  updateTitle();
   if (view === 'polltracker') {
     await activatePollTrackerMode();
   } else {
     await initElection(view);
   }
-  updateLeftBar();
-  updateTitle();
 }
 
 async function initElection(view) {
@@ -2208,7 +2210,6 @@ const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');
 const seatPreview = document.getElementById('mapsSeatPreview');
-const subtitle = document.getElementById('mapsSubtitle');
 const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
 const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
 const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
@@ -2423,33 +2424,6 @@ function formatZoomPct(scaleValue) {
 }
 
 
-
-/**
- * Sets the subtitle element content, optionally appending the latest poll snippet as a secondary span.
- * @param {string} baseText - Primary subtitle text to display.
- * @param {{includeSnippet?: boolean}} [options={}] - Options.
- * @returns {void}
- */
-function setSubtitleText(baseText, options = {}) {
-  if (!subtitle) return;
-
-  const latestPollSnippet = options.includeSnippet ? state.predictionSnippet : '';
-
-  subtitle.textContent = '';
-  subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
-
-  const mainSpan = document.createElement('span');
-  mainSpan.className = 'maps-subtitle-main';
-  mainSpan.textContent = String(baseText || '').trim();
-  subtitle.appendChild(mainSpan);
-
-  if (!latestPollSnippet) return;
-
-  const latestSpan = document.createElement('span');
-  latestSpan.className = 'maps-subtitle-latest';
-  latestSpan.textContent = latestPollSnippet;
-  subtitle.appendChild(latestSpan);
-}
 
 
 
@@ -2829,7 +2803,6 @@ async function activatePollTrackerMode() {
 
   setPollTrackerLayoutVisible(true);
   setMapsPageTitle('Poll tracker', 'westminster');
-  setSubtitleText('Poll tracker · model output trends', { includeSnippet: true });
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
   replaceRouteState('polltracker');
 
@@ -5191,16 +5164,11 @@ function updateTopSummary(election, summary) {
   const hasMajority = leadSeats > majorityThreshold;
   const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
 
-  if (subtitle) {
-    const subtitleOptions = { includeSnippet: Boolean(election?.model) };
-    if (hasMajority) {
-      const baseText = `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`;
-      setSubtitleText(baseText, subtitleOptions);
-    } else {
-      const baseText = `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
-      setSubtitleText(baseText, subtitleOptions);
-    }
-  }
+  const subtitleText = hasMajority
+    ? `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`
+    : `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
+  setSubtitleText(subtitleText);
+  updateTitle();
 }
 
 /**
@@ -5481,7 +5449,7 @@ async function init() {
   try {
     await initElectionData();
   } catch (error) {
-    setSubtitleText('Failed to load election data');
+    updateTitle(true);
     console.error(error);
   }
 }

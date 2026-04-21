@@ -2,16 +2,76 @@ import { manifest, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, sh
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
-const electionCountdownEl = document.getElementById('mapsElectionCountdown');
+const electionCountdown = document.getElementById('mapsElectionCountdown');
+const subtitle = document.getElementById('mapsSubtitle');
+
+// ─── Subtitle ─────────────────────────────────────────────────────────────────
+
+/** Full subtitle text set by updateTopSummary once election results have loaded. Empty until then. */
+let subtitleText = '';
 
 /**
- * Updates the title area: the page h1 and the election countdown.
- * TODO: migrate subtitle text (parliament description, latest poll) here.
+ * Stores the full subtitle string computed from election results. Call this before updateTitle
+ * so that renderSubtitleText picks up the latest value. Not needed for poll tracker or error
+ * states, which derive their text from state.view / the error flag directly.
+ * @param {string} text - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
  * @returns {void}
  */
-export function updateTitle() {
+export function setSubtitleText(text) {
+  subtitleText = text;
+}
+
+/**
+ * Renders the subtitle element. Derives text and snippet behaviour from current state:
+ * poll tracker view uses a fixed label with snippet; election view uses subtitleText
+ * (falling back to the election name before results load) with snippet for model elections.
+ * @param {boolean} [error=false] - When true, displays a load-failure message instead.
+ * @returns {void}
+ */
+function renderSubtitleText(error = false) {
+  if (!subtitle) return;
+
+  let baseText;
+  let includeSnippet;
+
+  if (error) {
+    baseText = 'Failed to load election data';
+    includeSnippet = false;
+  } else if (state.view === 'polltracker') {
+    baseText = 'Poll tracker · model output trends';
+    includeSnippet = true;
+  } else {
+    baseText = subtitleText || state.currentElection?.name || '';
+    includeSnippet = Boolean(state.currentElection?.model);
+  }
+
+  subtitle.textContent = '';
+ 
+  const mainSpan = document.createElement('span');
+  mainSpan.className = 'maps-subtitle-main';
+  mainSpan.textContent = String(baseText || '').trim();
+  subtitle.appendChild(mainSpan);
+
+  const latestPollSnippet = includeSnippet ? state.predictionSnippet : '';
+  subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
+  if (!latestPollSnippet) return;
+
+  const latestSpan = document.createElement('span');
+  latestSpan.className = 'maps-subtitle-latest';
+  latestSpan.textContent = latestPollSnippet;
+  subtitle.appendChild(latestSpan);
+}
+
+/**
+ * Updates the title area: the page h1, subtitle, and election countdown.
+ * Called early in init (subtitle shows election name only) and again after results load
+ * (subtitle shows the full summary set by setSubtitleText). Pass error=true on load failure.
+ * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
+ * @returns {void}
+ */
+export function updateTitle(error = false) {
   renderTitle();
-  // TODO: migrate subtitle text (parliament description, latest poll, countdown) here
+  renderSubtitleText(error);
   renderCountdown();
 }
 
@@ -116,7 +176,7 @@ function formatCountdown(ms) {
  * @returns {void}
  */
 function renderCountdown() {
-  if (!electionCountdownEl) return;
+  if (!electionCountdown) return;
 
   const shouldShow = shouldShowCountdown();
 
@@ -126,21 +186,21 @@ function renderCountdown() {
   }
 
   if (!shouldShow) {
-    electionCountdownEl.hidden = true;
+    electionCountdown.hidden = true;
     return;
   }
 
   const tick = () => {
     const msLeft = HOLYROOD_ELECTION_DATE - Date.now();
     if (msLeft <= 0) {
-      electionCountdownEl.hidden = true;
+      electionCountdown.hidden = true;
       // Clear and null the handle so renderCountdown can safely restart if called again.
       clearInterval(countdown.intervalId);
       countdown.intervalId = null;
       return;
     }
-    electionCountdownEl.textContent = `${formatCountdown(msLeft)} · Holyrood election · 7 May 2026`;
-    electionCountdownEl.hidden = false;
+    electionCountdown.textContent = `${formatCountdown(msLeft)} · Holyrood election · 7 May 2026`;
+    electionCountdown.hidden = false;
   };
 
   tick();

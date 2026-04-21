@@ -240,6 +240,10 @@ async function setState() {
   state.parliamentElections = parliamentElections;
   let currentElection = parliamentElections.find((e) => e.id === requestedId);
   if (!currentElection) {
+    // No ?election= param, or it named an election that doesn't exist in this parliament.
+    // Prefer the predict anchor (the live/current election for this parliament) so that
+    // bare parliament-tab clicks land on the most relevant view rather than an arbitrary
+    // historical election. Fall back to the manifest default, then the first in the list.
     const anchorId = getPredictAnchorElectionId();
     currentElection =
       (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)

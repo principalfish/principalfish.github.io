@@ -28,15 +28,15 @@ import { updateTitle, updateLeftBar } from './scripts/dom.js';
  */
 async function initElectionData() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
-  initState(await fetchJson('data/map-modes.json'));
   const view = getSearchParam('view') || 'election';
+  await initState(await fetchJson('data/map-modes.json'), view);
   if (view === 'polltracker') {
     await activatePollTrackerMode();
   } else {
     await initElection(view);
   }
-  updateTitle();
   updateLeftBar();
+  updateTitle();
 }
 
 async function initElection(view) {
@@ -56,16 +56,10 @@ async function initElection(view) {
   // Fetch 2 (parallel):
   //   - map topology (TopoJSON SVG paths for every seat)
   //   - election results (seat outcomes, vote totals, party breakdowns)
-  //   - prediction snippet text (model elections only — subtitle label from files.meta)
   const { mapFile, dataFile } = resolveElectionFiles(state.currentElection);
   const [mapData, resultsData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
-    ...(state.currentElection.model ? [
-      fetchJson(`data/${manifest.files.meta[state.currentParliament]}`)
-        .then((p) => { _state.predictionSnippet = String(p?.latest_poll_snippet || '').trim(); })
-        .catch(() => { _state.predictionSnippet = ''; }),
-    ] : []),
   ]);
 
   const seats = normalizeSeats(resultsData);
@@ -100,22 +94,6 @@ async function initElection(view) {
     await activatePredictMode();
   } else {
     replaceRouteState('election');
-  }
-}
-
-/**
- * Fetches the metadata snippet for the current parliament once per page load. Silently ignores fetch errors.
- * Uses state.currentParliament to select the correct meta file from manifest.files.meta.
- * @returns {Promise<void>}
- */
-async function loadParliamentMetaIfNeeded() {
-  const metaPath = manifest.files.meta[state.currentParliament];
-  if (!metaPath || _state.predictionSnippet !== null) return;
-  try {
-    const payload = await fetchJson(`data/${metaPath}`);
-    _state.predictionSnippet = String(payload?.latest_poll_snippet || '').trim();
-  } catch (_error) {
-    _state.predictionSnippet = '';
   }
 }
 
@@ -2455,7 +2433,7 @@ function formatZoomPct(scaleValue) {
 function setSubtitleText(baseText, options = {}) {
   if (!subtitle) return;
 
-  const latestPollSnippet = options.includeSnippet ? String(_state.predictionSnippet || '').trim() : '';
+  const latestPollSnippet = options.includeSnippet ? state.predictionSnippet : '';
 
   subtitle.textContent = '';
   subtitle.classList.toggle('maps-subtitle-has-latest', Boolean(latestPollSnippet));
@@ -2846,11 +2824,10 @@ async function loadPollTrackerDataIfNeeded() {
  * @returns {Promise<void>}
  */
 async function activatePollTrackerMode() {
-  if (predictWindow) predictWindow.hidden = true;
+  
   setPollTrackerActive(true);
 
   setPollTrackerLayoutVisible(true);
-  await loadParliamentMetaIfNeeded();
   setMapsPageTitle('Poll tracker', 'westminster');
   setSubtitleText('Poll tracker · model output trends', { includeSnippet: true });
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';

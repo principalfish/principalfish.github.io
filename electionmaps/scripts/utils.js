@@ -34,6 +34,21 @@ export function normalizeRegionKey(value) {
 }
 
 /**
+ * Fetches the parliament meta file and returns the latest poll snippet string, or null on failure.
+ * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
+ * @returns {Promise<string|null>}
+ */
+export async function fetchElectionPredictionMeta(parliament) {
+  const metaPath = manifest.files.meta[parliament];
+  try {
+    const payload = await fetchJson(`data/${metaPath}`);
+    return String(payload?.latest_poll_snippet || '').trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Returns the display label for a party from the manifest, or the raw key if not found.
  * @param {string} partyKey - Canonical party key (e.g. "labour").
  * @returns {string} Human-readable party name, or the raw key as fallback.

@@ -2,7 +2,7 @@
 // All modules import this object and mutate its properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import { normalizeRegionKey } from './utils.js';
+import { normalizeRegionKey, fetchElectionPredictionMeta } from './utils.js';
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 
@@ -12,12 +12,14 @@ export let manifest = null;
  * Initialises shared state for a page load: sets the manifest, hydrates lookup maps,
  * and resolves initial URL params into state.
  * @param {object} manifestData - Raw manifest object from map-modes.json.
- * @returns {void}
+ * @param {string} view - Active view name ('election' | 'predict' | 'polltracker').
+ * @returns {Promise<void>}
  */
-export function initState(manifestData) {
+export async function initState(manifestData, view) {
   manifest = manifestData;
+  state.view = view;
   hydrateManifestSettings();
-  setState();
+  await setState();
 }
 
 /**
@@ -171,7 +173,6 @@ export const _state = {
   pollTrackerTimeline: [],
   pollTrackerSeriesByParty: new Map(),
   pollTrackerRangeSelection: 'all',
-  predictionSnippet: null,
 
   // Misc
   lastTrackedVirtualPagePath: '',
@@ -214,6 +215,14 @@ export const state = {
   /** True when poll tracker mode is active — the user is viewing historical poll trends.
    * Mutually exclusive with predictModeActive. */
   pollTrackerModeActive: false,
+
+  /** Latest poll snippet text for the current parliament, used in subtitle rendering.
+   * Empty string until fetched or if the fetch failed. */
+  predictionSnippet: '',
+
+  /** Active view name for the current page load ('election' | 'predict' | 'polltracker').
+   * Set by initState from the ?view= URL param, defaulting to 'election'. */
+  view: 'election',
 };
 
 /**
@@ -222,7 +231,7 @@ export const state = {
  * Throws if no elections are configured for the resolved parliament.
  * @returns {void}
  */
-function setState() {
+async function setState() {
   const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
   state.currentParliament = getSearchParam('parliament') || defaultParliament;
 
@@ -243,6 +252,11 @@ function setState() {
   }
 
   state.currentElection = { ...currentElection };
+
+  // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
+  if (state.view === 'polltracker' || state.currentElection.model) {
+    state.predictionSnippet = (await fetchElectionPredictionMeta(state.currentParliament)) ?? '';
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

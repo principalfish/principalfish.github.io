@@ -99,7 +99,7 @@ function renderParliamentTabs() {
  * @returns {void}
  */
 function renderElectionLinks() {
-  const activeId = (state.pollTrackerModeActive || state.predictModeActive) ? null : state.currentElection.id;
+  const activeId = state.view === 'election' ? state.currentElection.id : null;
 
   const features = manifest.parliamentFeatures[state.currentParliament]?.features ?? [];
   const hasPredictMode = features.includes('predict');
@@ -119,7 +119,7 @@ function renderElectionLinks() {
     if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
       const predictLink = document.createElement('a');
       predictLink.href = predictUrl();
-      predictLink.className = `maps-election-item${state.predictModeActive ? ' active' : ''}`;
+      predictLink.className = `maps-election-item${state.view === 'predict' ? ' active' : ''}`;
       const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
       predictLink.textContent = `Predict ${nextElectionYear ?? ''}`;
       electionList.appendChild(predictLink);
@@ -128,7 +128,7 @@ function renderElectionLinks() {
       if (hasPollTracker && !insertedPollTrackerLink) {
         const trackerLink = document.createElement('a');
         trackerLink.href = pollTrackerUrl();
-        trackerLink.className = `maps-election-item${state.pollTrackerModeActive ? ' active' : ''}`;
+        trackerLink.className = `maps-election-item${state.view === 'polltracker' ? ' active' : ''}`;
         trackerLink.textContent = 'Poll tracker';
         electionList.appendChild(trackerLink);
         insertedPollTrackerLink = true;

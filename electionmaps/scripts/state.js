@@ -169,7 +169,6 @@ export const _state = {
   predictCurrentSimulationListShares: new Map(),
 
   // Poll tracker
-  pollTrackerDataLoaded: false,
   pollTrackerTimeline: [],
   pollTrackerSeriesByParty: new Map(),
   pollTrackerRangeSelection: 'all',

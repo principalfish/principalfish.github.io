@@ -101,6 +101,135 @@ async function initElection(view) {
 
 
 // =====================================================================
+// POLLTRACKER
+// =====================================================================
+
+/**
+ * Switches the app into poll tracker mode: deactivates predict mode, loads data, renders controls and chart, and updates the route.
+ * @returns {Promise<void>}
+ */
+async function activatePollTrackerMode() {
+  document.body.classList.add('maps-polltracker-mode');
+  setMapsPageTitle('Poll tracker', 'westminster');
+  trackVirtualPageView(window.location.href);
+
+  const dataPath = manifest.parliamentFeatures[state.currentParliament].polltrackerDataPath;
+  const data = await fetchJson(`data/${dataPath}`);
+  const parsed = parsePollTrackerData(data);
+  _state.pollTrackerTimeline = parsed.timeline;
+  _state.pollTrackerSeriesByParty = parsed.seriesByParty;
+
+  renderPollTrackerPartyControls();
+  renderPollTrackerChart();
+}
+
+/**
+ * Parses poll tracker JSON into { timeline, seriesByParty }.
+ * Deduplicates rows by date (asOfDate), preferring the highest electionId.
+ * Expands the sparse date entries into a dense daily timeline; series values
+ * carry forward the last known value for dates with no data.
+ * @param {Array} data - Parsed JSON array from the poll tracker data file.
+ * @returns {{timeline: Array<{dateKey: string, dateValue: Date}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>}} Parsed poll tracker data.
+ */
+function parsePollTrackerData(data) {
+  const partiesById = manifest.partiesById;
+  const rows = [];
+  for (const entry of data) {
+    const electionId = Number(entry.election_id);
+    if (!Number.isFinite(electionId)) continue;
+    const asOfDate = String(entry.as_of_date || '').trim();
+    for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
+      const partyId = Number(partyIdStr);
+      const seats = Number(pdata.s);
+      const votePct = Number(pdata.v);
+      if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
+      rows.push({
+        electionId,
+        partyKey: String(partyId),
+        asOfDate,
+        seats,
+        votePct,
+      });
+    }
+  }
+
+  const timelineByDateKey = new Map();
+  const byParty = new Map();
+
+  rows.forEach((row) => {
+    const dateKey = row.asOfDate;
+    const existingTimelineEntry = timelineByDateKey.get(dateKey);
+    if (!existingTimelineEntry || row.electionId > existingTimelineEntry.electionId) {
+      timelineByDateKey.set(dateKey, { dateKey, electionId: row.electionId });
+    }
+
+    if (!byParty.has(row.partyKey)) byParty.set(row.partyKey, new Map());
+    const byDateKey = byParty.get(row.partyKey);
+    const existingPartyDateRow = byDateKey.get(dateKey);
+    if (!existingPartyDateRow || row.electionId > existingPartyDateRow.electionId) {
+      byDateKey.set(dateKey, row);
+    }
+  });
+
+  const timeline = Array.from(timelineByDateKey.values())
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+
+  const parseIsoDate = (value) => new Date(`${value}T00:00:00Z`);
+  const formatIsoDate = (value) => {
+    const year = value.getUTCFullYear();
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(value.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const expandedTimeline = (() => {
+    if (timeline.length <= 1) {
+      return timeline.map((entry) => ({ dateKey: entry.dateKey, dateValue: parseIsoDate(entry.dateKey) }));
+    }
+    const start = parseIsoDate(timeline[0].dateKey);
+    const end = parseIsoDate(timeline[timeline.length - 1].dateKey);
+    const entries = [];
+    const current = new Date(start.getTime());
+    while (current.getTime() <= end.getTime()) {
+      const iso = formatIsoDate(current);
+      entries.push({ dateKey: iso, dateValue: new Date(current.getTime()) });
+      current.setUTCDate(current.getUTCDate() + 1);
+    }
+    return entries;
+  })();
+
+  const seriesByParty = new Map();
+  byParty.forEach((rowsByDateKey, partyKey) => {
+    const seats = [];
+    const votePct = [];
+    let lastSeats = null;
+    let lastVotePct = null;
+    expandedTimeline.forEach((entry) => {
+      const row = rowsByDateKey.get(entry.dateKey);
+      if (row) {
+        lastSeats = Number(row.seats || 0);
+        lastVotePct = Number(row.votePct || 0);
+      }
+      seats.push(lastSeats);
+      votePct.push(lastVotePct);
+    });
+
+    const manifestParty = partiesById?.get(Number(partyKey));
+    seriesByParty.set(partyKey, {
+      partyKey,
+      partyName: manifestParty?.name || partyKey,
+      colour: manifestParty?.colour || '#9CA3AF',
+      seats,
+      votePct,
+      latestSeats: Number(seats[seats.length - 1] || 0),
+    });
+  });
+
+  return { timeline: expandedTimeline, seriesByParty };
+}
+
+
+// =====================================================================
 // WIRE CONTROLS
 // =====================================================================
 
@@ -1496,20 +1625,6 @@ function cloneSeatRecord(seat) {
   };
 }
 
-/**
- * Extracts a YYYY-MM-DD date string from an election name when present.
- * Returns the trimmed name when no date is found, or the stringified fallbackId when the name is empty.
- * @param {string} electionName - Election name string, which may contain an ISO date.
- * @param {number|string} fallbackId - Fallback identifier used when the name is empty.
- * @returns {string} ISO date string if found in the name, the trimmed name otherwise, or stringified fallbackId for empty names.
- */
-function pollTrackerDateLabel(electionName, fallbackId) {
-  const text = String(electionName || '').trim();
-  const match = text.match(/(\d{4}-\d{2}-\d{2})/);
-  if (match?.[1]) return match[1];
-  return text || String(fallbackId);
-}
-
 // ── Predict payload encode / decode ──────────────────────────────────────────
 
 /**
@@ -1905,181 +2020,6 @@ function collectPredictInputRows(baseRegionLabelsByKey, englandExpanded) {
   return rows;
 }
 
-// ── Poll tracker parsing ──────────────────────────────────────────────────────
-
-/**
- * Parses poll tracker JSON into { timeline, seriesByParty, partyMeta }.
- * Deduplicates rows by date, preferring the highest electionId.
- * Expands sparse date entries into a dense daily timeline when all entries are ISO dates.
- * Series values carry forward the last known value for dates with no data.
- * @param {Array} data - Parsed JSON array from the poll tracker data file.
- * @param {Map<number, {key?: string, name?: string, colour?: string}>} partiesById - Manifest party lookup keyed by integer party ID.
- * @returns {{timeline: Array<{dateKey: string, electionId: number, sortValue: string, label: string, dateValue: Date|null}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>, partyMeta: Map<string, {name: string, colour: string}>}} Parsed poll tracker data.
- */
-function parsePollTrackerData(data) {
-  const partiesById = manifest.partiesById;
-  const rows = [];
-  for (const entry of data) {
-    const electionId = Number(entry.election_id);
-    if (!Number.isFinite(electionId)) continue;
-    const electionName = String(entry.election_name || '');
-    const asOfDateRaw = String(entry.as_of_date || '').trim();
-    const unsDateMatch = electionName.match(/UNS\s+(\d{4}-\d{2}-\d{2})/);
-    const asOfDate = unsDateMatch?.[1] || asOfDateRaw;
-    for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
-      const partyId = Number(partyIdStr);
-      const seats = Number(pdata.s);
-      const votePct = Number(pdata.v);
-      if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
-      const manifestParty = partiesById?.get(partyId);
-      const normalizedPartyKey = normalizePartyKey(manifestParty?.key || manifestParty?.name || String(partyId));
-      const partyName = manifestParty?.name || normalizedPartyKey || `Party ${partyId}`;
-      rows.push({
-        electionId,
-        partyId,
-        partyKey: String(partyId),
-        asOfDate,
-        electionName,
-        partyName,
-        seats,
-        votePct,
-      });
-    }
-  }
-
-  const timelineByDateKey = new Map();
-  const byParty = new Map();
-  const partyMeta = new Map();
-
-  /**
-   * Returns value unchanged if it is an ISO date string, otherwise returns fallback as a string.
-   * @param {string} value - Candidate sort value.
-   * @param {string|number} fallback - Fallback value used when value is not an ISO date.
-   * @returns {string} ISO date string or stringified fallback.
-   */
-  const toDateSortValue = (value, fallback) => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-    return String(fallback);
-  };
-
-  rows.forEach((row) => {
-    const dateKey = row.asOfDate || pollTrackerDateLabel(row.electionName, row.electionId);
-    const existingTimelineEntry = timelineByDateKey.get(dateKey);
-    if (!existingTimelineEntry || row.electionId > existingTimelineEntry.electionId) {
-      timelineByDateKey.set(dateKey, {
-        dateKey,
-        electionId: row.electionId,
-        sortValue: toDateSortValue(dateKey, row.electionId),
-        label: row.asOfDate || pollTrackerDateLabel(row.electionName, row.electionId),
-      });
-    }
-
-    if (!byParty.has(row.partyKey)) byParty.set(row.partyKey, new Map());
-    const byDateKey = byParty.get(row.partyKey);
-    const existingPartyDateRow = byDateKey.get(dateKey);
-    if (!existingPartyDateRow || row.electionId > existingPartyDateRow.electionId) {
-      byDateKey.set(dateKey, row);
-    }
-
-    if (!partyMeta.has(row.partyKey)) {
-      const manifestParty = Number.isFinite(row.partyId) ? partiesById?.get(row.partyId) : null;
-      partyMeta.set(row.partyKey, {
-        name: row.partyName,
-        colour: manifestParty?.colour || '#9CA3AF',
-      });
-    }
-  });
-
-  const timeline = Array.from(timelineByDateKey.values())
-    .sort((a, b) => {
-      if (a.sortValue === b.sortValue) return a.electionId - b.electionId;
-      return a.sortValue.localeCompare(b.sortValue);
-    });
-
-  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-  /**
-   * Parses an ISO date string into a UTC Date, or returns null if the input does not match ISO_DATE_RE.
-   * @param {string} value - String to parse.
-   * @returns {Date|null} UTC Date object, or null on invalid/non-ISO input.
-   */
-  const parseIsoDate = (value) => {
-    const text = String(value || '').trim();
-    if (!ISO_DATE_RE.test(text)) return null;
-    const parsed = new Date(`${text}T00:00:00Z`);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  };
-
-  /**
-   * Formats a UTC Date as a zero-padded ISO date string (YYYY-MM-DD).
-   * @param {Date} value - UTC Date to format.
-   * @returns {string} ISO date string derived from UTC year/month/day components.
-   */
-  const formatIsoDate = (value) => {
-    const year = value.getUTCFullYear();
-    const month = String(value.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(value.getUTCDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const allTimelineDates = timeline
-    .map((entry) => parseIsoDate(entry.dateKey || entry.label))
-    .filter(Boolean)
-    .sort((a, b) => a.getTime() - b.getTime());
-
-  const shouldExpandDailyTimeline = allTimelineDates.length === timeline.length && timeline.length > 1;
-  const expandedTimeline = shouldExpandDailyTimeline
-    ? (() => {
-        const start = allTimelineDates[0];
-        const end = allTimelineDates[allTimelineDates.length - 1];
-        const entries = [];
-        const current = new Date(start.getTime());
-        while (current.getTime() <= end.getTime()) {
-          const iso = formatIsoDate(current);
-          const existing = timelineByDateKey.get(iso);
-          entries.push({
-            dateKey: iso,
-            electionId: existing?.electionId || 0,
-            sortValue: iso,
-            label: iso,
-            dateValue: new Date(current.getTime()),
-          });
-          current.setUTCDate(current.getUTCDate() + 1);
-        }
-        return entries;
-      })()
-    : timeline.map((entry) => ({
-        ...entry,
-        dateValue: parseIsoDate(entry.dateKey || entry.label),
-      }));
-
-  const seriesByParty = new Map();
-  byParty.forEach((rowsByDateKey, partyKey) => {
-    const seats = [];
-    const votePct = [];
-    let lastSeats = null;
-    let lastVotePct = null;
-    expandedTimeline.forEach((entry) => {
-      const row = rowsByDateKey.get(entry.dateKey);
-      if (row) {
-        lastSeats = Number(row.seats || 0);
-        lastVotePct = Number(row.votePct || 0);
-      }
-      seats.push(lastSeats);
-      votePct.push(lastVotePct);
-    });
-
-    seriesByParty.set(partyKey, {
-      partyKey,
-      partyName: partyMeta.get(partyKey)?.name || partyKey,
-      colour: partyMeta.get(partyKey)?.colour || '#9CA3AF',
-      seats,
-      votePct,
-      latestSeats: Number(seats[seats.length - 1] || 0),
-    });
-  });
-
-  return { timeline: expandedTimeline, seriesByParty, partyMeta };
-}
 
 // ── Holyrood predict share resolution ────────────────────────────────────────
 
@@ -2257,7 +2197,6 @@ const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
 const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
-const POLL_TRACKER_DATA_PATH = 'data/results/model_output_trends.json';
 // Canonical map name strings used to route postcode lookups to the correct
 // postcodes.io endpoint and to identify whether postcode search is supported.
 const WESTMINSTER_OLD_MAP_NAME = 'westminster-2010';
@@ -2705,35 +2644,6 @@ function renderPollTrackerPartyControls() {
     label.appendChild(text);
     pollTrackerPartyControls.appendChild(label);
   });
-}
-
-/**
- * Fetches and parses the poll tracker CSV once per page load, populating _state.pollTrackerTimeline and _state.pollTrackerSeriesByParty.
- * @returns {Promise<void>}
- */
-async function loadPollTrackerDataIfNeeded() {
-  if (_state.pollTrackerDataLoaded) return;
-
-  const data = await fetchJson(POLL_TRACKER_DATA_PATH);
-  const parsed = parsePollTrackerData(data);
-
-  _state.pollTrackerTimeline = parsed.timeline;
-  _state.pollTrackerSeriesByParty = parsed.seriesByParty;
-  _state.pollTrackerDataLoaded = true;
-}
-
-/**
- * Switches the app into poll tracker mode: deactivates predict mode, loads data, renders controls and chart, and updates the route.
- * @returns {Promise<void>}
- */
-async function activatePollTrackerMode() {
-  document.body.classList.add('maps-polltracker-mode');
-  setMapsPageTitle('Poll tracker', 'westminster');
-  trackVirtualPageView(window.location.href);
-
-  await loadPollTrackerDataIfNeeded();
-  renderPollTrackerPartyControls();
-  renderPollTrackerChart();
 }
 
 /** Toggles vote percentage column visibility on the totals table. */

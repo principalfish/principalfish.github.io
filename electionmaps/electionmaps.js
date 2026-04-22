@@ -4,9 +4,9 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPredictActive, setPollTrackerActive } from './scripts/state.js';
-import { fetchJson, normalizeRegionKey, labelParty, colourParty } from './scripts/utils.js';
-import { updateTitle, updateLeftBar } from './scripts/dom.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId } from './scripts/state.js';
+import { fetchJson, normalizeRegionKey, labelParty, colourParty, trackVirtualPageView } from './scripts/utils.js';
+import { updateTitle, updateLeftBar, setMapsPageTitle } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -322,7 +322,7 @@ function wirePredictControls() {
 function wirePollTrackerMetricInput(inputEl) {
   if (!inputEl || inputEl.dataset.wired === 'true') return;
   inputEl.addEventListener('change', () => {
-    if (state.pollTrackerModeActive) renderPollTrackerChart();
+    if (state.view === 'polltracker') renderPollTrackerChart();
   });
   inputEl.dataset.wired = 'true';
 }
@@ -345,7 +345,7 @@ function wirePollTrackerControls() {
       document.querySelectorAll('[data-polltracker-range]').forEach((candidate) => {
         candidate.classList.toggle('is-active', candidate.getAttribute('data-polltracker-range') === nextRange);
       });
-      if (state.pollTrackerModeActive) renderPollTrackerChart();
+      if (state.view === 'polltracker') renderPollTrackerChart();
     });
     button.dataset.wired = 'true';
   });
@@ -526,7 +526,7 @@ function wireVoteTotalsToggle() {
 function wireWindowResize() {
   window.addEventListener('resize', () => {
     syncRightPanelHeightToMap();
-    if (state.pollTrackerModeActive) renderPollTrackerChart();
+    if (state.view === 'polltracker') renderPollTrackerChart();
   });
 }
 
@@ -2258,7 +2258,6 @@ const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 const POLL_TRACKER_DATA_PATH = 'data/results/model_output_trends.json';
-const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 // Canonical map name strings used to route postcode lookups to the correct
 // postcodes.io endpoint and to identify whether postcode search is supported.
 const WESTMINSTER_OLD_MAP_NAME = 'westminster-2010';
@@ -2296,48 +2295,11 @@ const HOLYROOD_2021_TO_2026_NAME = {
 
 
 /**
- * Fires a gtag page_view event for a URL, deduplicating against the last tracked path.
- * @param {string} nextUrl - Full URL string to track; parsed to extract pathname and search.
- * @returns {void}
- */
-function trackVirtualPageView(nextUrl) {
-  if (typeof window.gtag !== 'function') return;
-
-  try {
-    const parsed = new URL(nextUrl, window.location.origin);
-    const pagePath = `${parsed.pathname}${parsed.search}`;
-    if (pagePath === _state.lastTrackedVirtualPagePath) return;
-
-    _state.lastTrackedVirtualPagePath = pagePath;
-    window.gtag('event', 'page_view', {
-      page_location: parsed.toString(),
-      page_path: pagePath,
-      page_title: document.title,
-    });
-  } catch (_error) {
-  }
-}
-
-/**
- * Sets the browser tab title, prepending contextLabel when provided.
- * @param {string|null} contextLabel - Optional label to prepend (e.g. election name or mode name).
- * @param {string|null} [parliament=null] - Parliament key ('holyrood' | 'westminster' | null).
- * @returns {void}
- */
-function setMapsPageTitle(contextLabel, parliament = null) {
-  const label = String(contextLabel || '').trim();
-  const parlLabel = parliament ? parliament[0].toUpperCase() + parliament.slice(1) : null;
-  const suffix = parlLabel ? `${parlLabel} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
-  document.title = label ? `${label} | ${suffix}` : suffix;
-}
-
-/**
  * Builds a URLSearchParams for the given view, setting/removing the election and predict params as appropriate.
  * @param {string} view - View name to set ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to include; falls back to state.currentElection.id if null.
  * @returns {URLSearchParams} Updated search params with view, election, and predict params adjusted.
  */
-function buildRouteSearchParams(view, electionId = null) {
+function buildRouteSearchParams(view) {
   const params = getSearchParams();
   params.set('view', view);
   if (view !== 'predict') params.delete('predict');
@@ -2347,9 +2309,8 @@ function buildRouteSearchParams(view, electionId = null) {
     return params;
   }
 
-  const selectedElectionId = electionId || state.currentElection.id;
-  if (selectedElectionId) {
-    params.set('election', selectedElectionId);
+  if (state.currentElection.id) {
+    params.set('election', state.currentElection.id);
   }
   return params;
 }
@@ -2357,11 +2318,10 @@ function buildRouteSearchParams(view, electionId = null) {
 /**
  * Replaces the current browser history entry with the URL for the given view, then fires a virtual page view.
  * @param {string} view - View name ('election', 'predict', or 'polltracker').
- * @param {string|null} [electionId=null] - Election ID to encode in the URL; falls back to state.currentElection.id.
  * @returns {void}
  */
-function replaceRouteState(view, electionId = null) {
-  const params = buildRouteSearchParams(view, electionId);
+function replaceRouteState(view) {
+  const params = buildRouteSearchParams(view);
   const nextUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState({}, '', nextUrl);
   trackVirtualPageView(nextUrl);
@@ -2767,13 +2727,9 @@ async function loadPollTrackerDataIfNeeded() {
  * @returns {Promise<void>}
  */
 async function activatePollTrackerMode() {
-
-  setPollTrackerActive(true);
-
   document.body.classList.add('maps-polltracker-mode');
   setMapsPageTitle('Poll tracker', 'westminster');
-  if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
-  replaceRouteState('polltracker');
+  trackVirtualPageView(window.location.href);
 
   await loadPollTrackerDataIfNeeded();
   renderPollTrackerPartyControls();
@@ -2895,7 +2851,7 @@ function ensurePredictPartySwingMap(partyKey) {
 function syncPredictModeRightColumnLayout() {
   if (!predictWindow || !seatCard) return;
 
-  const predictVisible = state.predictModeActive && !state.pollTrackerModeActive;
+  const predictVisible = state.view === 'predict';
   predictWindow.hidden = !predictVisible;
   predictWindow.style.display = predictVisible ? '' : 'none';
 
@@ -3831,7 +3787,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
  * @returns {void}
  */
 function applyPredictModeProjection() {
-  if (!state.predictModeActive) return;
+  if (state.view !== 'predict') return;
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) return;
 
   const hasHolyroodSwings =
@@ -3858,7 +3814,6 @@ function applyPredictModeProjection() {
 async function activatePredictMode() {
   if (!_state.currentSeats.length || !_state.currentMapData) return;
 
-  setPredictActive(true);
   syncPredictModeRightColumnLayout();
 
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {

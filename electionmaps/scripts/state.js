@@ -173,9 +173,6 @@ export const _state = {
   pollTrackerTimeline: [],
   pollTrackerSeriesByParty: new Map(),
   pollTrackerRangeSelection: 'all',
-
-  // Misc
-  lastTrackedVirtualPagePath: '',
 };
 
 // ─── Current ─────────────────────────────────────────────────────────────────
@@ -207,14 +204,6 @@ export const state = {
   /** Parliament key for the currently active parliament tab ('westminster' | 'holyrood').
    * Resolved from the ?parliament= URL param on load, falling back to the manifest defaultElection's parliament. */
   currentParliament: '',
-
-  /** True when predict mode is active — the user is viewing a projected seat allocation.
-   * Mutually exclusive with pollTrackerModeActive. */
-  predictModeActive: false,
-
-  /** True when poll tracker mode is active — the user is viewing historical poll trends.
-   * Mutually exclusive with predictModeActive. */
-  pollTrackerModeActive: false,
 
   /** Latest poll snippet text for the current parliament, used in subtitle rendering.
    * Empty string until fetched or if the fetch failed. */
@@ -329,28 +318,6 @@ export function predictUrl() {
  */
 export function pollTrackerUrl() {
   return `?view=polltracker&parliament=${state.currentParliament}`;
-}
-
-// ─── Mode setters ─────────────────────────────────────────────────────────────
-
-/**
- * Sets predict mode active state. Also clears poll tracker mode, as the two are mutually exclusive.
- * @param {boolean} value
- * @returns {void}
- */
-export function setPredictActive(value) {
-  state.predictModeActive = value;
-  if (value) state.pollTrackerModeActive = false;
-}
-
-/**
- * Sets poll tracker mode active state. Also clears predict mode, as the two are mutually exclusive.
- * @param {boolean} value
- * @returns {void}
- */
-export function setPollTrackerActive(value) {
-  state.pollTrackerModeActive = value;
-  if (value) state.predictModeActive = false;
 }
 
 // ─── Active election ──────────────────────────────────────────────────────────

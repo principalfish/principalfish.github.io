@@ -24,6 +24,33 @@ export async function fetchJson(url) {
   return fetchResource(url, (response) => response.json());
 }
 
+// ─── Google Analytics ─────────────────────────────────────────────────────────
+
+let lastTrackedPath = '';
+
+/**
+ * Fires a gtag page_view event for a URL, deduplicating against the last tracked path.
+ * @param {string} nextUrl - Full URL string to track; parsed to extract pathname and search.
+ * @returns {void}
+ */
+export function trackVirtualPageView(nextUrl) {
+  if (typeof window.gtag !== 'function') return;
+
+  try {
+    const parsed = new URL(nextUrl, window.location.origin);
+    const pagePath = `${parsed.pathname}${parsed.search}`;
+    if (pagePath === lastTrackedPath) return;
+
+    lastTrackedPath = pagePath;
+    window.gtag('event', 'page_view', {
+      page_location: parsed.toString(),
+      page_path: pagePath,
+      page_title: document.title,
+    });
+  } catch (_error) {
+  }
+}
+
 /**
  * Converts a region name to a lowercase alphanumeric key with all non-alphanumeric characters removed.
  * @param {string} value - Raw region name or key string.

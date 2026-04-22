@@ -5,6 +5,23 @@ const mapsTitle = document.querySelector('.maps-title');
 const electionCountdown = document.getElementById('mapsElectionCountdown');
 const subtitle = document.getElementById('mapsSubtitle');
 
+// ─── Page title ───────────────────────────────────────────────────────────────
+
+const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
+
+/**
+ * Sets the browser tab title, prepending contextLabel when provided.
+ * @param {string|null} contextLabel - Optional label to prepend (e.g. election name or mode name).
+ * @param {string|null} [parliament=null] - Parliament key ('holyrood' | 'westminster' | null).
+ * @returns {void}
+ */
+export function setMapsPageTitle(contextLabel, parliament = null) {
+  const label = String(contextLabel || '').trim();
+  const parlLabel = parliament ? parliament[0].toUpperCase() + parliament.slice(1) : null;
+  const suffix = parlLabel ? `${parlLabel} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
+  document.title = label ? `${label} | ${suffix}` : suffix;
+}
+
 // ─── Subtitle ─────────────────────────────────────────────────────────────────
 
 /**

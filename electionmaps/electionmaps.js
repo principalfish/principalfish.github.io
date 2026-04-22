@@ -2224,7 +2224,6 @@ const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel')
 const seatList = document.getElementById('mapsSeatList');
 const mapsStage = document.querySelector('.maps-stage');
 const mapsPanelRight = document.querySelector('.maps-panel-right');
-const mapsMain = document.querySelector('.maps-main');
 const seatPopup = document.getElementById('mapsSeatPopup');
 const seatPopupTitle = document.getElementById('mapsSeatPopupTitle');
 const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
@@ -2233,7 +2232,6 @@ const seatPopupClose = document.getElementById('mapsSeatPopupClose');
 const choroplethLegend = document.getElementById('mapsChoroplethLegend');
 const regionCard = document.getElementById('mapsRegionCard');
 const regionTableBody = document.getElementById('mapsRegionTableBody');
-const pollTrackerView = document.getElementById('mapsPollTrackerView');
 const pollTrackerChartWrap = document.getElementById('mapsPollTrackerChartWrap');
 const pollTrackerPartyControls = document.getElementById('mapsPollTrackerPartyControls');
 const pollTrackerMetricSeatsInput = document.getElementById('mapsPollTrackerMetricSeats');
@@ -2421,35 +2419,6 @@ function formatZoomPct(scaleValue) {
   const ratio = Number(scaleValue) / baselineScale;
   if (!Number.isFinite(ratio) || ratio <= 0) return '100%';
   return `${Math.round(ratio * 100)}%`;
-}
-
-
-
-
-
-
-/**
- * Shows or hides the poll tracker view, toggling the map stage and right panel visibility accordingly.
- * @param {boolean} active - True to show the poll tracker layout and hide the map stage; false to restore the map layout.
- * @returns {void}
- */
-function setPollTrackerLayoutVisible(active) {
-  if (mapsStage) {
-    mapsStage.hidden = active;
-    mapsStage.style.display = active ? 'none' : '';
-  }
-  if (mapsPanelRight) {
-    mapsPanelRight.hidden = active;
-    mapsPanelRight.style.display = active ? 'none' : '';
-  }
-  if (pollTrackerView) {
-    pollTrackerView.hidden = !active;
-    pollTrackerView.style.display = active ? '' : 'none';
-  }
-  if (mapsMain) {
-    mapsMain.style.gridTemplateColumns = active ? 'minmax(0, 1fr)' : '';
-    mapsMain.style.width = active ? '100%' : '';
-  }
 }
 
 /**
@@ -2798,10 +2767,10 @@ async function loadPollTrackerDataIfNeeded() {
  * @returns {Promise<void>}
  */
 async function activatePollTrackerMode() {
-  
+
   setPollTrackerActive(true);
 
-  setPollTrackerLayoutVisible(true);
+  document.body.classList.add('maps-polltracker-mode');
   setMapsPageTitle('Poll tracker', 'westminster');
   if (seatPreview) seatPreview.textContent = 'Poll tracker mode active.';
   replaceRouteState('polltracker');
@@ -3890,7 +3859,6 @@ async function activatePredictMode() {
   if (!_state.currentSeats.length || !_state.currentMapData) return;
 
   setPredictActive(true);
-  setPollTrackerLayoutVisible(false);
   syncPredictModeRightColumnLayout();
 
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {

@@ -1613,6 +1613,21 @@ a {
 
 .maps-polltracker-view {
   width: 100%;
+  display: none;
+}
+
+.maps-polltracker-mode .maps-polltracker-view {
+  display: block;
+}
+
+.maps-polltracker-mode .maps-stage,
+.maps-polltracker-mode .maps-panel-right {
+  display: none;
+}
+
+.maps-polltracker-mode .maps-main {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
 }
 
 .maps-polltracker-card {

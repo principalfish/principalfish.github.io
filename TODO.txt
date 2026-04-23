@@ -1,6 +1,11 @@
 
-reset database ids
-model_uns -> westminster_uns
+USE COPILOT!!
+
+maps refactor
+next make  electionUrl, predictUrl, pollTrackerUrl 1 exported handler and put into utils
+then migrate the 2 polltracker rendering handlers 
+then add tests for utils
+
 
 redo data back end structure
 - ballot type on poll
@@ -8,12 +13,10 @@ redo data back end structure
 - regions mapping server any purpose?
 - UI needs thought
 - make brexit part of general export (check party ids are accurate)
-
-election maps
-- make country agnostic - all in map-nodes
-- more in core.js
+reset database ids
+model_uns -> westminster_uns
 
 
 
 
-dont forget to use copilot at some point
+

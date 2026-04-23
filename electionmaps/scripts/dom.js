@@ -263,8 +263,6 @@ function getPollTrackerSelectedParties() {
  * @returns {void}
  */
 function renderPollTrackerChart() {
-  if (!pollTrackerChartWrap) return;
-
     const selectedParties = getPollTrackerSelectedParties();
     const seatsEnabled = Boolean(pollTrackerMetricSeatsInput?.checked);
     const votePctEnabled = Boolean(pollTrackerMetricVotesInput?.checked);
@@ -519,8 +517,7 @@ function renderPollTrackerChart() {
  * @returns {void}
  */
 function renderPollTrackerPartyControls() {
-  if (!pollTrackerPartyControls) return;
-
+  // Sort parties by latest projected seats (descending), with party name as alphabetical tiebreaker.
   const partyRows = Array.from(state.pollTrackerData.seriesByParty.values())
     .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 

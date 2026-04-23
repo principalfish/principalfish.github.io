@@ -1,4 +1,17 @@
-import { manifest } from './state.js';
+import { manifest, state } from './state.js';
+
+/**
+ * Returns a query string URL for the given view in the current parliament.
+ * @param {'election'|'predict'|'polltracker'} view - Target view.
+ * @param {string} [electionId] - Election id; only used when view is 'election'.
+ * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
+ */
+export function viewUrl(view, electionId) {
+  const electionPart = view === 'election' && electionId
+    ? `&election=${encodeURIComponent(electionId)}`
+    : '';
+  return `?view=${view}${electionPart}&parliament=${state.currentParliament}`;
+}
 
 /**
  * Fetches a URL and passes the Response through the provided parser function. Throws on non-OK status.

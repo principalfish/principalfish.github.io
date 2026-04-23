@@ -2,7 +2,6 @@
 USE COPILOT!!
 
 maps refactor
-next make  electionUrl, predictUrl, pollTrackerUrl 1 exported handler and put into utils
 then migrate the 2 polltracker rendering handlers 
 then add tests for utils
 

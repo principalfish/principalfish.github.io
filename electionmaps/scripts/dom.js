@@ -1,6 +1,6 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { _state, manifest, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown, electionUrl, predictUrl, pollTrackerUrl } from './state.js';
-import { escapeHtml, formatInt, formatPct } from './utils.js';
+import { _state, manifest, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown } from './state.js';
+import { escapeHtml, formatInt, formatPct, viewUrl } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
@@ -139,14 +139,14 @@ function renderElectionLinks() {
   let insertedPollTrackerLink = false;
   state.parliamentElections.forEach((election) => {
     const link = document.createElement('a');
-    link.href = electionUrl(election.id);
+    link.href = viewUrl('election', election.id);
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
     link.textContent = election.name;
     electionList.appendChild(link);
 
     if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
       const predictLink = document.createElement('a');
-      predictLink.href = predictUrl();
+      predictLink.href = viewUrl('predict');
       predictLink.className = `maps-election-item${state.view === 'predict' ? ' active' : ''}`;
       const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
       predictLink.textContent = `Predict ${nextElectionYear ?? ''}`;
@@ -155,7 +155,7 @@ function renderElectionLinks() {
 
       if (hasPollTracker && !insertedPollTrackerLink) {
         const trackerLink = document.createElement('a');
-        trackerLink.href = pollTrackerUrl();
+        trackerLink.href = viewUrl('polltracker');
         trackerLink.className = `maps-election-item${state.view === 'polltracker' ? ' active' : ''}`;
         trackerLink.textContent = 'Poll tracker';
         electionList.appendChild(trackerLink);

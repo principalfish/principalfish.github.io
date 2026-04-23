@@ -303,33 +303,6 @@ export function getPredictBaselineElectionId() {
 }
 
 
-// ─── URL helpers ─────────────────────────────────────────────────────────────
-
-/**
- * Returns the URL for a given election in the current parliament.
- * @param {string} electionId - Election id to link to.
- * @returns {string} Query string URL.
- */
-export function electionUrl(electionId) {
-  return `?view=election&election=${encodeURIComponent(electionId)}&parliament=${state.currentParliament}`;
-}
-
-/**
- * Returns the URL to enter predict mode for the current parliament.
- * @returns {string} Query string URL.
- */
-export function predictUrl() {
-  return `?view=predict&parliament=${state.currentParliament}`;
-}
-
-/**
- * Returns the URL to enter poll tracker mode for the current parliament.
- * @returns {string} Query string URL.
- */
-export function pollTrackerUrl() {
-  return `?view=polltracker&parliament=${state.currentParliament}`;
-}
-
 // ─── Active election ──────────────────────────────────────────────────────────
 
 /** Scheduled polling date for the 2026 Holyrood election: 7 May 2026, 07:00 BST (06:00 UTC). */

@@ -29,26 +29,22 @@ export async function fetchJson(url) {
 let lastTrackedPath = '';
 
 /**
- * Fires a gtag page_view event for a URL, deduplicating against the last tracked path.
- * @param {string} nextUrl - Full URL string to track; parsed to extract pathname and search.
+ * Fires a gtag page_view event for the current location, deduplicating against the last tracked path.
+ * No-ops on dev hosts because ga-setup.js leaves window.gtag undefined there.
  * @returns {void}
  */
-export function trackVirtualPageView(nextUrl) {
+export function trackVirtualPageView() {
   if (typeof window.gtag !== 'function') return;
 
-  try {
-    const parsed = new URL(nextUrl, window.location.origin);
-    const pagePath = `${parsed.pathname}${parsed.search}`;
-    if (pagePath === lastTrackedPath) return;
+  const pagePath = `${window.location.pathname}${window.location.search}`;
+  if (pagePath === lastTrackedPath) return;
 
-    lastTrackedPath = pagePath;
-    window.gtag('event', 'page_view', {
-      page_location: parsed.toString(),
-      page_path: pagePath,
-      page_title: document.title,
-    });
-  } catch (_error) {
-  }
+  lastTrackedPath = pagePath;
+  window.gtag('event', 'page_view', {
+    page_location: window.location.href,
+    page_path: pagePath,
+    page_title: document.title,
+  });
 }
 
 /**

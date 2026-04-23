@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPollTrackerData } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty, trackVirtualPageView } from './scripts/utils.js';
 import { setHeader, setLeftBar, setPageTitle } from './scripts/dom.js';
 
@@ -32,7 +32,7 @@ async function initPage() {
   await initState(await fetchJson('data/map-modes.json'), view);
 
   setPageTitle();
-  trackVirtualPageView(window.location.href);
+  trackVirtualPageView();
   setLeftBar();
   // Render early with the election name only — subtitle will be overwritten with full summary
   // text (majority / hung parliament) once election results have loaded below.
@@ -116,28 +116,37 @@ async function activatePollTrackerMode() {
 
   const dataPath = manifest.parliamentFeatures[state.currentParliament].polltrackerDataPath;
   const data = await fetchJson(`data/${dataPath}`);
-  const parsed = parsePollTrackerData(data);
-  _state.pollTrackerTimeline = parsed.timeline;
-  _state.pollTrackerSeriesByParty = parsed.seriesByParty;
-
+  setPollTrackerData(parsePollTrackerData(data));
   renderPollTrackerPartyControls();
   renderPollTrackerChart();
 }
 
 /**
- * Parses poll tracker JSON into { timeline, seriesByParty }.
- * Deduplicates rows by date (asOfDate), preferring the highest electionId.
- * Expands the sparse date entries into a dense daily timeline; series values
- * carry forward the last known value for dates with no data.
+ * Parses the poll tracker JSON into a chart-ready timeline and per-party series.
+ *
+ * Input shape (one entry per model run; the writer guarantees one entry per as_of_date):
+ *   [{ election_id, election_name, as_of_date: "YYYY-MM-DD",
+ *      parties: { "<partyId>": { s: <seats>, v: <votePct> } } }]
+ *
+ * Pipeline:
+ *   1. Flatten — explode each entry into one row per party: { partyKey, asOfDate, seats, votePct }.
+ *   2. Index — bucket rows by date (timeline) and by (party, date) for the carry-forward step.
+ *   3. Sort — order timeline ascending by date (lexicographic on ISO YYYY-MM-DD == chronological).
+ *   4. Expand — fill in every calendar day between the first and last date, even days with no model run.
+ *      Gives the chart a uniform daily x-axis instead of one tick per sparse data point.
+ *   5. Carry forward — for each party, walk the dense timeline and emit (seats, votePct) for every day,
+ *      reusing the last known value on days with no data so chart lines stay continuous through gaps.
+ *      Days before a party's first reading remain null.
+ *
  * @param {Array} data - Parsed JSON array from the poll tracker data file.
- * @returns {{timeline: Array<{dateKey: string, dateValue: Date}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>}} Parsed poll tracker data.
+ * @returns {{timeline: Array<{dateKey: string, dateValue: Date}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>}} Chart-ready timeline and per-party series.
  */
 function parsePollTrackerData(data) {
   const partiesById = manifest.partiesById;
+
+  // 1. Flatten: one row per (entry, party).
   const rows = [];
   for (const entry of data) {
-    const electionId = Number(entry.election_id);
-    if (!Number.isFinite(electionId)) continue;
     const asOfDate = String(entry.as_of_date || '').trim();
     for (const [partyIdStr, pdata] of Object.entries(entry.parties || {})) {
       const partyId = Number(partyIdStr);
@@ -145,7 +154,6 @@ function parsePollTrackerData(data) {
       const votePct = Number(pdata.v);
       if (!Number.isFinite(partyId) || !Number.isFinite(seats) || !Number.isFinite(votePct)) continue;
       rows.push({
-        electionId,
         partyKey: String(partyId),
         asOfDate,
         seats,
@@ -154,27 +162,24 @@ function parsePollTrackerData(data) {
     }
   }
 
+  // 2. Index by date and by (party, date).
   const timelineByDateKey = new Map();
   const byParty = new Map();
 
   rows.forEach((row) => {
     const dateKey = row.asOfDate;
-    const existingTimelineEntry = timelineByDateKey.get(dateKey);
-    if (!existingTimelineEntry || row.electionId > existingTimelineEntry.electionId) {
-      timelineByDateKey.set(dateKey, { dateKey, electionId: row.electionId });
-    }
-
+    timelineByDateKey.set(dateKey, { dateKey });
     if (!byParty.has(row.partyKey)) byParty.set(row.partyKey, new Map());
-    const byDateKey = byParty.get(row.partyKey);
-    const existingPartyDateRow = byDateKey.get(dateKey);
-    if (!existingPartyDateRow || row.electionId > existingPartyDateRow.electionId) {
-      byDateKey.set(dateKey, row);
-    }
+    byParty.get(row.partyKey).set(dateKey, row);
   });
 
-  const timeline = Array.from(timelineByDateKey.values())
+
+  // 3. Sort: ISO date strings sort chronologically as plain strings.
+  const sortedDates = Array.from(timelineByDateKey.values())
     .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 
+  // 4. Expand: produce one entry per calendar day from first to last date inclusive.
+  // UTC throughout to avoid timezone drift bumping a date to the previous/next day.
   const parseIsoDate = (value) => new Date(`${value}T00:00:00Z`);
   const formatIsoDate = (value) => {
     const year = value.getUTCFullYear();
@@ -183,12 +188,14 @@ function parsePollTrackerData(data) {
     return `${year}-${month}-${day}`;
   };
 
-  const expandedTimeline = (() => {
-    if (timeline.length <= 1) {
-      return timeline.map((entry) => ({ dateKey: entry.dateKey, dateValue: parseIsoDate(entry.dateKey) }));
+  const timeline = (() => {
+    // Single point or empty: nothing to expand, just attach dateValue.
+    if (sortedDates.length <= 1) {
+      return sortedDates.map((entry) => ({ dateKey: entry.dateKey, dateValue: parseIsoDate(entry.dateKey) }));
     }
-    const start = parseIsoDate(timeline[0].dateKey);
-    const end = parseIsoDate(timeline[timeline.length - 1].dateKey);
+    // Walk day-by-day from earliest to latest date.
+    const start = parseIsoDate(sortedDates[0].dateKey);
+    const end = parseIsoDate(sortedDates[sortedDates.length - 1].dateKey);
     const entries = [];
     const current = new Date(start.getTime());
     while (current.getTime() <= end.getTime()) {
@@ -199,13 +206,15 @@ function parsePollTrackerData(data) {
     return entries;
   })();
 
+  // 5. Carry forward: for each party, walk the dense timeline producing parallel seats/votePct arrays
+  // with the last known value reused on no-data days. Days before the party's first reading stay null.
   const seriesByParty = new Map();
   byParty.forEach((rowsByDateKey, partyKey) => {
     const seats = [];
     const votePct = [];
     let lastSeats = null;
     let lastVotePct = null;
-    expandedTimeline.forEach((entry) => {
+    timeline.forEach((entry) => {
       const row = rowsByDateKey.get(entry.dateKey);
       if (row) {
         lastSeats = Number(row.seats || 0);
@@ -215,6 +224,7 @@ function parsePollTrackerData(data) {
       votePct.push(lastVotePct);
     });
 
+    // Resolve display name + colour from the manifest using the numeric party id.
     const manifestParty = partiesById?.get(Number(partyKey));
     seriesByParty.set(partyKey, {
       partyKey,
@@ -222,11 +232,11 @@ function parsePollTrackerData(data) {
       colour: manifestParty?.colour || '#9CA3AF',
       seats,
       votePct,
-      latestSeats: Number(seats[seats.length - 1] || 0),
+      latestSeats: lastSeats ?? 0,
     });
   });
 
-  return { timeline: expandedTimeline, seriesByParty };
+  return { timeline, seriesByParty };
 }
 
 
@@ -2346,7 +2356,7 @@ function renderPollTrackerChart() {
   pollTrackerChartWrap.innerHTML = '';
   pollTrackerChartWrap.style.position = 'relative';
 
-  if (!_state.pollTrackerTimeline.length) {
+  if (!state.pollTrackerData.timeline.length) {
     pollTrackerChartWrap.innerHTML = '<div class="maps-polltracker-empty">No poll tracker data available.</div>';
     return;
   }
@@ -2357,13 +2367,13 @@ function renderPollTrackerChart() {
   }
 
   const rangeSize = _state.pollTrackerRangeSelection === 'all'
-    ? _state.pollTrackerTimeline.length
+    ? state.pollTrackerData.timeline.length
     : Number(_state.pollTrackerRangeSelection);
   const windowSize = Number.isFinite(rangeSize) && rangeSize > 0
-    ? Math.min(rangeSize, _state.pollTrackerTimeline.length)
-    : _state.pollTrackerTimeline.length;
-  const windowStart = Math.max(0, _state.pollTrackerTimeline.length - windowSize);
-  const visibleTimeline = _state.pollTrackerTimeline.slice(windowStart);
+    ? Math.min(rangeSize, state.pollTrackerData.timeline.length)
+    : state.pollTrackerData.timeline.length;
+  const windowStart = Math.max(0, state.pollTrackerData.timeline.length - windowSize);
+  const visibleTimeline = state.pollTrackerData.timeline.slice(windowStart);
 
   const width = Math.max(760, pollTrackerChartWrap.clientWidth - 8);
   const height = 520;
@@ -2395,7 +2405,7 @@ function renderPollTrackerChart() {
       .range([0, innerWidth]);
 
   const selectedSeries = selectedParties
-    .map((partyKey) => _state.pollTrackerSeriesByParty.get(partyKey))
+    .map((partyKey) => state.pollTrackerData.seriesByParty.get(partyKey))
     .filter(Boolean)
     .map((series) => ({
       ...series,
@@ -2523,7 +2533,7 @@ function renderPollTrackerChart() {
 
     tooltip.innerHTML = `
       <div class="maps-polltracker-tooltip-party"><span class="maps-predict-grid-swatch" style="background:${partyColour}"></span>${escapeHtml(series.partyName)}</div>
-      <div>${timelinePoint?.label || ''}</div>
+      <div>${timelinePoint?.dateKey || ''}</div>
       <div>Seats: ${formatInt(seatsValue)}</div>
       <div>Vote %: ${formatPct(votePctValue)}%</div>
     `;
@@ -2597,7 +2607,7 @@ function renderPollTrackerChart() {
 function renderPollTrackerPartyControls() {
   if (!pollTrackerPartyControls) return;
 
-  const partyRows = Array.from(_state.pollTrackerSeriesByParty.values())
+  const partyRows = Array.from(state.pollTrackerData.seriesByParty.values())
     .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 
   /** @param {string} name - Party name to normalize. @returns {string} Lowercased, trimmed party name. */

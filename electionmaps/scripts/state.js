@@ -169,8 +169,6 @@ export const _state = {
   predictCurrentSimulationListShares: new Map(),
 
   // Poll tracker
-  pollTrackerTimeline: [],
-  pollTrackerSeriesByParty: new Map(),
   pollTrackerRangeSelection: 'all',
 };
 
@@ -211,7 +209,20 @@ export const state = {
   /** Active view name for the current page load ('election' | 'predict' | 'polltracker').
    * Set by initState from the ?view= URL param, defaulting to 'election'. */
   view: 'election',
+
+  /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
+   * Populated by setPollTrackerData when poll tracker mode activates; empty until then. */
+  pollTrackerData: { timeline: [], seriesByParty: new Map() },
 };
+
+/**
+ * Stores parsed poll tracker data on shared state for chart rendering.
+ * @param {{timeline: Array, seriesByParty: Map}} data
+ * @returns {void}
+ */
+export function setPollTrackerData(data) {
+  state.pollTrackerData = data;
+}
 
 /**
  * Resolves URL params and manifest defaults into the shared state object.

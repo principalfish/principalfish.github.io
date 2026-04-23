@@ -6,7 +6,7 @@ import {
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty, trackVirtualPageView } from './scripts/utils.js';
-import { updateTitle, updateLeftBar, setMapsPageTitle } from './scripts/dom.js';
+import { setHeader, setLeftBar, setPageTitle } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -26,14 +26,17 @@ import { updateTitle, updateLeftBar, setMapsPageTitle } from './scripts/dom.js';
  * populates controls, and triggers the initial render.
  * @returns {Promise<void>}
  */
-async function initElectionData() {
+async function initPage() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
   const view = getSearchParam('view') || 'election';
   await initState(await fetchJson('data/map-modes.json'), view);
-  updateLeftBar();
+
+  setPageTitle();
+  trackVirtualPageView(window.location.href);
+  setLeftBar();
   // Render early with the election name only — subtitle will be overwritten with full summary
   // text (majority / hung parliament) once election results have loaded below.
-  updateTitle();
+  setHeader();
   if (view === 'polltracker') {
     await activatePollTrackerMode();
   } else {
@@ -110,8 +113,6 @@ async function initElection(view) {
  */
 async function activatePollTrackerMode() {
   document.body.classList.add('maps-polltracker-mode');
-  setMapsPageTitle('Poll tracker', 'westminster');
-  trackVirtualPageView(window.location.href);
 
   const dataPath = manifest.parliamentFeatures[state.currentParliament].polltrackerDataPath;
   const data = await fetchJson(`data/${dataPath}`);
@@ -2263,7 +2264,6 @@ function replaceRouteState(view) {
   const params = buildRouteSearchParams(view);
   const nextUrl = `${window.location.pathname}?${params.toString()}`;
   window.history.replaceState({}, '', nextUrl);
-  trackVirtualPageView(nextUrl);
 }
 
 /**
@@ -3231,7 +3231,6 @@ function buildPredictShareUrl() {
 function replacePredictRouteStateFromInputs() {
   const nextUrl = buildPredictShareUrl();
   window.history.replaceState({}, '', nextUrl);
-  trackVirtualPageView(nextUrl);
 }
 
 /**
@@ -4989,7 +4988,6 @@ function syncRightPanelHeightToMap() {
  * @returns {void}
  */
 function updateTopSummary(election, summary) {
-  setMapsPageTitle(election?.name, election?.parliament);
   const top = summary.parties[0];
   const leadSeats = Number(top?.seats || 0);
   const totalSeats = Number(summary.totalSeats || 0);
@@ -5000,7 +4998,7 @@ function updateTopSummary(election, summary) {
   const subtitleText = hasMajority
     ? `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`
     : `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
-  updateTitle(subtitleText);
+  setHeader(subtitleText);
 }
 
 /**
@@ -5279,9 +5277,9 @@ async function init() {
   wireInit();
 
   try {
-    await initElectionData();
+    await initPage();
   } catch (error) {
-    updateTitle('', true);
+    setHeader('', true);
     console.error(error);
   }
 }

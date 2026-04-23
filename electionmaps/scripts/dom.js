@@ -10,13 +10,20 @@ const subtitle = document.getElementById('mapsSubtitle');
 const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 
 /**
- * Sets the browser tab title, prepending contextLabel when provided.
- * @param {string|null} contextLabel - Optional label to prepend (e.g. election name or mode name).
- * @param {string|null} [parliament=null] - Parliament key ('holyrood' | 'westminster' | null).
+ * Sets the browser tab title from the current view: poll tracker, predict (with next election year), or election name.
  * @returns {void}
  */
-export function setMapsPageTitle(contextLabel, parliament = null) {
-  const label = String(contextLabel || '').trim();
+export function setPageTitle() {
+  let label;
+  if (state.view === 'polltracker') {
+    label = 'Poll tracker';
+  } else if (state.view === 'predict') {
+    const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
+    label = `Predict ${nextElectionYear ?? ''}`.trim();
+  } else {
+    label = state.currentElection.name;
+  }
+  const parliament = state.currentParliament;
   const parlLabel = parliament ? parliament[0].toUpperCase() + parliament.slice(1) : null;
   const suffix = parlLabel ? `${parlLabel} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
   document.title = label ? `${label} | ${suffix}` : suffix;
@@ -75,7 +82,7 @@ function renderSubtitleText(text = '', error = false) {
  * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
  * @returns {void}
  */
-export function updateTitle(text = '', error = false) {
+export function setHeader(text = '', error = false) {
   renderTitle();
   renderSubtitleText(text, error);
   renderCountdown();
@@ -95,7 +102,7 @@ function renderTitle() {
  * @param {{ onPredict?: function, onPollTracker?: function }} callbacks - Click handlers for mode buttons.
  * @returns {void}
  */
-export function updateLeftBar() {
+export function setLeftBar() {
   renderParliamentTabs();
   renderElectionLinks();
 }

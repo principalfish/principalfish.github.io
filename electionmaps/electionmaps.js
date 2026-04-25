@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPollTrackerData } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPollTrackerData, setPollTrackerRange } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty, trackVirtualPageView, escapeHtml, formatInt, formatPct } from './scripts/utils.js';
 import { setHeader, setLeftBar, setPageTitle, setPollTracker } from './scripts/dom.js';
 
@@ -480,7 +480,7 @@ function wirePollTrackerControls() {
     if (button.dataset.wired === 'true') return;
     button.addEventListener('click', () => {
       const nextRange = button.getAttribute('data-polltracker-range') || 'all';
-      _state.pollTrackerRangeSelection = nextRange;
+      setPollTrackerRange(nextRange);
       document.querySelectorAll('[data-polltracker-range]').forEach((candidate) => {
         candidate.classList.toggle('is-active', candidate.getAttribute('data-polltracker-range') === nextRange);
       });

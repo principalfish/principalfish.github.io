@@ -124,7 +124,8 @@
       "predictAnchorElectionId": "current-prediction",
       "predictBaselineElectionId": "2024-general",
       "nextElectionYear": 2029,
-      "polltrackerDataPath": "results/model_output_trends.json"
+      "polltrackerDataPath": "results/model_output_trends.json",
+      "polltrackerDefaultParties": [1, 2, 4, 5, 6, 8]
     },
     "holyrood": {
       "features": [

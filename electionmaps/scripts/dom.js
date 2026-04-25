@@ -1,5 +1,5 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { _state, manifest, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown } from './state.js';
+import { manifest, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown } from './state.js';
 import { escapeHtml, formatInt, formatPct, viewUrl } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
@@ -250,7 +250,7 @@ export function setPollTracker() {
  * Returns the party key values of all checked party toggle checkboxes in the poll tracker controls.
  * @returns {string[]} Array of party key strings for all currently checked party toggle inputs.
  */
-function getPollTrackerSelectedParties() {
+function polltrackerSelectedParties() {
   return Array.from(document.querySelectorAll('.maps-polltracker-party-toggle input[type="checkbox"]'))
     .filter((input) => input.checked)
     .map((input) => input.value);
@@ -258,66 +258,52 @@ function getPollTrackerSelectedParties() {
 
 /**
  * Renders the poll tracker D3 SVG chart into pollTrackerChartWrap.
- * Draws line series for selected parties with separate left (seats) and right (vote %) axes.
- * Includes a crosshair tooltip and respects the current date-range selection.
+ * Draws solid lines for seats (left axis) and dashed lines for vote % (right axis), one pair per
+ * selected party. Respects the current date-range selection and includes a crosshair tooltip on hover.
  * @returns {void}
  */
 function renderPollTrackerChart() {
-    const selectedParties = getPollTrackerSelectedParties();
-    const seatsEnabled = Boolean(pollTrackerMetricSeatsInput?.checked);
-    const votePctEnabled = Boolean(pollTrackerMetricVotesInput?.checked);
-
+  // 1. Read inputs and reset the chart container.
+  const selectedParties = polltrackerSelectedParties();
+  const seatsEnabled = Boolean(pollTrackerMetricSeatsInput?.checked);
+  const votePctEnabled = Boolean(pollTrackerMetricVotesInput?.checked);
   pollTrackerChartWrap.innerHTML = '';
   pollTrackerChartWrap.style.position = 'relative';
 
+  // 2. Empty states. Bail with a friendly message if there's no data, or if the user
+  //    has deselected everything (no parties, or no metric).
   if (!state.pollTrackerData.timeline.length) {
     pollTrackerChartWrap.innerHTML = '<div class="maps-polltracker-empty">No poll tracker data available.</div>';
     return;
   }
-
   if (!selectedParties.length || !(seatsEnabled || votePctEnabled)) {
     pollTrackerChartWrap.innerHTML = '<div class="maps-polltracker-empty">Select at least one party and one metric (Seats/Vote %).</div>';
     return;
   }
 
-  const rangeSize = _state.pollTrackerRangeSelection === 'all'
-    ? state.pollTrackerData.timeline.length
-    : Number(_state.pollTrackerRangeSelection);
-  const windowSize = Number.isFinite(rangeSize) && rangeSize > 0
-    ? Math.min(rangeSize, state.pollTrackerData.timeline.length)
-    : state.pollTrackerData.timeline.length;
-  const windowStart = Math.max(0, state.pollTrackerData.timeline.length - windowSize);
-  const visibleTimeline = state.pollTrackerData.timeline.slice(windowStart);
+  // 3. Slice the visible window from the back of the full timeline based on the user range selection.
+  const { visibleTimeline, windowStart } = pollTrackerWindow();
 
-  const width = Math.max(760, pollTrackerChartWrap.clientWidth - 8);
-  const height = 520;
-  const margin = { top: 14, right: 84, bottom: 58, left: 70 };
-  const innerWidth = width - margin.left - margin.right;
-  const innerHeight = height - margin.top - margin.bottom;
+  // 4. Resolve responsive SVG dimensions and reserved margins.
+  const { width, height, margin, innerWidth, innerHeight } = pollTrackerDimensions();
 
-  const svg = d3.create('svg').attr('viewBox', `0 0 ${width} ${height}`);
-  const plot = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-  const tooltip = document.createElement('div');
-  tooltip.className = 'maps-polltracker-tooltip';
-  tooltip.hidden = true;
-  pollTrackerChartWrap.appendChild(tooltip);
-  const crosshairLine = plot.append('line')
-    .attr('class', 'maps-polltracker-crosshair')
-    .attr('y1', 0)
-    .attr('y2', innerHeight)
-    .attr('opacity', 0);
+  // 5. Build the SVG canvas, plot group, tooltip overlay, and the crosshair line.
+  const { svg, plot, tooltip, crosshairLine } = pollTrackerScaffold(width, height, margin, innerHeight);
 
-  const visibleTimelineDates = visibleTimeline.map((entry) => entry.dateValue).filter((value) => value instanceof Date);
-  const useTimeScale = visibleTimelineDates.length === visibleTimeline.length && visibleTimeline.length > 1;
-
+  // 6. X scale. With ≥2 entries we use a real time scale (placement matches actual dates, so big gaps
+  //    span proportionally). The 1-entry edge case can't form a time domain, so fall back to a
+  //    linear scale over indices — there's only one point to plot, so positioning is trivial anyway.
+  const useTimeScale = visibleTimeline.length > 1;
   const x = useTimeScale
     ? d3.scaleTime()
-      .domain(d3.extent(visibleTimelineDates))
+      .domain(d3.extent(visibleTimeline.map((entry) => entry.dateValue)))
       .range([0, innerWidth])
     : d3.scaleLinear()
-      .domain([0, Math.max(0, visibleTimeline.length - 1)])
+      .domain([0, 0])
       .range([0, innerWidth]);
 
+  // 7. Reshape per-party series down to just the visible window. The seats/votePct arrays
+  //    are sliced to align positionally with visibleTimeline.
   const selectedSeries = selectedParties
     .map((partyKey) => state.pollTrackerData.seriesByParty.get(partyKey))
     .filter(Boolean)
@@ -327,12 +313,15 @@ function renderPollTrackerChart() {
       votePct: series.votePct.slice(windowStart),
     }));
 
+  // 8. Y scales. Each metric gets its own with a 8% headroom (`* 1.08`); the vote-% scale is
+  //    capped at 100. `.nice()` rounds the domain to friendly tick boundaries.
   const seatsMax = d3.max(selectedSeries.flatMap((series) => series.seats.filter((value) => Number.isFinite(value)))) || 1;
   const votePctMax = d3.max(selectedSeries.flatMap((series) => series.votePct.filter((value) => Number.isFinite(value)))) || 1;
-
   const ySeats = d3.scaleLinear().domain([0, seatsMax * 1.08]).nice().range([innerHeight, 0]);
   const yVotePct = d3.scaleLinear().domain([0, Math.min(100, votePctMax * 1.08)]).nice().range([innerHeight, 0]);
 
+  // 9. Background grid. Uses whichever Y axis is currently enabled — extends its tick marks
+  //    across the full plot width as horizontal grid lines (no tick labels).
   const gridAxis = seatsEnabled ? d3.axisLeft(ySeats).ticks(6) : d3.axisRight(yVotePct).ticks(6);
   plot.append('g')
     .attr('class', 'maps-polltracker-axis')
@@ -340,6 +329,8 @@ function renderPollTrackerChart() {
     .selectAll('line')
     .attr('class', 'maps-polltracker-grid-line');
 
+  // 10. X axis with rotated date labels. Tick density is capped by available width
+  //     (~105px per tick). The non-time fallback is for the 1-entry edge case.
   const maxTicksByWidth = Math.max(4, Math.floor(innerWidth / 105));
   const xAxisGroup = plot.append('g')
     .attr('class', 'maps-polltracker-axis')
@@ -349,21 +340,21 @@ function renderPollTrackerChart() {
         .ticks(maxTicksByWidth)
         .tickFormat((value) => d3.timeFormat('%Y-%m-%d')(value))
       : d3.axisBottom(x)
-        .tickValues(d3.range(0, visibleTimeline.length, Math.max(1, Math.ceil(visibleTimeline.length / Math.max(1, maxTicksByWidth)))))
-        .tickFormat((index) => visibleTimeline[index]?.label || '')
+        .tickValues([0])
+        .tickFormat(() => visibleTimeline[0]?.dateKey || '')
     );
-
   xAxisGroup.selectAll('text')
     .style('text-anchor', 'end')
     .attr('dx', '-0.38em')
     .attr('dy', '0.44em')
     .attr('transform', 'rotate(-32)');
 
+  // 11. Y axes + labels. Left is "Seats" (when seats enabled), right is "Vote %" (when votes enabled),
+  //     bottom is "Date" always. Vote % ticks are formatted with a `%` suffix.
   if (seatsEnabled) {
     plot.append('g')
       .attr('class', 'maps-polltracker-axis')
       .call(d3.axisLeft(ySeats).ticks(7));
-
     plot.append('text')
       .attr('class', 'maps-polltracker-axis-label')
       .attr('transform', 'rotate(-90)')
@@ -372,13 +363,11 @@ function renderPollTrackerChart() {
       .attr('text-anchor', 'middle')
       .text('Seats');
   }
-
   if (votePctEnabled) {
     plot.append('g')
       .attr('class', 'maps-polltracker-axis')
       .attr('transform', `translate(${innerWidth},0)`)
       .call(d3.axisRight(yVotePct).ticks(7).tickFormat((value) => `${Number(value).toFixed(1)}%`));
-
     plot.append('text')
       .attr('class', 'maps-polltracker-axis-label')
       .attr('transform', 'rotate(90)')
@@ -387,7 +376,6 @@ function renderPollTrackerChart() {
       .attr('text-anchor', 'middle')
       .text('Vote %');
   }
-
   plot.append('text')
     .attr('class', 'maps-polltracker-axis-label')
     .attr('x', innerWidth / 2)
@@ -395,22 +383,20 @@ function renderPollTrackerChart() {
     .attr('text-anchor', 'middle')
     .text('Date');
 
+  // 12. Line generators. `.defined(...)` skips null gaps (party not yet in data), so lines break
+  //     rather than connect through nulls.
   const seatsLine = d3.line()
     .defined((value) => Number.isFinite(value))
     .x((_value, index) => (useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index)))
     .y((value) => ySeats(value));
-
   const votePctLine = d3.line()
     .defined((value) => Number.isFinite(value))
     .x((_value, index) => (useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index)))
     .y((value) => yVotePct(value));
 
-  /**
-   * Positions and populates the crosshair tooltip for a pointer event on a series path.
-   * @param {PointerEvent} event - The DOM pointer event from the SVG path element.
-   * @param {{partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>}} series - The series being hovered.
-   * @returns {void}
-   */
+  // 13. Tooltip handlers. showTrackerTooltip locates the nearest data point by bisecting the
+  //     timeline against the cursor's projected date, positions the crosshair, and renders the
+  //     party/date/seats/vote-% panel. hideTrackerTooltip is the symmetric mouseleave hook.
   const showTrackerTooltip = (event, series) => {
     const [pointerX] = d3.pointer(event, svg.node());
     const plotX = pointerX - margin.left;
@@ -419,6 +405,7 @@ function renderPollTrackerChart() {
       return;
     }
 
+    // Find nearest visible timeline entry to the cursor X.
     const index = useTimeScale
       ? (() => {
           const hoveredDate = x.invert(plotX);
@@ -430,7 +417,7 @@ function renderPollTrackerChart() {
           const rightDistance = Math.abs(visibleTimeline[rightIndex].dateValue.getTime() - hoveredDate.getTime());
           return rightDistance < leftDistance ? rightIndex : leftIndex;
         })()
-      : Math.max(0, Math.min(visibleTimeline.length - 1, Math.round(x.invert(plotX))));
+      : 0;
     const xPos = useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index);
     const timelinePoint = visibleTimeline[index];
     const seatsValue = Number(series.seats[index] || 0);
@@ -449,20 +436,21 @@ function renderPollTrackerChart() {
       <div>Seats: ${formatInt(seatsValue)}</div>
       <div>Vote %: ${formatPct(votePctValue)}%</div>
     `;
-
     const tooltipX = Math.min(width - 220, Math.max(8, pointerX + 14));
     const tooltipY = Math.min(height - 96, Math.max(8, event.offsetY + 10));
     tooltip.style.left = `${tooltipX}px`;
     tooltip.style.top = `${tooltipY}px`;
     tooltip.hidden = false;
   };
-
-  /** Hides the crosshair tooltip and fades the crosshair line. */
   const hideTrackerTooltip = () => {
     tooltip.hidden = true;
     crosshairLine.attr('opacity', 0);
   };
 
+  // 14. Draw the lines. For each series + each enabled metric we paint TWO paths:
+  //     - the visible coloured line (solid for seats, dashed for vote %)
+  //     - a thicker invisible "hit area" line on top, which is what catches mousemove/mouseleave.
+  //     This makes thin lines easy to hover without making the visible stroke fat.
   selectedSeries.forEach((series) => {
     if (seatsEnabled) {
       plot.append('path')
@@ -471,7 +459,6 @@ function renderPollTrackerChart() {
         .attr('stroke', series.colour)
         .attr('stroke-width', 2.1)
         .attr('d', seatsLine);
-
       plot.append('path')
         .datum(series.seats)
         .attr('fill', 'none')
@@ -481,7 +468,6 @@ function renderPollTrackerChart() {
         .on('mousemove', (event) => showTrackerTooltip(event, series))
         .on('mouseleave', hideTrackerTooltip);
     }
-
     if (votePctEnabled) {
       plot.append('path')
         .datum(series.votePct)
@@ -490,7 +476,6 @@ function renderPollTrackerChart() {
         .attr('stroke-width', 2.1)
         .attr('stroke-dasharray', '6 4')
         .attr('d', votePctLine);
-
       plot.append('path')
         .datum(series.votePct)
         .attr('fill', 'none')
@@ -502,6 +487,7 @@ function renderPollTrackerChart() {
     }
   });
 
+  // 15. Legend in the top-right corner explaining the line styles, then mount the SVG.
   const legend = svg.append('g').attr('transform', `translate(${width - margin.right},${margin.top - 2})`);
   legend.append('text')
     .text('Solid = Seats, Dashed = Vote %')
@@ -513,34 +499,87 @@ function renderPollTrackerChart() {
 }
 
 /**
- * Renders the party toggle checkboxes for the poll tracker, pre-selecting a fixed set of the main UK parties (Reform, Labour, Conservative, Lib Dems, Green, SNP).
+ * Resolves the visible slice of the poll tracker timeline based on the user's range selection.
+ * pollTrackerRangeSelection is either 'all' (whole timeline) or a numeric day count;
+ * Number('all') is NaN so the isFinite guard naturally falls through to the full length.
+ * @returns {{visibleTimeline: Array<{dateKey: string, dateValue: Date}>, windowStart: number}}
+ */
+function pollTrackerWindow() {
+  const timeline = state.pollTrackerData.timeline;
+  const requested = Number(state.pollTrackerRangeSelection);
+  const windowSize = Number.isFinite(requested) && requested > 0
+    ? Math.min(requested, timeline.length)
+    : timeline.length;
+  const windowStart = timeline.length - windowSize;
+  return { visibleTimeline: timeline.slice(windowStart), windowStart };
+}
+
+/**
+ * Resolves chart dimensions: responsive width (760px floor, 8px gutter), fixed height,
+ * and reserved margins for axes/labels.
+ * @returns {{width: number, height: number, margin: {top:number,right:number,bottom:number,left:number}, innerWidth: number, innerHeight: number}}
+ */
+function pollTrackerDimensions() {
+  const width = Math.max(760, pollTrackerChartWrap.clientWidth - 8);
+  const height = 520;
+  const margin = { top: 14, right: 84, bottom: 58, left: 70 };
+  return {
+    width,
+    height,
+    margin,
+    innerWidth: width - margin.left - margin.right,
+    innerHeight: height - margin.top - margin.bottom,
+  };
+}
+
+/**
+ * Builds the SVG canvas, the plot group (translated by margins), an HTML tooltip overlay, and
+ * a vertical crosshair line. Mounts the tooltip into pollTrackerChartWrap; the SVG is mounted by the caller.
+ * @param {number} width
+ * @param {number} height
+ * @param {{top:number,right:number,bottom:number,left:number}} margin
+ * @param {number} innerHeight
+ * @returns {{svg: object, plot: object, tooltip: HTMLDivElement, crosshairLine: object}}
+ */
+function pollTrackerScaffold(width, height, margin, innerHeight) {
+  const svg = d3.create('svg').attr('viewBox', `0 0 ${width} ${height}`);
+  const plot = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'maps-polltracker-tooltip';
+  tooltip.hidden = true;
+  pollTrackerChartWrap.appendChild(tooltip);
+
+  const crosshairLine = plot.append('line')
+    .attr('class', 'maps-polltracker-crosshair')
+    .attr('y1', 0)
+    .attr('y2', innerHeight)
+    .attr('opacity', 0);
+
+  return { svg, plot, tooltip, crosshairLine };
+}
+
+/**
+ * Renders the party toggle checkboxes for the poll tracker.
+ * Pre-selects a fixed set of the main UK parties (Reform, Labour, Conservative, Lib Dems, Green, SNP).
+ * Toggling a checkbox re-renders the chart.
  * @returns {void}
  */
 function renderPollTrackerPartyControls() {
-  // Sort parties by latest projected seats (descending), with party name as alphabetical tiebreaker.
+  // 1. Order parties so the largest (most recent projected seats) appears first;
+  //    party name is used as a stable alphabetical tiebreaker on ties.
   const partyRows = Array.from(state.pollTrackerData.seriesByParty.values())
     .sort((a, b) => b.latestSeats - a.latestSeats || a.partyName.localeCompare(b.partyName));
 
-  /** @param {string} name - Party name to normalize. @returns {string} Lowercased, trimmed party name. */
-  const normalizePartyName = (name) => String(name || '').trim().toLowerCase();
+  // 2. Decide which checkboxes start checked from the manifest's default party IDs.
+  //    partyKey on each series is String(partyId), so coerce IDs to strings for the lookup.
+  const defaultPartyIds = manifest.parliamentFeatures[state.currentParliament]?.polltrackerDefaultParties ?? [];
+  const defaultSelectedPartySet = new Set(defaultPartyIds.map(String));
 
-  /** Returns true if the party name matches one of the fixed default UK parties. */
-  const isDefaultParty = (name) => {
-    const n = normalizePartyName(name);
-    return n.includes('reform') ||
-           n.includes('labour') ||
-           n.includes('conservative') ||
-           n.includes('liberal democrat') || n.includes('lib dem') ||
-           n === 'green' ||
-           n.includes('snp') || n.includes('scottish national');
-  };
-
-  const defaultSelectedPartySet = new Set(
-    partyRows.filter((row) => isDefaultParty(row.partyName)).map((row) => row.partyKey)
-  );
-
+  // 3. Rebuild the toggle list. Each row is a <label> wrapping:
+  //    [ <input type=checkbox> ] [ colour swatch ] [ party name text ]
+  //    The change handler triggers a chart re-render.
   pollTrackerPartyControls.innerHTML = '';
-
   partyRows.forEach((row) => {
     const label = document.createElement('label');
     label.className = 'maps-polltracker-party-toggle';
@@ -549,9 +588,7 @@ function renderPollTrackerPartyControls() {
     checkbox.type = 'checkbox';
     checkbox.value = row.partyKey;
     checkbox.checked = defaultSelectedPartySet.has(row.partyKey);
-    checkbox.addEventListener('change', () => {
-      renderPollTrackerChart();
-    });
+    checkbox.addEventListener('change', () => renderPollTrackerChart());
 
     const swatch = document.createElement('span');
     swatch.className = 'maps-predict-grid-swatch';
@@ -560,9 +597,7 @@ function renderPollTrackerPartyControls() {
     const text = document.createElement('span');
     text.textContent = row.partyName;
 
-    label.appendChild(checkbox);
-    label.appendChild(swatch);
-    label.appendChild(text);
+    label.append(checkbox, swatch, text);
     pollTrackerPartyControls.appendChild(label);
   });
 }

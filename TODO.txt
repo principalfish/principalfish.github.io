@@ -1,9 +1,7 @@
 
 USE COPILOT!!
 
-maps refactor
-
-then add tests for utils
+part way through activateElection
 
 
 redo data back end structure

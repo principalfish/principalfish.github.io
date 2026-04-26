@@ -32,6 +32,7 @@ import {
   formatPct,
 } from './scripts/utils.js';
 import {
+  setElectionPreDataFetch,
   setHeader,
   setLeftBar,
   setPageTitle,
@@ -63,61 +64,56 @@ async function initPage() {
   if (view === 'polltracker') {
     await activatePollTrackerMode();
   } else {
-    await initElection(view);
+    await activateElection(view);
   }
 }
 
-async function initElection(view) {
-  _state.currentRegionLabelsByKey = buildRegionLabelLookup(state.currentElection.mapId);
-  _state.defaultComparisonSummary = null;
-  _state.defaultComparisonSeats = [];
-  if (filterGainsButton) {
-    filterGainsButton.textContent = getByElectionSeatsSet() ? 'By-elections' : 'Gains';
-    filterGainsButton.hidden = state.currentElection.id === 'eu-referendum-2016';
-  }
-  const isReferendumType = state.currentElection.id === 'eu-referendum-2016';
-  if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
-  if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
-  if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
-    _state.mapViewState.choroplethType = 'none';
-  }
-  // Fetch 2 (parallel):
-  //   - map topology (TopoJSON SVG paths for every seat)
-  //   - election results (seat outcomes, vote totals, party breakdowns)
+
+// =====================================================================
+// ELECTIONS
+// =====================================================================
+
+/**
+ * Loads and renders the active election: fetches map topology and results, optionally loads
+ * comparison data for swing calculations, populates controls, and triggers the initial render.
+ * @param {'election'|'predict'} view - Active view; 'predict' triggers predict mode activation after render.
+ * @returns {Promise<void>}
+ */
+async function activateElection(view) {
+  // Pre-fetch: reset state and configure UI for this election type
+  setElectionPreDataFetch();
+
+  // Fetch: map topology, election results, and (if configured) comparison election results in parallel
   const { mapFile, dataFile } = resolveElectionFiles(state.currentElection);
-  const [mapData, resultsData] = await Promise.all([
+  const comparisonElection = state.currentElection.comparisonElectionId
+    ? getElectionFromId(state.currentElection.comparisonElectionId)
+    : null;
+  const [mapData, resultsData, comparisonData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
+    comparisonElection ? fetchJson(`data/${resolveElectionFiles(comparisonElection).dataFile}`) : Promise.resolve(null),
   ]);
 
+  // Render: normalise data, build indexes, populate controls, render map and seat list
   const seats = normalizeSeats(resultsData);
   _state.baseElectionSeats = seats;
   _state.currentSeats = seats.map((seat) => cloneSeatRecord(seat));
   _state.currentMapData = mapData;
   _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
 
-  // Fetch 3 (conditional, sequential): comparison election results for swing calculations
-  if (state.currentElection.comparisonElectionId) {
-    const comparisonElection = getElectionFromId(state.currentElection.comparisonElectionId);
-    if (comparisonElection) {
-      const { dataFile: comparisonDataFile } = resolveElectionFiles(comparisonElection);
-      const comparisonData = await fetchJson(`data/${comparisonDataFile}`);
-      _state.defaultComparisonSeats = normalizeSeats(comparisonData);
-      _state.defaultComparisonSummary = summarizeElection(_state.defaultComparisonSeats);
-    }
+  if (comparisonData) {
+    _state.defaultComparisonSeats = normalizeSeats(comparisonData);
+    _state.defaultComparisonSummary = summarizeElection(_state.defaultComparisonSeats);
   }
-
   _state.currentComparisonSeats = _state.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
-  const showVoteTotals = state.currentElection.type !== 'model_uns' && state.currentElection.id !== 'eu-referendum-2016';
   populateMapControlOptions();
   syncMapControlStateFromInputs();
-
+  const showVoteTotals = state.currentElection.type !== 'model_uns' && state.currentElection.id !== 'eu-referendum-2016';
   window.__mapsShowVoteTotals = showVoteTotals;
   refreshElectionSeatStateAndRender();
 
-  // Fetch 4 (conditional): predict baseline + simulation data
   if (view === 'predict') {
     await activatePredictMode();
   } else {

@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, escapeHtml, formatInt, formatPct } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -102,5 +102,36 @@ describe('normalizeRegionKey', () => {
 
   it('handles numeric input', () => {
     expect(normalizeRegionKey(123)).toBe('123');
+  });
+});
+
+describe('titleCaseFromRegionKey', () => {
+  it('title-cases a space-separated string', () => {
+    expect(titleCaseFromRegionKey('north east england')).toBe('North East England');
+  });
+
+  it('splits on hyphens', () => {
+    expect(titleCaseFromRegionKey('north-east-england')).toBe('North East England');
+  });
+
+  it('splits on underscores', () => {
+    expect(titleCaseFromRegionKey('north_east_england')).toBe('North East England');
+  });
+
+  it('splits on camelCase boundaries', () => {
+    expect(titleCaseFromRegionKey('northEastEngland')).toBe('North East England');
+  });
+
+  it('title-cases a single word', () => {
+    expect(titleCaseFromRegionKey('scotland')).toBe('Scotland');
+  });
+
+  it('returns Unknown for empty string', () => {
+    expect(titleCaseFromRegionKey('')).toBe('Unknown');
+  });
+
+  it('returns Unknown for null/undefined', () => {
+    expect(titleCaseFromRegionKey(null)).toBe('Unknown');
+    expect(titleCaseFromRegionKey(undefined)).toBe('Unknown');
   });
 });

@@ -747,15 +747,10 @@ const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 
 /**
  * Configures election-type-specific UI before election data has loaded.
- * Resets comparison state, sets the gains button label, and toggles
- * referendum-specific controls.
+ * Sets the gains button label and toggles referendum-specific controls.
  * @returns {void}
  */
 export function setElectionPreDataFetch() {
-  _state.currentRegionLabelsByKey = buildRegionLabelLookup(state.currentElection.mapId);
-  _state.defaultComparisonSummary = null;
-  _state.defaultComparisonSeats = [];
-
   const isReferendumType = state.currentElection.id === 'eu-referendum-2016';
   if (filterGainsButton) {
     filterGainsButton.textContent = state.getByElectionSeatsSet() ? 'By-elections' : 'Gains';
@@ -766,15 +761,4 @@ export function setElectionPreDataFetch() {
   if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
     _state.mapViewState.choroplethType = 'none';
   }
-}
-
-function buildRegionLabelLookup(mapId) {
-  const lookup = new Map();
-  const regionRows = manifest.regionsByMapId?.[String(mapId)] || [];
-  regionRows.forEach((region) => {
-    const key = normalizeRegionKey(region?.name || '');
-    if (!key) return;
-    lookup.set(key, region.name);
-  });
-  return lookup;
 }

@@ -2,7 +2,7 @@
 // All modules import these objects and mutate their properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import { normalizeRegionKey } from './utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey } from './utils.js';
 import { fetchJson } from './files.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
@@ -123,6 +123,22 @@ class Manifest {
   }
 
   /**
+   * Returns a Map from normalised region key to display label for the given mapId.
+   * @param {string|number} mapId - Map identifier to look up in regionsByMapId.
+   * @returns {Map<string, string>}
+   */
+  buildRegionLabelLookup(mapId) {
+    const lookup = new Map();
+    const regionRows = this.regionsByMapId?.[String(mapId)] || [];
+    regionRows.forEach((region) => {
+      const key = normalizeRegionKey(region?.name || '');
+      if (!key) return;
+      lookup.set(key, region.name);
+    });
+    return lookup;
+  }
+
+  /**
    * Fetches the parliament meta file and returns the latest poll snippet string, or null on failure.
    * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
    * @returns {Promise<string|null>}
@@ -158,13 +174,10 @@ export const _state = {
   currentSeats: [],
   currentComparisonSeats: [],
   baseElectionSeats: [],
-  defaultComparisonSeats: [],
-  defaultComparisonSummary: null,
   currentSeatsByKey: new Map(),
   comparisonSeatsByKey: new Map(),
   currentSeatNameByKey: new Map(),
   seatListRowByKey: new Map(),
-  currentRegionLabelsByKey: new Map(),
   currentMapData: null,
 
   // Map filters / choropleth
@@ -261,6 +274,18 @@ class AppState {
     /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
      * Populated by assigning to state.pollTrackerData when poll tracker mode activates; empty until then. */
     this.pollTrackerData = { timeline: [], seriesByParty: new Map() };
+
+    /** Map from normalised region key to display label for the current election.
+     * Built from manifest.regionsByMapId on each election load; used by getRegionLabel. */
+    this.currentRegionLabelsByKey = new Map();
+
+    /** Seat records for the comparison election as loaded from JSON, before any cloning.
+     * Reset to [] on each election load; populated after comparison data fetch completes. */
+    this.defaultComparisonSeats = [];
+
+    /** Summary object for the default comparison election (seat totals, vote share etc).
+     * Reset to null on each election load; populated alongside defaultComparisonSeats. */
+    this.defaultComparisonSummary = null;
   }
 
   /**
@@ -296,6 +321,7 @@ class AppState {
     }
 
     this.currentElection = { ...currentElection };
+    this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
 
     // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
     if (this.view === 'polltracker' || this.currentElection.model) {
@@ -310,6 +336,19 @@ class AppState {
   getByElectionSeatsSet() {
     const seats = this.currentElection?.byElectionSeats;
     return seats?.length ? new Set(seats) : null;
+  }
+
+  /**
+   * Returns the display label for a region key, using the current election's region lookup
+   * with a title-cased fallback for unknown keys.
+   * @param {string} regionKey - Raw or normalised region key.
+   * @returns {string}
+   */
+  getRegionLabel(regionKey) {
+    const normalized = normalizeRegionKey(regionKey);
+    if (!normalized) return 'Unknown';
+    const label = this.currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
+    return label.replace(/ and /gi, ' & ');
   }
 
   #parlConfig() {

@@ -93,10 +93,10 @@ async function activateElection(view) {
   _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
 
   if (comparisonData) {
-    _state.defaultComparisonSeats = normalizeSeats(comparisonData);
-    _state.defaultComparisonSummary = summarizeElection(_state.defaultComparisonSeats);
+    state.defaultComparisonSeats = normalizeSeats(comparisonData);
+    state.defaultComparisonSummary = summarizeElection(state.defaultComparisonSeats);
   }
-  _state.currentComparisonSeats = _state.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
+  _state.currentComparisonSeats = state.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
   populateMapControlOptions();
@@ -774,20 +774,6 @@ function deltaClass(value) {
  * @param {string} regionKey - Region key or name to convert.
  * @returns {string} Title-cased display label (e.g. 'North West England'), or 'Unknown' for empty input.
  */
-function titleCaseFromRegionKey(regionKey) {
-  const text = String(regionKey || '').trim();
-  if (!text) return 'Unknown';
-  const spaced = text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/-/g, ' ').replace(/_/g, ' ');
-  if (spaced.includes(' ')) {
-    return spaced
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(' ');
-  }
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 // ── Seat utilities ───────────────────────────────────────────────────────────
 
 /**
@@ -1665,25 +1651,6 @@ function decodePredictPayload(encoded, slots) {
 
 // ── Map / region utilities ────────────────────────────────────────────────────
 
-/**
- * Returns a Map from normalised region key to display label for the given mapId.
- * Built from the manifest's region metadata object keyed by map ID.
- * Regions whose names normalise to an empty string are skipped.
- * @param {string|number} mapId - Map identifier used to look up region metadata in regionsByMapId.
- * @param {object} regionsByMapId - Manifest settings object mapping map ID strings to arrays of region metadata objects.
- * @returns {Map<string, string>} Map from normalized region key to display label.
- */
-function buildRegionLabelLookup(mapId) {
-  const lookup = new Map();
-  const regionRows = manifest.regionsByMapId?.[String(mapId)] || [];
-  regionRows.forEach((region) => {
-    const key = normalizeRegionKey(region?.name || '');
-    if (!key) return;
-    lookup.set(key, region.name);
-  });
-  return lookup;
-}
-
 // ── Seat filter utilities ─────────────────────────────────────────────────────
 
 /**
@@ -2335,18 +2302,6 @@ function renderSeatViewTabs(mapConfig) {
     });
     seatViewTabNav.appendChild(btn);
   });
-}
-
-/**
- * Returns the display label for a region, falling back to titleCaseFromRegionKey if not in the current region lookup.
- * @param {string} regionKey - Raw or normalized region key.
- * @returns {string} Human-readable region label from the current region map, or a title-cased derivation as fallback.
- */
-function labelRegion(regionKey) {
-  const normalized = normalizeRegionKey(regionKey);
-  if (!normalized) return 'Unknown';
-  const label = _state.currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
-  return label.replace(/ and /gi, ' & ');
 }
 
 /**
@@ -3220,7 +3175,7 @@ async function ensurePredictBaselineData() {
   }));
   _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
   _state.predictBaseMapData = mapData;
-  _state.predictBaseRegionLabelsByKey = buildRegionLabelLookup(baselineElection.mapId);
+  _state.predictBaseRegionLabelsByKey = manifest.buildRegionLabelLookup(baselineElection.mapId);
   _state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(_state.predictBaseSeats));
 
   return true;
@@ -3295,7 +3250,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   _state.currentComparisonSeats = _state.predictBaseSeats;
   _state.comparisonSeatsByKey = _state.predictBaseSeatsByKey;
   _state.currentMapData = _state.predictBaseMapData;
-  _state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
+  state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
 
   window.__mapsShowVoteTotals = false;
   window.__mapsCurrentSummary = projectedSummary;
@@ -3355,7 +3310,7 @@ async function activatePredictMode() {
       }));
       _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
       _state.predictBaseMapData = _state.currentMapData;
-      _state.predictBaseRegionLabelsByKey = new Map(_state.currentRegionLabelsByKey);
+      _state.predictBaseRegionLabelsByKey = new Map(state.currentRegionLabelsByKey);
       _state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(_state.predictBaseSeats));
     }
   }
@@ -3543,7 +3498,7 @@ function collectRegionsForControls() {
   _state.currentSeats.forEach((seat) => {
     const key = normalizeRegionKey(seat.region);
     if (!key) return;
-    if (!byKey.has(key)) byKey.set(key, labelRegion(seat.region));
+    if (!byKey.has(key)) byKey.set(key, state.getRegionLabel(seat.region));
   });
 
   const rows = Array.from(byKey.entries())
@@ -3804,7 +3759,7 @@ function refreshElectionSeatStateAndRender() {
 
   _state.currentSeats = _state.baseElectionSeats.map((seat) => cloneSeatRecord(seat));
   _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
-  _state.currentComparisonSeats = (_state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
+  _state.currentComparisonSeats = (state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
@@ -3814,7 +3769,7 @@ function refreshElectionSeatStateAndRender() {
   updateTopSummary(state.currentElection, summary);
 
   window.__mapsCurrentSummary = summary;
-  window.__mapsComparisonSummary = _state.defaultComparisonSummary;
+  window.__mapsComparisonSummary = state.defaultComparisonSummary;
   renderMapWithViewState();
   syncRightPanelHeightToMap();
 }
@@ -3941,7 +3896,7 @@ function renderSeatPopup(seatName) {
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
     ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${manifest.labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
-    <span class="maps-popup-meta-item">${labelRegion(seat.region)}</span>
+    <span class="maps-popup-meta-item">${state.getRegionLabel(seat.region)}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showRawMajority ? ` = ${formatInt(majority.raw)}` : ''}</span>
     ${showTurnout ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(turnout)}</span>` : ''}
   `;
@@ -4099,7 +4054,7 @@ function renderRegionPopup(regionKey, regionSummary) {
   if (!data) return;
 
   _state.currentOpenSeatName = null;
-  seatPopupTitle.textContent = `${labelRegion(regionKey)} List Vote`;
+  seatPopupTitle.textContent = `${state.getRegionLabel(regionKey)} List Vote`;
 
   const totalSeats = Object.values(data.seatsByParty).reduce((a, b) => a + b, 0);
   seatPopupMeta.innerHTML = `<span class="maps-popup-meta-item">Total seats: ${totalSeats}</span>`;
@@ -4161,7 +4116,7 @@ function renderRegionTable(regionSummary) {
 
     const tdName = document.createElement('td');
     tdName.className = 'maps-region-table-name';
-    tdName.textContent = labelRegion(regionKey);
+    tdName.textContent = state.getRegionLabel(regionKey);
     tr.appendChild(tdName);
 
     const tdSeats = document.createElement('td');

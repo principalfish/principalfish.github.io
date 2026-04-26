@@ -38,3 +38,22 @@ export function normalizeRegionKey(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+/**
+ * Converts a raw region key into a title-cased display label.
+ * Splits on camelCase, hyphens, and underscores; title-cases each word.
+ * @param {string} regionKey - Raw region key string.
+ * @returns {string} Title-cased label, or 'Unknown' if empty.
+ */
+export function titleCaseFromRegionKey(regionKey) {
+  const text = String(regionKey || '').trim();
+  if (!text) return 'Unknown';
+  const spaced = text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/-/g, ' ').replace(/_/g, ' ');
+  if (spaced.includes(' ')) {
+    return spaced
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  }
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

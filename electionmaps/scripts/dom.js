@@ -381,7 +381,13 @@ function pollTrackerWindow() {
 /**
  * Resolves chart dimensions: responsive width (760px floor, 8px gutter), fixed height,
  * and reserved margins for axes/labels.
- * @returns {{width: number, height: number, margin: {top:number,right:number,bottom:number,left:number}, innerWidth: number, innerHeight: number}}
+ * @returns {{
+ *   width: number,
+ *   height: number,
+ *   margin: {top: number, right: number, bottom: number, left: number},
+ *   innerWidth: number,
+ *   innerHeight: number
+ * }}
  */
 function pollTrackerDimensions() {
   const width = Math.max(760, pollTrackerChartWrap.clientWidth - 8);
@@ -448,7 +454,14 @@ function pollTrackerXScale(visibleTimeline, innerWidth) {
  * The seats/votePct arrays are sliced to align positionally with visibleTimeline.
  * @param {string[]} selectedParties - party keys checked in the toggle list
  * @param {number} windowStart - index in the full timeline where the visible window begins
- * @returns {Array<{partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>}
+ * @returns {Array<{
+ *   partyKey: string,
+ *   partyName: string,
+ *   colour: string,
+ *   seats: Array<number|null>,
+ *   votePct: Array<number|null>,
+ *   latestSeats: number
+ * }>}
  */
 function pollTrackerSelectedSeries(selectedParties, windowStart) {
   return selectedParties

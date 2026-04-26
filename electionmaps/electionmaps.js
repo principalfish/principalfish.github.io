@@ -137,7 +137,17 @@ async function activatePollTrackerMode() {
  *      Days before a party's first reading remain null.
  *
  * @param {Array} data - Parsed JSON array from the poll tracker data file.
- * @returns {{timeline: Array<{dateKey: string, dateValue: Date}>, seriesByParty: Map<string, {partyKey: string, partyName: string, colour: string, seats: Array<number|null>, votePct: Array<number|null>, latestSeats: number}>}} Chart-ready timeline and per-party series.
+ * @returns {{
+ *   timeline: Array<{dateKey: string, dateValue: Date}>,
+ *   seriesByParty: Map<string, {
+ *     partyKey: string,
+ *     partyName: string,
+ *     colour: string,
+ *     seats: Array<number|null>,
+ *     votePct: Array<number|null>,
+ *     latestSeats: number
+ *   }>
+ * }} Chart-ready timeline and per-party series.
  */
 function parsePollTrackerData(data) {
   const partiesById = manifest.partiesById;
@@ -867,7 +877,12 @@ function voteSharePct(seat, partyKey) {
 /**
  * Aggregates seats and votes across all constituencies, returning { parties, totalVotes, turnout, totalSeats }. Parties are sorted by seats descending then votes descending. Turnout is electorate-weighted.
  * @param {Array<object>} seats - Array of seat objects with `winner`, `votes`, `electorate`, and `turnout` properties.
- * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}} Aggregated election summary.
+ * @returns {{
+ *   parties: Array<{party: string, seats: number, votes: number}>,
+ *   totalVotes: number,
+ *   turnout: number,
+ *   totalSeats: number
+ * }} Aggregated election summary.
  */
 export function summarizeElection(seats, { mode = 'all' } = {}) {
   const partyStats = new Map();
@@ -1481,7 +1496,14 @@ function buildRegionSummary(seats) {
  * Duplicate keys that collapse after normalisation are summed.
  * Numeric fields (`electorate`, `turnout`) are coerced to numbers.
  * @param {object} seat - Raw seat object with `seat`, `region`, `winner`, `electorate`, `turnout`, and `votes` properties.
- * @returns {{seat: string, region: string, winner: string, electorate: number, turnout: number, votes: object}} Normalised copy of the seat record.
+ * @returns {{
+ *   seat: string,
+ *   region: string,
+ *   winner: string,
+ *   electorate: number,
+ *   turnout: number,
+ *   votes: object
+ * }} Normalised copy of the seat record.
  */
 export function cloneSeatRecord(seat) {
   const votes = {};
@@ -1543,7 +1565,10 @@ function encodePredictPayload(serializedRows, englandExpanded, slots) {
  * Returns null on any parse failure or when slots are unavailable.
  * @param {string} encoded - Encoded payload string as produced by encodePredictPayload.
  * @param {Array<[string, string]>} slots - Ordered array of [regionKey, partyKey] pairs matching those used during encoding.
- * @returns {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} Decoded state object, or null on parse failure.
+ * @returns {{
+ *   englandExpanded: boolean,
+ *   rows: Array<[string, string, number]>
+ * } | null} Decoded state object, or null on parse failure.
  */
 function decodePredictPayload(encoded, slots) {
   const raw = String(encoded || '').trim();
@@ -1797,7 +1822,12 @@ function collectPredictShareStateRows(baseRegionLabelsByKey) {
  * Each row carries `{ regionKey, regionLabel, isEnglandAggregate, isEnglandRegion }`.
  * @param {Map<string, string>} baseRegionLabelsByKey - Map from normalized region key to display label.
  * @param {boolean} englandExpanded - Whether English sub-regions should be included after the England aggregate row.
- * @returns {Array<{regionKey: string, regionLabel: string, isEnglandAggregate: boolean, isEnglandRegion: boolean}>} Ordered row descriptors for the predict input grid.
+ * @returns {Array<{
+ *   regionKey: string,
+ *   regionLabel: string,
+ *   isEnglandAggregate: boolean,
+ *   isEnglandRegion: boolean
+ * }>} Ordered row descriptors for the predict input grid.
  */
 function collectPredictInputRows(baseRegionLabelsByKey, englandExpanded) {
   const allRegions = collectPredictAllRegions(baseRegionLabelsByKey);
@@ -2638,7 +2668,10 @@ function buildPredictShareStatePayload() {
 
 /**
  * Reads and decodes the 'predict' URL parameter, returning the decoded state object or null.
- * @returns {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} Decoded predict state, or null if the parameter is absent or malformed.
+ * @returns {{
+ *   englandExpanded: boolean,
+ *   rows: Array<[string, string, number]>
+ * } | null} Decoded predict state, or null if the parameter is absent or malformed.
  */
 function readPredictShareStateFromUrl() {
   const encoded = new URLSearchParams(window.location.search).get('predict');
@@ -2757,7 +2790,11 @@ async function sharePredictScenario() {
 
 /**
  * Returns an array of region rows where the entered party shares exceed 100% in total. Empty array means all rows are valid.
- * @returns {Array<{regionKey: string, regionLabel: string, total: number}>} Array of invalid region rows with their computed totals; empty when all regions are valid.
+ * @returns {Array<{
+ *   regionKey: string,
+ *   regionLabel: string,
+ *   total: number
+ * }>} Array of invalid region rows with their computed totals; empty when all regions are valid.
  */
 function validatePredictRowsNotOver100() {
   if (state.currentParliament === 'holyrood') {
@@ -3520,7 +3557,13 @@ function populateMapControlOptions() {
  * For voteShareChange returns a diverging red-white-blue scale; for voteShare returns a white-to-party-colour scale.
  * Includes valueBySeatKey, toColour, and legend metadata.
  * @param {Set<string>} visibleSeatKeys - Set of seat lookup keys currently passing the active filters.
- * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
+ * @returns {{enabled: false} | {
+ *   enabled: true,
+ *   valueBySeatKey: Map<string, number>,
+ *   toColour: function(number): string,
+ *   legendText: string,
+ *   legend?: object
+ * }} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
   if (state.isReferendumType && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {

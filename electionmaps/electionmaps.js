@@ -20,8 +20,6 @@ import {
 } from './scripts/misc.js';
 import {
   normalizeRegionKey,
-  labelParty,
-  colourParty,
   escapeHtml,
   formatInt,
   formatPct,
@@ -2525,8 +2523,8 @@ function renderHolyroodTabGrid(tabMap, pass) {
   headRow.appendChild(regionTh);
   _state.predictColumnPartyKeys.forEach((pk) => {
     const th = document.createElement('th');
-    th.title = labelParty(pk);
-    th.innerHTML = `<span class="maps-predict-grid-swatch" style="background:${colourParty(pk)}" aria-hidden="true"></span>`;
+    th.title = manifest.labelParty(pk);
+    th.innerHTML = `<span class="maps-predict-grid-swatch" style="background:${manifest.colourParty(pk)}" aria-hidden="true"></span>`;
     headRow.appendChild(th);
   });
   const totalTh = document.createElement('th');
@@ -3060,8 +3058,8 @@ function renderPredictGrid() {
         th.title = 'NAT (SNP in Scotland, Plaid Cymru in Wales)';
         th.innerHTML = '<span class="maps-predict-grid-swatch maps-predict-grid-swatch-nat" aria-hidden="true"></span>';
       } else {
-        th.title = labelParty(partyKey);
-        th.innerHTML = `<span class="maps-predict-grid-swatch" style="background:${colourParty(partyKey)}" aria-hidden="true"></span>`;
+        th.title = manifest.labelParty(partyKey);
+        th.innerHTML = `<span class="maps-predict-grid-swatch" style="background:${manifest.colourParty(partyKey)}" aria-hidden="true"></span>`;
       }
       headRow.appendChild(th);
     });
@@ -3533,9 +3531,9 @@ function collectPartyKeysForControls() {
   });
 
   const sorted = Array.from(keys).filter((key) => key !== 'all')
-    .sort((a, b) => labelParty(a).localeCompare(labelParty(b)));
+    .sort((a, b) => manifest.labelParty(a).localeCompare(manifest.labelParty(b)));
 
-  return [{ value: 'all', label: 'all parties...' }, ...sorted.map((key) => ({ value: key, label: labelParty(key) }))];
+  return [{ value: 'all', label: 'all parties...' }, ...sorted.map((key) => ({ value: key, label: manifest.labelParty(key) }))];
 }
 
 /**
@@ -3707,8 +3705,8 @@ function buildChoroplethConfig(visibleSeatKeys) {
 
   if (!values.length) return { enabled: false };
 
-  const selectedPartyLabel = labelParty(_state.mapViewState.choroplethParty);
-  const selectedPartyColour = colourParty(_state.mapViewState.choroplethParty);
+  const selectedPartyLabel = manifest.labelParty(_state.mapViewState.choroplethParty);
+  const selectedPartyColour = manifest.colourParty(_state.mapViewState.choroplethParty);
   const legendBase = {
     party: selectedPartyLabel,
     isDelta,
@@ -3944,7 +3942,7 @@ function renderSeatPopup(seatName) {
 
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
-    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${colourParty(gainFrom)}"></span></span>` : ''}
+    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${manifest.labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
     <span class="maps-popup-meta-item">${labelRegion(seat.region)}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showRawMajority ? ` = ${formatInt(majority.raw)}` : ''}</span>
     ${showTurnout ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(turnout)}</span>` : ''}
@@ -3974,9 +3972,9 @@ function renderSeatPopup(seatName) {
     const item = document.createElement('div');
     item.className = 'maps-popup-row';
     item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-    item.style.setProperty('--maps-popup-bar-colour', colourParty(row.party));
+    item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(row.party));
     item.innerHTML = `
-      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${colourParty(row.party)}"></span>${escapeHtml(labelParty(row.party))}</div>
+      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(row.party)}"></span>${escapeHtml(manifest.labelParty(row.party))}</div>
       <div class="maps-popup-values">
         <span>${formatPct(row.pct)}%</span>
         ${row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`}
@@ -3997,7 +3995,7 @@ function sortPartyRows(rows) {
   const multiplier = _state.currentSort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     if (_state.currentSort.key === 'party') {
-      return multiplier * labelParty(a.party).localeCompare(labelParty(b.party));
+      return multiplier * manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
     }
 
     const av = Number(a[_state.currentSort.key] || 0);
@@ -4006,7 +4004,7 @@ function sortPartyRows(rows) {
     // Tiebreak by vote share descending, then party name
     const voteDiff = Number(b.votePct || 0) - Number(a.votePct || 0);
     if (voteDiff !== 0) return voteDiff;
-    return labelParty(a.party).localeCompare(labelParty(b.party));
+    return manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
   });
 }
 
@@ -4083,7 +4081,7 @@ function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
-      <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${colourParty(partyRow.party)}"></span>${labelParty(partyRow.party)}</span></td>
+      <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${manifest.labelParty(partyRow.party)}</span></td>
       <td>${formatInt(partyRow.seats)}</td>
       <td class="comparison-col ${showComparison ? deltaClass(partyRow.seatsDelta) : ''}">${showComparison ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
       <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
@@ -4122,9 +4120,9 @@ function renderRegionPopup(regionKey, regionSummary) {
     const item = document.createElement('div');
     item.className = 'maps-popup-row';
     item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-    item.style.setProperty('--maps-popup-bar-colour', colourParty(row.party));
+    item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(row.party));
     item.innerHTML = `
-      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${colourParty(row.party)}"></span>${escapeHtml(labelParty(row.party))}</div>
+      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(row.party)}"></span>${escapeHtml(manifest.labelParty(row.party))}</div>
       <div class="maps-popup-values">
         <span>${formatPct(row.pct)}%</span>
         <span style="color:#6b7280">${seats} seat${seats !== 1 ? 's' : ''}</span>
@@ -4178,7 +4176,7 @@ function renderRegionTable(regionSummary) {
         const seg = document.createElement('div');
         seg.className = 'maps-region-table-bar-seg';
         seg.style.width = `${(count / total) * 100}%`;
-        seg.style.background = colourParty(party);
+        seg.style.background = manifest.colourParty(party);
         if (count >= 2) seg.textContent = count;
         barEl.appendChild(seg);
       });
@@ -4233,11 +4231,11 @@ function renderSeatList(seats, comparisonSeats = null) {
     item.setAttribute('aria-label', `Zoom to ${seatName}`);
     item.innerHTML = `
       <span class="maps-seat-main">
-        <span class="maps-seat-icon maps-seat-owner-icon" style="background:${colourParty(winnerKey)}" title="${labelParty(winnerKey)}"></span>
+        <span class="maps-seat-icon maps-seat-owner-icon" style="background:${manifest.colourParty(winnerKey)}" title="${manifest.labelParty(winnerKey)}"></span>
         <span class="maps-seat-name">${seatName}</span>
       </span>
       <span class="maps-seat-meta">
-        ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${colourParty(gainedFrom)}" title="${labelParty(gainedFrom)}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
+        ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${manifest.labelParty(gainedFrom)}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
       </span>
     `;
 
@@ -4621,8 +4619,8 @@ function updateTopSummary(election, summary) {
   const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
 
   const subtitleText = hasMajority
-    ? `${election.name} · ${labelParty(top?.party || 'others')} majority: ${majority}`
-    : `${election.name} · Hung parliament - largest party ${labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
+    ? `${election.name} · ${manifest.labelParty(top?.party || 'others')} majority: ${majority}`
+    : `${election.name} · Hung parliament - largest party ${manifest.labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
   setHeader(subtitleText);
 }
 
@@ -4810,14 +4808,14 @@ function renderTopoMap(mapData, seats, options = {}) {
     .attr('d', path)
     .attr('fill', (datum) => {
       const seatName = seatNameFromFeature(datum);
-      if (!seatName) return colourParty('others');
+      if (!seatName) return manifest.colourParty('others');
       const seatKey = seatLookupKey(seatName);
       if (state.currentElection.id === 'eu-referendum-2016' && isPredictNorthernIrelandRegion(datum.properties?.region)) {
         return '#dce4ea';
       }
 
       const seat = _state.currentSeatsByKey.get(seatKey);
-      if (!seat) return colourParty('others');
+      if (!seat) return manifest.colourParty('others');
 
       if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) {
         return '#cbd5e1';
@@ -4829,7 +4827,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       }
 
       const winner = winnerBySeat.get(seatName) || winnerBySeat.get(seatLookupKey(seatName)) || 'others';
-      return colourParty(winner);
+      return manifest.colourParty(winner);
     })
     .attr('stroke', (datum) => {
       if (state.currentElection.id !== 'eu-referendum-2016') return null;

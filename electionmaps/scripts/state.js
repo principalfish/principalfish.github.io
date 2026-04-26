@@ -211,10 +211,6 @@ export const state = {
    * Populated by setPollTrackerData when poll tracker mode activates; empty until then. */
   pollTrackerData: { timeline: [], seriesByParty: new Map() },
 
-  /** User-selected date-range window for the poll tracker chart.
-   * 'all' renders the entire timeline; a numeric string (e.g. '30') restricts the chart to the
-   * last N days. Set by setPollTrackerRange when the user clicks a [data-polltracker-range] button. */
-  pollTrackerRangeSelection: 'all',
 };
 
 /**
@@ -224,15 +220,6 @@ export const state = {
  */
 export function setPollTrackerData(data) {
   state.pollTrackerData = data;
-}
-
-/**
- * Sets the active date-range selection for the poll tracker chart.
- * @param {string} range - 'all' or a numeric string indicating days to include.
- * @returns {void}
- */
-export function setPollTrackerRange(range) {
-  state.pollTrackerRangeSelection = range;
 }
 
 /**

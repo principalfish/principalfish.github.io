@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPollTrackerData, setPollTrackerRange } from './scripts/state.js';
+import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPollTrackerData } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty, trackVirtualPageView, escapeHtml, formatInt, formatPct } from './scripts/utils.js';
 import { setHeader, setLeftBar, setPageTitle, setPollTracker } from './scripts/dom.js';
 
@@ -468,8 +468,8 @@ function wirePollTrackerMetricInput(inputEl) {
 
 /**
  * Wires the seats and vote-% metric inputs (via wirePollTrackerMetricInput) and all
- * [data-polltracker-range] buttons so clicking a range button updates state and re-renders
- * the chart. Guards individual buttons against double-wiring via dataset flag.
+ * [data-polltracker-range] buttons so clicking a range button updates the active button
+ * and re-renders the chart. Guards individual buttons against double-wiring via dataset flag.
  * @returns {void}
  */
 function wirePollTrackerControls() {
@@ -480,7 +480,6 @@ function wirePollTrackerControls() {
     if (button.dataset.wired === 'true') return;
     button.addEventListener('click', () => {
       const nextRange = button.getAttribute('data-polltracker-range') || 'all';
-      setPollTrackerRange(nextRange);
       document.querySelectorAll('[data-polltracker-range]').forEach((candidate) => {
         candidate.classList.toggle('is-active', candidate.getAttribute('data-polltracker-range') === nextRange);
       });

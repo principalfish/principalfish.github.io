@@ -1,64 +1,4 @@
-import { manifest, state } from './state.js';
-
-/**
- * Returns a query string URL for the given view in the current parliament.
- * @param {'election'|'predict'|'polltracker'} view - Target view.
- * @param {string} [electionId] - Election id; only used when view is 'election'.
- * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
- */
-export function viewUrl(view, electionId) {
-  const electionPart = view === 'election' && electionId
-    ? `&election=${encodeURIComponent(electionId)}`
-    : '';
-  return `?view=${view}${electionPart}&parliament=${state.currentParliament}`;
-}
-
-/**
- * Fetches a URL and passes the Response through the provided parser function. Throws on non-OK status.
- * @param {string} url - URL to fetch.
- * @param {function(Response): Promise<*>} parser - Function that receives the Response and returns a parsed value.
- * @returns {Promise<*>} Resolved value returned by the parser function.
- * @throws {Error} When the response status is not OK.
- */
-async function fetchResource(url, parser) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  }
-  return parser(response);
-}
-
-/**
- * Fetches and parses a JSON resource from the given URL.
- * @param {string} url - URL of the JSON resource.
- * @returns {Promise<*>} Parsed JSON value.
- */
-export async function fetchJson(url) {
-  return fetchResource(url, (response) => response.json());
-}
-
-// ─── Google Analytics ─────────────────────────────────────────────────────────
-
-let lastTrackedPath = '';
-
-/**
- * Fires a gtag page_view event for the current location, deduplicating against the last tracked path.
- * No-ops on dev hosts because ga-setup.js leaves window.gtag undefined there.
- * @returns {void}
- */
-export function trackVirtualPageView() {
-  if (typeof window.gtag !== 'function') return;
-
-  const pagePath = `${window.location.pathname}${window.location.search}`;
-  if (pagePath === lastTrackedPath) return;
-
-  lastTrackedPath = pagePath;
-  window.gtag('event', 'page_view', {
-    page_location: window.location.href,
-    page_path: pagePath,
-    page_title: document.title,
-  });
-}
+import { manifest } from './state.js';
 
 /**
  * Escapes HTML special characters in a string for safe insertion into innerHTML.
@@ -98,21 +38,6 @@ export function formatPct(value) {
  */
 export function normalizeRegionKey(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-/**
- * Fetches the parliament meta file and returns the latest poll snippet string, or null on failure.
- * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
- * @returns {Promise<string|null>}
- */
-export async function fetchElectionPredictionMeta(parliament) {
-  const metaPath = manifest.files.meta[parliament];
-  try {
-    const payload = await fetchJson(`data/${metaPath}`);
-    return String(payload?.latest_poll_snippet || '').trim();
-  } catch {
-    return null;
-  }
 }
 
 /**

@@ -2,7 +2,8 @@
 // All modules import this object and mutate its properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import { normalizeRegionKey, fetchElectionPredictionMeta } from './utils.js';
+import { normalizeRegionKey } from './utils.js';
+import { fetchElectionPredictionMeta } from './files.js';
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 
@@ -312,4 +313,17 @@ export function getPredictBaselineElectionId() {
 export function shouldShowCountdown() {
   // TODO: generalise to support countdown for multiple concurrent elections
   return state.currentElection.type === 'holyrood_uns';
+}
+
+/**
+ * Returns a query string URL for the given view in the current parliament.
+ * @param {'election'|'predict'|'polltracker'} view - Target view.
+ * @param {string} [electionId] - Election id; only used when view is 'election'.
+ * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
+ */
+export function viewUrl(view, electionId) {
+  const electionPart = view === 'election' && electionId
+    ? `&election=${encodeURIComponent(electionId)}`
+    : '';
+  return `?view=${view}${electionPart}&parliament=${state.currentParliament}`;
 }

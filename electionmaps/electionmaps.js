@@ -4,17 +4,40 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPollTrackerData } from './scripts/state.js';
-import { fetchJson, normalizeRegionKey, labelParty, colourParty, trackVirtualPageView, escapeHtml, formatInt, formatPct } from './scripts/utils.js';
-import { setHeader, setLeftBar, setPageTitle, setPollTracker, wirePollTrackerControls } from './scripts/dom.js';
-
-// =====================================================================
-// COMPLETED REFACTORED 
-// =====================================================================
-
-// =====================================================================
-// IN PROGRESS REFACTORED
-// =====================================================================
+import {
+  _state,
+  state,
+  manifest,
+  initState,
+  getSearchParam,
+  getSearchParams,
+  getElectionFromId,
+  getByElectionSeatsSet,
+  getPredictAnchorElectionId,
+  getPredictBaselineElectionId,
+  setPollTrackerData,
+} from './scripts/state.js';
+import {
+  fetchJson,
+} from './scripts/files.js';
+import {
+  trackVirtualPageView,
+} from './scripts/misc.js';
+import {
+  normalizeRegionKey,
+  labelParty,
+  colourParty,
+  escapeHtml,
+  formatInt,
+  formatPct,
+} from './scripts/utils.js';
+import {
+  setHeader,
+  setLeftBar,
+  setPageTitle,
+  setPollTracker,
+  wirePollTrackerControls,
+} from './scripts/dom.js';
 
 // =====================================================================
 // INIT

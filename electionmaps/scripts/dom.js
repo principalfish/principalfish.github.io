@@ -1,6 +1,6 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { manifest, state, getPredictAnchorElectionId, shouldShowCountdown } from './state.js';
-import { escapeHtml, formatInt, formatPct, viewUrl } from './utils.js';
+import { manifest, state, getPredictAnchorElectionId, shouldShowCountdown, viewUrl } from './state.js';
+import { escapeHtml, formatInt, formatPct } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');

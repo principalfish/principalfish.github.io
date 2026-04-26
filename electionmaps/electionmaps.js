@@ -101,8 +101,6 @@ async function activateElection(view) {
 
   populateMapControlOptions();
   syncMapControlStateFromInputs();
-  const showVoteTotals = state.currentElection.type !== 'model_uns' && state.currentElection.id !== 'eu-referendum-2016';
-  window.__mapsShowVoteTotals = showVoteTotals;
   refreshElectionSeatStateAndRender();
 
   if (view === 'predict') {
@@ -271,7 +269,7 @@ function wireInit() {
   wireVoteTotalsSorting(() => {
     if (!window.__mapsCurrentSummary) return;
     renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null, {
-      showVoteTotals: window.__mapsShowVoteTotals !== false,
+      showVoteTotals: state.showVoteTotals,
     });
     syncRightPanelHeightToMap();
   });
@@ -623,7 +621,7 @@ function wireVoteTotalsToggle() {
     _state.voteTotalsExpanded = !_state.voteTotalsExpanded;
     if (!window.__mapsCurrentSummary) return;
     renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null, {
-      showVoteTotals: window.__mapsShowVoteTotals !== false,
+      showVoteTotals: state.showVoteTotals,
     });
     syncPredictModeRightColumnLayout();
   });
@@ -2268,7 +2266,7 @@ function renderVoteTotalsTabs(mapConfig) {
       const compSummary = compSeats.length ? summarizeElection(compSeats, { mode: _state.voteTotalsMode }) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
-      window.__mapsShowVoteTotals = showVotes;
+      state.showVoteTotals = showVotes;
       toggleVoteTotalColumns(showVotes);
       toggleVotePctColumns(showVotes);
       renderVoteTotals(summary, compSummary, { showVoteTotals: showVotes });
@@ -3252,7 +3250,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   _state.currentMapData = _state.predictBaseMapData;
   state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
 
-  window.__mapsShowVoteTotals = false;
+  state.showVoteTotals = false;
   window.__mapsCurrentSummary = projectedSummary;
   window.__mapsComparisonSummary = baselineSummary;
 
@@ -3607,7 +3605,7 @@ function populateMapControlOptions() {
  * @returns {{enabled: false}|{enabled: true, valueBySeatKey: Map<string, number>, toColour: function(number): string, legendText: string, legend?: object}} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
-  if (state.currentElection.id === 'eu-referendum-2016' && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
+  if (state.isReferendumType && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
     const valueBySeatKey = new Map();
     const values = [];
     _state.currentSeats.forEach((seat) => {

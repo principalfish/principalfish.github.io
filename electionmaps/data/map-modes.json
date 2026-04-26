@@ -114,6 +114,7 @@
       "id": "eu-referendum-2016",
       "name": "2016 EU Referendum",
       "type": "eu_referendum",
+      "referendum": true,
       "mapId": 1,
       "parliament": "westminster"
     }

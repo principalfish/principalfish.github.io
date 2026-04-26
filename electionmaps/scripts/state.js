@@ -286,6 +286,14 @@ class AppState {
     /** Summary object for the default comparison election (seat totals, vote share etc).
      * Reset to null on each election load; populated alongside defaultComparisonSeats. */
     this.defaultComparisonSummary = null;
+
+    /** True if the current election is a referendum, as flagged in the manifest.
+     * Controls visibility of gains/choropleth controls and data info button. */
+    this.isReferendumType = false;
+
+    /** Whether vote totals should be displayed for the current election.
+     * False for model runs and referendum-type elections; true otherwise. */
+    this.showVoteTotals = true;
   }
 
   /**
@@ -322,6 +330,8 @@ class AppState {
 
     this.currentElection = { ...currentElection };
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
+    this.isReferendumType = !!this.currentElection.referendum;
+    this.showVoteTotals = this.currentElection.type !== 'model_uns' && !this.isReferendumType;
 
     // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
     if (this.view === 'polltracker' || this.currentElection.model) {

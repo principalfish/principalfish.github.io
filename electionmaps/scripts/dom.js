@@ -1,5 +1,5 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { manifest, _state, state } from './state.js';
+import { manifest, state } from './state.js';
 import { escapeHtml, formatInt, formatPct, normalizeRegionKey } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
@@ -741,6 +741,7 @@ function renderPollTrackerPartyControls() {
 
 // ─── Elections ───────────────────────────────────────────────────────────────
 
+// Election-specific controls that are always present in index.html; toggled per election type.
 const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
@@ -751,14 +752,8 @@ const dataInfoButton = document.getElementById('mapsDataInfoBtn');
  * @returns {void}
  */
 export function setElectionPreDataFetch() {
-  const isReferendumType = state.currentElection.id === 'eu-referendum-2016';
-  if (filterGainsButton) {
-    filterGainsButton.textContent = state.getByElectionSeatsSet() ? 'By-elections' : 'Gains';
-    filterGainsButton.hidden = isReferendumType;
-  }
-  if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
-  if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
-  if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
-    _state.mapViewState.choroplethType = 'none';
-  }
+  filterGainsButton.textContent = state.getByElectionSeatsSet() ? 'By-elections' : 'Gains';
+  filterGainsButton.hidden = state.isReferendumType;
+  choroplethVoteShareChangeOption.hidden = state.isReferendumType;
+  dataInfoButton.hidden = !state.isReferendumType;
 }

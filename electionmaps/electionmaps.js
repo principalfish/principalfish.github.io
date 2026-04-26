@@ -269,7 +269,7 @@ function wireInit() {
   wireVoteTotalsSorting(() => {
     if (!window.__mapsCurrentSummary) return;
     renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null, {
-      showVoteTotals: state.showVoteTotals,
+      showVoteTotals: state.voteTotalsColumnVisible('votes'),
     });
     syncRightPanelHeightToMap();
   });
@@ -621,7 +621,7 @@ function wireVoteTotalsToggle() {
     _state.voteTotalsExpanded = !_state.voteTotalsExpanded;
     if (!window.__mapsCurrentSummary) return;
     renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null, {
-      showVoteTotals: state.showVoteTotals,
+      showVoteTotals: state.voteTotalsColumnVisible('votes'),
     });
     syncPredictModeRightColumnLayout();
   });
@@ -2261,14 +2261,14 @@ function renderVoteTotalsTabs(mapConfig) {
       updateVoteTotalsTabsUI();
       const seats = window.__mapsVisibleSeats || [];
       const compSeats = window.__mapsVisibleComparisonSeats || [];
-      const showVotes = _state.voteTotalsMode !== 'all';
+      const tabAllowsVotes = _state.voteTotalsMode !== 'all';
+      const showVotes = tabAllowsVotes && state.voteTotalsColumnVisible('votes');
       const summary = summarizeElection(seats, { mode: _state.voteTotalsMode });
       const compSummary = compSeats.length ? summarizeElection(compSeats, { mode: _state.voteTotalsMode }) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
-      state.showVoteTotals = showVotes;
       toggleVoteTotalColumns(showVotes);
-      toggleVotePctColumns(showVotes);
+      toggleVotePctColumns(tabAllowsVotes);
       renderVoteTotals(summary, compSummary, { showVoteTotals: showVotes });
     });
     voteTotalsTabNav.appendChild(btn);
@@ -3250,7 +3250,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   _state.currentMapData = _state.predictBaseMapData;
   state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
 
-  state.showVoteTotals = false;
+  state.voteTotals.votes = false;
   window.__mapsCurrentSummary = projectedSummary;
   window.__mapsComparisonSummary = baselineSummary;
 
@@ -3813,7 +3813,7 @@ function renderMapWithViewState(options = {}) {
   toggleVoteTotalColumns(showVotes);
   toggleVotePctColumns(showVotes);
   renderVoteTotals(filteredSummary, filteredComparisonSummary, {
-    showVoteTotals: showVotes && window.__mapsShowVoteTotals !== false,
+    showVoteTotals: showVotes && state.voteTotalsColumnVisible('votes'),
   });
 
   const preserveTransform = options.preserveZoom && mapSvg ? d3.zoomTransform(mapSvg) : null;

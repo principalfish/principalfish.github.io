@@ -291,9 +291,12 @@ class AppState {
      * Controls visibility of gains/choropleth controls and data info button. */
     this.isReferendumType = false;
 
-    /** Whether vote totals should be displayed for the current election.
-     * False for model runs and referendum-type elections; true otherwise. */
-    this.showVoteTotals = true;
+    /** UI flags for the vote totals panel.
+     * - votes: whether the raw vote count column is visible.
+     *   Initialised false for model elections and referendum-type elections; true otherwise.
+     *   Also toggled at runtime when switching vote totals tabs or entering predict mode.
+     */
+    this.voteTotals = { votes: true };
   }
 
   /**
@@ -331,12 +334,23 @@ class AppState {
     this.currentElection = { ...currentElection };
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
-    this.showVoteTotals = this.currentElection.type !== 'model_uns' && !this.isReferendumType;
+    if (this.currentElection.model || this.isReferendumType) {
+      this.voteTotals.votes = false;
+    }
 
     // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
     if (this.view === 'polltracker' || this.currentElection.model) {
       this.predictionSnippet = (await manifest.fetchPredictionMeta(this.currentParliament)) ?? '';
     }
+  }
+
+  /**
+   * Returns whether the named column should be visible in the vote totals panel.
+   * @param {string} column - Column key in this.voteTotals (e.g. 'votes').
+   * @returns {boolean}
+   */
+  voteTotalsColumnVisible(column) {
+    return !!this.voteTotals[column];
   }
 
   /**

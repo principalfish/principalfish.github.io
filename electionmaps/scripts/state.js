@@ -105,6 +105,24 @@ class Manifest {
   }
 
   /**
+   * Returns the display label for a party, or the raw key if not found.
+   * @param {string} partyKey - Canonical party key (e.g. "labour").
+   * @returns {string}
+   */
+  labelParty(partyKey) {
+    return this.partiesByKey?.[partyKey]?.name ?? partyKey;
+  }
+
+  /**
+   * Returns the hex colour for a party, or a grey fallback if not found.
+   * @param {string} partyKey - Canonical party key (e.g. "labour").
+   * @returns {string}
+   */
+  colourParty(partyKey) {
+    return this.partiesByKey?.[partyKey]?.colour ?? '#9CA3AF';
+  }
+
+  /**
    * Fetches the parliament meta file and returns the latest poll snippet string, or null on failure.
    * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
    * @returns {Promise<string|null>}

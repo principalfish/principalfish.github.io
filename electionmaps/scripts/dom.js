@@ -1,5 +1,5 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { manifest, state, getPredictAnchorElectionId, HOLYROOD_ELECTION_DATE, shouldShowCountdown } from './state.js';
+import { manifest, state, getPredictAnchorElectionId, shouldShowCountdown } from './state.js';
 import { escapeHtml, formatInt, formatPct, viewUrl } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
@@ -208,7 +208,7 @@ function renderCountdown() {
   }
 
   const tick = () => {
-    const msLeft = HOLYROOD_ELECTION_DATE - Date.now();
+    const msLeft = new Date(manifest.misc?.holyroodElectionDate) - Date.now();
     if (msLeft <= 0) {
       electionCountdown.hidden = true;
       // Clear and null the handle so renderCountdown can safely restart if called again.

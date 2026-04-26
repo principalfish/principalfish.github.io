@@ -303,8 +303,6 @@ export function getPredictBaselineElectionId() {
 
 // ─── Active election ──────────────────────────────────────────────────────────
 
-/** Scheduled polling date for the 2026 Holyrood election: 7 May 2026, 07:00 BST (06:00 UTC). */
-export const HOLYROOD_ELECTION_DATE = new Date('2026-05-07T06:00:00Z');
 
 /**
  * Returns true when the election countdown should be visible.

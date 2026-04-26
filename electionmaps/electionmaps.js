@@ -6,7 +6,7 @@ import {
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { _state, state, manifest, initState, getSearchParam, getSearchParams, getElectionFromId, getByElectionSeatsSet, getPredictAnchorElectionId, getPredictBaselineElectionId, setPollTrackerData } from './scripts/state.js';
 import { fetchJson, normalizeRegionKey, labelParty, colourParty, trackVirtualPageView, escapeHtml, formatInt, formatPct } from './scripts/utils.js';
-import { setHeader, setLeftBar, setPageTitle, setPollTracker } from './scripts/dom.js';
+import { setHeader, setLeftBar, setPageTitle, setPollTracker, wirePollTrackerControls } from './scripts/dom.js';
 
 // =====================================================================
 // COMPLETED REFACTORED 
@@ -450,43 +450,6 @@ function wirePredictControls() {
   }
 
   predictWindow.dataset.wired = 'true';
-}
-
-/**
- * Attaches a change handler to a poll tracker metric radio/checkbox so the chart re-renders
- * when the metric (seats vs vote %) is switched. No-op if null or already wired.
- * @param {HTMLInputElement|null} inputEl - The input element to wire.
- * @returns {void}
- */
-function wirePollTrackerMetricInput(inputEl) {
-  if (!inputEl || inputEl.dataset.wired === 'true') return;
-  inputEl.addEventListener('change', () => {
-    if (state.view === 'polltracker') setPollTracker();
-  });
-  inputEl.dataset.wired = 'true';
-}
-
-/**
- * Wires the seats and vote-% metric inputs (via wirePollTrackerMetricInput) and all
- * [data-polltracker-range] buttons so clicking a range button updates the active button
- * and re-renders the chart. Guards individual buttons against double-wiring via dataset flag.
- * @returns {void}
- */
-function wirePollTrackerControls() {
-  wirePollTrackerMetricInput(pollTrackerMetricSeatsInput);
-  wirePollTrackerMetricInput(pollTrackerMetricVotesInput);
-
-  document.querySelectorAll('[data-polltracker-range]').forEach((button) => {
-    if (button.dataset.wired === 'true') return;
-    button.addEventListener('click', () => {
-      const nextRange = button.getAttribute('data-polltracker-range') || 'all';
-      document.querySelectorAll('[data-polltracker-range]').forEach((candidate) => {
-        candidate.classList.toggle('is-active', candidate.getAttribute('data-polltracker-range') === nextRange);
-      });
-      if (state.view === 'polltracker') setPollTracker();
-    });
-    button.dataset.wired = 'true';
-  });
 }
 
 /**
@@ -2150,8 +2113,6 @@ const seatPopupClose = document.getElementById('mapsSeatPopupClose');
 const choroplethLegend = document.getElementById('mapsChoroplethLegend');
 const regionCard = document.getElementById('mapsRegionCard');
 const regionTableBody = document.getElementById('mapsRegionTableBody');
-const pollTrackerMetricSeatsInput = document.getElementById('mapsPollTrackerMetricSeats');
-const pollTrackerMetricVotesInput = document.getElementById('mapsPollTrackerMetricVotes');
 
 const filterPartySelect = document.getElementById('mapsFilterParty');
 const filterRegionSelect = document.getElementById('mapsFilterRegion');

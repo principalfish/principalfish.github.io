@@ -226,10 +226,49 @@ function renderCountdown() {
 
 // ─── Poll tracker ─────────────────────────────────────────────────────────────
 
+const POLLTRACKER_RANGE_ATTR = 'data-polltracker-range';
+
 const pollTrackerChartWrap = document.getElementById('mapsPollTrackerChartWrap');
 const pollTrackerPartyControls = document.getElementById('mapsPollTrackerPartyControls');
 const pollTrackerMetricSeatsInput = document.getElementById('mapsPollTrackerMetricSeats');
 const pollTrackerMetricVotesInput = document.getElementById('mapsPollTrackerMetricVotes');
+
+/**
+ * Attaches a change handler to a poll tracker metric radio/checkbox so the chart re-renders
+ * when the metric (seats vs vote %) is switched. No-op if null or already wired.
+ * @param {HTMLInputElement|null} inputEl - The input element to wire.
+ * @returns {void}
+ */
+function wirePollTrackerMetricInput(inputEl) {
+  if (!inputEl || inputEl.dataset.wired === 'true') return;
+  inputEl.addEventListener('change', () => {
+    if (state.view === 'polltracker') setPollTracker();
+  });
+  inputEl.dataset.wired = 'true';
+}
+
+/**
+ * Wires the seats and vote-% metric inputs (via wirePollTrackerMetricInput) and all
+ * [data-polltracker-range] buttons so clicking a range button updates the active button
+ * and re-renders the chart. Guards individual buttons against double-wiring via dataset flag.
+ * @returns {void}
+ */
+export function wirePollTrackerControls() {
+  wirePollTrackerMetricInput(pollTrackerMetricSeatsInput);
+  wirePollTrackerMetricInput(pollTrackerMetricVotesInput);
+
+  document.querySelectorAll(`[${POLLTRACKER_RANGE_ATTR}]`).forEach((button) => {
+    if (button.dataset.wired === 'true') return;
+    button.addEventListener('click', () => {
+      const nextRange = button.getAttribute(POLLTRACKER_RANGE_ATTR) || 'all';
+      document.querySelectorAll(`[${POLLTRACKER_RANGE_ATTR}]`).forEach((candidate) => {
+        candidate.classList.toggle('is-active', candidate.getAttribute(POLLTRACKER_RANGE_ATTR) === nextRange);
+      });
+      if (state.view === 'polltracker') setPollTracker();
+    });
+    button.dataset.wired = 'true';
+  });
+}
 
 let partyControlsRendered = false;
 
@@ -323,8 +362,8 @@ function renderPollTrackerChart() {
  */
 function pollTrackerWindow() {
   const timeline = state.pollTrackerData.timeline;
-  const activeBtn = document.querySelector('[data-polltracker-range].is-active');
-  const requested = Number(activeBtn?.getAttribute('data-polltracker-range'));
+  const activeBtn = document.querySelector(`[${POLLTRACKER_RANGE_ATTR}].is-active`);
+  const requested = Number(activeBtn?.getAttribute(POLLTRACKER_RANGE_ATTR));
   const windowSize = Number.isFinite(requested) && requested > 0
     ? Math.min(requested, timeline.length)
     : timeline.length;

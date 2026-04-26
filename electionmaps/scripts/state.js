@@ -5,7 +5,7 @@
 import { normalizeRegionKey, titleCaseFromRegionKey } from './utils.js';
 import { fetchJson } from './files.js';
 // Transitional: these handlers will be moved out of electionmaps.js eventually.
-import { normalizeSeats, cloneSeatRecord, buildSeatIndex, summarizeElection } from '../electionmaps.js';
+import { resolvePartyRef, cloneSeatRecord, buildSeatIndex, summarizeElection } from '../electionmaps.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
@@ -191,10 +191,7 @@ export const _state = {
   currentOpenSeatName: null,
 
   // Election / seat data
-  currentSeats: [],
   currentComparisonSeats: [],
-  baseElectionSeats: [],
-  currentSeatsByKey: new Map(),
   comparisonSeatsByKey: new Map(),
   currentSeatNameByKey: new Map(),
   seatListRowByKey: new Map(),
@@ -261,11 +258,11 @@ export const _state = {
  * Parsed seat data for a single election load. Used for both the active election and the
  * comparison election — the shape is symmetrical.
  */
-class ElectionData {
+export class ElectionData {
   constructor(resultsData) {
     /** Pristine normalised seat records as parsed from the results JSON. Never mutated;
      * use as the source of truth when rebuilding currentSeats from baseline. */
-    this.baseSeats = normalizeSeats(resultsData);
+    this.baseSeats = ElectionData.normalizeSeats(resultsData);
 
     /** Mutable clone of baseSeats. Predict mode and other features write back into this list,
      * so it diverges from baseSeats over time within a single election load. */
@@ -273,6 +270,83 @@ class ElectionData {
 
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
     this.seatsByKey = buildSeatIndex(this.currentSeats);
+  }
+
+  /**
+   * Normalizes raw pf-results-v4 results data into a canonical array of seat records.
+   *
+   * Accepts either the verbose JSON shape (full `seat` / `region` / `winner` / `votes` keys)
+   * or the compact shape (single-letter keys `n`, `r`, `w`, `e`, `t`, and a `p` array of
+   * `[partyRef, votes]` pairs). Both shapes produce the same output.
+   *
+   * Per-field handling:
+   * - `seat`: from `seat` or `n`; falls back to the literal string `'Unknown seat'`.
+   * - `region`: from `region` or `r`. Integer refs are resolved through `manifest.regionsById`
+   *   to a region key string; unrecognised integers and missing values become `'unknown'`.
+   * - `winner`: from `winner` or `w`. Resolved via `resolvePartyRef` so that integer party
+   *   IDs become canonical party keys; missing values default to `'others'`.
+   * - `electorate`, `turnout`: from `electorate`/`e` and `turnout`/`t`, coerced to `Number`.
+   *   Missing or non-numeric values become `0`.
+   * - `votes`: a plain object `{ partyKey: voteTotal }`.
+   *   - If `seat.votes` is an object, party keys are normalised via `resolvePartyRef` and
+   *     duplicate keys (after normalisation) are summed.
+   *   - Otherwise, if `seat.p` is an array, each `[partyRef, voteTotal]` entry is decoded
+   *     the same way.
+   *   - Entries with `voteTotal <= 0` are dropped, so the returned `votes` object only
+   *     contains parties with positive recorded votes.
+   *
+   * Returns an empty array if `resultsData.seats` is missing or not an array — never throws
+   * on malformed input.
+   *
+   * @param {object} resultsData - Parsed results JSON. Expected to have a `seats` array;
+   *   anything else returns `[]`.
+   * @returns {Array<{
+   *   seat: string,
+   *   region: string,
+   *   winner: string,
+   *   electorate: number,
+   *   turnout: number,
+   *   votes: Object<string, number>
+   * }>} Normalised seat records, one per entry in `resultsData.seats`.
+   */
+  static normalizeSeats(resultsData) {
+    if (!Array.isArray(resultsData?.seats)) return [];
+
+    return resultsData.seats.map((seat) => ({
+      seat: seat.seat || seat.n || 'Unknown seat',
+      region: (() => {
+        const raw = seat.region ?? seat.r;
+        if (typeof raw === 'number' && manifest.regionsById?.size) return manifest.regionsById.get(raw) || 'unknown';
+        return String(raw || 'unknown');
+      })(),
+      winner: resolvePartyRef(seat.winner ?? seat.w ?? 'others', manifest.partiesById),
+      electorate: Number(seat.electorate ?? seat.e ?? 0),
+      turnout: Number(seat.turnout ?? seat.t ?? 0),
+      votes: (() => {
+        if (seat.votes && typeof seat.votes === 'object' && !Array.isArray(seat.votes)) {
+          const normalizedVotes = {};
+          Object.entries(seat.votes).forEach(([partyKey, voteValue]) => {
+            const normalizedPartyKey = resolvePartyRef(partyKey, manifest.partiesById);
+            const voteTotal = Number(voteValue || 0);
+            if (voteTotal <= 0) return;
+            normalizedVotes[normalizedPartyKey] = (normalizedVotes[normalizedPartyKey] || 0) + voteTotal;
+          });
+          return normalizedVotes;
+        }
+        if (Array.isArray(seat.p)) {
+          const compactVotes = {};
+          seat.p.forEach((entry) => {
+            if (!Array.isArray(entry) || entry.length < 2) return;
+            const partyKey = resolvePartyRef(entry[0], manifest.partiesById);
+            const voteTotal = Number(entry[1] || 0);
+            if (!partyKey || voteTotal <= 0) return;
+            compactVotes[partyKey] = (compactVotes[partyKey] || 0) + voteTotal;
+          });
+          return compactVotes;
+        }
+        return {};
+      })(),
+    }));
   }
 }
 
@@ -413,34 +487,23 @@ class AppState {
 
   /**
    * Builds an ElectionData instance for the active election and stores it as state.electionData.
-   * Transitional: also mirrors the parsed seats / index onto _state.
    * @param {object} resultsData - Raw results JSON for the active election.
    * @returns {void}
    */
   initElectionData(resultsData) {
     this.electionData = new ElectionData(resultsData);
-    _state.baseElectionSeats = this.electionData.baseSeats;
-    _state.currentSeats = this.electionData.currentSeats;
-    _state.currentSeatsByKey = this.electionData.seatsByKey;
   }
 
   /**
    * Builds an ElectionData instance for the comparison election and stores it as state.comparisonElectionData.
-   * When comparisonData is null, resets all comparison state so stale data from a previous
-   * election load is not carried over. Transitional: mirrors the comparison seats / index onto _state.
-   * @param {object|null} comparisonData - Raw results JSON for the comparison election, or null.
+   * Transitional: mirrors the comparison seats / index onto _state.
+   * @param {object} comparisonData - Raw results JSON for the comparison election.
    * @returns {void}
    */
   initComparisonElectionData(comparisonData) {
-    if (comparisonData) {
-      this.comparisonElectionData = new ElectionData(comparisonData);
-      this.defaultComparisonSeats = this.comparisonElectionData.baseSeats;
-      this.defaultComparisonSummary = summarizeElection(this.comparisonElectionData.baseSeats);
-    } else {
-      this.comparisonElectionData = null;
-      this.defaultComparisonSeats = [];
-      this.defaultComparisonSummary = null;
-    }
+    this.comparisonElectionData = new ElectionData(comparisonData);
+    this.defaultComparisonSeats = this.comparisonElectionData.baseSeats;
+    this.defaultComparisonSummary = summarizeElection(this.comparisonElectionData.baseSeats);
     _state.currentComparisonSeats = this.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
     _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
   }

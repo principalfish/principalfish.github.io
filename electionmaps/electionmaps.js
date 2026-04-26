@@ -9,6 +9,7 @@ import {
   state,
   manifest,
   initState,
+  ElectionData,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -85,7 +86,9 @@ async function activateElection(view) {
   // Parse fetched data into shared state, then populate controls and render.
   state.initMapData(mapData);
   state.initElectionData(resultsData);
-  state.initComparisonElectionData(comparisonData);
+  if (comparisonData) {
+    state.initComparisonElectionData(comparisonData);
+  }
 
   populateMapControlOptions();
   syncMapControlStateFromInputs();
@@ -934,7 +937,7 @@ export function summarizeElection(seats, { mode = 'all' } = {}) {
  * @param {Map<number, {key: string}>} [partiesById] - Optional manifest party lookup map.
  * @returns {string} Canonical party key.
  */
-function resolvePartyRef(ref, partiesById) {
+export function resolvePartyRef(ref, partiesById) {
   const num = Number(ref);
   if (Number.isFinite(num) && num > 0) {
     const party = partiesById?.get(num);
@@ -942,56 +945,6 @@ function resolvePartyRef(ref, partiesById) {
     return normalizePartyKey(String(num));
   }
   return normalizePartyKey(ref);
-}
-
-/**
- * Normalizes results data (pf-results-v4 format) into a canonical array of seat objects.
- * Supports the compact array format ({ seats: [...] }) and the compact per-seat p[] format.
- * When partiesById is provided, integer party references are resolved via the map.
- * When regionsById is provided, integer region IDs are resolved to region keys via the map.
- * @param {object} resultsData - Raw results payload with a `seats` array.
- * @param {Map<number, {key: string}>} [partiesById] - Optional manifest party lookup for integer party_id refs.
- * @param {Map<number, string>} [regionsById] - Optional manifest region lookup for integer region_id refs.
- * @returns {Array<{seat: string, region: string, winner: string, electorate: number, turnout: number, votes: object}>} Normalized seat objects.
- */
-export function normalizeSeats(resultsData) {
-  if (!Array.isArray(resultsData?.seats)) return [];
-
-  return resultsData.seats.map((seat) => ({
-    seat: seat.seat || seat.n || 'Unknown seat',
-    region: (() => {
-      const raw = seat.region ?? seat.r;
-      if (typeof raw === 'number' && manifest.regionsById?.size) return manifest.regionsById.get(raw) || 'unknown';
-      return String(raw || 'unknown');
-    })(),
-    winner: resolvePartyRef(seat.winner ?? seat.w ?? 'others', manifest.partiesById),
-    electorate: Number(seat.electorate ?? seat.e ?? 0),
-    turnout: Number(seat.turnout ?? seat.t ?? 0),
-    votes: (() => {
-      if (seat.votes && typeof seat.votes === 'object' && !Array.isArray(seat.votes)) {
-        const normalizedVotes = {};
-        Object.entries(seat.votes).forEach(([partyKey, voteValue]) => {
-          const normalizedPartyKey = resolvePartyRef(partyKey, manifest.partiesById);
-          const voteTotal = Number(voteValue || 0);
-          if (voteTotal <= 0) return;
-          normalizedVotes[normalizedPartyKey] = (normalizedVotes[normalizedPartyKey] || 0) + voteTotal;
-        });
-        return normalizedVotes;
-      }
-      if (Array.isArray(seat.p)) {
-        const compactVotes = {};
-        seat.p.forEach((entry) => {
-          if (!Array.isArray(entry) || entry.length < 2) return;
-          const partyKey = resolvePartyRef(entry[0], manifest.partiesById);
-          const voteTotal = Number(entry[1] || 0);
-          if (!partyKey || voteTotal <= 0) return;
-          compactVotes[partyKey] = (compactVotes[partyKey] || 0) + voteTotal;
-        });
-        return compactVotes;
-      }
-      return {};
-    })(),
-  }));
 }
 
 // ── Predict region predicates ────────────────────────────────────────────────
@@ -3129,14 +3082,12 @@ async function ensurePredictBaselineData() {
     fetchJson(`data/${dataFile}`),
   ]);
 
-  const seats = normalizeSeats(resultsData);
-  if (!seats.length) return false;
+  // TODO: consider migration into state when we get to this
+  const electionData = new ElectionData(resultsData);
+  if (!electionData.baseSeats.length) return false;
 
-  _state.predictBaseSeats = seats.map((seat) => ({
-    ...seat,
-    votes: { ...(seat.votes || {}) },
-  }));
-  _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
+  _state.predictBaseSeats = electionData.currentSeats;
+  _state.predictBaseSeatsByKey = electionData.seatsByKey;
   _state.predictBaseMapData = mapData;
   _state.predictBaseRegionLabelsByKey = manifest.buildRegionLabelLookup(baselineElection.mapId);
   _state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(_state.predictBaseSeats));
@@ -3167,9 +3118,11 @@ async function ensurePredictCurrentSimulationData() {
     return false;
   }
 
-  const seats = normalizeSeats(resultsData);
-  if (!seats.length) return false;
+  // TODO: consider migration into state when we get to this
+  const electionData = new ElectionData(resultsData);
+  if (!electionData.baseSeats.length) return false;
 
+  const seats = electionData.baseSeats;
   _state.predictCurrentSimulationSeats = seats;
 
   if (state.currentParliament === 'holyrood') {
@@ -3208,8 +3161,8 @@ async function ensurePredictCurrentSimulationData() {
  */
 function commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary) {
   state.currentElection.type = state.currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
-  _state.currentSeats = projectedSeats;
-  _state.currentSeatsByKey = buildSeatIndex(projectedSeats);
+  state.electionData.currentSeats = projectedSeats;
+  state.electionData.seatsByKey = buildSeatIndex(projectedSeats);
   _state.currentComparisonSeats = _state.predictBaseSeats;
   _state.comparisonSeatsByKey = _state.predictBaseSeatsByKey;
   state.initMapData(_state.predictBaseMapData);
@@ -3260,14 +3213,14 @@ function applyPredictModeProjection() {
  * @returns {Promise<void>}
  */
 async function activatePredictMode() {
-  if (!_state.currentSeats.length || !state.mapData) return;
+  if (!state.electionData?.currentSeats.length || !state.mapData) return;
 
   syncPredictModeRightColumnLayout();
 
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {
     const loaded2024 = await ensurePredictBaselineData();
     if (!loaded2024) {
-      _state.predictBaseSeats = _state.currentSeats.map((seat) => ({
+      _state.predictBaseSeats = state.electionData.currentSeats.map((seat) => ({
         ...seat,
         votes: { ...(seat.votes || {}) },
       }));
@@ -3437,7 +3390,7 @@ function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
 function collectPartyKeysForControls() {
   const mergeKey = (key) => (key === 'other' ? 'others' : key);
   const keys = new Set(['all']);
-  _state.currentSeats.forEach((seat) => {
+  state.electionData.currentSeats.forEach((seat) => {
     keys.add(mergeKey(seat.winner || 'others'));
     Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
   });
@@ -3458,7 +3411,7 @@ function collectPartyKeysForControls() {
  */
 function collectRegionsForControls() {
   const byKey = new Map();
-  _state.currentSeats.forEach((seat) => {
+  state.electionData.currentSeats.forEach((seat) => {
     const key = normalizeRegionKey(seat.region);
     if (!key) return;
     if (!byKey.has(key)) byKey.set(key, state.getRegionLabel(seat.region));
@@ -3573,7 +3526,7 @@ function buildChoroplethConfig(visibleSeatKeys) {
   if (state.isReferendumType && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
     const valueBySeatKey = new Map();
     const values = [];
-    _state.currentSeats.forEach((seat) => {
+    state.electionData.currentSeats.forEach((seat) => {
       const seatKey = seatLookupKey(seat.seat);
       if (!visibleSeatKeys.has(seatKey)) return;
       if (isPredictNorthernIrelandRegion(seat.region)) return;
@@ -3609,7 +3562,7 @@ function buildChoroplethConfig(visibleSeatKeys) {
   const valueBySeatKey = new Map();
   const values = [];
 
-  _state.currentSeats.forEach((seat) => {
+  state.electionData.currentSeats.forEach((seat) => {
     const seatKey = seatLookupKey(seat.seat);
     if (!visibleSeatKeys.has(seatKey)) return;
     const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
@@ -3718,17 +3671,17 @@ function renderChoroplethLegend(choroplethConfig) {
  * @returns {void}
  */
 function refreshElectionSeatStateAndRender() {
-  if (!Array.isArray(_state.baseElectionSeats) || !_state.baseElectionSeats.length) return;
+  if (!state.electionData?.baseSeats?.length) return;
 
-  _state.currentSeats = _state.baseElectionSeats.map((seat) => cloneSeatRecord(seat));
-  _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
+  state.electionData.currentSeats = state.electionData.baseSeats.map((seat) => cloneSeatRecord(seat));
+  state.electionData.seatsByKey = buildSeatIndex(state.electionData.currentSeats);
   _state.currentComparisonSeats = (state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
   _state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
   _state.currentSeatView = mapConfig?.seatViews?.[0]?.id ?? 'seats';
-  const summary = summarizeElection(_state.currentSeats);
+  const summary = summarizeElection(state.electionData.currentSeats);
   updateTopSummary(state.currentElection, summary);
 
   window.__mapsCurrentSummary = summary;
@@ -3746,8 +3699,8 @@ function refreshElectionSeatStateAndRender() {
 function renderMapWithViewState(options = {}) {
   if (!state.mapData) return;
 
-  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, state.getByElectionSeatsSet());
-  const visibleSeats = _state.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
+  const visibleSeatKeys = buildVisibleSeatKeySet(state.electionData.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, state.getByElectionSeatsSet());
+  const visibleSeats = state.electionData.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
   const visibleComparisonSeats = Array.from(visibleSeatKeys)
     .map((seatKey) => _state.comparisonSeatsByKey.get(seatKey))
     .filter(Boolean);
@@ -3785,12 +3738,12 @@ function renderMapWithViewState(options = {}) {
   const mapId = String(state.currentElection.mapId ?? '');
 
   // Pass regionSummary (list seats) for Holyrood elections that have list seats.
-  const hasRegionTable = _state.currentSeats.some((s) => isListSeat(s.seat));
+  const hasRegionTable = state.electionData.currentSeats.some((s) => isListSeat(s.seat));
   const regionSummary = hasRegionTable
-    ? buildRegionSummary(_state.currentSeats.filter((s) => isListSeat(s.seat)))
+    ? buildRegionSummary(state.electionData.currentSeats.filter((s) => isListSeat(s.seat)))
     : null;
 
-  renderTopoMap(state.mapData, _state.currentSeats, {
+  renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys,
     choroplethConfig,
     ...(preserveTransform ? { preserveTransform } : {}),
@@ -3813,10 +3766,10 @@ function renderMapWithViewState(options = {}) {
     let previewText;
     if (hasRegionTable) {
       const visibleConst = visibleSeats.filter((s) => !isListSeat(s.seat));
-      const totalConst = _state.currentSeats.filter((s) => !isListSeat(s.seat));
+      const totalConst = state.electionData.currentSeats.filter((s) => !isListSeat(s.seat));
       previewText = `Showing ${formatInt(visibleConst.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
-      previewText = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(_state.currentSeats.length)} seats.`;
+      previewText = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
     }
     seatPreview.textContent = previewText;
   }
@@ -3834,14 +3787,14 @@ function hideSeatPopup() {
 
 /**
  * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked vote share bar chart with comparison deltas.
- * @param {string} seatName - Display name of the seat to show; looked up in _state.currentSeatsByKey.
+ * @param {string} seatName - Display name of the seat to show; looked up in state.electionData.seatsByKey.
  * @returns {void}
  */
 function renderSeatPopup(seatName) {
   if (!seatPopup || !seatPopupTitle || !seatPopupMeta || !seatPopupList) return;
 
   const seatKey = seatLookupKey(seatName);
-  const seat = _state.currentSeatsByKey.get(seatKey);
+  const seat = state.electionData.seatsByKey.get(seatKey);
   if (!seat) {
     hideSeatPopup();
     return;
@@ -4730,7 +4683,7 @@ function renderTopoMap(mapData, seats, options = {}) {
         return '#dce4ea';
       }
 
-      const seat = _state.currentSeatsByKey.get(seatKey);
+      const seat = state.electionData.seatsByKey.get(seatKey);
       if (!seat) return manifest.colourParty('others');
 
       if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) {

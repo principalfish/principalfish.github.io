@@ -11,11 +11,6 @@ import {
   initState,
   getSearchParam,
   getSearchParams,
-  getElectionFromId,
-  getByElectionSeatsSet,
-  getPredictAnchorElectionId,
-  getPredictBaselineElectionId,
-  setPollTrackerData,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -86,7 +81,7 @@ async function activateElection(view) {
   // Fetch: map topology, election results, and (if configured) comparison election results in parallel
   const { mapFile, dataFile } = resolveElectionFiles(state.currentElection);
   const comparisonElection = state.currentElection.comparisonElectionId
-    ? getElectionFromId(state.currentElection.comparisonElectionId)
+    ? manifest.getElectionFromId(state.currentElection.comparisonElectionId)
     : null;
   const [mapData, resultsData, comparisonData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
@@ -135,7 +130,7 @@ async function activatePollTrackerMode() {
 
   const dataPath = manifest.parliamentFeatures[state.currentParliament].polltrackerDataPath;
   const data = await fetchJson(`data/${dataPath}`);
-  setPollTrackerData(parsePollTrackerData(data));
+  state.pollTrackerData = parsePollTrackerData(data);
   setPollTracker();
 }
 
@@ -3211,7 +3206,7 @@ function renderPredictGrid() {
 async function ensurePredictBaselineData() {
   if (!manifest) return false;
 
-  const baselineElection = getElectionFromId(getPredictBaselineElectionId());
+  const baselineElection = manifest.getElectionFromId(state.getPredictBaselineElectionId());
   if (!baselineElection) return false;
 
   const { mapFile, dataFile } = resolveElectionFiles(baselineElection);
@@ -3246,7 +3241,7 @@ async function ensurePredictCurrentSimulationData() {
   if (_state.predictCurrentSimulationLoaded) return true;
   if (!manifest) return false;
 
-  const simulationElection = getElectionFromId(getPredictAnchorElectionId());
+  const simulationElection = manifest.getElectionFromId(state.getPredictAnchorElectionId());
   if (!simulationElection) return false;
   if (!simulationElection) return false;
 
@@ -3837,7 +3832,7 @@ function refreshElectionSeatStateAndRender() {
 function renderMapWithViewState(options = {}) {
   if (!_state.currentMapData) return;
 
-  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, getByElectionSeatsSet());
+  const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, state.getByElectionSeatsSet());
   const visibleSeats = _state.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
   const visibleComparisonSeats = Array.from(visibleSeatKeys)
     .map((seatKey) => _state.comparisonSeatsByKey.get(seatKey))

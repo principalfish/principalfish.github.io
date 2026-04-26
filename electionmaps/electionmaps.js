@@ -75,29 +75,15 @@ async function activateElection(view) {
   setElectionPreDataFetch();
 
   // Fetch: map topology, election results, and (if configured) comparison election results in parallel
-  const { mapFile, dataFile } = resolveElectionFiles(state.currentElection);
-  const comparisonElection = state.currentElection.comparisonElectionId
-    ? manifest.getElectionFromId(state.currentElection.comparisonElectionId)
-    : null;
+  const { mapFile, dataFile, comparisonDataFile } = manifest.resolveElectionFiles(state.currentElection);
   const [mapData, resultsData, comparisonData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
-    comparisonElection ? fetchJson(`data/${resolveElectionFiles(comparisonElection).dataFile}`) : Promise.resolve(null),
+    comparisonDataFile ? fetchJson(`data/${comparisonDataFile}`) : Promise.resolve(null),
   ]);
 
-  // Render: normalise data, build indexes, populate controls, render map and seat list
-  const seats = normalizeSeats(resultsData);
-  _state.baseElectionSeats = seats;
-  _state.currentSeats = seats.map((seat) => cloneSeatRecord(seat));
-  _state.currentMapData = mapData;
-  _state.currentSeatsByKey = buildSeatIndex(_state.currentSeats);
-
-  if (comparisonData) {
-    state.defaultComparisonSeats = normalizeSeats(comparisonData);
-    state.defaultComparisonSummary = summarizeElection(state.defaultComparisonSeats);
-  }
-  _state.currentComparisonSeats = state.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
-  _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
+  // Parse fetched data into shared state, then populate controls and render.
+  state.setupElectionData(mapData, resultsData, comparisonData);
 
   populateMapControlOptions();
   syncMapControlStateFromInputs();
@@ -838,7 +824,7 @@ function seatGainFromPartyKey(currentSeat, comparisonSeat) {
  * @param {Array<object>} seats - Array of seat objects, each with a `seat` name property.
  * @returns {Map<string, object>} Map from lowercase seat name key to seat object.
  */
-function buildSeatIndex(seats) {
+export function buildSeatIndex(seats) {
   const byKey = new Map();
   (seats || []).forEach((seat) => {
     if (!seat?.seat) return;
@@ -878,7 +864,7 @@ function voteSharePct(seat, partyKey) {
  * @param {Array<object>} seats - Array of seat objects with `winner`, `votes`, `electorate`, and `turnout` properties.
  * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}} Aggregated election summary.
  */
-function summarizeElection(seats, { mode = 'all' } = {}) {
+export function summarizeElection(seats, { mode = 'all' } = {}) {
   const partyStats = new Map();
   const listRegionPartyCountSeen = new Set();
   let electorateSum = 0;
@@ -966,7 +952,7 @@ function resolvePartyRef(ref, partiesById) {
  * @param {Map<number, string>} [regionsById] - Optional manifest region lookup for integer region_id refs.
  * @returns {Array<{seat: string, region: string, winner: string, electorate: number, turnout: number, votes: object}>} Normalized seat objects.
  */
-function normalizeSeats(resultsData) {
+export function normalizeSeats(resultsData) {
   if (!Array.isArray(resultsData?.seats)) return [];
 
   return resultsData.seats.map((seat) => ({
@@ -1542,7 +1528,7 @@ function buildRegionSummary(seats) {
  * @param {object} seat - Raw seat object with `seat`, `region`, `winner`, `electorate`, `turnout`, and `votes` properties.
  * @returns {{seat: string, region: string, winner: string, electorate: number, turnout: number, votes: object}} Normalised copy of the seat record.
  */
-function cloneSeatRecord(seat) {
+export function cloneSeatRecord(seat) {
   const votes = {};
   Object.entries(seat?.votes || {}).forEach(([partyKey, value]) => {
     const voteTotal = Number(value || 0);
@@ -1742,29 +1728,6 @@ function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethPart
 }
 
 // ── Election file resolution ──────────────────────────────────────────────────
-
-/**
- * Resolves the mapFile and dataFile paths for an election.
- * Checks manifest settings overrides (by mapId / electionId) first, then falls back to
- * election-level properties. Throws if either file path cannot be determined.
- * @param {object} manifest - Full elections manifest object with a `files` property.
- * @param {object} election - Election entry object with `id`, `mapId`, `mapFile`, and `dataFile` properties.
- * @returns {{mapFile: string, dataFile: string}} Resolved file paths for the map and results data.
- * @throws {Error} When either the mapFile or dataFile path cannot be determined for the election.
- */
-function resolveElectionFiles(election) {
-  const mapFileFromSettings = election?.mapId != null ? manifest.files.elections.mapsById[String(election.mapId)] : undefined;
-  const dataFileFromSettings = manifest.files.elections.electionsById[election.id];
-
-  const mapFile = mapFileFromSettings || election.mapFile;
-  const dataFile = dataFileFromSettings || election.dataFile;
-
-  if (!mapFile || !dataFile) {
-    throw new Error(`Missing file configuration for election ${election?.id || 'unknown'}`);
-  }
-
-  return { mapFile, dataFile };
-}
 
 // ── Predict share lookups ─────────────────────────────────────────────────────
 
@@ -3158,7 +3121,7 @@ async function ensurePredictBaselineData() {
   const baselineElection = manifest.getElectionFromId(state.getPredictBaselineElectionId());
   if (!baselineElection) return false;
 
-  const { mapFile, dataFile } = resolveElectionFiles(baselineElection);
+  const { mapFile, dataFile } = manifest.resolveElectionFiles(baselineElection);
   const [mapData, resultsData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
     fetchJson(`data/${dataFile}`),
@@ -3196,7 +3159,7 @@ async function ensurePredictCurrentSimulationData() {
 
   let resultsData;
   try {
-    const { dataFile } = resolveElectionFiles(simulationElection);
+    const { dataFile } = manifest.resolveElectionFiles(simulationElection);
     resultsData = await fetchJson(`data/${dataFile}`);
   } catch {
     return false;

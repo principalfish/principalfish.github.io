@@ -4,6 +4,8 @@
 
 import { normalizeRegionKey, titleCaseFromRegionKey } from './utils.js';
 import { fetchJson } from './files.js';
+// Transitional: these handlers will be moved out of electionmaps.js eventually.
+import { normalizeSeats, cloneSeatRecord, buildSeatIndex, summarizeElection } from '../electionmaps.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +125,24 @@ class Manifest {
   }
 
   /**
+   * Resolves the mapFile, dataFile, and (if configured) comparisonDataFile paths for an election.
+   * @param {object} election - Election entry with `id`, `mapId`, and optional `comparisonElectionId`.
+   * @returns {{mapFile: string, dataFile: string, comparisonDataFile: string|null}}
+   * @throws {Error} When either the mapFile or dataFile path cannot be determined.
+   */
+  resolveElectionFiles(election) {
+    const mapFile = this.files.elections.mapsById[String(election.mapId)];
+    const dataFile = this.files.elections.electionsById[election.id];
+    if (!mapFile || !dataFile) {
+      throw new Error(`Missing file configuration for election ${election?.id || 'unknown'}`);
+    }
+    const comparisonDataFile = election.comparisonElectionId
+      ? this.files.elections.electionsById[election.comparisonElectionId] ?? null
+      : null;
+    return { mapFile, dataFile, comparisonDataFile };
+  }
+
+  /**
    * Returns a Map from normalised region key to display label for the given mapId.
    * @param {string|number} mapId - Map identifier to look up in regionsByMapId.
    * @returns {Map<string, string>}
@@ -236,6 +256,44 @@ export const _state = {
   predictCurrentSimulationListShares: new Map(),
 };
 
+// ─── Election data ───────────────────────────────────────────────────────────
+
+/**
+ * Parsed map and seat data for a single election load.
+ * Holds the pristine `baseSeats`, a mutable `currentSeats` clone, the seat-key
+ * indexes, the topology, and (when comparison data is provided) the comparison
+ * seats / summary alongside their own clone and index.
+ */
+class ElectionData {
+  constructor(mapData, resultsData, comparisonData) {
+    /** Topology JSON for the active election, used by renderTopoMap to draw the map. */
+    this.mapData = mapData;
+
+    /** Pristine normalised seat records as parsed from the results JSON. Never mutated;
+     * use as the source of truth when rebuilding currentSeats from baseline. */
+    this.baseSeats = normalizeSeats(resultsData);
+
+    /** Mutable clone of baseSeats. Predict mode and other features write back into this list,
+     * so it diverges from baseSeats over time within a single election load. */
+    this.currentSeats = this.baseSeats.map((seat) => cloneSeatRecord(seat));
+
+    /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
+    this.seatsByKey = buildSeatIndex(this.currentSeats);
+
+    /** Pristine normalised seats for the comparison election, or [] if no comparison data. */
+    this.comparisonSeats = comparisonData ? normalizeSeats(comparisonData) : [];
+
+    /** Summary object for the comparison election (seat totals, vote share etc), or null if no comparison data. */
+    this.comparisonSummary = comparisonData ? summarizeElection(this.comparisonSeats) : null;
+
+    /** Mutable clone of comparisonSeats, written back to in the same way as currentSeats. */
+    this.currentComparisonSeats = this.comparisonSeats.map((seat) => cloneSeatRecord(seat));
+
+    /** Map from seat lookup key to currentComparisonSeats entry. */
+    this.comparisonSeatsByKey = buildSeatIndex(this.currentComparisonSeats);
+  }
+}
+
 // ─── Current ─────────────────────────────────────────────────────────────────
 
 class AppState {
@@ -297,6 +355,9 @@ class AppState {
      *   Also toggled at runtime when switching vote totals tabs or entering predict mode.
      */
     this.voteTotals = { votes: true };
+
+    /** Parsed map / seat data for the current election. ElectionData instance, or null until loaded. */
+    this.electionData = null;
   }
 
   /**
@@ -351,6 +412,32 @@ class AppState {
    */
   voteTotalsColumnVisible(column) {
     return !!this.voteTotals[column];
+  }
+
+  /**
+   * Builds an ElectionData instance from freshly fetched data and stores it as state.electionData.
+   * Transitional: also mirrors the parsed values into the legacy _state / state fields so the
+   * existing call sites that still read from _state.currentSeats etc. continue to work.
+   * @param {object} mapData - Topology JSON for the active election.
+   * @param {object} resultsData - Raw results JSON for the active election.
+   * @param {object|null} comparisonData - Raw results JSON for the comparison election, or null.
+   * @returns {void}
+   */
+  setupElectionData(mapData, resultsData, comparisonData) {
+    const data = new ElectionData(mapData, resultsData, comparisonData);
+    this.electionData = data;
+
+    _state.baseElectionSeats = data.baseSeats;
+    _state.currentSeats = data.currentSeats;
+    _state.currentMapData = data.mapData;
+    _state.currentSeatsByKey = data.seatsByKey;
+    _state.currentComparisonSeats = data.currentComparisonSeats;
+    _state.comparisonSeatsByKey = data.comparisonSeatsByKey;
+
+    if (comparisonData) {
+      this.defaultComparisonSeats = data.comparisonSeats;
+      this.defaultComparisonSummary = data.comparisonSummary;
+    }
   }
 
   /**

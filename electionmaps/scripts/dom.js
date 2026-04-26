@@ -1,5 +1,5 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { manifest, _state, state, getPredictAnchorElectionId, getByElectionSeatsSet, shouldShowCountdown, viewUrl } from './state.js';
+import { manifest, _state, state } from './state.js';
 import { escapeHtml, formatInt, formatPct, normalizeRegionKey } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
@@ -132,21 +132,21 @@ function renderElectionLinks() {
   const features = manifest.parliamentFeatures[state.currentParliament]?.features ?? [];
   const hasPredictMode = features.includes('predict');
   const hasPollTracker = features.includes('pollTracker');
-  const predictAnchorId = getPredictAnchorElectionId() ?? null;
+  const predictAnchorId = state.getPredictAnchorElectionId() ?? null;
 
   electionList.innerHTML = '';
   let insertedPredictLink = false;
   let insertedPollTrackerLink = false;
   state.parliamentElections.forEach((election) => {
     const link = document.createElement('a');
-    link.href = viewUrl('election', election.id);
+    link.href = state.viewUrl('election', election.id);
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;
     link.textContent = election.name;
     electionList.appendChild(link);
 
     if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
       const predictLink = document.createElement('a');
-      predictLink.href = viewUrl('predict');
+      predictLink.href = state.viewUrl('predict');
       predictLink.className = `maps-election-item${state.view === 'predict' ? ' active' : ''}`;
       const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
       predictLink.textContent = `Predict ${nextElectionYear ?? ''}`;
@@ -155,7 +155,7 @@ function renderElectionLinks() {
 
       if (hasPollTracker && !insertedPollTrackerLink) {
         const trackerLink = document.createElement('a');
-        trackerLink.href = viewUrl('polltracker');
+        trackerLink.href = state.viewUrl('polltracker');
         trackerLink.className = `maps-election-item${state.view === 'polltracker' ? ' active' : ''}`;
         trackerLink.textContent = 'Poll tracker';
         electionList.appendChild(trackerLink);
@@ -195,7 +195,7 @@ function formatCountdown(ms) {
 function renderCountdown() {
   if (!electionCountdown) return;
 
-  const shouldShow = shouldShowCountdown();
+  const shouldShow = state.shouldShowCountdown();
 
   if (countdown.intervalId !== null) {
     clearInterval(countdown.intervalId);
@@ -758,7 +758,7 @@ export function setElectionPreDataFetch() {
 
   const isReferendumType = state.currentElection.id === 'eu-referendum-2016';
   if (filterGainsButton) {
-    filterGainsButton.textContent = getByElectionSeatsSet() ? 'By-elections' : 'Gains';
+    filterGainsButton.textContent = state.getByElectionSeatsSet() ? 'By-elections' : 'Gains';
     filterGainsButton.hidden = isReferendumType;
   }
   if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;

@@ -1467,6 +1467,7 @@ def main() -> None:
         manifest_payload = {
             "defaultElection": default_election_id,
             "elections": manifest_entries,
+            "misc": existing.get("misc", {}),
             "parliamentFeatures": existing.get("parliamentFeatures", {}),
             "mapModes": existing.get("mapModes", {}),
             "files": files,

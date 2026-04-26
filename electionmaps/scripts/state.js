@@ -141,23 +141,6 @@ export const manifest = new Manifest();
 
 // ─── Search params ────────────────────────────────────────────────────────────
 
-/**
- * Returns a URLSearchParams object parsed from the current page URL.
- * @returns {URLSearchParams}
- */
-export function getSearchParams() {
-  return new URLSearchParams(window.location.search);
-}
-
-/**
- * Returns the value of a URL search param from the current page URL, or null if not present.
- * @param {string} key - Query parameter name.
- * @returns {string|null}
- */
-export function getSearchParam(key) {
-  return getSearchParams().get(key);
-}
-
 // ─── Application state ────────────────────────────────────────────────────────
 
 export const _state = {
@@ -289,9 +272,10 @@ class AppState {
    */
   async init(view) {
     this.view = view;
-    this.currentParliament = getSearchParam('parliament') || manifest.defaultParliament();
+    const params = new URLSearchParams(window.location.search);
+    this.currentParliament = params.get('parliament') || manifest.defaultParliament();
 
-    const requestedId = getSearchParam('election');
+    const requestedId = params.get('election');
     const parliamentElections = manifest.electionsForParliament(this.currentParliament);
     this.parliamentElections = parliamentElections;
     let currentElection = parliamentElections.find((e) => e.id === requestedId);

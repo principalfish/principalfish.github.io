@@ -9,8 +9,6 @@ import {
   state,
   manifest,
   initState,
-  getSearchParam,
-  getSearchParams,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -45,7 +43,7 @@ import {
  */
 async function initPage() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
-  const view = getSearchParam('view') || 'election';
+  const view = new URLSearchParams(window.location.search).get('view') || 'election';
   await initState(await fetchJson('data/map-modes.json'), view);
 
   setPageTitle();
@@ -2188,7 +2186,7 @@ const HOLYROOD_2021_TO_2026_NAME = {
  * @returns {URLSearchParams} Updated search params with view, election, and predict params adjusted.
  */
 function buildRouteSearchParams(view) {
-  const params = getSearchParams();
+  const params = new URLSearchParams(window.location.search);
   params.set('view', view);
   if (view !== 'predict') params.delete('predict');
 
@@ -2772,7 +2770,7 @@ function buildPredictShareStatePayload() {
  * @returns {{englandExpanded: boolean, rows: Array<[string, string, number]>}|null} Decoded predict state, or null if the parameter is absent or malformed.
  */
 function readPredictShareStateFromUrl() {
-  const encoded = getSearchParam('predict');
+  const encoded = new URLSearchParams(window.location.search).get('predict');
   if (!encoded) return null;
 
   // Peek the englandExpanded flag from the payload before building slots so that

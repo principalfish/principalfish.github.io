@@ -1,6 +1,6 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { manifest, state, getPredictAnchorElectionId, shouldShowCountdown, viewUrl } from './state.js';
-import { escapeHtml, formatInt, formatPct } from './utils.js';
+import { manifest, _state, state, getPredictAnchorElectionId, getByElectionSeatsSet, shouldShowCountdown, viewUrl } from './state.js';
+import { escapeHtml, formatInt, formatPct, normalizeRegionKey } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
@@ -739,4 +739,42 @@ function renderPollTrackerPartyControls() {
   });
 }
 
-// ───────────────────────────────────────────────────────────────────────────
+// ─── Elections ───────────────────────────────────────────────────────────────
+
+const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
+const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
+const dataInfoButton = document.getElementById('mapsDataInfoBtn');
+
+/**
+ * Configures election-type-specific UI before election data has loaded.
+ * Resets comparison state, sets the gains button label, and toggles
+ * referendum-specific controls.
+ * @returns {void}
+ */
+export function setElectionPreDataFetch() {
+  _state.currentRegionLabelsByKey = buildRegionLabelLookup(state.currentElection.mapId);
+  _state.defaultComparisonSummary = null;
+  _state.defaultComparisonSeats = [];
+
+  const isReferendumType = state.currentElection.id === 'eu-referendum-2016';
+  if (filterGainsButton) {
+    filterGainsButton.textContent = getByElectionSeatsSet() ? 'By-elections' : 'Gains';
+    filterGainsButton.hidden = isReferendumType;
+  }
+  if (choroplethVoteShareChangeOption) choroplethVoteShareChangeOption.hidden = isReferendumType;
+  if (dataInfoButton) dataInfoButton.hidden = !isReferendumType;
+  if (isReferendumType && _state.mapViewState.choroplethType === 'voteShareChange') {
+    _state.mapViewState.choroplethType = 'none';
+  }
+}
+
+function buildRegionLabelLookup(mapId) {
+  const lookup = new Map();
+  const regionRows = manifest.regionsByMapId?.[String(mapId)] || [];
+  regionRows.forEach((region) => {
+    const key = normalizeRegionKey(region?.name || '');
+    if (!key) return;
+    lookup.set(key, region.name);
+  });
+  return lookup;
+}

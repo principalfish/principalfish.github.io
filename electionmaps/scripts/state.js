@@ -198,7 +198,6 @@ export const _state = {
   comparisonSeatsByKey: new Map(),
   currentSeatNameByKey: new Map(),
   seatListRowByKey: new Map(),
-  currentMapData: null,
 
   // Map filters / choropleth
   mapViewState: {
@@ -259,16 +258,11 @@ export const _state = {
 // ─── Election data ───────────────────────────────────────────────────────────
 
 /**
- * Parsed map and seat data for a single election load.
- * Holds the pristine `baseSeats`, a mutable `currentSeats` clone, the seat-key
- * indexes, the topology, and (when comparison data is provided) the comparison
- * seats / summary alongside their own clone and index.
+ * Parsed seat data for a single election load. Used for both the active election and the
+ * comparison election — the shape is symmetrical.
  */
 class ElectionData {
-  constructor(mapData, resultsData, comparisonData) {
-    /** Topology JSON for the active election, used by renderTopoMap to draw the map. */
-    this.mapData = mapData;
-
+  constructor(resultsData) {
     /** Pristine normalised seat records as parsed from the results JSON. Never mutated;
      * use as the source of truth when rebuilding currentSeats from baseline. */
     this.baseSeats = normalizeSeats(resultsData);
@@ -279,18 +273,6 @@ class ElectionData {
 
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
     this.seatsByKey = buildSeatIndex(this.currentSeats);
-
-    /** Pristine normalised seats for the comparison election, or [] if no comparison data. */
-    this.comparisonSeats = comparisonData ? normalizeSeats(comparisonData) : [];
-
-    /** Summary object for the comparison election (seat totals, vote share etc), or null if no comparison data. */
-    this.comparisonSummary = comparisonData ? summarizeElection(this.comparisonSeats) : null;
-
-    /** Mutable clone of comparisonSeats, written back to in the same way as currentSeats. */
-    this.currentComparisonSeats = this.comparisonSeats.map((seat) => cloneSeatRecord(seat));
-
-    /** Map from seat lookup key to currentComparisonSeats entry. */
-    this.comparisonSeatsByKey = buildSeatIndex(this.currentComparisonSeats);
   }
 }
 
@@ -356,23 +338,29 @@ class AppState {
      */
     this.voteTotals = { votes: true };
 
-    /** Parsed map / seat data for the current election. ElectionData instance, or null until loaded. */
+    /** Raw topology JSON for the current election, used by renderTopoMap. Null until loaded. */
+    this.mapData = null;
+
+    /** Parsed seat data for the current election. ElectionData instance, or null until loaded. */
     this.electionData = null;
+
+    /** Parsed seat data for the comparison election. ElectionData instance, or null when no comparison data. */
+    this.comparisonElectionData = null;
   }
 
   /**
-   * Resolves URL params and manifest defaults into state.
+   * Resolves manifest defaults into state for the given URL-derived inputs.
    * Called once per page load by initState, after the manifest is hydrated.
    * Throws if no elections are configured for the resolved parliament.
    * @param {string} view - Active view name ('election' | 'predict' | 'polltracker').
+   * @param {string|null} parliament - Requested parliament from the URL, or null to use the manifest default.
+   * @param {string|null} requestedId - Requested election id from the URL, or null.
    * @returns {Promise<void>}
    */
-  async init(view) {
+  async init(view, parliament, requestedId) {
     this.view = view;
-    const params = new URLSearchParams(window.location.search);
-    this.currentParliament = params.get('parliament') || manifest.defaultParliament();
+    this.currentParliament = parliament || manifest.defaultParliament();
 
-    const requestedId = params.get('election');
     const parliamentElections = manifest.electionsForParliament(this.currentParliament);
     this.parliamentElections = parliamentElections;
     let currentElection = parliamentElections.find((e) => e.id === requestedId);
@@ -415,29 +403,46 @@ class AppState {
   }
 
   /**
-   * Builds an ElectionData instance from freshly fetched data and stores it as state.electionData.
-   * Transitional: also mirrors the parsed values into the legacy _state / state fields so the
-   * existing call sites that still read from _state.currentSeats etc. continue to work.
-   * @param {object} mapData - Topology JSON for the active election.
+   * Stores the freshly fetched topology as state.mapData.
+   * @param {object} topology - Topology JSON for the active election.
+   * @returns {void}
+   */
+  initMapData(topology) {
+    this.mapData = topology;
+  }
+
+  /**
+   * Builds an ElectionData instance for the active election and stores it as state.electionData.
+   * Transitional: also mirrors the parsed seats / index onto _state.
    * @param {object} resultsData - Raw results JSON for the active election.
+   * @returns {void}
+   */
+  initElectionData(resultsData) {
+    this.electionData = new ElectionData(resultsData);
+    _state.baseElectionSeats = this.electionData.baseSeats;
+    _state.currentSeats = this.electionData.currentSeats;
+    _state.currentSeatsByKey = this.electionData.seatsByKey;
+  }
+
+  /**
+   * Builds an ElectionData instance for the comparison election and stores it as state.comparisonElectionData.
+   * When comparisonData is null, resets all comparison state so stale data from a previous
+   * election load is not carried over. Transitional: mirrors the comparison seats / index onto _state.
    * @param {object|null} comparisonData - Raw results JSON for the comparison election, or null.
    * @returns {void}
    */
-  setupElectionData(mapData, resultsData, comparisonData) {
-    const data = new ElectionData(mapData, resultsData, comparisonData);
-    this.electionData = data;
-
-    _state.baseElectionSeats = data.baseSeats;
-    _state.currentSeats = data.currentSeats;
-    _state.currentMapData = data.mapData;
-    _state.currentSeatsByKey = data.seatsByKey;
-    _state.currentComparisonSeats = data.currentComparisonSeats;
-    _state.comparisonSeatsByKey = data.comparisonSeatsByKey;
-
+  initComparisonElectionData(comparisonData) {
     if (comparisonData) {
-      this.defaultComparisonSeats = data.comparisonSeats;
-      this.defaultComparisonSummary = data.comparisonSummary;
+      this.comparisonElectionData = new ElectionData(comparisonData);
+      this.defaultComparisonSeats = this.comparisonElectionData.baseSeats;
+      this.defaultComparisonSummary = summarizeElection(this.comparisonElectionData.baseSeats);
+    } else {
+      this.comparisonElectionData = null;
+      this.defaultComparisonSeats = [];
+      this.defaultComparisonSummary = null;
     }
+    _state.currentComparisonSeats = this.defaultComparisonSeats.map((seat) => cloneSeatRecord(seat));
+    _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
   }
 
   /**
@@ -519,6 +524,7 @@ export const state = new AppState();
  */
 export async function initState(manifestData, view) {
   manifest.init(manifestData);
-  await state.init(view);
+  const params = new URLSearchParams(window.location.search);
+  await state.init(view, params.get('parliament'), params.get('election'));
 }
 

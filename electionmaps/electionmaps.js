@@ -83,7 +83,9 @@ async function activateElection(view) {
   ]);
 
   // Parse fetched data into shared state, then populate controls and render.
-  state.setupElectionData(mapData, resultsData, comparisonData);
+  state.initMapData(mapData);
+  state.initElectionData(resultsData);
+  state.initComparisonElectionData(comparisonData);
 
   populateMapControlOptions();
   syncMapControlStateFromInputs();
@@ -3210,7 +3212,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   _state.currentSeatsByKey = buildSeatIndex(projectedSeats);
   _state.currentComparisonSeats = _state.predictBaseSeats;
   _state.comparisonSeatsByKey = _state.predictBaseSeatsByKey;
-  _state.currentMapData = _state.predictBaseMapData;
+  state.initMapData(_state.predictBaseMapData);
   state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
 
   state.voteTotals.votes = false;
@@ -3258,7 +3260,7 @@ function applyPredictModeProjection() {
  * @returns {Promise<void>}
  */
 async function activatePredictMode() {
-  if (!_state.currentSeats.length || !_state.currentMapData) return;
+  if (!_state.currentSeats.length || !state.mapData) return;
 
   syncPredictModeRightColumnLayout();
 
@@ -3270,7 +3272,7 @@ async function activatePredictMode() {
         votes: { ...(seat.votes || {}) },
       }));
       _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
-      _state.predictBaseMapData = _state.currentMapData;
+      _state.predictBaseMapData = state.mapData;
       _state.predictBaseRegionLabelsByKey = new Map(state.currentRegionLabelsByKey);
       _state.predictBaselineShareByRegionParty = normalizePredictShareMap(buildPredictBaselineShares(_state.predictBaseSeats));
     }
@@ -3742,7 +3744,7 @@ function refreshElectionSeatStateAndRender() {
  * @returns {void}
  */
 function renderMapWithViewState(options = {}) {
-  if (!_state.currentMapData) return;
+  if (!state.mapData) return;
 
   const visibleSeatKeys = buildVisibleSeatKeySet(_state.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, state.getByElectionSeatsSet());
   const visibleSeats = _state.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
@@ -3788,7 +3790,7 @@ function renderMapWithViewState(options = {}) {
     ? buildRegionSummary(_state.currentSeats.filter((s) => isListSeat(s.seat)))
     : null;
 
-  renderTopoMap(_state.currentMapData, _state.currentSeats, {
+  renderTopoMap(state.mapData, _state.currentSeats, {
     visibleSeatKeys,
     choroplethConfig,
     ...(preserveTransform ? { preserveTransform } : {}),

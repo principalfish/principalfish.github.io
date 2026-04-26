@@ -1,73 +1,125 @@
 // Shared mutable state for the electionmaps application.
-// All modules import this object and mutate its properties directly.
+// All modules import these objects and mutate their properties directly.
 // A single shared object reference means every importer sees the same state.
 
 import { normalizeRegionKey } from './utils.js';
-import { fetchElectionPredictionMeta } from './files.js';
+import { fetchJson } from './files.js';
 
-// ─── Init ────────────────────────────────────────────────────────────────────
+// ─── Manifest ─────────────────────────────────────────────────────────────────
 
-export let manifest = null;
+class Manifest {
+  constructor() {
+    this.elections = [];
+    this.defaultElection = null;
+    this.mapModes = {};
+    this.parliamentFeatures = {};
+    this.parties = [];
+    this.files = {};
+    this.misc = {};
+    this.partiesByKey = {};
+    this.partiesById = new Map();
+    this.regionsById = new Map();
+    this.regionsByMapId = {};
+  }
 
-/**
- * Initialises shared state for a page load: sets the manifest, hydrates lookup maps,
- * and resolves initial URL params into state.
- * @param {object} manifestData - Raw manifest object from map-modes.json.
- * @param {string} view - Active view name ('election' | 'predict' | 'polltracker').
- * @returns {Promise<void>}
- */
-export async function initState(manifestData, view) {
-  manifest = manifestData;
-  state.view = view;
-  hydrateManifestSettings();
-  await setState();
-}
+  /**
+   * Populates the manifest from raw JSON data and hydrates lookup maps.
+   * @param {object} data - Raw manifest object from map-modes.json.
+   * @returns {void}
+   */
+  init(data) {
+    Object.assign(this, data);
+    this.#hydrate();
+  }
 
-/**
- * Normalises missing manifest fields and populates party and region lookup maps
- * from the manifest's top-level `parties` array and per-map `regions` in `mapModes`.
- * @returns {void}
- */
-function hydrateManifestSettings() {
-  manifest.mapModes ??= {};
-  manifest.parliamentFeatures ??= {};
-  manifest.parties ??= [];
-  manifest.files ??= {};
-  manifest.files.elections ??= {};
-  manifest.files.elections.mapsById ??= {};
-  manifest.files.elections.electionsById ??= {};
-  manifest.files.meta ??= {};
+  /**
+   * Normalises missing manifest fields and populates party and region lookup maps
+   * from the manifest's top-level `parties` array and per-map `regions` in `mapModes`.
+   * @returns {void}
+   */
+  #hydrate() {
+    this.mapModes ??= {};
+    this.parliamentFeatures ??= {};
+    this.parties ??= [];
+    this.files ??= {};
+    this.files.elections ??= {};
+    this.files.elections.mapsById ??= {};
+    this.files.elections.electionsById ??= {};
+    this.files.meta ??= {};
 
-  // manifest.partiesByKey — plain object keyed by party.key string (e.g. "labour").
-  // Used for display lookups: name and colour given a key already known from seat data.
-  // manifest.partiesById — Map keyed by numeric party.id from the DB.
-  // Used during data normalisation to resolve raw [partyId, votes] pairs into party keys.
-  manifest.partiesByKey = {};
-  manifest.partiesById = new Map();
-  manifest.parties.forEach((party) => {
-    const id = Number(party?.id);
-    if (!Number.isFinite(id)) return;
-    manifest.partiesById.set(id, party);
-    const key = party?.key;
-    if (key && !manifest.partiesByKey[key]) manifest.partiesByKey[key] = party;
-  });
-
-  // manifest.regionsById — Map keyed by numeric region.id.
-  // Used during seat normalisation to resolve a region ID to its normalised key string.
-  // manifest.regionsByMapId — plain object keyed by mapId string.
-  // Used to build per-election region label lookups for the filter UI.
-  manifest.regionsById = new Map();
-  manifest.regionsByMapId = {};
-  Object.entries(manifest.mapModes).forEach(([mapId, mapMode]) => {
-    const regionRows = mapMode.regions || [];
-    manifest.regionsByMapId[mapId] = regionRows;
-    regionRows.forEach((region) => {
-      const id = Number(region?.id);
+    // manifest.partiesByKey — plain object keyed by party.key string (e.g. "labour").
+    // Used for display lookups: name and colour given a key already known from seat data.
+    // manifest.partiesById — Map keyed by numeric party.id from the DB.
+    // Used during data normalisation to resolve raw [partyId, votes] pairs into party keys.
+    this.partiesByKey = {};
+    this.partiesById = new Map();
+    this.parties.forEach((party) => {
+      const id = Number(party?.id);
       if (!Number.isFinite(id)) return;
-      manifest.regionsById.set(id, normalizeRegionKey(region?.name || ''));
+      this.partiesById.set(id, party);
+      const key = party?.key;
+      if (key && !this.partiesByKey[key]) this.partiesByKey[key] = party;
     });
-  });
+
+    // manifest.regionsById — Map keyed by numeric region.id.
+    // Used during seat normalisation to resolve a region ID to its normalised key string.
+    // manifest.regionsByMapId — plain object keyed by mapId string.
+    // Used to build per-election region label lookups for the filter UI.
+    this.regionsById = new Map();
+    this.regionsByMapId = {};
+    Object.entries(this.mapModes).forEach(([mapId, mapMode]) => {
+      const regionRows = mapMode.regions || [];
+      this.regionsByMapId[mapId] = regionRows;
+      regionRows.forEach((region) => {
+        const id = Number(region?.id);
+        if (!Number.isFinite(id)) return;
+        this.regionsById.set(id, normalizeRegionKey(region?.name || ''));
+      });
+    });
+  }
+
+  /**
+   * Returns the manifest election entry for the given id, or undefined if not found.
+   * @param {string} id - Election id to look up.
+   * @returns {object|undefined}
+   */
+  getElectionFromId(id) {
+    return this.elections.find((e) => e.id === id);
+  }
+
+  /**
+   * Returns the parliament key for the manifest's default election.
+   * @returns {string}
+   */
+  defaultParliament() {
+    return this.elections.find((e) => e.id === this.defaultElection)?.parliament ?? '';
+  }
+
+  /**
+   * Returns all elections for the given parliament.
+   * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
+   * @returns {object[]}
+   */
+  electionsForParliament(parliament) {
+    return this.elections.filter((e) => e.parliament === parliament);
+  }
+
+  /**
+   * Fetches the parliament meta file and returns the latest poll snippet string, or null on failure.
+   * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
+   * @returns {Promise<string|null>}
+   */
+  async fetchPredictionMeta(parliament) {
+    try {
+      const payload = await fetchJson(`data/${this.files.meta[parliament]}`);
+      return String(payload?.latest_poll_snippet || '').trim();
+    } catch {
+      return null;
+    }
+  }
 }
+
+export const manifest = new Manifest();
 
 // ─── Search params ────────────────────────────────────────────────────────────
 
@@ -172,158 +224,149 @@ export const _state = {
 
 // ─── Current ─────────────────────────────────────────────────────────────────
 
-/**
- * Current election context — updated on every election navigation.
- * Imported by any module that needs to read the active election identity.
- */
-export const state = {
+class AppState {
+  constructor() {
+    /** Active view name for the current page load ('election' | 'predict' | 'polltracker').
+     * Set by initState from the ?view= URL param, defaulting to 'election'. */
+    this.view = 'election';
+
+    /**
+     * The currently loaded election, spread from its manifest entry with one computed addition.
+     * Null before the first load. Sub-properties:
+     * - id {string} — unique election key (e.g. 'general-election-2024')
+     * - name {string} — display label shown in the nav
+     * - type {string} — 'uk_general' | 'holyrood_general' | 'holyrood_uns' | 'model_uns';
+     *     mutated to 'model_uns' or 'holyrood_uns' when predict mode activates
+     * - parliament {string} — 'westminster' | 'holyrood'
+     * - mapId {number} — key into manifest.mapModes for topology and region config
+     * - model {boolean|undefined} — true only on prediction elections; gates snippet fetch and predict mode
+     * - comparisonElectionId {string|undefined} — id of the election used for swing data
+     * - byElectionSeats {string[]|undefined} — constituency name list from the manifest; use state.getByElectionSeatsSet() for Set form
+     */
+    this.currentElection = null;
+
+    /** All elections belonging to the current parliament, filtered from manifest.elections.
+     * Set by setState on every page load alongside currentParliament. */
+    this.parliamentElections = [];
+
+    /** Parliament key for the currently active parliament tab ('westminster' | 'holyrood').
+     * Resolved from the ?parliament= URL param on load, falling back to the manifest defaultElection's parliament. */
+    this.currentParliament = '';
+
+    /** Latest poll snippet text for the current parliament, used in subtitle rendering.
+     * Empty string until fetched or if the fetch failed. */
+    this.predictionSnippet = '';
+
+    /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
+     * Populated by assigning to state.pollTrackerData when poll tracker mode activates; empty until then. */
+    this.pollTrackerData = { timeline: [], seriesByParty: new Map() };
+  }
+
   /**
-   * The currently loaded election, spread from its manifest entry with one computed addition.
-   * Null before the first load. Sub-properties:
-   * - id {string} — unique election key (e.g. 'general-election-2024')
-   * - name {string} — display label shown in the nav
-   * - type {string} — 'uk_general' | 'holyrood_general' | 'holyrood_uns' | 'model_uns';
-   *     mutated to 'model_uns' or 'holyrood_uns' when predict mode activates
-   * - parliament {string} — 'westminster' | 'holyrood'
-   * - mapId {number} — key into manifest.mapModes for topology and region config
-   * - model {boolean|undefined} — true only on prediction elections; gates snippet fetch and predict mode
-   * - comparisonElectionId {string|undefined} — id of the election used for swing data
-   * - byElectionSeats {string[]|undefined} — constituency name list from the manifest; use getByElectionSeatsSet() for Set form
+   * Resolves URL params and manifest defaults into state.
+   * Called once per page load by initState, after the manifest is hydrated.
+   * Throws if no elections are configured for the resolved parliament.
+   * @param {string} view - Active view name ('election' | 'predict' | 'polltracker').
+   * @returns {Promise<void>}
    */
-  currentElection: null,
+  async init(view) {
+    this.view = view;
+    this.currentParliament = getSearchParam('parliament') || manifest.defaultParliament();
 
-  /** All elections belonging to the current parliament, filtered from manifest.elections.
-   * Set by setState on every page load alongside currentParliament. */
-  parliamentElections: [],
+    const requestedId = getSearchParam('election');
+    const parliamentElections = manifest.electionsForParliament(this.currentParliament);
+    this.parliamentElections = parliamentElections;
+    let currentElection = parliamentElections.find((e) => e.id === requestedId);
+    if (!currentElection) {
+      // No ?election= param, or it named an election that doesn't exist in this parliament.
+      // Prefer the predict anchor (the live/current election for this parliament) so that
+      // bare parliament-tab clicks land on the most relevant view rather than an arbitrary
+      // historical election. Fall back to the manifest default, then the first in the list.
+      const anchorId = this.getPredictAnchorElectionId();
+      currentElection =
+        (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
+        || parliamentElections.find((e) => e.id === manifest.defaultElection)
+        || parliamentElections[0];
+    }
 
-  /** Parliament key for the currently active parliament tab ('westminster' | 'holyrood').
-   * Resolved from the ?parliament= URL param on load, falling back to the manifest defaultElection's parliament. */
-  currentParliament: '',
+    if (!currentElection) {
+      throw new Error('No elections configured in data/map-modes.json');
+    }
 
-  /** Latest poll snippet text for the current parliament, used in subtitle rendering.
-   * Empty string until fetched or if the fetch failed. */
-  predictionSnippet: '',
+    this.currentElection = { ...currentElection };
 
-  /** Active view name for the current page load ('election' | 'predict' | 'polltracker').
-   * Set by initState from the ?view= URL param, defaulting to 'election'. */
-  view: 'election',
-
-  /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
-   * Populated by setPollTrackerData when poll tracker mode activates; empty until then. */
-  pollTrackerData: { timeline: [], seriesByParty: new Map() },
-
-};
-
-/**
- * Stores parsed poll tracker data on shared state for chart rendering.
- * @param {{timeline: Array, seriesByParty: Map}} data
- * @returns {void}
- */
-export function setPollTrackerData(data) {
-  state.pollTrackerData = data;
-}
-
-/**
- * Resolves URL params and manifest defaults into the shared state object.
- * Called once per page load by initState, after the manifest is hydrated.
- * Throws if no elections are configured for the resolved parliament.
- * @returns {void}
- */
-async function setState() {
-  const defaultParliament = manifest.elections.find((e) => e.id === manifest.defaultElection)?.parliament ?? '';
-  state.currentParliament = getSearchParam('parliament') || defaultParliament;
-
-  const requestedId = getSearchParam('election');
-  const parliamentElections = manifest.elections.filter((e) => e.parliament === state.currentParliament);
-  state.parliamentElections = parliamentElections;
-  let currentElection = parliamentElections.find((e) => e.id === requestedId);
-  if (!currentElection) {
-    // No ?election= param, or it named an election that doesn't exist in this parliament.
-    // Prefer the predict anchor (the live/current election for this parliament) so that
-    // bare parliament-tab clicks land on the most relevant view rather than an arbitrary
-    // historical election. Fall back to the manifest default, then the first in the list.
-    const anchorId = getPredictAnchorElectionId();
-    currentElection =
-      (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
-      || parliamentElections.find((e) => e.id === manifest.defaultElection)
-      || parliamentElections[0];
+    // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
+    if (this.view === 'polltracker' || this.currentElection.model) {
+      this.predictionSnippet = (await manifest.fetchPredictionMeta(this.currentParliament)) ?? '';
+    }
   }
 
-  if (!currentElection) {
-    throw new Error('No elections configured in data/map-modes.json');
+  /**
+   * Returns a Set of by-election constituency names for the current election, or null if none.
+   * @returns {Set<string>|null}
+   */
+  getByElectionSeatsSet() {
+    const seats = this.currentElection?.byElectionSeats;
+    return seats?.length ? new Set(seats) : null;
   }
 
-  state.currentElection = { ...currentElection };
+  #parlConfig() {
+    return manifest.parliamentFeatures[this.currentParliament] ?? {};
+  }
 
-  // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
-  if (state.view === 'polltracker' || state.currentElection.model) {
-    state.predictionSnippet = (await fetchElectionPredictionMeta(state.currentParliament)) ?? '';
+  /**
+   * Returns the predict anchor election id for the current parliament, or undefined if not set.
+   * @returns {string|undefined}
+   */
+  getPredictAnchorElectionId() {
+    return this.#parlConfig().predictAnchorElectionId;
+  }
+
+  /**
+   * Returns the predict baseline election id for the current parliament, or undefined if not set.
+   * @returns {string|undefined}
+   */
+  getPredictBaselineElectionId() {
+    return this.#parlConfig().predictBaselineElectionId;
+  }
+
+  /**
+   * Returns true when the election countdown should be visible.
+   * The countdown shows only for the Holyrood UNS prediction when poll tracker mode is not active.
+   * @returns {boolean}
+   */
+  shouldShowCountdown() {
+    // TODO: generalise to support countdown for multiple concurrent elections
+    return this.currentElection.type === 'holyrood_uns';
+  }
+
+  /**
+   * Returns a query string URL for the given view in the current parliament.
+   * @param {'election'|'predict'|'polltracker'} view - Target view.
+   * @param {string} [electionId] - Election id; only used when view is 'election'.
+   * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
+   */
+  viewUrl(view, electionId) {
+    const electionPart = view === 'election' && electionId
+      ? `&election=${encodeURIComponent(electionId)}`
+      : '';
+    return `?view=${view}${electionPart}&parliament=${this.currentParliament}`;
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+export const state = new AppState();
+
+// ─── Init ────────────────────────────────────────────────────────────────────
 
 /**
- * Returns the manifest election entry for the given id, or undefined if not found.
- * @param {string} id - Election id to look up.
- * @returns {object|undefined}
+ * Initialises shared state for a page load: sets the manifest, hydrates lookup maps,
+ * and resolves initial URL params into state.
+ * @param {object} manifestData - Raw manifest object from map-modes.json.
+ * @param {string} view - Active view name ('election' | 'predict' | 'polltracker').
+ * @returns {Promise<void>}
  */
-export function getElectionFromId(id) {
-  return manifest.elections.find((e) => e.id === id);
+export async function initState(manifestData, view) {
+  manifest.init(manifestData);
+  await state.init(view);
 }
 
-/**
- * Returns a Set of by-election constituency names for the current election, or null if none.
- * @returns {Set<string>|null}
- */
-export function getByElectionSeatsSet() {
-  const seats = state.currentElection?.byElectionSeats;
-  return seats?.length ? new Set(seats) : null;
-}
-
-function getParlConfig() {
-  return manifest.parliamentFeatures[state.currentParliament] ?? {};
-}
-
-/**
- * Returns the predict anchor election id for the current parliament, or undefined if not set.
- * @returns {string|undefined}
- */
-export function getPredictAnchorElectionId() {
-  return getParlConfig().predictAnchorElectionId;
-}
-
-/**
- * Returns the predict baseline election id for the current parliament, or undefined if not set.
- * @returns {string|undefined}
- */
-export function getPredictBaselineElectionId() {
-  return getParlConfig().predictBaselineElectionId;
-}
-
-
-// ─── Active election ──────────────────────────────────────────────────────────
-
-
-/**
- * Returns true when the election countdown should be visible.
- * The countdown shows only for the Holyrood UNS prediction when poll tracker mode is not active.
- * @returns {boolean}
- */
-export function shouldShowCountdown() {
-  // TODO: generalise to support countdown for multiple concurrent elections
-  return state.currentElection.type === 'holyrood_uns';
-}
-
-/**
- * Returns a query string URL for the given view in the current parliament.
- * @param {'election'|'predict'|'polltracker'} view - Target view.
- * @param {string} [electionId] - Election id; only used when view is 'election'.
- * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
- */
-export function viewUrl(view, electionId) {
-  const electionPart = view === 'election' && electionId
-    ? `&election=${encodeURIComponent(electionId)}`
-    : '';
-  return `?view=${view}${electionPart}&parliament=${state.currentParliament}`;
-}

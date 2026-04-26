@@ -1,5 +1,3 @@
-import { manifest } from './state.js';
-
 /**
  * Fetches a URL and passes the Response through the provided parser function. Throws on non-OK status.
  * @param {string} url - URL to fetch.
@@ -22,19 +20,4 @@ async function fetchResource(url, parser) {
  */
 export async function fetchJson(url) {
   return fetchResource(url, (response) => response.json());
-}
-
-/**
- * Fetches the parliament meta file and returns the latest poll snippet string, or null on failure.
- * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
- * @returns {Promise<string|null>}
- */
-export async function fetchElectionPredictionMeta(parliament) {
-  const metaPath = manifest.files.meta[parliament];
-  try {
-    const payload = await fetchJson(`data/${metaPath}`);
-    return String(payload?.latest_poll_snippet || '').trim();
-  } catch {
-    return null;
-  }
 }

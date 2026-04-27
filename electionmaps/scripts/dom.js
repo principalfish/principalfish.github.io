@@ -2,9 +2,16 @@ import * as d3 from '../../site/vendor/d3.v7.esm.js';
 import { manifest, state } from './state.js';
 import { escapeHtml, formatInt, formatPct } from './utils.js';
 
+// Left-rail nav container — populated with one anchor per election plus the
+// Predict / Poll tracker links by renderElectionLinks.
 const electionList = document.getElementById('mapsElectionList');
+// Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
 const mapsTitle = document.querySelector('.maps-title');
+// Countdown badge in the header — visible only for the Holyrood UNS prediction;
+// ticks every second until the election date passes.
 const electionCountdown = document.getElementById('mapsElectionCountdown');
+// Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view),
+// optionally suffixed with the poll snippet for prediction elections.
 const subtitle = document.getElementById('mapsSubtitle');
 
 // ─── Page title ───────────────────────────────────────────────────────────────
@@ -235,9 +242,13 @@ const POLLTRACKER_HIT_STROKE_WIDTH = 14;
 const POLLTRACKER_EMPTY_CLASS = 'maps-polltracker-empty';
 const POLLTRACKER_GRID_LINE_CLASS = 'maps-polltracker-grid-line';
 
+// Wrapper element that the poll tracker SVG chart and tooltip overlay are mounted into.
 const pollTrackerChartWrap = document.getElementById('mapsPollTrackerChartWrap');
+// Container for the per-party checkbox toggles, built once per page load.
 const pollTrackerPartyControls = document.getElementById('mapsPollTrackerPartyControls');
+// Metric checkbox — when checked, the chart paints solid lines for seats on the left axis.
 const pollTrackerMetricSeatsInput = document.getElementById('mapsPollTrackerMetricSeats');
+// Metric checkbox — when checked, the chart paints dashed lines for vote % on the right axis.
 const pollTrackerMetricVotesInput = document.getElementById('mapsPollTrackerMetricVotes');
 
 /**
@@ -755,13 +766,25 @@ function renderPollTrackerPartyControls() {
 // ─── Elections ───────────────────────────────────────────────────────────────
 
 // Election-specific controls that are always present in index.html; toggled per election type.
+
+// Gains-only toggle button — labelled "Gains" by default, or "By-elections" when the current
+// election declares byElectionSeats. Hidden for referendum elections.
 const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
+// The "vote share change" <option> inside the choropleth-type select — hidden for referendums,
+// which only support the simpler vote-share view.
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
+// Info button shown only on referendum elections — opens a data-source / methodology explainer.
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 
+// Primary party filter — restricts visible seats to those won by the chosen party.
 const filterPartySelect = document.getElementById('mapsFilterParty');
+// Region filter — restricts visible seats to a single region (e.g. London, Scotland).
 const filterRegionSelect = document.getElementById('mapsFilterRegion');
+// Second-place filter — paired with filterPartySelect to restrict to seats where the chosen
+// party finished second. The wrapping group is hidden when filterParty is 'all'.
 const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
+// Choropleth target party — once a choropleth type is selected, this picks which party's
+// vote share / vote share change drives the colour ramp on the map.
 const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
 
 /**
@@ -817,8 +840,9 @@ export function setMapControlOptions() {
   const partyRows = state.mapControlParties();
   const regionRows = state.mapControlRegions();
 
-  setOptions(filterPartySelect, partyRows);
-  setOptions(filterSecondPartySelect, partyRows);
-  setOptions(choroplethPartySelect, partyRows);
-  setOptions(filterRegionSelect, regionRows);
+  // The three party-keyed selects share one option list; filterRegion uses its own.
+  setOptions(filterPartySelect, partyRows);       // primary winner filter
+  setOptions(filterSecondPartySelect, partyRows); // second-place finisher filter
+  setOptions(choroplethPartySelect, partyRows);   // choropleth target party
+  setOptions(filterRegionSelect, regionRows);     // region filter
 }

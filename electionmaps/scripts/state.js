@@ -4,8 +4,6 @@
 
 import { normalizeRegionKey, titleCaseFromRegionKey } from './utils.js';
 import { fetchJson } from './files.js';
-// Transitional: these handlers will be moved out of electionmaps.js eventually.
-import { summarizeElection } from '../electionmaps.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
@@ -304,6 +302,13 @@ export class Seat {
     });
   }
 
+  /**
+   * Resolves a raw region reference (integer region.id or string key) to a region key string.
+   * Numeric refs are looked up in `manifest.regionsById`; unrecognised numbers and missing
+   * values fall through to `'unknown'`. String refs pass through `String(...)` unchanged.
+   * @param {number|string|null|undefined} raw - Raw region reference from a seat record.
+   * @returns {string} Normalised region key, or `'unknown'` when the ref cannot be resolved.
+   */
   static #resolveRegion(raw) {
     if (typeof raw === 'number' && manifest.regionsById?.size) {
       return manifest.regionsById.get(raw) || 'unknown';
@@ -311,6 +316,14 @@ export class Seat {
     return String(raw || 'unknown');
   }
 
+  /**
+   * Decodes the compact `p` array from a raw pf-results-v4 seat into a `{ partyKey: votes }`
+   * object. Each entry is `[partyRef, voteTotal]`; party refs are resolved via the manifest
+   * and entries with non-positive totals are dropped. Duplicate party keys (after
+   * normalisation) are summed.
+   * @param {Array<[number|string, number]>|undefined} p - Compact party-vote pairs.
+   * @returns {Object<string, number>} Map of canonical party key to total votes.
+   */
   static #decodeCompactVotes(p) {
     const votes = {};
     if (!Array.isArray(p)) return votes;
@@ -324,6 +337,13 @@ export class Seat {
     return votes;
   }
 
+  /**
+   * Normalises a votes object on the clone path: re-resolves each key through the manifest,
+   * coerces values to numbers, drops non-positive totals, and sums any duplicate keys that
+   * collapse to the same canonical form.
+   * @param {Object<string, number>|undefined} rawVotes - Existing votes object from a seat.
+   * @returns {Object<string, number>} Map of canonical party key to total votes.
+   */
   static #normalizeVotes(rawVotes) {
     const votes = {};
     Object.entries(rawVotes || {}).forEach(([partyKey, value]) => {
@@ -430,14 +450,6 @@ class AppState {
      * Built from manifest.regionsByMapId on each election load; used by getRegionLabel. */
     this.currentRegionLabelsByKey = new Map();
 
-    /** Seat records for the comparison election as loaded from JSON, before any cloning.
-     * Reset to [] on each election load; populated after comparison data fetch completes. */
-    this.defaultComparisonSeats = [];
-
-    /** Summary object for the default comparison election (seat totals, vote share etc).
-     * Reset to null on each election load; populated alongside defaultComparisonSeats. */
-    this.defaultComparisonSummary = null;
-
     /** True if the current election is a referendum, as flagged in the manifest.
      * Controls visibility of gains/choropleth controls and data info button. */
     this.isReferendumType = false;
@@ -522,7 +534,7 @@ class AppState {
     this.mapData = topology;
   }
 
-  /**
+  /** 
    * Builds an ElectionData instance for the active election and stores it as state.electionData.
    * @param {object} resultsData - Raw results JSON for the active election.
    * @returns {void}
@@ -539,10 +551,10 @@ class AppState {
    */
   initComparisonElectionData(comparisonData) {
     this.comparisonElectionData = new ElectionData(comparisonData);
-    this.defaultComparisonSeats = this.comparisonElectionData.baseSeats;
-    this.defaultComparisonSummary = summarizeElection(this.comparisonElectionData.baseSeats);
-    _state.currentComparisonSeats = this.defaultComparisonSeats.map((seat) => new Seat(seat));
-    _state.comparisonSeatsByKey = ElectionData.buildSeatIndex(_state.currentComparisonSeats);
+    // Point the _state mirrors at comparisonElectionData's already-cloned arrays/index instead
+    // of re-cloning. Predict mode reassigns these mirrors to predictBaseSeats during projection.
+    _state.currentComparisonSeats = this.comparisonElectionData.currentSeats;
+    _state.comparisonSeatsByKey = this.comparisonElectionData.seatsByKey;
   }
 
   /**

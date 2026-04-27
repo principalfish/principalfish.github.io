@@ -3643,9 +3643,10 @@ function refreshElectionSeatStateAndRender() {
   state.electionData.currentSeats = state.electionData.baseSeats.map((seat) => new Seat(seat));
   // TODO: migrate to ElectionData.buildSeatIndex(state.electionData.currentSeats)
   state.electionData.seatsByKey = buildSeatIndex(state.electionData.currentSeats);
-  _state.currentComparisonSeats = (state.defaultComparisonSeats || []).map((seat) => new Seat(seat));
-  // TODO: migrate to ElectionData.buildSeatIndex(_state.currentComparisonSeats)
-  _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
+  // comparisonElectionData.currentSeats isn't mutated by predict mode (only the _state pointer
+  // is swapped to predictBaseSeats), so re-pointing the mirror restores the default comparison.
+  _state.currentComparisonSeats = state.comparisonElectionData?.currentSeats || [];
+  _state.comparisonSeatsByKey = state.comparisonElectionData?.seatsByKey || new Map();
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
   _state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
@@ -3654,7 +3655,9 @@ function refreshElectionSeatStateAndRender() {
   updateTopSummary(state.currentElection, summary);
 
   window.__mapsCurrentSummary = summary;
-  window.__mapsComparisonSummary = state.defaultComparisonSummary;
+  window.__mapsComparisonSummary = state.comparisonElectionData
+    ? summarizeElection(state.comparisonElectionData.baseSeats)
+    : null;
   renderMapWithViewState();
   syncRightPanelHeightToMap();
 }

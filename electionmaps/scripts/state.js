@@ -553,6 +553,7 @@ class AppState {
     this.comparisonElectionData = new ElectionData(comparisonData);
     // Point the _state mirrors at comparisonElectionData's already-cloned arrays/index instead
     // of re-cloning. Predict mode reassigns these mirrors to predictBaseSeats during projection.
+    // TODO these can be removed once  predict mode is migrated to use comparisonElectionData directly instead of the mirrors. 
     _state.currentComparisonSeats = this.comparisonElectionData.currentSeats;
     _state.comparisonSeatsByKey = this.comparisonElectionData.seatsByKey;
   }
@@ -577,6 +578,79 @@ class AppState {
     if (!normalized) return 'Unknown';
     const label = this.currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
     return label.replace(/ and /gi, ' & ');
+  }
+
+  /**
+   * Returns option rows for the party filter, second-party filter, and choropleth-party
+   * selects. Each row is `{ value, label }` ready for direct <option> rendering.
+   *
+   * The party set is the union of every key seen as a winner or as a voter across both
+   * the current and (when present) comparison elections. Including comparison parties
+   * means a party that has since lost all seats still appears as a filter option, so the
+   * user can target it in the comparison data.
+   *
+   * Two normalisations are applied:
+   *   - The legacy 'other' key is folded into the canonical 'others'. Older results files
+   *     used 'other'; without folding, both would appear as separate rows.
+   *   - Seats with no recorded winner contribute the synthetic 'others' key (rather than
+   *     being skipped), matching how the rest of the app treats unattributed seats.
+   *
+   * Rows are sorted by their human-readable party label (via manifest.labelParty), with
+   * an 'all parties...' row prepended as the dropdown default.
+   *
+   * @returns {Array<{value: string, label: string}>} Option rows for <option> rendering.
+   */
+  mapControlParties() {
+    const mergeKey = (key) => (key === 'other' ? 'others' : key);
+    const keys = new Set();
+    // Walks one seat array, adding the winner key and every voter key into the shared
+    // `keys` set. Run twice (current + comparison) to avoid duplicating the scan body.
+    // The optional chain handles a null comparisonElectionData (election with no comparison).
+    const addFromSeats = (seats) => {
+      seats?.forEach((seat) => {
+        keys.add(mergeKey(seat.winner || 'others'));
+        Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
+      });
+    };
+    addFromSeats(this.electionData?.currentSeats);
+    addFromSeats(this.comparisonElectionData?.currentSeats);
+
+    const sorted = Array.from(keys)
+      .sort((a, b) => manifest.labelParty(a).localeCompare(manifest.labelParty(b)));
+
+    return [
+      { value: 'all', label: 'all parties...' },
+      ...sorted.map((key) => ({ value: key, label: manifest.labelParty(key) })),
+    ];
+  }
+
+  /**
+   * Returns option rows for the region filter select. Each row is `{ value, label }`
+   * ready for direct <option> rendering.
+   *
+   * Walks current seats only — the region list is intrinsic to the active election's map
+   * geometry, so there's no equivalent need to extend it from the comparison election.
+   * Region keys are normalised (so spelling/case variants collapse onto a single row) and
+   * resolved to display labels via getRegionLabel. Seats with no resolvable region key
+   * (e.g. a UK-wide referendum row that has no regional breakdown) are dropped.
+   *
+   * Rows are sorted by label, with an 'all regions...' row prepended as the dropdown default.
+   *
+   * @returns {Array<{value: string, label: string}>} Option rows for <option> rendering.
+   */
+  mapControlRegions() {
+    const byKey = new Map();
+    this.electionData?.currentSeats?.forEach((seat) => {
+      const key = normalizeRegionKey(seat.region);
+      if (!key || byKey.has(key)) return;
+      byKey.set(key, this.getRegionLabel(seat.region));
+    });
+
+    const rows = Array.from(byKey.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    return [{ value: 'all', label: 'all regions...' }, ...rows];
   }
 
   #parlConfig() {

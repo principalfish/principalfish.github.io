@@ -1,6 +1,6 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
 import { manifest, state } from './state.js';
-import { escapeHtml, formatInt, formatPct, normalizeRegionKey } from './utils.js';
+import { escapeHtml, formatInt, formatPct } from './utils.js';
 
 const electionList = document.getElementById('mapsElectionList');
 const mapsTitle = document.querySelector('.maps-title');
@@ -759,6 +759,11 @@ const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 
+const filterPartySelect = document.getElementById('mapsFilterParty');
+const filterRegionSelect = document.getElementById('mapsFilterRegion');
+const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
+const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
+
 /**
  * Configures election-type-specific UI before election data has loaded.
  * Sets the gains button label and toggles referendum-specific controls.
@@ -769,4 +774,51 @@ export function setElectionPreDataFetch() {
   filterGainsButton.hidden = state.isReferendumType;
   choroplethVoteShareChangeOption.hidden = state.isReferendumType;
   dataInfoButton.hidden = !state.isReferendumType;
+}
+
+/**
+ * Rebuilds the option lists for the four election filter/choropleth selects from the
+ * currently loaded seat data: filterParty, filterSecondParty, choroplethParty (all sharing
+ * the party row set) and filterRegion. Called once per election load, after state has
+ * been initialised but before the controls are read back into _state.mapViewState.
+ *
+ * The party and region row sets come from AppState (mapControlParties /
+ * mapControlRegions) — this function is purely the DOM-write side; option content
+ * decisions (sorting, deduping, 'all parties...'/'all regions...' default rows) live there.
+ *
+ * Each select preserves its previously selected value when still available in the new
+ * options, otherwise falls back to 'all' — this is the reconciliation step that handles
+ * loading an election whose data lacks a party/region the previous selection referenced.
+ *
+ * @returns {void}
+ */
+export function setMapControlOptions() {
+  /**
+   * Replaces a select's options with the given rows, then sets its value back to the
+   * previously selected option if it survived the rebuild, falling back to 'all' otherwise.
+   * Mutates the select in place; does not fire any change events.
+   * @param {HTMLSelectElement} selectEl - Target <select> (assumed to exist).
+   * @param {Array<{value: string, label: string}>} rows - Option rows to render.
+   * @returns {void}
+   */
+  const setOptions = (selectEl, rows) => {
+    const previousValue = selectEl.value;
+    selectEl.innerHTML = '';
+    rows.forEach((row) => {
+      const option = document.createElement('option');
+      option.value = row.value;
+      option.textContent = row.label;
+      selectEl.appendChild(option);
+    });
+    const stillAvailable = rows.some((row) => row.value === previousValue);
+    selectEl.value = stillAvailable ? previousValue : 'all';
+  };
+
+  const partyRows = state.mapControlParties();
+  const regionRows = state.mapControlRegions();
+
+  setOptions(filterPartySelect, partyRows);
+  setOptions(filterSecondPartySelect, partyRows);
+  setOptions(choroplethPartySelect, partyRows);
+  setOptions(filterRegionSelect, regionRows);
 }

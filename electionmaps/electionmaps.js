@@ -28,6 +28,7 @@ import {
   setElectionPreDataFetch,
   setHeader,
   setLeftBar,
+  setMapControlOptions,
   setPageTitle,
   setPollTracker,
   wirePollTrackerControls,
@@ -91,7 +92,7 @@ async function activateElection(view) {
     state.initComparisonElectionData(comparisonData);
   }
 
-  populateMapControlOptions();
+  setMapControlOptions();
   syncMapControlStateFromInputs();
   refreshElectionSeatStateAndRender();
 
@@ -3312,80 +3313,6 @@ async function applyCurrentPredictionToInputs() {
 }
 
 /**
- * Rebuilds the options on a select element from an array of { value, label } rows, preserving the current selection or falling back to fallbackValue.
- * @param {HTMLSelectElement|null} selectEl - The select element to repopulate.
- * @param {Array<{value: string, label: string}>} rows - Option rows to render.
- * @param {string} [fallbackValue='all'] - Value to select when the previously selected value is no longer available.
- * @returns {void}
- */
-function setSelectOptions(selectEl, rows, fallbackValue = 'all') {
-  if (!selectEl) return;
-  const currentValue = selectEl.value;
-  selectEl.innerHTML = '';
-
-  rows.forEach((row) => {
-    const option = document.createElement('option');
-    option.value = row.value;
-    option.textContent = row.label;
-    selectEl.appendChild(option);
-  });
-
-  const availableValues = new Set(rows.map((row) => row.value));
-  if (availableValues.has(currentValue)) {
-    selectEl.value = currentValue;
-    return;
-  }
-
-  if (availableValues.has(fallbackValue)) {
-    selectEl.value = fallbackValue;
-    return;
-  }
-
-  if (rows[0]) selectEl.value = rows[0].value;
-}
-
-/**
- * Returns { value, label } rows for all parties appearing as winners or voters in current/comparison seats, sorted by label, with 'all parties…' prepended.
- * @returns {Array<{value: string, label: string}>} Option rows for party filter and choropleth selects.
- */
-function collectPartyKeysForControls() {
-  const mergeKey = (key) => (key === 'other' ? 'others' : key);
-  const keys = new Set(['all']);
-  state.electionData.currentSeats.forEach((seat) => {
-    keys.add(mergeKey(seat.winner || 'others'));
-    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
-  });
-  _state.currentComparisonSeats.forEach((seat) => {
-    keys.add(mergeKey(seat.winner || 'others'));
-    Object.keys(seat.votes || {}).forEach((partyKey) => keys.add(mergeKey(partyKey)));
-  });
-
-  const sorted = Array.from(keys).filter((key) => key !== 'all')
-    .sort((a, b) => manifest.labelParty(a).localeCompare(manifest.labelParty(b)));
-
-  return [{ value: 'all', label: 'all parties...' }, ...sorted.map((key) => ({ value: key, label: manifest.labelParty(key) }))];
-}
-
-/**
- * Returns { value, label } rows for all regions present in current seats, sorted by label, with 'all regions…' prepended.
- * @returns {Array<{value: string, label: string}>} Option rows for the region filter select.
- */
-function collectRegionsForControls() {
-  const byKey = new Map();
-  state.electionData.currentSeats.forEach((seat) => {
-    const key = normalizeRegionKey(seat.region);
-    if (!key) return;
-    if (!byKey.has(key)) byKey.set(key, state.getRegionLabel(seat.region));
-  });
-
-  const rows = Array.from(byKey.entries())
-    .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-  return [{ value: 'all', label: 'all regions...' }, ...rows];
-}
-
-/**
  * Pushes the current _state.mapViewState values into the DOM filter/choropleth inputs and toggles second-party group visibility.
  * @returns {void}
  */
@@ -3455,23 +3382,6 @@ function resetPrimaryFilters() {
 function resetChoropleths() {
   _state.mapViewState.choroplethType = 'none';
   _state.mapViewState.choroplethParty = 'all';
-  syncMapControlInputsFromState();
-}
-
-/**
- * Rebuilds all select options for party and region filter/choropleth controls from current seat data.
- * @returns {void}
- */
-function populateMapControlOptions() {
-  const partyRows = collectPartyKeysForControls();
-  const regionRows = collectRegionsForControls();
-
-  setSelectOptions(filterPartySelect, partyRows, 'all');
-  setSelectOptions(filterSecondPartySelect, partyRows, 'all');
-  setSelectOptions(choroplethPartySelect, partyRows, 'all');
-
-  setSelectOptions(filterRegionSelect, regionRows, 'all');
-
   syncMapControlInputsFromState();
 }
 

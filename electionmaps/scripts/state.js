@@ -5,7 +5,7 @@
 import { normalizeRegionKey, titleCaseFromRegionKey } from './utils.js';
 import { fetchJson } from './files.js';
 // Transitional: these handlers will be moved out of electionmaps.js eventually.
-import { buildSeatIndex, summarizeElection } from '../electionmaps.js';
+import { summarizeElection } from '../electionmaps.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
@@ -273,33 +273,35 @@ export const _state = {
 // ─── Seat ────────────────────────────────────────────────────────────────────
 
 /**
- * A normalised seat record. Construct from either:
- * - a raw pf-results-v4 seat (compact shape: `{ n, r, w, p }`) — region/party refs are
- *   resolved through the manifest, and `p` is decoded into a `votes` object
- * - another seat-shaped object (`{ seat, region, winner, votes }`) — used for cloning;
- *   votes are deep-copied and party keys re-normalised
- *
- * In both cases the result has canonical party keys and a `votes` object with
- * zero/negative entries dropped.
+ * A normalised seat record. The constructor takes a seat-shaped object (used for cloning);
+ * use {@link Seat.fromRaw} to build from a raw pf-results-v4 seat (compact `{n, r, w, p}`
+ * shape). In both paths party keys are normalised through the manifest and zero/negative
+ * vote entries are dropped.
  */
 export class Seat {
   /**
-   * @param {object} input - Raw or normalised seat object.
+   * @param {{seat: string, region: string, winner: (string|number), votes: object}} input
+   *   Normalised seat-shaped object. For raw JSON input, use {@link Seat.fromRaw} instead.
    */
   constructor(input) {
-    const isRaw = input != null && 'n' in input;
+    this.seat = input?.seat || 'Unknown seat';
+    this.region = String(input?.region || 'unknown');
+    this.winner = manifest.resolvePartyRef(input?.winner ?? 'others');
+    this.votes = Seat.#normalizeVotes(input?.votes);
+  }
 
-    if (isRaw) {
-      this.seat = input.n || 'Unknown seat';
-      this.region = Seat.#resolveRegion(input.r);
-      this.winner = manifest.resolvePartyRef(input.w ?? 'others');
-      this.votes = Seat.#decodeCompactVotes(input.p);
-    } else {
-      this.seat = input?.seat || 'Unknown seat';
-      this.region = String(input?.region || 'unknown');
-      this.winner = manifest.resolvePartyRef(input?.winner ?? 'others');
-      this.votes = Seat.#cloneVotes(input?.votes);
-    }
+  /**
+   * Builds a Seat from a raw pf-results-v4 compact seat record.
+   * @param {{n: string, r: (number|string), w: (number|string), p: Array<[number|string, number]>}} rawSeat
+   * @returns {Seat}
+   */
+  static fromRaw(rawSeat) {
+    return new Seat({
+      seat: rawSeat?.n,
+      region: Seat.#resolveRegion(rawSeat?.r),
+      winner: rawSeat?.w,
+      votes: Seat.#decodeCompactVotes(rawSeat?.p),
+    });
   }
 
   static #resolveRegion(raw) {
@@ -322,7 +324,7 @@ export class Seat {
     return votes;
   }
 
-  static #cloneVotes(rawVotes) {
+  static #normalizeVotes(rawVotes) {
     const votes = {};
     Object.entries(rawVotes || {}).forEach(([partyKey, value]) => {
       const voteTotal = Number(value || 0);
@@ -351,7 +353,7 @@ export class ElectionData {
     this.currentSeats = this.baseSeats.map((seat) => new Seat(seat));
 
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
-    this.seatsByKey = buildSeatIndex(this.currentSeats);
+    this.seatsByKey = ElectionData.buildSeatIndex(this.currentSeats);
   }
 
   /**
@@ -365,7 +367,23 @@ export class ElectionData {
    */
   static normalizeSeats(resultsData) {
     if (!Array.isArray(resultsData?.seats)) return [];
-    return resultsData.seats.map((seat) => new Seat(seat));
+    return resultsData.seats.map((seat) => Seat.fromRaw(seat));
+  }
+
+  /**
+   * Builds a Map from seat lookup key (trimmed lowercase seat name) to seat for fast lookups.
+   * Mirrors the standalone `buildSeatIndex` in electionmaps.js — duplicated here so state.js
+   * has no dependency on electionmaps.js. Callers in electionmaps.js should migrate to this.
+   * @param {Array<{seat: string}>} seats - Seat-shaped objects with a `seat` name property.
+   * @returns {Map<string, object>} Map from lowercase seat name key to seat object.
+   */
+  static buildSeatIndex(seats) {
+    const byKey = new Map();
+    (seats || []).forEach((seat) => {
+      if (!seat?.seat) return;
+      byKey.set(String(seat.seat).trim().toLowerCase(), seat);
+    });
+    return byKey;
   }
 }
 
@@ -524,7 +542,7 @@ class AppState {
     this.defaultComparisonSeats = this.comparisonElectionData.baseSeats;
     this.defaultComparisonSummary = summarizeElection(this.comparisonElectionData.baseSeats);
     _state.currentComparisonSeats = this.defaultComparisonSeats.map((seat) => new Seat(seat));
-    _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
+    _state.comparisonSeatsByKey = ElectionData.buildSeatIndex(_state.currentComparisonSeats);
   }
 
   /**

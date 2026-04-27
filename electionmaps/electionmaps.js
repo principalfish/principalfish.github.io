@@ -3119,6 +3119,7 @@ async function ensurePredictCurrentSimulationData() {
 function commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary) {
   state.currentElection.type = state.currentParliament === 'holyrood' ? 'holyrood_uns' : 'model_uns';
   state.electionData.currentSeats = projectedSeats;
+  // TODO: migrate to ElectionData.buildSeatIndex(projectedSeats)
   state.electionData.seatsByKey = buildSeatIndex(projectedSeats);
   _state.currentComparisonSeats = _state.predictBaseSeats;
   _state.comparisonSeatsByKey = _state.predictBaseSeatsByKey;
@@ -3183,6 +3184,7 @@ async function activatePredictMode() {
         ...seat,
         votes: { ...(seat.votes || {}) },
       }));
+      // TODO: migrate to ElectionData.buildSeatIndex(_state.predictBaseSeats)
       _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
       _state.predictBaseMapData = state.mapData;
       _state.predictBaseRegionLabelsByKey = new Map(state.currentRegionLabelsByKey);
@@ -3639,8 +3641,10 @@ function refreshElectionSeatStateAndRender() {
   if (!state.electionData?.baseSeats?.length) return;
 
   state.electionData.currentSeats = state.electionData.baseSeats.map((seat) => new Seat(seat));
+  // TODO: migrate to ElectionData.buildSeatIndex(state.electionData.currentSeats)
   state.electionData.seatsByKey = buildSeatIndex(state.electionData.currentSeats);
   _state.currentComparisonSeats = (state.defaultComparisonSeats || []).map((seat) => new Seat(seat));
+  // TODO: migrate to ElectionData.buildSeatIndex(_state.currentComparisonSeats)
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];

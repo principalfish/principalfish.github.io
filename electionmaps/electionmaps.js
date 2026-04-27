@@ -10,6 +10,7 @@ import {
   manifest,
   initState,
   ElectionData,
+  Seat,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -677,18 +678,6 @@ function wireVoteTotalsSorting(onSortChanged) {
  * No DOM dependencies, no module-level _state.
  */
 
-// ── Party constants ──────────────────────────────────────────────────────────
-
-const PARTY_KEY_ALIASES = {
-  ukindependenceparty: 'ukip',
-  reformuk: 'reform',
-  liberaldemocrats: 'libdems',
-  democraticunionistparty: 'dup',
-  ulsterunionistparty: 'uu',
-  uup: 'uu',
-  scottishnationalparty: 'snp',
-};
-
 // ── Predict constants ────────────────────────────────────────────────────────
 
 const PREDICT_BASE_PARTY_KEYS = ['labour', 'conservative', 'libdems', 'green', 'reform'];
@@ -719,24 +708,6 @@ const PREDICT_NI_KEY = 'northernireland';
  */
 function isListSeat(seatName) {
   return /\bList\s+\d+$/i.test(seatName);
-}
-
-// ── Party normalization ──────────────────────────────────────────────────────
-
-/**
- * Normalizes a raw party key string to a canonical lowercase key, applying aliases where needed. Returns 'others' for empty input.
- * @param {string} partyKey - Raw party key string, potentially mixed-case or containing special characters.
- * @returns {string} Canonical lowercase party key with aliases applied, or 'others' for empty input.
- */
-function normalizePartyKey(partyKey) {
-  const raw = String(partyKey || '').trim();
-  if (!raw) return 'others';
-
-  const lower = raw.toLowerCase();
-  const alnum = lower.replace(/[^a-z0-9]/g, '');
-  if (PARTY_KEY_ALIASES[alnum]) return PARTY_KEY_ALIASES[alnum];
-
-  return lower;
 }
 
 // ── Formatting ───────────────────────────────────────────────────────────────
@@ -940,26 +911,6 @@ export function summarizeElection(seats, { mode = 'all' } = {}) {
   const turnout = electorateSum > 0 ? turnoutWeighted / electorateSum : 0;
 
   return { parties, totalVotes, turnout, totalSeats: seats.length };
-}
-
-// ── Seat normalization ───────────────────────────────────────────────────────
-
-/**
- * Resolves a raw party reference (integer party_id or string key) to a canonical string party key.
- * When ref is a number or numeric string, looks up in partiesById (Map<number, {key: string}>).
- * Falls back to normalizePartyKey on string refs or when the id is not found in the map.
- * @param {number|string} ref - Raw party reference from results data.
- * @param {Map<number, {key: string}>} [partiesById] - Optional manifest party lookup map.
- * @returns {string} Canonical party key.
- */
-export function resolvePartyRef(ref, partiesById) {
-  const num = Number(ref);
-  if (Number.isFinite(num) && num > 0) {
-    const party = partiesById?.get(num);
-    if (party?.key) return party.key;
-    return normalizePartyKey(String(num));
-  }
-  return normalizePartyKey(ref);
 }
 
 // ── Predict region predicates ────────────────────────────────────────────────
@@ -1233,6 +1184,8 @@ function resolvedSwingValue(normalizedSeatRegion, partyKey, swingsByParty) {
  * @returns {object} New seat object with projected `votes`, `turnout`, and `winner`.
  */
 function projectedSeatForPredictMode(baseSeat, swingsByParty) {
+  // TODO: spread-clone produces a plain object, not a Seat instance — convert when Seat
+  // gains methods or behaviour that downstream code depends on.
   const totalVotes = totalVotesForSeat(baseSeat);
   if (totalVotes <= 0) return { ...baseSeat };
 
@@ -1488,39 +1441,6 @@ function buildRegionSummary(seats) {
     r.dominantParty = sorted[0]?.[0] || 'others';
   }
   return regions;
-}
-
-/**
- * Returns a deep-ish copy of a seat record with normalised party keys.
- * Zero-vote and negative-vote entries are filtered out.
- * Duplicate keys that collapse after normalisation are summed.
- * Numeric fields (`electorate`, `turnout`) are coerced to numbers.
- * @param {object} seat - Raw seat object with `seat`, `region`, `winner`, `electorate`, `turnout`, and `votes` properties.
- * @returns {{
- *   seat: string,
- *   region: string,
- *   winner: string,
- *   electorate: number,
- *   turnout: number,
- *   votes: object
- * }} Normalised copy of the seat record.
- */
-export function cloneSeatRecord(seat) {
-  const votes = {};
-  Object.entries(seat?.votes || {}).forEach(([partyKey, value]) => {
-    const voteTotal = Number(value || 0);
-    if (voteTotal <= 0) return;
-    votes[normalizePartyKey(partyKey)] = (votes[normalizePartyKey(partyKey)] || 0) + voteTotal;
-  });
-
-  return {
-    seat: seat?.seat || 'Unknown seat',
-    region: seat?.region || 'unknown',
-    winner: normalizePartyKey(seat?.winner || 'others'),
-    electorate: Number(seat?.electorate || 0),
-    turnout: Number(seat?.turnout || 0),
-    votes,
-  };
 }
 
 // ── Predict payload encode / decode ──────────────────────────────────────────
@@ -3257,6 +3177,8 @@ async function activatePredictMode() {
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {
     const loaded2024 = await ensurePredictBaselineData();
     if (!loaded2024) {
+      // TODO: spread-clone produces plain objects, not Seat instances — convert to
+      // `new Seat(seat)` when Seat gains methods or behaviour that downstream code depends on.
       _state.predictBaseSeats = state.electionData.currentSeats.map((seat) => ({
         ...seat,
         votes: { ...(seat.votes || {}) },
@@ -3716,9 +3638,9 @@ function renderChoroplethLegend(choroplethConfig) {
 function refreshElectionSeatStateAndRender() {
   if (!state.electionData?.baseSeats?.length) return;
 
-  state.electionData.currentSeats = state.electionData.baseSeats.map((seat) => cloneSeatRecord(seat));
+  state.electionData.currentSeats = state.electionData.baseSeats.map((seat) => new Seat(seat));
   state.electionData.seatsByKey = buildSeatIndex(state.electionData.currentSeats);
-  _state.currentComparisonSeats = (state.defaultComparisonSeats || []).map((seat) => cloneSeatRecord(seat));
+  _state.currentComparisonSeats = (state.defaultComparisonSeats || []).map((seat) => new Seat(seat));
   _state.comparisonSeatsByKey = buildSeatIndex(_state.currentComparisonSeats);
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];

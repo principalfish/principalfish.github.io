@@ -757,7 +757,8 @@ function deltaClass(value) {
  * @param {object} seat - Seat object with optional `turnout` number and `votes` object.
  * @returns {number} Total votes cast in the seat.
  */
-function totalVotesForSeat(seat) {
+// TODO: migrate callers to Seat.totalVotes in state.js
+function totalVotesForSeat2(seat) {
   const turnout = Number(seat?.turnout || 0);
   if (turnout > 0) return turnout;
   return Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
@@ -768,7 +769,8 @@ function totalVotesForSeat(seat) {
  * @param {object} seat - Seat object with a `votes` map of party key to vote count.
  * @returns {Array<{party: string, votes: number}>} Sorted array of party vote entries, highest first.
  */
-function sortedSeatVoteRows(seat) {
+// TODO: migrate callers to Seat static methods in state.js
+function sortedSeatVoteRows2(seat) {
   return Object.entries(seat?.votes || {})
     .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
     .filter((row) => row.votes > 0)
@@ -780,11 +782,12 @@ function sortedSeatVoteRows(seat) {
  * @param {object} seat - Seat object with a `votes` map and optional `turnout`.
  * @returns {{pct: number, raw: number}} Majority as a percentage of total votes and as a raw vote count.
  */
-function seatMajorityStats(seat) {
-  const voteRows = sortedSeatVoteRows(seat);
+// TODO: migrate callers to Seat.majorityStats in state.js
+function seatMajorityStats2(seat) {
+  const voteRows = sortedSeatVoteRows2(seat);
   if (voteRows.length < 2) return { pct: 0, raw: 0 };
   const marginVotes = voteRows[0].votes - voteRows[1].votes;
-  const totalVotes = totalVotesForSeat(seat);
+  const totalVotes = totalVotesForSeat2(seat);
   if (totalVotes <= 0) return { pct: 0, raw: marginVotes };
   return { pct: (marginVotes / totalVotes) * 100, raw: marginVotes };
 }
@@ -795,7 +798,8 @@ function seatMajorityStats(seat) {
  * @param {object|null} comparisonSeat - The seat in its comparison state, or null if no comparison is available.
  * @returns {string|null} The previous winner's party key if a gain occurred, otherwise null.
  */
-function seatGainFromPartyKey(currentSeat, comparisonSeat) {
+// TODO: migrate callers to Seat.gainFromParty in state.js
+function seatGainFromPartyKey2(currentSeat, comparisonSeat) {
   const winner = currentSeat?.winner || 'others';
   const previousWinner = comparisonSeat?.winner || null;
   if (!previousWinner || previousWinner === winner) return null;
@@ -821,8 +825,9 @@ export function buildSeatIndex(seats) {
  * @param {object} seat - Seat object with a `votes` map.
  * @returns {string|null} Party key of the second-place finisher, or null if unavailable.
  */
-function secondPlacePartyKey(seat) {
-  const voteRows = sortedSeatVoteRows(seat);
+// TODO: migrate callers to Seat static methods in state.js
+function secondPlacePartyKey2(seat) {
+  const voteRows = sortedSeatVoteRows2(seat);
   if (voteRows.length < 2) return null;
   return voteRows[1].party;
 }
@@ -834,7 +839,7 @@ function secondPlacePartyKey(seat) {
  * @returns {number} Vote share as a percentage in the range [0, 100].
  */
 function voteSharePct(seat, partyKey) {
-  const totalVotes = totalVotesForSeat(seat);
+  const totalVotes = totalVotesForSeat2(seat);
   if (totalVotes <= 0) return 0;
   const partyVotes = Number(seat?.votes?.[partyKey] || 0);
   return (partyVotes / totalVotes) * 100;
@@ -1094,7 +1099,7 @@ function buildPredictBaselineShares(seats) {
     const regionKey = normalizeRegionKey(seat.region);
     if (!regionKey) return;
 
-    const turnout = totalVotesForSeat(seat);
+    const turnout = totalVotesForSeat2(seat);
     if (turnout <= 0) return;
 
     const regionStats = ensureRegionStats(regionKey);
@@ -1184,7 +1189,7 @@ function resolvedSwingValue(normalizedSeatRegion, partyKey, swingsByParty) {
 function projectedSeatForPredictMode(baseSeat, swingsByParty) {
   // TODO: spread-clone produces a plain object, not a Seat instance — convert when Seat
   // gains methods or behaviour that downstream code depends on.
-  const totalVotes = totalVotesForSeat(baseSeat);
+  const totalVotes = totalVotesForSeat2(baseSeat);
   if (totalVotes <= 0) return { ...baseSeat };
 
   const regionKey = normalizeRegionKey(baseSeat.region);
@@ -1545,7 +1550,8 @@ function decodePredictPayload(encoded, slots) {
  * @param {Set<string>|null} byElectionSeats - Set of seat names that are by-election gains, or null to use comparison-seat gain detection.
  * @returns {boolean} True if the seat passes all currently active filters.
  */
-export function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
+// TODO: migrate to Seat.matchesPrimaryFilters in state.js
+function seatMatchesPrimaryFilters2(seat, comparisonSeat, filterState, byElectionSeats) {
   if (filterState.party !== 'all') {
     const winner = seat.winner === 'other' ? 'others' : seat.winner;
     if (winner !== filterState.party) return false;
@@ -1556,11 +1562,11 @@ export function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byE
     if (seatRegion !== filterState.region) return false;
   }
 
-  const majority = seatMajorityStats(seat).pct;
+  const majority = seatMajorityStats2(seat).pct;
   if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
 
   if (filterState.secondParty !== 'all') {
-    const secondParty = secondPlacePartyKey(seat);
+    const secondParty = secondPlacePartyKey2(seat);
     if (secondParty !== filterState.secondParty) return false;
   }
 
@@ -1568,7 +1574,7 @@ export function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byE
     if (byElectionSeats) {
       if (!byElectionSeats.has(seat.seat)) return false;
     } else {
-      const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
+      const gainFrom = seatGainFromPartyKey2(seat, comparisonSeat);
       if (!gainFrom) return false;
     }
   }
@@ -3619,9 +3625,9 @@ function renderSeatPopup(seatName) {
   _state.currentOpenSeatName = seatName;
 
   const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
-  const gainFrom = seatGainFromPartyKey(seat, comparisonSeat);
-  const turnout = totalVotesForSeat(seat);
-  const majority = seatMajorityStats(seat);
+  const gainFrom = seatGainFromPartyKey2(seat, comparisonSeat);
+  const turnout = totalVotesForSeat2(seat);
+  const majority = seatMajorityStats2(seat);
   const isReferendum = state.currentElection.id === 'eu-referendum-2016';
   const showTurnout = state.currentElection.type !== 'model_uns' && !isReferendum;
   const showRawMajority = state.currentElection.type !== 'model_uns' && !isReferendum;
@@ -3634,8 +3640,8 @@ function renderSeatPopup(seatName) {
     ${showTurnout ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(turnout)}</span>` : ''}
   `;
 
-  const currentTurnout = totalVotesForSeat(seat);
-  const comparisonTurnout = totalVotesForSeat(comparisonSeat);
+  const currentTurnout = totalVotesForSeat2(seat);
+  const comparisonTurnout = totalVotesForSeat2(comparisonSeat);
   const comparisonVotes = comparisonSeat?.votes || {};
 
   const rows = Object.entries(seat.votes || {})

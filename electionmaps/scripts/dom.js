@@ -785,7 +785,7 @@ const dataInfoButton = document.getElementById('mapsDataInfoBtn');
  * @returns {void}
  */
 export function setElectionPreDataFetch() {
-  filterGainsButton.textContent = state.getByElectionSeatsSet() ? 'By-elections' : 'Gains';
+  filterGainsButton.textContent = state.currentElection.byElectionSeats ? 'By-elections' : 'Gains';
   filterGainsButton.hidden = state.isReferendumType;
   choroplethVoteShareChangeOption.hidden = state.isReferendumType;
   dataInfoButton.hidden = !state.isReferendumType;

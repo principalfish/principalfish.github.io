@@ -4,11 +4,6 @@
 
 import { normalizeRegionKey, titleCaseFromRegionKey, formatInt, seatLookupKey } from './utils.js';
 import { fetchJson } from './files.js';
-// TODO: temporary cross-import — seatMatchesPrimaryFilters and its seat-data helper chain
-// (seatMajorityStats, secondPlacePartyKey, seatGainFromPartyKey, sortedSeatVoteRows,
-// totalVotesForSeat) should eventually move into state.js or a shared seat-data module to
-// break this circular dependency on electionmaps.js.
-import { seatMatchesPrimaryFilters } from '../electionmaps.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
@@ -206,7 +201,6 @@ class Manifest {
 
 export const manifest = new Manifest();
 
-// ─── Search params ────────────────────────────────────────────────────────────
 
 // ─── Application state ────────────────────────────────────────────────────────
 
@@ -354,6 +348,112 @@ export class Seat {
       votes[key] = (votes[key] || 0) + voteTotal;
     });
     return votes;
+  }
+
+  // ── Seat data utilities ────────────────────────────────────────────────────
+
+  /**
+   * Returns the total votes cast in a seat, using the explicit turnout field if available,
+   * otherwise summing all party vote totals.
+   * @param {object} seat - Seat-shaped object with optional `turnout` number and `votes` object.
+   * @returns {number} Total votes cast in the seat.
+   */
+  static totalVotes(seat) {
+    const turnout = Number(seat?.turnout || 0);
+    if (turnout > 0) return turnout;
+    return Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+  }
+
+  /**
+   * Returns an array of { party, votes } objects for a seat, sorted descending by vote count,
+   * excluding parties with zero votes.
+   * @param {object} seat - Seat-shaped object with a `votes` map.
+   * @returns {Array<{party: string, votes: number}>}
+   */
+  static #sortedVoteRows(seat) {
+    return Object.entries(seat?.votes || {})
+      .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
+      .filter((row) => row.votes > 0)
+      .sort((a, b) => b.votes - a.votes);
+  }
+
+  /**
+   * Returns { pct, raw } for the winning majority in a seat: pct as a percentage of total
+   * votes, raw as the vote margin between first and second place.
+   * @param {object} seat - Seat-shaped object with a `votes` map and optional `turnout`.
+   * @returns {{pct: number, raw: number}}
+   */
+  static majorityStats(seat) {
+    const voteRows = Seat.#sortedVoteRows(seat);
+    if (voteRows.length < 2) return { pct: 0, raw: 0 };
+    const marginVotes = voteRows[0].votes - voteRows[1].votes;
+    const totalVotes = Seat.totalVotes(seat);
+    if (totalVotes <= 0) return { pct: 0, raw: marginVotes };
+    return { pct: (marginVotes / totalVotes) * 100, raw: marginVotes };
+  }
+
+  /**
+   * Returns the previous winner's party key if the seat changed hands, or null if there was
+   * no change or no comparison available.
+   * @param {object} currentSeat - The seat in its current state, with a `winner` property.
+   * @param {string|null} comparisonSeatWinner - The winning party key from the comparison seat, or null.
+   * @returns {string|null}
+   */
+  static gainFromParty(currentSeat, comparisonSeatWinner) {
+    const winner = currentSeat?.winner || 'others';
+    const previousWinner = comparisonSeatWinner || null;
+    if (!previousWinner || previousWinner === winner) return null;
+    return previousWinner;
+  }
+
+  /**
+   * Returns the party key of the second-place finisher in a seat, or null if fewer than two
+   * parties have votes.
+   * @param {object} seat - Seat-shaped object with a `votes` map.
+   * @returns {string|null}
+   */
+  static #secondPlaceParty(seat) {
+    const voteRows = Seat.#sortedVoteRows(seat);
+    if (voteRows.length < 2) return null;
+    return voteRows[1].party;
+  }
+
+  /**
+   * Returns true when this seat passes all active primary filters.
+   * @param {object|null} comparisonSeat - Comparison seat for gains filtering; may be null.
+   * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean}} filterState - Active filter configuration.
+   * @param {Set<string>|null} byElectionSeats - Set of seat names for by-election gain filtering, or null.
+   * @returns {boolean} True if the seat passes all currently active filters.
+   */
+  matchesPrimaryFilters(comparisonSeat, filterState, byElectionSeats) {
+    if (filterState.party !== 'all') {
+      const winner = this.winner === 'other' ? 'others' : this.winner;
+      if (winner !== filterState.party) return false;
+    }
+
+    if (filterState.region !== 'all') {
+      const seatRegion = normalizeRegionKey(this.region);
+      if (seatRegion !== filterState.region) return false;
+    }
+
+    const majority = Seat.majorityStats(this).pct;
+    if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
+
+    if (filterState.secondParty !== 'all') {
+      const secondParty = Seat.#secondPlaceParty(this);
+      if (secondParty !== filterState.secondParty) return false;
+    }
+
+    if (filterState.gainsOnly) {
+      if (byElectionSeats) {
+        if (!byElectionSeats.has(this.seat)) return false;
+      } else {
+        const gainFrom = Seat.gainFromParty(this, comparisonSeat?.winner);
+        if (!gainFrom) return false;
+      }
+    }
+
+    return true;
   }
 }
 
@@ -533,7 +633,7 @@ class AppState {
      * - mapId {number} — key into manifest.mapModes for topology and region config
      * - model {boolean|undefined} — true only on prediction elections; gates snippet fetch and predict mode
      * - comparisonElectionId {string|undefined} — id of the election used for swing data
-     * - byElectionSeats {string[]|undefined} — constituency name list from the manifest; use state.getByElectionSeatsSet() for Set form
+     * - byElectionSeats {Set<string>|null} — constituency name set for by-election gain filtering, or null when not a by-election election
      */
     this.currentElection = null;
 
@@ -580,7 +680,7 @@ class AppState {
 
     /** Active map filter selections. Mutated by syncMapControlStateFromInputs (DOM → state) on
      * every filter change, by the gains-button click handler, and by resetPrimaryFilters. Read by
-     * seatMatchesPrimaryFilters when computing the visible seat set. */
+     * Seat.matchesPrimaryFilters when computing the visible seat set. */
     this.mapFilters = {
       party: 'all',
       region: 'all',
@@ -652,6 +752,9 @@ class AppState {
     }
 
     this.currentElection = { ...currentElection };
+    this.currentElection.byElectionSeats = this.currentElection.byElectionSeats?.length
+      ? new Set(this.currentElection.byElectionSeats)
+      : null;
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
     if (this.currentElection.model || this.isReferendumType) {
@@ -716,15 +819,6 @@ class AppState {
   }
 
   /**
-   * Returns a Set of by-election constituency names for the current election, or null if none.
-   * @returns {Set<string>|null}
-   */
-  getByElectionSeatsSet() {
-    const seats = this.currentElection?.byElectionSeats;
-    return seats?.length ? new Set(seats) : null;
-  }
-
-  /**
    * Recomputes mapVisible.{seatKeys, seats, comparisonSeats} by applying the active mapFilters
    * to electionData.currentSeats. Reads _state.comparisonSeatsByKey rather than
    * comparisonElectionData.seatsByKey because predict mode reassigns the _state mirror to the
@@ -734,12 +828,12 @@ class AppState {
   setMapVisible() {
     // TODO remove during refactor 
     const comparisonSeatsByKey = _state.comparisonSeatsByKey;
-    const byElectionSeats = this.getByElectionSeatsSet();
+    const byElectionSeats = this.currentElection.byElectionSeats;
     const seatKeys = new Set();
     this.electionData.currentSeats.forEach((seat) => {
       const seatKey = seatLookupKey(seat.seat);
       const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
-      if (seatMatchesPrimaryFilters(seat, comparisonSeat, this.mapFilters, byElectionSeats)) {
+      if (seat.matchesPrimaryFilters(comparisonSeat, this.mapFilters, byElectionSeats)) {
         seatKeys.add(seatKey);
       }
     });

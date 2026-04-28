@@ -271,7 +271,7 @@ function wirePollTrackerMetricInput(inputEl) {
  * and re-renders the chart. Guards individual buttons against double-wiring via dataset flag.
  * @returns {void}
  */
-export function wirePollTrackerControls() {
+function wirePollTrackerControls() {
   wirePollTrackerMetricInput(pollTrackerMetricSeatsInput);
   wirePollTrackerMetricInput(pollTrackerMetricVotesInput);
 
@@ -286,6 +286,14 @@ export function wirePollTrackerControls() {
     });
     button.dataset.wired = 'true';
   });
+}
+
+/**
+ * Wires all DOM-owned controls. Call once during page boot alongside wireInit.
+ * @returns {void}
+ */
+export function domWireInit() {
+  wirePollTrackerControls();
 }
 
 let partyControlsRendered = false;

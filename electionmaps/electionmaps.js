@@ -31,7 +31,7 @@ import {
   setMapControlOptions,
   setPageTitle,
   setPollTracker,
-  wirePollTrackerControls,
+  domWireInit,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -269,7 +269,6 @@ function wireInit() {
   wirePopupPanels();
   wireMapViewControls();
   wirePredictControls();
-  wirePollTrackerControls();
   wireSeatSearch();
   wirePostcodeSearch();
   wireSeatPopup();
@@ -4586,6 +4585,7 @@ function renderTopoMap(mapData, seats, options = {}) {
  */
 async function init() {
   wireInit();
+  domWireInit();
 
   try {
     await initPage();

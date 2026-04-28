@@ -353,67 +353,62 @@ export class Seat {
   // ── Seat data utilities ────────────────────────────────────────────────────
 
   /**
-   * Returns the total votes cast in a seat, using the explicit turnout field if available,
+   * Returns the total votes cast in this seat, using the explicit turnout field if available,
    * otherwise summing all party vote totals.
-   * @param {object} seat - Seat-shaped object with optional `turnout` number and `votes` object.
    * @returns {number} Total votes cast in the seat.
    */
-  static totalVotes(seat) {
-    const turnout = Number(seat?.turnout || 0);
+  totalVotes() {
+    const turnout = Number(this?.turnout || 0);
     if (turnout > 0) return turnout;
-    return Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+    return Object.values(this.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
   }
 
   /**
-   * Returns an array of { party, votes } objects for a seat, sorted descending by vote count,
+   * Returns an array of { party, votes } objects for this seat, sorted descending by vote count,
    * excluding parties with zero votes.
-   * @param {object} seat - Seat-shaped object with a `votes` map.
    * @returns {Array<{party: string, votes: number}>}
    */
-  static #sortedVoteRows(seat) {
-    return Object.entries(seat?.votes || {})
+  #sortedVoteRows() {
+    return Object.entries(this.votes || {})
       .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
       .filter((row) => row.votes > 0)
       .sort((a, b) => b.votes - a.votes);
   }
 
   /**
-   * Returns { pct, raw } for the winning majority in a seat: pct as a percentage of total
+   * Returns { pct, raw } for the winning majority in this seat: pct as a percentage of total
    * votes, raw as the vote margin between first and second place.
-   * @param {object} seat - Seat-shaped object with a `votes` map and optional `turnout`.
    * @returns {{pct: number, raw: number}}
    */
-  static majorityStats(seat) {
-    const voteRows = Seat.#sortedVoteRows(seat);
+  majorityStats() {
+    const voteRows = this.#sortedVoteRows();
     if (voteRows.length < 2) return { pct: 0, raw: 0 };
     const marginVotes = voteRows[0].votes - voteRows[1].votes;
-    const totalVotes = Seat.totalVotes(seat);
+    const totalVotes = this.totalVotes();
     if (totalVotes <= 0) return { pct: 0, raw: marginVotes };
     return { pct: (marginVotes / totalVotes) * 100, raw: marginVotes };
   }
 
   /**
-   * Returns the previous winner's party key if the seat changed hands, or null if there was
+   * Returns the previous winner's party key if this seat changed hands, or null if there was
    * no change or no comparison available.
-   * @param {object} currentSeat - The seat in its current state, with a `winner` property.
    * @param {string|null} comparisonSeatWinner - The winning party key from the comparison seat, or null.
    * @returns {string|null}
    */
-  static gainFromParty(currentSeat, comparisonSeatWinner) {
-    const winner = currentSeat?.winner || 'others';
+  gainFromParty(comparisonSeatWinner) {
+    const winner = this.winner || 'others';
     const previousWinner = comparisonSeatWinner || null;
     if (!previousWinner || previousWinner === winner) return null;
     return previousWinner;
   }
 
   /**
-   * Returns the party key of the second-place finisher in a seat, or null if fewer than two
+   * Returns the party key of the second-place finisher in this seat, or null if fewer than two
    * parties have votes.
-   * @param {object} seat - Seat-shaped object with a `votes` map.
    * @returns {string|null}
    */
-  static #secondPlaceParty(seat) {
-    const voteRows = Seat.#sortedVoteRows(seat);
+  #secondPlaceParty() {
+    const voteRows = this.#sortedVoteRows();
     if (voteRows.length < 2) return null;
     return voteRows[1].party;
   }
@@ -436,11 +431,11 @@ export class Seat {
       if (seatRegion !== filterState.region) return false;
     }
 
-    const majority = Seat.majorityStats(this).pct;
+    const majority = this.majorityStats().pct;
     if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
 
     if (filterState.secondParty !== 'all') {
-      const secondParty = Seat.#secondPlaceParty(this);
+      const secondParty = this.#secondPlaceParty();
       if (secondParty !== filterState.secondParty) return false;
     }
 
@@ -448,7 +443,7 @@ export class Seat {
       if (byElectionSeats) {
         if (!byElectionSeats.has(this.seat)) return false;
       } else {
-        const gainFrom = Seat.gainFromParty(this, comparisonSeat?.winner);
+        const gainFrom = this.gainFromParty(comparisonSeat?.winner);
         if (!gainFrom) return false;
       }
     }

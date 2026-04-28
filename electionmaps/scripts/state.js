@@ -2,8 +2,13 @@
 // All modules import these objects and mutate their properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import { normalizeRegionKey, titleCaseFromRegionKey } from './utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, formatInt, seatLookupKey } from './utils.js';
 import { fetchJson } from './files.js';
+// TODO: temporary cross-import — seatMatchesPrimaryFilters and its seat-data helper chain
+// (seatMajorityStats, secondPlacePartyKey, seatGainFromPartyKey, sortedSeatVoteRows,
+// totalVotesForSeat) should eventually move into state.js or a shared seat-data module to
+// break this circular dependency on electionmaps.js.
+import { seatMatchesPrimaryFilters } from '../electionmaps.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
@@ -359,7 +364,12 @@ export class Seat {
  * comparison election — the shape is symmetrical.
  */
 export class ElectionData {
-  constructor(resultsData) {
+  constructor(resultsData, electionName = null) {
+    /** Display label of the election this data represents (e.g. "2024 General Election").
+     * Used as the prefix in {@link ElectionData#generateSubtitleSummaryText}. Null for the
+     * comparison ElectionData instance, which never renders a subtitle. */
+    this.electionName = electionName;
+
     /** Pristine normalised seat records as parsed from the results JSON. Never mutated;
      * use as the source of truth when rebuilding currentSeats from baseline. */
     this.baseSeats = ElectionData.normalizeSeats(resultsData);
@@ -370,6 +380,17 @@ export class ElectionData {
 
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
     this.seatsByKey = ElectionData.buildSeatIndex(this.currentSeats);
+
+    /** Aggregated summary of currentSeats. Populated by AppState#initElectionData /
+     * #initComparisonElectionData after construction; recompute via
+     * {@link ElectionData#summarizeElection} when currentSeats changes. */
+    this.summary = null;
+
+    /** Pre-rendered subtitle text (e.g. "2024 General Election · Labour majority: 174").
+     * Populated by AppState#initElectionData after summary is set; regenerate via
+     * {@link ElectionData#generateSubtitleSummaryText} when summary changes. Only the active
+     * election populates this — comparison ElectionData instances leave it null. */
+    this.summaryText = null;
   }
 
   /**
@@ -388,8 +409,6 @@ export class ElectionData {
 
   /**
    * Builds a Map from seat lookup key (trimmed lowercase seat name) to seat for fast lookups.
-   * Mirrors the standalone `buildSeatIndex` in electionmaps.js — duplicated here so state.js
-   * has no dependency on electionmaps.js. Callers in electionmaps.js should migrate to this.
    * @param {Array<{seat: string}>} seats - Seat-shaped objects with a `seat` name property.
    * @returns {Map<string, object>} Map from lowercase seat name key to seat object.
    */
@@ -397,9 +416,101 @@ export class ElectionData {
     const byKey = new Map();
     (seats || []).forEach((seat) => {
       if (!seat?.seat) return;
-      byKey.set(String(seat.seat).trim().toLowerCase(), seat);
+      byKey.set(seatLookupKey(seat.seat), seat);
     });
     return byKey;
+  }
+
+  // TODO: dedupe summarizeElection / summarizeElection2 (this is the canonical handler)
+  /**
+   * Aggregates seats and votes across all constituencies in `currentSeats` and stores
+   * the result on `this.summary`. Call again whenever `currentSeats` changes (e.g. after
+   * predict-mode projection) to refresh the cached summary.
+   * List seats contribute their winner to the party seat count but not to vote totals
+   * (list seats use a separate ballot — combining them would double-count the electorate).
+   * Duplicate of the standalone `summarizeElection2` in electionmaps.js — kept temporarily
+   * while callers migrate.
+   * @returns {void}
+   */
+  summarizeElection() {
+    const partyStats = new Map();
+    let electorateSum = 0;
+    let turnoutWeighted = 0;
+
+    this.currentSeats.forEach((seat) => {
+      const isList = /\bList\s+\d+$/i.test(seat.seat);
+
+      const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
+      if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
+      partyStats.get(winner).seats += 1;
+
+      if (!isList) {
+        Object.entries(seat.votes || {}).forEach(([party, votes]) => {
+          const key = party === 'other' ? 'others' : party;
+          if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
+          partyStats.get(key).votes += Number(votes || 0);
+        });
+
+        if (seat.electorate > 0 && seat.turnout > 0) {
+          electorateSum += seat.electorate;
+          turnoutWeighted += seat.turnout * seat.electorate;
+        }
+      }
+    });
+
+    const parties = Array.from(partyStats.entries())
+      .map(([party, stats]) => ({ party, ...stats }))
+      .sort((a, b) => b.seats - a.seats || b.votes - a.votes);
+
+    const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
+    const turnout = electorateSum > 0 ? turnoutWeighted / electorateSum : 0;
+
+    return { parties, totalVotes, turnout, totalSeats: this.currentSeats.length };
+  }
+
+  /**
+   * Builds the subtitle text shown under the page title for this election: a single line
+   * describing either the leading party's overall majority or, when no party has one,
+   * a hung-parliament message naming the largest party.
+   *
+   * Inputs (all read from `this.summary`, which the caller must have populated):
+   *   - `summary.parties` — sorted by seats desc, so `parties[0]` is the leading party.
+   *   - `summary.totalSeats` — number of seats in the chamber (e.g. 650 for Westminster).
+   *
+   * Calculation:
+   *   - `majorityThreshold = totalSeats / 2` — the bare half-line. A party needs *more*
+   *     than this many seats to govern alone.
+   *   - `hasMajority = leadSeats > majorityThreshold` — strict greater-than so an exact
+   *     half-share counts as hung.
+   *   - `majority = 2 × (leadSeats − majorityThreshold)` — the standard parliamentary
+   *     "majority of N" figure: the number of seats by which the leading party's bench
+   *     exceeds the rest of the chamber combined. For 650 total seats and a leader on
+   *     412, that's 2 × (412 − 325) = 174. Rounded to handle odd totals (e.g. 129-seat
+   *     Holyrood gives a half-integer threshold).
+   *
+   * Output forms (returned as a single string, ` · `-joined):
+   *   - With majority:  `"<electionName> · <Party> majority: <N>"`
+   *     e.g. `"2024 General Election · Labour majority: 174"`
+   *   - Hung parliament: `"<electionName> · Hung parliament - largest party <Party> with <N> seats"`
+   *     e.g. `"2017 General Election · Hung parliament - largest party Conservative with 317 seats"`
+   *
+   * Party labels go through `manifest.labelParty` so internal keys ("lab", "con", …)
+   * render as their human display names. A missing winner falls back to the `'others'`
+   * label rather than throwing or producing an empty string.
+   *
+   * @returns {string} Pre-formatted subtitle string ready to pass to `setHeader`.
+   */
+  generateSubtitleSummaryText() {
+    const top = this.summary.parties[0];
+    const leadSeats = Number(top?.seats || 0);
+    const totalSeats = Number(this.summary.totalSeats || 0);
+    const majorityThreshold = totalSeats / 2;
+    const hasMajority = leadSeats > majorityThreshold;
+    const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
+
+    return hasMajority
+      ? `${this.electionName} · ${manifest.labelParty(top?.party || 'others')} majority: ${majority}`
+      : `${this.electionName} · Hung parliament - largest party ${manifest.labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
   }
 }
 
@@ -484,6 +595,18 @@ class AppState {
     this.mapChoropleths = {
       type: 'none',
       party: 'all',
+    };
+
+    /** Derived visible-seat slice produced by applying mapFilters to electionData.currentSeats.
+     * Recomputed at the top of renderMapWithViewState; read by the renderers and by the
+     * vote-totals tab click handler when it re-summarises without a full re-render.
+     * - seatKeys: Set<string> of seat lookup keys that pass the active filters.
+     * - seats: Array of current-election seat objects matching seatKeys.
+     * - comparisonSeats: Array of comparison-election seat objects keyed by seatKeys (Boolean-filtered). */
+    this.mapVisible = {
+      seatKeys: new Set(),
+      seats: [],
+      comparisonSeats: [],
     };
 
     /** Raw topology JSON for the current election, used by renderTopoMap. Null until loaded. */
@@ -571,7 +694,9 @@ class AppState {
    * @returns {void}
    */
   initElectionData(resultsData) {
-    this.electionData = new ElectionData(resultsData);
+    this.electionData = new ElectionData(resultsData, this.currentElection?.name ?? null);
+    this.electionData.summary = this.electionData.summarizeElection();
+    this.electionData.summaryText = this.electionData.generateSubtitleSummaryText();
   }
 
   /**
@@ -582,9 +707,10 @@ class AppState {
    */
   initComparisonElectionData(comparisonData) {
     this.comparisonElectionData = new ElectionData(comparisonData);
+    this.comparisonElectionData.summary = this.comparisonElectionData.summarizeElection();
     // Point the _state mirrors at comparisonElectionData's already-cloned arrays/index instead
     // of re-cloning. Predict mode reassigns these mirrors to predictBaseSeats during projection.
-    // TODO these can be removed once  predict mode is migrated to use comparisonElectionData directly instead of the mirrors. 
+    // TODO these can be removed once  predict mode is migrated to use comparisonElectionData directly instead of the mirrors.
     _state.currentComparisonSeats = this.comparisonElectionData.currentSeats;
     _state.comparisonSeatsByKey = this.comparisonElectionData.seatsByKey;
   }
@@ -596,6 +722,32 @@ class AppState {
   getByElectionSeatsSet() {
     const seats = this.currentElection?.byElectionSeats;
     return seats?.length ? new Set(seats) : null;
+  }
+
+  /**
+   * Recomputes mapVisible.{seatKeys, seats, comparisonSeats} by applying the active mapFilters
+   * to electionData.currentSeats. Reads _state.comparisonSeatsByKey rather than
+   * comparisonElectionData.seatsByKey because predict mode reassigns the _state mirror to the
+   * predict baseline index, which then becomes the source of truth for gains-filtering.
+   * @returns {void}
+   */
+  setMapVisible() {
+    // TODO remove during refactor 
+    const comparisonSeatsByKey = _state.comparisonSeatsByKey;
+    const byElectionSeats = this.getByElectionSeatsSet();
+    const seatKeys = new Set();
+    this.electionData.currentSeats.forEach((seat) => {
+      const seatKey = seatLookupKey(seat.seat);
+      const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
+      if (seatMatchesPrimaryFilters(seat, comparisonSeat, this.mapFilters, byElectionSeats)) {
+        seatKeys.add(seatKey);
+      }
+    });
+    this.mapVisible.seatKeys = seatKeys;
+    this.mapVisible.seats = this.electionData.currentSeats.filter((seat) => seatKeys.has(seatLookupKey(seat.seat)));
+    this.mapVisible.comparisonSeats = Array.from(seatKeys)
+      .map((seatKey) => comparisonSeatsByKey.get(seatKey))
+      .filter(Boolean);
   }
 
   /**

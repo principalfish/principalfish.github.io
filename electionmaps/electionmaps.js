@@ -22,6 +22,7 @@ import {
   escapeHtml,
   formatInt,
   formatPct,
+  seatLookupKey,
 } from './scripts/utils.js';
 import {
   setElectionPreDataFetch,
@@ -92,16 +93,13 @@ async function activateElection(view) {
   }
 
   setMapControlOptions();
-  if (state.electionData?.baseSeats?.length) {
-    const summary = summarizeElection(state.electionData.currentSeats);
-    updateTopSummary(state.currentElection, summary);
-    window.__mapsCurrentSummary = summary;
-    window.__mapsComparisonSummary = state.comparisonElectionData
-      ? summarizeElection(state.comparisonElectionData.baseSeats)
-      : null;
-    renderMapWithViewState();
-    syncRightPanelHeightToMap();
-  }
+  setHeader(state.electionData.summaryText);
+  // TODO: remove once other handlers read state.electionData.summary / state.comparisonElectionData.summary directly
+  window.__mapsCurrentSummary = state.electionData.summary;
+  window.__mapsComparisonSummary = state.comparisonElectionData?.summary ?? null;
+
+  renderMapWithViewState();
+  syncRightPanelHeightToMap();
 
   if (view === 'predict') {
     await activatePredictMode();
@@ -756,15 +754,6 @@ function deltaClass(value) {
 // ── Seat utilities ───────────────────────────────────────────────────────────
 
 /**
- * Returns a trimmed, lowercase string suitable for use as a seat lookup key.
- * @param {string} seatName - Raw seat name.
- * @returns {string} Trimmed lowercase seat name for use in Map lookups.
- */
-function seatLookupKey(seatName) {
-  return String(seatName || '').trim().toLowerCase();
-}
-
-/**
  * Returns the total votes cast in a seat, using the explicit turnout field if available, otherwise summing all party vote totals.
  * @param {object} seat - Seat object with optional `turnout` number and `votes` object.
  * @returns {number} Total votes cast in the seat.
@@ -864,7 +853,8 @@ function voteSharePct(seat, partyKey) {
  *   totalSeats: number
  * }} Aggregated election summary.
  */
-export function summarizeElection(seats, { mode = 'all' } = {}) {
+// TODO: dedupe summarizeElection / summarizeElection2 — migrate callers to ElectionData#summarizeElection and remove
+export function summarizeElection2(seats, { mode = 'all' } = {}) {
   const partyStats = new Map();
   const listRegionPartyCountSeen = new Set();
   let electorateSum = 0;
@@ -1556,7 +1546,7 @@ function decodePredictPayload(encoded, slots) {
  * @param {Set<string>|null} byElectionSeats - Set of seat names that are by-election gains, or null to use comparison-seat gain detection.
  * @returns {boolean} True if the seat passes all currently active filters.
  */
-function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
+export function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
   if (filterState.party !== 'all') {
     const winner = seat.winner === 'other' ? 'others' : seat.winner;
     if (winner !== filterState.party) return false;
@@ -1585,28 +1575,6 @@ function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElection
   }
 
   return true;
-}
-
-/**
- * Returns a Set of seat lookup keys for all seats that pass the current primary filters.
- * `comparisonSeatsByKey` is a Map from seatLookupKey to comparison seat object.
- * `filterState` and `byElectionSeats` are forwarded to `seatMatchesPrimaryFilters`.
- * @param {Array<object>} seats - Array of seat objects to filter.
- * @param {Map<string, object>} comparisonSeatsByKey - Map from seat lookup key to comparison seat, used for gains filtering.
- * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean}} filterState - Active filter configuration.
- * @param {Set<string>|null} byElectionSeats - Set of by-election seat names, or null to use comparison-based gain detection.
- * @returns {Set<string>} Set of seat lookup keys for all seats that pass the active filters.
- */
-function buildVisibleSeatKeySet(seats, comparisonSeatsByKey, filterState, byElectionSeats) {
-  const keySet = new Set();
-  seats.forEach((seat) => {
-    const seatKey = seatLookupKey(seat.seat);
-    const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
-    if (seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats)) {
-      keySet.add(seatKey);
-    }
-  });
-  return keySet;
 }
 
 /**
@@ -2126,12 +2094,13 @@ function renderVoteTotalsTabs(mapConfig) {
     btn.addEventListener('click', () => {
       state.voteTotals.mode = view.id;
       updateVoteTotalsTabsUI();
-      const seats = window.__mapsVisibleSeats || [];
-      const compSeats = window.__mapsVisibleComparisonSeats || [];
+      const { seats, comparisonSeats } = state.mapVisible;
       const tabAllowsVotes = state.voteTotals.mode !== 'all';
       const showVotes = tabAllowsVotes && state.voteTotalsColumnVisible('votes');
-      const summary = summarizeElection(seats, { mode: state.voteTotals.mode });
-      const compSummary = compSeats.length ? summarizeElection(compSeats, { mode: state.voteTotals.mode }) : null;
+      // TODO: dedupe summarizeElection / summarizeElection2
+      const summary = summarizeElection2(seats, { mode: state.voteTotals.mode });
+      // TODO: dedupe summarizeElection / summarizeElection2
+      const compSummary = comparisonSeats.length ? summarizeElection2(comparisonSeats, { mode: state.voteTotals.mode }) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
       toggleVoteTotalColumns(showVotes);
@@ -3130,6 +3099,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   window.__mapsComparisonSummary = baselineSummary;
 
   const predictLabel = `Predict ${predictElectionYear()}`;
+  // TODO: migrate to ElectionData#generateSubtitleSummaryText once predict mode writes its projected summary back onto state.electionData (will need to update electionData.electionName to predictLabel before calling)
   updateTopSummary({ name: predictLabel, parliament: state.currentParliament }, projectedSummary);
   renderMapWithViewState({ preserveZoom: true });
   syncRightPanelHeightToMap();
@@ -3159,8 +3129,10 @@ function applyPredictModeProjection() {
     : hasWestminsterSwings
       ? _state.predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, _state.predictRegionalSwingsByParty))
       : _state.predictBaseSeats.slice();
-  const projectedSummary = summarizeElection(projectedSeats, { mode: state.voteTotals.mode });
-  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: state.voteTotals.mode });
+  // TODO: dedupe summarizeElection / summarizeElection2
+  const projectedSummary = summarizeElection2(projectedSeats, { mode: state.voteTotals.mode });
+  // TODO: dedupe summarizeElection / summarizeElection2
+  const baselineSummary = summarizeElection2(_state.predictBaseSeats, { mode: state.voteTotals.mode });
 
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
 }
@@ -3302,8 +3274,10 @@ async function applyCurrentPredictionToInputs() {
     ...s,
     votes: { ...(s.votes || {}) },
   }));
-  const projectedSummary = summarizeElection(projectedSeats, { mode: state.voteTotals.mode });
-  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: state.voteTotals.mode });
+  // TODO: dedupe summarizeElection / summarizeElection2
+  const projectedSummary = summarizeElection2(projectedSeats, { mode: state.voteTotals.mode });
+  // TODO: dedupe summarizeElection / summarizeElection2
+  const baselineSummary = summarizeElection2(_state.predictBaseSeats, { mode: state.voteTotals.mode });
 
   renderPredictGrid();
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
@@ -3548,14 +3522,8 @@ function renderChoroplethLegend(choroplethConfig) {
  * @returns {void}
  */
 function renderMapWithViewState(options = {}) {
-  if (!state.mapData) return;
-
-  const visibleSeatKeys = buildVisibleSeatKeySet(state.electionData.currentSeats, _state.comparisonSeatsByKey, state.mapFilters, state.getByElectionSeatsSet());
-  const visibleSeats = state.electionData.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
-  const visibleComparisonSeats = Array.from(visibleSeatKeys)
-    .map((seatKey) => _state.comparisonSeatsByKey.get(seatKey))
-    .filter(Boolean);
-  const choroplethConfig = buildChoroplethConfig(visibleSeatKeys);
+  state.setMapVisible();
+  const choroplethConfig = buildChoroplethConfig(state.mapVisible.seatKeys);
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
 
@@ -3566,14 +3534,13 @@ function renderMapWithViewState(options = {}) {
   updateSeatViewTabsUI();
   updatePostcodeSearchVisibility();
 
-  window.__mapsVisibleSeats = visibleSeats;
-  window.__mapsVisibleComparisonSeats = visibleComparisonSeats;
-
   const hasMultipleVoteViews = mapConfig.voteTotalsViews.length > 1;
   const showVotes = !hasMultipleVoteViews || state.voteTotals.mode !== 'all';
-  const filteredSummary = summarizeElection(visibleSeats, { mode: state.voteTotals.mode });
+  // TODO: dedupe summarizeElection / summarizeElection2
+  const filteredSummary = summarizeElection2(state.mapVisible.seats, { mode: state.voteTotals.mode });
+  // TODO: dedupe summarizeElection / summarizeElection2
   const filteredComparisonSummary = _state.currentComparisonSeats.length
-    ? summarizeElection(visibleComparisonSeats, { mode: state.voteTotals.mode })
+    ? summarizeElection2(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })
     : null;
 
   window.__mapsCurrentSummary = filteredSummary;
@@ -3595,7 +3562,7 @@ function renderMapWithViewState(options = {}) {
     : null;
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
-    visibleSeatKeys,
+    visibleSeatKeys: state.mapVisible.seatKeys,
     choroplethConfig,
     ...(preserveTransform ? { preserveTransform } : {}),
     regionSummary,
@@ -3606,8 +3573,8 @@ function renderMapWithViewState(options = {}) {
 
   // Seat list: for Holyrood elections show constituency seats only (list seats appear in region table).
   const filteredSeats = hasRegionTable
-    ? visibleSeats.filter((s) => !isListSeat(s.seat))
-    : visibleSeats;
+    ? state.mapVisible.seats.filter((s) => !isListSeat(s.seat))
+    : state.mapVisible.seats;
   renderSeatList(filteredSeats, _state.currentComparisonSeats, {});
 
   applySeatSearchSuggestions(buildSeatSearchIndex(filteredSeats));
@@ -3616,11 +3583,11 @@ function renderMapWithViewState(options = {}) {
   if (seatPreview) {
     let previewText;
     if (hasRegionTable) {
-      const visibleConst = visibleSeats.filter((s) => !isListSeat(s.seat));
+      const visibleConst = state.mapVisible.seats.filter((s) => !isListSeat(s.seat));
       const totalConst = state.electionData.currentSeats.filter((s) => !isListSeat(s.seat));
       previewText = `Showing ${formatInt(visibleConst.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
-      previewText = `Showing ${formatInt(visibleSeats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
+      previewText = `Showing ${formatInt(state.mapVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
     }
     seatPreview.textContent = previewText;
   }
@@ -4324,6 +4291,7 @@ function syncRightPanelHeightToMap() {
   mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
 }
 
+// TODO: prefer ElectionData#generateSubtitleSummaryText for new callers; remove once the predict-mode caller migrates
 /**
  * Updates the page title and subtitle with the election name and leading-party majority (or hung-parliament message).
  * @param {object} election - Election entry object with a `name` and optionally a `type` property.

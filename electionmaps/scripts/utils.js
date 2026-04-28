@@ -12,6 +12,15 @@ export function escapeHtml(str) {
 }
 
 /**
+ * Returns a trimmed, lowercase string suitable for use as a seat lookup key.
+ * @param {string} seatName - Raw seat name.
+ * @returns {string} Trimmed lowercase seat name for use in Map lookups.
+ */
+export function seatLookupKey(seatName) {
+  return String(seatName || '').trim().toLowerCase();
+}
+
+/**
  * Rounds value to the nearest integer and formats it with GB locale thousands separators.
  * @param {number} value - Numeric value to format.
  * @returns {string} Rounded integer as a locale-formatted string (e.g. '1,234').

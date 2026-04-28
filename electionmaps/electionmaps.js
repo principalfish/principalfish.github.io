@@ -92,12 +92,22 @@ async function activateElection(view) {
   }
 
   setMapControlOptions();
-  refreshElectionSeatStateAndRender();
+  if (state.electionData?.baseSeats?.length) {
+    const summary = summarizeElection(state.electionData.currentSeats);
+    updateTopSummary(state.currentElection, summary);
+    window.__mapsCurrentSummary = summary;
+    window.__mapsComparisonSummary = state.comparisonElectionData
+      ? summarizeElection(state.comparisonElectionData.baseSeats)
+      : null;
+    renderMapWithViewState();
+    syncRightPanelHeightToMap();
+  }
 
   if (view === 'predict') {
     await activatePredictMode();
   } else {
-    replaceRouteState('election');
+    const params = buildRouteSearchParams('election');
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
   }
 }
 
@@ -2033,16 +2043,6 @@ function buildRouteSearchParams(view) {
   return params;
 }
 
-/**
- * Replaces the current browser history entry with the URL for the given view, then fires a virtual page view.
- * @param {string} view - View name ('election', 'predict', or 'polltracker').
- * @returns {void}
- */
-function replaceRouteState(view) {
-  const params = buildRouteSearchParams(view);
-  const nextUrl = `${window.location.pathname}?${params.toString()}`;
-  window.history.replaceState({}, '', nextUrl);
-}
 
 /**
  * Returns an ordered array of [regionKey, partyKey] slot pairs used as the positional index for predict payload encoding.
@@ -3539,25 +3539,6 @@ function renderChoroplethLegend(choroplethConfig) {
     </div>
   `;
   choroplethLegend.hidden = false;
-}
-
-/**
- * Computes the top-level election summary, exposes it on the window globals, and triggers
- * the initial map + panel render.
- * @returns {void}
- */
-function refreshElectionSeatStateAndRender() {
-  if (!state.electionData?.baseSeats?.length) return;
-
-  const summary = summarizeElection(state.electionData.currentSeats);
-  updateTopSummary(state.currentElection, summary);
-
-  window.__mapsCurrentSummary = summary;
-  window.__mapsComparisonSummary = state.comparisonElectionData
-    ? summarizeElection(state.comparisonElectionData.baseSeats)
-    : null;
-  renderMapWithViewState();
-  syncRightPanelHeightToMap();
 }
 
 /**

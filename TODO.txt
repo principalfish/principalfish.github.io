@@ -1,7 +1,8 @@
 
 USE COPILOT!!
 
-part way through activateElection
+part way through activateElection - refreshElectionSeatStateAndRender
+look at wireControls for areas already done - move into relevant dom sections
 
 
 redo data back end structure

@@ -10,7 +10,6 @@ import {
   manifest,
   initState,
   ElectionData,
-  Seat,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -2106,10 +2105,10 @@ function toggleVotePctColumns(show) {
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !show);
 }
 
-/** Sets the active class on vote-totals tab buttons to match _state.voteTotalsMode. */
+/** Sets the active class on vote-totals tab buttons to match state.voteTotals.mode. */
 function updateVoteTotalsTabsUI() {
   voteTotalsTabNav?.querySelectorAll('[data-vote-tab]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.voteTab === _state.voteTotalsMode);
+    btn.classList.toggle('active', btn.dataset.voteTab === state.voteTotals.mode);
   });
 }
 
@@ -2117,7 +2116,7 @@ function updateVoteTotalsTabsUI() {
 function renderVoteTotalsTabs(mapConfig) {
   if (!voteTotalsTabNav) return;
   voteTotalsTabNav.innerHTML = '';
-  const views = mapConfig?.voteTotalsViews ?? [];
+  const views = mapConfig.voteTotalsViews;
   voteTotalsTabNav.hidden = views.length <= 1;
   views.forEach((view, i) => {
     const btn = document.createElement('button');
@@ -2125,14 +2124,14 @@ function renderVoteTotalsTabs(mapConfig) {
     btn.dataset.voteTab = view.id;
     btn.textContent = view.label;
     btn.addEventListener('click', () => {
-      _state.voteTotalsMode = view.id;
+      state.voteTotals.mode = view.id;
       updateVoteTotalsTabsUI();
       const seats = window.__mapsVisibleSeats || [];
       const compSeats = window.__mapsVisibleComparisonSeats || [];
-      const tabAllowsVotes = _state.voteTotalsMode !== 'all';
+      const tabAllowsVotes = state.voteTotals.mode !== 'all';
       const showVotes = tabAllowsVotes && state.voteTotalsColumnVisible('votes');
-      const summary = summarizeElection(seats, { mode: _state.voteTotalsMode });
-      const compSummary = compSeats.length ? summarizeElection(compSeats, { mode: _state.voteTotalsMode }) : null;
+      const summary = summarizeElection(seats, { mode: state.voteTotals.mode });
+      const compSummary = compSeats.length ? summarizeElection(compSeats, { mode: state.voteTotals.mode }) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
       toggleVoteTotalColumns(showVotes);
@@ -2143,10 +2142,10 @@ function renderVoteTotalsTabs(mapConfig) {
   });
 }
 
-/** Sets the active class on seat-view tab buttons to match _state.currentSeatView. */
+/** Sets the active class on seat-view tab buttons to match state.seatView.mode. */
 function updateSeatViewTabsUI() {
   seatViewTabNav?.querySelectorAll('[data-seat-view]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.seatView === _state.currentSeatView);
+    btn.classList.toggle('active', btn.dataset.seatView === state.seatView.mode);
   });
 }
 
@@ -2154,7 +2153,7 @@ function updateSeatViewTabsUI() {
 function renderSeatViewTabs(mapConfig) {
   if (!seatViewTabNav) return;
   seatViewTabNav.innerHTML = '';
-  const views = mapConfig?.seatViews ?? [];
+  const views = mapConfig.seatViews;
   seatViewTabNav.hidden = views.length <= 1;
   views.forEach((view) => {
     const btn = document.createElement('button');
@@ -2162,7 +2161,7 @@ function renderSeatViewTabs(mapConfig) {
     btn.dataset.seatView = view.id;
     btn.textContent = view.label;
     btn.addEventListener('click', () => {
-      _state.currentSeatView = view.id;
+      state.seatView.mode = view.id;
       updateSeatViewTabsUI();
       renderMapWithViewState({ preserveZoom: true });
     });
@@ -3126,7 +3125,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   state.initMapData(_state.predictBaseMapData);
   state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
 
-  state.voteTotals.votes = false;
+  state.voteTotals.columns.votes = false;
   window.__mapsCurrentSummary = projectedSummary;
   window.__mapsComparisonSummary = baselineSummary;
 
@@ -3160,8 +3159,8 @@ function applyPredictModeProjection() {
     : hasWestminsterSwings
       ? _state.predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, _state.predictRegionalSwingsByParty))
       : _state.predictBaseSeats.slice();
-  const projectedSummary = summarizeElection(projectedSeats, { mode: _state.voteTotalsMode });
-  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: _state.voteTotalsMode });
+  const projectedSummary = summarizeElection(projectedSeats, { mode: state.voteTotals.mode });
+  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: state.voteTotals.mode });
 
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
 }
@@ -3303,8 +3302,8 @@ async function applyCurrentPredictionToInputs() {
     ...s,
     votes: { ...(s.votes || {}) },
   }));
-  const projectedSummary = summarizeElection(projectedSeats, { mode: _state.voteTotalsMode });
-  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: _state.voteTotalsMode });
+  const projectedSummary = summarizeElection(projectedSeats, { mode: state.voteTotals.mode });
+  const baselineSummary = summarizeElection(_state.predictBaseSeats, { mode: state.voteTotals.mode });
 
   renderPredictGrid();
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
@@ -3543,23 +3542,13 @@ function renderChoroplethLegend(choroplethConfig) {
 }
 
 /**
- * Resets current and comparison seat state from base data, recomputes summaries, and triggers a full map + panel re-render.
+ * Computes the top-level election summary, exposes it on the window globals, and triggers
+ * the initial map + panel render.
  * @returns {void}
  */
 function refreshElectionSeatStateAndRender() {
   if (!state.electionData?.baseSeats?.length) return;
 
-  state.electionData.currentSeats = state.electionData.baseSeats.map((seat) => new Seat(seat));
-  // TODO: migrate to ElectionData.buildSeatIndex(state.electionData.currentSeats)
-  state.electionData.seatsByKey = buildSeatIndex(state.electionData.currentSeats);
-  // comparisonElectionData.currentSeats isn't mutated by predict mode (only the _state pointer
-  // is swapped to predictBaseSeats), so re-pointing the mirror restores the default comparison.
-  _state.currentComparisonSeats = state.comparisonElectionData?.currentSeats || [];
-  _state.comparisonSeatsByKey = state.comparisonElectionData?.seatsByKey || new Map();
-
-  const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
-  _state.voteTotalsMode = mapConfig?.voteTotalsViews?.[0]?.id ?? 'all';
-  _state.currentSeatView = mapConfig?.seatViews?.[0]?.id ?? 'seats';
   const summary = summarizeElection(state.electionData.currentSeats);
   updateTopSummary(state.currentElection, summary);
 
@@ -3599,11 +3588,11 @@ function renderMapWithViewState(options = {}) {
   window.__mapsVisibleSeats = visibleSeats;
   window.__mapsVisibleComparisonSeats = visibleComparisonSeats;
 
-  const hasMultipleVoteViews = (mapConfig?.voteTotalsViews?.length ?? 0) > 1;
-  const showVotes = !hasMultipleVoteViews || _state.voteTotalsMode !== 'all';
-  const filteredSummary = summarizeElection(visibleSeats, { mode: _state.voteTotalsMode });
+  const hasMultipleVoteViews = mapConfig.voteTotalsViews.length > 1;
+  const showVotes = !hasMultipleVoteViews || state.voteTotals.mode !== 'all';
+  const filteredSummary = summarizeElection(visibleSeats, { mode: state.voteTotals.mode });
   const filteredComparisonSummary = _state.currentComparisonSeats.length
-    ? summarizeElection(visibleComparisonSeats, { mode: _state.voteTotalsMode })
+    ? summarizeElection(visibleComparisonSeats, { mode: state.voteTotals.mode })
     : null;
 
   window.__mapsCurrentSummary = filteredSummary;

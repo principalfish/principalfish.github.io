@@ -75,6 +75,16 @@ class Manifest {
         if (!Number.isFinite(id)) return;
         this.regionsById.set(id, normalizeRegionKey(region?.name || ''));
       });
+
+      // Guarantee a non-empty default tab so callers can read mapMode.voteTotalsViews[0].id and
+      // mapMode.seatViews[0].id without per-call-site fallbacks. The tab nav hides itself when
+      // length <= 1, so a single synthetic default is invisible to the user.
+      if (!mapMode.voteTotalsViews?.length) {
+        mapMode.voteTotalsViews = [{ id: 'all', label: 'Overall' }];
+      }
+      if (!mapMode.seatViews?.length) {
+        mapMode.seatViews = [{ id: 'seats', label: 'Seats' }];
+      }
     });
   }
 
@@ -199,9 +209,7 @@ export const _state = {
   // Sort / UI / totals
   currentSort: { key: 'seats', direction: 'desc' },
   voteTotalsExpanded: false,
-  voteTotalsMode: 'all',
   hiddenVoteTotalsParties: new Set(),
-  currentSeatView: 'seats',
   selectedSeatRow: null,
   activeSeatPathNode: null,
   currentOpenSeatName: null,
@@ -442,12 +450,22 @@ class AppState {
      * Controls visibility of gains/choropleth controls and data info button. */
     this.isReferendumType = false;
 
-    /** UI flags for the vote totals panel.
-     * - votes: whether the raw vote count column is visible.
-     *   Initialised false for model elections and referendum-type elections; true otherwise.
-     *   Also toggled at runtime when switching vote totals tabs or entering predict mode.
+    /** Vote totals panel state.
+     * - columns.votes: whether the raw vote count column is visible. Initialised false for
+     *   model elections and referendum-type elections; true otherwise. Flipped to false when
+     *   entering predict mode. Read via voteTotalsColumnVisible().
+     * - mode: id of the active vote-totals tab (e.g. 'all', 'constituency', 'list'). Initialised
+     *   in state.init from manifest.mapModes[mapId].voteTotalsViews[0].id; mutated when the user
+     *   clicks a different tab.
      */
-    this.voteTotals = { votes: true };
+    this.voteTotals = { columns: { votes: true }, mode: 'all' };
+
+    /** Seat view panel state.
+     * - mode: id of the active seat-view tab (e.g. 'seats', 'constituency', 'regions').
+     *   Initialised in state.init from manifest.mapModes[mapId].seatViews[0].id; mutated when
+     *   the user clicks a different tab.
+     */
+    this.seatView = { mode: 'seats' };
 
     /** Active map filter selections. Mutated by syncMapControlStateFromInputs (DOM → state) on
      * every filter change, by the gains-button click handler, and by resetPrimaryFilters. Read by
@@ -514,8 +532,14 @@ class AppState {
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
     if (this.currentElection.model || this.isReferendumType) {
-      this.voteTotals.votes = false;
+      this.voteTotals.columns.votes = false;
     }
+
+    // Default the active vote-totals / seat-view tabs from the mapMode config. The hydration
+    // step in Manifest.#hydrate guarantees both arrays are non-empty.
+    const mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
+    this.voteTotals.mode = mapConfig.voteTotalsViews[0].id;
+    this.seatView.mode = mapConfig.seatViews[0].id;
 
     // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
     if (this.view === 'polltracker' || this.currentElection.model) {
@@ -525,11 +549,11 @@ class AppState {
 
   /**
    * Returns whether the named column should be visible in the vote totals panel.
-   * @param {string} column - Column key in this.voteTotals (e.g. 'votes').
+   * @param {string} column - Column key in this.voteTotals.columns (e.g. 'votes').
    * @returns {boolean}
    */
   voteTotalsColumnVisible(column) {
-    return !!this.voteTotals[column];
+    return !!this.voteTotals.columns[column];
   }
 
   /**

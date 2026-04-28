@@ -800,7 +800,7 @@ const filterPartySelect = document.getElementById('mapsFilterParty');
 // Region filter — restricts visible seats to a single region (e.g. London, Scotland).
 const filterRegionSelect = document.getElementById('mapsFilterRegion');
 // Second-place filter — paired with filterPartySelect to restrict to seats where the chosen
-// party finished second. The wrapping group is hidden when filterParty is 'all'.
+// party finished second. The wrapping group is hidden when state.mapFilters.party is 'all'.
 const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
 // Choropleth target party — once a choropleth type is selected, this picks which party's
 // vote share / vote share change drives the colour ramp on the map.
@@ -810,7 +810,7 @@ const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
  * Rebuilds the option lists for the four election filter/choropleth selects from the
  * currently loaded seat data: filterParty, filterSecondParty, choroplethParty (all sharing
  * the party row set) and filterRegion. Called once per election load, after state has
- * been initialised but before the controls are read back into _state.mapViewState.
+ * been initialised but before the controls are read back into state.mapFilters / state.mapChoropleths.
  *
  * The party and region row sets come from AppState (mapControlParties /
  * mapControlRegions) — this function is purely the DOM-write side; option content

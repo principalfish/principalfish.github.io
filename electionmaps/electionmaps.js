@@ -93,7 +93,6 @@ async function activateElection(view) {
   }
 
   setMapControlOptions();
-  syncMapControlStateFromInputs();
   refreshElectionSeatStateAndRender();
 
   if (view === 'predict') {
@@ -377,7 +376,7 @@ function wireMapViewControls() {
 
   if (filterGainsButton) {
     filterGainsButton.addEventListener('click', () => {
-      _state.mapViewState.gainsOnly = !_state.mapViewState.gainsOnly;
+      state.mapFilters.gainsOnly = !state.mapFilters.gainsOnly;
       syncMapControlInputsFromState();
       renderMapWithViewState({ preserveZoom: true });
     });
@@ -1540,31 +1539,31 @@ function decodePredictPayload(encoded, slots) {
 
 /**
  * Returns true when a seat passes all active primary filters.
- * `filterState` mirrors the mapViewState shape: `{ filterParty, filterRegion, majorityMin, majorityMax, filterSecondParty, gainsOnly }`.
+ * `filterState` mirrors the state.mapFilters shape: `{ party, region, secondParty, majorityMin, majorityMax, gainsOnly }`.
  * `byElectionSeats` is a Set of seat names for by-election gain filtering, or null to use the comparison seat method.
  * @param {object} seat - Current seat object to test against the filters.
  * @param {object|null} comparisonSeat - Comparison seat for gains filtering; may be null if no comparison is available.
- * @param {{filterParty: string, filterRegion: string, majorityMin: number, majorityMax: number, filterSecondParty: string, gainsOnly: boolean}} filterState - Active filter configuration.
+ * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean}} filterState - Active filter configuration.
  * @param {Set<string>|null} byElectionSeats - Set of seat names that are by-election gains, or null to use comparison-seat gain detection.
  * @returns {boolean} True if the seat passes all currently active filters.
  */
 function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
-  if (filterState.filterParty !== 'all') {
+  if (filterState.party !== 'all') {
     const winner = seat.winner === 'other' ? 'others' : seat.winner;
-    if (winner !== filterState.filterParty) return false;
+    if (winner !== filterState.party) return false;
   }
 
-  if (filterState.filterRegion !== 'all') {
+  if (filterState.region !== 'all') {
     const seatRegion = normalizeRegionKey(seat.region);
-    if (seatRegion !== filterState.filterRegion) return false;
+    if (seatRegion !== filterState.region) return false;
   }
 
   const majority = seatMajorityStats(seat).pct;
   if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
 
-  if (filterState.filterSecondParty !== 'all') {
+  if (filterState.secondParty !== 'all') {
     const secondParty = secondPlacePartyKey(seat);
-    if (secondParty !== filterState.filterSecondParty) return false;
+    if (secondParty !== filterState.secondParty) return false;
   }
 
   if (filterState.gainsOnly) {
@@ -1585,7 +1584,7 @@ function seatMatchesPrimaryFilters(seat, comparisonSeat, filterState, byElection
  * `filterState` and `byElectionSeats` are forwarded to `seatMatchesPrimaryFilters`.
  * @param {Array<object>} seats - Array of seat objects to filter.
  * @param {Map<string, object>} comparisonSeatsByKey - Map from seat lookup key to comparison seat, used for gains filtering.
- * @param {{filterParty: string, filterRegion: string, majorityMin: number, majorityMax: number, filterSecondParty: string, gainsOnly: boolean}} filterState - Active filter configuration.
+ * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean}} filterState - Active filter configuration.
  * @param {Set<string>|null} byElectionSeats - Set of by-election seat names, or null to use comparison-based gain detection.
  * @returns {Set<string>} Set of seat lookup keys for all seats that pass the active filters.
  */
@@ -3313,50 +3312,50 @@ async function applyCurrentPredictionToInputs() {
 }
 
 /**
- * Pushes the current _state.mapViewState values into the DOM filter/choropleth inputs and toggles second-party group visibility.
+ * Pushes the current state.mapFilters and state.mapChoropleths values into the DOM filter/choropleth inputs and toggles second-party group visibility.
  * @returns {void}
  */
 function syncMapControlInputsFromState() {
-  if (filterPartySelect) filterPartySelect.value = _state.mapViewState.filterParty;
-  if (filterRegionSelect) filterRegionSelect.value = _state.mapViewState.filterRegion;
+  filterPartySelect.value = state.mapFilters.party;
+  filterRegionSelect.value = state.mapFilters.region;
 
-  const showSecondPlaceFilter = _state.mapViewState.filterParty !== 'all';
-  if (filterSecondPartyGroup) filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
+  const showSecondPlaceFilter = state.mapFilters.party !== 'all';
+  filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
   if (!showSecondPlaceFilter) {
-    _state.mapViewState.filterSecondParty = 'all';
+    state.mapFilters.secondParty = 'all';
   }
-  if (filterSecondPartySelect) filterSecondPartySelect.value = _state.mapViewState.filterSecondParty;
+  filterSecondPartySelect.value = state.mapFilters.secondParty;
 
-  if (filterMajorityMinInput) filterMajorityMinInput.value = String(_state.mapViewState.majorityMin);
-  if (filterMajorityMaxInput) filterMajorityMaxInput.value = String(_state.mapViewState.majorityMax);
-  if (filterGainsButton) filterGainsButton.classList.toggle('is-active', _state.mapViewState.gainsOnly);
+  filterMajorityMinInput.value = String(state.mapFilters.majorityMin);
+  filterMajorityMaxInput.value = String(state.mapFilters.majorityMax);
+  filterGainsButton.classList.toggle('is-active', state.mapFilters.gainsOnly);
 
-  if (choroplethTypeSelect) choroplethTypeSelect.value = _state.mapViewState.choroplethType;
-  if (choroplethPartySelect) choroplethPartySelect.value = _state.mapViewState.choroplethParty;
+  choroplethTypeSelect.value = state.mapChoropleths.type;
+  choroplethPartySelect.value = state.mapChoropleths.party;
 }
 
 /**
- * Reads the DOM filter/choropleth inputs into _state.mapViewState, normalizing and clamping values, then syncs the inputs back.
+ * Reads the DOM filter/choropleth inputs into state.mapFilters and state.mapChoropleths, normalizing and clamping values, then syncs the inputs back.
  * @returns {void}
  */
 function syncMapControlStateFromInputs() {
-  if (filterPartySelect) _state.mapViewState.filterParty = filterPartySelect.value || 'all';
-  if (filterRegionSelect) _state.mapViewState.filterRegion = filterRegionSelect.value || 'all';
-  if (_state.mapViewState.filterParty === 'all') {
-    _state.mapViewState.filterSecondParty = 'all';
-  } else if (filterSecondPartySelect) {
-    _state.mapViewState.filterSecondParty = filterSecondPartySelect.value || 'all';
+  state.mapFilters.party = filterPartySelect.value || 'all';
+  state.mapFilters.region = filterRegionSelect.value || 'all';
+  if (state.mapFilters.party === 'all') {
+    state.mapFilters.secondParty = 'all';
+  } else {
+    state.mapFilters.secondParty = filterSecondPartySelect.value || 'all';
   }
-  if (filterMajorityMinInput) _state.mapViewState.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
-  if (filterMajorityMaxInput) _state.mapViewState.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
-  if (_state.mapViewState.majorityMin > _state.mapViewState.majorityMax) {
-    const swap = _state.mapViewState.majorityMin;
-    _state.mapViewState.majorityMin = _state.mapViewState.majorityMax;
-    _state.mapViewState.majorityMax = swap;
+  state.mapFilters.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
+  state.mapFilters.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
+  if (state.mapFilters.majorityMin > state.mapFilters.majorityMax) {
+    const swap = state.mapFilters.majorityMin;
+    state.mapFilters.majorityMin = state.mapFilters.majorityMax;
+    state.mapFilters.majorityMax = swap;
   }
 
-  if (choroplethTypeSelect) _state.mapViewState.choroplethType = choroplethTypeSelect.value || 'none';
-  if (choroplethPartySelect) _state.mapViewState.choroplethParty = choroplethPartySelect.value || 'all';
+  state.mapChoropleths.type = choroplethTypeSelect.value || 'none';
+  state.mapChoropleths.party = choroplethPartySelect.value || 'all';
 
   syncMapControlInputsFromState();
 }
@@ -3366,12 +3365,12 @@ function syncMapControlStateFromInputs() {
  * @returns {void}
  */
 function resetPrimaryFilters() {
-  _state.mapViewState.filterParty = 'all';
-  _state.mapViewState.filterRegion = 'all';
-  _state.mapViewState.filterSecondParty = 'all';
-  _state.mapViewState.majorityMin = 0;
-  _state.mapViewState.majorityMax = 100;
-  _state.mapViewState.gainsOnly = false;
+  state.mapFilters.party = 'all';
+  state.mapFilters.region = 'all';
+  state.mapFilters.secondParty = 'all';
+  state.mapFilters.majorityMin = 0;
+  state.mapFilters.majorityMax = 100;
+  state.mapFilters.gainsOnly = false;
   syncMapControlInputsFromState();
 }
 
@@ -3380,8 +3379,8 @@ function resetPrimaryFilters() {
  * @returns {void}
  */
 function resetChoropleths() {
-  _state.mapViewState.choroplethType = 'none';
-  _state.mapViewState.choroplethParty = 'all';
+  state.mapChoropleths.type = 'none';
+  state.mapChoropleths.party = 'all';
   syncMapControlInputsFromState();
 }
 
@@ -3400,7 +3399,7 @@ function resetChoropleths() {
  * }} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
-  if (state.isReferendumType && (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all')) {
+  if (state.isReferendumType && (state.mapChoropleths.type === 'none' || state.mapChoropleths.party === 'all')) {
     const valueBySeatKey = new Map();
     const values = [];
     state.electionData.currentSeats.forEach((seat) => {
@@ -3433,8 +3432,8 @@ function buildChoroplethConfig(visibleSeatKeys) {
     };
   }
 
-  if (_state.mapViewState.choroplethType === 'none' || _state.mapViewState.choroplethParty === 'all') return { enabled: false };
-  const isDelta = _state.mapViewState.choroplethType === 'voteShareChange';
+  if (state.mapChoropleths.type === 'none' || state.mapChoropleths.party === 'all') return { enabled: false };
+  const isDelta = state.mapChoropleths.type === 'voteShareChange';
 
   const valueBySeatKey = new Map();
   const values = [];
@@ -3443,7 +3442,7 @@ function buildChoroplethConfig(visibleSeatKeys) {
     const seatKey = seatLookupKey(seat.seat);
     if (!visibleSeatKeys.has(seatKey)) return;
     const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
-    const value = getChoroplethValue(seat, comparisonSeat, _state.mapViewState.choroplethType, _state.mapViewState.choroplethParty);
+    const value = getChoroplethValue(seat, comparisonSeat, state.mapChoropleths.type, state.mapChoropleths.party);
     if (!Number.isFinite(value)) return;
     valueBySeatKey.set(seatKey, value);
     values.push(value);
@@ -3451,8 +3450,8 @@ function buildChoroplethConfig(visibleSeatKeys) {
 
   if (!values.length) return { enabled: false };
 
-  const selectedPartyLabel = manifest.labelParty(_state.mapViewState.choroplethParty);
-  const selectedPartyColour = manifest.colourParty(_state.mapViewState.choroplethParty);
+  const selectedPartyLabel = manifest.labelParty(state.mapChoropleths.party);
+  const selectedPartyColour = manifest.colourParty(state.mapChoropleths.party);
   const legendBase = {
     party: selectedPartyLabel,
     isDelta,
@@ -3581,7 +3580,7 @@ function refreshElectionSeatStateAndRender() {
 function renderMapWithViewState(options = {}) {
   if (!state.mapData) return;
 
-  const visibleSeatKeys = buildVisibleSeatKeySet(state.electionData.currentSeats, _state.comparisonSeatsByKey, _state.mapViewState, state.getByElectionSeatsSet());
+  const visibleSeatKeys = buildVisibleSeatKeySet(state.electionData.currentSeats, _state.comparisonSeatsByKey, state.mapFilters, state.getByElectionSeatsSet());
   const visibleSeats = state.electionData.currentSeats.filter((seat) => visibleSeatKeys.has(seatLookupKey(seat.seat)));
   const visibleComparisonSeats = Array.from(visibleSeatKeys)
     .map((seatKey) => _state.comparisonSeatsByKey.get(seatKey))

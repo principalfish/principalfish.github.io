@@ -212,18 +212,6 @@ export const _state = {
   currentSeatNameByKey: new Map(),
   seatListRowByKey: new Map(),
 
-  // Map filters / choropleth
-  mapViewState: {
-    filterParty: 'all',
-    filterRegion: 'all',
-    filterSecondParty: 'all',
-    majorityMin: 0,
-    majorityMax: 100,
-    gainsOnly: false,
-    choroplethType: 'none',
-    choroplethParty: 'all',
-  },
-
   // Map interaction controller — replaced by renderTopoMap
   mapInteractionController: {
     zoomBy: () => {},
@@ -460,6 +448,25 @@ class AppState {
      *   Also toggled at runtime when switching vote totals tabs or entering predict mode.
      */
     this.voteTotals = { votes: true };
+
+    /** Active map filter selections. Mutated by syncMapControlStateFromInputs (DOM → state) on
+     * every filter change, by the gains-button click handler, and by resetPrimaryFilters. Read by
+     * seatMatchesPrimaryFilters when computing the visible seat set. */
+    this.mapFilters = {
+      party: 'all',
+      region: 'all',
+      secondParty: 'all',
+      majorityMin: 0,
+      majorityMax: 100,
+      gainsOnly: false,
+    };
+
+    /** Active choropleth selection. Mutated by syncMapControlStateFromInputs and resetChoropleths.
+     * Read by buildChoroplethConfig and the choropleth render path. */
+    this.mapChoropleths = {
+      type: 'none',
+      party: 'all',
+    };
 
     /** Raw topology JSON for the current election, used by renderTopoMap. Null until loaded. */
     this.mapData = null;

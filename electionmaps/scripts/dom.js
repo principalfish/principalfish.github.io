@@ -763,29 +763,13 @@ function renderPollTrackerPartyControls() {
   });
 }
 
-// ─── Elections ───────────────────────────────────────────────────────────────
+// ─── Pre-fetch ───────────────────────────────────────────────────────────────
+//
+// Election-type-specific UI hooks that run before results are fetched — sibling to
+// the map controls below, but configured up-front rather than rebuilt per load.
 
-// Election-specific controls that are always present in index.html; toggled per election type.
-
-// Gains-only toggle button — labelled "Gains" by default, or "By-elections" when the current
-// election declares byElectionSeats. Hidden for referendum elections.
-const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
-// The "vote share change" <option> inside the choropleth-type select — hidden for referendums,
-// which only support the simpler vote-share view.
-const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
 // Info button shown only on referendum elections — opens a data-source / methodology explainer.
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
-
-// Primary party filter — restricts visible seats to those won by the chosen party.
-const filterPartySelect = document.getElementById('mapsFilterParty');
-// Region filter — restricts visible seats to a single region (e.g. London, Scotland).
-const filterRegionSelect = document.getElementById('mapsFilterRegion');
-// Second-place filter — paired with filterPartySelect to restrict to seats where the chosen
-// party finished second. The wrapping group is hidden when filterParty is 'all'.
-const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
-// Choropleth target party — once a choropleth type is selected, this picks which party's
-// vote share / vote share change drives the colour ramp on the map.
-const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
 
 /**
  * Configures election-type-specific UI before election data has loaded.
@@ -798,6 +782,29 @@ export function setElectionPreDataFetch() {
   choroplethVoteShareChangeOption.hidden = state.isReferendumType;
   dataInfoButton.hidden = !state.isReferendumType;
 }
+
+// ─── Map control ─────────────────────────────────────────────────────────────
+//
+// This section holds the filter and choropleth controls — the dropdowns and toggle
+// buttons users interact with to narrow visible seats or change the choropleth fill.
+
+// Gains-only toggle button — labelled "Gains" by default, or "By-elections" when the current
+// election declares byElectionSeats. Hidden for referendum elections.
+const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
+// The "vote share change" <option> inside the choropleth-type select — hidden for referendums,
+// which only support the simpler vote-share view.
+const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
+
+// Primary party filter — restricts visible seats to those won by the chosen party.
+const filterPartySelect = document.getElementById('mapsFilterParty');
+// Region filter — restricts visible seats to a single region (e.g. London, Scotland).
+const filterRegionSelect = document.getElementById('mapsFilterRegion');
+// Second-place filter — paired with filterPartySelect to restrict to seats where the chosen
+// party finished second. The wrapping group is hidden when filterParty is 'all'.
+const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
+// Choropleth target party — once a choropleth type is selected, this picks which party's
+// vote share / vote share change drives the colour ramp on the map.
+const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
 
 /**
  * Rebuilds the option lists for the four election filter/choropleth selects from the

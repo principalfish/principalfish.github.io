@@ -11,7 +11,7 @@ import {
   initState,
   ElectionData,
   Seat,
-  Summary,
+  ElectionSummary,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -786,12 +786,11 @@ export function buildSeatIndex(seats) {
 // ── Election summary ─────────────────────────────────────────────────────────
 
 /**
- * Aggregates seats and votes across all constituencies, returning { parties, totalVotes, turnout, totalSeats }. Parties are sorted by seats descending then votes descending. Turnout is electorate-weighted.
- * @param {Array<object>} seats - Array of seat objects with `winner`, `votes`, `electorate`, and `turnout` properties.
+ * Aggregates seats and votes across all constituencies, returning { parties, totalVotes, totalSeats }. Parties are sorted by seats descending then votes descending.
+ * @param {Array<object>} seats - Array of seat objects with `winner` and `votes` properties.
  * @returns {{
  *   parties: Array<{party: string, seats: number, votes: number}>,
  *   totalVotes: number,
- *   turnout: number,
  *   totalSeats: number
  * }} Aggregated election summary.
  */
@@ -799,8 +798,6 @@ export function buildSeatIndex(seats) {
 export function summarizeElection2(seats, { mode = 'all' } = {}) {
   const partyStats = new Map();
   const listRegionPartyCountSeen = new Set();
-  let electorateSum = 0;
-  let turnoutWeighted = 0;
 
   seats.forEach((seat) => {
     const isList = Seat.isList(seat);
@@ -836,11 +833,6 @@ export function summarizeElection2(seats, { mode = 'all' } = {}) {
         }
         partyStats.get(key).votes += Number(votes || 0);
       });
-
-      if (seat.electorate > 0 && seat.turnout > 0) {
-        electorateSum += seat.electorate;
-        turnoutWeighted += seat.turnout * seat.electorate;
-      }
     }
   });
 
@@ -849,9 +841,8 @@ export function summarizeElection2(seats, { mode = 'all' } = {}) {
     .sort((a, b) => b.seats - a.seats || b.votes - a.votes);
 
   const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
-  const turnout = electorateSum > 0 ? turnoutWeighted / electorateSum : 0;
 
-  return { parties, totalVotes, turnout, totalSeats: seats.length };
+  return { parties, totalVotes, totalSeats: seats.length };
 }
 
 // ── Predict region predicates ────────────────────────────────────────────────
@@ -3268,14 +3259,14 @@ function renderMapWithViewState(preserveZoom = false) {
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
   const hasListSeats = state.electionData.currentSeats.some((s) => Seat.isList(s));
-  // Suppress vote columns on the 'all' tab when list seats exist: Summary.summarize counts
+  // Suppress vote columns on the 'all' tab when list seats exist: ElectionSummary.summarize counts
   // only constituency votes in 'all' mode while seat counts include both — the mismatch is
   // misleading.
   const showVotes = !hasListSeats || state.voteTotals.mode !== 'all';
   // Aggregated summary of the currently visible (filter-passing) seats under the active
   // vote-totals tab. Drives the vote-totals panel rows; distinct from
   // state.electionData.summary, which always covers the unfiltered chamber.
-  const filteredSummary = Summary.summarize(state.mapVisible.seats, { mode: state.voteTotals.mode });
+  const filteredSummary = ElectionSummary.summarize(state.mapVisible.seats, { mode: state.voteTotals.mode });
   // TODO: dedupe summarizeElection / summarizeElection2
   const filteredComparisonSummary = _state.currentComparisonSeats.length
     ? summarizeElection2(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })

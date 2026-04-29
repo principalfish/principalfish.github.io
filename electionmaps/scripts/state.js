@@ -502,7 +502,7 @@ export class Seat {
   }
 }
 
-// ─── Summary ─────────────────────────────────────────────────────────────────
+// ─── ElectionSummary ─────────────────────────────────────────────────────────────────
 
 /**
  * Aggregated summary of an ElectionData's seats. Bundles the structured party/seat/vote
@@ -519,27 +519,31 @@ export class Seat {
  *     `(region, party)` pair only contributes votes once (regional list totals are
  *     duplicated across every seat in the region).
  */
-export class Summary {
+export class ElectionSummary {
   /**
    * @param {Seat[]} seats - Seats to aggregate.
    * @param {string|null} electionName - Display label for the election; when null, `text` is null.
-   * @param {{mode?: ('all'|'constituency'|'list')}} [options] - Aggregation options forwarded to {@link Summary.summarize}; see class jsdoc for the per-mode behaviour.
+   * @param {{mode?: ('all'|'constituency'|'list')}} [options] - Aggregation options forwarded to {@link ElectionSummary.summarize}; see class jsdoc for the per-mode behaviour.
    */
   constructor(seats, electionName, { mode = 'all' } = {}) {
+    /** Aggregation mode used to build {@link ElectionSummary#data}. See class jsdoc for per-mode behaviour. */
+    this.mode = mode;
+
     /** Structured aggregate: `{parties, totalVotes, turnout, totalSeats}`. Parties are
      * sorted by seats desc, then votes desc, so `parties[0]` is the leading party. */
-    this.data = Summary.summarize(seats, { mode });
+    this.data = ElectionSummary.summarize(seats, { mode });
 
     /** Pre-rendered subtitle string (e.g. "2024 General Election · Labour majority: 174"),
      * or null when no electionName was provided (comparison/predict-baseline summaries). */
-    this.text = electionName ? Summary.#subtitleText(this.data, electionName) : null;
+    this.text = electionName ? ElectionSummary.#subtitleText(this.data, electionName) : null;
   }
 
   // TODO: dedupe summarize / summarizeElection2 (this is the canonical handler)
   /**
-   * Aggregates seats and votes across all constituencies, honouring the active vote-totals
-   * tab via `mode`. Duplicate of the standalone `summarizeElection2` in electionmaps.js —
-   * kept temporarily while callers migrate.
+   * Aggregates seats and votes across all constituencies into the structured form consumed
+   * by the vote-totals panel and subtitle text. Honours the active vote-totals tab via
+   * `mode`. Duplicate of the standalone `summarizeElection2` in electionmaps.js — kept
+   * temporarily while callers migrate.
    *
    * Mode behaviour:
    *   - `'all'` (default) — every seat contributes its winner to the seat count, but only
@@ -550,34 +554,78 @@ export class Summary {
    *     vote totals are stored on every seat in the region; we only count each
    *     `(region, party)` pair once to avoid multiplying by the number of seats.
    *
-   * `totalSeats` is the input length and does not reflect mode filtering — it represents the
-   * size of the chamber being summarised, not the number of seats that contributed to stats.
+   * Parties are returned sorted by seats descending, then votes descending as a tiebreaker,
+   * so `parties[0]` is the leading party and the row order is stable. Two normalisations are
+   * applied while accumulating: the legacy `'other'` key is folded into the canonical
+   * `'others'` (older results files used `'other'`; without folding both would appear as
+   * separate rows), and seats with no recorded winner contribute the synthetic `'others'`
+   * key rather than being skipped.
    *
-   * @param {Seat[]} seats - Seats to aggregate.
+   * `totalSeats` is the input length and does *not* reflect mode filtering — it represents
+   * the size of the chamber being summarised, not the number of seats that contributed to
+   * stats.
+   *
+   * @param {Seat[]} seats - Seats to aggregate. Each seat must carry the normalised shape
+   *   produced by {@link Seat} (i.e. `winner`, `votes`, `region`); raw pf-results-v4
+   *   objects must be converted via `Seat.fromRaw` first.
    * @param {{mode?: ('all'|'constituency'|'list')}} [options] - Aggregation options.
-   * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}}
+   * @param {('all'|'constituency'|'list')} [options.mode='all'] - Vote-totals tab to summarise for; see Mode behaviour above.
+   * @returns {{
+   *   parties: Array<{party: string, seats: number, votes: number}>,
+   *   totalVotes: number,
+   *   totalSeats: number
+   * }} Aggregated summary:
+   *   - `parties` — one row per party that won at least one seat or received any votes,
+   *     sorted by seats desc then votes desc. `party` is the canonical key (e.g. `'lab'`),
+   *     `seats` is the number of seats won under the active mode, and `votes` is the total
+   *     vote count under the active mode (zero when the party only contributed via the
+   *     skipped ballot type).
+   *   - `totalVotes` — sum of `votes` across all party rows; the denominator for vote-share
+   *     percentages in the totals panel.
+   *   - `totalSeats` — `seats.length` of the input array (chamber size), independent of
+   *     mode filtering.
    */
   static summarize(seats, { mode = 'all' } = {}) {
+    // partyStats accumulates per-party seat and vote counts in a single pass over `seats`.
+    // We use a Map (not a plain object) because party keys are arbitrary user-data strings
+    // and we want insertion-order iteration if needed for deterministic debugging.
     const partyStats = new Map();
+    // Tracks `(region, party)` pairs we've already credited with list-mode votes. Each
+    // region's list ballot is duplicated across every list seat in that region, so without
+    // this guard a region with N list seats for one party would count its votes N times.
+    // Only populated in list mode; an empty Set in other modes costs nothing.
     const listRegionPartyCountSeen = new Set();
-    let electorateSum = 0;
-    let turnoutWeighted = 0;
 
     seats.forEach((seat) => {
       const isList = Seat.isList(seat);
 
+      // Mode filtering: constituency mode hides the regional list ballot, list mode hides
+      // the constituency ballot. Skipped seats contribute neither seat counts nor votes.
+      // 'all' falls through and counts every seat (with the per-mode vote rules below).
       if (mode === 'constituency' && isList) return;
       if (mode === 'list' && !isList) return;
 
+      // Seat-count accumulation: every non-skipped seat adds 1 to its winner's tally.
+      // Fold the legacy 'other' key into 'others' (older results files used 'other'),
+      // and missing/falsy winners fall back to 'others' rather than being dropped — the
+      // synthetic key matches how the rest of the app treats unattributed seats.
       const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
       if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
       partyStats.get(winner).seats += 1;
 
+      // Vote accumulation gate. List seats are excluded from votes in 'all' mode because
+      // they're a separate ballot — combining them with constituency votes would
+      // double-count the electorate. In 'constituency' and 'list' modes the filter above
+      // has already restricted the seat set, so includeVotes is true for every survivor.
       const includeVotes = mode !== 'all' || !isList;
       if (includeVotes) {
         Object.entries(seat.votes || {}).forEach(([party, votes]) => {
+          // Same 'other' → 'others' fold as for winners, applied per voter party.
           const key = party === 'other' ? 'others' : party;
           if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
+          // List-mode dedupe: skip this party's votes if we've already counted them for
+          // this region. The seenKey uses a NUL byte separator so it can't collide with
+          // a real party key that contains the region name (or vice versa).
           if (mode === 'list') {
             const seenKey = `${normalizeRegionKey(seat.region)}\x00${key}`;
             if (listRegionPartyCountSeen.has(seenKey)) return;
@@ -585,22 +633,25 @@ export class Summary {
           }
           partyStats.get(key).votes += Number(votes || 0);
         });
-
-        if (seat.electorate > 0 && seat.turnout > 0) {
-          electorateSum += seat.electorate;
-          turnoutWeighted += seat.turnout * seat.electorate;
-        }
       }
     });
 
+    // Flatten the Map into an array of `{party, seats, votes}` rows and order them so the
+    // leading party is first. Seats descending is the primary sort (it's what callers care
+    // about); votes descending breaks ties between parties on the same seat count, e.g. a
+    // by-election year where two minor parties each won 1 seat.
     const parties = Array.from(partyStats.entries())
       .map(([party, stats]) => ({ party, ...stats }))
       .sort((a, b) => b.seats - a.seats || b.votes - a.votes);
 
+    // totalVotes is the denominator used by the vote-totals panel for vote-share %s, so
+    // it must be re-derived from the final party rows rather than tracked alongside the
+    // accumulators (the list-mode dedupe means a running sum would double-count).
     const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
-    const turnout = electorateSum > 0 ? turnoutWeighted / electorateSum : 0;
 
-    return { parties, totalVotes, turnout, totalSeats: seats.length };
+    // totalSeats is the *input* length, not the size of partyStats — it represents the
+    // chamber, not the number of seats that survived mode filtering.
+    return { parties, totalVotes, totalSeats: seats.length };
   }
 
   /**
@@ -675,8 +726,8 @@ export class ElectionData {
     this.seatsByKey = ElectionData.buildSeatIndex(this.currentSeats);
 
     /** Aggregated summary of currentSeats: `{data, text}`. Rebuild by reassigning to a new
-     * `Summary` instance whenever currentSeats changes (e.g. after predict-mode projection). */
-    this.summary = new Summary(this.currentSeats, electionName);
+     * `ElectionSummary` instance whenever currentSeats changes (e.g. after predict-mode projection). */
+    this.summary = new ElectionSummary(this.currentSeats, electionName);
   }
 
   /**

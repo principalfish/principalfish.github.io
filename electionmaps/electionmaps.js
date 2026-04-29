@@ -810,18 +810,6 @@ export function buildSeatIndex(seats) {
   return byKey;
 }
 
-/**
- * Returns the party key of the second-place finisher in a seat, or null if fewer than two parties have votes.
- * @param {object} seat - Seat object with a `votes` map.
- * @returns {string|null} Party key of the second-place finisher, or null if unavailable.
- */
-// TODO: migrate callers to Seat static methods in state.js
-function secondPlacePartyKey2(seat) {
-  const voteRows = sortedSeatVoteRows2(seat);
-  if (voteRows.length < 2) return null;
-  return voteRows[1].party;
-}
-
 // ── Election summary ─────────────────────────────────────────────────────────
 
 /**
@@ -1514,50 +1502,6 @@ function decodePredictPayload(encoded, slots) {
 }
 
 // ── Map / region utilities ────────────────────────────────────────────────────
-
-// ── Seat filter utilities ─────────────────────────────────────────────────────
-
-/**
- * Returns true when a seat passes all active primary filters.
- * `filterState` mirrors the state.mapFilters shape: `{ party, region, secondParty, majorityMin, majorityMax, gainsOnly }`.
- * `byElectionSeats` is a Set of seat names for by-election gain filtering, or null to use the comparison seat method.
- * @param {object} seat - Current seat object to test against the filters.
- * @param {object|null} comparisonSeat - Comparison seat for gains filtering; may be null if no comparison is available.
- * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean}} filterState - Active filter configuration.
- * @param {Set<string>|null} byElectionSeats - Set of seat names that are by-election gains, or null to use comparison-seat gain detection.
- * @returns {boolean} True if the seat passes all currently active filters.
- */
-// TODO: migrate to Seat.matchesPrimaryFilters in state.js
-function seatMatchesPrimaryFilters2(seat, comparisonSeat, filterState, byElectionSeats) {
-  if (filterState.party !== 'all') {
-    const winner = seat.winner === 'other' ? 'others' : seat.winner;
-    if (winner !== filterState.party) return false;
-  }
-
-  if (filterState.region !== 'all') {
-    const seatRegion = normalizeRegionKey(seat.region);
-    if (seatRegion !== filterState.region) return false;
-  }
-
-  const majority = seatMajorityStats2(seat).pct;
-  if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
-
-  if (filterState.secondParty !== 'all') {
-    const secondParty = secondPlacePartyKey2(seat);
-    if (secondParty !== filterState.secondParty) return false;
-  }
-
-  if (filterState.gainsOnly) {
-    if (byElectionSeats) {
-      if (!byElectionSeats.has(seat.seat)) return false;
-    } else {
-      const gainFrom = seatGainFromPartyKey2(seat, comparisonSeat);
-      if (!gainFrom) return false;
-    }
-  }
-
-  return true;
-}
 
 // ── Election file resolution ──────────────────────────────────────────────────
 
@@ -3354,45 +3298,48 @@ function renderChoroplethLegend(choroplethConfig) {
  * @param {{preserveZoom?: boolean}} [options={}] - Rendering options; set preserveZoom to true to keep the current d3 zoom transform.
  * @returns {void}
  */
+// TODO: eventually this should become a call to state.setupMap() and a set of
+// focused DOM handlers in dom.js — e.g. setVoteTotals(), setMap(), setSeatList() —
+// each responsible for one render concern rather than one monolithic function.
 function renderMapWithViewState(options = {}) {
-  state.setMapVisible();
+  state.applyMapFilters();
   state.buildChoroplethConfig();
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
-
-  _state.hiddenVoteTotalsParties = new Set(mapConfig?.hiddenVoteTotalsParties ?? []);
-  renderVoteTotalsTabs(mapConfig);
-  updateVoteTotalsTabsUI();
-  renderSeatViewTabs(mapConfig);
-  updateSeatViewTabsUI();
-  updatePostcodeSearchVisibility();
-
-  const hasMultipleVoteViews = mapConfig.voteTotalsViews.length > 1;
-  const showVotes = !hasMultipleVoteViews || state.voteTotals.mode !== 'all';
+  const mapId = String(state.currentElection.mapId ?? '');
+  const preserveTransform = options.preserveZoom && mapSvg ? d3.zoomTransform(mapSvg) : null;
+  const showVotes = mapConfig.voteTotalsViews.length <= 1 || state.voteTotals.mode !== 'all';
   // TODO: dedupe summarizeElection / summarizeElection2
   const filteredSummary = summarizeElection2(state.mapVisible.seats, { mode: state.voteTotals.mode });
   // TODO: dedupe summarizeElection / summarizeElection2
   const filteredComparisonSummary = _state.currentComparisonSeats.length
     ? summarizeElection2(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })
     : null;
-
-  window.__mapsCurrentSummary = filteredSummary;
-  window.__mapsComparisonSummary = filteredComparisonSummary;
-
-  toggleVoteTotalColumns(showVotes);
-  toggleVotePctColumns(showVotes);
-  renderVoteTotals(filteredSummary, filteredComparisonSummary, {
-    showVoteTotals: showVotes && state.voteTotalsColumnVisible('votes'),
-  });
-
-  const preserveTransform = options.preserveZoom && mapSvg ? d3.zoomTransform(mapSvg) : null;
-  const mapId = String(state.currentElection.mapId ?? '');
-
   // Pass regionSummary (list seats) for Holyrood elections that have list seats.
   const hasRegionTable = state.electionData.currentSeats.some((s) => isListSeat(s.seat));
   const regionSummary = hasRegionTable
     ? buildRegionSummary(state.electionData.currentSeats.filter((s) => isListSeat(s.seat)))
     : null;
+  // Seat list: for Holyrood elections show constituency seats only (list seats appear in region table).
+  const filteredSeats = hasRegionTable
+    ? state.mapVisible.seats.filter((s) => !isListSeat(s.seat))
+    : state.mapVisible.seats;
+
+  window.__mapsCurrentSummary = filteredSummary;
+  window.__mapsComparisonSummary = filteredComparisonSummary;
+
+  renderVoteTotalsTabs(mapConfig);
+  updateVoteTotalsTabsUI();
+  renderSeatViewTabs(mapConfig);
+  updateSeatViewTabsUI();
+  updatePostcodeSearchVisibility();
+
+  toggleVoteTotalColumns(showVotes);
+  toggleVotePctColumns(showVotes);
+  renderVoteTotals(filteredSummary, filteredComparisonSummary, {
+    showVoteTotals: showVotes && state.voteTotalsColumnVisible('votes'),
+    hiddenParties: new Set(mapConfig?.hiddenVoteTotalsParties ?? []),
+  });
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys: state.mapVisible.seatKeys,
@@ -3404,10 +3351,6 @@ function renderMapWithViewState(options = {}) {
 
   renderRegionTable(regionSummary);
 
-  // Seat list: for Holyrood elections show constituency seats only (list seats appear in region table).
-  const filteredSeats = hasRegionTable
-    ? state.mapVisible.seats.filter((s) => !isListSeat(s.seat))
-    : state.mapVisible.seats;
   renderSeatList(filteredSeats, _state.currentComparisonSeats, {});
 
   applySeatSearchSuggestions(buildSeatSearchIndex(filteredSeats));
@@ -3416,9 +3359,8 @@ function renderMapWithViewState(options = {}) {
   if (seatPreview) {
     let previewText;
     if (hasRegionTable) {
-      const visibleConst = state.mapVisible.seats.filter((s) => !isListSeat(s.seat));
       const totalConst = state.electionData.currentSeats.filter((s) => !isListSeat(s.seat));
-      previewText = `Showing ${formatInt(visibleConst.length)} of ${formatInt(totalConst.length)} constituency seats.`;
+      previewText = `Showing ${formatInt(filteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
       previewText = `Showing ${formatInt(state.mapVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
     }
@@ -3586,7 +3528,7 @@ function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
     };
   });
 
-  const sortedRows = sortPartyRows(rows).filter((r) => !_state.hiddenVoteTotalsParties.has(r.party));
+  const sortedRows = sortPartyRows(rows).filter((r) => !options.hiddenParties?.has(r.party));
   const visibleRows = _state.voteTotalsExpanded ? sortedRows : sortedRows.slice(0, 7);
 
   if (voteTotalsToggle) {

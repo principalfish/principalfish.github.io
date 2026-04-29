@@ -462,36 +462,38 @@ export class Seat {
   }
 
   /**
-   * Returns true when this seat passes all active primary filters.
-   * @param {object|null} comparisonSeat - Comparison seat for gains filtering; may be null.
+   * Returns true when seat passes all active primary filters.
+   * Static so it accepts any Seat instance without binding to a particular `this`.
+   * @param {Seat} seat - The seat to test.
+   * @param {Seat|null} comparisonSeat - Comparison seat for gains filtering; may be null.
    * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean}} filterState - Active filter configuration.
    * @param {Set<string>|null} byElectionSeats - Set of seat names for by-election gain filtering, or null.
    * @returns {boolean} True if the seat passes all currently active filters.
    */
-  matchesPrimaryFilters(comparisonSeat, filterState, byElectionSeats) {
+  static matchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
     if (filterState.party !== 'all') {
-      const winner = this.winner === 'other' ? 'others' : this.winner;
+      const winner = seat.winner === 'other' ? 'others' : seat.winner;
       if (winner !== filterState.party) return false;
     }
 
     if (filterState.region !== 'all') {
-      const seatRegion = normalizeRegionKey(this.region);
+      const seatRegion = normalizeRegionKey(seat.region);
       if (seatRegion !== filterState.region) return false;
     }
 
-    const majority = this.majorityStats().pct;
+    const majority = seat.majorityStats().pct;
     if (majority < filterState.majorityMin || majority > filterState.majorityMax) return false;
 
     if (filterState.secondParty !== 'all') {
-      const secondParty = this.#secondPlaceParty();
+      const secondParty = seat.#secondPlaceParty();
       if (secondParty !== filterState.secondParty) return false;
     }
 
     if (filterState.gainsOnly) {
       if (byElectionSeats) {
-        if (!byElectionSeats.has(this.seat)) return false;
+        if (!byElectionSeats.has(seat.seat)) return false;
       } else {
-        const gainFrom = this.gainFromParty(comparisonSeat?.winner);
+        const gainFrom = seat.gainFromParty(comparisonSeat?.winner);
         if (!gainFrom) return false;
       }
     }
@@ -902,14 +904,14 @@ class AppState {
    * predict baseline index, which then becomes the source of truth for gains-filtering.
    * @returns {void}
    */
-  setMapVisible() {
+  applyMapFilters() {
     // TODO remove during refactor
     const comparisonSeatsByKey = _state.comparisonSeatsByKey;
     const seatKeys = new Set();
     this.electionData.currentSeats.forEach((seat) => {
       const seatKey = seatLookupKey(seat.seat);
       const comparisonSeat = comparisonSeatsByKey.get(seatKey) || null;
-      if (seat.matchesPrimaryFilters(comparisonSeat, this.mapFilters, this.currentElection.byElectionSeats)) {
+      if (Seat.matchesPrimaryFilters(seat, comparisonSeat, this.mapFilters, this.currentElection.byElectionSeats)) {
         seatKeys.add(seatKey);
       }
     });

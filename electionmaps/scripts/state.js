@@ -292,6 +292,7 @@ export class Seat {
     this.region = String(input?.region || 'unknown');
     this.winner = manifest.resolvePartyRef(input?.winner ?? 'others');
     this.votes = Seat.#normalizeVotes(input?.votes);
+    if (input?.turnout != null) this.turnout = Number(input.turnout) || 0;
   }
 
   /**

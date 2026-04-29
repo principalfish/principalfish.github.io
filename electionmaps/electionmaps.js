@@ -1130,16 +1130,14 @@ function resolvedSwingValue(normalizedSeatRegion, partyKey, swingsByParty) {
  * Projects a single seat result by applying regional swings to the baseline vote shares.
  * Modelled party shares are adjusted by their region's swing; remaining share is redistributed
  * proportionally to non-modelled parties (or assigned to 'others' if none exist).
- * Returns a new seat object with updated votes, turnout, and winner.
- * @param {object} baseSeat - Baseline seat object with `region`, `votes`, and `turnout`.
+ * Returns a new Seat instance with updated votes, turnout, and winner.
+ * @param {Seat} baseSeat - Baseline Seat instance with `region`, `votes`, and optional `turnout`.
  * @param {Map<string, Map<string, number>>} swingsByParty - Map from party key to regional swing values.
- * @returns {object} New seat object with projected `votes`, `turnout`, and `winner`.
+ * @returns {Seat} New Seat instance with projected `votes`, `turnout`, and `winner`.
  */
 function projectedSeatForPredictMode(baseSeat, swingsByParty) {
-  // TODO: spread-clone produces a plain object, not a Seat instance — convert when Seat
-  // gains methods or behaviour that downstream code depends on.
   const totalVotes = totalVotesForSeat2(baseSeat);
-  if (totalVotes <= 0) return { ...baseSeat };
+  if (totalVotes <= 0) return new Seat(baseSeat);
 
   const regionKey = normalizeRegionKey(baseSeat.region);
   const baseVotes = baseSeat.votes || {};
@@ -1195,7 +1193,7 @@ function projectedSeatForPredictMode(baseSeat, swingsByParty) {
   const winner = Object.entries(projectedVotes)
     .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0] || baseSeat.winner || 'others';
 
-  return { ...baseSeat, votes: projectedVotes, turnout: totalVotes, winner };
+  return new Seat({ ...baseSeat, votes: projectedVotes, turnout: totalVotes, winner });
 }
 
 /**
@@ -1306,7 +1304,7 @@ function projectHolyroodSeats(baseSeats, constSwingsByParty, listSwingsByParty =
     const listWinners = dhondt(voteSumByParty, regionListSeats.length, constWins);
 
     projectedRegionList.forEach((proj, idx) => {
-      projectedList.push({ ...proj, winner: listWinners[idx] || null });
+      projectedList.push(new Seat({ ...proj, winner: listWinners[idx] || null }));
     });
   }
 
@@ -3030,12 +3028,7 @@ async function activatePredictMode() {
   if (!_state.predictBaseSeats.length || !_state.predictBaseMapData) {
     const loaded2024 = await ensurePredictBaselineData();
     if (!loaded2024) {
-      // TODO: spread-clone produces plain objects, not Seat instances — convert to
-      // `new Seat(seat)` when Seat gains methods or behaviour that downstream code depends on.
-      _state.predictBaseSeats = state.electionData.currentSeats.map((seat) => ({
-        ...seat,
-        votes: { ...(seat.votes || {}) },
-      }));
+      _state.predictBaseSeats = state.electionData.currentSeats.map((seat) => new Seat(seat));
       // TODO: migrate to ElectionData.buildSeatIndex(_state.predictBaseSeats)
       _state.predictBaseSeatsByKey = buildSeatIndex(_state.predictBaseSeats);
       _state.predictBaseMapData = state.mapData;
@@ -3151,10 +3144,7 @@ async function applyCurrentPredictionToInputs() {
   // Load the prediction seats directly rather than re-projecting from the derived
   // regional shares, so the map reflects the exact model output rather than an
   // approximation produced by the simplified UNS projection.
-  const projectedSeats = _state.predictCurrentSimulationSeats.map((s) => ({
-    ...s,
-    votes: { ...(s.votes || {}) },
-  }));
+  const projectedSeats = _state.predictCurrentSimulationSeats.map((s) => new Seat(s));
   // TODO: dedupe summarizeElection / summarizeElection2
   const projectedSummary = summarizeElection2(projectedSeats, { mode: state.voteTotals.mode });
   // TODO: dedupe summarizeElection / summarizeElection2

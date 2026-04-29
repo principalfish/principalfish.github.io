@@ -148,12 +148,6 @@
           "label": "Seats"
         }
       ],
-      "voteTotalsViews": [
-        {
-          "id": "all",
-          "label": "All"
-        }
-      ],
       "regions": [
         {
           "id": 6,
@@ -210,12 +204,6 @@
         {
           "id": "seats",
           "label": "Seats"
-        }
-      ],
-      "voteTotalsViews": [
-        {
-          "id": "all",
-          "label": "All"
         }
       ],
       "regions": [

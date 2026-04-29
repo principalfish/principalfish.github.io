@@ -80,10 +80,10 @@ class Manifest {
       // Guarantee a non-empty default tab so callers can read mapMode.voteTotalsViews[0].id and
       // mapMode.seatViews[0].id without per-call-site fallbacks. The tab nav hides itself when
       // length <= 1, so a single synthetic default is invisible to the user.
-      if (!mapMode.voteTotalsViews?.length) {
-        mapMode.voteTotalsViews = [{ id: 'all', label: 'Overall' }];
+      if (!Array.isArray(mapMode.voteTotalsViews) || mapMode.voteTotalsViews.length === 0) {
+        mapMode.voteTotalsViews = [{ id: 'all', label: 'All' }];
       }
-      if (!mapMode.seatViews?.length) {
+      if (!Array.isArray(mapMode.seatViews) || mapMode.seatViews.length === 0) {
         mapMode.seatViews = [{ id: 'seats', label: 'Seats' }];
       }
     });
@@ -396,6 +396,17 @@ export class Seat {
       return Seat.voteSharePct(seat, choroplethParty) - Seat.voteSharePct(comparisonSeat, choroplethParty);
     }
     return Seat.voteSharePct(seat, choroplethParty);
+  }
+
+  /**
+   * Returns true if seat is a regional list seat (e.g. "Glasgow List 1"). List seats have no
+   * map geometry and appear only in the seat list panel. Static so it accepts any seat-shaped
+   * object, not just Seat instances.
+   * @param {{seat?: string}} seat - Seat-shaped object with a `seat` name field.
+   * @returns {boolean}
+   */
+  static isList(seat) {
+    return /\bList\s+\d+$/i.test(seat?.seat || '');
   }
 
   // ── Seat data utilities ────────────────────────────────────────────────────
@@ -806,7 +817,7 @@ class AppState {
       : null;
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
-    if (this.currentElection.model || this.isReferendumType) {
+    if (this.currentElection.model || this.isReferendumType || view === 'predict') {
       this.voteTotals.columns.votes = false;
     }
 

@@ -279,9 +279,7 @@ function wireInit() {
   wireWindowResize();
   wireVoteTotalsSorting(() => {
     if (!window.__mapsCurrentSummary) return;
-    renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null, {
-      showVoteTotals: state.voteTotalsColumnVisible('votes'),
-    });
+    renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null);
     syncRightPanelHeightToMap();
   });
 }
@@ -367,7 +365,7 @@ function wireMapViewControls() {
   /** Reads all filter/choropleth input values into state and re-renders the map. */
   const applyFromInputs = () => {
     syncMapControlStateFromInputs();
-    renderMapWithViewState({ preserveZoom: true });
+    renderMapWithViewState(true);
   };
 
   [
@@ -387,21 +385,21 @@ function wireMapViewControls() {
     filterGainsButton.addEventListener('click', () => {
       state.mapFilters.gainsOnly = !state.mapFilters.gainsOnly;
       syncMapControlInputsFromState();
-      renderMapWithViewState({ preserveZoom: true });
+      renderMapWithViewState(true);
     });
   }
 
   if (filtersResetButton) {
     filtersResetButton.addEventListener('click', () => {
       resetPrimaryFilters();
-      renderMapWithViewState({ preserveZoom: true });
+      renderMapWithViewState(true);
     });
   }
 
   if (choroplethsResetButton) {
     choroplethsResetButton.addEventListener('click', () => {
       resetChoropleths();
-      renderMapWithViewState({ preserveZoom: true });
+      renderMapWithViewState(true);
     });
   }
 
@@ -631,9 +629,7 @@ function wireVoteTotalsToggle() {
   voteTotalsToggle.addEventListener('click', () => {
     _state.voteTotalsExpanded = !_state.voteTotalsExpanded;
     if (!window.__mapsCurrentSummary) return;
-    renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null, {
-      showVoteTotals: state.voteTotalsColumnVisible('votes'),
-    });
+    renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null);
     syncPredictModeRightColumnLayout();
   });
 }
@@ -706,18 +702,6 @@ const PREDICT_ENGLAND_KEY = 'england';
 const PREDICT_SCOTLAND_KEY = 'scotland';
 const PREDICT_WALES_KEY = 'wales';
 const PREDICT_NI_KEY = 'northernireland';
-
-// ── List seat utilities ──────────────────────────────────────────────────────
-
-/**
- * Returns true if the seat name is a regional list seat (e.g. "Glasgow List 1").
- * List seats have no map geometry and appear only in the seat list panel.
- * @param {string} seatName - Seat name to test.
- * @returns {boolean}
- */
-function isListSeat(seatName) {
-  return /\bList\s+\d+$/i.test(seatName);
-}
 
 // ── Formatting ───────────────────────────────────────────────────────────────
 
@@ -830,7 +814,7 @@ export function summarizeElection2(seats, { mode = 'all' } = {}) {
   let turnoutWeighted = 0;
 
   seats.forEach((seat) => {
-    const isList = isListSeat(seat.seat);
+    const isList = Seat.isList(seat);
 
     // Mode filtering: skip seats that don't belong to the requested view.
     if (mode === 'constituency' && isList) return;
@@ -1283,8 +1267,8 @@ function buildHolyroodNationalBaselines(baselineShareByRegionParty, partyKeys, r
 function projectHolyroodSeats(baseSeats, constSwingsByParty, listSwingsByParty = null) {
   const effectiveListSwings = (listSwingsByParty && listSwingsByParty.size > 0) ? listSwingsByParty : constSwingsByParty;
 
-  const constBaseSeats = baseSeats.filter((s) => !isListSeat(s.seat));
-  const listBaseSeats = baseSeats.filter((s) => isListSeat(s.seat));
+  const constBaseSeats = baseSeats.filter((s) => !Seat.isList(s));
+  const listBaseSeats = baseSeats.filter((s) => Seat.isList(s));
 
   // Pass 1: project constituency seats with FPTP swing
   const projectedConst = constBaseSeats.map((s) => projectedSeatForPredictMode(s, constSwingsByParty));
@@ -1399,7 +1383,7 @@ function buildRegionSummary(seats) {
     for (const [party, votes] of Object.entries(seat.votes || {})) {
       r.votesByParty[party] = (r.votesByParty[party] || 0) + votes;
     }
-    if (isListSeat(seat.seat)) r.listSeats.push(seat);
+    if (Seat.isList(seat)) r.listSeats.push(seat);
   }
   for (const [, r] of regions) {
     const sorted = Object.entries(r.seatsByParty).sort((a, b) => {
@@ -1995,16 +1979,15 @@ function renderVoteTotalsTabs(mapConfig) {
       updateVoteTotalsTabsUI();
       const { seats, comparisonSeats } = state.mapVisible;
       const tabAllowsVotes = state.voteTotals.mode !== 'all';
-      const showVotes = tabAllowsVotes && state.voteTotalsColumnVisible('votes');
       // TODO: dedupe summarizeElection / summarizeElection2
       const summary = summarizeElection2(seats, { mode: state.voteTotals.mode });
       // TODO: dedupe summarizeElection / summarizeElection2
       const compSummary = comparisonSeats.length ? summarizeElection2(comparisonSeats, { mode: state.voteTotals.mode }) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
-      toggleVoteTotalColumns(showVotes);
+      toggleVoteTotalColumns(tabAllowsVotes);
       toggleVotePctColumns(tabAllowsVotes);
-      renderVoteTotals(summary, compSummary, { showVoteTotals: showVotes });
+      renderVoteTotals(summary, compSummary, { showVoteTotals: tabAllowsVotes });
     });
     voteTotalsTabNav.appendChild(btn);
   });
@@ -2031,7 +2014,7 @@ function renderSeatViewTabs(mapConfig) {
     btn.addEventListener('click', () => {
       state.seatView.mode = view.id;
       updateSeatViewTabsUI();
-      renderMapWithViewState({ preserveZoom: true });
+      renderMapWithViewState(true);
     });
     seatViewTabNav.appendChild(btn);
   });
@@ -2950,10 +2933,10 @@ async function ensurePredictCurrentSimulationData() {
   _state.predictCurrentSimulationSeats = seats;
 
   if (state.currentParliament === 'holyrood') {
-    const constSeats = seats.filter((s) => !isListSeat(s.seat));
+    const constSeats = seats.filter((s) => !Seat.isList(s));
     const seenListRegions = new Set();
     const deduplicatedListSeats = seats.filter((s) => {
-      if (!isListSeat(s.seat)) return false;
+      if (!Seat.isList(s)) return false;
       if (seenListRegions.has(s.region)) return false;
       seenListRegions.add(s.region);
       return true;
@@ -2993,14 +2976,13 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   state.initMapData(_state.predictBaseMapData);
   state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
 
-  state.voteTotals.columns.votes = false;
   window.__mapsCurrentSummary = projectedSummary;
   window.__mapsComparisonSummary = baselineSummary;
 
   const predictLabel = `Predict ${predictElectionYear()}`;
   // TODO: migrate to ElectionData#generateSubtitleSummaryText once predict mode writes its projected summary back onto state.electionData (will need to update electionData.electionName to predictLabel before calling)
   updateTopSummary({ name: predictLabel, parliament: state.currentParliament }, projectedSummary);
-  renderMapWithViewState({ preserveZoom: true });
+  renderMapWithViewState(true);
   syncRightPanelHeightToMap();
 
   if (_state.currentOpenSeatName) {
@@ -3076,10 +3058,10 @@ async function activatePredictMode() {
     _state.predictHolyroodListSwingsByParty = new Map();
     const regionKeys = Array.from(_state.predictBaseRegionLabelsByKey.keys());
     // Build separate constituency and list baseline share maps
-    const constSeats = _state.predictBaseSeats.filter((s) => !isListSeat(s.seat));
+    const constSeats = _state.predictBaseSeats.filter((s) => !Seat.isList(s));
     const seenListRegions = new Set();
     const deduplicatedListSeats = _state.predictBaseSeats.filter((s) => {
-      if (!isListSeat(s.seat)) return false;
+      if (!Seat.isList(s)) return false;
       if (seenListRegions.has(s.region)) return false;
       seenListRegions.add(s.region);
       return true;
@@ -3301,28 +3283,27 @@ function renderChoroplethLegend(choroplethConfig) {
 // TODO: eventually this should become a call to state.setupMap() and a set of
 // focused DOM handlers in dom.js — e.g. setVoteTotals(), setMap(), setSeatList() —
 // each responsible for one render concern rather than one monolithic function.
-function renderMapWithViewState(options = {}) {
+function renderMapWithViewState(preserveZoom = false) {
   state.applyMapFilters();
   state.buildChoroplethConfig();
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
-  const mapId = String(state.currentElection.mapId ?? '');
-  const preserveTransform = options.preserveZoom && mapSvg ? d3.zoomTransform(mapSvg) : null;
-  const showVotes = mapConfig.voteTotalsViews.length <= 1 || state.voteTotals.mode !== 'all';
+  const hasListSeats = state.electionData.currentSeats.some((s) => Seat.isList(s));
+  // Suppress vote columns on the 'all' tab when list seats exist: summarizeElection2 counts only
+  // constituency votes in 'all' mode while seat counts include both — the mismatch is misleading.
+  const showVotes = !hasListSeats || state.voteTotals.mode !== 'all';
   // TODO: dedupe summarizeElection / summarizeElection2
   const filteredSummary = summarizeElection2(state.mapVisible.seats, { mode: state.voteTotals.mode });
   // TODO: dedupe summarizeElection / summarizeElection2
   const filteredComparisonSummary = _state.currentComparisonSeats.length
     ? summarizeElection2(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })
     : null;
-  // Pass regionSummary (list seats) for Holyrood elections that have list seats.
-  const hasRegionTable = state.electionData.currentSeats.some((s) => isListSeat(s.seat));
-  const regionSummary = hasRegionTable
-    ? buildRegionSummary(state.electionData.currentSeats.filter((s) => isListSeat(s.seat)))
+  const regionSummary = hasListSeats
+    ? buildRegionSummary(state.electionData.currentSeats.filter((s) => Seat.isList(s)))
     : null;
   // Seat list: for Holyrood elections show constituency seats only (list seats appear in region table).
-  const filteredSeats = hasRegionTable
-    ? state.mapVisible.seats.filter((s) => !isListSeat(s.seat))
+  const filteredSeats = hasListSeats
+    ? state.mapVisible.seats.filter((s) => !Seat.isList(s))
     : state.mapVisible.seats;
 
   window.__mapsCurrentSummary = filteredSummary;
@@ -3337,16 +3318,16 @@ function renderMapWithViewState(options = {}) {
   toggleVoteTotalColumns(showVotes);
   toggleVotePctColumns(showVotes);
   renderVoteTotals(filteredSummary, filteredComparisonSummary, {
-    showVoteTotals: showVotes && state.voteTotalsColumnVisible('votes'),
+    showVoteTotals: showVotes,
     hiddenParties: new Set(mapConfig?.hiddenVoteTotalsParties ?? []),
   });
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys: state.mapVisible.seatKeys,
     choroplethConfig: state.choroplethConfig,
-    ...(preserveTransform ? { preserveTransform } : {}),
+    preserveZoom,
     regionSummary,
-    mapId,
+    mapId: String(state.currentElection.mapId ?? ''),
   });
 
   renderRegionTable(regionSummary);
@@ -3358,8 +3339,8 @@ function renderMapWithViewState(options = {}) {
 
   if (seatPreview) {
     let previewText;
-    if (hasRegionTable) {
-      const totalConst = state.electionData.currentSeats.filter((s) => !isListSeat(s.seat));
+    if (hasListSeats) {
+      const totalConst = state.electionData.currentSeats.filter((s) => !Seat.isList(s));
       previewText = `Showing ${formatInt(filteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
       previewText = `Showing ${formatInt(state.mapVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
@@ -3481,13 +3462,16 @@ function toggleComparisonColumns(showComparison) {
 }
 
 /**
- * Toggles the 'hide-vote-total-col' class on the vote totals table to show or hide raw vote count columns.
+ * Toggles the 'hide-vote-total-col' class on the vote totals table to show or hide raw vote count
+ * columns. Always hides when state.voteTotals.columns.votes is false (predict mode, model
+ * elections, referendums) — caller's showVoteTotals can only restrict further, not override.
  * @param {boolean} showVoteTotals - True to show the raw vote count column, false to hide it.
  * @returns {void}
  */
 function toggleVoteTotalColumns(showVoteTotals) {
   if (!voteTotalsTable) return;
-  voteTotalsTable.classList.toggle('hide-vote-total-col', !showVoteTotals);
+  const show = showVoteTotals && state.voteTotalsColumnVisible('votes');
+  voteTotalsTable.classList.toggle('hide-vote-total-col', !show);
 }
 
 /**
@@ -4128,10 +4112,10 @@ function getLegacySeatZoomTransform(path, featureDatum, width, height) {
  * Renders the full TopoJSON map into mapSvg using D3.
  * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom and hover handlers,
  * draws region boundary overlays, and sets up _state.mapInteractionController for external zoom/reset/highlight calls.
- * Accepts { visibleSeatKeys, choroplethConfig, preserveTransform } in options.
+ * Accepts { visibleSeatKeys, choroplethConfig, preserveZoom } in options.
  * @param {object} mapData - TopoJSON topology object with a single named objects entry.
  * @param {Array<object>} seats - Current seat objects used to determine winner colours.
- * @param {{visibleSeatKeys?: Set<string>, choroplethConfig?: object, preserveTransform?: object}} [options={}] - Rendering options including filter visibility, choropleth config, and optional preserved zoom transform.
+ * @param {{visibleSeatKeys?: Set<string>, choroplethConfig?: object, preserveZoom?: boolean}} [options={}] - Rendering options including filter visibility, choropleth config, and whether to preserve the current zoom transform.
  * @returns {void}
  */
 function renderTopoMap(mapData, seats, options = {}) {
@@ -4352,7 +4336,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     }
   });
 
-  svg.call(zoomBehavior.transform, options.preserveTransform || initialTransform);
+  svg.call(zoomBehavior.transform, options.preserveZoom ? d3.zoomTransform(mapSvg) : initialTransform);
 }
 
 /**

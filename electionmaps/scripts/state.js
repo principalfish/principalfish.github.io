@@ -2,7 +2,7 @@
 // All modules import these objects and mutate their properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import { normalizeRegionKey, titleCaseFromRegionKey, formatInt, seatLookupKey } from './utils.js';
+import { normalizeRegionKey, formatInt, seatLookupKey, getRegionLabel } from './utils.js';
 import { fetchJson } from './files.js';
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────
@@ -112,6 +112,16 @@ class Manifest {
    */
   electionsForParliament(parliament) {
     return this.elections.filter((e) => e.parliament === parliament);
+  }
+
+  /**
+   * Returns the per-parliament feature config (predict anchor/baseline election ids etc.),
+   * or an empty object when no entry exists for the given parliament.
+   * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
+   * @returns {object}
+   */
+  parliamentConfig(parliament) {
+    return this.parliamentFeatures[parliament] ?? {};
   }
 
   /**
@@ -769,15 +779,6 @@ class AppState {
   }
 
   /**
-   * Returns whether the named column should be visible in the vote totals panel.
-   * @param {string} column - Column key in this.voteTotals.columns (e.g. 'votes').
-   * @returns {boolean}
-   */
-  voteTotalsColumnVisible(column) {
-    return !!this.voteTotals.columns[column];
-  }
-
-  /**
    * Stores the freshly fetched topology as state.mapData.
    * @param {object} topology - Topology JSON for the active election.
    * @returns {void}
@@ -786,7 +787,7 @@ class AppState {
     this.mapData = topology;
   }
 
-  /** 
+  /**
    * Builds an ElectionData instance for the active election and stores it as state.electionData.
    * @param {object} resultsData - Raw results JSON for the active election.
    * @returns {void}
@@ -814,6 +815,45 @@ class AppState {
   }
 
   /**
+   * Returns a query string URL for the given view in the current parliament.
+   * @param {'election'|'predict'|'polltracker'} view - Target view.
+   * @param {string} [electionId] - Election id; only used when view is 'election'.
+   * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
+   */
+  viewUrl(view, electionId) {
+    const electionPart = view === 'election' && electionId
+      ? `&election=${encodeURIComponent(electionId)}`
+      : '';
+    return `?view=${view}${electionPart}&parliament=${this.currentParliament}`;
+  }
+
+  /**
+   * Returns the predict anchor election id for the current parliament, or undefined if not set.
+   * @returns {string|undefined}
+   */
+  getPredictAnchorElectionId() {
+    return manifest.parliamentConfig(this.currentParliament).predictAnchorElectionId;
+  }
+
+  /**
+   * Returns the predict baseline election id for the current parliament, or undefined if not set.
+   * @returns {string|undefined}
+   */
+  getPredictBaselineElectionId() {
+    return manifest.parliamentConfig(this.currentParliament).predictBaselineElectionId;
+  }
+
+  /**
+   * Returns true when the election countdown should be visible.
+   * The countdown shows only for the Holyrood UNS prediction when poll tracker mode is not active.
+   * @returns {boolean}
+   */
+  shouldShowCountdown() {
+    // TODO: generalise to support countdown for multiple concurrent elections
+    return this.currentElection.type === 'holyrood_uns';
+  }
+
+  /**
    * Recomputes mapVisible.{seatKeys, seats, comparisonSeats} by applying the active mapFilters
    * to electionData.currentSeats. Reads _state.comparisonSeatsByKey rather than
    * comparisonElectionData.seatsByKey because predict mode reassigns the _state mirror to the
@@ -821,7 +861,7 @@ class AppState {
    * @returns {void}
    */
   setMapVisible() {
-    // TODO remove during refactor 
+    // TODO remove during refactor
     const comparisonSeatsByKey = _state.comparisonSeatsByKey;
     const byElectionSeats = this.currentElection.byElectionSeats;
     const seatKeys = new Set();
@@ -837,19 +877,6 @@ class AppState {
     this.mapVisible.comparisonSeats = Array.from(seatKeys)
       .map((seatKey) => comparisonSeatsByKey.get(seatKey))
       .filter(Boolean);
-  }
-
-  /**
-   * Returns the display label for a region key, using the current election's region lookup
-   * with a title-cased fallback for unknown keys.
-   * @param {string} regionKey - Raw or normalised region key.
-   * @returns {string}
-   */
-  getRegionLabel(regionKey) {
-    const normalized = normalizeRegionKey(regionKey);
-    if (!normalized) return 'Unknown';
-    const label = this.currentRegionLabelsByKey.get(normalized) || titleCaseFromRegionKey(regionKey);
-    return label.replace(/ and /gi, ' & ');
   }
 
   /**
@@ -915,7 +942,7 @@ class AppState {
     this.electionData?.currentSeats?.forEach((seat) => {
       const key = normalizeRegionKey(seat.region);
       if (!key || byKey.has(key)) return;
-      byKey.set(key, this.getRegionLabel(seat.region));
+      byKey.set(key, getRegionLabel(seat.region, this.currentRegionLabelsByKey));
     });
 
     const rows = Array.from(byKey.entries())
@@ -925,47 +952,13 @@ class AppState {
     return [{ value: 'all', label: 'all regions...' }, ...rows];
   }
 
-  #parlConfig() {
-    return manifest.parliamentFeatures[this.currentParliament] ?? {};
-  }
-
   /**
-   * Returns the predict anchor election id for the current parliament, or undefined if not set.
-   * @returns {string|undefined}
-   */
-  getPredictAnchorElectionId() {
-    return this.#parlConfig().predictAnchorElectionId;
-  }
-
-  /**
-   * Returns the predict baseline election id for the current parliament, or undefined if not set.
-   * @returns {string|undefined}
-   */
-  getPredictBaselineElectionId() {
-    return this.#parlConfig().predictBaselineElectionId;
-  }
-
-  /**
-   * Returns true when the election countdown should be visible.
-   * The countdown shows only for the Holyrood UNS prediction when poll tracker mode is not active.
+   * Returns whether the named column should be visible in the vote totals panel.
+   * @param {string} column - Column key in this.voteTotals.columns (e.g. 'votes').
    * @returns {boolean}
    */
-  shouldShowCountdown() {
-    // TODO: generalise to support countdown for multiple concurrent elections
-    return this.currentElection.type === 'holyrood_uns';
-  }
-
-  /**
-   * Returns a query string URL for the given view in the current parliament.
-   * @param {'election'|'predict'|'polltracker'} view - Target view.
-   * @param {string} [electionId] - Election id; only used when view is 'election'.
-   * @returns {string} Query string URL (e.g. '?view=election&election=2024&parliament=westminster').
-   */
-  viewUrl(view, electionId) {
-    const electionPart = view === 'election' && electionId
-      ? `&election=${encodeURIComponent(electionId)}`
-      : '';
-    return `?view=${view}${electionPart}&parliament=${this.currentParliament}`;
+  voteTotalsColumnVisible(column) {
+    return !!this.voteTotals.columns[column];
   }
 }
 

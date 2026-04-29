@@ -23,6 +23,7 @@ import {
   formatInt,
   formatPct,
   seatLookupKey,
+  getRegionLabel,
 } from './scripts/utils.js';
 import {
   setElectionPreDataFetch,
@@ -3635,7 +3636,7 @@ function renderSeatPopup(seatName) {
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
     ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${manifest.labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
-    <span class="maps-popup-meta-item">${state.getRegionLabel(seat.region)}</span>
+    <span class="maps-popup-meta-item">${getRegionLabel(seat.region, state.currentRegionLabelsByKey)}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showRawMajority ? ` = ${formatInt(majority.raw)}` : ''}</span>
     ${showTurnout ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(turnout)}</span>` : ''}
   `;
@@ -3793,7 +3794,7 @@ function renderRegionPopup(regionKey, regionSummary) {
   if (!data) return;
 
   _state.currentOpenSeatName = null;
-  seatPopupTitle.textContent = `${state.getRegionLabel(regionKey)} List Vote`;
+  seatPopupTitle.textContent = `${getRegionLabel(regionKey, state.currentRegionLabelsByKey)} List Vote`;
 
   const totalSeats = Object.values(data.seatsByParty).reduce((a, b) => a + b, 0);
   seatPopupMeta.innerHTML = `<span class="maps-popup-meta-item">Total seats: ${totalSeats}</span>`;
@@ -3855,7 +3856,7 @@ function renderRegionTable(regionSummary) {
 
     const tdName = document.createElement('td');
     tdName.className = 'maps-region-table-name';
-    tdName.textContent = state.getRegionLabel(regionKey);
+    tdName.textContent = getRegionLabel(regionKey, state.currentRegionLabelsByKey);
     tr.appendChild(tdName);
 
     const tdSeats = document.createElement('td');

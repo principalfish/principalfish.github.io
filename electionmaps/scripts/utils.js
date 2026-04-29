@@ -66,3 +66,17 @@ export function titleCaseFromRegionKey(regionKey) {
   }
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/**
+ * Resolves a region key to its display label using the provided lookup map, falling back
+ * to a title-cased form of the raw key. Replaces ' and ' with ' & ' for compactness.
+ * @param {string} regionKey - Raw or normalised region key.
+ * @param {Map<string, string>} labelsByKey - Lookup from normalised key to display label.
+ * @returns {string}
+ */
+export function getRegionLabel(regionKey, labelsByKey) {
+  const normalized = normalizeRegionKey(regionKey);
+  if (!normalized) return 'Unknown';
+  const label = labelsByKey?.get(normalized) || titleCaseFromRegionKey(regionKey);
+  return label.replace(/ and /gi, ' & ');
+}

@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, getRegionLabel } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -133,5 +133,39 @@ describe('titleCaseFromRegionKey', () => {
   it('returns Unknown for null/undefined', () => {
     expect(titleCaseFromRegionKey(null)).toBe('Unknown');
     expect(titleCaseFromRegionKey(undefined)).toBe('Unknown');
+  });
+});
+
+describe('getRegionLabel', () => {
+  const labels = new Map([
+    ['northeastengland', 'North East England'],
+    ['yorkshirethehumber', 'Yorkshire and The Humber'],
+    ['scotland', 'Scotland'],
+  ]);
+
+  it('returns the label from the lookup map when the normalised key matches', () => {
+    expect(getRegionLabel('North East England', labels)).toBe('North East England');
+  });
+
+  it('replaces " and " with " & "', () => {
+    expect(getRegionLabel('Yorkshire & The Humber', labels)).toBe('Yorkshire & The Humber');
+  });
+
+  it('falls back to a title-cased form when the key is not in the lookup', () => {
+    expect(getRegionLabel('northWest', labels)).toBe('North West');
+  });
+
+  it('returns Unknown for empty input', () => {
+    expect(getRegionLabel('', labels)).toBe('Unknown');
+  });
+
+  it('returns Unknown for null/undefined input', () => {
+    expect(getRegionLabel(null, labels)).toBe('Unknown');
+    expect(getRegionLabel(undefined, labels)).toBe('Unknown');
+  });
+
+  it('falls back to a title-cased form when the lookup map is missing', () => {
+    expect(getRegionLabel('scotland', undefined)).toBe('Scotland');
+    expect(getRegionLabel('scotland', null)).toBe('Scotland');
   });
 });

@@ -1464,6 +1464,19 @@ def main() -> None:
         if any(e.get("id") == holyrood_prediction_id for e in manifest_entries):
             default_election_id = holyrood_prediction_id
 
+        # Preserve manually-curated election fields that the export pipeline does not compute.
+        # The main loop builds entries from DB rows with only the standard fields (id, name,
+        # type, mapId, parliament), so without this merge, manual additions (e.g. referendum
+        # flag, excludedRegions for the EU referendum) would be wiped on every export.
+        PRESERVED_ENTRY_FIELDS = ("referendum", "excludedRegions")
+        for entry in manifest_entries:
+            existing_entry = existing_by_id.get(entry.get("id"))
+            if not existing_entry:
+                continue
+            for field in PRESERVED_ENTRY_FIELDS:
+                if field in existing_entry and field not in entry:
+                    entry[field] = existing_entry[field]
+
         manifest_payload = {
             "defaultElection": default_election_id,
             "elections": manifest_entries,

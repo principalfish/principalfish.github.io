@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, getRegionLabel } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -169,3 +169,34 @@ describe('getRegionLabel', () => {
     expect(getRegionLabel('scotland', null)).toBe('Scotland');
   });
 });
+
+describe('formatSigned', () => {
+  it('prefixes positive values with +', () => {
+    expect(formatSigned(3)).toBe('+3');
+    expect(formatSigned(1.5, 2)).toBe('+1.50');
+  });
+
+  it('keeps negative sign on negative values', () => {
+    expect(formatSigned(-3)).toBe('-3');
+    expect(formatSigned(-1.5, 2)).toBe('-1.50');
+  });
+
+  it('returns "0" for exact zero', () => {
+    expect(formatSigned(0)).toBe('0');
+  });
+
+  it('returns "0" for values within floating-point epsilon of zero', () => {
+    expect(formatSigned(1e-10)).toBe('0');
+    expect(formatSigned(-1e-10)).toBe('0');
+  });
+
+  it('defaults to zero decimal places', () => {
+    expect(formatSigned(3.7)).toBe('+4');
+  });
+
+  it('treats null/undefined as zero', () => {
+    expect(formatSigned(null)).toBe('0');
+    expect(formatSigned(undefined)).toBe('0');
+  });
+});
+

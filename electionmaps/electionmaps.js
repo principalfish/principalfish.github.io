@@ -10,6 +10,7 @@ import {
   manifest,
   initState,
   ElectionData,
+  Seat,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -22,6 +23,7 @@ import {
   escapeHtml,
   formatInt,
   formatPct,
+  formatSigned,
   seatLookupKey,
   getRegionLabel,
 } from './scripts/utils.js';
@@ -720,19 +722,6 @@ function isListSeat(seatName) {
 // ── Formatting ───────────────────────────────────────────────────────────────
 
 /**
- * Formats value with an explicit '+' prefix for positive numbers and the specified decimal digits. Returns '0' for values within floating-point epsilon of zero.
- * @param {number} value - Numeric value to format with sign.
- * @param {number} [digits=0] - Number of decimal places to include.
- * @returns {string} Sign-prefixed string (e.g. '+3', '-1.50'), or '0' for near-zero values.
- */
-function formatSigned(value, digits = 0) {
-  const num = Number(value || 0);
-  if (Math.abs(num) < 1e-9) return '0';
-  const sign = num > 0 ? '+' : '';
-  return `${sign}${num.toFixed(digits)}`;
-}
-
-/**
  * Returns a CSS class name reflecting whether value is positive, negative, or neutral.
  * @param {number} value - Numeric delta value.
  * @returns {string} One of 'maps-delta-positive', 'maps-delta-negative', or 'maps-delta-neutral'.
@@ -831,19 +820,6 @@ function secondPlacePartyKey2(seat) {
   const voteRows = sortedSeatVoteRows2(seat);
   if (voteRows.length < 2) return null;
   return voteRows[1].party;
-}
-
-/**
- * Returns the vote share percentage (0–100) for partyKey in the given seat. Returns 0 if total votes are zero.
- * @param {object} seat - Seat object with a `votes` map and optional `turnout`.
- * @param {string} partyKey - The party whose vote share to calculate.
- * @returns {number} Vote share as a percentage in the range [0, 100].
- */
-function voteSharePct(seat, partyKey) {
-  const totalVotes = totalVotesForSeat2(seat);
-  if (totalVotes <= 0) return 0;
-  const partyVotes = Number(seat?.votes?.[partyKey] || 0);
-  return (partyVotes / totalVotes) * 100;
 }
 
 // ── Election summary ─────────────────────────────────────────────────────────
@@ -1600,11 +1576,11 @@ function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethPart
 
   if (choroplethType === 'voteShareChange') {
     if (!comparisonSeat) return null;
-    return voteSharePct(seat, choroplethParty) - voteSharePct(comparisonSeat, choroplethParty);
+    return Seat.voteSharePct(seat, choroplethParty) - Seat.voteSharePct(comparisonSeat, choroplethParty);
   }
 
   if (choroplethType === 'voteShare') {
-    return voteSharePct(seat, choroplethParty);
+    return Seat.voteSharePct(seat, choroplethParty);
   }
 
   return null;
@@ -3378,111 +3354,117 @@ function resetChoropleths() {
  * }} Choropleth config object; enabled is false when choropleth is inactive.
  */
 function buildChoroplethConfig(visibleSeatKeys) {
-  if (state.isReferendumType && (state.mapChoropleths.type === 'none' || state.mapChoropleths.party === 'all')) {
-    const valueBySeatKey = new Map();
-    const values = [];
-    state.electionData.currentSeats.forEach((seat) => {
-      const seatKey = seatLookupKey(seat.seat);
-      if (!visibleSeatKeys.has(seatKey)) return;
-      if (isPredictNorthernIrelandRegion(seat.region)) return;
-      const v = voteSharePct(seat, 'leave');
-      valueBySeatKey.set(seatKey, v);
-      values.push(v);
-    });
-    const minLeave = Math.min(...values);
-    const maxLeave = Math.max(...values);
-    const scale = d3.scaleLinear()
-      .domain([minLeave, 50, maxLeave])
-      .range(['#F4A11D', '#f8fbff', '#1D3565']);
-    return {
-      enabled: true,
-      valueBySeatKey,
-      toColour: (value) => scale(value),
-      legend: {
+  if (!state.choroplethOptionsSelected() && !state.isReferendumType) {
+    return { enabled: false };
+  }
+  if (visibleSeatKeys.size === 0) return { enabled: false };
+
+  const config = { enabled: true };
+  const valueBySeatKey = new Map();
+  const values = [];
+
+  // Referendum elections render a Leave-share map by default, but a user can still
+  // pick choropleth dropdown options to override that. Only treat this as the
+  // referendum special case when the dropdowns are at their defaults.
+  const isReferendumTypeWithDefaults = state.isReferendumType && !state.choroplethOptionsSelected();
+  const isDelta = state.mapChoropleths.type === 'voteShareChange';
+
+  const excludedRegionKeys = state.currentElection.excludedRegionKeys;
+
+  state.electionData.currentSeats.forEach((seat) => {
+    const seatKey = seatLookupKey(seat.seat);
+    if (!visibleSeatKeys.has(seatKey)) return;
+    if (state.isReferendumType && excludedRegionKeys?.has(seat.region)) return;
+    let value;
+    if (isReferendumTypeWithDefaults) {
+      value = Seat.voteSharePct(seat, 'leave');
+    } else {
+      const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
+      value = getChoroplethValue(seat, comparisonSeat, state.mapChoropleths.type, state.mapChoropleths.party);
+      if (!Number.isFinite(value)) return;
+    }
+    valueBySeatKey.set(seatKey, value);
+    values.push(value);
+  });
+
+  // Belt-and-braces: visibleSeatKeys.size > 0 above gets the common case, but we can still
+  // end up empty here — referendum runs drop excludedRegionKeys seats, non-referendum drops non-finite metrics.
+  if (!values.length) return { enabled: false };
+
+  config.valueBySeatKey = valueBySeatKey;
+
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const partyLabel = isReferendumTypeWithDefaults ? '' : manifest.labelParty(state.mapChoropleths.party);
+  const partyColour = isReferendumTypeWithDefaults ? '' : manifest.colourParty(state.mapChoropleths.party);
+
+  // 'uniform' is a sub-case of absolute vote share where every visible seat has the same
+  // value — there's no usable range to interpolate, so we paint flat in the party colour.
+  let kind;
+  if (isReferendumTypeWithDefaults) kind = 'referendum';
+  else if (isDelta) kind = 'delta';
+  else if (Math.abs(maxValue - minValue) < 1e-9) kind = 'uniform';
+  else kind = 'absolute';
+
+  switch (kind) {
+    case 'referendum': {
+      const scale = d3.scaleLinear()
+        .domain([minValue, 50, maxValue])
+        .range(['#F4A11D', '#f8fbff', '#1D3565']);
+      config.toColour = (value) => scale(value);
+      config.legend = {
         isDelta: true,
         title: 'Leave vote share',
         startColour: '#F4A11D',
         midColour: '#f8fbff',
         endColour: '#1D3565',
-        minLabel: `${formatPct(minLeave)}%`,
+        minLabel: `${formatPct(minValue)}%`,
         midLabel: '50%',
-        maxLabel: `${formatPct(maxLeave)}%`,
-      },
-    };
-  }
-
-  if (state.mapChoropleths.type === 'none' || state.mapChoropleths.party === 'all') return { enabled: false };
-  const isDelta = state.mapChoropleths.type === 'voteShareChange';
-
-  const valueBySeatKey = new Map();
-  const values = [];
-
-  state.electionData.currentSeats.forEach((seat) => {
-    const seatKey = seatLookupKey(seat.seat);
-    if (!visibleSeatKeys.has(seatKey)) return;
-    const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
-    const value = getChoroplethValue(seat, comparisonSeat, state.mapChoropleths.type, state.mapChoropleths.party);
-    if (!Number.isFinite(value)) return;
-    valueBySeatKey.set(seatKey, value);
-    values.push(value);
-  });
-
-  if (!values.length) return { enabled: false };
-
-  const selectedPartyLabel = manifest.labelParty(state.mapChoropleths.party);
-  const selectedPartyColour = manifest.colourParty(state.mapChoropleths.party);
-  const legendBase = {
-    party: selectedPartyLabel,
-    isDelta,
-  };
-
-  if (isDelta) {
-    const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 0.000001);
-    const scale = d3.scaleLinear().domain([-maxAbs, 0, maxAbs]).range(['#991b1b', '#f8fbff', '#1d4ed8']);
-    return {
-      enabled: true,
-      valueBySeatKey,
-      toColour: (value) => scale(value),
-      legendText: `${selectedPartyLabel} vote share change (${formatSigned(maxAbs, 2)} max abs)`,
-      legend: {
-        ...legendBase,
-        title: `${selectedPartyLabel} vote share change`,
+        maxLabel: `${formatPct(maxValue)}%`,
+      };
+      break;
+    }
+    case 'delta': {
+      const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 0.000001);
+      const scale = d3.scaleLinear().domain([-maxAbs, 0, maxAbs]).range(['#991b1b', '#f8fbff', '#1d4ed8']);
+      config.toColour = (value) => scale(value);
+      config.legendText = `${partyLabel} vote share change (${formatSigned(maxAbs, 2)} max abs)`;
+      config.legend = {
+        party: partyLabel,
+        isDelta: true,
+        title: `${partyLabel} vote share change`,
         startColour: '#991b1b',
         midColour: '#f8fbff',
         endColour: '#1d4ed8',
         minLabel: formatSigned(-maxAbs, 2),
         midLabel: '0',
         maxLabel: formatSigned(maxAbs, 2),
-      },
-    };
+      };
+      break;
+    }
+    case 'uniform': {
+      config.toColour = () => partyColour;
+      config.legendText = `${partyLabel} vote share (uniform)`;
+      break;
+    }
+    case 'absolute': {
+      const scale = d3.scaleLinear().domain([minValue, maxValue]).range(['#f8fbff', partyColour]);
+      config.toColour = (value) => scale(value);
+      config.legendText = `${partyLabel} vote share (${formatPct(minValue)} to ${formatPct(maxValue)})`;
+      config.legend = {
+        party: partyLabel,
+        isDelta: false,
+        title: `${partyLabel} vote share`,
+        startColour: '#f8fbff',
+        endColour: partyColour,
+        minLabel: formatPct(minValue),
+        maxLabel: formatPct(maxValue),
+      };
+      break;
+    }
   }
 
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  if (Math.abs(maxValue - minValue) < 1e-9) {
-    return {
-      enabled: true,
-      valueBySeatKey,
-      toColour: () => selectedPartyColour,
-      legendText: `${selectedPartyLabel} vote share (uniform)`
-    };
-  }
-
-  const scale = d3.scaleLinear().domain([minValue, maxValue]).range(['#f8fbff', selectedPartyColour]);
-  return {
-    enabled: true,
-    valueBySeatKey,
-    toColour: (value) => scale(value),
-    legendText: `${selectedPartyLabel} vote share (${formatPct(minValue)} to ${formatPct(maxValue)})`,
-    legend: {
-      ...legendBase,
-      title: `${selectedPartyLabel} vote share`,
-      startColour: '#f8fbff',
-      endColour: selectedPartyColour,
-      minLabel: formatPct(minValue),
-      maxLabel: formatPct(maxValue),
-    },
-  };
+  return config;
 }
 
 /**

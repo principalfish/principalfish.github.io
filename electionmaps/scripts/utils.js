@@ -39,6 +39,20 @@ export function formatPct(value) {
 }
 
 /**
+ * Formats value with an explicit '+' prefix for positive numbers and the specified
+ * decimal digits. Returns '0' for values within floating-point epsilon of zero.
+ * @param {number} value - Numeric value to format with sign.
+ * @param {number} [digits=0] - Number of decimal places to include.
+ * @returns {string} Sign-prefixed string (e.g. '+3', '-1.50'), or '0' for near-zero values.
+ */
+export function formatSigned(value, digits = 0) {
+  const num = Number(value || 0);
+  if (Math.abs(num) < 1e-9) return '0';
+  const sign = num > 0 ? '+' : '';
+  return `${sign}${num.toFixed(digits)}`;
+}
+
+/**
  * Converts a region name to a lowercase alphanumeric key with all non-alphanumeric characters removed.
  * @param {string} value - Raw region name or key string.
  * @returns {string} Lowercase alphanumeric string suitable for use as a lookup key.

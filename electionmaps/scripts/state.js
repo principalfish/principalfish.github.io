@@ -360,6 +360,25 @@ export class Seat {
     return votes;
   }
 
+  /**
+   * Returns the vote share percentage (0–100) for partyKey in the given seat. Uses the
+   * explicit turnout field if available, otherwise sums all party vote totals. Returns 0
+   * if total votes are zero. Static so it accepts any seat-shaped object, not just Seat
+   * instances.
+   * @param {{turnout?: number, votes?: object}} seat - Seat with optional turnout and a votes map.
+   * @param {string} partyKey - The party whose vote share to calculate.
+   * @returns {number} Vote share as a percentage in the range [0, 100].
+   */
+  static voteSharePct(seat, partyKey) {
+    const turnout = Number(seat?.turnout || 0);
+    const totalVotes = turnout > 0
+      ? turnout
+      : Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+    if (totalVotes <= 0) return 0;
+    const partyVotes = Number(seat?.votes?.[partyKey] || 0);
+    return (partyVotes / totalVotes) * 100;
+  }
+
   // ── Seat data utilities ────────────────────────────────────────────────────
 
   /**
@@ -639,6 +658,8 @@ class AppState {
      * - model {boolean|undefined} — true only on prediction elections; gates snippet fetch and predict mode
      * - comparisonElectionId {string|undefined} — id of the election used for swing data
      * - byElectionSeats {Set<string>|null} — constituency name set for by-election gain filtering, or null when not a by-election election
+     * - excludedRegions {number[]|undefined} — manifest-provided region ids whose seats this election does not cover (e.g. NI in the EU referendum)
+     * - excludedRegionKeys {Set<string>|null} — normalised region keys derived from excludedRegions; consumed by the choropleth builder
      */
     this.currentElection = null;
 
@@ -759,6 +780,15 @@ class AppState {
     this.currentElection = { ...currentElection };
     this.currentElection.byElectionSeats = this.currentElection.byElectionSeats?.length
       ? new Set(this.currentElection.byElectionSeats)
+      : null;
+    // Resolve manifest excludedRegions (numeric region ids) to a Set of normalised
+    // region keys so callers can test seat.region directly. Used by buildChoroplethConfig
+    // to drop unsupported regions (e.g. Northern Ireland for the EU referendum, where
+    // results are reported at country level rather than per-constituency).
+    this.currentElection.excludedRegionKeys = this.currentElection.excludedRegions?.length
+      ? new Set(this.currentElection.excludedRegions
+        .map((id) => manifest.regionsById.get(id))
+        .filter(Boolean))
       : null;
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
@@ -950,6 +980,15 @@ class AppState {
       .sort((a, b) => a.label.localeCompare(b.label));
 
     return [{ value: 'all', label: 'all regions...' }, ...rows];
+  }
+
+  /**
+   * Returns true when both choropleth dropdowns have been changed from their defaults
+   * (type 'none', party 'all'), meaning the user has selected a real choropleth metric.
+   * @returns {boolean}
+   */
+  choroplethOptionsSelected() {
+    return this.mapChoropleths.type !== 'none' && this.mapChoropleths.party !== 'all';
   }
 
   /**

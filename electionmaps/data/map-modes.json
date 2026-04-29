@@ -116,7 +116,8 @@
       "type": "eu_referendum",
       "referendum": true,
       "mapId": 1,
-      "parliament": "westminster"
+      "parliament": "westminster",
+      "excludedRegions": [11]
     }
   ],
   "parliamentFeatures": {

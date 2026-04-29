@@ -727,18 +727,6 @@ function deltaClass(value) {
 // ── Seat utilities ───────────────────────────────────────────────────────────
 
 /**
- * Returns the total votes cast in a seat, using the explicit turnout field if available, otherwise summing all party vote totals.
- * @param {object} seat - Seat object with optional `turnout` number and `votes` object.
- * @returns {number} Total votes cast in the seat.
- */
-// TODO: migrate callers to Seat.totalVotes in state.js
-function totalVotesForSeat2(seat) {
-  const turnout = Number(seat?.turnout || 0);
-  if (turnout > 0) return turnout;
-  return Object.values(seat?.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
-}
-
-/**
  * Returns an array of { party, votes } objects for a seat, sorted descending by vote count, excluding parties with zero votes.
  * @param {object} seat - Seat object with a `votes` map of party key to vote count.
  * @returns {Array<{party: string, votes: number}>} Sorted array of party vote entries, highest first.
@@ -761,7 +749,7 @@ function seatMajorityStats2(seat) {
   const voteRows = sortedSeatVoteRows2(seat);
   if (voteRows.length < 2) return { pct: 0, raw: 0 };
   const marginVotes = voteRows[0].votes - voteRows[1].votes;
-  const totalVotes = totalVotesForSeat2(seat);
+  const totalVotes = seat.turnout;
   if (totalVotes <= 0) return { pct: 0, raw: marginVotes };
   return { pct: (marginVotes / totalVotes) * 100, raw: marginVotes };
 }
@@ -1048,7 +1036,7 @@ function buildPredictBaselineShares(seats) {
     const regionKey = normalizeRegionKey(seat.region);
     if (!regionKey) return;
 
-    const turnout = totalVotesForSeat2(seat);
+    const turnout = seat.turnout;
     if (turnout <= 0) return;
 
     const regionStats = ensureRegionStats(regionKey);
@@ -1136,7 +1124,7 @@ function resolvedSwingValue(normalizedSeatRegion, partyKey, swingsByParty) {
  * @returns {Seat} New Seat instance with projected `votes`, `turnout`, and `winner`.
  */
 function projectedSeatForPredictMode(baseSeat, swingsByParty) {
-  const totalVotes = totalVotesForSeat2(baseSeat);
+  const totalVotes = baseSeat.turnout;
   if (totalVotes <= 0) return new Seat(baseSeat);
 
   const regionKey = normalizeRegionKey(baseSeat.region);
@@ -3367,7 +3355,6 @@ function renderSeatPopup(seatName) {
 
   const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
   const gainFrom = seatGainFromPartyKey2(seat, comparisonSeat);
-  const turnout = totalVotesForSeat2(seat);
   const majority = seatMajorityStats2(seat);
   const isReferendum = state.currentElection.id === 'eu-referendum-2016';
   const showTurnout = state.currentElection.type !== 'model_uns' && !isReferendum;
@@ -3378,11 +3365,11 @@ function renderSeatPopup(seatName) {
     ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${manifest.labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
     <span class="maps-popup-meta-item">${getRegionLabel(seat.region, state.currentRegionLabelsByKey)}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showRawMajority ? ` = ${formatInt(majority.raw)}` : ''}</span>
-    ${showTurnout ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(turnout)}</span>` : ''}
+    ${showTurnout ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(seat.turnout)}</span>` : ''}
   `;
 
-  const currentTurnout = totalVotesForSeat2(seat);
-  const comparisonTurnout = totalVotesForSeat2(comparisonSeat);
+  const currentTurnout = seat.turnout;
+  const comparisonTurnout = comparisonSeat?.turnout ?? 0;
   const comparisonVotes = comparisonSeat?.votes || {};
 
   const rows = Object.entries(seat.votes || {})

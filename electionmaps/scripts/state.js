@@ -292,7 +292,7 @@ export class Seat {
     this.region = String(input?.region || 'unknown');
     this.winner = manifest.resolvePartyRef(input?.winner ?? 'others');
     this.votes = Seat.#normalizeVotes(input?.votes);
-    if (input?.turnout != null) this.turnout = Number(input.turnout) || 0;
+    this.turnout = Object.values(this.votes).reduce((sum, v) => sum + Number(v || 0), 0);
   }
 
   /**
@@ -413,17 +413,6 @@ export class Seat {
   // ── Seat data utilities ────────────────────────────────────────────────────
 
   /**
-   * Returns the total votes cast in this seat, using the explicit turnout field if available,
-   * otherwise summing all party vote totals.
-   * @returns {number} Total votes cast in the seat.
-   */
-  totalVotes() {
-    const turnout = Number(this?.turnout || 0);
-    if (turnout > 0) return turnout;
-    return Object.values(this.votes || {}).reduce((sum, value) => sum + Number(value || 0), 0);
-  }
-
-  /**
    * Returns an array of { party, votes } objects for this seat, sorted descending by vote count,
    * excluding parties with zero votes.
    * @returns {Array<{party: string, votes: number}>}
@@ -444,9 +433,8 @@ export class Seat {
     const voteRows = this.#sortedVoteRows();
     if (voteRows.length < 2) return { pct: 0, raw: 0 };
     const marginVotes = voteRows[0].votes - voteRows[1].votes;
-    const totalVotes = this.totalVotes();
-    if (totalVotes <= 0) return { pct: 0, raw: marginVotes };
-    return { pct: (marginVotes / totalVotes) * 100, raw: marginVotes };
+    if (this.turnout <= 0) return { pct: 0, raw: marginVotes };
+    return { pct: (marginVotes / this.turnout) * 100, raw: marginVotes };
   }
 
   /**

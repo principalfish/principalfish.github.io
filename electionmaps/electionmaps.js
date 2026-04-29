@@ -139,13 +139,18 @@ function drawMap(preserveZoom = false) {
   const filteredSeatsComparisonSummary = state.comparisonSeats.length
     ? ElectionSummary.summarize(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })
     : null;
-  const regionSummary = hasListSeats
-    ? buildRegionSummary(state.electionData.currentSeats.filter((s) => Seat.isList(s)))
-    : null;
-  // Seat list: for Holyrood elections show constituency seats only (list seats appear in region table).
-  const filteredSeats = hasListSeats
-    ? state.mapVisible.seats.filter((s) => !Seat.isList(s))
-    : state.mapVisible.seats;
+  // List-seat specialisation. Elections with list elections need a per-region rollup for the
+  // region-table overlay (list seats render there rather than on the map), and the
+  // seat-list panel shows constituencies only — list seats appear in the region table
+  // instead. Westminster / by-elections / referenda have no list seats, so both vars
+  // stay at their defaults: no region rollup, and the seat list shows every visible
+  // seat unmodified.
+  let listRegionSummary = null;
+  let listFilteredSeats = state.mapVisible.seats;
+  if (hasListSeats) {
+    listRegionSummary = ElectionSummary.summarizeByRegion(state.electionData.currentSeats.filter((s) => Seat.isList(s)));
+    listFilteredSeats = state.mapVisible.seats.filter((s) => !Seat.isList(s));
+  }
 
   window.__mapsCurrentSummary = filteredSeatsSummary;
   window.__mapsComparisonSummary = filteredSeatsComparisonSummary;
@@ -167,22 +172,22 @@ function drawMap(preserveZoom = false) {
     visibleSeatKeys: state.mapVisible.seatKeys,
     choroplethConfig: state.choroplethConfig,
     preserveZoom,
-    regionSummary,
+    regionSummary: listRegionSummary,
     mapId: String(state.currentElection.mapId ?? ''),
   });
 
-  renderRegionTable(regionSummary);
+  renderRegionTable(listRegionSummary);
 
-  renderSeatList(filteredSeats, state.comparisonSeats, {});
+  renderSeatList(listFilteredSeats, state.comparisonSeats, {});
 
-  applySeatSearchSuggestions(buildSeatSearchIndex(filteredSeats));
+  applySeatSearchSuggestions(buildSeatSearchIndex(listFilteredSeats));
   renderChoroplethLegend(state.choroplethConfig);
 
   if (seatPreview) {
     let previewText;
     if (hasListSeats) {
       const totalConst = state.electionData.currentSeats.filter((s) => !Seat.isList(s));
-      previewText = `Showing ${formatInt(filteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
+      previewText = `Showing ${formatInt(listFilteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
       previewText = `Showing ${formatInt(state.mapVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
     }
@@ -1351,41 +1356,6 @@ function buildWinnerBySeat(seats) {
     bySeat.set(String(seat.seat).toLowerCase(), seat.winner || 'others');
   });
   return bySeat;
-}
-
-/**
- * Builds a per-region summary from a mixed constituency+list seat array.
- * Returns a Map keyed by region label → { dominantParty, seatsByParty, votesByParty, listSeats }.
- * dominantParty = party with the most total seats; ties broken by list vote total.
- * @param {Array<object>} seats - Normalised seat objects with `seat`, `region`, `winner`, `votes` properties.
- * @returns {Map<string, {dominantParty: string, seatsByParty: object, votesByParty: object, listSeats: Array}>}
- */
-function buildRegionSummary(seats) {
-  const regions = new Map();
-  for (const seat of seats) {
-    const region = seat.region || 'unknown';
-    if (!regions.has(region)) {
-      regions.set(region, { seatsByParty: {}, votesByParty: {}, listSeats: [] });
-    }
-    const r = regions.get(region);
-    const winner = seat.winner || 'others';
-    r.seatsByParty[winner] = (r.seatsByParty[winner] || 0) + 1;
-    // Note: list seats each store the full regional vote total by design, so votesByParty
-    // will be multiplied by the number of list seats per region. This is acceptable here
-    // as votesByParty is only used for relative tie-breaking (dominantParty), not absolute totals.
-    for (const [party, votes] of Object.entries(seat.votes || {})) {
-      r.votesByParty[party] = (r.votesByParty[party] || 0) + votes;
-    }
-    if (Seat.isList(seat)) r.listSeats.push(seat);
-  }
-  for (const [, r] of regions) {
-    const sorted = Object.entries(r.seatsByParty).sort((a, b) => {
-      if (b[1] !== a[1]) return b[1] - a[1];
-      return (r.votesByParty[b[0]] || 0) - (r.votesByParty[a[0]] || 0);
-    });
-    r.dominantParty = sorted[0]?.[0] || 'others';
-  }
-  return regions;
 }
 
 // ── Predict payload encode / decode ──────────────────────────────────────────

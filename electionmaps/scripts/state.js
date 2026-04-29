@@ -698,6 +698,74 @@ export class ElectionSummary {
       ? `${electionName} · ${manifest.labelParty(top?.party || 'others')} majority: ${majority}`
       : `${electionName} · Hung parliament - largest party ${manifest.labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
   }
+
+  /**
+   * Aggregates seats and votes per region, producing the breakdown consumed by the
+   * region-table overlay and the per-region popup. Currently only invoked with regional
+   * list seats (Holyrood) — the constituency map is rendered seat-by-seat instead, so
+   * there's no per-region rollup needed there — but the implementation works for any
+   * mix of constituency + list seats and could be reused if a Westminster regional view
+   * is ever added.
+   *
+   * Output shape (one entry per distinct `seat.region` encountered):
+   *   - `seatsByParty: { [partyKey]: number }` — count of seats won by each party in
+   *     the region. Used by the region-table renderer to size the colour-bar segments
+   *     and by the popup as the seat-count per row.
+   *   - `votesByParty: { [partyKey]: number }` — sum of votes per party in the region.
+   *     For Holyrood list seats each seat carries the *full* regional list total, so
+   *     summing across the N list seats per region inflates each party's votes by N.
+   *     That's fine for the only consumer (vote-share % in the popup), since the N
+   *     multiplier cancels out of `votes / Σvotes`, but absolute totals are NOT a true
+   *     regional vote count.
+   *
+   * Region keys come straight from `seat.region`; missing/falsy values fall back to
+   * `'unknown'` rather than being skipped, matching the rest of the app's
+   * unattributed-seat handling. Party keys use the raw `seat.winner` and `seat.votes`
+   * keys without the `'other'` → `'others'` fold applied by {@link summarize} —
+   * downstream renderers only call `manifest.labelParty` / `manifest.colourParty` on
+   * these keys, which handle either form.
+   *
+   * @param {Seat[]} seats - Seats to aggregate. Each seat must carry the normalised
+   *   shape produced by {@link Seat} (i.e. `region`, `winner`, `votes`).
+   * @returns {Map<string, {seatsByParty: Object<string, number>, votesByParty: Object<string, number>}>}
+   *   Map keyed by region key; each value is the seat/vote breakdown described above.
+   *   Insertion-ordered by first seat encountered per region.
+   */
+  static summarizeByRegion(seats) {
+    // Map preserves insertion order, so callers iterating the result see regions in
+    // the order their first seat appears in `seats` — the seat array is already
+    // ordered in a meaningful way (north-to-south for Holyrood lists), and a plain
+    // object would not give that guarantee for non-numeric keys.
+    const regions = new Map();
+
+    for (const seat of seats) {
+      // Bucket by region. Falsy/missing region falls back to 'unknown' so the seat is
+      // still aggregated rather than silently dropped — matches the synthetic-others
+      // fallback used elsewhere for unattributed data.
+      const region = seat.region || 'unknown';
+      // Lazily create the per-region bucket on first encounter. Pre-allocating empty
+      // buckets for every known region would require knowing the region list up front,
+      // which this static doesn't have access to.
+      if (!regions.has(region)) {
+        regions.set(region, { seatsByParty: {}, votesByParty: {} });
+      }
+      const r = regions.get(region);
+
+      // Increment the seat count for the winning party. Missing winners fall back to
+      // `'others'` so the row still appears in the region table rather than being
+      // dropped — same reasoning as the region fallback above.
+      const winner = seat.winner || 'others';
+      r.seatsByParty[winner] = (r.seatsByParty[winner] || 0) + 1;
+
+      // Sum votes per party. See jsdoc for the list-seat duplication caveat: this
+      // accumulator is only safe to read as ratios (vote shares), not absolute totals.
+      for (const [party, votes] of Object.entries(seat.votes || {})) {
+        r.votesByParty[party] = (r.votesByParty[party] || 0) + votes;
+      }
+    }
+
+    return regions;
+  }
 }
 
 // ─── Election data ───────────────────────────────────────────────────────────

@@ -45,7 +45,6 @@ export function setPageTitle() {
  * Called early in init (text omitted — subtitle falls back to election name) and again
  * after results load with the full summary string. Pass error=true on load failure.
  * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
- *   TODO: once election summary data is held in state, derive this internally and remove the param.
  * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
  * @returns {void}
  */

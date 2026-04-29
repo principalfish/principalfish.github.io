@@ -932,6 +932,45 @@ class AppState {
     /** Cached choropleth rendering config for the current visible seat set.
      * Set by buildChoroplethConfig; { enabled: false } until first computed. */
     this.choroplethConfig = { enabled: false };
+
+    // Per-render derived data, populated by setupMapData() before each drawMap call
+    // and read by drawMap plus the renderers it dispatches to. All initialised to
+    // safe empty values so a caller reading them before the first setupMapData run
+    // doesn't see undefined.
+
+    /** Manifest mapMode entry for currentElection.mapId. Carries the per-map config
+     * (regions, voteTotalsViews, seatViews, hiddenVoteTotalsParties). Null until
+     * setupMapData runs. */
+    this.mapConfig = null;
+
+    /** Whether the current chamber includes regional list seats (Holyrood). False until
+     * setupMapData runs. Drives the list-seat specialisation (region-table overlay and
+     * constituency-only seat list). */
+    this.hasListSeats = false;
+
+    /** Whether vote columns should be shown in the vote-totals panel. False on the 'all'
+     * tab when list seats exist (mismatch between seat counts and vote counts is
+     * misleading), otherwise true. */
+    this.showVotes = true;
+
+    /** ElectionSummary.summarize result over mapVisible.seats — the aggregated summary
+     * of the currently visible (filter-passing) seats under the active vote-totals tab.
+     * Distinct from electionData.summary, which always covers the unfiltered chamber. */
+    this.filteredSeatsSummary = null;
+
+    /** Same as filteredSeatsSummary but over mapVisible.comparisonSeats. Null when no
+     * comparison data is loaded. */
+    this.filteredSeatsComparisonSummary = null;
+
+    /** Per-region rollup from ElectionSummary.summarizeByRegion over the chamber's list
+     * seats only. Null when the chamber has no list seats. Feeds the region-table
+     * overlay and the per-region popup. */
+    this.listRegionSummary = null;
+
+    /** Visible seats minus list seats — when the chamber has list seats, the seat-list
+     * panel hides them (they appear in the region-table overlay instead). Equals
+     * mapVisible.seats unmodified when no list seats exist. */
+    this.listFilteredSeats = [];
   }
 
   /**
@@ -1071,6 +1110,54 @@ class AppState {
    */
   get comparisonSeats() {
     return _state.currentComparisonSeats;
+  }
+
+  /**
+   * Computes all derived per-render data for the active map view: applies filters,
+   * builds the choropleth config, and produces the aggregated summaries plus the
+   * list-seat specialisation slice. drawMap calls this once per render and then reads
+   * the populated fields off `state` rather than recomputing locally.
+   *
+   * Sets: mapConfig, hasListSeats, showVotes, filteredSeatsSummary,
+   *   filteredSeatsComparisonSummary, listRegionSummary, listFilteredSeats. Also
+   *   refreshes the mapVisible slice (via applyMapFilters) and the choroplethConfig
+   *   (via buildChoroplethConfig) as a side effect.
+   * @returns {void}
+   */
+  setupMapData() {
+    this.applyMapFilters();
+    this.buildChoroplethConfig();
+
+    this.mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
+    this.hasListSeats = this.electionData.currentSeats.some((s) => Seat.isList(s));
+    // Suppress vote columns on the 'all' tab when list seats exist: ElectionSummary.summarize
+    // counts only constituency votes in 'all' mode while seat counts include both — the
+    // mismatch is misleading.
+    this.showVotes = !this.hasListSeats || this.voteTotals.mode !== 'all';
+
+    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapVisible.seats, { mode: this.voteTotals.mode });
+    this.filteredSeatsComparisonSummary = this.comparisonSeats.length
+      ? ElectionSummary.summarize(this.mapVisible.comparisonSeats, { mode: this.voteTotals.mode })
+      : null;
+
+    // List-seat specialisation. Holyrood elections need a per-region rollup for the
+    // region-table overlay (list seats render there rather than on the map), and the
+    // seat-list panel shows constituencies only — list seats appear in the region table
+    // instead. Westminster / by-elections / referenda have no list seats, so both vars
+    // stay at their defaults: no region rollup, and the seat list shows every visible
+    // seat unmodified.
+    this.listRegionSummary = null;
+    this.listFilteredSeats = this.mapVisible.seats;
+    if (this.hasListSeats) {
+      this.listRegionSummary = ElectionSummary.summarizeByRegion(this.electionData.currentSeats.filter((s) => Seat.isList(s)));
+      this.listFilteredSeats = this.mapVisible.seats.filter((s) => !Seat.isList(s));
+    }
+
+    // TODO: remove once the resize-driven renderVoteTotals callers and the predict / tab-click
+    // summary builders read state.filteredSeatsSummary / state.filteredSeatsComparisonSummary
+    // directly (see also the activateElection mirrors guarded by the same TODO).
+    window.__mapsCurrentSummary = this.filteredSeatsSummary;
+    window.__mapsComparisonSummary = this.filteredSeatsComparisonSummary;
   }
 
   /**

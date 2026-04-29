@@ -114,80 +114,47 @@ async function activateElection(view) {
 }
 
 /**
- * Renders the map, seat list, vote totals, and choropleth legend for the current filter/choropleth _state.
- * Accepts { preserveZoom: true } to retain the current pan/zoom transform.
- * @param {{preserveZoom?: boolean}} [options={}] - Rendering options; set preserveZoom to true to keep the current d3 zoom transform.
+ * Renders the map, seat list, vote totals, and choropleth legend from the per-render
+ * data prepared by state.setupMapData().
+ * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
  * @returns {void}
  */
-// TODO: eventually this should become a call to state.setupMap() and a set of
-// focused DOM handlers in dom.js — e.g. setVoteTotals(), setMap(), setSeatList() —
-// each responsible for one render concern rather than one monolithic function.
 function drawMap(preserveZoom = false) {
-  state.applyMapFilters();
-  state.buildChoroplethConfig();
+  state.setupMapData();
 
-  const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
-  const hasListSeats = state.electionData.currentSeats.some((s) => Seat.isList(s));
-  // Suppress vote columns on the 'all' tab when list seats exist: ElectionSummary.summarize counts
-  // only constituency votes in 'all' mode while seat counts include both — the mismatch is
-  // misleading.
-  const showVotes = !hasListSeats || state.voteTotals.mode !== 'all';
-  // Aggregated summary of the currently visible (filter-passing) seats under the active
-  // vote-totals tab. Drives the vote-totals panel rows; distinct from
-  // state.electionData.summary, which always covers the unfiltered chamber.
-  const filteredSeatsSummary = ElectionSummary.summarize(state.mapVisible.seats, { mode: state.voteTotals.mode });
-  const filteredSeatsComparisonSummary = state.comparisonSeats.length
-    ? ElectionSummary.summarize(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })
-    : null;
-  // List-seat specialisation. Elections with list elections need a per-region rollup for the
-  // region-table overlay (list seats render there rather than on the map), and the
-  // seat-list panel shows constituencies only — list seats appear in the region table
-  // instead. Westminster / by-elections / referenda have no list seats, so both vars
-  // stay at their defaults: no region rollup, and the seat list shows every visible
-  // seat unmodified.
-  let listRegionSummary = null;
-  let listFilteredSeats = state.mapVisible.seats;
-  if (hasListSeats) {
-    listRegionSummary = ElectionSummary.summarizeByRegion(state.electionData.currentSeats.filter((s) => Seat.isList(s)));
-    listFilteredSeats = state.mapVisible.seats.filter((s) => !Seat.isList(s));
-  }
-
-  window.__mapsCurrentSummary = filteredSeatsSummary;
-  window.__mapsComparisonSummary = filteredSeatsComparisonSummary;
-
-  renderVoteTotalsTabs(mapConfig);
+  renderVoteTotalsTabs(state.mapConfig);
   updateVoteTotalsTabsUI();
-  renderSeatViewTabs(mapConfig);
+  renderSeatViewTabs(state.mapConfig);
   updateSeatViewTabsUI();
   updatePostcodeSearchVisibility();
 
-  toggleVoteTotalColumns(showVotes);
-  toggleVotePctColumns(showVotes);
-  renderVoteTotals(filteredSeatsSummary, filteredSeatsComparisonSummary, {
-    showVoteTotals: showVotes,
-    hiddenParties: new Set(mapConfig?.hiddenVoteTotalsParties ?? []),
+  toggleVoteTotalColumns(state.showVotes);
+  toggleVotePctColumns(state.showVotes);
+  renderVoteTotals(state.filteredSeatsSummary, state.filteredSeatsComparisonSummary, {
+    showVoteTotals: state.showVotes,
+    hiddenParties: new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []),
   });
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys: state.mapVisible.seatKeys,
     choroplethConfig: state.choroplethConfig,
     preserveZoom,
-    regionSummary: listRegionSummary,
+    regionSummary: state.listRegionSummary,
     mapId: String(state.currentElection.mapId ?? ''),
   });
 
-  renderRegionTable(listRegionSummary);
+  renderRegionTable(state.listRegionSummary);
 
-  renderSeatList(listFilteredSeats, state.comparisonSeats, {});
+  renderSeatList(state.listFilteredSeats, state.comparisonSeats, {});
 
-  applySeatSearchSuggestions(buildSeatSearchIndex(listFilteredSeats));
+  applySeatSearchSuggestions(buildSeatSearchIndex(state.listFilteredSeats));
   renderChoroplethLegend(state.choroplethConfig);
 
   if (seatPreview) {
     let previewText;
-    if (hasListSeats) {
+    if (state.hasListSeats) {
       const totalConst = state.electionData.currentSeats.filter((s) => !Seat.isList(s));
-      previewText = `Showing ${formatInt(listFilteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
+      previewText = `Showing ${formatInt(state.listFilteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
       previewText = `Showing ${formatInt(state.mapVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
     }

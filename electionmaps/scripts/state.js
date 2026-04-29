@@ -502,6 +502,155 @@ export class Seat {
   }
 }
 
+// ─── Summary ─────────────────────────────────────────────────────────────────
+
+/**
+ * Aggregated summary of an ElectionData's seats. Bundles the structured party/seat/vote
+ * totals (`data`) and the pre-rendered subtitle string (`text`) so both are recomputed
+ * together whenever the underlying seat list changes (e.g. after predict-mode projection).
+ *
+ * The `mode` option controls how list and constituency seats are folded together when
+ * aggregating votes:
+ *   - `'all'` (default) — every seat contributes its winner to the seat count, but only
+ *     constituency seats contribute votes (list seats use a separate ballot, so combining
+ *     would double-count the electorate).
+ *   - `'constituency'` — list seats are skipped entirely.
+ *   - `'list'` — constituency seats are skipped entirely; within list seats each
+ *     `(region, party)` pair only contributes votes once (regional list totals are
+ *     duplicated across every seat in the region).
+ */
+export class Summary {
+  /**
+   * @param {Seat[]} seats - Seats to aggregate.
+   * @param {string|null} electionName - Display label for the election; when null, `text` is null.
+   * @param {{mode?: ('all'|'constituency'|'list')}} [options] - Aggregation options forwarded to {@link Summary.summarize}; see class jsdoc for the per-mode behaviour.
+   */
+  constructor(seats, electionName, { mode = 'all' } = {}) {
+    /** Structured aggregate: `{parties, totalVotes, turnout, totalSeats}`. Parties are
+     * sorted by seats desc, then votes desc, so `parties[0]` is the leading party. */
+    this.data = Summary.summarize(seats, { mode });
+
+    /** Pre-rendered subtitle string (e.g. "2024 General Election · Labour majority: 174"),
+     * or null when no electionName was provided (comparison/predict-baseline summaries). */
+    this.text = electionName ? Summary.#subtitleText(this.data, electionName) : null;
+  }
+
+  // TODO: dedupe summarize / summarizeElection2 (this is the canonical handler)
+  /**
+   * Aggregates seats and votes across all constituencies, honouring the active vote-totals
+   * tab via `mode`. Duplicate of the standalone `summarizeElection2` in electionmaps.js —
+   * kept temporarily while callers migrate.
+   *
+   * Mode behaviour:
+   *   - `'all'` (default) — every seat contributes its winner to the seat count, but only
+   *     constituency seats contribute votes. List seats use a separate ballot, so combining
+   *     both would double-count the electorate.
+   *   - `'constituency'` — list seats are skipped entirely (neither seat count nor votes).
+   *   - `'list'` — constituency seats are skipped entirely. Within list seats, regional
+   *     vote totals are stored on every seat in the region; we only count each
+   *     `(region, party)` pair once to avoid multiplying by the number of seats.
+   *
+   * `totalSeats` is the input length and does not reflect mode filtering — it represents the
+   * size of the chamber being summarised, not the number of seats that contributed to stats.
+   *
+   * @param {Seat[]} seats - Seats to aggregate.
+   * @param {{mode?: ('all'|'constituency'|'list')}} [options] - Aggregation options.
+   * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}}
+   */
+  static summarize(seats, { mode = 'all' } = {}) {
+    const partyStats = new Map();
+    const listRegionPartyCountSeen = new Set();
+    let electorateSum = 0;
+    let turnoutWeighted = 0;
+
+    seats.forEach((seat) => {
+      const isList = Seat.isList(seat);
+
+      if (mode === 'constituency' && isList) return;
+      if (mode === 'list' && !isList) return;
+
+      const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
+      if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
+      partyStats.get(winner).seats += 1;
+
+      const includeVotes = mode !== 'all' || !isList;
+      if (includeVotes) {
+        Object.entries(seat.votes || {}).forEach(([party, votes]) => {
+          const key = party === 'other' ? 'others' : party;
+          if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
+          if (mode === 'list') {
+            const seenKey = `${normalizeRegionKey(seat.region)}\x00${key}`;
+            if (listRegionPartyCountSeen.has(seenKey)) return;
+            listRegionPartyCountSeen.add(seenKey);
+          }
+          partyStats.get(key).votes += Number(votes || 0);
+        });
+
+        if (seat.electorate > 0 && seat.turnout > 0) {
+          electorateSum += seat.electorate;
+          turnoutWeighted += seat.turnout * seat.electorate;
+        }
+      }
+    });
+
+    const parties = Array.from(partyStats.entries())
+      .map(([party, stats]) => ({ party, ...stats }))
+      .sort((a, b) => b.seats - a.seats || b.votes - a.votes);
+
+    const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
+    const turnout = electorateSum > 0 ? turnoutWeighted / electorateSum : 0;
+
+    return { parties, totalVotes, turnout, totalSeats: seats.length };
+  }
+
+  /**
+   * Builds the subtitle text shown under the page title: a single line describing either
+   * the leading party's overall majority or, when no party has one, a hung-parliament
+   * message naming the largest party.
+   *
+   * Inputs:
+   *   - `data.parties` — sorted by seats desc, so `parties[0]` is the leading party.
+   *   - `data.totalSeats` — number of seats in the chamber (e.g. 650 for Westminster).
+   *
+   * Calculation:
+   *   - `majorityThreshold = totalSeats / 2` — the bare half-line. A party needs *more*
+   *     than this many seats to govern alone.
+   *   - `hasMajority = leadSeats > majorityThreshold` — strict greater-than so an exact
+   *     half-share counts as hung.
+   *   - `majority = 2 × (leadSeats − majorityThreshold)` — the standard parliamentary
+   *     "majority of N" figure: the number of seats by which the leading party's bench
+   *     exceeds the rest of the chamber combined. For 650 total seats and a leader on
+   *     412, that's 2 × (412 − 325) = 174. Rounded to handle odd totals (e.g. 129-seat
+   *     Holyrood gives a half-integer threshold).
+   *
+   * Output forms (returned as a single string, ` · `-joined):
+   *   - With majority:  `"<electionName> · <Party> majority: <N>"`
+   *     e.g. `"2024 General Election · Labour majority: 174"`
+   *   - Hung parliament: `"<electionName> · Hung parliament - largest party <Party> with <N> seats"`
+   *     e.g. `"2017 General Election · Hung parliament - largest party Conservative with 317 seats"`
+   *
+   * Party labels go through `manifest.labelParty` so internal keys ("lab", "con", …)
+   * render as their human display names. A missing winner falls back to the `'others'`
+   * label rather than throwing or producing an empty string.
+   *
+   * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} data - Structured summary aggregate.
+   * @param {string} electionName - Display label prefix for the subtitle.
+   * @returns {string} Pre-formatted subtitle string ready to pass to `setHeader`.
+   */
+  static #subtitleText(data, electionName) {
+    const top = data.parties[0];
+    const leadSeats = Number(top?.seats || 0);
+    const totalSeats = Number(data.totalSeats || 0);
+    const majorityThreshold = totalSeats / 2;
+    const hasMajority = leadSeats > majorityThreshold;
+    const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
+
+    return hasMajority
+      ? `${electionName} · ${manifest.labelParty(top?.party || 'others')} majority: ${majority}`
+      : `${electionName} · Hung parliament - largest party ${manifest.labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
+  }
+}
+
 // ─── Election data ───────────────────────────────────────────────────────────
 
 /**
@@ -511,8 +660,7 @@ export class Seat {
 export class ElectionData {
   constructor(resultsData, electionName = null) {
     /** Display label of the election this data represents (e.g. "2024 General Election").
-     * Used as the prefix in {@link ElectionData#generateSubtitleSummaryText}. Null for the
-     * comparison ElectionData instance, which never renders a subtitle. */
+     * Null for the comparison ElectionData instance, which never renders a subtitle. */
     this.electionName = electionName;
 
     /** Pristine normalised seat records as parsed from the results JSON. Never mutated;
@@ -526,15 +674,9 @@ export class ElectionData {
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
     this.seatsByKey = ElectionData.buildSeatIndex(this.currentSeats);
 
-    /** Aggregated summary of currentSeats. Recompute via {@link ElectionData#summarizeElection}
-     * when currentSeats changes (e.g. after predict-mode projection). */
-    this.summary = this.summarizeElection();
-
-    /** Pre-rendered subtitle text (e.g. "2024 General Election · Labour majority: 174").
-     * Only populated when an electionName is provided — comparison and predict-baseline
-     * ElectionData instances leave it null. Regenerate via
-     * {@link ElectionData#generateSubtitleSummaryText} when summary changes. */
-    this.summaryText = electionName ? this.generateSubtitleSummaryText() : null;
+    /** Aggregated summary of currentSeats: `{data, text}`. Rebuild by reassigning to a new
+     * `Summary` instance whenever currentSeats changes (e.g. after predict-mode projection). */
+    this.summary = new Summary(this.currentSeats, electionName);
   }
 
   /**
@@ -563,98 +705,6 @@ export class ElectionData {
       byKey.set(seatLookupKey(seat.seat), seat);
     });
     return byKey;
-  }
-
-  // TODO: dedupe summarizeElection / summarizeElection2 (this is the canonical handler)
-  /**
-   * Aggregates seats and votes across all constituencies in `currentSeats`. Run automatically
-   * by the constructor; call again to refresh the cached `this.summary` whenever `currentSeats`
-   * changes (e.g. after predict-mode projection).
-   * List seats contribute their winner to the party seat count but not to vote totals
-   * (list seats use a separate ballot — combining them would double-count the electorate).
-   * Duplicate of the standalone `summarizeElection2` in electionmaps.js — kept temporarily
-   * while callers migrate.
-   * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}}
-   */
-  summarizeElection() {
-    const partyStats = new Map();
-    let electorateSum = 0;
-    let turnoutWeighted = 0;
-
-    this.currentSeats.forEach((seat) => {
-      const isList = Seat.isList(seat);
-
-      const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
-      if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
-      partyStats.get(winner).seats += 1;
-
-      if (!isList) {
-        Object.entries(seat.votes || {}).forEach(([party, votes]) => {
-          const key = party === 'other' ? 'others' : party;
-          if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
-          partyStats.get(key).votes += Number(votes || 0);
-        });
-
-        if (seat.electorate > 0 && seat.turnout > 0) {
-          electorateSum += seat.electorate;
-          turnoutWeighted += seat.turnout * seat.electorate;
-        }
-      }
-    });
-
-    const parties = Array.from(partyStats.entries())
-      .map(([party, stats]) => ({ party, ...stats }))
-      .sort((a, b) => b.seats - a.seats || b.votes - a.votes);
-
-    const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
-    const turnout = electorateSum > 0 ? turnoutWeighted / electorateSum : 0;
-
-    return { parties, totalVotes, turnout, totalSeats: this.currentSeats.length };
-  }
-
-  /**
-   * Builds the subtitle text shown under the page title for this election: a single line
-   * describing either the leading party's overall majority or, when no party has one,
-   * a hung-parliament message naming the largest party.
-   *
-   * Inputs (all read from `this.summary`, which the caller must have populated):
-   *   - `summary.parties` — sorted by seats desc, so `parties[0]` is the leading party.
-   *   - `summary.totalSeats` — number of seats in the chamber (e.g. 650 for Westminster).
-   *
-   * Calculation:
-   *   - `majorityThreshold = totalSeats / 2` — the bare half-line. A party needs *more*
-   *     than this many seats to govern alone.
-   *   - `hasMajority = leadSeats > majorityThreshold` — strict greater-than so an exact
-   *     half-share counts as hung.
-   *   - `majority = 2 × (leadSeats − majorityThreshold)` — the standard parliamentary
-   *     "majority of N" figure: the number of seats by which the leading party's bench
-   *     exceeds the rest of the chamber combined. For 650 total seats and a leader on
-   *     412, that's 2 × (412 − 325) = 174. Rounded to handle odd totals (e.g. 129-seat
-   *     Holyrood gives a half-integer threshold).
-   *
-   * Output forms (returned as a single string, ` · `-joined):
-   *   - With majority:  `"<electionName> · <Party> majority: <N>"`
-   *     e.g. `"2024 General Election · Labour majority: 174"`
-   *   - Hung parliament: `"<electionName> · Hung parliament - largest party <Party> with <N> seats"`
-   *     e.g. `"2017 General Election · Hung parliament - largest party Conservative with 317 seats"`
-   *
-   * Party labels go through `manifest.labelParty` so internal keys ("lab", "con", …)
-   * render as their human display names. A missing winner falls back to the `'others'`
-   * label rather than throwing or producing an empty string.
-   *
-   * @returns {string} Pre-formatted subtitle string ready to pass to `setHeader`.
-   */
-  generateSubtitleSummaryText() {
-    const top = this.summary.parties[0];
-    const leadSeats = Number(top?.seats || 0);
-    const totalSeats = Number(this.summary.totalSeats || 0);
-    const majorityThreshold = totalSeats / 2;
-    const hasMajority = leadSeats > majorityThreshold;
-    const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
-
-    return hasMajority
-      ? `${this.electionName} · ${manifest.labelParty(top?.party || 'others')} majority: ${majority}`
-      : `${this.electionName} · Hung parliament - largest party ${manifest.labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
   }
 }
 

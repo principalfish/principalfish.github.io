@@ -11,6 +11,7 @@ import {
   initState,
   ElectionData,
   Seat,
+  Summary,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -96,10 +97,10 @@ async function activateElection(view) {
   }
 
   setMapControlOptions();
-  setHeader(state.electionData.summaryText);
-  // TODO: remove once other handlers read state.electionData.summary / state.comparisonElectionData.summary directly
-  window.__mapsCurrentSummary = state.electionData.summary;
-  window.__mapsComparisonSummary = state.comparisonElectionData?.summary ?? null;
+  setHeader(state.electionData.summary.text);
+  // TODO: remove once other handlers read state.electionData.summary.data / state.comparisonElectionData.summary.data directly
+  window.__mapsCurrentSummary = state.electionData.summary.data;
+  window.__mapsComparisonSummary = state.comparisonElectionData?.summary.data ?? null;
 
   renderMapWithViewState();
   syncRightPanelHeightToMap();
@@ -3267,11 +3268,14 @@ function renderMapWithViewState(preserveZoom = false) {
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
   const hasListSeats = state.electionData.currentSeats.some((s) => Seat.isList(s));
-  // Suppress vote columns on the 'all' tab when list seats exist: summarizeElection2 counts only
-  // constituency votes in 'all' mode while seat counts include both — the mismatch is misleading.
+  // Suppress vote columns on the 'all' tab when list seats exist: Summary.summarize counts
+  // only constituency votes in 'all' mode while seat counts include both — the mismatch is
+  // misleading.
   const showVotes = !hasListSeats || state.voteTotals.mode !== 'all';
-  // TODO: dedupe summarizeElection / summarizeElection2
-  const filteredSummary = summarizeElection2(state.mapVisible.seats, { mode: state.voteTotals.mode });
+  // Aggregated summary of the currently visible (filter-passing) seats under the active
+  // vote-totals tab. Drives the vote-totals panel rows; distinct from
+  // state.electionData.summary, which always covers the unfiltered chamber.
+  const filteredSummary = Summary.summarize(state.mapVisible.seats, { mode: state.voteTotals.mode });
   // TODO: dedupe summarizeElection / summarizeElection2
   const filteredComparisonSummary = _state.currentComparisonSeats.length
     ? summarizeElection2(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })

@@ -1559,33 +1559,6 @@ function seatMatchesPrimaryFilters2(seat, comparisonSeat, filterState, byElectio
   return true;
 }
 
-/**
- * Returns the choropleth metric value for a seat, or null when choropleth is disabled.
- * `choroplethType` is `'voteShare'`, `'voteShareChange'`, or `'none'`.
- * `choroplethParty` is a party key or `'all'`.
- * Returns null when the type is `'none'`, the party is unset/`'all'`, or no comparison seat is available for a change metric.
- * @param {object} seat - Current seat object.
- * @param {object|null} comparisonSeat - Comparison seat for delta calculations; may be null.
- * @param {string} choroplethType - Choropleth type: 'voteShare', 'voteShareChange', or 'none'.
- * @param {string} choroplethParty - Party key to compute the metric for, or 'all' to disable.
- * @returns {number|null} Choropleth metric value, or null when the choropleth is inactive or data is unavailable.
- */
-function getChoroplethValue(seat, comparisonSeat, choroplethType, choroplethParty) {
-  if (choroplethType === 'none') return null;
-  if (!choroplethParty || choroplethParty === 'all') return null;
-
-  if (choroplethType === 'voteShareChange') {
-    if (!comparisonSeat) return null;
-    return Seat.voteSharePct(seat, choroplethParty) - Seat.voteSharePct(comparisonSeat, choroplethParty);
-  }
-
-  if (choroplethType === 'voteShare') {
-    return Seat.voteSharePct(seat, choroplethParty);
-  }
-
-  return null;
-}
-
 // ── Election file resolution ──────────────────────────────────────────────────
 
 // ── Predict share lookups ─────────────────────────────────────────────────────
@@ -3340,136 +3313,8 @@ function resetChoropleths() {
 }
 
 /**
- * Builds the choropleth rendering configuration for visible seats.
- * Returns { enabled: false } when no choropleth is selected.
- * For voteShareChange returns a diverging red-white-blue scale; for voteShare returns a white-to-party-colour scale.
- * Includes valueBySeatKey, toColour, and legend metadata.
- * @param {Set<string>} visibleSeatKeys - Set of seat lookup keys currently passing the active filters.
- * @returns {{enabled: false} | {
- *   enabled: true,
- *   valueBySeatKey: Map<string, number>,
- *   toColour: function(number): string,
- *   legendText: string,
- *   legend?: object
- * }} Choropleth config object; enabled is false when choropleth is inactive.
- */
-function buildChoroplethConfig(visibleSeatKeys) {
-  if (!state.choroplethOptionsSelected() && !state.isReferendumType) {
-    return { enabled: false };
-  }
-  if (visibleSeatKeys.size === 0) return { enabled: false };
-
-  const config = { enabled: true };
-  const valueBySeatKey = new Map();
-  const values = [];
-
-  // Referendum elections render a Leave-share map by default, but a user can still
-  // pick choropleth dropdown options to override that. Only treat this as the
-  // referendum special case when the dropdowns are at their defaults.
-  const isReferendumTypeWithDefaults = state.isReferendumType && !state.choroplethOptionsSelected();
-  const isDelta = state.mapChoropleths.type === 'voteShareChange';
-
-  const excludedRegionKeys = state.currentElection.excludedRegionKeys;
-
-  state.electionData.currentSeats.forEach((seat) => {
-    const seatKey = seatLookupKey(seat.seat);
-    if (!visibleSeatKeys.has(seatKey)) return;
-    if (state.isReferendumType && excludedRegionKeys?.has(seat.region)) return;
-    let value;
-    if (isReferendumTypeWithDefaults) {
-      value = Seat.voteSharePct(seat, 'leave');
-    } else {
-      const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
-      value = getChoroplethValue(seat, comparisonSeat, state.mapChoropleths.type, state.mapChoropleths.party);
-      if (!Number.isFinite(value)) return;
-    }
-    valueBySeatKey.set(seatKey, value);
-    values.push(value);
-  });
-
-  // Belt-and-braces: visibleSeatKeys.size > 0 above gets the common case, but we can still
-  // end up empty here — referendum runs drop excludedRegionKeys seats, non-referendum drops non-finite metrics.
-  if (!values.length) return { enabled: false };
-
-  config.valueBySeatKey = valueBySeatKey;
-
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const partyLabel = isReferendumTypeWithDefaults ? '' : manifest.labelParty(state.mapChoropleths.party);
-  const partyColour = isReferendumTypeWithDefaults ? '' : manifest.colourParty(state.mapChoropleths.party);
-
-  // 'uniform' is a sub-case of absolute vote share where every visible seat has the same
-  // value — there's no usable range to interpolate, so we paint flat in the party colour.
-  let kind;
-  if (isReferendumTypeWithDefaults) kind = 'referendum';
-  else if (isDelta) kind = 'delta';
-  else if (Math.abs(maxValue - minValue) < 1e-9) kind = 'uniform';
-  else kind = 'absolute';
-
-  switch (kind) {
-    case 'referendum': {
-      const scale = d3.scaleLinear()
-        .domain([minValue, 50, maxValue])
-        .range(['#F4A11D', '#f8fbff', '#1D3565']);
-      config.toColour = (value) => scale(value);
-      config.legend = {
-        isDelta: true,
-        title: 'Leave vote share',
-        startColour: '#F4A11D',
-        midColour: '#f8fbff',
-        endColour: '#1D3565',
-        minLabel: `${formatPct(minValue)}%`,
-        midLabel: '50%',
-        maxLabel: `${formatPct(maxValue)}%`,
-      };
-      break;
-    }
-    case 'delta': {
-      const maxAbs = Math.max(...values.map((value) => Math.abs(value)), 0.000001);
-      const scale = d3.scaleLinear().domain([-maxAbs, 0, maxAbs]).range(['#991b1b', '#f8fbff', '#1d4ed8']);
-      config.toColour = (value) => scale(value);
-      config.legendText = `${partyLabel} vote share change (${formatSigned(maxAbs, 2)} max abs)`;
-      config.legend = {
-        party: partyLabel,
-        isDelta: true,
-        title: `${partyLabel} vote share change`,
-        startColour: '#991b1b',
-        midColour: '#f8fbff',
-        endColour: '#1d4ed8',
-        minLabel: formatSigned(-maxAbs, 2),
-        midLabel: '0',
-        maxLabel: formatSigned(maxAbs, 2),
-      };
-      break;
-    }
-    case 'uniform': {
-      config.toColour = () => partyColour;
-      config.legendText = `${partyLabel} vote share (uniform)`;
-      break;
-    }
-    case 'absolute': {
-      const scale = d3.scaleLinear().domain([minValue, maxValue]).range(['#f8fbff', partyColour]);
-      config.toColour = (value) => scale(value);
-      config.legendText = `${partyLabel} vote share (${formatPct(minValue)} to ${formatPct(maxValue)})`;
-      config.legend = {
-        party: partyLabel,
-        isDelta: false,
-        title: `${partyLabel} vote share`,
-        startColour: '#f8fbff',
-        endColour: partyColour,
-        minLabel: formatPct(minValue),
-        maxLabel: formatPct(maxValue),
-      };
-      break;
-    }
-  }
-
-  return config;
-}
-
-/**
  * Renders the choropleth colour gradient legend into the legend element, or hides it when choropleth is disabled.
- * @param {{enabled: boolean, legend?: object, legendText?: string}} choroplethConfig - Choropleth config as returned by buildChoroplethConfig.
+ * @param {{enabled: boolean, legend?: object, legendText?: string}} choroplethConfig - Choropleth config as returned by state.buildChoroplethConfig.
  * @returns {void}
  */
 function renderChoroplethLegend(choroplethConfig) {
@@ -3511,7 +3356,7 @@ function renderChoroplethLegend(choroplethConfig) {
  */
 function renderMapWithViewState(options = {}) {
   state.setMapVisible();
-  const choroplethConfig = buildChoroplethConfig(state.mapVisible.seatKeys);
+  const choroplethConfig = state.buildChoroplethConfig(state.mapVisible.seatKeys);
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
 

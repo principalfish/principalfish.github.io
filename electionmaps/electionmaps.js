@@ -3266,10 +3266,9 @@ function renderMapWithViewState(preserveZoom = false) {
   // Aggregated summary of the currently visible (filter-passing) seats under the active
   // vote-totals tab. Drives the vote-totals panel rows; distinct from
   // state.electionData.summary, which always covers the unfiltered chamber.
-  const filteredSummary = ElectionSummary.summarize(state.mapVisible.seats, { mode: state.voteTotals.mode });
-  // TODO: dedupe summarizeElection / summarizeElection2
-  const filteredComparisonSummary = _state.currentComparisonSeats.length
-    ? summarizeElection2(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })
+  const filteredSeatsSummary = ElectionSummary.summarize(state.mapVisible.seats, { mode: state.voteTotals.mode });
+  const filteredSeatsComparisonSummary = state.comparisonSeats.length
+    ? ElectionSummary.summarize(state.mapVisible.comparisonSeats, { mode: state.voteTotals.mode })
     : null;
   const regionSummary = hasListSeats
     ? buildRegionSummary(state.electionData.currentSeats.filter((s) => Seat.isList(s)))
@@ -3279,8 +3278,8 @@ function renderMapWithViewState(preserveZoom = false) {
     ? state.mapVisible.seats.filter((s) => !Seat.isList(s))
     : state.mapVisible.seats;
 
-  window.__mapsCurrentSummary = filteredSummary;
-  window.__mapsComparisonSummary = filteredComparisonSummary;
+  window.__mapsCurrentSummary = filteredSeatsSummary;
+  window.__mapsComparisonSummary = filteredSeatsComparisonSummary;
 
   renderVoteTotalsTabs(mapConfig);
   updateVoteTotalsTabsUI();
@@ -3290,7 +3289,7 @@ function renderMapWithViewState(preserveZoom = false) {
 
   toggleVoteTotalColumns(showVotes);
   toggleVotePctColumns(showVotes);
-  renderVoteTotals(filteredSummary, filteredComparisonSummary, {
+  renderVoteTotals(filteredSeatsSummary, filteredSeatsComparisonSummary, {
     showVoteTotals: showVotes,
     hiddenParties: new Set(mapConfig?.hiddenVoteTotalsParties ?? []),
   });
@@ -3305,7 +3304,7 @@ function renderMapWithViewState(preserveZoom = false) {
 
   renderRegionTable(regionSummary);
 
-  renderSeatList(filteredSeats, _state.currentComparisonSeats, {});
+  renderSeatList(filteredSeats, state.comparisonSeats, {});
 
   applySeatSearchSuggestions(buildSeatSearchIndex(filteredSeats));
   renderChoroplethLegend(state.choroplethConfig);

@@ -995,6 +995,19 @@ class AppState {
   }
 
   /**
+   * The seat array used as the comparison/baseline for the active view. When a comparison
+   * election is loaded this is `comparisonElectionData.currentSeats`; predict mode swaps
+   * it for `predictBaseSeats`. Empty array when no comparison data exists. Reads through
+   * the `_state.currentComparisonSeats` mirror so callers see the predict-mode reassignment
+   * without having to know about the mirror.
+   * TODO eventyually remove tyhis once the _state property is removed and predict mode reads directly from comparisonElectionData.
+   * @returns {Seat[]}
+   */
+  get comparisonSeats() {
+    return _state.currentComparisonSeats;
+  }
+
+  /**
    * Recomputes mapVisible.{seatKeys, seats, comparisonSeats} by applying the active mapFilters
    * to electionData.currentSeats. Reads _state.comparisonSeatsByKey rather than
    * comparisonElectionData.seatsByKey because predict mode reassigns the _state mirror to the

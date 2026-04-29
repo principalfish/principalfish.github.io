@@ -537,16 +537,15 @@ export class ElectionData {
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
     this.seatsByKey = ElectionData.buildSeatIndex(this.currentSeats);
 
-    /** Aggregated summary of currentSeats. Populated by AppState#initElectionData /
-     * #initComparisonElectionData after construction; recompute via
-     * {@link ElectionData#summarizeElection} when currentSeats changes. */
-    this.summary = null;
+    /** Aggregated summary of currentSeats. Recompute via {@link ElectionData#summarizeElection}
+     * when currentSeats changes (e.g. after predict-mode projection). */
+    this.summary = this.summarizeElection();
 
     /** Pre-rendered subtitle text (e.g. "2024 General Election · Labour majority: 174").
-     * Populated by AppState#initElectionData after summary is set; regenerate via
-     * {@link ElectionData#generateSubtitleSummaryText} when summary changes. Only the active
-     * election populates this — comparison ElectionData instances leave it null. */
-    this.summaryText = null;
+     * Only populated when an electionName is provided — comparison and predict-baseline
+     * ElectionData instances leave it null. Regenerate via
+     * {@link ElectionData#generateSubtitleSummaryText} when summary changes. */
+    this.summaryText = electionName ? this.generateSubtitleSummaryText() : null;
   }
 
   /**
@@ -579,14 +578,14 @@ export class ElectionData {
 
   // TODO: dedupe summarizeElection / summarizeElection2 (this is the canonical handler)
   /**
-   * Aggregates seats and votes across all constituencies in `currentSeats` and stores
-   * the result on `this.summary`. Call again whenever `currentSeats` changes (e.g. after
-   * predict-mode projection) to refresh the cached summary.
+   * Aggregates seats and votes across all constituencies in `currentSeats`. Run automatically
+   * by the constructor; call again to refresh the cached `this.summary` whenever `currentSeats`
+   * changes (e.g. after predict-mode projection).
    * List seats contribute their winner to the party seat count but not to vote totals
    * (list seats use a separate ballot — combining them would double-count the electorate).
    * Duplicate of the standalone `summarizeElection2` in electionmaps.js — kept temporarily
    * while callers migrate.
-   * @returns {void}
+   * @returns {{parties: Array<{party: string, seats: number, votes: number}>, totalVotes: number, turnout: number, totalSeats: number}}
    */
   summarizeElection() {
     const partyStats = new Map();
@@ -594,7 +593,7 @@ export class ElectionData {
     let turnoutWeighted = 0;
 
     this.currentSeats.forEach((seat) => {
-      const isList = /\bList\s+\d+$/i.test(seat.seat);
+      const isList = Seat.isList(seat);
 
       const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
       if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
@@ -849,8 +848,6 @@ class AppState {
    */
   initElectionData(resultsData) {
     this.electionData = new ElectionData(resultsData, this.currentElection?.name ?? null);
-    this.electionData.summary = this.electionData.summarizeElection();
-    this.electionData.summaryText = this.electionData.generateSubtitleSummaryText();
   }
 
   /**
@@ -861,7 +858,6 @@ class AppState {
    */
   initComparisonElectionData(comparisonData) {
     this.comparisonElectionData = new ElectionData(comparisonData);
-    this.comparisonElectionData.summary = this.comparisonElectionData.summarizeElection();
     // Point the _state mirrors at comparisonElectionData's already-cloned arrays/index instead
     // of re-cloning. Predict mode reassigns these mirrors to predictBaseSeats during projection.
     // TODO these can be removed once  predict mode is migrated to use comparisonElectionData directly instead of the mirrors.

@@ -841,7 +841,7 @@ class AppState {
     };
 
     /** Derived visible-seat slice produced by applying mapFilters to electionData.currentSeats.
-     * Recomputed at the top of renderMapWithViewState; read by the renderers and by the
+     * Recomputed at the top of drawMap; read by the renderers and by the
      * vote-totals tab click handler when it re-summarises without a full re-render.
      * - seatKeys: Set<string> of seat lookup keys that pass the active filters.
      * - seats: Array of current-election seat objects matching seatKeys.

@@ -538,12 +538,10 @@ export class ElectionSummary {
     this.text = electionName ? ElectionSummary.#subtitleText(this.data, electionName) : null;
   }
 
-  // TODO: dedupe summarize / summarizeElection2 (this is the canonical handler)
   /**
    * Aggregates seats and votes across all constituencies into the structured form consumed
    * by the vote-totals panel and subtitle text. Honours the active vote-totals tab via
-   * `mode`. Duplicate of the standalone `summarizeElection2` in electionmaps.js — kept
-   * temporarily while callers migrate.
+   * `mode`.
    *
    * Mode behaviour:
    *   - `'all'` (default) — every seat contributes its winner to the seat count, but only

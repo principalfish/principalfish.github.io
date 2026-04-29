@@ -783,68 +783,6 @@ export function buildSeatIndex(seats) {
   return byKey;
 }
 
-// ── Election summary ─────────────────────────────────────────────────────────
-
-/**
- * Aggregates seats and votes across all constituencies, returning { parties, totalVotes, totalSeats }. Parties are sorted by seats descending then votes descending.
- * @param {Array<object>} seats - Array of seat objects with `winner` and `votes` properties.
- * @returns {{
- *   parties: Array<{party: string, seats: number, votes: number}>,
- *   totalVotes: number,
- *   totalSeats: number
- * }} Aggregated election summary.
- */
-// TODO: dedupe summarizeElection / summarizeElection2 — migrate callers to ElectionData#summarizeElection and remove
-export function summarizeElection2(seats, { mode = 'all' } = {}) {
-  const partyStats = new Map();
-  const listRegionPartyCountSeen = new Set();
-
-  seats.forEach((seat) => {
-    const isList = Seat.isList(seat);
-
-    // Mode filtering: skip seats that don't belong to the requested view.
-    if (mode === 'constituency' && isList) return;
-    if (mode === 'list' && !isList) return;
-
-    const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
-    if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
-    partyStats.get(winner).seats += 1;
-
-    // In 'all' mode, only accumulate votes from constituency seats. List seats
-    // use a separate ballot paper, so combining both would double-count the
-    // electorate and produce meaningless vote-share percentages.
-    //
-    // In 'list' mode, all seats within the same region share identical vote
-    // totals (each region's list votes are stored on every seat in that region).
-    // Only count votes for the first list seat encountered per region to avoid
-    // multiplying regional totals by the number of seats.
-    const includeVotes = mode !== 'all' || !isList;
-
-    if (includeVotes) {
-      Object.entries(seat.votes || {}).forEach(([party, votes]) => {
-        const key = party === 'other' ? 'others' : party;
-        if (!partyStats.has(key)) partyStats.set(key, { seats: 0, votes: 0 });
-        // In list mode, each party's regional vote total is duplicated across all
-        // seats they won in the region. Only count it once per (region, party) pair.
-        if (mode === 'list') {
-          const seenKey = `${normalizeRegionKey(seat.region)}\x00${key}`;
-          if (listRegionPartyCountSeen.has(seenKey)) return;
-          listRegionPartyCountSeen.add(seenKey);
-        }
-        partyStats.get(key).votes += Number(votes || 0);
-      });
-    }
-  });
-
-  const parties = Array.from(partyStats.entries())
-    .map(([party, stats]) => ({ party, ...stats }))
-    .sort((a, b) => b.seats - a.seats || b.votes - a.votes);
-
-  const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
-
-  return { parties, totalVotes, totalSeats: seats.length };
-}
-
 // ── Predict region predicates ────────────────────────────────────────────────
 
 /**
@@ -1957,10 +1895,8 @@ function renderVoteTotalsTabs(mapConfig) {
       updateVoteTotalsTabsUI();
       const { seats, comparisonSeats } = state.mapVisible;
       const tabAllowsVotes = state.voteTotals.mode !== 'all';
-      // TODO: dedupe summarizeElection / summarizeElection2
-      const summary = summarizeElection2(seats, { mode: state.voteTotals.mode });
-      // TODO: dedupe summarizeElection / summarizeElection2
-      const compSummary = comparisonSeats.length ? summarizeElection2(comparisonSeats, { mode: state.voteTotals.mode }) : null;
+      const summary = ElectionSummary.summarize(seats, { mode: state.voteTotals.mode });
+      const compSummary = comparisonSeats.length ? ElectionSummary.summarize(comparisonSeats, { mode: state.voteTotals.mode }) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
       toggleVoteTotalColumns(tabAllowsVotes);
@@ -2958,7 +2894,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   window.__mapsComparisonSummary = baselineSummary;
 
   const predictLabel = `Predict ${predictElectionYear()}`;
-  // TODO: migrate to ElectionData#generateSubtitleSummaryText once predict mode writes its projected summary back onto state.electionData (will need to update electionData.electionName to predictLabel before calling)
+  // TODO: migrate to `state.electionData.summary.text` once predict mode writes its projected summary back onto state.electionData (will need to update electionData.electionName to predictLabel so the ElectionSummary constructor renders the right prefix)
   updateTopSummary({ name: predictLabel, parliament: state.currentParliament }, projectedSummary);
   renderMapWithViewState(true);
   syncRightPanelHeightToMap();
@@ -2988,10 +2924,8 @@ function applyPredictModeProjection() {
     : hasWestminsterSwings
       ? _state.predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, _state.predictRegionalSwingsByParty))
       : _state.predictBaseSeats.slice();
-  // TODO: dedupe summarizeElection / summarizeElection2
-  const projectedSummary = summarizeElection2(projectedSeats, { mode: state.voteTotals.mode });
-  // TODO: dedupe summarizeElection / summarizeElection2
-  const baselineSummary = summarizeElection2(_state.predictBaseSeats, { mode: state.voteTotals.mode });
+  const projectedSummary = ElectionSummary.summarize(projectedSeats, { mode: state.voteTotals.mode });
+  const baselineSummary = ElectionSummary.summarize(_state.predictBaseSeats, { mode: state.voteTotals.mode });
 
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
 }
@@ -3125,10 +3059,8 @@ async function applyCurrentPredictionToInputs() {
   // regional shares, so the map reflects the exact model output rather than an
   // approximation produced by the simplified UNS projection.
   const projectedSeats = _state.predictCurrentSimulationSeats.map((s) => new Seat(s));
-  // TODO: dedupe summarizeElection / summarizeElection2
-  const projectedSummary = summarizeElection2(projectedSeats, { mode: state.voteTotals.mode });
-  // TODO: dedupe summarizeElection / summarizeElection2
-  const baselineSummary = summarizeElection2(_state.predictBaseSeats, { mode: state.voteTotals.mode });
+  const projectedSummary = ElectionSummary.summarize(projectedSeats, { mode: state.voteTotals.mode });
+  const baselineSummary = ElectionSummary.summarize(_state.predictBaseSeats, { mode: state.voteTotals.mode });
 
   renderPredictGrid();
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
@@ -3447,7 +3379,7 @@ function toggleVoteTotalColumns(showVoteTotals) {
 
 /**
  * Renders the vote totals summary table, showing seat counts, vote share, and comparison deltas when a comparisonSummary is provided. Truncates to top 6 rows unless expanded.
- * @param {{parties: Array<object>, totalVotes: number}} summary - Current election summary as returned by summarizeElection.
+ * @param {{parties: Array<object>, totalVotes: number}} summary - Current election summary as returned by `ElectionSummary.summarize`.
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary=null] - Optional comparison summary for rendering delta columns.
  * @param {{showVoteTotals?: boolean}} [options={}] - Rendering options; showVoteTotals controls raw vote count column visibility.
  * @returns {void}
@@ -4021,11 +3953,11 @@ function syncRightPanelHeightToMap() {
   mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
 }
 
-// TODO: prefer ElectionData#generateSubtitleSummaryText for new callers; remove once the predict-mode caller migrates
+// TODO: prefer `state.electionData.summary.text` for new callers; remove once the predict-mode caller migrates
 /**
  * Updates the page title and subtitle with the election name and leading-party majority (or hung-parliament message).
  * @param {object} election - Election entry object with a `name` and optionally a `type` property.
- * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} summary - Election summary as returned by summarizeElection.
+ * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} summary - Election summary as returned by `ElectionSummary.summarize`.
  * @returns {void}
  */
 function updateTopSummary(election, summary) {

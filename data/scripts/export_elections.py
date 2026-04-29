@@ -1466,9 +1466,9 @@ def main() -> None:
 
         # Preserve manually-curated election fields that the export pipeline does not compute.
         # The main loop builds entries from DB rows with only the standard fields (id, name,
-        # type, mapId, parliament), so without this merge, manual additions (e.g. referendum
-        # flag, excludedRegions for the EU referendum) would be wiped on every export.
-        PRESERVED_ENTRY_FIELDS = ("referendum", "excludedRegions")
+        # type, mapId, parliament), so without this merge, manual additions (e.g. the
+        # referendum flag) would be wiped on every export.
+        PRESERVED_ENTRY_FIELDS = ("referendum",)
         for entry in manifest_entries:
             existing_entry = existing_by_id.get(entry.get("id"))
             if not existing_entry:

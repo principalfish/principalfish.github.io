@@ -3314,7 +3314,7 @@ function resetChoropleths() {
 
 /**
  * Renders the choropleth colour gradient legend into the legend element, or hides it when choropleth is disabled.
- * @param {{enabled: boolean, legend?: object, legendText?: string}} choroplethConfig - Choropleth config as returned by state.buildChoroplethConfig.
+ * @param {{enabled: boolean, legend?: object, legendText?: string}} choroplethConfig - Choropleth config as returned by state.buildChoroplethConfig().
  * @returns {void}
  */
 function renderChoroplethLegend(choroplethConfig) {
@@ -3356,7 +3356,7 @@ function renderChoroplethLegend(choroplethConfig) {
  */
 function renderMapWithViewState(options = {}) {
   state.setMapVisible();
-  const choroplethConfig = state.buildChoroplethConfig(state.mapVisible.seatKeys);
+  state.buildChoroplethConfig();
 
   const mapConfig = manifest.mapModes[String(state.currentElection.mapId)];
 
@@ -3396,7 +3396,7 @@ function renderMapWithViewState(options = {}) {
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys: state.mapVisible.seatKeys,
-    choroplethConfig,
+    choroplethConfig: state.choroplethConfig,
     ...(preserveTransform ? { preserveTransform } : {}),
     regionSummary,
     mapId,
@@ -3411,7 +3411,7 @@ function renderMapWithViewState(options = {}) {
   renderSeatList(filteredSeats, _state.currentComparisonSeats, {});
 
   applySeatSearchSuggestions(buildSeatSearchIndex(filteredSeats));
-  renderChoroplethLegend(choroplethConfig);
+  renderChoroplethLegend(state.choroplethConfig);
 
   if (seatPreview) {
     let previewText;

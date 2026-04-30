@@ -136,7 +136,7 @@ function drawMap(preserveZoom = false) {
   });
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
-    visibleSeatKeys: state.mapVisible.seatKeys,
+    visibleSeatKeys: state.mapSeatsVisible.seatKeys,
     choroplethConfig: state.choroplethConfig,
     preserveZoom,
     regionSummary: state.listRegionSummary,
@@ -147,7 +147,7 @@ function drawMap(preserveZoom = false) {
 
   renderSeatList(state.listFilteredSeats, state.comparisonSeats, {});
 
-  applySeatSearchSuggestions(buildSeatSearchIndex(state.listFilteredSeats));
+  applySeatSearchSuggestions();
   renderChoroplethLegend(state.choroplethConfig);
 
   if (seatPreview) {
@@ -156,7 +156,7 @@ function drawMap(preserveZoom = false) {
       const totalConst = state.electionData.currentSeats.filter((s) => !Seat.isList(s));
       previewText = `Showing ${formatInt(state.listFilteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
     } else {
-      previewText = `Showing ${formatInt(state.mapVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
+      previewText = `Showing ${formatInt(state.mapSeatsVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
     }
     seatPreview.textContent = previewText;
   }
@@ -1907,10 +1907,10 @@ function renderVoteTotalsTabs(mapConfig) {
     btn.addEventListener('click', () => {
       state.voteTotals.mode = view.id;
       updateVoteTotalsTabsUI();
-      const { seats, comparisonSeats } = state.mapVisible;
+      const { seats, comparisonSeats } = state.mapSeatsVisible;
       const tabAllowsVotes = state.voteTotals.mode !== 'all';
-      const summary = ElectionSummary.summarize(seats, { mode: state.voteTotals.mode });
-      const compSummary = comparisonSeats.length ? ElectionSummary.summarize(comparisonSeats, { mode: state.voteTotals.mode }) : null;
+      const summary = ElectionSummary.summarize(seats, state.voteTotals.mode);
+      const compSummary = comparisonSeats.length ? ElectionSummary.summarize(comparisonSeats, state.voteTotals.mode) : null;
       window.__mapsCurrentSummary = summary;
       window.__mapsComparisonSummary = compSummary;
       toggleVoteTotalColumns(tabAllowsVotes);
@@ -2938,8 +2938,8 @@ function applyPredictModeProjection() {
     : hasWestminsterSwings
       ? _state.predictBaseSeats.map((seat) => projectedSeatForPredictMode(seat, _state.predictRegionalSwingsByParty))
       : _state.predictBaseSeats.slice();
-  const projectedSummary = ElectionSummary.summarize(projectedSeats, { mode: state.voteTotals.mode });
-  const baselineSummary = ElectionSummary.summarize(_state.predictBaseSeats, { mode: state.voteTotals.mode });
+  const projectedSummary = ElectionSummary.summarize(projectedSeats, state.voteTotals.mode);
+  const baselineSummary = ElectionSummary.summarize(_state.predictBaseSeats, state.voteTotals.mode);
 
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
 }
@@ -3073,8 +3073,8 @@ async function applyCurrentPredictionToInputs() {
   // regional shares, so the map reflects the exact model output rather than an
   // approximation produced by the simplified UNS projection.
   const projectedSeats = _state.predictCurrentSimulationSeats.map((s) => new Seat(s));
-  const projectedSummary = ElectionSummary.summarize(projectedSeats, { mode: state.voteTotals.mode });
-  const baselineSummary = ElectionSummary.summarize(_state.predictBaseSeats, { mode: state.voteTotals.mode });
+  const projectedSummary = ElectionSummary.summarize(projectedSeats, state.voteTotals.mode);
+  const baselineSummary = ElectionSummary.summarize(_state.predictBaseSeats, state.voteTotals.mode);
 
   renderPredictGrid();
   commitPredictProjectionState(projectedSeats, projectedSummary, baselineSummary);
@@ -3559,29 +3559,6 @@ function setSelectedSeatRowByKey(seatKey) {
 }
 
 /**
- * Builds the module-level seat name search index (_state.seatSearchNames and _state.currentSeatNameByKey) from the provided seats. Returns the sorted name array.
- * @param {Array<object>} seats - Array of seat objects with a `seat` name property.
- * @returns {string[]} Sorted array of seat name strings for autocomplete use.
- */
-function buildSeatSearchIndex(seats) {
-  _state.currentSeatNameByKey = new Map();
-  const names = [];
-
-  (seats || []).forEach((seat) => {
-    const seatName = String(seat?.seat || '').trim();
-    if (!seatName) return;
-    const key = seatLookupKey(seatName);
-    if (_state.currentSeatNameByKey.has(key)) return;
-    _state.currentSeatNameByKey.set(key, seatName);
-    names.push(seatName);
-  });
-
-  names.sort((a, b) => a.localeCompare(b));
-  _state.seatSearchNames = names;
-  return names;
-}
-
-/**
  * Creates the autocomplete dropdown menu element adjacent to the seat search input if it doesn't exist yet. Returns the element or null if the input is absent.
  * @returns {HTMLElement|null} The autocomplete menu element, or null if the seat search input is not in the DOM.
  */
@@ -3623,7 +3600,7 @@ function showSeatSearchSuggestions(query = '') {
   const queryText = String(query || '').trim().toLowerCase();
   const startsWithMatches = [];
   const includesMatches = [];
-  _state.seatSearchNames.forEach((name) => {
+  state.seatSearchNames.forEach((name) => {
     const lowerName = name.toLowerCase();
     if (!queryText || lowerName.startsWith(queryText)) {
       startsWithMatches.push(name);
@@ -3676,13 +3653,12 @@ function updateSeatSearchHighlight() {
 }
 
 /**
- * Updates the seat name list used for autocomplete suggestions and hides any open dropdown.
- * @param {string[]} seatNames - New array of seat name strings to use for autocomplete.
+ * Hides any open autocomplete dropdown so it picks up the refreshed
+ * state.seatSearchNames on next open.
  * @returns {void}
  */
-function applySeatSearchSuggestions(seatNames) {
+function applySeatSearchSuggestions() {
   if (!seatSearchInput) return;
-  _state.seatSearchNames = Array.isArray(seatNames) ? [...seatNames] : [];
   hideSeatSearchSuggestions();
 }
 
@@ -3696,12 +3672,12 @@ function selectSeatBySearchQuery(query) {
   if (!rawQuery) return;
 
   const directKey = seatLookupKey(rawQuery);
-  let seatName = _state.currentSeatNameByKey.get(directKey) || null;
+  let seatName = state.currentSeatNameByKey.get(directKey) || null;
 
   if (!seatName) {
     const queryLower = rawQuery.toLowerCase();
-    seatName = Array.from(_state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().startsWith(queryLower))
-      || Array.from(_state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().includes(queryLower))
+    seatName = Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().startsWith(queryLower))
+      || Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().includes(queryLower))
       || null;
   }
 
@@ -3859,7 +3835,7 @@ async function lookupPostcode(postcode) {
     // Holyrood 2021→2026 boundary mapping as a best-guess fallback.
     // Only applied on Holyrood to avoid false rewrites on Westminster lookups.
     const seatKey = seatLookupKey(constituencyName);
-    if (!_state.currentSeatNameByKey.has(seatKey) && mapName === HOLYROOD_NEW_MAP_NAME) {
+    if (!state.currentSeatNameByKey.has(seatKey) && mapName === HOLYROOD_NEW_MAP_NAME) {
       const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
       if (mapped) return mapped;
     }

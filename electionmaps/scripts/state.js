@@ -219,7 +219,6 @@ export const _state = {
   // Sort / UI / totals
   currentSort: { key: 'seats', direction: 'desc' },
   voteTotalsExpanded: false,
-  hiddenVoteTotalsParties: new Set(),
   selectedSeatRow: null,
   activeSeatPathNode: null,
   currentOpenSeatName: null,
@@ -227,7 +226,6 @@ export const _state = {
   // Election / seat data
   currentComparisonSeats: [],
   comparisonSeatsByKey: new Map(),
-  currentSeatNameByKey: new Map(),
   seatListRowByKey: new Map(),
 
   // Map interaction controller — replaced by renderTopoMap
@@ -241,7 +239,6 @@ export const _state = {
   },
 
   // Search
-  seatSearchNames: [],
   seatSearchSuggestions: [],
   seatSearchSuggestionIndex: -1,
   seatSearchMenuEl: null,
@@ -523,15 +520,15 @@ export class ElectionSummary {
   /**
    * @param {Seat[]} seats - Seats to aggregate.
    * @param {string|null} electionName - Display label for the election; when null, `text` is null.
-   * @param {{mode?: ('all'|'constituency'|'list')}} [options] - Aggregation options forwarded to {@link ElectionSummary.summarize}; see class jsdoc for the per-mode behaviour.
+   * @param {('all'|'constituency'|'list')} [mode='all'] - Aggregation mode forwarded to {@link ElectionSummary.summarize}; see class jsdoc for the per-mode behaviour.
    */
-  constructor(seats, electionName, { mode = 'all' } = {}) {
+  constructor(seats, electionName, mode = 'all') {
     /** Aggregation mode used to build {@link ElectionSummary#data}. See class jsdoc for per-mode behaviour. */
     this.mode = mode;
 
     /** Structured aggregate: `{parties, totalVotes, turnout, totalSeats}`. Parties are
      * sorted by seats desc, then votes desc, so `parties[0]` is the leading party. */
-    this.data = ElectionSummary.summarize(seats, { mode });
+    this.data = ElectionSummary.summarize(seats, mode);
 
     /** Pre-rendered subtitle string (e.g. "2024 General Election · Labour majority: 174"),
      * or null when no electionName was provided (comparison/predict-baseline summaries). */
@@ -566,8 +563,7 @@ export class ElectionSummary {
    * @param {Seat[]} seats - Seats to aggregate. Each seat must carry the normalised shape
    *   produced by {@link Seat} (i.e. `winner`, `votes`, `region`); raw pf-results-v4
    *   objects must be converted via `Seat.fromRaw` first.
-   * @param {{mode?: ('all'|'constituency'|'list')}} [options] - Aggregation options.
-   * @param {('all'|'constituency'|'list')} [options.mode='all'] - Vote-totals tab to summarise for; see Mode behaviour above.
+   * @param {('all'|'constituency'|'list')} [mode='all'] - Vote-totals tab to summarise for; see Mode behaviour above.
    * @returns {{
    *   parties: Array<{party: string, seats: number, votes: number}>,
    *   totalVotes: number,
@@ -583,7 +579,7 @@ export class ElectionSummary {
    *   - `totalSeats` — `seats.length` of the input array (chamber size), independent of
    *     mode filtering.
    */
-  static summarize(seats, { mode = 'all' } = {}) {
+  static summarize(seats, mode = 'all') {
     // partyStats accumulates per-party seat and vote counts in a single pass over `seats`.
     // We use a Map (not a plain object) because party keys are arbitrary user-data strings
     // and we want insertion-order iteration if needed for deterministic debugging.
@@ -914,7 +910,7 @@ class AppState {
      * - seatKeys: Set<string> of seat lookup keys that pass the active filters.
      * - seats: Array of current-election seat objects matching seatKeys.
      * - comparisonSeats: Array of comparison-election seat objects keyed by seatKeys (Boolean-filtered). */
-    this.mapVisible = {
+    this.mapSeatsVisible = {
       seatKeys: new Set(),
       seats: [],
       comparisonSeats: [],
@@ -953,12 +949,12 @@ class AppState {
      * misleading), otherwise true. */
     this.showVotes = true;
 
-    /** ElectionSummary.summarize result over mapVisible.seats — the aggregated summary
+    /** ElectionSummary.summarize result over mapSeatsVisible.seats — the aggregated summary
      * of the currently visible (filter-passing) seats under the active vote-totals tab.
      * Distinct from electionData.summary, which always covers the unfiltered chamber. */
     this.filteredSeatsSummary = null;
 
-    /** Same as filteredSeatsSummary but over mapVisible.comparisonSeats. Null when no
+    /** Same as filteredSeatsSummary but over mapSeatsVisible.comparisonSeats. Null when no
      * comparison data is loaded. */
     this.filteredSeatsComparisonSummary = null;
 
@@ -969,8 +965,16 @@ class AppState {
 
     /** Visible seats minus list seats — when the chamber has list seats, the seat-list
      * panel hides them (they appear in the region-table overlay instead). Equals
-     * mapVisible.seats unmodified when no list seats exist. */
+     * mapSeatsVisible.seats unmodified when no list seats exist. */
     this.listFilteredSeats = [];
+
+    /** Sorted seat-name array used by the autocomplete dropdown. Built from
+     * listFilteredSeats so Holyrood searches resolve only to constituencies. */
+    this.seatSearchNames = [];
+
+    /** Map of seat-lookup key → display name for the current visible set. Used by
+     * selectSeatBySearchQuery and the Holyrood new-boundary name fallback. */
+    this.currentSeatNameByKey = new Map();
   }
 
   /**
@@ -1119,9 +1123,10 @@ class AppState {
    * the populated fields off `state` rather than recomputing locally.
    *
    * Sets: mapConfig, hasListSeats, showVotes, filteredSeatsSummary,
-   *   filteredSeatsComparisonSummary, listRegionSummary, listFilteredSeats. Also
-   *   refreshes the mapVisible slice (via applyMapFilters) and the choroplethConfig
-   *   (via buildChoroplethConfig) as a side effect.
+   *   filteredSeatsComparisonSummary, listRegionSummary, listFilteredSeats,
+   *   seatSearchNames, currentSeatNameByKey. Also refreshes the mapSeatsVisible slice
+   *   (via applyMapFilters) and the choroplethConfig (via buildChoroplethConfig) as
+   *   a side effect.
    * @returns {void}
    */
   setupMapData() {
@@ -1135,9 +1140,9 @@ class AppState {
     // mismatch is misleading.
     this.showVotes = !this.hasListSeats || this.voteTotals.mode !== 'all';
 
-    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapVisible.seats, { mode: this.voteTotals.mode });
+    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode);
     this.filteredSeatsComparisonSummary = this.comparisonSeats.length
-      ? ElectionSummary.summarize(this.mapVisible.comparisonSeats, { mode: this.voteTotals.mode })
+      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode)
       : null;
 
     // List-seat specialisation. Holyrood elections need a per-region rollup for the
@@ -1147,11 +1152,33 @@ class AppState {
     // stay at their defaults: no region rollup, and the seat list shows every visible
     // seat unmodified.
     this.listRegionSummary = null;
-    this.listFilteredSeats = this.mapVisible.seats;
+    this.listFilteredSeats = this.mapSeatsVisible.seats;
     if (this.hasListSeats) {
       this.listRegionSummary = ElectionSummary.summarizeByRegion(this.electionData.currentSeats.filter((s) => Seat.isList(s)));
-      this.listFilteredSeats = this.mapVisible.seats.filter((s) => !Seat.isList(s));
+      this.listFilteredSeats = this.mapSeatsVisible.seats.filter((s) => !Seat.isList(s));
     }
+
+    // Seat search index. Built from listFilteredSeats (not mapSeatsVisible.seats) so that on
+    // list elections the autocomplete and postcode-lookup paths only see constituencies — list
+    // seats have no map polygon to zoom to, so users reach them via the region table.
+    // Two parallel structures are produced:
+    //   - currentSeatNameByKey: lookup-key → display name, used to resolve a typed query or
+    //     postcode-API constituency name back to the canonical seat name.
+    //   - seatSearchNames: alphabetised display names for the autocomplete dropdown.
+    // Dedupe-by-key drops collisions where two seats normalise to the same lookup key
+    // (e.g. accent variants); the first wins.
+    this.currentSeatNameByKey = new Map();
+    const seatNames = [];
+    this.listFilteredSeats.forEach((seat) => {
+      const seatName = String(seat?.seat || '').trim();
+      if (!seatName) return;
+      const key = seatLookupKey(seatName);
+      if (this.currentSeatNameByKey.has(key)) return;
+      this.currentSeatNameByKey.set(key, seatName);
+      seatNames.push(seatName);
+    });
+    seatNames.sort((a, b) => a.localeCompare(b));
+    this.seatSearchNames = seatNames;
 
     // TODO: remove once the resize-driven renderVoteTotals callers and the predict / tab-click
     // summary builders read state.filteredSeatsSummary / state.filteredSeatsComparisonSummary
@@ -1161,7 +1188,7 @@ class AppState {
   }
 
   /**
-   * Recomputes mapVisible.{seatKeys, seats, comparisonSeats} by applying the active mapFilters
+   * Recomputes mapSeatsVisible.{seatKeys, seats, comparisonSeats} by applying the active mapFilters
    * to electionData.currentSeats. Reads _state.comparisonSeatsByKey rather than
    * comparisonElectionData.seatsByKey because predict mode reassigns the _state mirror to the
    * predict baseline index, which then becomes the source of truth for gains-filtering.
@@ -1178,9 +1205,9 @@ class AppState {
         seatKeys.add(seatKey);
       }
     });
-    this.mapVisible.seatKeys = seatKeys;
-    this.mapVisible.seats = this.electionData.currentSeats.filter((seat) => seatKeys.has(seatLookupKey(seat.seat)));
-    this.mapVisible.comparisonSeats = Array.from(seatKeys)
+    this.mapSeatsVisible.seatKeys = seatKeys;
+    this.mapSeatsVisible.seats = this.electionData.currentSeats.filter((seat) => seatKeys.has(seatLookupKey(seat.seat)));
+    this.mapSeatsVisible.comparisonSeats = Array.from(seatKeys)
       .map((seatKey) => comparisonSeatsByKey.get(seatKey))
       .filter(Boolean);
   }
@@ -1268,7 +1295,7 @@ class AppState {
   }
 
   /**
-   * Builds the choropleth rendering configuration for visible seats (this.mapVisible.seatKeys).
+   * Builds the choropleth rendering configuration for visible seats (this.mapSeatsVisible.seatKeys).
    * Returns { enabled: false } when no choropleth is selected.
    * For voteShareChange returns a diverging red-white-blue scale; for voteShare returns a white-to-party-colour scale.
    * Includes valueBySeatKey, toColour, and legend metadata.
@@ -1278,7 +1305,7 @@ class AppState {
    * @returns {void}
    */
   buildChoroplethConfig() {
-    const visibleSeatKeys = this.mapVisible.seatKeys;
+    const visibleSeatKeys = this.mapSeatsVisible.seatKeys;
     if (!this.choroplethOptionsSelected() && !this.isReferendumType) {
       this.choroplethConfig = { enabled: false };
       return;

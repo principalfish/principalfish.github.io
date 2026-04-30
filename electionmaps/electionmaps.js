@@ -128,10 +128,7 @@ function drawMap(preserveZoom = false) {
   updateSeatViewTabsUI();
   updatePostcodeSearchVisibility();
 
-  toggleVoteTotalColumns(state.showVotes);
-  toggleVotePctColumns(state.showVotes);
   renderVoteTotals(state.filteredSeatsSummary, state.filteredSeatsComparisonSummary, {
-    showVoteTotals: state.showVotes,
     hiddenParties: new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []),
   });
 
@@ -1880,10 +1877,13 @@ function formatZoomPct(scaleValue) {
 }
 
 
-/** Toggles vote percentage column visibility on the totals table. */
-function toggleVotePctColumns(show) {
+/** Applies the three column-visibility classes on the vote-totals table from
+ *  state.voteTotals.columns. No-op when the table isn't in the DOM yet. */
+function applyVoteTotalsColumnVisibility() {
   if (!voteTotalsTable) return;
-  voteTotalsTable.classList.toggle('hide-vote-pct-col', !show);
+  voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
+  voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
+  voteTotalsTable.classList.toggle('hide-comparison-cols', !state.voteTotalsColumnVisible('comparison'));
 }
 
 /** Sets the active class on vote-totals tab buttons to match state.voteTotals.mode. */
@@ -1906,16 +1906,11 @@ function renderVoteTotalsTabs(mapConfig) {
     btn.textContent = view.label;
     btn.addEventListener('click', () => {
       state.voteTotals.mode = view.id;
+      state.recomputeVoteTotalsForMode();
       updateVoteTotalsTabsUI();
-      const { seats, comparisonSeats } = state.mapSeatsVisible;
-      const tabAllowsVotes = state.voteTotals.mode !== 'all';
-      const summary = ElectionSummary.summarize(seats, state.voteTotals.mode);
-      const compSummary = comparisonSeats.length ? ElectionSummary.summarize(comparisonSeats, state.voteTotals.mode) : null;
-      window.__mapsCurrentSummary = summary;
-      window.__mapsComparisonSummary = compSummary;
-      toggleVoteTotalColumns(tabAllowsVotes);
-      toggleVotePctColumns(tabAllowsVotes);
-      renderVoteTotals(summary, compSummary, { showVoteTotals: tabAllowsVotes });
+      renderVoteTotals(state.filteredSeatsSummary, state.filteredSeatsComparisonSummary, {
+        hiddenParties: new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []),
+      });
     });
     voteTotalsTabNav.appendChild(btn);
   });
@@ -3292,44 +3287,19 @@ function sortPartyRows(rows) {
 }
 
 /**
- * Toggles the 'hide-comparison-cols' class on the vote totals table to show or hide comparison delta columns.
- * @param {boolean} showComparison - True to show comparison columns, false to hide them.
- * @returns {void}
- */
-function toggleComparisonColumns(showComparison) {
-  if (!voteTotalsTable) return;
-  voteTotalsTable.classList.toggle('hide-comparison-cols', !showComparison);
-}
-
-/**
- * Toggles the 'hide-vote-total-col' class on the vote totals table to show or hide raw vote count
- * columns. Always hides when state.voteTotals.columns.votes is false (predict mode, model
- * elections, referendums) — caller's showVoteTotals can only restrict further, not override.
- * @param {boolean} showVoteTotals - True to show the raw vote count column, false to hide it.
- * @returns {void}
- */
-function toggleVoteTotalColumns(showVoteTotals) {
-  if (!voteTotalsTable) return;
-  const show = showVoteTotals && state.voteTotalsColumnVisible('votes');
-  voteTotalsTable.classList.toggle('hide-vote-total-col', !show);
-}
-
-/**
- * Renders the vote totals summary table, showing seat counts, vote share, and comparison deltas when a comparisonSummary is provided. Truncates to top 6 rows unless expanded.
+ * Renders the vote totals summary table, showing seat counts, vote share, and comparison deltas when a comparisonSummary is provided. Truncates to top 6 rows unless expanded. Column visibility is read from state.voteTotals.columns via applyVoteTotalsColumnVisibility.
  * @param {{parties: Array<object>, totalVotes: number}} summary - Current election summary as returned by `ElectionSummary.summarize`.
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary=null] - Optional comparison summary for rendering delta columns.
- * @param {{showVoteTotals?: boolean}} [options={}] - Rendering options; showVoteTotals controls raw vote count column visibility.
+ * @param {{hiddenParties?: Set<string>}} [options={}] - Rendering options; hiddenParties suppresses specific party rows.
  * @returns {void}
  */
 function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
   if (!voteTotalsBody) return;
   voteTotalsBody.innerHTML = '';
 
-  const showComparison = Boolean(comparisonSummary);
-  const showVoteTotals = options.showVoteTotals !== false;
-  toggleComparisonColumns(showComparison);
-  toggleVoteTotalColumns(showVoteTotals);
+  applyVoteTotalsColumnVisibility();
 
+  const showComparison = Boolean(comparisonSummary);
   const comparisonByParty = new Map();
   if (comparisonSummary) {
     comparisonSummary.parties.forEach((partyRow) => {

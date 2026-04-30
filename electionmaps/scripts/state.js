@@ -869,14 +869,19 @@ class AppState {
     this.isReferendumType = false;
 
     /** Vote totals panel state.
-     * - columns.votes: whether the raw vote count column is visible. Initialised false for
-     *   model elections and referendum-type elections; true otherwise. Flipped to false when
-     *   entering predict mode. Read via voteTotalsColumnVisible().
+     * - columns.votes: whether the raw vote-count column is visible. Hidden for predict / model /
+     *   referendum elections (no meaningful raw counts) and on the Holyrood 'all' tab (where
+     *   constituency and list ballots can't be summed coherently).
+     * - columns.votePct: whether the vote-percentage column is visible. Hidden only on the
+     *   Holyrood 'all' tab; predict / model / referendum still show vote shares.
+     * - columns.comparison: whether the comparison delta columns are visible. True whenever
+     *   comparison data is loaded.
+     * All three are re-derived per render in setupMapData; read via voteTotalsColumnVisible().
      * - mode: id of the active vote-totals tab (e.g. 'all', 'constituency', 'list'). Initialised
      *   in state.init from manifest.mapModes[mapId].voteTotalsViews[0].id; mutated when the user
      *   clicks a different tab.
      */
-    this.voteTotals = { columns: { votes: true }, mode: 'all' };
+    this.voteTotals = { columns: { votes: true, votePct: true, comparison: false }, mode: 'all' };
 
     /** Seat view panel state.
      * - mode: id of the active seat-view tab (e.g. 'seats', 'constituency', 'regions').
@@ -944,11 +949,6 @@ class AppState {
      * constituency-only seat list). */
     this.hasListSeats = false;
 
-    /** Whether vote columns should be shown in the vote-totals panel. False on the 'all'
-     * tab when list seats exist (mismatch between seat counts and vote counts is
-     * misleading), otherwise true. */
-    this.showVotes = true;
-
     /** ElectionSummary.summarize result over mapSeatsVisible.seats — the aggregated summary
      * of the currently visible (filter-passing) seats under the active vote-totals tab.
      * Distinct from electionData.summary, which always covers the unfiltered chamber. */
@@ -1015,9 +1015,6 @@ class AppState {
       : null;
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
-    if (this.currentElection.model || this.isReferendumType || view === 'predict') {
-      this.voteTotals.columns.votes = false;
-    }
 
     // Default the active vote-totals / seat-view tabs from the mapMode config. The hydration
     // step in Manifest.#hydrate guarantees both arrays are non-empty.
@@ -1122,11 +1119,10 @@ class AppState {
    * list-seat specialisation slice. drawMap calls this once per render and then reads
    * the populated fields off `state` rather than recomputing locally.
    *
-   * Sets: mapConfig, hasListSeats, showVotes, filteredSeatsSummary,
-   *   filteredSeatsComparisonSummary, listRegionSummary, listFilteredSeats,
-   *   seatSearchNames, currentSeatNameByKey. Also refreshes the mapSeatsVisible slice
-   *   (via applyMapFilters) and the choroplethConfig (via buildChoroplethConfig) as
-   *   a side effect.
+   * Sets: mapConfig, hasListSeats, listRegionSummary, listFilteredSeats, seatSearchNames,
+   *   currentSeatNameByKey. Also refreshes the mapSeatsVisible slice (via applyMapFilters),
+   *   the choroplethConfig (via buildChoroplethConfig), and the vote-totals column flags +
+   *   summaries (via recomputeVoteTotalsForMode) as a side effect.
    * @returns {void}
    */
   setupMapData() {
@@ -1135,15 +1131,8 @@ class AppState {
 
     this.mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
     this.hasListSeats = this.electionData.currentSeats.some((s) => Seat.isList(s));
-    // Suppress vote columns on the 'all' tab when list seats exist: ElectionSummary.summarize
-    // counts only constituency votes in 'all' mode while seat counts include both — the
-    // mismatch is misleading.
-    this.showVotes = !this.hasListSeats || this.voteTotals.mode !== 'all';
 
-    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode);
-    this.filteredSeatsComparisonSummary = this.comparisonSeats.length
-      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode)
-      : null;
+    this.recomputeVoteTotalsForMode();
 
     // List-seat specialisation. Holyrood elections need a per-region rollup for the
     // region-table overlay (list seats render there rather than on the map), and the
@@ -1179,8 +1168,38 @@ class AppState {
     });
     seatNames.sort((a, b) => a.localeCompare(b));
     this.seatSearchNames = seatNames;
+  }
 
-    // TODO: remove once the resize-driven renderVoteTotals callers and the predict / tab-click
+  /**
+   * Refreshes the vote-totals fields that depend on the active tab plus the comparison
+   * column flag: `voteTotals.columns.{votes, votePct, comparison}` and the
+   * filteredSeatsSummary / filteredSeatsComparisonSummary aggregates. Called by
+   * setupMapData and by the vote-totals tab click handler — the latter avoids the full
+   * setupMapData (filters, choropleth, search index) since none of that depends on the
+   * active tab.
+   *
+   * Vote-percent columns are gated by the active tab only — Holyrood 'all' mixes
+   * constituency vote counts with list seat counts (ElectionSummary.summarize counts only
+   * constituency votes in that mode while seat counts include both, so the mismatch is
+   * misleading). The raw vote-count column is gated by tab AND by election capability —
+   * predict / model / referendum elections have no meaningful raw counts but still
+   * display vote shares. The comparison column flag is tab-independent (driven by
+   * whether comparison data is loaded) but lives here to colocate all column visibility.
+   * @returns {void}
+   */
+  recomputeVoteTotalsForMode() {
+    const electionAllowsVoteCounts = !(this.currentElection.model || this.isReferendumType || this.view === 'predict');
+    const tabAllowsVotes = !this.hasListSeats || this.voteTotals.mode !== 'all';
+    this.voteTotals.columns.votePct = tabAllowsVotes;
+    this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
+    this.voteTotals.columns.comparison = this.comparisonSeats.length > 0;
+
+    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode);
+    this.filteredSeatsComparisonSummary = this.comparisonSeats.length
+      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode)
+      : null;
+
+    // TODO: remove once the resize-driven renderVoteTotals callers and the predict
     // summary builders read state.filteredSeatsSummary / state.filteredSeatsComparisonSummary
     // directly (see also the activateElection mirrors guarded by the same TODO).
     window.__mapsCurrentSummary = this.filteredSeatsSummary;

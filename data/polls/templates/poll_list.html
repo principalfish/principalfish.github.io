@@ -15,6 +15,7 @@
               <th>Sample</th>
               <th>Source URL</th>
               <th>Rows</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -32,6 +33,11 @@
                   {% endif %}
                 </td>
                 <td>{{ poll.row_count }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('delete_poll', poll_id=poll.poll_id) }}" class="inline-form">
+                    <button type="submit" class="button button-danger">Delete</button>
+                  </form>
+                </td>
               </tr>
             {% endfor %}
           </tbody>

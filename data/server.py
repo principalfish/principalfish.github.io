@@ -1506,6 +1506,32 @@ def poll_detail(poll_id: int) -> str | WerkzeugResponse:
     )
 
 
+@app.route("/polls/<int:poll_id>/delete", methods=["POST"])
+def delete_poll(poll_id: int) -> str | WerkzeugResponse:
+    """POST /polls/<poll_id>/delete — Delete a poll and its rows.
+
+    Args:
+        poll_id: Primary key of the Poll row to delete.
+
+    Returns:
+        Redirect to poll_list with a flash message indicating rows deleted.
+    """
+    db = _get_db()
+    with db.session() as session:
+        poll = session.get(Poll, poll_id)
+        if poll is None:
+            flash(f"Poll #{poll_id} not found.")
+            return redirect(url_for("poll_list"))
+
+        deleted_rows = session.execute(
+            delete(PollRow).where(PollRow.poll_id == poll.id)
+        ).rowcount or 0  # type: ignore[attr-defined]
+        session.delete(poll)
+
+    flash(f"Deleted poll #{poll_id} and {deleted_rows} poll rows.")
+    return redirect(url_for("poll_list"))
+
+
 @app.route("/polls/<int:poll_id>/csv", methods=["GET"])
 def poll_detail_csv(poll_id: int) -> str | WerkzeugResponse:
     """GET /polls/<poll_id>/csv — Download all poll rows for a poll as a CSV attachment.

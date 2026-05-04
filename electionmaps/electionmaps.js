@@ -102,8 +102,10 @@ async function activateElection(view) {
   window.__mapsCurrentSummary = state.electionData.summary.data;
   window.__mapsComparisonSummary = state.comparisonElectionData?.summary.data ?? null;
 
-  drawMap();
-  syncRightPanelHeightToMap();
+  state.setupMapData();
+  renderMapInit();
+  renderMap();
+  renderRightPanel();
 
   if (view === 'predict') {
     await activatePredictMode();
@@ -124,12 +126,14 @@ function drawMap(preserveZoom = false) {
   renderMap(preserveZoom);
 }
 
-function renderMap(preserveZoom = false) {
-  renderVoteTotalsTabs(state.mapConfig);
-  renderSeatViewTabs(state.mapConfig);
-  updateSeatViewTabsUI();
-  updatePostcodeSearchVisibility();
+function renderMapInit() {
+  initVoteTotalsTabs(state.mapConfig);
+  initSeatViewTabs(state.mapConfig);
+  initPostcodeSearch();
+  initRegionTable(state.listRegionSummary);
+}
 
+function renderMap(preserveZoom = false) {
   renderVoteTotals(state.filteredSeatsSummary, state.filteredSeatsComparisonSummary, {
     hiddenParties: new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []),
   });
@@ -141,8 +145,6 @@ function renderMap(preserveZoom = false) {
     regionSummary: state.listRegionSummary,
     mapId: String(state.currentElection.mapId ?? ''),
   });
-
-  renderRegionTable(state.listRegionSummary);
 
   renderSeatList(state.listFilteredSeats, state.comparisonSeats, {});
 
@@ -329,7 +331,7 @@ function wireInit() {
   wireVoteTotalsSorting(() => {
     if (!window.__mapsCurrentSummary) return;
     renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null);
-    syncRightPanelHeightToMap();
+    renderRightPanel();
   });
 }
 
@@ -690,7 +692,7 @@ function wireVoteTotalsToggle() {
  */
 function wireWindowResize() {
   window.addEventListener('resize', () => {
-    syncRightPanelHeightToMap();
+    renderRightPanel();
     if (state.view === 'polltracker') setPollTracker();
   });
 }
@@ -1888,15 +1890,8 @@ function applyVoteTotalsColumnVisibility() {
   voteTotalsTable.classList.toggle('hide-comparison-cols', !state.voteTotalsColumnVisible('comparison'));
 }
 
-/** Sets the active class on vote-totals tab buttons to match state.voteTotals.mode. */
-function updateVoteTotalsTabsUI() {
-  voteTotalsTabNav?.querySelectorAll('[data-vote-tab]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.voteTab === state.voteTotals.mode);
-  });
-}
-
 /** Builds vote-totals tab buttons (Overall / Constituency / List) from mapConfig.voteTotalsViews. */
-function renderVoteTotalsTabs(mapConfig) {
+function initVoteTotalsTabs(mapConfig) {
   if (!voteTotalsTabNav) return;
   voteTotalsTabNav.innerHTML = '';
   const views = mapConfig.voteTotalsViews;
@@ -1909,7 +1904,9 @@ function renderVoteTotalsTabs(mapConfig) {
     btn.addEventListener('click', () => {
       state.voteTotals.mode = view.id;
       state.recomputeVoteTotalsForMode();
-      updateVoteTotalsTabsUI();
+      voteTotalsTabNav.querySelectorAll('[data-vote-tab]').forEach((b) => {
+        b.classList.toggle('active', b.dataset.voteTab === state.voteTotals.mode);
+      });
       renderVoteTotals(state.filteredSeatsSummary, state.filteredSeatsComparisonSummary, {
         hiddenParties: new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []),
       });
@@ -1918,27 +1915,19 @@ function renderVoteTotalsTabs(mapConfig) {
   });
 }
 
-/** Sets the active class on seat-view tab buttons to match state.seatView.mode. */
-function updateSeatViewTabsUI() {
-  seatViewTabNav?.querySelectorAll('[data-seat-view]').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.seatView === state.seatView.mode);
-  });
-}
-
 /** Builds seat-view tab buttons (Constituencies / Regions) from mapConfig.seatViews. */
-function renderSeatViewTabs(mapConfig) {
+function initSeatViewTabs(mapConfig) {
   if (!seatViewTabNav) return;
   seatViewTabNav.innerHTML = '';
   const views = mapConfig.seatViews;
   seatViewTabNav.hidden = views.length <= 1;
   views.forEach((view) => {
     const btn = document.createElement('button');
-    btn.className = 'maps-seat-view-tab';
+    btn.className = `maps-seat-view-tab${view.id === state.seatView.mode ? ' active' : ''}`;
     btn.dataset.seatView = view.id;
     btn.textContent = view.label;
     btn.addEventListener('click', () => {
       state.seatView.mode = view.id;
-      updateSeatViewTabsUI();
       drawMap(true);
     });
     seatViewTabNav.appendChild(btn);
@@ -2908,7 +2897,7 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   // TODO: migrate to `state.electionData.summary.text` once predict mode writes its projected summary back onto state.electionData (will need to update electionData.electionName to predictLabel so the ElectionSummary constructor renders the right prefix)
   updateTopSummary({ name: predictLabel, parliament: state.currentParliament }, projectedSummary);
   drawMap(true);
-  syncRightPanelHeightToMap();
+  renderRightPanel();
 
   if (_state.currentOpenSeatName) {
     renderSeatPopup(_state.currentOpenSeatName);
@@ -3397,7 +3386,7 @@ function renderRegionPopup(regionKey, regionSummary) {
  * @param {Map<string, object>|null} regionSummary - Region key → { seatsByParty, votesByParty } map, or null to hide.
  * @returns {void}
  */
-function renderRegionTable(regionSummary) {
+function initRegionTable(regionSummary) {
   if (!regionCard || !regionTableBody) return;
   if (!regionSummary || regionSummary.size === 0) {
     regionCard.hidden = true;
@@ -3707,7 +3696,7 @@ function getPostcodeMapId() {
  * postcode lookup. Clears the input and any error state when hiding.
  * @returns {void}
  */
-function updatePostcodeSearchVisibility() {
+function initPostcodeSearch() {
   if (!postcodeSearchGroup) return;
   const mapId = getPostcodeMapId();
   const visible = mapId !== null;
@@ -3822,7 +3811,7 @@ async function lookupPostcode(postcode) {
  * Sets the right panel's height to match the map stage height so the two columns stay aligned. On mobile the panel stacks below the map so no height sync is needed.
  * @returns {void}
  */
-function syncRightPanelHeightToMap() {
+function renderRightPanel() {
   if (!mapsStage || !mapsPanelRight) return;
 
   if (window.innerWidth <= 980) {

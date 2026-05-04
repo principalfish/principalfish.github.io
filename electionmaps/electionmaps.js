@@ -121,9 +121,11 @@ async function activateElection(view) {
  */
 function drawMap(preserveZoom = false) {
   state.setupMapData();
+  renderMap(preserveZoom);
+}
 
+function renderMap(preserveZoom = false) {
   renderVoteTotalsTabs(state.mapConfig);
-  updateVoteTotalsTabsUI();
   renderSeatViewTabs(state.mapConfig);
   updateSeatViewTabsUI();
   updatePostcodeSearchVisibility();
@@ -1901,7 +1903,7 @@ function renderVoteTotalsTabs(mapConfig) {
   voteTotalsTabNav.hidden = views.length <= 1;
   views.forEach((view, i) => {
     const btn = document.createElement('button');
-    btn.className = `maps-vote-tab${i === 0 ? ' active' : ''}`;
+    btn.className = `maps-vote-tab${view.id === state.voteTotals.mode ? ' active' : ''}`;
     btn.dataset.voteTab = view.id;
     btn.textContent = view.label;
     btn.addEventListener('click', () => {

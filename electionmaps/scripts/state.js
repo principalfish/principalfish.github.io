@@ -944,6 +944,12 @@ class AppState {
      * setupMapData runs. */
     this.mapConfig = null;
 
+    /** currentElection.mapId when the current map supports postcode lookup, otherwise null.
+     * Derived from mapConfig.postcodeSupported (declared in map-modes.json). Null until
+     * setupMapData runs. Used by dom.js to show/hide the postcode search group and to
+     * distinguish Holyrood (mapId 12) from Westminster (mapId 2) when dispatching lookups. */
+    this.postcodeMapId = null;
+
     /** Whether the current chamber includes regional list seats (Holyrood). False until
      * setupMapData runs. Drives the list-seat specialisation (region-table overlay and
      * constituency-only seat list). */
@@ -1130,6 +1136,7 @@ class AppState {
     this.buildChoroplethConfig();
 
     this.mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
+    this.postcodeMapId = this.mapConfig?.postcodeSupported ? this.currentElection.mapId : null;
     this.hasListSeats = this.electionData.currentSeats.some((s) => Seat.isList(s));
 
     this.recomputeVoteTotalsForMode();

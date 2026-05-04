@@ -25,6 +25,7 @@ import {
   formatInt,
   formatPct,
   formatSigned,
+  deltaClass,
   seatLookupKey,
   getRegionLabel,
 } from './scripts/utils.js';
@@ -36,6 +37,9 @@ import {
   setPageTitle,
   setPollTracker,
   domWireInit,
+  renderMapInit,
+  renderVoteTotals,
+  wireVoteTotalsToggle,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -103,7 +107,7 @@ async function activateElection(view) {
   window.__mapsComparisonSummary = state.comparisonElectionData?.summary.data ?? null;
 
   state.setupMapData();
-  renderMapInit();
+  renderMapInit({ drawMap, clearPostcodeError, renderRegionPopup });
   renderMap();
   renderRightPanel();
 
@@ -126,17 +130,8 @@ function drawMap(preserveZoom = false) {
   renderMap(preserveZoom);
 }
 
-function renderMapInit() {
-  initVoteTotalsTabs(state.mapConfig);
-  initSeatViewTabs(state.mapConfig);
-  initPostcodeSearch();
-  initRegionTable(state.listRegionSummary);
-}
-
 function renderMap(preserveZoom = false) {
-  renderVoteTotals(state.filteredSeatsSummary, state.filteredSeatsComparisonSummary, {
-    hiddenParties: new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []),
-  });
+  renderVoteTotals();
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys: state.mapSeatsVisible.seatKeys,
@@ -326,7 +321,7 @@ function wireInit() {
   wireSeatSearch();
   wirePostcodeSearch();
   wireSeatPopup();
-  wireVoteTotalsToggle();
+  wireVoteTotalsToggle(syncPredictModeRightColumnLayout);
   wireWindowResize();
   wireVoteTotalsSorting(() => {
     if (!window.__mapsCurrentSummary) return;
@@ -670,20 +665,6 @@ function wireSeatPopup() {
   });
 }
 
-/**
- * Toggles the vote totals panel open/closed on click, re-renders the table at the new height,
- * and recalculates the predict window right-column layout (both share the same panel column).
- * @returns {void}
- */
-function wireVoteTotalsToggle() {
-  if (!voteTotalsToggle) return;
-  voteTotalsToggle.addEventListener('click', () => {
-    _state.voteTotalsExpanded = !_state.voteTotalsExpanded;
-    if (!window.__mapsCurrentSummary) return;
-    renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null);
-    syncPredictModeRightColumnLayout();
-  });
-}
 
 /**
  * Syncs the right panel height to the map on window resize, and re-renders the poll tracker
@@ -755,17 +736,6 @@ const PREDICT_WALES_KEY = 'wales';
 const PREDICT_NI_KEY = 'northernireland';
 
 // ── Formatting ───────────────────────────────────────────────────────────────
-
-/**
- * Returns a CSS class name reflecting whether value is positive, negative, or neutral.
- * @param {number} value - Numeric delta value.
- * @returns {string} One of 'maps-delta-positive', 'maps-delta-negative', or 'maps-delta-neutral'.
- */
-function deltaClass(value) {
-  const num = Number(value || 0);
-  if (Math.abs(num) < 1e-9) return 'maps-delta-neutral';
-  return num > 0 ? 'maps-delta-positive' : 'maps-delta-negative';
-}
 
 // ── Region normalization ─────────────────────────────────────────────────────
 
@@ -1725,17 +1695,9 @@ const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');
 const seatPreview = document.getElementById('mapsSeatPreview');
-const voteTotalsBody = document.getElementById('mapsVoteTotalsBody');
-const voteTotalsTable = document.getElementById('mapsVoteTotalsTable');
-const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
-const voteTotalsTabNav = document.getElementById('mapsVoteTotalsTabNav');
-const seatViewTabNav = document.getElementById('mapsSeatViewTabNav');
 const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
-const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
-const postcodeWarningBtn = document.getElementById('mapsPostcodeWarningBtn');
-const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel');
 const seatList = document.getElementById('mapsSeatList');
 const mapsStage = document.querySelector('.maps-stage');
 const mapsPanelRight = document.querySelector('.maps-panel-right');
@@ -1745,8 +1707,6 @@ const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
 const seatPopupList = document.getElementById('mapsSeatPopupList');
 const seatPopupClose = document.getElementById('mapsSeatPopupClose');
 const choroplethLegend = document.getElementById('mapsChoroplethLegend');
-const regionCard = document.getElementById('mapsRegionCard');
-const regionTableBody = document.getElementById('mapsRegionTableBody');
 
 const filterPartySelect = document.getElementById('mapsFilterParty');
 const filterRegionSelect = document.getElementById('mapsFilterRegion');
@@ -1770,10 +1730,6 @@ const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethV
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 // Canonical map name strings used to route postcode lookups to the correct
 // postcodes.io endpoint and to identify whether postcode search is supported.
-const WESTMINSTER_OLD_MAP_NAME = 'westminster-2010';
-const WESTMINSTER_NEW_MAP_NAME = 'westminster-2024';
-const HOLYROOD_OLD_MAP_NAME = 'holyrood-2021';
-const HOLYROOD_NEW_MAP_NAME = 'holyrood-2026';
 
 // Maps old 2021 Holyrood constituency names (as returned by postcodes.io) to their
 // 2026 boundary equivalents. Used as a fallback when a returned name has no match
@@ -1881,58 +1837,6 @@ function formatZoomPct(scaleValue) {
 }
 
 
-/** Applies the three column-visibility classes on the vote-totals table from
- *  state.voteTotals.columns. No-op when the table isn't in the DOM yet. */
-function applyVoteTotalsColumnVisibility() {
-  if (!voteTotalsTable) return;
-  voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
-  voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
-  voteTotalsTable.classList.toggle('hide-comparison-cols', !state.voteTotalsColumnVisible('comparison'));
-}
-
-/** Builds vote-totals tab buttons (Overall / Constituency / List) from mapConfig.voteTotalsViews. */
-function initVoteTotalsTabs(mapConfig) {
-  if (!voteTotalsTabNav) return;
-  voteTotalsTabNav.innerHTML = '';
-  const views = mapConfig.voteTotalsViews;
-  voteTotalsTabNav.hidden = views.length <= 1;
-  views.forEach((view, i) => {
-    const btn = document.createElement('button');
-    btn.className = `maps-vote-tab${view.id === state.voteTotals.mode ? ' active' : ''}`;
-    btn.dataset.voteTab = view.id;
-    btn.textContent = view.label;
-    btn.addEventListener('click', () => {
-      state.voteTotals.mode = view.id;
-      state.recomputeVoteTotalsForMode();
-      voteTotalsTabNav.querySelectorAll('[data-vote-tab]').forEach((b) => {
-        b.classList.toggle('active', b.dataset.voteTab === state.voteTotals.mode);
-      });
-      renderVoteTotals(state.filteredSeatsSummary, state.filteredSeatsComparisonSummary, {
-        hiddenParties: new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []),
-      });
-    });
-    voteTotalsTabNav.appendChild(btn);
-  });
-}
-
-/** Builds seat-view tab buttons (Constituencies / Regions) from mapConfig.seatViews. */
-function initSeatViewTabs(mapConfig) {
-  if (!seatViewTabNav) return;
-  seatViewTabNav.innerHTML = '';
-  const views = mapConfig.seatViews;
-  seatViewTabNav.hidden = views.length <= 1;
-  views.forEach((view) => {
-    const btn = document.createElement('button');
-    btn.className = `maps-seat-view-tab${view.id === state.seatView.mode ? ' active' : ''}`;
-    btn.dataset.seatView = view.id;
-    btn.textContent = view.label;
-    btn.addEventListener('click', () => {
-      state.seatView.mode = view.id;
-      drawMap(true);
-    });
-    seatViewTabNav.appendChild(btn);
-  });
-}
 
 /**
  * Updates _state.currentSort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
@@ -3256,90 +3160,6 @@ function renderSeatPopup(seatName) {
 }
 
 /**
- * Returns a sorted copy of party rows according to _state.currentSort (party name alpha, or numeric column with label tiebreak).
- * @param {Array<object>} rows - Party summary rows with a `party` key and numeric fields matching sort key names.
- * @returns {Array<object>} New sorted array of party rows.
- */
-function sortPartyRows(rows) {
-  const multiplier = _state.currentSort.direction === 'asc' ? 1 : -1;
-  return [...rows].sort((a, b) => {
-    if (_state.currentSort.key === 'party') {
-      return multiplier * manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
-    }
-
-    const av = Number(a[_state.currentSort.key] || 0);
-    const bv = Number(b[_state.currentSort.key] || 0);
-    if (av !== bv) return multiplier * (av - bv);
-    // Tiebreak by vote share descending, then party name
-    const voteDiff = Number(b.votePct || 0) - Number(a.votePct || 0);
-    if (voteDiff !== 0) return voteDiff;
-    return manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
-  });
-}
-
-/**
- * Renders the vote totals summary table, showing seat counts, vote share, and comparison deltas when a comparisonSummary is provided. Truncates to top 6 rows unless expanded. Column visibility is read from state.voteTotals.columns via applyVoteTotalsColumnVisibility.
- * @param {{parties: Array<object>, totalVotes: number}} summary - Current election summary as returned by `ElectionSummary.summarize`.
- * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary=null] - Optional comparison summary for rendering delta columns.
- * @param {{hiddenParties?: Set<string>}} [options={}] - Rendering options; hiddenParties suppresses specific party rows.
- * @returns {void}
- */
-function renderVoteTotals(summary, comparisonSummary = null, options = {}) {
-  if (!voteTotalsBody) return;
-  voteTotalsBody.innerHTML = '';
-
-  applyVoteTotalsColumnVisibility();
-
-  const showComparison = Boolean(comparisonSummary);
-  const comparisonByParty = new Map();
-  if (comparisonSummary) {
-    comparisonSummary.parties.forEach((partyRow) => {
-      const votePct = comparisonSummary.totalVotes > 0 ? (partyRow.votes / comparisonSummary.totalVotes) * 100 : 0;
-      comparisonByParty.set(partyRow.party, {
-        seats: Number(partyRow.seats || 0),
-        votePct,
-      });
-    });
-  }
-
-  const rows = summary.parties.map((partyRow) => {
-    const votePct = summary.totalVotes > 0 ? (partyRow.votes / summary.totalVotes) * 100 : 0;
-    const comparison = comparisonByParty.get(partyRow.party) || { seats: 0, votePct: 0 };
-    return {
-      ...partyRow,
-      votePct,
-      seatsDelta: Number(partyRow.seats || 0) - comparison.seats,
-      votePctDelta: votePct - comparison.votePct,
-    };
-  });
-
-  const sortedRows = sortPartyRows(rows).filter((r) => !options.hiddenParties?.has(r.party));
-  const visibleRows = _state.voteTotalsExpanded ? sortedRows : sortedRows.slice(0, 7);
-
-  if (voteTotalsToggle) {
-    const canExpand = sortedRows.length > 7;
-    voteTotalsToggle.hidden = !canExpand;
-    if (canExpand) {
-      voteTotalsToggle.textContent = _state.voteTotalsExpanded ? 'Show fewer' : 'Show all';
-    }
-  }
-
-  visibleRows.forEach((partyRow) => {
-    const tr = document.createElement('tr');
-
-    tr.innerHTML = `
-      <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${manifest.labelParty(partyRow.party)}</span></td>
-      <td>${formatInt(partyRow.seats)}</td>
-      <td class="comparison-col ${showComparison ? deltaClass(partyRow.seatsDelta) : ''}">${showComparison ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
-      <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
-      <td class="vote-pct-col">${formatPct(partyRow.votePct)}</td>
-      <td class="comparison-col vote-pct-comparison-col ${showComparison ? deltaClass(partyRow.votePctDelta) : ''}">${showComparison ? formatSigned(partyRow.votePctDelta, 2) : ''}</td>
-    `;
-    voteTotalsBody.appendChild(tr);
-  });
-}
-
-/**
  * Renders a region summary popup showing seat tallies and list vote shares.
  */
 function renderRegionPopup(regionKey, regionSummary) {
@@ -3381,73 +3201,6 @@ function renderRegionPopup(regionKey, regionSummary) {
   seatPopup.hidden = false;
 }
 
-/**
- * Renders the region table overlay showing list-seat colour bars for each region. Shows the card when regionSummary is provided, hides it otherwise. Each row click flashes the region on the map and opens the region popup.
- * @param {Map<string, object>|null} regionSummary - Region key → { seatsByParty, votesByParty } map, or null to hide.
- * @returns {void}
- */
-function initRegionTable(regionSummary) {
-  if (!regionCard || !regionTableBody) return;
-  if (!regionSummary || regionSummary.size === 0) {
-    regionCard.hidden = true;
-    return;
-  }
-
-  regionTableBody.innerHTML = '';
-
-  regionSummary.forEach((data, regionKey) => {
-    const entries = Object.entries(data.seatsByParty)
-      .filter(([, n]) => n > 0)
-      .sort((a, b) => b[1] - a[1]);
-    const total = entries.reduce((s, [, n]) => s + n, 0);
-
-    const tr = document.createElement('tr');
-    tr.className = 'maps-region-table-row';
-    tr.addEventListener('click', () => {
-      _state.mapInteractionController.flashRegion(regionKey);
-      renderRegionPopup(regionKey, regionSummary);
-    });
-
-    const tdName = document.createElement('td');
-    tdName.className = 'maps-region-table-name';
-    tdName.textContent = getRegionLabel(regionKey, state.currentRegionLabelsByKey);
-    tr.appendChild(tdName);
-
-    const tdSeats = document.createElement('td');
-    tdSeats.className = 'maps-region-table-seats';
-
-    if (total > 0) {
-      const barEl = document.createElement('div');
-      barEl.className = 'maps-region-table-bar';
-      entries.forEach(([party, count]) => {
-        const seg = document.createElement('div');
-        seg.className = 'maps-region-table-bar-seg';
-        seg.style.width = `${(count / total) * 100}%`;
-        seg.style.background = manifest.colourParty(party);
-        if (count >= 2) seg.textContent = count;
-        barEl.appendChild(seg);
-      });
-      tdSeats.appendChild(barEl);
-    }
-
-    tr.appendChild(tdSeats);
-    regionTableBody.appendChild(tr);
-  });
-
-  regionCard.hidden = false;
-
-  const toggleBtn = document.getElementById('mapsRegionCardToggle');
-  regionCard.classList.remove('maps-region-card--collapsed');
-  if (toggleBtn) {
-    toggleBtn.textContent = '▼';
-    const onToggle = () => {
-      const collapsed = regionCard.classList.toggle('maps-region-card--collapsed');
-      toggleBtn.textContent = collapsed ? '▶' : '▼';
-    };
-    const thead = regionCard.querySelector('thead');
-    if (thead) thead.onclick = onToggle;
-  }
-}
 
 /**
  * Renders up to 300 seat rows sorted alphabetically into the seat list panel. Each row shows the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup.
@@ -3666,49 +3419,7 @@ function selectSeatBySearchQuery(query) {
  * @param {number} mapId
  * @returns {string|null}
  */
-function getMapName(mapId) {
-  const manifestName = manifest?.mapModes?.[String(mapId)]?.name;
-  if (manifestName) return manifestName;
-  const knownNames = {
-    1: WESTMINSTER_OLD_MAP_NAME,
-    2: WESTMINSTER_NEW_MAP_NAME,
-    11: HOLYROOD_OLD_MAP_NAME,
-    12: HOLYROOD_NEW_MAP_NAME,
-  };
-  return knownNames[mapId] ?? null;
-}
 
-/**
- * Returns the mapId for the current election if it supports postcode lookup, otherwise null.
- * Only the current Westminster and Holyrood boundary maps are supported.
- * Use as a boolean check (null = unsupported) or to pass to lookupPostcode.
- * @returns {number|null}
- */
-function getPostcodeMapId() {
-  const mapId = state.currentElection.mapId;
-  if (mapId == null) return null;
-  const name = getMapName(mapId);
-  return name === WESTMINSTER_NEW_MAP_NAME || name === HOLYROOD_NEW_MAP_NAME ? mapId : null;
-}
-
-/**
- * Shows or hides the postcode search group based on whether the current election supports
- * postcode lookup. Clears the input and any error state when hiding.
- * @returns {void}
- */
-function initPostcodeSearch() {
-  if (!postcodeSearchGroup) return;
-  const mapId = getPostcodeMapId();
-  const visible = mapId !== null;
-  const isHolyrood = mapId === 12;
-  postcodeSearchGroup.hidden = !visible;
-  if (postcodeWarningBtn) postcodeWarningBtn.hidden = !isHolyrood;
-  if (!isHolyrood && postcodeWarningPanel) postcodeWarningPanel.hidden = true;
-  if (!visible && postcodeSearchInput) {
-    postcodeSearchInput.value = '';
-    clearPostcodeError();
-  }
-}
 
 /**
  * Flashes an error message inside the postcode input for 2 seconds, then clears the
@@ -3755,24 +3466,23 @@ function clearPostcodeError() {
  * @returns {Promise<string|null>} The constituency name, or null on failure.
  */
 async function lookupPostcode(postcode) {
-  const mapId = getPostcodeMapId();
-  if (!mapId) return null;
+  if (!state.postcodeMapId) return null;
 
   // Strip all whitespace then re-insert the canonical space before the inward code
   // (always the last 3 characters). Both endpoints require this format.
   const stripped = postcode.trim().toUpperCase().replace(/\s+/g, '');
   const normalised = stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
 
-  const mapName = getMapName(mapId);
+  const mapName = state.mapConfig?.name ?? null;
   let url = '';
   let resultProperty = '';
 
   switch (mapName) {
-    case HOLYROOD_NEW_MAP_NAME:
+    case 'holyrood-2026':
       url = `https://api.postcodes.io/scotland/postcodes/${encodeURIComponent(normalised)}`;
       resultProperty = 'scottish_parliamentary_constituency';
       break;
-    case WESTMINSTER_NEW_MAP_NAME:
+    case 'westminster-2024':
       url = `https://api.postcodes.io/postcodes/${encodeURIComponent(normalised)}`;
       resultProperty = 'parliamentary_constituency_2024';
       break;
@@ -3796,7 +3506,7 @@ async function lookupPostcode(postcode) {
     // Holyrood 2021→2026 boundary mapping as a best-guess fallback.
     // Only applied on Holyrood to avoid false rewrites on Westminster lookups.
     const seatKey = seatLookupKey(constituencyName);
-    if (!state.currentSeatNameByKey.has(seatKey) && mapName === HOLYROOD_NEW_MAP_NAME) {
+    if (!state.currentSeatNameByKey.has(seatKey) && mapName === 'holyrood-2026') {
       const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
       if (mapped) return mapped;
     }

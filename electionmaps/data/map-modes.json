@@ -142,6 +142,7 @@
   },
   "mapModes": {
     "1": {
+      "name": "westminster-2010",
       "seatViews": [
         {
           "id": "seats",
@@ -200,6 +201,8 @@
       ]
     },
     "2": {
+      "name": "westminster-2024",
+      "postcodeSupported": true,
       "seatViews": [
         {
           "id": "seats",
@@ -258,6 +261,7 @@
       ]
     },
     "11": {
+      "name": "holyrood-2021",
       "seatViews": [
         {
           "id": "constituency",
@@ -314,6 +318,8 @@
       ]
     },
     "12": {
+      "name": "holyrood-2026",
+      "postcodeSupported": true,
       "seatViews": [
         {
           "id": "constituency",

@@ -39,6 +39,17 @@ export function formatPct(value) {
 }
 
 /**
+ * Returns a CSS class name reflecting whether value is positive, negative, or neutral.
+ * @param {number} value - Numeric delta value.
+ * @returns {string} One of 'maps-delta-positive', 'maps-delta-negative', or 'maps-delta-neutral'.
+ */
+export function deltaClass(value) {
+  const num = Number(value || 0);
+  if (Math.abs(num) < 1e-9) return 'maps-delta-neutral';
+  return num > 0 ? 'maps-delta-positive' : 'maps-delta-negative';
+}
+
+/**
  * Formats value with an explicit '+' prefix for positive numbers and the specified
  * decimal digits. Returns '0' for values within floating-point epsilon of zero.
  * @param {number} value - Numeric value to format with sign.

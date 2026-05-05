@@ -105,20 +105,3 @@ export function getRegionLabel(regionKey, labelsByKey) {
   const label = labelsByKey?.get(normalized) || titleCaseFromRegionKey(regionKey);
   return label.replace(/ and /gi, ' & ');
 }
-
-/**
- * Returns a Map from seat name to winner party key for fast map colour lookups.
- * Each seat is stored under both its original name and a lowercase variant.
- * Seats without a `seat` property are skipped. Winner defaults to `'others'` if missing.
- * @param {Array<object>} seats - Array of seat objects with `seat` and `winner` properties.
- * @returns {Map<string, string>} Map from seat name (original and lowercase) to winner party key.
- */
-export function buildWinnerBySeat(seats) {
-  const bySeat = new Map();
-  seats.forEach((seat) => {
-    if (!seat?.seat) return;
-    bySeat.set(seat.seat, seat.winner || 'others');
-    bySeat.set(String(seat.seat).toLowerCase(), seat.winner || 'others');
-  });
-  return bySeat;
-}

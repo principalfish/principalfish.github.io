@@ -1,6 +1,11 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
+import {
+  feature as topojsonFeature,
+  mesh as topojsonMesh,
+  merge as topojsonMerge,
+} from '../../site/vendor/topojson-client.v3.esm.js';
 import { manifest, state, _state } from './state.js';
-import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, buildWinnerBySeat } from './utils.js';
+import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey } from './utils.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
@@ -1011,8 +1016,8 @@ function initRegionTable() {
     const tr = document.createElement('tr');
     tr.className = 'maps-region-table-row';
     tr.addEventListener('click', () => {
-      // TODO: _state.mapInteractionController will move to map.js alongside renderTopoMap
-      _state.mapInteractionController.flashRegion(regionKey);
+      // TODO: map.interaction will move to map.js alongside renderTopoMap
+      map.interaction.flashRegion(regionKey);
       renderRegionPopup(regionKey, data);
     });
 
@@ -1165,7 +1170,7 @@ export function hideSeatPopup() {
   seatPopup.hidden = true;
 }
 
-// TODO: make private once electionmaps.js callers (selectSeatBySearchQuery, renderTopoMap) migrate to dom.js
+// TODO: make private once electionmaps.js caller (selectSeatBySearchQuery) migrates to dom.js
 /**
  * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked
  * vote share bar chart with comparison deltas. Hides the popup if the seat is not found.
@@ -1266,9 +1271,7 @@ export function renderSeatList() {
   seatList.innerHTML = '';
   state.seatList.selected = null;
 
-  // Build a winner-by-seat lookup for the comparison election so each row can show a
-  // "GAIN FROM" indicator without scanning the full comparison array per row.
-  const comparisonWinnerBySeat = comparisonSeats ? buildWinnerBySeat(comparisonSeats) : new Map();
+  const comparisonSeatsByKey = state.comparisonElectionData?.seatsByKey ?? null;
 
   const ordered = [...seats].sort((a, b) => a.seat.localeCompare(b.seat));
   // Build rowByKey locally so it can be atomically written to state at the end,
@@ -1279,7 +1282,7 @@ export function renderSeatList() {
     const seatName = seat.seat || 'Unknown seat';
     const seatKey = seatLookupKey(seatName);
     const winnerKey = seat.winner || 'others';
-    const comparisonWinnerKey = comparisonWinnerBySeat.get(seatLookupKey(seatName));
+    const comparisonWinnerKey = comparisonSeatsByKey?.get(seatKey)?.winner ?? null;
     // Only show a gain indicator when the winner changed from the comparison election.
     const gainedFrom = comparisonWinnerKey && comparisonWinnerKey !== winnerKey ? comparisonWinnerKey : null;
     const item = document.createElement('button');
@@ -1299,8 +1302,8 @@ export function renderSeatList() {
 
     item.addEventListener('click', () => {
       setSelectedSeatRowByKey(seatKey);
-      // TODO: remove once mapInteractionController migrates to map.js
-      _state.mapInteractionController.zoomToSeat(seatName);
+      // TODO: remove once map.interaction migrates to map.js
+      map.interaction.zoomToSeat(seatName);
       renderSeatPopup(seatName);
     });
 
@@ -1328,4 +1331,438 @@ export function renderMapInit() {
   initVoteTotalsTabs();
   initPostcodeSearch();
   initRegionTable();
+}
+
+// ─── TopoJSON map ────────────────────────────────────────────────────────────
+
+const mapSvg = document.querySelector('.maps-svg');
+const mapContent = document.getElementById('mapContent');
+const zoomValue = document.getElementById('mapsZoomValue');
+
+// Exported map render state. interaction is replaced on every renderTopoMap
+// call; external callers (toolbar buttons, seat list, postcode search) use it to drive
+// the map without holding references to internal D3 selections.
+export const map = {
+  /** Zoom/highlight/flash interface. Stub methods until the first renderTopoMap call. */
+  interaction: {
+    zoomBy: () => {},
+    reset: () => {},
+    clearSelection: () => {},
+    highlightSeat: () => {},
+    zoomToSeat: () => false,
+    flashRegion: () => {},
+  },
+};
+
+const INITIAL_MAP_SCALE = 1.0;
+const INITIAL_MAP_SCALE_MOBILE = 1.26;
+const ZOOM_MIN_SCALE = 1;
+const ZOOM_MAX_SCALE = 17.5;
+const SEAT_ZOOM_BASE = 0.05;
+const CLICK_ZOOM_DURATION_MS = 1500;
+const RESET_ZOOM_DURATION_MS = 500;
+
+/**
+ * Owns all zoom, pan, highlight, and flash interactions for the rendered TopoJSON map.
+ * Constructed by renderTopoMap on each render with fresh D3 selections and lookup maps;
+ * assigned to map.interaction for external callers.
+ *
+ * Public API (called by toolbar buttons, seat list, postcode search, region table):
+ *   zoomBy(factor)          — scale by factor in a short transition
+ *   reset()                 — return to initial zoom and clear selection
+ *   clearSelection()        — remove the active seat highlight
+ *   highlightSeat(name)     — highlight without zooming
+ *   zoomToSeat(name)        — highlight and zoom; returns false if seat not on map
+ *   flashRegion(regionKey)  — no-op until setFlashLayer() is called
+ *   setFlashLayer(...)      — wires the flash animation once the layer exists
+ *
+ * Internal helpers (used by renderTopoMap's seat-path click handler):
+ *   setActivePath(pathNode) — activate a seat path SVG element
+ *   zoomToFeature(datum)    — animate zoom to a GeoJSON feature
+ */
+class MapInteraction {
+  /**
+   * @param {object} svg - d3 selection of the root SVG element.
+   * @param {object} zoomBehavior - d3 zoom behaviour attached to svg.
+   * @param {object} path - d3 geo path generator for the current projection.
+   * @param {object} initialTransform - d3 zoom transform to return to on reset.
+   * @param {number} width - SVG viewBox width in pixels.
+   * @param {number} height - SVG viewBox height in pixels.
+   * @param {Map} featureBySeat - normalised seat key → GeoJSON feature.
+   */
+  constructor(svg, zoomBehavior, path, initialTransform, width, height, featureBySeat) {
+    this._svg = svg;
+    this._zoomBehavior = zoomBehavior;
+    this._path = path;
+    this._initialTransform = initialTransform;
+    this._width = width;
+    this._height = height;
+    this._featureBySeat = featureBySeat;
+    this._seatPathByKey = new Map();
+    this._activeSeatPathNode = null;
+  }
+
+  /**
+   * Registers a rendered SVG path node for a seat so highlightSeat and zoomToSeat can
+   * locate it by name. Called once per seat path during the initial render pass.
+   * @param {string} seatKey - Normalised seat lookup key.
+   * @param {Element} node - SVG path DOM node for the seat.
+   */
+  registerSeatPath(seatKey, node) {
+    this._seatPathByKey.set(seatKey, node);
+  }
+
+  // ── Static utilities ─────────────────────────────────────────────────────
+
+  /** Extracts the seat name from a TopoJSON feature. All current map files use `name`. */
+  static seatNameFromFeature(featureDatum) {
+    return featureDatum?.properties?.name || null;
+  }
+
+  /**
+   * Converts a d3 zoom scale value to a human-readable percentage string relative to
+   * INITIAL_MAP_SCALE (e.g. scale 2.0 → '200%').
+   */
+  static formatZoomPct(scaleValue) {
+    const baselineScale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
+    const ratio = Number(scaleValue) / baselineScale;
+    if (!Number.isFinite(ratio) || ratio <= 0) return '100%';
+    return `${Math.round(ratio * 100)}%`;
+  }
+
+  /**
+   * Returns the d3 zoom transform that centres the map at the initial scale.
+   * Uses INITIAL_MAP_SCALE_MOBILE on narrow screens (≤ 980px), INITIAL_MAP_SCALE otherwise.
+   */
+  static getInitialZoomTransform(width, height) {
+    const isMobile = window.innerWidth <= 980;
+    const scale = Math.max(1, Number(isMobile ? INITIAL_MAP_SCALE_MOBILE : INITIAL_MAP_SCALE) || 1);
+    const tx = width / 2 - scale * (width / 2);
+    const ty = height / 2 - scale * (height / 2);
+    return d3.zoomIdentity.translate(tx, ty).scale(scale);
+  }
+
+  /**
+   * Computes a d3 zoom transform centred on featureDatum, scaling by the square-root of
+   * its bounding box dimensions so large seats zoom less than small ones.
+   */
+  static getSeatZoomTransform(path, featureDatum, width, height) {
+    const bounds = path.bounds(featureDatum);
+    const dx = Math.max(0, bounds[1][0] - bounds[0][0]);
+    const dy = Math.max(0, bounds[1][1] - bounds[0][1]);
+    const cx = (bounds[0][0] + bounds[1][0]) / 2;
+    const cy = (bounds[0][1] + bounds[1][1]) / 2;
+    const denom = Math.max(Math.sqrt(dx) / width, Math.sqrt(dy) / height, 1e-9);
+    const scale = Math.max(ZOOM_MIN_SCALE, Math.min(ZOOM_MAX_SCALE, SEAT_ZOOM_BASE / denom));
+    return d3.zoomIdentity.translate(width / 2 - scale * cx, height / 2 - scale * cy).scale(scale);
+  }
+
+  // ── Internal helpers ──────────────────────────────────────────────────────
+
+  /** Animates zoom to centre on featureDatum using the seat zoom transform. */
+  zoomToFeature(featureDatum) {
+    const targetTransform = MapInteraction.getSeatZoomTransform(this._path, featureDatum, this._width, this._height);
+    this._svg.transition().duration(CLICK_ZOOM_DURATION_MS).call(this._zoomBehavior.transform, targetTransform);
+  }
+
+  /**
+   * Marks pathNode as the active seat: removes highlight from the previous path,
+   * applies the active class, and raises it above neighbouring seats in the SVG stack.
+   * @param {SVGPathElement} pathNode
+   */
+  setActivePath(pathNode) {
+    if (!pathNode) return;
+    if (this._activeSeatPathNode && this._activeSeatPathNode !== pathNode) {
+      d3.select(this._activeSeatPathNode).classed('maps-region-path-active', false);
+    }
+    this._activeSeatPathNode = pathNode;
+    d3.select(pathNode).classed('maps-region-path-active', true).raise();
+  }
+
+  /** Removes the active highlight and clears the reference. Safe to call when nothing is active. */
+  clearActivePath() {
+    if (!this._activeSeatPathNode) return;
+    d3.select(this._activeSeatPathNode).classed('maps-region-path-active', false);
+    this._activeSeatPathNode = null;
+  }
+
+  // ── Public interface ──────────────────────────────────────────────────────
+
+  /** Scales the map by factor in a short transition. factor > 1 zooms in, < 1 zooms out. */
+  zoomBy(factor) {
+    this._svg.transition().duration(180).call(this._zoomBehavior.scaleBy, factor);
+  }
+
+  /** Hides the seat popup, clears the active highlight, and returns to the initial zoom. */
+  reset() {
+    hideSeatPopup();
+    this.clearActivePath();
+    this._svg.transition().duration(RESET_ZOOM_DURATION_MS).call(this._zoomBehavior.transform, this._initialTransform);
+  }
+
+  /** Removes the active seat highlight. */
+  clearSelection() {
+    this.clearActivePath();
+  }
+
+  /** Highlights the path for seatName without zooming — syncs map to an external trigger. */
+  highlightSeat(seatName) {
+    const seatPathNode = this._seatPathByKey.get(seatLookupKey(seatName));
+    if (seatPathNode) this.setActivePath(seatPathNode);
+  }
+
+  /**
+   * Highlights the path for seatName and zooms to it.
+   * @returns {boolean} false if the seat has no matching feature (e.g. filtered out).
+   */
+  zoomToSeat(seatName) {
+    const seatKey = seatLookupKey(seatName);
+    const featureDatum = this._featureBySeat.get(seatKey);
+    if (!featureDatum) return false;
+    const seatPathNode = this._seatPathByKey.get(seatKey);
+    if (seatPathNode) this.setActivePath(seatPathNode);
+    this.zoomToFeature(featureDatum);
+    return true;
+  }
+
+  /** No-op until setFlashLayer() is called. */
+  flashRegion() {}
+
+  /**
+   * Wires the region flash animation. Called after construction when the flash layer
+   * exists (list-seat elections only). Dissolves the region's seat geometries into a
+   * single merged polygon, appends a temporary path, and removes it after the CSS animation.
+   * @param {object} flashLayer - d3 selection of the flash g element inside zoomLayer.
+   * @param {Map} geometriesByRegion - normalised region key → TopoJSON geometry array.
+   */
+  setFlashLayer(flashLayer, geometriesByRegion) {
+    this.flashRegion = (regionKey) => {
+      const geoms = geometriesByRegion.get(regionKey);
+      if (!geoms) return;
+      const merged = topojsonMerge(state.mapData, geoms);
+      if (!merged) return;
+      const flashPath = flashLayer.append('path')
+        .attr('class', 'maps-region-flash-path')
+        .attr('d', this._path(merged));
+      flashPath.node().addEventListener('animationend', () => flashPath.remove(), { once: true });
+    };
+  }
+}
+
+/**
+ * Renders the full TopoJSON map into mapSvg using D3.
+ * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom
+ * and hover handlers, draws region boundary overlays, and assigns a fresh MapInteraction
+ * instance to map.interaction for external callers.
+ * Reads map data, seats, filters, choropleth config, and region summary directly from state.
+ * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
+ * @returns {void}
+ */
+export function renderTopoMap(preserveZoom = false) {
+  // ── Snapshot state ────────────────────────────────────────────────────────
+  // Read everything from state up-front so the render is a pure function of a
+  // single consistent snapshot. Nothing here should be read lazily mid-render.
+
+  const mapData = state.mapData;
+  // null means "all seats visible"; a Set means only those keys are unfiltered.
+  const visibleSeatKeys = state.mapSeatsVisible.seatKeys || null;
+  const choroplethConfig = state.choroplethConfig || { enabled: false };
+  // regionSummary is non-null only for list-seat elections (e.g. Holyrood) that
+  // have regional seat totals — it gates the flash layer setup below.
+  const regionSummary = state.listRegionSummary;
+
+  // ── TopoJSON → GeoJSON ────────────────────────────────────────────────────
+  // TopoJSON files contain exactly one named object (the map layer). Take the
+  // first (only) key rather than hard-coding a name, so the function works
+  // across all map files regardless of what they name their object.
+
+  const objectName = Object.keys(mapData?.objects || {})[0];
+  if (!objectName) throw new Error('TopoJSON missing objects');
+  
+  const object = mapData.objects[objectName];
+  // Convert the TopoJSON arc topology to a standard GeoJSON FeatureCollection
+  // so D3's geo functions can work with it.
+  const featureCollection = topojsonFeature(mapData, object);
+  const features = featureCollection?.features || [];
+
+  if (!features.length) throw new Error('No map features available');
+
+  // ── SVG dimensions ────────────────────────────────────────────────────────
+  // Read dimensions from the SVG's declared viewBox rather than its rendered
+  // size — the viewBox is the coordinate space that the projection and all path
+  // data are computed in.
+
+  const vb = mapSvg.viewBox?.baseVal;
+  const width = vb?.width || 1200;
+  const height = vb?.height || 900;
+
+  // ── Projection and path generator ─────────────────────────────────────────
+  // fitSize scales and centres the Mercator projection so the full feature
+  // collection fills the viewBox. path converts GeoJSON geometries to SVG path
+  // data strings using that projection.
+
+  const projection = d3.geoMercator().fitSize([width, height], featureCollection);
+  const path = d3.geoPath(projection);
+
+  // ── DOM teardown and rebuild ───────────────────────────────────────────────
+  // Remove all existing children of mapContent before rebuilding, so that
+  // re-renders (filter change, election switch) start from a clean slate.
+
+  const svg = d3.select(mapSvg);
+  const content = d3.select(mapContent);
+  content.selectAll('*').remove();
+
+  // ── Lookup tables ─────────────────────────────────────────────────────────
+  // featureBySeat: normalised seat key → GeoJSON feature, for zoom-to-seat.
+  // Fill colour uses state.electionData.seatsByKey directly — no extra map needed.
+
+  const featureBySeat = new Map();
+  features.forEach((featureDatum) => {
+    const seatName = MapInteraction.seatNameFromFeature(featureDatum);
+    if (!seatName) return;
+    featureBySeat.set(seatLookupKey(seatName), featureDatum);
+  });
+
+  // ── SVG layer structure ───────────────────────────────────────────────────
+  // zoomRoot  — receives no transform; wraps everything inside mapContent.
+  //   maps-map-bg rect  — full-size transparent hit area so clicks on empty
+  //                       space outside all seat paths still reach the svg
+  //                       background click handler.
+  //   zoomLayer  — receives the d3 zoom transform on every zoom/pan event.
+  //     seatLayer     — constituency fill paths.
+  //     boundaryLayer — region boundary overlay mesh (drawn above seat fills).
+  //     flashLayer    — temporary region-flash paths (added below if needed).
+
+  const zoomRoot = content.append('g').attr('class', 'maps-geo-root');
+  zoomRoot.append('rect').attr('class', 'maps-map-bg').attr('x', 0).attr('y', 0).attr('width', width).attr('height', height);
+  const zoomLayer = zoomRoot.append('g').attr('class', 'maps-geo-layer');
+  const seatLayer = zoomLayer.append('g').attr('class', 'maps-seat-layer');
+  const boundaryLayer = zoomLayer.append('g').attr('class', 'maps-boundary-layer');
+
+  // Zoom behaviour: pan and pinch-zoom within the scale bounds. On each zoom event, apply
+  // the new transform to zoomLayer (which contains all map geometry) and update the readout.
+  const zoomBehavior = d3
+    .zoom()
+    .scaleExtent([ZOOM_MIN_SCALE, ZOOM_MAX_SCALE])
+    .on('zoom', (event) => {
+      zoomLayer.attr('transform', event.transform.toString());
+      zoomValue.textContent = MapInteraction.formatZoomPct(event.transform.k);
+    });
+
+  svg.call(zoomBehavior);
+  const initialTransform = MapInteraction.getInitialZoomTransform(width, height);
+
+  // ── Interaction controller ─────────────────────────────────────────────────
+
+  const interaction = new MapInteraction(svg, zoomBehavior, path, initialTransform, width, height, featureBySeat);
+  map.interaction = interaction;
+
+  // ── Region boundary mesh ──────────────────────────────────────────────────
+  // topojsonMesh extracts shared arc segments matching the filter predicate.
+  // The filter keeps only interior edges shared by two different-region features
+  // (a !== b rules out the outer coastline; the region check rules out edges
+  // between two seats in the same region). The result is a single MultiLineString
+  // drawn as one path element, styled to show region divisions over the seat fills.
+
+  const regionBoundaryMesh = topojsonMesh(
+    mapData, object,
+    (a, b) => a && b && a !== b && a.properties?.region !== b.properties?.region
+  );
+  if (regionBoundaryMesh?.coordinates?.length) {
+    boundaryLayer.append('path')
+      .datum(regionBoundaryMesh)
+      .attr('class', 'maps-region-boundary')
+      .attr('d', path);
+  }
+
+  // ── Constituency seat paths ───────────────────────────────────────────────
+
+  const seatPaths = seatLayer
+    .selectAll('path')
+    .data(features)
+    .join('path')
+    .attr('class', 'maps-region-path')
+    .attr('d', path)
+    .attr('fill', (datum) => {
+      const seatKey = seatLookupKey(MapInteraction.seatNameFromFeature(datum));
+      const seat = state.electionData.seatsByKey.get(seatKey);
+      // Feature has no name, or no matching seat in the election data — render as others.
+      if (!seat) return manifest.colourParty('others');
+
+      // Active filter excludes this seat — render as greyed-out slate rather than hiding,
+      // so the map shape remains intact and the filter effect is clear.
+      if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) return '#cbd5e1';
+
+      // Choropleth mode overrides winner colouring with a continuous metric scale.
+      if (choroplethConfig.enabled && choroplethConfig.valueBySeatKey?.has(seatKey)) {
+        return choroplethConfig.toColour(choroplethConfig.valueBySeatKey.get(seatKey));
+      }
+
+      // Default: colour by winning party.
+      return manifest.colourParty(seat.winner || 'others');
+    })
+    .attr('stroke', null)
+    .on('mouseenter', null)
+    .on('click', (event, datum) => {
+      // stopPropagation prevents the svg background click handler from firing and
+      // immediately resetting the zoom we are about to trigger.
+      event.stopPropagation();
+      interaction.setActivePath(event.currentTarget);
+      const seatName = MapInteraction.seatNameFromFeature(datum);
+      if (seatName) {
+        setSelectedSeatRowByKey(seatLookupKey(seatName));
+        renderSeatPopup(seatName);
+        interaction.zoomToFeature(datum);
+      }
+    });
+
+  // Build the seatKey → SVG path node index so zoomToSeat and highlightSeat can find
+  // the path element for a given seat name without scanning all features on every call.
+  seatPaths.each(function assignSeatPath(datum) {
+    const seatName = MapInteraction.seatNameFromFeature(datum);
+    if (!seatName) return;
+    interaction.registerSeatPath(seatLookupKey(seatName), this);
+  });
+
+  // ── Region flash layer (list-seat elections only) ─────────────────────────
+  // regionSummary is non-null only for Holyrood-style elections that have a
+  // regional seat total panel. The flash layer sits above all seat paths inside
+  // zoomLayer so it zooms and pans with the map.
+  //
+  // geometriesByRegion maps each normalised region key to the raw TopoJSON
+  // geometry objects for all seats in that region. setFlashLayer wires the real
+  // flashRegion implementation on the interaction instance once the layer exists.
+
+  if (regionSummary) {
+    const geometriesByRegion = new Map();
+    (object.geometries || []).forEach((geom) => {
+      const region = geom.properties?.region;
+      if (!region) return;
+      const regionKey = normalizeRegionKey(region);
+      if (!geometriesByRegion.has(regionKey)) geometriesByRegion.set(regionKey, []);
+      geometriesByRegion.get(regionKey).push(geom);
+    });
+
+    const flashLayer = zoomLayer.append('g').attr('class', 'maps-region-flash-layer');
+    interaction.setFlashLayer(flashLayer, geometriesByRegion);
+  }
+
+  // ── Background click → reset ───────────────────────────────────────────────
+  // Clicking the SVG element itself or the background rect resets the map.
+  // Clicks on seat paths do not reach here because they call stopPropagation.
+
+  svg.on('click', (event) => {
+    const target = event.target;
+    if (target === mapSvg || target?.classList?.contains('maps-map-bg')) {
+      interaction.reset();
+    }
+  });
+
+  // ── Initial transform ──────────────────────────────────────────────────────
+  // Apply the starting zoom state immediately (no transition). When preserveZoom
+  // is true, read the current live transform from the SVG node so pan/zoom
+  // position survives a filter or choropleth re-render. Otherwise reset to the
+  // computed initial transform.
+
+  svg.call(zoomBehavior.transform, preserveZoom ? d3.zoomTransform(mapSvg) : initialTransform);
 }

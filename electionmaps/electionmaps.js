@@ -1,9 +1,3 @@
-import * as d3 from '../site/vendor/d3.v7.esm.js';
-import {
-  feature as topojsonFeature,
-  mesh as topojsonMesh,
-  merge as topojsonMerge,
-} from '../site/vendor/topojson-client.v3.esm.js';
 import {
   _state,
   state,
@@ -20,7 +14,6 @@ import {
   trackVirtualPageView,
 } from './scripts/misc.js';
 import {
-  normalizeRegionKey,
   escapeHtml,
   formatInt,
   formatPct,
@@ -28,7 +21,6 @@ import {
   deltaClass,
   seatLookupKey,
   getRegionLabel,
-  buildWinnerBySeat,
 } from './scripts/utils.js';
 import {
   setElectionPreDataFetch,
@@ -45,6 +37,8 @@ import {
   setSelectedSeatRowByKey,
   hideSeatPopup,
   renderSeatPopup,
+  renderTopoMap,
+  map,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -307,11 +301,11 @@ function wireMapInteractions() {
   document.querySelectorAll('[data-map-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.getAttribute('data-map-action');
-      if (action === 'zoom-in') _state.mapInteractionController.zoomBy(1.2);
-      if (action === 'zoom-out') _state.mapInteractionController.zoomBy(0.83);
-      if (action === 'reset-zoom') _state.mapInteractionController.reset();
+      if (action === 'zoom-in') map.interaction.zoomBy(1.2);
+      if (action === 'zoom-out') map.interaction.zoomBy(0.83);
+      if (action === 'reset-zoom') map.interaction.reset();
       if (action === 'reset-view') {
-        _state.mapInteractionController.reset();
+        map.interaction.reset();
         resetPrimaryFilters();
         resetChoropleths();
         drawMap();
@@ -566,7 +560,7 @@ function wireSeatPopup() {
   if (!seatPopupClose) return;
   seatPopupClose.addEventListener('click', () => {
     hideSeatPopup();
-    _state.mapInteractionController.clearSelection?.();
+    map.interaction.clearSelection?.();
   });
 }
 
@@ -654,27 +648,7 @@ function clampNumber(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, numeric));
 }
 
-// ── Seat / feature utilities ──────────────────────────────────────────────────
-
-/**
- * Extracts the seat name from a TopoJSON feature's properties.
- * Tries `name`, `seat_name`, `seat`, `constituency`, and `Name` in order.
- * Returns null if none of the known properties are present.
- * @param {object} featureDatum - A TopoJSON feature object with a `properties` map.
- * @returns {string|null} Seat name extracted from feature properties, or null if not found.
- */
-function seatNameFromFeature(featureDatum) {
-  const props = featureDatum?.properties || {};
-  return props.name || props.seat_name || props.seat || props.constituency || props.Name || null;
-}
-
-// ── Map / region utilities ────────────────────────────────────────────────────
-
 // ── Election file resolution ──────────────────────────────────────────────────
-
-const mapSvg = document.querySelector('.maps-svg');
-const mapContent = document.getElementById('mapContent');
-const zoomValue = document.getElementById('mapsZoomValue');
 const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
@@ -747,26 +721,7 @@ function buildRouteSearchParams(view) {
   return params;
 }
 
-const INITIAL_MAP_SCALE = 1.0;
-const INITIAL_MAP_SCALE_MOBILE = 1.26;
-const ZOOM_MIN_SCALE = 1;
-const ZOOM_MAX_SCALE = 17.5;
-const LEGACY_CLICK_ZOOM_BASE = 0.05;
-const CLICK_ZOOM_DURATION_MS = 1500;
-const RESET_ZOOM_DURATION_MS = 500;
 const MAX_SEAT_SEARCH_SUGGESTIONS = 10;
-
-/**
- * Converts a d3 zoom scale value to a human-readable percentage string relative to the initial map scale.
- * @param {number} scaleValue - Raw d3 zoom transform scale value.
- * @returns {string} Percentage string relative to INITIAL_MAP_SCALE (e.g. '150%').
- */
-function formatZoomPct(scaleValue) {
-  const baselineScale = Math.max(1, Number(INITIAL_MAP_SCALE) || 1);
-  const ratio = Number(scaleValue) / baselineScale;
-  if (!Number.isFinite(ratio) || ratio <= 0) return '100%';
-  return `${Math.round(ratio * 100)}%`;
-}
 
 /**
  * Updates state.voteTotals.sort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
@@ -1011,7 +966,7 @@ function selectSeatBySearchQuery(query) {
   }
 
   const seatKey = seatLookupKey(seatName);
-  const zoomed = _state.mapInteractionController.zoomToSeat(seatName);
+  const zoomed = map.interaction.zoomToSeat(seatName);
   if (zoomed) {
     setSelectedSeatRowByKey(seatKey);
     renderSeatPopup(seatName);
@@ -1142,266 +1097,6 @@ function renderRightPanel() {
 
   mapsPanelRight.style.height = `${Math.round(stageHeight)}px`;
   mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
-}
-
-/**
- * Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE (or INITIAL_MAP_SCALE_MOBILE on narrow screens).
- * @param {number} width - SVG viewport width in pixels.
- * @param {number} height - SVG viewport height in pixels.
- * @returns {object} d3 zoom identity transform scaled and translated to centre the map.
- */
-function getInitialZoomTransform(width, height) {
-  const isMobile = window.innerWidth <= 980;
-  const scale = Math.max(1, Number(isMobile ? INITIAL_MAP_SCALE_MOBILE : INITIAL_MAP_SCALE) || 1);
-  const tx = width / 2 - scale * (width / 2);
-  const ty = height / 2 - scale * (height / 2);
-  return d3.zoomIdentity.translate(tx, ty).scale(scale);
-}
-
-/**
- * Computes a d3 zoom transform to zoom into a specific map feature, scaling based on the square-root of its bounding box dimensions.
- * @param {object} path - d3 geo path generator used to compute the feature's bounding box.
- * @param {object} featureDatum - GeoJSON feature to zoom to.
- * @param {number} width - SVG viewport width in pixels.
- * @param {number} height - SVG viewport height in pixels.
- * @returns {object} d3 zoom identity transform targeting the feature centre with a scale derived from its size.
- */
-function getLegacySeatZoomTransform(path, featureDatum, width, height) {
-  const bounds = path.bounds(featureDatum);
-  const dx = Math.max(0, bounds[1][0] - bounds[0][0]);
-  const dy = Math.max(0, bounds[1][1] - bounds[0][1]);
-  const dxAdjusted = Math.sqrt(dx);
-  const dyAdjusted = Math.sqrt(dy);
-  const cx = (bounds[0][0] + bounds[1][0]) / 2;
-  const cy = (bounds[0][1] + bounds[1][1]) / 2;
-  const denom = Math.max(dxAdjusted / width, dyAdjusted / height, 1e-9);
-  const scale = Math.max(ZOOM_MIN_SCALE, Math.min(ZOOM_MAX_SCALE, LEGACY_CLICK_ZOOM_BASE / denom));
-  const translate = [width / 2 - scale * cx, height / 2 - scale * cy];
-
-  return d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale);
-}
-
-/**
- * Renders the full TopoJSON map into mapSvg using D3.
- * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom and hover handlers,
- * draws region boundary overlays, and sets up _state.mapInteractionController for external zoom/reset/highlight calls.
- * Reads map data, seats, filters, choropleth config, and region summary directly from state.
- * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
- * @returns {void}
- */
-function renderTopoMap(preserveZoom = false) {
-  if (!mapSvg || !mapContent || !zoomValue) return;
-
-  const mapData = state.mapData;
-  const seats = state.electionData.currentSeats;
-  const visibleSeatKeys = state.mapSeatsVisible.seatKeys || null;
-  const choroplethConfig = state.choroplethConfig || { enabled: false };
-  const regionSummary = state.listRegionSummary;
-
-  const objectName = Object.keys(mapData?.objects || {})[0];
-  if (!objectName) throw new Error('TopoJSON missing objects');
-
-  const object = mapData.objects[objectName];
-  const featureCollection = topojsonFeature(mapData, object);
-  const features = featureCollection?.features || [];
-
-  if (!features.length) throw new Error('No map features available');
-
-  const vb = mapSvg.viewBox?.baseVal;
-  const width = vb?.width || 1200;
-  const height = vb?.height || 900;
-
-  const projection = d3.geoMercator().fitSize([width, height], featureCollection);
-  const path = d3.geoPath(projection);
-
-  const svg = d3.select(mapSvg);
-  const content = d3.select(mapContent);
-  content.selectAll('*').remove();
-
-  const winnerBySeat = buildWinnerBySeat(seats);
-  const featureBySeat = new Map();
-  const seatPathByKey = new Map();
-  _state.activeSeatPathNode = null;
-
-  features.forEach((featureDatum) => {
-    const seatName = seatNameFromFeature(featureDatum);
-    if (!seatName) return;
-    featureBySeat.set(seatLookupKey(seatName), featureDatum);
-  });
-
-  const zoomRoot = content.append('g').attr('class', 'maps-geo-root');
-  zoomRoot.append('rect').attr('class', 'maps-map-bg').attr('x', 0).attr('y', 0).attr('width', width).attr('height', height);
-  const zoomLayer = zoomRoot.append('g').attr('class', 'maps-geo-layer');
-  const seatLayer = zoomLayer.append('g').attr('class', 'maps-seat-layer');
-  const boundaryLayer = zoomLayer.append('g').attr('class', 'maps-boundary-layer');
-
-  const zoomBehavior = d3
-    .zoom()
-    .scaleExtent([ZOOM_MIN_SCALE, ZOOM_MAX_SCALE])
-    .on('zoom', (event) => {
-      zoomLayer.attr('transform', event.transform.toString());
-      zoomValue.textContent = formatZoomPct(event.transform.k);
-    });
-
-  svg.call(zoomBehavior);
-  const initialTransform = getInitialZoomTransform(width, height);
-
-  /**
-   * Animates the map zoom to centre on a GeoJSON feature using the legacy seat zoom transform.
-   * @param {object} featureDatum - GeoJSON feature to zoom to.
-   * @returns {void}
-   */
-  const zoomToFeature = (featureDatum) => {
-    const targetTransform = getLegacySeatZoomTransform(path, featureDatum, width, height);
-    svg.transition().duration(CLICK_ZOOM_DURATION_MS).call(zoomBehavior.transform, targetTransform);
-  };
-
-  /** Removes the active highlight class from the currently active seat path and clears the reference. */
-  const clearActiveSeatPath = () => {
-    if (!_state.activeSeatPathNode) return;
-    d3.select(_state.activeSeatPathNode).classed('maps-region-path-active', false);
-    _state.activeSeatPathNode = null;
-  };
-
-  /**
-   * Sets pathNode as the active seat path, removing the highlight from any previously active path and raising pathNode to the front.
-   * @param {SVGPathElement} pathNode - The SVG path element to activate.
-   * @returns {void}
-   */
-  const setActiveSeatPath = (pathNode) => {
-    if (!pathNode) return;
-    if (_state.activeSeatPathNode && _state.activeSeatPathNode !== pathNode) {
-      d3.select(_state.activeSeatPathNode).classed('maps-region-path-active', false);
-    }
-    _state.activeSeatPathNode = pathNode;
-    d3.select(pathNode).classed('maps-region-path-active', true).raise();
-  };
-
-  /** Hides the seat popup, clears the active path highlight, and animates the map back to the initial zoom transform. */
-  const resetZoom = () => {
-    hideSeatPopup();
-    clearActiveSeatPath();
-    svg.transition().duration(RESET_ZOOM_DURATION_MS).call(zoomBehavior.transform, initialTransform);
-  };
-
-  _state.mapInteractionController = {
-    zoomBy: (factor) => svg.transition().duration(180).call(zoomBehavior.scaleBy, factor),
-    reset: resetZoom,
-    clearSelection: clearActiveSeatPath,
-    highlightSeat: (seatName) => {
-      const seatKey = seatLookupKey(seatName);
-      const seatPathNode = seatPathByKey.get(seatKey);
-      if (seatPathNode) setActiveSeatPath(seatPathNode);
-    },
-    zoomToSeat: (seatName) => {
-      const seatKey = seatLookupKey(seatName);
-      const featureDatum = featureBySeat.get(seatKey);
-      if (!featureDatum) return false;
-      const seatPathNode = seatPathByKey.get(seatKey);
-      if (seatPathNode) {
-        setActiveSeatPath(seatPathNode);
-      }
-      zoomToFeature(featureDatum);
-      return true;
-    },
-    flashRegion: () => {},
-  };
-
-  // Draw cross-region boundary mesh — interior edges only, no coastlines.
-  const regionBoundaryMesh = topojsonMesh(
-    mapData, object,
-    (a, b) => a && b && a !== b && a.properties?.region !== b.properties?.region
-  );
-  if (regionBoundaryMesh?.coordinates?.length) {
-    boundaryLayer.append('path')
-      .datum(regionBoundaryMesh)
-      .attr('class', 'maps-region-boundary')
-      .attr('d', path);
-  }
-
-  // ── Draw individual constituency seat paths ───────────────────────────────
-
-  const seatPaths = seatLayer
-    .selectAll('path')
-    .data(features)
-    .join('path')
-    .attr('class', 'maps-region-path')
-    .attr('d', path)
-    .attr('fill', (datum) => {
-      const seatName = seatNameFromFeature(datum);
-      if (!seatName) return manifest.colourParty('others');
-      const seatKey = seatLookupKey(seatName);
-      const seat = state.electionData.seatsByKey.get(seatKey);
-      if (!seat) return manifest.colourParty('others');
-
-      if (visibleSeatKeys && !visibleSeatKeys.has(seatKey)) {
-        return '#cbd5e1';
-      }
-
-      if (choroplethConfig.enabled && choroplethConfig.valueBySeatKey?.has(seatKey)) {
-        const metricValue = choroplethConfig.valueBySeatKey.get(seatKey);
-        return choroplethConfig.toColour(metricValue);
-      }
-
-      const winner = winnerBySeat.get(seatName) || winnerBySeat.get(seatLookupKey(seatName)) || 'others';
-      return manifest.colourParty(winner);
-    })
-    .attr('stroke', null)
-    .on('mouseenter', null)
-    .on('click', (event, datum) => {
-      event.stopPropagation();
-      setActiveSeatPath(event.currentTarget);
-      const seatName = seatNameFromFeature(datum);
-      if (seatName) {
-        setSelectedSeatRowByKey(seatLookupKey(seatName));
-        renderSeatPopup(seatName);
-        zoomToFeature(datum);
-      }
-    });
-
-  seatPaths.each(function assignSeatPath(datum) {
-    const seatName = seatNameFromFeature(datum);
-    if (!seatName) return;
-    seatPathByKey.set(seatLookupKey(seatName), this);
-  });
-
-  // ── Region connector lines and flash layer (Holyrood list-seat region summaries) ──
-
-  if (regionSummary) {
-    // Group topology geometries by normalised region key for flash animation.
-    const geometriesByRegion = new Map();
-    (object.geometries || []).forEach((geom) => {
-      const region = geom.properties?.region;
-      if (!region) return;
-      const regionKey = normalizeRegionKey(region);
-      if (!geometriesByRegion.has(regionKey)) geometriesByRegion.set(regionKey, []);
-      geometriesByRegion.get(regionKey).push(geom);
-    });
-
-    // Flash layer for region highlight animation (inside zoomLayer, drawn above seat paths).
-    const flashLayer = zoomLayer.append('g').attr('class', 'maps-region-flash-layer');
-
-    // Flash animation: draw a temporary merged-region path that pulses and disappears.
-    _state.mapInteractionController.flashRegion = (regionKey) => {
-      const geoms = geometriesByRegion.get(regionKey);
-      if (!geoms) return;
-      const merged = topojsonMerge(state.mapData, geoms);
-      if (!merged) return;
-      const flashPath = flashLayer.append('path')
-        .attr('class', 'maps-region-flash-path')
-        .attr('d', path(merged));
-      flashPath.node().addEventListener('animationend', () => flashPath.remove(), { once: true });
-    };
-  }
-
-  svg.on('click', (event) => {
-    const target = event.target;
-    if (target === mapSvg || target?.classList?.contains('maps-map-bg')) {
-      resetZoom();
-    }
-  });
-
-  svg.call(zoomBehavior.transform, preserveZoom ? d3.zoomTransform(mapSvg) : initialTransform);
 }
 
 /**

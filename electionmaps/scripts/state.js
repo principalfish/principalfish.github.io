@@ -210,19 +210,6 @@ export const manifest = new Manifest();
 // ─── Application state ────────────────────────────────────────────────────────
 
 export const _state = {
-  // Sort / UI / totals
-  activeSeatPathNode: null,
-
-  // Map interaction controller — replaced by renderTopoMap
-  mapInteractionController: {
-    zoomBy: () => {},
-    reset: () => {},
-    clearSelection: () => {},
-    highlightSeat: () => {},
-    zoomToSeat: () => false,
-    flashRegion: () => {},
-  },
-
   // Search
   seatSearchSuggestions: [],
   seatSearchSuggestionIndex: -1,

@@ -107,7 +107,7 @@ async function activateElection(view) {
   window.__mapsComparisonSummary = state.comparisonElectionData?.summary.data ?? null;
 
   state.setupMapData();
-  renderMapInit({ renderRegionPopup });
+  renderMapInit();
   renderMap();
   renderRightPanel();
 
@@ -2803,9 +2803,9 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   drawMap(true);
   renderRightPanel();
 
-  if (_state.currentOpenSeatName) {
-    renderSeatPopup(_state.currentOpenSeatName);
-    _state.mapInteractionController.highlightSeat(_state.currentOpenSeatName);
+  if (state.map.openSeat) {
+    renderSeatPopup(state.map.openSeat);
+    _state.mapInteractionController.highlightSeat(state.map.openSeat);
   }
 }
 
@@ -3087,7 +3087,7 @@ function renderChoroplethLegend(choroplethConfig) {
 function hideSeatPopup() {
   if (!seatPopup) return;
   seatPopup.hidden = true;
-  _state.currentOpenSeatName = null;
+  state.map.openSeat = null;
 }
 
 /**
@@ -3104,7 +3104,7 @@ function renderSeatPopup(seatName) {
     hideSeatPopup();
     return;
   }
-  _state.currentOpenSeatName = seatName;
+  state.map.openSeat = seatName;
 
   const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
   const gainFrom = seatGainFromPartyKey2(seat, comparisonSeat);
@@ -3151,48 +3151,6 @@ function renderSeatPopup(seatName) {
       <div class="maps-popup-values">
         <span>${formatPct(row.pct)}%</span>
         ${row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`}
-      </div>
-    `;
-    seatPopupList.appendChild(item);
-  });
-
-  seatPopup.hidden = false;
-}
-
-/**
- * Renders a region summary popup showing seat tallies and list vote shares.
- */
-function renderRegionPopup(regionKey, regionSummary) {
-  if (!seatPopup || !seatPopupTitle || !seatPopupMeta || !seatPopupList) return;
-  const data = regionSummary.get(regionKey);
-  if (!data) return;
-
-  _state.currentOpenSeatName = null;
-  seatPopupTitle.textContent = `${getRegionLabel(regionKey, state.currentRegionLabelsByKey)} List Vote`;
-
-  const totalSeats = Object.values(data.seatsByParty).reduce((a, b) => a + b, 0);
-  seatPopupMeta.innerHTML = `<span class="maps-popup-meta-item">Total seats: ${totalSeats}</span>`;
-
-  const totalVotes = Object.values(data.votesByParty).reduce((a, b) => a + b, 0);
-  const rows = Object.entries(data.votesByParty)
-    .map(([party, votes]) => ({ party, votes, pct: totalVotes > 0 ? (votes / totalVotes) * 100 : 0 }))
-    .sort((a, b) => b.votes - a.votes)
-    .slice(0, 8);
-
-  const maxPct = rows.reduce((m, r) => Math.max(m, r.pct), 0);
-  seatPopupList.innerHTML = '';
-  rows.forEach((row) => {
-    const barWidth = maxPct > 0 ? Math.min(75, (row.pct / maxPct) * 75) : 0;
-    const seats = data.seatsByParty[row.party] || 0;
-    const item = document.createElement('div');
-    item.className = 'maps-popup-row';
-    item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-    item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(row.party));
-    item.innerHTML = `
-      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(row.party)}"></span>${escapeHtml(manifest.labelParty(row.party))}</div>
-      <div class="maps-popup-values">
-        <span>${formatPct(row.pct)}%</span>
-        <span style="color:#6b7280">${seats} seat${seats !== 1 ? 's' : ''}</span>
       </div>
     `;
     seatPopupList.appendChild(item);

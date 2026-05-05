@@ -1041,43 +1041,67 @@ function initPostcodeSearch() {
   if (!isHolyrood) postcodeWarningPanel.hidden = true;
 }
 
-// ─── Map init ────────────────────────────────────────────────────────────────
+// ─── Map ─────────────────────────────────────────────────────────────────────
 
 const regionCard = document.getElementById('mapsRegionCard');
 const regionTableBody = document.getElementById('mapsRegionTableBody');
 
 /**
- * Renders the region table overlay showing list-seat colour bars for each region.
- * Shows the card when regionSummary is provided, hides it otherwise.
+ * Builds the Holyrood list-region table overlay from `state.listRegionSummary`.
+ *
+ * Hides the region card and returns early if there is no summary or it is empty
+ * (non-list elections have no regions).
+ *
+ * For each region in the summary, renders a table row containing:
+ *  - A name cell with the human-readable region label.
+ *  - A seats cell with a proportional colour bar — one segment per party that
+ *    won at least one seat, widths scaled to that party's share of total seats,
+ *    labelled with the count when ≥ 2. Rows with no data are skipped entirely.
+ *
+ * Clicking a row flashes the region boundary on the map and opens the region popup.
+ *
+ * After all rows are appended, unhides the card and wires the collapse toggle on
+ * the table header, resetting to expanded state on each call.
+ *
+ * @returns {void}
  */
-// TODO: renderRegionPopup is a sub-sub-handler still in electionmaps.js — passed as callback
-function initRegionTable(regionSummary, renderRegionPopup) {
-  if (!regionCard || !regionTableBody) return;
+function initRegionTable() {
+  const regionSummary = state.listRegionSummary;
+  // Non-list elections have no region summary — hide the card and bail.
   if (!regionSummary || regionSummary.size === 0) {
     regionCard.hidden = true;
     return;
   }
 
+  // Clear any previously rendered rows before rebuilding.
   regionTableBody.innerHTML = '';
 
   regionSummary.forEach((data, regionKey) => {
+    // Skip regions with no data (shouldn't happen, but guard against malformed summaries).
+    if (!data) return;
+
+    // Sort parties by seat count descending and compute total for bar width scaling.
     const entries = Object.entries(data.seatsByParty)
       .filter(([, n]) => n > 0)
       .sort((a, b) => b[1] - a[1]);
     const total = entries.reduce((s, [, n]) => s + n, 0);
 
+    // Build the row — clicking flashes the region on the map and opens the popup.
     const tr = document.createElement('tr');
     tr.className = 'maps-region-table-row';
     tr.addEventListener('click', () => {
+      // TODO: _state.mapInteractionController will move to map.js alongside renderTopoMap
       _state.mapInteractionController.flashRegion(regionKey);
-      renderRegionPopup(regionKey, regionSummary);
+      renderRegionPopup(regionKey, data);
     });
 
+    // First cell: human-readable region name.
     const tdName = document.createElement('td');
     tdName.className = 'maps-region-table-name';
     tdName.textContent = getRegionLabel(regionKey, state.currentRegionLabelsByKey);
     tr.appendChild(tdName);
 
+    // Second cell: proportional colour bar, one segment per party.
     const tdSeats = document.createElement('td');
     tdSeats.className = 'maps-region-table-seats';
 
@@ -1089,6 +1113,7 @@ function initRegionTable(regionSummary, renderRegionPopup) {
         seg.className = 'maps-region-table-bar-seg';
         seg.style.width = `${(count / total) * 100}%`;
         seg.style.background = manifest.colourParty(party);
+        // Only label the segment if it's wide enough to fit the number.
         if (count >= 2) seg.textContent = count;
         barEl.appendChild(seg);
       });
@@ -1099,8 +1124,10 @@ function initRegionTable(regionSummary, renderRegionPopup) {
     regionTableBody.appendChild(tr);
   });
 
+  // All rows built — show the card.
   regionCard.hidden = false;
 
+  // Reset to expanded and wire the header toggle button (mobile-only — toggle and collapsed styles are gated behind max-width: 640px in styles.css).
   const toggleBtn = document.getElementById('mapsRegionCardToggle');
   regionCard.classList.remove('maps-region-card--collapsed');
   if (toggleBtn) {
@@ -1114,6 +1141,80 @@ function initRegionTable(regionSummary, renderRegionPopup) {
   }
 }
 
+// ─── Seat popup ──────────────────────────────────────────────────────────────
+
+// TODO: deduplicate with electionmaps.js once renderSeatPopup migrates
+const seatPopup = document.getElementById('mapsSeatPopup');
+const seatPopupTitle = document.getElementById('mapsSeatPopupTitle');
+const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
+const seatPopupList = document.getElementById('mapsSeatPopupList');
+
+// TODO: once renderSeatPopup migrates here, factor shared popup row building (bar-width calc, CSS custom props, party swatch+label template) into a helper
+/**
+ * Populates the seat popup with a Holyrood list-region summary.
+ *
+ * Clears the current seat selection so no constituency is shown as active.
+ *
+ * Sets the popup title to "<Region> List Vote" using the human-readable region label.
+ *
+ * Renders the meta bar with the total number of list seats won in this region.
+ *
+ * Builds a vote-share row for each party that received list votes, sorted descending
+ * by vote count, capped at 8 rows. Each row contains:
+ *  - A colour bar whose width is proportional to the party's share relative to the
+ *    leading party, capped at 75% of the column width.
+ *  - A party swatch and label.
+ *  - The party's list vote percentage and seat count.
+ *
+ * Unhides the popup.
+ *
+ * @param {string} regionKey - Normalised region identifier (used for the title label).
+ * @param {{seatsByParty: Object<string,number>, votesByParty: Object<string,number>}} data - Pre-fetched summary entry for this region.
+ * @returns {void}
+ */
+function renderRegionPopup(regionKey, data) {
+  // Clear the active seat so the popup doesn't show stale constituency state.
+  state.map.openSeat = null;
+  seatPopupTitle.textContent = `${getRegionLabel(regionKey, state.currentRegionLabelsByKey)} List Vote`;
+
+  // Meta bar: total list seats won across all parties in this region.
+  const totalSeats = Object.values(data.seatsByParty).reduce((a, b) => a + b, 0);
+  seatPopupMeta.innerHTML = `<span class="maps-popup-meta-item">Total seats: ${totalSeats}</span>`;
+
+  // Build a sorted rows array with pre-computed vote share percentages, capped at 8.
+  const totalVotes = Object.values(data.votesByParty).reduce((a, b) => a + b, 0);
+  const rows = Object.entries(data.votesByParty)
+    .map(([party, votes]) => ({ party, votes, pct: totalVotes > 0 ? (votes / totalVotes) * 100 : 0 }))
+    .sort((a, b) => b.votes - a.votes)
+    .slice(0, 8);
+
+  // Find the leading party's share so all bar widths are relative to it, not to 100%.
+  const maxPct = rows.reduce((m, r) => Math.max(m, r.pct), 0);
+  seatPopupList.innerHTML = '';
+  rows.forEach((row) => {
+    // Scale bar width relative to leader, capped at 75% to leave room for labels.
+    const barWidth = maxPct > 0 ? Math.min(75, (row.pct / maxPct) * 75) : 0;
+    const seats = data.seatsByParty[row.party] || 0;
+    const item = document.createElement('div');
+    item.className = 'maps-popup-row';
+    // CSS custom properties drive the bar rendering in the stylesheet.
+    item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
+    item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(row.party));
+    item.innerHTML = `
+      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(row.party)}"></span>${escapeHtml(manifest.labelParty(row.party))}</div>
+      <div class="maps-popup-values">
+        <span>${formatPct(row.pct)}%</span>
+        <span style="color:#6b7280">${seats} seat${seats !== 1 ? 's' : ''}</span>
+      </div>
+    `;
+    seatPopupList.appendChild(item);
+  });
+
+  seatPopup.hidden = false;
+}
+
+// ─── Map init ────────────────────────────────────────────────────────────────
+
 /**
  * Runs all once-per-election DOM initialisations. Must be called after state.setupMapData() so
  * mapConfig and listRegionSummary are already set.
@@ -1121,13 +1222,10 @@ function initRegionTable(regionSummary, renderRegionPopup) {
  * Rebuilds the vote-totals tab nav, shows/hides the postcode search group based
  * on state.mapConfig.postcodeSupported, and populates the Holyrood region-table overlay (hidden for non-list elections).
  *
- * @param {{
- *   renderRegionPopup: Function,
- * }} callbacks - Handlers that remain in electionmaps.js pending further migration.
  * @returns {void}
  */
-export function renderMapInit({ renderRegionPopup }) {
+export function renderMapInit() {
   initVoteTotalsTabs();
   initPostcodeSearch();
-  initRegionTable(state.listRegionSummary, renderRegionPopup);
+  initRegionTable();
 }

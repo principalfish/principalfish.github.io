@@ -213,7 +213,6 @@ export const _state = {
   // Sort / UI / totals
   selectedSeatRow: null,
   activeSeatPathNode: null,
-  currentOpenSeatName: null,
 
   // Election / seat data
   currentComparisonSeats: [],
@@ -899,6 +898,13 @@ class AppState {
       party: 'all',
     };
 
+    // TODO: map interaction state may migrate elsewhere once renderTopoMap moves to map.js
+    /** Transient map interaction state. */
+    this.map = {
+      /** Name of the currently open seat popup, or null when no popup is shown. */
+      openSeat: null,
+    };
+
     /** Derived visible-seat slice produced by applying mapFilters to electionData.currentSeats.
      * Recomputed at the top of drawMap; read by the renderers and by the
      * vote-totals tab click handler when it re-summarises without a full re-render.
@@ -1129,12 +1135,12 @@ class AppState {
     // instead. Westminster / by-elections / referenda have no list seats, so both vars
     // stay at their defaults: no region rollup, and the seat list shows every visible
     // seat unmodified.
-    this.listRegionSummary = null;
-    this.listFilteredSeats = this.mapSeatsVisible.seats;
-    if (this.hasListSeats) {
-      this.listRegionSummary = ElectionSummary.summarizeByRegion(this.electionData.currentSeats.filter((s) => Seat.isList(s)));
-      this.listFilteredSeats = this.mapSeatsVisible.seats.filter((s) => !Seat.isList(s));
-    }
+    this.listRegionSummary = this.hasListSeats
+      ? ElectionSummary.summarizeByRegion(this.electionData.currentSeats.filter((s) => Seat.isList(s)))
+      : null;
+    this.listFilteredSeats = this.hasListSeats
+      ? this.mapSeatsVisible.seats.filter((s) => !Seat.isList(s))
+      : this.mapSeatsVisible.seats;
 
     // Seat search index. Built from listFilteredSeats (not mapSeatsVisible.seats) so that on
     // list elections the autocomplete and postcode-lookup paths only see constituencies — list

@@ -1182,11 +1182,6 @@ class AppState {
       ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode)
       : null;
 
-    // TODO: remove once the resize-driven renderVoteTotals callers and the predict
-    // summary builders read state.filteredSeatsSummary / state.filteredSeatsComparisonSummary
-    // directly (see also the activateElection mirrors guarded by the same TODO).
-    window.__mapsCurrentSummary = this.filteredSeatsSummary;
-    window.__mapsComparisonSummary = this.filteredSeatsComparisonSummary;
   }
 
   /**

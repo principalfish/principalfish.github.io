@@ -846,8 +846,6 @@ function sortPartyRows(rows) {
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary] - Comparison for delta columns; defaults to state.filteredSeatsComparisonSummary.
  * @returns {void}
  */
-// TODO: Make private (drop export) once window.__mapsCurrentSummary / __mapsComparisonSummary are in state
-// and all call sites in electionmaps.js can be replaced by internal re-renders.
 export function renderVoteTotals(
   summary = state.filteredSeatsSummary,
   comparisonSummary = state.filteredSeatsComparisonSummary
@@ -936,24 +934,17 @@ function initVoteTotalsTabs() {
   });
 }
 
-// TODO: Revisit once window.__mapsCurrentSummary / __mapsComparisonSummary are moved into state
-// and syncPredictModeRightColumnLayout is migrated here — at that point this can self-wire with
-// no parameters and the export can be dropped.
 /**
  * Wires the expand/collapse button that toggles the vote-totals table between the top-7 truncation
  * and the full party list. Flips state.voteTotals.expanded then re-renders via renderVoteTotals().
- * Guards on window.__mapsCurrentSummary so the button is a no-op until an election has loaded.
- * Passes window.__mapsCurrentSummary / __mapsComparisonSummary explicitly to handle predict mode,
- * where those values differ from state.filteredSeatsSummary. syncPredictLayout is called afterward
- * to keep the right-column height consistent when the table grows or shrinks.
  * @param {function(): void} syncPredictLayout - Recalculates predict-mode right-column height.
  * @returns {void}
  */
 export function wireVoteTotalsToggle(syncPredictLayout) {
   voteTotalsToggle.addEventListener('click', () => {
     state.voteTotals.expanded = !state.voteTotals.expanded;
-    if (!window.__mapsCurrentSummary) return;
-    renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null);
+    if (!state.filteredSeatsSummary) return;
+    renderVoteTotals();
     syncPredictLayout();
   });
 }

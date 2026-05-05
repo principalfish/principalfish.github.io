@@ -102,10 +102,6 @@ async function activateElection(view) {
 
   setMapControlOptions();
   setHeader(state.electionData.summary.text);
-  // TODO: remove once other handlers read state.electionData.summary.data / state.comparisonElectionData.summary.data directly
-  window.__mapsCurrentSummary = state.electionData.summary.data;
-  window.__mapsComparisonSummary = state.comparisonElectionData?.summary.data ?? null;
-
   state.setupMapData();
   renderMapInit();
   renderMap();
@@ -311,11 +307,7 @@ function wireInit() {
   wireSeatPopup();
   wireVoteTotalsToggle(syncPredictModeRightColumnLayout);
   wireWindowResize();
-  wireVoteTotalsSorting(() => {
-    if (!window.__mapsCurrentSummary) return;
-    renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null);
-    renderRightPanel();
-  });
+  wireVoteTotalsSorting();
 }
 
 /**
@@ -668,19 +660,18 @@ function wireWindowResize() {
 
 /**
  * Attaches click and keyboard (Enter/Space) handlers to all [data-sort-key] table headers
- * to trigger sort changes, then invokes onSortChanged so the caller can re-render.
- * @param {function(): void} onSortChanged - Callback invoked after the sort direction is updated.
+ * to trigger sort changes and re-render the vote totals and right panel.
  * @returns {void}
  */
-function wireVoteTotalsSorting(onSortChanged) {
+function wireVoteTotalsSorting() {
   document.querySelectorAll('th[data-sort-key]').forEach((header) => {
     const sortKey = header.getAttribute('data-sort-key');
     if (!sortKey) return;
 
-    /** Updates sort direction for sortKey and invokes the onSortChanged callback. */
     const trigger = () => {
       setSortDirection(sortKey);
-      onSortChanged();
+      renderVoteTotals();
+      renderRightPanel();
     };
 
     header.addEventListener('click', trigger);
@@ -2781,9 +2772,6 @@ function commitPredictProjectionState(projectedSeats, projectedSummary, baseline
   _state.comparisonSeatsByKey = _state.predictBaseSeatsByKey;
   state.initMapData(_state.predictBaseMapData);
   state.currentRegionLabelsByKey = _state.predictBaseRegionLabelsByKey;
-
-  window.__mapsCurrentSummary = projectedSummary;
-  window.__mapsComparisonSummary = baselineSummary;
 
   const predictLabel = `Predict ${predictElectionYear()}`;
   // TODO: migrate to `state.electionData.summary.text` once predict mode writes its projected summary back onto state.electionData (will need to update electionData.electionName to predictLabel so the ElectionSummary constructor renders the right prefix)

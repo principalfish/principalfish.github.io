@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, buildWinnerBySeat } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -197,6 +197,43 @@ describe('formatSigned', () => {
   it('treats null/undefined as zero', () => {
     expect(formatSigned(null)).toBe('0');
     expect(formatSigned(undefined)).toBe('0');
+  });
+});
+
+describe('buildWinnerBySeat', () => {
+  it('maps seat name to winner party key', () => {
+    const result = buildWinnerBySeat([{ seat: 'Bristol East', winner: 'labour' }]);
+    expect(result.get('Bristol East')).toBe('labour');
+  });
+
+  it('also stores a lowercase key for each seat', () => {
+    const result = buildWinnerBySeat([{ seat: 'Bristol East', winner: 'labour' }]);
+    expect(result.get('bristol east')).toBe('labour');
+  });
+
+  it('defaults winner to "others" when winner is missing', () => {
+    const result = buildWinnerBySeat([{ seat: 'Bristol East' }]);
+    expect(result.get('Bristol East')).toBe('others');
+    expect(result.get('bristol east')).toBe('others');
+  });
+
+  it('skips entries without a seat property', () => {
+    const result = buildWinnerBySeat([{ winner: 'labour' }, null, undefined]);
+    expect(result.size).toBe(0);
+  });
+
+  it('handles multiple seats', () => {
+    const result = buildWinnerBySeat([
+      { seat: 'Bristol East', winner: 'labour' },
+      { seat: 'Orkney', winner: 'libdem' },
+    ]);
+    expect(result.get('Bristol East')).toBe('labour');
+    expect(result.get('Orkney')).toBe('libdem');
+    expect(result.size).toBe(4);
+  });
+
+  it('returns an empty Map for an empty array', () => {
+    expect(buildWinnerBySeat([]).size).toBe(0);
   });
 });
 

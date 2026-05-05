@@ -1,15 +1,6 @@
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
 import { manifest, state, _state } from './state.js';
-import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel } from './utils.js';
-
-// Left-rail nav container — populated with one anchor per election plus the
-// Poll tracker link by renderElectionLinks.
-const electionList = document.getElementById('mapsElectionList');
-// Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
-const mapsTitle = document.querySelector('.maps-title');
-// Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view),
-// optionally suffixed with the poll snippet for prediction elections.
-const subtitle = document.getElementById('mapsSubtitle');
+import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, buildWinnerBySeat } from './utils.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
@@ -33,6 +24,12 @@ export function setPageTitle() {
 }
 
 // ─── Header ─────────────────────────────────────────────────────────────────
+
+// Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
+const mapsTitle = document.querySelector('.maps-title');
+// Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view),
+// optionally suffixed with the poll snippet for prediction elections.
+const subtitle = document.getElementById('mapsSubtitle');
 
 /**
  * Updates the title area: the page h1 and subtitle.
@@ -99,6 +96,10 @@ function renderTitle() {
 }
 
 // ─── Left Bar ─────────────────────────────────────────────────────────────────
+
+// Left-rail nav container — populated with one anchor per election plus the
+// Poll tracker link by renderElectionLinks.
+const electionList = document.getElementById('mapsElectionList');
 
 /**
  * Updates the left panel: highlights the active parliament tab and rebuilds the election list nav.
@@ -967,7 +968,7 @@ const regionCard = document.getElementById('mapsRegionCard');
 const regionTableBody = document.getElementById('mapsRegionTableBody');
 
 /**
- * Builds the Holyrood list-region table overlay from `state.listRegionSummary`.
+ * Builds the list-region table overlay from `state.listRegionSummary`.
  *
  * Hides the region card and returns early if there is no summary or it is empty
  * (non-list elections have no regions).
@@ -1071,7 +1072,7 @@ const seatPopupList = document.getElementById('mapsSeatPopupList');
 
 // TODO: once renderSeatPopup migrates here, factor shared popup row building (bar-width calc, CSS custom props, party swatch+label template) into a helper
 /**
- * Populates the seat popup with a Holyrood list-region summary.
+ * Populates the seat popup with a list-region summary.
  *
  * Clears the current seat selection so no constituency is shown as active.
  *
@@ -1133,6 +1134,93 @@ function renderRegionPopup(regionKey, data) {
   seatPopup.hidden = false;
 }
 
+// ─── Seat list ───────────────────────────────────────────────────────────────
+
+// Seat list panel elements — populated by renderSeatList.
+const seatList = document.getElementById('mapsSeatList');
+const seatListTitle = document.querySelector('#mapsSeatCard .maps-panel-title');
+
+// TODO: make private once electionmaps.js callers (selectSeatBySearchQuery) migrate to dom.js
+/**
+ * Marks the seat list row for seatKey as selected (is-selected class) and deselects the previously selected row.
+ * @param {string} seatKey - Normalized seat lookup key identifying which row to select.
+ * @returns {void}
+ */
+export function setSelectedSeatRowByKey(seatKey) {
+  const nextRow = state.seatList.rowByKey.get(seatKey);
+  // No row found — seat may not be visible under current filters; do nothing.
+  if (!nextRow) return;
+
+  // Deselect the previously highlighted row before selecting the new one.
+  if (state.seatList.selected && state.seatList.selected !== nextRow) {
+    state.seatList.selected.classList.remove('is-selected');
+  }
+  nextRow.classList.add('is-selected');
+  state.seatList.selected = nextRow;
+}
+
+/**
+ * Renders up to 300 seat rows sorted alphabetically into the seat list panel. Each row shows
+ * the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup.
+ * Reads seats and comparison data directly from state.
+ * @returns {void}
+ */
+export function renderSeatList() {
+  const seats = state.listFilteredSeats;
+  const comparisonSeats = state.comparisonSeats;
+  seatListTitle.textContent = `Seats (${seats.length})`;
+  // Wipe the previous render and clear the stale selection reference before rebuilding.
+  seatList.innerHTML = '';
+  state.seatList.selected = null;
+
+  // Build a winner-by-seat lookup for the comparison election so each row can show a
+  // "GAIN FROM" indicator without scanning the full comparison array per row.
+  const comparisonWinnerBySeat = comparisonSeats ? buildWinnerBySeat(comparisonSeats) : new Map();
+
+  const ordered = [...seats].sort((a, b) => a.seat.localeCompare(b.seat));
+  // Build rowByKey locally so it can be atomically written to state at the end,
+  // avoiding a partially-populated map being read by setSelectedSeatRowByKey mid-render.
+  const rowByKey = new Map();
+
+  const renderSeatRow = (seat) => {
+    const seatName = seat.seat || 'Unknown seat';
+    const seatKey = seatLookupKey(seatName);
+    const winnerKey = seat.winner || 'others';
+    const comparisonWinnerKey = comparisonWinnerBySeat.get(seatLookupKey(seatName));
+    // Only show a gain indicator when the winner changed from the comparison election.
+    const gainedFrom = comparisonWinnerKey && comparisonWinnerKey !== winnerKey ? comparisonWinnerKey : null;
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'maps-seat-row';
+    item.dataset.seatKey = seatKey;
+    item.setAttribute('aria-label', `Zoom to ${seatName}`);
+    item.innerHTML = `
+      <span class="maps-seat-main">
+        <span class="maps-seat-icon maps-seat-owner-icon" style="background:${manifest.colourParty(winnerKey)}" title="${manifest.labelParty(winnerKey)}"></span>
+        <span class="maps-seat-name">${seatName}</span>
+      </span>
+      <span class="maps-seat-meta">
+        ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${manifest.labelParty(gainedFrom)}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
+      </span>
+    `;
+
+    item.addEventListener('click', () => {
+      setSelectedSeatRowByKey(seatKey);
+      // TODO: remove once mapInteractionController migrates to map.js
+      _state.mapInteractionController.zoomToSeat(seatName);
+      // TODO: remove once renderSeatPopup migrates to dom.js (callback slot no longer needed)
+      _state.renderSeatPopup(seatName);
+    });
+
+    rowByKey.set(seatKey, item);
+    seatList.appendChild(item);
+  };
+
+  // Render the rows
+  ordered.forEach(renderSeatRow);
+  state.seatList.rowByKey = rowByKey;
+}
+
 // ─── Map init ────────────────────────────────────────────────────────────────
 
 /**
@@ -1140,7 +1228,7 @@ function renderRegionPopup(regionKey, data) {
  * mapConfig and listRegionSummary are already set.
  *
  * Rebuilds the vote-totals tab nav, shows/hides the postcode search group based
- * on state.mapConfig.postcodeSupported, and populates the Holyrood region-table overlay (hidden for non-list elections).
+ * on state.mapConfig.postcodeSupported, and populates the region-table overlay (hidden for non-list elections).
  *
  * @returns {void}
  */

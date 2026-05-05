@@ -28,6 +28,7 @@ import {
   deltaClass,
   seatLookupKey,
   getRegionLabel,
+  buildWinnerBySeat,
 } from './scripts/utils.js';
 import {
   setElectionPreDataFetch,
@@ -40,6 +41,8 @@ import {
   renderMapInit,
   renderVoteTotals,
   wireVoteTotalsToggle,
+  renderSeatList,
+  setSelectedSeatRowByKey,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -124,7 +127,7 @@ function drawMap(preserveZoom = false) {
 
 function renderMap(preserveZoom = false) {
   renderVoteTotals();
-  renderSeatList(state.listFilteredSeats, state.comparisonSeats, {});
+  renderSeatList();
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys: state.mapSeatsVisible.seatKeys,
@@ -715,23 +718,6 @@ function seatNameFromFeature(featureDatum) {
   return props.name || props.seat_name || props.seat || props.constituency || props.Name || null;
 }
 
-/**
- * Returns a Map from seat name to winner party key for fast map colour lookups.
- * Each seat is stored under both its original name and a lowercase variant.
- * Seats without a `seat` property are skipped. Winner defaults to `'others'` if missing.
- * @param {Array<object>} seats - Array of seat objects with `seat` and `winner` properties.
- * @returns {Map<string, string>} Map from seat name (original and lowercase) to winner party key.
- */
-function buildWinnerBySeat(seats) {
-  const bySeat = new Map();
-  seats.forEach((seat) => {
-    if (!seat?.seat) return;
-    bySeat.set(seat.seat, seat.winner || 'others');
-    bySeat.set(String(seat.seat).toLowerCase(), seat.winner || 'others');
-  });
-  return bySeat;
-}
-
 // ── Map / region utilities ────────────────────────────────────────────────────
 
 // ── Election file resolution ──────────────────────────────────────────────────
@@ -742,8 +728,6 @@ const zoomValue = document.getElementById('mapsZoomValue');
 const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
-const seatList = document.getElementById('mapsSeatList');
-const seatListTitle = document.querySelector('#mapsSeatCard .maps-panel-title');
 const mapsStage = document.querySelector('.maps-stage');
 const mapsPanelRight = document.querySelector('.maps-panel-right');
 const seatPopup = document.getElementById('mapsSeatPopup');
@@ -1040,74 +1024,6 @@ function renderSeatPopup(seatName) {
   });
 
   seatPopup.hidden = false;
-}
-
-/**
- * Renders up to 300 seat rows sorted alphabetically into the seat list panel. Each row shows the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup.
- * @param {Array<object>} seats - Visible seat objects to render in the list.
- * @param {Array<object>|null} [comparisonSeats=null] - Optional comparison seats used to show gain-from indicators.
- * @returns {void}
- */
-function renderSeatList(seats, comparisonSeats = null) {
-  if (!seatList) return;
-  if (seatListTitle) seatListTitle.textContent = `Seats (${seats.length})`;
-  seatList.innerHTML = '';
-  _state.selectedSeatRow = null;
-  _state.seatListRowByKey = new Map();
-
-  const comparisonWinnerBySeat = comparisonSeats ? buildWinnerBySeat(comparisonSeats) : new Map();
-
-  const ordered = [...seats].sort((a, b) => a.seat.localeCompare(b.seat));
-
-  const renderSeatRow = (seat) => {
-    const seatName = seat.seat || 'Unknown seat';
-    const seatKey = seatLookupKey(seatName);
-    const winnerKey = seat.winner || 'others';
-    const comparisonWinnerKey = comparisonWinnerBySeat.get(seatLookupKey(seatName));
-    const gainedFrom = comparisonWinnerKey && comparisonWinnerKey !== winnerKey ? comparisonWinnerKey : null;
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'maps-seat-row';
-    item.dataset.seatKey = seatKey;
-    item.setAttribute('aria-label', `Zoom to ${seatName}`);
-    item.innerHTML = `
-      <span class="maps-seat-main">
-        <span class="maps-seat-icon maps-seat-owner-icon" style="background:${manifest.colourParty(winnerKey)}" title="${manifest.labelParty(winnerKey)}"></span>
-        <span class="maps-seat-name">${seatName}</span>
-      </span>
-      <span class="maps-seat-meta">
-        ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${manifest.labelParty(gainedFrom)}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
-      </span>
-    `;
-
-    item.addEventListener('click', () => {
-      setSelectedSeatRowByKey(seatKey);
-
-      const zoomed = _state.mapInteractionController.zoomToSeat(seatName);
-      renderSeatPopup(seatName);
-    });
-
-    _state.seatListRowByKey.set(seatKey, item);
-    seatList.appendChild(item);
-  };
-
-  ordered.slice(0, 300).forEach(renderSeatRow);
-}
-
-/**
- * Marks the seat list row for seatKey as selected (is-selected class) and deselects the previously selected row.
- * @param {string} seatKey - Normalized seat lookup key identifying which row to select.
- * @returns {void}
- */
-function setSelectedSeatRowByKey(seatKey) {
-  const nextRow = _state.seatListRowByKey.get(seatKey);
-  if (!nextRow) return;
-
-  if (_state.selectedSeatRow && _state.selectedSeatRow !== nextRow) {
-    _state.selectedSeatRow.classList.remove('is-selected');
-  }
-  nextRow.classList.add('is-selected');
-  _state.selectedSeatRow = nextRow;
 }
 
 /**
@@ -1589,6 +1505,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       setActiveSeatPath(event.currentTarget);
       const seatName = seatNameFromFeature(datum);
       if (seatName) {
+        setSelectedSeatRowByKey(seatLookupKey(seatName));
         renderSeatPopup(seatName);
         zoomToFeature(datum);
       }
@@ -1644,6 +1561,8 @@ function renderTopoMap(mapData, seats, options = {}) {
  * @returns {Promise<void>}
  */
 async function init() {
+  // TODO: remove once renderSeatPopup migrates to dom.js (callback slot no longer needed)
+  _state.renderSeatPopup = renderSeatPopup;
   wireInit();
   domWireInit();
 

@@ -1,10 +1,7 @@
 
 USE COPILOT!!
 
-part way through activateElection - refreshElectionSeatStateAndRender
-finish activateElection
-
-make vote share change election not appear without comparison election
+add hover text on map - some thought on seatPreview
 
 
 redo data back end structure
@@ -15,8 +12,5 @@ redo data back end structure
 - make brexit part of general export (check party ids are accurate)
 reset database ids
 model_uns -> westminster_uns
-
-
-
 
 

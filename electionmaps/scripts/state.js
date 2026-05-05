@@ -211,13 +211,11 @@ export const manifest = new Manifest();
 
 export const _state = {
   // Sort / UI / totals
-  selectedSeatRow: null,
   activeSeatPathNode: null,
 
   // Election / seat data
   currentComparisonSeats: [],
   comparisonSeatsByKey: new Map(),
-  seatListRowByKey: new Map(),
 
   // Map interaction controller — replaced by renderTopoMap
   mapInteractionController: {
@@ -228,6 +226,10 @@ export const _state = {
     zoomToSeat: () => false,
     flashRegion: () => {},
   },
+
+  // TODO: remove once renderSeatPopup migrates to dom.js (callback slot no longer needed)
+  // Seat popup callback — assigned in init() once renderSeatPopup is defined
+  renderSeatPopup: () => {},
 
   // Search
   seatSearchSuggestions: [],
@@ -946,6 +948,15 @@ class AppState {
     /** Map of seat-lookup key → display name for the current visible set. Used by
      * selectSeatBySearchQuery and the Holyrood new-boundary name fallback. */
     this.currentSeatNameByKey = new Map();
+
+    /** Seat list panel render state. Rebuilt on every renderSeatList call.
+     * - rowByKey {Map<string, HTMLElement>} — seat lookup key → rendered row button.
+     *   Used by setSelectedSeatRowByKey and the zoomToSeat flow to find a row without querying the DOM.
+     * - selected {HTMLElement|null} — the currently highlighted row, or null when nothing is selected. */
+    this.seatList = {
+      rowByKey: new Map(),
+      selected: null,
+    };
   }
 
   /**

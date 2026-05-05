@@ -1455,12 +1455,8 @@ function wireSeatSearch() {
   seatSearchInput.addEventListener('input', () => {
     showSeatSearchSuggestions(seatSearchInput.value);
   });
-  seatSearchInput.addEventListener('change', submitSearch);
   seatSearchInput.addEventListener('blur', () => {
-    window.setTimeout(() => {
-      hideSeatSearchSuggestions();
-      submitSearch();
-    }, 120);
+    window.setTimeout(hideSeatSearchSuggestions, 120);
   });
   seatSearchInput.addEventListener('keydown', (event) => {
     // ArrowDown: open the list if empty, then advance the cursor.

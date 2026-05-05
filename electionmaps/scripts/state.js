@@ -209,14 +209,6 @@ export const manifest = new Manifest();
 
 // ─── Application state ────────────────────────────────────────────────────────
 
-export const _state = {
-  // Search
-  seatSearchSuggestions: [],
-  seatSearchSuggestionIndex: -1,
-  seatSearchMenuEl: null,
-  postcodeErrorTimeout: null,
-};
-
 // ─── Seat ────────────────────────────────────────────────────────────────────
 
 /**
@@ -1383,6 +1375,21 @@ class AppState {
    */
   voteTotalsColumnVisible(column) {
     return !!this.voteTotals.columns[column];
+  }
+
+  /**
+   * Updates voteTotals.sort: toggles direction if the same key is re-selected, otherwise
+   * switches to the new key with a default direction.
+   * @param {string} sortKey - Column key to sort by (e.g. 'seats', 'votes', 'party').
+   * @returns {void}
+   */
+  setSortDirection(sortKey) {
+    if (this.voteTotals.sort.key === sortKey) {
+      this.voteTotals.sort.direction = this.voteTotals.sort.direction === 'asc' ? 'desc' : 'asc';
+      return;
+    }
+    this.voteTotals.sort.key = sortKey;
+    this.voteTotals.sort.direction = sortKey === 'party' ? 'asc' : 'desc';
   }
 
   /**

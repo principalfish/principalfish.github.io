@@ -1058,6 +1058,32 @@ export function wireVoteTotalsToggle() {
   });
 }
 
+/**
+ * Attaches click and keyboard (Enter/Space) handlers to all [data-sort-key] table headers
+ * to trigger sort changes and re-render the vote totals and right panel.
+ * @returns {void}
+ */
+function wireVoteTotalsSorting() {
+  document.querySelectorAll('th[data-sort-key]').forEach((header) => {
+    const sortKey = header.getAttribute('data-sort-key');
+    if (!sortKey) return;
+
+    const trigger = () => {
+      state.setSortDirection(sortKey);
+      renderVoteTotals();
+      renderRightPanel();
+    };
+
+    header.addEventListener('click', trigger);
+    header.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        trigger();
+      }
+    });
+  });
+}
+
 // ─── Seat search ─────────────────────────────────────────────────────────────
 
 // ── Shared ───────────────────────────────────────────────────────────────────
@@ -1844,6 +1870,19 @@ export function renderSeatPopup(seatName) {
   seatPopup.hidden = false;
 }
 
+const seatPopupClose = document.getElementById('mapsSeatPopupClose');
+
+/**
+ * Closes the seat detail popup and deselects the active map path when the close button is clicked.
+ * @returns {void}
+ */
+function wireSeatPopup() {
+  seatPopupClose.addEventListener('click', () => {
+    hideSeatPopup();
+    mapInteraction.clearSelection?.();
+  });
+}
+
 // ─── Seat list ───────────────────────────────────────────────────────────────
 
 // Seat list panel elements — populated by renderSeatList.
@@ -1938,8 +1977,6 @@ const mapsPanelRight = document.querySelector('.maps-panel-right');
  * @returns {void}
  */
 export function renderRightPanel() {
-  if (!mapsStage || !mapsPanelRight) return;
-
   if (window.innerWidth <= 980) {
     mapsPanelRight.style.height = '';
     mapsPanelRight.style.maxHeight = '';
@@ -2446,7 +2483,7 @@ function renderChoroplethLegend() {
  * Wires all DOM-owned controls. Call once during page boot alongside wireInit.
  * @returns {void}
  */
-export function domWireInit() {
+export function wireInit() {
   wirePollTrackerControls();
   wirePopupPanels();
   wireMapInteractions();
@@ -2454,6 +2491,9 @@ export function domWireInit() {
   wireSeatSearch();
   wirePostcodeSearch();
   wireVoteTotalsToggle();
+  wireVoteTotalsSorting();
+  wireWindowResize();
+  wireSeatPopup();
 }
 
 /**
@@ -2493,4 +2533,16 @@ export function renderMap(preserveZoom = false) {
 function drawMap(preserveZoom = false) {
   state.setupMapData();
   renderMap(preserveZoom);
+}
+
+/**
+ * Syncs the right panel height to the map on window resize, and re-renders the poll tracker
+ * chart so its SVG dimensions update to the new container size.
+ * @returns {void}
+ */
+function wireWindowResize() {
+  window.addEventListener('resize', () => {
+    renderRightPanel();
+    if (state.view === 'polltracker') renderPollTracker();
+  });
 }

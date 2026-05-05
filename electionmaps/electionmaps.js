@@ -1,5 +1,4 @@
 import {
-  _state,
   state,
   manifest,
   initState,
@@ -8,28 +7,16 @@ import {
   fetchJson,
 } from './scripts/files.js';
 import {
-  trackVirtualPageView,
-} from './scripts/misc.js';
-import {
-  seatLookupKey,
-} from './scripts/utils.js';
-import {
-  setElectionPreDataFetch,
   renderHeader,
   renderLeftBar,
+  renderMap,
   renderMapControlOptions,
+  renderMapInit,
   renderPageTitle,
   renderPollTracker,
-  domWireInit,
-  renderMapInit,
-  renderMap,
-  renderVoteTotals,
-  wireVoteTotalsToggle,
-  setSelectedSeatRowByKey,
-  hideSeatPopup,
-  renderSeatPopup,
   renderRightPanel,
-  mapInteraction,
+  setElectionPreDataFetch,
+  wireInit,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -257,6 +244,27 @@ function parsePollTrackerData(data) {
 // MISC
 // =====================================================================
 
+let lastTrackedPath = '';
+
+/**
+ * Fires a gtag page_view event for the current location, deduplicating against the last tracked path.
+ * No-ops on dev hosts because ga-setup.js leaves window.gtag undefined there.
+ * @returns {void}
+ */
+function trackVirtualPageView() {
+  if (typeof window.gtag !== 'function') return;
+
+  const pagePath = `${window.location.pathname}${window.location.search}`;
+  if (pagePath === lastTrackedPath) return;
+
+  lastTrackedPath = pagePath;
+  window.gtag('event', 'page_view', {
+    page_location: window.location.href,
+    page_path: pagePath,
+    page_title: document.title,
+  });
+}
+
 /**
  * Builds a URLSearchParams for the given view, setting/removing the election param as appropriate.
  * @param {string} view - View name to set ('election' or 'polltracker').
@@ -282,505 +290,11 @@ function buildRouteSearchParams(view) {
 // =====================================================================
 
 /**
- * Calls every wireX handler exactly once. Invoked from init() during boot.
- * @returns {void}
- */
-function wireInit() {
-  wireSeatSearch();
-  wirePostcodeSearch();
-  wireSeatPopup();
-  wireVoteTotalsToggle();
-  wireWindowResize();
-  wireVoteTotalsSorting();
-}
-
-/**
- * Attaches all seat search event listeners: focus/input show the autocomplete dropdown,
- * change/blur submit the query, arrow keys navigate suggestions, Enter selects, Escape closes,
- * and an outside click dismisses the menu. Guards against double-wiring via dataset flag.
- * @returns {void}
- */
-function wireSeatSearch() {
-  if (!seatSearchInput || seatSearchInput.dataset.wired === 'true') return;
-  ensureSeatSearchMenu();
-
-  let lastSubmittedQuery = '';
-  /**
-   * Reads the current search input value and calls selectSeatBySearchQuery, deduplicating against the last submitted query.
-   * @returns {void}
-   */
-  const submitSearch = () => {
-    const query = String(seatSearchInput.value || '').trim();
-    if (!query || query === lastSubmittedQuery) return;
-    lastSubmittedQuery = query;
-    selectSeatBySearchQuery(query);
-  };
-
-  seatSearchInput.addEventListener('focus', () => {
-    showSeatSearchSuggestions(seatSearchInput.value);
-  });
-  seatSearchInput.addEventListener('input', () => {
-    showSeatSearchSuggestions(seatSearchInput.value);
-  });
-  seatSearchInput.addEventListener('change', submitSearch);
-  seatSearchInput.addEventListener('blur', () => {
-    window.setTimeout(() => {
-      hideSeatSearchSuggestions();
-      submitSearch();
-    }, 120);
-  });
-  seatSearchInput.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowDown') {
-      if (!_state.seatSearchSuggestions.length) {
-        showSeatSearchSuggestions(seatSearchInput.value);
-      }
-      if (!_state.seatSearchSuggestions.length) return;
-      event.preventDefault();
-      _state.seatSearchSuggestionIndex = Math.min(_state.seatSearchSuggestionIndex + 1, _state.seatSearchSuggestions.length - 1);
-      updateSeatSearchHighlight();
-      return;
-    }
-
-    if (event.key === 'ArrowUp') {
-      if (!_state.seatSearchSuggestions.length) return;
-      event.preventDefault();
-      _state.seatSearchSuggestionIndex = Math.max(_state.seatSearchSuggestionIndex - 1, 0);
-      updateSeatSearchHighlight();
-      return;
-    }
-
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      if (_state.seatSearchSuggestionIndex >= 0 && _state.seatSearchSuggestionIndex < _state.seatSearchSuggestions.length) {
-        const selectedName = _state.seatSearchSuggestions[_state.seatSearchSuggestionIndex];
-        seatSearchInput.value = selectedName;
-      }
-      hideSeatSearchSuggestions();
-      submitSearch();
-      return;
-    }
-
-    if (event.key === 'Escape') {
-      hideSeatSearchSuggestions();
-    }
-  });
-  document.addEventListener('click', (event) => {
-    if (!(event.target instanceof Node)) return;
-    if (seatSearchInput.contains(event.target)) return;
-    if (_state.seatSearchMenuEl?.contains(event.target)) return;
-    hideSeatSearchSuggestions();
-  });
-
-  seatSearchInput.dataset.wired = 'true';
-}
-
-/**
- * Attaches event listeners to the postcode search input. On Enter or blur, looks up the
- * postcode and zooms to the matched constituency. Disables the input during the fetch,
- * shows an inline error on failure, and deduplicates blur-after-Enter submissions.
- * Guards against double-wiring via dataset flag.
- * @returns {void}
- */
-function wirePostcodeSearch() {
-  if (!postcodeSearchInput || postcodeSearchInput.dataset.wired === 'true') return;
-
-  let lastSubmittedPostcode = '';
-
-  /**
-   * Reads the postcode input, runs the lookup, and selects the resolved seat.
-   * Deduplicates against the last submitted value to avoid double-fetching on blur after Enter.
-   * @returns {void}
-   */
-  const submitPostcode = async () => {
-    const query = postcodeSearchInput.value.trim();
-    if (!query || query === lastSubmittedPostcode) return;
-    lastSubmittedPostcode = query;
-    postcodeSearchInput.disabled = true;
-    clearPostcodeError();
-    const constituencyName = await lookupPostcode(query);
-    postcodeSearchInput.disabled = false;
-    if (constituencyName) {
-      selectSeatBySearchQuery(constituencyName);
-    } else {
-      showPostcodeError('Postcode not found');
-    }
-  };
-
-  postcodeSearchInput.addEventListener('focus', () => {
-    // If the error flash is showing, dismiss it and restore the original value
-    // so the user can immediately retype without clearing "Postcode not found" manually.
-    if (postcodeSearchInput.readOnly) {
-      clearPostcodeError();
-      postcodeSearchInput.value = '';
-      lastSubmittedPostcode = '';
-    }
-  });
-  postcodeSearchInput.addEventListener('input', () => {
-    lastSubmittedPostcode = '';
-    clearPostcodeError();
-  });
-  postcodeSearchInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      submitPostcode();
-    }
-  });
-  postcodeSearchInput.addEventListener('blur', () => {
-    window.setTimeout(submitPostcode, 120);
-  });
-
-  postcodeSearchInput.dataset.wired = 'true';
-}
-
-/**
- * Closes the seat detail popup and deselects the active map path when the close button is clicked.
- * @returns {void}
- */
-function wireSeatPopup() {
-  if (!seatPopupClose) return;
-  seatPopupClose.addEventListener('click', () => {
-    hideSeatPopup();
-    mapInteraction.clearSelection?.();
-  });
-}
-
-/**
- * Syncs the right panel height to the map on window resize, and re-renders the poll tracker
- * chart so its SVG dimensions update to the new container size.
- * @returns {void}
- */
-function wireWindowResize() {
-  window.addEventListener('resize', () => {
-    renderRightPanel();
-    if (state.view === 'polltracker') renderPollTracker();
-  });
-}
-
-/**
- * Attaches click and keyboard (Enter/Space) handlers to all [data-sort-key] table headers
- * to trigger sort changes and re-render the vote totals and right panel.
- * @returns {void}
- */
-function wireVoteTotalsSorting() {
-  document.querySelectorAll('th[data-sort-key]').forEach((header) => {
-    const sortKey = header.getAttribute('data-sort-key');
-    if (!sortKey) return;
-
-    const trigger = () => {
-      setSortDirection(sortKey);
-      renderVoteTotals();
-      renderRightPanel();
-    };
-
-    header.addEventListener('click', trigger);
-    header.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        trigger();
-      }
-    });
-  });
-}
-
-// =====================================================================
-// BELOW HERE: UNREFACTORED LEGACY CODE
-// Extract to a submodule or lift above the banner. Do not add new code.
-// =====================================================================
-
-
-// ── Election file resolution ──────────────────────────────────────────────────
-const seatCard = document.getElementById('mapsSeatCard');
-const seatSearchInput = document.getElementById('maps-seat-search');
-const postcodeSearchInput = document.getElementById('maps-postcode-search');
-const seatPopupClose = document.getElementById('mapsSeatPopupClose');
-
-const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
-const dataInfoButton = document.getElementById('mapsDataInfoBtn');
-// Canonical map name strings used to route postcode lookups to the correct
-// postcodes.io endpoint and to identify whether postcode search is supported.
-
-// Maps old 2021 Holyrood constituency names (as returned by postcodes.io) to their
-// 2026 boundary equivalents. Used as a fallback when a returned name has no match
-// in the current seat data. Where two old seats merged into one, both map to the new
-// combined name — best-guess only, since the boundary changed at the postcode level.
-const HOLYROOD_2021_TO_2026_NAME = {
-  'Aberdeen South and North Kincardine': 'Aberdeen Deeside and North Kincardine',
-  'Airdrie and Shotts': 'Airdrie',
-  'East Lothian': 'East Lothian Coast and Lammermuirs',
-  'Edinburgh Eastern': 'Edinburgh Eastern, Musselburgh and Tranent',
-  'Edinburgh Northern and Leith': 'Edinburgh North Eastern and Leith',
-  'Edinburgh Pentlands': 'Edinburgh South Western',
-  'Edinburgh Western': 'Edinburgh North Western',
-  'Falkirk East': 'Falkirk East and Linlithgow',
-  'Glasgow Cathcart': 'Glasgow Cathcart and Pollok',
-  'Glasgow Kelvin': 'Glasgow Kelvin and Maryhill',
-  'Glasgow Maryhill and Springburn': 'Glasgow Kelvin and Maryhill',
-  'Glasgow Pollok': 'Glasgow Cathcart and Pollok',
-  'Glasgow Provan': 'Glasgow Easterhouse and Springburn',
-  'Glasgow Shettleston': 'Glasgow Baillieston and Shettleston',
-  'Greenock and Inverclyde': 'Inverclyde',
-  'Linlithgow': 'Falkirk East and Linlithgow',
-  'Midlothian North and Musselburgh': 'Midlothian North',
-  'North East Fife': 'Fife North East',
-  'Renfrewshire North and West': 'Renfrewshire North and Cardonald',
-  'Renfrewshire South': 'Renfrewshire West and Levern Valley',
-  'Rutherglen': 'Rutherglen and Cambuslang',
-};
-
-const MAX_SEAT_SEARCH_SUGGESTIONS = 10;
-
-/**
- * Updates state.voteTotals.sort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
- * @param {string} sortKey - Column key to sort by (e.g. 'seats', 'votes', 'party').
- * @returns {void}
- */
-function setSortDirection(sortKey) {
-  if (state.voteTotals.sort.key === sortKey) {
-    state.voteTotals.sort.direction = state.voteTotals.sort.direction === 'asc' ? 'desc' : 'asc';
-    return;
-  }
-  state.voteTotals.sort.key = sortKey;
-  state.voteTotals.sort.direction = sortKey === 'party' ? 'asc' : 'desc';
-}
-
-/**
- * Creates the autocomplete dropdown menu element adjacent to the seat search input if it doesn't exist yet. Returns the element or null if the input is absent.
- * @returns {HTMLElement|null} The autocomplete menu element, or null if the seat search input is not in the DOM.
- */
-function ensureSeatSearchMenu() {
-  if (_state.seatSearchMenuEl || !seatSearchInput) return _state.seatSearchMenuEl;
-  const searchGroup = seatSearchInput.closest('.maps-toolbar-group-search') || seatSearchInput.parentElement;
-  if (!searchGroup) return null;
-
-  const menu = document.createElement('div');
-  menu.className = 'maps-seat-search-menu';
-  menu.hidden = true;
-  menu.setAttribute('role', 'listbox');
-  menu.id = 'mapsSeatSearchMenu';
-  searchGroup.appendChild(menu);
-  _state.seatSearchMenuEl = menu;
-  return _state.seatSearchMenuEl;
-}
-
-/**
- * Hides the autocomplete dropdown and clears the keyboard suggestion index.
- * @returns {void}
- */
-function hideSeatSearchSuggestions() {
-  _state.seatSearchSuggestionIndex = -1;
-  if (!_state.seatSearchMenuEl) return;
-  _state.seatSearchMenuEl.hidden = true;
-  _state.seatSearchMenuEl.innerHTML = '';
-}
-
-/**
- * Populates the autocomplete dropdown with up to MAX_SEAT_SEARCH_SUGGESTIONS seat names matching query (starts-with first, then contains).
- * @param {string} [query=''] - Search string to match against; empty string shows all names up to the limit.
- * @returns {void}
- */
-function showSeatSearchSuggestions(query = '') {
-  const menu = ensureSeatSearchMenu();
-  if (!menu) return;
-
-  const queryText = String(query || '').trim().toLowerCase();
-  const startsWithMatches = [];
-  const includesMatches = [];
-  state.seatSearchNames.forEach((name) => {
-    const lowerName = name.toLowerCase();
-    if (!queryText || lowerName.startsWith(queryText)) {
-      startsWithMatches.push(name);
-      return;
-    }
-    if (lowerName.includes(queryText)) includesMatches.push(name);
-  });
-
-  _state.seatSearchSuggestions = [...startsWithMatches, ...includesMatches].slice(0, MAX_SEAT_SEARCH_SUGGESTIONS);
-  _state.seatSearchSuggestionIndex = -1;
-  menu.innerHTML = '';
-
-  if (!_state.seatSearchSuggestions.length) {
-    menu.hidden = true;
-    return;
-  }
-
-  _state.seatSearchSuggestions.forEach((name, index) => {
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'maps-seat-search-item';
-    item.textContent = name;
-    item.setAttribute('role', 'option');
-    item.dataset.index = String(index);
-    item.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-    });
-    item.addEventListener('click', () => {
-      seatSearchInput.value = name;
-      hideSeatSearchSuggestions();
-      selectSeatBySearchQuery(name);
-    });
-    menu.appendChild(item);
-  });
-
-  menu.hidden = false;
-}
-
-/**
- * Updates the keyboard-active (is-active) class on suggestion items to reflect _state.seatSearchSuggestionIndex.
- * @returns {void}
- */
-function updateSeatSearchHighlight() {
-  if (!_state.seatSearchMenuEl) return;
-  const options = _state.seatSearchMenuEl.querySelectorAll('.maps-seat-search-item');
-  options.forEach((option) => {
-    const index = Number(option.dataset.index);
-    option.classList.toggle('is-active', index === _state.seatSearchSuggestionIndex);
-  });
-}
-
-/**
- * Resolves a search query to a seat name (exact → starts-with → contains), zooms the map, selects the list row, and opens the popup.
- * @param {string} query - Raw search string as entered by the user.
- * @returns {void}
- */
-function selectSeatBySearchQuery(query) {
-  const rawQuery = String(query || '').trim();
-  if (!rawQuery) return;
-
-  const directKey = seatLookupKey(rawQuery);
-  let seatName = state.currentSeatNameByKey.get(directKey) || null;
-
-  if (!seatName) {
-    const queryLower = rawQuery.toLowerCase();
-    seatName = Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().startsWith(queryLower))
-      || Array.from(state.currentSeatNameByKey.values()).find((name) => name.toLowerCase().includes(queryLower))
-      || null;
-  }
-
-  if (!seatName) {
-    return;
-  }
-
-  const seatKey = seatLookupKey(seatName);
-  const zoomed = mapInteraction.zoomToSeat(seatName);
-  if (zoomed) {
-    setSelectedSeatRowByKey(seatKey);
-    renderSeatPopup(seatName);
-    if (seatSearchInput) seatSearchInput.value = seatName;
-    return;
-  }
-
-}
-
-/**
- * Returns a descriptive name for a map ID. Checks the manifest first (in case a name
- * field is added later), then falls back to the known map name constants.
- * @param {number} mapId
- * @returns {string|null}
- */
-
-/**
- * Flashes an error message inside the postcode input for 2 seconds, then clears the
- * input so the placeholder is shown again. The input is made readonly during the flash
- * to prevent accidental edits. Cancels any in-flight error flash before starting a new one.
- * @param {string} msg - The error text to display in the input.
- * @returns {void}
- */
-function showPostcodeError(msg) {
-  if (!postcodeSearchInput) return;
-  clearPostcodeError();
-  postcodeSearchInput.value = msg;
-  postcodeSearchInput.readOnly = true;
-  postcodeSearchInput.classList.add('is-postcode-error');
-  _state.postcodeErrorTimeout = window.setTimeout(() => {
-    postcodeSearchInput.readOnly = false;
-    postcodeSearchInput.value = '';
-    postcodeSearchInput.classList.remove('is-postcode-error');
-    _state.postcodeErrorTimeout = null;
-  }, 2000);
-}
-
-/**
- * Cancels any active postcode error flash and removes the error style.
- * Does not restore the input value — caller is responsible for that if needed.
- * @returns {void}
- */
-function clearPostcodeError() {
-  if (_state.postcodeErrorTimeout) {
-    clearTimeout(_state.postcodeErrorTimeout);
-    _state.postcodeErrorTimeout = null;
-  }
-  if (postcodeSearchInput) {
-    postcodeSearchInput.readOnly = false;
-    postcodeSearchInput.classList.remove('is-postcode-error');
-  }
-}
-
-/**
- * Looks up a postcode via the postcodes.io API and returns the constituency name,
- * or null if the postcode is not found or the current map does not support lookup.
- * Selects the Westminster or Scottish endpoint based on the current election's mapId.
- * @param {string} postcode - The raw postcode string entered by the user.
- * @returns {Promise<string|null>} The constituency name, or null on failure.
- */
-async function lookupPostcode(postcode) {
-  if (!state.mapConfig?.postcodeSupported) return null;
-
-  // Strip all whitespace then re-insert the canonical space before the inward code
-  // (always the last 3 characters). Both endpoints require this format.
-  const stripped = postcode.trim().toUpperCase().replace(/\s+/g, '');
-  const normalised = stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
-
-  const mapName = state.mapConfig?.name ?? null;
-  let url = '';
-  let resultProperty = '';
-
-  switch (mapName) {
-    case 'holyrood-2026':
-      url = `https://api.postcodes.io/scotland/postcodes/${encodeURIComponent(normalised)}`;
-      resultProperty = 'scottish_parliamentary_constituency';
-      break;
-    case 'westminster-2024':
-      url = `https://api.postcodes.io/postcodes/${encodeURIComponent(normalised)}`;
-      resultProperty = 'parliamentary_constituency_2024';
-      break;
-    default:
-      return null;
-  }
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const rawName = data?.result?.[resultProperty] ?? null;
-
-    if (!rawName) return null;
-
-    // Normalise accented characters to ASCII so names like "Ynys Môn" match
-    // our seat data which stores the unaccented form "Ynys Mon".
-    const constituencyName = rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-    // If the returned name has no match in the current seat index, try the
-    // Holyrood 2021→2026 boundary mapping as a best-guess fallback.
-    // Only applied on Holyrood to avoid false rewrites on Westminster lookups.
-    const seatKey = seatLookupKey(constituencyName);
-    if (!state.currentSeatNameByKey.has(seatKey) && mapName === 'holyrood-2026') {
-      const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
-      if (mapped) return mapped;
-    }
-
-    return constituencyName;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Entry point. Wires controls then loads election data and routes to the initial view.
  * @returns {Promise<void>}
  */
 async function init() {
   wireInit();
-  domWireInit();
 
   try {
     await initPage();

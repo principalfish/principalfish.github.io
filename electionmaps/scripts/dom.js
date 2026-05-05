@@ -15,7 +15,7 @@ const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
  * Sets the browser tab title from the current view: poll tracker or election name.
  * @returns {void}
  */
-export function setPageTitle() {
+export function renderPageTitle() {
   let label;
   if (state.view === 'polltracker') {
     label = 'Poll tracker';
@@ -44,7 +44,7 @@ const subtitle = document.getElementById('mapsSubtitle');
  * @param {boolean} [error=false] - When true, subtitle shows a load-failure message.
  * @returns {void}
  */
-export function setHeader(text = '', error = false) {
+export function renderHeader(text = '', error = false) {
   renderTitle();
   renderSubtitleText(text, error);
 }
@@ -111,7 +111,7 @@ const electionList = document.getElementById('mapsElectionList');
  * @param {{ onPredict?: function, onPollTracker?: function }} callbacks - Click handlers for mode buttons.
  * @returns {void}
  */
-export function setLeftBar() {
+export function renderLeftBar() {
   renderParliamentTabs();
   renderElectionLinks();
 }
@@ -196,7 +196,7 @@ const pollTrackerMetricVotesInput = document.getElementById('mapsPollTrackerMetr
 function wirePollTrackerMetricInput(inputEl) {
   if (!inputEl || inputEl.dataset.wired === 'true') return;
   inputEl.addEventListener('change', () => {
-    if (state.view === 'polltracker') setPollTracker();
+    if (state.view === 'polltracker') renderPollTracker();
   });
   inputEl.dataset.wired = 'true';
 }
@@ -218,7 +218,7 @@ function wirePollTrackerControls() {
       document.querySelectorAll(`[${POLLTRACKER_RANGE_ATTR}]`).forEach((candidate) => {
         candidate.classList.toggle('is-active', candidate.getAttribute(POLLTRACKER_RANGE_ATTR) === nextRange);
       });
-      if (state.view === 'polltracker') setPollTracker();
+      if (state.view === 'polltracker') renderPollTracker();
     });
     button.dataset.wired = 'true';
   });
@@ -239,7 +239,7 @@ let partyControlsRendered = false;
  * Subsequent calls only re-render the chart, since the toggle state is preserved on the DOM.
  * @returns {void}
  */
-export function setPollTracker() {
+export function renderPollTracker() {
   if (!partyControlsRendered) {
     renderPollTrackerPartyControls();
     partyControlsRendered = true;
@@ -738,6 +738,7 @@ const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
 // The "vote share change" <option> inside the choropleth-type select — hidden for referendums,
 // which only support the simpler vote-share view.
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
+const choroplethLegend = document.getElementById('mapsChoroplethLegend');
 
 // Primary party filter — restricts visible seats to those won by the chosen party.
 const filterPartySelect = document.getElementById('mapsFilterParty');
@@ -766,7 +767,7 @@ const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
  *
  * @returns {void}
  */
-export function setMapControlOptions() {
+export function renderMapControlOptions() {
   /**
    * Replaces a select's options with the given rows, then sets its value back to the
    * previously selected option if it survived the rebuild, falling back to 'all' otherwise.
@@ -1016,8 +1017,7 @@ function initRegionTable() {
     const tr = document.createElement('tr');
     tr.className = 'maps-region-table-row';
     tr.addEventListener('click', () => {
-      // TODO: map.interaction will move to map.js alongside renderTopoMap
-      map.interaction.flashRegion(regionKey);
+      mapInteraction.flashRegion(regionKey);
       renderRegionPopup(regionKey, data);
     });
 
@@ -1302,8 +1302,7 @@ export function renderSeatList() {
 
     item.addEventListener('click', () => {
       setSelectedSeatRowByKey(seatKey);
-      // TODO: remove once map.interaction migrates to map.js
-      map.interaction.zoomToSeat(seatName);
+      mapInteraction.zoomToSeat(seatName);
       renderSeatPopup(seatName);
     });
 
@@ -1314,6 +1313,33 @@ export function renderSeatList() {
   // Render the rows
   ordered.forEach(renderSeatRow);
   state.seatList.rowByKey = rowByKey;
+}
+
+// ─── Right panel ─────────────────────────────────────────────────────────────
+
+const mapsStage = document.querySelector('.maps-stage');
+const mapsPanelRight = document.querySelector('.maps-panel-right');
+
+/**
+ * Syncs the right panel's height to the map stage height so the two columns stay aligned.
+ * On mobile (≤980px) the panel stacks below the map, so height constraints are cleared instead.
+ * No-ops silently when either element is absent from the DOM.
+ * @returns {void}
+ */
+export function renderRightPanel() {
+  if (!mapsStage || !mapsPanelRight) return;
+
+  if (window.innerWidth <= 980) {
+    mapsPanelRight.style.height = '';
+    mapsPanelRight.style.maxHeight = '';
+    return;
+  }
+
+  const stageHeight = mapsStage.getBoundingClientRect().height;
+  if (!Number.isFinite(stageHeight) || stageHeight <= 0) return;
+
+  mapsPanelRight.style.height = `${Math.round(stageHeight)}px`;
+  mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
 }
 
 // ─── Map init ────────────────────────────────────────────────────────────────
@@ -1339,19 +1365,17 @@ const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');
 
-// Exported map render state. interaction is replaced on every renderTopoMap
-// call; external callers (toolbar buttons, seat list, postcode search) use it to drive
+// Exported map interaction handle. Replaced on every renderTopoMap call;
+// external callers (toolbar buttons, seat list, postcode search) use it to drive
 // the map without holding references to internal D3 selections.
-export const map = {
-  /** Zoom/highlight/flash interface. Stub methods until the first renderTopoMap call. */
-  interaction: {
-    zoomBy: () => {},
-    reset: () => {},
-    clearSelection: () => {},
-    highlightSeat: () => {},
-    zoomToSeat: () => false,
-    flashRegion: () => {},
-  },
+// Stub methods are in effect until the first renderTopoMap call.
+export let mapInteraction = {
+  zoomBy: () => {},
+  reset: () => {},
+  clearSelection: () => {},
+  highlightSeat: () => {},
+  zoomToSeat: () => false,
+  flashRegion: () => {},
 };
 
 const INITIAL_MAP_SCALE = 1.0;
@@ -1365,20 +1389,18 @@ const RESET_ZOOM_DURATION_MS = 500;
 /**
  * Owns all zoom, pan, highlight, and flash interactions for the rendered TopoJSON map.
  * Constructed by renderTopoMap on each render with fresh D3 selections and lookup maps;
- * assigned to map.interaction for external callers.
+ * assigned to the exported mapInteraction binding for external callers.
  *
- * Public API (called by toolbar buttons, seat list, postcode search, region table):
- *   zoomBy(factor)          — scale by factor in a short transition
- *   reset()                 — return to initial zoom and clear selection
- *   clearSelection()        — remove the active seat highlight
- *   highlightSeat(name)     — highlight without zooming
- *   zoomToSeat(name)        — highlight and zoom; returns false if seat not on map
- *   flashRegion(regionKey)  — no-op until setFlashLayer() is called
- *   setFlashLayer(...)      — wires the flash animation once the layer exists
- *
- * Internal helpers (used by renderTopoMap's seat-path click handler):
- *   setActivePath(pathNode) — activate a seat path SVG element
- *   zoomToFeature(datum)    — animate zoom to a GeoJSON feature
+ * Public API:
+ *   zoomBy(factor)                  — scale by factor in a short transition
+ *   reset()                         — return to initial zoom and clear selection
+ *   clearSelection()                — remove the active seat highlight
+ *   highlightSeat(name)             — highlight without zooming
+ *   selectFeature(datum, pathNode)  — highlight pathNode and zoom to its feature
+ *   zoomToSeat(name)                — highlight and zoom by seat name; returns false if seat not on map
+ *   flashRegion(regionKey)          — flash a region; no-op until setFlashLayer() is called
+ *   registerSeatPath(key, node)     — record a seat's path node (called once per seat at render time)
+ *   setFlashLayer(layer, geoms)     — install the flash layer (list-seat elections only)
  */
 class MapInteraction {
   /**
@@ -1400,6 +1422,8 @@ class MapInteraction {
     this._featureBySeat = featureBySeat;
     this._seatPathByKey = new Map();
     this._activeSeatPathNode = null;
+    this._flashLayer = null;
+    this._geometriesByRegion = null;
   }
 
   /**
@@ -1457,10 +1481,10 @@ class MapInteraction {
     return d3.zoomIdentity.translate(width / 2 - scale * cx, height / 2 - scale * cy).scale(scale);
   }
 
-  // ── Internal helpers ──────────────────────────────────────────────────────
+  // ── Private helpers ───────────────────────────────────────────────────────
 
   /** Animates zoom to centre on featureDatum using the seat zoom transform. */
-  zoomToFeature(featureDatum) {
+  _zoomToFeature(featureDatum) {
     const targetTransform = MapInteraction.getSeatZoomTransform(this._path, featureDatum, this._width, this._height);
     this._svg.transition().duration(CLICK_ZOOM_DURATION_MS).call(this._zoomBehavior.transform, targetTransform);
   }
@@ -1468,9 +1492,10 @@ class MapInteraction {
   /**
    * Marks pathNode as the active seat: removes highlight from the previous path,
    * applies the active class, and raises it above neighbouring seats in the SVG stack.
-   * @param {SVGPathElement} pathNode
+   * Safe to call with null — no-op.
+   * @param {SVGPathElement|null} pathNode
    */
-  setActivePath(pathNode) {
+  _setActivePath(pathNode) {
     if (!pathNode) return;
     if (this._activeSeatPathNode && this._activeSeatPathNode !== pathNode) {
       d3.select(this._activeSeatPathNode).classed('maps-region-path-active', false);
@@ -1480,7 +1505,7 @@ class MapInteraction {
   }
 
   /** Removes the active highlight and clears the reference. Safe to call when nothing is active. */
-  clearActivePath() {
+  _clearActivePath() {
     if (!this._activeSeatPathNode) return;
     d3.select(this._activeSeatPathNode).classed('maps-region-path-active', false);
     this._activeSeatPathNode = null;
@@ -1496,56 +1521,71 @@ class MapInteraction {
   /** Hides the seat popup, clears the active highlight, and returns to the initial zoom. */
   reset() {
     hideSeatPopup();
-    this.clearActivePath();
+    this._clearActivePath();
     this._svg.transition().duration(RESET_ZOOM_DURATION_MS).call(this._zoomBehavior.transform, this._initialTransform);
   }
 
   /** Removes the active seat highlight. */
   clearSelection() {
-    this.clearActivePath();
+    this._clearActivePath();
   }
 
   /** Highlights the path for seatName without zooming — syncs map to an external trigger. */
   highlightSeat(seatName) {
     const seatPathNode = this._seatPathByKey.get(seatLookupKey(seatName));
-    if (seatPathNode) this.setActivePath(seatPathNode);
+    this._setActivePath(seatPathNode);
   }
 
   /**
-   * Highlights the path for seatName and zooms to it.
+   * Highlights pathNode and animates zoom to featureDatum. Used by the seat-path click
+   * handler in renderTopoMap, which already has both values in hand.
+   * @param {object} featureDatum - GeoJSON feature for the seat.
+   * @param {SVGPathElement|null} pathNode - SVG path to highlight; null skips highlight.
+   */
+  selectFeature(featureDatum, pathNode) {
+    this._setActivePath(pathNode);
+    this._zoomToFeature(featureDatum);
+  }
+
+  /**
+   * Highlights and zooms to seatName.
    * @returns {boolean} false if the seat has no matching feature (e.g. filtered out).
    */
   zoomToSeat(seatName) {
     const seatKey = seatLookupKey(seatName);
     const featureDatum = this._featureBySeat.get(seatKey);
     if (!featureDatum) return false;
-    const seatPathNode = this._seatPathByKey.get(seatKey);
-    if (seatPathNode) this.setActivePath(seatPathNode);
-    this.zoomToFeature(featureDatum);
+    this.selectFeature(featureDatum, this._seatPathByKey.get(seatKey));
     return true;
   }
 
-  /** No-op until setFlashLayer() is called. */
-  flashRegion() {}
+  /**
+   * Dissolves the region's seat geometries into a single merged polygon, appends a
+   * temporary path to the flash layer, and removes it after the CSS animation.
+   * No-op until setFlashLayer() has installed a layer (list-seat elections only).
+   * @param {string} regionKey - normalised region key.
+   */
+  flashRegion(regionKey) {
+    if (!this._flashLayer || !this._geometriesByRegion) return;
+    const geoms = this._geometriesByRegion.get(regionKey);
+    if (!geoms) return;
+    const merged = topojsonMerge(state.mapData, geoms);
+    if (!merged) return;
+    const flashPath = this._flashLayer.append('path')
+      .attr('class', 'maps-region-flash-path')
+      .attr('d', this._path(merged));
+    flashPath.node().addEventListener('animationend', () => flashPath.remove(), { once: true });
+  }
 
   /**
-   * Wires the region flash animation. Called after construction when the flash layer
-   * exists (list-seat elections only). Dissolves the region's seat geometries into a
-   * single merged polygon, appends a temporary path, and removes it after the CSS animation.
+   * Installs the flash layer and region geometry index. Called after construction
+   * once the layer exists. Until called, flashRegion is a no-op.
    * @param {object} flashLayer - d3 selection of the flash g element inside zoomLayer.
    * @param {Map} geometriesByRegion - normalised region key → TopoJSON geometry array.
    */
   setFlashLayer(flashLayer, geometriesByRegion) {
-    this.flashRegion = (regionKey) => {
-      const geoms = geometriesByRegion.get(regionKey);
-      if (!geoms) return;
-      const merged = topojsonMerge(state.mapData, geoms);
-      if (!merged) return;
-      const flashPath = flashLayer.append('path')
-        .attr('class', 'maps-region-flash-path')
-        .attr('d', this._path(merged));
-      flashPath.node().addEventListener('animationend', () => flashPath.remove(), { once: true });
-    };
+    this._flashLayer = flashLayer;
+    this._geometriesByRegion = geometriesByRegion;
   }
 }
 
@@ -1553,7 +1593,7 @@ class MapInteraction {
  * Renders the full TopoJSON map into mapSvg using D3.
  * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom
  * and hover handlers, draws region boundary overlays, and assigns a fresh MapInteraction
- * instance to map.interaction for external callers.
+ * instance to the exported mapInteraction binding for external callers.
  * Reads map data, seats, filters, choropleth config, and region summary directly from state.
  * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
  * @returns {void}
@@ -1655,7 +1695,7 @@ export function renderTopoMap(preserveZoom = false) {
   // ── Interaction controller ─────────────────────────────────────────────────
 
   const interaction = new MapInteraction(svg, zoomBehavior, path, initialTransform, width, height, featureBySeat);
-  map.interaction = interaction;
+  mapInteraction = interaction;
 
   // ── Region boundary mesh ──────────────────────────────────────────────────
   // topojsonMesh extracts shared arc segments matching the filter predicate.
@@ -1707,13 +1747,11 @@ export function renderTopoMap(preserveZoom = false) {
       // stopPropagation prevents the svg background click handler from firing and
       // immediately resetting the zoom we are about to trigger.
       event.stopPropagation();
-      interaction.setActivePath(event.currentTarget);
       const seatName = MapInteraction.seatNameFromFeature(datum);
-      if (seatName) {
-        setSelectedSeatRowByKey(seatLookupKey(seatName));
-        renderSeatPopup(seatName);
-        interaction.zoomToFeature(datum);
-      }
+      if (!seatName) return;
+      setSelectedSeatRowByKey(seatLookupKey(seatName));
+      renderSeatPopup(seatName);
+      interaction.selectFeature(datum, event.currentTarget);
     });
 
   // Build the seatKey → SVG path node index so zoomToSeat and highlightSeat can find
@@ -1765,4 +1803,62 @@ export function renderTopoMap(preserveZoom = false) {
   // computed initial transform.
 
   svg.call(zoomBehavior.transform, preserveZoom ? d3.zoomTransform(mapSvg) : initialTransform);
+}
+
+// ─── Choropleth legend ────────────────────────────────────────────────────────────────
+
+/**
+ * Renders the choropleth legend panel from state.choroplethConfig.
+ * Hides and clears the panel when choropleth is disabled.
+ * Shows a plain-text label when the config has no structured legend object.
+ * Builds a CSS gradient bar with min/mid/max labels when a full legend is present;
+ * the mid stop is included only for delta (symmetric) colour ramps.
+ * @returns {void}
+ */
+export function renderChoroplethLegend() {
+  const choroplethConfig = state.choroplethConfig;
+  if (!choroplethConfig?.enabled) {
+    choroplethLegend.hidden = true;
+    choroplethLegend.innerHTML = '';
+    return;
+  }
+
+  const legend = choroplethConfig.legend;
+  if (!legend) {
+    choroplethLegend.textContent = `Choropleth: ${choroplethConfig.legendText}`;
+    choroplethLegend.hidden = false;
+    return;
+  }
+
+  const gradient = legend.isDelta
+    ? `linear-gradient(90deg, ${legend.startColour} 0%, ${legend.midColour} 50%, ${legend.endColour} 100%)`
+    : `linear-gradient(90deg, ${legend.startColour} 0%, ${legend.endColour} 100%)`;
+
+  choroplethLegend.innerHTML = `
+    <div class="maps-choropleth-legend-title">${legend.title}</div>
+    <div class="maps-choropleth-legend-bar" style="background:${gradient}"></div>
+    <div class="maps-choropleth-legend-labels">
+      <span>${legend.minLabel}</span>
+      ${legend.isDelta ? `<span>${legend.midLabel}</span>` : ''}
+      <span>${legend.maxLabel}</span>
+    </div>
+  `;
+  choroplethLegend.hidden = false;
+}
+
+// ─── Map init ────────────────────────────────────────────────────────────────
+
+/**
+ * Runs all once-per-election DOM initialisations. Must be called after state.setupMapData() so
+ * mapConfig and listRegionSummary are already set.
+ *
+ * Rebuilds the vote-totals tab nav, shows/hides the postcode search group based
+ * on state.mapConfig.postcodeSupported, and populates the region-table overlay (hidden for non-list elections).
+ *
+ * @returns {void}
+ */
+export function renderMapInit() {
+  initVoteTotalsTabs();
+  initPostcodeSearch();
+  initRegionTable();
 }

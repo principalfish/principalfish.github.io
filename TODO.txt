@@ -1,5 +1,4 @@
-
-USE COPILOT!!
+migrate renderMap to dom.js
 
 add hover text on map - some thought on seatPreview
 
@@ -14,3 +13,4 @@ reset database ids
 model_uns -> westminster_uns
 
 
+migra

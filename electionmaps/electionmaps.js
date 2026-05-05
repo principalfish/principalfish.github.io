@@ -3,9 +3,6 @@ import {
   state,
   manifest,
   initState,
-  ElectionData,
-  Seat,
-  ElectionSummary,
 } from './scripts/state.js';
 import {
   fetchJson,
@@ -14,21 +11,16 @@ import {
   trackVirtualPageView,
 } from './scripts/misc.js';
 import {
-  escapeHtml,
-  formatInt,
-  formatPct,
-  formatSigned,
-  deltaClass,
   seatLookupKey,
-  getRegionLabel,
+  clampNumber,
 } from './scripts/utils.js';
 import {
   setElectionPreDataFetch,
-  setHeader,
-  setLeftBar,
-  setMapControlOptions,
-  setPageTitle,
-  setPollTracker,
+  renderHeader,
+  renderLeftBar,
+  renderMapControlOptions,
+  renderPageTitle,
+  renderPollTracker,
   domWireInit,
   renderMapInit,
   renderVoteTotals,
@@ -38,7 +30,9 @@ import {
   hideSeatPopup,
   renderSeatPopup,
   renderTopoMap,
-  map,
+  renderChoroplethLegend,
+  renderRightPanel,
+  mapInteraction,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -56,16 +50,16 @@ async function initPage() {
   const view = new URLSearchParams(window.location.search).get('view') || 'election';
   await initState(await fetchJson('data/map-modes.json'), view);
 
-  setPageTitle();
+  renderPageTitle();
   trackVirtualPageView();
-  setLeftBar();
+  renderLeftBar();
   // Render early with the election name only — subtitle will be overwritten with full summary
   // text (majority / hung parliament) once election results have loaded below.
-  setHeader();
+  renderHeader();
   if (view === 'polltracker') {
     await activatePollTrackerMode();
   } else {
-    await activateElection(view);
+    await activateElection();
   }
 }
 
@@ -79,11 +73,17 @@ async function initPage() {
  * @param {'election'} view - Active view.
  * @returns {Promise<void>}
  */
-async function activateElection(view) {
-  // Pre-fetch: reset state and configure UI for this election type
+/**
+ * Loads and activates an election: fetches all required data files, wires them into
+ * shared state, fully re-renders all panels, and syncs the URL to the new selection.
+ * Must be called after state.currentElection is set to the target election.
+ * @returns {Promise<void>}
+ */
+async function activateElection() {
+  // Pre-fetch: reset state and configure UI for this election type.
   setElectionPreDataFetch();
 
-  // Fetch: map topology, election results, and (if configured) comparison election results in parallel
+  // Fetch: map topology, election results, and (if configured) comparison results in parallel.
   const { mapFile, dataFile, comparisonDataFile } = manifest.resolveElectionFiles(state.currentElection);
   const [mapData, resultsData, comparisonData] = await Promise.all([
     fetchJson(`data/${mapFile}`),
@@ -91,20 +91,21 @@ async function activateElection(view) {
     comparisonDataFile ? fetchJson(`data/${comparisonDataFile}`) : Promise.resolve(null),
   ]);
 
-  // Parse fetched data into shared state, then populate controls and render.
+  // Parse: load fetched data into shared state, then populate controls and render all panels.
   state.initMapData(mapData);
   state.initElectionData(resultsData);
   if (comparisonData) {
     state.initComparisonElectionData(comparisonData);
   }
 
-  setMapControlOptions();
-  setHeader(state.electionData.summary.text);
+  renderMapControlOptions();
+  renderHeader(state.electionData.summary.text);
   state.setupMapData();
   renderMapInit();
   renderMap();
   renderRightPanel();
 
+  // Sync: update the URL so the active election is bookmarkable and shareable.
   const params = buildRouteSearchParams('election');
   window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 }
@@ -125,7 +126,7 @@ function renderMap(preserveZoom = false) {
   renderVoteTotals();
   renderSeatList();
   renderTopoMap(preserveZoom);
-  renderChoroplethLegend(state.choroplethConfig);
+  renderChoroplethLegend();
 }
 
 // =====================================================================
@@ -142,7 +143,7 @@ async function activatePollTrackerMode() {
   const dataPath = manifest.parliamentFeatures[state.currentParliament].polltrackerDataPath;
   const data = await fetchJson(`data/${dataPath}`);
   state.pollTrackerData = parsePollTrackerData(data);
-  setPollTracker();
+  renderPollTracker();
 }
 
 /**
@@ -273,6 +274,30 @@ function parsePollTrackerData(data) {
 }
 
 // =====================================================================
+// MISC
+// =====================================================================
+
+/**
+ * Builds a URLSearchParams for the given view, setting/removing the election param as appropriate.
+ * @param {string} view - View name to set ('election' or 'polltracker').
+ * @returns {URLSearchParams} Updated search params with view and election params adjusted.
+ */
+function buildRouteSearchParams(view) {
+  const params = new URLSearchParams(window.location.search);
+  params.set('view', view);
+
+  if (view === 'polltracker') {
+    params.delete('election');
+    return params;
+  }
+
+  if (state.currentElection.id) {
+    params.set('election', state.currentElection.id);
+  }
+  return params;
+}
+
+// =====================================================================
 // WIRE CONTROLS
 // =====================================================================
 
@@ -301,11 +326,11 @@ function wireMapInteractions() {
   document.querySelectorAll('[data-map-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.getAttribute('data-map-action');
-      if (action === 'zoom-in') map.interaction.zoomBy(1.2);
-      if (action === 'zoom-out') map.interaction.zoomBy(0.83);
-      if (action === 'reset-zoom') map.interaction.reset();
+      if (action === 'zoom-in') mapInteraction.zoomBy(1.2);
+      if (action === 'zoom-out') mapInteraction.zoomBy(0.83);
+      if (action === 'reset-zoom') mapInteraction.reset();
       if (action === 'reset-view') {
-        map.interaction.reset();
+        mapInteraction.reset();
         resetPrimaryFilters();
         resetChoropleths();
         drawMap();
@@ -560,7 +585,7 @@ function wireSeatPopup() {
   if (!seatPopupClose) return;
   seatPopupClose.addEventListener('click', () => {
     hideSeatPopup();
-    map.interaction.clearSelection?.();
+    mapInteraction.clearSelection?.();
   });
 }
 
@@ -572,7 +597,7 @@ function wireSeatPopup() {
 function wireWindowResize() {
   window.addEventListener('resize', () => {
     renderRightPanel();
-    if (state.view === 'polltracker') setPollTracker();
+    if (state.view === 'polltracker') renderPollTracker();
   });
 }
 
@@ -607,55 +632,12 @@ function wireVoteTotalsSorting() {
 // Extract to a submodule or lift above the banner. Do not add new code.
 // =====================================================================
 
-/**
- * Pure utility functions extracted from electionmaps.js for testability.
- * No DOM dependencies, no module-level _state.
- */
-
-// ── Formatting ───────────────────────────────────────────────────────────────
-
-// ── Region normalization ─────────────────────────────────────────────────────
-
-/**
- * Converts a region key or name to title case, splitting on camelCase boundaries, hyphens, and underscores. Returns 'Unknown' for empty input.
- * @param {string} regionKey - Region key or name to convert.
- * @returns {string} Title-cased display label (e.g. 'North West England'), or 'Unknown' for empty input.
- */
-/**
- * Builds a Map from seatLookupKey to seat object for fast seat lookups.
- * @param {Array<object>} seats - Array of seat objects, each with a `seat` name property.
- * @returns {Map<string, object>} Map from lowercase seat name key to seat object.
- */
-export function buildSeatIndex(seats) {
-  const byKey = new Map();
-  (seats || []).forEach((seat) => {
-    if (!seat?.seat) return;
-    byKey.set(seatLookupKey(seat.seat), seat);
-  });
-  return byKey;
-}
-
-/**
- * Clamps value to [minimum, maximum]. Returns minimum if value is not finite.
- * @param {number} value - Value to clamp.
- * @param {number} minimum - Lower bound (inclusive).
- * @param {number} maximum - Upper bound (inclusive).
- * @returns {number} Clamped numeric value within [minimum, maximum].
- */
-function clampNumber(value, minimum, maximum) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return minimum;
-  return Math.max(minimum, Math.min(maximum, numeric));
-}
 
 // ── Election file resolution ──────────────────────────────────────────────────
 const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
-const mapsStage = document.querySelector('.maps-stage');
-const mapsPanelRight = document.querySelector('.maps-panel-right');
 const seatPopupClose = document.getElementById('mapsSeatPopupClose');
-const choroplethLegend = document.getElementById('mapsChoroplethLegend');
 
 const filterPartySelect = document.getElementById('mapsFilterParty');
 const filterRegionSelect = document.getElementById('mapsFilterRegion');
@@ -700,26 +682,6 @@ const HOLYROOD_2021_TO_2026_NAME = {
   'Renfrewshire South': 'Renfrewshire West and Levern Valley',
   'Rutherglen': 'Rutherglen and Cambuslang',
 };
-
-/**
- * Builds a URLSearchParams for the given view, setting/removing the election param as appropriate.
- * @param {string} view - View name to set ('election' or 'polltracker').
- * @returns {URLSearchParams} Updated search params with view and election params adjusted.
- */
-function buildRouteSearchParams(view) {
-  const params = new URLSearchParams(window.location.search);
-  params.set('view', view);
-
-  if (view === 'polltracker') {
-    params.delete('election');
-    return params;
-  }
-
-  if (state.currentElection.id) {
-    params.set('election', state.currentElection.id);
-  }
-  return params;
-}
 
 const MAX_SEAT_SEARCH_SUGGESTIONS = 10;
 
@@ -810,42 +772,6 @@ function resetChoropleths() {
   state.mapChoropleths.type = 'none';
   state.mapChoropleths.party = 'all';
   syncMapControlInputsFromState();
-}
-
-/**
- * Renders the choropleth colour gradient legend into the legend element, or hides it when choropleth is disabled.
- * @param {{enabled: boolean, legend?: object, legendText?: string}} choroplethConfig - Choropleth config as returned by state.buildChoroplethConfig().
- * @returns {void}
- */
-function renderChoroplethLegend(choroplethConfig) {
-  if (!choroplethLegend) return;
-  if (!choroplethConfig?.enabled) {
-    choroplethLegend.hidden = true;
-    choroplethLegend.innerHTML = '';
-    return;
-  }
-
-  const legend = choroplethConfig.legend;
-  if (!legend) {
-    choroplethLegend.textContent = `Choropleth: ${choroplethConfig.legendText}`;
-    choroplethLegend.hidden = false;
-    return;
-  }
-
-  const gradient = legend.isDelta
-    ? `linear-gradient(90deg, ${legend.startColour} 0%, ${legend.midColour} 50%, ${legend.endColour} 100%)`
-    : `linear-gradient(90deg, ${legend.startColour} 0%, ${legend.endColour} 100%)`;
-
-  choroplethLegend.innerHTML = `
-    <div class="maps-choropleth-legend-title">${legend.title}</div>
-    <div class="maps-choropleth-legend-bar" style="background:${gradient}"></div>
-    <div class="maps-choropleth-legend-labels">
-      <span>${legend.minLabel}</span>
-      ${legend.isDelta ? `<span>${legend.midLabel}</span>` : ''}
-      <span>${legend.maxLabel}</span>
-    </div>
-  `;
-  choroplethLegend.hidden = false;
 }
 
 /**
@@ -966,7 +892,7 @@ function selectSeatBySearchQuery(query) {
   }
 
   const seatKey = seatLookupKey(seatName);
-  const zoomed = map.interaction.zoomToSeat(seatName);
+  const zoomed = mapInteraction.zoomToSeat(seatName);
   if (zoomed) {
     setSelectedSeatRowByKey(seatKey);
     renderSeatPopup(seatName);
@@ -1080,26 +1006,6 @@ async function lookupPostcode(postcode) {
 }
 
 /**
- * Sets the right panel's height to match the map stage height so the two columns stay aligned. On mobile the panel stacks below the map so no height sync is needed.
- * @returns {void}
- */
-function renderRightPanel() {
-  if (!mapsStage || !mapsPanelRight) return;
-
-  if (window.innerWidth <= 980) {
-    mapsPanelRight.style.height = '';
-    mapsPanelRight.style.maxHeight = '';
-    return;
-  }
-
-  const stageHeight = mapsStage.getBoundingClientRect().height;
-  if (!Number.isFinite(stageHeight) || stageHeight <= 0) return;
-
-  mapsPanelRight.style.height = `${Math.round(stageHeight)}px`;
-  mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
-}
-
-/**
  * Entry point. Wires controls then loads election data and routes to the initial view.
  * @returns {Promise<void>}
  */
@@ -1110,7 +1016,7 @@ async function init() {
   try {
     await initPage();
   } catch (error) {
-    setHeader('', true);
+    renderHeader('', true);
     console.error(error);
   }
 }

@@ -1,8 +1,5 @@
 {
-  "defaultElection": "current-holyrood-prediction",
-  "misc": {
-    "holyroodElectionDate": "2026-05-07T06:00:00Z"
-  },
+  "defaultElection": "current-prediction",
   "elections": [
     {
       "id": "current-prediction",

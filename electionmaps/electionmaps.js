@@ -1144,27 +1144,6 @@ function renderRightPanel() {
   mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
 }
 
-// TODO: prefer `state.electionData.summary.text` for new callers
-/**
- * Updates the page title and subtitle with the election name and leading-party majority (or hung-parliament message).
- * @param {object} election - Election entry object with a `name` and optionally a `type` property.
- * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} summary - Election summary as returned by `ElectionSummary.summarize`.
- * @returns {void}
- */
-function updateTopSummary(election, summary) {
-  const top = summary.parties[0];
-  const leadSeats = Number(top?.seats || 0);
-  const totalSeats = Number(summary.totalSeats || 0);
-  const majorityThreshold = totalSeats / 2;
-  const hasMajority = leadSeats > majorityThreshold;
-  const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
-
-  const subtitleText = hasMajority
-    ? `${election.name} · ${manifest.labelParty(top?.party || 'others')} majority: ${majority}`
-    : `${election.name} · Hung parliament - largest party ${manifest.labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
-  setHeader(subtitleText);
-}
-
 /**
  * Returns the d3 zoom transform that centres the map at INITIAL_MAP_SCALE (or INITIAL_MAP_SCALE_MOBILE on narrow screens).
  * @param {number} width - SVG viewport width in pixels.

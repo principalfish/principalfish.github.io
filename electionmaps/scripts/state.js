@@ -213,10 +213,6 @@ export const _state = {
   // Sort / UI / totals
   activeSeatPathNode: null,
 
-  // Election / seat data
-  currentComparisonSeats: [],
-  comparisonSeatsByKey: new Map(),
-
   // Map interaction controller — replaced by renderTopoMap
   mapInteractionController: {
     zoomBy: () => {},
@@ -1022,11 +1018,6 @@ class AppState {
    */
   initComparisonElectionData(comparisonData) {
     this.comparisonElectionData = new ElectionData(comparisonData);
-    // Point the _state mirrors at comparisonElectionData's already-cloned arrays/index instead
-    // of re-cloning. Predict mode reassigns these mirrors to predictBaseSeats during projection.
-    // TODO these can be removed once  predict mode is migrated to use comparisonElectionData directly instead of the mirrors.
-    _state.currentComparisonSeats = this.comparisonElectionData.currentSeats;
-    _state.comparisonSeatsByKey = this.comparisonElectionData.seatsByKey;
   }
 
   /**
@@ -1056,19 +1047,6 @@ class AppState {
    */
   getPredictBaselineElectionId() {
     return manifest.parliamentConfig(this.currentParliament).predictBaselineElectionId;
-  }
-
-  /**
-   * The seat array used as the comparison/baseline for the active view. When a comparison
-   * election is loaded this is `comparisonElectionData.currentSeats`; predict mode swaps
-   * it for `predictBaseSeats`. Empty array when no comparison data exists. Reads through
-   * the `_state.currentComparisonSeats` mirror so callers see the predict-mode reassignment
-   * without having to know about the mirror.
-   * TODO eventyually remove tyhis once the _state property is removed and predict mode reads directly from comparisonElectionData.
-   * @returns {Seat[]}
-   */
-  get comparisonSeats() {
-    return _state.currentComparisonSeats;
   }
 
   /**
@@ -1152,7 +1130,7 @@ class AppState {
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
 
     this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode);
-    this.filteredSeatsComparisonSummary = this.comparisonSeats.length
+    this.filteredSeatsComparisonSummary = this.comparisonElectionData?.currentSeats.length
       ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode)
       : null;
 
@@ -1160,14 +1138,11 @@ class AppState {
 
   /**
    * Recomputes mapSeatsVisible.{seatKeys, seats, comparisonSeats} by applying the active mapFilters
-   * to electionData.currentSeats. Reads _state.comparisonSeatsByKey rather than
-   * comparisonElectionData.seatsByKey because predict mode reassigns the _state mirror to the
-   * predict baseline index, which then becomes the source of truth for gains-filtering.
+   * to electionData.currentSeats. Reads comparisonElectionData.seatsByKey.
    * @returns {void}
    */
   applyMapFilters() {
-    // TODO remove during refactor
-    const comparisonSeatsByKey = _state.comparisonSeatsByKey;
+    const comparisonSeatsByKey = this.comparisonElectionData?.seatsByKey  || new Map();
     const seatKeys = new Set();
     this.electionData.currentSeats.forEach((seat) => {
       const seatKey = seatLookupKey(seat.seat);
@@ -1307,8 +1282,7 @@ class AppState {
       if (isReferendumTypeWithDefaults) {
         value = Seat.voteSharePct(seat, 'leave');
       } else {
-        // TODO: remove _state.comparisonSeatsByKey access once comparison data is fully on AppState
-        const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
+        const comparisonSeat = this.comparisonElectionData?.seatsByKey.get(seatKey) ?? null;
         value = Seat.choroplethValue(seat, comparisonSeat, isDelta, this.mapChoropleths.party);
         if (value === null) return;
       }

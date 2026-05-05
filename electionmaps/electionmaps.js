@@ -286,59 +286,12 @@ function buildRouteSearchParams(view) {
  * @returns {void}
  */
 function wireInit() {
-  wirePopupPanels();
   wireSeatSearch();
   wirePostcodeSearch();
   wireSeatPopup();
   wireVoteTotalsToggle();
   wireWindowResize();
   wireVoteTotalsSorting();
-}
-
-/**
- * Attaches click handlers to all [data-popup-action] buttons. 'toggle' opens the target panel
- * and closes all others (plus backdrop); 'close' closes all panels. On mobile the backdrop
- * overlay is shown/hidden alongside the panel. Guards against double-wiring via dataset flag.
- * @returns {void}
- */
-function wirePopupPanels() {
-  const popupOverlay = document.getElementById('mapsPopupOverlay');
-
-  /** Closes all popup panels and hides the backdrop overlay. */
-  function closeAllPopups() {
-    document.querySelectorAll('.maps-control-popup').forEach((p) => { p.hidden = true; });
-    if (popupOverlay) popupOverlay.hidden = true;
-  }
-
-  if (popupOverlay && popupOverlay.dataset.wired !== 'true') {
-    popupOverlay.addEventListener('click', closeAllPopups);
-    popupOverlay.dataset.wired = 'true';
-  }
-
-  document.querySelectorAll('[data-popup-action]').forEach((button) => {
-    if (button.dataset.wired === 'true') return;
-
-    button.addEventListener('click', () => {
-      const action = button.getAttribute('data-popup-action');
-      const targetId = button.getAttribute('data-popup-target');
-      const panel = targetId ? document.getElementById(targetId) : null;
-      if (!panel) return;
-
-      if (action === 'close') {
-        closeAllPopups();
-        return;
-      }
-
-      if (action === 'toggle') {
-        const willShow = panel.hidden;
-        closeAllPopups();
-        panel.hidden = !willShow;
-        if (popupOverlay) popupOverlay.hidden = !willShow;
-      }
-    });
-
-    button.dataset.wired = 'true';
-  });
 }
 
 /**

@@ -224,16 +224,6 @@ function wirePollTrackerControls() {
   });
 }
 
-/**
- * Wires all DOM-owned controls. Call once during page boot alongside wireInit.
- * @returns {void}
- */
-export function domWireInit() {
-  wirePollTrackerControls();
-  wireMapInteractions();
-  wireMapViewControls();
-}
-
 let partyControlsRendered = false;
 
 /**
@@ -902,6 +892,7 @@ function wireMapViewControls() {
     filtersResetButton.addEventListener('click', () => {
       state.resetFilters();
       syncMapControlInputsFromState();
+      closeAllPopups();
       drawMap(true);
     });
   }
@@ -910,6 +901,7 @@ function wireMapViewControls() {
     choroplethsResetButton.addEventListener('click', () => {
       state.resetChoropleths();
       syncMapControlInputsFromState();
+      closeAllPopups();
       drawMap(true);
     });
   }
@@ -1086,6 +1078,59 @@ function initPostcodeSearch() {
   if (!isHolyrood) postcodeWarningPanel.hidden = true;
 }
 
+// ─── Map ─────────────────────────────────────────────────────────────────────
+
+const regionCard = document.getElementById('mapsRegionCard');
+const regionTableBody = document.getElementById('mapsRegionTableBody');
+const popupOverlay = document.getElementById('mapsPopupOverlay');
+
+/** Closes all popup panels and hides the backdrop overlay. */
+function closeAllPopups() {
+  document.querySelectorAll('.maps-control-popup').forEach((p) => { p.hidden = true; });
+  if (popupOverlay) popupOverlay.hidden = true;
+}
+
+/**
+ * Attaches click handlers to all [data-popup-action] buttons. 'toggle' opens the target panel
+ * and closes all others (plus backdrop); 'close' closes all panels. On mobile the backdrop
+ * overlay is shown/hidden alongside the panel. Guards against double-wiring via dataset flag.
+ *
+ * Covers the four map control popups: Filters, Choropleths, Data info (referendum only),
+ * and Postcode accuracy warning.
+ * @returns {void}
+ */
+function wirePopupPanels() {
+  if (popupOverlay && popupOverlay.dataset.wired !== 'true') {
+    popupOverlay.addEventListener('click', closeAllPopups);
+    popupOverlay.dataset.wired = 'true';
+  }
+
+  document.querySelectorAll('[data-popup-action]').forEach((button) => {
+    if (button.dataset.wired === 'true') return;
+
+    button.addEventListener('click', () => {
+      const action = button.getAttribute('data-popup-action');
+      const targetId = button.getAttribute('data-popup-target');
+      const panel = targetId ? document.getElementById(targetId) : null;
+      if (!panel) return;
+
+      if (action === 'close') {
+        closeAllPopups();
+        return;
+      }
+
+      if (action === 'toggle') {
+        const willShow = panel.hidden;
+        closeAllPopups();
+        panel.hidden = !willShow;
+        if (popupOverlay) popupOverlay.hidden = !willShow;
+      }
+    });
+
+    button.dataset.wired = 'true';
+  });
+}
+
 /**
  * Attaches click handlers to all [data-map-action] buttons: zoom-in (×1.2), zoom-out (×0.83),
  * reset-zoom (restore default transform), and reset-view (zoom reset + clear all filters/choropleths).
@@ -1103,16 +1148,12 @@ function wireMapInteractions() {
         state.resetFilters();
         state.resetChoropleths();
         syncMapControlInputsFromState();
+        closeAllPopups();
         drawMap();
       }
     });
   });
 }
-
-// ─── Map ─────────────────────────────────────────────────────────────────────
-
-const regionCard = document.getElementById('mapsRegionCard');
-const regionTableBody = document.getElementById('mapsRegionTableBody');
 
 /**
  * Builds the list-region table overlay from `state.listRegionSummary`.
@@ -1971,6 +2012,17 @@ function renderChoroplethLegend() {
 }
 
 // ─── Map init ────────────────────────────────────────────────────────────────
+
+/**
+ * Wires all DOM-owned controls. Call once during page boot alongside wireInit.
+ * @returns {void}
+ */
+export function domWireInit() {
+  wirePollTrackerControls();
+  wirePopupPanels();
+  wireMapInteractions();
+  wireMapViewControls();
+}
 
 /**
  * Runs all once-per-election DOM initialisations. Must be called after state.setupMapData() so

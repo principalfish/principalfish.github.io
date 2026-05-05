@@ -109,24 +109,6 @@
     min-height: unset;
   }
 
-  .maps-predict-window {
-    overflow: auto;
-  }
-
-  .maps-predict-window.maps-predict-window-compact {
-    display: block;
-    min-height: 0;
-  }
-
-  .maps-predict-window.maps-predict-window-compact .maps-predict-window-body {
-    display: block;
-    min-height: 0;
-  }
-
-  .maps-predict-window.maps-predict-window-compact .maps-predict-grid {
-    flex: unset;
-  }
-
   .maps-seat-list {
     max-height: min(52vh, 430px);
   }

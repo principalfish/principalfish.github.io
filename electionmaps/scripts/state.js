@@ -110,7 +110,7 @@ class Manifest {
   }
 
   /**
-   * Returns the per-parliament feature config (predict anchor/baseline election ids etc.),
+   * Returns the per-parliament feature config (anchor/baseline election ids etc.),
    * or an empty object when no entry exists for the given parliament.
    * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
    * @returns {object}
@@ -234,32 +234,6 @@ export const _state = {
   seatSearchSuggestionIndex: -1,
   seatSearchMenuEl: null,
   postcodeErrorTimeout: null,
-
-  // Predict mode
-  predictBaseSeats: [],
-  predictBaseSeatsByKey: new Map(),
-  predictBaseMapData: null,
-  predictBaseRegionLabelsByKey: new Map(),
-  predictColumnPartyKeys: [],
-  predictInputByRegionParty: new Map(),
-  predictBaselineShareByRegionParty: new Map(),
-  predictRegionalSwingsByParty: new Map(),
-  predictEnglandExpanded: false,
-  predictOtherCellByRegion: new Map(),
-  predictHolyroodTab: 'constituency',
-  predictHolyroodRegionsExpanded: false,
-  predictConstInputByRegionParty: new Map(),
-  predictListInputByRegionParty: new Map(),
-  predictNationalBaselines: new Map(),
-  predictNationalListBaselines: new Map(),
-  predictBaselineConstShareByRegionParty: new Map(),
-  predictBaselineListShareByRegionParty: new Map(),
-  predictHolyroodConstSwingsByParty: new Map(),
-  predictHolyroodListSwingsByParty: new Map(),
-  predictCurrentSimulationLoaded: false,
-  predictCurrentSimulationSeats: [],
-  predictCurrentSimulationConstShares: new Map(),
-  predictCurrentSimulationListShares: new Map(),
 };
 
 // ─── Seat ────────────────────────────────────────────────────────────────────
@@ -1172,7 +1146,7 @@ class AppState {
    * @returns {void}
    */
   recomputeVoteTotalsForMode() {
-    const electionAllowsVoteCounts = !(this.currentElection.model || this.isReferendumType || this.view === 'predict');
+    const electionAllowsVoteCounts = !(this.currentElection.model || this.isReferendumType);
     const tabAllowsVotes = !this.hasListSeats || this.voteTotals.mode !== 'all';
     this.voteTotals.columns.votePct = tabAllowsVotes;
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;

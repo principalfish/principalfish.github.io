@@ -3,7 +3,7 @@ import { manifest, state, _state } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel } from './utils.js';
 
 // Left-rail nav container — populated with one anchor per election plus the
-// Predict / Poll tracker links by renderElectionLinks.
+// Poll tracker link by renderElectionLinks.
 const electionList = document.getElementById('mapsElectionList');
 // Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
 const mapsTitle = document.querySelector('.maps-title');
@@ -16,16 +16,13 @@ const subtitle = document.getElementById('mapsSubtitle');
 const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
 
 /**
- * Sets the browser tab title from the current view: poll tracker, predict (with next election year), or election name.
+ * Sets the browser tab title from the current view: poll tracker or election name.
  * @returns {void}
  */
 export function setPageTitle() {
   let label;
   if (state.view === 'polltracker') {
     label = 'Poll tracker';
-  } else if (state.view === 'predict') {
-    const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
-    label = `Predict ${nextElectionYear ?? ''}`.trim();
   } else {
     label = state.currentElection.name;
   }
@@ -124,20 +121,19 @@ function renderParliamentTabs() {
 }
 
 /**
- * Rebuilds the election list nav, inserting Predict and Poll tracker links after the
- * current-prediction entry.
+ * Rebuilds the election list nav with one link per election, plus a Poll tracker link
+ * when the feature is enabled for the current parliament.
  * @returns {void}
  */
 function renderElectionLinks() {
+  if (!electionList) return;
   const activeId = state.view === 'election' ? state.currentElection.id : null;
 
   const features = manifest.parliamentFeatures[state.currentParliament]?.features ?? [];
-  const hasPredictMode = features.includes('predict');
   const hasPollTracker = features.includes('pollTracker');
-  const predictAnchorId = state.getPredictAnchorElectionId() ?? null;
+  const pollTrackerAnchorId = hasPollTracker ? (state.getPredictAnchorElectionId() ?? null) : null;
 
   electionList.innerHTML = '';
-  let insertedPredictLink = false;
   let insertedPollTrackerLink = false;
   state.parliamentElections.forEach((election) => {
     const link = document.createElement('a');
@@ -146,25 +142,23 @@ function renderElectionLinks() {
     link.textContent = election.name;
     electionList.appendChild(link);
 
-    if (hasPredictMode && !insertedPredictLink && election.id === predictAnchorId) {
-      const predictLink = document.createElement('a');
-      predictLink.href = state.viewUrl('predict');
-      predictLink.className = `maps-election-item${state.view === 'predict' ? ' active' : ''}`;
-      const nextElectionYear = manifest.parliamentFeatures[state.currentParliament]?.nextElectionYear;
-      predictLink.textContent = `Predict ${nextElectionYear ?? ''}`;
-      electionList.appendChild(predictLink);
-      insertedPredictLink = true;
-
-      if (hasPollTracker && !insertedPollTrackerLink) {
-        const trackerLink = document.createElement('a');
-        trackerLink.href = state.viewUrl('polltracker');
-        trackerLink.className = `maps-election-item${state.view === 'polltracker' ? ' active' : ''}`;
-        trackerLink.textContent = 'Poll tracker';
-        electionList.appendChild(trackerLink);
-        insertedPollTrackerLink = true;
-      }
+    if (hasPollTracker && !insertedPollTrackerLink && election.id === pollTrackerAnchorId) {
+      const trackerLink = document.createElement('a');
+      trackerLink.href = state.viewUrl('polltracker');
+      trackerLink.className = `maps-election-item${state.view === 'polltracker' ? ' active' : ''}`;
+      trackerLink.textContent = 'Poll tracker';
+      electionList.appendChild(trackerLink);
+      insertedPollTrackerLink = true;
     }
   });
+
+  if (hasPollTracker && !insertedPollTrackerLink) {
+    const trackerLink = document.createElement('a');
+    trackerLink.href = state.viewUrl('polltracker');
+    trackerLink.className = `maps-election-item${state.view === 'polltracker' ? ' active' : ''}`;
+    trackerLink.textContent = 'Poll tracker';
+    electionList.appendChild(trackerLink);
+  }
 }
 
 // ─── Poll tracker ─────────────────────────────────────────────────────────────
@@ -584,7 +578,7 @@ function pollTrackerTooltipHandlers({ svg, tooltip, crosshairLine, margin, inner
       .raise();
 
     tooltip.innerHTML = `
-      <div class="maps-polltracker-tooltip-party"><span class="maps-predict-grid-swatch" style="background:${partyColour}"></span>${escapeHtml(series.partyName)}</div>
+      <div class="maps-polltracker-tooltip-party"><span class="maps-party-swatch" style="background:${partyColour}"></span>${escapeHtml(series.partyName)}</div>
       <div>${timelinePoint?.dateKey || ''}</div>
       <div>Seats: ${formatInt(seatsValue)}</div>
       <div>Vote %: ${formatPct(votePctValue)}%</div>
@@ -696,7 +690,7 @@ function renderPollTrackerPartyControls() {
     checkbox.addEventListener('change', () => renderPollTrackerChart());
 
     const swatch = document.createElement('span');
-    swatch.className = 'maps-predict-grid-swatch';
+    swatch.className = 'maps-party-swatch';
     swatch.style.background = row.colour;
 
     const text = document.createElement('span');
@@ -937,15 +931,13 @@ function initVoteTotalsTabs() {
 /**
  * Wires the expand/collapse button that toggles the vote-totals table between the top-7 truncation
  * and the full party list. Flips state.voteTotals.expanded then re-renders via renderVoteTotals().
- * @param {function(): void} syncPredictLayout - Recalculates predict-mode right-column height.
  * @returns {void}
  */
-export function wireVoteTotalsToggle(syncPredictLayout) {
+export function wireVoteTotalsToggle() {
   voteTotalsToggle.addEventListener('click', () => {
     state.voteTotals.expanded = !state.voteTotals.expanded;
     if (!state.filteredSeatsSummary) return;
     renderVoteTotals();
-    syncPredictLayout();
   });
 }
 

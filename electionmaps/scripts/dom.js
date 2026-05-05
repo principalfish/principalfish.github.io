@@ -1064,13 +1064,51 @@ function initRegionTable() {
 
 // ─── Seat popup ──────────────────────────────────────────────────────────────
 
-// TODO: deduplicate with electionmaps.js once renderSeatPopup migrates
 const seatPopup = document.getElementById('mapsSeatPopup');
 const seatPopupTitle = document.getElementById('mapsSeatPopupTitle');
 const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
 const seatPopupList = document.getElementById('mapsSeatPopupList');
 
-// TODO: once renderSeatPopup migrates here, factor shared popup row building (bar-width calc, CSS custom props, party swatch+label template) into a helper
+/**
+ * Creates a .maps-popup-row element with the party colour bar, label, and injected values HTML.
+ * CSS custom properties --maps-popup-bar-width and --maps-popup-bar-colour drive the bar.
+ * @param {string} party - Party key for colour lookup.
+ * @param {number} barWidth - Bar width percentage (0–75), scaled relative to the leading row.
+ * @param {string} valuesHtml - Inner HTML for the .maps-popup-values div.
+ * @returns {HTMLDivElement}
+ */
+function buildPopupRow(party, barWidth, valuesHtml) {
+  const item = document.createElement('div');
+  item.className = 'maps-popup-row';
+  item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
+  item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(party));
+  item.innerHTML = `
+    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(party)}"></span>${escapeHtml(manifest.labelParty(party))}</div>
+    <div class="maps-popup-values">${valuesHtml}</div>
+  `;
+  return item;
+}
+
+/**
+ * Clears seatPopupList and renders a scaled bar-chart row for each entry in rows.
+ * Computes maxPct internally so callers don't need to manage bar-width scaling.
+ * @param {Array<{party: string, pct: number}>} rows - Sorted rows; each must have party and pct.
+ * @param {function({party: string, pct: number}): string} getValuesHtml - Returns right-side values HTML for a row.
+ * @returns {void}
+ */
+function renderPopupRows(rows, getValuesHtml) {
+  // Scale all bars relative to the leading row so the top party always fills 75%.
+  const maxPct = rows.reduce((max, row) => Math.max(max, row.pct), 0);
+  seatPopupList.innerHTML = '';
+  rows.forEach((row) => {
+    // Bar width is proportional to pct / maxPct, capped at 75 to leave room for labels.
+    const barWidth = maxPct > 0 ? Math.max(0, Math.min(75, (row.pct / maxPct) * 75)) : 0;
+    // getValuesHtml supplies the right-side content (vote share, delta, seat count, etc.)
+    // which differs between the region popup and the constituency popup.
+    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row)));
+  });
+}
+
 /**
  * Populates the seat popup with a list-region summary.
  *
@@ -1094,8 +1132,6 @@ const seatPopupList = document.getElementById('mapsSeatPopupList');
  * @returns {void}
  */
 function renderRegionPopup(regionKey, data) {
-  // Clear the active seat so the popup doesn't show stale constituency state.
-  state.map.openSeat = null;
   seatPopupTitle.textContent = `${getRegionLabel(regionKey, state.currentRegionLabelsByKey)} List Vote`;
 
   // Meta bar: total list seats won across all parties in this region.
@@ -1109,26 +1145,83 @@ function renderRegionPopup(regionKey, data) {
     .sort((a, b) => b.votes - a.votes)
     .slice(0, 8);
 
-  // Find the leading party's share so all bar widths are relative to it, not to 100%.
-  const maxPct = rows.reduce((m, r) => Math.max(m, r.pct), 0);
-  seatPopupList.innerHTML = '';
-  rows.forEach((row) => {
-    // Scale bar width relative to leader, capped at 75% to leave room for labels.
-    const barWidth = maxPct > 0 ? Math.min(75, (row.pct / maxPct) * 75) : 0;
+  // Each row shows the party's list vote share (derived from votesByParty / totalVotes above)
+  // and the raw seat count for that party in this region (from seatsByParty).
+  renderPopupRows(rows, (row) => {
     const seats = data.seatsByParty[row.party] || 0;
-    const item = document.createElement('div');
-    item.className = 'maps-popup-row';
-    // CSS custom properties drive the bar rendering in the stylesheet.
-    item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-    item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(row.party));
-    item.innerHTML = `
-      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(row.party)}"></span>${escapeHtml(manifest.labelParty(row.party))}</div>
-      <div class="maps-popup-values">
-        <span>${formatPct(row.pct)}%</span>
-        <span style="color:#6b7280">${seats} seat${seats !== 1 ? 's' : ''}</span>
-      </div>
-    `;
-    seatPopupList.appendChild(item);
+    return `<span>${formatPct(row.pct)}%</span><span style="color:#6b7280">${seats} seat${seats !== 1 ? 's' : ''}</span>`;
+  });
+
+  seatPopup.hidden = false;
+}
+
+// TODO: make private once electionmaps.js callers (wireSeatPopup, resetZoom) migrate to dom.js
+/**
+ * Hides the seat detail popup and clears the tracked open seat name.
+ * @returns {void}
+ */
+export function hideSeatPopup() {
+  if (!seatPopup) return;
+  seatPopup.hidden = true;
+}
+
+// TODO: make private once electionmaps.js callers (selectSeatBySearchQuery, renderTopoMap) migrate to dom.js
+/**
+ * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked
+ * vote share bar chart with comparison deltas. Hides the popup if the seat is not found.
+ * @param {string} seatName - Display name of the seat to show.
+ * @returns {void}
+ */
+export function renderSeatPopup(seatName) {
+  // Resolve the seat object; hide the popup and bail if not found.
+  const seatKey = seatLookupKey(seatName);
+  const seat = state.electionData.seatsByKey.get(seatKey);
+  if (!seat) {
+    hideSeatPopup();
+    return;
+  }
+
+  // Resolve gain indicator and majority stats via Seat instance methods so the
+  // logic stays in one place and this function has no arithmetic of its own.
+  const comparisonSeat = state.comparisonElectionData?.seatsByKey.get(seatKey) || null;
+  const gainFrom = seat.gainFromParty(comparisonSeat?.winner || null);
+  const majority = seat.majorityStats();
+
+  // Model and referendum elections have no meaningful turnout or raw majority to display.
+  const showCounts = !state.currentElection.model && !state.isReferendumType;
+
+  // Populate title and meta line (gain indicator, region, majority, turnout).
+  seatPopupTitle.textContent = seat.seat;
+  seatPopupMeta.innerHTML = `
+    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${manifest.labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
+    <span class="maps-popup-meta-item">${getRegionLabel(seat.region, state.currentRegionLabelsByKey)}</span>
+    <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showCounts ? ` = ${formatInt(majority.raw)}` : ''}</span>
+    ${showCounts ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(seat.turnout)}</span>` : ''}
+  `;
+
+  // Build vote-share rows with comparison deltas. prevPct is null before the
+  // comparison election's first data point, which suppresses the delta span.
+  const currentTurnout = seat.turnout;
+  const comparisonTurnout = comparisonSeat?.turnout ?? 0;
+  const comparisonVotes = comparisonSeat?.votes || {};
+
+  const rows = Object.entries(seat.votes || {})
+    .map(([party, votes]) => {
+      const voteTotal = Number(votes || 0);
+      const pct = currentTurnout > 0 ? (voteTotal / currentTurnout) * 100 : 0;
+      const prevPct = comparisonTurnout > 0 ? ((Number(comparisonVotes[party] || 0) / comparisonTurnout) * 100) : null;
+      const delta = prevPct == null ? null : pct - prevPct;
+      return { party, pct, delta };
+    })
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 8);
+
+  // Each row shows the party's vote share (votes / seat turnout) and, when comparison
+  // data is available, the signed delta vs the comparison election. delta is null when
+  // the party had no comparison data point, which suppresses the delta span entirely.
+  renderPopupRows(rows, (row) => {
+    const deltaHtml = row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`;
+    return `<span>${formatPct(row.pct)}%</span>${deltaHtml}`;
   });
 
   seatPopup.hidden = false;
@@ -1208,8 +1301,7 @@ export function renderSeatList() {
       setSelectedSeatRowByKey(seatKey);
       // TODO: remove once mapInteractionController migrates to map.js
       _state.mapInteractionController.zoomToSeat(seatName);
-      // TODO: remove once renderSeatPopup migrates to dom.js (callback slot no longer needed)
-      _state.renderSeatPopup(seatName);
+      renderSeatPopup(seatName);
     });
 
     rowByKey.set(seatKey, item);

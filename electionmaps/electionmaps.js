@@ -43,6 +43,8 @@ import {
   wireVoteTotalsToggle,
   renderSeatList,
   setSelectedSeatRowByKey,
+  hideSeatPopup,
+  renderSeatPopup,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -128,15 +130,7 @@ function drawMap(preserveZoom = false) {
 function renderMap(preserveZoom = false) {
   renderVoteTotals();
   renderSeatList();
-
-  renderTopoMap(state.mapData, state.electionData.currentSeats, {
-    visibleSeatKeys: state.mapSeatsVisible.seatKeys,
-    choroplethConfig: state.choroplethConfig,
-    preserveZoom,
-    regionSummary: state.listRegionSummary,
-    mapId: String(state.currentElection.mapId ?? ''),
-  });
-
+  renderTopoMap(preserveZoom);
   renderChoroplethLegend(state.choroplethConfig);
 }
 
@@ -633,50 +627,6 @@ function wireVoteTotalsSorting() {
  * @param {string} regionKey - Region key or name to convert.
  * @returns {string} Title-cased display label (e.g. 'North West England'), or 'Unknown' for empty input.
  */
-// ── Seat utilities ───────────────────────────────────────────────────────────
-
-/**
- * Returns an array of { party, votes } objects for a seat, sorted descending by vote count, excluding parties with zero votes.
- * @param {object} seat - Seat object with a `votes` map of party key to vote count.
- * @returns {Array<{party: string, votes: number}>} Sorted array of party vote entries, highest first.
- */
-// TODO: migrate callers to Seat static methods in state.js
-function sortedSeatVoteRows2(seat) {
-  return Object.entries(seat?.votes || {})
-    .map(([party, votes]) => ({ party, votes: Number(votes || 0) }))
-    .filter((row) => row.votes > 0)
-    .sort((a, b) => b.votes - a.votes);
-}
-
-/**
- * Returns { pct, raw } for the winning majority in a seat: pct as a percentage of total votes, raw as the vote margin between first and second place.
- * @param {object} seat - Seat object with a `votes` map and optional `turnout`.
- * @returns {{pct: number, raw: number}} Majority as a percentage of total votes and as a raw vote count.
- */
-// TODO: migrate callers to Seat.majorityStats in state.js
-function seatMajorityStats2(seat) {
-  const voteRows = sortedSeatVoteRows2(seat);
-  if (voteRows.length < 2) return { pct: 0, raw: 0 };
-  const marginVotes = voteRows[0].votes - voteRows[1].votes;
-  const totalVotes = seat.turnout;
-  if (totalVotes <= 0) return { pct: 0, raw: marginVotes };
-  return { pct: (marginVotes / totalVotes) * 100, raw: marginVotes };
-}
-
-/**
- * Returns the previous winner's party key if the seat changed hands between comparisonSeat and currentSeat, or null if there was no change or no comparison available.
- * @param {object} currentSeat - The seat in its current state, with a `winner` property.
- * @param {object|null} comparisonSeat - The seat in its comparison state, or null if no comparison is available.
- * @returns {string|null} The previous winner's party key if a gain occurred, otherwise null.
- */
-// TODO: migrate callers to Seat.gainFromParty in state.js
-function seatGainFromPartyKey2(currentSeat, comparisonSeat) {
-  const winner = currentSeat?.winner || 'others';
-  const previousWinner = comparisonSeat?.winner || null;
-  if (!previousWinner || previousWinner === winner) return null;
-  return previousWinner;
-}
-
 /**
  * Builds a Map from seatLookupKey to seat object for fast seat lookups.
  * @param {Array<object>} seats - Array of seat objects, each with a `seat` name property.
@@ -730,10 +680,6 @@ const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
 const mapsStage = document.querySelector('.maps-stage');
 const mapsPanelRight = document.querySelector('.maps-panel-right');
-const seatPopup = document.getElementById('mapsSeatPopup');
-const seatPopupTitle = document.getElementById('mapsSeatPopupTitle');
-const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
-const seatPopupList = document.getElementById('mapsSeatPopupList');
 const seatPopupClose = document.getElementById('mapsSeatPopupClose');
 const choroplethLegend = document.getElementById('mapsChoroplethLegend');
 
@@ -945,85 +891,6 @@ function renderChoroplethLegend(choroplethConfig) {
     </div>
   `;
   choroplethLegend.hidden = false;
-}
-
-/**
- * Hides the seat detail popup and clears the tracked open seat name.
- * @returns {void}
- */
-function hideSeatPopup() {
-  if (!seatPopup) return;
-  seatPopup.hidden = true;
-  state.map.openSeat = null;
-}
-
-/**
- * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked vote share bar chart with comparison deltas.
- * @param {string} seatName - Display name of the seat to show; looked up in state.electionData.seatsByKey.
- * @returns {void}
- */
-function renderSeatPopup(seatName) {
-  if (!seatPopup || !seatPopupTitle || !seatPopupMeta || !seatPopupList) return;
-
-  const seatKey = seatLookupKey(seatName);
-  const seat = state.electionData.seatsByKey.get(seatKey);
-  if (!seat) {
-    hideSeatPopup();
-    return;
-  }
-  state.map.openSeat = seatName;
-
-  const comparisonSeat = _state.comparisonSeatsByKey.get(seatKey) || null;
-  const gainFrom = seatGainFromPartyKey2(seat, comparisonSeat);
-  const majority = seatMajorityStats2(seat);
-  const isReferendum = state.currentElection.id === 'eu-referendum-2016';
-  const showTurnout = state.currentElection.type !== 'model_uns' && !isReferendum;
-  const showRawMajority = state.currentElection.type !== 'model_uns' && !isReferendum;
-
-  seatPopupTitle.textContent = seat.seat;
-  seatPopupMeta.innerHTML = `
-    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${manifest.labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
-    <span class="maps-popup-meta-item">${getRegionLabel(seat.region, state.currentRegionLabelsByKey)}</span>
-    <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showRawMajority ? ` = ${formatInt(majority.raw)}` : ''}</span>
-    ${showTurnout ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(seat.turnout)}</span>` : ''}
-  `;
-
-  const currentTurnout = seat.turnout;
-  const comparisonTurnout = comparisonSeat?.turnout ?? 0;
-  const comparisonVotes = comparisonSeat?.votes || {};
-
-  const rows = Object.entries(seat.votes || {})
-    .map(([party, votes]) => {
-      const voteTotal = Number(votes || 0);
-      const pct = currentTurnout > 0 ? (voteTotal / currentTurnout) * 100 : 0;
-      const prevPct = comparisonTurnout > 0 ? ((Number(comparisonVotes[party] || 0) / comparisonTurnout) * 100) : null;
-      const delta = prevPct == null ? null : pct - prevPct;
-      return { party, pct, delta };
-    })
-    .sort((a, b) => b.pct - a.pct)
-    .slice(0, 8);
-
-  const maxPct = rows.reduce((max, row) => Math.max(max, row.pct), 0);
-
-  seatPopupList.innerHTML = '';
-  rows.forEach((row) => {
-    const scaledWidth = maxPct > 0 ? (row.pct / maxPct) * 75 : 0;
-    const barWidth = Math.max(0, Math.min(75, scaledWidth));
-    const item = document.createElement('div');
-    item.className = 'maps-popup-row';
-    item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
-    item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(row.party));
-    item.innerHTML = `
-      <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(row.party)}"></span>${escapeHtml(manifest.labelParty(row.party))}</div>
-      <div class="maps-popup-values">
-        <span>${formatPct(row.pct)}%</span>
-        ${row.delta == null ? '' : `<span class="${deltaClass(row.delta)}">${formatSigned(row.delta, 2)}</span>`}
-      </div>
-    `;
-    seatPopupList.appendChild(item);
-  });
-
-  seatPopup.hidden = false;
 }
 
 /**
@@ -1339,14 +1206,18 @@ function getLegacySeatZoomTransform(path, featureDatum, width, height) {
  * Renders the full TopoJSON map into mapSvg using D3.
  * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom and hover handlers,
  * draws region boundary overlays, and sets up _state.mapInteractionController for external zoom/reset/highlight calls.
- * Accepts { visibleSeatKeys, choroplethConfig, preserveZoom } in options.
- * @param {object} mapData - TopoJSON topology object with a single named objects entry.
- * @param {Array<object>} seats - Current seat objects used to determine winner colours.
- * @param {{visibleSeatKeys?: Set<string>, choroplethConfig?: object, preserveZoom?: boolean}} [options={}] - Rendering options including filter visibility, choropleth config, and whether to preserve the current zoom transform.
+ * Reads map data, seats, filters, choropleth config, and region summary directly from state.
+ * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
  * @returns {void}
  */
-function renderTopoMap(mapData, seats, options = {}) {
+function renderTopoMap(preserveZoom = false) {
   if (!mapSvg || !mapContent || !zoomValue) return;
+
+  const mapData = state.mapData;
+  const seats = state.electionData.currentSeats;
+  const visibleSeatKeys = state.mapSeatsVisible.seatKeys || null;
+  const choroplethConfig = state.choroplethConfig || { enabled: false };
+  const regionSummary = state.listRegionSummary;
 
   const objectName = Object.keys(mapData?.objects || {})[0];
   if (!objectName) throw new Error('TopoJSON missing objects');
@@ -1369,8 +1240,6 @@ function renderTopoMap(mapData, seats, options = {}) {
   content.selectAll('*').remove();
 
   const winnerBySeat = buildWinnerBySeat(seats);
-  const visibleSeatKeys = options.visibleSeatKeys || null;
-  const choroplethConfig = options.choroplethConfig || { enabled: false };
   const featureBySeat = new Map();
   const seatPathByKey = new Map();
   _state.activeSeatPathNode = null;
@@ -1519,7 +1388,7 @@ function renderTopoMap(mapData, seats, options = {}) {
 
   // ── Region connector lines and flash layer (Holyrood list-seat region summaries) ──
 
-  if (options.regionSummary) {
+  if (regionSummary) {
     // Group topology geometries by normalised region key for flash animation.
     const geometriesByRegion = new Map();
     (object.geometries || []).forEach((geom) => {
@@ -1537,7 +1406,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     _state.mapInteractionController.flashRegion = (regionKey) => {
       const geoms = geometriesByRegion.get(regionKey);
       if (!geoms) return;
-      const merged = topojsonMerge(mapData, geoms);
+      const merged = topojsonMerge(state.mapData, geoms);
       if (!merged) return;
       const flashPath = flashLayer.append('path')
         .attr('class', 'maps-region-flash-path')
@@ -1553,7 +1422,7 @@ function renderTopoMap(mapData, seats, options = {}) {
     }
   });
 
-  svg.call(zoomBehavior.transform, options.preserveZoom ? d3.zoomTransform(mapSvg) : initialTransform);
+  svg.call(zoomBehavior.transform, preserveZoom ? d3.zoomTransform(mapSvg) : initialTransform);
 }
 
 /**
@@ -1561,8 +1430,6 @@ function renderTopoMap(mapData, seats, options = {}) {
  * @returns {Promise<void>}
  */
 async function init() {
-  // TODO: remove once renderSeatPopup migrates to dom.js (callback slot no longer needed)
-  _state.renderSeatPopup = renderSeatPopup;
   wireInit();
   domWireInit();
 

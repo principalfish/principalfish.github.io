@@ -227,10 +227,6 @@ export const _state = {
     flashRegion: () => {},
   },
 
-  // TODO: remove once renderSeatPopup migrates to dom.js (callback slot no longer needed)
-  // Seat popup callback — assigned in init() once renderSeatPopup is defined
-  renderSeatPopup: () => {},
-
   // Search
   seatSearchSuggestions: [],
   seatSearchSuggestionIndex: -1,
@@ -872,13 +868,6 @@ class AppState {
     this.mapChoropleths = {
       type: 'none',
       party: 'all',
-    };
-
-    // TODO: map interaction state may migrate elsewhere once renderTopoMap moves to map.js
-    /** Transient map interaction state. */
-    this.map = {
-      /** Name of the currently open seat popup, or null when no popup is shown. */
-      openSeat: null,
     };
 
     /** Derived visible-seat slice produced by applying mapFilters to electionData.currentSeats.

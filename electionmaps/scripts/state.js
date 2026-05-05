@@ -1384,6 +1384,30 @@ class AppState {
   voteTotalsColumnVisible(column) {
     return !!this.voteTotals.columns[column];
   }
+
+  /**
+   * Resets all primary filter state (party, region, second party, majority range, gains toggle)
+   * to their defaults. Does not sync UI controls or re-render — callers are responsible for both.
+   * @returns {void}
+   */
+  resetFilters() {
+    this.mapFilters.party = 'all';
+    this.mapFilters.region = 'all';
+    this.mapFilters.secondParty = 'all';
+    this.mapFilters.majorityMin = 0;
+    this.mapFilters.majorityMax = 100;
+    this.mapFilters.gainsOnly = false;
+  }
+
+  /**
+   * Resets choropleth type and party to defaults.
+   * Does not sync UI controls or re-render — callers are responsible for both.
+   * @returns {void}
+   */
+  resetChoropleths() {
+    this.mapChoropleths.type = 'none';
+    this.mapChoropleths.party = 'all';
+  }
 }
 
 export const state = new AppState();

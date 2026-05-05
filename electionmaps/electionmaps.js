@@ -331,8 +331,9 @@ function wireMapInteractions() {
       if (action === 'reset-zoom') mapInteraction.reset();
       if (action === 'reset-view') {
         mapInteraction.reset();
-        resetPrimaryFilters();
-        resetChoropleths();
+        state.resetFilters();
+        state.resetChoropleths();
+        syncMapControlInputsFromState();
         drawMap();
       }
     });
@@ -424,14 +425,16 @@ function wireMapViewControls() {
 
   if (filtersResetButton) {
     filtersResetButton.addEventListener('click', () => {
-      resetPrimaryFilters();
+      state.resetFilters();
+      syncMapControlInputsFromState();
       drawMap(true);
     });
   }
 
   if (choroplethsResetButton) {
     choroplethsResetButton.addEventListener('click', () => {
-      resetChoropleths();
+      state.resetChoropleths();
+      syncMapControlInputsFromState();
       drawMap(true);
     });
   }
@@ -747,30 +750,6 @@ function syncMapControlStateFromInputs() {
   state.mapChoropleths.type = choroplethTypeSelect.value || 'none';
   state.mapChoropleths.party = choroplethPartySelect.value || 'all';
 
-  syncMapControlInputsFromState();
-}
-
-/**
- * Resets all primary filter state (party, region, majority range, gains toggle) to defaults and syncs the controls.
- * @returns {void}
- */
-function resetPrimaryFilters() {
-  state.mapFilters.party = 'all';
-  state.mapFilters.region = 'all';
-  state.mapFilters.secondParty = 'all';
-  state.mapFilters.majorityMin = 0;
-  state.mapFilters.majorityMax = 100;
-  state.mapFilters.gainsOnly = false;
-  syncMapControlInputsFromState();
-}
-
-/**
- * Resets choropleth type and party to defaults and syncs the controls.
- * @returns {void}
- */
-function resetChoropleths() {
-  state.mapChoropleths.type = 'none';
-  state.mapChoropleths.party = 'all';
   syncMapControlInputsFromState();
 }
 

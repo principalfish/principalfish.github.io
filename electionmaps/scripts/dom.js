@@ -5,7 +5,7 @@ import {
   merge as topojsonMerge,
 } from '../../site/vendor/topojson-client.v3.esm.js';
 import { manifest, state, _state } from './state.js';
-import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey } from './utils.js';
+import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber } from './utils.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
@@ -747,6 +747,13 @@ const filterRegionSelect = document.getElementById('mapsFilterRegion');
 // Second-place filter — paired with filterPartySelect to restrict to seats where the chosen
 // party finished second. The wrapping group is hidden when state.mapFilters.party is 'all'.
 const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
+// Wrapping group for the second-party filter — hidden when no primary party is selected.
+const filterSecondPartyGroup = document.getElementById('mapsFilterSecondPartyGroup');
+// Majority range filter inputs — restrict visible seats to those within the min/max % range.
+const filterMajorityMinInput = document.getElementById('mapsFilterMajorityMin');
+const filterMajorityMaxInput = document.getElementById('mapsFilterMajorityMax');
+// Choropleth type select — 'none', 'vote-share', or 'vote-share-change'.
+const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
 // Choropleth target party — once a choropleth type is selected, this picks which party's
 // vote share / vote share change drives the colour ramp on the map.
 const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
@@ -797,6 +804,57 @@ export function renderMapControlOptions() {
   setOptions(filterSecondPartySelect, partyRows); // second-place finisher filter
   setOptions(choroplethPartySelect, partyRows);   // choropleth target party
   setOptions(filterRegionSelect, regionRows);     // region filter
+}
+
+/**
+ * Pushes the current state.mapFilters and state.mapChoropleths values into the DOM
+ * filter/choropleth inputs and toggles second-party group visibility.
+ * @returns {void}
+ */
+export function syncMapControlInputsFromState() {
+  filterPartySelect.value = state.mapFilters.party;
+  filterRegionSelect.value = state.mapFilters.region;
+
+  const showSecondPlaceFilter = state.mapFilters.party !== 'all';
+  filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
+  if (!showSecondPlaceFilter) {
+    state.mapFilters.secondParty = 'all';
+  }
+  filterSecondPartySelect.value = state.mapFilters.secondParty;
+
+  filterMajorityMinInput.value = String(state.mapFilters.majorityMin);
+  filterMajorityMaxInput.value = String(state.mapFilters.majorityMax);
+  filterGainsButton.classList.toggle('is-active', state.mapFilters.gainsOnly);
+
+  choroplethTypeSelect.value = state.mapChoropleths.type;
+  choroplethPartySelect.value = state.mapChoropleths.party;
+}
+
+/**
+ * Reads the DOM filter/choropleth inputs into state.mapFilters and state.mapChoropleths,
+ * normalizing and clamping values, then syncs the inputs back.
+ * @returns {void}
+ */
+export function syncMapControlStateFromInputs() {
+  state.mapFilters.party = filterPartySelect.value || 'all';
+  state.mapFilters.region = filterRegionSelect.value || 'all';
+  if (state.mapFilters.party === 'all') {
+    state.mapFilters.secondParty = 'all';
+  } else {
+    state.mapFilters.secondParty = filterSecondPartySelect.value || 'all';
+  }
+  state.mapFilters.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
+  state.mapFilters.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
+  if (state.mapFilters.majorityMin > state.mapFilters.majorityMax) {
+    const swap = state.mapFilters.majorityMin;
+    state.mapFilters.majorityMin = state.mapFilters.majorityMax;
+    state.mapFilters.majorityMax = swap;
+  }
+
+  state.mapChoropleths.type = choroplethTypeSelect.value || 'none';
+  state.mapChoropleths.party = choroplethPartySelect.value || 'all';
+
+  syncMapControlInputsFromState();
 }
 
 // ─── Vote totals ─────────────────────────────────────────────────────────────
@@ -1340,23 +1398,6 @@ export function renderRightPanel() {
 
   mapsPanelRight.style.height = `${Math.round(stageHeight)}px`;
   mapsPanelRight.style.maxHeight = `${Math.round(stageHeight)}px`;
-}
-
-// ─── Map init ────────────────────────────────────────────────────────────────
-
-/**
- * Runs all once-per-election DOM initialisations. Must be called after state.setupMapData() so
- * mapConfig and listRegionSummary are already set.
- *
- * Rebuilds the vote-totals tab nav, shows/hides the postcode search group based
- * on state.mapConfig.postcodeSupported, and populates the region-table overlay (hidden for non-list elections).
- *
- * @returns {void}
- */
-export function renderMapInit() {
-  initVoteTotalsTabs();
-  initPostcodeSearch();
-  initRegionTable();
 }
 
 // ─── TopoJSON map ────────────────────────────────────────────────────────────

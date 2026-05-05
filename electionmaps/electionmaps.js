@@ -12,7 +12,6 @@ import {
 } from './scripts/misc.js';
 import {
   seatLookupKey,
-  clampNumber,
 } from './scripts/utils.js';
 import {
   setElectionPreDataFetch,
@@ -33,6 +32,8 @@ import {
   renderChoroplethLegend,
   renderRightPanel,
   mapInteraction,
+  syncMapControlInputsFromState,
+  syncMapControlStateFromInputs,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -700,57 +701,6 @@ function setSortDirection(sortKey) {
   }
   state.voteTotals.sort.key = sortKey;
   state.voteTotals.sort.direction = sortKey === 'party' ? 'asc' : 'desc';
-}
-
-// ── Holyrood tab helpers ──────────────────────────────────────────────────────
-
-/**
- * Pushes the current state.mapFilters and state.mapChoropleths values into the DOM filter/choropleth inputs and toggles second-party group visibility.
- * @returns {void}
- */
-function syncMapControlInputsFromState() {
-  filterPartySelect.value = state.mapFilters.party;
-  filterRegionSelect.value = state.mapFilters.region;
-
-  const showSecondPlaceFilter = state.mapFilters.party !== 'all';
-  filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
-  if (!showSecondPlaceFilter) {
-    state.mapFilters.secondParty = 'all';
-  }
-  filterSecondPartySelect.value = state.mapFilters.secondParty;
-
-  filterMajorityMinInput.value = String(state.mapFilters.majorityMin);
-  filterMajorityMaxInput.value = String(state.mapFilters.majorityMax);
-  filterGainsButton.classList.toggle('is-active', state.mapFilters.gainsOnly);
-
-  choroplethTypeSelect.value = state.mapChoropleths.type;
-  choroplethPartySelect.value = state.mapChoropleths.party;
-}
-
-/**
- * Reads the DOM filter/choropleth inputs into state.mapFilters and state.mapChoropleths, normalizing and clamping values, then syncs the inputs back.
- * @returns {void}
- */
-function syncMapControlStateFromInputs() {
-  state.mapFilters.party = filterPartySelect.value || 'all';
-  state.mapFilters.region = filterRegionSelect.value || 'all';
-  if (state.mapFilters.party === 'all') {
-    state.mapFilters.secondParty = 'all';
-  } else {
-    state.mapFilters.secondParty = filterSecondPartySelect.value || 'all';
-  }
-  state.mapFilters.majorityMin = clampNumber(filterMajorityMinInput.value, 0, 100);
-  state.mapFilters.majorityMax = clampNumber(filterMajorityMaxInput.value, 0, 100);
-  if (state.mapFilters.majorityMin > state.mapFilters.majorityMax) {
-    const swap = state.mapFilters.majorityMin;
-    state.mapFilters.majorityMin = state.mapFilters.majorityMax;
-    state.mapFilters.majorityMax = swap;
-  }
-
-  state.mapChoropleths.type = choroplethTypeSelect.value || 'none';
-  state.mapChoropleths.party = choroplethPartySelect.value || 'all';
-
-  syncMapControlInputsFromState();
 }
 
 /**

@@ -127,11 +127,13 @@ async function activateElection(view) {
  */
 function drawMap(preserveZoom = false) {
   state.setupMapData();
+  hideSeatSearchSuggestions();
   renderMap(preserveZoom);
 }
 
 function renderMap(preserveZoom = false) {
   renderVoteTotals();
+  renderSeatList(state.listFilteredSeats, state.comparisonSeats, {});
 
   renderTopoMap(state.mapData, state.electionData.currentSeats, {
     visibleSeatKeys: state.mapSeatsVisible.seatKeys,
@@ -141,21 +143,7 @@ function renderMap(preserveZoom = false) {
     mapId: String(state.currentElection.mapId ?? ''),
   });
 
-  renderSeatList(state.listFilteredSeats, state.comparisonSeats, {});
-
-  applySeatSearchSuggestions();
   renderChoroplethLegend(state.choroplethConfig);
-
-  if (seatPreview) {
-    let previewText;
-    if (state.hasListSeats) {
-      const totalConst = state.electionData.currentSeats.filter((s) => !Seat.isList(s));
-      previewText = `Showing ${formatInt(state.listFilteredSeats.length)} of ${formatInt(totalConst.length)} constituency seats.`;
-    } else {
-      previewText = `Showing ${formatInt(state.mapSeatsVisible.seats.length)} of ${formatInt(state.electionData.currentSeats.length)} seats.`;
-    }
-    seatPreview.textContent = previewText;
-  }
 }
 
 
@@ -1694,11 +1682,11 @@ function coreHolyroodResolvedOtherShare(regionKey, pass, partyKeys, state) {
 const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');
-const seatPreview = document.getElementById('mapsSeatPreview');
 const seatCard = document.getElementById('mapsSeatCard');
 const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
 const seatList = document.getElementById('mapsSeatList');
+const seatListTitle = document.querySelector('#mapsSeatCard .maps-panel-title');
 const mapsStage = document.querySelector('.maps-stage');
 const mapsPanelRight = document.querySelector('.maps-panel-right');
 const seatPopup = document.getElementById('mapsSeatPopup');
@@ -2891,9 +2879,6 @@ async function activatePredictMode() {
   syncPredictModeRightColumnLayout();
   renderPredictGrid();
 
-  if (seatPreview) {
-    seatPreview.textContent = 'Predict mode active: edit regional vote shares and click Submit.';
-  }
 
   replacePredictRouteStateFromInputs();
 
@@ -3168,6 +3153,7 @@ function renderSeatPopup(seatName) {
  */
 function renderSeatList(seats, comparisonSeats = null) {
   if (!seatList) return;
+  if (seatListTitle) seatListTitle.textContent = `Seats (${seats.length})`;
   seatList.innerHTML = '';
   _state.selectedSeatRow = null;
   _state.seatListRowByKey = new Map();
@@ -3201,9 +3187,6 @@ function renderSeatList(seats, comparisonSeats = null) {
       setSelectedSeatRowByKey(seatKey);
 
       const zoomed = _state.mapInteractionController.zoomToSeat(seatName);
-      if (seatPreview) {
-        seatPreview.textContent = zoomed ? `Selected: ${seatName}` : `Seat not found on map: ${seatName}`;
-      }
       renderSeatPopup(seatName);
     });
 
@@ -3324,15 +3307,6 @@ function updateSeatSearchHighlight() {
   });
 }
 
-/**
- * Hides any open autocomplete dropdown so it picks up the refreshed
- * state.seatSearchNames on next open.
- * @returns {void}
- */
-function applySeatSearchSuggestions() {
-  if (!seatSearchInput) return;
-  hideSeatSearchSuggestions();
-}
 
 /**
  * Resolves a search query to a seat name (exact → starts-with → contains), zooms the map, selects the list row, and opens the popup.
@@ -3354,7 +3328,6 @@ function selectSeatBySearchQuery(query) {
   }
 
   if (!seatName) {
-    if (seatPreview) seatPreview.textContent = `Seat not found: ${rawQuery}`;
     return;
   }
 
@@ -3363,12 +3336,10 @@ function selectSeatBySearchQuery(query) {
   if (zoomed) {
     setSelectedSeatRowByKey(seatKey);
     renderSeatPopup(seatName);
-    if (seatPreview) seatPreview.textContent = `Selected: ${seatName}`;
     if (seatSearchInput) seatSearchInput.value = seatName;
     return;
   }
 
-  if (seatPreview) seatPreview.textContent = `Seat not found on map: ${seatName}`;
 }
 
 /**
@@ -3725,10 +3696,7 @@ function renderTopoMap(mapData, seats, options = {}) {
       if (state.currentElection.id !== 'eu-referendum-2016') return null;
       return isPredictNorthernIrelandRegion(datum.properties?.region) ? '#dce4ea' : null;
     })
-    .on('mouseenter', (_event, datum) => {
-      const seatName = seatNameFromFeature(datum);
-      if (seatPreview && seatName) seatPreview.textContent = `Selected: ${seatName}`;
-    })
+    .on('mouseenter', null)
     .on('click', (event, datum) => {
       event.stopPropagation();
       setActiveSeatPath(event.currentTarget);

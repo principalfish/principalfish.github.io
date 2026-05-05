@@ -1021,33 +1021,30 @@ export function wireVoteTotalsToggle(syncPredictLayout) {
   });
 }
 
-// ─── Map init ────────────────────────────────────────────────────────────────
+// ─── Postcode search ─────────────────────────────────────────────────────────
 
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
 const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
 const postcodeWarningBtn = document.getElementById('mapsPostcodeWarningBtn');
 const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel');
-const regionCard = document.getElementById('mapsRegionCard');
-const regionTableBody = document.getElementById('mapsRegionTableBody');
 
 /**
  * Shows or hides the postcode search group based on whether the current election supports
  * postcode lookup. Clears the input and any error state when hiding.
  */
-// TODO: clearPostcodeError is a sub-sub-handler still in electionmaps.js — passed as callback
-function initPostcodeSearch(clearPostcodeError) {
-  if (!postcodeSearchGroup) return;
-  const mapId = state.postcodeMapId;
-  const visible = mapId !== null;
-  const isHolyrood = mapId === 12;
-  postcodeSearchGroup.hidden = !visible;
-  if (postcodeWarningBtn) postcodeWarningBtn.hidden = !isHolyrood;
-  if (!isHolyrood && postcodeWarningPanel) postcodeWarningPanel.hidden = true;
-  if (!visible && postcodeSearchInput) {
-    postcodeSearchInput.value = '';
-    clearPostcodeError();
-  }
+function initPostcodeSearch() {
+  postcodeSearchGroup.hidden = !state.mapConfig?.postcodeSupported;
+  // postcodes.io returns 2021 Scottish Parliament constituencies, but the Holyrood map uses
+  // 2026 boundaries — the warning icon toggles a panel listing the affected seats.
+  const isHolyrood = state.mapConfig?.name?.startsWith('holyrood') ?? false;
+  postcodeWarningBtn.hidden = !isHolyrood;
+  if (!isHolyrood) postcodeWarningPanel.hidden = true;
 }
+
+// ─── Map init ────────────────────────────────────────────────────────────────
+
+const regionCard = document.getElementById('mapsRegionCard');
+const regionTableBody = document.getElementById('mapsRegionTableBody');
 
 /**
  * Renders the region table overlay showing list-seat colour bars for each region.
@@ -1119,19 +1116,18 @@ function initRegionTable(regionSummary, renderRegionPopup) {
 
 /**
  * Runs all once-per-election DOM initialisations. Must be called after state.setupMapData() so
- * mapConfig, listRegionSummary, and postcodeMapId are already set.
+ * mapConfig and listRegionSummary are already set.
  *
  * Rebuilds the vote-totals tab nav, shows/hides the postcode search group based
- * on state.postcodeMapId, and populates the Holyrood region-table overlay (hidden for non-list elections).
+ * on state.mapConfig.postcodeSupported, and populates the Holyrood region-table overlay (hidden for non-list elections).
  *
  * @param {{
- *   clearPostcodeError: Function,
  *   renderRegionPopup: Function,
  * }} callbacks - Handlers that remain in electionmaps.js pending further migration.
  * @returns {void}
  */
-export function renderMapInit({ clearPostcodeError, renderRegionPopup }) {
+export function renderMapInit({ renderRegionPopup }) {
   initVoteTotalsTabs();
-  initPostcodeSearch(clearPostcodeError);
+  initPostcodeSearch();
   initRegionTable(state.listRegionSummary, renderRegionPopup);
 }

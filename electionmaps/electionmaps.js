@@ -107,7 +107,7 @@ async function activateElection(view) {
   window.__mapsComparisonSummary = state.comparisonElectionData?.summary.data ?? null;
 
   state.setupMapData();
-  renderMapInit({ clearPostcodeError, renderRegionPopup });
+  renderMapInit({ renderRegionPopup });
   renderMap();
   renderRightPanel();
 
@@ -3466,7 +3466,7 @@ function clearPostcodeError() {
  * @returns {Promise<string|null>} The constituency name, or null on failure.
  */
 async function lookupPostcode(postcode) {
-  if (!state.postcodeMapId) return null;
+  if (!state.mapConfig?.postcodeSupported) return null;
 
   // Strip all whitespace then re-insert the canonical space before the inward code
   // (always the last 3 characters). Both endpoints require this format.

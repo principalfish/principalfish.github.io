@@ -230,6 +230,8 @@ function wirePollTrackerControls() {
  */
 export function domWireInit() {
   wirePollTrackerControls();
+  wireMapInteractions();
+  wireMapViewControls();
 }
 
 let partyControlsRendered = false;
@@ -757,6 +759,9 @@ const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
 // Choropleth target party — once a choropleth type is selected, this picks which party's
 // vote share / vote share change drives the colour ramp on the map.
 const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
+// Reset buttons — restore all filters or choropleths to defaults.
+const filtersResetButton = document.getElementById('mapsFiltersReset');
+const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
 
 /**
  * Rebuilds the option lists for the four election filter/choropleth selects from the
@@ -855,6 +860,61 @@ export function syncMapControlStateFromInputs() {
   state.mapChoropleths.party = choroplethPartySelect.value || 'all';
 
   syncMapControlInputsFromState();
+}
+
+/**
+ * Attaches change handlers to all filter and choropleth selects/inputs so any change reads
+ * state and re-renders the map. Also wires the gains toggle, reset-filters, and
+ * reset-choropleths buttons. Guards against double-wiring via dataset flag.
+ * @returns {void}
+ */
+function wireMapViewControls() {
+  if (filterPartySelect?.dataset.wired === 'true') return;
+
+  /** Reads all filter/choropleth input values into state and re-renders the map. */
+  const applyFromInputs = () => {
+    syncMapControlStateFromInputs();
+    drawMap(true);
+  };
+
+  [
+    filterPartySelect,
+    filterRegionSelect,
+    filterSecondPartySelect,
+    filterMajorityMinInput,
+    filterMajorityMaxInput,
+    choroplethTypeSelect,
+    choroplethPartySelect,
+  ].forEach((input) => {
+    if (!input) return;
+    input.addEventListener('change', applyFromInputs);
+  });
+
+  if (filterGainsButton) {
+    filterGainsButton.addEventListener('click', () => {
+      state.mapFilters.gainsOnly = !state.mapFilters.gainsOnly;
+      syncMapControlInputsFromState();
+      drawMap(true);
+    });
+  }
+
+  if (filtersResetButton) {
+    filtersResetButton.addEventListener('click', () => {
+      state.resetFilters();
+      syncMapControlInputsFromState();
+      drawMap(true);
+    });
+  }
+
+  if (choroplethsResetButton) {
+    choroplethsResetButton.addEventListener('click', () => {
+      state.resetChoropleths();
+      syncMapControlInputsFromState();
+      drawMap(true);
+    });
+  }
+
+  if (filterPartySelect) filterPartySelect.dataset.wired = 'true';
 }
 
 // ─── Vote totals ─────────────────────────────────────────────────────────────
@@ -1024,6 +1084,29 @@ function initPostcodeSearch() {
   const isHolyrood = state.mapConfig?.name?.startsWith('holyrood') ?? false;
   postcodeWarningBtn.hidden = !isHolyrood;
   if (!isHolyrood) postcodeWarningPanel.hidden = true;
+}
+
+/**
+ * Attaches click handlers to all [data-map-action] buttons: zoom-in (×1.2), zoom-out (×0.83),
+ * reset-zoom (restore default transform), and reset-view (zoom reset + clear all filters/choropleths).
+ * @returns {void}
+ */
+function wireMapInteractions() {
+  document.querySelectorAll('[data-map-action]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const action = button.getAttribute('data-map-action');
+      if (action === 'zoom-in') mapInteraction.zoomBy(1.2);
+      if (action === 'zoom-out') mapInteraction.zoomBy(0.83);
+      if (action === 'reset-zoom') mapInteraction.reset();
+      if (action === 'reset-view') {
+        mapInteraction.reset();
+        state.resetFilters();
+        state.resetChoropleths();
+        syncMapControlInputsFromState();
+        drawMap();
+      }
+    });
+  });
 }
 
 // ─── Map ─────────────────────────────────────────────────────────────────────
@@ -1321,7 +1404,7 @@ export function setSelectedSeatRowByKey(seatKey) {
  * Reads seats and comparison data directly from state.
  * @returns {void}
  */
-export function renderSeatList() {
+function renderSeatList() {
   const seats = state.listFilteredSeats;
   const comparisonSeats = state.comparisonSeats;
   seatListTitle.textContent = `Seats (${seats.length})`;
@@ -1639,7 +1722,7 @@ class MapInteraction {
  * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
  * @returns {void}
  */
-export function renderTopoMap(preserveZoom = false) {
+function renderTopoMap(preserveZoom = false) {
   // ── Snapshot state ────────────────────────────────────────────────────────
   // Read everything from state up-front so the render is a pure function of a
   // single consistent snapshot. Nothing here should be read lazily mid-render.
@@ -1856,7 +1939,7 @@ export function renderTopoMap(preserveZoom = false) {
  * the mid stop is included only for delta (symmetric) colour ramps.
  * @returns {void}
  */
-export function renderChoroplethLegend() {
+function renderChoroplethLegend() {
   const choroplethConfig = state.choroplethConfig;
   if (!choroplethConfig?.enabled) {
     choroplethLegend.hidden = true;
@@ -1902,4 +1985,28 @@ export function renderMapInit() {
   initVoteTotalsTabs();
   initPostcodeSearch();
   initRegionTable();
+}
+
+// ─── Draw ────────────────────────────────────────────────────────────────────
+
+/**
+ * Renders the vote totals, seat list, topo map, and choropleth legend.
+ * @param {boolean} [preserveZoom=false] - When true, keep the current pan/zoom transform.
+ * @returns {void}
+ */
+export function renderMap(preserveZoom = false) {
+  renderVoteTotals();
+  renderSeatList();
+  renderTopoMap(preserveZoom);
+  renderChoroplethLegend();
+}
+
+/**
+ * Runs the per-render data setup then re-renders map, seat list, vote totals, and legend.
+ * @param {boolean} [preserveZoom=false] - When true, keep the current pan/zoom transform.
+ * @returns {void}
+ */
+function drawMap(preserveZoom = false) {
+  state.setupMapData();
+  renderMap(preserveZoom);
 }

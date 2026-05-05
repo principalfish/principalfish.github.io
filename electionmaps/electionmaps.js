@@ -22,18 +22,14 @@ import {
   renderPollTracker,
   domWireInit,
   renderMapInit,
+  renderMap,
   renderVoteTotals,
   wireVoteTotalsToggle,
-  renderSeatList,
   setSelectedSeatRowByKey,
   hideSeatPopup,
   renderSeatPopup,
-  renderTopoMap,
-  renderChoroplethLegend,
   renderRightPanel,
   mapInteraction,
-  syncMapControlInputsFromState,
-  syncMapControlStateFromInputs,
 } from './scripts/dom.js';
 
 // =====================================================================
@@ -111,24 +107,7 @@ async function activateElection() {
   window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 }
 
-/**
- * Renders the map, seat list, vote totals, and choropleth legend from the per-render
- * data prepared by state.setupMapData().
- * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
- * @returns {void}
- */
-function drawMap(preserveZoom = false) {
-  state.setupMapData();
-  hideSeatSearchSuggestions();
-  renderMap(preserveZoom);
-}
 
-function renderMap(preserveZoom = false) {
-  renderVoteTotals();
-  renderSeatList();
-  renderTopoMap(preserveZoom);
-  renderChoroplethLegend();
-}
 
 // =====================================================================
 // POLLTRACKER
@@ -307,39 +286,13 @@ function buildRouteSearchParams(view) {
  * @returns {void}
  */
 function wireInit() {
-  wireMapInteractions();
   wirePopupPanels();
-  wireMapViewControls();
   wireSeatSearch();
   wirePostcodeSearch();
   wireSeatPopup();
   wireVoteTotalsToggle();
   wireWindowResize();
   wireVoteTotalsSorting();
-}
-
-/**
- * Attaches click handlers to all [data-map-action] buttons: zoom-in (×1.2), zoom-out (×0.83),
- * reset-zoom (restore default transform), and reset-view (zoom reset + clear all filters/choropleths).
- * @returns {void}
- */
-function wireMapInteractions() {
-  document.querySelectorAll('[data-map-action]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const action = button.getAttribute('data-map-action');
-      if (action === 'zoom-in') mapInteraction.zoomBy(1.2);
-      if (action === 'zoom-out') mapInteraction.zoomBy(0.83);
-      if (action === 'reset-zoom') mapInteraction.reset();
-      if (action === 'reset-view') {
-        mapInteraction.reset();
-        state.resetFilters();
-        state.resetChoropleths();
-        syncMapControlInputsFromState();
-        drawMap();
-      }
-    });
-  });
-
 }
 
 /**
@@ -386,61 +339,6 @@ function wirePopupPanels() {
 
     button.dataset.wired = 'true';
   });
-}
-
-/**
- * Attaches change handlers to all filter and choropleth selects/inputs so any change reads
- * state and re-renders the map. Also wires the gains toggle, reset-filters, and
- * reset-choropleths buttons. Guards against double-wiring via dataset flag.
- * @returns {void}
- */
-function wireMapViewControls() {
-  if (filterPartySelect?.dataset.wired === 'true') return;
-
-  /** Reads all filter/choropleth input values into state and re-renders the map. */
-  const applyFromInputs = () => {
-    syncMapControlStateFromInputs();
-    drawMap(true);
-  };
-
-  [
-    filterPartySelect,
-    filterRegionSelect,
-    filterSecondPartySelect,
-    filterMajorityMinInput,
-    filterMajorityMaxInput,
-    choroplethTypeSelect,
-    choroplethPartySelect,
-  ].forEach((input) => {
-    if (!input) return;
-    input.addEventListener('change', applyFromInputs);
-  });
-
-  if (filterGainsButton) {
-    filterGainsButton.addEventListener('click', () => {
-      state.mapFilters.gainsOnly = !state.mapFilters.gainsOnly;
-      syncMapControlInputsFromState();
-      drawMap(true);
-    });
-  }
-
-  if (filtersResetButton) {
-    filtersResetButton.addEventListener('click', () => {
-      state.resetFilters();
-      syncMapControlInputsFromState();
-      drawMap(true);
-    });
-  }
-
-  if (choroplethsResetButton) {
-    choroplethsResetButton.addEventListener('click', () => {
-      state.resetChoropleths();
-      syncMapControlInputsFromState();
-      drawMap(true);
-    });
-  }
-
-  if (filterPartySelect) filterPartySelect.dataset.wired = 'true';
 }
 
 /**
@@ -643,17 +541,6 @@ const seatSearchInput = document.getElementById('maps-seat-search');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
 const seatPopupClose = document.getElementById('mapsSeatPopupClose');
 
-const filterPartySelect = document.getElementById('mapsFilterParty');
-const filterRegionSelect = document.getElementById('mapsFilterRegion');
-const filterSecondPartyGroup = document.getElementById('mapsFilterSecondPartyGroup');
-const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
-const filterMajorityMinInput = document.getElementById('mapsFilterMajorityMin');
-const filterMajorityMaxInput = document.getElementById('mapsFilterMajorityMax');
-const filterGainsButton = document.getElementById('mapsFilterGainsOnly');
-const filtersResetButton = document.getElementById('mapsFiltersReset');
-const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
-const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
-const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
 const choroplethVoteShareChangeOption = document.getElementById('mapsChoroplethVoteShareChangeOption');
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 // Canonical map name strings used to route postcode lookups to the correct

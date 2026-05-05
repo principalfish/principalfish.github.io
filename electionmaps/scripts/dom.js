@@ -873,26 +873,20 @@ const voteTotalsToggle = document.getElementById('mapsVoteTotalsToggle');
  * Adds `hide-vote-total-col`, `hide-vote-pct-col`, or `hide-comparison-cols` when the corresponding
  * column type is toggled off, so CSS hides the relevant <td> elements without re-rendering rows.
  */
-function applyVoteTotalsColumnVisibility() {
-  voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
-  voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
-  voteTotalsTable.classList.toggle('hide-comparison-cols', !state.voteTotalsColumnVisible('comparison'));
-}
-
 /**
- * Returns a sorted copy of party rows according to _state.currentSort (party name alpha, or numeric column with label tiebreak).
+ * Returns a sorted copy of party rows according to state.voteTotals.sort (party name alpha, or numeric column with label tiebreak).
  * @param {Array<object>} rows - Party summary rows with a `party` key and numeric fields matching sort key names.
  * @returns {Array<object>} New sorted array of party rows.
  */
 function sortPartyRows(rows) {
-  const multiplier = _state.currentSort.direction === 'asc' ? 1 : -1;
+  const multiplier = state.voteTotals.sort.direction === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
-    if (_state.currentSort.key === 'party') {
+    if (state.voteTotals.sort.key === 'party') {
       return multiplier * manifest.labelParty(a.party).localeCompare(manifest.labelParty(b.party));
     }
 
-    const av = Number(a[_state.currentSort.key] || 0);
-    const bv = Number(b[_state.currentSort.key] || 0);
+    const av = Number(a[state.voteTotals.sort.key] || 0);
+    const bv = Number(b[state.voteTotals.sort.key] || 0);
     if (av !== bv) return multiplier * (av - bv);
     const voteDiff = Number(b.votePct || 0) - Number(a.votePct || 0);
     if (voteDiff !== 0) return voteDiff;
@@ -903,7 +897,7 @@ function sortPartyRows(rows) {
 /**
  * Renders the vote totals panel: first syncs tab active classes to state.voteTotals.mode, then
  * rebuilds the table body with one row per party showing seats, seat delta, vote count, vote pct,
- * and vote-pct delta. Truncates to 7 rows unless _state.voteTotalsExpanded is true.
+ * and vote-pct delta. Truncates to 7 rows unless state.voteTotals.expanded is true.
  *
  * Defaults to state.filteredSeatsSummary / state.filteredSeatsComparisonSummary so callers in the
  * normal render path need no arguments. Predict mode passes explicit summaries (projectedSummary /
@@ -915,6 +909,8 @@ function sortPartyRows(rows) {
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary] - Comparison for delta columns; defaults to state.filteredSeatsComparisonSummary.
  * @returns {void}
  */
+// TODO: Make private (drop export) once window.__mapsCurrentSummary / __mapsComparisonSummary are in state
+// and all call sites in electionmaps.js can be replaced by internal re-renders.
 export function renderVoteTotals(
   summary = state.filteredSeatsSummary,
   comparisonSummary = state.filteredSeatsComparisonSummary
@@ -924,10 +920,12 @@ export function renderVoteTotals(
   });
 
   voteTotalsBody.innerHTML = '';
-  applyVoteTotalsColumnVisibility();
+  voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
+  voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
 
   const hiddenParties = new Set(state.mapConfig?.hiddenVoteTotalsParties ?? []);
   const showComparison = Boolean(comparisonSummary);
+  voteTotalsTable.classList.toggle('hide-comparison-cols', !showComparison);
   const comparisonByParty = new Map();
   if (comparisonSummary) {
     comparisonSummary.parties.forEach((partyRow) => {
@@ -951,13 +949,13 @@ export function renderVoteTotals(
   });
 
   const sortedRows = sortPartyRows(rows).filter((r) => !hiddenParties.has(r.party));
-  const visibleRows = _state.voteTotalsExpanded ? sortedRows : sortedRows.slice(0, 7);
+  const visibleRows = state.voteTotals.expanded ? sortedRows : sortedRows.slice(0, 7);
 
   if (voteTotalsToggle) {
     const canExpand = sortedRows.length > 7;
     voteTotalsToggle.hidden = !canExpand;
     if (canExpand) {
-      voteTotalsToggle.textContent = _state.voteTotalsExpanded ? 'Show fewer' : 'Show all';
+      voteTotalsToggle.textContent = state.voteTotals.expanded ? 'Show fewer' : 'Show all';
     }
   }
 
@@ -1001,9 +999,12 @@ function initVoteTotalsTabs() {
   });
 }
 
+// TODO: Revisit once window.__mapsCurrentSummary / __mapsComparisonSummary are moved into state
+// and syncPredictModeRightColumnLayout is migrated here — at that point this can self-wire with
+// no parameters and the export can be dropped.
 /**
  * Wires the expand/collapse button that toggles the vote-totals table between the top-7 truncation
- * and the full party list. Flips _state.voteTotalsExpanded then re-renders via renderVoteTotals().
+ * and the full party list. Flips state.voteTotals.expanded then re-renders via renderVoteTotals().
  * Guards on window.__mapsCurrentSummary so the button is a no-op until an election has loaded.
  * Passes window.__mapsCurrentSummary / __mapsComparisonSummary explicitly to handle predict mode,
  * where those values differ from state.filteredSeatsSummary. syncPredictLayout is called afterward
@@ -1013,7 +1014,7 @@ function initVoteTotalsTabs() {
  */
 export function wireVoteTotalsToggle(syncPredictLayout) {
   voteTotalsToggle.addEventListener('click', () => {
-    _state.voteTotalsExpanded = !_state.voteTotalsExpanded;
+    state.voteTotals.expanded = !state.voteTotals.expanded;
     if (!window.__mapsCurrentSummary) return;
     renderVoteTotals(window.__mapsCurrentSummary, window.__mapsComparisonSummary || null);
     syncPredictLayout();
@@ -1022,37 +1023,12 @@ export function wireVoteTotalsToggle(syncPredictLayout) {
 
 // ─── Map init ────────────────────────────────────────────────────────────────
 
-const seatViewTabNav = document.getElementById('mapsSeatViewTabNav');
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
 const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
 const postcodeWarningBtn = document.getElementById('mapsPostcodeWarningBtn');
 const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel');
 const regionCard = document.getElementById('mapsRegionCard');
 const regionTableBody = document.getElementById('mapsRegionTableBody');
-
-/**
- * Rebuilds the seat-view tab nav from mapConfig.seatViews. Hides the nav when only one view exists
- * (Westminster elections and the old Holyrood map have no constituency/list split in the map view).
- * Each button sets state.seatView.mode on click then calls drawMap(true) to re-render with zoom preserved.
- */
-// TODO: drawMap is a sub-sub-handler still in electionmaps.js — passed as callback
-function initSeatViewTabs(mapConfig, drawMap) {
-  if (!seatViewTabNav) return;
-  seatViewTabNav.innerHTML = '';
-  const views = mapConfig.seatViews;
-  seatViewTabNav.hidden = views.length <= 1;
-  views.forEach((view) => {
-    const btn = document.createElement('button');
-    btn.className = `maps-seat-view-tab${view.id === state.seatView.mode ? ' active' : ''}`;
-    btn.dataset.seatView = view.id;
-    btn.textContent = view.label;
-    btn.addEventListener('click', () => {
-      state.seatView.mode = view.id;
-      drawMap(true);
-    });
-    seatViewTabNav.appendChild(btn);
-  });
-}
 
 /**
  * Shows or hides the postcode search group based on whether the current election supports
@@ -1145,19 +1121,17 @@ function initRegionTable(regionSummary, renderRegionPopup) {
  * Runs all once-per-election DOM initialisations. Must be called after state.setupMapData() so
  * mapConfig, listRegionSummary, and postcodeMapId are already set.
  *
- * Rebuilds the vote-totals and seat-view tab navs, shows/hides the postcode search group based
+ * Rebuilds the vote-totals tab nav, shows/hides the postcode search group based
  * on state.postcodeMapId, and populates the Holyrood region-table overlay (hidden for non-list elections).
  *
  * @param {{
- *   drawMap: Function,
  *   clearPostcodeError: Function,
  *   renderRegionPopup: Function,
  * }} callbacks - Handlers that remain in electionmaps.js pending further migration.
  * @returns {void}
  */
-export function renderMapInit({ drawMap, clearPostcodeError, renderRegionPopup }) {
+export function renderMapInit({ clearPostcodeError, renderRegionPopup }) {
   initVoteTotalsTabs();
-  initSeatViewTabs(state.mapConfig, drawMap);
   initPostcodeSearch(clearPostcodeError);
   initRegionTable(state.listRegionSummary, renderRegionPopup);
 }

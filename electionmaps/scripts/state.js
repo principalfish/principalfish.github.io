@@ -77,14 +77,8 @@ class Manifest {
         this.regionsById.set(id, normalizeRegionKey(region?.name || ''));
       });
 
-      // Guarantee a non-empty default tab so callers can read mapMode.voteTotalsViews[0].id and
-      // mapMode.seatViews[0].id without per-call-site fallbacks. The tab nav hides itself when
-      // length <= 1, so a single synthetic default is invisible to the user.
       if (!Array.isArray(mapMode.voteTotalsViews) || mapMode.voteTotalsViews.length === 0) {
         mapMode.voteTotalsViews = [{ id: 'all', label: 'All' }];
-      }
-      if (!Array.isArray(mapMode.seatViews) || mapMode.seatViews.length === 0) {
-        mapMode.seatViews = [{ id: 'seats', label: 'Seats' }];
       }
     });
   }
@@ -217,8 +211,6 @@ export const manifest = new Manifest();
 
 export const _state = {
   // Sort / UI / totals
-  currentSort: { key: 'seats', direction: 'desc' },
-  voteTotalsExpanded: false,
   selectedSeatRow: null,
   activeSeatPathNode: null,
   currentOpenSeatName: null,
@@ -881,14 +873,12 @@ class AppState {
      *   in state.init from manifest.mapModes[mapId].voteTotalsViews[0].id; mutated when the user
      *   clicks a different tab.
      */
-    this.voteTotals = { columns: { votes: true, votePct: true, comparison: false }, mode: 'all' };
-
-    /** Seat view panel state.
-     * - mode: id of the active seat-view tab (e.g. 'seats', 'constituency', 'regions').
-     *   Initialised in state.init from manifest.mapModes[mapId].seatViews[0].id; mutated when
-     *   the user clicks a different tab.
-     */
-    this.seatView = { mode: 'seats' };
+    this.voteTotals = {
+      columns: { votes: true, votePct: true },
+      mode: 'all',
+      expanded: false,
+      sort: { key: 'seats', direction: 'desc' },
+    };
 
     /** Active map filter selections. Mutated by syncMapControlStateFromInputs (DOM → state) on
      * every filter change, by the gains-button click handler, and by resetPrimaryFilters. Read by
@@ -940,7 +930,7 @@ class AppState {
     // doesn't see undefined.
 
     /** Manifest mapMode entry for currentElection.mapId. Carries the per-map config
-     * (regions, voteTotalsViews, seatViews, hiddenVoteTotalsParties). Null until
+     * (regions, voteTotalsViews, hiddenVoteTotalsParties). Null until
      * setupMapData runs. */
     this.mapConfig = null;
 
@@ -1022,11 +1012,8 @@ class AppState {
     this.currentRegionLabelsByKey = manifest.buildRegionLabelLookup(this.currentElection.mapId);
     this.isReferendumType = !!this.currentElection.referendum;
 
-    // Default the active vote-totals / seat-view tabs from the mapMode config. The hydration
-    // step in Manifest.#hydrate guarantees both arrays are non-empty.
     const mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
     this.voteTotals.mode = mapConfig.voteTotalsViews[0].id;
-    this.seatView.mode = mapConfig.seatViews[0].id;
 
     // Fetch prediction snippet for model elections and poll tracker, where subtitle text references it.
     if (this.view === 'polltracker' || this.currentElection.model) {
@@ -1179,7 +1166,7 @@ class AppState {
 
   /**
    * Refreshes the vote-totals fields that depend on the active tab plus the comparison
-   * column flag: `voteTotals.columns.{votes, votePct, comparison}` and the
+   * column flags: `voteTotals.columns.{votes, votePct}` and the
    * filteredSeatsSummary / filteredSeatsComparisonSummary aggregates. Called by
    * setupMapData and by the vote-totals tab click handler — the latter avoids the full
    * setupMapData (filters, choropleth, search index) since none of that depends on the
@@ -1190,8 +1177,7 @@ class AppState {
    * constituency votes in that mode while seat counts include both, so the mismatch is
    * misleading). The raw vote-count column is gated by tab AND by election capability —
    * predict / model / referendum elections have no meaningful raw counts but still
-   * display vote shares. The comparison column flag is tab-independent (driven by
-   * whether comparison data is loaded) but lives here to colocate all column visibility.
+   * display vote shares. The comparison column is toggled directly from comparisonSummary in the render.
    * @returns {void}
    */
   recomputeVoteTotalsForMode() {
@@ -1199,7 +1185,6 @@ class AppState {
     const tabAllowsVotes = !this.hasListSeats || this.voteTotals.mode !== 'all';
     this.voteTotals.columns.votePct = tabAllowsVotes;
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
-    this.voteTotals.columns.comparison = this.comparisonSeats.length > 0;
 
     this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode);
     this.filteredSeatsComparisonSummary = this.comparisonSeats.length

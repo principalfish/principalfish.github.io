@@ -107,7 +107,7 @@ async function activateElection(view) {
   window.__mapsComparisonSummary = state.comparisonElectionData?.summary.data ?? null;
 
   state.setupMapData();
-  renderMapInit({ drawMap, clearPostcodeError, renderRegionPopup });
+  renderMapInit({ clearPostcodeError, renderRegionPopup });
   renderMap();
   renderRightPanel();
 
@@ -1839,17 +1839,17 @@ function formatZoomPct(scaleValue) {
 
 
 /**
- * Updates _state.currentSort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
+ * Updates state.voteTotals.sort: toggles direction if the same key is re-selected, otherwise switches to the new key with a default direction.
  * @param {string} sortKey - Column key to sort by (e.g. 'seats', 'votes', 'party').
  * @returns {void}
  */
 function setSortDirection(sortKey) {
-  if (_state.currentSort.key === sortKey) {
-    _state.currentSort.direction = _state.currentSort.direction === 'asc' ? 'desc' : 'asc';
+  if (state.voteTotals.sort.key === sortKey) {
+    state.voteTotals.sort.direction = state.voteTotals.sort.direction === 'asc' ? 'desc' : 'asc';
     return;
   }
-  _state.currentSort.key = sortKey;
-  _state.currentSort.direction = sortKey === 'party' ? 'asc' : 'desc';
+  state.voteTotals.sort.key = sortKey;
+  state.voteTotals.sort.direction = sortKey === 'party' ? 'asc' : 'desc';
 }
 
 /**

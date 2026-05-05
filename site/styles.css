@@ -1063,6 +1063,14 @@ a {
   font: 600 0.85rem/1 "DM Sans", "Segoe UI", sans-serif;
 }
 
+#maps-seat-search {
+  width: 11rem;
+}
+
+#maps-postcode-search {
+  width: 8rem;
+}
+
 .maps-toolbar input,
 .maps-controls-grid select {
   border: 1px solid rgba(15, 23, 42, 0.3);

@@ -1085,16 +1085,6 @@ class AppState {
   }
 
   /**
-   * Returns true when the election countdown should be visible.
-   * The countdown shows only for the Holyrood UNS prediction when poll tracker mode is not active.
-   * @returns {boolean}
-   */
-  shouldShowCountdown() {
-    // TODO: generalise to support countdown for multiple concurrent elections
-    return this.currentElection.type === 'holyrood_uns';
-  }
-
-  /**
    * The seat array used as the comparison/baseline for the active view. When a comparison
    * election is loaded this is `comparisonElectionData.currentSeats`; predict mode swaps
    * it for `predictBaseSeats`. Empty array when no comparison data exists. Reads through

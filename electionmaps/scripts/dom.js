@@ -7,9 +7,6 @@ import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLa
 const electionList = document.getElementById('mapsElectionList');
 // Page H1 — set to "UK Election Maps · <Parliament>" by renderTitle.
 const mapsTitle = document.querySelector('.maps-title');
-// Countdown badge in the header — visible only for the Holyrood UNS prediction;
-// ticks every second until the election date passes.
-const electionCountdown = document.getElementById('mapsElectionCountdown');
 // Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view),
 // optionally suffixed with the poll snippet for prediction elections.
 const subtitle = document.getElementById('mapsSubtitle');
@@ -41,7 +38,7 @@ export function setPageTitle() {
 // ─── Header ─────────────────────────────────────────────────────────────────
 
 /**
- * Updates the title area: the page h1, subtitle, and election countdown.
+ * Updates the title area: the page h1 and subtitle.
  * Called early in init (text omitted — subtitle falls back to election name) and again
  * after results load with the full summary string. Pass error=true on load failure.
  * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
@@ -51,7 +48,6 @@ export function setPageTitle() {
 export function setHeader(text = '', error = false) {
   renderTitle();
   renderSubtitleText(text, error);
-  renderCountdown();
 }
 
 /**
@@ -169,65 +165,6 @@ function renderElectionLinks() {
       }
     }
   });
-}
-
-// ─── Countdown ────────────────────────────────────────────────────────────────
-
-const countdown = {
-  /** setInterval handle for the 1-second countdown tick, or null when not running. */
-  intervalId: null,
-};
-
-/**
- * Formats a millisecond duration as "Xd Xh Xm Xs".
- * @param {number} ms - Milliseconds remaining (must be > 0).
- * @returns {string} Formatted countdown string.
- */
-function formatCountdown(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-}
-
-/**
- * Shows or hides the election countdown element based on the current election type and mode.
- * Starts a 1-second interval tick when visible; clears it when hidden or after election day.
- * Visible only when state.currentElection.type is 'holyrood_uns' and poll tracker is not active.
- * @returns {void}
- */
-function renderCountdown() {
-  if (!electionCountdown) return;
-
-  const shouldShow = state.shouldShowCountdown();
-
-  if (countdown.intervalId !== null) {
-    clearInterval(countdown.intervalId);
-    countdown.intervalId = null;
-  }
-
-  if (!shouldShow) {
-    electionCountdown.hidden = true;
-    return;
-  }
-
-  const tick = () => {
-    const msLeft = new Date(manifest.misc?.holyroodElectionDate) - Date.now();
-    if (msLeft <= 0) {
-      electionCountdown.hidden = true;
-      // Clear and null the handle so renderCountdown can safely restart if called again.
-      clearInterval(countdown.intervalId);
-      countdown.intervalId = null;
-      return;
-    }
-    electionCountdown.textContent = `${formatCountdown(msLeft)} · Holyrood election · 7 May 2026`;
-    electionCountdown.hidden = false;
-  };
-
-  tick();
-  countdown.intervalId = setInterval(tick, 1000);
 }
 
 // ─── Poll tracker ─────────────────────────────────────────────────────────────

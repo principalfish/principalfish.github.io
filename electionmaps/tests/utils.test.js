@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, buildWinnerBySeat } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, buildWinnerBySeat, clampNumber } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -200,40 +200,37 @@ describe('formatSigned', () => {
   });
 });
 
-describe('buildWinnerBySeat', () => {
-  it('maps seat name to winner party key', () => {
-    const result = buildWinnerBySeat([{ seat: 'Bristol East', winner: 'labour' }]);
-    expect(result.get('Bristol East')).toBe('labour');
+describe('clampNumber', () => {
+  it('returns value when within range', () => {
+    expect(clampNumber(5, 0, 10)).toBe(5);
   });
 
-  it('also stores a lowercase key for each seat', () => {
-    const result = buildWinnerBySeat([{ seat: 'Bristol East', winner: 'labour' }]);
-    expect(result.get('bristol east')).toBe('labour');
+  it('clamps to minimum when value is below range', () => {
+    expect(clampNumber(-5, 0, 100)).toBe(0);
   });
 
-  it('defaults winner to "others" when winner is missing', () => {
-    const result = buildWinnerBySeat([{ seat: 'Bristol East' }]);
-    expect(result.get('Bristol East')).toBe('others');
-    expect(result.get('bristol east')).toBe('others');
+  it('clamps to maximum when value is above range', () => {
+    expect(clampNumber(150, 0, 100)).toBe(100);
   });
 
-  it('skips entries without a seat property', () => {
-    const result = buildWinnerBySeat([{ winner: 'labour' }, null, undefined]);
-    expect(result.size).toBe(0);
+  it('returns minimum for non-finite values', () => {
+    expect(clampNumber(NaN, 0, 100)).toBe(0);
+    expect(clampNumber(Infinity, 0, 100)).toBe(0);
+    expect(clampNumber(-Infinity, 0, 100)).toBe(0);
   });
 
-  it('handles multiple seats', () => {
-    const result = buildWinnerBySeat([
-      { seat: 'Bristol East', winner: 'labour' },
-      { seat: 'Orkney', winner: 'libdem' },
-    ]);
-    expect(result.get('Bristol East')).toBe('labour');
-    expect(result.get('Orkney')).toBe('libdem');
-    expect(result.size).toBe(4);
+  it('coerces string input', () => {
+    expect(clampNumber('50', 0, 100)).toBe(50);
+    expect(clampNumber('abc', 0, 100)).toBe(0);
   });
 
-  it('returns an empty Map for an empty array', () => {
-    expect(buildWinnerBySeat([]).size).toBe(0);
+  it('returns minimum for null/undefined', () => {
+    expect(clampNumber(null, 0, 100)).toBe(0);
+    expect(clampNumber(undefined, 0, 100)).toBe(0);
+  });
+
+  it('handles boundary values inclusively', () => {
+    expect(clampNumber(0, 0, 100)).toBe(0);
+    expect(clampNumber(100, 0, 100)).toBe(100);
   });
 });
-

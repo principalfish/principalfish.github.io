@@ -626,7 +626,7 @@ export class ElectionSummary {
    *
    * @param {{parties: Array<{party: string, seats: number}>, totalSeats: number}} data - Structured summary aggregate.
    * @param {string} electionName - Display label prefix for the subtitle.
-   * @returns {string} Pre-formatted subtitle string ready to pass to `setHeader`.
+   * @returns {string} Pre-formatted subtitle string ready to pass to `renderHeader`.
    */
   static #subtitleText(data, electionName) {
     const top = data.parties[0];

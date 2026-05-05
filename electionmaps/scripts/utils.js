@@ -105,3 +105,16 @@ export function getRegionLabel(regionKey, labelsByKey) {
   const label = labelsByKey?.get(normalized) || titleCaseFromRegionKey(regionKey);
   return label.replace(/ and /gi, ' & ');
 }
+
+/**
+ * Clamps value to [minimum, maximum]. Returns minimum if value is not a finite number.
+ * @param {number} value - Value to clamp.
+ * @param {number} minimum - Lower bound (inclusive).
+ * @param {number} maximum - Upper bound (inclusive).
+ * @returns {number} Clamped numeric value within [minimum, maximum].
+ */
+export function clampNumber(value, minimum, maximum) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return minimum;
+  return Math.max(minimum, Math.min(maximum, numeric));
+}

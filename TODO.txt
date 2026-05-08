@@ -1,4 +1,3 @@
-migrate renderMap to dom.js
 
 add hover text on map - some thought on seatPreview
 
@@ -12,5 +11,3 @@ redo data back end structure
 reset database ids
 model_uns -> westminster_uns
 
-
-migra

@@ -126,7 +126,46 @@
       "predictBaselineElectionId": "2024-general",
       "nextElectionYear": 2029,
       "polltrackerDataPath": "results/model_output_trends.json",
-      "polltrackerDefaultParties": [1, 2, 4, 5, 6, 8]
+      "polltrackerDefaultParties": [1, 2, 4, 5, 6, 8],
+      "predict": {
+        "model": "westminster",
+        "modelledPartyKeys": [
+          "labour", "conservative", "libdems", "green", "reform",
+          "snp", "plaidcymru", "scottishgreens", "alba",
+          "sinnfein", "dup", "alliance", "uu", "sdlp"
+        ],
+        "virtualColumns": {
+          "nat": { "scotland": "snp", "wales": "plaidcymru" }
+        },
+        "regionLabelOverrides": {
+          "northernireland": "N Ireland",
+          "northeastengland": "North East",
+          "northwestengland": "North West",
+          "southeastengland": "South East",
+          "southwestengland": "South West",
+          "eastofengland": "E of England",
+          "yorkshireandthehumber": "Yorks"
+        },
+        "aggregate": {
+          "key": "england",
+          "label": "England",
+          "excludeRegions": ["scotland", "wales", "northernireland"]
+        },
+        "gridSections": [
+          {
+            "id": "gb",
+            "columnKeys": ["labour", "conservative", "libdems", "green", "reform", "nat"],
+            "containsAggregate": true,
+            "extraRegionKeys": ["scotland", "wales"]
+          },
+          {
+            "id": "ni",
+            "columnKeys": ["sinnfein", "dup", "alliance", "uu", "sdlp"],
+            "regionKeys": ["northernireland"],
+            "blankRegionHeader": true
+          }
+        ]
+      }
     },
     "holyrood": {
       "features": [
@@ -134,7 +173,30 @@
       ],
       "predictAnchorElectionId": "current-holyrood-prediction",
       "predictBaselineElectionId": "2021-holyrood-2026",
-      "nextElectionYear": 2026
+      "nextElectionYear": 2026,
+      "predict": {
+        "model": "holyrood",
+        "modelledPartyKeys": [
+          "snp", "labour", "conservative", "libdems", "scottishgreens", "reform",
+          "alba", "green"
+        ],
+        "aggregate": {
+          "key": "scotland",
+          "label": "Scotland",
+          "excludeRegions": []
+        },
+        "tabs": [
+          { "key": "constituency", "label": "Constituency" },
+          { "key": "list", "label": "List" }
+        ],
+        "gridSections": [
+          {
+            "id": "holyrood",
+            "columnKeys": ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+            "containsAggregate": true
+          }
+        ]
+      }
     }
   },
   "mapModes": {

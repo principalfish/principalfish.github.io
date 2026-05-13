@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, buildWinnerBySeat, clampNumber } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, buildWinnerBySeat, clampNumber, roundShare, base64urlEncode, base64urlDecode } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -232,5 +232,83 @@ describe('clampNumber', () => {
   it('handles boundary values inclusively', () => {
     expect(clampNumber(0, 0, 100)).toBe(0);
     expect(clampNumber(100, 0, 100)).toBe(100);
+  });
+});
+
+describe('roundShare', () => {
+  it('rounds an in-range value to the nearest integer', () => {
+    expect(roundShare(42.4)).toBe(42);
+    expect(roundShare(42.5)).toBe(43);
+    expect(roundShare(42.6)).toBe(43);
+  });
+
+  it('clamps below zero to 0', () => {
+    expect(roundShare(-5)).toBe(0);
+    expect(roundShare(-0.4)).toBe(0);
+  });
+
+  it('clamps above 100 to 100', () => {
+    expect(roundShare(101)).toBe(100);
+    expect(roundShare(150.7)).toBe(100);
+  });
+
+  it('returns 0 for non-finite input', () => {
+    expect(roundShare(NaN)).toBe(0);
+    expect(roundShare(Infinity)).toBe(0);
+    expect(roundShare(-Infinity)).toBe(0);
+  });
+
+  it('returns 0 for null/undefined', () => {
+    expect(roundShare(null)).toBe(0);
+    expect(roundShare(undefined)).toBe(0);
+  });
+
+  it('coerces numeric strings', () => {
+    expect(roundShare('33.6')).toBe(34);
+    expect(roundShare('-10')).toBe(0);
+    expect(roundShare('abc')).toBe(0);
+  });
+
+  it('preserves the boundary values', () => {
+    expect(roundShare(0)).toBe(0);
+    expect(roundShare(100)).toBe(100);
+  });
+});
+
+describe('base64urlEncode / base64urlDecode', () => {
+  it('round-trips ASCII text', () => {
+    const text = 'hello world';
+    expect(base64urlDecode(base64urlEncode(text))).toBe(text);
+  });
+
+  it('round-trips JSON payloads with predict-like shape', () => {
+    const payload = JSON.stringify({ e: 1, r: [['scotland', 'snp', 50], ['wales', 'plaidcymru', 30]] });
+    expect(base64urlDecode(base64urlEncode(payload))).toBe(payload);
+  });
+
+  it('substitutes URL-unsafe characters', () => {
+    // Inputs chosen to force btoa output to contain '+' and '/'.
+    const encoded = base64urlEncode('\xff\xfe\xfd\xfc');
+    expect(encoded).not.toMatch(/[+/=]/);
+  });
+
+  it('strips trailing padding from the encoded output', () => {
+    expect(base64urlEncode('a')).toBe('YQ');
+    expect(base64urlEncode('ab')).toBe('YWI');
+    expect(base64urlEncode('abc')).toBe('YWJj');
+  });
+
+  it('returns empty string when encoding empty input', () => {
+    expect(base64urlEncode('')).toBe('');
+  });
+
+  it('decodes payloads with arbitrary padding state', () => {
+    expect(base64urlDecode('YQ')).toBe('a');
+    expect(base64urlDecode('YWI')).toBe('ab');
+    expect(base64urlDecode('YWJj')).toBe('abc');
+  });
+
+  it('returns null for malformed input', () => {
+    expect(base64urlDecode('!!!not base64!!!')).toBeNull();
   });
 });

@@ -214,7 +214,10 @@
             <article class="maps-card" id="mapsVoteTotalsCard">
               <div class="maps-card-head">
                 <h2 class="maps-panel-title">Vote Totals</h2>
-                <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
+                <div class="maps-card-head-actions">
+                  <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
+                  <button type="button" id="mapsVoteTotalsCollapse" class="maps-inline-btn maps-vote-totals-collapse" data-vote-totals-action="collapse" aria-label="Collapse vote totals">▲</button>
+                </div>
               </div>
               <nav class="maps-vote-tabs" id="mapsVoteTotalsTabNav" hidden aria-label="Vote totals view"></nav>
               <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder">

@@ -118,3 +118,34 @@ export function clampNumber(value, minimum, maximum) {
   if (!Number.isFinite(numeric)) return minimum;
   return Math.max(minimum, Math.min(maximum, numeric));
 }
+
+/**
+ * Clamps value to [0, 100] and rounds to the nearest integer. Returns 0 for non-finite input.
+ * Used by predict-mode share inputs and baseline-share computation.
+ * @param {number|string} value
+ * @returns {number}
+ */
+export function roundShare(value) {
+  return Math.round(clampNumber(value, 0, 100));
+}
+
+/**
+ * Base64url-encodes a string. URL-safe variant of btoa: '+' → '-', '/' → '_', trailing '=' stripped.
+ * Works for ASCII-only payloads (consumers in this codebase use ASCII JSON only).
+ * @param {string} text
+ * @returns {string}
+ */
+export function base64urlEncode(text) {
+  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Decodes a base64url payload back to its source string. Restores the URL-safe substitutions,
+ * pads to a multiple of 4, and runs atob. Returns null on malformed input rather than throwing.
+ * @param {string} payload
+ * @returns {string|null}
+ */
+export function base64urlDecode(payload) {
+  const padded = payload.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((payload.length + 3) % 4);
+  try { return atob(padded); } catch { return null; }
+}

@@ -1167,6 +1167,18 @@ a {
   gap: 0.5rem;
 }
 
+.maps-card-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-vote-tabs,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
+  display: none;
+}
+
 .maps-inline-btn {
   border: 1px solid rgba(15, 23, 42, 0.28);
   background: #f5f9fc;
@@ -1268,8 +1280,20 @@ a {
 .maps-seat-card {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  /* Take the leftover space below vote-totals + predict (basis 0 so predict isn't
+   * pushed to shrink to free space for the seat list). When the leftover would be
+   * smaller than the seat header + one row, JS in dom.js hides the card outright
+   * rather than rendering it cramped. */
+  flex: 1 1 0;
   min-height: 0;
+  overflow: hidden;
+}
+
+/* Pin the vote-totals card at its natural content height — it must never shrink
+ * to make room for the seat list. Predict can shrink (its inner grid scrolls) so
+ * the rail still fits when vote-totals + predict together exceed the rail height. */
+#mapsVoteTotalsCard {
+  flex-shrink: 0;
 }
 
 .maps-polltracker-view {
@@ -1763,7 +1787,10 @@ a {
 .maps-predict-window.maps-predict-window-fill {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  /* Size to content rather than claiming all remaining space — the seat card sits
+   * below and grows into the leftover. When predict's content exceeds available
+   * height, the inner grid scrolls (overflow-y on .maps-predict-grid). */
+  flex: 0 1 auto;
   min-height: 0;
 }
 

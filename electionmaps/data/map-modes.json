@@ -111,7 +111,12 @@
       "id": "eu-referendum-2016",
       "name": "2016 EU Referendum",
       "type": "eu_referendum",
-      "referendum": true,
+      "referendum": {
+        "highParty": "leave",
+        "lowParty": "remain",
+        "threshold": 50,
+        "metricLabel": "Leave vote share"
+      },
       "mapId": 1,
       "parliament": "westminster"
     }
@@ -129,6 +134,7 @@
       "polltrackerDefaultParties": [1, 2, 4, 5, 6, 8],
       "predict": {
         "model": "westminster",
+        "title": "User Input (uniform swing)",
         "modelledPartyKeys": [
           "labour", "conservative", "libdems", "green", "reform",
           "snp", "plaidcymru", "scottishgreens", "alba",
@@ -136,6 +142,9 @@
         ],
         "virtualColumns": {
           "nat": { "scotland": "snp", "wales": "plaidcymru" }
+        },
+        "virtualColumnMeta": {
+          "nat": { "title": "NAT (SNP in Scotland, Plaid Cymru in Wales)", "swatchClass": "maps-party-swatch-nat" }
         },
         "regionLabelOverrides": {
           "northernireland": "N Ireland",
@@ -176,6 +185,7 @@
       "nextElectionYear": 2026,
       "predict": {
         "model": "holyrood",
+        "title": "User Input (constituency swing + D'Hondt list)",
         "modelledPartyKeys": [
           "snp", "labour", "conservative", "libdems", "scottishgreens", "reform",
           "alba", "green"

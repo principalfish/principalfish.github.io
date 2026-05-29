@@ -725,6 +725,7 @@ function renderPollTrackerPartyControls() {
 const predictWindow = document.getElementById('mapsPredictWindow');
 const predictGrid = document.getElementById('mapsPredictGrid');
 const predictTabNav = document.getElementById('mapsPredictTabNav');
+const predictTitle = document.getElementById('mapsPredictTitle');
 
 // Action handlers wired by the orchestrator (electionmaps.js) so predict-mode actions can
 // run their projection / URL-share / forecast-load logic without dom.js needing to import
@@ -761,14 +762,15 @@ export function setPredictActionHandlers(handlers) {
  *
  * When `visible` is true:
  * - Unhides `mapsPredictWindow` so the input grid + action buttons render.
- * - Hides `mapsSeatCard` so the predict window can claim the right-rail vertical space.
- * - Adds `maps-predict-window-fill` to make the predict window flex-grow into that slot.
+ * - Adds `maps-predict-window-fill` so the predict window sizes to its content at the top
+ *   of the right rail; the seat card sits below and grows into the leftover space.
  * - Adds `maps-predict-mode` to the body for top-level CSS hooks.
  *
- * When `visible` is false: reverses all four. The predict-window collapse button (▲ /
- * ▼ inside the window's header) toggles the same fill class + seat-card visibility
- * dynamically so the user can shrink the predict window and read the seat list without
- * leaving predict mode entirely.
+ * When `visible` is false: reverses all three. The seat card is never hidden here — its
+ * visibility is managed reactively by `seatCardObserver`, which hides it only when the
+ * remaining height falls below `SEAT_CARD_MIN_HEIGHT`. The predict-window collapse button
+ * (▲ / ▼ inside the window's header) toggles the same fill class so the user can shrink
+ * the predict window and read the seat list without leaving predict mode entirely.
  *
  * @param {boolean} visible
  * @returns {void}
@@ -800,6 +802,7 @@ export function setPredictWindowVisible(visible) {
 export function renderPredict() {
   const model = state.predictModel;
   if (!model || !predictWindow) return;
+  if (predictTitle) predictTitle.textContent = model.title;
   if (predictTabNav) {
     const hasTabs = (model.tabs?.length || 0) > 0;
     predictTabNav.hidden = !hasTabs;
@@ -905,9 +908,12 @@ function renderPredictGrid(model) {
     headRow.appendChild(regionTh);
     section.columnKeys.forEach((columnKey) => {
       const th = document.createElement('th');
-      if (columnKey === 'nat') {
-        th.title = 'NAT (SNP in Scotland, Plaid Cymru in Wales)';
-        th.innerHTML = '<span class="maps-party-swatch maps-party-swatch-nat" aria-hidden="true"></span>';
+      // Virtual columns (e.g. 'nat') carry their own title + swatch class in the manifest;
+      // plain party columns fall back to the manifest party label + colour.
+      const meta = model.columnMeta(columnKey);
+      if (meta) {
+        if (meta.title) th.title = meta.title;
+        th.innerHTML = `<span class="maps-party-swatch ${meta.swatchClass || ''}" aria-hidden="true"></span>`;
       } else {
         th.title = manifest.labelParty(columnKey);
         th.innerHTML = `<span class="maps-party-swatch" style="background:${manifest.colourParty(columnKey)}" aria-hidden="true"></span>`;
@@ -1003,20 +1009,21 @@ function renderPredictGrid(model) {
 }
 
 /**
- * Wires the predict-window action buttons via a single click delegator per button. Runs
- * exactly once per page lifetime — the `data-wired` flag on `predictWindow` guards
- * against re-wiring on subsequent predict-mode entries (which would stack duplicate
- * listeners and fire each handler N times).
+ * Wires the predict-window action buttons via a single click delegator per button. Called
+ * exactly once from `wireInit` at page init, so no re-wiring guard is needed — there is no
+ * second predict-mode entry that would re-run it and stack duplicate listeners.
  *
  * Two action classes share the dispatcher:
  *
  * 1. **Collapse** (`data-predict-action="collapse"`) — purely layout-local, handled
  *    inline. Toggles the `maps-predict-window--collapsed` class (which hides the body
- *    via CSS), flips the button glyph between ▲ (expanded) and ▼ (collapsed), strips
- *    `maps-predict-window-fill` so the predict window stops claiming the right-rail
- *    slot, and unhides `mapsSeatCard` so the seat list renders in the recovered space.
- *    All four flips reverse on re-expand. None of this is shared with the orchestrator
- *    — keeping it inline avoids a round-trip through `electionmaps.js`.
+ *    via CSS), flips the button glyph between ▲ (expanded) and ▼ (collapsed), and strips
+ *    `maps-predict-window-fill` so the predict window shrinks to header height instead of
+ *    sizing to its content. The seat card below then grows into the recovered space, and
+ *    the `seatCardObserver` ResizeObserver re-shows it if it had been hidden for lack of
+ *    room — the collapse handler never touches the seat card directly. Both class flips
+ *    reverse on re-expand. None of this is shared with the orchestrator — keeping it
+ *    inline avoids a round-trip through `electionmaps.js`.
  *
  * 2. **Apply / Submit / Share / Reset** — looked up in the `predictActionHandlers` bag
  *    populated by `setPredictActionHandlers`. Each handler lives in `electionmaps.js`

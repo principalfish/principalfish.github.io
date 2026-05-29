@@ -1,11 +1,4 @@
 
-Predict
-
-dom.js looks good - check renderPredictGrid once understand models better. 
-                maybe find a way to get rid of formatPredictRegionLabel
-electionmaps.js looks good - check model handlers as you work through them
-
-
 add hover text on map - some thought on seatPreview
 
 

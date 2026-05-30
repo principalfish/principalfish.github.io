@@ -144,6 +144,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Include parser identifiers that currently have no imported polls in the database",
     )
+    parser.add_argument(
+        "--model-after-each",
+        action="store_true",
+        help="Run the UNS model after each successful poll import (instead of once at the end)",
+    )
     return parser.parse_args()
 
 
@@ -241,6 +246,37 @@ def classify_unimportable_url(parser_identifier: str, source_url: str) -> str | 
         return f"{parser_identifier}-missing-{expected_ext[1:]}-url"
 
     return None
+
+
+def _resolve_model_as_of_date() -> str | None:
+    """Return the model --as-of-date arg: max(latest poll date, current trend meta date), or None."""
+    db = Database()
+    with db.session() as session:
+        max_poll_date: date | None = session.execute(
+            select(Poll.fieldwork_end).order_by(Poll.fieldwork_end.desc()).limit(1)
+        ).scalar()
+
+    meta_as_of_date: date | None = None
+    meta_path = ROOT_DIR.parent / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
+    if meta_path.exists():
+        try:
+            raw = json.loads(meta_path.read_text()).get("as_of_date", "")
+            meta_as_of_date = date.fromisoformat(raw) if raw else None
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    candidates = [d for d in (max_poll_date, meta_as_of_date) if d is not None]
+    return max(candidates).isoformat() if candidates else None
+
+
+def _run_uns_model(as_of_date: str | None) -> None:
+    """Invoke the Westminster UNS model script, optionally pinning the as-of date."""
+    print("\n== Run UNS model ==")
+    cmd = [sys.executable, str(ROOT_DIR / "models" / "westminster" / "run_uns_model.py")]
+    if as_of_date:
+        cmd += ["--as-of-date", as_of_date]
+        print(f"As-of date: {as_of_date}")
+    subprocess.run(cmd, cwd=ROOT_DIR, check=True)
 
 
 def main() -> int:
@@ -374,6 +410,9 @@ def main() -> int:
             raise
         summary["import_attempted"] += 1
 
+        if args.model_after_each:
+            _run_uns_model(_resolve_model_as_of_date())
+
     print("\n== Summary ==")
     print(f"Import attempts: {summary['import_attempted']}")
     print(f"Skipped duplicate source URL: {summary['duplicate_source_url']}")
@@ -407,33 +446,8 @@ def main() -> int:
         for parser_identifier, source_url, code in failures:
             print(f"- [{parser_identifier}] (exit {code}) {source_url}")
 
-    if summary["import_attempted"] > 0:
-        db = Database()
-        with db.session() as session:
-            max_poll_date: date | None = session.execute(
-                select(Poll.fieldwork_end).order_by(Poll.fieldwork_end.desc()).limit(1)
-            ).scalar()
-
-        # Also check the current trend meta so we re-run that date too when
-        # a new poll lands behind the existing trend frontier.
-        meta_as_of_date: date | None = None
-        meta_path = ROOT_DIR.parent / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
-        if meta_path.exists():
-            try:
-                raw = json.loads(meta_path.read_text()).get("as_of_date", "")
-                meta_as_of_date = date.fromisoformat(raw) if raw else None
-            except (json.JSONDecodeError, ValueError):
-                pass
-
-        candidate_dates = [d for d in (max_poll_date, meta_as_of_date) if d is not None]
-        as_of_date = max(candidate_dates).isoformat() if candidate_dates else None
-
-        print("\n== Run UNS model ==")
-        cmd = [sys.executable, str(ROOT_DIR / "models" / "uns" / "run_uns_model.py")]
-        if as_of_date:
-            cmd += ["--as-of-date", as_of_date]
-            print(f"As-of date: {as_of_date}")
-        subprocess.run(cmd, cwd=ROOT_DIR, check=True)
+    if summary["import_attempted"] > 0 and not args.model_after_each:
+        _run_uns_model(_resolve_model_as_of_date())
 
     return 1 if failures else 0
 

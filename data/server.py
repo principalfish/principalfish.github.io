@@ -14,7 +14,7 @@ import sqlite3
 import subprocess
 import sys
 import uuid
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -107,6 +107,7 @@ REPO_ROOT = DATA_DIR.parent
 TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
 UPDATE_POLLS_SCRIPT = DATA_DIR / "polls" / "update_polls.sh"
+UPDATE_POLLS_LOG = DATA_DIR / "logs" / "update_polls.log"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "westminster" / "run_uns_model.py"
 HOLYROOD_IMPORT_SCRIPT = DATA_DIR / "polls" / "importers" / "holyrood" / "holyrood_wikipedia_import.py"
 HOLYROOD_MODEL_SCRIPT = DATA_DIR / "models" / "holyrood" / "run_holyrood_uns_model.py"
@@ -343,18 +344,32 @@ def update_polls() -> str | WerkzeugResponse:
         flash(f"Update script not found: {UPDATE_POLLS_SCRIPT}")
         return redirect(url_for("home"))
 
+    command = [
+        "bash",
+        str(UPDATE_POLLS_SCRIPT),
+        "--continue-on-error",
+        "--model-after-each",
+    ]
     result = subprocess.run(
-        ["bash", str(UPDATE_POLLS_SCRIPT)],
+        command,
         cwd=str(DATA_DIR),
         capture_output=True,
         text=True,
         timeout=1800,
     )
 
+    UPDATE_POLLS_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with UPDATE_POLLS_LOG.open("a", encoding="utf-8") as handle:
+        handle.write(f"\n===== {datetime.now().isoformat(timespec='seconds')} (exit {result.returncode}) =====\n")
+        handle.write(result.stdout)
+        if result.stderr:
+            handle.write("\n--- stderr ---\n")
+            handle.write(result.stderr)
+
     return render_template(
         "command_result.html",
-        title="Update Polls",
-        command=f"bash {UPDATE_POLLS_SCRIPT.name}",
+        title="Sync from Wikipedia",
+        command=" ".join(shlex.quote(part) for part in command),
         stdout=result.stdout,
         stderr=result.stderr,
         return_code=result.returncode,

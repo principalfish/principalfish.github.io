@@ -55,6 +55,8 @@ def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
             vote_total REAL,
             elected INTEGER DEFAULT 0
         );
+        CREATE INDEX IF NOT EXISTS idx_votes_election_id ON votes(election_id);
+        CREATE INDEX IF NOT EXISTS idx_elections_name ON elections(name);
     """)
     # Add election_type column to existing databases that lack it.
     existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(elections)").fetchall()}
@@ -1480,11 +1482,14 @@ def main() -> None:
                     f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
                     f"to latest poll date {latest_poll_date.isoformat()}"
                 )
+                # Shift the window back so its upper bound is latest_poll_date
+                # but its length (lookback) is preserved.
+                shift = cfg.as_of_date - latest_poll_date
                 cfg = SimulationConfig(
                     map_name=cfg.map_name,
                     baseline_election_name=cfg.baseline_election_name,
                     as_of_date=latest_poll_date,
-                    since_date=min(cfg.since_date, latest_poll_date),
+                    since_date=cfg.since_date - shift,
                     half_life_days=cfg.half_life_days,
                     output_csv=cfg.output_csv,
                     dry_run=cfg.dry_run,

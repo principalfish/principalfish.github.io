@@ -3,8 +3,8 @@ import {
   buildBaselineShares,
   projectSeatUniformSwing,
   dhondtAllocate,
-  WestminsterPredict,
-  HolyroodPredict,
+  FPTPPredict,
+  AMSPredict,
 } from '../scripts/predict.js';
 import { state, Seat } from '../scripts/state.js';
 import { base64urlEncode } from '../scripts/utils.js';
@@ -129,7 +129,7 @@ describe('dhondtAllocate', () => {
   });
 });
 
-describe('WestminsterPredict serialize / deserialize', () => {
+describe('FPTPPredict serialize / deserialize', () => {
   const config = {
     modelledPartyKeys: ['labour', 'conservative'],
     gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], regionKeys: ['london'] }],
@@ -146,12 +146,12 @@ describe('WestminsterPredict serialize / deserialize', () => {
   });
 
   it('round-trips an entered override that differs from baseline', () => {
-    const model = new WestminsterPredict(2029, config);
+    const model = new FPTPPredict(2029, config);
     model.setShare('london', 'labour', 70);
     const payload = model.serialize();
     expect(payload).not.toBe('');
 
-    const restored = new WestminsterPredict(2029, config);
+    const restored = new FPTPPredict(2029, config);
     restored.deserialize(payload);
     expect(restored.getShare('london', 'labour')).toBe(70);
     // An untouched party still reads through to its baseline.
@@ -159,17 +159,17 @@ describe('WestminsterPredict serialize / deserialize', () => {
   });
 
   it('serializes to an empty payload when no input differs from baseline', () => {
-    const model = new WestminsterPredict(2029, config);
+    const model = new FPTPPredict(2029, config);
     expect(model.serialize()).toBe('');
   });
 
   it('ignores overrides for regions outside the grid', () => {
-    const model = new WestminsterPredict(2029, config);
+    const model = new FPTPPredict(2029, config);
     model.setShare('london', 'labour', 65);
     const payload = model.serialize();
 
     state.currentRegionLabelsByKey = new Map([['london', 'London']]);
-    const restored = new WestminsterPredict(2029, { ...config, gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], regionKeys: [] }] });
+    const restored = new FPTPPredict(2029, { ...config, gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], regionKeys: [] }] });
     restored.deserialize(payload);
     // 'london' is no longer a valid region in this config, so the override is dropped.
     expect(restored.currentInputMap().has('london')).toBe(false);
@@ -193,7 +193,7 @@ describe('PredictModel.setAggregateExpanded', () => {
   });
 
   it('propagates the aggregate input onto empty member sub-regions and clears the aggregate', () => {
-    const model = new WestminsterPredict(2029, config);
+    const model = new FPTPPredict(2029, config);
     model.setShare('england', 'labour', 55);
     model.setAggregateExpanded(true);
 
@@ -206,7 +206,7 @@ describe('PredictModel.setAggregateExpanded', () => {
   });
 
   it('drops member sub-region inputs on collapse', () => {
-    const model = new WestminsterPredict(2029, config);
+    const model = new FPTPPredict(2029, config);
     model.aggregateExpanded = true;
     model.setShare('northeastengland', 'labour', 40);
     model.setAggregateExpanded(false);
@@ -214,7 +214,7 @@ describe('PredictModel.setAggregateExpanded', () => {
   });
 });
 
-describe('HolyroodPredict.project (two-pass constituency + D\'Hondt list)', () => {
+describe('AMSPredict.project (two-pass constituency + D\'Hondt list)', () => {
   const config = {
     modelledPartyKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'],
     aggregate: { key: 'scotland', label: 'Scotland', excludeRegions: [] },
@@ -238,14 +238,14 @@ describe('HolyroodPredict.project (two-pass constituency + D\'Hondt list)', () =
   });
 
   it('returns the untouched baseline when no input differs (zero-swing short-circuit)', () => {
-    const model = new HolyroodPredict(2026, config);
+    const model = new AMSPredict(2026, config);
     const projected = model.project();
     expect(projected).toHaveLength(10);
     expect(projected.map((s) => s.winner)).toEqual(state.comparisonElectionData.currentSeats.map((s) => s.winner));
   });
 
   it('runs both passes and preserves the seat split when an input drives a swing', () => {
-    const model = new HolyroodPredict(2026, config);
+    const model = new AMSPredict(2026, config);
     // A constituency input bypasses the short-circuit and exercises the FPTP pass. Collapsed,
     // input is entered on the 'scotland' aggregate and falls through to its member regions.
     model.setActiveTab('constituency');
@@ -263,7 +263,7 @@ describe('HolyroodPredict.project (two-pass constituency + D\'Hondt list)', () =
   });
 });
 
-describe('HolyroodPredict serialize / deserialize', () => {
+describe('AMSPredict serialize / deserialize', () => {
   const config = {
     modelledPartyKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'],
     aggregate: { key: 'scotland', label: 'Scotland', excludeRegions: [] },
@@ -282,7 +282,7 @@ describe('HolyroodPredict serialize / deserialize', () => {
   });
 
   it('round-trips constituency and list overrides into the correct ballots', () => {
-    const model = new HolyroodPredict(2026, config);
+    const model = new AMSPredict(2026, config);
     model.setActiveTab('constituency');
     model.setShare('scotland', 'labour', 60);
     model.setActiveTab('list');
@@ -290,7 +290,7 @@ describe('HolyroodPredict serialize / deserialize', () => {
     const payload = model.serialize();
     expect(payload).not.toBe('');
 
-    const restored = new HolyroodPredict(2026, config);
+    const restored = new AMSPredict(2026, config);
     restored.deserialize(payload);
     restored.setActiveTab('constituency');
     expect(restored.getShare('scotland', 'labour')).toBe(60);
@@ -298,12 +298,11 @@ describe('HolyroodPredict serialize / deserialize', () => {
     expect(restored.getShare('scotland', 'snp')).toBe(45);
   });
 
-  it('ignores a payload missing the Holyrood discriminator (h !== 1)', () => {
-    // A Westminster-shaped payload (no `h`, 3-tuple overrides) must not load into Holyrood.
-    const wmPayload = base64urlEncode(JSON.stringify({ e: 0, r: [['scotland', 'labour', 60]] }));
-    const model = new HolyroodPredict(2026, config);
-    model.deserialize(wmPayload);
-    expect(model.constInput.size).toBe(0);
-    expect(model.listInput.size).toBe(0);
+  it('ignores a payload missing the AMS discriminator (h !== 1)', () => {
+    // An FPTP-shaped payload (no `h`, 3-tuple overrides) must not load into an AMS model.
+    const fptpPayload = base64urlEncode(JSON.stringify({ e: 0, r: [['scotland', 'labour', 60]] }));
+    const model = new AMSPredict(2026, config);
+    model.deserialize(fptpPayload);
+    expect(model.inputMaps().every((m) => m.size === 0)).toBe(true);
   });
 });

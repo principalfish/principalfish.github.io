@@ -133,7 +133,7 @@
       "polltrackerDataPath": "results/model_output_trends.json",
       "polltrackerDefaultParties": [1, 2, 4, 5, 6, 8],
       "predict": {
-        "model": "westminster",
+        "model": "fptp",
         "title": "User Input (uniform swing)",
         "modelledPartyKeys": [
           "labour", "conservative", "libdems", "green", "reform",
@@ -184,7 +184,7 @@
       "predictBaselineElectionId": "2021-holyrood-2026",
       "nextElectionYear": 2026,
       "predict": {
-        "model": "holyrood",
+        "model": "ams",
         "title": "User Input (constituency swing + D'Hondt list)",
         "modelledPartyKeys": [
           "snp", "labour", "conservative", "libdems", "scottishgreens", "reform",

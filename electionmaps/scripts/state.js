@@ -945,7 +945,7 @@ class AppState {
       selected: null,
     };
 
-    /** Active predict-mode model (WestminsterPredict | HolyroodPredict | null). Populated by
+    /** Active predict-mode model (FPTPPredict | AMSPredict | null). Populated by
      * activatePredictMode in electionmaps.js; null whenever view !== 'predict'. */
     this.predictModel = null;
   }

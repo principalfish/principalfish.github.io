@@ -116,6 +116,7 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
   if (totalVotes <= 0) return new Seat(baseSeat);
 
   const regionKey = normalizeRegionKey(baseSeat.region);
+  if (!regionKey) return new Seat(baseSeat);
   const baseVotes = baseSeat.votes || {};
 
   // Resolve the swing for a party: prefer the seat's own region, fall back to the
@@ -174,7 +175,7 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
 }
 
 /**
- * Runs D'Hondt seat allocation for one Holyrood region, deducting constituency wins from
+ * Runs D'Hondt seat allocation for one AMS region, deducting constituency wins from
  * the divisor so list seats top up under-represented parties.
  * @param {Map<string, number>} votesByParty
  * @param {number} nSeats
@@ -203,15 +204,60 @@ export function dhondtAllocate(votesByParty, nSeats, constWinsByParty = new Map(
 }
 
 /**
- * Abstract base for predict models. Owns the baseline election, the user-input share map,
- * and the projection entry point. Reads/writes go through the active input/baseline maps,
- * which subclasses expose via currentInputMap()/currentBaselineMap() — Westminster has a
- * single pair, Holyrood swaps between const and list pairs as the active tab changes.
+ * Filters a seat array to one list seat per region. Each list seat in the source data
+ * duplicates the full regional list total, so deduping by region is the right input for
+ * `buildBaselineShares` and "use current forecast" share loading.
+ * @param {Seat[]} seats
+ * @returns {Seat[]}
+ */
+function dedupeListSeatsByRegion(seats) {
+  const seen = new Set();
+  return seats.filter((s) => {
+    if (!Seat.isList(s)) return false;
+    if (seen.has(s.region)) return false;
+    seen.add(s.region);
+    return true;
+  });
+}
+
+/**
+ * One ballot's worth of user input + matching baseline. FPTP models have one ballot;
+ * AMS models have two (constituency + list). Encapsulating them lets the base class
+ * iterate `this.ballots` for serialize / deserialize / reset / loadSimulationShares
+ * without branching on the model's electoral system.
+ *
+ * Fields:
+ * - `key` — ballot identifier, matched against `AMSPredict.activeTab` to pick the
+ *   active ballot. Single-ballot models can leave this null.
+ * - `input` — user-input map `regionKey → partyKey → share`. Mutated in place; the
+ *   reference is stable across `reset()` / `loadSimulationShares()`.
+ * - `baseline` — paired baseline map; same shape as input but read-only.
+ * - `serializePrefix` — `null` for single-ballot models (entry shape `[r, p, v]`);
+ *   `'c'` / `'l'` for AMS (entry shape `[prefix, r, p, v]` so deserialize can route).
+ * - `filterSeats` — picks the simulation-seat subset relevant to this ballot when
+ *   loading "current forecast". FPTP passes seats through; AMS filters to const or
+ *   deduped-list seats.
+ */
+class Ballot {
+  constructor({ key = null, input, baseline, serializePrefix = null, filterSeats = (seats) => seats } = {}) {
+    this.key = key;
+    this.input = input;
+    this.baseline = baseline;
+    this.serializePrefix = serializePrefix;
+    this.filterSeats = filterSeats;
+  }
+}
+
+/**
+ * Abstract base for predict models. Owns the baseline election, the user-input share maps
+ * (one per ballot — see `Ballot`), and the projection entry point. Reads/writes go through
+ * the currently active ballot, which `activeBallot()` exposes — FPTP has a single ballot,
+ * AMS swaps between constituency and list ballots as the active tab changes.
  *
  * Subclasses implement parliament-specific row/column structure (regions, parties,
- * gridSections), the projection algorithm (project), and serialization. Everything else
- * — share reads/writes, swing computation, validation, the 'other' share helper — is
- * shared.
+ * gridSections), the projection algorithm (`project`), and the ballot list. Everything
+ * else — share reads/writes, swing computation, validation, serialize/deserialize, the
+ * "load current forecast" flow — is shared.
  */
 class PredictModel {
   /**
@@ -224,8 +270,8 @@ class PredictModel {
    *
    * @param {number|undefined} nextElectionYear - Display year (e.g. 2029) for "Predict YYYY" labels.
    * @param {object} config - The `predict` block from manifest.parliamentFeatures. Recognised keys:
-   *   - `model` {'westminster'|'holyrood'} — class selector read by `predictModelClassFor`
-   *     before construction; the model class itself does not consume this field.
+   *   - `model` {'fptp'|'ams'} — class selector read by `predictModelClassFor` before
+   *     construction; the model class itself does not consume this field.
    *   - `title` {string} — heading shown above the predict input grid (e.g. 'User Input
    *     (uniform swing)'). Read by dom.js via `model.title`; defaults to 'User Input'.
    *   - `modelledPartyKeys` {string[]} — parties carried through `buildBaselineShares` and
@@ -248,7 +294,7 @@ class PredictModel {
    *   - `regionLabelOverrides` {Object<string, string>} — normalised regionKey → short
    *     display label for the predict grid (e.g. `{ northernireland: 'N Ireland' }`).
    *     Region rows fall back to their map label when no override is present.
-   *   - `tabs` {Array<{key: string, label: string}>} — Holyrood-only ballot tabs (typically
+   *   - `tabs` {Array<{key: string, label: string}>} — AMS-only ballot tabs (typically
    *     constituency + list). First entry's `key` is the initial `activeTab`.
    */
   constructor(nextElectionYear, config) {
@@ -262,6 +308,8 @@ class PredictModel {
     this.regionLabelOverrides = this.config.regionLabelOverrides || {};
     this.gridSectionsConfig = this.config.gridSections || [];
     this.aggregateExpanded = false;
+    /** @type {Ballot[]} populated by subclass constructors after super(). */
+    this.ballots = [];
   }
 
   /** @returns {ElectionData} Baseline election the projection runs against. */
@@ -316,8 +364,8 @@ class PredictModel {
 
   /**
    * Computes baseline shares for a seat array using this model's modelled parties +
-   * aggregate config. Subclasses call this in their constructor (Westminster: once over
-   * all seats; Holyrood: once each over the const and deduped-list slices).
+   * aggregate config. Subclasses call this in their constructor (FPTP: once over
+   * all seats; AMS: once each over the const and deduped-list slices).
    * @param {Seat[]} seats
    * @returns {Map<string, Map<string, number>>}
    */
@@ -440,15 +488,20 @@ class PredictModel {
     return null;
   }
 
-  /** Override: returns the user-input map currently being read/written. Westminster always
-   * returns the same map; Holyrood swaps based on activeTab. */
-  currentInputMap() { return new Map(); }
+  /**
+   * Returns the active ballot. FPTP models have a single ballot, so the default
+   * `this.ballots[0]` is correct; AMS overrides to pick by `activeTab`.
+   * @returns {Ballot}
+   */
+  activeBallot() { return this.ballots[0]; }
 
-  /** Override: returns the baseline map paired with the current input map (so getShare's
-   * fallback uses the matching ballot's baseline). */
-  currentBaselineMap() { return new Map(); }
+  /** Returns the active ballot's user-input map. */
+  currentInputMap() { return this.activeBallot().input; }
 
-  /** Writes a single share input into the active input map. */
+  /** Returns the active ballot's baseline map. */
+  currentBaselineMap() { return this.activeBallot().baseline; }
+
+  /** Writes a single share input into the active ballot's input map. */
   setShare(regionKey, partyKey, value) {
     const input = this.currentInputMap();
     if (!input.has(regionKey)) input.set(regionKey, new Map());
@@ -485,7 +538,7 @@ class PredictModel {
 
   /**
    * Builds a regionKey → partyKey → swing-pp map from explicit input/baseline pair. Zero
-   * swings are dropped. Subclasses call this once (Westminster) or twice (Holyrood, for
+   * swings are dropped. Subclasses call this once (FPTP) or twice (AMS, for
    * const and list passes) inside project().
    * @param {Map<string, Map<string, number>>} inputMap
    * @param {Map<string, Map<string, number>>} baselineMap
@@ -512,7 +565,7 @@ class PredictModel {
    * active input/baseline pair (`currentInputMap` / `currentBaselineMap`). Returns the
    * untouched baseline seats when no input differs from baseline (zero swings), so a model
    * with no user edits reproduces the published result exactly. Subclasses with a different
-   * electoral system (e.g. Holyrood's constituency + D'Hondt list two-pass) override this.
+   * electoral system (e.g. AMS's constituency + D'Hondt list two-pass) override this.
    * @returns {Seat[]}
    */
   project() {
@@ -521,16 +574,24 @@ class PredictModel {
     return this.baseSeats.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
   }
 
-  /** Reset shared state. Subclasses override to also clear their input maps and ballot
-   * tab, calling `super.reset()` to handle the aggregate flag. */
-  reset() { this.aggregateExpanded = false; }
+  /**
+   * Resets the model to its constructed-empty state: clears every ballot's input map
+   * (in place, so references stay stable) and resets the aggregate-expanded flag.
+   * Subclasses override to also reset their own non-ballot state (e.g. AMS's
+   * `activeTab`), calling `super.reset()` to handle ballots + the aggregate flag.
+   */
+  reset() {
+    this.aggregateExpanded = false;
+    this.ballots.forEach((b) => b.input.clear());
+  }
 
   /**
-   * Builds the wire payload shared by every subclass `serialize()`. Returns '' when the
-   * model has no overrides AND no aggregate-expanded flag — the empty payload is what
-   * suppresses the `?predict=` query param entirely.
-   * @param {Array} overrides - From `collectOverrides`. Shape varies per subclass.
-   * @param {object} [extra] - Extra envelope keys (e.g. Holyrood's `{ h: 1 }` discriminator).
+   * Builds the wire payload that gets base64url-encoded into the `?predict=` query param.
+   * Returns '' when the model has no overrides AND no aggregate-expanded flag — the empty
+   * payload is what suppresses the query param entirely.
+   * @param {Array} overrides - Flat array from `collectOverrides`, shape depends on whether
+   *   ballots have a `serializePrefix`.
+   * @param {object} [extra] - Extra envelope keys (e.g. AMS's `{ h: 1 }` discriminator).
    * @returns {string}
    */
   buildSerializedPayload(overrides, extra = {}) {
@@ -542,30 +603,84 @@ class PredictModel {
     }));
   }
 
-  /** Override: serialize to a URL-safe payload string. */
-  serialize() { return ''; }
+  /**
+   * Serializes every ballot's overrides into a URL-safe payload string. Each ballot
+   * contributes entries tagged with its `serializePrefix` (null for single-ballot models,
+   * `'c'`/`'l'` for AMS); `serializeExtra` lets subclasses add discriminator fields like
+   * `{ h: 1 }`.
+   * @returns {string}
+   */
+  serialize() {
+    const overrides = this.ballots.flatMap((b) => this.collectOverrides(b.input, b.baseline, b.serializePrefix));
+    return this.buildSerializedPayload(overrides, this.serializeExtra());
+  }
 
-  /** Override: load a serialized payload. */
-  deserialize(_payload) {}
-
-  /** Override: load from a model-output simulation seat array (Apply current forecast). */
-  loadSimulationShares(_simulationSeats) {}
+  /** Override: extra envelope keys for `serialize()`. Default is empty. */
+  serializeExtra() { return {}; }
 
   /**
-   * Override hook: returns every input map subject to aggregate expand/collapse handling.
-   *
-   * Westminster has a single nested `Map<regionKey, Map<partyKey, share>>` and returns
-   * `[this.inputByRegion]`. Holyrood maintains separate const and list ballots and
-   * returns `[this.constInput, this.listInput]` so `setAggregateExpanded`'s propagation
-   * + drop logic touches both ballots in lockstep, preventing a stale value from leaking
-   * through after a tab switch.
-   *
-   * Default returns `[]` so a subclass without input maps (or `aggregateConfig === null`)
-   * is a safe no-op when `setAggregateExpanded` runs.
-   *
-   * @returns {Map<string, Map<string, number>>[]}
+   * Loads a serialized payload into the ballot inputs. Subclasses override
+   * `acceptsPayload` to reject payloads that don't match this model (e.g. AMS rejects
+   * payloads without the `h:1` flag). Entry shape depends on whether the model uses
+   * ballot prefixes — single-ballot models read `[r, p, v]`, multi-ballot models read
+   * `[prefix, r, p, v]` and route via `ballotForPrefix`.
+   * @param {string} payload
    */
-  inputMaps() { return []; }
+  deserialize(payload) {
+    const decoded = decodePredictPayload(payload);
+    if (!decoded) return;
+    if (!this.acceptsPayload(decoded)) return;
+    this.aggregateExpanded = decoded.e === 1;
+    const validRegions = new Set(this.regions().map((r) => r.regionKey));
+    const usesPrefixes = this.ballots.some((b) => b.serializePrefix !== null);
+    (decoded.r || []).forEach((entry) => {
+      let prefix = null;
+      let regionKey; let partyKey; let value;
+      if (usesPrefixes) {
+        [prefix, regionKey, partyKey, value] = entry;
+      } else {
+        [regionKey, partyKey, value] = entry;
+      }
+      if (!validRegions.has(regionKey)) return;
+      if (!this.parties(regionKey).includes(partyKey)) return;
+      const ballot = this.ballotForPrefix(prefix);
+      if (!ballot) return;
+      if (!ballot.input.has(regionKey)) ballot.input.set(regionKey, new Map());
+      ballot.input.get(regionKey).set(partyKey, roundShare(value));
+    });
+  }
+
+  /** Override: returns true if the decoded payload is meant for this model. */
+  acceptsPayload(_decoded) { return true; }
+
+  /**
+   * Picks the ballot a serialized entry routes to. Single-ballot models always pick
+   * `ballots[0]`; multi-ballot models match by `serializePrefix`.
+   * @param {string|null} prefix
+   * @returns {Ballot|null}
+   */
+  ballotForPrefix(prefix) {
+    if (prefix === null) return this.ballots[0] || null;
+    return this.ballots.find((b) => b.serializePrefix === prefix) || null;
+  }
+
+  /**
+   * Loads regional shares from a simulation seat array into every ballot's input map.
+   * Each ballot's `filterSeats` picks the simulation-seat subset it cares about (FPTP
+   * passes through; AMS filters to constituency seats / deduped list seats). Inputs
+   * are cleared in place before loading.
+   * @param {Seat[]} simulationSeats
+   */
+  loadSimulationShares(simulationSeats) {
+    this.ballots.forEach((b) => {
+      b.input.clear();
+      this.loadSharesFromSeats(b.filterSeats(simulationSeats), b.input);
+    });
+  }
+
+  /** Returns every ballot's input map — used by `setAggregateExpanded` to propagate /
+   * drop sub-region entries across all ballots in lockstep. */
+  inputMaps() { return this.ballots.map((b) => b.input); }
 
   /**
    * Toggles the predict grid between collapsed (single aggregate row) and expanded
@@ -634,7 +749,7 @@ class PredictModel {
    *   conflict with what the user was just looking at.
    *
    * @param {Seat[]} seats - Source seats (already filtered to the relevant ballot type
-   *   for Holyrood — const vs list — by the caller).
+   *   for AMS — const vs list — by the caller).
    * @param {Map<string, Map<string, number>>} target - Input map to populate (mutated).
    * @returns {void}
    */
@@ -658,8 +773,8 @@ class PredictModel {
    * three changed parties produces three entries.
    *
    * Output shape:
-   * - Without prefix (Westminster, single ballot): `[regionKey, partyKey, value]`.
-   * - With prefix (Holyrood, two ballots): `[prefix, regionKey, partyKey, value]` where
+   * - Without prefix (single-ballot, e.g. FPTP): `[regionKey, partyKey, value]`.
+   * - With prefix (multi-ballot, e.g. AMS): `[prefix, regionKey, partyKey, value]` where
    *   prefix is `'c'` (constituency) or `'l'` (list) so deserialize can route the entry
    *   back to the correct input map.
    *
@@ -718,87 +833,66 @@ class PredictModel {
 }
 
 /**
- * Westminster predict: GB regions (England aggregate or sub-regions) + NI region. Inputs
- * are a nested Map<region, Map<party, share>>. Grid layout, columns, and the 'nat'
- * virtual column are all driven by the manifest's `gridSections` + `virtualColumns`.
+ * FPTP predict: single-ballot uniform-swing model. Used by Westminster (GB regions with
+ * an England aggregate + NI), but the class is system-driven, not parliament-driven — any
+ * pure first-past-the-post layout can use it. Grid layout, columns, virtual columns, and
+ * aggregate handling all come from the manifest's `predict` config.
+ *
+ * Inherits `project()` (base-class uniform-swing default), `serialize` / `deserialize`,
+ * and `loadSimulationShares` from `PredictModel`; only needs to supply the ballot.
  */
-export class WestminsterPredict extends PredictModel {
+export class FPTPPredict extends PredictModel {
   constructor(nextElectionYear, config) {
     super(nextElectionYear, config);
-    this.baselineByRegion = this.baselineFor(this.baseSeats);
-    this.inputByRegion = new Map();
-  }
-
-  currentInputMap() { return this.inputByRegion; }
-  currentBaselineMap() { return this.baselineByRegion; }
-  inputMaps() { return [this.inputByRegion]; }
-
-  reset() {
-    super.reset();
-    this.inputByRegion = new Map();
-  }
-
-  // project() uses the base-class uniform-swing default (single GB+NI pass).
-
-  /** Populates inputs from a simulation seat array (model-output forecast). */
-  loadSimulationShares(simulationSeats) {
-    this.inputByRegion = new Map();
-    this.loadSharesFromSeats(simulationSeats, this.inputByRegion);
-  }
-
-  /** Encodes inputs as a base64url-encoded JSON object. Empty string when no overrides. */
-  serialize() {
-    return this.buildSerializedPayload(this.collectOverrides(this.inputByRegion, this.baselineByRegion));
-  }
-
-  deserialize(payload) {
-    const decoded = decodePredictPayload(payload);
-    if (!decoded) return;
-    this.aggregateExpanded = decoded.e === 1;
-    const validRegions = new Set(this.regions().map((r) => r.regionKey));
-    (decoded.r || []).forEach(([regionKey, partyKey, value]) => {
-      if (!validRegions.has(regionKey)) return;
-      if (!this.parties(regionKey).includes(partyKey)) return;
-      this.setShare(regionKey, partyKey, value);
-    });
+    this.ballots = [new Ballot({
+      input: new Map(),
+      baseline: this.baselineFor(this.baseSeats),
+    })];
   }
 }
 
 /**
- * Holyrood predict: 8 regional rows with separate constituency and list ballot inputs.
- * Active tab determines which input map the grid reads/writes; project() runs both passes
- * regardless of the active tab.
+ * AMS (Additional Member System) predict: two-ballot model. Pass 1 projects constituency
+ * seats with FPTP uniform swing; Pass 2 runs per-region D'Hondt list allocation, seeded
+ * with the pass-1 constituency wins so the list tops up under-represented parties. Used
+ * by Holyrood today; the class is system-driven, so any AMS / MMP layout (Welsh Senedd,
+ * London Assembly) can reuse it.
+ *
+ * Holds two ballots — constituency and list — and an `activeTab` that selects which one
+ * the grid reads/writes. `project()` runs both passes regardless of the active tab.
  */
-export class HolyroodPredict extends PredictModel {
+export class AMSPredict extends PredictModel {
   constructor(nextElectionYear, config) {
     super(nextElectionYear, config);
     this.tabs = this.config.tabs || [];
     this.activeTab = this.tabs[0]?.key || 'constituency';
-    this.constInput = new Map();
-    this.listInput = new Map();
-    this.constBaselineByRegion = this.baselineFor(this.baseSeats.filter((s) => !Seat.isList(s)));
-    // List baselines: each list seat in a region carries the full regional list total
-    // duplicated, so dedupe by region before computing shares.
-    this.listBaselineByRegion = this.baselineFor(HolyroodPredict.#dedupeListSeatsByRegion(this.baseSeats));
+    this.ballots = [
+      new Ballot({
+        key: 'constituency',
+        serializePrefix: 'c',
+        input: new Map(),
+        baseline: this.baselineFor(this.baseSeats.filter((s) => !Seat.isList(s))),
+        filterSeats: (seats) => seats.filter((s) => !Seat.isList(s)),
+      }),
+      new Ballot({
+        key: 'list',
+        serializePrefix: 'l',
+        // List baselines: each list seat in a region carries the full regional list total
+        // duplicated, so dedupe by region before computing shares.
+        input: new Map(),
+        baseline: this.baselineFor(dedupeListSeatsByRegion(this.baseSeats)),
+        filterSeats: dedupeListSeatsByRegion,
+      }),
+    ];
   }
 
-  static #dedupeListSeatsByRegion(seats) {
-    const seen = new Set();
-    return seats.filter((s) => {
-      if (!Seat.isList(s)) return false;
-      if (seen.has(s.region)) return false;
-      seen.add(s.region);
-      return true;
-    });
+  activeBallot() {
+    return this.ballots.find((b) => b.key === this.activeTab) || this.ballots[0];
   }
-
-  currentInputMap() { return this.activeTab === 'list' ? this.listInput : this.constInput; }
-  currentBaselineMap() { return this.activeTab === 'list' ? this.listBaselineByRegion : this.constBaselineByRegion; }
-  inputMaps() { return [this.constInput, this.listInput]; }
 
   /**
    * Switches the active ballot tab. Subsequent reads/writes via `currentInputMap` and
-   * `currentBaselineMap` route to the matching ballot's pair (const vs list).
+   * `currentBaselineMap` route to the matching ballot.
    *
    * Validates `tab` against the manifest's `predict.tabs` list and silently no-ops on
    * unknown keys — guards against a bad URL fragment or stray caller. `project()` runs
@@ -816,13 +910,15 @@ export class HolyroodPredict extends PredictModel {
   reset() {
     super.reset();
     this.activeTab = this.tabs[0]?.key || 'constituency';
-    this.constInput = new Map();
-    this.listInput = new Map();
   }
 
+  acceptsPayload(decoded) { return decoded.h === 1; }
+  serializeExtra() { return { h: 1 }; }
+
   project() {
-    const constSwings = this.buildSwings(this.constInput, this.constBaselineByRegion);
-    const listSwings = this.buildSwings(this.listInput, this.listBaselineByRegion);
+    const [constBallot, listBallot] = this.ballots;
+    const constSwings = this.buildSwings(constBallot.input, constBallot.baseline);
+    const listSwings = this.buildSwings(listBallot.input, listBallot.baseline);
     // Zero-swing short-circuit: with no inputs the user expects the published baseline
     // result exactly. Re-running D'Hondt on the baseline data can produce a mathematically
     // valid but different allocation when the source data wasn't itself a clean D'Hondt
@@ -853,7 +949,7 @@ export class HolyroodPredict extends PredictModel {
   }
 
   /**
-   * Projects the regional list seats and runs D'Hondt allocation per region (Holyrood pass 2).
+   * Projects the regional list seats and runs D'Hondt allocation per region (AMS pass 2).
    * Each region's list seats share an identical regional vote total (the source data duplicates
    * it across every list seat), so the divisor pool is read from the first projected seat in the
    * region; constituency wins from pass 1 seed the divisor so the list tops up under-represented
@@ -869,6 +965,7 @@ export class HolyroodPredict extends PredictModel {
     const listByRegion = new Map();
     listBase.forEach((s) => {
       const rk = normalizeRegionKey(s.region);
+      if (!rk) return;
       if (!listByRegion.has(rk)) listByRegion.set(rk, []);
       listByRegion.get(rk).push(s);
     });
@@ -890,37 +987,6 @@ export class HolyroodPredict extends PredictModel {
     });
     return projectedList;
   }
-
-  loadSimulationShares(simulationSeats) {
-    const constSeats = simulationSeats.filter((s) => !Seat.isList(s));
-    const dedupedListSeats = HolyroodPredict.#dedupeListSeatsByRegion(simulationSeats);
-    this.constInput = new Map();
-    this.listInput = new Map();
-    this.loadSharesFromSeats(constSeats, this.constInput);
-    this.loadSharesFromSeats(dedupedListSeats, this.listInput);
-  }
-
-  serialize() {
-    const overrides = [
-      ...this.collectOverrides(this.constInput, this.constBaselineByRegion, 'c'),
-      ...this.collectOverrides(this.listInput, this.listBaselineByRegion, 'l'),
-    ];
-    return this.buildSerializedPayload(overrides, { h: 1 });
-  }
-
-  deserialize(payload) {
-    const decoded = decodePredictPayload(payload);
-    if (!decoded || decoded.h !== 1) return;
-    this.aggregateExpanded = decoded.e === 1;
-    const validRegions = new Set(this.regions().map((r) => r.regionKey));
-    (decoded.r || []).forEach(([prefix, regionKey, partyKey, value]) => {
-      if (!validRegions.has(regionKey)) return;
-      if (!this.parties(regionKey).includes(partyKey)) return;
-      const target = prefix === 'l' ? this.listInput : this.constInput;
-      if (!target.has(regionKey)) target.set(regionKey, new Map());
-      target.get(regionKey).set(partyKey, roundShare(value));
-    });
-  }
 }
 
 function decodePredictPayload(payload) {
@@ -940,7 +1006,7 @@ function decodePredictPayload(payload) {
 export function predictModelClassFor(parliament) {
   const config = manifest.parliamentConfig(parliament).predict;
   if (!config?.model) return null;
-  if (config.model === 'westminster') return WestminsterPredict;
-  if (config.model === 'holyrood') return HolyroodPredict;
+  if (config.model === 'fptp') return FPTPPredict;
+  if (config.model === 'ams') return AMSPredict;
   return null;
 }

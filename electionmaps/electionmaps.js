@@ -1033,7 +1033,7 @@ function renderElectionLinks(manifest, activeId) {
     const predictButton = document.createElement('button');
     predictButton.type = 'button';
     predictButton.className = 'maps-election-item';
-    predictButton.textContent = currentParliament === 'holyrood' ? 'Predict 2026' : 'Predict 2029';
+    predictButton.textContent = currentParliament === 'holyrood' ? 'Predict 2031' : 'Predict 2029';
     predictButton.addEventListener('click', () => {
       activatePredictMode().catch((error) => {
         console.error(error);

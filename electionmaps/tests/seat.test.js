@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { Seat } from '../scripts/state.js';
+import { describe, it, expect, afterEach } from 'vitest';
+import { Seat, state } from '../scripts/state.js';
 
 describe('Seat.voteSharePct', () => {
   it('calculates share against the explicit turnout when present', () => {
@@ -56,6 +56,13 @@ describe('Seat constructor', () => {
     expect(seat.region).toBe('unknown');
     expect(seat.winner).toBe('others');
   });
+
+  it('folds non-canonical string winner keys onto their canonical alias', () => {
+    // resolvePartyRef applies PARTY_KEY_ALIASES to string refs after alnum-normalising.
+    expect(new Seat({ winner: 'uup', votes: { uu: 1 } }).winner).toBe('uu');
+    expect(new Seat({ winner: 'Reform UK', votes: { reform: 1 } }).winner).toBe('reform');
+    expect(new Seat({ winner: 'Liberal Democrats', votes: { libdems: 1 } }).winner).toBe('libdems');
+  });
 });
 
 describe('Seat.fromRaw', () => {
@@ -83,6 +90,28 @@ describe('Seat.isList', () => {
     expect(Seat.isList({ seat: 'Glasgow Pollok' })).toBe(false);
     expect(Seat.isList({ seat: 'Listowel' })).toBe(false);
     expect(Seat.isList({})).toBe(false);
+  });
+});
+
+describe('Seat.isList (configurable per-map pattern)', () => {
+  afterEach(() => { state.mapConfig = null; });
+
+  it('uses the default "<region> List <n>" convention when no pattern is configured', () => {
+    state.mapConfig = null;
+    expect(Seat.isList({ seat: 'Glasgow List 1' })).toBe(true);
+    expect(Seat.isList({ seat: 'Glasgow Pollok' })).toBe(false);
+  });
+
+  it('honours a per-map listSeatPattern override', () => {
+    state.mapConfig = { listSeatPattern: '^Region:' };
+    expect(Seat.isList({ seat: 'Region: North 1' })).toBe(true);
+    // The default "List N" convention no longer matches once a chamber overrides the pattern.
+    expect(Seat.isList({ seat: 'Glasgow List 1' })).toBe(false);
+  });
+
+  it('falls back to the default when the configured pattern is malformed', () => {
+    state.mapConfig = { listSeatPattern: '[' };
+    expect(Seat.isList({ seat: 'Glasgow List 1' })).toBe(true);
   });
 });
 

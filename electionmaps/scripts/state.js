@@ -6,6 +6,19 @@ import * as d3 from '../../site/vendor/d3.v7.esm.js';
 import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel } from './utils.js';
 import { fetchJson } from './files.js';
 
+// Canonical aliases for non-standard string party keys in legacy / external data, applied by
+// Manifest.resolvePartyRef after alphanumeric-normalising the raw key. Modern pf-results-v4
+// data uses integer party ids, so this only affects string-keyed inputs.
+const PARTY_KEY_ALIASES = {
+  ukindependenceparty: 'ukip',
+  reformuk: 'reform',
+  liberaldemocrats: 'libdems',
+  democraticunionistparty: 'dup',
+  ulsterunionistparty: 'uu',
+  uup: 'uu',
+  scottishnationalparty: 'snp',
+};
+
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
 class Manifest {
@@ -140,7 +153,8 @@ class Manifest {
   /**
    * Resolves a raw party reference (integer party_id or string key) to a canonical party key.
    * Numeric refs are looked up in `this.partiesById` and the party's `.key` is returned.
-   * String refs are lowercased and returned as-is. Empty/unknown input becomes `'others'`.
+   * String refs are lowercased and folded through known party-key aliases (e.g. `uup` → `uu`).
+   * Empty/unknown input becomes `'others'`.
    * @param {number|string} ref - Raw party reference from results data.
    * @returns {string} Canonical party key.
    */
@@ -152,7 +166,11 @@ class Manifest {
       return String(num);
     }
     const raw = String(ref || '').trim().toLowerCase();
-    return raw || 'others';
+    if (!raw) return 'others';
+    // Fold known alias spellings (e.g. 'uup' → 'uu', 'reform uk' → 'reform') onto canonical
+    // keys after stripping non-alphanumerics, matching the legacy normalizePartyKey behaviour.
+    const alnum = raw.replace(/[^a-z0-9]/g, '');
+    return PARTY_KEY_ALIASES[alnum] || raw;
   }
 
   /**
@@ -210,6 +228,23 @@ export const manifest = new Manifest();
 // ─── Application state ────────────────────────────────────────────────────────
 
 // ─── Seat ────────────────────────────────────────────────────────────────────
+
+// Regional-list (AMS top-up) seats are identified by a name pattern. The default matches the
+// "<region> List <n>" convention emitted by export_elections.py; a chamber whose data labels
+// list seats differently overrides it per map via mapModes[id].listSeatPattern (a string,
+// compiled case-insensitively). Compiled regexes are memoised by pattern string, and a
+// malformed pattern falls back to the default rather than throwing.
+const DEFAULT_LIST_SEAT_REGEX = /\bList\s+\d+$/i;
+const listSeatRegexCache = new Map();
+function listSeatRegexFor(pattern) {
+  if (!pattern) return DEFAULT_LIST_SEAT_REGEX;
+  let regex = listSeatRegexCache.get(pattern);
+  if (!regex) {
+    try { regex = new RegExp(pattern, 'i'); } catch { regex = DEFAULT_LIST_SEAT_REGEX; }
+    listSeatRegexCache.set(pattern, regex);
+  }
+  return regex;
+}
 
 /**
  * A normalised seat record. The constructor takes a seat-shaped object (used for cloning);
@@ -336,13 +371,15 @@ export class Seat {
 
   /**
    * Returns true if seat is a regional list seat (e.g. "Glasgow List 1"). List seats have no
-   * map geometry and appear only in the seat list panel. Static so it accepts any seat-shaped
-   * object, not just Seat instances.
+   * map geometry and appear only in the seat list panel. The match pattern comes from the
+   * active map's `listSeatPattern` config (falling back to the default "<region> List <n>"
+   * convention), so a chamber that labels list seats differently is config-driven rather than
+   * hardcoded. Static so it accepts any seat-shaped object, not just Seat instances.
    * @param {{seat?: string}} seat - Seat-shaped object with a `seat` name field.
    * @returns {boolean}
    */
   static isList(seat) {
-    return /\bList\s+\d+$/i.test(seat?.seat || '');
+    return listSeatRegexFor(state.mapConfig?.listSeatPattern).test(seat?.seat || '');
   }
 
   // ── Seat data utilities ────────────────────────────────────────────────────
@@ -714,12 +751,12 @@ export class ElectionData {
      * Null for the comparison ElectionData instance, which never renders a subtitle. */
     this.electionName = electionName;
 
-    /** Pristine normalised seat records as parsed from the results JSON. Never mutated;
-     * use as the source of truth when rebuilding currentSeats from baseline. */
+    /** Pristine normalised seat records as parsed from the results JSON. */
     this.baseSeats = ElectionData.normalizeSeats(resultsData);
 
-    /** Mutable clone of baseSeats. Predict mode and other features write back into this list,
-     * so it diverges from baseSeats over time within a single election load. */
+    /** Working copy of baseSeats — a defensive clone so holders of currentSeats can't disturb
+     * the pristine parse. Currently replaced wholesale (predict projection swaps in a fresh
+     * ElectionData via fromSeats) rather than mutated in place. */
     this.currentSeats = this.baseSeats.map((seat) => new Seat(seat));
 
     /** Map from seat lookup key to currentSeats entry, rebuilt whenever currentSeats is replaced. */
@@ -946,7 +983,7 @@ class AppState {
     };
 
     /** Active predict-mode model (FPTPPredict | AMSPredict | null). Populated by
-     * activatePredictMode in electionmaps.js; null whenever view !== 'predict'. */
+     * activatePredictView in predict-controller.js; null whenever view !== 'predict'. */
     this.predictModel = null;
   }
 
@@ -1062,14 +1099,6 @@ class AppState {
    */
   getPredictAnchorElectionId() {
     return manifest.parliamentConfig(this.currentParliament).predictAnchorElectionId;
-  }
-
-  /**
-   * Returns the predict baseline election id for the current parliament, or undefined if not set.
-   * @returns {string|undefined}
-   */
-  getPredictBaselineElectionId() {
-    return manifest.parliamentConfig(this.currentParliament).predictBaselineElectionId;
   }
 
   /**

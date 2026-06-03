@@ -6,6 +6,7 @@ import {
 } from '../../site/vendor/topojson-client.v3.esm.js';
 import { manifest, state } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber } from './utils.js';
+import { fetchJson } from './files.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
@@ -727,9 +728,9 @@ const predictGrid = document.getElementById('mapsPredictGrid');
 const predictTabNav = document.getElementById('mapsPredictTabNav');
 const predictTitle = document.getElementById('mapsPredictTitle');
 
-// Action handlers wired by the orchestrator (electionmaps.js) so predict-mode actions can
-// run their projection / URL-share / forecast-load logic without dom.js needing to import
-// from electionmaps.js. Keys: 'apply' | 'submit' | 'share' | 'reset'.
+// Action handlers wired by the predict controller (predict-controller.js) so predict-mode
+// actions can run their projection / URL-share / forecast-load logic without dom.js needing to
+// import that logic. Keys: 'apply' | 'submit' | 'share' | 'reset'.
 let predictActionHandlers = {};
 
 /**
@@ -737,7 +738,7 @@ let predictActionHandlers = {};
  * clicks. Keys must match the `[data-predict-action]` attributes on the action buttons
  * in `index.html`; missing keys cause the matching button click to no-op.
  *
- * Called once per predict-mode entry from `activatePredictView` in `electionmaps.js`.
+ * Called once per predict-mode entry from `activatePredictView` in `predict-controller.js`.
  * Subsequent calls overwrite the registration wholesale (a `null` argument resets to
  * an empty object, disabling all action buttons until re-registered).
  *
@@ -783,8 +784,8 @@ export function setPredictWindowVisible(visible) {
 
 /**
  * Renders the predict window contents from `state.predictModel`. Driven from three
- * places: the orchestrator's predict-mode entry (`activatePredictView`), each action
- * handler in electionmaps.js after it mutates the model, and the inline event handlers
+ * places: the predict-mode entry (`activatePredictView`), each action
+ * handler in predict-controller.js after it mutates the model, and the inline event handlers
  * in this file (tab click, aggregate toggle, input change) when they need to repaint
  * after a model state change.
  *
@@ -979,9 +980,18 @@ function renderPredictGrid(model) {
           input.disabled = true;
         } else {
           input.addEventListener('change', () => {
-            // 'change' fires on blur / Enter — clamp + round before persisting so the
-            // model only ever holds [0, 100] integer shares, then refresh the row's
-            // 'other' cell so the implied total stays consistent with the new value.
+            // 'change' fires on blur / Enter. An empty cell means "revert to baseline": clear
+            // the override and redisplay the baseline value, rather than coercing the blank to
+            // 0% (clampNumber('') is 0, which would silently pin the party to zero). Otherwise
+            // clamp + round before persisting so the model only ever holds [0, 100] integer
+            // shares. Either way refresh the row's 'other' cell so the implied total stays
+            // consistent.
+            if (input.value.trim() === '') {
+              model.clearShare(row.regionKey, partyKey);
+              input.value = String(model.getShare(row.regionKey, partyKey));
+              refreshOther(row.regionKey);
+              return;
+            }
             const next = clampNumber(input.value, 0, 100);
             input.value = String(Math.round(next));
             model.setShare(row.regionKey, partyKey, next);
@@ -1023,10 +1033,10 @@ function renderPredictGrid(model) {
  *    the `seatCardObserver` ResizeObserver re-shows it if it had been hidden for lack of
  *    room — the collapse handler never touches the seat card directly. Both class flips
  *    reverse on re-expand. None of this is shared with the orchestrator — keeping it
- *    inline avoids a round-trip through `electionmaps.js`.
+ *    inline avoids a round-trip through `predict-controller.js`.
  *
  * 2. **Apply / Submit / Share / Reset** — looked up in the `predictActionHandlers` bag
- *    populated by `setPredictActionHandlers`. Each handler lives in `electionmaps.js`
+ *    populated by `setPredictActionHandlers`. Each handler lives in `predict-controller.js`
  *    where it can mutate the model and trigger a re-projection. Missing handlers
  *    silently no-op (defensive against partial registration).
  *
@@ -1037,7 +1047,7 @@ function wirePredictControls() {
     button.addEventListener('click', () => {
       // Collapse is layout-only and stays in dom.js; the rest (apply/submit/share/reset)
       // routes to the orchestrator-supplied handler so this module doesn't need to
-      // import predict-mode logic from electionmaps.js.
+      // import predict-mode logic from predict-controller.js.
       const action = button.getAttribute('data-predict-action');
       if (action === 'collapse') {
         // Dropping maps-predict-window-fill makes the window shrink to header-only
@@ -1161,7 +1171,7 @@ export function renderMapControlOptions() {
  * filter/choropleth inputs and toggles second-party group visibility.
  * @returns {void}
  */
-export function syncMapControlInputsFromState() {
+function syncMapControlInputsFromState() {
   filterPartySelect.value = state.mapFilters.party;
   filterRegionSelect.value = state.mapFilters.region;
 
@@ -1185,7 +1195,7 @@ export function syncMapControlInputsFromState() {
  * normalizing and clamping values, then syncs the inputs back.
  * @returns {void}
  */
-export function syncMapControlStateFromInputs() {
+function syncMapControlStateFromInputs() {
   state.mapFilters.party = filterPartySelect.value || 'all';
   state.mapFilters.region = filterRegionSelect.value || 'all';
   if (state.mapFilters.party === 'all') {
@@ -1313,7 +1323,7 @@ function sortPartyRows(rows) {
  * @param {{parties: Array<object>, totalVotes: number}|null} [comparisonSummary] - Comparison for delta columns; defaults to state.filteredSeatsComparisonSummary.
  * @returns {void}
  */
-export function renderVoteTotals(
+function renderVoteTotals(
   summary = state.filteredSeatsSummary,
   comparisonSummary = state.filteredSeatsComparisonSummary
 ) {
@@ -1406,7 +1416,7 @@ function initVoteTotalsTabs() {
  * and the full party list. Flips state.voteTotals.expanded then re-renders via renderVoteTotals().
  * @returns {void}
  */
-export function wireVoteTotalsToggle() {
+function wireVoteTotalsToggle() {
   voteTotalsToggle.addEventListener('click', () => {
     state.voteTotals.expanded = !state.voteTotals.expanded;
     if (!state.filteredSeatsSummary) return;
@@ -1421,7 +1431,7 @@ export function wireVoteTotalsToggle() {
  * hidden on mobile via a media query in mobile-sidebar.css.
  * @returns {void}
  */
-export function wireVoteTotalsCollapse() {
+function wireVoteTotalsCollapse() {
   voteTotalsCollapse.addEventListener('click', () => {
     const collapsed = voteTotalsCard.classList.toggle('maps-vote-totals--collapsed');
     voteTotalsCollapse.textContent = collapsed ? '▼' : '▲';
@@ -1620,9 +1630,9 @@ async function lookupPostcode(postcode) {
   }
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
+    // fetchJson throws on a non-OK status (e.g. 404 for an unknown postcode); the catch below
+    // turns that into the same null this lookup returns for any other failure.
+    const data = await fetchJson(url);
     const rawName = data?.result?.[resultProperty] ?? null;
 
     if (!rawName) return null;
@@ -2168,24 +2178,22 @@ function renderRegionPopup(regionKey, data) {
   seatPopup.hidden = false;
 }
 
-// TODO: make private once electionmaps.js callers (wireSeatPopup, resetZoom) migrate to dom.js
 /**
  * Hides the seat detail popup and clears the tracked open seat name.
  * @returns {void}
  */
-export function hideSeatPopup() {
+function hideSeatPopup() {
   if (!seatPopup) return;
   seatPopup.hidden = true;
 }
 
-// TODO: make private once electionmaps.js caller (selectSeatBySearchQuery) migrates to dom.js
 /**
  * Renders the seat detail popup for seatName, showing majority, gain indicator, and a ranked
  * vote share bar chart with comparison deltas. Hides the popup if the seat is not found.
  * @param {string} seatName - Display name of the seat to show.
  * @returns {void}
  */
-export function renderSeatPopup(seatName) {
+function renderSeatPopup(seatName) {
   // Resolve the seat object; hide the popup and bail if not found.
   const seatKey = seatLookupKey(seatName);
   const seat = state.electionData.seatsByKey.get(seatKey);
@@ -2285,7 +2293,6 @@ function setSelectedSeatRowByKey(seatKey) {
  */
 function renderSeatList() {
   const seats = state.listFilteredSeats;
-  const comparisonSeats = state.comparisonSeats;
   seatListTitle.textContent = `Seats (${seats.length})`;
   // Wipe the previous render and clear the stale selection reference before rebuilding.
   seatList.innerHTML = '';

@@ -96,3 +96,4 @@ Per-map-ID display configuration. Keyed by the numeric map ID.
 | `seatViews` | Tabs shown in the seat list panel. Each has `id` and `label`. For Westminster this is just `seats`; for Holyrood it is `constituency`. |
 | `voteTotalsViews` | Tabs shown in the vote totals panel. Westminster has a single `all` tab; Holyrood has `all`, `constituency`, and `list`. |
 | `hiddenVoteTotalsParties` | Optional array of party keys to hide from the vote totals table for this map (e.g. Alba is hidden on the 2026-boundary Holyrood map where it has no list presence). |
+| `listSeatPattern` | Optional regex string (compiled case-insensitively) identifying regional-list (AMS top-up) seats by name. Omit for first-past-the-post maps. Holyrood sets `\bList\s+\d+$` to match the `<region> List <n>` naming convention; an AMS chamber labelling list seats differently overrides it here rather than in code. |

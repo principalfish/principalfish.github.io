@@ -66,6 +66,16 @@ describe('buildBaselineShares', () => {
     expect(sum).toBe(100);
     expect(shares.get('r').get('a')).toBe(32);
   });
+
+  it('keeps trimming across parties when the overshoot exceeds the smallest party', () => {
+    // a/b/c round 0.7 -> 1 each, d rounds 98.7 -> 99: sum 102, overshoot 2 > smallest (1),
+    // so the single-party trim is not enough — the loop must zero two parties to reach 100.
+    const seats = [{ region: 'r', turnout: 1000, votes: { a: 7, b: 7, c: 7, d: 987 } }];
+    const shares = buildBaselineShares(seats, ['a', 'b', 'c', 'd']);
+    const parties = shares.get('r');
+    const sum = parties.get('a') + parties.get('b') + parties.get('c') + parties.get('d');
+    expect(sum).toBe(100);
+  });
 });
 
 describe('projectSeatUniformSwing', () => {
@@ -161,6 +171,24 @@ describe('FPTPPredict serialize / deserialize', () => {
   it('serializes to an empty payload when no input differs from baseline', () => {
     const model = new FPTPPredict(2029, config);
     expect(model.serialize()).toBe('');
+  });
+
+  it('clearShare reverts a cell to baseline and prunes the empty region map', () => {
+    const model = new FPTPPredict(2029, config);
+    model.setShare('london', 'labour', 70);
+    expect(model.getShare('london', 'labour')).toBe(70);
+
+    model.clearShare('london', 'labour');
+    // Baseline labour share is 600/1000 = 60; getShare must fall back to it, not to 0.
+    expect(model.getShare('london', 'labour')).toBe(60);
+    expect(model.currentInputMap().has('london')).toBe(false);
+  });
+
+  it('deserialize tolerates a payload whose `r` is not an array', () => {
+    const payload = base64urlEncode(JSON.stringify({ e: 0, r: 'not-an-array' }));
+    const model = new FPTPPredict(2029, config);
+    expect(() => model.deserialize(payload)).not.toThrow();
+    expect(model.currentInputMap().size).toBe(0);
   });
 
   it('ignores overrides for regions outside the grid', () => {
@@ -260,6 +288,51 @@ describe('AMSPredict.project (two-pass constituency + D\'Hondt list)', () => {
     expect(consts.every((s) => s.winner === 'labour')).toBe(true);
     // The D'Hondt list pass still assigns a winner to every list seat.
     expect(lists.every((s) => s.winner)).toBe(true);
+  });
+
+  it('does not apply constituency swings to list votes when the list ballot is untouched', () => {
+    const model = new AMSPredict(2026, config);
+    // Big labour swing on the constituency ballot only; the list ballot is left at baseline.
+    model.setActiveTab('constituency');
+    model.setShare('scotland', 'labour', 70);
+    const lists = model.project().filter((s) => Seat.isList(s));
+
+    // List votes must stay at their baseline distribution (SNP 5000 > Labour 4000). Under the
+    // old const->list swing fallback the labour swing would have leaked in and flipped this.
+    expect(lists.every((s) => s.votes.snp > s.votes.labour)).toBe(true);
+  });
+});
+
+describe('AMSPredict.validate (checks every ballot, not just the active tab)', () => {
+  const config = {
+    modelledPartyKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'],
+    aggregate: { key: 'scotland', label: 'Scotland', excludeRegions: [] },
+    tabs: [{ key: 'constituency', label: 'Constituency' }, { key: 'list', label: 'List' }],
+    gridSections: [{ id: 'holyrood', columnKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'], containsAggregate: true }],
+  };
+
+  beforeEach(() => {
+    state.comparisonElectionData = {
+      currentSeats: [
+        new Seat({ seat: 'Glasgow A', region: 'glasgow', winner: 'snp', votes: { snp: 600, labour: 400 } }),
+        new Seat({ seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: { snp: 5000, labour: 4000 } }),
+      ],
+    };
+    state.currentRegionLabelsByKey = new Map([['glasgow', 'Glasgow']]);
+  });
+
+  it('flags an over-100% row entered on the inactive (list) ballot', () => {
+    const model = new AMSPredict(2026, config);
+    model.setActiveTab('list');
+    model.setShare('scotland', 'snp', 60);
+    model.setShare('scotland', 'labour', 50); // list sum = 110%
+    // Switch back to constituency: the offending row is now on the inactive tab.
+    model.setActiveTab('constituency');
+
+    const invalid = model.validate();
+    expect(invalid.length).toBeGreaterThan(0);
+    // The offending ballot's label is appended so the Submit alert names the tab.
+    expect(invalid.some((r) => /\(List\)/.test(r.regionLabel))).toBe(true);
   });
 });
 

@@ -319,6 +319,7 @@
     },
     "11": {
       "name": "holyrood-2021",
+      "listSeatPattern": "\\bList\\s+\\d+$",
       "voteTotalsViews": [
         {
           "id": "all",
@@ -371,6 +372,7 @@
     "12": {
       "name": "holyrood-2026",
       "postcodeSupported": true,
+      "listSeatPattern": "\\bList\\s+\\d+$",
       "voteTotalsViews": [
         {
           "id": "all",

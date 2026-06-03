@@ -85,13 +85,18 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
     // alone: the shortfall is the implicit "other" share.
     let sum = 0;
     partyMap.forEach((v) => { sum += v; });
-    if (sum > 100) {
+    // Trim the overshoot off the smallest non-zero party first; if that party can't absorb it
+    // all (the overshoot exceeds its share), zero it and continue onto the next-smallest, so
+    // the corrected total always lands at 100 even when many small parties each rounded up.
+    let overshoot = sum - 100;
+    while (overshoot > 0) {
       let minKey = null;
       let minVal = Infinity;
       partyMap.forEach((v, k) => { if (v > 0 && v < minVal) { minVal = v; minKey = k; } });
-      // Clamp at zero — overshoot is bounded by ~3pp in practice but the guard prevents
-      // a negative share leaking through if a future party set raises the bound.
-      if (minKey) partyMap.set(minKey, Math.max(0, minVal - (sum - 100)));
+      if (!minKey) break;
+      const reduced = Math.max(0, minVal - overshoot);
+      partyMap.set(minKey, reduced);
+      overshoot -= minVal - reduced;
     }
     result.set(regionKey, partyMap);
   });
@@ -214,8 +219,12 @@ function dedupeListSeatsByRegion(seats) {
   const seen = new Set();
   return seats.filter((s) => {
     if (!Seat.isList(s)) return false;
-    if (seen.has(s.region)) return false;
-    seen.add(s.region);
+    // Dedupe on the normalised region key — the same key buildBaselineShares and
+    // #allocateListSeats bucket by — so a region's list seats collapse to one row even when
+    // their raw region strings differ in case/punctuation/whitespace.
+    const rk = normalizeRegionKey(s.region);
+    if (seen.has(rk)) return false;
+    seen.add(rk);
     return true;
   });
 }
@@ -508,6 +517,19 @@ class PredictModel {
     input.get(regionKey).set(partyKey, roundShare(value));
   }
 
+  /**
+   * Clears a single share input from the active ballot, reverting that cell to baseline
+   * (getShare falls back to baseline when no entered value is present). Drops the region's
+   * inner map once empty so collectOverrides / serialize stay clean.
+   */
+  clearShare(regionKey, partyKey) {
+    const input = this.currentInputMap();
+    const regionMap = input.get(regionKey);
+    if (!regionMap) return;
+    regionMap.delete(partyKey);
+    if (regionMap.size === 0) input.delete(regionKey);
+  }
+
   /** Reads the current share (entered if set, else baseline). */
   getShare(regionKey, partyKey) {
     const cached = this.currentInputMap().get(regionKey)?.get(partyKey);
@@ -520,18 +542,43 @@ class PredictModel {
     return roundShare(this.currentBaselineMap().get(regionKey)?.get(partyKey) ?? 0);
   }
 
+  /**
+   * Reads a region/party share from a specific ballot — the entered value if present, else
+   * that ballot's baseline. Mirrors getShare but isn't tied to the active tab, so validate()
+   * can check every ballot rather than only the visible one.
+   */
+  shareForBallot(ballot, regionKey, partyKey) {
+    const cached = ballot.input.get(regionKey)?.get(partyKey);
+    if (Number.isFinite(cached)) return Number(cached);
+    return roundShare(ballot.baseline.get(regionKey)?.get(partyKey) ?? 0);
+  }
+
   /** Returns the implied 'other' share for a region (100 − sum of party shares). */
   getOtherShare(regionKey) {
     const sum = this.parties(regionKey).reduce((s, p) => s + this.getShare(regionKey, p), 0);
     return roundShare(100 - sum);
   }
 
-  /** Returns rows whose entered shares sum > 100. */
+  /** Human-readable label for a ballot, used in validation messages. Default is the ballot key. */
+  ballotLabel(ballot) { return ballot.key || ''; }
+
+  /**
+   * Returns rows whose entered shares sum > 100, checked across EVERY ballot — not just the
+   * active tab — so a multi-ballot model can't slip an over-100% row past Submit on an
+   * inactive ballot. For multi-ballot models the offending ballot's label is appended to the
+   * region label so the alert names the tab.
+   */
   validate() {
     const invalid = [];
-    this.regions().forEach((row) => {
-      const sum = this.parties(row.regionKey).reduce((s, p) => s + this.getShare(row.regionKey, p), 0);
-      if (sum > 100) invalid.push({ ...row, total: roundShare(sum) });
+    const multiBallot = this.ballots.length > 1;
+    this.ballots.forEach((ballot) => {
+      this.regions().forEach((row) => {
+        const sum = this.parties(row.regionKey)
+          .reduce((s, p) => s + this.shareForBallot(ballot, row.regionKey, p), 0);
+        if (sum <= 100) return;
+        const regionLabel = multiBallot ? `${row.regionLabel} (${this.ballotLabel(ballot)})` : row.regionLabel;
+        invalid.push({ ...row, regionLabel, total: roundShare(sum) });
+      });
     });
     return invalid;
   }
@@ -570,7 +617,10 @@ class PredictModel {
    */
   project() {
     const swings = this.buildSwings(this.currentInputMap(), this.currentBaselineMap());
-    if (swings.size === 0) return this.baseSeats.slice();
+    // Deep-copy on the zero-swing path: baseSeats are state.comparisonElectionData's Seats, so
+    // returning a shallow slice would let state.electionData and state.comparisonElectionData
+    // share Seat instances. Cloning keeps the projected and comparison elections independent.
+    if (swings.size === 0) return this.baseSeats.map((seat) => new Seat(seat));
     return this.baseSeats.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
   }
 
@@ -633,7 +683,10 @@ class PredictModel {
     this.aggregateExpanded = decoded.e === 1;
     const validRegions = new Set(this.regions().map((r) => r.regionKey));
     const usesPrefixes = this.ballots.some((b) => b.serializePrefix !== null);
-    (decoded.r || []).forEach((entry) => {
+    // decoded.r comes from arbitrary (possibly hand-crafted) URL payloads; guard the shape so
+    // a non-array `r` can't throw a TypeError out of deserialize and break predict-view load.
+    const entries = Array.isArray(decoded.r) ? decoded.r : [];
+    entries.forEach((entry) => {
       let prefix = null;
       let regionKey; let partyKey; let value;
       if (usesPrefixes) {
@@ -915,6 +968,10 @@ export class AMSPredict extends PredictModel {
   acceptsPayload(decoded) { return decoded.h === 1; }
   serializeExtra() { return { h: 1 }; }
 
+  ballotLabel(ballot) {
+    return this.tabs.find((t) => t.key === ballot.key)?.label || ballot.key || '';
+  }
+
   project() {
     const [constBallot, listBallot] = this.ballots;
     const constSwings = this.buildSwings(constBallot.input, constBallot.baseline);
@@ -924,8 +981,13 @@ export class AMSPredict extends PredictModel {
     // valid but different allocation when the source data wasn't itself a clean D'Hondt
     // recomputation (e.g. the "2021 Election (2026 boundaries)" file preserves the historical
     // 2021 list winners rather than re-allocating under the new region structure).
-    if (constSwings.size === 0 && listSwings.size === 0) return this.baseSeats.slice();
-    const effectiveListSwings = listSwings.size > 0 ? listSwings : constSwings;
+    if (constSwings.size === 0 && listSwings.size === 0) return this.baseSeats.map((seat) => new Seat(seat));
+    // List votes only move when the user edits the list ballot. Editing only the constituency
+    // ballot still changes the list allocation — but indirectly, via the updated constituency
+    // wins that seed each region's D'Hondt divisors (constWinsByRegion below) — not by applying
+    // constituency-ballot swings (computed against the constituency baseline) to list votes,
+    // which would conflate two different ballots' baselines.
+    const effectiveListSwings = listSwings;
 
     const constBase = this.baseSeats.filter((s) => !Seat.isList(s));
     const listBase = this.baseSeats.filter((s) => Seat.isList(s));

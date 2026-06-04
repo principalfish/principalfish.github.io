@@ -3,7 +3,7 @@
 // A single shared object reference means every importer sees the same state.
 
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel } from './utils.js';
+import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber } from './utils.js';
 import { fetchJson } from './files.js';
 
 // Canonical aliases for non-standard string party keys in legacy / external data, applied by
@@ -1119,7 +1119,11 @@ class AppState {
 
     this.mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
 
-    this.hasListSeats = this.electionData.currentSeats.some((s) => Seat.isList(s));
+    // Partition the chamber into list / non-list seats in a single pass — the predicate
+    // (Seat.isList, a regex test) was previously evaluated three separate times per render
+    // (hasListSeats .some, the listRegionSummary .filter, and the listFilteredSeats .filter).
+    const chamberListSeats = this.electionData.currentSeats.filter((s) => Seat.isList(s));
+    this.hasListSeats = chamberListSeats.length > 0;
 
     this.recomputeVoteTotalsForMode();
 
@@ -1130,7 +1134,7 @@ class AppState {
     // stay at their defaults: no region rollup, and the seat list shows every visible
     // seat unmodified.
     this.listRegionSummary = this.hasListSeats
-      ? ElectionSummary.summarizeByRegion(this.electionData.currentSeats.filter((s) => Seat.isList(s)))
+      ? ElectionSummary.summarizeByRegion(chamberListSeats)
       : null;
     this.listFilteredSeats = this.hasListSeats
       ? this.mapSeatsVisible.seats.filter((s) => !Seat.isList(s))
@@ -1385,8 +1389,15 @@ class AppState {
         // and metric label are driven by the election's `referendum` block.
         const highColour = manifest.colourParty(refHighParty);
         const lowColour = manifest.colourParty(refLowParty);
+        // d3.scaleLinear requires a monotonic domain. Normally minValue < threshold < maxValue,
+        // but a filter that leaves only seats on one side of the threshold (e.g. party=Leave on
+        // the EU map) can push minValue above — or maxValue below — refThreshold, producing a
+        // non-monotonic [min, threshold, max] that d3 interpolates incorrectly. Clamp the
+        // threshold anchor into [minValue, maxValue] so the domain is always non-decreasing; the
+        // degenerate one-sided case collapses to a clean two-stop scale.
+        const midPoint = clampNumber(refThreshold, minValue, maxValue);
         const scale = d3.scaleLinear()
-          .domain([minValue, refThreshold, maxValue])
+          .domain([minValue, midPoint, maxValue])
           .range([lowColour, neutralColour, highColour]);
         config.toColour = (value) => scale(value);
         config.legend = {

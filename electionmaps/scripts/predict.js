@@ -139,7 +139,7 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
   let adjustedTrackedSum = 0;
   const adjustedTrackedShare = new Map();
   modelledPartyKeys.forEach((partyKey) => {
-    const baseShare = (Number(baseVotes[partyKey] || 0) / totalVotes) * 100;
+    const baseShare = Seat.voteSharePct(baseSeat, partyKey);
     const adjusted = Math.max(0, baseShare + resolveSwing(partyKey));
     adjustedTrackedShare.set(partyKey, adjusted);
     adjustedTrackedSum += adjusted;
@@ -269,6 +269,15 @@ class Ballot {
  * "load current forecast" flow — is shared.
  */
 class PredictModel {
+  /** Memoised region layout. `#sectionCache` maps a normalised regionKey to its grid section
+   * — a pure function of the immutable grid config, so it never needs invalidating.
+   * `#regionsCache` holds the last `regions()` result, keyed by `#regionsCacheKey` (the
+   * current `aggregateExpanded`, the only input that changes during a model's life) so the
+   * repeated buildSwings / validate / deserialize / render passes don't rebuild it. */
+  #sectionCache = new Map();
+  #regionsCache = null;
+  #regionsCacheKey = null;
+
   /**
    * Reads the baseline election, map topology, and region-label lookup from module-level
    * `state` rather than holding its own references. Callers MUST populate
@@ -395,6 +404,7 @@ class PredictModel {
    * @returns {Array<object>}
    */
   regions() {
+    if (this.#regionsCache && this.#regionsCacheKey === this.aggregateExpanded) return this.#regionsCache;
     const labels = this.regionLabelsByKey;
     const allByNorm = new Map();
     Array.from(labels.entries()).forEach(([rk, label]) => {
@@ -415,10 +425,13 @@ class PredictModel {
         if (found) out.push({ ...found, section: section.id });
       });
     });
-    return out.map((r) => ({
+    const rows = out.map((r) => ({
       ...r,
       predictLabel: this.regionLabelOverrides[normalizeRegionKey(r.regionKey)] || r.regionLabel,
     }));
+    this.#regionsCache = rows;
+    this.#regionsCacheKey = this.aggregateExpanded;
+    return rows;
   }
 
   /**
@@ -486,15 +499,18 @@ class PredictModel {
    */
   #sectionForRegion(regionKey) {
     const rk = normalizeRegionKey(regionKey);
+    if (this.#sectionCache.has(rk)) return this.#sectionCache.get(rk);
+    let found = null;
     for (const section of this.gridSectionsConfig) {
       if (section.containsAggregate && this.aggregateConfig) {
-        if (rk === this.aggregateConfig.key) return section;
-        if (this.aggregateConfig.isMember(rk)) return section;
+        if (rk === this.aggregateConfig.key) { found = section; break; }
+        if (this.aggregateConfig.isMember(rk)) { found = section; break; }
       }
       const explicits = [...(section.extraRegionKeys || []), ...(section.regionKeys || [])];
-      if (explicits.some((k) => normalizeRegionKey(k) === rk)) return section;
+      if (explicits.some((k) => normalizeRegionKey(k) === rk)) { found = section; break; }
     }
-    return null;
+    this.#sectionCache.set(rk, found);
+    return found;
   }
 
   /**
@@ -571,8 +587,9 @@ class PredictModel {
   validate() {
     const invalid = [];
     const multiBallot = this.ballots.length > 1;
+    const rows = this.regions();
     this.ballots.forEach((ballot) => {
-      this.regions().forEach((row) => {
+      rows.forEach((row) => {
         const sum = this.parties(row.regionKey)
           .reduce((s, p) => s + this.shareForBallot(ballot, row.regionKey, p), 0);
         if (sum <= 100) return;
@@ -741,18 +758,23 @@ class PredictModel {
    * already matches.
    *
    * On expand: for every input map returned by `inputMaps()`, copies the aggregate row's
-   * party shares onto each empty sub-region (preserving the user's national-level intent
-   * as a per-region starting point), then clears the aggregate row so sub-rows become the
-   * source of truth. Sub-regions that already carry inputs (e.g. populated by a previous
-   * Apply while collapsed) are not overwritten.
+   * party shares verbatim onto each empty sub-region as that region's own absolute share,
+   * then clears the aggregate row so the sub-rows become the source of truth. Sub-regions
+   * that already carry inputs (e.g. populated by a previous Apply while collapsed) are not
+   * overwritten. This makes the expand transition explicit — the user sees the national
+   * figure already filled into each region rather than the rows silently snapping back to
+   * baseline. Note this is a deliberate level→level copy, NOT a swing copy: the projected
+   * map can therefore shift slightly on expand, because a single aggregate swing applied
+   * uniformly is not identical to each region adopting the same absolute share.
    *
-   * On collapse: drops every sub-region entry from each input map. The aggregate row's
-   * own inputs are kept, so a user who toggled Show → Hide retains any aggregate-level
-   * value they had typed earlier.
-   *
-   * The propagation step is what fixes the otherwise-jarring transition where expanding
-   * after typing "SNP 50%" at the national level would silently revert sub-rows to
-   * baseline despite the projection still using the user's swing.
+   * On collapse: drops EVERY sub-region entry from each input map — including the ones that
+   * were seeded from the aggregate on a prior expand — and reverts the grid to a single
+   * aggregate row at baseline. Entered per-region values are intentionally not folded back
+   * up into an aggregate figure: there is no unambiguous way to collapse a divergent
+   * per-region breakdown into one number, and attempting it makes it confusing which
+   * percentage maps to which region. A user who wants to keep working at the aggregate
+   * level should stay collapsed; expanding then collapsing is a destructive reset of the
+   * region inputs by design.
    *
    * @param {boolean} expanded - True to show sub-regions, false to collapse to aggregate.
    * @returns {void}

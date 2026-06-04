@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, buildWinnerBySeat, clampNumber, roundShare, base64urlEncode, base64urlDecode } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Referdle Solver</title>
+  <meta name="description" content="Client-side solver for the Referdle daily word game." />
+  <link rel="icon" type="image/png" href="/imgs/logo.png" />
+  <script src="../site/ga-setup.js"></script>
+  <link rel="stylesheet" href="../site/topbar.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/solver.css">
+</head>
+<body data-topbar-back-href="../">
+  <header>
+    <h1>Referdle Solver</h1>
+  </header>
+  <main>
+    <div id="loading">
+      <div class="loading-bar"></div>
+      <span>Loading solver assets…</span>
+    </div>
+
+    <div id="app" style="display:none">
+      <div class="mode-toggle">
+        <label><input type="radio" name="mode" value="daily" checked> Daily</label>
+        <label><input type="radio" name="mode" value="manual"> Manual</label>
+      </div>
+
+      <section id="daily-section" class="controls">
+        <select id="daily-select" class="daily-select"></select>
+        <button id="solve-to-end" disabled>Solve</button>
+        <button id="next-turn" disabled>Next turn</button>
+      </section>
+
+      <section id="manual-section" class="controls" style="display:none">
+        <button id="manual-suggest">Suggest next guess</button>
+        <button id="manual-reset">Reset</button>
+      </section>
+
+      <div id="result-status" class="status muted">Loading…</div>
+
+      <section class="scrub-controls">
+        <button id="scrub-prev" disabled>◀ Prev</button>
+        <input type="range" id="scrub-slider" min="0" max="0" value="0" disabled>
+        <button id="scrub-next" disabled>Next ▶</button>
+      </section>
+
+      <section class="boards">
+        <div class="cluegrid-wrap">
+          <h2>Clue grid</h2>
+          <div id="manual-cluegrid" class="cluegrid"></div>
+        </div>
+        <div class="board-grid">
+          <h2>Boards</h2>
+          <div id="manual-grid" class="manual-grid"></div>
+        </div>
+      </section>
+
+      <section class="results">
+        <div id="result-suggest" class="result-col"></div>
+        <div id="result-autosolve" class="result-col"></div>
+        <div id="result-slots" class="result-slots"></div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="../site/topbar.min.js"></script>
+  <script type="module" src="js/solver/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+/* Static-solver-specific layout. Extends style.css (linked first). */
+
+#loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 80px 0;
+  color: var(--muted);
+}
+
+.loading-bar {
+  width: 220px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  overflow: hidden;
+  position: relative;
+}
+.loading-bar::after {
+  content: "";
+  position: absolute;
+  left: -40%;
+  top: 0;
+  height: 100%;
+  width: 40%;
+  background: var(--accent);
+  border-radius: 3px;
+  animation: loading-slide 1.1s ease-in-out infinite;
+}
+@keyframes loading-slide {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.mode-toggle label {
+  cursor: pointer;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.mode-toggle input { accent-color: var(--accent); }
+
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.controls button,
+.daily-select {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--fg);
+  font-size: 14px;
+  cursor: pointer;
+}
+.controls button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.controls button:not(:disabled):hover { border-color: var(--accent); }
+
+.status { margin: 8px 0 14px; font-size: 14px; }
+
+.scrub-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.scrub-controls button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 13px;
+}
+.scrub-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+.scrub-controls input[type="range"] {
+  flex: 1;
+  max-width: 460px;
+  accent-color: var(--accent);
+}
+
+.boards {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.boards h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.manual-grid { display: flex; gap: 18px; flex-wrap: wrap; }
+.cluegrid { display: flex; flex-direction: column; gap: 6px; }
+
+/* Daily boards are solver-driven (display-only) — the manual "+ guess" does
+   nothing there, so hide it. Manual mode keeps it. The boards subtree is also
+   set `inert` in daily mode (see main.js); show a non-interactive cursor. */
+.mode-daily .add-guess { display: none; }
+.mode-daily .tile { cursor: default; }
+
+.results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.result-slots {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 760px) {
+  .results { grid-template-columns: 1fr; }
+  .boards { gap: 20px; }
+  .scrub-controls input[type="range"] { max-width: none; }
+}

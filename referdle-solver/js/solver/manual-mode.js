@@ -31,8 +31,8 @@ export function initManualMode(state, manual, clueUI, uiEls) {
   const reSolve = (slots, clueGrid) =>
     solveRelaxed(slots, clueGrid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, null);
 
-  function buildSuggest(res) {
-    const ranked = bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS);
+  function buildSuggest(res, ctx) {
+    const ranked = bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS, ctx);
     const perBoard = [];
     for (let b = 0; b < res.perSlotFeasible.length; b++) {
       const ans = res.perSlotFeasible[b];
@@ -141,7 +141,7 @@ export function initManualMode(state, manual, clueUI, uiEls) {
       lastAutoSolve = null;
       disableScrub();
       uiEls.moveTableEl.innerHTML = "";
-      renderSuggestStandalone(buildSuggest(res));
+      renderSuggestStandalone(buildSuggest(res, { slots, clueGrid, pool: st.POOL }));
     }
   }
 
@@ -196,7 +196,9 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     const clueGrid = clueIsSet(rawGrid) ? rawGrid : null;
     const step = steps[K];
     if (step.suggest === undefined) {
-      step.suggest = step.after.solvable ? buildSuggest(step.after) : { solvable: false };
+      step.suggest = step.after.solvable
+        ? buildSuggest(step.after, { slots: slotsAfter, clueGrid, pool: st.POOL })
+        : { solvable: false };
     }
 
     manual.reset();

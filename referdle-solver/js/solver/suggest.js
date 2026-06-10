@@ -4,6 +4,7 @@
 import { compareCode } from "./compare.js";
 import { pmCode } from "./data.js";
 import { STRATEGY } from "./strategy.js";
+import { solve } from "./solver.js";
 
 const LOOKAHEAD_MAX = 14;
 
@@ -394,7 +395,10 @@ export function topGuessesForBoard(answers, PM, N, poolIndex, ALL_GUESSES, PLURA
 
 // --- best guess across boards --------------------------------------------------
 
-export function bestGuessAcrossBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS) {
+// `ctx` (optional) = { slots, clueGrid, pool } — the live game state. When given
+// (and STRATEGY.resolve_tiebreak is on), the endgame tie-break refines the chosen
+// board's word; without it, behaviour is unchanged.
+export function bestGuessAcrossBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURALS, ctx) {
   if (!res || !res.solvable) return [];
 
   const out = [];
@@ -425,5 +429,56 @@ export function bestGuessAcrossBoards(res, PM, N, poolIndex, ALL_GUESSES, PLURAL
     return a.word < b.word ? -1 : a.word > b.word ? 1 : 0;
   });
 
+  resolveTiebreak(out, res, PM, N, poolIndex, PLURALS, ctx);
   return out;
+}
+
+// [resolve tie-break] Endgame refinement of ONLY the chosen board's word: among
+// its candidate answers tied on own-board frac, prefer the one that — if it is
+// the answer — collapses the most OTHER boards via the clue coupling. The board
+// being attacked is unchanged (perturbation-free); this replaces the lexical
+// tiebreak with a meaningful one. Mutates out[0].word in place.
+function resolveTiebreak(out, res, PM, N, poolIndex, PLURALS, ctx) {
+  if (!STRATEGY.resolve_tiebreak || !ctx || !out.length || out[0].probe) return;
+
+  const totalRemaining = res.perSlotFeasible.reduce((sum, s) => sum + s.length, 0);
+  if (totalRemaining > STRATEGY.resolve_tiebreak_cap) return;
+
+  const top = out[0];
+  const b = top.board;
+  const answers = res.perSlotFeasible[b];
+  const nb = answers.length;
+  if (nb < 2) return;
+
+  const ex = expectedRemainingAll(answers, PM, N, poolIndex);
+  let minEx = Infinity;
+  for (let i = 0; i < nb; i++) if (ex[i] < minEx) minEx = ex[i];
+  const thr = minEx / nb + STRATEGY.resolve_tiebreak_eps / nb;
+  const tied = [];
+  for (let i = 0; i < nb; i++) if (ex[i] / nb <= thr) tied.push(answers[i]);
+  if (tied.length < 2) return;
+
+  const { slots, clueGrid, pool } = ctx;
+  // Other boards pinned to a single answer if `w` is correct (all-green on b).
+  const otherPins = (w) => {
+    const sim = slots.map((s) => ({ guesses: (s.guesses || []).slice() }));
+    sim[b].guesses.push({ word: w, colors: "22222" });
+    const r = solve(sim, clueGrid, pool, PM, N, poolIndex, PLURALS);
+    if (!r.solvable) return 0;
+    let c = 0;
+    for (let j = 0; j < r.perSlotFeasible.length; j++) {
+      if (j !== b && r.perSlotFeasible[j].length === 1) c++;
+    }
+    return c;
+  };
+
+  // `tied` is sorted ascending, so a strict ">" keeps the lexically-smallest of
+  // the words that pin the most other boards (matches the Python first-char key).
+  let pick = tied[0];
+  let pickPins = otherPins(tied[0]);
+  for (let k = 1; k < tied.length; k++) {
+    const p = otherPins(tied[k]);
+    if (p > pickPins) { pick = tied[k]; pickPins = p; }
+  }
+  if (pick !== top.word) top.word = pick;
 }

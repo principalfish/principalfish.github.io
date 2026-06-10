@@ -29,6 +29,14 @@ export const STRATEGY = Object.freeze({
   plural_endgame_avoid: true, // swap best W5 pick to a near-tied non-plural
   plural_endgame_max_n: 8,    // only when candidate set is this small
   plural_endgame_eps: 0.5,    // "near tie" tolerance on expected-remaining
+
+  // ── Resolve tie-break (endgame within-board word choice) ──────────────────
+  // Among the chosen board's frac-tied candidates, prefer the one that — if it
+  // is the answer — pins the most OTHER boards via the clue coupling. The board
+  // that gets attacked is unchanged, so this never perturbs board selection.
+  resolve_tiebreak: true,      // toggle
+  resolve_tiebreak_cap: 15,    // only when total remaining across boards ≤ this
+  resolve_tiebreak_eps: 0.25,  // own-board frac tolerance for "tied"
 });
 
 export const MAX_STEPS = 30;

@@ -176,7 +176,8 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   }
 
   function rank(res) {
-    return bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS);
+    return bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS,
+      { slots: turn.slots, clueGrid: turn.grid, pool: st.POOL });
   }
 
   // After-move solve (relaxed) for the overlay + word-list panels.

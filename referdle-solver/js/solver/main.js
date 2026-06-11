@@ -41,6 +41,7 @@ function uiEls() {
     prevBtn: $("scrub-prev"),
     nextBtn: $("scrub-next"),
     sliderEl: $("scrub-slider"),
+    expandedToggle: $("expanded-toggle"),
   };
 }
 
@@ -64,6 +65,12 @@ function initUI() {
   });
   $("solve-to-end").addEventListener("click", () => daily.solveToEnd());
   $("next-turn").addEventListener("click", () => daily.nextTurn());
+  // Changing the probe word-set invalidates the current result. In daily mode,
+  // reset so the next Solve re-runs; in manual mode, re-suggest immediately.
+  $("expanded-toggle").addEventListener("change", () => {
+    if (mode === "daily") daily.resetSolve();
+    else manualCtl.refreshSuggest();
+  });
 
   // Manual controls. Solving is on-demand (typing does NOT re-solve every key);
   // manual mode has no whole-game auto-solve (it doesn't know the real answers).

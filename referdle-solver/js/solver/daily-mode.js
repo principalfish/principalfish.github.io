@@ -37,6 +37,11 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
     ALL_GUESSES: state.ALL_GUESSES, PLURALS: state.PLURALS,
   };
 
+  // Guess universe for probe search: the full expanded set, or just the answer
+  // pool when the "Expanded probes" toggle is off.
+  const guessSet = () =>
+    (uiEls.expandedToggle && !uiEls.expandedToggle.checked) ? st.POOL : st.ALL_GUESSES;
+
   function status(msg) {
     if (uiEls.statusEl) uiEls.statusEl.textContent = msg;
   }
@@ -62,6 +67,21 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
     uiEls.slotsEl.innerHTML = "";
     uiEls.suggestEl.innerHTML = "";
     uiEls.moveTableEl.innerHTML = "";
+  }
+
+  // Discard the current solve (keeping the loaded daily) so the next Solve
+  // recomputes — used when the probe word-set toggle changes.
+  function resetSolve() {
+    cancelAnim();
+    if (!words) return;
+    clueUI.setClueGrid(dailyClueGrid(words));
+    manual.reset();
+    lastAutoSolve = null;
+    turn = null;
+    activeIdx = -1;
+    clearPanels();
+    setupScrub(0);
+    status(`Probe set changed — press "Solve" to re-run daily #${day}.`);
   }
 
   function enableControls(on) {
@@ -168,7 +188,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
         const avoid = b < 3 && STRATEGY.avoid_doubles_w13;
         perBoard.push({
           board: b,
-          top: topGuessesForBoard(ans, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS, 5, avoid, b),
+          top: topGuessesForBoard(ans, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS, 5, avoid, b),
         });
       }
     }
@@ -176,7 +196,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   }
 
   function rank(res) {
-    return bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS,
+    return bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS,
       { slots: turn.slots, clueGrid: turn.grid, pool: st.POOL });
   }
 
@@ -356,6 +376,6 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   }
   function scrubTo(v) { if (lastAutoSolve) { cancelAnim(); jumpToMove(+v); posStatus(); } }
 
-  return { loadDay, solveToEnd, nextTurn, jumpToMove, prev, next, scrubTo, stop: cancelAnim,
+  return { loadDay, solveToEnd, nextTurn, resetSolve, jumpToMove, prev, next, scrubTo, stop: cancelAnim,
            getDay: () => day, getWords: () => words };
 }

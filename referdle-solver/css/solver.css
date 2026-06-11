@@ -73,6 +73,15 @@
   cursor: not-allowed;
 }
 .controls button:not(:disabled):hover { border-color: var(--accent); }
+.probe-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.probe-toggle input { accent-color: var(--accent); cursor: pointer; }
 
 .status { margin: 8px 0 14px; font-size: 14px; }
 

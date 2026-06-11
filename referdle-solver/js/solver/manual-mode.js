@@ -34,8 +34,14 @@ export function initManualMode(state, manual, clueUI, uiEls) {
   const reSolve = (slots, clueGrid) =>
     solveRelaxed(slots, clueGrid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, null);
 
+  // Guess universe for probe search: the full expanded set, or just the answer
+  // pool when the "Expanded probes" toggle is off.
+  const guessSet = () =>
+    (uiEls.expandedToggle && !uiEls.expandedToggle.checked) ? st.POOL : st.ALL_GUESSES;
+
   function buildSuggest(res, ctx) {
-    const ranked = bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS, ctx);
+    const guesses = guessSet();
+    const ranked = bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, guesses, st.PLURALS, ctx);
     const perBoard = [];
     for (let b = 0; b < res.perSlotFeasible.length; b++) {
       const ans = res.perSlotFeasible[b];
@@ -43,7 +49,7 @@ export function initManualMode(state, manual, clueUI, uiEls) {
         const avoid = b < 3 && STRATEGY.avoid_doubles_w13;
         perBoard.push({
           board: b,
-          top: topGuessesForBoard(ans, st.PM, st.N, st.poolIndex, st.ALL_GUESSES, st.PLURALS, 5, avoid, b),
+          top: topGuessesForBoard(ans, st.PM, st.N, st.poolIndex, guesses, st.PLURALS, 5, avoid, b),
         });
       }
     }
@@ -261,6 +267,13 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     replayCache = null;
   }
 
+  // The probe word-set toggle changed — cached suggestions are stale (they rank
+  // probes from the old set), so drop the cache and re-suggest with the new set.
+  function refreshSuggest() {
+    replayCache = null;
+    onEdit();
+  }
+
   // Full reset of the manual state — clears the boards, the clue grid, the
   // results and the solve cache, but STAYS in manual mode (no page reload).
   function reset() {
@@ -270,5 +283,5 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     status('Enter a game state, then "Suggest next guess".');
   }
 
-  return { onEdit, notifyReady, reset, prev, next, scrubTo };
+  return { onEdit, notifyReady, reset, refreshSuggest, prev, next, scrubTo };
 }

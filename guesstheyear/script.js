@@ -727,8 +727,8 @@ function saveHistory(wonStatus) {
 /**
  * Copy the game result as an emoji string to the clipboard.
  *
- * Builds a share message containing the mode, emoji sequence, score out of 8, and the
- * current page URL.  In daily mode, falls back to the saved daily result from localStorage
+ * Builds a share message containing the mode, emoji sequence, and score out of 8.
+ * In daily mode, falls back to the saved daily result from localStorage
  * if the in-memory guessHistory is empty (e.g. when sharing after a page reload).
  * Shows a confirmation alert on success.
  *
@@ -754,8 +754,7 @@ function shareResult() {
 
     const text = `⌛ Chronos ${mode === 'daily' ? 'Daily' : 'Infinite'}\n` +
                 `${emojis}\n` +
-                `Result: ${scoreDisplay}/8\n` +
-                window.location.href;
+                `Result: ${scoreDisplay}/8`;
 
     navigator.clipboard.writeText(text).then(() => {
         alert("Result copied to clipboard!");

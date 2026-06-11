@@ -15,6 +15,9 @@ import {
 export function initManualMode(state, manual, clueUI, uiEls) {
   let lastAutoSolve = null;
   let activeIdx = -1;
+  // Cache of the last replay ({ clueKey, moves, steps }) so a re-press reuses the
+  // unchanged prefix instead of re-solving every move from scratch.
+  let replayCache = null;
 
   const st = {
     PM: state.PM, N: state.N, POOL: state.POOL, poolIndex: state.poolIndex,
@@ -97,10 +100,33 @@ export function initManualMode(state, manual, clueUI, uiEls) {
       }
     }
 
+    // Reuse the longest unchanged prefix from the previous solve: same clue grid
+    // and identical earlier moves. Only the diverging tail is re-solved — so a
+    // continued game reuses everything but the new move, while an earlier edit or
+    // reset shortens the reusable prefix (down to zero → solve from the start).
+    const clueKey = clueGrid ? clueGrid.join("|") : "";
+    let reuse = 0;
+    if (replayCache && replayCache.clueKey === clueKey) {
+      const cm = replayCache.moves;
+      while (reuse < cm.length && reuse < moves.length &&
+             cm[reuse].board === moves[reuse].board &&
+             cm[reuse].word === moves[reuse].word &&
+             cm[reuse].colors === moves[reuse].colors) {
+        reuse++;
+      }
+    }
+
     const startSlots = freshSlots();
     const stateSlots = freshSlots();
     const steps = [];
-    for (const m of moves) {
+    for (let i = 0; i < reuse; i++) {                 // unchanged prefix — no re-solve
+      moves[i].setSize = replayCache.moves[i].setSize;
+      moves[i].expRemaining = replayCache.moves[i].expRemaining;
+      steps.push(replayCache.steps[i]);
+      stateSlots[moves[i].board].guesses.push({ word: moves[i].word, colors: moves[i].colors });
+    }
+    for (let i = reuse; i < moves.length; i++) {      // diverging tail — solve from here
+      const m = moves[i];
       const before = reSolve(stateSlots, clueGrid);
       m.setSize = before.solvable ? before.perSlotFeasible[m.board].length : null;
       stateSlots[m.board].guesses.push({ word: m.word, colors: m.colors });
@@ -111,9 +137,11 @@ export function initManualMode(state, manual, clueUI, uiEls) {
       // completed game where intermediate boards still hold huge candidate sets.
       steps.push({ after, suggest: undefined });
     }
+    replayCache = { clueKey, moves, steps };
 
-    // Final full solve (the clue grid can constrain beyond the guesses).
-    const res = reSolve(slots, clueGrid);
+    // The full final state equals the last replayed prefix, so reuse its solve
+    // rather than re-solving the whole board again. (No moves → solve clue only.)
+    const res = moves.length ? steps[steps.length - 1].after : reSolve(slots, clueGrid);
     clueUI.setResults(buildOverlay(slots, res));
     if (!res.solvable) {
       status(`Unsolvable. ${res.reason || ""}`);
@@ -230,7 +258,17 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     disableScrub();
     lastAutoSolve = null;
     activeIdx = -1;
+    replayCache = null;
   }
 
-  return { onEdit, notifyReady, prev, next, scrubTo };
+  // Full reset of the manual state — clears the boards, the clue grid, the
+  // results and the solve cache, but STAYS in manual mode (no page reload).
+  function reset() {
+    manual.reset();
+    clueUI.setClueGrid(null);
+    clearAll();
+    status('Enter a game state, then "Suggest next guess".');
+  }
+
+  return { onEdit, notifyReady, reset, prev, next, scrubTo };
 }

@@ -68,8 +68,8 @@ function initUI() {
   // Manual controls. Solving is on-demand (typing does NOT re-solve every key);
   // manual mode has no whole-game auto-solve (it doesn't know the real answers).
   $("manual-suggest").addEventListener("click", () => manualCtl.onEdit());
-  // Reset = full page reset (clears boards, clue grid, daily pick, everything).
-  $("manual-reset").addEventListener("click", () => location.reload());
+  // Reset clears the manual boards, clue grid and results but stays in manual mode.
+  $("manual-reset").addEventListener("click", () => manualCtl.reset());
 
   // Scrub controls (daily's step-through; manual has none, hence optional calls).
   $("scrub-prev").addEventListener("click", () => activeCtl().prev?.());

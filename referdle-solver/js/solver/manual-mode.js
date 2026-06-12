@@ -123,31 +123,27 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     }
 
     const startSlots = freshSlots();
-    const stateSlots = freshSlots();
     const steps = [];
-    for (let i = 0; i < reuse; i++) {                 // unchanged prefix — no re-solve
+    for (let i = 0; i < reuse; i++) {                 // unchanged prefix — reuse cached solve (lazy)
       moves[i].setSize = replayCache.moves[i].setSize;
       moves[i].expRemaining = replayCache.moves[i].expRemaining;
       steps.push(replayCache.steps[i]);
-      stateSlots[moves[i].board].guesses.push({ word: moves[i].word, colors: moves[i].colors });
     }
-    for (let i = reuse; i < moves.length; i++) {      // diverging tail — solve from here
-      const m = moves[i];
-      const before = reSolve(stateSlots, clueGrid);
-      m.setSize = before.solvable ? before.perSlotFeasible[m.board].length : null;
-      stateSlots[m.board].guesses.push({ word: m.word, colors: m.colors });
-      const after = reSolve(stateSlots, clueGrid);
-      m.expRemaining = after.solvable ? after.perSlotFeasible[m.board].length : null;
-      // Suggestion is computed lazily (in jumpToMove) — building it for every
-      // prefix up front is O(n²)+lookahead per step, which freezes on a long /
-      // completed game where intermediate boards still hold huge candidate sets.
-      steps.push({ after, suggest: undefined });
+    for (let i = reuse; i < moves.length; i++) {      // diverging tail — solve LAZILY (on scrub)
+      // Do NOT solve every prefix up front: the broad EARLY prefixes are ~2s solves each, so a
+      // long/completed game froze (it was 2 solves per move). Leave each step's before/after
+      // undefined; ensureStepSolved() (in jumpToMove) computes a step's solve + cut on demand
+      // when the user actually scrubs to that move. Same lazy spirit as the per-step suggestion.
+      steps.push({ after: undefined, suggest: undefined });
+      moves[i].setSize = undefined;
+      moves[i].expRemaining = undefined;
     }
     replayCache = { clueKey, moves, steps };
 
-    // The full final state equals the last replayed prefix, so reuse its solve
-    // rather than re-solving the whole board again. (No moves → solve clue only.)
-    const res = moves.length ? steps[steps.length - 1].after : reSolve(slots, clueGrid);
+    // Solve ONLY the current/final state — that's all the displayed suggestion needs, and a
+    // settled end-state is narrow (fast). The per-move replay is filled in lazily on scrub.
+    const res = reSolve(slots, clueGrid);
+    if (moves.length) steps[steps.length - 1].after = res;  // last step == final state; reuse it
     clueUI.setResults(buildOverlay(slots, res));
     if (!res.solvable) {
       status(`Unsolvable. ${res.reason || ""}`);
@@ -221,6 +217,23 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     return slots;
   }
 
+  // Lazily compute a replayed move's solve + cut numbers, only when scrubbed to. The step's
+  // `after` (state through move K) and the move's before/after candidate counts are solved on
+  // demand — so the broad early prefixes are only ever solved if the user actually visits them.
+  function ensureStepSolved(K, clueGrid) {
+    const { startSlots, moves, steps } = lastAutoSolve;
+    const step = steps[K];
+    if (step.after === undefined) {
+      step.after = reSolve(reconstructSlots(startSlots, moves, K + 1), clueGrid);
+    }
+    if (moves[K].setSize === undefined) {
+      const before = reSolve(reconstructSlots(startSlots, moves, K), clueGrid);
+      moves[K].setSize = before.solvable ? before.perSlotFeasible[moves[K].board].length : null;
+      moves[K].expRemaining = step.after.solvable
+        ? step.after.perSlotFeasible[moves[K].board].length : null;
+    }
+  }
+
   function jumpToMove(K) {
     if (!lastAutoSolve) return;
     const { startSlots, moves, steps } = lastAutoSolve;
@@ -228,6 +241,7 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     const slotsAfter = reconstructSlots(startSlots, moves, K + 1);
     const rawGrid = clueUI.getClueGrid();
     const clueGrid = clueIsSet(rawGrid) ? rawGrid : null;
+    ensureStepSolved(K, clueGrid);
     const step = steps[K];
     if (step.suggest === undefined) {
       step.suggest = step.after.solvable

@@ -231,7 +231,9 @@ export function renderAutoSolveTable(container, lastAutoSolve, activeIdx, onJump
         : m.probe ? ` <span class="probe-tag">probe</span>` : "";
       const cut = m.isClosing
         ? `<span class="muted small">answer</span>`
-        : `<span class="muted small">${m.setSize}→${fmtExp(m.expRemaining)}</span>`;
+        : m.setSize === undefined
+          ? `<span class="muted small">…</span>`
+          : `<span class="muted small">${m.setSize}→${fmtExp(m.expRemaining)}</span>`;
       const cls =
         `move-row${m.isClosing ? " closing" : ""}${m.probe ? " probe" : ""}${i === activeIdx ? " active" : ""}`;
       return (

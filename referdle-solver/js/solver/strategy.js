@@ -6,7 +6,8 @@
 export const STRATEGY = Object.freeze({
   // ── Probe / sacrifice guesses ──────────────────────────────────────────────
   probe_trigger: 1.5,        // probe when best candidate leaves > this many expected remaining
-  probe_cap: 140,            // only probe when candidate set is this size or smaller
+  probe_cap: 220,            // only probe when candidate set is this size or smaller
+                             // (raised from 140: pool-world optimum, ~-0.02 current-era)
   probe_floor: 4,            // minimum set size worth probing (n<4 a probe can't win)
   probe_tail_lambda: 0.0,    // 0 = pure-expected probe scoring (no worst-case blend)
 

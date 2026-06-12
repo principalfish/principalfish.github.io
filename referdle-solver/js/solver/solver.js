@@ -389,7 +389,41 @@ function solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) {
     if (!ok) continue;
     conditioned[FINAL] = [f];
 
-    const feas = chainFeasible(conditioned, clue, PM, N, poolIndex);
+    let feas = chainFeasible(conditioned, clue, PM, N, poolIndex);
+    // Deduction-aware absent-letter elimination (fixpoint) — mirrors solver.py. The
+    // guess-based `claimed` pass above only claims letters a board PROVED present by an
+    // actual guess; here a letter absent from the final that EVERY chain-surviving
+    // candidate of a board contains is owned by that board (an absent letter lives in
+    // <=1 of the five words), so it is forbidden in all the others — even when that
+    // board was solved by pure DEDUCTION (collapsed via the chain) with no guess on it.
+    // E.g. D in a deduced DEPTH excludes UNDER from another board. Re-run the chain
+    // after each removal, since narrowing one board can claim a new letter elsewhere.
+    while (feas[FINAL].length) {
+      const owned = [];
+      for (let k = 0; k < 5; k++) {
+        const fk = feas[k];
+        if (!fk.length) { owned.push(new Set()); continue; }
+        let common = new Set(fk[0]);
+        for (let j = 1; j < fk.length && common.size; j++) {
+          const wset = new Set(fk[j]);
+          common = new Set([...common].filter((c) => wset.has(c)));
+        }
+        owned.push(new Set([...common].filter((c) => !fset.has(c))));
+      }
+      let changed = false;
+      for (let i = 0; i < FINAL; i++) {
+        const forbidden = new Set();
+        for (let k = 0; k < 5; k++) {
+          if (k !== i) for (const c of owned[k]) forbidden.add(c);
+        }
+        if (forbidden.size) {
+          const kept = feas[i].filter((w) => !sharesLetter(w, forbidden));
+          if (kept.length !== feas[i].length) { feas[i] = kept; changed = true; }
+        }
+      }
+      if (!changed) break;
+      feas = chainFeasible(feas, clue, PM, N, poolIndex);
+    }
     if (feas[FINAL].length === 0) continue;
 
     viableFinals.push(f);

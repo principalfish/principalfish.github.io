@@ -390,34 +390,51 @@ function solveWithClue(cands, clue, knownPresent, PM, N, poolIndex) {
     conditioned[FINAL] = [f];
 
     let feas = chainFeasible(conditioned, clue, PM, N, poolIndex);
-    // Deduction-aware absent-letter elimination (fixpoint) — mirrors solver.py. The
-    // guess-based `claimed` pass above only claims letters a board PROVED present by an
-    // actual guess; here a letter absent from the final that EVERY chain-surviving
-    // candidate of a board contains is owned by that board (an absent letter lives in
-    // <=1 of the five words), so it is forbidden in all the others — even when that
-    // board was solved by pure DEDUCTION (collapsed via the chain) with no guess on it.
-    // E.g. D in a deduced DEPTH excludes UNDER from another board. Re-run the chain
-    // after each removal, since narrowing one board can claim a new letter elsewhere.
+    // Cross-board elimination (fixpoint) — mirrors solver.py. A rational hard-mode chain never
+    // re-uses a known-wrong (letter, position) placement an earlier word showed was wrong. Both
+    // cases derive from what EVERY chain-surviving candidate of a board agrees on (so they fire
+    // even when a board was solved by pure DEDUCTION, with no guess on it):
+    //   - ABSENT letter (gray): a letter every candidate has that is NOT in the final is forbidden
+    //     everywhere else (e.g. D in a deduced DEPTH excludes UNDER).
+    //   - YELLOW letter at p: a letter every candidate places at p that IS in the final but isn't
+    //     the final's letter there is forbidden AT THAT POSITION on every other board (e.g. L is
+    //     yellow@1 in a deduced LIGHT, so L can't be @1 elsewhere -> excludes LUMPY).
+    // Both hold 0/1916. Re-run the chain after each removal.
     while (feas[FINAL].length) {
-      const owned = [];
+      const owned = [];      // board k -> Set of absent-from-final letters every candidate has
+      const ownedPos = [];   // board k -> Set of "<letter><pos>" yellow placements every candidate has
       for (let k = 0; k < 5; k++) {
         const fk = feas[k];
-        if (!fk.length) { owned.push(new Set()); continue; }
+        if (!fk.length) { owned.push(new Set()); ownedPos.push(new Set()); continue; }
         let common = new Set(fk[0]);
         for (let j = 1; j < fk.length && common.size; j++) {
           const wset = new Set(fk[j]);
           common = new Set([...common].filter((c) => wset.has(c)));
         }
         owned.push(new Set([...common].filter((c) => !fset.has(c))));
+        const ps = new Set();
+        for (let p = 0; p < 5; p++) {
+          const ch = fk[0][p];
+          if (ch !== f[p] && fset.has(ch) && fk.every((w) => w[p] === ch)) ps.add(ch + p);
+        }
+        ownedPos.push(ps);
       }
       let changed = false;
       for (let i = 0; i < FINAL; i++) {
         const forbidden = new Set();
+        const forbiddenPos = new Set();
         for (let k = 0; k < 5; k++) {
-          if (k !== i) for (const c of owned[k]) forbidden.add(c);
+          if (k !== i) {
+            for (const c of owned[k]) forbidden.add(c);
+            for (const cp of ownedPos[k]) forbiddenPos.add(cp);
+          }
         }
-        if (forbidden.size) {
-          const kept = feas[i].filter((w) => !sharesLetter(w, forbidden));
+        if (forbidden.size || forbiddenPos.size) {
+          const kept = feas[i].filter((w) => {
+            if (sharesLetter(w, forbidden)) return false;
+            for (let p = 0; p < 5; p++) if (forbiddenPos.has(w[p] + p)) return false;
+            return true;
+          });
           if (kept.length !== feas[i].length) { feas[i] = kept; changed = true; }
         }
       }

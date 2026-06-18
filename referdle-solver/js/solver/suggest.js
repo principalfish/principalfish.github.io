@@ -316,6 +316,25 @@ export function bestGuessForSet(answers, PM, N, poolIndex, ALL_GUESSES, PLURALS,
     }
   }
 
+  // W4 double-letter tie-break — W4 only (mirror of the plural swap, but PREFER). W4 answers are
+  // a double-letter word ~60% (1.85x the pool; W1-3 ~0%), so among near-tied W4 candidates a
+  // double is the likelier answer; if the best pick is NOT a double, swap to the best near-tied
+  // double. Near-tie (eps) -> no greedy-path perturbation.
+  if (STRATEGY.w4_double_tiebreak && board === 3 && answers.length <= STRATEGY.w4_double_max_n) {
+    if (!hasRepeat(answers[bestI])) {
+      const thr = score[bestI] + STRATEGY.w4_double_eps;
+      let alt = null;
+      for (const i of sel) {
+        if (!hasRepeat(answers[i]) || score[i] > thr) continue;
+        if (alt === null || score[i] < score[alt] ||
+            (score[i] === score[alt] && answers[i] < answers[alt])) {
+          alt = i;
+        }
+      }
+      if (alt !== null) bestI = alt;
+    }
+  }
+
   const candExp = exp[bestI];
   const bestWord = answers[bestI];
   const n = answers.length;

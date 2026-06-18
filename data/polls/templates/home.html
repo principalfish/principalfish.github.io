@@ -7,7 +7,7 @@
     <div class="action-grid action-grid-three">
       <a class="button primary button-block" href="{{ url_for('import_poll_form') }}">Import Poll</a>
       <form method="post" action="{{ url_for('update_polls') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Update Polls</button>
+        <button type="submit" class="button button-block">Sync from Wikipedia</button>
       </form>
       <a class="button button-block" href="{{ url_for('poll_list') }}">View Polls</a>
     </div>

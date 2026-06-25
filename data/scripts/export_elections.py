@@ -39,7 +39,9 @@ from db import Database
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 
 DEFAULT_SQLITE_PATH = Path(
-    os.environ.get("SQLITE_DATABASE_PATH", str(DATA_DIR / "model_uns.db"))
+    os.environ.get("SQLITE_DATABASE_PATH")
+    or os.environ.get("DATABASE_PATH")
+    or "/home/philiph/dbs/elections.db"
 )
 
 REPO_ROOT = DATA_DIR.parent
@@ -520,7 +522,9 @@ def convert_legacy_seatinfo_to_v4(
             pid = party_key_to_id.get(norm_key, OTHERS_PARTY_ID)
             compact.append([pid, total])
 
-        compact.sort(key=lambda row: float(row[1]), reverse=True)
+        # Sort by vote total descending, party id ascending as a stable tiebreak
+        # so the output is deterministic when two parties have equal totals.
+        compact.sort(key=lambda row: (-float(row[1]), row[0]))
 
         seats_out.append({
             "n": seat_name,
@@ -599,12 +603,13 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
         if seat.electorate and seat.electorate > 0:
             turnout_pct = round(100.0 * turnout_total / seat.electorate, 1)
 
+        # Vote total descending, party id ascending as a stable tiebreak for
+        # deterministic output when two parties have equal totals.
         compact_party_rows = [
             [pid, party_data.get("total", 0)]
             for pid, party_data in sorted(
                 party_info.items(),
-                key=lambda row: float(row[1].get("total", 0)),
-                reverse=True,
+                key=lambda row: (-float(row[1].get("total", 0)), row[0]),
             )
             if float(party_data.get("total", 0)) > 0
         ]
@@ -911,9 +916,11 @@ def build_result_payload_from_sqlite(
             winner_row = None
         winner_id = (winner_row["party_id"] or OTHERS_PARTY_ID) if winner_row else OTHERS_PARTY_ID
 
+        # Vote total descending, party id ascending as a stable tiebreak for
+        # deterministic output when two parties have equal totals.
         compact = [
             [pid, normalize_vote_total_value(total)]
-            for pid, total in sorted(party_info.items(), key=lambda x: x[1], reverse=True)
+            for pid, total in sorted(party_info.items(), key=lambda x: (-x[1], x[0]))
             if total > 0
         ]
 
@@ -935,7 +942,7 @@ def get_latest_sqlite_model_uns(sqlite_path: Path = DEFAULT_SQLITE_PATH) -> dict
         conn.row_factory = sqlite3.Row
         row = conn.execute(
             "SELECT id, map_id, year, name, election_date "
-            "FROM elections WHERE election_type = 'model_uns' "
+            "FROM elections WHERE type = 'model_uns' "
             "ORDER BY id DESC LIMIT 1"
         ).fetchone()
     if row is None:
@@ -1342,8 +1349,7 @@ def main() -> None:
                                 [int(pid), v]
                                 for pid, v in sorted(
                                     change_votes.items(),
-                                    key=lambda item: float(item[1]),
-                                    reverse=True,
+                                    key=lambda item: (-float(item[1]), int(item[0])),
                                 )
                                 if float(v) > 0
                             ]

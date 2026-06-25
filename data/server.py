@@ -10,7 +10,6 @@ import math
 import os
 import re
 import shlex
-import sqlite3
 import subprocess
 import sys
 import uuid
@@ -100,9 +99,6 @@ class ImporterMeta(TypedDict):
 
 
 DATA_DIR = Path(__file__).resolve().parent
-SQLITE_ARCHIVE_PATH = Path(
-    os.environ.get("SQLITE_DATABASE_PATH", str(DATA_DIR / "model_uns.db"))
-)
 REPO_ROOT = DATA_DIR.parent
 TEMPLATE_DIR = DATA_DIR / "polls" / "templates"
 STATIC_DIR = DATA_DIR / "polls" / "static"
@@ -473,6 +469,91 @@ def export_current_simulation() -> str | WerkzeugResponse:
     )
 
 
+@app.route("/db/backup", methods=["POST"])
+def backup_database() -> str | WerkzeugResponse:
+    """POST /db/backup — Snapshot the local SQLite database to Google Drive.
+
+    Runs ``backup_to_drive.sh --force``: a manual click backs up immediately,
+    bypassing the script's once-per-day guard (the scheduled run keeps it). The
+    script logs to ``backup.log``, so the tail of that log is appended to the
+    result for visibility.
+
+    Returns:
+        Rendered command_result.html, or a redirect to home if the script is
+        missing.
+    """
+    db_dir = Path(_get_db().config.database_path).parent
+    script = db_dir / "backup_to_drive.sh"
+    if not script.exists():
+        flash(f"Backup script not found: {script}")
+        return redirect(url_for("home"))
+
+    command = ["bash", str(script), "--force"]
+    result = subprocess.run(
+        command, cwd=str(db_dir), capture_output=True, text=True, timeout=900
+    )
+
+    log_path = db_dir / "backup.log"
+    stdout = result.stdout
+    if log_path.exists():
+        tail = "\n".join(log_path.read_text(encoding="utf-8").splitlines()[-12:])
+        stdout = f"{stdout}\n\n--- backup.log (tail) ---\n{tail}".strip()
+
+    return render_template(
+        "command_result.html",
+        title="Backup Database to Drive",
+        command=shlex.join(command),
+        stdout=stdout,
+        stderr=result.stderr,
+        return_code=result.returncode,
+        back_endpoint="home",
+        back_label="Back to home",
+    )
+
+
+@app.route("/db/restore", methods=["POST"])
+def restore_database() -> str | WerkzeugResponse:
+    """POST /db/restore — Restore the local SQLite database from the Drive snapshot.
+
+    Closes the server's DB connections and drops the cached engine, runs
+    ``restore_from_drive.sh`` (Drive -> local, with integrity checks and a
+    ``.prerestore`` safety copy), then leaves the cache cleared so the next
+    request reconnects to the restored file.
+
+    Returns:
+        Rendered command_result.html, or a redirect to home if the script is
+        missing.
+    """
+    global _DB
+    db_dir = Path(_get_db().config.database_path).parent
+    script = db_dir / "restore_from_drive.sh"
+    if not script.exists():
+        flash(f"Restore script not found: {script}")
+        return redirect(url_for("home"))
+
+    # Close open connections and drop the cached engine so the DB file can be
+    # swapped safely; the next _get_db() call reconnects to the restored DB.
+    if _DB is not None:
+        _DB.engine.dispose()
+        _DB = None
+
+    command = ["bash", str(script)]
+    result = subprocess.run(
+        command, cwd=str(db_dir), capture_output=True, text=True, timeout=900
+    )
+
+    return render_template(
+        "command_result.html",
+        title="Restore Database from Drive",
+        command=shlex.join(command),
+        stdout=result.stdout,
+        stderr=result.stderr,
+        return_code=result.returncode,
+        back_endpoint="home",
+        back_label="Back to home",
+    )
+
+
 @app.route("/models/run", methods=["GET"])
 def model_run_form() -> str:
     """GET /models/run — Render the UNS model run form with default values."""
@@ -609,53 +690,6 @@ def model_run_execute() -> str | WerkzeugResponse:
         form_values=form_values,
         run_result=run_result,
     )
-
-
-def _sqlite_model_elections(limit: int | None = None) -> list[dict[str, Any]]:
-    """Return model_uns elections from the local SQLite archive as output item dicts.
-
-    Args:
-        limit: Maximum number of rows to return, ordered by election_date descending.
-            Pass ``None`` to return all rows.
-
-    Returns:
-        List of dicts with keys ``election_id``, ``name``, ``year``, ``map_name``
-        (always ``"—"`` for SQLite rows), ``vote_rows``, and ``source`` (``"sqlite"``).
-        Returns an empty list if the archive file does not exist or has no rows.
-    """
-    if not SQLITE_ARCHIVE_PATH.exists():
-        return []
-    with sqlite3.connect(SQLITE_ARCHIVE_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        query = "SELECT id, name, year, election_date FROM elections ORDER BY election_date DESC"
-        if limit is not None:
-            # f-string intentional: sqlite3 doesn't support ? placeholders for LIMIT.
-            # Value is server-computed (integer arithmetic), never user-supplied.
-            query += f" LIMIT {int(limit)}"
-        elections = conn.execute(query).fetchall()
-        if not elections:
-            return []
-        election_ids = [row["id"] for row in elections]
-        vote_counts = {
-            row["election_id"]: row["cnt"]
-            for row in conn.execute(
-                f"SELECT election_id, COUNT(*) as cnt FROM votes "
-                f"WHERE election_id IN ({','.join('?' * len(election_ids))}) "
-                f"GROUP BY election_id",
-                election_ids,
-            ).fetchall()
-        }
-    return [
-        {
-            "election_id": row["id"],
-            "name": row["name"],
-            "year": row["year"],
-            "map_name": "—",
-            "vote_rows": vote_counts.get(row["id"], 0),
-            "source": "sqlite",
-        }
-        for row in elections
-    ]
 
 
 @app.route("/models/outputs", methods=["GET"])
@@ -887,15 +921,7 @@ def model_outputs() -> str:
             "vote_pct_datasets": vote_pct_datasets,
         }
 
-    sqlite_limit = None if show_all else max(0, default_limit - len(rows))
-    sqlite_items = _sqlite_model_elections(limit=sqlite_limit)
-
-    sqlite_total_count = 0
-    if SQLITE_ARCHIVE_PATH.exists():
-        with sqlite3.connect(SQLITE_ARCHIVE_PATH) as _conn:
-            sqlite_total_count = _conn.execute("SELECT COUNT(*) FROM elections").fetchone()[0]
-
-    total_output_count = int(postgres_output_count) + sqlite_total_count
+    total_output_count = int(postgres_output_count)
 
     items = [
         {
@@ -907,7 +933,7 @@ def model_outputs() -> str:
             "source": "postgres",
         }
         for election, map_row in rows
-    ] + sqlite_items
+    ]
 
     return render_template(
         "model_outputs.html",
@@ -1209,35 +1235,6 @@ def delete_model_output(election_id: int) -> str | WerkzeugResponse:
     return redirect(url_for("model_outputs"))
 
 
-@app.route("/models/outputs/sqlite/<int:election_id>/delete", methods=["POST"])
-def delete_sqlite_model_output(election_id: int) -> str | WerkzeugResponse:
-    """POST /models/outputs/sqlite/<election_id>/delete — Delete a model run from the SQLite archive.
-
-    Args:
-        election_id: Primary key of the election row in the SQLite archive to delete.
-
-    Side effects:
-        Deletes the matching row from the ``elections`` table and all associated rows
-        from the ``votes`` table in the SQLite archive.
-
-    Returns:
-        Redirect to model_outputs with a flash message indicating rows deleted,
-        or a flash error redirect if the archive file does not exist.
-    """
-    if not SQLITE_ARCHIVE_PATH.exists():
-        flash("SQLite archive not found.")
-        return redirect(url_for("model_outputs"))
-    with sqlite3.connect(SQLITE_ARCHIVE_PATH) as conn:
-        deleted_votes = conn.execute(
-            "DELETE FROM votes WHERE election_id = ?", (election_id,)
-        ).rowcount
-        deleted_elections = conn.execute(
-            "DELETE FROM elections WHERE id = ?", (election_id,)
-        ).rowcount
-    flash(f"Deleted SQLite model output #{election_id} and {deleted_votes} vote rows.")
-    return redirect(url_for("model_outputs"))
-
-
 @app.route("/models/outputs/delete-selected", methods=["POST"])
 def delete_selected_model_outputs() -> str | WerkzeugResponse:
     """POST /models/outputs/delete-selected — Bulk-delete selected UNS model output elections.
@@ -1249,54 +1246,36 @@ def delete_selected_model_outputs() -> str | WerkzeugResponse:
         Redirect to model_outputs with a flash message. Flashes an error if no valid IDs provided.
     """
     raw_ids = request.form.getlist("election_ids")
-    postgres_ids: list[int] = []
-    sqlite_ids: list[int] = []
+    election_ids: list[int] = []
     for value in raw_ids:
-        if value.startswith("sqlite:"):
-            try:
-                sqlite_ids.append(int(value[7:]))
-            except ValueError:
-                continue
-        else:
-            try:
-                postgres_ids.append(int(value))
-            except ValueError:
-                continue
+        try:
+            election_ids.append(int(value))
+        except ValueError:
+            continue
 
-    if not postgres_ids and not sqlite_ids:
+    if not election_ids:
         flash("No model outputs selected.")
         return redirect(url_for("model_outputs"))
 
     total_deleted_elections = 0
     total_deleted_votes = 0
 
-    if postgres_ids:
-        db = _get_db()
-        with db.session() as session:
-            existing_ids = session.execute(
-                select(Election.id)
-                .where(
-                    Election.id.in_(postgres_ids),
-                    Election.type == ElectionType.model_uns,
-                )
-            ).scalars().all()
-            if existing_ids:
-                total_deleted_votes += session.execute(
-                    delete(Vote).where(Vote.election_id.in_(existing_ids))
-                ).rowcount or 0  # type: ignore[attr-defined]
-                total_deleted_elections += session.execute(
-                    delete(Election).where(Election.id.in_(existing_ids))
-                ).rowcount or 0  # type: ignore[attr-defined]
-
-    if sqlite_ids and SQLITE_ARCHIVE_PATH.exists():
-        with sqlite3.connect(SQLITE_ARCHIVE_PATH) as conn:
-            placeholders = ",".join("?" * len(sqlite_ids))
-            total_deleted_votes += conn.execute(
-                f"DELETE FROM votes WHERE election_id IN ({placeholders})", sqlite_ids
-            ).rowcount
-            total_deleted_elections += conn.execute(
-                f"DELETE FROM elections WHERE id IN ({placeholders})", sqlite_ids
-            ).rowcount
+    db = _get_db()
+    with db.session() as session:
+        existing_ids = session.execute(
+            select(Election.id)
+            .where(
+                Election.id.in_(election_ids),
+                Election.type == ElectionType.model_uns,
+            )
+        ).scalars().all()
+        if existing_ids:
+            total_deleted_votes += session.execute(
+                delete(Vote).where(Vote.election_id.in_(existing_ids))
+            ).rowcount or 0  # type: ignore[attr-defined]
+            total_deleted_elections += session.execute(
+                delete(Election).where(Election.id.in_(existing_ids))
+            ).rowcount or 0  # type: ignore[attr-defined]
 
     flash(f"Deleted {total_deleted_elections} model outputs and {total_deleted_votes} vote rows.")
     return redirect(url_for("model_outputs"))

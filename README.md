@@ -29,7 +29,7 @@ PORT=8001 ./server.sh
 
 This guide covers local setup for the `data/` part of the repo end-to-end:
 - Python environment
-- PostgreSQL bootstrap
+- SQLite database
 - Full base-data import
 - Poll import (Wikipedia-driven)
 - UNS retrospective run
@@ -41,7 +41,7 @@ This guide covers local setup for the `data/` part of the repo end-to-end:
 
 - Linux/macOS shell
 - Python 3.10+
-- Docker + Docker Compose plugin (`docker compose`)
+- `sqlite3` CLI (for inspection/backups)
 - Network access (poll importers fetch remote PDFs/XLSX/HTML)
 
 ---
@@ -64,29 +64,21 @@ source election_data/bin/activate
 
 ---
 
-## 3) Database bootstrap
+## 3) Database
 
-From `data/`:
+The app uses a single local SQLite database. Point it at a file with the
+`DATABASE_PATH` environment variable (see `.env_example`); the default is
+`/home/philiph/dbs/elections.db`. `SQLITE_DATABASE_PATH` should point at the same
+file (used by the raw-sqlite model read/write paths). Copy `.env_example` to
+`.env` and adjust the paths if needed.
 
-```bash
-cd data
-./start_db.sh
-```
+Tables are created automatically by `Database.create_tables()`
+(`Base.metadata.create_all`). A fresh database can be populated with the base-data
+importers below, or recovered from the Google Drive snapshot
+(`/mnt/f/My Drive/dbs/elections.db`).
 
-Expected local connection:
-- Host: `localhost`
-- Port: `5432`
-- DB: `election_maps`
-- User: `election_maps`
-- Password: `election_maps_dev`
-
-`start_db.sh` will try to stop a local host Postgres on port 5432 if needed.
-If that cannot be done automatically, run:
-
-```bash
-sudo systemctl stop postgresql
-./start_db.sh
-```
+The live database stays on local disk — SQLite must not run off the Drive mount.
+`/home/philiph/dbs/backup_to_drive.sh` snapshots it to Google Drive once per day.
 
 ---
 
@@ -176,22 +168,23 @@ Server URL:
 From `data/`:
 
 ```bash
-docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT count(*) FROM maps;"
-docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT count(*) FROM elections;"
-docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT count(*) FROM polls;"
-docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT type, count(*) FROM elections GROUP BY type ORDER BY type;"
+sqlite3 "$DATABASE_PATH" "SELECT count(*) FROM maps;"
+sqlite3 "$DATABASE_PATH" "SELECT count(*) FROM elections;"
+sqlite3 "$DATABASE_PATH" "SELECT count(*) FROM polls;"
+sqlite3 "$DATABASE_PATH" "SELECT type, count(*) FROM elections GROUP BY type ORDER BY type;"
 ```
 
 ---
 
 ## 9) Common troubleshooting
 
-- **DB auth fails / wrong DB in client**
-	- Ensure you are connecting to Docker DB on `localhost:5432` with `election_maps/election_maps_dev`.
-	- Re-run `./start_db.sh`.
+- **Wrong database / empty results**
+	- Ensure `DATABASE_PATH` and `SQLITE_DATABASE_PATH` point at the intended
+	  `elections.db` file (see `.env`).
 
-- **Port 5432 already in use**
-	- Stop local Postgres (`sudo systemctl stop postgresql`) and re-run bootstrap.
+- **Database is locked**
+	- SQLite uses WAL journaling; make sure no other writer (e.g. a model run)
+	  is mid-transaction, and never open the live DB off the Google Drive mount.
 
 - **Poll importer skips everything**
 	- Use `--include-unimported-parsers` on a fresh DB.
@@ -201,7 +194,7 @@ docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT type
 	- Audit directly in DB, for example:
 
 ```bash
-docker compose exec -T db psql -U election_maps -d election_maps -c "SELECT poll_id, COUNT(*) AS zero_rows FROM poll_rows WHERE pct = 0 GROUP BY poll_id ORDER BY zero_rows DESC LIMIT 25;"
+sqlite3 "$DATABASE_PATH" "SELECT poll_id, COUNT(*) AS zero_rows FROM poll_rows WHERE percentage = 0 GROUP BY poll_id ORDER BY zero_rows DESC LIMIT 25;"
 ```
 
 ---

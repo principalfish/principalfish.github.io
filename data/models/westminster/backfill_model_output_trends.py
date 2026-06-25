@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import re
 import sqlite3
 from dataclasses import dataclass
@@ -19,10 +20,14 @@ from sqlalchemy import delete, select
 from run_uns_model import Database, TREND_CACHE_CSV
 from models import Election, ElectionType, Map, Party, Vote
 
-# Default path for the SQLite archive, relative to the data/ directory
+# Default path for the SQLite database holding model-run results.
 _MODELS_WESTMINSTER_DIR = Path(__file__).resolve().parent
 _DATA_DIR = _MODELS_WESTMINSTER_DIR.parent.parent  # data/models/westminster -> data/models -> data
-DEFAULT_SQLITE_PATH = _DATA_DIR / "model_uns.db"
+DEFAULT_SQLITE_PATH = Path(
+    os.environ.get("SQLITE_DATABASE_PATH")
+    or os.environ.get("DATABASE_PATH")
+    or "/home/philiph/dbs/elections.db"
+)
 
 
 @dataclass
@@ -55,7 +60,7 @@ def _load_sqlite_elections(sqlite_path: Path, map_name: str | None) -> list[_Ele
     with sqlite3.connect(sqlite_path) as conn:
         conn.row_factory = sqlite3.Row
         elections = conn.execute(
-            "SELECT id, map_id, year, name FROM elections ORDER BY id ASC"
+            "SELECT id, map_id, year, name FROM elections WHERE type = 'model_uns' ORDER BY id ASC"
         ).fetchall()
 
         for e in elections:

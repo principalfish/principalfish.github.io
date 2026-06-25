@@ -34,5 +34,17 @@
         </small>
       </form>
     </div>
+
+    <div class="action-grid action-grid-two">
+      <form method="post" action="{{ url_for('backup_database') }}" class="inline-form button-form">
+        <button type="submit" class="button button-block">Backup Database</button>
+        <small>Snapshot the local database to Google Drive.</small>
+      </form>
+      <form method="post" action="{{ url_for('restore_database') }}" class="inline-form button-form"
+            onsubmit="return confirm('Restore the database from the Google Drive snapshot? This overwrites the current local database (a .prerestore copy is kept).');">
+        <button type="submit" class="button button-block button-danger">Sync from Database</button>
+        <small>Restore the local database from the Google Drive snapshot.</small>
+      </form>
+    </div>
   </section>
 {% endblock %}

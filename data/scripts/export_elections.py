@@ -722,6 +722,61 @@ def write_manifest(path: Path, payload: dict[str, Any]) -> None:
         handle.write("\n")
 
 
+def reorder_manifest_entries(
+    entries: list[dict[str, Any]], existing_order: Sequence[str]
+) -> list[dict[str, Any]]:
+    """Reorder freshly-built manifest entries to match the curated manifest order.
+
+    The export builds entries in DB/insertion order, which differs from the
+    hand-curated order of the existing ``map-modes.json``.  To keep regen diffs
+    minimal and the UI election selector stable, entries already present in
+    ``existing_order`` keep that order.  A new entry (not in the existing
+    manifest, e.g. a freshly-added election) is slotted immediately after the
+    existing entry that names it as its ``comparisonElectionId`` (its "newer"
+    neighbour); failing that, immediately before the existing entry it itself
+    compares against; otherwise appended at the end.
+
+    When ``existing_order`` is empty (no prior manifest), the built order is
+    returned unchanged.
+
+    Args:
+        entries: Manifest entry dicts in their freshly-built order.
+        existing_order: Election ids in the order of the existing manifest.
+
+    Returns:
+        A new list of the same entries reordered to follow ``existing_order``.
+    """
+    if not existing_order:
+        return list(entries)
+
+    existing_index = {eid: i for i, eid in enumerate(existing_order)}
+    end = len(existing_order)
+
+    # id -> id of the first entry that compares against it (its newer neighbour)
+    compared_by: dict[str, str] = {}
+    for entry in entries:
+        comp = entry.get("comparisonElectionId")
+        if comp:
+            compared_by.setdefault(comp, entry["id"])
+
+    def sort_key(item: tuple[int, dict[str, Any]]) -> tuple[float, int, int]:
+        built_pos, entry = item
+        eid = entry["id"]
+        if eid in existing_index:
+            return (existing_index[eid], 0, built_pos)
+        anchor = compared_by.get(eid)
+        if anchor in existing_index:
+            # right after the existing entry that compares against this one
+            return (existing_index[anchor], 1, built_pos)
+        comp = entry.get("comparisonElectionId")
+        if comp in existing_index:
+            # right before the existing entry this one compares against
+            return (existing_index[comp] - 1, 2, built_pos)
+        return (end, 0, built_pos)
+
+    return [entry for _, entry in sorted(enumerate(entries), key=sort_key)]
+
+
 def parse_args() -> argparse.Namespace:
     """Parse and validate command-line arguments.
 
@@ -1302,17 +1357,21 @@ def main() -> None:
                         write_json(map_path, map_payload)
 
             map_files_by_id[str(election.map_id)] = map_relpath
-            data_files_by_election_id[election_manifest_id] = f"results/{result_filename}"
             written_map_ids.add(election.map_id)
             manifest_id_by_db_id[election.id] = election_manifest_id
 
             # Holyrood elections with non-standard names (e.g. remapped boundary elections)
-            # are exported to disk for model use but excluded from the UI manifest.
+            # are exported to disk for model use but excluded from the UI manifest.  Their
+            # data-file ref is registered below by manifest_id, so skip them here to avoid
+            # polluting electionsById with a malformed slug (they are re-registered under
+            # their curated manifest id by the preservation pass).
             is_standard_holyrood = election.type != ElectionType.holyrood_general or bool(
                 re.fullmatch(r"\d{4}\s+Scottish Parliament Election", election.name)
             )
             if not is_standard_holyrood:
                 continue
+
+            data_files_by_election_id[election_manifest_id] = f"results/{result_filename}"
 
             parliament = getattr(map_row, "parliament", "westminster")
             manifest_entry = {
@@ -1322,6 +1381,10 @@ def main() -> None:
                 "mapId": election.map_id,
                 "parliament": parliament,
             }
+            # Prediction elections carry ``model: true`` so the front-end shows the
+            # predict UI / hides raw vote counts for them.
+            if election.type in (ElectionType.model_uns, ElectionType.holyrood_uns):
+                manifest_entry["model"] = True
             manifest_entries.append(manifest_entry)
 
             if default_election_id is None and election.type == ElectionType.uk_general:
@@ -1508,10 +1571,15 @@ def main() -> None:
                 data_files_by_election_id[entry_id] = data_file
                 files["elections"]["electionsById"] = data_files_by_election_id
 
-        # Use current-holyrood-prediction as the default if it is present in the manifest
-        holyrood_prediction_id = "current-holyrood-prediction"
-        if any(e.get("id") == holyrood_prediction_id for e in manifest_entries):
-            default_election_id = holyrood_prediction_id
+        # Preserve the curated defaultElection across exports when it still points at a
+        # real election (so a hand-set default like "current-prediction" survives regen);
+        # otherwise fall back to current-holyrood-prediction when present.
+        manifest_ids = {e.get("id") for e in manifest_entries}
+        existing_default = existing.get("defaultElection")
+        if existing_default in manifest_ids:
+            default_election_id = existing_default
+        elif "current-holyrood-prediction" in manifest_ids:
+            default_election_id = "current-holyrood-prediction"
 
         # Preserve manually-curated election fields that the export pipeline does not compute.
         # The main loop builds entries from DB rows with only the standard fields (id, name,
@@ -1525,6 +1593,12 @@ def main() -> None:
             for field in PRESERVED_ENTRY_FIELDS:
                 if field in existing_entry and field not in entry:
                     entry[field] = existing_entry[field]
+
+        # Keep the curated election order from the existing manifest so regen does not
+        # reshuffle the UI election selector; new elections are slotted next to the entry
+        # that references them.
+        existing_order = [e["id"] for e in existing.get("elections", []) if "id" in e]
+        manifest_entries = reorder_manifest_entries(manifest_entries, existing_order)
 
         manifest_payload = {
             "defaultElection": default_election_id,

@@ -330,15 +330,40 @@ def manifest_id_for_election(election: Election) -> str:
 def manifest_name_for_election(election: Election) -> str:
     """Return the human-readable display name for an election in the manifest.
 
+    Shortens the verbose DB names to the curated forms used in the front-end:
+
+    - ``model_uns`` → ``"Current prediction"``
+    - ``uk_general`` ``"{year} General Election"`` → ``"{year} Election"``
+    - ``holyrood_general`` ``"{year} Scottish Parliament Election"`` →
+      ``"{year} Election"``
+    - ``holyrood_general`` ``"{year} Scottish Parliament Election ({yyyy} Boundaries)"``
+      → ``"{year} Election ({yyyy} boundaries)"``
+    - anything else → the ``name`` field verbatim.
+
     Args:
         election: Election ORM row.
 
     Returns:
-        ``"Current prediction"`` for ``model_uns`` elections; otherwise the
-        election's ``name`` field verbatim.
+        The display name string used in ``map-modes.json``.
     """
     if election.type == ElectionType.model_uns:
         return "Current prediction"
+
+    general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
+    if election.type == ElectionType.uk_general and general_match:
+        return f"{general_match.group(1)} Election"
+
+    if election.type == ElectionType.holyrood_general:
+        boundaries_match = re.fullmatch(
+            r"(\d{4})\s+Scottish Parliament Election \((\d{4}) Boundaries\)", election.name
+        )
+        if boundaries_match:
+            return f"{boundaries_match.group(1)} Election ({boundaries_match.group(2)} boundaries)"
+
+        holyrood_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election", election.name)
+        if holyrood_match:
+            return f"{holyrood_match.group(1)} Election"
+
     return election.name
 
 

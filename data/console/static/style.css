@@ -68,6 +68,39 @@ body {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.console-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.console-column h2 small {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.column-meta {
+  margin: 4px 0 14px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.action-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.danger-zone {
+  border: 1px solid #f3c5c5;
+}
+
+.danger-zone h2 small {
+  font-weight: 500;
+  color: #b91c1c;
+  font-size: 14px;
+}
+
 .button-form {
   width: 100%;
 }
@@ -235,7 +268,8 @@ th {
 
 @media (max-width: 860px) {
   .action-grid-three,
-  .action-grid-two {
+  .action-grid-two,
+  .console-columns {
     grid-template-columns: 1fr;
   }
 }

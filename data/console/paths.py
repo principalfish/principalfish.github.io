@@ -12,8 +12,6 @@ from pathlib import Path
 DATA_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = DATA_DIR.parent
 
-UPDATE_POLLS_SCRIPT = DATA_DIR / "polls" / "update_polls.sh"
-UPDATE_POLLS_LOG = DATA_DIR / "logs" / "update_polls.log"
 UNS_MODEL_SCRIPT = DATA_DIR / "models" / "westminster" / "run_uns_model.py"
 HOLYROOD_IMPORT_SCRIPT = DATA_DIR / "polls" / "importers" / "holyrood" / "holyrood_wikipedia_import.py"
 HOLYROOD_MODEL_SCRIPT = DATA_DIR / "models" / "holyrood" / "run_holyrood_uns_model.py"

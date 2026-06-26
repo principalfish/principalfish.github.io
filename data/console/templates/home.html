@@ -2,48 +2,61 @@
 {% block content %}
   <section class="hero">
     <h1>Election Data Console</h1>
-    <p>Run poll imports, refresh polling data, and manage model runs and outputs.</p>
+    <p>Import polling data, run projection models, publish outputs, and manage the database.</p>
+  </section>
 
-    <div class="action-grid action-grid-three">
-      <a class="button primary button-block" href="{{ url_for('poll_import.import_poll_form') }}">Import Poll</a>
-      <form method="post" action="{{ url_for('westminster.update_polls') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Sync from Wikipedia</button>
-      </form>
-      <a class="button button-block" href="{{ url_for('polls.poll_list') }}">View Polls</a>
-    </div>
+  <div class="console-columns">
+    <section class="card console-column">
+      <h2>Westminster</h2>
+      <div class="action-stack">
+        <a class="button primary button-block" href="{{ url_for('poll_import.import_poll_form') }}">Import Poll</a>
+        <a class="button button-block" href="{{ url_for('by_elections.by_election_form') }}">Import By-Election</a>
+        <a class="button button-block" href="{{ url_for('polls.poll_list') }}">View Polls</a>
+        <a class="button button-block" href="{{ url_for('westminster.model_run_form') }}">Run Westminster Model</a>
+        <a class="button button-block" href="{{ url_for('westminster.model_outputs') }}">View Westminster Outputs</a>
+      </div>
+    </section>
 
+    <section class="card console-column">
+      <h2>Holyrood <small>(Scotland)</small></h2>
+      <p class="column-meta">
+        Constituency: {{ holyrood_latest_constituency or '—' }}
+        &nbsp;|&nbsp;
+        List: {{ holyrood_latest_list or '—' }}
+      </p>
+      <div class="action-stack">
+        <form method="post" action="{{ url_for('holyrood.holyrood_import_polls') }}" class="inline-form button-form">
+          <button type="submit" class="button button-block">Import Scottish Polls</button>
+        </form>
+        <form method="post" action="{{ url_for('holyrood.run_holyrood_model') }}" class="inline-form button-form">
+          <button type="submit" class="button button-block">Run Holyrood Model</button>
+        </form>
+        <a class="button button-block" href="{{ url_for('holyrood.holyrood_outputs') }}">View Holyrood Outputs</a>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Publish</h2>
     <div class="action-grid action-grid-two">
-      <a class="button button-block" href="{{ url_for('westminster.model_run_form') }}">Run Model</a>
-      <a class="button button-block" href="{{ url_for('westminster.model_outputs') }}">View Model Outputs</a>
-    </div>
-
-    <div class="action-grid action-grid-two">
-      <a class="button button-block" href="{{ url_for('by_elections.by_election_form') }}">Import By-Election</a>
       <form method="post" action="{{ url_for('exports.export_current_simulation') }}" class="inline-form button-form">
         <button type="submit" class="button button-block">Export Simulation JSON</button>
+        <small>Write the latest Westminster prediction to the live site data.</small>
       </form>
     </div>
+  </section>
 
-    <div class="action-grid action-grid-two">
-      <form method="post" action="{{ url_for('holyrood.holyrood_import_polls') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Import Scottish Polls</button>
-        <small>
-          Constituency: {{ holyrood_latest_constituency or '—' }}
-          &nbsp;|&nbsp;
-          List: {{ holyrood_latest_list or '—' }}
-        </small>
-      </form>
-    </div>
-
+  <section class="card danger-zone">
+    <h2>Database <small>(admin)</small></h2>
     <div class="action-grid action-grid-two">
       <form method="post" action="{{ url_for('db_admin.backup_database') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Backup Database</button>
+        <button type="submit" class="button button-block">Backup to Drive</button>
         <small>Snapshot the local database to Google Drive.</small>
       </form>
       <form method="post" action="{{ url_for('db_admin.restore_database') }}" class="inline-form button-form"
             onsubmit="return confirm('Restore the database from the Google Drive snapshot? This overwrites the current local database (a .prerestore copy is kept).');">
-        <button type="submit" class="button button-block button-danger">Sync from Database</button>
-        <small>Restore the local database from the Google Drive snapshot.</small>
+        <button type="submit" class="button button-block button-danger">Restore from Drive</button>
+        <small>Overwrite the local database with the Google Drive snapshot.</small>
       </form>
     </div>
   </section>

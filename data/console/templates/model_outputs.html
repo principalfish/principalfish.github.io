@@ -19,16 +19,16 @@
   </section>
 
   <section class="card">
-    <h2>Model Outputs</h2>
+    <h2>{{ heading }}</h2>
     <div class="outputs-toolbar">
       <p class="outputs-meta">
         Showing {{ outputs|length }} of {{ total_output_count }} model runs.
       </p>
       <div class="table-actions">
         {% if show_all %}
-          <a class="button" href="{{ url_for('westminster.model_outputs') }}">Show Recent ({{ default_limit }})</a>
+          <a class="button" href="{{ url_for(outputs_endpoint) }}">Show Recent ({{ default_limit }})</a>
         {% else %}
-          <a class="button" href="{{ url_for('westminster.model_outputs', show='all') }}">Show All</a>
+          <a class="button" href="{{ url_for(outputs_endpoint, show='all') }}">Show All</a>
         {% endif %}
       </div>
     </div>
@@ -36,7 +36,7 @@
       <p>No model outputs have been generated yet.</p>
     {% else %}
       <div class="bulk-actions">
-        <form id="bulk-delete-form" method="post" action="{{ url_for('westminster.delete_selected_model_outputs') }}" class="inline-form">
+        <form id="bulk-delete-form" method="post" action="{{ url_for(delete_selected_endpoint) }}" class="inline-form">
           <button id="bulk-delete-btn" type="submit" class="button button-danger" disabled>Delete Selected</button>
         </form>
       </div>
@@ -71,8 +71,8 @@
                 <td>{{ output.vote_rows }}</td>
                 <td>
                   <div class="table-actions">
-                    <a class="button" href="{{ url_for('westminster.model_output_detail', election_id=output.election_id) }}">View Model</a>
-                    <form method="post" action="{{ url_for('westminster.delete_model_output', election_id=output.election_id) }}" class="inline-form">
+                    <a class="button" href="{{ url_for(detail_endpoint, election_id=output.election_id) }}">View Model</a>
+                    <form method="post" action="{{ url_for(delete_endpoint, election_id=output.election_id) }}" class="inline-form">
                       <button type="submit" class="button button-danger">Delete</button>
                     </form>
                   </div>

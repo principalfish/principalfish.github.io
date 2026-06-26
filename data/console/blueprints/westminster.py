@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shlex
 import sys
-from datetime import date, datetime
+from datetime import date
 
 from flask import (
     Blueprint,
@@ -24,13 +24,10 @@ from models import Election, ElectionType, Map
 from console.db import get_db
 from console.forms import ModelRunForm
 from console.paths import (
-    DATA_DIR,
     EXPORT_ELECTION_SCRIPT,
     PREDICTION_SIMULATION_OUTPUT,
     UNS_MODEL_SCRIPT,
     UNS_TREND_CACHE_JSON,
-    UPDATE_POLLS_LOG,
-    UPDATE_POLLS_SCRIPT,
 )
 from console.services.model_outputs import (
     build_output_detail_context,
@@ -38,7 +35,7 @@ from console.services.model_outputs import (
     delete_model_output as delete_one_output,
     delete_selected_model_outputs as delete_selected_outputs,
 )
-from console.services.runner import render_command_result, run_command
+from console.services.runner import run_command
 
 bp = Blueprint("westminster", __name__)
 
@@ -128,47 +125,6 @@ def _model_arg_explanations() -> list[dict[str, str]]:
             "description": "When enabled, runs the model without inserting a new election or votes.",
         },
     ]
-
-
-@bp.route("/update-polls", methods=["POST"])
-def update_polls() -> ResponseReturnValue:
-    """POST /update-polls — Run update_polls.sh and render its stdout/stderr output.
-
-    Side effects:
-        Executes ``update_polls.sh`` as a subprocess (timeout 1800 s), which may
-        write new poll data to the database.
-
-    Returns:
-        Rendered command_result.html showing stdout, stderr, and return code,
-        or a redirect to home with a flash message if the script is not found.
-    """
-    if not UPDATE_POLLS_SCRIPT.exists():
-        flash(f"Update script not found: {UPDATE_POLLS_SCRIPT}")
-        return redirect(url_for("home.home"))
-
-    command = [
-        "bash",
-        str(UPDATE_POLLS_SCRIPT),
-        "--continue-on-error",
-        "--model-after-each",
-    ]
-    result = run_command(command, timeout=1800)
-
-    UPDATE_POLLS_LOG.parent.mkdir(parents=True, exist_ok=True)
-    with UPDATE_POLLS_LOG.open("a", encoding="utf-8") as handle:
-        handle.write(f"\n===== {datetime.now().isoformat(timespec='seconds')} (exit {result.returncode}) =====\n")
-        handle.write(result.stdout)
-        if result.stderr:
-            handle.write("\n--- stderr ---\n")
-            handle.write(result.stderr)
-
-    return render_command_result(
-        title="Sync from Wikipedia",
-        command=shlex.join(command),
-        stdout=result.stdout,
-        stderr=result.stderr,
-        return_code=result.returncode,
-    )
 
 
 @bp.route("/models/run", methods=["GET"])
@@ -315,7 +271,15 @@ def model_outputs() -> str:
         trend_cache_path=UNS_TREND_CACHE_JSON,
         show_all=show_all,
     )
-    return render_template("model_outputs.html", **context)
+    return render_template(
+        "model_outputs.html",
+        **context,
+        heading="Westminster Model Outputs",
+        outputs_endpoint="westminster.model_outputs",
+        detail_endpoint="westminster.model_output_detail",
+        delete_endpoint="westminster.delete_model_output",
+        delete_selected_endpoint="westminster.delete_selected_model_outputs",
+    )
 
 
 @bp.route("/models/outputs/<int:election_id>", methods=["GET"])
@@ -343,7 +307,12 @@ def model_output_detail(election_id: int) -> ResponseReturnValue:
     if context is None:
         flash(f"Model output #{election_id} not found.")
         return redirect(url_for("westminster.model_outputs"))
-    return render_template("model_output_detail.html", **context)
+    return render_template(
+        "model_output_detail.html",
+        **context,
+        outputs_endpoint="westminster.model_outputs",
+        detail_endpoint="westminster.model_output_detail",
+    )
 
 
 @bp.route("/models/outputs/<int:election_id>/delete", methods=["POST"])

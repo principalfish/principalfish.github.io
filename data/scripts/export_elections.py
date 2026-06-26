@@ -1365,10 +1365,16 @@ def main() -> None:
                 if args.dry_run:
                     print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
                     if election.map_id not in written_map_ids:
-                        print(f"Would write map: {map_path} (template {map_template_filename})")
+                        if map_path.exists():
+                            print(f"Map already in place: {map_path}")
+                        else:
+                            print(f"Would write map: {map_path} (template {map_template_filename})")
                 else:
                     write_json(result_path, result_payload)
-                    if election.map_id not in written_map_ids:
+                    if election.map_id not in written_map_ids and not map_path.exists():
+                        # Bootstrap a missing map from its legacy template only.  Never overwrite
+                        # an existing map: the committed TopoJSON is hand-curated (e.g. manual
+                        # boundary fixes) and is not reflected in the legacy templates.
                         map_payload = json.loads(map_template_path.read_text(encoding="utf-8"))
                         write_json(map_path, map_payload)
 

@@ -2214,8 +2214,8 @@ function renderSeatPopup(seatName) {
   // Populate title and meta line (gain indicator, region, majority, turnout).
   seatPopupTitle.textContent = seat.seat;
   seatPopupMeta.innerHTML = `
-    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${manifest.labelParty(gainFrom)} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
-    <span class="maps-popup-meta-item">${getRegionLabel(seat.region, state.currentRegionLabelsByKey)}</span>
+    ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${escapeHtml(manifest.labelParty(gainFrom))} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
+    <span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>
     <span class="maps-popup-meta-item">Majority: ${formatPct(majority.pct)}%${showCounts ? ` = ${formatInt(majority.raw)}` : ''}</span>
     ${showCounts ? `<span class="maps-popup-meta-item">Turnout: ${formatInt(seat.turnout)}</span>` : ''}
   `;
@@ -2434,7 +2434,7 @@ const RESET_ZOOM_DURATION_MS = 500;
 /**
  * Owns all zoom, pan, highlight, and flash interactions for the rendered TopoJSON map.
  * Constructed by renderTopoMap on each render with fresh D3 selections and lookup maps;
- * assigned to the exported mapInteraction binding for external callers.
+ * assigned to the module-level mapInteraction binding used within this module.
  *
  * Public API:
  *   zoomBy(factor)                  — scale by factor in a short transition
@@ -2631,7 +2631,7 @@ class MapInteraction {
  * Renders the full TopoJSON map into mapSvg using D3.
  * Creates seat path elements coloured by winner or choropleth metric, wires click-to-zoom
  * and hover handlers, draws region boundary overlays, and assigns a fresh MapInteraction
- * instance to the exported mapInteraction binding for external callers.
+ * instance to the module-level mapInteraction binding used within this module.
  * Reads map data, seats, filters, choropleth config, and region summary directly from state.
  * @param {boolean} [preserveZoom=false] - When true, keep the current d3 pan/zoom transform.
  * @returns {void}

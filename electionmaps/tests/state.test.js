@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams } from '../scripts/state.js';
 
-// Restores the manifest singleton to an empty, hydrated baseline so a configuring block
-// can't leak party/region/file lookups into a later block.
+// Restores the manifest singleton to a fully-zeroed, hydrated baseline so a configuring
+// block can't leak party/region/file/feature lookups into a later block. init() does
+// Object.assign + re-hydrate, so every key a block might set must be listed here to be
+// cleared. Run before AND after every test for order-independence.
 function resetManifest() {
-  manifest.init({ parties: [], mapModes: {}, elections: [], files: {} });
+  manifest.init({ parties: [], mapModes: {}, elections: [], files: {}, parliamentFeatures: {} });
 }
+
+beforeEach(resetManifest);
+afterEach(resetManifest);
 
 // ─── Seat.matchesPrimaryFilters ──────────────────────────────────────────────
 describe('Seat.matchesPrimaryFilters', () => {
@@ -230,8 +235,8 @@ describe('ElectionSummary.summarize', () => {
 
 // ─── ElectionSummary subtitle (majority vs hung) ──────────────────────────────
 describe('ElectionSummary subtitle text', () => {
-  beforeEach(resetManifest); // labelParty returns the raw key when no parties configured
-  afterEach(resetManifest);
+  // The file-level resetManifest hooks already zero the manifest, so labelParty returns
+  // the raw party key here.
 
   const seatsWon = (party, n) => Array.from({ length: n }, (_, i) => ({ seat: `${party}-${i}`, region: 'r', winner: party, votes: { [party]: 1 } }));
 
@@ -320,5 +325,10 @@ describe('buildRouteSearchParams', () => {
   it('predict view embeds the serialized payload when present', () => {
     state.predictModel = { serialize: () => 'XYZ' };
     expect(buildRouteSearchParams('predict').get('predict')).toBe('XYZ');
+  });
+
+  it('omits the election param when currentElection has no id', () => {
+    state.currentElection = { id: null };
+    expect(buildRouteSearchParams('election').has('election')).toBe(false);
   });
 });

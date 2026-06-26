@@ -330,6 +330,22 @@ describe('AMSPredict.project (two-pass constituency + D\'Hondt list)', () => {
     // old const->list swing fallback the labour swing would have leaked in and flipped this.
     expect(lists.every((s) => s.votes.snp > s.votes.labour)).toBe(true);
   });
+
+  it('folds list seats to "others" when a region has no list votes (D\'Hondt returns nothing)', () => {
+    // Edge: list seats with no votes -> #allocateListSeats hits dhondtAllocate([]) -> winners[idx]
+    // is undefined -> `winners[idx] || null`, and the Seat constructor then resolves null to 'others'.
+    state.comparisonElectionData = { currentSeats: [
+      new Seat({ seat: 'Glasgow A', region: 'glasgow', winner: 'snp', votes: { snp: 600, labour: 400 } }),
+      new Seat({ seat: 'Glasgow List 1', region: 'glasgow', winner: 'snp', votes: {} }),
+      new Seat({ seat: 'Glasgow List 2', region: 'glasgow', winner: 'snp', votes: {} }),
+    ] };
+    const model = new AMSPredict(2026, config);
+    model.setActiveTab('constituency');
+    model.setShare('scotland', 'labour', 70); // bypass the zero-swing short-circuit
+    const lists = model.project().filter((s) => Seat.isList(s));
+    expect(lists).toHaveLength(2);
+    expect(lists.every((s) => s.winner === 'others')).toBe(true);
+  });
 });
 
 describe('AMSPredict.validate (checks every ballot, not just the active tab)', () => {

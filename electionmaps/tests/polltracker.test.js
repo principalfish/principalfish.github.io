@@ -4,13 +4,16 @@ import { manifest } from '../scripts/state.js';
 import { DEFAULT_PARTY_COLOUR } from '../scripts/utils.js';
 
 describe('parsePollTrackerData', () => {
+  // Fully specify every key so init()'s Object.assign + re-hydrate leaves no leakage from
+  // (or into) another test file's manifest configuration.
+  const emptyManifest = { parties: [], mapModes: {}, elections: [], files: {}, parliamentFeatures: {} };
   beforeEach(() => {
-    manifest.init({ parties: [
+    manifest.init({ ...emptyManifest, parties: [
       { id: 1, key: 'lab', name: 'Labour', colour: '#E4003B' },
       { id: 2, key: 'con', name: 'Con', colour: '#0087DC' },
     ] });
   });
-  afterEach(() => { manifest.init({ parties: [] }); });
+  afterEach(() => { manifest.init({ ...emptyManifest }); });
 
   it('returns empty structures for empty input', () => {
     const { timeline, seriesByParty } = parsePollTrackerData([]);

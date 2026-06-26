@@ -234,10 +234,11 @@ async function handlePredictApply() {
  * on failure. The cache stores the in-flight promise (not the resolved seats) so concurrent
  * callers — typically the activatePredictView prefetch and a fast Apply click — share one
  * fetch. On failure the entry is evicted so the next call retries.
+ * Exported for unit testing of the cache/eviction semantics.
  * @param {string} parliament
  * @returns {Promise<Seat[] | null>}
  */
-async function ensurePredictSimulation(parliament) {
+export async function ensurePredictSimulation(parliament) {
   if (predictSimulationCache.has(parliament)) return predictSimulationCache.get(parliament);
 
   const anchorId = manifest.parliamentConfig(parliament).predictAnchorElectionId;

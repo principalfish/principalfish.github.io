@@ -139,6 +139,8 @@
       "predictAnchorElectionId": "current-prediction",
       "predictBaselineElectionId": "2024-general",
       "nextElectionYear": 2029,
+      "nextElectionDate": null,
+      "nextElectionLabel": "UK general election",
       "polltrackerDataPath": "results/model_output_trends.json",
       "polltrackerDefaultParties": [
         1,
@@ -238,6 +240,8 @@
       "predictAnchorElectionId": "current-holyrood-prediction",
       "predictBaselineElectionId": "2026-holyrood",
       "nextElectionYear": 2031,
+      "nextElectionDate": "2031-05-01",
+      "nextElectionLabel": "Holyrood election",
       "predict": {
         "model": "ams",
         "title": "User Input (constituency swing + D'Hondt list)",

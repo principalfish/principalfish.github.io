@@ -1102,6 +1102,20 @@ class AppState {
   }
 
   /**
+   * Returns true when the election countdown should be visible: on a prediction / predict
+   * view for the current parliament, when that parliament has an upcoming election date set.
+   * Hidden in poll tracker view. Parliament-agnostic — each parliament drives its own date,
+   * so simultaneously-scheduled parliaments each show their own countdown when viewed.
+   * @returns {boolean}
+   */
+  shouldShowCountdown() {
+    if (this.view === 'polltracker') return false;
+    const cfg = manifest.parliamentConfig(this.currentParliament);
+    if (!cfg.nextElectionDate) return false;
+    return this.view === 'predict' || Boolean(this.currentElection?.model);
+  }
+
+  /**
    * Computes all derived per-render data for the active map view: applies filters,
    * builds the choropleth config, and produces the aggregated summaries plus the
    * list-seat specialisation slice. drawMap calls this once per render and then reads

@@ -332,3 +332,53 @@ describe('buildRouteSearchParams', () => {
     expect(buildRouteSearchParams('election').has('election')).toBe(false);
   });
 });
+
+describe('AppState.shouldShowCountdown', () => {
+  let saved;
+
+  beforeEach(() => {
+    manifest.init({
+      parties: [], mapModes: {}, elections: [], files: {},
+      parliamentFeatures: {
+        // Holyrood has a confirmed upcoming date; Westminster's is not yet set (null).
+        holyrood: { nextElectionDate: '2031-05-01', nextElectionLabel: 'Holyrood election' },
+        westminster: { nextElectionDate: null, nextElectionLabel: 'UK general election' },
+      },
+    });
+    saved = { view: state.view, parliament: state.currentParliament, election: state.currentElection };
+    state.currentParliament = 'holyrood';
+    state.view = 'predict';
+    state.currentElection = { id: 'e1', model: true };
+  });
+
+  afterEach(() => {
+    state.view = saved.view;
+    state.currentParliament = saved.parliament;
+    state.currentElection = saved.election;
+  });
+
+  it('shows on a parliament predict view when an upcoming date is configured', () => {
+    expect(state.shouldShowCountdown()).toBe(true);
+  });
+
+  it('shows when viewing the prediction election (model) outside predict mode', () => {
+    state.view = 'election';
+    expect(state.shouldShowCountdown()).toBe(true);
+  });
+
+  it('hides on a non-prediction election view', () => {
+    state.view = 'election';
+    state.currentElection = { id: 'e1', model: false };
+    expect(state.shouldShowCountdown()).toBe(false);
+  });
+
+  it('hides in poll tracker view even for a prediction', () => {
+    state.view = 'polltracker';
+    expect(state.shouldShowCountdown()).toBe(false);
+  });
+
+  it('hides when the current parliament has no upcoming date set', () => {
+    state.currentParliament = 'westminster';
+    expect(state.shouldShowCountdown()).toBe(false);
+  });
+});

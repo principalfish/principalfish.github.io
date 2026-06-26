@@ -236,8 +236,8 @@
         "predict"
       ],
       "predictAnchorElectionId": "current-holyrood-prediction",
-      "predictBaselineElectionId": "2021-holyrood-2026",
-      "nextElectionYear": 2026,
+      "predictBaselineElectionId": "2026-holyrood",
+      "nextElectionYear": 2031,
       "predict": {
         "model": "ams",
         "title": "User Input (constituency swing + D'Hondt list)",

@@ -11,7 +11,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import pytest
 
 from models import ElectionType
-from export_elections import manifest_name_for_election, reorder_manifest_entries
+from export_elections import (
+    assign_comparison_elections,
+    manifest_name_for_election,
+    reorder_manifest_entries,
+)
 
 
 class _Election:
@@ -108,3 +112,78 @@ class TestReorderManifestEntries:
         built = [{"id": "a"}, {"id": "floating"}, {"id": "b"}]
         out = reorder_manifest_entries(built, ["a", "b"])
         assert self._ids(out) == ["a", "b", "floating"]
+
+
+class TestAssignComparisonElections:
+    """Comparisons follow same parliament + same boundaries (mapId), newest-first."""
+
+    @staticmethod
+    def _entry(eid, parliament, map_id, type=ElectionType.holyrood_general.value):
+        return {"id": eid, "type": type, "parliament": parliament, "mapId": map_id}
+
+    def test_boundary_changed_election_compares_within_same_map(self) -> None:
+        # 2026 (map 12) must compare against the map-12 baseline, not the map-11 2021.
+        entries = [
+            self._entry("2026-holyrood", "holyrood", 12),
+            self._entry("2021-holyrood-2026", "holyrood", 12),
+            self._entry("2021-holyrood", "holyrood", 11),
+            self._entry("2016-holyrood", "holyrood", 11),
+        ]
+        assign_comparison_elections(entries)
+        by_id = {e["id"]: e for e in entries}
+        assert by_id["2026-holyrood"]["comparisonElectionId"] == "2021-holyrood-2026"
+        assert by_id["2021-holyrood"]["comparisonElectionId"] == "2016-holyrood"
+        # baseline / oldest on each map get no comparison
+        assert "comparisonElectionId" not in by_id["2021-holyrood-2026"]
+        assert "comparisonElectionId" not in by_id["2016-holyrood"]
+
+    def test_general_does_not_compare_against_same_map_referendum(self) -> None:
+        # The oldest general (map 1) must not grab the EU referendum (map 1, other type).
+        entries = [
+            self._entry("2015-general", "westminster", 1, ElectionType.uk_general.value),
+            self._entry("2010-general", "westminster", 1, ElectionType.uk_general.value),
+            {"id": "eu-referendum-2016", "type": "eu_referendum", "parliament": "westminster", "mapId": 1},
+        ]
+        assign_comparison_elections(entries)
+        by_id = {e["id"]: e for e in entries}
+        assert by_id["2015-general"]["comparisonElectionId"] == "2010-general"
+        assert "comparisonElectionId" not in by_id["2010-general"]
+        assert "comparisonElectionId" not in by_id["eu-referendum-2016"]
+
+    def test_never_compares_across_parliaments(self) -> None:
+        entries = [
+            self._entry("2024-general", "westminster", 2, ElectionType.uk_general.value),
+            self._entry("2021-holyrood", "holyrood", 11),
+        ]
+        assign_comparison_elections(entries)
+        # different parliament AND map → no comparison either way
+        assert "comparisonElectionId" not in entries[0]
+        assert "comparisonElectionId" not in entries[1]
+
+    def test_model_uns_compares_against_latest_general(self) -> None:
+        entries = [
+            self._entry("current-prediction", "westminster", 2, ElectionType.model_uns.value),
+            self._entry("2024-general", "westminster", 2, ElectionType.uk_general.value),
+            self._entry("2019-general", "westminster", 1, ElectionType.uk_general.value),
+        ]
+        assign_comparison_elections(entries)
+        assert entries[0]["comparisonElectionId"] == "2024-general"
+
+    def test_existing_comparison_is_not_overwritten(self) -> None:
+        entries = [
+            self._entry("2026-holyrood", "holyrood", 12),
+            self._entry("2021-holyrood-2026", "holyrood", 12),
+        ]
+        entries[0]["comparisonElectionId"] = "already-set"
+        assign_comparison_elections(entries)
+        assert entries[0]["comparisonElectionId"] == "already-set"
+
+    def test_second_pass_resolves_late_added_baseline(self) -> None:
+        # Mimics the real flow: first pass runs without the map-12 baseline present,
+        # so 2026 is left unresolved; a later pass with the baseline present fills it.
+        entries = [self._entry("2026-holyrood", "holyrood", 12)]
+        assign_comparison_elections(entries)
+        assert "comparisonElectionId" not in entries[0]
+        entries.append(self._entry("2021-holyrood-2026", "holyrood", 12))
+        assign_comparison_elections(entries)
+        assert entries[0]["comparisonElectionId"] == "2021-holyrood-2026"

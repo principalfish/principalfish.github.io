@@ -465,10 +465,20 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     - ``model_uns`` entries compare against the most recent UK general
       election in the list.
     - All other entries compare against the next entry in the list with the
-      same ``parliament`` value (i.e. the chronologically preceding election
-      in the same parliament).  This prevents Westminster elections from
-      being compared against Holyrood elections and vice versa.
-    - The last entry in each parliament receives no comparison.
+      same ``parliament``, ``mapId`` **and** ``type`` (i.e. the chronologically
+      preceding election of the same kind on the same boundaries).  Matching
+      ``mapId`` keeps a boundary-changed election comparing against the
+      same-boundary baseline (e.g. the 2026 Holyrood election against
+      ``2021-holyrood-2026``, not the old-boundary ``2021-holyrood``); matching
+      ``type`` stops a general election from comparing against a same-map
+      election of another kind (e.g. the EU referendum); and the ``parliament``
+      check prevents cross-parliament comparisons.
+    - The last entry of each (parliament, mapId, type) receives no comparison.
+
+    Idempotent and safe to call more than once: entries that already have a
+    comparison are skipped, so a second pass only fills entries left unresolved
+    when their same-boundary baseline was not yet present (e.g. a preserved
+    boundary-changed election added after the first pass).
 
     Args:
         manifest_entries: List of manifest election dicts, ordered newest
@@ -486,12 +496,18 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
 
         comparison_id: str | None = None
 
-        if entry.get("type") == ElectionType.model_uns:
+        if entry.get("type") == ElectionType.model_uns.value:
             comparison_id = latest_general_id
         else:
             parliament = entry.get("parliament")
+            map_id = entry.get("mapId")
+            entry_type = entry.get("type")
             for later_entry in manifest_entries[index + 1:]:
-                if later_entry.get("parliament") == parliament:
+                if (
+                    later_entry.get("parliament") == parliament
+                    and later_entry.get("mapId") == map_id
+                    and later_entry.get("type") == entry_type
+                ):
                     comparison_id = later_entry["id"]
                     break
 
@@ -1599,6 +1615,14 @@ def main() -> None:
         # that references them.
         existing_order = [e["id"] for e in existing.get("elections", []) if "id" in e]
         manifest_entries = reorder_manifest_entries(manifest_entries, existing_order)
+
+        # Second comparison pass, now that preserved boundary-changed baselines (e.g.
+        # 2021-holyrood-2026) are present and the list is in curated newest-first order.
+        # This resolves any comparison left unset by the first pass because its
+        # same-boundary baseline had not yet been re-inserted.  Idempotent: entries that
+        # already have a comparison are skipped.
+        assign_comparison_elections(manifest_entries)
+        remove_comparison_for_supplemental_entries(manifest_entries)
 
         manifest_payload = {
             "defaultElection": default_election_id,

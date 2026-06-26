@@ -679,6 +679,24 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
         json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
 
 
+def write_manifest(path: Path, payload: dict[str, Any]) -> None:
+    """Serialise the ``map-modes.json`` manifest as pretty-printed JSON.
+
+    Unlike :func:`write_json` (compact, for the large ``results/*.json`` files),
+    the manifest is small and human-curated, so it is written with two-space
+    indentation and a trailing newline to keep diffs readable.
+
+    Args:
+        path: Destination file path.  Parent directories are created if
+            they do not exist.
+        payload: JSON-serialisable manifest dict to write.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+
+
 def parse_args() -> argparse.Namespace:
     """Parse and validate command-line arguments.
 
@@ -1000,7 +1018,7 @@ def main() -> None:
             print(f"Would write manifest metadata: {manifest_path}")
             print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
         else:
-            write_json(manifest_path, manifest)
+            write_manifest(manifest_path, manifest)
             print(f"Wrote manifest metadata: {manifest_path}")
             print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
         return
@@ -1496,7 +1514,7 @@ def main() -> None:
         if args.dry_run:
             print(f"Would write manifest: {manifest_path} ({len(manifest_entries)} elections)")
         else:
-            write_json(manifest_path, manifest_payload)
+            write_manifest(manifest_path, manifest_payload)
             print(f"Wrote manifest: {manifest_path} ({len(manifest_entries)} elections)")
 
 

@@ -113,7 +113,7 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
  * @param {Map<string, Map<string, number>>} swingsByRegionByParty - regionKey → partyKey → swing pp.
  * @param {string[]} modelledPartyKeys - Parties whose share is adjusted by swing (rest absorb residue).
  * @param {{key: string, isMember: (regionKey: string) => boolean} | null} [aggregateConfig]
- *   When set, sub-regions whose own swing is unset fall back to the aggregate's swing.
+ *   When set, sub-regions whose own swing is unset *or zero* fall back to the aggregate's swing.
  * @returns {Seat}
  */
 export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelledPartyKeys, aggregateConfig = null) {
@@ -125,8 +125,8 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
   const baseVotes = baseSeat.votes || {};
 
   // Resolve the swing for a party: prefer the seat's own region, fall back to the
-  // configured aggregate (e.g. 'england', 'scotland') for sub-regions when the region has
-  // no direct entry.
+  // configured aggregate (e.g. 'england', 'scotland') for sub-regions when the region's
+  // own swing is zero or absent.
   const resolveSwing = (partyKey) => {
     const direct = Number(swingsByRegionByParty.get(regionKey)?.get(partyKey) || 0);
     if (Math.abs(direct) > 1e-9) return direct;
@@ -185,7 +185,8 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
  * @param {Map<string, number>} votesByParty
  * @param {number} nSeats
  * @param {Map<string, number>} constWinsByParty
- * @returns {string[]} Ordered array of winning party keys (one per seat).
+ * @returns {string[]} Ordered array of winning party keys — normally one per seat, but
+ *   shorter than nSeats if fewer parties have positive votes than there are seats to fill.
  */
 export function dhondtAllocate(votesByParty, nSeats, constWinsByParty = new Map()) {
   const listSeatsWon = new Map();
@@ -200,7 +201,7 @@ export function dhondtAllocate(votesByParty, nSeats, constWinsByParty = new Map(
       const quotient = votes / (total + 1);
       if (quotient > bestQuotient) { bestQuotient = quotient; bestParty = party; }
     }
-    if (bestParty != null) {
+    if (bestParty !== null) {
       listSeatsWon.set(bestParty, (listSeatsWon.get(bestParty) || 0) + 1);
       winners.push(bestParty);
     }

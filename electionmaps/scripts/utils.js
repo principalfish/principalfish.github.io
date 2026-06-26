@@ -1,4 +1,11 @@
 /**
+ * Fallback colour for a party or chart series with no colour defined in the manifest
+ * (neutral grey). Shared across the state, render, and poll-tracker layers.
+ * @type {string}
+ */
+export const DEFAULT_PARTY_COLOUR = '#9CA3AF';
+
+/**
  * Escapes HTML special characters in a string for safe insertion into innerHTML.
  * @param {string} str - String to escape.
  * @returns {string} HTML-escaped string.

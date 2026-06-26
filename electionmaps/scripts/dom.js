@@ -5,7 +5,7 @@ import {
   merge as topojsonMerge,
 } from '../../site/vendor/topojson-client.v3.esm.js';
 import { manifest, state } from './state.js';
-import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber } from './utils.js';
+import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
@@ -584,7 +584,7 @@ function pollTrackerTooltipHandlers({ svg, tooltip, crosshairLine, margin, inner
     const timelinePoint = visibleTimeline[index];
     const seatsValue = Number(series.seats[index] || 0);
     const votePctValue = Number(series.votePct[index] || 0);
-    const partyColour = series.colour || '#9CA3AF';
+    const partyColour = series.colour || DEFAULT_PARTY_COLOUR;
 
     crosshairLine
       .attr('x1', xPos)
@@ -1374,7 +1374,7 @@ function renderVoteTotals(
   visibleRows.forEach((partyRow) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${manifest.labelParty(partyRow.party)}</span></td>
+      <td><span class="maps-party-cell"><span class="maps-party-swatch" style="background:${manifest.colourParty(partyRow.party)}"></span>${escapeHtml(manifest.labelParty(partyRow.party))}</span></td>
       <td>${formatInt(partyRow.seats)}</td>
       <td class="comparison-col ${showComparison ? deltaClass(partyRow.seatsDelta) : ''}">${showComparison ? formatSigned(partyRow.seatsDelta, 0) : ''}</td>
       <td class="vote-total-col">${formatInt(partyRow.votes)}</td>
@@ -2010,7 +2010,7 @@ function wireMapInteractions() {
  *
  * @returns {void}
  */
-function initRegionTable() {
+export function initRegionTable() {
   const regionSummary = state.listRegionSummary;
   // Non-list elections have no region summary — hide the card and bail.
   if (!regionSummary || regionSummary.size === 0) {
@@ -2286,7 +2286,7 @@ function setSelectedSeatRowByKey(seatKey) {
 }
 
 /**
- * Renders up to 300 seat rows sorted alphabetically into the seat list panel. Each row shows
+ * Renders the filtered seats, sorted alphabetically, into the seat list panel. Each row shows
  * the winner colour, name, and gain-from indicator. Click zooms and opens the seat popup.
  * Reads seats and comparison data directly from state.
  * @returns {void}
@@ -2319,11 +2319,11 @@ function renderSeatList() {
     item.setAttribute('aria-label', `Zoom to ${seatName}`);
     item.innerHTML = `
       <span class="maps-seat-main">
-        <span class="maps-seat-icon maps-seat-owner-icon" style="background:${manifest.colourParty(winnerKey)}" title="${manifest.labelParty(winnerKey)}"></span>
-        <span class="maps-seat-name">${seatName}</span>
+        <span class="maps-seat-icon maps-seat-owner-icon" style="background:${manifest.colourParty(winnerKey)}" title="${escapeHtml(manifest.labelParty(winnerKey))}"></span>
+        <span class="maps-seat-name">${escapeHtml(seatName)}</span>
       </span>
       <span class="maps-seat-meta">
-        ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${manifest.labelParty(gainedFrom)}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
+        ${gainedFrom ? `<span class="maps-seat-gain"><span class="maps-seat-gain-label">GAIN FROM</span><span class="maps-seat-icon" style="background:${manifest.colourParty(gainedFrom)}" title="${escapeHtml(manifest.labelParty(gainedFrom))}"></span></span>` : '<span class="maps-seat-gain-placeholder"></span>'}
       </span>
     `;
 
@@ -2411,15 +2411,14 @@ const mapSvg = document.querySelector('.maps-svg');
 const mapContent = document.getElementById('mapContent');
 const zoomValue = document.getElementById('mapsZoomValue');
 
-// Exported map interaction handle. Replaced on every renderTopoMap call;
-// external callers (toolbar buttons, seat list, postcode search) use it to drive
+// Module-level map interaction handle. Replaced on every renderTopoMap call;
+// callers within this module (toolbar buttons, seat list, postcode search) use it to drive
 // the map without holding references to internal D3 selections.
 // Stub methods are in effect until the first renderTopoMap call.
-export let mapInteraction = {
+let mapInteraction = {
   zoomBy: () => {},
   reset: () => {},
   clearSelection: () => {},
-  highlightSeat: () => {},
   zoomToSeat: () => false,
   flashRegion: () => {},
 };
@@ -2441,7 +2440,6 @@ const RESET_ZOOM_DURATION_MS = 500;
  *   zoomBy(factor)                  — scale by factor in a short transition
  *   reset()                         — return to initial zoom and clear selection
  *   clearSelection()                — remove the active seat highlight
- *   highlightSeat(name)             — highlight without zooming
  *   selectFeature(datum, pathNode)  — highlight pathNode and zoom to its feature
  *   zoomToSeat(name)                — highlight and zoom by seat name; returns false if seat not on map
  *   flashRegion(regionKey)          — flash a region; no-op until setFlashLayer() is called
@@ -2473,7 +2471,7 @@ class MapInteraction {
   }
 
   /**
-   * Registers a rendered SVG path node for a seat so highlightSeat and zoomToSeat can
+   * Registers a rendered SVG path node for a seat so zoomToSeat can
    * locate it by name. Called once per seat path during the initial render pass.
    * @param {string} seatKey - Normalised seat lookup key.
    * @param {Element} node - SVG path DOM node for the seat.
@@ -2574,12 +2572,6 @@ class MapInteraction {
   /** Removes the active seat highlight. */
   clearSelection() {
     this._clearActivePath();
-  }
-
-  /** Highlights the path for seatName without zooming — syncs map to an external trigger. */
-  highlightSeat(seatName) {
-    const seatPathNode = this._seatPathByKey.get(seatLookupKey(seatName));
-    this._setActivePath(seatPathNode);
   }
 
   /**
@@ -2800,7 +2792,7 @@ function renderTopoMap(preserveZoom = false) {
       interaction.selectFeature(datum, event.currentTarget);
     });
 
-  // Build the seatKey → SVG path node index so zoomToSeat and highlightSeat can find
+  // Build the seatKey → SVG path node index so zoomToSeat can find
   // the path element for a given seat name without scanning all features on every call.
   seatPaths.each(function assignSeatPath(datum) {
     const seatName = MapInteraction.seatNameFromFeature(datum);
@@ -2881,12 +2873,12 @@ function renderChoroplethLegend() {
     : `linear-gradient(90deg, ${legend.startColour} 0%, ${legend.endColour} 100%)`;
 
   choroplethLegend.innerHTML = `
-    <div class="maps-choropleth-legend-title">${legend.title}</div>
+    <div class="maps-choropleth-legend-title">${escapeHtml(legend.title)}</div>
     <div class="maps-choropleth-legend-bar" style="background:${gradient}"></div>
     <div class="maps-choropleth-legend-labels">
-      <span>${legend.minLabel}</span>
-      ${legend.isDelta ? `<span>${legend.midLabel}</span>` : ''}
-      <span>${legend.maxLabel}</span>
+      <span>${escapeHtml(legend.minLabel)}</span>
+      ${legend.isDelta ? `<span>${escapeHtml(legend.midLabel)}</span>` : ''}
+      <span>${escapeHtml(legend.maxLabel)}</span>
     </div>
   `;
   choroplethLegend.hidden = false;

@@ -119,6 +119,25 @@ describe('projectSeatUniformSwing', () => {
     expect(projected.winner).toBe('labour');
     expect(projected.turnout).toBe(0);
   });
+
+  it('clamps the residual to zero and re-scales when modelled shares exceed 100%', () => {
+    const seat = { seat: 'A', region: 'london', winner: 'labour', votes: { labour: 500, conservative: 500 }, turnout: 1000 };
+    // labour 50% + 60 swing = 110%, conservative 50% -> tracked sum 160% -> otherShare clamped to 0.
+    const swings = new Map([['london', new Map([['labour', 60]])]]);
+    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative']);
+    expect(projected.votes.others).toBeUndefined();
+    // Re-scaled back down to turnout; party shares re-normalise to 100%.
+    expect(projected.turnout).toBeCloseTo(1000, 6);
+    expect(Seat.voteSharePct(projected, 'labour') + Seat.voteSharePct(projected, 'conservative')).toBeCloseTo(100, 6);
+    expect(projected.winner).toBe('labour');
+  });
+
+  it('preserves turnout (projected votes sum to baseSeat.turnout)', () => {
+    const seat = { seat: 'A', region: 'london', winner: 'labour', votes: { labour: 400, conservative: 400, libdems: 200 }, turnout: 1000 };
+    const swings = new Map([['london', new Map([['labour', 10], ['conservative', -10]])]]);
+    const projected = projectSeatUniformSwing(seat, swings, ['labour', 'conservative']);
+    expect(projected.turnout).toBeCloseTo(1000, 6);
+  });
 });
 
 describe('dhondtAllocate', () => {
@@ -136,6 +155,16 @@ describe('dhondtAllocate', () => {
   it('skips parties with non-positive votes', () => {
     const votes = new Map([['a', 0], ['b', 50]]);
     expect(dhondtAllocate(votes, 2)).toEqual(['b', 'b']);
+  });
+
+  it('returns an empty array when no party has positive votes', () => {
+    // The all-skipped path: bestParty stays null every iteration, so nothing is pushed.
+    // #allocateListSeats maps these missing winners to Seats with winner: null.
+    expect(dhondtAllocate(new Map([['a', 0], ['b', -5]]), 2)).toEqual([]);
+  });
+
+  it('returns an empty array when zero seats are requested', () => {
+    expect(dhondtAllocate(new Map([['a', 100]]), 0)).toEqual([]);
   });
 });
 

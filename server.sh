@@ -33,6 +33,11 @@ WATCH_FILES=(
 	electionmaps/electionmaps.js
 	electionmaps/scripts/state.js
 	electionmaps/scripts/utils.js
+	electionmaps/scripts/dom.js
+	electionmaps/scripts/predict.js
+	electionmaps/scripts/predict-controller.js
+	electionmaps/scripts/files.js
+	electionmaps/scripts/polltracker.js
 	electionmaps/mobile-sidebar.js
 	electionmaps/mobile-sidebar.css
 	site/styles.css

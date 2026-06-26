@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass } from '../scripts/utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -310,5 +310,18 @@ describe('base64urlEncode / base64urlDecode', () => {
 
   it('returns null for malformed input', () => {
     expect(base64urlDecode('!!!not base64!!!')).toBeNull();
+  });
+});
+
+describe('deltaClass', () => {
+  it('classifies positive, negative, and neutral values', () => {
+    expect(deltaClass(3)).toBe('maps-delta-positive');
+    expect(deltaClass(-1.5)).toBe('maps-delta-negative');
+    expect(deltaClass(0)).toBe('maps-delta-neutral');
+  });
+
+  it('treats values within floating-point epsilon of zero as neutral', () => {
+    expect(deltaClass(1e-12)).toBe('maps-delta-neutral');
+    expect(deltaClass(null)).toBe('maps-delta-neutral');
   });
 });

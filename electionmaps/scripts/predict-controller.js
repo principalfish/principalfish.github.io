@@ -25,6 +25,7 @@ import {
   syncRightPanelHeight,
   setPredictActionHandlers,
   setPredictWindowVisible,
+  initRegionTable,
 } from './dom.js';
 
 // Cached current-model simulation seats (for the "Use current forecast" button), one entry
@@ -47,12 +48,13 @@ const predictSimulationCache = new Map();
  */
 export function getPredictBaseElection() {
   const parliament = state.currentParliament;
-  const features = manifest.parliamentFeatures[parliament]?.features ?? [];
+  const config = manifest.parliamentConfig(parliament);
+  const features = config.features ?? [];
   if (!features.includes('predict')) {
     state.view = 'election';
     return state.currentElection;
   }
-  const baselineId = manifest.parliamentFeatures[parliament]?.predictBaselineElectionId;
+  const baselineId = config.predictBaselineElectionId;
   return baselineId ? manifest.getElectionFromId(baselineId) : null;
 }
 
@@ -122,7 +124,10 @@ function runPredictProjection() {
   state.setupMapData();
   renderHeader(state.electionData.summary.text);
   renderMapControlOptions();
-  renderMap();
+  renderMap(true);
+  // setupMapData recomputed listRegionSummary from the projected seats, so rebuild the
+  // region-table overlay (renderMap doesn't touch it). preserveZoom keeps the user's pan/zoom.
+  initRegionTable();
   syncRightPanelHeight();
 
   const params = buildRouteSearchParams('predict');
@@ -235,7 +240,7 @@ async function handlePredictApply() {
 async function ensurePredictSimulation(parliament) {
   if (predictSimulationCache.has(parliament)) return predictSimulationCache.get(parliament);
 
-  const anchorId = manifest.parliamentFeatures[parliament]?.predictAnchorElectionId;
+  const anchorId = manifest.parliamentConfig(parliament).predictAnchorElectionId;
   const anchorElection = anchorId ? manifest.getElectionFromId(anchorId) : null;
   if (!anchorElection) return null;
 

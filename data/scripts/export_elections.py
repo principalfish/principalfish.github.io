@@ -1416,6 +1416,9 @@ def main() -> None:
                         existing_map.unlink()
                         print(f"Removed stale map: {existing_map}")
 
+        manifest_path = output_root / "map-modes.json"
+        existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+
         files = {
             "elections": {
                 "mapsById": map_files_by_id,
@@ -1426,9 +1429,6 @@ def main() -> None:
                 "holyrood": "results/holyrood-prediction-meta.json",
             }),
         }
-
-        manifest_path = output_root / "map-modes.json"
-        existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
 
         # Re-insert any holyrood_uns or model_uns prediction entry from the existing
         # manifest, provided its data file still exists on disk.  This lets the model write

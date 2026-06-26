@@ -3,7 +3,7 @@
 // A single shared object reference means every importer sees the same state.
 
 import * as d3 from '../../site/vendor/d3.v7.esm.js';
-import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber } from './utils.js';
+import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
 
 // Canonical aliases for non-standard string party keys in legacy / external data, applied by
@@ -147,7 +147,7 @@ class Manifest {
    * @returns {string}
    */
   colourParty(partyKey) {
-    return this.partiesByKey?.[partyKey]?.colour ?? '#9CA3AF';
+    return this.partiesByKey?.[partyKey]?.colour ?? DEFAULT_PARTY_COLOUR;
   }
 
   /**
@@ -1304,6 +1304,12 @@ class AppState {
    * Sets this.choroplethConfig. { enabled: false } when no choropleth is active;
    * otherwise enabled is true with valueBySeatKey, toColour, and legend metadata.
    * legendText is absent for the referendum kind, which uses only the legend object.
+   *
+   * Layering note: this builds d3 colour scales + legend metadata (presentation concerns) inside
+   * the state layer, so state.js carries a d3 dependency. Kept here deliberately for now — the
+   * `toColour`/legend output is consumed wholesale by dom.js. If state.js needs to become
+   * d3-free / Node-testable, move the scale construction into the render layer and have this
+   * method emit only the raw values + scale kind.
    * @returns {void}
    */
   buildChoroplethConfig() {

@@ -39,9 +39,12 @@ const mapsTitle = document.querySelector('.maps-title');
 // Subtitle line below the H1 — election name (or "Poll tracker..." in tracker view),
 // optionally suffixed with the poll snippet for prediction elections.
 const subtitle = document.getElementById('mapsSubtitle');
+// Countdown badge in the header — visible only on a parliament's prediction / predict view
+// when that parliament has an upcoming election date; ticks every second until it passes.
+const electionCountdown = document.getElementById('mapsElectionCountdown');
 
 /**
- * Updates the title area: the page h1 and subtitle.
+ * Updates the title area: the page h1, subtitle, and election countdown.
  * Called early in init (text omitted — subtitle falls back to election name) and again
  * after results load with the full summary string. Pass error=true on load failure.
  * @param {string} [text=''] - Full subtitle string (e.g. "2024 Election · Labour majority: 174").
@@ -51,6 +54,7 @@ const subtitle = document.getElementById('mapsSubtitle');
 export function renderHeader(text = '', error = false) {
   renderTitle();
   renderSubtitleText(text, error);
+  renderCountdown();
 }
 
 /**
@@ -182,6 +186,76 @@ function renderElectionLinks() {
     if (hasPredict) appendPredictLink();
     if (hasPollTracker) appendPollTrackerLink();
   }
+}
+
+// ─── Countdown ────────────────────────────────────────────────────────────────
+
+const countdown = {
+  /** setInterval handle for the 1-second countdown tick, or null when not running. */
+  intervalId: null,
+};
+
+/**
+ * Formats a millisecond duration as "Xd Xh Xm Xs".
+ * @param {number} ms - Milliseconds remaining (must be > 0).
+ * @returns {string} Formatted countdown string.
+ */
+function formatCountdown(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
+
+/**
+ * Shows or hides the election countdown element based on the current election type and mode.
+ * Starts a 1-second interval tick when visible; clears it when hidden or after election day.
+ * The date and label come from the current parliament's config (nextElectionDate /
+ * nextElectionLabel), so each parliament drives its own countdown — see
+ * `state.shouldShowCountdown`.
+ * @returns {void}
+ */
+function renderCountdown() {
+  if (!electionCountdown) return;
+
+  const shouldShow = state.shouldShowCountdown();
+
+  if (countdown.intervalId !== null) {
+    clearInterval(countdown.intervalId);
+    countdown.intervalId = null;
+  }
+
+  if (!shouldShow) {
+    electionCountdown.hidden = true;
+    return;
+  }
+
+  const cfg = manifest.parliamentConfig(state.currentParliament);
+  const electionDate = new Date(cfg.nextElectionDate);
+  const label = cfg.nextElectionLabel ?? '';
+  const dateText = electionDate.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const tick = () => {
+    const msLeft = electionDate - Date.now();
+    if (msLeft <= 0) {
+      electionCountdown.hidden = true;
+      // Clear and null the handle so renderCountdown can safely restart if called again.
+      clearInterval(countdown.intervalId);
+      countdown.intervalId = null;
+      return;
+    }
+    electionCountdown.textContent = `${formatCountdown(msLeft)} · ${label} · ${dateText}`;
+    electionCountdown.hidden = false;
+  };
+
+  tick();
+  countdown.intervalId = setInterval(tick, 1000);
 }
 
 // ─── Poll tracker ─────────────────────────────────────────────────────────────

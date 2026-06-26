@@ -5,9 +5,9 @@
       "id": "current-prediction",
       "name": "Current prediction",
       "type": "model_uns",
-      "model": true,
       "mapId": 2,
       "parliament": "westminster",
+      "model": true,
       "comparisonElectionId": "2024-general"
     },
     {
@@ -44,7 +44,15 @@
       "model": true,
       "mapId": 12,
       "parliament": "holyrood",
-      "comparisonElectionId": "2021-holyrood-2026"
+      "comparisonElectionId": "2026-holyrood"
+    },
+    {
+      "id": "2026-holyrood",
+      "name": "2026 Election",
+      "type": "holyrood_general",
+      "mapId": 12,
+      "parliament": "holyrood",
+      "comparisonElectionId": "2021-holyrood"
     },
     {
       "id": "2021-holyrood-2026",
@@ -121,6 +129,7 @@
       "parliament": "westminster"
     }
   ],
+  "misc": {},
   "parliamentFeatures": {
     "westminster": {
       "features": [
@@ -131,20 +140,44 @@
       "predictBaselineElectionId": "2024-general",
       "nextElectionYear": 2029,
       "polltrackerDataPath": "results/model_output_trends.json",
-      "polltrackerDefaultParties": [1, 2, 4, 5, 6, 8],
+      "polltrackerDefaultParties": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        8
+      ],
       "predict": {
         "model": "fptp",
         "title": "User Input (uniform swing)",
         "modelledPartyKeys": [
-          "labour", "conservative", "libdems", "green", "reform",
-          "snp", "plaidcymru", "scottishgreens", "alba",
-          "sinnfein", "dup", "alliance", "uu", "sdlp"
+          "labour",
+          "conservative",
+          "libdems",
+          "green",
+          "reform",
+          "snp",
+          "plaidcymru",
+          "scottishgreens",
+          "alba",
+          "sinnfein",
+          "dup",
+          "alliance",
+          "uu",
+          "sdlp"
         ],
         "virtualColumns": {
-          "nat": { "scotland": "snp", "wales": "plaidcymru" }
+          "nat": {
+            "scotland": "snp",
+            "wales": "plaidcymru"
+          }
         },
         "virtualColumnMeta": {
-          "nat": { "title": "NAT (SNP in Scotland, Plaid Cymru in Wales)", "swatchClass": "maps-party-swatch-nat" }
+          "nat": {
+            "title": "NAT (SNP in Scotland, Plaid Cymru in Wales)",
+            "swatchClass": "maps-party-swatch-nat"
+          }
         },
         "regionLabelOverrides": {
           "northernireland": "N Ireland",
@@ -158,19 +191,41 @@
         "aggregate": {
           "key": "england",
           "label": "England",
-          "excludeRegions": ["scotland", "wales", "northernireland"]
+          "excludeRegions": [
+            "scotland",
+            "wales",
+            "northernireland"
+          ]
         },
         "gridSections": [
           {
             "id": "gb",
-            "columnKeys": ["labour", "conservative", "libdems", "green", "reform", "nat"],
+            "columnKeys": [
+              "labour",
+              "conservative",
+              "libdems",
+              "green",
+              "reform",
+              "nat"
+            ],
             "containsAggregate": true,
-            "extraRegionKeys": ["scotland", "wales"]
+            "extraRegionKeys": [
+              "scotland",
+              "wales"
+            ]
           },
           {
             "id": "ni",
-            "columnKeys": ["sinnfein", "dup", "alliance", "uu", "sdlp"],
-            "regionKeys": ["northernireland"],
+            "columnKeys": [
+              "sinnfein",
+              "dup",
+              "alliance",
+              "uu",
+              "sdlp"
+            ],
+            "regionKeys": [
+              "northernireland"
+            ],
             "blankRegionHeader": true
           }
         ]
@@ -187,8 +242,14 @@
         "model": "ams",
         "title": "User Input (constituency swing + D'Hondt list)",
         "modelledPartyKeys": [
-          "snp", "labour", "conservative", "libdems", "scottishgreens", "reform",
-          "alba", "green"
+          "snp",
+          "labour",
+          "conservative",
+          "libdems",
+          "scottishgreens",
+          "reform",
+          "alba",
+          "green"
         ],
         "aggregate": {
           "key": "scotland",
@@ -196,13 +257,26 @@
           "excludeRegions": []
         },
         "tabs": [
-          { "key": "constituency", "label": "Constituency" },
-          { "key": "list", "label": "List" }
+          {
+            "key": "constituency",
+            "label": "Constituency"
+          },
+          {
+            "key": "list",
+            "label": "List"
+          }
         ],
         "gridSections": [
           {
             "id": "holyrood",
-            "columnKeys": ["snp", "labour", "conservative", "libdems", "scottishgreens", "reform"],
+            "columnKeys": [
+              "snp",
+              "labour",
+              "conservative",
+              "libdems",
+              "scottishgreens",
+              "reform"
+            ],
             "containsAggregate": true
           }
         ]
@@ -429,16 +503,16 @@
   "files": {
     "elections": {
       "mapsById": {
-        "1": "maps/map-1.topo.json",
         "2": "maps/map-2.topo.json",
+        "12": "maps/map-12.topo.json",
         "11": "maps/map-11.topo.json",
-        "12": "maps/map-12.topo.json"
+        "1": "maps/map-1.topo.json"
       },
       "electionsById": {
         "current-prediction": "results/prediction-simulation.json",
+        "2026-holyrood": "results/holyrood-general-2026.json",
         "2024-general": "results/uk-general-2024.json",
         "2021-holyrood": "results/holyrood-general-2021.json",
-        "2021-holyrood-2026": "results/holyrood-general-2021-changed-boundaries.json",
         "2019-general": "results/uk-general-2019.json",
         "2017-general": "results/uk-general-2017.json",
         "2016-holyrood": "results/holyrood-general-2016.json",
@@ -448,6 +522,7 @@
         "2019-general-changed-boundaries": "results/uk-general-2019-changed-boundaries.json",
         "current-parliament": "results/current-parliament.json",
         "current-holyrood-prediction": "results/holyrood-prediction.json",
+        "2021-holyrood-2026": "results/holyrood-general-2021-changed-boundaries.json",
         "eu-referendum-2016": "results/eu-referendum-2016.json"
       }
     },
@@ -494,6 +569,12 @@
       "colour": "#E4003B"
     },
     {
+      "id": 18,
+      "key": "leave",
+      "name": "Leave",
+      "colour": "#1D3565"
+    },
+    {
       "id": 5,
       "key": "libdems",
       "name": "Liberal Democrats",
@@ -522,6 +603,12 @@
       "key": "reform",
       "name": "Reform UK",
       "colour": "#12B6CF"
+    },
+    {
+      "id": 19,
+      "key": "remain",
+      "name": "Remain",
+      "colour": "#F4A11D"
     },
     {
       "id": 17,
@@ -558,18 +645,6 @@
       "key": "uu",
       "name": "Ulster Unionist Party",
       "colour": "#48A5EE"
-    },
-    {
-      "id": 18,
-      "key": "leave",
-      "name": "Leave",
-      "colour": "#1D3565"
-    },
-    {
-      "id": 19,
-      "key": "remain",
-      "name": "Remain",
-      "colour": "#F4A11D"
     }
   ]
 }

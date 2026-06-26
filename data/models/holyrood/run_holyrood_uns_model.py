@@ -892,21 +892,23 @@ def update_manifest(
     manifest_path: Path,
     result_file: Path,
     map_id: int,
-    comparison_election_id: str = "2021-holyrood-2026",
+    comparison_election_id: str = "2026-holyrood",
 ) -> None:
     """Add or refresh the ``current-holyrood-prediction`` entry in ``map-modes.json``.
 
     Reads the existing manifest, inserts the election entry and data file
     reference if not already present (or updates them if they are), and writes
-    the file back.  Idempotent: safe to call on every model run.
+    the file back pretty-printed.  Idempotent: safe to call on every model run.
 
     Args:
         manifest_path: Path to ``map-modes.json``.
         result_file: Path to the written ``holyrood-prediction.json`` (used to
             derive the relative data-file reference stored in the manifest).
-        map_id: Map primary key used in the election entry (typically 11).
-        comparison_election_id: Manifest ID of the election used for comparison
-            display.  Defaults to ``"2021-holyrood"``.
+        map_id: Map primary key used in the election entry (typically 12).
+        comparison_election_id: Manifest ID of the election the prediction is
+            compared against in the UI.  Defaults to ``"2026-holyrood"`` (the
+            current baseline); pass the matching ``--election-name`` baseline if
+            re-pointing it.
     """
     if not manifest_path.exists():
         print(f"WARNING: manifest not found at {manifest_path} — skipping update")
@@ -917,10 +919,10 @@ def update_manifest(
     # Derive the relative data-file path from the result file's location
     data_file = str(result_file.relative_to(manifest_path.parent)).replace("\\", "/")
 
-    # --- settings.dataFilesByElectionId ---
-    manifest.setdefault("settings", {}).setdefault("dataFilesByElectionId", {})[
-        MANIFEST_ELECTION_ID
-    ] = data_file
+    # --- files.elections.electionsById ---
+    manifest.setdefault("files", {}).setdefault("elections", {}).setdefault(
+        "electionsById", {}
+    )[MANIFEST_ELECTION_ID] = data_file
 
     # --- elections array ---
     elections: list[dict] = manifest.setdefault("elections", [])
@@ -948,7 +950,8 @@ def update_manifest(
     manifest.setdefault("parliamentFeatures", {}).setdefault("holyrood", {"features": []})
 
     with manifest_path.open("w", encoding="utf-8") as handle:
-        json.dump(manifest, handle, separators=(",", ":"), ensure_ascii=False)
+        json.dump(manifest, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
     print(f"Updated manifest: {manifest_path}")
 
 

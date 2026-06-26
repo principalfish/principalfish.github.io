@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from run_holyrood_uns_model import (
     project_constituency_seats,
     project_list_seats,
     run_holyrood_projection,
+    update_manifest,
 )
 
 
@@ -448,3 +450,94 @@ class TestRunHolyroodProjection:
         )
         with pytest.raises(ValueError, match="Constituency election not found"):
             run_holyrood_projection(db, cfg)
+
+
+# ── update_manifest ───────────────────────────────────────────────────────────
+
+
+class TestUpdateManifest:
+    """Tests for writing the current-holyrood-prediction entry into map-modes.json."""
+
+    @staticmethod
+    def _write_manifest(tmp_path: Path) -> tuple[Path, Path]:
+        """Create a minimal refactored-schema manifest + result file; return their paths."""
+        manifest = {
+            "defaultElection": "current-prediction",
+            "elections": [
+                {"id": "current-prediction", "type": "model_uns", "parliament": "westminster"},
+                {"id": "2026-holyrood", "type": "holyrood_general", "parliament": "holyrood"},
+            ],
+            "files": {
+                "elections": {
+                    "mapsById": {"12": "maps/map-12.topo.json"},
+                    "electionsById": {"2026-holyrood": "results/holyrood-general-2026.json"},
+                },
+                "meta": {},
+            },
+            "parties": [],
+        }
+        manifest_path = tmp_path / "map-modes.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        result_file = tmp_path / "results" / "holyrood-prediction.json"
+        result_file.parent.mkdir()
+        result_file.write_text("{}", encoding="utf-8")
+        return manifest_path, result_file
+
+    def test_writes_refactored_schema(self, tmp_path: Path) -> None:
+        """The data-file ref goes under files.elections.electionsById, not the old settings key."""
+        manifest_path, result_file = self._write_manifest(tmp_path)
+
+        update_manifest(manifest_path, result_file, map_id=12)
+
+        out = json.loads(manifest_path.read_text(encoding="utf-8"))
+        elections_by_id = out["files"]["elections"]["electionsById"]
+        assert elections_by_id["current-holyrood-prediction"] == "results/holyrood-prediction.json"
+        # existing mapping preserved, no spurious legacy `settings` key introduced
+        assert elections_by_id["2026-holyrood"] == "results/holyrood-general-2026.json"
+        assert out["files"]["elections"]["mapsById"] == {"12": "maps/map-12.topo.json"}
+        assert "settings" not in out
+
+    def test_entry_defaults_to_2026_comparison(self, tmp_path: Path) -> None:
+        """The prediction entry compares against 2026-holyrood by default and sits before holyrood."""
+        manifest_path, result_file = self._write_manifest(tmp_path)
+
+        update_manifest(manifest_path, result_file, map_id=12)
+
+        out = json.loads(manifest_path.read_text(encoding="utf-8"))
+        entry = next(e for e in out["elections"] if e["id"] == "current-holyrood-prediction")
+        assert entry["comparisonElectionId"] == "2026-holyrood"
+        assert entry["type"] == "holyrood_uns"
+        ids = [e["id"] for e in out["elections"]]
+        assert ids.index("current-holyrood-prediction") < ids.index("2026-holyrood")
+
+    def test_pretty_printed_with_trailing_newline(self, tmp_path: Path) -> None:
+        """Output is two-space-indented with a trailing newline for readable diffs."""
+        manifest_path, result_file = self._write_manifest(tmp_path)
+
+        update_manifest(manifest_path, result_file, map_id=12)
+
+        text = manifest_path.read_text(encoding="utf-8")
+        assert text.startswith("{\n  ")
+        assert text.endswith("}\n")
+
+    def test_idempotent(self, tmp_path: Path) -> None:
+        """Calling twice does not duplicate the prediction entry."""
+        manifest_path, result_file = self._write_manifest(tmp_path)
+
+        update_manifest(manifest_path, result_file, map_id=12)
+        update_manifest(manifest_path, result_file, map_id=12)
+
+        out = json.loads(manifest_path.read_text(encoding="utf-8"))
+        count = sum(1 for e in out["elections"] if e["id"] == "current-holyrood-prediction")
+        assert count == 1
+
+    def test_missing_manifest_is_a_noop(self, tmp_path: Path) -> None:
+        """A non-existent manifest path is skipped without raising."""
+        manifest_path = tmp_path / "does-not-exist.json"
+        result_file = tmp_path / "results" / "holyrood-prediction.json"
+        result_file.parent.mkdir()
+        result_file.write_text("{}", encoding="utf-8")
+
+        update_manifest(manifest_path, result_file, map_id=12)
+
+        assert not manifest_path.exists()

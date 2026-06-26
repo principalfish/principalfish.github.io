@@ -21,7 +21,7 @@
           <tbody>
             {% for poll in polls %}
               <tr>
-                <td><a href="{{ url_for('poll_detail', poll_id=poll.poll_id) }}">#{{ poll.poll_id }}</a></td>
+                <td><a href="{{ url_for('polls.poll_detail', poll_id=poll.poll_id) }}">#{{ poll.poll_id }}</a></td>
                 <td>{{ poll.pollster_name }} ({{ poll.pollster_identifier }})</td>
                 <td>{{ poll.fieldwork_start }} to {{ poll.fieldwork_end }}</td>
                 <td>{{ poll.sample_size }}</td>
@@ -34,7 +34,7 @@
                 </td>
                 <td>{{ poll.row_count }}</td>
                 <td>
-                  <form method="post" action="{{ url_for('delete_poll', poll_id=poll.poll_id) }}" class="inline-form">
+                  <form method="post" action="{{ url_for('polls.delete_poll', poll_id=poll.poll_id) }}" class="inline-form">
                     <button type="submit" class="button button-danger">Delete</button>
                   </form>
                 </td>

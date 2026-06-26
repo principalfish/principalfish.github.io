@@ -2,7 +2,7 @@
 {% block content %}
   <section class="card">
     <h2>Import Poll</h2>
-    <form method="post" action="{{ url_for('import_poll_preview') }}" class="form">
+    <form method="post" action="{{ url_for('poll_import.import_poll_preview') }}" class="form">
       <label for="pollster_identifier">Pollster</label>
       <select name="pollster_identifier" id="pollster_identifier" required>
         {% for pollster in pollsters %}

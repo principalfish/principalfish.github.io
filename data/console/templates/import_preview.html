@@ -9,7 +9,7 @@
     <p><strong>Sample size:</strong> {{ plan.parsed.sample_size }}</p>
     <p><strong>Rows to insert:</strong> {{ plan.rows|length }}</p>
 
-    <form method="post" action="{{ url_for('import_poll_confirm', token=token) }}" class="form-inline">
+    <form method="post" action="{{ url_for('poll_import.import_poll_confirm', token=token) }}" class="form-inline">
       <label class="checkbox">
         <input type="checkbox" name="replace_rows" />
         Replace existing rows if this poll already has data

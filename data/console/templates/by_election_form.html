@@ -2,7 +2,7 @@
 {% block content %}
   <section class="card">
     <h2>Import By-Election</h2>
-    <form method="post" action="{{ url_for('by_election_preview') }}" class="form">
+    <form method="post" action="{{ url_for('by_elections.by_election_preview') }}" class="form">
       <label for="source_url">Wikipedia By-Election URL</label>
       <input
         type="url"

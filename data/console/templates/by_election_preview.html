@@ -18,7 +18,7 @@
     <p><strong>Source:</strong> <a href="{{ plan.url }}" target="_blank">{{ plan.url }}</a></p>
 
     {% if plan.seat_id and plan.candidates %}
-      <form method="post" action="{{ url_for('by_election_confirm', token=token) }}" class="form-inline">
+      <form method="post" action="{{ url_for('by_elections.by_election_confirm', token=token) }}" class="form-inline">
         <button type="submit" class="button primary">Confirm Import</button>
       </form>
     {% else %}

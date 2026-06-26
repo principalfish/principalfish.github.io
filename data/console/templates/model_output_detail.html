@@ -14,7 +14,7 @@
         None
       {% endif %}
     </p>
-    <p><a class="button" href="{{ url_for('model_outputs') }}">Back to Model Outputs</a></p>
+    <p><a class="button" href="{{ url_for('westminster.model_outputs') }}">Back to Model Outputs</a></p>
   </section>
 
   <section class="card">
@@ -103,11 +103,11 @@
 
     <div class="pagination-controls">
       {% if pagination.page > 1 %}
-        <a class="button" href="{{ url_for('model_output_detail', election_id=election.id, page=pagination.page - 1) }}">Previous</a>
+        <a class="button" href="{{ url_for('westminster.model_output_detail', election_id=election.id, page=pagination.page - 1) }}">Previous</a>
       {% endif %}
       <span>Page {{ pagination.page }} of {{ pagination.total_pages }}</span>
       {% if pagination.page < pagination.total_pages %}
-        <a class="button" href="{{ url_for('model_output_detail', election_id=election.id, page=pagination.page + 1) }}">Next</a>
+        <a class="button" href="{{ url_for('westminster.model_output_detail', election_id=election.id, page=pagination.page + 1) }}">Next</a>
       {% endif %}
     </div>
   </section>

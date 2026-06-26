@@ -17,17 +17,16 @@ import pytest
 from config import DatabaseConfig
 from db import Database
 
-TEST_DB_NAME = "election_maps_test"
-
 
 @pytest.fixture()
-def db() -> Generator[Database, None, None]:
+def db(tmp_path: Path) -> Generator[Database, None, None]:
     """Provide a Database instance with clean tables for every test.
-    Uses the dedicated test database so real data is never touched."""
-    config = DatabaseConfig.local()
-    config.database = TEST_DB_NAME
+
+    Each test gets its own fresh SQLite file in a pytest temp directory, so
+    tests are fully isolated and real data is never touched.
+    """
+    config = DatabaseConfig.model_construct(database_path=str(tmp_path / "test.db"))
     database = Database(config)
-    database.drop_tables()
     database.create_tables()
     yield database
-    database.drop_tables()
+    database.engine.dispose()

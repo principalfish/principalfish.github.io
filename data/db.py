@@ -9,9 +9,8 @@ from contextlib import contextmanager
 from datetime import date
 from typing import Any, Generator, Sequence
 
-from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import MultiPolygon, shape
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, event, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from config import DatabaseConfig
@@ -41,7 +40,23 @@ class Database:
                 variables via DatabaseConfig.from_env().
         """
         self.config = config or DatabaseConfig.from_env()
-        self.engine = create_engine(self.config.url, echo=False, hide_parameters=True)
+        # check_same_thread=False so the Flask dev server's threads can share the
+        # engine's pooled connections.
+        self.engine = create_engine(
+            self.config.url,
+            echo=False,
+            hide_parameters=True,
+            connect_args={"check_same_thread": False},
+        )
+
+        @event.listens_for(self.engine, "connect")
+        def _set_sqlite_pragmas(dbapi_connection: Any, _connection_record: Any) -> None:
+            """Enforce foreign keys and use WAL journaling on every connection."""
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.close()
+
         self._session_factory = sessionmaker(
             bind=self.engine, expire_on_commit=False
         )
@@ -269,7 +284,8 @@ class Database:
         """Insert a new Seat row and return it.
 
         Accepts geometry as either a Shapely MultiPolygon or a GeoJSON dict;
-        converts to WKB with SRID 4326 before storing.
+        a GeoJSON dict is converted to a Shapely geometry before storing
+        (the ``GeometryWKB`` column serialises it to WKB).
 
         Args:
             map_id: Primary key of the parent Map.
@@ -284,9 +300,7 @@ class Database:
         """
         geom_col = None
         if geometry is not None:
-            if isinstance(geometry, dict):
-                geometry = shape(geometry)
-            geom_col = from_shape(geometry, srid=4326)
+            geom_col = shape(geometry) if isinstance(geometry, dict) else geometry
 
         with self.session() as s:
             seat = Seat(
@@ -339,7 +353,7 @@ class Database:
             seat = s.get(Seat, seat_id)
             if seat is None or seat.geometry is None:
                 return None
-            return to_shape(seat.geometry)
+            return seat.geometry
 
     def set_seat_electorate(self, seat_id: int, electorate: int | None) -> Seat | None:
         """Update the electorate count for a seat.
@@ -614,8 +628,8 @@ class Database:
         """Insert many Seat rows in a single session.
 
         Geometry values in each dict may be GeoJSON dicts or Shapely objects;
-        they are converted to WKB with SRID 4326 before insertion. The
-        'geometry' key is popped and converted in-place from each dict.
+        a GeoJSON dict is converted to a Shapely geometry in-place (the
+        ``GeometryWKB`` column serialises it to WKB on insert).
 
         Args:
             seats: List of dicts with keys matching Seat column names. The
@@ -627,11 +641,9 @@ class Database:
         """
         with self.session() as s:
             for seat_data in seats:
-                geom = seat_data.pop("geometry", None)
-                if geom is not None:
-                    if isinstance(geom, dict):
-                        geom = shape(geom)
-                    seat_data["geometry"] = from_shape(geom, srid=4326)
+                geom = seat_data.get("geometry")
+                if isinstance(geom, dict):
+                    seat_data["geometry"] = shape(geom)
                 s.add(Seat(**seat_data))
             s.flush()
             return len(seats)

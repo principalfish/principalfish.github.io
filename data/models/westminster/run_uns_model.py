@@ -33,17 +33,28 @@ from db import Database
 from models import Election, Map, Region
 import os
 
-DEFAULT_SQLITE_PATH = Path(os.environ.get("SQLITE_DATABASE_PATH", str(DATA_DIR / "model_uns.db")))
+DEFAULT_SQLITE_PATH = Path(
+    os.environ.get("SQLITE_DATABASE_PATH")
+    or os.environ.get("DATABASE_PATH")
+    or "/home/philiph/dbs/elections.db"
+)
 
 
 def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
+    """Ensure the unified elections/votes tables exist (no-op on the main DB).
+
+    Mirrors the schema in ``models.py``. On the live ``elections.db`` these
+    tables already exist, so this is a no-op; it only materialises them for a
+    fresh database (e.g. in tests).
+    """
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS elections (
             id INTEGER PRIMARY KEY,
             map_id INTEGER NOT NULL,
             year INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            election_type TEXT NOT NULL DEFAULT 'model_uns',
+            name TEXT NOT NULL UNIQUE,
+            type TEXT NOT NULL,
+            parent_election_id INTEGER,
             election_date TEXT
         );
         CREATE TABLE IF NOT EXISTS votes (
@@ -58,10 +69,6 @@ def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_votes_election_id ON votes(election_id);
         CREATE INDEX IF NOT EXISTS idx_elections_name ON elections(name);
     """)
-    # Add election_type column to existing databases that lack it.
-    existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(elections)").fetchall()}
-    if "election_type" not in existing_cols:
-        conn.execute("ALTER TABLE elections ADD COLUMN election_type TEXT NOT NULL DEFAULT 'model_uns'")
     conn.commit()
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
@@ -1191,7 +1198,7 @@ def persist_projection(
     with sqlite3.connect(sqlite_path) as conn:
         ensure_sqlite_schema(conn)
         cursor = conn.execute(
-            "INSERT INTO elections (map_id, year, name, election_type, election_date) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
             (map_id, as_of_date.year, election_name, "model_uns", as_of_date.isoformat()),
         )
         election_id = cursor.lastrowid

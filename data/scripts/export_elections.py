@@ -18,9 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
-import sqlite3
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
@@ -37,12 +35,6 @@ from sqlalchemy.orm import joinedload
 
 from db import Database
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
-
-DEFAULT_SQLITE_PATH = Path(
-    os.environ.get("SQLITE_DATABASE_PATH")
-    or os.environ.get("DATABASE_PATH")
-    or "/home/philiph/dbs/elections.db"
-)
 
 REPO_ROOT = DATA_DIR.parent
 OUTPUT_ROOT_DEFAULT = REPO_ROOT / "electionmaps" / "data"
@@ -979,95 +971,6 @@ def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, 
             entry.pop("comparisonElectionId", None)
 
 
-def build_result_payload_from_sqlite(
-    seats: list[SeatRow],
-    sqlite_election_id: int,
-    sqlite_path: Path = DEFAULT_SQLITE_PATH,
-) -> dict[str, Any]:
-    """Build a ``pf-results-v4`` result payload from SQLite votes.
-
-    Reads votes for the given election from the local SQLite archive and
-    combines them with seat metadata from Supabase (passed in via *seats*).
-
-    Args:
-        seats: SeatRow projections from the Supabase ``seats`` table.
-        sqlite_election_id: Primary key of the election in the SQLite DB.
-        sqlite_path: Path to the SQLite database file.
-
-    Returns:
-        Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` in the
-        same shape as ``build_result_payload``.
-    """
-    with sqlite3.connect(sqlite_path) as conn:
-        conn.row_factory = sqlite3.Row
-        vote_rows = conn.execute(
-            "SELECT seat_id, party_id, candidate_name, vote_total, elected "
-            "FROM votes WHERE election_id = ?",
-            (sqlite_election_id,),
-        ).fetchall()
-
-    votes_by_seat: dict[int, list[dict]] = defaultdict(list)
-    for row in vote_rows:
-        votes_by_seat[row["seat_id"]].append(dict(row))
-
-    payload_seats: list[dict[str, Any]] = []
-
-    for seat in sorted(seats, key=lambda s: s.seat_name):
-        seat_votes = sorted(
-            votes_by_seat.get(seat.seat_id, []),
-            key=lambda r: (r.get("vote_total") or 0),
-            reverse=True,
-        )
-
-        party_info: dict[int, float] = {}
-        for v in seat_votes:
-            pid = v["party_id"] or OTHERS_PARTY_ID
-            party_info[pid] = party_info.get(pid, 0) + float(v.get("vote_total") or 0)
-
-        # Winner: prefer explicitly elected rows, else highest vote total
-        elected_rows = [v for v in seat_votes if v.get("elected")]
-        if elected_rows:
-            winner_row = max(elected_rows, key=lambda r: (r.get("vote_total") or 0))
-        elif seat_votes:
-            winner_row = seat_votes[0]
-        else:
-            winner_row = None
-        winner_id = (winner_row["party_id"] or OTHERS_PARTY_ID) if winner_row else OTHERS_PARTY_ID
-
-        # Vote total descending, party id ascending as a stable tiebreak for
-        # deterministic output when two parties have equal totals.
-        compact = [
-            [pid, normalize_vote_total_value(total)]
-            for pid, total in sorted(party_info.items(), key=lambda x: (-x[1], x[0]))
-            if total > 0
-        ]
-
-        payload_seats.append({
-            "n": seat.seat_name,
-            "r": seat.region_id or 0,
-            "w": winner_id,
-            "p": compact,
-        })
-
-    return {"schema": "pf-results-v4", "seats": payload_seats}
-
-
-def get_latest_sqlite_model_uns(sqlite_path: Path = DEFAULT_SQLITE_PATH) -> dict[str, Any] | None:
-    """Return metadata for the latest model_uns election in SQLite, or None."""
-    if not sqlite_path.exists():
-        return None
-    with sqlite3.connect(sqlite_path) as conn:
-        conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT id, map_id, year, name, election_date "
-            "FROM elections WHERE type = 'model_uns' "
-            "ORDER BY id DESC LIMIT 1"
-        ).fetchone()
-    if row is None:
-        return None
-    return dict(row)
-
-
 def main() -> None:
     """Entry point: export elections from the DB to electionmaps static data files.
 
@@ -1143,12 +1046,17 @@ def main() -> None:
             if not elections:
                 raise RuntimeError(f"Election not found: {args.election_name}")
         elif args.current_simulation:
-            # Read the latest model_uns election from local SQLite archive
-            sqlite_election = get_latest_sqlite_model_uns()
-            if sqlite_election is None:
-                raise RuntimeError("No model_uns elections found in SQLite for --current-simulation")
+            # Export the latest model_uns election (the current prediction).
+            sim_election = session.execute(
+                select(Election)
+                .where(Election.type == ElectionType.model_uns)
+                .order_by(Election.id.desc())
+                .limit(1)
+            ).scalars().first()
+            if sim_election is None:
+                raise RuntimeError("No model_uns elections found for --current-simulation")
 
-            map_id = sqlite_election["map_id"]
+            map_id = sim_election.map_id
 
             if has_electorate:
                 seat_rows = session.execute(
@@ -1176,27 +1084,30 @@ def main() -> None:
                 for row in seat_rows
             ]
 
-            result_payload = build_result_payload_from_sqlite(
-                seats, sqlite_election["id"]
-            )
+            votes = list(session.execute(
+                select(Vote)
+                .where(Vote.election_id == sim_election.id)
+                .options(joinedload(Vote.party))
+            ).scalars().all())
+            result_payload = build_result_payload(seats, votes, election_year=sim_election.year)
 
             if args.output_file:
                 output_file = args.output_file.resolve()
                 seat_count = len(result_payload.get("seats", []))
                 if args.dry_run:
-                    print(f"Would write simulation payload: {output_file} ({seat_count} seats from SQLite)")
+                    print(f"Would write simulation payload: {output_file} ({seat_count} seats)")
                 else:
                     write_json(output_file, result_payload)
-                    print(f"Wrote simulation payload: {output_file} ({seat_count} seats from SQLite election '{sqlite_election['name']}')")
+                    print(f"Wrote simulation payload: {output_file} ({seat_count} seats from election '{sim_election.name}')")
             else:
                 # Write to default results dir
                 result_path = args.output_root.resolve() / "results" / "prediction-simulation.json"
                 seat_count = len(result_payload.get("seats", []))
                 if args.dry_run:
-                    print(f"Would write simulation: {result_path} ({seat_count} seats from SQLite)")
+                    print(f"Would write simulation: {result_path} ({seat_count} seats)")
                 else:
                     write_json(result_path, result_payload)
-                    print(f"Wrote simulation: {result_path} ({seat_count} seats from SQLite election '{sqlite_election['name']}')")
+                    print(f"Wrote simulation: {result_path} ({seat_count} seats from election '{sim_election.name}')")
             return
         else:
             elections = session.execute(

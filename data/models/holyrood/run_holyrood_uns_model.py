@@ -106,22 +106,25 @@ An empty swing dict reproduces the baseline election result exactly.
 
 Output
 ------
-The model writes two outputs:
+The model writes two output files:
 
   electionmaps/data/results/holyrood-prediction.json
     A ``pf-results-v4`` JSON payload consumed by the front-end map renderer.
     Contains one entry per seat (both constituency and list) with the winning
     party and per-party adjusted vote totals.
 
-  electionmaps/data/map-modes.json  (manifest)
-    Updated in-place to register the prediction under the election ID
-    ``"current-holyrood-prediction"``, pointing at the result file above.
-    This makes the prediction available in the front-end election selector.
+  electionmaps/data/results/holyrood-prediction-meta.json
+    The "Latest poll used" snippet shown beneath the prediction.
+
+It does **not** touch ``map-modes.json``: the ``current-holyrood-prediction``
+entry is registered there once and preserved by ``export_elections.py`` (which is
+the single writer of the manifest).  Run the export after this script to refresh
+the static data; the data console's Holyrood route does this automatically.
 
 
 CLI usage
 ---------
-  # Default: fetch polls from DB, run model, write output + update manifest
+  # Default: fetch polls from DB, run model, write the prediction + meta files
   python data/models/holyrood/run_holyrood_uns_model.py
 
   # Override poll shares manually (bypasses DB poll averaging)
@@ -133,7 +136,7 @@ CLI usage
       --election-name "2021 Scottish Parliament Election"
 
   # Print seat totals only — no file writes
-  python data/models/holyrood/run_holyrood_uns_model.py --no-output --no-manifest
+  python data/models/holyrood/run_holyrood_uns_model.py --no-output
 """
 
 from __future__ import annotations
@@ -822,7 +825,6 @@ def run_holyrood_projection(
 
 RESULT_FILE_NAME = "holyrood-prediction.json"
 META_FILE_NAME = "holyrood-prediction-meta.json"
-MANIFEST_ELECTION_ID = "current-holyrood-prediction"
 
 
 def build_result_payload(
@@ -888,80 +890,12 @@ def write_result_json(payload: dict[str, Any], output_path: Path) -> None:
         json.dump(payload, handle, separators=(",", ":"), ensure_ascii=False)
 
 
-def update_manifest(
-    manifest_path: Path,
-    result_file: Path,
-    map_id: int,
-    comparison_election_id: str = "2026-holyrood",
-) -> None:
-    """Add or refresh the ``current-holyrood-prediction`` entry in ``map-modes.json``.
-
-    Reads the existing manifest, inserts the election entry and data file
-    reference if not already present (or updates them if they are), and writes
-    the file back pretty-printed.  Idempotent: safe to call on every model run.
-
-    Args:
-        manifest_path: Path to ``map-modes.json``.
-        result_file: Path to the written ``holyrood-prediction.json`` (used to
-            derive the relative data-file reference stored in the manifest).
-        map_id: Map primary key used in the election entry (typically 12).
-        comparison_election_id: Manifest ID of the election the prediction is
-            compared against in the UI.  Defaults to ``"2026-holyrood"`` (the
-            current baseline); pass the matching ``--election-name`` baseline if
-            re-pointing it.
-    """
-    if not manifest_path.exists():
-        print(f"WARNING: manifest not found at {manifest_path} — skipping update")
-        return
-
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-
-    # Derive the relative data-file path from the result file's location
-    data_file = str(result_file.relative_to(manifest_path.parent)).replace("\\", "/")
-
-    # --- files.elections.electionsById ---
-    manifest.setdefault("files", {}).setdefault("elections", {}).setdefault(
-        "electionsById", {}
-    )[MANIFEST_ELECTION_ID] = data_file
-
-    # --- elections array ---
-    elections: list[dict] = manifest.setdefault("elections", [])
-    existing_ids = [e["id"] for e in elections]
-    new_entry = {
-        "id": MANIFEST_ELECTION_ID,
-        "name": "Current prediction",
-        "type": "holyrood_uns",
-        "mapId": map_id,
-        "parliament": "holyrood",
-        "comparisonElectionId": comparison_election_id,
-    }
-    if MANIFEST_ELECTION_ID in existing_ids:
-        idx = existing_ids.index(MANIFEST_ELECTION_ID)
-        elections[idx] = new_entry
-    else:
-        # Insert before the first holyrood election entry
-        insert_at = next(
-            (i for i, e in enumerate(elections) if e.get("parliament") == "holyrood"),
-            len(elections),
-        )
-        elections.insert(insert_at, new_entry)
-
-    # --- parliamentFeatures.holyrood ---
-    manifest.setdefault("parliamentFeatures", {}).setdefault("holyrood", {"features": []})
-
-    with manifest_path.open("w", encoding="utf-8") as handle:
-        json.dump(manifest, handle, ensure_ascii=False, indent=2)
-        handle.write("\n")
-    print(f"Updated manifest: {manifest_path}")
-
-
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_OUTPUT = _REPO_ROOT / "electionmaps" / "data" / "results" / RESULT_FILE_NAME
 _DEFAULT_META_OUTPUT = _REPO_ROOT / "electionmaps" / "data" / "results" / META_FILE_NAME
-_DEFAULT_MANIFEST = _REPO_ROOT / "electionmaps" / "data" / "map-modes.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -973,9 +907,6 @@ def parse_args() -> argparse.Namespace:
         --output FILE     Path to write the pf-results-v4 JSON output.
                           Defaults to electionmaps/data/results/holyrood-prediction.json.
         --no-output       Skip writing any JSON output file.
-        --manifest FILE   Path to map-modes.json to update.
-                          Defaults to electionmaps/data/map-modes.json.
-        --no-manifest     Skip updating map-modes.json.
         --poll-shares JSON
                           JSON dict of party name → VI share % to use as poll
                           averages, bypassing the DB poll fetch.  Accepts full
@@ -998,17 +929,6 @@ def parse_args() -> argparse.Namespace:
         "--no-output",
         action="store_true",
         help="Skip writing the JSON output file",
-    )
-    parser.add_argument(
-        "--manifest",
-        metavar="FILE",
-        default=str(_DEFAULT_MANIFEST),
-        help="Path to map-modes.json to update (default: repo electionmaps/data/map-modes.json)",
-    )
-    parser.add_argument(
-        "--no-manifest",
-        action="store_true",
-        help="Skip updating map-modes.json",
     )
     parser.add_argument(
         "--poll-shares",
@@ -1041,9 +961,12 @@ def main() -> None:
     3. Run run_holyrood_projection(), which executes Pass 1 (FPTP) then Pass 2
        (D'Hondt) using the separate constituency and list swings.
     4. Print a seat-count table to stdout.
-    5. Unless --no-output: write the pf-results-v4 JSON to holyrood-prediction.json.
-    6. Unless --no-manifest: update map-modes.json so the front-end can find
-       the new prediction file.
+    5. Unless --no-output: write the pf-results-v4 JSON to holyrood-prediction.json
+       and the "Latest poll used" snippet to holyrood-prediction-meta.json.
+
+    The ``current-holyrood-prediction`` manifest entry is owned by
+    export_elections.py (run it afterwards); this script never touches
+    map-modes.json.
     """
     args = parse_args()
     db = Database(DatabaseConfig.from_env())
@@ -1145,10 +1068,6 @@ def main() -> None:
         meta_payload: dict[str, Any] = {"latest_poll_snippet": snippet}
         write_result_json(meta_payload, _DEFAULT_META_OUTPUT)
         print(f"Wrote meta → {_DEFAULT_META_OUTPUT}")
-
-        if not args.no_manifest:
-            manifest_path = Path(args.manifest)
-            update_manifest(manifest_path, output_path, map_id=const_election.map_id)
 
 
 

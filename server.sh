@@ -19,14 +19,25 @@ npm run minify:electionmaps
 
 PORT="${PORT:-8000}"
 echo "Starting static server on http://127.0.0.1:${PORT}"
-python3 -m http.server "${PORT}" 2>/dev/null &
+python3 -m http.server "${PORT}" &
 SERVER_PID=$!
+sleep 1
+if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+	echo "Error: static server failed to start (is port ${PORT} already in use?)" >&2
+	exit 1
+fi
 
 trap 'echo "Stopping server..."; kill "$SERVER_PID" 2>/dev/null; exit 0' INT TERM
 
 WATCH_FILES=(
 	electionmaps/electionmaps.js
-	electionmaps/core.js
+	electionmaps/scripts/state.js
+	electionmaps/scripts/utils.js
+	electionmaps/scripts/dom.js
+	electionmaps/scripts/predict.js
+	electionmaps/scripts/predict-controller.js
+	electionmaps/scripts/files.js
+	electionmaps/scripts/polltracker.js
 	electionmaps/mobile-sidebar.js
 	electionmaps/mobile-sidebar.css
 	site/styles.css
@@ -37,7 +48,7 @@ WATCH_FILES=(
 echo "Watching for changes: ${WATCH_FILES[*]}"
 
 get_checksums() {
-	sha256sum "${WATCH_FILES[@]}" 2>/dev/null
+	sha256sum "${WATCH_FILES[@]}" 2>/dev/null || true
 }
 
 LAST_CHECKSUMS="$(get_checksums)"

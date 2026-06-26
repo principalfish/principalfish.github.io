@@ -289,6 +289,10 @@ def file_stem_for_election(election: Election) -> str:
     if election.type == ElectionType.holyrood_general and holyrood_match:
         return f"holyrood-general-{holyrood_match.group(1)}"
 
+    holyrood_boundaries_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election \(\d{4} Boundaries\)", election.name)
+    if election.type == ElectionType.holyrood_general and holyrood_boundaries_match:
+        return f"holyrood-general-{holyrood_boundaries_match.group(1)}-changed-boundaries"
+
     return slugify(f"{election.type.value}-{election.year}-{election.name}")
 
 
@@ -326,15 +330,40 @@ def manifest_id_for_election(election: Election) -> str:
 def manifest_name_for_election(election: Election) -> str:
     """Return the human-readable display name for an election in the manifest.
 
+    Shortens the verbose DB names to the curated forms used in the front-end:
+
+    - ``model_uns`` → ``"Current prediction"``
+    - ``uk_general`` ``"{year} General Election"`` → ``"{year} Election"``
+    - ``holyrood_general`` ``"{year} Scottish Parliament Election"`` →
+      ``"{year} Election"``
+    - ``holyrood_general`` ``"{year} Scottish Parliament Election ({yyyy} Boundaries)"``
+      → ``"{year} Election ({yyyy} boundaries)"``
+    - anything else → the ``name`` field verbatim.
+
     Args:
         election: Election ORM row.
 
     Returns:
-        ``"Current prediction"`` for ``model_uns`` elections; otherwise the
-        election's ``name`` field verbatim.
+        The display name string used in ``map-modes.json``.
     """
     if election.type == ElectionType.model_uns:
         return "Current prediction"
+
+    general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
+    if election.type == ElectionType.uk_general and general_match:
+        return f"{general_match.group(1)} Election"
+
+    if election.type == ElectionType.holyrood_general:
+        boundaries_match = re.fullmatch(
+            r"(\d{4})\s+Scottish Parliament Election \((\d{4}) Boundaries\)", election.name
+        )
+        if boundaries_match:
+            return f"{boundaries_match.group(1)} Election ({boundaries_match.group(2)} boundaries)"
+
+        holyrood_match = re.fullmatch(r"(\d{4})\s+Scottish Parliament Election", election.name)
+        if holyrood_match:
+            return f"{holyrood_match.group(1)} Election"
+
     return election.name
 
 
@@ -436,10 +465,20 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     - ``model_uns`` entries compare against the most recent UK general
       election in the list.
     - All other entries compare against the next entry in the list with the
-      same ``parliament`` value (i.e. the chronologically preceding election
-      in the same parliament).  This prevents Westminster elections from
-      being compared against Holyrood elections and vice versa.
-    - The last entry in each parliament receives no comparison.
+      same ``parliament``, ``mapId`` **and** ``type`` (i.e. the chronologically
+      preceding election of the same kind on the same boundaries).  Matching
+      ``mapId`` keeps a boundary-changed election comparing against the
+      same-boundary baseline (e.g. the 2026 Holyrood election against
+      ``2021-holyrood-2026``, not the old-boundary ``2021-holyrood``); matching
+      ``type`` stops a general election from comparing against a same-map
+      election of another kind (e.g. the EU referendum); and the ``parliament``
+      check prevents cross-parliament comparisons.
+    - The last entry of each (parliament, mapId, type) receives no comparison.
+
+    Idempotent and safe to call more than once: entries that already have a
+    comparison are skipped, so a second pass only fills entries left unresolved
+    when their same-boundary baseline was not yet present (e.g. a preserved
+    boundary-changed election added after the first pass).
 
     Args:
         manifest_entries: List of manifest election dicts, ordered newest
@@ -457,12 +496,18 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
 
         comparison_id: str | None = None
 
-        if entry.get("type") == ElectionType.model_uns:
+        if entry.get("type") == ElectionType.model_uns.value:
             comparison_id = latest_general_id
         else:
             parliament = entry.get("parliament")
+            map_id = entry.get("mapId")
+            entry_type = entry.get("type")
             for later_entry in manifest_entries[index + 1:]:
-                if later_entry.get("parliament") == parliament:
+                if (
+                    later_entry.get("parliament") == parliament
+                    and later_entry.get("mapId") == map_id
+                    and later_entry.get("type") == entry_type
+                ):
                     comparison_id = later_entry["id"]
                     break
 
@@ -675,14 +720,87 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
         json.dump(payload, handle, ensure_ascii=False, separators=(",", ":"))
 
 
+def write_manifest(path: Path, payload: dict[str, Any]) -> None:
+    """Serialise the ``map-modes.json`` manifest as pretty-printed JSON.
+
+    Unlike :func:`write_json` (compact, for the large ``results/*.json`` files),
+    the manifest is small and human-curated, so it is written with two-space
+    indentation and a trailing newline to keep diffs readable.
+
+    Args:
+        path: Destination file path.  Parent directories are created if
+            they do not exist.
+        payload: JSON-serialisable manifest dict to write.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+
+
+def reorder_manifest_entries(
+    entries: list[dict[str, Any]], existing_order: Sequence[str]
+) -> list[dict[str, Any]]:
+    """Reorder freshly-built manifest entries to match the curated manifest order.
+
+    The export builds entries in DB/insertion order, which differs from the
+    hand-curated order of the existing ``map-modes.json``.  To keep regen diffs
+    minimal and the UI election selector stable, entries already present in
+    ``existing_order`` keep that order.  A new entry (not in the existing
+    manifest, e.g. a freshly-added election) is slotted immediately after the
+    existing entry that names it as its ``comparisonElectionId`` (its "newer"
+    neighbour); failing that, immediately before the existing entry it itself
+    compares against; otherwise appended at the end.
+
+    When ``existing_order`` is empty (no prior manifest), the built order is
+    returned unchanged.
+
+    Args:
+        entries: Manifest entry dicts in their freshly-built order.
+        existing_order: Election ids in the order of the existing manifest.
+
+    Returns:
+        A new list of the same entries reordered to follow ``existing_order``.
+    """
+    if not existing_order:
+        return list(entries)
+
+    existing_index = {eid: i for i, eid in enumerate(existing_order)}
+    end = len(existing_order)
+
+    # id -> id of the first entry that compares against it (its newer neighbour)
+    compared_by: dict[str, str] = {}
+    for entry in entries:
+        comp = entry.get("comparisonElectionId")
+        if comp:
+            compared_by.setdefault(comp, entry["id"])
+
+    def sort_key(item: tuple[int, dict[str, Any]]) -> tuple[float, int, int]:
+        built_pos, entry = item
+        eid = entry["id"]
+        if eid in existing_index:
+            return (existing_index[eid], 0, built_pos)
+        anchor = compared_by.get(eid)
+        if anchor in existing_index:
+            # right after the existing entry that compares against this one
+            return (existing_index[anchor], 1, built_pos)
+        comp = entry.get("comparisonElectionId")
+        if comp in existing_index:
+            # right before the existing entry this one compares against
+            return (existing_index[comp] - 1, 2, built_pos)
+        return (end, 0, built_pos)
+
+    return [entry for _, entry in sorted(enumerate(entries), key=sort_key)]
+
+
 def parse_args() -> argparse.Namespace:
     """Parse and validate command-line arguments.
 
     Mutually exclusive target flags:
     - ``--election-name NAME``: export only the named election.
     - ``--current-simulation``: export only the latest ``model_uns`` election.
-    - ``--metadata-only``: refresh only ``settings.parties`` and
-      ``settings.regionsByMapId`` in the existing ``map-modes.json``.
+    - ``--metadata-only``: refresh only ``parties`` and per-map ``regions``
+      in the existing ``map-modes.json``.
 
     Other flags:
     - ``--output-root PATH``: override the default output directory
@@ -716,7 +834,7 @@ def parse_args() -> argparse.Namespace:
     target_group.add_argument(
         "--metadata-only",
         action="store_true",
-        help="Update only settings.parties and settings.regionsByMapId in map-modes.json",
+        help="Update only parties and per-map regions in map-modes.json",
     )
     parser.add_argument(
         "--output-root",
@@ -988,16 +1106,15 @@ def main() -> None:
             regions = session.execute(select(Region)).scalars().all()
         manifest_parties = build_manifest_party_settings(parties)
         manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
-        settings = manifest.get("settings") or {}
-        settings["parties"] = manifest_parties
-        settings.pop("partiesByKey", None)
-        settings["regionsByMapId"] = manifest_regions_by_map_id
-        manifest["settings"] = settings
+        manifest["parties"] = manifest_parties
+        for map_id, regions_list in manifest_regions_by_map_id.items():
+            if str(map_id) in manifest.get("mapModes", {}):
+                manifest["mapModes"][str(map_id)]["regions"] = regions_list
         if args.dry_run:
             print(f"Would write manifest metadata: {manifest_path}")
             print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
         else:
-            write_json(manifest_path, manifest)
+            write_manifest(manifest_path, manifest)
             print(f"Wrote manifest metadata: {manifest_path}")
             print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
         return
@@ -1248,25 +1365,35 @@ def main() -> None:
                 if args.dry_run:
                     print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
                     if election.map_id not in written_map_ids:
-                        print(f"Would write map: {map_path} (template {map_template_filename})")
+                        if map_path.exists():
+                            print(f"Map already in place: {map_path}")
+                        else:
+                            print(f"Would write map: {map_path} (template {map_template_filename})")
                 else:
                     write_json(result_path, result_payload)
-                    if election.map_id not in written_map_ids:
+                    if election.map_id not in written_map_ids and not map_path.exists():
+                        # Bootstrap a missing map from its legacy template only.  Never overwrite
+                        # an existing map: the committed TopoJSON is hand-curated (e.g. manual
+                        # boundary fixes) and is not reflected in the legacy templates.
                         map_payload = json.loads(map_template_path.read_text(encoding="utf-8"))
                         write_json(map_path, map_payload)
 
             map_files_by_id[str(election.map_id)] = map_relpath
-            data_files_by_election_id[election_manifest_id] = f"results/{result_filename}"
             written_map_ids.add(election.map_id)
             manifest_id_by_db_id[election.id] = election_manifest_id
 
             # Holyrood elections with non-standard names (e.g. remapped boundary elections)
-            # are exported to disk for model use but excluded from the UI manifest.
+            # are exported to disk for model use but excluded from the UI manifest.  Their
+            # data-file ref is registered below by manifest_id, so skip them here to avoid
+            # polluting electionsById with a malformed slug (they are re-registered under
+            # their curated manifest id by the preservation pass).
             is_standard_holyrood = election.type != ElectionType.holyrood_general or bool(
                 re.fullmatch(r"\d{4}\s+Scottish Parliament Election", election.name)
             )
             if not is_standard_holyrood:
                 continue
+
+            data_files_by_election_id[election_manifest_id] = f"results/{result_filename}"
 
             parliament = getattr(map_row, "parliament", "westminster")
             manifest_entry = {
@@ -1276,6 +1403,10 @@ def main() -> None:
                 "mapId": election.map_id,
                 "parliament": parliament,
             }
+            # Prediction elections carry ``model: true`` so the front-end shows the
+            # predict UI / hides raw vote counts for them.
+            if election.type in (ElectionType.model_uns, ElectionType.holyrood_uns):
+                manifest_entry["model"] = True
             manifest_entries.append(manifest_entry)
 
             if default_election_id is None and election.type == ElectionType.uk_general:
@@ -1413,67 +1544,106 @@ def main() -> None:
                         existing_map.unlink()
                         print(f"Removed stale map: {existing_map}")
 
-        settings = {
-                "mapFilesById": map_files_by_id,
-                "dataFilesByElectionId": data_files_by_election_id,
-                "parties": manifest_parties,
-                "regionsByMapId": manifest_regions_by_map_id,
-        }
-
         manifest_path = output_root / "map-modes.json"
         existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+
+        files = {
+            "elections": {
+                "mapsById": map_files_by_id,
+                "electionsById": data_files_by_election_id,
+            },
+            "meta": existing.get("files", {}).get("meta", {
+                "westminster": "results/model_output_trends_meta.json",
+                "holyrood": "results/holyrood-prediction-meta.json",
+            }),
+        }
 
         # Re-insert any holyrood_uns or model_uns prediction entry from the existing
         # manifest, provided its data file still exists on disk.  This lets the model write
         # the entry once and have it survive subsequent full export runs without needing a
         # DB record (the westminster model writes to SQLite only; Supabase never receives
-        # simulation data).
+        # simulation data).  Non-standard holyrood_general elections (e.g. remapped-boundary
+        # elections like 2021-holyrood-2026) are also preserved here — they are exported to
+        # disk by the main loop but excluded from manifest_entries by the standard-name filter.
         existing_by_id = {e.get("id"): e for e in existing.get("elections", [])}
-        existing_data_files = existing.get("settings", {}).get("dataFilesByElectionId", {})
+        existing_data_files = existing.get("files", {}).get("elections", {}).get("electionsById", {})
+        PRESERVE_TYPES = ("holyrood_uns", "model_uns", "eu_referendum", "holyrood_general")
         for entry_id, entry in existing_by_id.items():
             entry_type = entry.get("type")
-            if entry_type not in ("holyrood_uns", "model_uns", "eu_referendum"):
+            if entry_type not in PRESERVE_TYPES:
                 continue
             if entry_id in {e["id"] for e in manifest_entries}:
-                continue  # already present (shouldn't happen, but be safe)
+                continue  # already present
             data_file = existing_data_files.get(entry_id)
             if data_file and (output_root / data_file).exists():
                 if entry_type == "model_uns":
-                    # Insert at the top of the westminster elections (index 0)
                     insert_at = 0
-                elif entry_type == "holyrood_uns":
-                    # Insert before the first holyrood election in the rebuilt list
+                elif entry_type in ("holyrood_uns", "holyrood_general"):
                     insert_at = next(
                         (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
                         len(manifest_entries),
                     )
                 else:
-                    # Append at the end of the westminster elections, before holyrood
+                    # eu_referendum and others: before holyrood block
                     insert_at = next(
                         (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
                         len(manifest_entries),
                     )
                 manifest_entries.insert(insert_at, entry)
                 data_files_by_election_id[entry_id] = data_file
-                settings["dataFilesByElectionId"] = data_files_by_election_id
+                files["elections"]["electionsById"] = data_files_by_election_id
 
-        # Use current-holyrood-prediction as the default if it is present in the manifest
-        holyrood_prediction_id = "current-holyrood-prediction"
-        if any(e.get("id") == holyrood_prediction_id for e in manifest_entries):
-            default_election_id = holyrood_prediction_id
+        # Preserve the curated defaultElection across exports when it still points at a
+        # real election (so a hand-set default like "current-prediction" survives regen);
+        # otherwise fall back to current-holyrood-prediction when present.
+        manifest_ids = {e.get("id") for e in manifest_entries}
+        existing_default = existing.get("defaultElection")
+        if existing_default in manifest_ids:
+            default_election_id = existing_default
+        elif "current-holyrood-prediction" in manifest_ids:
+            default_election_id = "current-holyrood-prediction"
+
+        # Preserve manually-curated election fields that the export pipeline does not compute.
+        # The main loop builds entries from DB rows with only the standard fields (id, name,
+        # type, mapId, parliament), so without this merge, manual additions (e.g. the
+        # referendum flag) would be wiped on every export.
+        PRESERVED_ENTRY_FIELDS = ("referendum",)
+        for entry in manifest_entries:
+            existing_entry = existing_by_id.get(entry.get("id"))
+            if not existing_entry:
+                continue
+            for field in PRESERVED_ENTRY_FIELDS:
+                if field in existing_entry and field not in entry:
+                    entry[field] = existing_entry[field]
+
+        # Keep the curated election order from the existing manifest so regen does not
+        # reshuffle the UI election selector; new elections are slotted next to the entry
+        # that references them.
+        existing_order = [e["id"] for e in existing.get("elections", []) if "id" in e]
+        manifest_entries = reorder_manifest_entries(manifest_entries, existing_order)
+
+        # Second comparison pass, now that preserved boundary-changed baselines (e.g.
+        # 2021-holyrood-2026) are present and the list is in curated newest-first order.
+        # This resolves any comparison left unset by the first pass because its
+        # same-boundary baseline had not yet been re-inserted.  Idempotent: entries that
+        # already have a comparison are skipped.
+        assign_comparison_elections(manifest_entries)
+        remove_comparison_for_supplemental_entries(manifest_entries)
 
         manifest_payload = {
             "defaultElection": default_election_id,
-            "settings": settings,
             "elections": manifest_entries,
+            "misc": existing.get("misc", {}),
             "parliamentFeatures": existing.get("parliamentFeatures", {}),
             "mapModes": existing.get("mapModes", {}),
+            "files": files,
+            "parties": manifest_parties,
         }
 
         if args.dry_run:
             print(f"Would write manifest: {manifest_path} ({len(manifest_entries)} elections)")
         else:
-            write_json(manifest_path, manifest_payload)
+            write_manifest(manifest_path, manifest_payload)
             print(f"Wrote manifest: {manifest_path} ({len(manifest_entries)} elections)")
 
 

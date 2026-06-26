@@ -1300,7 +1300,7 @@ def update_trend_cache_json(
         "parties": {
             str(party_id): {
                 "s": seats_by_party.get(party_id, 0),
-                "v": round((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0, 6) if total_votes > 0 else 0.0,
+                "v": round((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0, 1) if total_votes > 0 else 0.0,
             }
             for party_id in sorted(vote_totals_by_party.keys())
         },

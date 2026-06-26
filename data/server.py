@@ -380,12 +380,14 @@ def holyrood_import_polls() -> str | WerkzeugResponse:
 
     Side effects:
         Runs holyrood_wikipedia_import.py (idempotent — skips existing polls),
-        then runs run_holyrood_uns_model.py to update the projection.
+        then run_holyrood_uns_model.py to refresh the projection, then
+        export_elections.py to regenerate the static data files (the model no
+        longer writes map-modes.json — the export is the single manifest writer).
 
     Returns:
         Rendered command_result.html showing combined stdout, stderr, and return code.
     """
-    for script in (HOLYROOD_IMPORT_SCRIPT, HOLYROOD_MODEL_SCRIPT):
+    for script in (HOLYROOD_IMPORT_SCRIPT, HOLYROOD_MODEL_SCRIPT, EXPORT_ELECTION_SCRIPT):
         if not script.exists():
             flash(f"Script not found: {script}")
             return redirect(url_for("home"))
@@ -398,6 +400,7 @@ def holyrood_import_polls() -> str | WerkzeugResponse:
         (HOLYROOD_IMPORT_SCRIPT, "Import Scottish constituency polls from Wikipedia", []),
         (HOLYROOD_IMPORT_SCRIPT, "Import Scottish list polls from Wikipedia", ["--ballot", "list"]),
         (HOLYROOD_MODEL_SCRIPT, "Run Holyrood UNS model", []),
+        (EXPORT_ELECTION_SCRIPT, "Export elections to static data files", []),
     ]:
         result = subprocess.run(
             [sys.executable, str(script), *extra_args],
@@ -416,7 +419,7 @@ def holyrood_import_polls() -> str | WerkzeugResponse:
     return render_template(
         "command_result.html",
         title="Import Scottish Polls",
-        command=f"holyrood_wikipedia_import.py → run_holyrood_uns_model.py",
+        command="holyrood_wikipedia_import.py → run_holyrood_uns_model.py → export_elections.py",
         stdout="\n".join(combined_stdout),
         stderr="\n".join(combined_stderr),
         return_code=return_code,

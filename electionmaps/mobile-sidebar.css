@@ -113,18 +113,20 @@
     overflow: auto;
   }
 
-  .maps-predict-window.maps-predict-window-compact {
+  .maps-predict-window.maps-predict-window-fill {
     display: block;
     min-height: 0;
   }
 
-  .maps-predict-window.maps-predict-window-compact .maps-predict-window-body {
+  .maps-predict-window.maps-predict-window-fill .maps-predict-window-body {
     display: block;
     min-height: 0;
+    overflow: visible;
   }
 
-  .maps-predict-window.maps-predict-window-compact .maps-predict-grid {
+  .maps-predict-window.maps-predict-window-fill .maps-predict-grid {
     flex: unset;
+    max-height: none;
   }
 
   .maps-seat-list {

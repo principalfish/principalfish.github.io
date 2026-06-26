@@ -359,13 +359,6 @@ a {
   content: none;
 }
 
-.maps-election-countdown {
-  margin: 0.3rem 0 0;
-  color: #16a34a;
-  font: 700 0.92rem/1.2 "DM Sans", "Segoe UI", sans-serif;
-  font-variant-numeric: tabular-nums;
-}
-
 .maps-app {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -398,32 +391,6 @@ a {
   margin: 0;
   font: 700 1rem/1.2 "DM Sans", "Segoe UI", sans-serif;
   color: #10243b;
-}
-
-.maps-parliament-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.3rem;
-  margin-bottom: 0.5rem;
-}
-
-.maps-parliament-tab {
-  display: block;
-  text-align: center;
-  border: 1px solid rgba(15, 23, 42, 0.2);
-  background: #f5f9fc;
-  color: #173253;
-  border-radius: 8px;
-  padding: 0.35rem 0.4rem;
-  font: 600 0.85rem/1.2 "DM Sans", "Segoe UI", sans-serif;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.maps-parliament-tab.active {
-  background: #15314f;
-  border-color: #15314f;
-  color: #fff;
 }
 
 .maps-vote-tabs {
@@ -494,360 +461,45 @@ a {
   gap: 0.35rem;
 }
 
-.maps-election-list {
-  margin-top: 0;
-  display: grid;
-  gap: 0.45rem;
-}
-
-.maps-predict-window {
-  position: relative;
-  width: 100%;
-  max-height: none;
-  border: 1px solid rgba(15, 23, 42, 0.22);
-  border-radius: 9px;
-  background: #fbfdff;
-  box-shadow: none;
-  z-index: auto;
-  overflow: hidden;
-}
-
-.maps-predict-window-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  background: #fbfdff;
-  color: #10243b;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
-  padding: 0.36rem 0.55rem;
-  position: relative;
-  z-index: 3;
-}
-
-.maps-predict-window-title-group {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.maps-predict-window-title {
-  margin: 0;
-  font: 700 1rem/1.15 "DM Sans", "Segoe UI", sans-serif;
-}
-
-.maps-predict-window-body {
-  padding: 0.55rem 0.62rem 0.68rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.46rem;
-  min-height: 0;
-}
-
-.maps-predict-window--collapsed .maps-predict-window-body {
-  display: none;
-}
-
-.maps-predict-grid {
-  --maps-predict-region-col-width: 6.55rem;
-  --maps-predict-value-col-width: 3.04rem;
-  overflow-x: auto;
-  overflow-y: visible;
-  max-height: none;
-  border: 1px solid rgba(15, 23, 42, 0.17);
-  border-radius: 8px;
-  background: #f7fbff;
-  padding: 0.38rem;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(15, 23, 42, 0.32) transparent;
-}
-
-.maps-predict-grid-section + .maps-predict-grid-section {
-  margin-top: 0.58rem;
-}
-
-.maps-predict-grid-section-title {
-  margin: 0 0 0.28rem;
-  font: 700 0.74rem/1.15 "DM Sans", "Segoe UI", sans-serif;
-  color: #1e293b;
-}
-
-.maps-predict-grid::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.maps-predict-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.maps-predict-grid::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.32);
-  border-radius: 999px;
-}
-
-.maps-predict-grid::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 23, 42, 0.44);
-}
-
-.maps-predict-window.maps-predict-window-compact {
-  max-height: none;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.maps-predict-window.maps-predict-window-compact .maps-predict-window-body {
-  flex: 1;
-}
-
-.maps-predict-window.maps-predict-window-compact .maps-predict-grid {
-  flex: 0 1 auto;
-  max-height: none;
-}
-
-.maps-predict-window.maps-predict-window-fill {
-  flex: 1;
-  min-height: 0;
-}
-
-.maps-predict-window.maps-predict-window-fill .maps-predict-grid {
-  flex: 1;
-  max-height: none;
-}
-
-.maps-predict-window.maps-predict-window-force-scroll {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.maps-predict-window.maps-predict-window-force-scroll .maps-predict-window-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-height: min(60vh, 480px);
-  min-height: 0;
-  overflow: hidden;
-}
-
-.maps-predict-window.maps-predict-window-force-scroll .maps-predict-grid {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: auto;
-  max-height: none;
-}
-
-.maps-predict-window.maps-predict-window-force-scroll .maps-predict-window-actions {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  margin-top: 0.32rem;
-  padding-top: 0.42rem;
-  padding-bottom: 0.42rem;
-  border-top: 1px solid rgba(15, 23, 42, 0.14);
-  background: #fbfdff;
-}
-
-.maps-predict-grid-table {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-}
-
-.maps-predict-grid-table th,
-.maps-predict-grid-table td {
-  padding: clamp(0.12rem, 0.42vw, 0.2rem) clamp(0.14rem, 0.5vw, 0.24rem);
-  text-align: center;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.09);
-  background: #f7fbff;
-}
-
-.maps-predict-grid-table th:first-child,
-.maps-predict-grid-table td:first-child {
-  text-align: left;
-  position: sticky;
-  left: 0;
-  width: var(--maps-predict-region-col-width);
-  min-width: var(--maps-predict-region-col-width);
-  background: #f7fbff;
-}
-
-.maps-predict-grid-table th:not(:first-child),
-.maps-predict-grid-table td:not(:first-child) {
-  width: var(--maps-predict-value-col-width);
-  min-width: var(--maps-predict-value-col-width);
-}
-
-.maps-predict-grid-table th {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  background: #eef4fb;
-  color: #1e293b;
-  font: 700 0.73rem/1.1 "DM Sans", "Segoe UI", sans-serif;
-  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.1);
-}
-
-.maps-predict-grid-table th:first-child {
-  z-index: 7;
-  background: #eef4fb;
-}
-
-.maps-predict-grid-table td:first-child {
-  z-index: 2;
-}
-
-.maps-predict-grid-th-label {
-  margin-left: 0.22rem;
-  font: 700 0.68rem/1 "DM Sans", "Segoe UI", sans-serif;
-  color: #1e293b;
-  white-space: nowrap;
-}
-
-.maps-predict-grid-swatch {
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 2px;
+.maps-party-swatch {
   display: inline-block;
-  border: 1px solid rgba(15, 23, 42, 0.24);
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
 }
 
-.maps-predict-grid-swatch-nat {
-  background: linear-gradient(90deg, #fdf38e 0%, #fdf38e 50%, #005b54 50%, #005b54 100%);
-}
-
-.maps-predict-grid-swatch-other {
-  background: #9ca3af;
-}
-
-.maps-predict-grid-region {
-  font: 700 0.77rem/1.15 "Source Sans 3", "Segoe UI", sans-serif;
-  color: #0f172a;
-  white-space: nowrap;
-}
-
-.maps-predict-grid-region-child {
-  padding-left: 0.8rem;
-  color: #334155;
-}
-
-.maps-predict-region-label-wrap {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
-}
-
-.maps-predict-expand-btn {
-  border: 1px solid rgba(15, 23, 42, 0.22);
-  border-radius: 999px;
-  background: #ffffff;
-  color: #173253;
-  font: 700 0.68rem/1 "DM Sans", "Segoe UI", sans-serif;
-  padding: 0.16rem 0.45rem;
-  cursor: pointer;
-}
-
-.maps-predict-expand-btn:hover {
-  background: #edf4fb;
-}
-
-.maps-predict-grid-input {
-  width: 100%;
-  border: 1px solid rgba(15, 23, 42, 0.24);
-  border-radius: 6px;
-  padding: 0.12rem 0.16rem;
-  font: 700 0.75rem/1 "DM Sans", "Segoe UI", sans-serif;
-  text-align: center;
-  color: #0f172a;
-  background: #ffffff;
-}
-
-@media (max-width: 560px) {
-  .maps-predict-grid {
-    --maps-predict-region-col-width: 5.9rem;
-    --maps-predict-value-col-width: 2.86rem;
-  }
-
-  .maps-predict-grid-input {
-    width: 100%;
-    padding: 0.08rem 0.12rem;
-  }
-
-  .maps-predict-expand-btn {
-    padding: 0.14rem 0.36rem;
-    font-size: 0.64rem;
-  }
-}
-
-.maps-predict-grid-input:focus {
-  outline: none;
-  border-color: #1f3b5a;
-  box-shadow: 0 0 0 2px rgba(31, 59, 90, 0.15);
-}
-
-.maps-predict-grid-input:disabled {
-  background: rgba(15, 23, 42, 0.06);
-  color: rgba(15, 23, 42, 0.35);
-  border-color: rgba(15, 23, 42, 0.12);
-  cursor: not-allowed;
-}
-
-.maps-predict-tabs {
-  display: flex;
+.maps-parliament-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.3rem;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
 }
 
-.maps-predict-tab-btn {
-  flex: 1;
+.maps-parliament-tab {
+  display: block;
   text-align: center;
   border: 1px solid rgba(15, 23, 42, 0.2);
   background: #f5f9fc;
   color: #173253;
   border-radius: 8px;
-  padding: 0.3rem 0.4rem;
-  font: 600 0.82rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  padding: 0.35rem 0.4rem;
+  font: 600 0.85rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  text-decoration: none;
   cursor: pointer;
 }
 
-.maps-predict-tab-btn.active {
+.maps-parliament-tab.active {
   background: #15314f;
   border-color: #15314f;
   color: #fff;
 }
 
-.maps-predict-tab-info {
-  margin: 0;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  color: #475569;
-  background: #f0f6ff;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  border-radius: 7px;
-}
-
-.maps-predict-grid-total {
-  color: #334155;
-  font: 700 0.77rem/1 "DM Sans", "Segoe UI", sans-serif;
-}
-
-.maps-predict-grid-total.maps-predict-grid-total-over {
-  color: #d93025;
-}
-
-.maps-predict-grid-spacer {
-  color: transparent;
-}
-
-.maps-predict-window-actions {
-  display: flex;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 0.42rem;
+.maps-election-list {
+  margin-top: 0;
+  display: grid;
+  gap: 0.45rem;
 }
 
 .maps-election-item {
@@ -870,6 +522,7 @@ a {
   border-color: #15314f;
   color: #fff;
 }
+
 
 .maps-stage {
   display: flex;
@@ -1068,6 +721,14 @@ a {
 .maps-search-label {
   color: #334155;
   font: 600 0.85rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
+#maps-seat-search {
+  width: 11rem;
+}
+
+#maps-postcode-search {
+  width: 8rem;
 }
 
 .maps-toolbar input,
@@ -1506,6 +1167,18 @@ a {
   gap: 0.5rem;
 }
 
+.maps-card-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-vote-tabs,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
+#mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
+  display: none;
+}
+
 .maps-inline-btn {
   border: 1px solid rgba(15, 23, 42, 0.28);
   background: #f5f9fc;
@@ -1607,11 +1280,38 @@ a {
 .maps-seat-card {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  /* Take the leftover space below vote-totals + predict (basis 0 so predict isn't
+   * pushed to shrink to free space for the seat list). When the leftover would be
+   * smaller than the seat header + one row, JS in dom.js hides the card outright
+   * rather than rendering it cramped. */
+  flex: 1 1 0;
   min-height: 0;
+  overflow: hidden;
+}
+
+/* Pin the vote-totals card at its natural content height — it must never shrink
+ * to make room for the seat list. Predict can shrink (its inner grid scrolls) so
+ * the rail still fits when vote-totals + predict together exceed the rail height. */
+#mapsVoteTotalsCard {
+  flex-shrink: 0;
 }
 
 .maps-polltracker-view {
+  width: 100%;
+  display: none;
+}
+
+.maps-polltracker-mode .maps-polltracker-view {
+  display: block;
+}
+
+.maps-polltracker-mode .maps-stage,
+.maps-polltracker-mode .maps-panel-right {
+  display: none;
+}
+
+.maps-polltracker-mode .maps-main {
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
 }
 
@@ -2040,5 +1740,268 @@ a {
   .maps-viewport,
   .maps-svg {
     min-height: 390px;
+  }
+}
+
+/* ── Predict mode ───────────────────────────────────────────────────────── */
+
+.maps-predict-window {
+  position: relative;
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.22);
+  border-radius: 9px;
+  background: #fbfdff;
+  overflow: hidden;
+}
+
+.maps-predict-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  background: #fbfdff;
+  color: #10243b;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 0.36rem 0.55rem;
+}
+
+.maps-predict-window-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.maps-predict-window-title {
+  margin: 0;
+  font: 700 1rem/1.15 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-predict-window-body {
+  padding: 0.55rem 0.62rem 0.68rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.46rem;
+  min-height: 0;
+}
+
+.maps-predict-window.maps-predict-window-fill {
+  display: flex;
+  flex-direction: column;
+  /* Size to content rather than claiming all remaining space — the seat card sits
+   * below and grows into the leftover. When predict's content exceeds available
+   * height, the inner grid scrolls (overflow-y on .maps-predict-grid). */
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.maps-predict-window.maps-predict-window-fill .maps-predict-window-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.maps-predict-window.maps-predict-window-fill .maps-predict-grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Placed AFTER the .maps-predict-window-fill rules so equal-specificity ties go to this
+ * collapse rule. Doubled selector matches the fill rule's specificity (0,3,0). */
+.maps-predict-window.maps-predict-window--collapsed .maps-predict-window-body {
+  display: none;
+}
+
+.maps-predict-window.maps-predict-window-fill .maps-predict-window-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 0.32rem;
+  padding-top: 0.42rem;
+  padding-bottom: 0.42rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.14);
+  background: #fbfdff;
+}
+
+.maps-predict-tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+}
+
+.maps-predict-tab-btn {
+  flex: 1;
+  text-align: center;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #f5f9fc;
+  color: #173253;
+  border-radius: 8px;
+  padding: 0.3rem 0.4rem;
+  font: 600 0.82rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+
+.maps-predict-tab-btn.active {
+  background: #15314f;
+  border-color: #15314f;
+  color: #fff;
+}
+
+.maps-predict-grid {
+  --maps-predict-region-col-width: 6.55rem;
+  --maps-predict-value-col-width: 3.04rem;
+  overflow-x: auto;
+  border: 1px solid rgba(15, 23, 42, 0.17);
+  border-radius: 8px;
+  background: #f7fbff;
+  padding: 0.38rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 23, 42, 0.32) transparent;
+}
+
+.maps-predict-grid-section + .maps-predict-grid-section {
+  margin-top: 0.58rem;
+}
+
+.maps-predict-grid-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.maps-predict-grid-table th,
+.maps-predict-grid-table td {
+  padding: clamp(0.12rem, 0.42vw, 0.2rem) clamp(0.14rem, 0.5vw, 0.24rem);
+  text-align: center;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.09);
+  background: #f7fbff;
+}
+
+.maps-predict-grid-table th:first-child,
+.maps-predict-grid-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  width: var(--maps-predict-region-col-width);
+  min-width: var(--maps-predict-region-col-width);
+  background: #f7fbff;
+}
+
+.maps-predict-grid-table th:not(:first-child),
+.maps-predict-grid-table td:not(:first-child) {
+  width: var(--maps-predict-value-col-width);
+  min-width: var(--maps-predict-value-col-width);
+}
+
+.maps-predict-grid-table th {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #eef4fb;
+  color: #1e293b;
+  font: 700 0.73rem/1.1 "DM Sans", "Segoe UI", sans-serif;
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.1);
+}
+
+.maps-predict-grid-table th:first-child {
+  z-index: 7;
+  background: #eef4fb;
+}
+
+.maps-party-swatch-nat {
+  border-radius: 2px;
+  background: linear-gradient(90deg, #fdf38e 0%, #fdf38e 50%, #005b54 50%, #005b54 100%);
+}
+
+.maps-party-swatch-other {
+  border-radius: 2px;
+  background: #9ca3af;
+}
+
+.maps-predict-grid-region {
+  font: 700 0.77rem/1.15 "Source Sans 3", "Segoe UI", sans-serif;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.maps-predict-grid-region-child {
+  padding-left: 0.8rem;
+  color: #334155;
+}
+
+.maps-predict-region-label-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.maps-predict-expand-btn {
+  border: 1px solid rgba(15, 23, 42, 0.22);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #173253;
+  font: 700 0.68rem/1 "DM Sans", "Segoe UI", sans-serif;
+  padding: 0.16rem 0.45rem;
+  cursor: pointer;
+}
+
+.maps-predict-expand-btn:hover {
+  background: #edf4fb;
+}
+
+.maps-predict-grid-input {
+  width: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.24);
+  border-radius: 6px;
+  padding: 0.12rem 0.16rem;
+  font: 700 0.75rem/1 "DM Sans", "Segoe UI", sans-serif;
+  text-align: center;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.maps-predict-grid-input:focus {
+  outline: none;
+  border-color: #1f3b5a;
+  box-shadow: 0 0 0 2px rgba(31, 59, 90, 0.15);
+}
+
+.maps-predict-grid-input:disabled {
+  background: rgba(15, 23, 42, 0.06);
+  color: rgba(15, 23, 42, 0.35);
+  border-color: rgba(15, 23, 42, 0.12);
+  cursor: not-allowed;
+}
+
+.maps-predict-grid-total {
+  color: #334155;
+  font: 700 0.77rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-predict-grid-total.maps-predict-grid-total-over {
+  color: #d93025;
+}
+
+.maps-predict-window-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+@media (max-width: 560px) {
+  .maps-predict-grid {
+    --maps-predict-region-col-width: 5.9rem;
+    --maps-predict-value-col-width: 2.86rem;
+  }
+  .maps-predict-grid-input {
+    padding: 0.08rem 0.12rem;
+  }
+  .maps-predict-expand-btn {
+    padding: 0.14rem 0.36rem;
+    font-size: 0.64rem;
   }
 }

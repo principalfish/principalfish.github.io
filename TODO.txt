@@ -1,6 +1,6 @@
 
-reset database ids
-model_uns -> westminster_uns
+add hover text on map - some thought on seatPreview
+
 
 redo data back end structure
 - ballot type on poll
@@ -8,12 +8,6 @@ redo data back end structure
 - regions mapping server any purpose?
 - UI needs thought
 - make brexit part of general export (check party ids are accurate)
+reset database ids
+model_uns -> westminster_uns
 
-election maps
-- make country agnostic - all in map-nodes
-- more in core.js
-
-
-
-
-dont forget to use copilot at some point

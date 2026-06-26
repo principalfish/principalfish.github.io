@@ -22,7 +22,6 @@
       <header class="maps-header">
         <h1 class="maps-title">UK Election Maps</h1>
         <p id="mapsSubtitle" class="maps-subtitle">Loading election…</p>
-        <p id="mapsElectionCountdown" class="maps-election-countdown" hidden></p>
         <button
           type="button"
           id="mapsSidebarToggle"
@@ -215,7 +214,10 @@
             <article class="maps-card" id="mapsVoteTotalsCard">
               <div class="maps-card-head">
                 <h2 class="maps-panel-title">Vote Totals</h2>
-                <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
+                <div class="maps-card-head-actions">
+                  <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
+                  <button type="button" id="mapsVoteTotalsCollapse" class="maps-inline-btn maps-vote-totals-collapse" data-vote-totals-action="collapse" aria-label="Collapse vote totals">▲</button>
+                </div>
               </div>
               <nav class="maps-vote-tabs" id="mapsVoteTotalsTabNav" hidden aria-label="Vote totals view"></nav>
               <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder">
@@ -233,21 +235,21 @@
               </table>
             </article>
 
-            <article id="mapsPredictWindow" class="maps-predict-window" hidden aria-label="Predict 2029 input">
+            <article id="mapsPredictWindow" class="maps-predict-window" hidden aria-label="Predict input">
               <header class="maps-predict-window-head">
                 <div class="maps-predict-window-title-group">
-                  <h3 class="maps-predict-window-title">User Input (uniform swing)</h3>
+                  <h3 id="mapsPredictTitle" class="maps-predict-window-title">User Input</h3>
                 </div>
-                <button type="button" id="mapsPredictCollapse" class="maps-inline-btn" aria-label="Collapse user input">▲</button>
+                <button type="button" class="maps-inline-btn" data-predict-action="collapse" aria-label="Collapse user input">▲</button>
               </header>
               <div class="maps-predict-window-body">
                 <nav id="mapsPredictTabNav" class="maps-predict-tabs" hidden aria-label="Predict input tabs"></nav>
-<div id="mapsPredictGrid" class="maps-predict-grid" aria-label="Regional swing matrix"></div>
+                <div id="mapsPredictGrid" class="maps-predict-grid" aria-label="Regional swing matrix"></div>
                 <div class="maps-predict-window-actions">
-                  <button type="button" id="mapsPredictApply" class="maps-apply-btn">Use current forecast</button>
-                  <button type="button" id="mapsPredictSubmit" class="maps-apply-btn">Submit</button>
-                  <button type="button" id="mapsPredictShare" class="maps-apply-btn">Share</button>
-                  <button type="button" id="mapsPredictResetAll" class="maps-apply-btn">Reset</button>
+                  <button type="button" class="maps-apply-btn" data-predict-action="apply">Use current forecast</button>
+                  <button type="button" class="maps-apply-btn" data-predict-action="submit">Submit</button>
+                  <button type="button" class="maps-apply-btn" data-predict-action="share">Share</button>
+                  <button type="button" class="maps-apply-btn" data-predict-action="reset">Reset</button>
                 </div>
               </div>
             </article>
@@ -255,16 +257,14 @@
             <article class="maps-card maps-seat-card" id="mapsSeatCard">
               <div class="maps-card-head">
                 <h2 class="maps-panel-title">Seats</h2>
-                <nav class="maps-seat-view-tabs" id="mapsSeatViewTabNav" hidden aria-label="Seat view"></nav>
               </div>
-              <p id="mapsSeatPreview" class="maps-meta">Hover a region on the map to preview selection.</p>
               <div id="mapsSeatList" class="maps-seat-list" aria-label="Seat list placeholder">
                 <p>Loading seats…</p>
               </div>
             </article>
           </aside>
 
-          <section id="mapsPollTrackerView" class="maps-polltracker-view" hidden aria-label="Poll tracker view">
+          <section id="mapsPollTrackerView" class="maps-polltracker-view" aria-label="Poll tracker view">
             <article class="maps-card maps-polltracker-card">
               <div class="maps-card-head">
                 <h2 class="maps-panel-title">Poll tracker</h2>
@@ -290,7 +290,7 @@
     </main>
 
     <script type="module" src="../site/topbar.min.js"></script>
-    <script type="module" src="./electionmaps.min.js"></script>
+    <script type="module" src="./electionmaps.js"></script>
     <script type="module" src="./mobile-sidebar.min.js"></script>
   </body>
 </html>

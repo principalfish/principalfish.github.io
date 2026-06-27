@@ -11,7 +11,7 @@ import json
 import re
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 UNS_NAME_DATE_PATTERN = re.compile(r"UNS\s+(\d{4}-\d{2}-\d{2})")
 
@@ -48,4 +48,4 @@ def trend_entry_as_of_date(entry: dict[str, Any]) -> date | None:
 def load_trend_entries(path: Path) -> list[dict[str, Any]]:
     """Load and return the trend cache JSON array from ``path``."""
     with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return cast(list[dict[str, Any]], json.load(handle))

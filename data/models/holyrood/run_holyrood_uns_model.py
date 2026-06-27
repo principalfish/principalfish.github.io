@@ -324,7 +324,7 @@ def fetch_holyrood_poll_averages(
     as_of_date: date,
     half_life_days: float = _DEFAULT_HALF_LIFE_DAYS,
     lookback_days: int = _DEFAULT_LOOKBACK_DAYS,
-) -> dict[int, float]:
+) -> tuple[dict[int, float], str | None, date | None]:
     """Compute a time-decayed weighted average of Holyrood polls for one ballot type.
 
     Polls are identified by their pollster's ``identifier`` field ending with

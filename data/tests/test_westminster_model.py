@@ -10,6 +10,7 @@ from collections import Counter
 from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
 
@@ -116,26 +117,29 @@ class TestComputeRegionDiffs:
         self,
         *,
         seats: list[SeatRef],
-        region_by_id: dict,
-        party_name_by_id: dict,
-        national_totals: dict,
-        weighted_sums: dict,
-        total_weights: dict,
-        baseline_national: dict,
-        baseline_regional: dict,
-    ):
+        region_by_id: dict[int, Any],
+        party_name_by_id: dict[int, str],
+        national_totals: dict[int, float],
+        weighted_sums: dict[tuple[int | None, int], float],
+        total_weights: dict[tuple[int | None, int], float],
+        baseline_national: dict[int, float],
+        baseline_regional: dict[int, dict[int, float]],
+    ) -> tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]]:
         from collections import defaultdict
         ws = defaultdict(float, weighted_sums)
         tw = defaultdict(float, total_weights)
-        return compute_region_diffs(
-            seats=seats,
-            region_by_id=region_by_id,
-            party_name_by_id=party_name_by_id,
-            national_party_totals=national_totals,
-            weighted_sums=ws,
-            total_weights=tw,
-            baseline_national_shares=baseline_national,
-            baseline_region_shares=baseline_regional,
+        return cast(
+            tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]],
+            compute_region_diffs(
+                seats=seats,
+                region_by_id=region_by_id,
+                party_name_by_id=party_name_by_id,
+                national_party_totals=national_totals,
+                weighted_sums=ws,
+                total_weights=tw,
+                baseline_national_shares=baseline_national,
+                baseline_region_shares=baseline_regional,
+            ),
         )
 
     def test_zero_swing_when_poll_matches_baseline(self) -> None:
@@ -270,7 +274,7 @@ class TestProjectSeatVotes:
         seat_votes = {1: {10: 0.0, 20: 0.0}}  # zero total
         region_by_seat = {1: 99}
         party_universe = {10, 20}
-        region_swings: dict = {}
+        region_swings: dict[int, dict[int, float]] = {}
         party_names = {10: "Labour", 20: "Conservative"}
 
         projected, winners = project_seat_votes(

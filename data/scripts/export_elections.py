@@ -194,9 +194,9 @@ def main() -> None:
         manifest_parties = build_manifest_party_settings(parties)
         manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
         manifest["parties"] = manifest_parties
-        for map_id, regions_list in manifest_regions_by_map_id.items():
-            if str(map_id) in manifest.get("mapModes", {}):
-                manifest["mapModes"][str(map_id)]["regions"] = regions_list
+        for map_id_str, regions_list in manifest_regions_by_map_id.items():
+            if map_id_str in manifest.get("mapModes", {}):
+                manifest["mapModes"][map_id_str]["regions"] = regions_list
         if args.dry_run:
             print(f"Would write manifest metadata: {manifest_path}")
             print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")
@@ -510,10 +510,7 @@ def main() -> None:
             return
 
         if single_election_mode:
-            if args.dry_run:
-                print("Skipping manifest write for single-election export mode")
-            else:
-                print("Skipping manifest write for single-election export mode")
+            print("Skipping manifest write for single-election export mode")
             return
 
         apply_supplemental_legacy_elections(
@@ -619,14 +616,6 @@ def main() -> None:
                 )
                 manifest_entries.insert(prediction_index + 1, composite_entry)
                 default_election_id = composite_manifest_id
-
-        for entry in manifest_entries:
-            parent_db_id = entry.pop("parentElectionDbId", None)
-            if parent_db_id is None:
-                continue
-            parent_manifest_id = manifest_id_by_db_id.get(parent_db_id)
-            if parent_manifest_id:
-                entry["parentElectionId"] = parent_manifest_id
 
         expected_map_filenames = {Path(path).name for path in map_files_by_id.values()}
         if maps_dir.exists():

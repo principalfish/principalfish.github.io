@@ -13,7 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from export_elections import (  # type: ignore[import-not-found]
+from export_elections import (
     SeatRow,
     build_result_payload,
     choose_winner,

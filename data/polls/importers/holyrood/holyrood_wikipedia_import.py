@@ -112,7 +112,8 @@ def fetch_html(url: str) -> str:
         headers={"User-Agent": "Mozilla/5.0 (compatible; holyrood-poll-importer/1.0)"},
     )
     with urlopen(req, timeout=30) as response:
-        return response.read().decode("utf-8", errors="replace")
+        body: str = response.read().decode("utf-8", errors="replace")
+    return body
 
 
 # ── Parsing helpers ───────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@
       <h2>Westminster</h2>
       <div class="action-stack">
         <a class="button primary button-block" href="{{ url_for('poll_import.import_poll_form') }}">Import Poll</a>
-        <a class="button button-block" href="{{ url_for('by_elections.by_election_form') }}">Import By-Election</a>
+        <a class="button primary button-block" href="{{ url_for('by_elections.by_election_form') }}">Import By-Election</a>
         <a class="button button-block" href="{{ url_for('polls.poll_list') }}">View Polls</a>
         <a class="button button-block" href="{{ url_for('westminster.model_run_form') }}">Run Westminster Model</a>
         <a class="button button-block" href="{{ url_for('westminster.model_outputs') }}">View Westminster Outputs</a>
@@ -19,14 +19,9 @@
 
     <section class="card console-column">
       <h2>Holyrood</h2>
-      <p class="column-meta">
-        Constituency: {{ holyrood_latest_constituency or '—' }}
-        &nbsp;|&nbsp;
-        List: {{ holyrood_latest_list or '—' }}
-      </p>
       <div class="action-stack">
         <form method="post" action="{{ url_for('holyrood.holyrood_import_polls') }}" class="inline-form button-form">
-          <button type="submit" class="button button-block">Import Scottish Polls</button>
+          <button type="submit" class="button primary button-block">Import Scottish Polls</button>
         </form>
         <form method="post" action="{{ url_for('holyrood.run_holyrood_model') }}" class="inline-form button-form">
           <button type="submit" class="button button-block">Run Holyrood Model</button>

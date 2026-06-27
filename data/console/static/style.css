@@ -80,12 +80,6 @@ body {
   font-size: 14px;
 }
 
-.column-meta {
-  margin: 4px 0 14px;
-  color: #475569;
-  font-size: 13px;
-}
-
 .action-stack {
   display: grid;
   gap: 12px;

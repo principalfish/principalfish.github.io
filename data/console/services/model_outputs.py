@@ -70,7 +70,7 @@ def build_outputs_context(
             if party_id is not None
         }
 
-        postgres_output_count = session.execute(
+        output_count = session.execute(
             select(func.count(Election.id)).where(Election.type == election_type)
         ).scalar_one()
 
@@ -259,7 +259,7 @@ def build_outputs_context(
             "vote_pct_datasets": vote_pct_datasets,
         }
 
-    total_output_count = int(postgres_output_count)
+    total_output_count = int(output_count)
 
     items = [
         {
@@ -268,7 +268,6 @@ def build_outputs_context(
             "year": election.year,
             "map_name": map_row.name,
             "vote_rows": vote_rows_by_election_id.get(int(election.id), 0),
-            "source": "postgres",
         }
         for election, map_row in rows
     ]

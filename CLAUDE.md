@@ -1,13 +1,7 @@
 # principalfish.github.io
 
-This project is managed by the global Claude framework at `~/.claude`.
-
-- Global instructions: `~/.claude/claude.md`
-- Project config (auto-loaded each session by the SessionStart hook):
-  `~/.claude/projects-data/principalfish.github.io/claude.md`
-
-Skills, guides, and workflows live under `~/.claude/`. The old in-repo `.claude/`
-framework has been removed.
+A GitHub Pages static site with a Python data pipeline. Read
+[README.md](README.md) for the repository structure and setup/runbook.
 
 ## Testing
 

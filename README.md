@@ -1,6 +1,35 @@
-Hosting for principalfish.co.uk
+# principalfish.github.io
 
-Contributor workflow notes (plans, internal docs, and task learnings) are maintained in `AGENTS.md` and `.agents/README.md`.
+The GitHub Pages static site for **principalfish.co.uk**, plus the Python data
+pipeline that powers its interactive UK election maps.
+
+## Repository structure
+
+| Path | What it is |
+|------|------------|
+| `index.html`, `404.html`, `CNAME` | Landing page, error page, GitHub Pages custom domain |
+| `site/` | Shared frontend assets — styles, top bar, Google Analytics, vendored `d3`/`topojson` bundles |
+| `bio/` | Static bio page |
+| `electionmaps/` | Interactive UK election maps (D3 + TopoJSON); `data/` = exported maps/results, `scripts/` = JS modules, `tests/` = Vitest specs |
+| `guesstheyear/` | "Guess the year" game — static frontend + Python helpers (`app.py`, `wiki.py`, `export.py`) |
+| `referdle-solver/` | Referdle solver — static frontend (`js/`, `css/`, `data/`) |
+| `imgs/` | Shared images and logos |
+| `data/` | Python election-data pipeline — see below |
+| `server.sh` | Local dev server: builds frontend assets, then serves on `:8000` |
+| `package.json` | Frontend build tooling (esbuild, terser, clean-css) + Vitest tests |
+
+### `data/` layout
+
+| Path | What it is |
+|------|------------|
+| `models.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
+| `console/` | Local web console for the data (`create_app`) |
+| `server.py` | Local data preview server (`:5000`) |
+| `old_data/` | Base-data importers (TopoJSON maps, parties, general elections) |
+| `polls/` | Wikipedia-driven poll importers |
+| `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective) |
+| `scripts/` | Static export scripts that generate files for `electionmaps/` |
+| `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |
 
 ## Static site local preview (`/`, `/bio`, `/electionmaps`)
 

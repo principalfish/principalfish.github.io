@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>By-Election Preview</h2>
+    <p><strong>Election:</strong> {{ plan.election_name }}</p>
+    <p><strong>Constituency:</strong> {{ plan.constituency_name }}</p>
+    <p><strong>Date:</strong> {{ plan.election_date or "Unknown" }}</p>
+    <p><strong>Seat match:</strong>
+      {% if plan.seat_name_matched %}
+        {{ plan.seat_name_matched }}
+      {% else %}
+        <span style="color: red;">NOT FOUND</span>
+      {% endif %}
+    </p>
+    <p><strong>Parent election:</strong> {{ plan.parent_election_name }}
+      {% if plan.parent_election_id %}(id={{ plan.parent_election_id }}){% else %}<span style="color: red;">NOT FOUND</span>{% endif %}
+    </p>
+    <p><strong>Source:</strong> <a href="{{ plan.url }}" target="_blank">{{ plan.url }}</a></p>
+
+    {% if plan.seat_id and plan.candidates %}
+      <form method="post" action="{{ url_for('by_elections.by_election_confirm', token=token) }}" class="form-inline">
+        <button type="submit" class="button primary">Confirm Import</button>
+      </form>
+    {% else %}
+      <p class="alert">Cannot import: {% if not plan.seat_id %}seat not matched{% endif %}{% if not plan.candidates %} no candidates parsed{% endif %}</p>
+    {% endif %}
+  </section>
+
+  {% if plan.candidates %}
+  <section class="card">
+    <h3>Candidates</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Party</th>
+            <th>Candidate</th>
+            <th>Votes</th>
+            <th>Elected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in plan.candidates %}
+            <tr>
+              <td>{{ c.party_name }}{% if c.party_name in plan.party_id_by_name %} (id={{ plan.party_id_by_name[c.party_name] }}){% else %} <span style="color: orange;">unmapped</span>{% endif %}</td>
+              <td>{{ c.candidate_name }}</td>
+              <td>{{ "{:,}".format(c.votes) }}</td>
+              <td>{{ "Yes" if c.elected else "" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+{% endblock %}

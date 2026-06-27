@@ -1,6 +1,6 @@
 import enum
 from datetime import date
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from shapely import wkb as shapely_wkb
 from shapely.geometry.base import BaseGeometry
@@ -25,7 +25,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class GeometryWKB(types.TypeDecorator):
+class GeometryWKB(types.TypeDecorator[bytes]):
     """Store a Shapely geometry as plain WKB bytes in a BLOB column.
 
     Replaces the former PostGIS/geoalchemy2 ``Geometry`` type so the schema is
@@ -45,7 +45,7 @@ class GeometryWKB(types.TypeDecorator):
         if isinstance(value, (bytes, bytearray)):
             return bytes(value)
         if isinstance(value, BaseGeometry):
-            return shapely_wkb.dumps(value)
+            return cast(bytes, shapely_wkb.dumps(value))
         raise TypeError(f"Unsupported geometry value: {type(value)!r}")
 
     def process_result_value(self, value: Any, dialect: Any) -> BaseGeometry | None:

@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyroo
 import pytest
 
 from db import Database
-from models import ElectionType
+from models import Election, ElectionType, Party, Region
 from run_holyrood_uns_model import (
     HolyroodSimulationConfig,
     SeatRef,
@@ -284,7 +284,9 @@ class TestComputeHolyroodSwings:
 class TestRunHolyroodProjection:
     """Integration tests for run_holyrood_projection using a synthetic DB fixture."""
 
-    def _build_scenario(self, db: Database):
+    def _build_scenario(
+        self, db: Database
+    ) -> tuple[int, Election, Party, Party, Party, Region, Region]:
         """Create a minimal 2-region, 2-constituency + 3-list Holyrood scenario.
 
         Region A: constituency seats 'A Const 1' (party 1 wins) and 'A Const 2' (party 2 wins)
@@ -407,7 +409,7 @@ class TestRunHolyroodProjection:
         elected_list = [row for row in list_proj if row["elected"]]
 
         # p3 should win exactly 2 seats (1 per region), p1 should win 4
-        list_wins = {}
+        list_wins: dict[int, int] = {}
         for row in elected_list:
             list_wins[row["party_id"]] = list_wins.get(row["party_id"], 0) + 1
 

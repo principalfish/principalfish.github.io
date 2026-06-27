@@ -31,13 +31,9 @@ if str(DATA_DIR) not in sys.path:
 from config import DatabaseConfig
 from db import Database
 from models import Election, Map, Region
-import os
 
-DEFAULT_SQLITE_PATH = Path(
-    os.environ.get("SQLITE_DATABASE_PATH")
-    or os.environ.get("DATABASE_PATH")
-    or "/home/philiph/dbs/elections.db"
-)
+# Single source of truth for the database path: config.py (which reads .env).
+DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
 
 
 def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
@@ -1202,6 +1198,8 @@ def persist_projection(
             (map_id, as_of_date.year, election_name, "model_uns", as_of_date.isoformat()),
         )
         election_id = cursor.lastrowid
+        if election_id is None:
+            raise RuntimeError("Failed to obtain election id after INSERT")
         conn.executemany(
             "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, vote_total, elected) "
             "VALUES (?, ?, ?, ?, ?, ?)",
@@ -1258,7 +1256,7 @@ def update_trend_cache_json(
 
     total_votes = sum(vote_totals_by_party.values())
 
-    def seat_snapshot_from_entry(entry: dict) -> tuple[tuple[int, int], ...]:
+    def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
         """Build a sorted snapshot tuple from a JSON entry's parties map."""
         snapshot: dict[int, int] = {}
         for pid_str, pdata in (entry.get("parties") or {}).items():
@@ -1275,8 +1273,8 @@ def update_trend_cache_json(
         """Build a sorted snapshot tuple from a party-seat-count dict."""
         return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
 
-    existing_entries: list[dict] = []
-    entries_by_date: dict[date, dict] = {}
+    existing_entries: list[dict[str, Any]] = []
+    entries_by_date: dict[date, dict[str, Any]] = {}
     if TREND_CACHE_JSON.exists():
         with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
             entries = json.load(handle)

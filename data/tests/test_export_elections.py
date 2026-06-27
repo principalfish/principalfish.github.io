@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
@@ -73,7 +74,7 @@ class TestReorderManifestEntries:
     """Entries follow the curated manifest order; new ones slot next to their neighbour."""
 
     @staticmethod
-    def _ids(entries: list[dict]) -> list[str]:
+    def _ids(entries: list[dict[str, Any]]) -> list[str]:
         return [e["id"] for e in entries]
 
     def test_empty_existing_order_keeps_built_order(self) -> None:
@@ -118,7 +119,12 @@ class TestAssignComparisonElections:
     """Comparisons follow same parliament + same boundaries (mapId), newest-first."""
 
     @staticmethod
-    def _entry(eid, parliament, map_id, type=ElectionType.holyrood_general.value):
+    def _entry(
+        eid: str,
+        parliament: str,
+        map_id: int,
+        type: str = ElectionType.holyrood_general.value,
+    ) -> dict[str, Any]:
         return {"id": eid, "type": type, "parliament": parliament, "mapId": map_id}
 
     def test_boundary_changed_election_compares_within_same_map(self) -> None:

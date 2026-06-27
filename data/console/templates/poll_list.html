@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>All Polls</h2>
+    {% if not polls %}
+      <p>No polls have been imported yet.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Poll</th>
+              <th>Pollster</th>
+              <th>Fieldwork</th>
+              <th>Sample</th>
+              <th>Source URL</th>
+              <th>Rows</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for poll in polls %}
+              <tr>
+                <td><a href="{{ url_for('polls.poll_detail', poll_id=poll.poll_id) }}">#{{ poll.poll_id }}</a></td>
+                <td>{{ poll.pollster_name }} ({{ poll.pollster_identifier }})</td>
+                <td>{{ poll.fieldwork_start }} to {{ poll.fieldwork_end }}</td>
+                <td>{{ poll.sample_size }}</td>
+                <td>
+                  {% if poll.source_url %}
+                    <a href="{{ poll.source_url }}" target="_blank" rel="noopener">Source</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>{{ poll.row_count }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('polls.delete_poll', poll_id=poll.poll_id) }}" class="inline-form">
+                    <button type="submit" class="button button-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

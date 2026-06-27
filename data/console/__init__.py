@@ -22,6 +22,7 @@ def create_app() -> Flask:
     from console.blueprints.home import bp as home_bp
     from console.blueprints.poll_import import bp as poll_import_bp
     from console.blueprints.polls import bp as polls_bp
+    from console.blueprints.site import bp as site_bp
     from console.blueprints.westminster import bp as westminster_bp
 
     for blueprint in (
@@ -31,6 +32,7 @@ def create_app() -> Flask:
         westminster_bp,
         holyrood_bp,
         by_elections_bp,
+        site_bp,
         db_admin_bp,
     ):
         app.register_blueprint(blueprint)

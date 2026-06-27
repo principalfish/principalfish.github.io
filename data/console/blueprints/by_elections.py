@@ -12,7 +12,9 @@ from scripts import by_election_import
 
 from console.db import get_db
 from console.forms import ByElectionPreviewForm
+from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.preview import get_preview, pop_preview, store_preview
+from console.services.runner import render_command_result, run_python_script
 
 bp = Blueprint("by_elections", __name__)
 
@@ -85,8 +87,13 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
     Args:
         token: One-time hex token identifying the cached by-election import plan.
 
+    Side effects:
+        On a successful commit, runs the general ``export_elections.py`` so the
+        new by-election is folded into the static ``current-parliament`` data.
+
     Returns:
-        Redirect to by_election_form with a flash message on success or error.
+        Rendered command_result.html showing the export output, or a redirect to
+        by_election_form with a flash message on error or expired token.
     """
     cached = get_preview(token)
     if cached is None or cached.get("type") != "by_election":
@@ -106,4 +113,19 @@ def by_election_confirm(token: str) -> ResponseReturnValue:
         f"Imported '{result.election_name}' for {result.seat_name}: "
         f"{result.votes_inserted} votes."
     )
-    return redirect(url_for("by_elections.by_election_form"))
+
+    # Rebuild the static site data so the by-election shows in current-parliament.
+    if not EXPORT_ELECTION_SCRIPT.exists():
+        flash(f"Imported, but export script not found: {EXPORT_ELECTION_SCRIPT}")
+        return redirect(url_for("by_elections.by_election_form"))
+
+    export = run_python_script(EXPORT_ELECTION_SCRIPT, timeout=900)
+    return render_command_result(
+        title="Import By-Election",
+        command="export_elections.py (rebuild site data)",
+        stdout=export.stdout,
+        stderr=export.stderr,
+        return_code=export.returncode,
+        back_endpoint="by_elections.by_election_form",
+        back_label="Back to by-elections",
+    )

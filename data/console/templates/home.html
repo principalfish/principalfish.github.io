@@ -18,7 +18,7 @@
     </section>
 
     <section class="card console-column">
-      <h2>Holyrood <small>(Scotland)</small></h2>
+      <h2>Holyrood</h2>
       <p class="column-meta">
         Constituency: {{ holyrood_latest_constituency or '—' }}
         &nbsp;|&nbsp;
@@ -35,16 +35,6 @@
       </div>
     </section>
   </div>
-
-  <section class="card">
-    <h2>Publish</h2>
-    <div class="action-grid action-grid-two">
-      <form method="post" action="{{ url_for('exports.export_current_simulation') }}" class="inline-form button-form">
-        <button type="submit" class="button button-block">Export Simulation JSON</button>
-        <small>Write the latest Westminster prediction to the live site data.</small>
-      </form>
-    </div>
-  </section>
 
   <section class="card danger-zone">
     <h2>Database <small>(admin)</small></h2>

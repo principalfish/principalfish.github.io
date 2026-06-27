@@ -18,7 +18,6 @@ def create_app() -> Flask:
 
     from console.blueprints.by_elections import bp as by_elections_bp
     from console.blueprints.db_admin import bp as db_admin_bp
-    from console.blueprints.exports import bp as exports_bp
     from console.blueprints.holyrood import bp as holyrood_bp
     from console.blueprints.home import bp as home_bp
     from console.blueprints.poll_import import bp as poll_import_bp
@@ -31,7 +30,6 @@ def create_app() -> Flask:
         polls_bp,
         westminster_bp,
         holyrood_bp,
-        exports_bp,
         by_elections_bp,
         db_admin_bp,
     ):

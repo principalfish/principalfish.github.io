@@ -31,13 +31,9 @@ if str(DATA_DIR) not in sys.path:
 from config import DatabaseConfig
 from db import Database
 from models import Election, Map, Region
-import os
 
-DEFAULT_SQLITE_PATH = Path(
-    os.environ.get("SQLITE_DATABASE_PATH")
-    or os.environ.get("DATABASE_PATH")
-    or "/home/philiph/dbs/elections.db"
-)
+# Single source of truth for the database path: config.py (which reads .env).
+DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
 
 
 def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:

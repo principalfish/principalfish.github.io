@@ -132,7 +132,19 @@
       "parliament": "westminster"
     }
   ],
-  "misc": {},
+  "misc": {
+    "title": "UK Election Maps",
+    "parliamentTabs": [
+      {
+        "parliament": "westminster",
+        "label": "Westminster"
+      },
+      {
+        "parliament": "holyrood",
+        "label": "Holyrood"
+      }
+    ]
+  },
   "parliamentFeatures": {
     "westminster": {
       "features": [

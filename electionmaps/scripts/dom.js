@@ -104,8 +104,9 @@ function renderSubtitleText(text = '', error = false) {
  * @returns {void}
  */
 function renderTitle() {
-  const label = state.currentParliament[0].toUpperCase() + state.currentParliament.slice(1);
-  mapsTitle.textContent = `UK Election Maps · ${label}`;
+  const base = manifest.misc?.title || 'UK Election Maps';
+  const label = manifest.parliamentLabel(state.currentParliament);
+  mapsTitle.textContent = label ? `${base} · ${label}` : base;
 }
 
 // ─── Left Bar ─────────────────────────────────────────────────────────────────
@@ -124,13 +125,25 @@ export function renderLeftBar() {
   renderElectionLinks();
 }
 
+// Parliament selector container — rebuilt from manifest.parliamentTabs() each render.
+const parliamentTabsContainer = document.querySelector('.maps-parliament-tabs');
+
 /**
- * Highlights the active parliament tab by toggling the 'active' class on all [data-parliament] elements.
+ * Rebuilds the parliament selector from manifest.parliamentTabs(), one anchor per tab, and
+ * marks the current parliament active. Tabs are plain `?parliament=…` links (navigation is
+ * handled on load), so rebuilding them dynamically is safe — nothing binds click handlers here.
  * @returns {void}
  */
 function renderParliamentTabs() {
-  document.querySelectorAll('[data-parliament]').forEach((tab) => {
-    tab.classList.toggle('active', tab.dataset.parliament === state.currentParliament);
+  if (!parliamentTabsContainer) return;
+  parliamentTabsContainer.innerHTML = '';
+  manifest.parliamentTabs().forEach((tab) => {
+    const link = document.createElement('a');
+    link.className = `maps-parliament-tab${tab.parliament === state.currentParliament ? ' active' : ''}`;
+    link.dataset.parliament = tab.parliament;
+    link.href = `?parliament=${tab.parliament}`;
+    link.textContent = tab.label;
+    parliamentTabsContainer.appendChild(link);
   });
 }
 
@@ -2749,11 +2762,14 @@ function renderTopoMap(preserveZoom = false) {
   const height = vb?.height || 900;
 
   // ── Projection and path generator ─────────────────────────────────────────
-  // fitSize scales and centres the Mercator projection so the full feature
-  // collection fills the viewBox. path converts GeoJSON geometries to SVG path
-  // data strings using that projection.
+  // The projection is selected per map via mapMode.projection ("albersUsa" for
+  // US maps, default "mercator" for UK maps). fitSize scales and centres it so
+  // the full feature collection fills the viewBox; path converts GeoJSON
+  // geometries to SVG path data strings using that projection.
 
-  const projection = d3.geoMercator().fitSize([width, height], featureCollection);
+  const projectionFactory =
+    state.mapConfig?.projection === 'albersUsa' ? d3.geoAlbersUsa : d3.geoMercator;
+  const projection = projectionFactory().fitSize([width, height], featureCollection);
   const path = d3.geoPath(projection);
 
   // ── DOM teardown and rebuild ───────────────────────────────────────────────

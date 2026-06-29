@@ -133,6 +133,34 @@ class Manifest {
   }
 
   /**
+   * Returns the parliament tab definitions for the parliament selector, sourced from
+   * `misc.parliamentTabs` (each `{ parliament, label }`). Falls back to the historical
+   * Westminster/Holyrood pair when the manifest does not define any, so behaviour is
+   * unchanged for manifests that predate this field.
+   * @returns {{ parliament: string, label: string }[]}
+   */
+  parliamentTabs() {
+    const tabs = this.misc?.parliamentTabs;
+    if (Array.isArray(tabs) && tabs.length) return tabs;
+    return [
+      { parliament: 'westminster', label: 'Westminster' },
+      { parliament: 'holyrood', label: 'Holyrood' },
+    ];
+  }
+
+  /**
+   * Returns the display label for a parliament, using the configured tab label when present
+   * and otherwise capitalising the parliament key (the historical default).
+   * @param {string} parliament - Parliament key (e.g. "westminster", "us_house").
+   * @returns {string}
+   */
+  parliamentLabel(parliament) {
+    const tab = this.parliamentTabs().find((t) => t.parliament === parliament);
+    if (tab?.label) return tab.label;
+    return parliament ? parliament[0].toUpperCase() + parliament.slice(1) : '';
+  }
+
+  /**
    * Returns the display label for a party, or the raw key if not found.
    * @param {string} partyKey - Canonical party key (e.g. "labour").
    * @returns {string}

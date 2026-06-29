@@ -25,6 +25,11 @@ PARTY_NAME_TO_KEY = {
     "sinnfein": "sinnfein",
     "scottishnationalparty": "snp",
     "ulsterunionistparty": "uu",
+    "democratic": "democrat",
+    "republican": "republican",
+    "independent": "independent",
+    "libertarian": "libertarian",
+    "usgreen": "usgreen",
     "other": "other",
     "others": "others",
 }

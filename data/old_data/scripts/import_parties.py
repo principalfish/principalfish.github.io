@@ -12,7 +12,7 @@ Behavior:
     - Generates short_name using rules:
         - spaces/punctuation removed
         - acronyms where commonly used (e.g. DUP, SDLP, SNP, UUP)
-    - Applies party colours for known UK parties.
+    - Applies party colours for known UK and US parties.
 """
 
 from __future__ import annotations
@@ -47,6 +47,12 @@ PARTY_DEFINITIONS = (
     {"name": "Scottish National Party", "colour": "#FFF95D"},
     {"name": "Sinn Féin", "colour": "#326760"},
     {"name": "Ulster Unionist Party", "colour": "#48A5EE"},
+    # US parties
+    {"name": "Democratic", "colour": "#1375E1"},
+    {"name": "Republican", "colour": "#E81B23"},
+    {"name": "Independent", "colour": "#9B59B6"},
+    {"name": "Libertarian", "colour": "#FED105"},
+    {"name": "US Green", "colour": "#17AA5C"},
 )
 
 ACRONYM_PARTIES = {

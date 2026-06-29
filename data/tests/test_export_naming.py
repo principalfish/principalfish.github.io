@@ -105,6 +105,18 @@ class TestPartyKeyForParty:
     def test_mapped_name(self) -> None:
         assert party_key_for_party(_Party("Scottish National Party")) == "snp"
 
+    def test_us_democratic_maps_to_democrat(self) -> None:
+        assert party_key_for_party(_Party("Democratic", short_name="democratic")) == "democrat"
+
+    def test_us_democratic_via_name(self) -> None:
+        assert party_key_for_party(_Party("Democratic")) == "democrat"
+
+    def test_us_republican(self) -> None:
+        assert party_key_for_party(_Party("Republican", short_name="republican")) == "republican"
+
+    def test_us_green_maps_to_usgreen(self) -> None:
+        assert party_key_for_party(_Party("US Green", short_name="usgreen")) == "usgreen"
+
     def test_unmapped_name_passes_through(self) -> None:
         assert party_key_for_party(_Party("Foo Bar")) == "foobar"
 

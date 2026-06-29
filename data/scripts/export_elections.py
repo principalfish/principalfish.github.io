@@ -65,6 +65,7 @@ from scripts.export.serialize import (
 from scripts.export.manifest import (
     build_manifest_party_settings,
     build_manifest_regions_by_map_id,
+    build_map_modes_with_regions,
     assign_comparison_elections,
     reorder_manifest_entries,
     remove_comparison_for_supplemental_entries,
@@ -630,6 +631,14 @@ def main() -> None:
         manifest_path = output_root / "map-modes.json"
         existing = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
 
+        # map-modes-shell.json is the hand-authored source of truth for the carried-over,
+        # non-generated config (misc, parliamentFeatures, mapModes structure, defaultElection).
+        # When absent we fall back to the previously-written map-modes.json so older
+        # checkouts and tests without a shell keep working unchanged.
+        shell_path = output_root / "map-modes-shell.json"
+        shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
+        config = shell if shell else existing
+
         files = {
             "elections": {
                 "mapsById": map_files_by_id,
@@ -680,7 +689,7 @@ def main() -> None:
         # real election (so a hand-set default like "current-prediction" survives regen);
         # otherwise fall back to current-holyrood-prediction when present.
         manifest_ids = {e.get("id") for e in manifest_entries}
-        existing_default = existing.get("defaultElection")
+        existing_default = config.get("defaultElection", existing.get("defaultElection"))
         if existing_default in manifest_ids:
             default_election_id = existing_default
         elif "current-holyrood-prediction" in manifest_ids:
@@ -716,9 +725,11 @@ def main() -> None:
         manifest_payload = {
             "defaultElection": default_election_id,
             "elections": manifest_entries,
-            "misc": existing.get("misc", {}),
-            "parliamentFeatures": existing.get("parliamentFeatures", {}),
-            "mapModes": existing.get("mapModes", {}),
+            "misc": config.get("misc", {}),
+            "parliamentFeatures": config.get("parliamentFeatures", {}),
+            "mapModes": build_map_modes_with_regions(
+                config.get("mapModes", {}), manifest_regions_by_map_id
+            ),
             "files": files,
             "parties": manifest_parties,
         }

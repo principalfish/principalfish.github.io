@@ -67,6 +67,37 @@ def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, lis
     return dict(regions_by_map_id)
 
 
+def build_map_modes_with_regions(
+    map_modes: dict[str, Any],
+    regions_by_map_id: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    """Build the ``mapModes`` block, preferring shell-curated regions over DB ones.
+
+    ``map-modes-shell.json`` holds the hand-authored mapModes config per map. Region
+    ``name`` values are display labels and are sometimes curated (shortened) away from
+    the canonical DB region names, so when a shell mapMode already lists ``regions``
+    they are kept verbatim. When a mapMode omits ``regions`` (e.g. a newly-added map
+    that has not been hand-curated), the region list is attached from the database as
+    the final key, so new geographies need no manual region authoring.
+
+    Args:
+        map_modes: Per-map config keyed by string map id (regions optional).
+        regions_by_map_id: Region lists keyed by string map id, as built by
+            :func:`build_manifest_regions_by_map_id`.
+
+    Returns:
+        A new dict keyed by string map id, each value being the mapMode config with
+        a ``regions`` list (the shell's when present, otherwise the DB's, else empty).
+    """
+    merged: dict[str, Any] = {}
+    for map_id_str, mode in map_modes.items():
+        entry = dict(mode)
+        if "regions" not in entry:
+            entry["regions"] = regions_by_map_id.get(map_id_str, [])
+        merged[map_id_str] = entry
+    return merged
+
+
 def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     """Populate ``comparisonElectionId`` for each manifest entry in-place.
 

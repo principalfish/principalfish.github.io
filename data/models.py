@@ -71,6 +71,12 @@ class ElectionType(enum.Enum):
             covering FPTP constituency seats.
         holyrood_list: Regional list seat allocations for a Scottish Parliament
             election, computed via d'Hondt from the regional list vote.
+        us_house: A US House of Representatives election.
+        us_senate: A US Senate election.
+        us_presidential: A US presidential election.
+        us_house_model: A modelled/projected US House of Representatives election.
+        us_senate_model: A modelled/projected US Senate election.
+        us_presidential_model: A modelled/projected US presidential election.
     """
 
     uk_general = "uk_general"
@@ -80,6 +86,12 @@ class ElectionType(enum.Enum):
     holyrood_uns = "holyrood_uns"
     holyrood_general = "holyrood_general"
     holyrood_list = "holyrood_list"
+    us_house = "us_house"
+    us_senate = "us_senate"
+    us_presidential = "us_presidential"
+    us_house_model = "us_house_model"
+    us_senate_model = "us_senate_model"
+    us_presidential_model = "us_presidential_model"
 
 
 # ── Tables ───────────────────────────────────────────────────────────────────
@@ -196,6 +208,8 @@ class Seat(Base):
         seat_name: Name of the constituency.
         region_id: Optional foreign key to the ``Region`` this seat belongs to.
         electorate: Optional registered electorate size.
+        electoral_votes: Optional number of US Electoral College votes for this
+            seat (US states only; ``None`` for UK constituencies).
         geometry: Optional MULTIPOLYGON geometry (SRID 4326) for the seat boundary.
         map: The owning ``Map`` instance.
         region: The ``Region`` this seat belongs to, if any.
@@ -209,6 +223,7 @@ class Seat(Base):
     seat_name: Mapped[str] = mapped_column(String, nullable=False)
     region_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("regions.id"), nullable=True)
     electorate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    electoral_votes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     geometry: Mapped[Optional[Any]] = mapped_column(GeometryWKB, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="seats")

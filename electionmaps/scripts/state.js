@@ -791,6 +791,8 @@ export class ElectionSummary {
       return `${electionName} · ${topLabel} margin of victory: ${formatInt(margin)}`;
     }
 
+    // Working majority: the lead over half the chamber, doubled (the standard "majority of N").
+    // Independents are simply part of the chamber total, not folded into either party.
     const majorityThreshold = totalSeats / 2;
     const hasMajority = leadSeats > majorityThreshold;
     const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;

@@ -2214,15 +2214,17 @@ function buildPopupRow(party, barWidth, valuesHtml, label) {
  * Computes maxPct internally so callers don't need to manage bar-width scaling.
  * @param {Array<{party: string, pct: number}>} rows - Sorted rows; each must have party and pct.
  * @param {function({party: string, pct: number}): string} getValuesHtml - Returns right-side values HTML for a row.
+ * @param {number} [barCap=75] - Max bar width (%); lower it when the row's value text is wide
+ *   (e.g. the member popup) so the bar doesn't run under the value.
  * @returns {void}
  */
-function renderPopupRows(rows, getValuesHtml) {
-  // Scale all bars relative to the leading row so the top party always fills 75%.
+function renderPopupRows(rows, getValuesHtml, barCap = 75) {
+  // Scale all bars relative to the leading row so the top party always fills barCap.
   const maxPct = rows.reduce((max, row) => Math.max(max, row.pct), 0);
   seatPopupList.innerHTML = '';
   rows.forEach((row) => {
-    // Bar width is proportional to pct / maxPct, capped at 75 to leave room for labels.
-    const barWidth = maxPct > 0 ? Math.max(0, Math.min(75, (row.pct / maxPct) * 75)) : 0;
+    // Bar width is proportional to pct / maxPct, capped to leave room for labels.
+    const barWidth = maxPct > 0 ? Math.max(0, Math.min(barCap, (row.pct / maxPct) * barCap)) : 0;
     // getValuesHtml supplies the right-side content (vote share, delta, seat count, etc.)
     // which differs between the region popup and the constituency popup. row.label, when
     // present, overrides the party label (e.g. a candidate name in the seat popup).
@@ -2312,8 +2314,9 @@ function renderSeatPopup(seatName) {
       label: member.name,
       up: member.up,
     }));
-    // Terms are 6 years, so a seat was last contested six years before it is next up.
-    renderPopupRows(rows, (row) => `<span>last ${row.up - 6} · up ${row.up}</span>`);
+    // Terms are 6 years, so a seat was last contested six years before it is next up. The
+    // bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
+    renderPopupRows(rows, (row) => `<span>last ${row.up - 6} · up ${row.up}</span>`, 40);
     seatPopup.hidden = false;
     return;
   }

@@ -207,6 +207,7 @@
       "name": "us-senate-2024",
       "projection": "albersUsa",
       "neutralFill": "#e5e7eb",
+      "hideMajority": true,
       "postcodeSupported": false
     },
     "1": {

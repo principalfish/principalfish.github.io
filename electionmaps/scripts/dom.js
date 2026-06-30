@@ -27,7 +27,9 @@ export function renderPageTitle() {
     label = state.currentElection.name;
   }
   const parliament = state.currentParliament;
-  const parlLabel = parliament ? parliament[0].toUpperCase() + parliament.slice(1) : null;
+  // Use the manifest's display label (e.g. "US House"), not the raw key ("us_house"),
+  // so the browser-tab title matches the on-page H1.
+  const parlLabel = parliament ? manifest.parliamentLabel(parliament) : null;
   const suffix = parlLabel ? `${parlLabel} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
   document.title = label ? `${label} | ${suffix}` : suffix;
 }
@@ -1419,6 +1421,9 @@ function renderVoteTotals(
   });
 
   voteTotalsBody.innerHTML = '';
+  // The "Seats" column counts electoral votes on EV-tally maps (presidential), so relabel it.
+  const seatsHeader = voteTotalsTable.querySelector('th[data-sort-key="seats"]');
+  if (seatsHeader) seatsHeader.textContent = state.mapConfig?.tally === 'electoralVotes' ? 'EV' : 'Seats';
   voteTotalsTable.classList.toggle('hide-vote-total-col', !state.voteTotalsColumnVisible('votes'));
   voteTotalsTable.classList.toggle('hide-vote-pct-col', !state.voteTotalsColumnVisible('votePct'));
 

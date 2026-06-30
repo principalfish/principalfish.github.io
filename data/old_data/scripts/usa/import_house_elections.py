@@ -23,9 +23,11 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import Database
 from models import ElectionType, Map
+from regions import division_for_state
 
 # Fixed map id for US House (convention: 1-9 westminster, 11-19 holyrood, 21+ US).
 MAP_ID = 21
@@ -56,19 +58,29 @@ ST_NAME = {
 }
 
 
-def ensure_map(db: Database) -> Map:
-    """Return the US House Map, creating it with the fixed id if absent."""
+def ensure_map(db: Database, replace: bool = False) -> Map:
+    """Return the US House Map, creating it with the fixed id if absent.
+
+    When ``replace`` is True and the map exists, it is deleted first (cascading its
+    regions/seats/elections/votes) so a re-import starts clean — used to re-derive seat
+    regions or refresh results without manual cleanup.
+    """
     existing = db.get_map(MAP_ID)
-    if existing is not None:
+    if existing is not None and not replace:
         return existing
     with db.session() as session:
+        if existing is not None:
+            stale = session.get(Map, MAP_ID)
+            if stale is not None:
+                session.delete(stale)
+                session.flush()
         session.add(Map(id=MAP_ID, name=MAP_NAME, parliament="us_house"))
     result = db.get_map(MAP_ID)
     assert result is not None
     return result
 
 
-def import_house(db: Database, file: Path, year: int, name: str) -> int:
+def import_house(db: Database, file: Path, year: int, name: str, replace: bool = False) -> int:
     """Load a US House election JSON file into ``db`` and return the vote count.
 
     Args:
@@ -76,12 +88,14 @@ def import_house(db: Database, file: Path, year: int, name: str) -> int:
         file: Path to the ``house-YYYY.json`` election file.
         year: Election year.
         name: Unique election name; raises if one already exists.
+        replace: If True, delete and rebuild the US House map first (see ``ensure_map``).
 
     Returns:
         The number of Vote rows inserted.
     """
+    house_map = ensure_map(db, replace=replace)
     if db.get_election_by_name(name) is not None:
-        raise SystemExit(f"Election {name!r} already exists — delete it first to re-import.")
+        raise SystemExit(f"Election {name!r} already exists — re-run with --replace to rebuild.")
 
     # Resolve the US parties up front (they must already be seeded).
     party_id_by_key: dict[str, int] = {}
@@ -91,19 +105,19 @@ def import_house(db: Database, file: Path, year: int, name: str) -> int:
             raise SystemExit(f"Party {party_name!r} not found — run import_parties.py first.")
         party_id_by_key[key] = party.id
 
-    house_map = ensure_map(db)
     data = json.loads(file.read_text(encoding="utf-8"))
 
-    # One Region per state, keyed by full state name.
-    region_id_by_state: dict[str, int] = {r.name: r.id for r in db.get_regions_for_map(house_map.id)}
+    # Seats are grouped by Census division (the region filter); a seat's state maps to
+    # one of the 9 divisions.
+    region_id_by_division: dict[str, int] = {r.name: r.id for r in db.get_regions_for_map(house_map.id)}
     seat_id_by_code: dict[str, int] = {s.seat_name: s.id for s in db.get_seats_for_map(house_map.id)}
     for code in data:
-        state = ST_NAME[code.split("-")[0]]
-        if state not in region_id_by_state:
-            region_id_by_state[state] = db.add_region(house_map.id, state).id
+        division = division_for_state(ST_NAME[code.split("-")[0]])
+        if division not in region_id_by_division:
+            region_id_by_division[division] = db.add_region(house_map.id, division).id
         if code not in seat_id_by_code:
             seat_id_by_code[code] = db.add_seat(
-                house_map.id, code, region_id=region_id_by_state[state]
+                house_map.id, code, region_id=region_id_by_division[division]
             ).id
 
     election = db.add_election(
@@ -132,11 +146,12 @@ def main() -> None:
     parser.add_argument("--file", required=True, type=Path, help="Path to the house-YYYY.json file")
     parser.add_argument("--year", type=int, required=True, help="Election year (e.g. 2024)")
     parser.add_argument("--name", required=True, help="Election name (e.g. '2024 US House Election')")
+    parser.add_argument("--replace", action="store_true", help="Rebuild the US House map first")
     args = parser.parse_args()
 
     db = Database()
     db.create_tables()
-    inserted = import_house(db, args.file, args.year, args.name)
+    inserted = import_house(db, args.file, args.year, args.name, replace=args.replace)
     print(f"Imported {args.name}: {inserted} votes, map id {MAP_ID}")
 
 

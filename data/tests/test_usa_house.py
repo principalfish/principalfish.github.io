@@ -108,6 +108,6 @@ def test_import_house_loads_seats_votes_and_winner(db: Database, tmp_path: Path)
     seats = {s.seat_name for s in db.get_seats_for_map(house_map.id)}
     assert seats == {"TX-01", "CA-12"}
     regions = {r.name for r in db.get_regions_for_map(house_map.id)}
-    assert regions == {"Texas", "California"}
+    assert regions == {"West South Central", "Pacific"}  # TX, CA Census divisions
     election = db.get_election_by_name("2024 US House Election")
     assert election is not None and election.type == ElectionType.us_house

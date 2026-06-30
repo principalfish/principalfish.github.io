@@ -23,9 +23,11 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import Database
 from models import ElectionType, Map
+from regions import division_for_state
 
 # Fixed map id for US Senate (convention: 21 house, 22 president, 23 senate).
 MAP_ID = 23
@@ -42,22 +44,32 @@ PARTY_KEY_TO_NAME = {
 }
 
 
-def ensure_map(db: Database) -> Map:
-    """Return the US Senate Map, creating it with the fixed id if absent."""
+def ensure_map(db: Database, replace: bool = False) -> Map:
+    """Return the US Senate Map, creating it with the fixed id if absent.
+
+    When ``replace`` is True and the map exists, it is deleted first (cascading its
+    regions/seats/elections/votes) so a re-import starts clean.
+    """
     existing = db.get_map(MAP_ID)
-    if existing is not None:
+    if existing is not None and not replace:
         return existing
     with db.session() as session:
+        if existing is not None:
+            stale = session.get(Map, MAP_ID)
+            if stale is not None:
+                session.delete(stale)
+                session.flush()
         session.add(Map(id=MAP_ID, name=MAP_NAME, parliament="us_senate"))
     result = db.get_map(MAP_ID)
     assert result is not None
     return result
 
 
-def import_senate(db: Database, file: Path, year: int, name: str) -> int:
+def import_senate(db: Database, file: Path, year: int, name: str, replace: bool = False) -> int:
     """Load a US Senate election JSON file into ``db`` and return the vote count."""
+    senate_map = ensure_map(db, replace=replace)
     if db.get_election_by_name(name) is not None:
-        raise SystemExit(f"Election {name!r} already exists — delete it first to re-import.")
+        raise SystemExit(f"Election {name!r} already exists — re-run with --replace to rebuild.")
 
     party_id_by_key: dict[str, int] = {}
     for key, party_name in PARTY_KEY_TO_NAME.items():
@@ -66,17 +78,18 @@ def import_senate(db: Database, file: Path, year: int, name: str) -> int:
             raise SystemExit(f"Party {party_name!r} not found — run import_parties.py first.")
         party_id_by_key[key] = party.id
 
-    senate_map = ensure_map(db)
     data = json.loads(file.read_text(encoding="utf-8"))
 
-    region_id_by_name: dict[str, int] = {r.name: r.id for r in db.get_regions_for_map(senate_map.id)}
+    # Seats are grouped by Census division; each state maps to one of the 9 divisions.
+    region_id_by_division: dict[str, int] = {r.name: r.id for r in db.get_regions_for_map(senate_map.id)}
     seat_id_by_name: dict[str, int] = {s.seat_name: s.id for s in db.get_seats_for_map(senate_map.id)}
     for state in data:
-        if state not in region_id_by_name:
-            region_id_by_name[state] = db.add_region(senate_map.id, state).id
+        division = division_for_state(state)
+        if division not in region_id_by_division:
+            region_id_by_division[division] = db.add_region(senate_map.id, division).id
         if state not in seat_id_by_name:
             seat_id_by_name[state] = db.add_seat(
-                senate_map.id, state, region_id=region_id_by_name[state]
+                senate_map.id, state, region_id=region_id_by_division[division]
             ).id
 
     election = db.add_election(
@@ -105,11 +118,12 @@ def main() -> None:
     parser.add_argument("--file", required=True, type=Path, help="Path to the senate-YYYY.json file")
     parser.add_argument("--year", type=int, required=True, help="Election year (e.g. 2024)")
     parser.add_argument("--name", required=True, help="Election name (e.g. '2024 US Senate Election')")
+    parser.add_argument("--replace", action="store_true", help="Rebuild the US Senate map first")
     args = parser.parse_args()
 
     db = Database()
     db.create_tables()
-    inserted = import_senate(db, args.file, args.year, args.name)
+    inserted = import_senate(db, args.file, args.year, args.name, replace=args.replace)
     print(f"Imported {args.name}: {inserted} votes, map id {MAP_ID}")
 
 

@@ -351,204 +351,40 @@
       "postcodeSupported": false,
       "regions": [
         {
-          "id": 76,
-          "name": "Alabama"
+          "id": 216,
+          "name": "East North Central"
         },
         {
-          "id": 75,
-          "name": "Alaska"
+          "id": 210,
+          "name": "East South Central"
         },
         {
-          "id": 78,
-          "name": "Arizona"
+          "id": 217,
+          "name": "Mid-Atlantic"
         },
         {
-          "id": 77,
-          "name": "Arkansas"
+          "id": 212,
+          "name": "Mountain"
         },
         {
-          "id": 79,
-          "name": "California"
+          "id": 213,
+          "name": "New England"
         },
         {
-          "id": 80,
-          "name": "Colorado"
+          "id": 209,
+          "name": "Pacific"
         },
         {
-          "id": 81,
-          "name": "Connecticut"
+          "id": 214,
+          "name": "South Atlantic"
         },
         {
-          "id": 82,
-          "name": "Delaware"
+          "id": 215,
+          "name": "West North Central"
         },
         {
-          "id": 83,
-          "name": "Florida"
-        },
-        {
-          "id": 84,
-          "name": "Georgia"
-        },
-        {
-          "id": 85,
-          "name": "Hawaii"
-        },
-        {
-          "id": 87,
-          "name": "Idaho"
-        },
-        {
-          "id": 88,
-          "name": "Illinois"
-        },
-        {
-          "id": 89,
-          "name": "Indiana"
-        },
-        {
-          "id": 86,
-          "name": "Iowa"
-        },
-        {
-          "id": 90,
-          "name": "Kansas"
-        },
-        {
-          "id": 91,
-          "name": "Kentucky"
-        },
-        {
-          "id": 92,
-          "name": "Louisiana"
-        },
-        {
-          "id": 95,
-          "name": "Maine"
-        },
-        {
-          "id": 94,
-          "name": "Maryland"
-        },
-        {
-          "id": 93,
-          "name": "Massachusetts"
-        },
-        {
-          "id": 96,
-          "name": "Michigan"
-        },
-        {
-          "id": 97,
-          "name": "Minnesota"
-        },
-        {
-          "id": 99,
-          "name": "Mississippi"
-        },
-        {
-          "id": 98,
-          "name": "Missouri"
-        },
-        {
-          "id": 100,
-          "name": "Montana"
-        },
-        {
-          "id": 103,
-          "name": "Nebraska"
-        },
-        {
-          "id": 107,
-          "name": "Nevada"
-        },
-        {
-          "id": 104,
-          "name": "New Hampshire"
-        },
-        {
-          "id": 105,
-          "name": "New Jersey"
-        },
-        {
-          "id": 106,
-          "name": "New Mexico"
-        },
-        {
-          "id": 108,
-          "name": "New York"
-        },
-        {
-          "id": 101,
-          "name": "North Carolina"
-        },
-        {
-          "id": 102,
-          "name": "North Dakota"
-        },
-        {
-          "id": 109,
-          "name": "Ohio"
-        },
-        {
-          "id": 110,
-          "name": "Oklahoma"
-        },
-        {
-          "id": 111,
-          "name": "Oregon"
-        },
-        {
-          "id": 112,
-          "name": "Pennsylvania"
-        },
-        {
-          "id": 113,
-          "name": "Rhode Island"
-        },
-        {
-          "id": 114,
-          "name": "South Carolina"
-        },
-        {
-          "id": 115,
-          "name": "South Dakota"
-        },
-        {
-          "id": 116,
-          "name": "Tennessee"
-        },
-        {
-          "id": 117,
-          "name": "Texas"
-        },
-        {
-          "id": 118,
-          "name": "Utah"
-        },
-        {
-          "id": 120,
-          "name": "Vermont"
-        },
-        {
-          "id": 119,
-          "name": "Virginia"
-        },
-        {
-          "id": 121,
-          "name": "Washington"
-        },
-        {
-          "id": 123,
-          "name": "West Virginia"
-        },
-        {
-          "id": 122,
-          "name": "Wisconsin"
-        },
-        {
-          "id": 124,
-          "name": "Wyoming"
+          "id": 211,
+          "name": "West South Central"
         }
       ]
     },
@@ -559,208 +395,40 @@
       "postcodeSupported": false,
       "regions": [
         {
-          "id": 125,
-          "name": "Alabama"
+          "id": 224,
+          "name": "East North Central"
         },
         {
-          "id": 126,
-          "name": "Alaska"
+          "id": 218,
+          "name": "East South Central"
         },
         {
-          "id": 127,
-          "name": "Arizona"
+          "id": 226,
+          "name": "Mid-Atlantic"
         },
         {
-          "id": 128,
-          "name": "Arkansas"
+          "id": 220,
+          "name": "Mountain"
         },
         {
-          "id": 129,
-          "name": "California"
+          "id": 222,
+          "name": "New England"
         },
         {
-          "id": 130,
-          "name": "Colorado"
+          "id": 219,
+          "name": "Pacific"
         },
         {
-          "id": 131,
-          "name": "Connecticut"
+          "id": 223,
+          "name": "South Atlantic"
         },
         {
-          "id": 132,
-          "name": "Delaware"
+          "id": 225,
+          "name": "West North Central"
         },
         {
-          "id": 133,
-          "name": "District of Columbia"
-        },
-        {
-          "id": 134,
-          "name": "Florida"
-        },
-        {
-          "id": 135,
-          "name": "Georgia"
-        },
-        {
-          "id": 136,
-          "name": "Hawaii"
-        },
-        {
-          "id": 137,
-          "name": "Idaho"
-        },
-        {
-          "id": 138,
-          "name": "Illinois"
-        },
-        {
-          "id": 139,
-          "name": "Indiana"
-        },
-        {
-          "id": 140,
-          "name": "Iowa"
-        },
-        {
-          "id": 141,
-          "name": "Kansas"
-        },
-        {
-          "id": 142,
-          "name": "Kentucky"
-        },
-        {
-          "id": 143,
-          "name": "Louisiana"
-        },
-        {
-          "id": 144,
-          "name": "Maine"
-        },
-        {
-          "id": 145,
-          "name": "Maryland"
-        },
-        {
-          "id": 146,
-          "name": "Massachusetts"
-        },
-        {
-          "id": 147,
-          "name": "Michigan"
-        },
-        {
-          "id": 148,
-          "name": "Minnesota"
-        },
-        {
-          "id": 149,
-          "name": "Mississippi"
-        },
-        {
-          "id": 150,
-          "name": "Missouri"
-        },
-        {
-          "id": 151,
-          "name": "Montana"
-        },
-        {
-          "id": 152,
-          "name": "Nebraska"
-        },
-        {
-          "id": 153,
-          "name": "Nevada"
-        },
-        {
-          "id": 154,
-          "name": "New Hampshire"
-        },
-        {
-          "id": 155,
-          "name": "New Jersey"
-        },
-        {
-          "id": 156,
-          "name": "New Mexico"
-        },
-        {
-          "id": 157,
-          "name": "New York"
-        },
-        {
-          "id": 158,
-          "name": "North Carolina"
-        },
-        {
-          "id": 159,
-          "name": "North Dakota"
-        },
-        {
-          "id": 160,
-          "name": "Ohio"
-        },
-        {
-          "id": 161,
-          "name": "Oklahoma"
-        },
-        {
-          "id": 162,
-          "name": "Oregon"
-        },
-        {
-          "id": 163,
-          "name": "Pennsylvania"
-        },
-        {
-          "id": 164,
-          "name": "Rhode Island"
-        },
-        {
-          "id": 165,
-          "name": "South Carolina"
-        },
-        {
-          "id": 166,
-          "name": "South Dakota"
-        },
-        {
-          "id": 167,
-          "name": "Tennessee"
-        },
-        {
-          "id": 168,
-          "name": "Texas"
-        },
-        {
-          "id": 169,
-          "name": "Utah"
-        },
-        {
-          "id": 170,
-          "name": "Vermont"
-        },
-        {
-          "id": 171,
-          "name": "Virginia"
-        },
-        {
-          "id": 172,
-          "name": "Washington"
-        },
-        {
-          "id": 173,
-          "name": "West Virginia"
-        },
-        {
-          "id": 174,
-          "name": "Wisconsin"
-        },
-        {
-          "id": 175,
-          "name": "Wyoming"
+          "id": 221,
+          "name": "West South Central"
         }
       ]
     },
@@ -768,139 +436,44 @@
       "name": "us-senate-2024",
       "projection": "albersUsa",
       "neutralFill": "#e5e7eb",
+      "hideMajority": true,
       "postcodeSupported": false,
       "regions": [
         {
-          "id": 176,
-          "name": "Arizona"
+          "id": 231,
+          "name": "East North Central"
         },
         {
-          "id": 177,
-          "name": "California"
+          "id": 233,
+          "name": "East South Central"
         },
         {
-          "id": 178,
-          "name": "Connecticut"
+          "id": 234,
+          "name": "Mid-Atlantic"
         },
         {
-          "id": 179,
-          "name": "Delaware"
+          "id": 227,
+          "name": "Mountain"
         },
         {
-          "id": 180,
-          "name": "Florida"
+          "id": 229,
+          "name": "New England"
         },
         {
-          "id": 181,
-          "name": "Hawaii"
+          "id": 228,
+          "name": "Pacific"
         },
         {
-          "id": 182,
-          "name": "Indiana"
+          "id": 230,
+          "name": "South Atlantic"
         },
         {
-          "id": 183,
-          "name": "Maine"
+          "id": 232,
+          "name": "West North Central"
         },
         {
-          "id": 184,
-          "name": "Maryland"
-        },
-        {
-          "id": 185,
-          "name": "Massachusetts"
-        },
-        {
-          "id": 186,
-          "name": "Michigan"
-        },
-        {
-          "id": 187,
-          "name": "Minnesota"
-        },
-        {
-          "id": 188,
-          "name": "Mississippi"
-        },
-        {
-          "id": 189,
-          "name": "Missouri"
-        },
-        {
-          "id": 190,
-          "name": "Montana"
-        },
-        {
-          "id": 191,
-          "name": "Nebraska"
-        },
-        {
-          "id": 192,
-          "name": "Nevada"
-        },
-        {
-          "id": 193,
-          "name": "New Jersey"
-        },
-        {
-          "id": 194,
-          "name": "New Mexico"
-        },
-        {
-          "id": 195,
-          "name": "New York"
-        },
-        {
-          "id": 196,
-          "name": "North Dakota"
-        },
-        {
-          "id": 197,
-          "name": "Ohio"
-        },
-        {
-          "id": 198,
-          "name": "Pennsylvania"
-        },
-        {
-          "id": 199,
-          "name": "Rhode Island"
-        },
-        {
-          "id": 200,
-          "name": "Tennessee"
-        },
-        {
-          "id": 201,
-          "name": "Texas"
-        },
-        {
-          "id": 202,
-          "name": "Utah"
-        },
-        {
-          "id": 203,
-          "name": "Vermont"
-        },
-        {
-          "id": 204,
-          "name": "Virginia"
-        },
-        {
-          "id": 205,
-          "name": "Washington"
-        },
-        {
-          "id": 206,
-          "name": "West Virginia"
-        },
-        {
-          "id": 207,
-          "name": "Wisconsin"
-        },
-        {
-          "id": 208,
-          "name": "Wyoming"
+          "id": 235,
+          "name": "West South Central"
         }
       ]
     },

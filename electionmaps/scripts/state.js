@@ -723,12 +723,21 @@ export class ElectionSummary {
     const totalSeats = Number(data.totalSeats || 0);
     const topLabel = manifest.labelParty(top?.party || 'others');
 
-    // Electoral-vote tally (presidential): report the leader's EV against the 270-to-win line.
+    // Seats-up views (e.g. the US Senate, which shows only the seats contested this cycle)
+    // have no meaningful chamber majority — show just the election name.
+    if (state.mapConfig?.hideMajority) {
+      return electionName;
+    }
+
+    // Electoral-vote tally (presidential): the winner's EV and the margin of victory over
+    // the runner-up (the electoral-vote difference, not a count of states).
     if (state.mapConfig?.tally === 'electoralVotes') {
       const toWin = Math.floor(totalSeats / 2) + 1;
+      const runnerUp = Number(data.parties[1]?.seats || 0);
+      const margin = leadSeats - runnerUp;
       return leadSeats >= toWin
-        ? `${electionName} · ${topLabel} ${formatInt(leadSeats)} electoral votes (${toWin} to win)`
-        : `${electionName} · No majority - ${topLabel} leads with ${formatInt(leadSeats)} (${toWin} to win)`;
+        ? `${electionName} · ${topLabel} ${formatInt(leadSeats)} EV · Margin of victory: ${formatInt(margin)}`
+        : `${electionName} · No majority — ${topLabel} leads with ${formatInt(leadSeats)} EV (${toWin} to win)`;
     }
 
     const majorityThreshold = totalSeats / 2;

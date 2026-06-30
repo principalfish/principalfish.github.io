@@ -85,6 +85,6 @@ def test_import_presidential_sets_electoral_votes_and_regions(db: Database, tmp_
     assert seats["California"].electoral_votes == 54
     assert seats["Maine CD-2"].electoral_votes == 1
     regions = {r.name for r in db.get_regions_for_map(pres_map.id)}
-    assert regions == {"California", "Maine"}  # Maine CD-2 groups under "Maine"
+    assert regions == {"Pacific", "New England"}  # CA -> Pacific; Maine + CD-2 -> New England
     election = db.get_election_by_name("2024 US Presidential Election")
     assert election is not None and election.type == ElectionType.us_presidential

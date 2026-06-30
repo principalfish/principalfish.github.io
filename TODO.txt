@@ -1,6 +1,10 @@
 
 add hover text on map - some thought on seatPreview
 
+holyrood 2026 seat popup missing candidate names - holyrood importer stores party-level
+votes only (no candidate_name), so payload rows have no name and fall back to party label.
+populate candidate names in the holyrood import to fix.
+
 
 redo data back end structure
 - ballot type on poll

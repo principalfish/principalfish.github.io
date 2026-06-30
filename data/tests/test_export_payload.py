@@ -147,6 +147,28 @@ class TestBuildResultPayload:
         payload = build_result_payload(seats, votes)
         assert payload["seats"][0]["r"] == 0
 
+    def test_candidate_name_appended_only_when_present(self) -> None:
+        set_others_party_id(0)
+        seats = [_seat(1, "Alpha")]
+        votes = [
+            _Vote(1, 100.0, party=_Party(1, "Labour"), elected=True, candidate_name="Alice"),
+            _Vote(1, 60.0, party=_Party(2, "Conservative"), candidate_name="Bob"),
+            _Vote(1, 10.0, party=_Party(3, "Green")),  # no name -> stays 2-element
+        ]
+        payload = build_result_payload(seats, votes)
+        assert payload["seats"][0]["p"] == [[1, 100, "Alice"], [2, 60, "Bob"], [3, 10]]
+
+    def test_aggregated_party_keeps_leading_candidate_name(self) -> None:
+        set_others_party_id(0)
+        lab = _Party(1, "Labour")
+        seats = [_seat(1, "Alpha")]
+        votes = [
+            _Vote(1, 20.0, party=lab, candidate_name="Low"),
+            _Vote(1, 80.0, party=lab, elected=True, candidate_name="High"),
+        ]
+        payload = build_result_payload(seats, votes)
+        assert payload["seats"][0]["p"] == [[1, 100, "High"]]
+
 
 class TestCompactVotesToDict:
     """Skips malformed rows, empty keys, and non-positive totals."""

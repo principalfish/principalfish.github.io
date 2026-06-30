@@ -291,6 +291,9 @@ export class Seat {
     this.winner = manifest.resolvePartyRef(input?.winner ?? 'others');
     this.votes = Seat.#normalizeVotes(input?.votes);
     this.turnout = Object.values(this.votes).reduce((sum, v) => sum + Number(v || 0), 0);
+    // Optional candidate names by party key; absent for projections / older data,
+    // where the UI falls back to the party label.
+    this.candidates = { ...(input?.candidates || {}) };
   }
 
   /**
@@ -304,7 +307,26 @@ export class Seat {
       region: Seat.#resolveRegion(rawSeat?.r),
       winner: rawSeat?.w,
       votes: Seat.#decodeCompactVotes(rawSeat?.p),
+      candidates: Seat.#decodeCandidates(rawSeat?.p),
     });
+  }
+
+  /**
+   * Decodes candidate names from the compact `p` array into a `{ partyKey: name }` map.
+   * Each entry is `[partyRef, voteTotal, name?]`; the optional third element is the
+   * party's leading-candidate name. Entries without a name are skipped.
+   * @param {Array<[number|string, number, string]>|undefined} p - Compact party-vote rows.
+   * @returns {Object<string, string>} Map of canonical party key to candidate name.
+   */
+  static #decodeCandidates(p) {
+    const candidates = {};
+    if (!Array.isArray(p)) return candidates;
+    p.forEach((entry) => {
+      if (!Array.isArray(entry) || entry.length < 3 || !entry[2]) return;
+      const partyKey = manifest.resolvePartyRef(entry[0]);
+      if (partyKey && !candidates[partyKey]) candidates[partyKey] = String(entry[2]);
+    });
+    return candidates;
   }
 
   /**

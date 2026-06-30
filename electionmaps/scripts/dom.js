@@ -2185,15 +2185,17 @@ const seatPopupList = document.getElementById('mapsSeatPopupList');
  * @param {string} party - Party key for colour lookup.
  * @param {number} barWidth - Bar width percentage (0–75), scaled relative to the leading row.
  * @param {string} valuesHtml - Inner HTML for the .maps-popup-values div.
+ * @param {string} [label] - Row label; defaults to the party name when omitted (e.g. a
+ *   candidate name is passed for constituency popups, party labels for region summaries).
  * @returns {HTMLDivElement}
  */
-function buildPopupRow(party, barWidth, valuesHtml) {
+function buildPopupRow(party, barWidth, valuesHtml, label) {
   const item = document.createElement('div');
   item.className = 'maps-popup-row';
   item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
   item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(party));
   item.innerHTML = `
-    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(party)}"></span>${escapeHtml(manifest.labelParty(party))}</div>
+    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(party)}"></span>${escapeHtml(label ?? manifest.labelParty(party))}</div>
     <div class="maps-popup-values">${valuesHtml}</div>
   `;
   return item;
@@ -2214,8 +2216,9 @@ function renderPopupRows(rows, getValuesHtml) {
     // Bar width is proportional to pct / maxPct, capped at 75 to leave room for labels.
     const barWidth = maxPct > 0 ? Math.max(0, Math.min(75, (row.pct / maxPct) * 75)) : 0;
     // getValuesHtml supplies the right-side content (vote share, delta, seat count, etc.)
-    // which differs between the region popup and the constituency popup.
-    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row)));
+    // which differs between the region popup and the constituency popup. row.label, when
+    // present, overrides the party label (e.g. a candidate name in the seat popup).
+    seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label));
   });
 }
 
@@ -2319,7 +2322,8 @@ function renderSeatPopup(seatName) {
       const pct = currentTurnout > 0 ? (voteTotal / currentTurnout) * 100 : 0;
       const prevPct = comparisonTurnout > 0 ? ((Number(comparisonVotes[party] || 0) / comparisonTurnout) * 100) : null;
       const delta = prevPct == null ? null : pct - prevPct;
-      return { party, pct, delta };
+      // Label by candidate name where available (name mode); party label otherwise.
+      return { party, pct, delta, label: seat.candidates?.[party] };
     })
     .sort((a, b) => b.pct - a.pct)
     .slice(0, 8);

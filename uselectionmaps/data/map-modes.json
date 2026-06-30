@@ -1,0 +1,358 @@
+{
+  "defaultElection": "2024-us-house",
+  "elections": [
+    {
+      "id": "2024-us-house",
+      "name": "2024 Election",
+      "type": "us_house",
+      "mapId": 21,
+      "parliament": "us_house"
+    },
+    {
+      "id": "2024-us-president",
+      "name": "2024 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential"
+    },
+    {
+      "id": "current-senate",
+      "name": "Current Senate",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate",
+      "multiMember": true
+    },
+    {
+      "id": "2024-us-senate",
+      "name": "2024 Election",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate"
+    }
+  ],
+  "misc": {
+    "title": "US Elections",
+    "parliamentTabs": [
+      {
+        "parliament": "us_house",
+        "label": "House"
+      },
+      {
+        "parliament": "us_presidential",
+        "label": "President"
+      },
+      {
+        "parliament": "us_senate",
+        "label": "Senate"
+      }
+    ]
+  },
+  "parliamentFeatures": {
+    "us_house": {
+      "features": []
+    },
+    "us_presidential": {
+      "features": []
+    },
+    "us_senate": {
+      "features": []
+    }
+  },
+  "mapModes": {
+    "21": {
+      "name": "us-house-2024",
+      "projection": "albersUsa",
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 216,
+          "name": "East North Central"
+        },
+        {
+          "id": 210,
+          "name": "East South Central"
+        },
+        {
+          "id": 217,
+          "name": "Mid-Atlantic"
+        },
+        {
+          "id": 212,
+          "name": "Mountain"
+        },
+        {
+          "id": 213,
+          "name": "New England"
+        },
+        {
+          "id": 209,
+          "name": "Pacific"
+        },
+        {
+          "id": 214,
+          "name": "South Atlantic"
+        },
+        {
+          "id": 215,
+          "name": "West North Central"
+        },
+        {
+          "id": 211,
+          "name": "West South Central"
+        }
+      ]
+    },
+    "22": {
+      "name": "us-president-2024",
+      "projection": "albersUsa",
+      "tally": "electoralVotes",
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 224,
+          "name": "East North Central"
+        },
+        {
+          "id": 218,
+          "name": "East South Central"
+        },
+        {
+          "id": 226,
+          "name": "Mid-Atlantic"
+        },
+        {
+          "id": 220,
+          "name": "Mountain"
+        },
+        {
+          "id": 222,
+          "name": "New England"
+        },
+        {
+          "id": 219,
+          "name": "Pacific"
+        },
+        {
+          "id": 223,
+          "name": "South Atlantic"
+        },
+        {
+          "id": 225,
+          "name": "West North Central"
+        },
+        {
+          "id": 221,
+          "name": "West South Central"
+        }
+      ]
+    },
+    "23": {
+      "name": "us-senate-2024",
+      "projection": "albersUsa",
+      "neutralFill": "#e5e7eb",
+      "hideMajority": true,
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 231,
+          "name": "East North Central"
+        },
+        {
+          "id": 233,
+          "name": "East South Central"
+        },
+        {
+          "id": 234,
+          "name": "Mid-Atlantic"
+        },
+        {
+          "id": 227,
+          "name": "Mountain"
+        },
+        {
+          "id": 229,
+          "name": "New England"
+        },
+        {
+          "id": 228,
+          "name": "Pacific"
+        },
+        {
+          "id": 230,
+          "name": "South Atlantic"
+        },
+        {
+          "id": 232,
+          "name": "West North Central"
+        },
+        {
+          "id": 235,
+          "name": "West South Central"
+        }
+      ]
+    }
+  },
+  "files": {
+    "elections": {
+      "mapsById": {
+        "21": "maps/map-21.topo.json",
+        "22": "maps/map-22.topo.json",
+        "23": "maps/map-23.topo.json"
+      },
+      "electionsById": {
+        "2024-us-house": "results/us-house-2024.json",
+        "2024-us-president": "results/us-president-2024.json",
+        "2024-us-senate": "results/us-senate-2024.json",
+        "current-senate": "results/senate-current.json"
+      }
+    },
+    "meta": {}
+  },
+  "parties": [
+    {
+      "id": 16,
+      "key": "alba",
+      "name": "Alba Party",
+      "colour": "#005EB8"
+    },
+    {
+      "id": 10,
+      "key": "alliance",
+      "name": "Alliance",
+      "colour": "#F6CB2F"
+    },
+    {
+      "id": 4,
+      "key": "conservative",
+      "name": "Conservative",
+      "colour": "#0087DC"
+    },
+    {
+      "id": 20,
+      "key": "democrat",
+      "name": "Democratic",
+      "colour": "#1375E1"
+    },
+    {
+      "id": 9,
+      "key": "dup",
+      "name": "Democratic Unionist Party",
+      "colour": "#D46A4C"
+    },
+    {
+      "id": 6,
+      "key": "green",
+      "name": "Green",
+      "colour": "#6AB023"
+    },
+    {
+      "id": 22,
+      "key": "independent",
+      "name": "Independent",
+      "colour": "#9B59B6"
+    },
+    {
+      "id": 1,
+      "key": "labour",
+      "name": "Labour",
+      "colour": "#E4003B"
+    },
+    {
+      "id": 18,
+      "key": "leave",
+      "name": "Leave",
+      "colour": "#1D3565"
+    },
+    {
+      "id": 5,
+      "key": "libdems",
+      "name": "Liberal Democrats",
+      "colour": "#FAA61A"
+    },
+    {
+      "id": 23,
+      "key": "libertarian",
+      "name": "Libertarian",
+      "colour": "#FED105"
+    },
+    {
+      "id": 7,
+      "key": "other",
+      "name": "Other",
+      "colour": "#808080"
+    },
+    {
+      "id": 15,
+      "key": "others",
+      "name": "Others",
+      "colour": "#808080"
+    },
+    {
+      "id": 3,
+      "key": "plaidcymru",
+      "name": "Plaid Cymru",
+      "colour": "#005B54"
+    },
+    {
+      "id": 2,
+      "key": "reform",
+      "name": "Reform UK",
+      "colour": "#12B6CF"
+    },
+    {
+      "id": 19,
+      "key": "remain",
+      "name": "Remain",
+      "colour": "#F4A11D"
+    },
+    {
+      "id": 21,
+      "key": "republican",
+      "name": "Republican",
+      "colour": "#E81B23"
+    },
+    {
+      "id": 17,
+      "key": "scottishgreens",
+      "name": "Scottish Greens",
+      "colour": "#63BB46"
+    },
+    {
+      "id": 8,
+      "key": "snp",
+      "name": "Scottish National Party",
+      "colour": "#FFF95D"
+    },
+    {
+      "id": 12,
+      "key": "sdlp",
+      "name": "SDLP",
+      "colour": "#2AA82C"
+    },
+    {
+      "id": 13,
+      "key": "sinnfein",
+      "name": "Sinn Féin",
+      "colour": "#326760"
+    },
+    {
+      "id": 14,
+      "key": "ukip",
+      "name": "UK Independence Party",
+      "colour": "#70147A"
+    },
+    {
+      "id": 11,
+      "key": "uu",
+      "name": "Ulster Unionist Party",
+      "colour": "#48A5EE"
+    },
+    {
+      "id": 24,
+      "key": "usgreen",
+      "name": "US Green",
+      "colour": "#17AA5C"
+    }
+  ]
+}

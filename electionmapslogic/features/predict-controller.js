@@ -14,19 +14,21 @@
 // Apply / Reset clicks call runPredictProjection, which re-projects from the model and
 // re-renders.
 
-import { state, manifest, ElectionData, buildRouteSearchParams } from './state.js';
+import { state, manifest, ElectionData, buildRouteSearchParams } from '../state.js';
 import { predictModelClassFor } from './predict.js';
-import { fetchJson } from './files.js';
+import { fetchJson } from '../files.js';
 import {
   renderHeader,
   renderMap,
   renderMapControlOptions,
-  renderPredict,
   syncRightPanelHeight,
+  initRegionTable,
+} from '../dom.js';
+import {
+  renderPredict,
   setPredictActionHandlers,
   setPredictWindowVisible,
-  initRegionTable,
-} from './dom.js';
+} from './predict-view.js';
 
 // Cached current-model simulation seats (for the "Use current forecast" button), one entry
 // per parliament. Prefetched in the background from activatePredictView so the first Apply

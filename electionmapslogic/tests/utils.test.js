@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../scripts/state.js', () => ({
+vi.mock('../state.js', () => ({
   manifest: {
     partiesByKey: {
       labour: { name: 'Labour', colour: '#E4003B' },
@@ -11,7 +11,7 @@ vi.mock('../scripts/state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass } from '../scripts/utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass } from '../utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {

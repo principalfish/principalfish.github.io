@@ -4,7 +4,7 @@ Reads the ``{ "TX-01": {seatInfo, partyInfo}, ... }`` JSON produced by
 ``convert_538_house.py`` and loads it as a ``us_house`` election: a Map (fixed id 21,
 so manifest wiring is deterministic), one Region per state, 435 Seats named by district
 code (e.g. ``TX-01``), and per-party Vote rows. Seat geometry lives in the frontend
-TopoJSON (``electionmaps/data/maps/map-21.topo.json``), not the DB.
+TopoJSON (``uselectionmaps/data/maps/map-21.topo.json``), not the DB.
 
 Run ``import_parties.py`` first so the US Party rows exist.
 

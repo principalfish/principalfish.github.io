@@ -20,7 +20,7 @@ geometry stays in lon/lat and Alaska/Hawaii are placed by the projection, not th
 Usage:
     python old_data/scripts/usa/build_house_topojson.py \
         --shp cd119/cb_2024_us_cd119_500k.shp \
-        --out ../electionmaps/data/maps/map-21.topo.json
+        --out ../uselectionmaps/data/maps/map-21.topo.json
 """
 
 from __future__ import annotations

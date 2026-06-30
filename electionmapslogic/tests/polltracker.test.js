@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { parsePollTrackerData } from '../scripts/polltracker.js';
-import { manifest } from '../scripts/state.js';
-import { DEFAULT_PARTY_COLOUR } from '../scripts/utils.js';
+import { parsePollTrackerData } from '../features/polltracker.js';
+import { manifest } from '../state.js';
+import { DEFAULT_PARTY_COLOUR } from '../utils.js';
 
 describe('parsePollTrackerData', () => {
   // Fully specify every key so init()'s Object.assign + re-hydrate leaves no leakage from

@@ -13,8 +13,8 @@
 // unchanged. The original baseline ElectionData becomes state.comparisonElectionData so
 // gains-from-baseline and the comparison column work without further wiring.
 
-import { state, manifest, Seat } from './state.js';
-import { normalizeRegionKey, roundShare, base64urlEncode, base64urlDecode } from './utils.js';
+import { state, manifest, Seat } from '../state.js';
+import { normalizeRegionKey, roundShare, base64urlEncode, base64urlDecode } from '../utils.js';
 
 /**
  * Computes baseline regional vote share percentages from a seat array. For each party in

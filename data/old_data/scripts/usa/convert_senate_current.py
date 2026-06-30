@@ -15,7 +15,7 @@ the DB/election export); re-run it when the chamber changes.
 Usage:
     python old_data/scripts/usa/convert_senate_current.py \
         --legislators /path/to/legislators-current.json \
-        --out ../electionmaps/data/results/senate-current.json
+        --out ../uselectionmaps/data/results/senate-current.json
 """
 
 from __future__ import annotations

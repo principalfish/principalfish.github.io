@@ -12,8 +12,8 @@
     <script src="../site/ga-setup.js"></script>
 
     <link rel="stylesheet" href="../site/topbar.min.css" />
-    <link rel="stylesheet" href="../site/styles.min.css" />
-    <link rel="stylesheet" href="../electionmaps/mobile-sidebar.min.css" />
+    <link rel="stylesheet" href="../electionmapslogic/maps.min.css" />
+    <link rel="stylesheet" href="../electionmapslogic/mobile-sidebar.min.css" />
   </head>
   <body class="maps-page" data-topbar-back-href="../">
     <div class="maps-background" aria-hidden="true"></div>
@@ -290,17 +290,16 @@
     </main>
 
     <script type="module" src="../site/topbar.min.js"></script>
-    <!-- US elections page: shares the electionmaps engine + data dir, restricted to the US
-         contests, branded "US Elections", landing on the House. -->
+    <!-- US elections page: shares the /electionmapslogic engine, with its own data dir
+         (uselectionmaps/data), branded "US Elections", landing on the House. -->
     <script>
       window.MAPS_PAGE = {
         parliaments: ['us_house', 'us_presidential', 'us_senate'],
         defaultParliament: 'us_house',
         title: 'US Elections',
-        dataBase: '../electionmaps/data',
       };
     </script>
-    <script type="module" src="../electionmaps/electionmaps.js"></script>
-    <script type="module" src="../electionmaps/mobile-sidebar.min.js"></script>
+    <script type="module" src="./uselectionmaps.min.js"></script>
+    <script type="module" src="../electionmapslogic/mobile-sidebar.min.js"></script>
   </body>
 </html>

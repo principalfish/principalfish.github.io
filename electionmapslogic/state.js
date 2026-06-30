@@ -2,7 +2,7 @@
 // All modules import these objects and mutate their properties directly.
 // A single shared object reference means every importer sees the same state.
 
-import * as d3 from '../../site/vendor/d3.v7.esm.js';
+import * as d3 from '../site/vendor/d3.v7.esm.js';
 import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
 

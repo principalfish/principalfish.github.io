@@ -1,23 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// predict-controller imports the DOM render layer (dom.js) at module load, which touches
-// document/observers. Stub it so the module imports cleanly in Node. files.js is stubbed so
-// the simulation fetch is controllable.
-vi.mock('../scripts/dom.js', () => ({
+// predict-controller imports the DOM render layer (dom.js) and the predict view module
+// (predict-view.js) at module load, both of which touch document/observers. Stub them so the
+// module imports cleanly in Node. files.js is stubbed so the simulation fetch is controllable.
+vi.mock('../dom.js', () => ({
   renderHeader: vi.fn(),
   renderMap: vi.fn(),
   renderMapControlOptions: vi.fn(),
-  renderPredict: vi.fn(),
   syncRightPanelHeight: vi.fn(),
-  setPredictActionHandlers: vi.fn(),
-  setPredictWindowVisible: vi.fn(),
   initRegionTable: vi.fn(),
 }));
-vi.mock('../scripts/files.js', () => ({ fetchJson: vi.fn() }));
+vi.mock('../features/predict-view.js', () => ({
+  renderPredict: vi.fn(),
+  setPredictActionHandlers: vi.fn(),
+  setPredictWindowVisible: vi.fn(),
+}));
+vi.mock('../files.js', () => ({ fetchJson: vi.fn() }));
 
-import { getPredictBaseElection, ensurePredictSimulation } from '../scripts/predict-controller.js';
-import { manifest, state } from '../scripts/state.js';
-import { fetchJson } from '../scripts/files.js';
+import { getPredictBaseElection, ensurePredictSimulation } from '../features/predict-controller.js';
+import { manifest, state } from '../state.js';
+import { fetchJson } from '../files.js';
 
 describe('getPredictBaseElection', () => {
   beforeEach(() => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { Seat, state } from '../scripts/state.js';
+import { Seat, state } from '../state.js';
 
 describe('Seat.voteSharePct', () => {
   it('calculates share against the explicit turnout when present', () => {

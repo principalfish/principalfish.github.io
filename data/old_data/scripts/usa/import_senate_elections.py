@@ -4,7 +4,7 @@ Reads the ``{ "Texas": {seatInfo, partyInfo}, ... }`` JSON produced by
 ``convert_538_senate.py`` and loads it as a ``us_senate`` election: a Map (fixed id 23),
 one Region per state, one Seat per state with a race that cycle (named by state), and
 per-party Vote rows. States not up that cycle have no seat and render with the map's
-neutral fill. Seat geometry lives in ``electionmaps/data/maps/map-23.topo.json``.
+neutral fill. Seat geometry lives in ``uselectionmaps/data/maps/map-23.topo.json``.
 
 Run ``import_parties.py`` first so the US Party rows exist.
 

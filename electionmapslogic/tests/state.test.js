@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams } from '../scripts/state.js';
+import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams } from '../state.js';
 
 // Restores the manifest singleton to a fully-zeroed, hydrated baseline so a configuring
 // block can't leak party/region/file/feature lookups into a later block. init() does

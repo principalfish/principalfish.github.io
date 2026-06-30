@@ -5,9 +5,9 @@ import {
   dhondtAllocate,
   FPTPPredict,
   AMSPredict,
-} from '../scripts/predict.js';
-import { state, Seat } from '../scripts/state.js';
-import { base64urlEncode } from '../scripts/utils.js';
+} from '../features/predict.js';
+import { state, Seat } from '../state.js';
+import { base64urlEncode } from '../utils.js';
 
 // A bare aggregate config matching the shape #buildAggregateConfig produces: a key plus
 // an isMember predicate. Tests build these inline rather than going through the manifest.

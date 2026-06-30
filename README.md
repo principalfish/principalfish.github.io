@@ -10,7 +10,9 @@ pipeline that powers its interactive UK election maps.
 | `index.html`, `404.html`, `CNAME` | Landing page, error page, GitHub Pages custom domain |
 | `site/` | Shared frontend assets — styles, top bar, Google Analytics, vendored `d3`/`topojson` bundles |
 | `bio/` | Static bio page |
-| `electionmaps/` | Interactive UK election maps (D3 + TopoJSON); `data/` = exported maps/results, `scripts/` = JS modules, `tests/` = Vitest specs |
+| `electionmapslogic/` | Shared election-maps engine (D3 + TopoJSON): core modules (`state`/`dom`/`utils`/`files`/`app`), `features/` (predict + poll tracker, opt-in per page), `maps.css`, `mobile-sidebar`, `tests/` = Vitest specs |
+| `electionmaps/` | UK election-maps page shell — `index.html`, the `electionmaps.js` entry (bundled to `electionmaps.min.js`), and `data/` = UK exported maps/results + `map-modes(-shell).json` |
+| `uselectionmaps/` | US election-maps page shell — `index.html`, the `uselectionmaps.js` entry (bundled to `uselectionmaps.min.js`), and `data/` = US exported maps/results + `map-modes(-shell).json` |
 | `guesstheyear/` | "Guess the year" game — static frontend + Python helpers (`app.py`, `wiki.py`, `export.py`) |
 | `referdle-solver/` | Referdle solver — static frontend (`js/`, `css/`, `data/`) |
 | `imgs/` | Shared images and logos |
@@ -28,7 +30,7 @@ pipeline that powers its interactive UK election maps.
 | `old_data/` | Base-data importers (TopoJSON maps, parties, general elections) |
 | `polls/` | Wikipedia-driven poll importers |
 | `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective) |
-| `scripts/` | Static export scripts that generate files for `electionmaps/` |
+| `scripts/` | Static export scripts that partition elections by parliament into the per-page data dirs (`electionmaps/data`, `uselectionmaps/data`) |
 | `tests/` | Pytest suite — run with `./run_tests.sh` (strict mypy, then pytest) |
 
 ## Static site local preview (`/`, `/bio`, `/electionmaps`)

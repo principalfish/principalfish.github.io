@@ -19,7 +19,7 @@ Usage:
     python old_data/scripts/usa/build_presidential_topojson.py \
         --state-shp state_geo/cb_2024_us_state_500k.shp \
         --cd-shp cd119/cb_2024_us_cd119_500k.shp \
-        --out ../electionmaps/data/maps/map-22.topo.json
+        --out ../uselectionmaps/data/maps/map-22.topo.json
 """
 
 from __future__ import annotations

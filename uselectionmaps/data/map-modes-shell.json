@@ -1,0 +1,51 @@
+{
+  "defaultElection": "2024-us-house",
+  "misc": {
+    "title": "US Elections",
+    "parliamentTabs": [
+      {
+        "parliament": "us_house",
+        "label": "House"
+      },
+      {
+        "parliament": "us_presidential",
+        "label": "President"
+      },
+      {
+        "parliament": "us_senate",
+        "label": "Senate"
+      }
+    ]
+  },
+  "parliamentFeatures": {
+    "us_house": {
+      "features": []
+    },
+    "us_presidential": {
+      "features": []
+    },
+    "us_senate": {
+      "features": []
+    }
+  },
+  "mapModes": {
+    "21": {
+      "name": "us-house-2024",
+      "projection": "albersUsa",
+      "postcodeSupported": false
+    },
+    "22": {
+      "name": "us-president-2024",
+      "projection": "albersUsa",
+      "tally": "electoralVotes",
+      "postcodeSupported": false
+    },
+    "23": {
+      "name": "us-senate-2024",
+      "projection": "albersUsa",
+      "neutralFill": "#e5e7eb",
+      "hideMajority": true,
+      "postcodeSupported": false
+    }
+  }
+}

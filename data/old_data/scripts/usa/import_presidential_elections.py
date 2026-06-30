@@ -6,7 +6,7 @@ Reads the ``{ "California": {seatInfo, partyInfo}, ... }`` JSON produced by
 Maine/Nebraska statewide and district units), each carrying ``electoral_votes``, and
 per-party Vote rows. The two statewide ME/NE units have no map polygon — they are
 tally-only — but still hold their 2 EV. Seat geometry lives in the frontend TopoJSON
-(``electionmaps/data/maps/map-22.topo.json``).
+(``uselectionmaps/data/maps/map-22.topo.json``).
 
 Run ``import_parties.py`` first so the US Party rows exist.
 

@@ -47,7 +47,10 @@ SUPPLEMENTAL_LEGACY_ELECTION_NAMES = {
 }
 
 
-def reposition_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> None:
+def reposition_supplemental_entries(
+    manifest_entries: list[dict[str, Any]],
+    parliaments: set[str] | None = None,
+) -> None:
     """Re-apply each supplemental's ``insertBeforeId`` / ``insertAfterId`` position in-place.
 
     ``reorder_manifest_entries`` sorts entries by the previous manifest's order, which can
@@ -60,6 +63,8 @@ def reposition_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> N
     """
     by_id = {entry.get("id"): entry for entry in manifest_entries}
     for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
+        if parliaments is not None and supplemental.get("parliament", "westminster") not in parliaments:
+            continue
         before_id = supplemental.get("insertBeforeId")
         after_id = supplemental.get("insertAfterId")
         entry = by_id.get(supplemental["id"])
@@ -82,6 +87,7 @@ def apply_supplemental_legacy_elections(
     dry_run: bool,
     manifest_parties: list[dict[str, Any]] | None = None,
     manifest_regions_by_map_id: dict[str, list[dict[str, Any]]] | None = None,
+    parliaments: set[str] | None = None,
 ) -> None:
     """Write result files and inject manifest entries for supplemental legacy elections.
 
@@ -110,6 +116,8 @@ def apply_supplemental_legacy_elections(
             under ``legacy_files_dir``.
     """
     for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
+        if parliaments is not None and supplemental.get("parliament", "westminster") not in parliaments:
+            continue
         election_id = supplemental["id"]
         map_id = int(supplemental["mapId"])
         result_filename = supplemental["resultFile"]

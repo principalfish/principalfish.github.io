@@ -303,6 +303,7 @@ def main() -> None:
                     ElectionType.holyrood_general,
                     ElectionType.us_house,
                     ElectionType.us_presidential,
+                    ElectionType.us_senate,
                 ]))
                 .options(joinedload(Election.map))
                 .order_by(Election.year.desc(), Election.name.asc())

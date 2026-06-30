@@ -2858,8 +2858,10 @@ function renderTopoMap(preserveZoom = false) {
     .attr('fill', (datum) => {
       const seatKey = seatLookupKey(MapInteraction.seatNameFromFeature(datum));
       const seat = state.electionData.seatsByKey.get(seatKey);
-      // Feature has no name, or no matching seat in the election data — render as others.
-      if (!seat) return manifest.colourParty('others');
+      // Feature has no matching seat in the election data — e.g. a US state with no Senate
+      // race this cycle. Use the map's neutralFill when configured (so "not contested"
+      // reads as neutral, not an Others win), otherwise the Others colour.
+      if (!seat) return state.mapConfig?.neutralFill || manifest.colourParty('others');
 
       // Active filter excludes this seat — render as greyed-out slate rather than hiding,
       // so the map shape remains intact and the filter effect is clear.

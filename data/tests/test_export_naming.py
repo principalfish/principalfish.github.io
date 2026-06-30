@@ -198,6 +198,10 @@ class TestFileStemForElection:
         election = _Election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
         assert file_stem_for_election(election) == "us-president-2024"
 
+    def test_us_senate(self) -> None:
+        election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
+        assert file_stem_for_election(election) == "us-senate-2024"
+
     def test_fallback_slugifies_type_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)
         assert file_stem_for_election(election) == "by-election-2025-some-by-election"
@@ -223,6 +227,10 @@ class TestManifestIdForElection:
     def test_us_president(self) -> None:
         election = _Election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
         assert manifest_id_for_election(election) == "2024-us-president"
+
+    def test_us_senate(self) -> None:
+        election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
+        assert manifest_id_for_election(election) == "2024-us-senate"
 
     def test_fallback_slugifies_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)

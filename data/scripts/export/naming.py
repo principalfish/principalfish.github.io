@@ -191,6 +191,9 @@ def file_stem_for_election(election: Election) -> str:
     if election.type == ElectionType.us_presidential:
         return f"us-president-{election.year}"
 
+    if election.type == ElectionType.us_senate:
+        return f"us-senate-{election.year}"
+
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
     if election.type == ElectionType.uk_general and general_match:
         year = general_match.group(1)
@@ -233,6 +236,9 @@ def manifest_id_for_election(election: Election) -> str:
     if election.type == ElectionType.us_presidential:
         return f"{election.year}-us-president"
 
+    if election.type == ElectionType.us_senate:
+        return f"{election.year}-us-senate"
+
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
     if election.type == ElectionType.uk_general and general_match:
         return f"{general_match.group(1)}-general"
@@ -266,7 +272,7 @@ def manifest_name_for_election(election: Election) -> str:
     if election.type == ElectionType.model_uns:
         return "Current prediction"
 
-    if election.type in (ElectionType.us_house, ElectionType.us_presidential):
+    if election.type in (ElectionType.us_house, ElectionType.us_presidential, ElectionType.us_senate):
         return f"{election.year} Election"
 
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)

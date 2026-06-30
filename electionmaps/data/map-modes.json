@@ -144,6 +144,13 @@
       "type": "us_presidential",
       "mapId": 22,
       "parliament": "us_presidential"
+    },
+    {
+      "id": "2024-us-senate",
+      "name": "2024 Election",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate"
     }
   ],
   "misc": {
@@ -164,6 +171,10 @@
       {
         "parliament": "us_presidential",
         "label": "US President"
+      },
+      {
+        "parliament": "us_senate",
+        "label": "US Senate"
       }
     ]
   },
@@ -327,6 +338,9 @@
       "features": []
     },
     "us_presidential": {
+      "features": []
+    },
+    "us_senate": {
       "features": []
     }
   },
@@ -750,6 +764,146 @@
         }
       ]
     },
+    "23": {
+      "name": "us-senate-2024",
+      "projection": "albersUsa",
+      "neutralFill": "#e5e7eb",
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 176,
+          "name": "Arizona"
+        },
+        {
+          "id": 177,
+          "name": "California"
+        },
+        {
+          "id": 178,
+          "name": "Connecticut"
+        },
+        {
+          "id": 179,
+          "name": "Delaware"
+        },
+        {
+          "id": 180,
+          "name": "Florida"
+        },
+        {
+          "id": 181,
+          "name": "Hawaii"
+        },
+        {
+          "id": 182,
+          "name": "Indiana"
+        },
+        {
+          "id": 183,
+          "name": "Maine"
+        },
+        {
+          "id": 184,
+          "name": "Maryland"
+        },
+        {
+          "id": 185,
+          "name": "Massachusetts"
+        },
+        {
+          "id": 186,
+          "name": "Michigan"
+        },
+        {
+          "id": 187,
+          "name": "Minnesota"
+        },
+        {
+          "id": 188,
+          "name": "Mississippi"
+        },
+        {
+          "id": 189,
+          "name": "Missouri"
+        },
+        {
+          "id": 190,
+          "name": "Montana"
+        },
+        {
+          "id": 191,
+          "name": "Nebraska"
+        },
+        {
+          "id": 192,
+          "name": "Nevada"
+        },
+        {
+          "id": 193,
+          "name": "New Jersey"
+        },
+        {
+          "id": 194,
+          "name": "New Mexico"
+        },
+        {
+          "id": 195,
+          "name": "New York"
+        },
+        {
+          "id": 196,
+          "name": "North Dakota"
+        },
+        {
+          "id": 197,
+          "name": "Ohio"
+        },
+        {
+          "id": 198,
+          "name": "Pennsylvania"
+        },
+        {
+          "id": 199,
+          "name": "Rhode Island"
+        },
+        {
+          "id": 200,
+          "name": "Tennessee"
+        },
+        {
+          "id": 201,
+          "name": "Texas"
+        },
+        {
+          "id": 202,
+          "name": "Utah"
+        },
+        {
+          "id": 203,
+          "name": "Vermont"
+        },
+        {
+          "id": 204,
+          "name": "Virginia"
+        },
+        {
+          "id": 205,
+          "name": "Washington"
+        },
+        {
+          "id": 206,
+          "name": "West Virginia"
+        },
+        {
+          "id": 207,
+          "name": "Wisconsin"
+        },
+        {
+          "id": 208,
+          "name": "Wyoming"
+        }
+      ]
+    },
     "1": {
       "name": "westminster-2010",
       "regions": [
@@ -973,6 +1127,7 @@
         "12": "maps/map-12.topo.json",
         "21": "maps/map-21.topo.json",
         "22": "maps/map-22.topo.json",
+        "23": "maps/map-23.topo.json",
         "11": "maps/map-11.topo.json",
         "1": "maps/map-1.topo.json"
       },
@@ -982,6 +1137,7 @@
         "2024-general": "results/uk-general-2024.json",
         "2024-us-house": "results/us-house-2024.json",
         "2024-us-president": "results/us-president-2024.json",
+        "2024-us-senate": "results/us-senate-2024.json",
         "2021-holyrood": "results/holyrood-general-2021.json",
         "2019-general": "results/uk-general-2019.json",
         "2017-general": "results/uk-general-2017.json",

@@ -169,23 +169,26 @@ def upsert_party(
 def drop_long_name_column(db: Database, dry_run: bool) -> None:
     """Remove the obsolete ``long_name`` column from the ``parties`` table.
 
-    Executes ``ALTER TABLE IF EXISTS parties DROP COLUMN IF EXISTS long_name``
-    directly against the database engine. The statement is idempotent: it
-    silently does nothing if the column does not exist.
+    SQLite does not support ``ALTER TABLE ... IF EXISTS`` / ``DROP COLUMN IF
+    EXISTS``, so the column's presence is checked via ``PRAGMA table_info``
+    first; the ``DROP COLUMN`` (SQLite 3.35+) only runs when it exists. The
+    operation is idempotent.
 
     Args:
         db: Active ``Database`` instance whose engine is used for the DDL
             statement.
         dry_run: If ``True``, print the would-be SQL without executing it.
     """
-    statement = "ALTER TABLE IF EXISTS parties DROP COLUMN IF EXISTS long_name"
-    if dry_run:
-        print(f"- [dry-run] would run: {statement}")
-        return
-
     with db.engine.begin() as connection:
-        connection.execute(text(statement))
-    print("- removed obsolete column: parties.long_name (if it existed)")
+        columns = [row[1] for row in connection.execute(text("PRAGMA table_info(parties)"))]
+        if "long_name" not in columns:
+            print("- parties.long_name already absent, skipping")
+            return
+        if dry_run:
+            print("- [dry-run] would run: ALTER TABLE parties DROP COLUMN long_name")
+            return
+        connection.execute(text("ALTER TABLE parties DROP COLUMN long_name"))
+    print("- removed obsolete column: parties.long_name")
 
 
 def main() -> None:

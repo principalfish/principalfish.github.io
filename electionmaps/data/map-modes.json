@@ -130,6 +130,13 @@
       },
       "mapId": 1,
       "parliament": "westminster"
+    },
+    {
+      "id": "2024-us-house",
+      "name": "2024 Election",
+      "type": "us_house",
+      "mapId": 21,
+      "parliament": "us_house"
     }
   ],
   "misc": {
@@ -142,6 +149,10 @@
       {
         "parliament": "holyrood",
         "label": "Holyrood"
+      },
+      {
+        "parliament": "us_house",
+        "label": "US House"
       }
     ]
   },
@@ -300,9 +311,219 @@
           }
         ]
       }
+    },
+    "us_house": {
+      "features": []
     }
   },
   "mapModes": {
+    "21": {
+      "name": "us-house-2024",
+      "projection": "albersUsa",
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 76,
+          "name": "Alabama"
+        },
+        {
+          "id": 75,
+          "name": "Alaska"
+        },
+        {
+          "id": 78,
+          "name": "Arizona"
+        },
+        {
+          "id": 77,
+          "name": "Arkansas"
+        },
+        {
+          "id": 79,
+          "name": "California"
+        },
+        {
+          "id": 80,
+          "name": "Colorado"
+        },
+        {
+          "id": 81,
+          "name": "Connecticut"
+        },
+        {
+          "id": 82,
+          "name": "Delaware"
+        },
+        {
+          "id": 83,
+          "name": "Florida"
+        },
+        {
+          "id": 84,
+          "name": "Georgia"
+        },
+        {
+          "id": 85,
+          "name": "Hawaii"
+        },
+        {
+          "id": 87,
+          "name": "Idaho"
+        },
+        {
+          "id": 88,
+          "name": "Illinois"
+        },
+        {
+          "id": 89,
+          "name": "Indiana"
+        },
+        {
+          "id": 86,
+          "name": "Iowa"
+        },
+        {
+          "id": 90,
+          "name": "Kansas"
+        },
+        {
+          "id": 91,
+          "name": "Kentucky"
+        },
+        {
+          "id": 92,
+          "name": "Louisiana"
+        },
+        {
+          "id": 95,
+          "name": "Maine"
+        },
+        {
+          "id": 94,
+          "name": "Maryland"
+        },
+        {
+          "id": 93,
+          "name": "Massachusetts"
+        },
+        {
+          "id": 96,
+          "name": "Michigan"
+        },
+        {
+          "id": 97,
+          "name": "Minnesota"
+        },
+        {
+          "id": 99,
+          "name": "Mississippi"
+        },
+        {
+          "id": 98,
+          "name": "Missouri"
+        },
+        {
+          "id": 100,
+          "name": "Montana"
+        },
+        {
+          "id": 103,
+          "name": "Nebraska"
+        },
+        {
+          "id": 107,
+          "name": "Nevada"
+        },
+        {
+          "id": 104,
+          "name": "New Hampshire"
+        },
+        {
+          "id": 105,
+          "name": "New Jersey"
+        },
+        {
+          "id": 106,
+          "name": "New Mexico"
+        },
+        {
+          "id": 108,
+          "name": "New York"
+        },
+        {
+          "id": 101,
+          "name": "North Carolina"
+        },
+        {
+          "id": 102,
+          "name": "North Dakota"
+        },
+        {
+          "id": 109,
+          "name": "Ohio"
+        },
+        {
+          "id": 110,
+          "name": "Oklahoma"
+        },
+        {
+          "id": 111,
+          "name": "Oregon"
+        },
+        {
+          "id": 112,
+          "name": "Pennsylvania"
+        },
+        {
+          "id": 113,
+          "name": "Rhode Island"
+        },
+        {
+          "id": 114,
+          "name": "South Carolina"
+        },
+        {
+          "id": 115,
+          "name": "South Dakota"
+        },
+        {
+          "id": 116,
+          "name": "Tennessee"
+        },
+        {
+          "id": 117,
+          "name": "Texas"
+        },
+        {
+          "id": 118,
+          "name": "Utah"
+        },
+        {
+          "id": 120,
+          "name": "Vermont"
+        },
+        {
+          "id": 119,
+          "name": "Virginia"
+        },
+        {
+          "id": 121,
+          "name": "Washington"
+        },
+        {
+          "id": 123,
+          "name": "West Virginia"
+        },
+        {
+          "id": 122,
+          "name": "Wisconsin"
+        },
+        {
+          "id": 124,
+          "name": "Wyoming"
+        }
+      ]
+    },
     "1": {
       "name": "westminster-2010",
       "regions": [
@@ -524,6 +745,7 @@
       "mapsById": {
         "2": "maps/map-2.topo.json",
         "12": "maps/map-12.topo.json",
+        "21": "maps/map-21.topo.json",
         "11": "maps/map-11.topo.json",
         "1": "maps/map-1.topo.json"
       },
@@ -531,6 +753,7 @@
         "current-prediction": "results/prediction-simulation.json",
         "2026-holyrood": "results/holyrood-general-2026.json",
         "2024-general": "results/uk-general-2024.json",
+        "2024-us-house": "results/us-house-2024.json",
         "2021-holyrood": "results/holyrood-general-2021.json",
         "2019-general": "results/uk-general-2019.json",
         "2017-general": "results/uk-general-2017.json",
@@ -570,6 +793,12 @@
       "colour": "#0087DC"
     },
     {
+      "id": 20,
+      "key": "democrat",
+      "name": "Democratic",
+      "colour": "#1375E1"
+    },
+    {
       "id": 9,
       "key": "dup",
       "name": "Democratic Unionist Party",
@@ -580,6 +809,12 @@
       "key": "green",
       "name": "Green",
       "colour": "#6AB023"
+    },
+    {
+      "id": 22,
+      "key": "independent",
+      "name": "Independent",
+      "colour": "#9B59B6"
     },
     {
       "id": 1,
@@ -598,6 +833,12 @@
       "key": "libdems",
       "name": "Liberal Democrats",
       "colour": "#FAA61A"
+    },
+    {
+      "id": 23,
+      "key": "libertarian",
+      "name": "Libertarian",
+      "colour": "#FED105"
     },
     {
       "id": 7,
@@ -628,6 +869,12 @@
       "key": "remain",
       "name": "Remain",
       "colour": "#F4A11D"
+    },
+    {
+      "id": 21,
+      "key": "republican",
+      "name": "Republican",
+      "colour": "#E81B23"
     },
     {
       "id": 17,
@@ -664,6 +911,12 @@
       "key": "uu",
       "name": "Ulster Unionist Party",
       "colour": "#48A5EE"
+    },
+    {
+      "id": 24,
+      "key": "usgreen",
+      "name": "US Green",
+      "colour": "#17AA5C"
     }
   ]
 }

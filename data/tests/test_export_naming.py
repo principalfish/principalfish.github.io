@@ -190,6 +190,10 @@ class TestFileStemForElection:
         )
         assert file_stem_for_election(election) == "holyrood-general-2021-changed-boundaries"
 
+    def test_us_house(self) -> None:
+        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        assert file_stem_for_election(election) == "us-house-2024"
+
     def test_fallback_slugifies_type_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)
         assert file_stem_for_election(election) == "by-election-2025-some-by-election"
@@ -207,6 +211,10 @@ class TestManifestIdForElection:
     def test_holyrood_general(self) -> None:
         election = _Election("2021 Scottish Parliament Election", ElectionType.holyrood_general)
         assert manifest_id_for_election(election) == "2021-holyrood"
+
+    def test_us_house(self) -> None:
+        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        assert manifest_id_for_election(election) == "2024-us-house"
 
     def test_fallback_slugifies_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)

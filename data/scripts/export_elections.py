@@ -300,6 +300,7 @@ def main() -> None:
                     ElectionType.uk_general,
                     ElectionType.by_election,
                     ElectionType.holyrood_general,
+                    ElectionType.us_house,
                 ]))
                 .options(joinedload(Election.map))
                 .order_by(Election.year.desc(), Election.name.asc())
@@ -432,22 +433,25 @@ def main() -> None:
                 )
                 continue
 
-            is_holyrood_map = getattr(map_row, "parliament", "westminster") == "holyrood"
+            # Only Westminster maps are bootstrapped from a legacy template; every other
+            # parliament (Holyrood, US) ships a pre-built TopoJSON in maps/ that we verify.
+            uses_prebuilt_map = getattr(map_row, "parliament", "westminster") != "westminster"
             map_relpath = f"maps/{map_filename}"
             result_path = results_dir / result_filename
             map_path = maps_dir / map_filename
 
-            if is_holyrood_map:
-                # The TopoJSON for Holyrood maps is written by the boundaries import script
-                # and lives directly in maps/. We only need to verify it exists.
+            if uses_prebuilt_map:
+                # The TopoJSON for these maps is produced by a dedicated build/import step
+                # (e.g. build_house_topojson.py, import_holyrood_boundaries.py) and lives
+                # directly in maps/. We only need to verify it exists.
                 if args.dry_run:
                     print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
                     if election.map_id not in written_map_ids:
-                        print(f"Holyrood map already in place: {map_path}")
+                        print(f"Pre-built map already in place: {map_path}")
                 else:
                     write_json(result_path, result_payload)
                     if election.map_id not in written_map_ids and not map_path.exists():
-                        print(f"WARNING: Holyrood map not found at {map_path} — run import_holyrood_boundaries.py first")
+                        print(f"WARNING: map not found at {map_path} — build it first (e.g. build_house_topojson.py)")
             else:
                 map_template_filename = choose_map_template_filename(map_row)
                 map_template_path = args.legacy_files_dir / map_template_filename

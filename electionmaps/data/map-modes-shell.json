@@ -10,6 +10,10 @@
       {
         "parliament": "holyrood",
         "label": "Holyrood"
+      },
+      {
+        "parliament": "us_house",
+        "label": "US House"
       }
     ]
   },
@@ -168,9 +172,17 @@
           }
         ]
       }
+    },
+    "us_house": {
+      "features": []
     }
   },
   "mapModes": {
+    "21": {
+      "name": "us-house-2024",
+      "projection": "albersUsa",
+      "postcodeSupported": false
+    },
     "1": {
       "name": "westminster-2010",
       "regions": [

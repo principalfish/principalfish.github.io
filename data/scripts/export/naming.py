@@ -185,6 +185,9 @@ def file_stem_for_election(election: Election) -> str:
     if election.type == ElectionType.model_uns:
         return "prediction-simulation"
 
+    if election.type == ElectionType.us_house:
+        return f"us-house-{election.year}"
+
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
     if election.type == ElectionType.uk_general and general_match:
         year = general_match.group(1)
@@ -221,6 +224,9 @@ def manifest_id_for_election(election: Election) -> str:
     if election.type == ElectionType.model_uns:
         return "current-prediction"
 
+    if election.type == ElectionType.us_house:
+        return f"{election.year}-us-house"
+
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
     if election.type == ElectionType.uk_general and general_match:
         return f"{general_match.group(1)}-general"
@@ -253,6 +259,9 @@ def manifest_name_for_election(election: Election) -> str:
     """
     if election.type == ElectionType.model_uns:
         return "Current prediction"
+
+    if election.type == ElectionType.us_house:
+        return f"{election.year} Election"
 
     general_match = re.fullmatch(r"(\d{4})\s+General\s+Election", election.name)
     if election.type == ElectionType.uk_general and general_match:

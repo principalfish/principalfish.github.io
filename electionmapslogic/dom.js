@@ -313,6 +313,10 @@ const choroplethLegend = document.getElementById('mapsChoroplethLegend');
 const filterPartySelect = document.getElementById('mapsFilterParty');
 // Region filter — restricts visible seats to a single region (e.g. London, Scotland).
 const filterRegionSelect = document.getElementById('mapsFilterRegion');
+// "Next up for election" cycle filter (multi-member chambers whose election carries
+// `upcomingElections`, e.g. the Current Senate). The wrapping group is shown only then.
+const filterUpcomingSelect = document.getElementById('mapsFilterUpcoming');
+const filterUpcomingGroup = document.getElementById('mapsFilterUpcomingGroup');
 // Second-place filter — paired with filterPartySelect to restrict to seats where the chosen
 // party finished second. The wrapping group is hidden when state.mapFilters.party is 'all'.
 const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty');
@@ -376,6 +380,18 @@ export function renderMapControlOptions() {
   setOptions(filterSecondPartySelect, partyRows); // second-place finisher filter
   setOptions(choroplethPartySelect, partyRows);   // choropleth target party
   setOptions(filterRegionSelect, regionRows);     // region filter
+
+  // The "next up for election" filter is gated by the election's `upcomingElections` flag.
+  // When off, hide the control and force the filter to 'all' so it never narrows other
+  // elections; when on, populate the cycle years from the data.
+  const upcomingEnabled = Boolean(state.currentElection?.upcomingElections);
+  if (filterUpcomingGroup) filterUpcomingGroup.hidden = !upcomingEnabled;
+  if (upcomingEnabled) {
+    setOptions(filterUpcomingSelect, state.mapControlUpcomingYears());
+  } else {
+    state.mapFilters.upcoming = 'all';
+    if (filterUpcomingSelect) filterUpcomingSelect.innerHTML = '';
+  }
 }
 
 /**
@@ -386,6 +402,7 @@ export function renderMapControlOptions() {
 function syncMapControlInputsFromState() {
   filterPartySelect.value = state.mapFilters.party;
   filterRegionSelect.value = state.mapFilters.region;
+  if (filterUpcomingSelect) filterUpcomingSelect.value = state.mapFilters.upcoming;
 
   const showSecondPlaceFilter = state.mapFilters.party !== 'all';
   filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
@@ -410,6 +427,7 @@ function syncMapControlInputsFromState() {
 function syncMapControlStateFromInputs() {
   state.mapFilters.party = filterPartySelect.value || 'all';
   state.mapFilters.region = filterRegionSelect.value || 'all';
+  if (filterUpcomingSelect) state.mapFilters.upcoming = filterUpcomingSelect.value || 'all';
   if (state.mapFilters.party === 'all') {
     state.mapFilters.secondParty = 'all';
   } else {
@@ -447,6 +465,7 @@ function wireMapViewControls() {
   [
     filterPartySelect,
     filterRegionSelect,
+    filterUpcomingSelect,
     filterSecondPartySelect,
     filterMajorityMinInput,
     filterMajorityMaxInput,

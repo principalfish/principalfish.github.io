@@ -21,7 +21,8 @@
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate",
-      "multiMember": true
+      "multiMember": true,
+      "upcomingElections": true
     },
     {
       "id": "2024-us-senate",

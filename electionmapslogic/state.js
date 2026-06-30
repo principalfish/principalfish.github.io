@@ -510,7 +510,7 @@ export class Seat {
    * Static so it accepts any Seat instance without binding to a particular `this`.
    * @param {Seat} seat - The seat to test.
    * @param {Seat|null} comparisonSeat - Comparison seat for gains filtering; may be null.
-   * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean}} filterState - Active filter configuration.
+   * @param {{party: string, region: string, secondParty: string, majorityMin: number, majorityMax: number, gainsOnly: boolean, upcoming: string}} filterState - Active filter configuration.
    * @param {Set<string>|null} byElectionSeats - Set of seat names for by-election gain filtering, or null.
    * @returns {boolean} True if the seat passes all currently active filters.
    */
@@ -523,6 +523,13 @@ export class Seat {
     if (filterState.region !== 'all') {
       const seatRegion = normalizeRegionKey(seat.region);
       if (seatRegion !== filterState.region) return false;
+    }
+
+    // "Next up for election" cycle filter (multi-member chambers, e.g. Current Senate): the
+    // seat passes if any of its members is next up in the selected year.
+    if (filterState.upcoming !== 'all') {
+      const members = seat.members || [];
+      if (!members.some((member) => String(member?.up) === filterState.upcoming)) return false;
     }
 
     const majority = seat.majorityStats().pct;
@@ -626,7 +633,7 @@ export class ElectionSummary {
    *   - `totalSeats` — `seats.length` of the input array (chamber size), independent of
    *     mode filtering.
    */
-  static summarize(seats, mode = 'all') {
+  static summarize(seats, mode = 'all', upcomingFilter = 'all') {
     // Multi-member chambers (each map seat returns more than one member, held in the seat's
     // `members` array): tally the individual members, since the chamber size differs from the
     // seat count. Such views carry no vote tallies, so totalVotes is 0.
@@ -634,6 +641,9 @@ export class ElectionSummary {
       const memberStats = new Map();
       let total = 0;
       seats.forEach((seat) => (seat.members || []).forEach((member) => {
+        // When a "next up for election" cycle is selected, count only the members up that
+        // year (one per state) so the totals match the filtered seats, not both senators.
+        if (upcomingFilter !== 'all' && String(member?.up) !== upcomingFilter) return;
         const key = member.party === 'other' ? 'others' : (member.party || 'others');
         if (!memberStats.has(key)) memberStats.set(key, { seats: 0, votes: 0 });
         memberStats.get(key).seats += 1;
@@ -1014,6 +1024,9 @@ class AppState {
       majorityMin: 0,
       majorityMax: 100,
       gainsOnly: false,
+      // Cycle year for the "next up for election" filter (multi-member chambers whose election
+      // carries `upcomingElections`, e.g. the Current Senate). 'all' = no cycle filtering.
+      upcoming: 'all',
     };
 
     /** Active choropleth selection. Mutated by syncMapControlStateFromInputs and resetChoropleths.
@@ -1324,9 +1337,9 @@ class AppState {
     this.voteTotals.columns.votePct = tabAllowsVotes;
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
 
-    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode);
+    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode, this.mapFilters.upcoming);
     this.filteredSeatsComparisonSummary = this.comparisonElectionData?.currentSeats.length
-      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode)
+      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode, this.mapFilters.upcoming)
       : null;
 
   }
@@ -1424,6 +1437,29 @@ class AppState {
       .sort((a, b) => a.label.localeCompare(b.label));
 
     return [{ value: 'all', label: 'all regions...' }, ...rows];
+  }
+
+  /**
+   * Distinct "next up for election" cycle years across the current seats' members, ascending,
+   * for the upcoming-elections filter dropdown. Derived from the data (each member's `up`
+   * year), so the option list tracks the loaded snapshot automatically.
+   *
+   * @returns {Array<{value: string, label: string}>} Option rows, with an 'all cycles...' default.
+   */
+  mapControlUpcomingYears() {
+    const years = new Set();
+    this.electionData?.currentSeats?.forEach((seat) => {
+      (seat.members || []).forEach((member) => {
+        const year = Number(member?.up);
+        if (Number.isFinite(year)) years.add(year);
+      });
+    });
+
+    const rows = Array.from(years)
+      .sort((a, b) => a - b)
+      .map((year) => ({ value: String(year), label: String(year) }));
+
+    return [{ value: 'all', label: 'all cycles...' }, ...rows];
   }
 
   /**
@@ -1642,6 +1678,7 @@ class AppState {
     this.mapFilters.majorityMin = 0;
     this.mapFilters.majorityMax = 100;
     this.mapFilters.gainsOnly = false;
+    this.mapFilters.upcoming = 'all';
   }
 
   /**

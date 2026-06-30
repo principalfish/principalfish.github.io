@@ -35,6 +35,7 @@ SUPPLEMENTAL_LEGACY_ELECTIONS: list[dict[str, Any]] = [
         "resultFile": "senate-current.json",
         "prebuilt": True,
         "multiMember": True,
+        "upcomingElections": True,
         "insertBeforeId": "2024-us-senate",
         "noComparison": True,
     },
@@ -164,6 +165,10 @@ def apply_supplemental_legacy_elections(
         # front-end to tally members for the majority subtitle and to hide the vote columns.
         if supplemental.get("multiMember"):
             supplemental_entry["multiMember"] = True
+        # Enables the "next up for election" filter (per-member `up` year); the front-end shows
+        # the cycle dropdown only for elections carrying this flag.
+        if supplemental.get("upcomingElections"):
+            supplemental_entry["upcomingElections"] = True
 
         existing_index = next((idx for idx, entry in enumerate(manifest_entries) if entry.get("id") == election_id), None)
         if existing_index is not None:

@@ -14,7 +14,7 @@ afterEach(resetManifest);
 
 // ─── Seat.matchesPrimaryFilters ──────────────────────────────────────────────
 describe('Seat.matchesPrimaryFilters', () => {
-  const openFilter = { party: 'all', region: 'all', secondParty: 'all', majorityMin: 0, majorityMax: 100, gainsOnly: false };
+  const openFilter = { party: 'all', region: 'all', secondParty: 'all', majorityMin: 0, majorityMax: 100, gainsOnly: false, upcoming: 'all' };
   // 30% majority (margin 300 / turnout 1000); second place is conservative.
   const makeSeat = () => new Seat({ seat: 'A', region: 'london', winner: 'labour', votes: { labour: 600, conservative: 300, libdems: 100 } });
 
@@ -60,6 +60,19 @@ describe('Seat.matchesPrimaryFilters', () => {
     expect(Seat.matchesPrimaryFilters(makeSeat(), { winner: 'conservative' }, filter, null)).toBe(true);
     expect(Seat.matchesPrimaryFilters(makeSeat(), { winner: 'labour' }, filter, null)).toBe(false);
     expect(Seat.matchesPrimaryFilters(makeSeat(), null, filter, null)).toBe(false);
+  });
+
+  it('filters by upcoming election cycle when any member is up that year', () => {
+    const senateSeat = new Seat({
+      seat: 'Alabama', region: 'eastsouthcentral', winner: 'republican',
+      members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }],
+    });
+    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: '2026' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: '2028' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: '2030' }, null)).toBe(false);
+    // 'all' never narrows; single-winner seats (no members) are excluded by any year filter.
+    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: 'all' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, upcoming: '2026' }, null)).toBe(false);
   });
 });
 
@@ -193,6 +206,8 @@ describe('manifest.buildRegionLabelLookup', () => {
 // ─── ElectionSummary.summarize (modes / dedupe / other-fold) ──────────────────
 describe('ElectionSummary.summarize', () => {
   const findParty = (data, key) => data.parties.find((p) => p.party === key);
+  // The multi-member branch reads state.currentElection.multiMember; clear it after each test.
+  afterEach(() => { state.currentElection = null; });
 
   it('all mode: counts list seats but excludes their votes (separate ballot)', () => {
     const seats = [
@@ -230,6 +245,21 @@ describe('ElectionSummary.summarize', () => {
     const data = ElectionSummary.summarize(seats, 'all');
     expect(findParty(data, 'others')).toMatchObject({ seats: 1, votes: 500 });
     expect(findParty(data, 'other')).toBeUndefined();
+  });
+
+  it('multi-member: tallies all members by default but only the selected cycle when filtering', () => {
+    state.currentElection = { multiMember: true };
+    const seats = [
+      { seat: 'Alabama', members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }] },
+      { seat: 'Arizona', members: [{ party: 'democrat', up: 2026 }, { party: 'republican', up: 2030 }] },
+    ];
+    // No cycle filter: every member counts (4 senators across the two states).
+    expect(ElectionSummary.summarize(seats, 'all', 'all').totalSeats).toBe(4);
+    // 2026 cycle: only the member up that year in each state (one R, one D).
+    const cycle = ElectionSummary.summarize(seats, 'all', '2026');
+    expect(cycle.totalSeats).toBe(2);
+    expect(findParty(cycle, 'republican')).toMatchObject({ seats: 1 });
+    expect(findParty(cycle, 'democrat')).toMatchObject({ seats: 1 });
   });
 });
 

@@ -71,29 +71,33 @@ def build_map_modes_with_regions(
     map_modes: dict[str, Any],
     regions_by_map_id: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
-    """Build the ``mapModes`` block, preferring shell-curated regions over DB ones.
+    """Build the ``mapModes`` block, attaching DB-derived regions to each map.
 
-    ``map-modes-shell.json`` holds the hand-authored mapModes config per map. Region
-    ``name`` values are display labels and are sometimes curated (shortened) away from
-    the canonical DB region names, so when a shell mapMode already lists ``regions``
-    they are kept verbatim. When a mapMode omits ``regions`` (e.g. a newly-added map
-    that has not been hand-curated), the region list is attached from the database as
-    the final key, so new geographies need no manual region authoring.
+    Regions are always generated from the database (uniform for every map), so the
+    shell holds only structural mapMode config — no region lists. A shell mapMode may
+    carry an optional ``regionNameOverride`` (a ``{db_name: display_name}`` map) for the
+    few regions whose display label is deliberately curated away from the canonical DB
+    name (e.g. the shortened Holyrood-2026 labels); it is applied here and stripped from
+    the output. A mapMode that still lists ``regions`` keeps them (back-compat).
 
     Args:
-        map_modes: Per-map config keyed by string map id (regions optional).
+        map_modes: Per-map config keyed by string map id.
         regions_by_map_id: Region lists keyed by string map id, as built by
             :func:`build_manifest_regions_by_map_id`.
 
     Returns:
-        A new dict keyed by string map id, each value being the mapMode config with
-        a ``regions`` list (the shell's when present, otherwise the DB's, else empty).
+        A new dict keyed by string map id, each value being the mapMode config with a
+        ``regions`` list (DB-derived, display names overridden where configured).
     """
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)
+        overrides: dict[str, str] = entry.pop("regionNameOverride", None) or {}
         if "regions" not in entry:
-            entry["regions"] = regions_by_map_id.get(map_id_str, [])
+            entry["regions"] = [
+                {"id": region["id"], "name": overrides.get(region["name"], region["name"])}
+                for region in regions_by_map_id.get(map_id_str, [])
+            ]
         merged[map_id_str] = entry
     return merged
 

@@ -13,15 +13,15 @@
       },
       {
         "parliament": "us_house",
-        "label": "US House"
+        "label": "House"
       },
       {
         "parliament": "us_presidential",
-        "label": "US President"
+        "label": "President"
       },
       {
         "parliament": "us_senate",
-        "label": "US Senate"
+        "label": "Senate"
       }
     ]
   },
@@ -211,111 +211,11 @@
       "postcodeSupported": false
     },
     "1": {
-      "name": "westminster-2010",
-      "regions": [
-        {
-          "id": 6,
-          "name": "East Midlands"
-        },
-        {
-          "id": 9,
-          "name": "East of England"
-        },
-        {
-          "id": 7,
-          "name": "London"
-        },
-        {
-          "id": 12,
-          "name": "North East England"
-        },
-        {
-          "id": 5,
-          "name": "North West England"
-        },
-        {
-          "id": 11,
-          "name": "Northern Ireland"
-        },
-        {
-          "id": 2,
-          "name": "Scotland"
-        },
-        {
-          "id": 3,
-          "name": "South East England"
-        },
-        {
-          "id": 10,
-          "name": "South West England"
-        },
-        {
-          "id": 1,
-          "name": "Wales"
-        },
-        {
-          "id": 4,
-          "name": "West Midlands"
-        },
-        {
-          "id": 8,
-          "name": "Yorkshire and The Humber"
-        }
-      ]
+      "name": "westminster-2010"
     },
     "2": {
       "name": "westminster-2024",
-      "postcodeSupported": true,
-      "regions": [
-        {
-          "id": 16,
-          "name": "East Midlands"
-        },
-        {
-          "id": 19,
-          "name": "East of England"
-        },
-        {
-          "id": 17,
-          "name": "London"
-        },
-        {
-          "id": 21,
-          "name": "North East England"
-        },
-        {
-          "id": 15,
-          "name": "North West England"
-        },
-        {
-          "id": 24,
-          "name": "Northern Ireland"
-        },
-        {
-          "id": 22,
-          "name": "Scotland"
-        },
-        {
-          "id": 13,
-          "name": "South East England"
-        },
-        {
-          "id": 20,
-          "name": "South West England"
-        },
-        {
-          "id": 23,
-          "name": "Wales"
-        },
-        {
-          "id": 14,
-          "name": "West Midlands"
-        },
-        {
-          "id": 18,
-          "name": "Yorkshire and The Humber"
-        }
-      ]
+      "postcodeSupported": true
     },
     "11": {
       "name": "holyrood-2021",
@@ -332,40 +232,6 @@
         {
           "id": "list",
           "label": "List"
-        }
-      ],
-      "regions": [
-        {
-          "id": 59,
-          "name": "Central Scotland"
-        },
-        {
-          "id": 60,
-          "name": "Glasgow"
-        },
-        {
-          "id": 61,
-          "name": "Highlands and Islands"
-        },
-        {
-          "id": 62,
-          "name": "Lothian"
-        },
-        {
-          "id": 63,
-          "name": "Mid Scotland and Fife"
-        },
-        {
-          "id": 64,
-          "name": "North East Scotland"
-        },
-        {
-          "id": 65,
-          "name": "South Scotland"
-        },
-        {
-          "id": 66,
-          "name": "West Scotland"
         }
       ]
     },
@@ -390,40 +256,10 @@
       "hiddenVoteTotalsParties": [
         "alba"
       ],
-      "regions": [
-        {
-          "id": 67,
-          "name": "Central and Lothian W"
-        },
-        {
-          "id": 68,
-          "name": "Edinburgh and Lothian E"
-        },
-        {
-          "id": 69,
-          "name": "Glasgow"
-        },
-        {
-          "id": 70,
-          "name": "Highlands and Islands"
-        },
-        {
-          "id": 71,
-          "name": "Mid Scotland and Fife"
-        },
-        {
-          "id": 72,
-          "name": "North East Scotland"
-        },
-        {
-          "id": 73,
-          "name": "South Scotland"
-        },
-        {
-          "id": 74,
-          "name": "West Scotland"
-        }
-      ]
+      "regionNameOverride": {
+        "Central Scotland and Lothians West": "Central and Lothian W",
+        "Edinburgh and Lothians East": "Edinburgh and Lothian E"
+      }
     }
   }
 }

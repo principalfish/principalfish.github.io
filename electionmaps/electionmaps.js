@@ -1,6 +1,7 @@
 import {
   state,
   manifest,
+  page,
   initState,
   buildRouteSearchParams,
 } from './scripts/state.js';
@@ -27,6 +28,10 @@ import {
   wireInit,
 } from './scripts/dom.js';
 
+// Base path for data fetches. Page-relative by default ('data' → /<page>/data); the US
+// page sets page.dataBase to '../electionmaps/data' so it reads the one shared data dir.
+const DATA_BASE = page.dataBase || 'data';
+
 // =====================================================================
 // INIT
 // =====================================================================
@@ -40,7 +45,7 @@ import {
 async function initPage() {
   // Fetch 1: manifest — election list, parliament config, file paths, party/region lookup data
   const view = new URLSearchParams(window.location.search).get('view') || 'election';
-  await initState(await fetchJson('data/map-modes.json'), view);
+  await initState(await fetchJson(`${DATA_BASE}/map-modes.json`), view);
 
   renderPageTitle();
   trackVirtualPageView();
@@ -92,9 +97,9 @@ async function activateElection() {
   const { mapFile, dataFile, comparisonDataFile } = manifest.resolveElectionFiles(fetchElection);
   const includeComparison = state.view !== 'predict' && comparisonDataFile;
   const [mapData, resultsData, comparisonData] = await Promise.all([
-    fetchJson(`data/${mapFile}`),
-    fetchJson(`data/${dataFile}`),
-    includeComparison ? fetchJson(`data/${comparisonDataFile}`) : Promise.resolve(null),
+    fetchJson(`${DATA_BASE}/${mapFile}`),
+    fetchJson(`${DATA_BASE}/${dataFile}`),
+    includeComparison ? fetchJson(`${DATA_BASE}/${comparisonDataFile}`) : Promise.resolve(null),
   ]);
 
   // Wire results into state. Predict mode points both electionData and
@@ -134,7 +139,7 @@ async function activatePollTrackerMode() {
   document.body.classList.add('maps-polltracker-mode');
 
   const dataPath = manifest.parliamentFeatures[state.currentParliament].polltrackerDataPath;
-  const data = await fetchJson(`data/${dataPath}`);
+  const data = await fetchJson(`${DATA_BASE}/${dataPath}`);
   state.pollTrackerData = parsePollTrackerData(data);
   renderPollTracker();
 }

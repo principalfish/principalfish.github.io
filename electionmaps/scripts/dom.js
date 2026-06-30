@@ -4,13 +4,16 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../../site/vendor/topojson-client.v3.esm.js';
-import { manifest, state } from './state.js';
+import { manifest, state, page } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
-const MAPS_PAGE_TITLE_SUFFIX = 'Election Maps | Principal Fish';
+// Brand shown in the H1 and browser-tab title. The US page overrides it via page.title
+// ("US Elections"); the UK page keeps the default.
+const PAGE_BRAND = page.title || 'Election Maps';
+const MAPS_PAGE_TITLE_SUFFIX = `${PAGE_BRAND} | Principal Fish`;
 
 /**
  * Sets the browser tab title from the current view: poll tracker, predict, or election name.
@@ -106,7 +109,7 @@ function renderSubtitleText(text = '', error = false) {
  * @returns {void}
  */
 function renderTitle() {
-  const base = manifest.misc?.title || 'UK Election Maps';
+  const base = page.title || manifest.misc?.title || 'UK Election Maps';
   const label = manifest.parliamentLabel(state.currentParliament);
   mapsTitle.textContent = label ? `${base} · ${label}` : base;
 }
@@ -2306,8 +2309,8 @@ function renderSeatPopup(seatName) {
   // Model and referendum elections have no meaningful turnout or raw majority to display.
   const showCounts = !state.currentElection.model && !state.isReferendumType;
 
-  // Populate title and meta line (gain indicator, region, majority, turnout).
-  seatPopupTitle.textContent = seat.seat;
+  // Populate title (with electoral votes for presidential states) and meta line.
+  seatPopupTitle.textContent = seat.ev ? `${seat.seat} - ${formatInt(seat.ev)} EV` : seat.seat;
   seatPopupMeta.innerHTML = `
     ${gainFrom ? `<span class="maps-popup-meta-item">FROM ${escapeHtml(manifest.labelParty(gainFrom))} <span class="maps-seat-icon" style="background:${manifest.colourParty(gainFrom)}"></span></span>` : ''}
     <span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>

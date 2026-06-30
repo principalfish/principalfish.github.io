@@ -19,6 +19,23 @@ const PARTY_KEY_ALIASES = {
   scottishnationalparty: 'snp',
 };
 
+// Per-page config set by the host HTML before the engine loads (window.MAPS_PAGE). It lets
+// one shared manifest + engine drive multiple pages (UK at electionmaps/, US at
+// uselectionmaps/): each page restricts the parliaments it shows, overrides the title and
+// default parliament, and points at the shared data dir. Empty object => unrestricted.
+//   parliaments?: string[]      — only these parliament tabs/elections are shown
+//   defaultParliament?: string  — landing parliament for the page
+//   title?: string              — page brand (H1 / document title)
+//   dataBase?: string           — base path for data fetches (default 'data')
+export const page = (typeof window !== 'undefined' && window.MAPS_PAGE) || {};
+
+// The active election's mapMode config, resolved from the manifest via the current election.
+// Use this (not state.mapConfig) where config is needed before render — e.g. when an
+// ElectionSummary builds its subtitle during data load, state.mapConfig is not yet assigned.
+function activeMapMode() {
+  return manifest.mapModes?.[String(state.currentElection?.mapId)] || {};
+}
+
 // ─── Manifest ─────────────────────────────────────────────────────────────────
 
 class Manifest {
@@ -110,6 +127,8 @@ class Manifest {
    * @returns {string}
    */
   defaultParliament() {
+    // A page may pin its landing parliament (e.g. the US page defaults to the House).
+    if (page.defaultParliament) return page.defaultParliament;
     return this.elections.find((e) => e.id === this.defaultElection)?.parliament ?? '';
   }
 
@@ -140,12 +159,16 @@ class Manifest {
    * @returns {{ parliament: string, label: string }[]}
    */
   parliamentTabs() {
-    const tabs = this.misc?.parliamentTabs;
-    if (Array.isArray(tabs) && tabs.length) return tabs;
-    return [
+    const tabs = this.misc?.parliamentTabs ?? [
       { parliament: 'westminster', label: 'Westminster' },
       { parliament: 'holyrood', label: 'Holyrood' },
     ];
+    // Restrict to the host page's parliaments when set (so the UK page hides US tabs and
+    // vice versa) while both share one manifest.
+    if (Array.isArray(page.parliaments)) {
+      return tabs.filter((tab) => page.parliaments.includes(tab.parliament));
+    }
+    return tabs;
   }
 
   /**
@@ -613,8 +636,9 @@ export class ElectionSummary {
     // and we want insertion-order iteration if needed for deterministic debugging.
     const partyStats = new Map();
     // Electoral-vote tally mode (presidential maps): the leading party's "seats" count
-    // and the chamber total are measured in electoral votes, not seat counts.
-    const evTally = state.mapConfig?.tally === 'electoralVotes';
+    // and the chamber total are measured in electoral votes, not seat counts. Resolve from
+    // the active election's mapMode so it's correct even before state.mapConfig is set.
+    const evTally = activeMapMode().tally === 'electoralVotes';
     const weightOf = (seat) => (evTally ? Number(seat.ev || 0) : 1);
     // Tracks `(region, party)` pairs we've already credited with list-mode votes. Each
     // region's list ballot is duplicated across every list seat in that region, so without
@@ -722,22 +746,20 @@ export class ElectionSummary {
     const leadSeats = Number(top?.seats || 0);
     const totalSeats = Number(data.totalSeats || 0);
     const topLabel = manifest.labelParty(top?.party || 'others');
+    const mapMode = activeMapMode();
 
     // Seats-up views (e.g. the US Senate, which shows only the seats contested this cycle)
     // have no meaningful chamber majority — show just the election name.
-    if (state.mapConfig?.hideMajority) {
+    if (mapMode.hideMajority) {
       return electionName;
     }
 
-    // Electoral-vote tally (presidential): the winner's EV and the margin of victory over
-    // the runner-up (the electoral-vote difference, not a count of states).
-    if (state.mapConfig?.tally === 'electoralVotes') {
-      const toWin = Math.floor(totalSeats / 2) + 1;
+    // Electoral-vote tally (presidential): show the winner's margin of victory — the
+    // electoral-vote lead over the runner-up — rather than a parliamentary "majority".
+    if (mapMode.tally === 'electoralVotes') {
       const runnerUp = Number(data.parties[1]?.seats || 0);
       const margin = leadSeats - runnerUp;
-      return leadSeats >= toWin
-        ? `${electionName} · ${topLabel} ${formatInt(leadSeats)} EV · Margin of victory: ${formatInt(margin)}`
-        : `${electionName} · No majority — ${topLabel} leads with ${formatInt(leadSeats)} EV (${toWin} to win)`;
+      return `${electionName} · ${topLabel} margin of victory: ${formatInt(margin)}`;
     }
 
     const majorityThreshold = totalSeats / 2;
@@ -1078,6 +1100,11 @@ class AppState {
   async init(view, parliament, requestedId) {
     this.view = view;
     this.currentParliament = parliament || manifest.defaultParliament();
+    // Ignore a ?parliament= the host page doesn't host (e.g. ?parliament=westminster on the
+    // US page) and fall back to the page's default parliament.
+    if (Array.isArray(page.parliaments) && !page.parliaments.includes(this.currentParliament)) {
+      this.currentParliament = manifest.defaultParliament();
+    }
 
     const parliamentElections = manifest.electionsForParliament(this.currentParliament);
     this.parliamentElections = parliamentElections;

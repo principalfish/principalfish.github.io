@@ -166,15 +166,15 @@
       },
       {
         "parliament": "us_house",
-        "label": "US House"
+        "label": "House"
       },
       {
         "parliament": "us_presidential",
-        "label": "US President"
+        "label": "President"
       },
       {
         "parliament": "us_senate",
-        "label": "US Senate"
+        "label": "Senate"
       }
     ]
   },

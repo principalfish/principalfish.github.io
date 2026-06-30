@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Election Maps | Principal Fish</title>
+    <title>US Elections | Principal Fish</title>
     <meta
       name="description"
       content="Interactive election maps scaffold with election navigation, zoomable map canvas, and control panels."
@@ -13,14 +13,14 @@
 
     <link rel="stylesheet" href="../site/topbar.min.css" />
     <link rel="stylesheet" href="../site/styles.min.css" />
-    <link rel="stylesheet" href="./mobile-sidebar.min.css" />
+    <link rel="stylesheet" href="../electionmaps/mobile-sidebar.min.css" />
   </head>
   <body class="maps-page" data-topbar-back-href="../">
     <div class="maps-background" aria-hidden="true"></div>
 
     <main class="site-wrap maps-wrap">
       <header class="maps-header">
-        <h1 class="maps-title">UK Election Maps</h1>
+        <h1 class="maps-title">US Elections</h1>
         <p id="mapsSubtitle" class="maps-subtitle">Loading election…</p>
         <p id="mapsElectionCountdown" class="maps-election-countdown" hidden></p>
         <button
@@ -290,9 +290,17 @@
     </main>
 
     <script type="module" src="../site/topbar.min.js"></script>
-    <!-- This page shows only the UK parliaments; the US contests live at /uselectionmaps. -->
-    <script>window.MAPS_PAGE = { parliaments: ['westminster', 'holyrood'] };</script>
-    <script type="module" src="./electionmaps.js"></script>
-    <script type="module" src="./mobile-sidebar.min.js"></script>
+    <!-- US elections page: shares the electionmaps engine + data dir, restricted to the US
+         contests, branded "US Elections", landing on the House. -->
+    <script>
+      window.MAPS_PAGE = {
+        parliaments: ['us_house', 'us_presidential', 'us_senate'],
+        defaultParliament: 'us_house',
+        title: 'US Elections',
+        dataBase: '../electionmaps/data',
+      };
+    </script>
+    <script type="module" src="../electionmaps/electionmaps.js"></script>
+    <script type="module" src="../electionmaps/mobile-sidebar.min.js"></script>
   </body>
 </html>

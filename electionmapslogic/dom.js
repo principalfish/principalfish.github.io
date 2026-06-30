@@ -689,7 +689,7 @@ function wireVoteTotalsSorting() {
  * @param {string} query - Raw search string as entered by the user.
  * @returns {void}
  */
-function selectSeatBySearchQuery(query) {
+export function selectSeatBySearchQuery(query) {
   const rawQuery = String(query || '').trim();
   if (!rawQuery) return;
 
@@ -720,216 +720,6 @@ function selectSeatBySearchQuery(query) {
     seatSearchInput.value = seatName;
     return;
   }
-}
-
-// ── Postcode search ───────────────────────────────────────────────────────────
-
-const postcodeSearchInput = document.getElementById('maps-postcode-search');
-const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
-const postcodeWarningBtn = document.getElementById('mapsPostcodeWarningBtn');
-const postcodeWarningPanel = document.getElementById('mapsPostcodeWarningPanel');
-let postcodeErrorTimeout = null;
-
-// Maps old 2021 Holyrood constituency names (as returned by postcodes.io) to their
-// 2026 boundary equivalents. Used as a fallback when a returned name has no match
-// in the current seat data. Where two old seats merged into one, both map to the new
-// combined name — best-guess only, since the boundary changed at the postcode level.
-const HOLYROOD_2021_TO_2026_NAME = {
-  'Aberdeen South and North Kincardine': 'Aberdeen Deeside and North Kincardine',
-  'Airdrie and Shotts': 'Airdrie',
-  'East Lothian': 'East Lothian Coast and Lammermuirs',
-  'Edinburgh Eastern': 'Edinburgh Eastern, Musselburgh and Tranent',
-  'Edinburgh Northern and Leith': 'Edinburgh North Eastern and Leith',
-  'Edinburgh Pentlands': 'Edinburgh South Western',
-  'Edinburgh Western': 'Edinburgh North Western',
-  'Falkirk East': 'Falkirk East and Linlithgow',
-  'Glasgow Cathcart': 'Glasgow Cathcart and Pollok',
-  'Glasgow Kelvin': 'Glasgow Kelvin and Maryhill',
-  'Glasgow Maryhill and Springburn': 'Glasgow Kelvin and Maryhill',
-  'Glasgow Pollok': 'Glasgow Cathcart and Pollok',
-  'Glasgow Provan': 'Glasgow Easterhouse and Springburn',
-  'Glasgow Shettleston': 'Glasgow Baillieston and Shettleston',
-  'Greenock and Inverclyde': 'Inverclyde',
-  'Linlithgow': 'Falkirk East and Linlithgow',
-  'Midlothian North and Musselburgh': 'Midlothian North',
-  'North East Fife': 'Fife North East',
-  'Renfrewshire North and West': 'Renfrewshire North and Cardonald',
-  'Renfrewshire South': 'Renfrewshire West and Levern Valley',
-  'Rutherglen': 'Rutherglen and Cambuslang',
-};
-
-/**
- * Shows or hides the postcode search group based on whether the current election supports
- * postcode lookup. Clears the input and any error state when hiding.
- */
-function initPostcodeSearch() {
-  postcodeSearchGroup.hidden = !state.mapConfig?.postcodeSupported;
-  // postcodes.io returns 2021 Scottish Parliament constituencies, but the Holyrood map uses
-  // 2026 boundaries — the warning icon toggles a panel listing the affected seats.
-  const isHolyrood = state.mapConfig?.name?.startsWith('holyrood') ?? false;
-  postcodeWarningBtn.hidden = !isHolyrood;
-  if (!isHolyrood) postcodeWarningPanel.hidden = true;
-}
-
-/**
- * Flashes an error message inside the postcode input for 2 seconds, then clears the
- * input so the placeholder is shown again. The input is made readonly during the flash
- * to prevent accidental edits. Cancels any in-flight error flash before starting a new one.
- * @param {string} msg - The error text to display in the input.
- * @returns {void}
- */
-function showPostcodeError(msg) {
-  // Cancel any in-flight flash before starting a new one to avoid overlapping timers.
-  clearPostcodeError();
-  // Display the error text in the input and lock it readonly so the user can't type over it.
-  postcodeSearchInput.value = msg;
-  postcodeSearchInput.readOnly = true;
-  postcodeSearchInput.classList.add('is-postcode-error');
-  // Store the timer ID so clearPostcodeError can cancel it if the user focuses before 2 s.
-  postcodeErrorTimeout = window.setTimeout(() => {
-    postcodeSearchInput.readOnly = false;
-    postcodeSearchInput.value = '';
-    postcodeSearchInput.classList.remove('is-postcode-error');
-    postcodeErrorTimeout = null;
-  }, 2000);
-}
-
-/**
- * Cancels any active postcode error flash and removes the error style.
- * Does not restore the input value — caller is responsible for that if needed.
- * @returns {void}
- */
-function clearPostcodeError() {
-  // Cancel the pending auto-clear timer.
-  if (postcodeErrorTimeout) {
-    clearTimeout(postcodeErrorTimeout);
-    postcodeErrorTimeout = null;
-  }
-  // Restore the input to its normal editable state.
-  if (postcodeSearchInput) {
-    postcodeSearchInput.readOnly = false;
-    postcodeSearchInput.classList.remove('is-postcode-error');
-  }
-}
-
-/**
- * Looks up a postcode via the postcodes.io API and returns the constituency name,
- * or null if the postcode is not found or the current map does not support lookup.
- * Selects the Westminster or Scottish endpoint based on the current election's mapId.
- * @param {string} postcode - The raw postcode string entered by the user.
- * @returns {Promise<string|null>} The constituency name, or null on failure.
- */
-async function lookupPostcode(postcode) {
-  if (!state.mapConfig?.postcodeSupported) return null;
-
-  // Strip all whitespace then re-insert the canonical space before the inward code
-  // (always the last 3 characters). Both endpoints require this format.
-  const stripped = postcode.trim().toUpperCase().replace(/\s+/g, '');
-  const normalised = stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
-
-  const mapName = state.mapConfig?.name ?? null;
-  let url = '';
-  let resultProperty = '';
-
-  switch (mapName) {
-    case 'holyrood-2026':
-      url = `https://api.postcodes.io/scotland/postcodes/${encodeURIComponent(normalised)}`;
-      resultProperty = 'scottish_parliamentary_constituency';
-      break;
-    case 'westminster-2024':
-      url = `https://api.postcodes.io/postcodes/${encodeURIComponent(normalised)}`;
-      resultProperty = 'parliamentary_constituency_2024';
-      break;
-    default:
-      return null;
-  }
-
-  try {
-    // fetchJson throws on a non-OK status (e.g. 404 for an unknown postcode); the catch below
-    // turns that into the same null this lookup returns for any other failure.
-    const data = await fetchJson(url);
-    const rawName = data?.result?.[resultProperty] ?? null;
-
-    if (!rawName) return null;
-
-    // Normalise accented characters to ASCII so names like "Ynys Môn" match
-    // our seat data which stores the unaccented form "Ynys Mon".
-    const constituencyName = rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-    // If the returned name has no match in the current seat index, try the
-    // Holyrood 2021→2026 boundary mapping as a best-guess fallback.
-    // Only applied on Holyrood to avoid false rewrites on Westminster lookups.
-    const seatKey = seatLookupKey(constituencyName);
-    if (!state.currentSeatNameByKey.has(seatKey) && mapName === 'holyrood-2026') {
-      const mapped = HOLYROOD_2021_TO_2026_NAME[constituencyName] ?? null;
-      if (mapped) return mapped;
-    }
-
-    return constituencyName;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Attaches event listeners to the postcode search input. On Enter or blur, looks up the
- * postcode and zooms to the matched constituency. Disables the input during the fetch,
- * shows an inline error on failure, and deduplicates blur-after-Enter submissions.
- * Guards against double-wiring via dataset flag.
- * @returns {void}
- */
-function wirePostcodeSearch() {
-  if (postcodeSearchInput.dataset.wired === 'true') return;
-
-  let lastSubmittedPostcode = '';
-
-  /**
-   * Reads the postcode input, runs the lookup, and selects the resolved seat.
-   * Deduplicates against the last submitted value to avoid double-fetching on blur after Enter.
-   * @returns {void}
-   */
-  const submitPostcode = async () => {
-    const query = postcodeSearchInput.value.trim();
-    if (!query || query === lastSubmittedPostcode) return;
-    lastSubmittedPostcode = query;
-    postcodeSearchInput.disabled = true;
-    clearPostcodeError();
-    const constituencyName = await lookupPostcode(query);
-    postcodeSearchInput.disabled = false;
-    if (constituencyName) {
-      selectSeatBySearchQuery(constituencyName);
-    } else {
-      showPostcodeError('Postcode not found');
-    }
-  };
-
-  postcodeSearchInput.addEventListener('focus', () => {
-    // If the error flash is showing, dismiss it and restore the original value
-    // so the user can immediately retype without clearing "Postcode not found" manually.
-    if (postcodeSearchInput.readOnly) {
-      clearPostcodeError();
-      postcodeSearchInput.value = '';
-      lastSubmittedPostcode = '';
-    }
-  });
-  postcodeSearchInput.addEventListener('input', () => {
-    // Reset the dedup guard so the same value can be re-submitted after editing.
-    lastSubmittedPostcode = '';
-    clearPostcodeError();
-  });
-  postcodeSearchInput.addEventListener('keydown', (event) => {
-    // Enter submits immediately without waiting for blur.
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      submitPostcode();
-    }
-  });
-  postcodeSearchInput.addEventListener('blur', () => {
-    // Brief delay absorbs Enter-then-blur so submitPostcode isn't called twice in quick succession.
-    window.setTimeout(submitPostcode, 120);
-  });
-
-  postcodeSearchInput.dataset.wired = 'true';
 }
 
 // ── Seat name search ──────────────────────────────────────────────────────────
@@ -2144,7 +1934,6 @@ export function wireInit() {
   wireMapInteractions();
   wireMapViewControls();
   wireSeatSearch();
-  wirePostcodeSearch();
   wireVoteTotalsToggle();
   wireVoteTotalsCollapse();
   wireVoteTotalsSorting();
@@ -2156,15 +1945,30 @@ export function wireInit() {
  * Runs all once-per-election DOM initialisations. Must be called after state.setupMapData() so
  * mapConfig and listRegionSummary are already set.
  *
- * Rebuilds the vote-totals tab nav, shows/hides the postcode search group based
- * on state.mapConfig.postcodeSupported, and populates the region-table overlay (hidden for non-list elections).
+ * Rebuilds the vote-totals tab nav, populates the region-table overlay (hidden for non-list
+ * elections), then runs any feature-registered map-init hooks (e.g. postcode search).
  *
  * @returns {void}
  */
 export function renderMapInit() {
   initVoteTotalsTabs();
-  initPostcodeSearch();
   initRegionTable();
+  for (const hook of mapInitHooks) hook();
+}
+
+// Per-map-init hooks registered by opt-in feature modules (e.g. postcode search). Invoked by
+// renderMapInit after the core inits, so a feature can react to each election load without
+// core dom.js importing it.
+const mapInitHooks = [];
+
+/**
+ * Registers a callback to run on every map (re)initialisation. Used by feature modules the
+ * page entry opts into.
+ * @param {() => void} hook
+ * @returns {void}
+ */
+export function registerMapInitHook(hook) {
+  mapInitHooks.push(hook);
 }
 
 // ─── Draw ────────────────────────────────────────────────────────────────────

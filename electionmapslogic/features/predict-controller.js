@@ -298,7 +298,7 @@ async function handlePredictShare() {
   const shareUrl = `${window.location.origin}${window.location.pathname}${query ? `?${query}` : ''}`;
   try {
     if (navigator.share) {
-      await navigator.share({ title: 'UK Election Maps prediction', url: shareUrl });
+      await navigator.share({ title: `${manifest.misc?.title ?? 'Election maps'} prediction`, url: shareUrl });
       return;
     }
   } catch { /* fall through */ }

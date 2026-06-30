@@ -6,22 +6,9 @@ import * as d3 from '../site/vendor/d3.v7.esm.js';
 import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
 
-// Canonical aliases for non-standard string party keys in legacy / external data, applied by
-// Manifest.resolvePartyRef after alphanumeric-normalising the raw key. Modern pf-results-v4
-// data uses integer party ids, so this only affects string-keyed inputs.
 // Colour for a "split" seat — a multi-member seat whose members are from different parties.
 // A distinct purple from the Independent party colour so the two don't blur.
 const SPLIT_COLOUR = '#7d3c98';
-
-const PARTY_KEY_ALIASES = {
-  ukindependenceparty: 'ukip',
-  reformuk: 'reform',
-  liberaldemocrats: 'libdems',
-  democraticunionistparty: 'dup',
-  ulsterunionistparty: 'uu',
-  uup: 'uu',
-  scottishnationalparty: 'snp',
-};
 
 // Per-page config set by the host HTML before the engine loads (window.MAPS_PAGE). It lets
 // one shared manifest + engine drive multiple pages (UK at electionmaps/, US at
@@ -49,6 +36,10 @@ class Manifest {
     this.mapModes = {};
     this.parliamentFeatures = {};
     this.parties = [];
+    // Canonical aliases for non-standard string party keys in legacy / external data, keyed by
+    // the alphanumeric-normalised form (manifest-driven, jurisdiction-specific). Applied by
+    // resolvePartyRef; modern pf-results-v4 data uses integer party ids and skips this.
+    this.partyKeyAliases = {};
     this.files = {};
     this.misc = {};
     this.partiesByKey = {};
@@ -76,6 +67,7 @@ class Manifest {
     this.mapModes ??= {};
     this.parliamentFeatures ??= {};
     this.parties ??= [];
+    this.partyKeyAliases ??= {};
     this.files ??= {};
     this.files.elections ??= {};
     this.files.elections.mapsById ??= {};
@@ -157,18 +149,12 @@ class Manifest {
 
   /**
    * Returns the parliament tab definitions for the parliament selector, sourced from
-   * `misc.parliamentTabs` (each `{ parliament, label }`). Falls back to the historical
-   * Westminster/Holyrood pair when the manifest does not define any, so behaviour is
-   * unchanged for manifests that predate this field.
+   * `misc.parliamentTabs` (each `{ parliament, label }`) — every page's shell supplies its own.
    * @returns {{ parliament: string, label: string }[]}
    */
   parliamentTabs() {
-    const tabs = this.misc?.parliamentTabs ?? [
-      { parliament: 'westminster', label: 'Westminster' },
-      { parliament: 'holyrood', label: 'Holyrood' },
-    ];
-    // Restrict to the host page's parliaments when set (so the UK page hides US tabs and
-    // vice versa) while both share one manifest.
+    const tabs = this.misc?.parliamentTabs ?? [];
+    // Restrict to the host page's parliaments when set (so a page only shows its own tabs).
     if (Array.isArray(page.parliaments)) {
       return tabs.filter((tab) => page.parliaments.includes(tab.parliament));
     }
@@ -227,7 +213,7 @@ class Manifest {
     // Fold known alias spellings (e.g. 'uup' → 'uu', 'reform uk' → 'reform') onto canonical
     // keys after stripping non-alphanumerics, matching the legacy normalizePartyKey behaviour.
     const alnum = raw.replace(/[^a-z0-9]/g, '');
-    return PARTY_KEY_ALIASES[alnum] || raw;
+    return this.partyKeyAliases[alnum] || raw;
   }
 
   /**

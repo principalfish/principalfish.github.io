@@ -193,6 +193,7 @@
       ]
     }
   },
+  "partyKeyAliases": {},
   "files": {
     "elections": {
       "mapsById": {

@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { Seat, state } from '../state.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { Seat, state, manifest } from '../state.js';
 
 describe('Seat.voteSharePct', () => {
   it('calculates share against the explicit turnout when present', () => {
@@ -37,6 +37,10 @@ describe('Seat.voteSharePct', () => {
 });
 
 describe('Seat constructor', () => {
+  // resolvePartyRef reads aliases from the manifest; supply the fixture the alias test needs.
+  beforeEach(() => { manifest.init({ partyKeyAliases: { uup: 'uu', reformuk: 'reform', liberaldemocrats: 'libdems' } }); });
+  afterEach(() => { manifest.init({ partyKeyAliases: {} }); });
+
   it('computes turnout as the sum of votes and applies defaults', () => {
     const seat = new Seat({ seat: 'A', region: 'london', winner: 'labour', votes: { labour: 600, conservative: 400 } });
     expect(seat.turnout).toBe(1000);

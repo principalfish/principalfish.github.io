@@ -813,6 +813,9 @@ def _export_page(
         "mapModes": build_map_modes_with_regions(
             config.get("mapModes", {}), manifest_regions_by_map_id
         ),
+        # Hand-authored, jurisdiction-specific party-key aliases (carried through from the
+        # page's shell); the front-end's resolvePartyRef reads them so no aliases live in JS.
+        "partyKeyAliases": config.get("partyKeyAliases", {}),
         "files": files,
         "parties": manifest_parties,
     }

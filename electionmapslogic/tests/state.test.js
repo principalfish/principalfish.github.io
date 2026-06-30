@@ -6,7 +6,7 @@ import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams } from '
 // Object.assign + re-hydrate, so every key a block might set must be listed here to be
 // cleared. Run before AND after every test for order-independence.
 function resetManifest() {
-  manifest.init({ parties: [], mapModes: {}, elections: [], files: {}, parliamentFeatures: {} });
+  manifest.init({ parties: [], mapModes: {}, elections: [], files: {}, parliamentFeatures: {}, partyKeyAliases: {} });
 }
 
 beforeEach(resetManifest);
@@ -113,7 +113,7 @@ describe('Seat.fromRaw with numeric manifest refs', () => {
 
 // ─── Manifest.resolvePartyRef ────────────────────────────────────────────────
 describe('manifest.resolvePartyRef', () => {
-  beforeEach(() => { manifest.init({ parties: [{ id: 1, key: 'snp', name: 'SNP' }] }); });
+  beforeEach(() => { manifest.init({ parties: [{ id: 1, key: 'snp', name: 'SNP' }], partyKeyAliases: { uup: 'uu', reformuk: 'reform', liberaldemocrats: 'libdems' } }); });
   afterEach(resetManifest);
 
   it('resolves a numeric id to the party key', () => {

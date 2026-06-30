@@ -515,6 +515,17 @@ export class Seat {
    * @returns {boolean} True if the seat passes all currently active filters.
    */
   static matchesPrimaryFilters(seat, comparisonSeat, filterState, byElectionSeats) {
+    // Multi-member chambers (e.g. Current Senate): the party and "next up" cycle filters apply
+    // per member — the seat is visible when a single member matches all active member-level
+    // filters, so the member tally (which counts those members) stays consistent with the map.
+    // The vote/comparison-based filters (majority, second place, gains) have no data here; only
+    // the seat-level region filter also applies.
+    if (seat.members) {
+      if (!seat.members.some((member) => Seat.memberMatchesFilters(member, filterState))) return false;
+      if (filterState.region !== 'all' && normalizeRegionKey(seat.region) !== filterState.region) return false;
+      return true;
+    }
+
     if (filterState.party !== 'all') {
       const winner = seat.winner === 'other' ? 'others' : seat.winner;
       if (winner !== filterState.party) return false;
@@ -523,13 +534,6 @@ export class Seat {
     if (filterState.region !== 'all') {
       const seatRegion = normalizeRegionKey(seat.region);
       if (seatRegion !== filterState.region) return false;
-    }
-
-    // "Next up for election" cycle filter (multi-member chambers, e.g. Current Senate): the
-    // seat passes if any of its members is next up in the selected year.
-    if (filterState.upcoming !== 'all') {
-      const members = seat.members || [];
-      if (!members.some((member) => String(member?.up) === filterState.upcoming)) return false;
     }
 
     const majority = seat.majorityStats().pct;
@@ -549,6 +553,27 @@ export class Seat {
       }
     }
 
+    return true;
+  }
+
+  /**
+   * Per-member match for multi-member chambers: returns true when a single member satisfies
+   * the member-level filters (party + "next up" cycle). Shared by matchesPrimaryFilters (the
+   * seat is visible when any member matches) and ElectionSummary.summarize (tally only the
+   * matching members), so the map and the vote totals never disagree — e.g. filtering by a
+   * party counts that party's senators even in split states.
+   * @param {{party?: string, up?: (number|string)}} member
+   * @param {{party?: string, upcoming?: string}} filterState
+   * @returns {boolean}
+   */
+  static memberMatchesFilters(member, filterState) {
+    if (filterState.party && filterState.party !== 'all') {
+      const party = member?.party === 'other' ? 'others' : (member?.party || 'others');
+      if (party !== filterState.party) return false;
+    }
+    if (filterState.upcoming && filterState.upcoming !== 'all' && String(member?.up) !== filterState.upcoming) {
+      return false;
+    }
     return true;
   }
 }
@@ -633,7 +658,7 @@ export class ElectionSummary {
    *   - `totalSeats` — `seats.length` of the input array (chamber size), independent of
    *     mode filtering.
    */
-  static summarize(seats, mode = 'all', upcomingFilter = 'all') {
+  static summarize(seats, mode = 'all', memberFilter = { party: 'all', upcoming: 'all' }) {
     // Multi-member chambers (each map seat returns more than one member, held in the seat's
     // `members` array): tally the individual members, since the chamber size differs from the
     // seat count. Such views carry no vote tallies, so totalVotes is 0.
@@ -641,9 +666,10 @@ export class ElectionSummary {
       const memberStats = new Map();
       let total = 0;
       seats.forEach((seat) => (seat.members || []).forEach((member) => {
-        // When a "next up for election" cycle is selected, count only the members up that
-        // year (one per state) so the totals match the filtered seats, not both senators.
-        if (upcomingFilter !== 'all' && String(member?.up) !== upcomingFilter) return;
+        // Count only members matching the active member-level filters (party + cycle), via the
+        // same predicate the map uses, so the totals agree with the filtered seats — e.g. a
+        // party filter counts that party's senators even in split states, one per state.
+        if (!Seat.memberMatchesFilters(member, memberFilter)) return;
         const key = member.party === 'other' ? 'others' : (member.party || 'others');
         if (!memberStats.has(key)) memberStats.set(key, { seats: 0, votes: 0 });
         memberStats.get(key).seats += 1;
@@ -1358,9 +1384,10 @@ class AppState {
     this.voteTotals.columns.votePct = tabAllowsVotes;
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
 
-    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode, this.mapFilters.upcoming);
+    const memberFilter = { party: this.mapFilters.party, upcoming: this.mapFilters.upcoming };
+    this.filteredSeatsSummary = ElectionSummary.summarize(this.mapSeatsVisible.seats, this.voteTotals.mode, memberFilter);
     this.filteredSeatsComparisonSummary = this.comparisonElectionData?.currentSeats.length
-      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode, this.mapFilters.upcoming)
+      ? ElectionSummary.summarize(this.mapSeatsVisible.comparisonSeats, this.voteTotals.mode, memberFilter)
       : null;
 
   }
@@ -1509,6 +1536,13 @@ class AppState {
    * @returns {void}
    */
   buildChoroplethConfig() {
+    // Multi-member chambers (composition snapshots, no votes) have no vote-share metric to
+    // colour by — disable choropleths without touching the user's selection, which stays
+    // intact for other elections. The choropleths control is also hidden for these maps.
+    if (this.currentElection?.multiMember) {
+      this.choroplethConfig = { enabled: false };
+      return;
+    }
     const visibleSeatKeys = this.mapSeatsVisible.seatKeys;
     if (!this.choroplethOptionsSelected() && !this.isReferendumType) {
       this.choroplethConfig = { enabled: false };

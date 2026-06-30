@@ -323,6 +323,8 @@ const filterSecondPartySelect = document.getElementById('mapsFilterSecondParty')
 // Wrapping group for the second-party filter — hidden when no primary party is selected.
 const filterSecondPartyGroup = document.getElementById('mapsFilterSecondPartyGroup');
 // Majority range filter inputs — restrict visible seats to those within the min/max % range.
+// The wrapping row is hidden for multi-member chambers (no vote margins, e.g. Current Senate).
+const filterMajorityGroup = document.getElementById('mapsFilterMajorityGroup');
 const filterMajorityMinInput = document.getElementById('mapsFilterMajorityMin');
 const filterMajorityMaxInput = document.getElementById('mapsFilterMajorityMax');
 // Choropleth type select — 'none', 'vote-share', or 'vote-share-change'.
@@ -330,6 +332,8 @@ const choroplethTypeSelect = document.getElementById('mapsChoroplethType');
 // Choropleth target party — once a choropleth type is selected, this picks which party's
 // vote share / vote share change drives the colour ramp on the map.
 const choroplethPartySelect = document.getElementById('mapsChoroplethParty');
+// Choropleths toolbar button — opens the choropleths panel; hidden for multi-member chambers.
+const choroplethsButton = document.getElementById('mapsChoroplethsBtn');
 // Reset buttons — restore all filters or choropleths to defaults.
 const filtersResetButton = document.getElementById('mapsFiltersReset');
 const choroplethsResetButton = document.getElementById('mapsChoroplethsReset');
@@ -392,6 +396,24 @@ export function renderMapControlOptions() {
     state.mapFilters.upcoming = 'all';
     if (filterUpcomingSelect) filterUpcomingSelect.innerHTML = '';
   }
+
+  // Vote/comparison-based controls are meaningless for multi-member chambers (composition
+  // snapshots with no votes and no comparison, e.g. Current Senate): hide the majority range,
+  // the gains toggle, and the choropleths button, and force them off so none can narrow the
+  // map. (The party filter still works — it matches per member; see matchesPrimaryFilters.)
+  // buildChoroplethConfig + matchesPrimaryFilters also ignore these for such elections.
+  const isMultiMember = Boolean(state.currentElection?.multiMember);
+  if (filterMajorityGroup) filterMajorityGroup.hidden = isMultiMember;
+  if (filterGainsButton) filterGainsButton.hidden = isMultiMember;
+  if (choroplethsButton) choroplethsButton.hidden = isMultiMember;
+  if (isMultiMember) {
+    state.mapFilters.majorityMin = 0;
+    state.mapFilters.majorityMax = 100;
+    state.mapFilters.gainsOnly = false;
+    filterMajorityMinInput.value = '0';
+    filterMajorityMaxInput.value = '100';
+    filterGainsButton.classList.remove('is-active');
+  }
 }
 
 /**
@@ -404,7 +426,8 @@ function syncMapControlInputsFromState() {
   filterRegionSelect.value = state.mapFilters.region;
   if (filterUpcomingSelect) filterUpcomingSelect.value = state.mapFilters.upcoming;
 
-  const showSecondPlaceFilter = state.mapFilters.party !== 'all';
+  // Second-place needs vote data, so it's never offered for multi-member chambers (no votes).
+  const showSecondPlaceFilter = state.mapFilters.party !== 'all' && !state.currentElection?.multiMember;
   filterSecondPartyGroup.hidden = !showSecondPlaceFilter;
   if (!showSecondPlaceFilter) {
     state.mapFilters.secondParty = 'all';

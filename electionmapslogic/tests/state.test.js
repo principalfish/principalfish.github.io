@@ -62,17 +62,26 @@ describe('Seat.matchesPrimaryFilters', () => {
     expect(Seat.matchesPrimaryFilters(makeSeat(), null, filter, null)).toBe(false);
   });
 
-  it('filters by upcoming election cycle when any member is up that year', () => {
-    const senateSeat = new Seat({
+  it('multi-member: party and cycle filters match per member, including split seats', () => {
+    const bothR = new Seat({
       seat: 'Alabama', region: 'eastsouthcentral', winner: 'republican',
       members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }],
     });
-    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: '2026' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: '2028' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: '2030' }, null)).toBe(false);
-    // 'all' never narrows; single-winner seats (no members) are excluded by any year filter.
-    expect(Seat.matchesPrimaryFilters(senateSeat, null, { ...openFilter, upcoming: 'all' }, null)).toBe(true);
-    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, upcoming: '2026' }, null)).toBe(false);
+    const split = new Seat({
+      seat: 'Maine', region: 'newengland', winner: 'split',
+      members: [{ party: 'independent', up: 2026 }, { party: 'republican', up: 2030 }],
+    });
+    // Cycle filter: the seat is visible when any member is up that year.
+    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: '2026' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: '2030' }, null)).toBe(false);
+    expect(Seat.matchesPrimaryFilters(bothR, null, { ...openFilter, upcoming: 'all' }, null)).toBe(true);
+    // Party filter matches per member, so the split seat passes the 'independent' filter (it
+    // holds one) — a combined-winner test would wrongly exclude it.
+    expect(Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: 'independent' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: 'republican' }, null)).toBe(true);
+    expect(Seat.matchesPrimaryFilters(split, null, { ...openFilter, party: 'democrat' }, null)).toBe(false);
+    // The cycle filter only applies to multi-member chambers; single-member seats ignore it.
+    expect(Seat.matchesPrimaryFilters(makeSeat(), null, { ...openFilter, upcoming: '2026' }, null)).toBe(true);
   });
 });
 
@@ -247,19 +256,25 @@ describe('ElectionSummary.summarize', () => {
     expect(findParty(data, 'other')).toBeUndefined();
   });
 
-  it('multi-member: tallies all members by default but only the selected cycle when filtering', () => {
+  it('multi-member: tallies all members by default but only matching ones when filtering', () => {
     state.currentElection = { multiMember: true };
     const seats = [
       { seat: 'Alabama', members: [{ party: 'republican', up: 2026 }, { party: 'republican', up: 2028 }] },
       { seat: 'Arizona', members: [{ party: 'democrat', up: 2026 }, { party: 'republican', up: 2030 }] },
     ];
-    // No cycle filter: every member counts (4 senators across the two states).
-    expect(ElectionSummary.summarize(seats, 'all', 'all').totalSeats).toBe(4);
+    // No filter: every member counts (4 senators across the two states).
+    expect(ElectionSummary.summarize(seats, 'all').totalSeats).toBe(4);
     // 2026 cycle: only the member up that year in each state (one R, one D).
-    const cycle = ElectionSummary.summarize(seats, 'all', '2026');
+    const cycle = ElectionSummary.summarize(seats, 'all', { upcoming: '2026' });
     expect(cycle.totalSeats).toBe(2);
     expect(findParty(cycle, 'republican')).toMatchObject({ seats: 1 });
     expect(findParty(cycle, 'democrat')).toMatchObject({ seats: 1 });
+    // Party filter: counts that party's senators wherever they sit, incl. the split Arizona
+    // seat (1 D) — not just states the party fully holds. Republicans: 2 (Alabama) + 1 (AZ) = 3.
+    const dem = ElectionSummary.summarize(seats, 'all', { party: 'democrat' });
+    expect(dem.totalSeats).toBe(1);
+    expect(findParty(dem, 'democrat')).toMatchObject({ seats: 1 });
+    expect(ElectionSummary.summarize(seats, 'all', { party: 'republican' }).totalSeats).toBe(3);
   });
 });
 

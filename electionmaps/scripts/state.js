@@ -9,6 +9,10 @@ import { fetchJson } from './files.js';
 // Canonical aliases for non-standard string party keys in legacy / external data, applied by
 // Manifest.resolvePartyRef after alphanumeric-normalising the raw key. Modern pf-results-v4
 // data uses integer party ids, so this only affects string-keyed inputs.
+// Colour for a "split" seat — a multi-member seat whose members are from different parties.
+// A distinct purple from the Independent party colour so the two don't blur.
+const SPLIT_COLOUR = '#7d3c98';
+
 const PARTY_KEY_ALIASES = {
   ukindependenceparty: 'ukip',
   reformuk: 'reform',
@@ -189,6 +193,7 @@ class Manifest {
    * @returns {string}
    */
   labelParty(partyKey) {
+    if (partyKey === 'split') return 'Split';
     return this.partiesByKey?.[partyKey]?.name ?? partyKey;
   }
 
@@ -198,6 +203,7 @@ class Manifest {
    * @returns {string}
    */
   colourParty(partyKey) {
+    if (partyKey === 'split') return SPLIT_COLOUR;
     return this.partiesByKey?.[partyKey]?.colour ?? DEFAULT_PARTY_COLOUR;
   }
 
@@ -319,6 +325,9 @@ export class Seat {
     this.candidates = { ...(input?.candidates || {}) };
     // Electoral College votes for this seat (presidential maps only); 0 otherwise.
     this.ev = Number(input?.ev) || 0;
+    // Multi-member seats only (a seat that returns several members, each {party, name, up});
+    // null for single-winner seats. Drives the per-member popup and the chamber tally.
+    this.members = Array.isArray(input?.members) ? input.members : null;
   }
 
   /**
@@ -334,6 +343,7 @@ export class Seat {
       votes: Seat.#decodeCompactVotes(rawSeat?.p),
       candidates: Seat.#decodeCandidates(rawSeat?.p),
       ev: rawSeat?.ev,
+      members: rawSeat?.members,
     });
   }
 
@@ -631,6 +641,24 @@ export class ElectionSummary {
    *     mode filtering.
    */
   static summarize(seats, mode = 'all') {
+    // Multi-member chambers (each map seat returns more than one member, held in the seat's
+    // `members` array): tally the individual members, since the chamber size differs from the
+    // seat count. Such views carry no vote tallies, so totalVotes is 0.
+    if (state.currentElection?.multiMember) {
+      const memberStats = new Map();
+      let total = 0;
+      seats.forEach((seat) => (seat.members || []).forEach((member) => {
+        const key = member.party === 'other' ? 'others' : (member.party || 'others');
+        if (!memberStats.has(key)) memberStats.set(key, { seats: 0, votes: 0 });
+        memberStats.get(key).seats += 1;
+        total += 1;
+      }));
+      const parties = Array.from(memberStats.entries())
+        .map(([party, stats]) => ({ party, ...stats }))
+        .sort((a, b) => b.seats - a.seats);
+      return { parties, totalVotes: 0, totalSeats: total };
+    }
+
     // partyStats accumulates per-party seat and vote counts in a single pass over `seats`.
     // We use a Map (not a plain object) because party keys are arbitrary user-data strings
     // and we want insertion-order iteration if needed for deterministic debugging.
@@ -748,9 +776,10 @@ export class ElectionSummary {
     const topLabel = manifest.labelParty(top?.party || 'others');
     const mapMode = activeMapMode();
 
-    // Seats-up views (e.g. the US Senate, which shows only the seats contested this cycle)
-    // have no meaningful chamber majority — show just the election name.
-    if (mapMode.hideMajority) {
+    // Seats-up views (only the seats contested this cycle) have no meaningful chamber
+    // majority — show just the election name. A full multi-member chamber overrides this
+    // and shows the majority.
+    if (mapMode.hideMajority && !state.currentElection?.multiMember) {
       return electionName;
     }
 
@@ -1300,8 +1329,10 @@ class AppState {
    * @returns {void}
    */
   recomputeVoteTotalsForMode() {
-    const electionAllowsVoteCounts = !(this.currentElection.model || this.isReferendumType || this.view === 'predict');
-    const tabAllowsVotes = !this.hasListSeats || this.voteTotals.mode !== 'all';
+    // A multi-member chamber view has no vote tallies, so both vote columns hide.
+    const multiMember = !!this.currentElection.multiMember;
+    const electionAllowsVoteCounts = !(this.currentElection.model || this.isReferendumType || this.view === 'predict' || multiMember);
+    const tabAllowsVotes = (!this.hasListSeats || this.voteTotals.mode !== 'all') && !multiMember;
     this.voteTotals.columns.votePct = tabAllowsVotes;
     this.voteTotals.columns.votes = tabAllowsVotes && electionAllowsVoteCounts;
 

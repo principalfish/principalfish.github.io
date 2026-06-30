@@ -1110,9 +1110,19 @@ a {
   justify-self: start;
   text-align: left;
   min-width: 0;
+  overflow: hidden;
   gap: 0.35rem;
   font: 700 0.83rem/1.2 "Source Sans 3", "Segoe UI", sans-serif;
   color: #0f172a;
+}
+
+/* The label (party or candidate/member name) truncates so a longer value (e.g. a
+   member's "last YYYY · up YYYY") never overflows the row. */
+.maps-popup-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .maps-popup-values {
@@ -1120,6 +1130,7 @@ a {
   align-items: center;
   justify-self: end;
   gap: 0.45rem;
+  white-space: nowrap;
   font: 700 0.8rem/1.1 "DM Sans", "Segoe UI", sans-serif;
   color: #0f172a;
 }
@@ -1510,6 +1521,7 @@ a {
 .maps-seat-icon {
   width: 0.72rem;
   height: 0.72rem;
+  flex: none;
   display: inline-block;
   border-radius: 2px;
   border: 1px solid rgba(15, 23, 42, 0.25);

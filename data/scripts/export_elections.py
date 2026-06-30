@@ -73,6 +73,7 @@ from scripts.export.manifest import (
 from scripts.export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTIONS,
     SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
+    reposition_supplemental_entries,
     apply_supplemental_legacy_elections,
 )
 
@@ -725,6 +726,9 @@ def main() -> None:
         # that references them.
         existing_order = [e["id"] for e in existing.get("elections", []) if "id" in e]
         manifest_entries = reorder_manifest_entries(manifest_entries, existing_order)
+        # Restore supplemental positions the reorder may have overridden (e.g. Current Senate
+        # leading the Senate list regardless of the previous manifest's order).
+        reposition_supplemental_entries(manifest_entries)
 
         # Second comparison pass, now that preserved boundary-changed baselines (e.g.
         # 2021-holyrood-2026) are present and the list is in curated newest-first order.

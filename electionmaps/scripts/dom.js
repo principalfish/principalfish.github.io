@@ -2203,7 +2203,7 @@ function buildPopupRow(party, barWidth, valuesHtml, label) {
   item.style.setProperty('--maps-popup-bar-width', `${barWidth}%`);
   item.style.setProperty('--maps-popup-bar-colour', manifest.colourParty(party));
   item.innerHTML = `
-    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(party)}"></span>${escapeHtml(label ?? manifest.labelParty(party))}</div>
+    <div class="maps-popup-party"><span class="maps-seat-icon" style="background:${manifest.colourParty(party)}"></span><span class="maps-popup-name">${escapeHtml(label ?? manifest.labelParty(party))}</span></div>
     <div class="maps-popup-values">${valuesHtml}</div>
   `;
   return item;
@@ -2297,6 +2297,24 @@ function renderSeatPopup(seatName) {
   const seat = state.electionData.seatsByKey.get(seatKey);
   if (!seat) {
     hideSeatPopup();
+    return;
+  }
+
+  // Multi-member seat (several members, not a single winner): show each member with their
+  // party colour, name and the years their seat was last and is next contested.
+  if (seat.members?.length) {
+    seatPopupTitle.textContent = seat.seat;
+    seatPopupMeta.innerHTML =
+      `<span class="maps-popup-meta-item">${escapeHtml(getRegionLabel(seat.region, state.currentRegionLabelsByKey))}</span>`;
+    const rows = seat.members.map((member) => ({
+      party: member.party,
+      pct: 100,
+      label: member.name,
+      up: member.up,
+    }));
+    // Terms are 6 years, so a seat was last contested six years before it is next up.
+    renderPopupRows(rows, (row) => `<span>last ${row.up - 6} · up ${row.up}</span>`);
+    seatPopup.hidden = false;
     return;
   }
 
@@ -2866,9 +2884,9 @@ function renderTopoMap(preserveZoom = false) {
     .attr('fill', (datum) => {
       const seatKey = seatLookupKey(MapInteraction.seatNameFromFeature(datum));
       const seat = state.electionData.seatsByKey.get(seatKey);
-      // Feature has no matching seat in the election data — e.g. a US state with no Senate
-      // race this cycle. Use the map's neutralFill when configured (so "not contested"
-      // reads as neutral, not an Others win), otherwise the Others colour.
+      // Feature has no matching seat in the election data — e.g. an area not contested this
+      // cycle. Use the map's neutralFill when configured (so "not contested" reads as
+      // neutral, not an Others win), otherwise the Others colour.
       if (!seat) return state.mapConfig?.neutralFill || manifest.colourParty('others');
 
       // Active filter excludes this seat — render as greyed-out slate rather than hiding,

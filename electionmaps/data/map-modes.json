@@ -146,6 +146,14 @@
       "parliament": "us_presidential"
     },
     {
+      "id": "current-senate",
+      "name": "Current Senate",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate",
+      "multiMember": true
+    },
+    {
       "id": "2024-us-senate",
       "name": "2024 Election",
       "type": "us_senate",
@@ -719,6 +727,7 @@
         "2011-holyrood": "results/holyrood-general-2011.json",
         "2010-general": "results/uk-general-2010.json",
         "2019-general-changed-boundaries": "results/uk-general-2019-changed-boundaries.json",
+        "current-senate": "results/senate-current.json",
         "current-parliament": "results/current-parliament.json",
         "current-holyrood-prediction": "results/holyrood-prediction.json",
         "2021-holyrood-2026": "results/holyrood-general-2021-changed-boundaries.json",

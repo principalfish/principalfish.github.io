@@ -214,6 +214,7 @@ def main() -> None:
     set_others_party_id(others_party.id)
     seat_columns = {column["name"] for column in inspect(db.engine).get_columns("seats")}
     has_electorate = "electorate" in seat_columns
+    has_electoral_votes = "electoral_votes" in seat_columns
 
     with db.session() as session:
         parties = session.execute(select(Party)).scalars().all()
@@ -301,6 +302,7 @@ def main() -> None:
                     ElectionType.by_election,
                     ElectionType.holyrood_general,
                     ElectionType.us_house,
+                    ElectionType.us_presidential,
                 ]))
                 .options(joinedload(Election.map))
                 .order_by(Election.year.desc(), Election.name.asc())
@@ -341,20 +343,24 @@ def main() -> None:
             if map_row is None:
                 raise RuntimeError(f"Election {election.id} has no map")
 
+            # Optional columns (electorate, electoral_votes) are appended only when present
+            # in the schema, so index positions depend on those flags.
+            columns: list[Any] = [Seat.id, Seat.seat_name, Region.id, Region.name]
+            electorate_idx = None
+            electoral_votes_idx = None
             if has_electorate:
-                seat_rows = session.execute(
-                    select(Seat.id, Seat.seat_name, Region.id, Region.name, Seat.electorate)
-                    .outerjoin(Region, Region.id == Seat.region_id)
-                    .where(Seat.map_id == election.map_id)
-                    .order_by(Seat.seat_name)
-                ).all()
-            else:
-                seat_rows = session.execute(  # type: ignore[assignment]
-                    select(Seat.id, Seat.seat_name, Region.id, Region.name)
-                    .outerjoin(Region, Region.id == Seat.region_id)
-                    .where(Seat.map_id == election.map_id)
-                    .order_by(Seat.seat_name)
-                ).all()
+                electorate_idx = len(columns)
+                columns.append(Seat.electorate)
+            if has_electoral_votes:
+                electoral_votes_idx = len(columns)
+                columns.append(Seat.electoral_votes)
+
+            seat_rows = session.execute(
+                select(*columns)
+                .outerjoin(Region, Region.id == Seat.region_id)
+                .where(Seat.map_id == election.map_id)
+                .order_by(Seat.seat_name)
+            ).all()
 
             seats = [
                 SeatRow(
@@ -362,7 +368,8 @@ def main() -> None:
                     seat_name=row[1],
                     region_id=row[2],
                     region_name=row[3],
-                    electorate=(row[4] if has_electorate else None),
+                    electorate=(row[electorate_idx] if electorate_idx is not None else None),
+                    electoral_votes=(row[electoral_votes_idx] if electoral_votes_idx is not None else None),
                 )
                 for row in seat_rows
             ]

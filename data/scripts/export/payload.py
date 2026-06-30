@@ -29,6 +29,8 @@ class SeatRow:
         region_name: Display name of the region, or None if unset.
         electorate: Registered electorate size used for turnout calculation,
             or None if the seats table has no electorate column.
+        electoral_votes: US Electoral College votes for this seat (presidential
+            maps only), or None.
     """
 
     seat_id: int
@@ -36,6 +38,7 @@ class SeatRow:
     region_id: int | None
     region_name: str | None
     electorate: int | None
+    electoral_votes: int | None = None
 
 
 def choose_winner(votes: Sequence[Vote]) -> Vote | None:
@@ -149,14 +152,17 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
                 row.append(candidate)
             compact_party_rows.append(row)
 
-        payload_seats.append(
-            {
-                "n": seat.seat_name,
-                "r": seat.region_id or 0,
-                "w": winner_id,
-                "p": compact_party_rows,
-            }
-        )
+        seat_entry: dict[str, Any] = {
+            "n": seat.seat_name,
+            "r": seat.region_id or 0,
+            "w": winner_id,
+            "p": compact_party_rows,
+        }
+        # Electoral-vote weight for presidential seats; omitted elsewhere so the field
+        # only appears where a tally needs it.
+        if seat.electoral_votes is not None:
+            seat_entry["ev"] = seat.electoral_votes
+        payload_seats.append(seat_entry)
 
     return {
         "schema": "pf-results-v4",

@@ -137,6 +137,13 @@
       "type": "us_house",
       "mapId": 21,
       "parliament": "us_house"
+    },
+    {
+      "id": "2024-us-president",
+      "name": "2024 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential"
     }
   ],
   "misc": {
@@ -153,6 +160,10 @@
       {
         "parliament": "us_house",
         "label": "US House"
+      },
+      {
+        "parliament": "us_presidential",
+        "label": "US President"
       }
     ]
   },
@@ -313,6 +324,9 @@
       }
     },
     "us_house": {
+      "features": []
+    },
+    "us_presidential": {
       "features": []
     }
   },
@@ -520,6 +534,218 @@
         },
         {
           "id": 124,
+          "name": "Wyoming"
+        }
+      ]
+    },
+    "22": {
+      "name": "us-president-2024",
+      "projection": "albersUsa",
+      "tally": "electoralVotes",
+      "postcodeSupported": false,
+      "regions": [
+        {
+          "id": 125,
+          "name": "Alabama"
+        },
+        {
+          "id": 126,
+          "name": "Alaska"
+        },
+        {
+          "id": 127,
+          "name": "Arizona"
+        },
+        {
+          "id": 128,
+          "name": "Arkansas"
+        },
+        {
+          "id": 129,
+          "name": "California"
+        },
+        {
+          "id": 130,
+          "name": "Colorado"
+        },
+        {
+          "id": 131,
+          "name": "Connecticut"
+        },
+        {
+          "id": 132,
+          "name": "Delaware"
+        },
+        {
+          "id": 133,
+          "name": "District of Columbia"
+        },
+        {
+          "id": 134,
+          "name": "Florida"
+        },
+        {
+          "id": 135,
+          "name": "Georgia"
+        },
+        {
+          "id": 136,
+          "name": "Hawaii"
+        },
+        {
+          "id": 137,
+          "name": "Idaho"
+        },
+        {
+          "id": 138,
+          "name": "Illinois"
+        },
+        {
+          "id": 139,
+          "name": "Indiana"
+        },
+        {
+          "id": 140,
+          "name": "Iowa"
+        },
+        {
+          "id": 141,
+          "name": "Kansas"
+        },
+        {
+          "id": 142,
+          "name": "Kentucky"
+        },
+        {
+          "id": 143,
+          "name": "Louisiana"
+        },
+        {
+          "id": 144,
+          "name": "Maine"
+        },
+        {
+          "id": 145,
+          "name": "Maryland"
+        },
+        {
+          "id": 146,
+          "name": "Massachusetts"
+        },
+        {
+          "id": 147,
+          "name": "Michigan"
+        },
+        {
+          "id": 148,
+          "name": "Minnesota"
+        },
+        {
+          "id": 149,
+          "name": "Mississippi"
+        },
+        {
+          "id": 150,
+          "name": "Missouri"
+        },
+        {
+          "id": 151,
+          "name": "Montana"
+        },
+        {
+          "id": 152,
+          "name": "Nebraska"
+        },
+        {
+          "id": 153,
+          "name": "Nevada"
+        },
+        {
+          "id": 154,
+          "name": "New Hampshire"
+        },
+        {
+          "id": 155,
+          "name": "New Jersey"
+        },
+        {
+          "id": 156,
+          "name": "New Mexico"
+        },
+        {
+          "id": 157,
+          "name": "New York"
+        },
+        {
+          "id": 158,
+          "name": "North Carolina"
+        },
+        {
+          "id": 159,
+          "name": "North Dakota"
+        },
+        {
+          "id": 160,
+          "name": "Ohio"
+        },
+        {
+          "id": 161,
+          "name": "Oklahoma"
+        },
+        {
+          "id": 162,
+          "name": "Oregon"
+        },
+        {
+          "id": 163,
+          "name": "Pennsylvania"
+        },
+        {
+          "id": 164,
+          "name": "Rhode Island"
+        },
+        {
+          "id": 165,
+          "name": "South Carolina"
+        },
+        {
+          "id": 166,
+          "name": "South Dakota"
+        },
+        {
+          "id": 167,
+          "name": "Tennessee"
+        },
+        {
+          "id": 168,
+          "name": "Texas"
+        },
+        {
+          "id": 169,
+          "name": "Utah"
+        },
+        {
+          "id": 170,
+          "name": "Vermont"
+        },
+        {
+          "id": 171,
+          "name": "Virginia"
+        },
+        {
+          "id": 172,
+          "name": "Washington"
+        },
+        {
+          "id": 173,
+          "name": "West Virginia"
+        },
+        {
+          "id": 174,
+          "name": "Wisconsin"
+        },
+        {
+          "id": 175,
           "name": "Wyoming"
         }
       ]
@@ -746,6 +972,7 @@
         "2": "maps/map-2.topo.json",
         "12": "maps/map-12.topo.json",
         "21": "maps/map-21.topo.json",
+        "22": "maps/map-22.topo.json",
         "11": "maps/map-11.topo.json",
         "1": "maps/map-1.topo.json"
       },
@@ -754,6 +981,7 @@
         "2026-holyrood": "results/holyrood-general-2026.json",
         "2024-general": "results/uk-general-2024.json",
         "2024-us-house": "results/us-house-2024.json",
+        "2024-us-president": "results/us-president-2024.json",
         "2021-holyrood": "results/holyrood-general-2021.json",
         "2019-general": "results/uk-general-2019.json",
         "2017-general": "results/uk-general-2017.json",

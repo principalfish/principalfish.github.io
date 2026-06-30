@@ -14,6 +14,10 @@
       {
         "parliament": "us_house",
         "label": "US House"
+      },
+      {
+        "parliament": "us_presidential",
+        "label": "US President"
       }
     ]
   },
@@ -175,12 +179,21 @@
     },
     "us_house": {
       "features": []
+    },
+    "us_presidential": {
+      "features": []
     }
   },
   "mapModes": {
     "21": {
       "name": "us-house-2024",
       "projection": "albersUsa",
+      "postcodeSupported": false
+    },
+    "22": {
+      "name": "us-president-2024",
+      "projection": "albersUsa",
+      "tally": "electoralVotes",
       "postcodeSupported": false
     },
     "1": {

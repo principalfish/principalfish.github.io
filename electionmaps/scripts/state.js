@@ -294,6 +294,8 @@ export class Seat {
     // Optional candidate names by party key; absent for projections / older data,
     // where the UI falls back to the party label.
     this.candidates = { ...(input?.candidates || {}) };
+    // Electoral College votes for this seat (presidential maps only); 0 otherwise.
+    this.ev = Number(input?.ev) || 0;
   }
 
   /**
@@ -308,6 +310,7 @@ export class Seat {
       winner: rawSeat?.w,
       votes: Seat.#decodeCompactVotes(rawSeat?.p),
       candidates: Seat.#decodeCandidates(rawSeat?.p),
+      ev: rawSeat?.ev,
     });
   }
 
@@ -609,6 +612,10 @@ export class ElectionSummary {
     // We use a Map (not a plain object) because party keys are arbitrary user-data strings
     // and we want insertion-order iteration if needed for deterministic debugging.
     const partyStats = new Map();
+    // Electoral-vote tally mode (presidential maps): the leading party's "seats" count
+    // and the chamber total are measured in electoral votes, not seat counts.
+    const evTally = state.mapConfig?.tally === 'electoralVotes';
+    const weightOf = (seat) => (evTally ? Number(seat.ev || 0) : 1);
     // Tracks `(region, party)` pairs we've already credited with list-mode votes. Each
     // region's list ballot is duplicated across every list seat in that region, so without
     // this guard a region with N list seats for one party would count its votes N times.
@@ -630,7 +637,7 @@ export class ElectionSummary {
       // synthetic key matches how the rest of the app treats unattributed seats.
       const winner = seat.winner === 'other' ? 'others' : (seat.winner || 'others');
       if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
-      partyStats.get(winner).seats += 1;
+      partyStats.get(winner).seats += weightOf(seat);
 
       // Vote accumulation gate. List seats are excluded from votes in 'all' mode because
       // they're a separate ballot — combining them with constituency votes would
@@ -668,9 +675,12 @@ export class ElectionSummary {
     // accumulators (the list-mode dedupe means a running sum would double-count).
     const totalVotes = parties.reduce((sum, p) => sum + p.votes, 0);
 
-    // totalSeats is the *input* length, not the size of partyStats — it represents the
-    // chamber, not the number of seats that survived mode filtering.
-    return { parties, totalVotes, totalSeats: seats.length };
+    // totalSeats is the *input* length (the chamber), not the number of seats that survived
+    // mode filtering. In EV-tally mode it is the total electoral votes available (e.g. 538).
+    const totalSeats = evTally
+      ? seats.reduce((sum, seat) => sum + Number(seat.ev || 0), 0)
+      : seats.length;
+    return { parties, totalVotes, totalSeats };
   }
 
   /**
@@ -711,13 +721,23 @@ export class ElectionSummary {
     const top = data.parties[0];
     const leadSeats = Number(top?.seats || 0);
     const totalSeats = Number(data.totalSeats || 0);
+    const topLabel = manifest.labelParty(top?.party || 'others');
+
+    // Electoral-vote tally (presidential): report the leader's EV against the 270-to-win line.
+    if (state.mapConfig?.tally === 'electoralVotes') {
+      const toWin = Math.floor(totalSeats / 2) + 1;
+      return leadSeats >= toWin
+        ? `${electionName} · ${topLabel} ${formatInt(leadSeats)} electoral votes (${toWin} to win)`
+        : `${electionName} · No majority - ${topLabel} leads with ${formatInt(leadSeats)} (${toWin} to win)`;
+    }
+
     const majorityThreshold = totalSeats / 2;
     const hasMajority = leadSeats > majorityThreshold;
     const majority = hasMajority ? Math.round(2 * (leadSeats - majorityThreshold)) : 0;
 
     return hasMajority
-      ? `${electionName} · ${manifest.labelParty(top?.party || 'others')} majority: ${majority}`
-      : `${electionName} · Hung parliament - largest party ${manifest.labelParty(top?.party || 'others')} with ${formatInt(leadSeats)} seats`;
+      ? `${electionName} · ${topLabel} majority: ${majority}`
+      : `${electionName} · Hung parliament - largest party ${topLabel} with ${formatInt(leadSeats)} seats`;
   }
 
   /**

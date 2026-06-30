@@ -158,6 +158,19 @@ class TestBuildResultPayload:
         payload = build_result_payload(seats, votes)
         assert payload["seats"][0]["p"] == [[1, 100, "Alice"], [2, 60, "Bob"], [3, 10]]
 
+    def test_electoral_votes_emitted_only_when_set(self) -> None:
+        set_others_party_id(0)
+        pres_seat = SeatRow(
+            seat_id=1, seat_name="California", region_id=1, region_name="California",
+            electorate=None, electoral_votes=54,
+        )
+        votes = [_Vote(1, 100.0, party=_Party(1, "Democratic"), elected=True)]
+        payload = build_result_payload([pres_seat], votes)
+        assert payload["seats"][0]["ev"] == 54
+        # A seat with no electoral_votes (the default) omits the key entirely.
+        uk = build_result_payload([_seat(2, "Alpha")], [_Vote(2, 10.0, party=_Party(1, "Labour"))])
+        assert "ev" not in uk["seats"][0]
+
     def test_aggregated_party_keeps_leading_candidate_name(self) -> None:
         set_others_party_id(0)
         lab = _Party(1, "Labour")

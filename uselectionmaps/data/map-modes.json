@@ -191,7 +191,12 @@
           "id": 235,
           "name": "West South Central"
         }
-      ]
+      ],
+      "senateClassNextElection": {
+        "1": 2030,
+        "2": 2026,
+        "3": 2028
+      }
     }
   },
   "partyKeyAliases": {},

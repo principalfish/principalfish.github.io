@@ -1252,6 +1252,24 @@ class AppState {
   }
 
   /**
+   * For multi-member chambers whose mapMode carries a `senateClassNextElection` map, stamps
+   * each member's next-up election year onto `member.up` from its permanent `class`. This lets
+   * the cycle filter, tally, and seat popup read `member.up` unchanged while the year itself is
+   * manifest-driven and time-aware (resolved at export). No-op when there's no class→year map.
+   * @returns {void}
+   */
+  #resolveMemberCycles() {
+    const cycleMap = this.mapConfig?.senateClassNextElection;
+    if (!cycleMap) return;
+    this.electionData?.currentSeats?.forEach((seat) => {
+      (seat.members || []).forEach((member) => {
+        const year = cycleMap[member?.class];
+        if (year != null) member.up = year;
+      });
+    });
+  }
+
+  /**
    * Computes all derived per-render data for the active map view: applies filters,
    * builds the choropleth config, and produces the aggregated summaries plus the
    * list-seat specialisation slice. drawMap calls this once per render and then reads
@@ -1264,10 +1282,13 @@ class AppState {
    * @returns {void}
    */
   setupMapData() {
+    this.mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
+    // Stamp each member's next-up year from its class before filtering, so the cycle filter
+    // and tally (which read member.up) see the manifest-driven, time-aware year.
+    this.#resolveMemberCycles();
+
     this.applyMapFilters();
     this.buildChoroplethConfig();
-
-    this.mapConfig = manifest.mapModes[String(this.currentElection.mapId)];
 
     // Partition the chamber into list / non-list seats in a single pass — the predicate
     // (Seat.isList, a regex test) was previously evaluated three separate times per render

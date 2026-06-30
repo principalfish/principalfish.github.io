@@ -45,7 +45,11 @@
       "projection": "albersUsa",
       "neutralFill": "#e5e7eb",
       "hideMajority": true,
-      "postcodeSupported": false
+      "postcodeSupported": false,
+      "senateClassCycle": {
+        "base": { "1": 2018, "2": 2020, "3": 2022 },
+        "period": 6
+      }
     }
   }
 }

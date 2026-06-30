@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 import json
+import math
 from typing import Any, Sequence
 
 from models import Election, ElectionType, Party, Region
@@ -89,6 +91,7 @@ def build_map_modes_with_regions(
         A new dict keyed by string map id, each value being the mapMode config with a
         ``regions`` list (DB-derived, display names overridden where configured).
     """
+    current_year = date.today().year
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)
@@ -98,8 +101,36 @@ def build_map_modes_with_regions(
                 {"id": region["id"], "name": overrides.get(region["name"], region["name"])}
                 for region in regions_by_map_id.get(map_id_str, [])
             ]
+        # Resolve the durable Senate-class cycle ({base year per class, period}) into concrete
+        # "next up" years as of this export, so the front-end filter stays a simple class→year
+        # lookup and the cycle rolls forward on its own without editing the shell.
+        cycle = entry.pop("senateClassCycle", None)
+        if cycle:
+            entry["senateClassNextElection"] = _senate_class_next_election(cycle, current_year)
         merged[map_id_str] = entry
     return merged
+
+
+def _senate_class_next_election(cycle: dict[str, Any], current_year: int) -> dict[str, int]:
+    """Resolve each Senate class's next election year from a durable cycle definition.
+
+    Args:
+        cycle: ``{"base": {class: base_election_year}, "period": years}`` — each class's fixed
+            6-year cycle anchored at a base year (Class 1 = 2018, 2 = 2020, 3 = 2022).
+        current_year: The year to resolve "next up" relative to (the export year).
+
+    Returns:
+        ``{class: next_election_year}`` (string class keys), where each year is the first
+        election year on that class's cycle that is ``>= current_year``.
+    """
+    base = cycle.get("base", {})
+    period = int(cycle.get("period", 6)) or 6
+    result: dict[str, int] = {}
+    for cls, base_year in base.items():
+        base_year = int(base_year)
+        steps = max(0, math.ceil((current_year - base_year) / period))
+        result[str(cls)] = base_year + steps * period
+    return result
 
 
 def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:

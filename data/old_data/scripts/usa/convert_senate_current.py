@@ -1,8 +1,9 @@
 """Build the "Current Senate" composition snapshot from congress-legislators data.
 
 Unlike the election result files (one cycle's contests), this is the *current* makeup of
-all 100 seats: per state, its two sitting senators, each with the party, name and the year
-their seat is next up (from their Senate class). The state's map colour is the combination
+all 100 seats: per state, its two sitting senators, each with the party, name and Senate
+class (1/2/3 — permanent; the year that class is next up is derived downstream from the
+map's `senateClassCycle` config). The state's map colour is the combination
 of the pair — both same party, or "split" when they differ. Independents (Sanders, King)
 count as their own party, so their states read as split.
 
@@ -43,8 +44,9 @@ def _region_key(state: str) -> str:
 
 PARTY_KEY = {"Democrat": "democrat", "Republican": "republican", "Independent": "independent"}
 
-# Senate class -> the year that class is next up for regular election (after the 2024 cycle).
-CLASS_NEXT_ELECTION = {1: 2030, 2: 2026, 3: 2028}
+# Note: a senator's `class` (1/2/3) is permanent, so it is the only cycle data stored here.
+# The year each class is *next* up is derived downstream from the map's `senateClassCycle`
+# config (base years + period) at export time, so it never needs editing in this snapshot.
 
 ABBREV_TO_STATE = {
     "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
@@ -85,12 +87,11 @@ def build(legislators: list[dict[str, Any]]) -> dict[str, Any]:
             "party": PARTY_KEY.get(term.get("party", ""), "others"),
             "name": leg["name"].get("official_full") or f"{leg['name'].get('first', '')} {leg['name'].get('last', '')}".strip(),
             "class": senator_class,
-            "up": CLASS_NEXT_ELECTION.get(senator_class),
         })
 
     seats: list[dict[str, Any]] = []
     for state in sorted(by_state):
-        members = sorted(by_state[state], key=lambda s: s["up"] or 0)
+        members = sorted(by_state[state], key=lambda s: s["class"] or 0)
         parties = {m["party"] for m in members}
         winner = next(iter(parties)) if len(parties) == 1 else "split"
         # Region is the state's Census division (normalised key) so the division filter

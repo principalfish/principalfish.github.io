@@ -25,6 +25,9 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 TREND_CACHE_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.json"
 TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
+# Default baseline election the projection swings from (override with --baseline-election-name).
+# Bump to the latest general election once it lands. Mirrors Holyrood's BASELINE_ELECTION_NAME.
+BASELINE_ELECTION_NAME = "2024 General Election"
 if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
@@ -245,7 +248,11 @@ def parse_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--map-name", default="UK Constituencies post 2022")
-    parser.add_argument("--baseline-election-name", default="2024 General Election")
+    parser.add_argument(
+        "--baseline-election-name",
+        default=BASELINE_ELECTION_NAME,
+        help=f"Baseline election the projection swings from (default: {BASELINE_ELECTION_NAME!r})",
+    )
     parser.add_argument("--half-life-days", type=float, default=30.0)
     parser.add_argument("--dry-run", action="store_true")
     # Single-date flags

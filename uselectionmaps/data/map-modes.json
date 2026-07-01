@@ -86,6 +86,20 @@
       "type": "us_presidential",
       "mapId": 22,
       "parliament": "us_presidential"
+    },
+    {
+      "id": "2022-us-senate",
+      "name": "2022 Election",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate"
+    },
+    {
+      "id": "2020-us-senate",
+      "name": "2020 Election",
+      "type": "us_senate",
+      "mapId": 23,
+      "parliament": "us_senate"
     }
   ],
   "misc": {
@@ -268,7 +282,9 @@
         "2024-us-president": "results/us-president-2024.json",
         "2024-us-senate": "results/us-senate-2024.json",
         "2022-us-house": "results/us-house-2022.json",
+        "2022-us-senate": "results/us-senate-2022.json",
         "2020-us-president": "results/us-president-2020.json",
+        "2020-us-senate": "results/us-senate-2020.json",
         "2016-us-president": "results/us-president-2016.json",
         "2012-us-president": "results/us-president-2012.json",
         "2008-us-president": "results/us-president-2008.json",

@@ -55,6 +55,40 @@ def test_convert_regular_races_only_and_independents(tmp_path: Path) -> None:
     assert result["Texas"]["seatInfo"]["current"] == "republican"
 
 
+def test_convert_runoff_supersedes_general(tmp_path: Path) -> None:
+    """A runoff is the decisive round: the general plurality is overridden (Georgia 2020)."""
+    csv_path = tmp_path / "senate.csv"
+    _write_csv(csv_path, [
+        # November general: Republican leads but the seat went to a runoff.
+        {"cycle": "2020", "stage": "general", "special": "false", "state_abbrev": "GA", "state": "Georgia",
+         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Perdue", "votes": "2462617", "winner": "true"},
+        {"cycle": "2020", "stage": "general", "special": "false", "state_abbrev": "GA", "state": "Georgia",
+         "ballot_party": "DEM", "candidate_id": "2", "candidate_name": "Ossoff", "votes": "2374519", "winner": "false"},
+        # January runoff: Democrat wins the seat.
+        {"cycle": "2020", "stage": "runoff", "special": "false", "state_abbrev": "GA", "state": "Georgia",
+         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Perdue", "votes": "2214979", "winner": "false"},
+        {"cycle": "2020", "stage": "runoff", "special": "false", "state_abbrev": "GA", "state": "Georgia",
+         "ballot_party": "DEM", "candidate_id": "2", "candidate_name": "Ossoff", "votes": "2269923", "winner": "true"},
+    ])
+    result = convert_senate.convert(csv_path, "2020")
+    assert result["Georgia"]["seatInfo"]["current"] == "democrat"  # runoff, not the Nov plurality
+    # Only the decisive (runoff) round's votes are kept, so totals are the runoff totals.
+    assert result["Georgia"]["partyInfo"]["democrat"]["total"] == 2269923
+
+
+def test_convert_jungle_primary_stands_in_for_general(tmp_path: Path) -> None:
+    """A state with only a jungle primary (Louisiana) is settled by it — no general needed."""
+    csv_path = tmp_path / "senate.csv"
+    _write_csv(csv_path, [
+        {"cycle": "2020", "stage": "jungle primary", "special": "false", "state_abbrev": "LA", "state": "Louisiana",
+         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Cassidy", "votes": "1228908", "winner": "true"},
+        {"cycle": "2020", "stage": "jungle primary", "special": "false", "state_abbrev": "LA", "state": "Louisiana",
+         "ballot_party": "DEM", "candidate_id": "2", "candidate_name": "Perkins", "votes": "394049", "winner": "false"},
+    ])
+    result = convert_senate.convert(csv_path, "2020")
+    assert result["Louisiana"]["seatInfo"]["current"] == "republican"
+
+
 def _seed_us_parties(db: Database) -> None:
     for name in ("Democratic", "Republican", "Libertarian", "US Green", "Independent", "Others"):
         db.add_party(name)

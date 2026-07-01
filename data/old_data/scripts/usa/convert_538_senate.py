@@ -10,6 +10,13 @@ cycle simply have no seat and render with the map's neutral fill. Same quirk-han
 as the House converter (party in ``ballot_party``, fusion lines aggregated by candidate);
 independents (Sanders/King) map to the "independent" party.
 
+Each state is settled by its highest-precedence stage (:data:`STAGE_PRECEDENCE`): a
+general-election runoff supersedes the first round when one was held (e.g. Georgia 2020 →
+Ossoff, not the November plurality), and Louisiana's jungle primary stands in for a general
+(Cassidy 2020, Kennedy 2022). This reflects the seat's final holder, so three consecutive
+cycles sum to the real Senate composition. Primary runoffs never appear here — this is a
+general-election dataset — so the only ``runoff`` rows are Georgia/Louisiana general runoffs.
+
 Special elections (e.g. 2024 NE/CA also held one) are skipped here — those states had a
 regular race too; standalone specials can be added later as a separate overlay.
 
@@ -33,6 +40,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from convert_538_house import aggregate_unit
+
+# General-election stages 538 records, in decreasing precedence. A state is settled by the
+# highest-precedence stage present: a runoff is decisive when one was held, otherwise the
+# first round (a regular "general", or Louisiana's "jungle primary") settles the seat.
+STAGE_PRECEDENCE = ("runoff", "general", "jungle primary")
 
 # 50 states; excludes DC and territories that may appear in the source.
 STATE_ABBREVS = {
@@ -59,15 +71,28 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
             row
             for row in csv.DictReader(handle)
             if row["cycle"] == year
-            and row["stage"] == "general"
+            and row["stage"] in STAGE_PRECEDENCE
             and row["special"] != "true"
             and row["state_abbrev"] in STATE_ABBREVS
         ]
+
+    # Resolve each state's decisive stage (a runoff supersedes the first round), then keep
+    # only that stage's rows so a runoff-flip (e.g. Georgia 2020) reflects the seat winner
+    # rather than the first-round plurality.
+    stages_by_state: dict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        stages_by_state[row["state_abbrev"]].add(row["stage"])
+    decisive_stage = {
+        abbrev: next(stage for stage in STAGE_PRECEDENCE if stage in stages)
+        for abbrev, stages in stages_by_state.items()
+    }
 
     by_state: dict[str, dict[str, dict[str, Any]]] = defaultdict(lambda: defaultdict(lambda: {
         "name": "", "votes": 0, "ballot_parties": [], "winner": False, "state": "",
     }))
     for row in rows:
+        if row["stage"] != decisive_stage[row["state_abbrev"]]:
+            continue
         candidate_id = row.get("candidate_id") or row["candidate_name"]
         candidate = by_state[row["state_abbrev"]][candidate_id]
         candidate["name"] = row["candidate_name"]

@@ -213,6 +213,11 @@ a {
   color: #b45309;
 }
 
+.card-icon-us {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .card-icon-image {
   object-fit: cover;
   display: block;

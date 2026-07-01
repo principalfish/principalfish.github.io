@@ -153,6 +153,58 @@ a {
   font-size: clamp(1.9rem, 4.8vw, 2.9rem);
 }
 
+.maps-us-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.85rem;
+  padding: 0.7rem 1.1rem;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #fff4e5, #ffe8c7);
+  border: 1px solid var(--amber);
+  color: #b45309;
+  font: 700 1rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+  text-decoration: none;
+  animation: maps-us-banner-pulse 2.6s ease-in-out infinite;
+}
+
+.maps-us-banner:hover,
+.maps-us-banner:focus-visible {
+  background: var(--amber);
+  color: #fff;
+  animation: none;
+}
+
+.maps-us-banner-flag {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.maps-us-banner-text {
+  flex: 1 1 auto;
+}
+
+.maps-us-banner-arrow {
+  font-size: 1.15rem;
+  transition: transform 160ms ease;
+}
+
+.maps-us-banner:hover .maps-us-banner-arrow,
+.maps-us-banner:focus-visible .maps-us-banner-arrow {
+  transform: translateX(3px);
+}
+
+@keyframes maps-us-banner-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.18); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maps-us-banner {
+    animation: none;
+  }
+}
+
 .maps-subtitle {
   margin: 0.35rem 0 0;
   color: #334155;

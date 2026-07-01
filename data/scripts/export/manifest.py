@@ -12,6 +12,11 @@ from models import Election, ElectionType, Party, Region
 from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from scripts.export.naming import party_key_for_party
 
+# Election types that must never auto-chain to a comparison election. The US Senate's
+# staggered classes contest a different ~third of the states each cycle, so a delta against
+# the preceding cycle would compare unrelated seats. See ``assign_comparison_elections``.
+NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.value})
+
 
 def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, Any]]:
     """Build the ``settings.parties`` list for the elections manifest.
@@ -155,6 +160,9 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
       election of another kind (e.g. the EU referendum); and the ``parliament``
       check prevents cross-parliament comparisons.
     - The last entry of each (parliament, mapId, type) receives no comparison.
+    - Types in ``NO_AUTO_COMPARISON_TYPES`` (US Senate) never auto-chain: their
+      staggered classes contest different states each cycle, so a delta against
+      the preceding cycle would compare unrelated seats.
 
     Idempotent and safe to call more than once: entries that already have a
     comparison are skipped, so a second pass only fills entries left unresolved
@@ -173,6 +181,11 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     for index, entry in enumerate(manifest_entries):
         # Skip entries that already have a comparison set (e.g. Current Parliament)
         if entry.get("comparisonElectionId"):
+            continue
+
+        # Staggered-class chambers (US Senate) contest different states each cycle, so
+        # auto-chaining against the previous cycle would compare unrelated seats — skip them.
+        if entry.get("type") in NO_AUTO_COMPARISON_TYPES:
             continue
 
         comparison_id: str | None = None

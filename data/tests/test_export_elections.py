@@ -193,3 +193,27 @@ class TestAssignComparisonElections:
         entries.append(self._entry("2021-holyrood-2026", "holyrood", 12))
         assign_comparison_elections(entries)
         assert entries[0]["comparisonElectionId"] == "2021-holyrood-2026"
+
+    def test_senate_never_auto_compares_staggered_cycles(self) -> None:
+        # The Senate's staggered classes contest different states each cycle, so no Senate
+        # election chains to the previous one — even though they share parliament/mapId/type.
+        entries = [
+            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry("2022-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry("2020-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+        ]
+        assign_comparison_elections(entries)
+        assert all("comparisonElectionId" not in e for e in entries)
+
+    def test_house_still_chains_alongside_senate(self) -> None:
+        # The Senate exclusion must not affect other US contests: House still chains newest→prev.
+        entries = [
+            self._entry("2024-us-house", "us_house", 21, ElectionType.us_house.value),
+            self._entry("2022-us-house", "us_house", 21, ElectionType.us_house.value),
+            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+        ]
+        assign_comparison_elections(entries)
+        by_id = {e["id"]: e for e in entries}
+        assert by_id["2024-us-house"]["comparisonElectionId"] == "2022-us-house"
+        assert "comparisonElectionId" not in by_id["2022-us-house"]
+        assert "comparisonElectionId" not in by_id["2024-us-senate"]

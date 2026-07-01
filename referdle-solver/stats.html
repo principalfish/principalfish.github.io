@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Referdle stats</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #ddd;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+    h2 { margin: 0 0 4px; font-size: 1.2rem; letter-spacing: 0.04em; }
+    .instructions {
+      font-size: 13px;
+      color: #888;
+      margin: 0 0 12px;
+      line-height: 1.6;
+    }
+    code {
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 12px;
+      color: #7cf;
+      user-select: all;
+    }
+    textarea {
+      width: 100%;
+      height: 70px;
+      background: #1a1a1a;
+      color: #ccc;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      resize: vertical;
+    }
+    textarea::placeholder { color: #555; }
+    button {
+      margin-top: 8px;
+      padding: 7px 22px;
+      background: #2a7a4a;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #3a9a5a; }
+    #summary {
+      margin: 16px 0 4px;
+      font-size: 13px;
+      color: #aaa;
+      display: flex;
+      gap: 24px;
+    }
+    #summary span b { color: #eee; }
+    #chart-wrap { position: relative; margin-top: 8px; }
+    .error { color: #f77; font-size: 13px; margin-top: 8px; }
+    details { margin-bottom: 10px; }
+    summary { cursor: pointer; font-size: 13px; color: #888; user-select: none; }
+    summary:hover { color: #bbb; }
+    details[open] summary { color: #bbb; margin-bottom: 6px; }
+    .tab-instructions { font-size: 13px; color: #888; line-height: 1.7; padding-left: 12px; }
+    .tab-instructions ol { margin: 4px 0 0; padding-left: 18px; }
+    .tab-instructions li { margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+<h2>Referdle — guess history</h2>
+<p class="instructions">
+  On <strong>referdle.com</strong>, open the browser console
+  (<kbd>F12</kbd> → Console) and run:<br>
+  <code>copy(localStorage.getItem("stats-D"))</code><br>
+  Then paste the result below and click Plot.
+</p>
+
+<details>
+  <summary>On a tablet?</summary>
+  <div class="tab-instructions">
+    Tablets don't have a console, so use a bookmarklet instead:
+    <ol>
+      <li>On <strong>referdle.com</strong>, bookmark the page (tap the share icon → <em>Add Bookmark</em>). Call it <em>Copy Referdle stats</em>.</li>
+      <li>Open your bookmarks, find it, and <strong>edit</strong> it. Replace the URL entirely with:<br>
+        <code>javascript:prompt('Your stats:',localStorage.getItem('stats-D'))</code>
+      </li>
+      <li>Next time you're on <strong>referdle.com</strong>, tap that bookmark. A dialog will pop up with the stats text pre-selected — copy it, then paste below.</li>
+    </ol>
+  </div>
+</details>
+
+<textarea id="input" placeholder='[14, "X", 11, "B", 18, "X", 12, ...]'></textarea>
+<input type="number" id="rolling" value=50>
+<br>
+<button onclick="plot()">Plot</button>
+<div id="error"></div>
+<div id="summary"></div>
+<div id="chart-wrap"><canvas id="chart"></canvas></div>
+
+<script>
+  let chartInstance = null;
+
+  function plot() {
+    document.getElementById("error").textContent = "";
+    const raw = document.getElementById("input").value.trim();
+    if (!raw) return;
+
+    let stats;
+    try { stats = JSON.parse(raw); }
+    catch (e) { document.getElementById("error").textContent = "Invalid JSON — check the paste."; return; }
+
+    // Drop "B" (break) entries — not meaningful game data
+    const entries = stats.filter(x => x !== "B");
+    if (!entries.length) { document.getElementById("error").textContent = "No game data found."; return; }
+
+    const wins   = entries.filter(x => typeof x === "number");
+    const fails  = entries.filter(x => x === "X");
+    const total  = entries.length;
+    const winPct = total ? Math.round(100 * wins.length / total) : 0;
+    const avg    = wins.length ? (wins.reduce((a, b) => a + b, 0) / wins.length).toFixed(1) : "—";
+    const best   = wins.length ? Math.min(...wins) : "—";
+    const worst  = wins.length ? Math.max(...wins) : "—";
+
+    // Chart uses wins only — no gaps
+    const labels = Array.from({ length: wins.length }, (_, i) => i + 1);
+
+    // Rolling average over last WINDOW wins
+    const WINDOW = document.getElementById("rolling").value.trim();
+    const avgData = [];
+    const buf = [];
+    for (const v of wins) {
+      buf.push(v);
+      if (buf.length > WINDOW) buf.shift();
+      avgData.push(+(buf.reduce((a, b) => a + b, 0) / buf.length).toFixed(2));
+    }
+
+    document.getElementById("summary").innerHTML = `
+      <span><b>${total}</b> played</span>
+      <span><b>${wins.length}</b> wins (${winPct}%) · <b>${fails.length}</b> fails</span>
+      <span>avg <b>${avg}</b> guesses</span>
+      <span>best <b>${best}</b> · worst <b>${worst}</b></span>
+    `;
+
+    if (chartInstance) chartInstance.destroy();
+    const ctx = document.getElementById("chart").getContext("2d");
+
+    chartInstance = new Chart(ctx, {
+      data: {
+        labels,
+        datasets: [
+          {
+            type: "line",
+            label: "Guesses (win)",
+            data: wins,
+            borderColor: "rgba(80,200,130,0.35)",
+            backgroundColor: "rgba(80,200,130,0.35)",
+            pointRadius: 2.5,
+            pointHoverRadius: 5,
+            showLine: false,
+            order: 3,
+          },
+          {
+            type: "line",
+            label: `Rolling avg (last ${WINDOW} wins)`,
+            data: avgData,
+            borderColor: "rgba(255,210,60,0.9)",
+            backgroundColor: "transparent",
+            pointRadius: 0,
+            borderWidth: 2.5,
+            tension: 0.35,
+            spanGaps: true,
+            order: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        animation: false,
+        plugins: {
+          legend: {
+            labels: { color: "#bbb", boxWidth: 12, font: { size: 12 } },
+          },
+          tooltip: {
+            mode: "index",
+            intersect: false,
+            callbacks: {
+              label: (ctx) => {
+                const v = ctx.parsed.y;
+                if (ctx.dataset.label === "Failed") return v !== null ? " Failed" : null;
+                if (ctx.dataset.label.startsWith("Rolling")) return v !== null ? ` Avg: ${v}` : null;
+                return v !== null ? ` ${v} guesses` : null;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            title: { display: true, text: "Game #", color: "#777", font: { size: 12 } },
+            ticks: { color: "#666", maxTicksLimit: 20 },
+            grid: { color: "#222" },
+          },
+          y: {
+            title: { display: true, text: "Total guesses", color: "#777", font: { size: 12 } },
+            ticks: { color: "#666" },
+            grid: { color: "#222" },
+            min: 5,
+          },
+        },
+      },
+    });
+  }
+
+  // Auto-plot if textarea already has content (e.g. on reload with cached value)
+  document.getElementById("input").addEventListener("paste", () => setTimeout(plot, 50));
+</script>
+</body>
+</html>

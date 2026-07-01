@@ -6,6 +6,14 @@
       "name": "2024 Election",
       "type": "us_house",
       "mapId": 21,
+      "parliament": "us_house",
+      "comparisonElectionId": "2022-us-house"
+    },
+    {
+      "id": "2022-us-house",
+      "name": "2022 Election",
+      "type": "us_house",
+      "mapId": 21,
       "parliament": "us_house"
     },
     {
@@ -211,6 +219,7 @@
         "2024-us-house": "results/us-house-2024.json",
         "2024-us-president": "results/us-president-2024.json",
         "2024-us-senate": "results/us-senate-2024.json",
+        "2022-us-house": "results/us-house-2022.json",
         "current-senate": "results/senate-current.json"
       }
     },

@@ -23,8 +23,21 @@ export const page = (typeof window !== 'undefined' && window.MAPS_PAGE) || {};
 // The active election's mapMode config, resolved from the manifest via the current election.
 // Use this (not state.mapConfig) where config is needed before render — e.g. when an
 // ElectionSummary builds its subtitle during data load, state.mapConfig is not yet assigned.
-function activeMapMode() {
+export function activeMapMode() {
   return manifest.mapModes?.[String(state.currentElection?.mapId)] || {};
+}
+
+/**
+ * Whether the per-seat comparison controls — the "vote share change" choropleth option and
+ * the Gains filter — should be hidden for the current election. Both need matching seat keys
+ * across the compared cycles, so they are suppressed for referendums (no per-seat swing) and
+ * for maps whose mapMode sets `seatComparison: false` (aggregate-only comparison, e.g. the US
+ * House, where districts are redrawn between cycles). The aggregate vote-totals delta columns
+ * are unaffected — they key off comparison-data presence, not this flag. Absent flag ⇒ shown.
+ * @returns {boolean}
+ */
+export function seatComparisonHidden() {
+  return state.isReferendumType || activeMapMode().seatComparison === false;
 }
 
 // ─── Manifest ─────────────────────────────────────────────────────────────────

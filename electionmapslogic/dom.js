@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { manifest, state, page } from './state.js';
+import { manifest, state, page, seatComparisonHidden } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
 
@@ -290,9 +290,14 @@ const dataInfoButton = document.getElementById('mapsDataInfoBtn');
  * @returns {void}
  */
 export function setElectionPreDataFetch() {
+  // The Gains filter and "vote share change" choropleth both need matching seat keys across
+  // cycles, so they are hidden for referendums and for aggregate-only comparison maps
+  // (mapMode.seatComparison === false, e.g. the US House). The referendum-only data-info
+  // button stays gated on isReferendumType alone.
+  const hideSeatComparison = seatComparisonHidden();
   filterGainsButton.textContent = state.currentElection.byElectionSeats ? 'By-elections' : 'Gains';
-  filterGainsButton.hidden = state.isReferendumType;
-  choroplethVoteShareChangeOption.hidden = state.isReferendumType;
+  filterGainsButton.hidden = hideSeatComparison;
+  choroplethVoteShareChangeOption.hidden = hideSeatComparison;
   dataInfoButton.hidden = !state.isReferendumType;
 }
 
@@ -404,7 +409,11 @@ export function renderMapControlOptions() {
   // buildChoroplethConfig + matchesPrimaryFilters also ignore these for such elections.
   const isMultiMember = Boolean(state.currentElection?.multiMember);
   if (filterMajorityGroup) filterMajorityGroup.hidden = isMultiMember;
-  if (filterGainsButton) filterGainsButton.hidden = isMultiMember;
+  // This is the authoritative writer of the gains button's visibility (it runs after
+  // setElectionPreDataFetch), so the per-seat comparison gate must be honoured here too:
+  // Gains needs matching seat keys across cycles, absent for referendums and aggregate-only
+  // comparison maps (mapMode.seatComparison === false, e.g. the US House).
+  if (filterGainsButton) filterGainsButton.hidden = isMultiMember || seatComparisonHidden();
   if (choroplethsButton) choroplethsButton.hidden = isMultiMember;
   if (isMultiMember) {
     state.mapFilters.majorityMin = 0;

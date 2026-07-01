@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams } from '../state.js';
+import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams, seatComparisonHidden } from '../state.js';
 
 // Restores the manifest singleton to a fully-zeroed, hydrated baseline so a configuring
 // block can't leak party/region/file/feature lookups into a later block. init() does
@@ -432,6 +432,39 @@ describe('ElectionSummary subtitle (EV margin / hideMajority)', () => {
     state.currentElection = { mapId: 23 };
     const seats = [{ seat: 'Texas', region: 'r', winner: 'republican', votes: { republican: 1 } }];
     expect(new ElectionSummary(seats, '2024 Senate', 'all').text).toBe('2024 Senate');
+  });
+});
+
+// ─── seatComparisonHidden: aggregate-only comparison flag (US House) ───────────
+describe('seatComparisonHidden', () => {
+  afterEach(() => { state.currentElection = null; state.isReferendumType = false; });
+
+  it('hides per-seat comparison when the mapMode sets seatComparison:false', () => {
+    manifest.init({ mapModes: { 21: { seatComparison: false } } });
+    state.currentElection = { mapId: 21 };
+    state.isReferendumType = false;
+    expect(seatComparisonHidden()).toBe(true);
+  });
+
+  it('shows per-seat comparison when the flag is absent (default)', () => {
+    manifest.init({ mapModes: { 21: {} } });
+    state.currentElection = { mapId: 21 };
+    state.isReferendumType = false;
+    expect(seatComparisonHidden()).toBe(false);
+  });
+
+  it('shows per-seat comparison when the flag is explicitly true', () => {
+    manifest.init({ mapModes: { 21: { seatComparison: true } } });
+    state.currentElection = { mapId: 21 };
+    state.isReferendumType = false;
+    expect(seatComparisonHidden()).toBe(false);
+  });
+
+  it('hides per-seat comparison for referendums regardless of the flag', () => {
+    manifest.init({ mapModes: { 21: { seatComparison: true } } });
+    state.currentElection = { mapId: 21 };
+    state.isReferendumType = true;
+    expect(seatComparisonHidden()).toBe(true);
   });
 });
 

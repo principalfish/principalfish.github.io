@@ -1,13 +1,26 @@
 // ─── US election maps — page entry ──────────────────────────────────────────
 //
-// Thin shell for the US page (House, Senate, President). The engine lives in
-// /electionmapslogic; this page enables no extra features today, so it imports only the
-// shared bootstrap and ships none of the predict / poll-tracker code. window.MAPS_PAGE is set
-// inline in index.html before this module loads and is read via `page` in state.js.
+// Thin shell for the US page (President, Senate, House). The engine lives in
+// /electionmapslogic; this page enables the `predict` feature (interactive uniform-swing
+// forecasting) and imports only that feature module — it ships none of the poll-tracker or
+// postcode code. window.MAPS_PAGE is set inline in index.html before this module loads and
+// is read via `page` in state.js.
 //
-// To add a US forecast or poll tracker later, import the relevant feature module(s) here and
-// pass their hooks to startApp (mirroring electionmaps/electionmaps.js) — no engine change.
+// Because only this entry imports the predict modules, esbuild bundles them into
+// uselectionmaps.min.js alone. Predict switches on per parliament via the manifest's
+// parliamentFeatures (only parliaments listing `predict` in `features` get the model).
 
 import { startApp } from '../electionmapslogic/app.js';
+import {
+  activatePredictView,
+  getPredictBaseElection,
+} from '../electionmapslogic/features/predict-controller.js';
+import { wirePredictControls } from '../electionmapslogic/features/predict-view.js';
 
-startApp();
+startApp({
+  predict: {
+    wire: wirePredictControls,
+    activate: activatePredictView,
+    getBaseElection: getPredictBaseElection,
+  },
+});

@@ -121,10 +121,66 @@
   },
   "parliamentFeatures": {
     "us_house": {
-      "features": []
+      "features": [
+        "predict"
+      ],
+      "predictBaselineElectionId": "2024-us-house",
+      "nextElectionYear": 2026,
+      "nextElectionLabel": "US House election",
+      "predict": {
+        "model": "fptp",
+        "title": "User Input (uniform swing)",
+        "modelledPartyKeys": [
+          "democrat",
+          "republican"
+        ],
+        "aggregate": {
+          "key": "national",
+          "label": "National",
+          "excludeRegions": []
+        },
+        "gridSections": [
+          {
+            "id": "us",
+            "columnKeys": [
+              "democrat",
+              "republican"
+            ],
+            "containsAggregate": true
+          }
+        ]
+      }
     },
     "us_presidential": {
-      "features": []
+      "features": [
+        "predict"
+      ],
+      "predictBaselineElectionId": "2024-us-president",
+      "nextElectionYear": 2028,
+      "nextElectionLabel": "US presidential election",
+      "predict": {
+        "model": "fptp",
+        "title": "User Input (uniform swing)",
+        "modelledPartyKeys": [
+          "democrat",
+          "republican"
+        ],
+        "aggregate": {
+          "key": "national",
+          "label": "National",
+          "excludeRegions": []
+        },
+        "gridSections": [
+          {
+            "id": "us",
+            "columnKeys": [
+              "democrat",
+              "republican"
+            ],
+            "containsAggregate": true
+          }
+        ]
+      }
     },
     "us_senate": {
       "features": []

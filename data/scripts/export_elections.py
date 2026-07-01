@@ -214,9 +214,24 @@ def main() -> None:
                 continue
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["parties"] = manifest_parties
-            for map_id_str, regions_list in manifest_regions_by_map_id.items():
-                if map_id_str in manifest.get("mapModes", {}):
-                    manifest["mapModes"][map_id_str]["regions"] = regions_list
+            # Rebuild regions the way a full export does so the two paths stay consistent:
+            # apply each map's shell ``regionNameOverride`` and re-resolve the durable
+            # ``senateClassCycle``. Without this, a metadata-only refresh silently regressed
+            # curated labels (e.g. the shortened Holyrood-2026 names) to raw DB names and
+            # left Senate "next up" years stale. Falls back to raw regions with no shell.
+            shell_path = page_root / "map-modes-shell.json"
+            shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
+            rebuilt_modes = build_map_modes_with_regions(
+                shell.get("mapModes", {}), manifest_regions_by_map_id
+            )
+            for map_id_str, mode in manifest.get("mapModes", {}).items():
+                rebuilt = rebuilt_modes.get(map_id_str)
+                if rebuilt is not None:
+                    mode["regions"] = rebuilt["regions"]
+                    if "senateClassNextElection" in rebuilt:
+                        mode["senateClassNextElection"] = rebuilt["senateClassNextElection"]
+                elif map_id_str in manifest_regions_by_map_id:
+                    mode["regions"] = manifest_regions_by_map_id[map_id_str]
             if args.dry_run:
                 print(f"Would write manifest metadata: {manifest_path}")
                 print(f"parties={len(manifest_parties)} maps={len(manifest_regions_by_map_id)}")

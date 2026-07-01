@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 from db import Database
 from models import ElectionType
 
@@ -43,6 +45,23 @@ class TestConverterHelpers:
     def test_resolve_party_unmapped_is_others(self) -> None:
         assert convert_538.resolve_candidate_party(["CON"]) == "others"
         assert convert_538.resolve_candidate_party([]) == "others"
+
+    def test_aggregate_unit_raises_on_all_noise(self) -> None:
+        # A unit whose only rows are blank/zero-vote noise must raise (not crash on an
+        # empty max()). Shared guard used by all three converters.
+        with pytest.raises(ValueError):
+            convert_538.aggregate_unit(
+                [{"votes": 0, "name": "", "ballot_parties": [], "winner": False}], "ZZ-99"
+            )
+
+    def test_aggregate_unit_falls_back_to_top_when_no_winner_flag(self) -> None:
+        party_info, winner = convert_538.aggregate_unit([
+            {"votes": 100, "name": "A", "ballot_parties": ["DEM"], "winner": False},
+            {"votes": 80, "name": "B", "ballot_parties": ["REP"], "winner": False},
+        ], "NY-01")
+        assert winner == "democrat"  # highest total, since no winner flag was set
+        assert party_info["democrat"]["total"] == 100
+        assert "_top" not in party_info["democrat"]  # scratch field is dropped
 
 
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:

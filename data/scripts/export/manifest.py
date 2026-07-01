@@ -72,6 +72,7 @@ def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, lis
 def build_map_modes_with_regions(
     map_modes: dict[str, Any],
     regions_by_map_id: dict[str, list[dict[str, Any]]],
+    current_year: int | None = None,
 ) -> dict[str, Any]:
     """Build the ``mapModes`` block, attaching DB-derived regions to each map.
 
@@ -86,12 +87,16 @@ def build_map_modes_with_regions(
         map_modes: Per-map config keyed by string map id.
         regions_by_map_id: Region lists keyed by string map id, as built by
             :func:`build_manifest_regions_by_map_id`.
+        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against;
+            defaults to the current calendar year. Injectable so exports (and tests) can
+            pin a year rather than depend on the wall clock.
 
     Returns:
         A new dict keyed by string map id, each value being the mapMode config with a
         ``regions`` list (DB-derived, display names overridden where configured).
     """
-    current_year = date.today().year
+    if current_year is None:
+        current_year = date.today().year
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)

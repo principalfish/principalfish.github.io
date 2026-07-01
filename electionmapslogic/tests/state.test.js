@@ -378,6 +378,89 @@ describe('buildRouteSearchParams', () => {
   });
 });
 
+// ─── ElectionSummary.summarize electoral-vote tally (presidential maps) ───────
+describe('ElectionSummary.summarize electoral-vote tally', () => {
+  const findParty = (data, key) => data.parties.find((p) => p.party === key);
+  beforeEach(() => {
+    // mapMode.tally === 'electoralVotes' is resolved via activeMapMode() → the current
+    // election's mapId. Set both so summarize weights the tally by seat.ev.
+    manifest.init({ mapModes: { 22: { tally: 'electoralVotes' } } });
+    state.currentElection = { mapId: 22 };
+  });
+  afterEach(() => { state.currentElection = null; });
+
+  it('weights the winner tally by electoral votes and totals EVs, not seat count', () => {
+    const seats = [
+      { seat: 'California', region: 'pacific', winner: 'democrat', votes: { democrat: 1 }, ev: 54 },
+      { seat: 'Texas', region: 'westsouthcentral', winner: 'republican', votes: { republican: 1 }, ev: 40 },
+      { seat: 'Florida', region: 'southatlantic', winner: 'republican', votes: { republican: 1 }, ev: 30 },
+    ];
+    const data = ElectionSummary.summarize(seats, 'all');
+    expect(findParty(data, 'democrat').seats).toBe(54);
+    expect(findParty(data, 'republican').seats).toBe(70); // 40 + 30, summed by EV
+    expect(data.totalSeats).toBe(124); // total electoral votes, not the 3 states
+  });
+
+  it('treats a seat with no ev as 0 rather than NaN', () => {
+    const seats = [
+      { seat: 'California', region: 'pacific', winner: 'democrat', votes: { democrat: 1 }, ev: 54 },
+      { seat: 'Statewide', region: 'pacific', winner: 'democrat', votes: { democrat: 1 } }, // no ev
+    ];
+    const data = ElectionSummary.summarize(seats, 'all');
+    expect(findParty(data, 'democrat').seats).toBe(54);
+    expect(data.totalSeats).toBe(54);
+  });
+});
+
+// ─── ElectionSummary subtitle: EV margin + hideMajority ───────────────────────
+describe('ElectionSummary subtitle (EV margin / hideMajority)', () => {
+  afterEach(() => { state.currentElection = null; });
+
+  it('shows the electoral-vote margin of victory in EV-tally mode', () => {
+    manifest.init({ mapModes: { 22: { tally: 'electoralVotes' } } });
+    state.currentElection = { mapId: 22 };
+    const seats = [
+      { seat: 'A', region: 'r', winner: 'republican', votes: { republican: 1 }, ev: 312 },
+      { seat: 'B', region: 'r', winner: 'democrat', votes: { democrat: 1 }, ev: 226 },
+    ];
+    const summary = new ElectionSummary(seats, '2024 Election', 'all');
+    expect(summary.text).toBe('2024 Election · republican margin of victory: 86');
+  });
+
+  it('shows just the election name when hideMajority and not multi-member', () => {
+    manifest.init({ mapModes: { 23: { hideMajority: true } } });
+    state.currentElection = { mapId: 23 };
+    const seats = [{ seat: 'Texas', region: 'r', winner: 'republican', votes: { republican: 1 } }];
+    expect(new ElectionSummary(seats, '2024 Senate', 'all').text).toBe('2024 Senate');
+  });
+});
+
+// ─── Seat.fromRaw candidate-name decode (pf-results-v4 optional 3rd element) ───
+describe('Seat.fromRaw candidate-name decode', () => {
+  beforeEach(() => {
+    manifest.init({ parties: [
+      { id: 1, key: 'republican', name: 'Republican' },
+      { id: 2, key: 'democrat', name: 'Democratic' },
+    ] });
+  });
+  afterEach(resetManifest);
+
+  it('decodes the optional 3rd element into candidate names by party key', () => {
+    const seat = Seat.fromRaw({ n: 'TX-01', r: 0, w: 1, p: [[1, 200, 'Jane Rep'], [2, 100, 'John Dem']] });
+    expect(seat.candidates).toEqual({ republican: 'Jane Rep', democrat: 'John Dem' });
+  });
+
+  it('leaves candidates empty for 2-element legacy rows (no name)', () => {
+    const seat = Seat.fromRaw({ n: 'X', r: 0, w: 1, p: [[1, 200], [2, 100]] });
+    expect(seat.candidates).toEqual({});
+  });
+
+  it('keeps the first candidate when a party key repeats', () => {
+    const seat = Seat.fromRaw({ n: 'X', r: 0, w: 1, p: [[1, 200, 'First'], [1, 50, 'Second']] });
+    expect(seat.candidates).toEqual({ republican: 'First' });
+  });
+});
+
 describe('AppState.shouldShowCountdown', () => {
   let saved;
 

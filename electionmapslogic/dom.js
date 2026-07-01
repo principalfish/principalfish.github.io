@@ -1268,7 +1268,9 @@ function renderSeatPopup(seatName) {
     }));
     // Terms are 6 years, so a seat was last contested six years before it is next up. The
     // bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
-    renderPopupRows(rows, (row) => `<span>last ${row.up - 6} · up ${row.up}</span>`, 40);
+    // Guard an unresolved cycle year (member missing `class`, or no senateClassNextElection)
+    // so the row shows just the name rather than "last NaN · up undefined".
+    renderPopupRows(rows, (row) => (row.up ? `<span>last ${row.up - 6} · up ${row.up}</span>` : ''), 70);
     seatPopup.hidden = false;
     return;
   }

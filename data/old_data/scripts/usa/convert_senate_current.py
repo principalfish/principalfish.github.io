@@ -30,7 +30,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from regions import division_for_state
+from regions import STATE_NAMES, division_for_state
 
 
 def _region_key(state: str) -> str:
@@ -47,20 +47,6 @@ PARTY_KEY = {"Democrat": "democrat", "Republican": "republican", "Independent": 
 # Note: a senator's `class` (1/2/3) is permanent, so it is the only cycle data stored here.
 # The year each class is *next* up is derived downstream from the map's `senateClassCycle`
 # config (base years + period) at export time, so it never needs editing in this snapshot.
-
-ABBREV_TO_STATE = {
-    "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
-    "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
-    "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
-    "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
-    "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi",
-    "MO": "Missouri", "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire",
-    "NJ": "New Jersey", "NM": "New Mexico", "NY": "New York", "NC": "North Carolina",
-    "ND": "North Dakota", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
-    "RI": "Rhode Island", "SC": "South Carolina", "SD": "South Dakota", "TN": "Tennessee",
-    "TX": "Texas", "UT": "Utah", "VT": "Vermont", "VA": "Virginia", "WA": "Washington",
-    "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming",
-}
 
 
 def build(legislators: list[dict[str, Any]]) -> dict[str, Any]:
@@ -79,10 +65,14 @@ def build(legislators: list[dict[str, Any]]) -> dict[str, Any]:
         term = leg["terms"][-1]
         if term["type"] != "sen":
             continue
-        state = ABBREV_TO_STATE.get(term["state"])
+        state = STATE_NAMES.get(term["state"])
         if state is None:
             continue  # skip non-state senators if any
         senator_class = term.get("class")
+        if senator_class is None:
+            # Every sitting senator has a class in the source; a gap means the record is
+            # malformed. Surface it — the front-end can't derive a "next up" year without it.
+            print(f"WARNING: senator in {state} has no class; 'next up' year will be blank")
         by_state.setdefault(state, []).append({
             "party": PARTY_KEY.get(term.get("party", ""), "others"),
             "name": leg["name"].get("official_full") or f"{leg['name'].get('first', '')} {leg['name'].get('last', '')}".strip(),

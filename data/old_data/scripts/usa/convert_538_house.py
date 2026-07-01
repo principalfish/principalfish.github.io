@@ -42,7 +42,7 @@ import csv
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 # Non-state jurisdictions whose House members are non-voting delegates; excluded so
 # the output is exactly the 435 voting districts.
@@ -100,6 +100,45 @@ def resolve_candidate_party(ballot_parties: list[str]) -> str:
     return "others"
 
 
+def aggregate_unit(
+    candidates: Iterable[dict[str, Any]], unit_label: str
+) -> tuple[dict[str, dict[str, Any]], str]:
+    """Aggregate one unit's candidate rows into ``(party_info, winner_key)``.
+
+    Shared by the House/Senate/President converters. Skips blank noise rows, sums fusion
+    ballot lines per resolved party, keeps the highest-polling candidate's name, resolves
+    the winner (by flag, else highest total), then drops the internal ``_top`` scratch
+    field and backfills a generic name. Raises ``ValueError`` if the unit has no real
+    candidate rows (avoids a cryptic ``max()`` over an empty sequence).
+    """
+    party_info: dict[str, dict[str, Any]] = {}
+    winner_key: str | None = None
+    for candidate in candidates:
+        # Skip noise rows (e.g. blank fusion/write-in lines with no votes).
+        if candidate["votes"] == 0 and not candidate["name"]:
+            continue
+        key = resolve_candidate_party(candidate["ballot_parties"])
+        # Multiple candidates can fold into one key (e.g. two independents -> others):
+        # sum totals and keep the highest-polling candidate's name.
+        bucket = party_info.setdefault(key, {"total": 0, "name": candidate["name"], "_top": -1})
+        bucket["total"] += candidate["votes"]
+        if candidate["votes"] > bucket["_top"]:
+            bucket["_top"] = candidate["votes"]
+            bucket["name"] = candidate["name"]
+        if candidate["winner"]:
+            winner_key = key
+    if not party_info:
+        raise ValueError(f"No candidate rows for {unit_label!r} — check the source CSV")
+    # Fall back to the highest-polling party when no winner flag was set.
+    if winner_key is None:
+        winner_key = max(party_info.items(), key=lambda kv: kv[1]["total"])[0]
+    for bucket in party_info.values():
+        bucket.pop("_top", None)
+        if not bucket["name"]:
+            bucket["name"] = "Other"
+    return party_info, winner_key
+
+
 def convert(csv_path: Path, year: str) -> dict[str, Any]:
     """Convert the 538 House CSV into the project election-JSON structure.
 
@@ -140,29 +179,7 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
 
     result: dict[str, Any] = {}
     for code, candidates in by_district.items():
-        party_info: dict[str, dict[str, Any]] = {}
-        winner_key: str | None = None
-        for candidate in candidates.values():
-            # Skip noise rows (e.g. blank fusion/write-in lines with no votes).
-            if candidate["votes"] == 0 and not candidate["name"]:
-                continue
-            key = resolve_candidate_party(candidate["ballot_parties"])
-            # Multiple candidates can fold into one key (e.g. two independents -> others):
-            # sum totals and keep the highest-polling candidate's name.
-            bucket = party_info.setdefault(key, {"total": 0, "name": candidate["name"], "_top": -1})
-            bucket["total"] += candidate["votes"]
-            if candidate["votes"] > bucket["_top"]:
-                bucket["_top"] = candidate["votes"]
-                bucket["name"] = candidate["name"]
-            if candidate["winner"]:
-                winner_key = key
-        # Fall back to the highest-polling party when no winner flag was set.
-        if winner_key is None:
-            winner_key = max(party_info.items(), key=lambda kv: kv[1]["total"])[0]
-        for bucket in party_info.values():
-            bucket.pop("_top", None)
-            if not bucket["name"]:
-                bucket["name"] = "Other"
+        party_info, winner_key = aggregate_unit(candidates.values(), code)
         result[code] = {"seatInfo": {"current": winner_key}, "partyInfo": party_info}
 
     return dict(sorted(result.items()))

@@ -32,7 +32,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from convert_538_house import resolve_candidate_party
+from convert_538_house import aggregate_unit
 
 # Electoral votes per 538 unit (2024 apportionment; ME/NE statewide = 2, their CD units = 1).
 ELECTORAL_VOTES = {
@@ -82,27 +82,9 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
 
     result: dict[str, Any] = {}
     for unit, candidates in by_unit.items():
-        party_info: dict[str, dict[str, Any]] = {}
-        winner_key: str | None = None
-        display_name = ""
-        for candidate in candidates.values():
-            if candidate["votes"] == 0 and not candidate["name"]:
-                continue
-            display_name = candidate["state"]
-            key = resolve_candidate_party(candidate["ballot_parties"])
-            bucket = party_info.setdefault(key, {"total": 0, "name": candidate["name"], "_top": -1})
-            bucket["total"] += candidate["votes"]
-            if candidate["votes"] > bucket["_top"]:
-                bucket["_top"] = candidate["votes"]
-                bucket["name"] = candidate["name"]
-            if candidate["winner"]:
-                winner_key = key
-        if winner_key is None:
-            winner_key = max(party_info.items(), key=lambda kv: kv[1]["total"])[0]
-        for bucket in party_info.values():
-            bucket.pop("_top", None)
-            if not bucket["name"]:
-                bucket["name"] = "Other"
+        party_info, winner_key = aggregate_unit(candidates.values(), unit)
+        # All rows for a unit carry the same full name; key the result by it.
+        display_name = next(iter(candidates.values()))["state"]
         result[display_name] = {
             "seatInfo": {"current": winner_key, "electoral_votes": ELECTORAL_VOTES[unit]},
             "partyInfo": party_info,

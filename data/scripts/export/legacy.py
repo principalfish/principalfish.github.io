@@ -135,24 +135,33 @@ def apply_supplemental_legacy_elections(
                 print(f"WARNING: prebuilt result file missing: {result_path} — run its converter first")
             elif dry_run:
                 print(f"Would register prebuilt supplemental: {result_path}")
-        elif (source_path := legacy_files_dir / supplemental["sourceFile"]) and not source_path.exists():
-            raise FileNotFoundError(f"Supplemental legacy results file not found: {source_path}")
-        elif dry_run:
-            print(f"Would write supplemental results: {result_path} (from {source_path.name})")
         else:
-            raw_payload = json.loads(source_path.read_text(encoding="utf-8"))
-            # Convert legacy seatInfo/partyInfo format to pf-results-v4 if needed
-            if manifest_parties and manifest_regions_by_map_id and raw_payload.get("schema") is None:
-                party_key_to_id = {p["key"]: p["id"] for p in manifest_parties}
-                region_rows = manifest_regions_by_map_id.get(str(map_id)) or []
-                region_key_to_id = {
-                    normalize_region_name(r["name"]): r["id"]
-                    for r in region_rows
-                }
-                payload = convert_legacy_seatinfo_to_v4(raw_payload, party_key_to_id, region_key_to_id)
+            # A non-prebuilt supplemental must name its source file; guard the lookup so a
+            # config slip surfaces as a clear error rather than a bare KeyError.
+            source_name = supplemental.get("sourceFile")
+            if not source_name:
+                raise ValueError(
+                    f"Supplemental {election_id!r} must be 'prebuilt' or define a 'sourceFile'"
+                )
+            source_path = legacy_files_dir / source_name
+            if not source_path.exists():
+                raise FileNotFoundError(f"Supplemental legacy results file not found: {source_path}")
+            if dry_run:
+                print(f"Would write supplemental results: {result_path} (from {source_path.name})")
             else:
-                payload = raw_payload
-            write_json(result_path, payload)
+                raw_payload = json.loads(source_path.read_text(encoding="utf-8"))
+                # Convert legacy seatInfo/partyInfo format to pf-results-v4 if needed
+                if manifest_parties and manifest_regions_by_map_id and raw_payload.get("schema") is None:
+                    party_key_to_id = {p["key"]: p["id"] for p in manifest_parties}
+                    region_rows = manifest_regions_by_map_id.get(str(map_id)) or []
+                    region_key_to_id = {
+                        normalize_region_name(r["name"]): r["id"]
+                        for r in region_rows
+                    }
+                    payload = convert_legacy_seatinfo_to_v4(raw_payload, party_key_to_id, region_key_to_id)
+                else:
+                    payload = raw_payload
+                write_json(result_path, payload)
 
         supplemental_entry = {
             "id": election_id,

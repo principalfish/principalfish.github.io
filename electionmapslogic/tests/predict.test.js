@@ -5,6 +5,7 @@ import {
   dhondtAllocate,
   FPTPPredict,
   AMSPredict,
+  SenatePredict,
 } from '../features/predict.js';
 import { state, Seat } from '../state.js';
 import { base64urlEncode } from '../utils.js';
@@ -422,5 +423,101 @@ describe('AMSPredict serialize / deserialize', () => {
     const model = new AMSPredict(2026, config);
     model.deserialize(fptpPayload);
     expect(model.inputMaps().every((m) => m.size === 0)).toBe(true);
+  });
+});
+
+describe('SenatePredict (seats-up projection + full-chamber composition)', () => {
+  const config = {
+    modelledPartyKeys: ['democrat', 'republican'],
+    aggregate: { key: 'national', label: 'National', excludeRegions: [] },
+    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'], containsAggregate: true }],
+    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+  };
+
+  // Baseline = the seats up in 2026 (Class 2), shaped like the 2020 Senate result.
+  const buildBaseSeats = () => [
+    new Seat({ seat: 'Alpha', region: 'east', winner: 'republican', votes: { republican: 600, democrat: 400 } }),
+    new Seat({ seat: 'Beta', region: 'east', winner: 'democrat', votes: { democrat: 550, republican: 450 } }),
+  ];
+
+  // Chamber snapshot = all 100 senators; here 3 states covering every class combination. Alpha
+  // holds the contested Class-2 seat + a carried-over Class-1 Democrat; Beta a contested Class-2
+  // + carried-over Class-3, both Democrat; Gamma has no Class-2 seat (not up in 2026).
+  const buildChamberSeats = () => [
+    new Seat({ seat: 'Alpha', region: 'east', winner: 'split', members: [
+      { party: 'republican', name: 'Alpha R', class: 2 },
+      { party: 'democrat', name: 'Alpha D', class: 1 },
+    ] }),
+    new Seat({ seat: 'Beta', region: 'east', winner: 'democrat', members: [
+      { party: 'democrat', name: 'Beta D2', class: 2 },
+      { party: 'democrat', name: 'Beta D3', class: 3 },
+    ] }),
+    new Seat({ seat: 'Gamma', region: 'east', winner: 'republican', members: [
+      { party: 'republican', name: 'Gamma R1', class: 1 },
+      { party: 'republican', name: 'Gamma R3', class: 3 },
+    ] }),
+  ];
+
+  beforeEach(() => {
+    state.comparisonElectionData = { currentSeats: buildBaseSeats() };
+    state.currentRegionLabelsByKey = new Map([['east', 'East']]);
+  });
+
+  it('isMultiMemberView tracks the active output tab', () => {
+    const model = new SenatePredict(2026, config);
+    expect(model.isMultiMemberView()).toBe(false);
+    model.setActiveTab('chamber');
+    expect(model.isMultiMemberView()).toBe(true);
+  });
+
+  it('seats-up view projects only the contested (Class-2) baseline seats', () => {
+    const model = new SenatePredict(2026, config);
+    model.setChamberSeats(buildChamberSeats());
+    const projected = model.project();
+    expect(projected.map((s) => s.seat).sort()).toEqual(['Alpha', 'Beta']);
+    expect(projected.find((s) => s.seat === 'Alpha').winner).toBe('republican');
+  });
+
+  it('chamber view merges projected winners with carried-over senators and colours splits', () => {
+    const model = new SenatePredict(2026, config);
+    model.setChamberSeats(buildChamberSeats());
+    model.setActiveTab('chamber');
+    const chamber = model.project();
+    expect(chamber).toHaveLength(3);
+
+    // Alpha: contested Class-2 stays Republican (zero swing) + carried-over Class-1 Democrat -> split.
+    const alpha = chamber.find((s) => s.seat === 'Alpha');
+    expect(alpha.members.find((m) => m.class === 2).party).toBe('republican');
+    expect(alpha.members.find((m) => m.class === 1).party).toBe('democrat');
+    expect(alpha.winner).toBe('split');
+
+    // Gamma has no Class-2 seat, so both members carry over untouched.
+    const gamma = chamber.find((s) => s.seat === 'Gamma');
+    expect(gamma.members.map((m) => m.party)).toEqual(['republican', 'republican']);
+    expect(gamma.winner).toBe('republican');
+  });
+
+  it('comparisonSeatsForView targets the 2020 base for seats-up, the current chamber for Full Senate', () => {
+    const model = new SenatePredict(2026, config);
+    model.setChamberSeats(buildChamberSeats());
+    // Seats-up: delta is gains vs the 2020 projection baseline (Alpha + Beta).
+    expect(model.comparisonSeatsForView().map((s) => s.seat).sort()).toEqual(['Alpha', 'Beta']);
+    // Full Senate: delta is net change vs the current 100-member chamber (Alpha + Beta + Gamma).
+    model.setActiveTab('chamber');
+    expect(model.comparisonSeatsForView().map((s) => s.seat).sort()).toEqual(['Alpha', 'Beta', 'Gamma']);
+  });
+
+  it('a swing that flips the contested seat flips it in the chamber composition too', () => {
+    const model = new SenatePredict(2026, config);
+    model.setChamberSeats(buildChamberSeats());
+    model.setActiveTab('chamber');
+    // Drive Democrats up nationally (baseline east ~D47/R53); the aggregate swing falls through
+    // to every sub-region, flipping Alpha's contested Class-2 seat from R to D.
+    model.setShare('national', 'democrat', 60);
+    model.setShare('national', 'republican', 40);
+    const alpha = model.project().find((s) => s.seat === 'Alpha');
+    expect(alpha.members.find((m) => m.class === 2).party).toBe('democrat');
+    // Alpha now has two Democrats (flipped Class-2 + carried-over Class-1) -> solid, not split.
+    expect(alpha.winner).toBe('democrat');
   });
 });

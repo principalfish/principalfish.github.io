@@ -49,7 +49,24 @@
       }
     },
     "us_senate": {
-      "features": []
+      "features": ["predict"],
+      "predictBaselineElectionId": "2020-us-senate",
+      "nextElectionYear": 2026,
+      "nextElectionLabel": "US Senate election",
+      "predict": {
+        "model": "senate",
+        "title": "User Input (uniform swing)",
+        "chamberElectionId": "current-senate",
+        "modelledPartyKeys": ["democrat", "republican"],
+        "aggregate": { "key": "national", "label": "National", "excludeRegions": [] },
+        "gridSections": [
+          { "id": "us", "columnKeys": ["democrat", "republican"], "containsAggregate": true }
+        ],
+        "tabs": [
+          { "key": "seatsup", "label": "Seats up (2026)" },
+          { "key": "chamber", "label": "Full Senate" }
+        ]
+      }
     }
   },
   "mapModes": {

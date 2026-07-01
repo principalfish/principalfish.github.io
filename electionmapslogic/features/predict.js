@@ -14,7 +14,7 @@
 // gains-from-baseline and the comparison column work without further wiring.
 
 import { state, manifest, Seat } from '../state.js';
-import { normalizeRegionKey, roundShare, base64urlEncode, base64urlDecode } from '../utils.js';
+import { normalizeRegionKey, roundShare, base64urlEncode, base64urlDecode, seatLookupKey } from '../utils.js';
 
 /**
  * Computes baseline regional vote share percentages from a seat array. For each party in
@@ -1074,6 +1074,118 @@ export class AMSPredict extends PredictModel {
   }
 }
 
+/**
+ * Senate predict: FPTP uniform swing over the ~33 seats up in 2026 (the 2020 Class-2
+ * baseline), with a toggle between two output views that share one swing input:
+ *   - 'seatsup' → the projected contested seats, rendered as a normal seats-up map.
+ *   - 'chamber' → those projected winners merged into the full 100-member Senate — the
+ *     carried-over Class-1 (last elected 2024) and Class-3 (2022) senators taken from the
+ *     chamber snapshot — rendered as a multi-member composition like the Current Senate page.
+ *
+ * The chamber snapshot (senate-current.json: all 100 members with their permanent class) is
+ * fetched by the controller and handed in via `setChamberSeats` before the first projection,
+ * so the model itself stays DOM-free and does no I/O. Both views run off the one swing ballot;
+ * the tabs only switch which output is built, so `reprojectOnTabChange` tells predict-view to
+ * re-run the projection (repainting the map) on a tab switch rather than just the input grid.
+ */
+export class SenatePredict extends FPTPPredict {
+  constructor(nextElectionYear, config) {
+    super(nextElectionYear, config);
+    this.tabs = config.tabs || [
+      { key: 'seatsup', label: 'Seats up' },
+      { key: 'chamber', label: 'Full Senate' },
+    ];
+    this.activeTab = this.tabs[0].key;
+    this.reprojectOnTabChange = true;
+    /** @type {Seat[]} Full 100-member chamber snapshot; empty until the controller loads it. */
+    this.chamberSeats = [];
+    // Snapshot the projection baseline (the 2020 Class-2 seats, currently in comparisonElectionData)
+    // so projecting stays independent of comparisonElectionData — which the controller repoints at
+    // the current chamber for the full-Senate view's delta column. Ballot swing baselines were
+    // already computed off the same seats in super(), so this only decouples the *projection* source.
+    this.projectionBase = state.comparisonElectionData?.currentSeats
+      ? [...state.comparisonElectionData.currentSeats]
+      : [];
+  }
+
+  /**
+   * Receives the full chamber snapshot (senate-current seats) from the controller. Called
+   * once after construction, before the first projection.
+   * @param {Seat[]} seats
+   */
+  setChamberSeats(seats) {
+    this.chamberSeats = Array.isArray(seats) ? seats : [];
+  }
+
+  /** True when the active view is the full-chamber composition (rendered multi-member). */
+  isMultiMemberView() { return this.activeTab === 'chamber'; }
+
+  /** Records the active output view. Unknown keys no-op (guards a stray URL fragment). */
+  setActiveTab(tab) {
+    if (!this.tabs.some((t) => t.key === tab)) return;
+    this.activeTab = tab;
+  }
+
+  reset() {
+    super.reset();
+    this.activeTab = this.tabs[0].key;
+  }
+
+  /**
+   * The seats the display comparison (the vote-totals ± / gains column) should run against for the
+   * active view: the current chamber snapshot for the full-Senate composition — so ± reads as the
+   * net change vs today's Senate — else the 2020 projection baseline for the seats-up view (gains
+   * vs 2020). The controller assigns the result to `state.comparisonElectionData` each projection.
+   * @returns {Seat[]}
+   */
+  comparisonSeatsForView() {
+    return this.activeTab === 'chamber' && this.chamberSeats.length ? this.chamberSeats : this.projectionBase;
+  }
+
+  /**
+   * Projects the contested (2026 Class-2) seats with uniform swing — the baseline is exactly the
+   * 33 Class-2 states, snapshotted in `projectionBase` so the projection is independent of the
+   * repointed comparison — then either returns them (seats-up view) or folds their winners into
+   * the full 100-member chamber snapshot (chamber view). Both run off the same swing input.
+   * @returns {Seat[]}
+   */
+  project() {
+    const swings = this.buildSwings(this.currentInputMap(), this.currentBaselineMap());
+    const base = this.projectionBase.length ? this.projectionBase : this.baseSeats;
+    const projectedContested = swings.size === 0
+      ? base.map((seat) => new Seat(seat))
+      : base.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
+    if (this.activeTab !== 'chamber') return projectedContested;
+    return this.#buildChamber(projectedContested);
+  }
+
+  /**
+   * Merges the projected Class-2 winners into the chamber snapshot: each state's Class-2 member
+   * takes the projected party; Class-1 and Class-3 members carry over unchanged. The seat winner
+   * is recomputed for the map fill — a party when both members share it, else 'split' (matching
+   * how senate-current colours split states). Falls back to the projected contested seats when
+   * the snapshot hasn't loaded yet.
+   * @param {Seat[]} projectedContested
+   * @returns {Seat[]}
+   */
+  #buildChamber(projectedContested) {
+    if (!this.chamberSeats.length) return projectedContested;
+    const winnerByState = new Map();
+    projectedContested.forEach((seat) => winnerByState.set(seatLookupKey(seat.seat), seat.winner));
+
+    return this.chamberSeats.map((seat) => {
+      const projectedWinner = winnerByState.get(seatLookupKey(seat.seat));
+      const members = (seat.members || []).map((member) => {
+        if (Number(member?.class) !== 2 || !projectedWinner) return { ...member };
+        return { ...member, party: projectedWinner, name: `${manifest.labelParty(projectedWinner)} (projected)` };
+      });
+      const parties = members.map((m) => m.party);
+      const winner = parties.length && parties.every((p) => p === parties[0]) ? parties[0] : 'split';
+      return new Seat({ seat: seat.seat, region: seat.region, winner, members, votes: {} });
+    });
+  }
+}
+
 function decodePredictPayload(payload) {
   const raw = String(payload || '').trim();
   if (!raw) return null;
@@ -1093,5 +1205,6 @@ export function predictModelClassFor(parliament) {
   if (!config?.model) return null;
   if (config.model === 'fptp') return FPTPPredict;
   if (config.model === 'ams') return AMSPredict;
+  if (config.model === 'senate') return SenatePredict;
   return null;
 }

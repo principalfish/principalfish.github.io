@@ -124,6 +124,10 @@ function renderPredictTabs(model) {
       // the grid surfaces the active tab's inputs instead of the previous tab's.
       model.setActiveTab(key);
       renderPredict();
+      // Some models (Senate) use tabs to switch the OUTPUT view — seats-up vs full-chamber —
+      // rather than which ballot is edited, so a tab click must re-run the projection to repaint
+      // the map, not just the grid. AMS models leave the flag unset and keep the grid-only swap.
+      if (model.reprojectOnTabChange) predictActionHandlers.tabChange?.();
     });
     predictTabNav.appendChild(btn);
   });

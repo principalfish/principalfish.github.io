@@ -78,11 +78,19 @@ export async function activatePredictView() {
   }
   state.predictModel = new PredictModelClass(parliamentConfig.nextElectionYear, parliamentConfig.predict);
 
+  // Senate's full-chamber view merges the projected seats-up winners into the 100-member
+  // snapshot (carried-over senators). Load it once, before the first projection, and hand it to
+  // the model — the engine stays I/O-free. No-op for models without a chamber snapshot.
+  if (typeof state.predictModel.setChamberSeats === 'function') {
+    await loadPredictChamberSeats(parliamentConfig, state.predictModel);
+  }
+
   setPredictActionHandlers({
     apply: handlePredictApply,
     submit: handlePredictSubmit,
     share: handlePredictShare,
     reset: handlePredictReset,
+    tabChange: runPredictProjection,
   });
   setPredictWindowVisible(true);
   renderPredict();
@@ -93,16 +101,19 @@ export async function activatePredictView() {
   // Apply handler still calls ensurePredictSimulation defensively.
   ensurePredictSimulation(parliament);
 
-  // If a shared scenario URL is present, hydrate the model, repaint the grid so the
-  // deserialised inputs show up in the cells, and re-project so the map reflects them.
-  // Without a payload, the baseline already shown by activateElection is the correct
-  // initial display.
+  // If a shared scenario URL is present, hydrate the model and repaint the grid so the
+  // deserialised inputs show up in the cells before the projection runs.
   const sharedPayload = new URLSearchParams(window.location.search).get('predict');
   if (sharedPayload) {
     state.predictModel.deserialize(sharedPayload);
     renderPredict();
-    runPredictProjection();
   }
+  // Always run an initial projection so the vote-totals table and subtitle reflect the model
+  // from the outset (zero swing reproduces the baseline). This also reconciles state the
+  // baseline election alone leaves inconsistent — notably the multi-member flag for Senate's
+  // seats-up view, whose default currentElection (the current-senate chamber) is multi-member
+  // while the loaded 2020 baseline is single-winner, which otherwise leaves the totals empty.
+  runPredictProjection();
 }
 
 /**
@@ -117,11 +128,28 @@ function runPredictProjection() {
   const nextYear = model.nextElectionYear;
   const predictLabel = `Predict ${nextYear ?? ''}`.trim();
 
+  // Senate: the full-chamber view renders as a multi-member composition (member tally +
+  // split-state colours), the seats-up view as a normal single-winner map. Flip the flag the
+  // summary/subtitle read *before* rebuilding the election data, so the tally counts the right
+  // thing (members vs seats). No-op for models that don't expose the view distinction.
+  if (typeof model.isMultiMemberView === 'function' && state.currentElection) {
+    state.currentElection.multiMember = model.isMultiMemberView();
+  }
+
   // Only state.electionData (the projection output) changes between projections — the
   // baseline / map / region-labels were set once in activateElection and the model
   // now reads them straight from state via getters.
   const projectedSeats = model.project();
   state.setElectionDataFromSeats(projectedSeats, predictLabel);
+
+  // Point the display comparison (the vote-totals ± / gains column) at the right baseline for the
+  // active view. Senate's full-chamber view compares against the current Senate, so ± reads as the
+  // net change from today's chamber rather than a nonsensical delta against the single-winner 2020
+  // seats; the seats-up view keeps its 2020 gains baseline. Models without this method leave
+  // comparisonElectionData as activateElection set it.
+  if (typeof model.comparisonSeatsForView === 'function') {
+    state.comparisonElectionData = ElectionData.fromSeats(model.comparisonSeatsForView(), predictLabel);
+  }
 
   state.setupMapData();
   renderHeader(state.electionData.summary.text);
@@ -263,6 +291,29 @@ export async function ensurePredictSimulation(parliament) {
   const seats = await promise;
   if (!seats) predictSimulationCache.delete(parliament);
   return seats;
+}
+
+/**
+ * Loads the full chamber snapshot for a predict model that needs one (Senate: the 100-member
+ * `current-senate` election) and hands its seats to the model via `setChamberSeats`. Resolves
+ * the election from the parliament's `predict.chamberElectionId`; silently no-ops when that's
+ * unset or the fetch fails, in which case the model's composition view falls back to the
+ * projected contested seats.
+ * @param {object} parliamentConfig - The parliament's `parliamentFeatures` block.
+ * @param {object} model - The predict model exposing `setChamberSeats`.
+ * @returns {Promise<void>}
+ */
+async function loadPredictChamberSeats(parliamentConfig, model) {
+  const chamberId = parliamentConfig.predict?.chamberElectionId;
+  const chamberElection = chamberId ? manifest.getElectionFromId(chamberId) : null;
+  if (!chamberElection) return;
+  try {
+    const { dataFile } = manifest.resolveElectionFiles(chamberElection);
+    const chamberData = await fetchJson(`data/${dataFile}`);
+    model.setChamberSeats(new ElectionData(chamberData).currentSeats);
+  } catch (error) {
+    console.error('Senate chamber snapshot load failed', error);
+  }
 }
 
 /**

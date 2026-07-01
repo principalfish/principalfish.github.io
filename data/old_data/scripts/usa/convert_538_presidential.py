@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import json
 import sys
@@ -33,6 +34,15 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from convert_538_house import aggregate_unit
+
+# The Maine/Nebraska congressional-district units and their parent statewide unit. 538
+# occasionally omits a state's CD units for a cycle where it did not split (e.g. Nebraska in
+# 2004, which voted uniformly Republican), but the presidential map still carries those seats,
+# so any missing CD unit is backfilled from its parent's statewide result (see backfill below).
+ME_NE_CD_UNITS = {
+    "Maine": ["Maine CD-1", "Maine CD-2"],
+    "Nebraska": ["Nebraska CD-1", "Nebraska CD-2", "Nebraska CD-3"],
+}
 
 # Electoral votes per 538 unit (2024 apportionment; ME/NE statewide = 2, their CD units = 1).
 ELECTORAL_VOTES = {
@@ -90,7 +100,35 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
             "partyInfo": party_info,
         }
 
+    _backfill_me_ne_cd_units(result)
     return dict(sorted(result.items()))
+
+
+def _backfill_me_ne_cd_units(result: dict[str, Any]) -> None:
+    """Add any Maine/Nebraska CD unit the source omitted, from its parent's statewide result.
+
+    A cycle where Maine or Nebraska did not split (e.g. Nebraska 2004) can be missing its CD
+    units in the 538 data, but the presidential map still has those seats. Each missing CD unit
+    inherits the parent state's winner and vote breakdown (district-level popular vote being
+    unavailable) so the electoral-vote tally stays complete. Mutates ``result`` in place;
+    a no-op when every CD unit is already present.
+
+    Args:
+        result: Unit display name → ``{"seatInfo", "partyInfo"}`` mapping, mutated in place.
+    """
+    for parent, cd_units in ME_NE_CD_UNITS.items():
+        if parent not in result:
+            continue
+        for cd_unit in cd_units:
+            if cd_unit in result:
+                continue
+            result[cd_unit] = {
+                "seatInfo": {
+                    "current": result[parent]["seatInfo"]["current"],
+                    "electoral_votes": 1,
+                },
+                "partyInfo": copy.deepcopy(result[parent]["partyInfo"]),
+            }
 
 
 def main() -> None:

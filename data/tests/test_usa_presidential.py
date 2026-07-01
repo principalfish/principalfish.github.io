@@ -53,10 +53,47 @@ def test_convert_assigns_electoral_votes_and_drops_pr(tmp_path: Path) -> None:
          "ballot_party": "DEM", "candidate_id": "3", "candidate_name": "X", "votes": "9", "winner": "true"},
     ])
     result = convert_pres.convert(csv_path, "2024")
-    assert set(result) == {"California", "Maine", "Maine CD-2"}  # PR dropped
+    # PR dropped; Maine CD-1 (absent from source) is backfilled from the statewide Maine winner.
+    assert set(result) == {"California", "Maine", "Maine CD-1", "Maine CD-2"}
     assert result["California"]["seatInfo"] == {"current": "democrat", "electoral_votes": 54}
     assert result["Maine"]["seatInfo"]["electoral_votes"] == 2
     assert result["Maine CD-2"]["seatInfo"] == {"current": "republican", "electoral_votes": 1}
+    assert result["Maine CD-1"]["seatInfo"] == {"current": "democrat", "electoral_votes": 1}  # backfilled
+
+
+def test_convert_backfills_missing_nebraska_cd_units(tmp_path: Path) -> None:
+    """A cycle missing NE district units (e.g. 2004) backfills them from the statewide winner."""
+    csv_path = tmp_path / "pres.csv"
+    _write_csv(csv_path, [
+        # Nebraska statewide only — no N1/N2/N3 rows, as in the 2004 source.
+        {"cycle": "2004", "stage": "general", "state_abbrev": "NE", "state": "Nebraska",
+         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Bush", "votes": "500", "winner": "true"},
+        {"cycle": "2004", "stage": "general", "state_abbrev": "NE", "state": "Nebraska",
+         "ballot_party": "DEM", "candidate_id": "2", "candidate_name": "Kerry", "votes": "250", "winner": "false"},
+    ])
+    result = convert_pres.convert(csv_path, "2004")
+    # All three district units are synthesised from the statewide Republican win.
+    for cd in ("Nebraska CD-1", "Nebraska CD-2", "Nebraska CD-3"):
+        assert result[cd]["seatInfo"] == {"current": "republican", "electoral_votes": 1}
+        assert result[cd]["partyInfo"] == result["Nebraska"]["partyInfo"]
+    # The backfilled partyInfo is a copy, not a shared reference to the parent's.
+    assert result["Nebraska CD-1"]["partyInfo"] is not result["Nebraska"]["partyInfo"]
+
+
+def test_convert_does_not_backfill_when_cd_units_present(tmp_path: Path) -> None:
+    """When the source already has a CD unit, its real result is kept (no overwrite)."""
+    csv_path = tmp_path / "pres.csv"
+    _write_csv(csv_path, [
+        {"cycle": "2020", "stage": "general", "state_abbrev": "NE", "state": "Nebraska",
+         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Trump", "votes": "500", "winner": "true"},
+        {"cycle": "2020", "stage": "general", "state_abbrev": "N2", "state": "Nebraska CD-2",
+         "ballot_party": "DEM", "candidate_id": "2", "candidate_name": "Biden", "votes": "100", "winner": "true"},
+    ])
+    result = convert_pres.convert(csv_path, "2020")
+    assert result["Nebraska CD-2"]["seatInfo"]["current"] == "democrat"  # real split kept
+    # The other two districts (absent from source) still backfill from the statewide winner.
+    assert result["Nebraska CD-1"]["seatInfo"]["current"] == "republican"
+    assert result["Nebraska CD-3"]["seatInfo"]["current"] == "republican"
 
 
 def _seed_us_parties(db: Database) -> None:

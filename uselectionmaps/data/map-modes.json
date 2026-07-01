@@ -21,7 +21,16 @@
       "name": "2024 Election",
       "type": "us_presidential",
       "mapId": 22,
-      "parliament": "us_presidential"
+      "parliament": "us_presidential",
+      "comparisonElectionId": "2020-us-president"
+    },
+    {
+      "id": "2020-us-president",
+      "name": "2020 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "2016-us-president"
     },
     {
       "id": "current-senate",
@@ -38,6 +47,45 @@
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate"
+    },
+    {
+      "id": "2016-us-president",
+      "name": "2016 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "2012-us-president"
+    },
+    {
+      "id": "2012-us-president",
+      "name": "2012 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "2008-us-president"
+    },
+    {
+      "id": "2008-us-president",
+      "name": "2008 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "2004-us-president"
+    },
+    {
+      "id": "2004-us-president",
+      "name": "2004 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "2000-us-president"
+    },
+    {
+      "id": "2000-us-president",
+      "name": "2000 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential"
     }
   ],
   "misc": {
@@ -220,6 +268,12 @@
         "2024-us-president": "results/us-president-2024.json",
         "2024-us-senate": "results/us-senate-2024.json",
         "2022-us-house": "results/us-house-2022.json",
+        "2020-us-president": "results/us-president-2020.json",
+        "2016-us-president": "results/us-president-2016.json",
+        "2012-us-president": "results/us-president-2012.json",
+        "2008-us-president": "results/us-president-2008.json",
+        "2004-us-president": "results/us-president-2004.json",
+        "2000-us-president": "results/us-president-2000.json",
         "current-senate": "results/senate-current.json"
       }
     },

@@ -1,0 +1,1502 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "others": {
+        "total": 21712,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 729547,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 44467,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 9391,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1318255,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 14307,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 116454,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 18725,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 5735,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 163387,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 18988,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 1161167,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 106327,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 34345,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1252401,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 3390,
+        "name": "Lynn Sandra Kahn"
+      },
+      "others": {
+        "total": 22577,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 380494,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 29829,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 9473,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 684872,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 8753792,
+        "name": "Hillary Rodham Clinton"
+      },
+      "others": {
+        "total": 186840,
+        "name": "Bernie Sanders"
+      },
+      "libertarian": {
+        "total": 478500,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 278658,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 4483814,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 56308,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 1338870,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 144121,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 38437,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1202484,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2616,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 897572,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 48676,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 22841,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 673215,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2224,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 235603,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 14757,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 6103,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 185127,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 12723,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 10809,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 282830,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 4906,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 30
+    },
+    "partyInfo": {
+      "others": {
+        "total": 25736,
+        "name": "Darrell Castle"
+      },
+      "democrat": {
+        "total": 4504975,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 207043,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 64399,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 4617886,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "others": {
+        "total": 22359,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 1877963,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 125306,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 2089104,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4508,
+        "name": "Darrell Castle"
+      },
+      "democrat": {
+        "total": 266891,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 15954,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 12737,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 128847,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 60748,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 189765,
+        "name": "Hillary Rodham Clinton"
+      },
+      "others": {
+        "total": 2356,
+        "name": "Arlon Scott Copeland"
+      },
+      "libertarian": {
+        "total": 28331,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 409055,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2146015,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 13282,
+        "name": "Evan McMullin"
+      },
+      "usgreen": {
+        "total": 76802,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 209596,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 3090729,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10553,
+        "name": "Jill Stein"
+      },
+      "democrat": {
+        "total": 1033126,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 133993,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 1557286,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 40263,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 800983,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 653669,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 59186,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 11479,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 7467,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 427005,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 55406,
+        "name": "Gary Johnson"
+      },
+      "independent": {
+        "total": 23506,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 671018,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1879,
+        "name": "Roque De La Fuente"
+      },
+      "republican": {
+        "total": 1202971,
+        "name": "Donald Trump"
+      },
+      "independent": {
+        "total": 22780,
+        "name": "Evan McMullin"
+      },
+      "usgreen": {
+        "total": 13913,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 53752,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 628854,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 18231,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 780154,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 37978,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 14031,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1178638,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 40459,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 357735,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 38105,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 335593,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 18592,
+        "name": "Gary Johnson"
+      },
+      "others": {
+        "total": 8579,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 154384,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 212774,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 7912,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 181177,
+        "name": "Donald Trump"
+      },
+      "libertarian": {
+        "total": 19510,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 144817,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 943169,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 44799,
+        "name": "Other"
+      },
+      "usgreen": {
+        "total": 35945,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 79605,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 1677928,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 154714,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 1995196,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 138018,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 1090893,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2279543,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 33271,
+        "name": "Darrell Castle"
+      },
+      "usgreen": {
+        "total": 51463,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 172136,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 2268839,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1367705,
+        "name": "Hillary Rodham Clinton"
+      },
+      "others": {
+        "total": 104170,
+        "name": "Evan McMullin"
+      },
+      "libertarian": {
+        "total": 112972,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 36986,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1322949,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5346,
+        "name": "Darrell Castle"
+      },
+      "democrat": {
+        "total": 485131,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 14435,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 3731,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 700714,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 20248,
+        "name": "Darrell Castle"
+      },
+      "democrat": {
+        "total": 1071068,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 97359,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 25416,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1594511,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4191,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 177709,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 28037,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 7970,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 279240,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 24826,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 38946,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 284494,
+        "name": "Hillary Rodham Clinton"
+      },
+      "republican": {
+        "total": 495961,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 158642,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 9555,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 14033,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 100132,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 137564,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 9841,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 13245,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 131030,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5505,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 53332,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 11668,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 199755,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 36683,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 512058,
+        "name": "Donald Trump"
+      },
+      "libertarian": {
+        "total": 37384,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 539260,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12707,
+        "name": "Bernie Sanders"
+      },
+      "republican": {
+        "total": 345790,
+        "name": "Donald Trump"
+      },
+      "libertarian": {
+        "total": 30777,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 6496,
+        "name": "Jill Stein"
+      },
+      "democrat": {
+        "total": 348526,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13586,
+        "name": "Darrell Castle"
+      },
+      "democrat": {
+        "total": 2148278,
+        "name": "Hillary Rodham Clinton"
+      },
+      "republican": {
+        "total": 1601933,
+        "name": "Donald Trump"
+      },
+      "libertarian": {
+        "total": 72477,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 37772,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8998,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 385234,
+        "name": "Hillary Rodham Clinton"
+      },
+      "usgreen": {
+        "total": 9879,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 74541,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 319667,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 28
+    },
+    "partyInfo": {
+      "others": {
+        "total": 141894,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 4556124,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 176598,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 107934,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 2819534,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2189316,
+        "name": "Hillary Rodham Clinton"
+      },
+      "others": {
+        "total": 59491,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 130126,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 2362631,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 216794,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 8594,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 93758,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 21434,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 3780,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 17
+    },
+    "partyInfo": {
+      "others": {
+        "total": 215047,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 2394164,
+        "name": "Hillary Rodham Clinton"
+      },
+      "usgreen": {
+        "total": 46271,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 2841005,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 420375,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 83481,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 949136,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 122596,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 1002106,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 94231,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 782403,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "others": {
+        "total": 71648,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 2926441,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 146715,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 49941,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 2970733,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10110,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 180453,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 6220,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 14746,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 252525,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1155389,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 30027,
+        "name": "Evan McMullin"
+      },
+      "usgreen": {
+        "total": 13034,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 49204,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 855373,
+        "name": "Hillary Rodham Clinton"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4064,
+        "name": "Darrell Castle"
+      },
+      "democrat": {
+        "total": 117458,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 20850,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 227721,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13789,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 870695,
+        "name": "Hillary Rodham Clinton"
+      },
+      "independent": {
+        "total": 100618,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 1522925,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 40
+    },
+    "partyInfo": {
+      "others": {
+        "total": 51261,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 3877868,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 283492,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 71558,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 4685047,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 265895,
+        "name": "Evan McMullin"
+      },
+      "democrat": {
+        "total": 310674,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 39608,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 515211,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 28626,
+        "name": "Bernie Sanders"
+      },
+      "usgreen": {
+        "total": 6758,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 10078,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 178573,
+        "name": "Hillary Rodham Clinton"
+      },
+      "republican": {
+        "total": 95369,
+        "name": "Donald Trump"
+      },
+      "independent": {
+        "total": 1063,
+        "name": "Roque De La Fuente"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "others": {
+        "total": 33749,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 1981473,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 118274,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 27638,
+        "name": "Jill Stein"
+      },
+      "independent": {
+        "total": 54054,
+        "name": "Evan McMullin"
+      },
+      "republican": {
+        "total": 1769443,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "others": {
+        "total": 133258,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 1742718,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 160879,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 58417,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1221747,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13254,
+        "name": "Jill Stein"
+      },
+      "democrat": {
+        "total": 188794,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 23004,
+        "name": "Gary Johnson"
+      },
+      "republican": {
+        "total": 489371,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 50584,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 1382536,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 106674,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 31072,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1405284,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 11885,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 55973,
+        "name": "Hillary Rodham Clinton"
+      },
+      "libertarian": {
+        "total": 13287,
+        "name": "Gary Johnson"
+      },
+      "independent": {
+        "total": 3224,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 174419,
+        "name": "Donald Trump"
+      }
+    }
+  }
+}

@@ -15,8 +15,24 @@ from __future__ import annotations
 
 # Era year → {display_name → electoral votes} for the 49 whole-unit tally units
 # (48 non-ME/NE states + DC). Each era's 49-unit sum plus the fixed ME (2+1+1)
-# and NE (2+1+1+1) structure totals 538.
+# and NE (2+1+1+1) structure totals 538. The era key is the census whose
+# apportionment the election used, which lags the decennial count by one cycle
+# (1990 census → 1992/1996/2000 elections; 2000 census → 2004/2008; etc.).
 EV_BY_ERA: dict[int, dict[str, int]] = {
+    1990: {
+        "Alabama": 9, "Alaska": 3, "Arizona": 8, "Arkansas": 6, "California": 54,
+        "Colorado": 8, "Connecticut": 8, "Delaware": 3, "District of Columbia": 3,
+        "Florida": 25, "Georgia": 13, "Hawaii": 4, "Idaho": 4, "Illinois": 22,
+        "Indiana": 12, "Iowa": 7, "Kansas": 6, "Kentucky": 8, "Louisiana": 9,
+        "Maryland": 10, "Massachusetts": 12, "Michigan": 18, "Minnesota": 10,
+        "Mississippi": 7, "Missouri": 11, "Montana": 3, "Nevada": 4,
+        "New Hampshire": 4, "New Jersey": 15, "New Mexico": 5, "New York": 33,
+        "North Carolina": 14, "North Dakota": 3, "Ohio": 21, "Oklahoma": 8,
+        "Oregon": 7, "Pennsylvania": 23, "Rhode Island": 4, "South Carolina": 8,
+        "South Dakota": 3, "Tennessee": 11, "Texas": 32, "Utah": 5, "Vermont": 3,
+        "Virginia": 13, "Washington": 11, "West Virginia": 5, "Wisconsin": 11,
+        "Wyoming": 3,
+    },
     2000: {
         "Alabama": 9, "Alaska": 3, "Arizona": 10, "Arkansas": 6, "California": 55,
         "Colorado": 9, "Connecticut": 7, "Delaware": 3, "District of Columbia": 3,
@@ -65,8 +81,11 @@ EV_BY_ERA: dict[int, dict[str, int]] = {
 def _era_for_year(year: int) -> int:
     """Return the apportionment era key for a presidential election year.
 
-    2000–2008 → 2000, 2012–2020 → 2010, 2024 and later → 2020.
+    Each election uses the apportionment from the previous decade's census:
+    ≤2000 → 1990, 2004–2008 → 2000, 2012–2020 → 2010, 2024 and later → 2020.
     """
+    if year <= 2000:
+        return 1990
     if year <= 2008:
         return 2000
     if year <= 2020:

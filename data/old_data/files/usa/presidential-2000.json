@@ -1,0 +1,1538 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1398,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1882346,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 51792,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 1385222,
+        "name": "Al Gore"
+      },
+      "libertarian": {
+        "total": 11786,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 7775,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 167398,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 79004,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 28747,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2636,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13603,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 781652,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 685341,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 45645,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 5775,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 472940,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 9871,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 422768,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 13421,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2781,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 4567429,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 72963,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 5861203,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 418707,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 45520,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 883748,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 15160,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 738227,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 91434,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 12799,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "others": {
+        "total": 14480,
+        "name": "Howard Phillips"
+      },
+      "republican": {
+        "total": 561094,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 816015,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 64452,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 3484,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 137288,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 1092,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 180068,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 8307,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 774,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 669,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 11229,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 171923,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 18073,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 30
+    },
+    "partyInfo": {
+      "others": {
+        "total": 24164,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 2912790,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 2912253,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 97488,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 16415,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 36332,
+        "name": "Harry Browne"
+      },
+      "independent": {
+        "total": 10926,
+        "name": "Patrick J. Buchanan"
+      },
+      "others": {
+        "total": 13596,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 1116230,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 1419720,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 1477,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 1720,
+        "name": "Patrick J. Buchanan"
+      },
+      "usgreen": {
+        "total": 21623,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 205286,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 137845,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 3488,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 22559,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 138637,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 336937,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2173,
+        "name": "John Hagelin"
+      },
+      "republican": {
+        "total": 2019421,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 2589026,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 103759,
+        "name": "Ralph Nader"
+      },
+      "independent": {
+        "total": 16106,
+        "name": "Patrick J. Buchanan"
+      },
+      "libertarian": {
+        "total": 11623,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 18997,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 1245836,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 901980,
+        "name": "Al Gore"
+      },
+      "independent": {
+        "total": 16959,
+        "name": "Patrick J. Buchanan"
+      },
+      "libertarian": {
+        "total": 15530,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10090,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 634373,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 638517,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 29374,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 3209,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 622332,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 8624,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 399276,
+        "name": "Al Gore"
+      },
+      "independent": {
+        "total": 37459,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 4525,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6660,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 872520,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 638923,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 23118,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2885,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 2951,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 22017,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 927871,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 792344,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 20473,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 3074,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 5049,
+        "name": "Patrick J. Buchanan"
+      },
+      "usgreen": {
+        "total": 37127,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 319951,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 286616,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 1479,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 2264,
+        "name": "Patrick J. Buchanan"
+      },
+      "usgreen": {
+        "total": 20297,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 176293,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 148618,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2785,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 137998,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 143658,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 16830,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 1595,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8299,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 813827,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 1144008,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 53768,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 5310,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 49087,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 878502,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 1616487,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 173564,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 16366,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8068,
+        "name": "Howard Phillips"
+      },
+      "republican": {
+        "total": 1953139,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 2170418,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 84165,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 16711,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 28782,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 1109659,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 1168266,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 126696,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 5282,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 572844,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 5982,
+        "name": "Howard Phillips"
+      },
+      "independent": {
+        "total": 8735,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 404614,
+        "name": "Al Gore"
+      },
+      "libertarian": {
+        "total": 2009,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1189924,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 12879,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 1111138,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 38515,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 7436,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 240178,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 7527,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 137126,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 24437,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 1718,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 433862,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 4592,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 231780,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 24540,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2245,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 10085,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 754,
+        "name": "Harry Browne"
+      },
+      "republican": {
+        "total": 142562,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 13576,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 86946,
+        "name": "Al Gore"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 925,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 1132,
+        "name": "Patrick J. Buchanan"
+      },
+      "usgreen": {
+        "total": 8495,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 88975,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 131485,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 159815,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 1784,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 55859,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 5960,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 566,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 15008,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 9554,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 279978,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 301575,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 3311,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 2757,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 4219,
+        "name": "Patrick J. Buchanan"
+      },
+      "usgreen": {
+        "total": 22198,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 266348,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 273559,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1788850,
+        "name": "Al Gore"
+      },
+      "independent": {
+        "total": 114203,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 1284173,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 286417,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 2096,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 286783,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 21251,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2058,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 28
+    },
+    "partyInfo": {
+      "others": {
+        "total": 197465,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 2403374,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 4107697,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 244030,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 7649,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1631163,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 12244,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 1257692,
+        "name": "Al Gore"
+      },
+      "libertarian": {
+        "total": 13891,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 174852,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 7661,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 95284,
+        "name": "Al Gore"
+      },
+      "independent": {
+        "total": 10459,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 17
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2350363,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 154534,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 2183628,
+        "name": "Al Gore"
+      },
+      "libertarian": {
+        "total": 13473,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 744337,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 474276,
+        "name": "Al Gore"
+      },
+      "others": {
+        "total": 9014,
+        "name": "Patrick J. Buchanan"
+      },
+      "libertarian": {
+        "total": 6602,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 85521,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 713577,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 720342,
+        "name": "Al Gore"
+      },
+      "independent": {
+        "total": 7063,
+        "name": "Patrick J. Buchanan"
+      },
+      "libertarian": {
+        "total": 7447,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2281127,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 30451,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 2485967,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 103392,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 11248,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3255,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 130555,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 249508,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 25052,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 742,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 786892,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 26213,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 566037,
+        "name": "Al Gore"
+      },
+      "libertarian": {
+        "total": 4760,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 190700,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 1781,
+        "name": "Howard Phillips"
+      },
+      "democrat": {
+        "total": 118804,
+        "name": "Al Gore"
+      },
+      "others": {
+        "total": 3322,
+        "name": "Patrick J. Buchanan"
+      },
+      "libertarian": {
+        "total": 1662,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 428,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1061949,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 32084,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 981720,
+        "name": "Al Gore"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 40
+    },
+    "partyInfo": {
+      "others": {
+        "total": 704,
+        "name": "Howard Phillips"
+      },
+      "republican": {
+        "total": 3799639,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 2433746,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 137994,
+        "name": "Ralph Nader"
+      },
+      "independent": {
+        "total": 12394,
+        "name": "Patrick J. Buchanan"
+      },
+      "libertarian": {
+        "total": 23160,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13139,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 515096,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 203053,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 35850,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 3616,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 24727,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 119775,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 149022,
+        "name": "Al Gore"
+      },
+      "libertarian": {
+        "total": 784,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10071,
+        "name": "Patrick J. Buchanan"
+      },
+      "republican": {
+        "total": 1437490,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 1217290,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 59398,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 15198,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1108864,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 14780,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 1247652,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 103002,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 13135,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 1912,
+        "name": "Harry Browne"
+      },
+      "others": {
+        "total": 3560,
+        "name": "Patrick J. Buchanan"
+      },
+      "usgreen": {
+        "total": 10680,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 295497,
+        "name": "Al Gore"
+      },
+      "republican": {
+        "total": 336475,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3938,
+        "name": "Howard Phillips"
+      },
+      "republican": {
+        "total": 1237279,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 13693,
+        "name": "Patrick J. Buchanan"
+      },
+      "democrat": {
+        "total": 1242987,
+        "name": "Al Gore"
+      },
+      "usgreen": {
+        "total": 94070,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 6640,
+        "name": "Harry Browne"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 147947,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 720,
+        "name": "Howard Phillips"
+      },
+      "democrat": {
+        "total": 60481,
+        "name": "Al Gore"
+      },
+      "others": {
+        "total": 3135,
+        "name": "Patrick J. Buchanan"
+      },
+      "libertarian": {
+        "total": 1443,
+        "name": "Harry Browne"
+      }
+    }
+  }
+}

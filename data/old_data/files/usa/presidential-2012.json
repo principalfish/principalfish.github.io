@@ -1,0 +1,1478 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6992,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1255925,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 795696,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 12328,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 3397,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2870,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 164676,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 122640,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 7392,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 2917,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 452,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 1233654,
+        "name": "Mitt Romney"
+      },
+      "libertarian": {
+        "total": 32100,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 1025232,
+        "name": "Barack Obama"
+      },
+      "usgreen": {
+        "total": 7816,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1734,
+        "name": "Peta Lindsay"
+      },
+      "republican": {
+        "total": 647744,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 394409,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 16276,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 9305,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "others": {
+        "total": 115445,
+        "name": "Roseanne Cherie Barr"
+      },
+      "republican": {
+        "total": 4839958,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 7854285,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 143221,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 85638,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 18124,
+        "name": "Virgil H. Goode"
+      },
+      "usgreen": {
+        "total": 7508,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 35545,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 1323102,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 1185243,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6405,
+        "name": "Ross C. Anderson"
+      },
+      "republican": {
+        "total": 634892,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 905083,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 12580,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 31,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 165484,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 242584,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 3882,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 1940,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3230,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 21381,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 267070,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 2083,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 30
+    },
+    "partyInfo": {
+      "others": {
+        "total": 19303,
+        "name": "Roseanne Cherie Barr"
+      },
+      "republican": {
+        "total": 4163447,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 4237756,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 44726,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 8947,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2211,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 45324,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 1773827,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 2078688,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 3184,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 3840,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 306658,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 121015,
+        "name": "Mitt Romney"
+      },
+      "others": {
+        "total": 2462,
+        "name": "Other"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 4402,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 9453,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 212787,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 4721,
+        "name": "Ross C. Anderson"
+      },
+      "republican": {
+        "total": 420911,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "others": {
+        "total": 835,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 2135216,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 3019512,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 56229,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 30222,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 993,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1420543,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 1152887,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 50111,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 3769,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 12926,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 822544,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 12324,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 730617,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6155,
+        "name": "Charles O. Baldwin"
+      },
+      "republican": {
+        "total": 692634,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 440726,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 20456,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 380,
+        "name": "Virgil H. Goode"
+      },
+      "independent": {
+        "total": 6872,
+        "name": "Randall A. Terry"
+      },
+      "republican": {
+        "total": 1087190,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 679370,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 17063,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 6337,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 6978,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 18157,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 809141,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 7527,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 1152262,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 21824,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 292276,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 401306,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 9352,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3946,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 4501,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 223035,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 142937,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 149215,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 177998,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 4843,
+        "name": "Gary Johnson"
+      },
+      "others": {
+        "total": 4170,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1677844,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 10309,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 971869,
+        "name": "Mitt Romney"
+      },
+      "usgreen": {
+        "total": 17110,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 30195,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 20691,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 30920,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 1921290,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 1188314,
+        "name": "Mitt Romney"
+      },
+      "others": {
+        "total": 22981,
+        "name": "Other"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "others": {
+        "total": 29239,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 2115256,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 2564569,
+        "name": "Barack Obama"
+      },
+      "usgreen": {
+        "total": 21897,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 13023,
+        "name": "Jill Stein"
+      },
+      "others": {
+        "total": 22048,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1320225,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 1546167,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 35098,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3625,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 710746,
+        "name": "Mitt Romney"
+      },
+      "usgreen": {
+        "total": 1588,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 6676,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 562949,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1482440,
+        "name": "Mitt Romney"
+      },
+      "others": {
+        "total": 7936,
+        "name": "Virgil H. Goode"
+      },
+      "democrat": {
+        "total": 1223796,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 43151,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 14165,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 201839,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 267928,
+        "name": "Mitt Romney"
+      },
+      "others": {
+        "total": 116,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 475064,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 302081,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 11109,
+        "name": "Gary Johnson"
+      },
+      "others": {
+        "total": 6125,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 762,
+        "name": "Randall A. Terry"
+      },
+      "republican": {
+        "total": 152021,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 108082,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 3847,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 3393,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 121889,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 140976,
+        "name": "Mitt Romney"
+      },
+      "others": {
+        "total": 469,
+        "name": "Randall A. Terry"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1177,
+        "name": "Randall A. Terry"
+      },
+      "republican": {
+        "total": 182067,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 72110,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 3869,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 10968,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 531373,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 9010,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 463567,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3281,
+        "name": "Ron Paul"
+      },
+      "libertarian": {
+        "total": 8212,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 369561,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 329918,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6704,
+        "name": "Virgil H. Goode"
+      },
+      "usgreen": {
+        "total": 9886,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 21035,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 2122786,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 1478088,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2156,
+        "name": "Ross C. Anderson"
+      },
+      "republican": {
+        "total": 335788,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 415335,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 27788,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 2691,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 28
+    },
+    "partyInfo": {
+      "others": {
+        "total": 72539,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 2485432,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 4471871,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 47092,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 39856,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12071,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 2270395,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 2178391,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 44515,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3046,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 188320,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 124966,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 5238,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 1362,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 17
+    },
+    "partyInfo": {
+      "others": {
+        "total": 11225,
+        "name": "Virgil H. Goode"
+      },
+      "independent": {
+        "total": 12502,
+        "name": "Richard Austing Duncan"
+      },
+      "republican": {
+        "total": 2661407,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 2827621,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 49493,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 18574,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 891325,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 443547,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 40518,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 754175,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 970488,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 24089,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 21341,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 49991,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 2990274,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 11630,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 2680434,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3740,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 157204,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 279677,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 4388,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 2421,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1071645,
+        "name": "Mitt Romney"
+      },
+      "others": {
+        "total": 4765,
+        "name": "Virgil H. Goode"
+      },
+      "democrat": {
+        "total": 865941,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 16321,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 5446,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 210610,
+        "name": "Mitt Romney"
+      },
+      "others": {
+        "total": 2371,
+        "name": "Virgil H. Goode"
+      },
+      "democrat": {
+        "total": 145039,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 5795,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 6515,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 18623,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 960709,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 10400,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 1462330,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 40
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2647,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 4569843,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 3308124,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 88580,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 24657,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8638,
+        "name": "Ross C. Anderson"
+      },
+      "republican": {
+        "total": 740600,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 251813,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 12572,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 3817,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3866,
+        "name": "Ross C. Anderson"
+      },
+      "republican": {
+        "total": 92698,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 199239,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 3487,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 8627,
+        "name": "Jill Stein"
+      },
+      "others": {
+        "total": 20304,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 1822522,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 1971820,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 31216,
+        "name": "Gary Johnson"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "others": {
+        "total": 16320,
+        "name": "Virgil H. Goode"
+      },
+      "republican": {
+        "total": 1290670,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 1755396,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 42202,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 20928,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8212,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 6302,
+        "name": "Gary Johnson"
+      },
+      "democrat": {
+        "total": 238269,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 417655,
+        "name": "Mitt Romney"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10300,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 1079,
+        "name": "Jerome Samuel White"
+      },
+      "republican": {
+        "total": 1410966,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 1620985,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 20439,
+        "name": "Gary Johnson"
+      },
+      "usgreen": {
+        "total": 7665,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5127,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 170962,
+        "name": "Mitt Romney"
+      },
+      "democrat": {
+        "total": 69286,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 5326,
+        "name": "Gary Johnson"
+      }
+    }
+  }
+}

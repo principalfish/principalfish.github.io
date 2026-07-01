@@ -1,5 +1,5 @@
 {
-  "defaultElection": "2024-us-house",
+  "defaultElection": "2024-us-president",
   "elections": [
     {
       "id": "2024-us-house",
@@ -106,16 +106,16 @@
     "title": "US Elections",
     "parliamentTabs": [
       {
-        "parliament": "us_house",
-        "label": "House"
-      },
-      {
         "parliament": "us_presidential",
         "label": "President"
       },
       {
         "parliament": "us_senate",
         "label": "Senate"
+      },
+      {
+        "parliament": "us_house",
+        "label": "House"
       }
     ]
   },
@@ -135,6 +135,7 @@
       "name": "us-house-2024",
       "projection": "albersUsa",
       "postcodeSupported": false,
+      "seatComparison": false,
       "regions": [
         {
           "id": 216,

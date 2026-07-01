@@ -171,6 +171,36 @@ class TestBuildResultPayload:
         uk = build_result_payload([_seat(2, "Alpha")], [_Vote(2, 10.0, party=_Party(1, "Labour"))])
         assert "ev" not in uk["seats"][0]
 
+    def test_ev_by_unit_overrides_seat_electoral_votes(self) -> None:
+        set_others_party_id(0)
+        seat = SeatRow(
+            seat_id=1, seat_name="California", region_id=1, region_name="Pacific",
+            electorate=None, electoral_votes=54,
+        )
+        votes = [_Vote(1, 100.0, party=_Party(1, "Democratic"), elected=True)]
+        payload = build_result_payload([seat], votes, ev_by_unit={"California": 55})
+        assert payload["seats"][0]["ev"] == 55
+
+    def test_ev_by_unit_none_falls_back_to_seat(self) -> None:
+        set_others_party_id(0)
+        seat = SeatRow(
+            seat_id=1, seat_name="California", region_id=1, region_name="Pacific",
+            electorate=None, electoral_votes=54,
+        )
+        votes = [_Vote(1, 100.0, party=_Party(1, "Democratic"), elected=True)]
+        payload = build_result_payload([seat], votes, ev_by_unit=None)
+        assert payload["seats"][0]["ev"] == 54
+
+    def test_ev_by_unit_missing_key_omits_ev(self) -> None:
+        set_others_party_id(0)
+        seat = SeatRow(
+            seat_id=1, seat_name="California", region_id=1, region_name="Pacific",
+            electorate=None, electoral_votes=54,
+        )
+        votes = [_Vote(1, 100.0, party=_Party(1, "Democratic"), elected=True)]
+        payload = build_result_payload([seat], votes, ev_by_unit={"OtherState": 10})
+        assert "ev" not in payload["seats"][0]
+
     def test_aggregated_party_keeps_leading_candidate_name(self) -> None:
         set_others_party_id(0)
         lab = _Party(1, "Labour")

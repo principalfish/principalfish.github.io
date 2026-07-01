@@ -69,7 +69,12 @@ def party_id_for_vote(vote: Vote) -> int:
     return vote.party.id
 
 
-def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_year: int | None = None) -> dict[str, Any]:
+def build_result_payload(
+    seats: list[SeatRow],
+    votes: Sequence[Vote],
+    election_year: int | None = None,
+    ev_by_unit: dict[str, int] | None = None,
+) -> dict[str, Any]:
     """Build a ``pf-results-v4`` result payload for a single election.
 
     Groups votes by seat, aggregates multiple candidate rows for the same
@@ -90,6 +95,10 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
         election_year: Four-digit year of the election, forwarded to
             ``legacy_party_key_for_vote`` for Reform UK / UKIP resolution.
             Pass ``None`` when unknown.
+        ev_by_unit: Optional ``{seat_name: electoral_votes}`` map (the per-era
+            presidential EV table). When provided, a seat's ``ev`` is taken
+            from this map by seat name; when ``None``, it falls back to the
+            seat's stored ``electoral_votes`` (non-presidential maps, e.g. UK).
 
     Returns:
         Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` where
@@ -160,7 +169,13 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
         }
         # Electoral-vote weight for presidential seats; omitted elsewhere so the field
         # only appears where a tally needs it.
-        if seat.electoral_votes is not None:
+        # When ev_by_unit is provided (per-era presidential EV table), use it;
+        # fall back to the seat's stored value for non-presidential maps (UK etc.).
+        if ev_by_unit is not None:
+            ev_val = ev_by_unit.get(seat.seat_name)
+            if ev_val is not None:
+                seat_entry["ev"] = ev_val
+        elif seat.electoral_votes is not None:
             seat_entry["ev"] = seat.electoral_votes
         payload_seats.append(seat_entry)
 

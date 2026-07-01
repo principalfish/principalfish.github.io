@@ -81,6 +81,17 @@ from scripts.export.legacy import (
     apply_supplemental_legacy_elections,
 )
 
+# old_data/scripts/usa/ is a scripts dir, not an importable package, so load the
+# per-era presidential EV table by file path (same pattern as tests use).
+import importlib.util as _importlib_util
+_US_EV_SPEC = _importlib_util.spec_from_file_location(
+    "us_electoral_votes",
+    Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa" / "us_electoral_votes.py",
+)
+_us_ev_mod = _importlib_util.module_from_spec(_US_EV_SPEC)  # type: ignore[arg-type]
+_US_EV_SPEC.loader.exec_module(_us_ev_mod)  # type: ignore[union-attr]
+ev_map_for_year = _us_ev_mod.ev_map_for_year
+
 REPO_ROOT = DATA_DIR.parent
 OUTPUT_ROOT_DEFAULT = REPO_ROOT / "electionmaps" / "data"
 LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files" / "westminster"
@@ -482,7 +493,10 @@ def _export_page(
         map_filename = map_filename_for_map_id(election.map_id)
         election_manifest_id = manifest_id_for_election(election)
 
-        result_payload = build_result_payload(seats, votes, election_year=election.year)
+        ev_by_unit: dict[str, int] | None = None
+        if election.type == ElectionType.us_presidential:
+            ev_by_unit = ev_map_for_year(election.year)
+        result_payload = build_result_payload(seats, votes, election_year=election.year, ev_by_unit=ev_by_unit)
 
         if args.output_file:
             output_file = args.output_file.resolve()

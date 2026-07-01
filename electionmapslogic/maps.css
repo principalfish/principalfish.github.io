@@ -367,10 +367,12 @@ a {
   gap: 0.7rem;
   flex-wrap: wrap;
   align-items: flex-start;
+  pointer-events: none;
 }
 
 .maps-control-popup {
   width: min(270px, 42vw);
+  pointer-events: auto;
   border: 1px solid rgba(15, 23, 42, 0.24);
   border-radius: 12px;
   background: rgba(248, 251, 255, 0.96);

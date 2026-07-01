@@ -1,6 +1,5 @@
 .maps-mobile-sidebar-toggle,
-.maps-mobile-sidebar-overlay,
-.maps-popup-overlay {
+.maps-mobile-sidebar-overlay {
   display: none;
 }
 
@@ -84,18 +83,6 @@
 
   .maps-control-popup {
     width: 100%;
-  }
-
-  .maps-popup-overlay:not([hidden]) {
-    position: fixed;
-    inset: 0;
-    z-index: 6;
-    border: 0;
-    margin: 0;
-    padding: 0;
-    background: rgba(15, 23, 42, 0.42);
-    cursor: pointer;
-    display: block;
   }
 
   .maps-panel-right {

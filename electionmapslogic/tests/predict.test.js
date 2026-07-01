@@ -8,7 +8,7 @@ import {
   SenatePredict,
 } from '../features/predict.js';
 import { state, Seat } from '../state.js';
-import { base64urlEncode } from '../utils.js';
+import { base64urlEncode, roundShare } from '../utils.js';
 
 // A bare aggregate config matching the shape #buildAggregateConfig produces: a key plus
 // an isMember predicate. Tests build these inline rather than going through the manifest.
@@ -269,6 +269,34 @@ describe('PredictModel.setAggregateExpanded', () => {
     model.setShare('northeastengland', 'labour', 40);
     model.setAggregateExpanded(false);
     expect(model.currentInputMap().has('northeastengland')).toBe(false);
+  });
+
+  it('seeds each member region from its own baseline + the aggregate swing, not the raw national number', () => {
+    // Regression for: "change a national %, drill down — every region shows the same number."
+    // North East baseline: 60% labour. North West baseline: 40% labour.
+    // England (aggregate) baseline: 50% labour (sum of both regions).
+    state.comparisonElectionData = {
+      currentSeats: [
+        new Seat({ seat: 'NE 1', region: 'northeastengland', winner: 'labour', votes: { labour: 1200, conservative: 800 } }),
+        new Seat({ seat: 'NW 1', region: 'northwestengland', winner: 'conservative', votes: { labour: 800, conservative: 1200 } }),
+      ],
+    };
+    const model = new FPTPPredict(2029, config);
+
+    // Set England labour to 60: swing = 60 − 50 = +10 pp.
+    model.setShare('england', 'labour', 60);
+    model.setAggregateExpanded(true);
+
+    const input = model.currentInputMap();
+    expect(input.has('england')).toBe(false);
+    // Each region gets its own baseline + the +10 swing, not the flat 60.
+    expect(input.get('northeastengland').get('labour')).toBe(roundShare(60 + 10)); // 70
+    expect(input.get('northwestengland').get('labour')).toBe(roundShare(40 + 10)); // 50
+    // If the old absolute-copy bug were still present both would be 60 (same as the national input).
+    expect(input.get('northeastengland').get('labour')).not.toBe(60);
+    expect(input.get('northwestengland').get('labour')).not.toBe(60);
+    // scotland is excluded from the aggregate and must not be seeded.
+    expect(input.has('scotland')).toBe(false);
   });
 });
 

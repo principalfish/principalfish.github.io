@@ -749,8 +749,8 @@ class PredictModel {
     });
   }
 
-  /** Returns every ballot's input map — used by `setAggregateExpanded` to propagate /
-   * drop sub-region entries across all ballots in lockstep. */
+  /** Returns every ballot's input map — a convenience accessor for callers that need to
+   * inspect all ballots' entries at once (e.g. asserting every input is empty after reset). */
   inputMaps() { return this.ballots.map((b) => b.input); }
 
   /**
@@ -758,15 +758,16 @@ class PredictModel {
    * (aggregate + sub-region rows). No-ops when no aggregate is configured or the flag
    * already matches.
    *
-   * On expand: for every input map returned by `inputMaps()`, copies the aggregate row's
-   * party shares verbatim onto each empty sub-region as that region's own absolute share,
-   * then clears the aggregate row so the sub-rows become the source of truth. Sub-regions
-   * that already carry inputs (e.g. populated by a previous Apply while collapsed) are not
-   * overwritten. This makes the expand transition explicit — the user sees the national
-   * figure already filled into each region rather than the rows silently snapping back to
-   * baseline. Note this is a deliberate level→level copy, NOT a swing copy: the projected
-   * map can therefore shift slightly on expand, because a single aggregate swing applied
-   * uniformly is not identical to each region adopting the same absolute share.
+   * On expand: for every ballot, seeds each empty member sub-region with that region's own
+   * baseline share plus the national swing (aggregate input − aggregate baseline), then
+   * clears the aggregate row so the sub-rows become the source of truth. Sub-regions that
+   * already carry inputs (e.g. populated by a previous Apply while collapsed) are not
+   * overwritten. Only parties the user actually entered on the aggregate row are seeded;
+   * untouched parties fall back to each region's own baseline via `getShare`. This mirrors
+   * what the collapsed uniform-swing projection computes, so each region shows its own
+   * distinct prediction and the projected map stays put on expand (up to a possible ~1pp
+   * shift at a party near 0/100, since the seed is an integer-share approximation of the
+   * projection's per-seat swing).
    *
    * On collapse: drops EVERY sub-region entry from each input map — including the ones that
    * were seeded from the aggregate on a prior expand — and reverts the grid to a single
@@ -786,12 +787,19 @@ class PredictModel {
     const { key, isMember } = this.aggregateConfig;
     const subKeys = Array.from(this.regionLabelsByKey.keys()).filter((rk) => isMember(rk));
 
-    const propagateAndClear = (input) => {
+    const propagateAndClear = (input, baseline) => {
       const aggInputs = input.get(key);
       if (aggInputs && aggInputs.size > 0) {
+        const aggBaseline = baseline.get(key) ?? new Map();
         subKeys.forEach((rk) => {
           if (input.has(rk)) return;
-          input.set(rk, new Map(aggInputs));
+          const regionBaseline = baseline.get(rk) ?? new Map();
+          const seeded = new Map();
+          aggInputs.forEach((aggValue, partyKey) => {
+            const swing = aggValue - (aggBaseline.get(partyKey) ?? 0);
+            seeded.set(partyKey, roundShare((regionBaseline.get(partyKey) ?? 0) + swing));
+          });
+          input.set(rk, seeded);
         });
       }
       input.delete(key);
@@ -802,9 +810,9 @@ class PredictModel {
       });
     };
 
-    this.inputMaps().forEach((input) => {
-      if (expanded) propagateAndClear(input);
-      else dropSubs(input);
+    this.ballots.forEach((b) => {
+      if (expanded) propagateAndClear(b.input, b.baseline);
+      else dropSubs(b.input);
     });
     this.aggregateExpanded = expanded;
   }

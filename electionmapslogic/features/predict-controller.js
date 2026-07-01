@@ -23,6 +23,7 @@ import {
   renderMapControlOptions,
   syncRightPanelHeight,
   initRegionTable,
+  refreshOpenSeatPopup,
 } from '../dom.js';
 import {
   renderPredict,
@@ -159,6 +160,9 @@ function runPredictProjection() {
   // region-table overlay (renderMap doesn't touch it). preserveZoom keeps the user's pan/zoom.
   initRegionTable();
   syncRightPanelHeight();
+  // If a seat popup is open, re-render it against the just-projected data so its votes/majority
+  // and swing column update in place (map stays put — no re-zoom).
+  refreshOpenSeatPopup();
 
   const params = buildRouteSearchParams('predict');
   window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);

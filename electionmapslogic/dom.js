@@ -1139,6 +1139,11 @@ const seatPopupTitle = document.getElementById('mapsSeatPopupTitle');
 const seatPopupMeta = document.getElementById('mapsSeatPopupMeta');
 const seatPopupList = document.getElementById('mapsSeatPopupList');
 
+// Name of the seat whose detail popup is currently open, or null when nothing is open (or a
+// region list-vote popup is showing instead). Lets refreshOpenSeatPopup re-render it in place
+// after a predict projection swaps in new seat data.
+let openSeatName = null;
+
 /**
  * Creates a .maps-popup-row element with the party colour bar, label, and injected values HTML.
  * CSS custom properties --maps-popup-bar-width and --maps-popup-bar-colour drive the bar.
@@ -1207,6 +1212,9 @@ function renderPopupRows(rows, getValuesHtml, barCap = 75) {
  * @returns {void}
  */
 function renderRegionPopup(regionKey, data) {
+  // A region list-vote popup reuses the shared seatPopup element; clear the seat tracker so a
+  // later refreshOpenSeatPopup doesn't draw a stale seat over this region view.
+  openSeatName = null;
   seatPopupTitle.textContent = `${getRegionLabel(regionKey, state.currentRegionLabelsByKey)} List Vote`;
 
   // Meta bar: total list seats won across all parties in this region.
@@ -1237,6 +1245,17 @@ function renderRegionPopup(regionKey, data) {
 function hideSeatPopup() {
   if (!seatPopup) return;
   seatPopup.hidden = true;
+  openSeatName = null;
+}
+
+/**
+ * Re-renders the currently-open seat popup in place, if one is showing. Used after a predict
+ * projection swaps in new seat data so the open popup reflects the projected votes/majority and
+ * the (now non-zero) swing column, without re-zooming. No-op when no seat popup is open.
+ * @returns {void}
+ */
+export function refreshOpenSeatPopup() {
+  if (openSeatName && seatPopup && !seatPopup.hidden) renderSeatPopup(openSeatName);
 }
 
 /**
@@ -1253,6 +1272,8 @@ function renderSeatPopup(seatName) {
     hideSeatPopup();
     return;
   }
+  // Record the open seat so refreshOpenSeatPopup can re-render it after a predict projection.
+  openSeatName = seatName;
 
   // Multi-member seat (several members, not a single winner): show each member with their
   // party colour, name and the years their seat was last and is next contested.

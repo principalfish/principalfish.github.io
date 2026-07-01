@@ -9,6 +9,7 @@ vi.mock('../dom.js', () => ({
   renderMapControlOptions: vi.fn(),
   syncRightPanelHeight: vi.fn(),
   initRegionTable: vi.fn(),
+  refreshOpenSeatPopup: vi.fn(),
 }));
 vi.mock('../features/predict-view.js', () => ({
   renderPredict: vi.fn(),

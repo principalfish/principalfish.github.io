@@ -236,11 +236,14 @@ function handlePredictReset() {
  * the load fails — missing anchor election, network error, or empty seat array —
  * surfaces a blocking `window.alert` and bails.
  *
- * On success, calls `model.loadSimulationShares(simulationSeats)` which writes the
- * forecast's per-region shares into the model's input map(s), honouring the current
- * aggregate-expanded state (`PredictModel.loadSharesFromSeats` skips the synthetic
- * aggregate when expanded, sub-regions when collapsed). Then re-renders the grid so
- * forecast values become editable, and re-projects.
+ * On success, first calls `model.setAggregateExpanded(true)` so the forecast loads at
+ * per-region granularity — collapsed, the whole aggregate (England for Westminster,
+ * Scotland for Holyrood) would take a single swing across all its seats and couldn't
+ * reproduce the per-region model output the forecast was built from. Then calls
+ * `model.loadSimulationShares(simulationSeats)`, which writes the forecast's per-region
+ * shares into the model's input map(s) (`PredictModel.loadSharesFromSeats` now skips the
+ * synthetic aggregate, keeping the sub-region rows). Then re-renders the grid so forecast
+ * values become editable, and re-projects.
  *
  * No-ops silently if `state.predictModel` is null.
  *
@@ -258,6 +261,12 @@ async function handlePredictApply() {
     window.alert('Current prediction data is not available.');
     return;
   }
+  // Expand the aggregate to per-region rows before loading so each region carries its own
+  // swing. Collapsed, the whole aggregate (England / Scotland) takes a single swing across
+  // all its seats — buildSwings only reads sub-region rows when expanded — which can't
+  // reproduce the per-region model output the current forecast was built from. No-op for
+  // models without an aggregate config.
+  model.setAggregateExpanded(true);
   model.loadSimulationShares(simulationSeats);
   renderPredict();
   runPredictProjection();

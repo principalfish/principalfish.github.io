@@ -300,6 +300,74 @@ describe('PredictModel.setAggregateExpanded', () => {
   });
 });
 
+describe('PredictModel.loadSimulationShares — "Use current forecast"', () => {
+  // Two English regions with baselines that lean opposite ways — NE labour, NW conservative —
+  // and an England aggregate that sits at an even 50/50 (turnout-weighted sum of both).
+  const config = {
+    modelledPartyKeys: ['labour', 'conservative'],
+    aggregate: { key: 'england', label: 'England', excludeRegions: ['scotland'] },
+    gridSections: [{ id: 'gb', columnKeys: ['labour', 'conservative'], containsAggregate: true, extraRegionKeys: ['scotland'] }],
+  };
+
+  // A forecast whose two regions swing hard in *opposite* directions: NE flips to
+  // conservative, NW flips to labour. Their average is 50/50 — identical to the England
+  // baseline — so the aggregate swing is zero and the collapsed path changes nothing.
+  const simulationSeats = [
+    { seat: 'NE 1', region: 'northeastengland', turnout: 100, votes: { labour: 30, conservative: 70 } },
+    { seat: 'NW 1', region: 'northwestengland', turnout: 100, votes: { labour: 70, conservative: 30 } },
+  ];
+
+  const winnersByRegion = (seats) => Object.fromEntries(seats.map((s) => [s.region, s.winner]));
+
+  beforeEach(() => {
+    state.comparisonElectionData = {
+      currentSeats: [
+        new Seat({ seat: 'NE 1', region: 'northeastengland', winner: 'labour', votes: { labour: 1200, conservative: 800 } }),
+        new Seat({ seat: 'NW 1', region: 'northwestengland', winner: 'conservative', votes: { labour: 800, conservative: 1200 } }),
+      ],
+    };
+    state.currentRegionLabelsByKey = new Map([
+      ['northeastengland', 'North East'],
+      ['northwestengland', 'North West'],
+    ]);
+  });
+
+  it('collapsed load writes only the aggregate row, collapsing the per-region forecast to one swing', () => {
+    const model = new FPTPPredict(2029, config); // aggregateExpanded defaults to false
+    model.loadSimulationShares(simulationSeats);
+
+    const input = model.currentInputMap();
+    // Only the England aggregate is populated; the sub-regions are skipped while collapsed.
+    expect(input.has('england')).toBe(true);
+    expect(input.has('northeastengland')).toBe(false);
+    expect(input.has('northwestengland')).toBe(false);
+    // The aggregate averages the two opposite regions back to 50/50 — equal to its 50/50
+    // baseline — so the swing is zero and every seat keeps its baseline winner.
+    const winners = winnersByRegion(model.project());
+    expect(winners.northeastengland).toBe('labour');
+    expect(winners.northwestengland).toBe('conservative');
+  });
+
+  it('expanding before load gives each region its own swing, matching the per-region forecast', () => {
+    // This is what handlePredictApply does (setAggregateExpanded(true) before load) so the
+    // predict map reproduces the current prediction instead of one aggregate swing.
+    const model = new FPTPPredict(2029, config);
+    model.setAggregateExpanded(true);
+    model.loadSimulationShares(simulationSeats);
+
+    const input = model.currentInputMap();
+    // Each sub-region now carries its own forecast shares; the aggregate is not written.
+    expect(input.has('england')).toBe(false);
+    expect(input.get('northeastengland').get('labour')).toBe(30);
+    expect(input.get('northwestengland').get('labour')).toBe(70);
+    // Per-region swings flip each seat the way the forecast does — the opposite of the
+    // collapsed single-swing path, which left both winners unchanged.
+    const winners = winnersByRegion(model.project());
+    expect(winners.northeastengland).toBe('conservative');
+    expect(winners.northwestengland).toBe('labour');
+  });
+});
+
 describe('AMSPredict.project (two-pass constituency + D\'Hondt list)', () => {
   const config = {
     modelledPartyKeys: ['snp', 'labour', 'conservative', 'libdems', 'scottishgreens', 'reform'],

@@ -20,6 +20,7 @@
   "parliamentFeatures": {
     "us_house": {
       "features": ["predict"],
+      "predictAnchorElectionId": "2024-us-house",
       "predictBaselineElectionId": "2024-us-house",
       "nextElectionYear": 2026,
       "nextElectionLabel": "US House election",
@@ -35,6 +36,7 @@
     },
     "us_presidential": {
       "features": ["predict"],
+      "predictAnchorElectionId": "2024-us-president",
       "predictBaselineElectionId": "2024-us-president",
       "nextElectionYear": 2028,
       "nextElectionLabel": "US presidential election",
@@ -50,6 +52,7 @@
     },
     "us_senate": {
       "features": ["predict"],
+      "predictAnchorElectionId": "current-senate",
       "predictBaselineElectionId": "2020-us-senate",
       "nextElectionYear": 2026,
       "nextElectionLabel": "US Senate election",

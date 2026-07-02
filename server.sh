@@ -42,6 +42,7 @@ WATCH_FILES=(
 	electionmapslogic/features/predict-view.js
 	electionmapslogic/features/polltracker.js
 	electionmapslogic/features/polltracker-view.js
+	electionmapslogic/features/postcode.js
 	electionmapslogic/mobile-sidebar.js
 	electionmapslogic/mobile-sidebar.css
 	electionmapslogic/maps.css

@@ -140,7 +140,7 @@ a {
 .card-grid {
   margin-top: 0.85rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 0.85rem;
 }
 
@@ -920,6 +920,10 @@ a {
 }
 
 @media (max-width: 640px) {
+  .card-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .maps-region-card {
     position: static;
     order: 10;

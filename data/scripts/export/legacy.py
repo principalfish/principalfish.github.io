@@ -114,7 +114,8 @@ def apply_supplemental_legacy_elections(
 
     Raises:
         FileNotFoundError: If a supplemental source file does not exist
-            under ``legacy_files_dir``.
+            under ``legacy_files_dir``, or a prebuilt supplemental's result
+            file does not exist under ``results_dir``.
     """
     for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
         if parliaments is not None and supplemental.get("parliament", "westminster") not in parliaments:
@@ -132,8 +133,12 @@ def apply_supplemental_legacy_elections(
         # by a separate converter; the export only registers the manifest entry.
         if supplemental.get("prebuilt"):
             if not result_path.exists():
-                print(f"WARNING: prebuilt result file missing: {result_path} — run its converter first")
-            elif dry_run:
+                # Fail rather than register a manifest entry pointing at a missing result
+                # file (consistent with the missing-sourceFile error below).
+                raise FileNotFoundError(
+                    f"Prebuilt result file not found: {result_path} — run its converter first"
+                )
+            if dry_run:
                 print(f"Would register prebuilt supplemental: {result_path}")
         else:
             # A non-prebuilt supplemental must name its source file; guard the lookup so a

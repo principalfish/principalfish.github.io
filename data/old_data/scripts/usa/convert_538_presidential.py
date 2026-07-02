@@ -93,8 +93,12 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for unit, candidates in by_unit.items():
         party_info, winner_key = aggregate_unit(candidates.values(), unit)
-        # All rows for a unit carry the same full name; key the result by it.
-        display_name = next(iter(candidates.values()))["state"]
+        # All rows for a unit carry the same full name; key the result by it. A mis-tagged
+        # row would silently mis-key (or collide with) a seat, so disagreement is fatal.
+        display_names = {c["state"] for c in candidates.values()}
+        if len(display_names) != 1:
+            raise ValueError(f"Unit {unit!r} rows disagree on state name: {sorted(display_names)}")
+        display_name = display_names.pop()
         result[display_name] = {
             "seatInfo": {"current": winner_key, "electoral_votes": ELECTORAL_VOTES[unit]},
             "partyInfo": party_info,

@@ -11,7 +11,7 @@ vi.mock('../state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass } from '../utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass, normalizePostcode, resolveLookupSeatName } from '../utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -323,5 +323,68 @@ describe('deltaClass', () => {
   it('treats values within floating-point epsilon of zero as neutral', () => {
     expect(deltaClass(1e-12)).toBe('maps-delta-neutral');
     expect(deltaClass(null)).toBe('maps-delta-neutral');
+  });
+});
+
+describe('normalizePostcode', () => {
+  it('uppercases and inserts the inward-code space', () => {
+    expect(normalizePostcode('sw1a1aa')).toBe('SW1A 1AA');
+    expect(normalizePostcode('m11ae')).toBe('M1 1AE');
+  });
+
+  it('collapses existing internal whitespace to the canonical single space', () => {
+    expect(normalizePostcode('SW1A  1AA')).toBe('SW1A 1AA');
+    expect(normalizePostcode(' m1\t1ae ')).toBe('M1 1AE');
+  });
+
+  it('leaves an already-canonical postcode unchanged', () => {
+    expect(normalizePostcode('SW1A 1AA')).toBe('SW1A 1AA');
+  });
+
+  it('passes short fragments through without inserting a space', () => {
+    expect(normalizePostcode('M1')).toBe('M1');
+    expect(normalizePostcode('sw1a')).toBe('SW1A');
+  });
+
+  it('returns empty string for empty or null input', () => {
+    expect(normalizePostcode('')).toBe('');
+    expect(normalizePostcode(null)).toBe('');
+    expect(normalizePostcode(undefined)).toBe('');
+  });
+});
+
+describe('resolveLookupSeatName', () => {
+  const seatKeys = new Map([
+    ['ynys mon', 'Ynys Mon'],
+    ['cardiff north', 'Cardiff North'],
+  ]);
+
+  it('strips accents so API names match unaccented seat data', () => {
+    expect(resolveLookupSeatName('Ynys Môn', seatKeys, null)).toBe('Ynys Mon');
+  });
+
+  it('returns a known seat name unchanged without consulting renames', () => {
+    expect(resolveLookupSeatName('Cardiff North', seatKeys, { 'Cardiff North': 'WRONG' }))
+      .toBe('Cardiff North');
+  });
+
+  it('applies the boundary-rename fallback for names missing from the seat index', () => {
+    const renames = { 'Old Boundary Seat': 'New Boundary Seat' };
+    expect(resolveLookupSeatName('Old Boundary Seat', seatKeys, renames)).toBe('New Boundary Seat');
+  });
+
+  it('returns the accent-stripped name when no rename matches', () => {
+    expect(resolveLookupSeatName('Unknown Seat', seatKeys, { Other: 'X' })).toBe('Unknown Seat');
+    expect(resolveLookupSeatName('Unknown Seat', seatKeys, null)).toBe('Unknown Seat');
+  });
+
+  it('tolerates a missing seat index', () => {
+    expect(resolveLookupSeatName('Ynys Môn', null, null)).toBe('Ynys Mon');
+    expect(resolveLookupSeatName('Ynys Môn', undefined, { 'Ynys Mon': 'Renamed' })).toBe('Renamed');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(resolveLookupSeatName('', seatKeys, null)).toBe('');
+    expect(resolveLookupSeatName(null, seatKeys, null)).toBe('');
   });
 });

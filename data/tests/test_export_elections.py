@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 from typing import Any
@@ -10,9 +11,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
-from models import ElectionType
+from db import Database
+from models import Election, ElectionType
 from export_elections import (
+    _export_page,
     assign_comparison_elections,
     manifest_name_for_election,
     reorder_manifest_entries,
@@ -217,3 +222,39 @@ class TestAssignComparisonElections:
         assert by_id["2024-us-house"]["comparisonElectionId"] == "2022-us-house"
         assert "comparisonElectionId" not in by_id["2022-us-house"]
         assert "comparisonElectionId" not in by_id["2024-us-senate"]
+
+
+class TestMissingPrebuiltMapFails:
+    """A full export must fail, not warn, when a referenced pre-built map is absent.
+
+    Non-Westminster maps (Holyrood, US) ship a pre-built TopoJSON produced by a separate
+    build step; exporting without it used to emit a manifest pointing at a 404 map.
+    """
+
+    def test_export_raises_when_prebuilt_map_missing(self, db: Database, tmp_path: Path) -> None:
+        us_map = db.add_map("us-house-districts", parliament="us_house")
+        region = db.add_region(us_map.id, "South Atlantic")
+        db.add_seat(us_map.id, "GA-01", region_id=region.id)
+        db.add_election(us_map.id, 2024, "2024 US House Election", ElectionType.us_house)
+
+        output_root = tmp_path / "uselectionmaps" / "data"
+        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+        with db.session() as session:
+            election = session.execute(
+                select(Election).options(joinedload(Election.map))
+            ).scalars().one()
+            with pytest.raises(FileNotFoundError, match=r"map-\d+\.topo\.json"):
+                _export_page(
+                    session=session,
+                    elections=[election],
+                    output_root=output_root,
+                    parliaments={"us_house"},
+                    args=args,
+                    manifest_parties=[],
+                    manifest_regions_by_map_id={},
+                    has_electorate=True,
+                    has_electoral_votes=True,
+                    single_election_mode=False,
+                )
+        # The failure must happen before any results are written for the broken map.
+        assert not (output_root / "results").exists()

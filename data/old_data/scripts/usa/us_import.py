@@ -127,10 +127,16 @@ def import_us_election(
     for key, seat in data.items():
         winner_key = seat["seatInfo"]["current"]
         for party_key, info in seat["partyInfo"].items():
+            party_id = party_id_by_key.get(party_key)
+            if party_id is None:
+                raise SystemExit(
+                    f"Unknown party key {party_key!r} in seat {key!r} — "
+                    f"expected one of {sorted(party_id_by_key)} (seed via import_parties.py)"
+                )
             votes.append({
                 "election_id": election.id,
                 "seat_id": seat_id_by_key[key],
-                "party_id": party_id_by_key[party_key],
+                "party_id": party_id,
                 "candidate_name": info["name"],
                 "vote_total": float(info["total"]),
                 "elected": party_key == winner_key,

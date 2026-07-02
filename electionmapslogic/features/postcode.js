@@ -10,7 +10,7 @@
 import { selectSeatBySearchQuery } from '../dom.js';
 import { state } from '../state.js';
 import { fetchJson } from '../files.js';
-import { seatLookupKey } from '../utils.js';
+import { normalizePostcode, resolveLookupSeatName } from '../utils.js';
 
 const postcodeSearchInput = document.getElementById('maps-postcode-search');
 const postcodeSearchGroup = postcodeSearchInput?.closest('.maps-toolbar-group-postcode') ?? null;
@@ -86,12 +86,7 @@ async function lookupPostcode(postcode) {
   const cfg = state.mapConfig?.postcode;
   if (!cfg?.endpoint || !cfg?.resultProperty) return null;
 
-  // Strip all whitespace then re-insert the canonical space before the inward code
-  // (always the last 3 characters). The lookup API requires this format.
-  const stripped = postcode.trim().toUpperCase().replace(/\s+/g, '');
-  const normalised = stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
-
-  const url = `${cfg.endpoint}${encodeURIComponent(normalised)}`;
+  const url = `${cfg.endpoint}${encodeURIComponent(normalizePostcode(postcode))}`;
 
   try {
     // fetchJson throws on a non-OK status (e.g. 404 for an unknown postcode); the catch below
@@ -101,19 +96,7 @@ async function lookupPostcode(postcode) {
 
     if (!rawName) return null;
 
-    // Normalise accented characters to ASCII so names like "Ynys Môn" match
-    // our seat data which stores the unaccented form "Ynys Mon".
-    const constituencyName = rawName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-    // If the returned name has no match in the current seat index, apply the configured
-    // boundary-rename fallback (e.g. when the API uses older boundaries than the map).
-    const seatKey = seatLookupKey(constituencyName);
-    if (!state.currentSeatNameByKey.has(seatKey) && cfg.seatRenames) {
-      const mapped = cfg.seatRenames[constituencyName] ?? null;
-      if (mapped) return mapped;
-    }
-
-    return constituencyName;
+    return resolveLookupSeatName(rawName, state.currentSeatNameByKey, cfg.seatRenames);
   } catch {
     return null;
   }

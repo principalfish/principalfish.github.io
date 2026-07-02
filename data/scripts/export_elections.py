@@ -565,9 +565,13 @@ def _export_page(
                 if election.map_id not in written_map_ids:
                     print(f"Pre-built map already in place: {map_path}")
             else:
-                write_json(result_path, result_payload)
                 if election.map_id not in written_map_ids and not map_path.exists():
-                    print(f"WARNING: map not found at {map_path} — build it first (e.g. build_house_topojson.py)")
+                    # Fail rather than emit a manifest pointing at a 404 map (matches the
+                    # missing-template error on the Westminster path below).
+                    raise FileNotFoundError(
+                        f"Pre-built map not found at {map_path} — build it first (e.g. build_house_topojson.py)"
+                    )
+                write_json(result_path, result_payload)
         else:
             map_template_filename = choose_map_template_filename(map_row)
             map_template_path = args.legacy_files_dir / map_template_filename

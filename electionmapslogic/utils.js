@@ -28,6 +28,39 @@ export function seatLookupKey(seatName) {
 }
 
 /**
+ * Normalises a raw user-typed postcode to the lookup API's canonical form: strips all
+ * whitespace, uppercases, and re-inserts the single space before the inward code
+ * (always the last 3 characters). Inputs too short to have an inward code pass through
+ * stripped and uppercased only.
+ * @param {string} postcode - Raw postcode string as typed by the user.
+ * @returns {string} Canonical postcode (e.g. 'sw1a1aa' → 'SW1A 1AA').
+ */
+export function normalizePostcode(postcode) {
+  const stripped = String(postcode || '').trim().toUpperCase().replace(/\s+/g, '');
+  return stripped.length >= 5 ? `${stripped.slice(0, -3)} ${stripped.slice(-3)}` : stripped;
+}
+
+/**
+ * Resolves a lookup-API constituency name against the current seat index. Strips accents
+ * to ASCII (NFD) so names like 'Ynys Môn' match seat data stored unaccented; when the
+ * name has no match in the index, applies the configured boundary-rename fallback (e.g.
+ * an API on older boundaries than the rendered map).
+ * @param {string} rawName - Constituency name as returned by the lookup API.
+ * @param {{has: (key: string) => boolean}|null|undefined} seatKeys - Index of known seat
+ *   lookup keys (anything with a `has`, e.g. `state.currentSeatNameByKey`).
+ * @param {Object<string, string>|null|undefined} seatRenames - Optional API-name → seat-name map.
+ * @returns {string} The seat name to select (accent-stripped, possibly renamed).
+ */
+export function resolveLookupSeatName(rawName, seatKeys, seatRenames) {
+  const constituencyName = String(rawName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (!seatKeys?.has(seatLookupKey(constituencyName)) && seatRenames) {
+    const mapped = seatRenames[constituencyName] ?? null;
+    if (mapped) return mapped;
+  }
+  return constituencyName;
+}
+
+/**
  * Rounds value to the nearest integer and formats it with GB locale thousands separators.
  * @param {number} value - Numeric value to format.
  * @returns {string} Rounded integer as a locale-formatted string (e.g. '1,234').

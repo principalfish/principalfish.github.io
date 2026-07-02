@@ -70,10 +70,16 @@ export function wirePollTrackerControls() {
 
   // Re-render the chart on window resize so its SVG dimensions track the container. Wired
   // here (once, from the page entry) rather than in core dom.js, which stays feature-free.
-  window.addEventListener('resize', () => {
-    if (state.view === 'polltracker') renderPollTracker();
-  });
+  // Guarded like the button listeners above so a repeat call can't stack listeners.
+  if (!resizeListenerWired) {
+    window.addEventListener('resize', () => {
+      if (state.view === 'polltracker') renderPollTracker();
+    });
+    resizeListenerWired = true;
+  }
 }
+
+let resizeListenerWired = false;
 
 let partyControlsRendered = false;
 

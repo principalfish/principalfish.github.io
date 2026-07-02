@@ -110,6 +110,25 @@ PAGE_PARLIAMENTS = {
 }
 
 
+def partition_elections_by_page(elections: Sequence[Election]) -> dict[str, list[Election]]:
+    """Group ``elections`` by the front-end page that owns their parliament.
+
+    Routing is driven by :data:`PAGE_PARLIAMENTS`: an election lands in the page whose parliament
+    set contains ``election.map.parliament`` (defaulting to ``"westminster"`` for legacy maps with
+    no ``parliament`` attribute). Elections whose parliament matches no page are dropped — they
+    belong to no exported page. Every :data:`PAGE_PARLIAMENTS` key is present in the result, with
+    an empty list when nothing routes to it. The parliament sets are disjoint, so first match wins.
+    """
+    by_page: dict[str, list[Election]] = {page: [] for page in PAGE_PARLIAMENTS}
+    for election in elections:
+        parliament = getattr(election.map, "parliament", "westminster")
+        for page_name, parliaments in PAGE_PARLIAMENTS.items():
+            if parliament in parliaments:
+                by_page[page_name].append(election)
+                break
+    return by_page
+
+
 def parse_args() -> argparse.Namespace:
     """Parse and validate command-line arguments.
 
@@ -380,13 +399,11 @@ def main() -> None:
         if args.output_file and len(elections) != 1:
             raise RuntimeError("--output-file supports exactly one target election")
 
+        elections_by_page = partition_elections_by_page(elections)
         for _page_name, _page_parliaments in PAGE_PARLIAMENTS.items():
             _export_page(
                 session=session,
-                elections=[
-                    e for e in elections
-                    if getattr(e.map, "parliament", "westminster") in _page_parliaments
-                ],
+                elections=elections_by_page[_page_name],
                 output_root=PAGE_OUTPUT_ROOTS[_page_name],
                 parliaments=_page_parliaments,
                 args=args,

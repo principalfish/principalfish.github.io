@@ -37,6 +37,7 @@ WATCH_FILES=(
 	electionmapslogic/utils.js
 	electionmapslogic/dom.js
 	electionmapslogic/files.js
+	electionmapslogic/shell-loader.js
 	electionmapslogic/features/predict.js
 	electionmapslogic/features/predict-controller.js
 	electionmapslogic/features/predict-view.js

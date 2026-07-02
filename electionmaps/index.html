@@ -40,269 +40,28 @@
         <span class="maps-us-banner-arrow" aria-hidden="true">→</span>
       </a>
 
-      <section class="maps-app" aria-label="Election maps application layout">
-        <aside id="mapsLeftPanel" class="maps-panel maps-panel-left" aria-label="Election selection">
-          <div class="maps-parliament-tabs" role="tablist" aria-label="Parliament selection">
-            <!-- Tabs are rendered from manifest.parliamentTabs() by renderParliamentTabs(). -->
-          </div>
-          <nav id="mapsElectionList" class="maps-election-list" aria-label="Election years"></nav>
-        </aside>
-        <button type="button" id="mapsSidebarOverlay" class="maps-mobile-sidebar-overlay" aria-label="Close elections menu" hidden></button>
-
-        <section class="maps-main" aria-label="Map and election insights">
-          <section class="maps-stage" aria-label="Zoomable map stage">
-            <div class="maps-toolbar">
-              <div class="maps-toolbar-group">
-                <button type="button" class="maps-tool-btn" data-map-action="reset-view">Reset</button>
-                <button type="button" class="maps-tool-btn" data-popup-action="toggle" data-popup-target="mapsFiltersPanel">Filters</button>
-                <button type="button" id="mapsChoroplethsBtn" class="maps-tool-btn" data-popup-action="toggle" data-popup-target="mapsChoroplethsPanel">Choropleths</button>
-                <button type="button" id="mapsDataInfoBtn" class="maps-icon-btn" data-popup-action="toggle" data-popup-target="mapsDataInfoPanel" hidden aria-label="Data info">ⓘ</button>
-              </div>
-              <div class="maps-toolbar-group maps-toolbar-group-search">
-                <label for="maps-seat-search" class="maps-search-label">Seat search</label>
-                <input id="maps-seat-search" type="text" placeholder="type a seat name" />
-              </div>
-              <div class="maps-toolbar-group maps-toolbar-group-postcode" hidden>
-                <label for="maps-postcode-search" class="maps-search-label">Postcode</label>
-                <input id="maps-postcode-search" type="text" placeholder="type a postcode" autocomplete="off" />
-                <button type="button" id="mapsPostcodeWarningBtn" class="maps-postcode-warning-btn" data-popup-action="toggle" data-popup-target="mapsPostcodeWarningPanel" aria-label="Postcode accuracy warning" hidden>!</button>
-              </div>
-            </div>
-
-            <div class="maps-popups-wrap" aria-label="Map controls popups">
-              <article id="mapsFiltersPanel" class="maps-control-popup" hidden>
-                <header class="maps-control-popup-head">
-                  <h3 class="maps-control-popup-title">Filters</h3>
-                  <button type="button" class="maps-control-popup-close" data-popup-action="close" data-popup-target="mapsFiltersPanel" aria-label="Close filters">X</button>
-                </header>
-                <div class="maps-control-popup-body">
-                  <label class="maps-control-label" for="mapsFilterParty">by party...</label>
-                  <select id="mapsFilterParty"></select>
-
-                  <label class="maps-control-label" for="mapsFilterRegion">by region...</label>
-                  <select id="mapsFilterRegion"></select>
-
-                  <div id="mapsFilterUpcomingGroup" hidden>
-                    <label class="maps-control-label" for="mapsFilterUpcoming">next up for election...</label>
-                    <select id="mapsFilterUpcoming"></select>
-                  </div>
-
-                  <div id="mapsFilterMajorityGroup" class="maps-range-row">
-                    <span>Majority</span>
-                    <input id="mapsFilterMajorityMin" type="number" min="0" max="100" step="0.1" value="0" />
-                    <span>to</span>
-                    <input id="mapsFilterMajorityMax" type="number" min="0" max="100" step="0.1" value="100" />
-                  </div>
-
-                  <div id="mapsFilterSecondPartyGroup" hidden>
-                    <label class="maps-control-label" for="mapsFilterSecondParty">by second place party...</label>
-                    <select id="mapsFilterSecondParty"></select>
-                  </div>
-
-                  <button type="button" id="mapsFilterGainsOnly" class="maps-apply-btn">Gains</button>
-                  <button type="button" id="mapsFiltersReset" class="maps-apply-btn">Reset</button>
-                </div>
-              </article>
-
-              <article id="mapsChoroplethsPanel" class="maps-control-popup" hidden>
-                <header class="maps-control-popup-head">
-                  <h3 class="maps-control-popup-title">Choropleths</h3>
-                  <button type="button" class="maps-control-popup-close" data-popup-action="close" data-popup-target="mapsChoroplethsPanel" aria-label="Close choropleths">X</button>
-                </header>
-                <div class="maps-control-popup-body">
-                  <label class="maps-control-label" for="mapsChoroplethType">Type</label>
-                  <select id="mapsChoroplethType">
-                    <option value="none">none...</option>
-                    <option value="voteShare">vote share...</option>
-                    <option id="mapsChoroplethVoteShareChangeOption" value="voteShareChange">vote share change...</option>
-                  </select>
-
-                  <label class="maps-control-label" for="mapsChoroplethParty">Party</label>
-                  <select id="mapsChoroplethParty"></select>
-
-                  <button type="button" id="mapsChoroplethsReset" class="maps-apply-btn">Reset</button>
-                </div>
-              </article>
-
-              <article id="mapsDataInfoPanel" class="maps-control-popup" hidden>
-                <header class="maps-control-popup-head">
-                  <h3 class="maps-control-popup-title">Data</h3>
-                  <button type="button" class="maps-control-popup-close" data-popup-action="close" data-popup-target="mapsDataInfoPanel" aria-label="Close data info">X</button>
-                </header>
-                <div class="maps-control-popup-body">
-                  <p>With thanks to Chris Hanretty for the data. More info <a href="https://medium.com/@chrishanretty/final-estimates-of-the-leave-vote-or-areal-interpolation-and-the-uks-referendum-on-eu-membership-5490b6cab878#.4u4zxiklb" target="_blank" rel="noopener">here</a>.</p>
-                  <p>"Areal interpolation and the UK's referendum on EU membership", Chris Hanretty, <em>Journal of Elections, Public Opinion and Parties</em>. <a href="http://dx.doi.org/10.1080/17457289.2017.1287081" target="_blank" rel="noopener">Link</a></p>
-                </div>
-              </article>
-
-              <article id="mapsPostcodeWarningPanel" class="maps-control-popup maps-postcode-warning-panel" hidden>
-                <header class="maps-control-popup-head">
-                  <h3 class="maps-control-popup-title">Postcode accuracy</h3>
-                  <button type="button" class="maps-control-popup-close" data-popup-action="close" data-popup-target="mapsPostcodeWarningPanel" aria-label="Close postcode warning">X</button>
-                </header>
-                <div class="maps-control-popup-body">
-                  <p>Postcode lookup uses <a href="https://postcodes.io" target="_blank" rel="noopener">postcodes.io</a>, which currently maps postcodes to <strong>2021 Holyrood boundaries</strong>. This map uses <strong>2026 boundaries</strong>, so postcodes in the following seats may resolve to the wrong constituency:</p>
-                  <table class="maps-postcode-warning-table">
-                    <thead><tr><th>2021 name (API)</th><th>2026 name (this map)</th></tr></thead>
-                    <tbody>
-                      <tr><td>Aberdeen South and North Kincardine</td><td>Aberdeen Deeside and North Kincardine</td></tr>
-                      <tr><td>Airdrie and Shotts</td><td>Airdrie / Coatbridge and Chryston</td></tr>
-                      <tr><td>East Lothian</td><td>East Lothian Coast and Lammermuirs</td></tr>
-                      <tr><td>Edinburgh Eastern</td><td>Edinburgh Eastern, Musselburgh and Tranent</td></tr>
-                      <tr><td>Edinburgh Northern and Leith</td><td>Edinburgh North Eastern and Leith</td></tr>
-                      <tr><td>Edinburgh Pentlands</td><td>Edinburgh South Western</td></tr>
-                      <tr><td>Edinburgh Western</td><td>Edinburgh North Western</td></tr>
-                      <tr><td>Falkirk East</td><td>Falkirk East and Linlithgow</td></tr>
-                      <tr><td>Glasgow Cathcart</td><td>Glasgow Cathcart and Pollok</td></tr>
-                      <tr><td>Glasgow Kelvin</td><td>Glasgow Kelvin and Maryhill</td></tr>
-                      <tr><td>Glasgow Maryhill and Springburn</td><td>Glasgow Kelvin and Maryhill</td></tr>
-                      <tr><td>Glasgow Pollok</td><td>Glasgow Cathcart and Pollok</td></tr>
-                      <tr><td>Glasgow Provan</td><td>Glasgow Easterhouse and Springburn</td></tr>
-                      <tr><td>Glasgow Shettleston</td><td>Glasgow Baillieston and Shettleston</td></tr>
-                      <tr><td>Greenock and Inverclyde</td><td>Inverclyde</td></tr>
-                      <tr><td>Linlithgow</td><td>Falkirk East and Linlithgow</td></tr>
-                      <tr><td>Midlothian North and Musselburgh</td><td>Midlothian North</td></tr>
-                      <tr><td>North East Fife</td><td>Fife North East</td></tr>
-                      <tr><td>Renfrewshire North and West</td><td>Renfrewshire North and Cardonald</td></tr>
-                      <tr><td>Renfrewshire South</td><td>Renfrewshire West and Levern Valley</td></tr>
-                      <tr><td>Rutherglen</td><td>Rutherglen and Cambuslang</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </article>
-
-            </div>
-
-            <div id="mapsChoroplethLegend" class="maps-choropleth-legend" hidden></div>
-
-            <article id="mapsRegionCard" class="maps-region-card" hidden aria-label="List seats by region">
-              <table class="maps-region-table" aria-label="List seats by region">
-                <thead>
-                  <tr class="maps-region-table-header-row">
-                    <th class="maps-region-table-th">Region</th>
-                    <th class="maps-region-table-th maps-region-table-th-seats">
-                      Seats
-                      <button type="button" id="mapsRegionCardToggle" class="maps-region-card-toggle" aria-label="Toggle region list">▼</button>
-                    </th>
-                  </tr>
-                  <tr class="maps-region-table-collapsed-row">
-                    <th class="maps-region-table-th maps-region-table-th-collapsed" colspan="2">
-                      Show Regional Seats
-                      <button type="button" id="mapsRegionCardToggle2" class="maps-region-card-toggle maps-region-card-toggle--show" aria-label="Show region list">▶</button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody id="mapsRegionTableBody"></tbody>
-              </table>
-            </article>
-
-            <div id="mapsViewport" class="maps-viewport" aria-label="Map viewport">
-              <div class="maps-zoom-overlay" aria-label="Map zoom controls">
-                <button type="button" class="maps-icon-btn" data-map-action="zoom-out" aria-label="Zoom out">−</button>
-                <button type="button" class="maps-icon-btn" data-map-action="zoom-in" aria-label="Zoom in">+</button>
-                <button type="button" class="maps-icon-btn" data-map-action="reset-zoom" aria-label="Reset zoom">⟲</button>
-                <span id="mapsZoomValue" class="maps-zoom-value">100%</span>
-              </div>
-              <svg viewBox="0 0 1200 900" role="img" aria-label="UK election map" class="maps-svg">
-                <g id="mapContent" class="maps-map-content">
-                  <rect x="0" y="0" width="1200" height="900" rx="26" class="maps-water" />
-                </g>
-              </svg>
-            </div>
-
-            <article id="mapsSeatPopup" class="maps-seat-popup" hidden aria-live="polite">
-              <header class="maps-seat-popup-head">
-                <h3 id="mapsSeatPopupTitle" class="maps-seat-popup-title">Seat</h3>
-                <button type="button" id="mapsSeatPopupClose" class="maps-seat-popup-close" aria-label="Close seat details">×</button>
-              </header>
-              <div id="mapsSeatPopupMeta" class="maps-seat-popup-meta"></div>
-              <div id="mapsSeatPopupList" class="maps-seat-popup-list"></div>
-            </article>
-          </section>
-
-          <aside class="maps-panel maps-panel-right" aria-label="Map insights and controls">
-            <article class="maps-card" id="mapsVoteTotalsCard">
-              <div class="maps-card-head">
-                <h2 class="maps-panel-title">Vote Totals</h2>
-                <div class="maps-card-head-actions">
-                  <button type="button" id="mapsVoteTotalsToggle" class="maps-inline-btn" hidden>Show all</button>
-                  <button type="button" id="mapsVoteTotalsCollapse" class="maps-inline-btn maps-vote-totals-collapse" data-vote-totals-action="collapse" aria-label="Collapse vote totals">▲</button>
-                </div>
-              </div>
-              <nav class="maps-vote-tabs" id="mapsVoteTotalsTabNav" hidden aria-label="Vote totals view"></nav>
-              <table id="mapsVoteTotalsTable" class="maps-table" aria-label="Vote totals placeholder">
-                <thead>
-                  <tr>
-                    <th data-sort-key="party" role="button" tabindex="0" title="Sort by party">Party</th>
-                    <th data-sort-key="seats" role="button" tabindex="0" title="Sort by seats">Seats</th>
-                    <th class="comparison-col">±</th>
-                    <th class="vote-total-col" data-sort-key="votes" role="button" tabindex="0" title="Sort by votes">Votes</th>
-                    <th class="vote-pct-col" data-sort-key="votePct" role="button" tabindex="0" title="Sort by vote percentage">Vote %</th>
-                    <th class="comparison-col vote-pct-comparison-col">±</th>
-                  </tr>
-                </thead>
-                <tbody id="mapsVoteTotalsBody"></tbody>
-              </table>
-            </article>
-
-            <article id="mapsPredictWindow" class="maps-predict-window" hidden aria-label="Predict input">
-              <header class="maps-predict-window-head">
-                <div class="maps-predict-window-title-group">
-                  <h3 id="mapsPredictTitle" class="maps-predict-window-title">User Input</h3>
-                </div>
-                <button type="button" class="maps-inline-btn" data-predict-action="collapse" aria-label="Collapse user input">▲</button>
-              </header>
-              <div class="maps-predict-window-body">
-                <nav id="mapsPredictTabNav" class="maps-predict-tabs" hidden aria-label="Predict input tabs"></nav>
-                <div id="mapsPredictGrid" class="maps-predict-grid" aria-label="Regional swing matrix"></div>
-                <div class="maps-predict-window-actions">
-                  <button type="button" class="maps-apply-btn" data-predict-action="apply">Use current forecast</button>
-                  <button type="button" class="maps-apply-btn" data-predict-action="submit">Submit</button>
-                  <button type="button" class="maps-apply-btn" data-predict-action="share">Share</button>
-                  <button type="button" class="maps-apply-btn" data-predict-action="reset">Reset</button>
-                </div>
-              </div>
-            </article>
-
-            <article class="maps-card maps-seat-card" id="mapsSeatCard">
-              <div class="maps-card-head">
-                <h2 class="maps-panel-title">Seats</h2>
-              </div>
-              <div id="mapsSeatList" class="maps-seat-list" aria-label="Seat list placeholder">
-                <p>Loading seats…</p>
-              </div>
-            </article>
-          </aside>
-
-          <section id="mapsPollTrackerView" class="maps-polltracker-view" aria-label="Poll tracker view">
-            <article class="maps-card maps-polltracker-card">
-              <div class="maps-card-head">
-                <h2 class="maps-panel-title">Poll tracker</h2>
-              </div>
-
-              <div class="maps-polltracker-controls">
-                <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked /> Seats</label>
-                <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked /> Vote %</label>
-                <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
-                  <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
-                  <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
-                  <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="90">Last 90</button>
-                </div>
-              </div>
-
-              <div id="mapsPollTrackerPartyControls" class="maps-polltracker-party-controls" aria-label="Poll tracker party toggles"></div>
-
-              <div id="mapsPollTrackerChartWrap" class="maps-polltracker-chart-wrap" aria-label="Poll tracker chart container"></div>
-            </article>
-          </section>
-        </section>
-      </section>
+      <!-- Replaced by the shared app markup (electionmapslogic/shell.html) plus this
+           page's fragments by the shell loader below, before the page bundle loads. -->
+      <div id="mapsShellMount"></div>
     </main>
 
     <script type="module" src="../site/topbar.min.js"></script>
     <!-- This page shows only the UK parliaments; the US contests live at /uselectionmaps. -->
     <script>window.MAPS_PAGE = { parliaments: ['westminster', 'holyrood'] };</script>
-    <script type="module" src="./electionmaps.min.js"></script>
-    <script type="module" src="../electionmapslogic/mobile-sidebar.min.js"></script>
+    <script type="module">
+      import { loadShell } from '../electionmapslogic/shell-loader.min.js';
+      try {
+        await loadShell(['postcode', 'referendum-info', 'polltracker']);
+      } catch (error) {
+        document.getElementById('mapsSubtitle').textContent = 'Unable to load this page.';
+        throw error;
+      }
+      // The engine and sidebar query shell elements at module load, so import them only
+      // after the shell markup is in the DOM.
+      await Promise.all([
+        import('./electionmaps.min.js'),
+        import('../electionmapslogic/mobile-sidebar.min.js'),
+      ]);
+    </script>
   </body>
 </html>

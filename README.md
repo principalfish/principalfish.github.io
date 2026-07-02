@@ -10,9 +10,9 @@ pipeline that powers its interactive UK election maps.
 | `index.html`, `404.html`, `CNAME` | Landing page, error page, GitHub Pages custom domain |
 | `site/` | Shared frontend assets — styles, top bar, Google Analytics, vendored `d3`/`topojson` bundles |
 | `bio/` | Static bio page |
-| `electionmapslogic/` | Shared election-maps engine (D3 + TopoJSON): core modules (`state`/`dom`/`utils`/`files`/`app`), `features/` (predict + poll tracker, opt-in per page), `maps.css`, `mobile-sidebar`, `tests/` = Vitest specs |
-| `electionmaps/` | UK election-maps page shell — `index.html`, the `electionmaps.js` entry (bundled to `electionmaps.min.js`), and `data/` = UK exported maps/results + `map-modes(-shell).json` |
-| `uselectionmaps/` | US election-maps page shell — `index.html`, the `uselectionmaps.js` entry (bundled to `uselectionmaps.min.js`), and `data/` = US exported maps/results + `map-modes(-shell).json` |
+| `electionmapslogic/` | Shared election-maps engine (D3 + TopoJSON): core modules (`state`/`dom`/`utils`/`files`/`app`), `features/` (predict + poll tracker, opt-in per page), shared app markup (`shell.html` + opt-in `fragments/`, injected per page by `shell-loader.js`), `maps.css`, `mobile-sidebar`, `tests/` = Vitest specs |
+| `electionmaps/` | UK election-maps page shell — thin `index.html` (header + shell mount; loads fragments `postcode`/`referendum-info`/`polltracker`), the `electionmaps.js` entry (bundled to `electionmaps.min.js`), and `data/` = UK exported maps/results + `map-modes(-shell).json` |
+| `uselectionmaps/` | US election-maps page shell — thin `index.html` (header + shell mount; no fragments), the `uselectionmaps.js` entry (bundled to `uselectionmaps.min.js`), and `data/` = US exported maps/results + `map-modes(-shell).json` |
 | `guesstheyear/` | "Guess the year" game — static frontend + Python helpers (`app.py`, `wiki.py`, `export.py`) |
 | `referdle-solver/` | Referdle solver — static frontend (`js/`, `css/`, `data/`) |
 | `imgs/` | Shared images and logos |

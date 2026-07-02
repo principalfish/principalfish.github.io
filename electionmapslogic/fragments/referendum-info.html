@@ -1,0 +1,17 @@
+<!-- Referendum data-info fragment (UK pages only): the toolbar ⓘ button and the popup
+     crediting the EU-referendum estimates. Loaded by shell-loader.js when the page's
+     fragment list includes "referendum-info"; each top-level element is appended to the
+     shell element matching its data-shell-target (the button joins the first toolbar
+     group). dom.js unhides the button only on referendum elections (isReferendumType). -->
+<button type="button" id="mapsDataInfoBtn" class="maps-icon-btn" data-shell-target=".maps-toolbar-group" data-popup-action="toggle" data-popup-target="mapsDataInfoPanel" hidden aria-label="Data info">ⓘ</button>
+
+<article id="mapsDataInfoPanel" class="maps-control-popup" data-shell-target=".maps-popups-wrap" hidden>
+  <header class="maps-control-popup-head">
+    <h3 class="maps-control-popup-title">Data</h3>
+    <button type="button" class="maps-control-popup-close" data-popup-action="close" data-popup-target="mapsDataInfoPanel" aria-label="Close data info">X</button>
+  </header>
+  <div class="maps-control-popup-body">
+    <p>With thanks to Chris Hanretty for the data. More info <a href="https://medium.com/@chrishanretty/final-estimates-of-the-leave-vote-or-areal-interpolation-and-the-uks-referendum-on-eu-membership-5490b6cab878#.4u4zxiklb" target="_blank" rel="noopener">here</a>.</p>
+    <p>"Areal interpolation and the UK's referendum on EU membership", Chris Hanretty, <em>Journal of Elections, Public Opinion and Parties</em>. <a href="http://dx.doi.org/10.1080/17457289.2017.1287081" target="_blank" rel="noopener">Link</a></p>
+  </div>
+</article>

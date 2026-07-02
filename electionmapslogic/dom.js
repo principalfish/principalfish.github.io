@@ -282,6 +282,7 @@ function renderCountdown() {
 // the map controls below, but configured up-front rather than rebuilt per load.
 
 // Info button shown only on referendum elections — opens a data-source / methodology explainer.
+// Lives in the referendum-info shell fragment, so it's null on pages that don't load it (US).
 const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 
 /**
@@ -298,7 +299,7 @@ export function setElectionPreDataFetch() {
   filterGainsButton.textContent = state.currentElection.byElectionSeats ? 'By-elections' : 'Gains';
   filterGainsButton.hidden = hideSeatComparison;
   choroplethVoteShareChangeOption.hidden = hideSeatComparison;
-  dataInfoButton.hidden = !state.isReferendumType;
+  if (dataInfoButton) dataInfoButton.hidden = !state.isReferendumType;
 }
 
 // ─── Map control ─────────────────────────────────────────────────────────────

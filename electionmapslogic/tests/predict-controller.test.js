@@ -13,13 +13,20 @@ vi.mock('../dom.js', () => ({
 }));
 vi.mock('../features/predict-view.js', () => ({
   renderPredict: vi.fn(),
+  setApplyActionVisible: vi.fn(),
   setPredictActionHandlers: vi.fn(),
   setPredictWindowVisible: vi.fn(),
 }));
 vi.mock('../files.js', () => ({ fetchJson: vi.fn() }));
 
-import { getPredictBaseElection, ensurePredictSimulation } from '../features/predict-controller.js';
-import { manifest, state } from '../state.js';
+import {
+  activatePredictView,
+  getPredictBaseElection,
+  ensurePredictSimulation,
+  parliamentHasForecast,
+} from '../features/predict-controller.js';
+import { setApplyActionVisible, setPredictActionHandlers } from '../features/predict-view.js';
+import { manifest, state, ElectionData } from '../state.js';
 import { fetchJson } from '../files.js';
 
 describe('getPredictBaseElection', () => {
@@ -57,6 +64,89 @@ describe('getPredictBaseElection', () => {
       elections: [],
     });
     expect(getPredictBaseElection()).toBeFalsy();
+  });
+});
+
+describe('parliamentHasForecast', () => {
+  it('is true when the anchor resolves to a model/nowcast election', () => {
+    manifest.init({
+      parliamentFeatures: { westminster: { predictAnchorElectionId: 'nowcast' } },
+      elections: [{ id: 'nowcast', model: true }],
+    });
+    expect(parliamentHasForecast('westminster')).toBe(true);
+  });
+
+  it('is false when the anchor is a plain past election (US-style)', () => {
+    manifest.init({
+      parliamentFeatures: { us_presidential: { predictAnchorElectionId: '2024-us-president' } },
+      elections: [{ id: '2024-us-president' }],
+    });
+    expect(parliamentHasForecast('us_presidential')).toBe(false);
+  });
+
+  it('is false when no anchor election id is configured', () => {
+    manifest.init({ parliamentFeatures: { us_house: {} }, elections: [] });
+    expect(parliamentHasForecast('us_house')).toBe(false);
+  });
+});
+
+describe('activatePredictView forecast gating', () => {
+  // Minimal single-seat baseline: FPTPPredict's constructor builds its ballot baseline from
+  // state.comparisonElectionData (set by activateElection in the real flow).
+  const baselineResults = { seats: [{ n: 'A', r: 'glasgow', w: 'snp', p: [['snp', 600], ['labour', 400]] }] };
+  const predictConfig = {
+    model: 'fptp',
+    modelledPartyKeys: ['snp', 'labour'],
+    gridSections: [{ id: 's', columnKeys: ['snp', 'labour'] }],
+  };
+
+  /** Manifest with a predict-enabled parliament whose anchor is / isn't a model election.
+   * Distinct parliament keys per test keep the module-level simulation cache from leaking. */
+  function configurePredict(parliament, { modelAnchor }) {
+    manifest.init({
+      parliamentFeatures: {
+        [parliament]: { predictAnchorElectionId: 'anchor', nextElectionYear: 2030, predict: predictConfig },
+      },
+      elections: [{ id: 'anchor', mapId: 1, ...(modelAnchor ? { model: true } : {}) }],
+      files: { elections: { mapsById: { 1: 'maps/m.topo.json' }, electionsById: { anchor: 'results/r.json' } } },
+    });
+    state.comparisonElectionData = new ElectionData(baselineResults);
+  }
+
+  /** Runs activatePredictView far enough to assert the gating. The action-handler wiring,
+   * apply-button visibility, and prefetch all happen before the function reads
+   * window.location (absent in the node test env), where it throws — swallow that. */
+  async function runActivate(parliament) {
+    state.currentParliament = parliament;
+    try {
+      await activatePredictView();
+    } catch { /* expected: no window in node; gating already ran */ }
+  }
+
+  beforeEach(() => {
+    fetchJson.mockReset();
+    setApplyActionVisible.mockClear();
+    setPredictActionHandlers.mockClear();
+  });
+
+  it('with a model anchor: registers the apply handler, shows the button, prefetches', async () => {
+    configurePredict('p_forecast', { modelAnchor: true });
+    fetchJson.mockResolvedValue(baselineResults);
+    await runActivate('p_forecast');
+    expect(setApplyActionVisible).toHaveBeenCalledWith(true);
+    const handlers = setPredictActionHandlers.mock.calls[0][0];
+    expect(handlers.apply).toBeTypeOf('function');
+    expect(fetchJson).toHaveBeenCalledWith('data/results/r.json');
+  });
+
+  it('without a model anchor (US-style): no apply handler, hidden button, no prefetch', async () => {
+    configurePredict('p_noforecast', { modelAnchor: false });
+    await runActivate('p_noforecast');
+    expect(setApplyActionVisible).toHaveBeenCalledWith(false);
+    const handlers = setPredictActionHandlers.mock.calls[0][0];
+    expect(handlers.apply).toBeUndefined();
+    expect(handlers.submit).toBeTypeOf('function');
+    expect(fetchJson).not.toHaveBeenCalled();
   });
 });
 

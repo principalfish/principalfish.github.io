@@ -1,0 +1,25 @@
+<!-- Poll tracker view fragment (UK page only): the full-width chart view that replaces the
+     map + right panel when ?view=polltracker is active. Loaded by shell-loader.js when the
+     page's fragment list includes "polltracker" and appended to the shell's .maps-main;
+     the feature JS (features/polltracker-view.js) does all the wiring and rendering. -->
+<section id="mapsPollTrackerView" class="maps-polltracker-view" data-shell-target=".maps-main" aria-label="Poll tracker view">
+  <article class="maps-card maps-polltracker-card">
+    <div class="maps-card-head">
+      <h2 class="maps-panel-title">Poll tracker</h2>
+    </div>
+
+    <div class="maps-polltracker-controls">
+      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked /> Seats</label>
+      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked /> Vote %</label>
+      <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
+        <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
+        <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
+        <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="90">Last 90</button>
+      </div>
+    </div>
+
+    <div id="mapsPollTrackerPartyControls" class="maps-polltracker-party-controls" aria-label="Poll tracker party toggles"></div>
+
+    <div id="mapsPollTrackerChartWrap" class="maps-polltracker-chart-wrap" aria-label="Poll tracker chart container"></div>
+  </article>
+</section>

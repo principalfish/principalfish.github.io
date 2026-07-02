@@ -4,7 +4,10 @@
 // /electionmapslogic; this entry only declares the feature modules this page bundles —
 // predict, the poll tracker, and postcode search — keyed by feature name. startApp switches
 // each on only when the manifest's parliamentFeatures enables it, so behaviour is
-// manifest-driven. window.MAPS_PAGE is set inline in index.html before this module loads.
+// manifest-driven. window.MAPS_PAGE is set inline in index.html before this module loads,
+// and index.html injects the shared app markup (electionmapslogic/shell.html plus this
+// page's fragments: postcode, referendum-info, polltracker) via shell-loader before
+// importing this bundle — the engine queries those elements at module load.
 //
 // Because only this entry imports these feature modules, esbuild bundles them into
 // electionmaps.min.js alone; the US bundle (which omits these imports) ships without them.

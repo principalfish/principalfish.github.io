@@ -43,6 +43,19 @@ export function setPredictActionHandlers(handlers) {
 }
 
 /**
+ * Shows or hides the "Use current forecast" (apply) action button. The button ships in the
+ * shared shell (shell.html) for every page, but only parliaments whose predict anchor is a
+ * model/nowcast election have a forecast to load — the predict controller calls this on
+ * every predict-mode entry with that parliament's flag. No-ops when the button is absent.
+ * @param {boolean} visible
+ * @returns {void}
+ */
+export function setApplyActionVisible(visible) {
+  const applyButton = document.querySelector('[data-predict-action="apply"]');
+  if (applyButton) applyButton.hidden = !visible;
+}
+
+/**
  * Shows or hides the predict input window. Drives layout swaps between predict mode and
  * the regular election / poll-tracker views.
  *

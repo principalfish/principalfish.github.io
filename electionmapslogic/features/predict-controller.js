@@ -27,6 +27,7 @@ import {
 } from '../dom.js';
 import {
   renderPredict,
+  setApplyActionVisible,
   setPredictActionHandlers,
   setPredictWindowVisible,
 } from './predict-view.js';
@@ -62,6 +63,22 @@ export function getPredictBaseElection() {
 }
 
 /**
+ * Returns true when the parliament has a current forecast for the Apply button to load:
+ * its `predictAnchorElectionId` resolves to a model/nowcast election (`model: true` in
+ * the manifest, e.g. Westminster's current-prediction). US parliaments anchor predict on
+ * a real past election (or the Current Senate snapshot), which has no forecast shares to
+ * apply — for those the button is hidden and the simulation prefetch skipped.
+ * Exported for unit testing.
+ * @param {string} parliament
+ * @returns {boolean}
+ */
+export function parliamentHasForecast(parliament) {
+  const anchorId = manifest.parliamentConfig(parliament).predictAnchorElectionId;
+  const anchorElection = anchorId ? manifest.getElectionFromId(anchorId) : null;
+  return Boolean(anchorElection?.model);
+}
+
+/**
  * Predict-only setup that runs after `activateElection` has fetched the baseline and
  * rendered it. Constructs the parliament-specific predict model, wires the action
  * buttons, shows the predict window, and (only if the URL carries a shared scenario)
@@ -86,21 +103,26 @@ export async function activatePredictView() {
     await loadPredictChamberSeats(parliamentConfig, state.predictModel);
   }
 
+  // The Apply action ("Use current forecast") only exists where the anchor election is a
+  // model output: no handler registered and the shared shell's button hidden otherwise.
+  const hasForecast = parliamentHasForecast(parliament);
   setPredictActionHandlers({
-    apply: handlePredictApply,
+    ...(hasForecast ? { apply: handlePredictApply } : {}),
     submit: handlePredictSubmit,
     share: handlePredictShare,
     reset: handlePredictReset,
     tabChange: runPredictProjection,
   });
+  setApplyActionVisible(hasForecast);
   setPredictWindowVisible(true);
   renderPredict();
 
   // Warm the simulation cache in the background so the "Use current forecast" button
   // doesn't pay the (possibly multi-MB) fetch latency on its first click. Fire-and-forget:
   // ensurePredictSimulation catches its own errors and returns null on failure, and the
-  // Apply handler still calls ensurePredictSimulation defensively.
-  ensurePredictSimulation(parliament);
+  // Apply handler still calls ensurePredictSimulation defensively. Skipped when there is
+  // no forecast to load (the anchor would be a plain past election, fetched for nothing).
+  if (hasForecast) ensurePredictSimulation(parliament);
 
   // If a shared scenario URL is present, hydrate the model and repaint the grid so the
   // deserialised inputs show up in the cells before the projection runs.

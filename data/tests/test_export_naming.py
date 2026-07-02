@@ -105,6 +105,18 @@ class TestPartyKeyForParty:
     def test_mapped_name(self) -> None:
         assert party_key_for_party(_Party("Scottish National Party")) == "snp"
 
+    def test_us_democratic_maps_to_democrat(self) -> None:
+        assert party_key_for_party(_Party("Democratic", short_name="democratic")) == "democrat"
+
+    def test_us_democratic_via_name(self) -> None:
+        assert party_key_for_party(_Party("Democratic")) == "democrat"
+
+    def test_us_republican(self) -> None:
+        assert party_key_for_party(_Party("Republican", short_name="republican")) == "republican"
+
+    def test_us_green_maps_to_usgreen(self) -> None:
+        assert party_key_for_party(_Party("US Green", short_name="usgreen")) == "usgreen"
+
     def test_unmapped_name_passes_through(self) -> None:
         assert party_key_for_party(_Party("Foo Bar")) == "foobar"
 
@@ -178,6 +190,18 @@ class TestFileStemForElection:
         )
         assert file_stem_for_election(election) == "holyrood-general-2021-changed-boundaries"
 
+    def test_us_house(self) -> None:
+        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        assert file_stem_for_election(election) == "us-house-2024"
+
+    def test_us_president(self) -> None:
+        election = _Election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
+        assert file_stem_for_election(election) == "us-president-2024"
+
+    def test_us_senate(self) -> None:
+        election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
+        assert file_stem_for_election(election) == "us-senate-2024"
+
     def test_fallback_slugifies_type_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)
         assert file_stem_for_election(election) == "by-election-2025-some-by-election"
@@ -195,6 +219,18 @@ class TestManifestIdForElection:
     def test_holyrood_general(self) -> None:
         election = _Election("2021 Scottish Parliament Election", ElectionType.holyrood_general)
         assert manifest_id_for_election(election) == "2021-holyrood"
+
+    def test_us_house(self) -> None:
+        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        assert manifest_id_for_election(election) == "2024-us-house"
+
+    def test_us_president(self) -> None:
+        election = _Election("2024 US Presidential Election", ElectionType.us_presidential, year=2024)
+        assert manifest_id_for_election(election) == "2024-us-president"
+
+    def test_us_senate(self) -> None:
+        election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
+        assert manifest_id_for_election(election) == "2024-us-senate"
 
     def test_fallback_slugifies_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)

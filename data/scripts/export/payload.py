@@ -29,6 +29,8 @@ class SeatRow:
         region_name: Display name of the region, or None if unset.
         electorate: Registered electorate size used for turnout calculation,
             or None if the seats table has no electorate column.
+        electoral_votes: US Electoral College votes for this seat (presidential
+            maps only), or None.
     """
 
     seat_id: int
@@ -36,6 +38,7 @@ class SeatRow:
     region_id: int | None
     region_name: str | None
     electorate: int | None
+    electoral_votes: int | None = None
 
 
 def choose_winner(votes: Sequence[Vote]) -> Vote | None:
@@ -66,12 +69,24 @@ def party_id_for_vote(vote: Vote) -> int:
     return vote.party.id
 
 
-def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_year: int | None = None) -> dict[str, Any]:
+def build_result_payload(
+    seats: list[SeatRow],
+    votes: Sequence[Vote],
+    election_year: int | None = None,
+    ev_by_unit: dict[str, int] | None = None,
+) -> dict[str, Any]:
     """Build a ``pf-results-v4`` result payload for a single election.
 
     Groups votes by seat, aggregates multiple candidate rows for the same
     party within a seat, determines the winner, and computes turnout where
     electorate data is available.
+
+    Each ``p`` row is ``[party_id, votes]`` and, when the party's winning
+    candidate has a name on record, a third element with that candidate name
+    (``[party_id, votes, name]``). The front-end shows the candidate name by
+    default and falls back to the party label when it is absent (projections
+    and any older data with no candidate names). The third element is
+    backward-compatible: decoders that read only indices 0 and 1 ignore it.
 
     Args:
         seats: All SeatRow projections for the election's map.
@@ -80,14 +95,17 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
         election_year: Four-digit year of the election, forwarded to
             ``legacy_party_key_for_vote`` for Reform UK / UKIP resolution.
             Pass ``None`` when unknown.
+        ev_by_unit: Optional ``{seat_name: electoral_votes}`` map (the per-era
+            presidential EV table). When provided, a seat's ``ev`` is taken
+            from this map by seat name; when ``None``, it falls back to the
+            seat's stored ``electoral_votes`` (non-presidential maps, e.g. UK).
 
     Returns:
         Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` where
         each seat entry has keys ``n`` (name), ``r`` (region ID), ``w``
         (winner party ID), and ``p`` (list of ``[party_id, vote_total]``
-        rows sorted descending by votes, zero-total parties excluded).
-        Seats with no votes at all are omitted (relevant for Holyrood maps
-        where constituency and list seats coexist).
+        rows, optionally with a candidate name, sorted descending by votes,
+        zero-total parties excluded). Seats with no votes at all are omitted.
     """
     votes_by_seat: dict[int, list[Vote]] = defaultdict(list)
     for vote in votes:
@@ -106,12 +124,14 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
             if pid in party_info:
                 combined_total = float(party_info[pid]["total"]) + vote_total_raw
                 party_info[pid]["total"] = normalize_vote_total_value(combined_total)
-                if not party_info[pid].get("name"):
-                    party_info[pid]["name"] = vote.candidate_name or (vote.party.name if vote.party else "Other")
             else:
+                # seat_votes is sorted by votes desc, so the first row for a party is its
+                # leading candidate; keep that candidate name (real names only — no party
+                # fallback here, so the payload stays compact and the front-end can fall
+                # back to the party label when a name is absent).
                 party_info[pid] = {
                     "total": normalize_vote_total_value(vote_total_raw),
-                    "name": vote.candidate_name or (vote.party.name if vote.party else "Other"),
+                    "candidate": vote.candidate_name or None,
                 }
 
         if not seat_votes:
@@ -126,24 +146,38 @@ def build_result_payload(seats: list[SeatRow], votes: Sequence[Vote], election_y
             turnout_pct = round(100.0 * turnout_total / seat.electorate, 1)
 
         # Vote total descending, party id ascending as a stable tiebreak for
-        # deterministic output when two parties have equal totals.
-        compact_party_rows = [
-            [pid, party_data.get("total", 0)]
-            for pid, party_data in sorted(
-                party_info.items(),
-                key=lambda row: (-float(row[1].get("total", 0)), row[0]),
-            )
-            if float(party_data.get("total", 0)) > 0
-        ]
+        # deterministic output when two parties have equal totals. A third element
+        # (candidate name) is appended only when one is on record.
+        compact_party_rows: list[list[Any]] = []
+        for pid, party_data in sorted(
+            party_info.items(),
+            key=lambda row: (-float(row[1].get("total", 0)), row[0]),
+        ):
+            if float(party_data.get("total", 0)) <= 0:
+                continue
+            row: list[Any] = [pid, party_data.get("total", 0)]
+            candidate = party_data.get("candidate")
+            if candidate:
+                row.append(candidate)
+            compact_party_rows.append(row)
 
-        payload_seats.append(
-            {
-                "n": seat.seat_name,
-                "r": seat.region_id or 0,
-                "w": winner_id,
-                "p": compact_party_rows,
-            }
-        )
+        seat_entry: dict[str, Any] = {
+            "n": seat.seat_name,
+            "r": seat.region_id or 0,
+            "w": winner_id,
+            "p": compact_party_rows,
+        }
+        # Electoral-vote weight for presidential seats; omitted elsewhere so the field
+        # only appears where a tally needs it.
+        # When ev_by_unit is provided (per-era presidential EV table), use it;
+        # fall back to the seat's stored value for non-presidential maps (UK etc.).
+        if ev_by_unit is not None:
+            ev_val = ev_by_unit.get(seat.seat_name)
+            if ev_val is not None:
+                seat_entry["ev"] = ev_val
+        elif seat.electoral_votes is not None:
+            seat_entry["ev"] = seat.electoral_votes
+        payload_seats.append(seat_entry)
 
     return {
         "schema": "pf-results-v4",

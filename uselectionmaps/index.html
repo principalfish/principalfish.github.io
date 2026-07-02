@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>US Elections | Principal Fish</title>
+    <meta
+      name="description"
+      content="Interactive election maps scaffold with election navigation, zoomable map canvas, and control panels."
+    />
+    <link rel="icon" type="image/png" href="/imgs/logo.png" />
+    <script src="../site/ga-setup.js"></script>
+
+    <link rel="stylesheet" href="../site/topbar.min.css" />
+    <link rel="stylesheet" href="../electionmapslogic/maps.min.css" />
+    <link rel="stylesheet" href="../electionmapslogic/mobile-sidebar.min.css" />
+  </head>
+  <body class="maps-page" data-topbar-back-href="../">
+    <div class="maps-background" aria-hidden="true"></div>
+
+    <main class="site-wrap maps-wrap">
+      <header class="maps-header">
+        <h1 class="maps-title">US Elections</h1>
+        <p id="mapsSubtitle" class="maps-subtitle">Loading election…</p>
+        <p id="mapsElectionCountdown" class="maps-election-countdown" hidden></p>
+        <button
+          type="button"
+          id="mapsSidebarToggle"
+          class="maps-mobile-sidebar-toggle"
+          aria-controls="mapsLeftPanel"
+          aria-expanded="false"
+        >
+          Pick an Election
+        </button>
+      </header>
+
+      <!-- Replaced by the shared app markup (electionmapslogic/shell.html) by the shell
+           loader below, before the page bundle loads. No fragments: postcode search,
+           referendum credits, and the poll tracker are UK-only. -->
+      <div id="mapsShellMount"></div>
+    </main>
+
+    <script type="module" src="../site/topbar.min.js"></script>
+    <!-- US elections page: shares the /electionmapslogic engine, with its own data dir
+         (uselectionmaps/data), branded "US Elections", landing on the President. -->
+    <script>
+      window.MAPS_PAGE = {
+        parliaments: ['us_presidential', 'us_senate', 'us_house'],
+        defaultParliament: 'us_presidential',
+        title: 'US Elections',
+      };
+    </script>
+    <script type="module">
+      import { loadShell } from '../electionmapslogic/shell-loader.min.js';
+      try {
+        await loadShell();
+      } catch (error) {
+        document.getElementById('mapsSubtitle').textContent = 'Unable to load this page.';
+        throw error;
+      }
+      // The engine and sidebar query shell elements at module load, so import them only
+      // after the shell markup is in the DOM.
+      await Promise.all([
+        import('./uselectionmaps.min.js'),
+        import('../electionmapslogic/mobile-sidebar.min.js'),
+      ]);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,100 @@
+{
+  "defaultElection": "2024-us-president",
+  "misc": {
+    "title": "US Elections",
+    "parliamentTabs": [
+      {
+        "parliament": "us_presidential",
+        "label": "President"
+      },
+      {
+        "parliament": "us_senate",
+        "label": "Senate"
+      },
+      {
+        "parliament": "us_house",
+        "label": "House"
+      }
+    ]
+  },
+  "parliamentFeatures": {
+    "us_house": {
+      "features": ["predict"],
+      "predictAnchorElectionId": "2024-us-house",
+      "predictBaselineElectionId": "2024-us-house",
+      "nextElectionYear": 2026,
+      "nextElectionLabel": "US House election",
+      "predict": {
+        "model": "fptp",
+        "title": "User Input (uniform swing)",
+        "modelledPartyKeys": ["democrat", "republican"],
+        "aggregate": { "key": "national", "label": "National", "excludeRegions": [] },
+        "gridSections": [
+          { "id": "us", "columnKeys": ["democrat", "republican"], "containsAggregate": true }
+        ]
+      }
+    },
+    "us_presidential": {
+      "features": ["predict"],
+      "predictAnchorElectionId": "2024-us-president",
+      "predictBaselineElectionId": "2024-us-president",
+      "nextElectionYear": 2028,
+      "nextElectionLabel": "US presidential election",
+      "predict": {
+        "model": "fptp",
+        "title": "User Input (uniform swing)",
+        "modelledPartyKeys": ["democrat", "republican"],
+        "aggregate": { "key": "national", "label": "National", "excludeRegions": [] },
+        "gridSections": [
+          { "id": "us", "columnKeys": ["democrat", "republican"], "containsAggregate": true }
+        ]
+      }
+    },
+    "us_senate": {
+      "features": ["predict"],
+      "predictAnchorElectionId": "current-senate",
+      "predictBaselineElectionId": "2020-us-senate",
+      "nextElectionYear": 2026,
+      "nextElectionLabel": "US Senate election",
+      "predict": {
+        "model": "senate",
+        "title": "User Input (uniform swing)",
+        "chamberElectionId": "current-senate",
+        "modelledPartyKeys": ["democrat", "republican"],
+        "aggregate": { "key": "national", "label": "National", "excludeRegions": [] },
+        "gridSections": [
+          { "id": "us", "columnKeys": ["democrat", "republican"], "containsAggregate": true }
+        ],
+        "tabs": [
+          { "key": "seatsup", "label": "Seats up (2026)" },
+          { "key": "chamber", "label": "Full Senate" }
+        ]
+      }
+    }
+  },
+  "mapModes": {
+    "21": {
+      "name": "us-house-2024",
+      "projection": "albersUsa",
+      "postcodeSupported": false,
+      "seatComparison": false
+    },
+    "22": {
+      "name": "us-president-2024",
+      "projection": "albersUsa",
+      "tally": "electoralVotes",
+      "postcodeSupported": false
+    },
+    "23": {
+      "name": "us-senate-2024",
+      "projection": "albersUsa",
+      "neutralFill": "#e5e7eb",
+      "hideMajority": true,
+      "postcodeSupported": false,
+      "senateClassCycle": {
+        "base": { "1": 2018, "2": 2020, "3": 2022 },
+        "period": 6
+      }
+    }
+  }
+}

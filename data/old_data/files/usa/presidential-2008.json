@@ -1,0 +1,1590 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 6788,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 4991,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 1266546,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 8015,
+        "name": "Charles O. Baldwin"
+      },
+      "democrat": {
+        "total": 813479,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3390,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 3783,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 123594,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 1589,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 193841,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1395,
+        "name": "Charles O. Baldwin"
+      },
+      "republican": {
+        "total": 1230111,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 3406,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 12555,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1034707,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 11301,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 638017,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 3470,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 4776,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 422310,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 12882,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 5162,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 67582,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 8274473,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 169290,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 5011781,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 38774,
+        "name": "Cynthia Ann McKinney"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 25477,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 1073589,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 2822,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 10897,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1288576,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "others": {
+        "total": 435,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 19162,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 997772,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 629428,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 152374,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 385,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 1109,
+        "name": "Bob Barr"
+      },
+      "independent": {
+        "total": 2401,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 255459,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 684,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 17367,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 1728,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 958,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 245800,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 30
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 4045624,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 42941,
+        "name": "Ralph Nader"
+      },
+      "usgreen": {
+        "total": 2887,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 17218,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 4282074,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2873,
+        "name": "Charles O. Baldwin"
+      },
+      "democrat": {
+        "total": 1844123,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 28731,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 2048759,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3509,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 120566,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 979,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 1314,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 325871,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 3825,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4837,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 7175,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 236440,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 3658,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 403012,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "others": {
+        "total": 9416,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 30948,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 3419348,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 19642,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 11838,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 2031179,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1345648,
+        "name": "John McCain"
+      },
+      "libertarian": {
+        "total": 29257,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1374039,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 2110,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 19791,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 828940,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 4590,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 1423,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 682379,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 699655,
+        "name": "John McCain"
+      },
+      "libertarian": {
+        "total": 6706,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 514765,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 10527,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 4219,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1048462,
+        "name": "John McCain"
+      },
+      "libertarian": {
+        "total": 5989,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 751985,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 15378,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 4806,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13313,
+        "name": "Ron Paul"
+      },
+      "independent": {
+        "total": 6997,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 782989,
+        "name": "Barack Obama"
+      },
+      "usgreen": {
+        "total": 9187,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 1148275,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 421923,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 10636,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 3331,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 295273,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1614,
+        "name": "Cynthia Ann McKinney"
+      },
+      "independent": {
+        "total": 5263,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 232145,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 144604,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1717,
+        "name": "Cynthia Ann McKinney"
+      },
+      "independent": {
+        "total": 5373,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 189778,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 150669,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 959862,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 12965,
+        "name": "Other"
+      },
+      "usgreen": {
+        "total": 4747,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 9842,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1629467,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 14713,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 28841,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 48014,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1108854,
+        "name": "John McCain"
+      },
+      "libertarian": {
+        "total": 13189,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1904097,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2048639,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 47940,
+        "name": "Ralph Nader"
+      },
+      "usgreen": {
+        "total": 8892,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 23716,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 2872579,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 17106,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 30152,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 1573354,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 9174,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 5174,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 1275409,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3032,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 4011,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 554662,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 2529,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 1034,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 724597,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8281,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 17813,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 1441911,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 11386,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 1445814,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10831,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 3686,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 231667,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 1355,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 242763,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 333319,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 2740,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 1028,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 452979,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 5809,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 5406,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1024,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 1963,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 121411,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 922,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 394,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 148179,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 599,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 1628,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 138809,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 1014,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 320,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 135439,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 169361,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 314,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 804,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 73099,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 1815,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 1349,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 9461,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 6150,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 533736,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 4263,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 1411,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 412827,
+        "name": "John McCain"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3359,
+        "name": "Hillary Rodham Clinton"
+      },
+      "republican": {
+        "total": 316534,
+        "name": "John McCain"
+      },
+      "libertarian": {
+        "total": 2748,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 384826,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 3503,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1613207,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 3636,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 8441,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 2215422,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 21298,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 6233,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 346832,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 1552,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 2428,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 472422,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 5327,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 1597,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 28
+    },
+    "partyInfo": {
+      "others": {
+        "total": 135519,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 4804945,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 19596,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 12801,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 2752771,
+        "name": "John McCain"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2128474,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 13942,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 25722,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 2142651,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1199,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 4189,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 141278,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 1354,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 168601,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 17
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2677820,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 15809,
+        "name": "Charles O. Baldwin"
+      },
+      "usgreen": {
+        "total": 8518,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 19917,
+        "name": "Bob Barr"
+      },
+      "independent": {
+        "total": 46242,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 2940044,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 502496,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 960165,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 738475,
+        "name": "John McCain"
+      },
+      "others": {
+        "total": 44463,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 7635,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1037291,
+        "name": "Barack Obama"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "others": {
+        "total": 18135,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 42977,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 3276363,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 19912,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 2655885,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2796,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 165391,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 797,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 1382,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 296571,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 4829,
+        "name": "Ralph Nader"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6827,
+        "name": "Charles O. Baldwin"
+      },
+      "independent": {
+        "total": 5053,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 862449,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 7283,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 4461,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 1034896,
+        "name": "John McCain"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 203054,
+        "name": "John McCain"
+      },
+      "libertarian": {
+        "total": 1835,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 170924,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 4267,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 1895,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 30635,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 1087437,
+        "name": "Barack Obama"
+      },
+      "others": {
+        "total": 2499,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 1479178,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 40
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13718,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 3528633,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 56116,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 4479328,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 20722,
+        "name": "Charles O. Baldwin"
+      },
+      "democrat": {
+        "total": 327670,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 6966,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 982,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 596030,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2404,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 3339,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 219262,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 1067,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 98974,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1725005,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 2344,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 11067,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1959532,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 11483,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 13829,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1229216,
+        "name": "John McCain"
+      },
+      "usgreen": {
+        "total": 3819,
+        "name": "Cynthia Ann McKinney"
+      },
+      "libertarian": {
+        "total": 12728,
+        "name": "Bob Barr"
+      },
+      "democrat": {
+        "total": 1750848,
+        "name": "Barack Obama"
+      },
+      "independent": {
+        "total": 29489,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 10778,
+        "name": "Charles O. Baldwin"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12128,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 303857,
+        "name": "Barack Obama"
+      },
+      "republican": {
+        "total": 397466,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8062,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 22677,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 1677211,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 8858,
+        "name": "Bob Barr"
+      },
+      "usgreen": {
+        "total": 4216,
+        "name": "Cynthia Ann McKinney"
+      },
+      "republican": {
+        "total": 1262393,
+        "name": "John McCain"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1767,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 3717,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 82868,
+        "name": "Barack Obama"
+      },
+      "libertarian": {
+        "total": 1594,
+        "name": "Bob Barr"
+      },
+      "republican": {
+        "total": 164958,
+        "name": "John McCain"
+      }
+    }
+  }
+}

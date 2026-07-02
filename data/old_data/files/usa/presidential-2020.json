@@ -1,0 +1,1490 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1441170,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 849624,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 25176,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 7312,
+        "name": "Other"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4231,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 8897,
+        "name": "Jo Jorgensen"
+      },
+      "usgreen": {
+        "total": 2673,
+        "name": "Jesse Ventura"
+      },
+      "democrat": {
+        "total": 153778,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 189951,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1661686,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 2032,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 1672143,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 51465,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 760647,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 2980,
+        "name": "Howie Hawkins"
+      },
+      "others": {
+        "total": 9326,
+        "name": "Phil Collins"
+      },
+      "democrat": {
+        "total": 423932,
+        "name": "Joe Biden"
+      },
+      "independent": {
+        "total": 9051,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 13133,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 6006429,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 81029,
+        "name": "Howie Hawkins"
+      },
+      "others": {
+        "total": 115278,
+        "name": "Roque De La Fuente"
+      },
+      "democrat": {
+        "total": 11110250,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 187895,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 26571,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 52460,
+        "name": "Jo Jorgensen"
+      },
+      "independent": {
+        "total": 4,
+        "name": "Todd Cella"
+      },
+      "democrat": {
+        "total": 1804352,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 8986,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 1364607,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "others": {
+        "total": 519,
+        "name": "Kanye West"
+      },
+      "republican": {
+        "total": 714717,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 7538,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 1080831,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 20230,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 200603,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 2139,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 296268,
+        "name": "Joe Biden"
+      },
+      "others": {
+        "total": 315,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 5000,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 18586,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 1726,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 317323,
+        "name": "Joe Biden"
+      },
+      "independent": {
+        "total": 1548,
+        "name": "Gloria La Riva"
+      },
+      "libertarian": {
+        "total": 2036,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 3137,
+        "name": "Other"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 30
+    },
+    "partyInfo": {
+      "others": {
+        "total": 16635,
+        "name": "Roque De La Fuente"
+      },
+      "democrat": {
+        "total": 5297045,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 70324,
+        "name": "Jo Jorgensen"
+      },
+      "republican": {
+        "total": 5668731,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 14721,
+        "name": "Howie Hawkins"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2244,
+        "name": "Howie Hawkins"
+      },
+      "libertarian": {
+        "total": 62229,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 2473633,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 2461854,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 196864,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 3822,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 366130,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 5539,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 7429,
+        "name": "Other"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 554119,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 2539,
+        "name": "Don Blankenship"
+      },
+      "independent": {
+        "total": 7931,
+        "name": "Kanye West"
+      },
+      "democrat": {
+        "total": 287021,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 16404,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2446891,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 30494,
+        "name": "Howie Hawkins"
+      },
+      "others": {
+        "total": 17900,
+        "name": "Brian T. Carroll"
+      },
+      "democrat": {
+        "total": 3471915,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 66544,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 59232,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 965,
+        "name": "Brian T. Carroll"
+      },
+      "democrat": {
+        "total": 1242416,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 989,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 1729519,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 16931,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 3754,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 19637,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 759061,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 3075,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 897672,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 30574,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 570323,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 771406,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 10082,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 26234,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 1332,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 772474,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 1326646,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 14607,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 21645,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 856034,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 1255776,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 18344,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 360737,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 435072,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 14152,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10217,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 164045,
+        "name": "Donald Trump"
+      },
+      "libertarian": {
+        "total": 7343,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 266376,
+        "name": "Joe Biden"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8127,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 196692,
+        "name": "Donald Trump"
+      },
+      "libertarian": {
+        "total": 6809,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 168696,
+        "name": "Joe Biden"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 26306,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 1985023,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 15799,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 976414,
+        "name": "Donald Trump"
+      },
+      "libertarian": {
+        "total": 33488,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1167202,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 18658,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 2382202,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 47013,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 42930,
+        "name": "Other"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "others": {
+        "total": 11311,
+        "name": "Don Blankenship"
+      },
+      "libertarian": {
+        "total": 60381,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 2804040,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 13718,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 2649852,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 17429,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1484065,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 10033,
+        "name": "Howie Hawkins"
+      },
+      "democrat": {
+        "total": 1717077,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 34976,
+        "name": "Jo Jorgensen"
+      },
+      "independent": {
+        "total": 13591,
+        "name": "Kanye West"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 5633,
+        "name": "Kanye West"
+      },
+      "others": {
+        "total": 2440,
+        "name": "Don Blankenship"
+      },
+      "libertarian": {
+        "total": 8026,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 539398,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 1498,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 756764,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4724,
+        "name": "Don Blankenship"
+      },
+      "libertarian": {
+        "total": 41205,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 1253014,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 8283,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 1718736,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 15252,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 32,
+        "name": "Mark R. Charles"
+      },
+      "democrat": {
+        "total": 244786,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 343602,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4671,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 20283,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 374583,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 556846,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 180290,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 132261,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 7495,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 1840,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1912,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 154377,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 176468,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 6909,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 919,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 5879,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 65854,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 222179,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 669890,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 703486,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 14783,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 17217,
+        "name": "Other"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2372,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 365660,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 424937,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 13236,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "others": {
+        "total": 11865,
+        "name": "William Robert Hammons"
+      },
+      "libertarian": {
+        "total": 31677,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 2608335,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 14202,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 1883274,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 12585,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 3446,
+        "name": "Sheila Tittle"
+      },
+      "democrat": {
+        "total": 501614,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 4426,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 401894,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 28
+    },
+    "partyInfo": {
+      "others": {
+        "total": 70378,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 22587,
+        "name": "Brock Pierce"
+      },
+      "libertarian": {
+        "total": 60234,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 5230985,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 32753,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 3244798,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "others": {
+        "total": 20864,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 48678,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 2684292,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 12195,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 2758775,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 235595,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 114902,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 9393,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 1929,
+        "name": "Other"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 17
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 67569,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 1822,
+        "name": "Brian T. Carroll"
+      },
+      "democrat": {
+        "total": 2679165,
+        "name": "Joe Biden"
+      },
+      "independent": {
+        "total": 18812,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 3154834,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 11798,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 24731,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 503890,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 1020280,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 958448,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 33908,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 1340383,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 41582,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 79380,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 3458229,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 3377674,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5296,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 5053,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 307486,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 199922,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 27916,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 1091541,
+        "name": "Joe Biden"
+      },
+      "others": {
+        "total": 1862,
+        "name": "Roque De La Fuente"
+      },
+      "usgreen": {
+        "total": 6907,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 1385103,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 11095,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 150471,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 261043,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 56803,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 862,
+        "name": "Brian T. Carroll"
+      },
+      "democrat": {
+        "total": 1143711,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 1852475,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 40
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 5890347,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 33396,
+        "name": "Howie Hawkins"
+      },
+      "others": {
+        "total": 5944,
+        "name": "Brian T. Carroll"
+      },
+      "democrat": {
+        "total": 5259126,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 126243,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 865140,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 5053,
+        "name": "Howie Hawkins"
+      },
+      "others": {
+        "total": 19367,
+        "name": "Kanye West"
+      },
+      "democrat": {
+        "total": 560282,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 38447,
+        "name": "Jo Jorgensen"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8106,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 2420,
+        "name": "Kanye West"
+      },
+      "libertarian": {
+        "total": 3608,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 242820,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 1310,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 112704,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1962430,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 2413568,
+        "name": "Joe Biden"
+      },
+      "libertarian": {
+        "total": 64761,
+        "name": "Jo Jorgensen"
+      },
+      "others": {
+        "total": 19765,
+        "name": "Other"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "others": {
+        "total": 34579,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 80500,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 2369612,
+        "name": "Joe Biden"
+      },
+      "usgreen": {
+        "total": 18289,
+        "name": "Howie Hawkins"
+      },
+      "republican": {
+        "total": 1584651,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2637,
+        "name": "Howie Hawkins"
+      },
+      "libertarian": {
+        "total": 10687,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 235984,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 545382,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 13241,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 43750,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 1630866,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 1610184,
+        "name": "Donald Trump"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3477,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 2208,
+        "name": "Brock Pierce"
+      },
+      "libertarian": {
+        "total": 5768,
+        "name": "Jo Jorgensen"
+      },
+      "democrat": {
+        "total": 73491,
+        "name": "Joe Biden"
+      },
+      "republican": {
+        "total": 193559,
+        "name": "Donald Trump"
+      }
+    }
+  }
+}

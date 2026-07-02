@@ -279,6 +279,7 @@ class Database:
         *,
         region_id: int | None = None,
         electorate: int | None = None,
+        electoral_votes: int | None = None,
         geometry: MultiPolygon | dict[str, Any] | None = None,
     ) -> Seat:
         """Insert a new Seat row and return it.
@@ -292,6 +293,8 @@ class Database:
             seat_name: Name of the constituency or seat.
             region_id: Optional primary key of the Region the seat belongs to.
             electorate: Optional registered electorate count.
+            electoral_votes: Optional number of US Electoral College votes
+                (US states only; omit or pass None for UK constituencies).
             geometry: Optional boundary geometry as a Shapely MultiPolygon or
                 a GeoJSON geometry dict.
 
@@ -308,6 +311,7 @@ class Database:
                 seat_name=seat_name,
                 region_id=region_id,
                 electorate=electorate,
+                electoral_votes=electoral_votes,
                 geometry=geom_col,
             )
             s.add(seat)
@@ -634,7 +638,8 @@ class Database:
         Args:
             seats: List of dicts with keys matching Seat column names. The
                 optional 'geometry' value may be a GeoJSON dict or a Shapely
-                MultiPolygon.
+                MultiPolygon. The optional 'electoral_votes' value is an
+                integer Electoral College vote count (US states only).
 
         Returns:
             Number of rows inserted.

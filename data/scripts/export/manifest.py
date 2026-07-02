@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 import json
+import math
 from typing import Any, Sequence
 
 from models import Election, ElectionType, Party, Region
 from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from scripts.export.naming import party_key_for_party
+
+# Election types that must never auto-chain to a comparison election. The US Senate's
+# staggered classes contest a different ~third of the states each cycle, so a delta against
+# the preceding cycle would compare unrelated seats. See ``assign_comparison_elections``.
+NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.value})
 
 
 def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, Any]]:
@@ -67,6 +74,75 @@ def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, lis
     return dict(regions_by_map_id)
 
 
+def build_map_modes_with_regions(
+    map_modes: dict[str, Any],
+    regions_by_map_id: dict[str, list[dict[str, Any]]],
+    current_year: int | None = None,
+) -> dict[str, Any]:
+    """Build the ``mapModes`` block, attaching DB-derived regions to each map.
+
+    Regions are always generated from the database (uniform for every map), so the
+    shell holds only structural mapMode config — no region lists. A shell mapMode may
+    carry an optional ``regionNameOverride`` (a ``{db_name: display_name}`` map) for the
+    few regions whose display label is deliberately curated away from the canonical DB
+    name (e.g. the shortened Holyrood-2026 labels); it is applied here and stripped from
+    the output. A mapMode that still lists ``regions`` keeps them (back-compat).
+
+    Args:
+        map_modes: Per-map config keyed by string map id.
+        regions_by_map_id: Region lists keyed by string map id, as built by
+            :func:`build_manifest_regions_by_map_id`.
+        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against;
+            defaults to the current calendar year. Injectable so exports (and tests) can
+            pin a year rather than depend on the wall clock.
+
+    Returns:
+        A new dict keyed by string map id, each value being the mapMode config with a
+        ``regions`` list (DB-derived, display names overridden where configured).
+    """
+    if current_year is None:
+        current_year = date.today().year
+    merged: dict[str, Any] = {}
+    for map_id_str, mode in map_modes.items():
+        entry = dict(mode)
+        overrides: dict[str, str] = entry.pop("regionNameOverride", None) or {}
+        if "regions" not in entry:
+            entry["regions"] = [
+                {"id": region["id"], "name": overrides.get(region["name"], region["name"])}
+                for region in regions_by_map_id.get(map_id_str, [])
+            ]
+        # Resolve the durable Senate-class cycle ({base year per class, period}) into concrete
+        # "next up" years as of this export, so the front-end filter stays a simple class→year
+        # lookup and the cycle rolls forward on its own without editing the shell.
+        cycle = entry.pop("senateClassCycle", None)
+        if cycle:
+            entry["senateClassNextElection"] = _senate_class_next_election(cycle, current_year)
+        merged[map_id_str] = entry
+    return merged
+
+
+def _senate_class_next_election(cycle: dict[str, Any], current_year: int) -> dict[str, int]:
+    """Resolve each Senate class's next election year from a durable cycle definition.
+
+    Args:
+        cycle: ``{"base": {class: base_election_year}, "period": years}`` — each class's fixed
+            6-year cycle anchored at a base year (Class 1 = 2018, 2 = 2020, 3 = 2022).
+        current_year: The year to resolve "next up" relative to (the export year).
+
+    Returns:
+        ``{class: next_election_year}`` (string class keys), where each year is the first
+        election year on that class's cycle that is ``>= current_year``.
+    """
+    base = cycle.get("base", {})
+    period = int(cycle.get("period", 6)) or 6
+    result: dict[str, int] = {}
+    for cls, base_year in base.items():
+        base_year = int(base_year)
+        steps = max(0, math.ceil((current_year - base_year) / period))
+        result[str(cls)] = base_year + steps * period
+    return result
+
+
 def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     """Populate ``comparisonElectionId`` for each manifest entry in-place.
 
@@ -84,6 +160,9 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
       election of another kind (e.g. the EU referendum); and the ``parliament``
       check prevents cross-parliament comparisons.
     - The last entry of each (parliament, mapId, type) receives no comparison.
+    - Types in ``NO_AUTO_COMPARISON_TYPES`` (US Senate) never auto-chain: their
+      staggered classes contest different states each cycle, so a delta against
+      the preceding cycle would compare unrelated seats.
 
     Idempotent and safe to call more than once: entries that already have a
     comparison are skipped, so a second pass only fills entries left unresolved
@@ -102,6 +181,11 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     for index, entry in enumerate(manifest_entries):
         # Skip entries that already have a comparison set (e.g. Current Parliament)
         if entry.get("comparisonElectionId"):
+            continue
+
+        # Staggered-class chambers (US Senate) contest different states each cycle, so
+        # auto-chaining against the previous cycle would compare unrelated seats — skip them.
+        if entry.get("type") in NO_AUTO_COMPARISON_TYPES:
             continue
 
         comparison_id: str | None = None

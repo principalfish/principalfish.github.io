@@ -31,15 +31,22 @@ trap 'echo "Stopping server..."; kill "$SERVER_PID" 2>/dev/null; exit 0' INT TER
 
 WATCH_FILES=(
 	electionmaps/electionmaps.js
-	electionmaps/scripts/state.js
-	electionmaps/scripts/utils.js
-	electionmaps/scripts/dom.js
-	electionmaps/scripts/predict.js
-	electionmaps/scripts/predict-controller.js
-	electionmaps/scripts/files.js
-	electionmaps/scripts/polltracker.js
-	electionmaps/mobile-sidebar.js
-	electionmaps/mobile-sidebar.css
+	uselectionmaps/uselectionmaps.js
+	electionmapslogic/app.js
+	electionmapslogic/state.js
+	electionmapslogic/utils.js
+	electionmapslogic/dom.js
+	electionmapslogic/files.js
+	electionmapslogic/shell-loader.js
+	electionmapslogic/features/predict.js
+	electionmapslogic/features/predict-controller.js
+	electionmapslogic/features/predict-view.js
+	electionmapslogic/features/polltracker.js
+	electionmapslogic/features/polltracker-view.js
+	electionmapslogic/features/postcode.js
+	electionmapslogic/mobile-sidebar.js
+	electionmapslogic/mobile-sidebar.css
+	electionmapslogic/maps.css
 	site/styles.css
 	site/topbar.js
 	site/topbar.css

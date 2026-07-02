@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 from typing import Any
@@ -10,9 +11,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
-from models import ElectionType
+from db import Database
+from models import Election, ElectionType
 from export_elections import (
+    _export_page,
     assign_comparison_elections,
     manifest_name_for_election,
     reorder_manifest_entries,
@@ -193,3 +198,63 @@ class TestAssignComparisonElections:
         entries.append(self._entry("2021-holyrood-2026", "holyrood", 12))
         assign_comparison_elections(entries)
         assert entries[0]["comparisonElectionId"] == "2021-holyrood-2026"
+
+    def test_senate_never_auto_compares_staggered_cycles(self) -> None:
+        # The Senate's staggered classes contest different states each cycle, so no Senate
+        # election chains to the previous one — even though they share parliament/mapId/type.
+        entries = [
+            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry("2022-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry("2020-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+        ]
+        assign_comparison_elections(entries)
+        assert all("comparisonElectionId" not in e for e in entries)
+
+    def test_house_still_chains_alongside_senate(self) -> None:
+        # The Senate exclusion must not affect other US contests: House still chains newest→prev.
+        entries = [
+            self._entry("2024-us-house", "us_house", 21, ElectionType.us_house.value),
+            self._entry("2022-us-house", "us_house", 21, ElectionType.us_house.value),
+            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+        ]
+        assign_comparison_elections(entries)
+        by_id = {e["id"]: e for e in entries}
+        assert by_id["2024-us-house"]["comparisonElectionId"] == "2022-us-house"
+        assert "comparisonElectionId" not in by_id["2022-us-house"]
+        assert "comparisonElectionId" not in by_id["2024-us-senate"]
+
+
+class TestMissingPrebuiltMapFails:
+    """A full export must fail, not warn, when a referenced pre-built map is absent.
+
+    Non-Westminster maps (Holyrood, US) ship a pre-built TopoJSON produced by a separate
+    build step; exporting without it used to emit a manifest pointing at a 404 map.
+    """
+
+    def test_export_raises_when_prebuilt_map_missing(self, db: Database, tmp_path: Path) -> None:
+        us_map = db.add_map("us-house-districts", parliament="us_house")
+        region = db.add_region(us_map.id, "South Atlantic")
+        db.add_seat(us_map.id, "GA-01", region_id=region.id)
+        db.add_election(us_map.id, 2024, "2024 US House Election", ElectionType.us_house)
+
+        output_root = tmp_path / "uselectionmaps" / "data"
+        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+        with db.session() as session:
+            election = session.execute(
+                select(Election).options(joinedload(Election.map))
+            ).scalars().one()
+            with pytest.raises(FileNotFoundError, match=r"map-\d+\.topo\.json"):
+                _export_page(
+                    session=session,
+                    elections=[election],
+                    output_root=output_root,
+                    parliaments={"us_house"},
+                    args=args,
+                    manifest_parties=[],
+                    manifest_regions_by_map_id={},
+                    has_electorate=True,
+                    has_electoral_votes=True,
+                    single_election_mode=False,
+                )
+        # The failure must happen before any results are written for the broken map.
+        assert not (output_root / "results").exists()

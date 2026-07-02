@@ -1,0 +1,267 @@
+{
+  "defaultElection": "current-prediction",
+  "partyKeyAliases": {
+    "ukindependenceparty": "ukip",
+    "reformuk": "reform",
+    "liberaldemocrats": "libdems",
+    "democraticunionistparty": "dup",
+    "ulsterunionistparty": "uu",
+    "uup": "uu",
+    "scottishnationalparty": "snp"
+  },
+  "misc": {
+    "title": "UK Election Maps",
+    "parliamentTabs": [
+      {
+        "parliament": "westminster",
+        "label": "Westminster"
+      },
+      {
+        "parliament": "holyrood",
+        "label": "Holyrood"
+      }
+    ]
+  },
+  "parliamentFeatures": {
+    "westminster": {
+      "features": [
+        "predict",
+        "pollTracker",
+        "postcode"
+      ],
+      "predictAnchorElectionId": "current-prediction",
+      "predictBaselineElectionId": "2024-general",
+      "nextElectionYear": 2029,
+      "nextElectionDate": null,
+      "nextElectionLabel": "UK general election",
+      "polltrackerDataPath": "results/model_output_trends.json",
+      "polltrackerDefaultParties": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        8
+      ],
+      "predict": {
+        "model": "fptp",
+        "title": "User Input (uniform swing)",
+        "modelledPartyKeys": [
+          "labour",
+          "conservative",
+          "libdems",
+          "green",
+          "reform",
+          "snp",
+          "plaidcymru",
+          "scottishgreens",
+          "alba",
+          "sinnfein",
+          "dup",
+          "alliance",
+          "uu",
+          "sdlp"
+        ],
+        "virtualColumns": {
+          "nat": {
+            "scotland": "snp",
+            "wales": "plaidcymru"
+          }
+        },
+        "virtualColumnMeta": {
+          "nat": {
+            "title": "NAT (SNP in Scotland, Plaid Cymru in Wales)",
+            "swatchClass": "maps-party-swatch-nat"
+          }
+        },
+        "regionLabelOverrides": {
+          "northernireland": "N Ireland",
+          "northeastengland": "North East",
+          "northwestengland": "North West",
+          "southeastengland": "South East",
+          "southwestengland": "South West",
+          "eastofengland": "E of England",
+          "yorkshireandthehumber": "Yorks"
+        },
+        "aggregate": {
+          "key": "england",
+          "label": "England",
+          "excludeRegions": [
+            "scotland",
+            "wales",
+            "northernireland"
+          ]
+        },
+        "gridSections": [
+          {
+            "id": "gb",
+            "columnKeys": [
+              "labour",
+              "conservative",
+              "libdems",
+              "green",
+              "reform",
+              "nat"
+            ],
+            "containsAggregate": true,
+            "extraRegionKeys": [
+              "scotland",
+              "wales"
+            ]
+          },
+          {
+            "id": "ni",
+            "columnKeys": [
+              "sinnfein",
+              "dup",
+              "alliance",
+              "uu",
+              "sdlp"
+            ],
+            "regionKeys": [
+              "northernireland"
+            ],
+            "blankRegionHeader": true
+          }
+        ]
+      }
+    },
+    "holyrood": {
+      "features": [
+        "predict",
+        "postcode"
+      ],
+      "predictAnchorElectionId": "current-holyrood-prediction",
+      "predictBaselineElectionId": "2026-holyrood",
+      "nextElectionYear": 2031,
+      "nextElectionDate": "2031-05-01",
+      "nextElectionLabel": "Holyrood election",
+      "predict": {
+        "model": "ams",
+        "title": "User Input (constituency swing + D'Hondt list)",
+        "modelledPartyKeys": [
+          "snp",
+          "labour",
+          "conservative",
+          "libdems",
+          "scottishgreens",
+          "reform",
+          "alba",
+          "green"
+        ],
+        "aggregate": {
+          "key": "scotland",
+          "label": "Scotland",
+          "excludeRegions": []
+        },
+        "tabs": [
+          {
+            "key": "constituency",
+            "label": "Constituency"
+          },
+          {
+            "key": "list",
+            "label": "List"
+          }
+        ],
+        "gridSections": [
+          {
+            "id": "holyrood",
+            "columnKeys": [
+              "snp",
+              "labour",
+              "conservative",
+              "libdems",
+              "scottishgreens",
+              "reform"
+            ],
+            "containsAggregate": true
+          }
+        ]
+      }
+    }
+  },
+  "mapModes": {
+    "1": {
+      "name": "westminster-2010"
+    },
+    "2": {
+      "name": "westminster-2024",
+      "postcode": {
+        "endpoint": "https://api.postcodes.io/postcodes/",
+        "resultProperty": "parliamentary_constituency_2024"
+      }
+    },
+    "11": {
+      "name": "holyrood-2021",
+      "listSeatPattern": "\\bList\\s+\\d+$",
+      "voteTotalsViews": [
+        {
+          "id": "all",
+          "label": "Overall"
+        },
+        {
+          "id": "constituency",
+          "label": "Constituency"
+        },
+        {
+          "id": "list",
+          "label": "List"
+        }
+      ]
+    },
+    "12": {
+      "name": "holyrood-2026",
+      "postcode": {
+        "endpoint": "https://api.postcodes.io/scotland/postcodes/",
+        "resultProperty": "scottish_parliamentary_constituency",
+        "boundaryWarning": true,
+        "seatRenames": {
+          "Aberdeen South and North Kincardine": "Aberdeen Deeside and North Kincardine",
+          "Airdrie and Shotts": "Airdrie",
+          "East Lothian": "East Lothian Coast and Lammermuirs",
+          "Edinburgh Eastern": "Edinburgh Eastern, Musselburgh and Tranent",
+          "Edinburgh Northern and Leith": "Edinburgh North Eastern and Leith",
+          "Edinburgh Pentlands": "Edinburgh South Western",
+          "Edinburgh Western": "Edinburgh North Western",
+          "Falkirk East": "Falkirk East and Linlithgow",
+          "Glasgow Cathcart": "Glasgow Cathcart and Pollok",
+          "Glasgow Kelvin": "Glasgow Kelvin and Maryhill",
+          "Glasgow Maryhill and Springburn": "Glasgow Kelvin and Maryhill",
+          "Glasgow Pollok": "Glasgow Cathcart and Pollok",
+          "Glasgow Provan": "Glasgow Easterhouse and Springburn",
+          "Glasgow Shettleston": "Glasgow Baillieston and Shettleston",
+          "Greenock and Inverclyde": "Inverclyde",
+          "Linlithgow": "Falkirk East and Linlithgow",
+          "Midlothian North and Musselburgh": "Midlothian North",
+          "North East Fife": "Fife North East",
+          "Renfrewshire North and West": "Renfrewshire North and Cardonald",
+          "Renfrewshire South": "Renfrewshire West and Levern Valley",
+          "Rutherglen": "Rutherglen and Cambuslang"
+        }
+      },
+      "listSeatPattern": "\\bList\\s+\\d+$",
+      "voteTotalsViews": [
+        {
+          "id": "all",
+          "label": "Overall"
+        },
+        {
+          "id": "constituency",
+          "label": "Constituency"
+        },
+        {
+          "id": "list",
+          "label": "List"
+        }
+      ],
+      "hiddenVoteTotalsParties": [
+        "alba"
+      ],
+      "regionNameOverride": {
+        "Central Scotland and Lothians West": "Central and Lothian W",
+        "Edinburgh and Lothians East": "Edinburgh and Lothian E"
+      }
+    }
+  }
+}

@@ -1,0 +1,7691 @@
+{
+  "AK-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 27081,
+        "name": "John Wayne Howe"
+      },
+      "democrat": {
+        "total": 467752,
+        "name": "Mary S. Peltola"
+      },
+      "republican": {
+        "total": 484682,
+        "name": "Nick Begich"
+      }
+    }
+  },
+  "AL-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 258619,
+        "name": "Barry Moore"
+      },
+      "others": {
+        "total": 306,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 70929,
+        "name": "Tom Holmes"
+      }
+    }
+  },
+  "AL-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 131414,
+        "name": "Caroleene Dobson"
+      },
+      "democrat": {
+        "total": 158041,
+        "name": "Shomari Figures"
+      },
+      "others": {
+        "total": 219,
+        "name": "Other"
+      }
+    }
+  },
+  "AL-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 243848,
+        "name": "Mike Rogers"
+      },
+      "others": {
+        "total": 5160,
+        "name": "Other"
+      }
+    }
+  },
+  "AL-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3374,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 274498,
+        "name": "Robert B. Aderholt"
+      }
+    }
+  },
+  "AL-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12088,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 250322,
+        "name": "Dale Strong"
+      }
+    }
+  },
+  "AL-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 102504,
+        "name": "Elizabeth Anderson"
+      },
+      "others": {
+        "total": 380,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 243741,
+        "name": "Gary Palmer"
+      }
+    }
+  },
+  "AL-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 106312,
+        "name": "Robin Litaker"
+      },
+      "democrat": {
+        "total": 186723,
+        "name": "Terri A. Sewell"
+      },
+      "others": {
+        "total": 185,
+        "name": "Other"
+      }
+    }
+  },
+  "AR-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 194711,
+        "name": "Rick Crawford"
+      },
+      "libertarian": {
+        "total": 8353,
+        "name": "Steven Gene Parsons"
+      },
+      "democrat": {
+        "total": 64113,
+        "name": "Rodney Govens"
+      }
+    }
+  },
+  "AR-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 180509,
+        "name": "French Hill"
+      },
+      "democrat": {
+        "total": 125777,
+        "name": "Marcus A. Jones"
+      }
+    }
+  },
+  "AR-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 95652,
+        "name": "Caitlin Draper"
+      },
+      "republican": {
+        "total": 192101,
+        "name": "Steve Womack"
+      },
+      "libertarian": {
+        "total": 13331,
+        "name": "Bobby Wilson"
+      }
+    }
+  },
+  "AR-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 197046,
+        "name": "Bruce Westerman"
+      },
+      "democrat": {
+        "total": 73207,
+        "name": "Risie Howard"
+      }
+    }
+  },
+  "AZ-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 208966,
+        "name": "Amish Shah"
+      },
+      "republican": {
+        "total": 225538,
+        "name": "David Schweikert"
+      }
+    }
+  },
+  "AZ-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 55,
+        "name": "Richard William Ester"
+      },
+      "republican": {
+        "total": 221413,
+        "name": "Eli Crane"
+      },
+      "democrat": {
+        "total": 184963,
+        "name": "Jonathan Nez"
+      }
+    }
+  },
+  "AZ-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 53705,
+        "name": "Jeff Zink"
+      },
+      "democrat": {
+        "total": 143336,
+        "name": "Yassamin Ansari"
+      },
+      "usgreen": {
+        "total": 5008,
+        "name": "Alan Aversa"
+      },
+      "others": {
+        "total": 16,
+        "name": "Candace Cunningham"
+      }
+    }
+  },
+  "AZ-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 6065,
+        "name": "Vincent Beck-Jones"
+      },
+      "democrat": {
+        "total": 176428,
+        "name": "Greg Stanton"
+      },
+      "republican": {
+        "total": 152052,
+        "name": "Kelly Cooper"
+      }
+    }
+  },
+  "AZ-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 167680,
+        "name": "Katrina Schaffner"
+      },
+      "republican": {
+        "total": 255628,
+        "name": "Andy Biggs"
+      }
+    }
+  },
+  "AZ-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 215596,
+        "name": "Juan Ciscomani"
+      },
+      "others": {
+        "total": 91,
+        "name": "Luis Pozzolo"
+      },
+      "usgreen": {
+        "total": 10759,
+        "name": "Athena Eastwood"
+      },
+      "democrat": {
+        "total": 204774,
+        "name": "Kirsten Engel"
+      }
+    }
+  },
+  "AZ-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 99057,
+        "name": "Daniel Francis Butierez Sr."
+      },
+      "democrat": {
+        "total": 171954,
+        "name": "Raúl Grijalva"
+      }
+    }
+  },
+  "AZ-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 208269,
+        "name": "Abraham \"Abe\" Hamadeh"
+      },
+      "democrat": {
+        "total": 160344,
+        "name": "Gregory Whitten"
+      }
+    }
+  },
+  "AZ-09": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 132640,
+        "name": "Quacy Smith"
+      },
+      "republican": {
+        "total": 249583,
+        "name": "Paul Gosar"
+      }
+    }
+  },
+  "CA-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 208592,
+        "name": "Doug LaMalfa"
+      },
+      "democrat": {
+        "total": 110636,
+        "name": "Rose Penelope Yee"
+      }
+    }
+  },
+  "CA-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 272883,
+        "name": "Jared Huffman"
+      },
+      "republican": {
+        "total": 106734,
+        "name": "Chris Coulombe"
+      }
+    }
+  },
+  "CA-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 234246,
+        "name": "Kevin Kiley"
+      },
+      "democrat": {
+        "total": 188067,
+        "name": "Jessica Morse"
+      }
+    }
+  },
+  "CA-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 227730,
+        "name": "Mike Thompson"
+      },
+      "republican": {
+        "total": 114950,
+        "name": "John Munn"
+      }
+    }
+  },
+  "CA-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 227643,
+        "name": "Tom McClintock"
+      },
+      "democrat": {
+        "total": 140919,
+        "name": "Michael J. \"Mike\" Barkley"
+      }
+    }
+  },
+  "CA-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 165408,
+        "name": "Ami Bera"
+      },
+      "republican": {
+        "total": 121664,
+        "name": "Christine Bish"
+      }
+    }
+  },
+  "CA-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 98341,
+        "name": "Tom Silva"
+      },
+      "democrat": {
+        "total": 197429,
+        "name": "Doris Matsui"
+      }
+    }
+  },
+  "CA-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 71068,
+        "name": "Rudy Recile"
+      },
+      "democrat": {
+        "total": 201962,
+        "name": "John Garamendi"
+      }
+    }
+  },
+  "CA-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 130183,
+        "name": "Josh Harder"
+      },
+      "republican": {
+        "total": 121174,
+        "name": "Kevin Lincoln"
+      }
+    }
+  },
+  "CA-10": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 122219,
+        "name": "Katherine Piccinini"
+      },
+      "democrat": {
+        "total": 242325,
+        "name": "Mark DeSaulnier"
+      }
+    }
+  },
+  "CA-11": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 64315,
+        "name": "Bruce Lou"
+      },
+      "democrat": {
+        "total": 274796,
+        "name": "Nancy Pelosi"
+      }
+    }
+  },
+  "CA-12": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 283025,
+        "name": "Lateefah Simon"
+      }
+    }
+  },
+  "CA-13": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 105367,
+        "name": "John Duarte"
+      },
+      "democrat": {
+        "total": 105554,
+        "name": "Adam Gray"
+      }
+    }
+  },
+  "CA-14": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 89125,
+        "name": "Vin Kruttiventi"
+      },
+      "democrat": {
+        "total": 187263,
+        "name": "Eric Swalwell"
+      }
+    }
+  },
+  "CA-15": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 77896,
+        "name": "Anna Cheng Kramer"
+      },
+      "democrat": {
+        "total": 211648,
+        "name": "Kevin Mullin"
+      }
+    }
+  },
+  "CA-16": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 308476,
+        "name": "Sam Liccardo"
+      }
+    }
+  },
+  "CA-17": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 172462,
+        "name": "Ro Khanna"
+      },
+      "republican": {
+        "total": 82415,
+        "name": "Anita Chen"
+      }
+    }
+  },
+  "CA-18": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 80832,
+        "name": "Peter D. Hernandez"
+      },
+      "democrat": {
+        "total": 147674,
+        "name": "Zoe Lofgren"
+      }
+    }
+  },
+  "CA-19": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 252458,
+        "name": "Jimmy Panetta"
+      },
+      "republican": {
+        "total": 111862,
+        "name": "Jason Michael Anderson"
+      }
+    }
+  },
+  "CA-20": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 372383,
+        "name": "Vince Fong"
+      }
+    }
+  },
+  "CA-21": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 92733,
+        "name": "Michael Maher"
+      },
+      "democrat": {
+        "total": 102798,
+        "name": "Jim Costa"
+      }
+    }
+  },
+  "CA-22": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 89484,
+        "name": "David G. Valadao"
+      },
+      "democrat": {
+        "total": 78023,
+        "name": "Rudy Salas"
+      }
+    }
+  },
+  "CA-23": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 105563,
+        "name": "Derek Marshall"
+      },
+      "republican": {
+        "total": 159286,
+        "name": "Jay Obernolte"
+      }
+    }
+  },
+  "CA-24": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 127755,
+        "name": "Thomas Cole"
+      },
+      "democrat": {
+        "total": 214724,
+        "name": "Salud Carbajal"
+      }
+    }
+  },
+  "CA-25": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 137837,
+        "name": "Raul Ruiz"
+      },
+      "republican": {
+        "total": 107194,
+        "name": "Ian M. Weeks"
+      }
+    }
+  },
+  "CA-26": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 146913,
+        "name": "Michael Koslow"
+      },
+      "democrat": {
+        "total": 187393,
+        "name": "Julia Brownley"
+      }
+    }
+  },
+  "CA-27": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 154040,
+        "name": "George Whitesides"
+      },
+      "republican": {
+        "total": 146050,
+        "name": "Mike Garcia"
+      }
+    }
+  },
+  "CA-28": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 204489,
+        "name": "Judy Chu"
+      },
+      "republican": {
+        "total": 110455,
+        "name": "April A. Verlato"
+      }
+    }
+  },
+  "CA-29": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 63374,
+        "name": "Benito Benny Bernal"
+      },
+      "democrat": {
+        "total": 146312,
+        "name": "Luz Maria Rivas"
+      }
+    }
+  },
+  "CA-30": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 98559,
+        "name": "Alex Balekian"
+      },
+      "democrat": {
+        "total": 213100,
+        "name": "Laura Friedman"
+      }
+    }
+  },
+  "CA-31": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 99856,
+        "name": "Daniel Jose Bocic Martinez"
+      },
+      "democrat": {
+        "total": 148095,
+        "name": "Gil Cisneros"
+      }
+    }
+  },
+  "CA-32": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 212934,
+        "name": "Brad Sherman"
+      },
+      "republican": {
+        "total": 108711,
+        "name": "Larry Thompson"
+      }
+    }
+  },
+  "CA-33": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 96078,
+        "name": "Tom Herman"
+      },
+      "democrat": {
+        "total": 137197,
+        "name": "Pete Aguilar"
+      }
+    }
+  },
+  "CA-34": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 189414,
+        "name": "Jimmy Gomez"
+      }
+    }
+  },
+  "CA-35": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 136413,
+        "name": "Norma J. Torres"
+      },
+      "republican": {
+        "total": 97142,
+        "name": "Mike Cargile"
+      }
+    }
+  },
+  "CA-36": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 246002,
+        "name": "Ted W. Lieu"
+      },
+      "republican": {
+        "total": 111985,
+        "name": "Melissa Toomim"
+      }
+    }
+  },
+  "CA-37": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 44450,
+        "name": "Juan Rey"
+      },
+      "democrat": {
+        "total": 160364,
+        "name": "Sydney Kamlager-Dove"
+      }
+    }
+  },
+  "CA-38": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 165110,
+        "name": "Linda T. Sánchez"
+      },
+      "republican": {
+        "total": 110818,
+        "name": "Eric J. Ching"
+      }
+    }
+  },
+  "CA-39": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 99469,
+        "name": "David Serpa"
+      },
+      "democrat": {
+        "total": 130191,
+        "name": "Mark Takano"
+      }
+    }
+  },
+  "CA-40": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 211998,
+        "name": "Young Kim"
+      },
+      "democrat": {
+        "total": 171637,
+        "name": "Joe Kerr"
+      }
+    }
+  },
+  "CA-41": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 183216,
+        "name": "Ken Calvert"
+      },
+      "democrat": {
+        "total": 171229,
+        "name": "Will Rollins"
+      }
+    }
+  },
+  "CA-42": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 159153,
+        "name": "Robert Garcia"
+      },
+      "republican": {
+        "total": 74410,
+        "name": "John Briscoe"
+      }
+    }
+  },
+  "CA-43": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 53152,
+        "name": "Steve Williams"
+      },
+      "democrat": {
+        "total": 160080,
+        "name": "Maxine Waters"
+      }
+    }
+  },
+  "CA-44": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 66087,
+        "name": "Roger Groh"
+      },
+      "democrat": {
+        "total": 164765,
+        "name": "Nanette Diaz Barragán"
+      }
+    }
+  },
+  "CA-45": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 157611,
+        "name": "Michelle Steel"
+      },
+      "democrat": {
+        "total": 158264,
+        "name": "Derek Tran"
+      }
+    }
+  },
+  "CA-46": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 77279,
+        "name": "David Pan"
+      },
+      "democrat": {
+        "total": 134013,
+        "name": "Lou Correa"
+      }
+    }
+  },
+  "CA-47": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 181721,
+        "name": "Dave Min"
+      },
+      "republican": {
+        "total": 171554,
+        "name": "Scott Baugh"
+      }
+    }
+  },
+  "CA-48": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 213625,
+        "name": "Darrell E. Issa"
+      },
+      "democrat": {
+        "total": 146665,
+        "name": "Stephen Houlahan"
+      }
+    }
+  },
+  "CA-49": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 197397,
+        "name": "Mike Levin"
+      },
+      "republican": {
+        "total": 180950,
+        "name": "Matt Gunderson"
+      }
+    }
+  },
+  "CA-50": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 231836,
+        "name": "Scott Peters"
+      },
+      "republican": {
+        "total": 128859,
+        "name": "Peter J. Bono"
+      }
+    }
+  },
+  "CA-51": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 198835,
+        "name": "Sara Jacobs"
+      },
+      "republican": {
+        "total": 128749,
+        "name": "Bill Wells"
+      }
+    }
+  },
+  "CA-52": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 172217,
+        "name": "Juan Vargas"
+      },
+      "republican": {
+        "total": 87501,
+        "name": "Justin Lee"
+      }
+    }
+  },
+  "CO-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 264606,
+        "name": "Diana DeGette"
+      },
+      "others": {
+        "total": 6531,
+        "name": "Critter Milton"
+      },
+      "republican": {
+        "total": 74598,
+        "name": "Valdamar Archuleta"
+      }
+    }
+  },
+  "CO-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 5180,
+        "name": "Gaylon Kent"
+      },
+      "others": {
+        "total": 6101,
+        "name": "Cynthia Munhos de Aquino Sirianni"
+      },
+      "democrat": {
+        "total": 284994,
+        "name": "Joe Neguse"
+      },
+      "republican": {
+        "total": 120633,
+        "name": "Marshall Dawson"
+      }
+    }
+  },
+  "CO-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 182147,
+        "name": "Adam Frisch"
+      },
+      "republican": {
+        "total": 201951,
+        "name": "Jeff Hurd"
+      },
+      "libertarian": {
+        "total": 10734,
+        "name": "James Wiley"
+      },
+      "others": {
+        "total": 2721,
+        "name": "Adam Withrow"
+      }
+    }
+  },
+  "CO-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 340308,
+        "name": "Lauren Boebert"
+      },
+      "democrat": {
+        "total": 247262,
+        "name": "Trisha Calvarese"
+      },
+      "others": {
+        "total": 10894,
+        "name": "Frank Atwood"
+      },
+      "libertarian": {
+        "total": 20745,
+        "name": "Hannah Goodman"
+      }
+    }
+  },
+  "CO-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 4094,
+        "name": "Joseph O. Gaye"
+      },
+      "others": {
+        "total": 5637,
+        "name": "Christopher Mitchell"
+      },
+      "republican": {
+        "total": 197924,
+        "name": "Jeff Crank"
+      },
+      "democrat": {
+        "total": 147972,
+        "name": "River Gassen"
+      },
+      "libertarian": {
+        "total": 6458,
+        "name": "Michael Vance"
+      }
+    }
+  },
+  "CO-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 4832,
+        "name": "John Kittleson"
+      },
+      "democrat": {
+        "total": 202686,
+        "name": "Jason Crow"
+      },
+      "republican": {
+        "total": 132174,
+        "name": "John E. Fabbricatore"
+      },
+      "others": {
+        "total": 4029,
+        "name": "Travis L. Nicks"
+      }
+    }
+  },
+  "CO-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5308,
+        "name": "Ron D. Tupa"
+      },
+      "republican": {
+        "total": 175273,
+        "name": "Sergei Matveyuk"
+      },
+      "democrat": {
+        "total": 235688,
+        "name": "Brittany Pettersen"
+      },
+      "libertarian": {
+        "total": 9697,
+        "name": "Patrick Bohan"
+      }
+    }
+  },
+  "CO-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 9425,
+        "name": "Christopher Baum"
+      },
+      "republican": {
+        "total": 163320,
+        "name": "Gabe Evans"
+      },
+      "democrat": {
+        "total": 160871,
+        "name": "Yadira Caraveo"
+      }
+    }
+  },
+  "CT-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 115065,
+        "name": "Jim Griffin"
+      },
+      "usgreen": {
+        "total": 6768,
+        "name": "Mary L. Sanders"
+      },
+      "democrat": {
+        "total": 208649,
+        "name": "John B. Larson"
+      }
+    }
+  },
+  "CT-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 7,
+        "name": "Jeffery Russell"
+      },
+      "democrat": {
+        "total": 218162,
+        "name": "Joe Courtney"
+      },
+      "republican": {
+        "total": 157878,
+        "name": "Mike France"
+      }
+    }
+  },
+  "CT-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 126,
+        "name": "Shahd Omar"
+      },
+      "republican": {
+        "total": 135113,
+        "name": "Michael Massey"
+      },
+      "democrat": {
+        "total": 193684,
+        "name": "Rosa L. DeLauro"
+      }
+    }
+  },
+  "CT-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 200791,
+        "name": "Jim Himes"
+      },
+      "republican": {
+        "total": 122793,
+        "name": "Michael Goldstein"
+      },
+      "independent": {
+        "total": 5273,
+        "name": "Benjamin L. Wesley"
+      }
+    }
+  },
+  "CT-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 79,
+        "name": "Ahmad Darwish"
+      },
+      "democrat": {
+        "total": 180268,
+        "name": "Jahana Hayes"
+      },
+      "republican": {
+        "total": 157258,
+        "name": "George Logan"
+      }
+    }
+  },
+  "DE-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 287830,
+        "name": "Sarah McBride"
+      },
+      "republican": {
+        "total": 209606,
+        "name": "John J. Whalen III"
+      }
+    }
+  },
+  "FL-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 140980,
+        "name": "Gay Valimont"
+      },
+      "republican": {
+        "total": 274108,
+        "name": "Matt Gaetz"
+      }
+    }
+  },
+  "FL-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 247957,
+        "name": "Neal Dunn"
+      },
+      "democrat": {
+        "total": 154323,
+        "name": "Yen Bailey"
+      }
+    }
+  },
+  "FL-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 150283,
+        "name": "Tom Wells"
+      },
+      "republican": {
+        "total": 241174,
+        "name": "Kat Cammack"
+      }
+    }
+  },
+  "FL-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 73,
+        "name": "Todd R. Schaefer"
+      },
+      "republican": {
+        "total": 222364,
+        "name": "Aaron Bean"
+      },
+      "democrat": {
+        "total": 165912,
+        "name": "LaShonda \"L.J.\" Holloway"
+      }
+    }
+  },
+  "FL-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 267471,
+        "name": "John H. Rutherford"
+      },
+      "others": {
+        "total": 23,
+        "name": "Gary L. Koniz"
+      },
+      "democrat": {
+        "total": 156570,
+        "name": "Jay McGovern"
+      }
+    }
+  },
+  "FL-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10,
+        "name": "Richard Paul Dembinsky"
+      },
+      "democrat": {
+        "total": 143050,
+        "name": "James David Stockton III"
+      },
+      "republican": {
+        "total": 284414,
+        "name": "Michael Waltz"
+      }
+    }
+  },
+  "FL-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 179917,
+        "name": "Jennifer Adams"
+      },
+      "republican": {
+        "total": 233937,
+        "name": "Cory Lee Mills"
+      }
+    }
+  },
+  "FL-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 280352,
+        "name": "Mike Haridopolos"
+      },
+      "democrat": {
+        "total": 170096,
+        "name": "Sandy Kennedy"
+      }
+    }
+  },
+  "FL-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 178785,
+        "name": "Darren Soto"
+      },
+      "others": {
+        "total": 7412,
+        "name": "Gregory Marcus Carter"
+      },
+      "republican": {
+        "total": 138076,
+        "name": "Thomas Chalifoux"
+      }
+    }
+  },
+  "FL-10": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 109460,
+        "name": "Willie J. Montague"
+      },
+      "democrat": {
+        "total": 181455,
+        "name": "Maxwell Alejandro Frost"
+      }
+    }
+  },
+  "FL-11": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 269277,
+        "name": "Daniel Webster"
+      },
+      "democrat": {
+        "total": 176726,
+        "name": "Barbie Harden Hall"
+      }
+    }
+  },
+  "FL-12": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 124949,
+        "name": "Rock Aboujaoude Jr."
+      },
+      "republican": {
+        "total": 306487,
+        "name": "Gus Michael Bilirakis"
+      }
+    }
+  },
+  "FL-13": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 225636,
+        "name": "Anna Paulina Luna"
+      },
+      "democrat": {
+        "total": 185930,
+        "name": "Whitney Fox"
+      },
+      "others": {
+        "total": 27,
+        "name": "Tony D'Arrigo"
+      }
+    }
+  },
+  "FL-14": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 145643,
+        "name": "Robert \"Rocky\" Rochford"
+      },
+      "others": {
+        "total": 2595,
+        "name": "Christopher Allen Bradley"
+      },
+      "libertarian": {
+        "total": 2524,
+        "name": "Nathaniel T. Snyder"
+      },
+      "democrat": {
+        "total": 199423,
+        "name": "Kathy Castor"
+      }
+    }
+  },
+  "FL-15": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 152361,
+        "name": "Patricia \"Pat\" Kemp"
+      },
+      "republican": {
+        "total": 195334,
+        "name": "Laurel Lee"
+      }
+    }
+  },
+  "FL-16": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 168625,
+        "name": "Jan Schneider"
+      },
+      "republican": {
+        "total": 247516,
+        "name": "Vern Buchanan"
+      }
+    }
+  },
+  "FL-17": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8,
+        "name": "Ralph E. Hartman"
+      },
+      "republican": {
+        "total": 291347,
+        "name": "Greg Steube"
+      },
+      "democrat": {
+        "total": 164566,
+        "name": "Manny Lopez"
+      }
+    }
+  },
+  "FL-18": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 119637,
+        "name": "Andrea Doria Kale"
+      },
+      "republican": {
+        "total": 225170,
+        "name": "Scott Franklin"
+      }
+    }
+  },
+  "FL-19": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 140038,
+        "name": "Kari L. Lerner"
+      },
+      "republican": {
+        "total": 275708,
+        "name": "Byron Donalds"
+      }
+    }
+  },
+  "FL-20": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 0,
+        "name": "Sheila Cherfilus-McCormick"
+      }
+    }
+  },
+  "FL-21": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 19,
+        "name": "Elizabeth Felton"
+      },
+      "democrat": {
+        "total": 171312,
+        "name": "Thomas Wiktop"
+      },
+      "republican": {
+        "total": 277435,
+        "name": "Brian Mast"
+      }
+    }
+  },
+  "FL-22": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 201608,
+        "name": "Lois Frankel"
+      },
+      "republican": {
+        "total": 165248,
+        "name": "Dan Franzese"
+      }
+    }
+  },
+  "FL-23": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 178006,
+        "name": "Joseph \"Joe\" Kaufman"
+      },
+      "democrat": {
+        "total": 196311,
+        "name": "Jared Moskowitz"
+      }
+    }
+  },
+  "FL-24": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 90692,
+        "name": "Jesus Gabriel Navarro"
+      },
+      "democrat": {
+        "total": 194874,
+        "name": "Frederica Wilson"
+      },
+      "others": {
+        "total": 22,
+        "name": "Lavern Spicer"
+      }
+    }
+  },
+  "FL-25": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 156208,
+        "name": "Chris Eddy"
+      },
+      "others": {
+        "total": 41,
+        "name": "Eddie Goldfarb"
+      },
+      "democrat": {
+        "total": 186942,
+        "name": "Debbie Wasserman Schultz"
+      }
+    }
+  },
+  "FL-26": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 217199,
+        "name": "Mario Diaz-Balart"
+      },
+      "democrat": {
+        "total": 89072,
+        "name": "Joey Atkins"
+      }
+    }
+  },
+  "FL-27": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 199159,
+        "name": "Maria Elvira Salazar"
+      },
+      "democrat": {
+        "total": 130708,
+        "name": "Lucia Baez-Geller"
+      }
+    }
+  },
+  "FL-28": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 115280,
+        "name": "Phil Ehr"
+      },
+      "republican": {
+        "total": 210057,
+        "name": "Carlos A. Gimenez"
+      }
+    }
+  },
+  "GA-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 220576,
+        "name": "Earl L. \"Buddy\" Carter"
+      },
+      "democrat": {
+        "total": 135281,
+        "name": "Patti Hewitt"
+      }
+    }
+  },
+  "GA-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 176028,
+        "name": "Sanford Bishop"
+      },
+      "republican": {
+        "total": 136473,
+        "name": "A. Wayne Johnson"
+      }
+    }
+  },
+  "GA-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 273036,
+        "name": "Brian Jack"
+      },
+      "democrat": {
+        "total": 138749,
+        "name": "Maura Keller"
+      }
+    }
+  },
+  "GA-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 229290,
+        "name": "Henry \"Hank\" Johnson Jr."
+      },
+      "republican": {
+        "total": 74071,
+        "name": "Eugene Yu"
+      }
+    }
+  },
+  "GA-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 49221,
+        "name": "John \"Bongo\" Salvesen"
+      },
+      "democrat": {
+        "total": 294470,
+        "name": "Nikema Williams"
+      }
+    }
+  },
+  "GA-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 277027,
+        "name": "Lucy McBath"
+      },
+      "republican": {
+        "total": 93909,
+        "name": "Jeff Criswell"
+      },
+      "others": {
+        "total": 45,
+        "name": "Other"
+      }
+    }
+  },
+  "GA-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 275907,
+        "name": "Rich McCormick"
+      },
+      "democrat": {
+        "total": 149535,
+        "name": "Bob Christian"
+      }
+    }
+  },
+  "GA-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 104434,
+        "name": "Darrius Maurice Butler"
+      },
+      "republican": {
+        "total": 231547,
+        "name": "Austin Scott"
+      }
+    }
+  },
+  "GA-09": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 271062,
+        "name": "Andrew Clyde"
+      },
+      "democrat": {
+        "total": 121754,
+        "name": "Tambrei Cash"
+      }
+    }
+  },
+  "GA-10": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 150274,
+        "name": "Alexandra \"Lexy\" Doherty"
+      },
+      "republican": {
+        "total": 256442,
+        "name": "Mike Collins"
+      }
+    }
+  },
+  "GA-11": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10226,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 131064,
+        "name": "Katy \"Kate\" L. Stamper"
+      },
+      "republican": {
+        "total": 269849,
+        "name": "Barry Loudermilk"
+      }
+    }
+  },
+  "GA-12": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 205849,
+        "name": "Richard W. Allen"
+      },
+      "democrat": {
+        "total": 135417,
+        "name": "Elizabeth \"Liz\" Johnson"
+      }
+    }
+  },
+  "GA-13": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 256902,
+        "name": "David Scott"
+      },
+      "republican": {
+        "total": 100730,
+        "name": "Jonathan Chavez"
+      }
+    }
+  },
+  "GA-14": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 243446,
+        "name": "Marjorie Taylor Greene"
+      },
+      "democrat": {
+        "total": 134759,
+        "name": "Shawn General Harris"
+      }
+    }
+  },
+  "HI-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 164237,
+        "name": "Ed Case"
+      },
+      "others": {
+        "total": 22822,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 64373,
+        "name": "Patrick C. Largey"
+      }
+    }
+  },
+  "HI-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 75471,
+        "name": "Steve Bond"
+      },
+      "others": {
+        "total": 24585,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 166251,
+        "name": "Jill N. Tokuda"
+      },
+      "libertarian": {
+        "total": 4497,
+        "name": "Aaron Toman"
+      }
+    }
+  },
+  "IA-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 14229,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 206955,
+        "name": "Mariannette Miller-Meeks"
+      },
+      "democrat": {
+        "total": 206156,
+        "name": "Christina Bohannan"
+      }
+    }
+  },
+  "IA-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 233340,
+        "name": "Ashley Hinson"
+      },
+      "democrat": {
+        "total": 169740,
+        "name": "Sarah Corkery"
+      },
+      "others": {
+        "total": 15558,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 5381,
+        "name": "Jody Marie Madlom Puffett"
+      }
+    }
+  },
+  "IA-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 213746,
+        "name": "Zach Nunn"
+      },
+      "others": {
+        "total": 14838,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 197962,
+        "name": "Lanon Baccam"
+      }
+    }
+  },
+  "IA-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 122175,
+        "name": "Ryan Melton"
+      },
+      "republican": {
+        "total": 250522,
+        "name": "Randy Feenstra"
+      },
+      "others": {
+        "total": 23411,
+        "name": "Other"
+      }
+    }
+  },
+  "ID-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 9594,
+        "name": "Matt Loesby"
+      },
+      "republican": {
+        "total": 331049,
+        "name": "Russ Fulcher"
+      },
+      "others": {
+        "total": 6943,
+        "name": "Brendan J. Gomez"
+      },
+      "democrat": {
+        "total": 118656,
+        "name": "Kaylee Peterson"
+      }
+    }
+  },
+  "ID-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 250119,
+        "name": "Mike Simpson"
+      },
+      "others": {
+        "total": 9804,
+        "name": "Idaho Sierra Law"
+      },
+      "libertarian": {
+        "total": 21310,
+        "name": "Todd Corsetti"
+      },
+      "democrat": {
+        "total": 126229,
+        "name": "David Roth"
+      }
+    }
+  },
+  "IL-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 108064,
+        "name": "Marcus Lewis"
+      },
+      "others": {
+        "total": 45,
+        "name": "Hilary Myrick-Winston"
+      },
+      "democrat": {
+        "total": 208398,
+        "name": "Jonathan L. Jackson"
+      }
+    }
+  },
+  "IL-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 94004,
+        "name": "Ashley Ramos"
+      },
+      "others": {
+        "total": 62,
+        "name": "Mike Vick"
+      },
+      "democrat": {
+        "total": 195777,
+        "name": "Robin Kelly"
+      }
+    }
+  },
+  "IL-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 84987,
+        "name": "John Booras"
+      },
+      "democrat": {
+        "total": 174825,
+        "name": "Delia Ramirez"
+      },
+      "others": {
+        "total": 96,
+        "name": "Angel Oakley"
+      }
+    }
+  },
+  "IL-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10730,
+        "name": "Edward Hershey"
+      },
+      "republican": {
+        "total": 56323,
+        "name": "Lupe Castillo"
+      },
+      "democrat": {
+        "total": 139343,
+        "name": "Jesus \"Chuy\" Garcia"
+      }
+    }
+  },
+  "IL-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 251025,
+        "name": "Mike Quigley"
+      },
+      "republican": {
+        "total": 112931,
+        "name": "Tommy Hanson"
+      },
+      "others": {
+        "total": 9,
+        "name": "Frank Bennett Rowder"
+      }
+    }
+  },
+  "IL-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 166116,
+        "name": "Niki Conforti"
+      },
+      "democrat": {
+        "total": 196647,
+        "name": "Sean Casten"
+      },
+      "others": {
+        "total": 86,
+        "name": "Peter J. Meyer"
+      }
+    }
+  },
+  "IL-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 44598,
+        "name": "Chad Koppie"
+      },
+      "others": {
+        "total": 146,
+        "name": "Lien Choi"
+      },
+      "democrat": {
+        "total": 222408,
+        "name": "Danny K. Davis"
+      }
+    }
+  },
+  "IL-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 172920,
+        "name": "Raja Krishnamoorthi"
+      },
+      "republican": {
+        "total": 130153,
+        "name": "Mark Rice"
+      }
+    }
+  },
+  "IL-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 107106,
+        "name": "Seth Alan Cohen"
+      },
+      "democrat": {
+        "total": 231722,
+        "name": "Janice D. Schakowsky"
+      }
+    }
+  },
+  "IL-10": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 238,
+        "name": "Joseph Severino"
+      },
+      "republican": {
+        "total": 131025,
+        "name": "Jim Carris"
+      },
+      "democrat": {
+        "total": 196358,
+        "name": "Brad Schneider"
+      }
+    }
+  },
+  "IL-11": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 199825,
+        "name": "Bill Foster"
+      },
+      "others": {
+        "total": 229,
+        "name": "Anna Schiefelbein"
+      },
+      "republican": {
+        "total": 159630,
+        "name": "Jerry Evans"
+      }
+    }
+  },
+  "IL-12": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 272754,
+        "name": "Mike Bost"
+      },
+      "democrat": {
+        "total": 94875,
+        "name": "Brian Roberts"
+      }
+    }
+  },
+  "IL-13": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 191339,
+        "name": "Nikki Budzinski"
+      },
+      "republican": {
+        "total": 137917,
+        "name": "Joshua Loyd"
+      },
+      "others": {
+        "total": 244,
+        "name": "Chibuihe Asonye"
+      }
+    }
+  },
+  "IL-14": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 19,
+        "name": "Roy Jones"
+      },
+      "democrat": {
+        "total": 183446,
+        "name": "Lauren Underwood"
+      },
+      "republican": {
+        "total": 149464,
+        "name": "James T. \"Jim\" Marter"
+      }
+    }
+  },
+  "IL-15": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 308825,
+        "name": "Mary Miller"
+      },
+      "others": {
+        "total": 1409,
+        "name": "William Bonnett"
+      }
+    }
+  },
+  "IL-16": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 310925,
+        "name": "Darin LaHood"
+      },
+      "others": {
+        "total": 183,
+        "name": "Scott K. Summers"
+      }
+    }
+  },
+  "IL-17": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 170261,
+        "name": "Eric Sorensen"
+      },
+      "republican": {
+        "total": 142567,
+        "name": "Joe McGraw"
+      }
+    }
+  },
+  "IN-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 5200,
+        "name": "Dakotah Miskus"
+      },
+      "republican": {
+        "total": 145056,
+        "name": "Randy Niemeyer"
+      },
+      "democrat": {
+        "total": 172467,
+        "name": "Frank J. Mrvan"
+      }
+    }
+  },
+  "IN-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 101962,
+        "name": "Lori A. Camp"
+      },
+      "libertarian": {
+        "total": 7795,
+        "name": "William E. Henry"
+      },
+      "others": {
+        "total": 13,
+        "name": "Michael John Hubbard"
+      },
+      "republican": {
+        "total": 184848,
+        "name": "Rudy Yakym"
+      }
+    }
+  },
+  "IN-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 202653,
+        "name": "Marlin A. Stutzman"
+      },
+      "democrat": {
+        "total": 97871,
+        "name": "Kiley M. Adolph"
+      },
+      "libertarian": {
+        "total": 11015,
+        "name": "Jarrad Lancaster"
+      }
+    }
+  },
+  "IN-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 13710,
+        "name": "Ashley Groff"
+      },
+      "democrat": {
+        "total": 100091,
+        "name": "Derrick Holder"
+      },
+      "republican": {
+        "total": 209794,
+        "name": "Jim Baird"
+      }
+    }
+  },
+  "IN-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 9567,
+        "name": "Lauri Shillings"
+      },
+      "independent": {
+        "total": 9790,
+        "name": "Robby G. Slaughter"
+      },
+      "democrat": {
+        "total": 136554,
+        "name": "Deborah A. Pickett"
+      },
+      "republican": {
+        "total": 203293,
+        "name": "Victoria Spartz"
+      }
+    }
+  },
+  "IN-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 13711,
+        "name": "James Sceniak"
+      },
+      "republican": {
+        "total": 201357,
+        "name": "Jefferson Shreve"
+      },
+      "democrat": {
+        "total": 99841,
+        "name": "Cynthia \"Cinde\" Wirth"
+      }
+    }
+  },
+  "IN-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 7369,
+        "name": "Russell Scott Johnson"
+      },
+      "democrat": {
+        "total": 185987,
+        "name": "André Carson"
+      },
+      "republican": {
+        "total": 78792,
+        "name": "John George Schmitz"
+      }
+    }
+  },
+  "IN-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 8381,
+        "name": "K. Richard Fitzlaff"
+      },
+      "republican": {
+        "total": 219941,
+        "name": "Mark Messmer"
+      },
+      "democrat": {
+        "total": 95311,
+        "name": "Erik Hurt"
+      }
+    }
+  },
+  "IN-09": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 113400,
+        "name": "Timothy \"Tim\" Peck"
+      },
+      "republican": {
+        "total": 222884,
+        "name": "Erin Houchin"
+      },
+      "libertarian": {
+        "total": 9454,
+        "name": "Russell P. Brooksbank"
+      }
+    }
+  },
+  "KS-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 93965,
+        "name": "Paul Buskirk"
+      },
+      "republican": {
+        "total": 210493,
+        "name": "Tracey Mann"
+      }
+    }
+  },
+  "KS-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 14229,
+        "name": "John Hauer"
+      },
+      "democrat": {
+        "total": 115685,
+        "name": "Nancy Boyda"
+      },
+      "republican": {
+        "total": 172847,
+        "name": "Derek Schmidt"
+      }
+    }
+  },
+  "KS-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 167570,
+        "name": "Prasanth Reddy"
+      },
+      "libertarian": {
+        "total": 15892,
+        "name": "Steve Roberts"
+      },
+      "democrat": {
+        "total": 209871,
+        "name": "Sharice Davids"
+      }
+    }
+  },
+  "KS-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 106632,
+        "name": "Esau Freeman"
+      },
+      "republican": {
+        "total": 198465,
+        "name": "Ron Estes"
+      }
+    }
+  },
+  "KY-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 252729,
+        "name": "James R. Comer"
+      },
+      "democrat": {
+        "total": 85524,
+        "name": "Erin Marshall"
+      }
+    }
+  },
+  "KY-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 93029,
+        "name": "Hank Linderman"
+      },
+      "republican": {
+        "total": 252826,
+        "name": "S. Brett Guthrie"
+      }
+    }
+  },
+  "KY-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 51,
+        "name": "Daniel Cobble"
+      },
+      "republican": {
+        "total": 124713,
+        "name": "Mike Craven"
+      },
+      "democrat": {
+        "total": 203100,
+        "name": "Morgan McGarvey"
+      }
+    }
+  },
+  "KY-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1131,
+        "name": "Benjamin August Middendorf"
+      },
+      "republican": {
+        "total": 278386,
+        "name": "Thomas Massie"
+      }
+    }
+  },
+  "KY-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 261407,
+        "name": "Hal Rogers"
+      }
+    }
+  },
+  "KY-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 130345,
+        "name": "Randy Cravens"
+      },
+      "republican": {
+        "total": 222293,
+        "name": "Andy Barr"
+      }
+    }
+  },
+  "LA-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 265028,
+        "name": "Steve Scalise"
+      },
+      "others": {
+        "total": 6781,
+        "name": "J. Hyers"
+      },
+      "democrat": {
+        "total": 85911,
+        "name": "Mel Manuel"
+      }
+    }
+  },
+  "LA-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 88693,
+        "name": "Christy Lynch"
+      },
+      "democrat": {
+        "total": 216491,
+        "name": "Troy A. Carter Sr."
+      }
+    }
+  },
+  "LA-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 239525,
+        "name": "Clay Higgins"
+      },
+      "democrat": {
+        "total": 81157,
+        "name": "Priscilla Gonzalez"
+      }
+    }
+  },
+  "LA-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 306248,
+        "name": "Mike Johnson"
+      }
+    }
+  },
+  "LA-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 236870,
+        "name": "Julia Letlow"
+      },
+      "democrat": {
+        "total": 82981,
+        "name": "Michael Vallien Jr."
+      }
+    }
+  },
+  "LA-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 184296,
+        "name": "Cleo Fields"
+      },
+      "republican": {
+        "total": 111737,
+        "name": "Elbert Guillory"
+      }
+    }
+  },
+  "MA-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 133552,
+        "name": "Nadia Milleron"
+      },
+      "others": {
+        "total": 28128,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 223325,
+        "name": "Richard E. Neal"
+      }
+    }
+  },
+  "MA-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 114065,
+        "name": "Cornelius Shea"
+      },
+      "others": {
+        "total": 23831,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 251441,
+        "name": "James P. McGovern"
+      }
+    }
+  },
+  "MA-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 97980,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 264698,
+        "name": "Lori Loureiro Trahan"
+      }
+    }
+  },
+  "MA-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 289374,
+        "name": "Jake Auchincloss"
+      },
+      "others": {
+        "total": 122140,
+        "name": "Other"
+      }
+    }
+  },
+  "MA-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 286689,
+        "name": "Katherine M. Clark"
+      },
+      "others": {
+        "total": 93012,
+        "name": "Other"
+      }
+    }
+  },
+  "MA-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 321186,
+        "name": "Seth Moulton"
+      },
+      "others": {
+        "total": 117387,
+        "name": "Other"
+      }
+    }
+  },
+  "MA-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 232094,
+        "name": "Ayanna S. Pressley"
+      },
+      "others": {
+        "total": 51100,
+        "name": "Other"
+      }
+    }
+  },
+  "MA-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 21697,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 110638,
+        "name": "Robert G. Burke"
+      },
+      "democrat": {
+        "total": 265432,
+        "name": "Stephen F. Lynch"
+      }
+    }
+  },
+  "MA-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 19344,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 193822,
+        "name": "Dan Sullivan"
+      },
+      "democrat": {
+        "total": 251931,
+        "name": "Bill Keating"
+      }
+    }
+  },
+  "MD-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 12664,
+        "name": "Joshua W. O'Brien"
+      },
+      "others": {
+        "total": 675,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 154985,
+        "name": "Blane H. Miller III"
+      },
+      "republican": {
+        "total": 246356,
+        "name": "Andy Harris"
+      }
+    }
+  },
+  "MD-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 8169,
+        "name": "Jasen Wunder"
+      },
+      "others": {
+        "total": 749,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 152079,
+        "name": "Kim Klacik"
+      },
+      "democrat": {
+        "total": 223797,
+        "name": "John \"Johnny O\" Olszewski Jr."
+      }
+    }
+  },
+  "MD-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 10471,
+        "name": "Miguel Barajas"
+      },
+      "others": {
+        "total": 862,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 236681,
+        "name": "Sarah Elfreth"
+      },
+      "republican": {
+        "total": 151186,
+        "name": "Robert J. Steinberger"
+      }
+    }
+  },
+  "MD-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 239596,
+        "name": "Glenn F. Ivey"
+      },
+      "others": {
+        "total": 920,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 30454,
+        "name": "George McDermott"
+      }
+    }
+  },
+  "MD-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 283619,
+        "name": "Steny Hoyer"
+      },
+      "others": {
+        "total": 999,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 133985,
+        "name": "Michelle Talkington"
+      }
+    }
+  },
+  "MD-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 199788,
+        "name": "April McClain Delaney"
+      },
+      "republican": {
+        "total": 175974,
+        "name": "Neil C. Parrott"
+      },
+      "others": {
+        "total": 862,
+        "name": "Other"
+      }
+    }
+  },
+  "MD-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 6840,
+        "name": "Ronald M. Owens-Bey"
+      },
+      "others": {
+        "total": 649,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 49799,
+        "name": "Scott M. Collier"
+      },
+      "democrat": {
+        "total": 232849,
+        "name": "Kweisi Mfume"
+      }
+    }
+  },
+  "MD-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 9612,
+        "name": "Nancy Wallace"
+      },
+      "republican": {
+        "total": 77821,
+        "name": "Cheryl Riley"
+      },
+      "others": {
+        "total": 786,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 292101,
+        "name": "Jamie Raskin"
+      }
+    }
+  },
+  "ME-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 154849,
+        "name": "Ronald C. Russell"
+      },
+      "others": {
+        "total": 14037,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 20883,
+        "name": "Ethan Weld Alcorn"
+      },
+      "democrat": {
+        "total": 249798,
+        "name": "Chellie Pingree"
+      }
+    }
+  },
+  "ME-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 390891,
+        "name": "Jared Forrest Golden"
+      },
+      "republican": {
+        "total": 387459,
+        "name": "Austin Theriault"
+      },
+      "others": {
+        "total": 420,
+        "name": "Other"
+      }
+    }
+  },
+  "MI-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 282264,
+        "name": "Jack Bergman"
+      },
+      "democrat": {
+        "total": 180937,
+        "name": "Callie Barr"
+      },
+      "others": {
+        "total": 8497,
+        "name": "Liz Hakola"
+      },
+      "libertarian": {
+        "total": 5486,
+        "name": "Andrew Gale"
+      }
+    }
+  },
+  "MI-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 7037,
+        "name": "Ben DeJong"
+      },
+      "others": {
+        "total": 6522,
+        "name": "Scott Adams"
+      },
+      "democrat": {
+        "total": 135824,
+        "name": "Michael Lynch"
+      },
+      "republican": {
+        "total": 279167,
+        "name": "John Moolenaar"
+      }
+    }
+  },
+  "MI-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5546,
+        "name": "Louis Palus"
+      },
+      "republican": {
+        "total": 183952,
+        "name": "Paul Hudson"
+      },
+      "libertarian": {
+        "total": 5281,
+        "name": "Alex Avery"
+      },
+      "democrat": {
+        "total": 225510,
+        "name": "Hillary Scholten"
+      }
+    }
+  },
+  "MI-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 234489,
+        "name": "Bill Huizenga"
+      },
+      "democrat": {
+        "total": 184641,
+        "name": "Jessica Swartz"
+      },
+      "others": {
+        "total": 6687,
+        "name": "Curtis Michael Clark"
+      }
+    }
+  },
+  "MI-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 134282,
+        "name": "Libbi Urban"
+      },
+      "republican": {
+        "total": 269215,
+        "name": "Tim Walberg"
+      },
+      "usgreen": {
+        "total": 6379,
+        "name": "James Bronke"
+      }
+    }
+  },
+  "MI-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 7963,
+        "name": "Clyde K. Shabazz"
+      },
+      "libertarian": {
+        "total": 5523,
+        "name": "Bill Krebaum"
+      },
+      "republican": {
+        "total": 158658,
+        "name": "Heather Smiley"
+      },
+      "democrat": {
+        "total": 281162,
+        "name": "Debbie Dingell"
+      }
+    }
+  },
+  "MI-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 209959,
+        "name": "Curtis Hertel"
+      },
+      "republican": {
+        "total": 226722,
+        "name": "Tom Barrett"
+      },
+      "libertarian": {
+        "total": 14231,
+        "name": "Leah Rachel Dailey"
+      }
+    }
+  },
+  "MI-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 11173,
+        "name": "Kathy Goodwin"
+      },
+      "usgreen": {
+        "total": 1602,
+        "name": "Jim Casha"
+      },
+      "libertarian": {
+        "total": 4768,
+        "name": "Steve Barcelo"
+      },
+      "republican": {
+        "total": 189317,
+        "name": "Paul Junge"
+      },
+      "democrat": {
+        "total": 217490,
+        "name": "Kristen McDonald Rivet"
+      }
+    }
+  },
+  "MI-09": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12169,
+        "name": "Jim Walkowicz"
+      },
+      "republican": {
+        "total": 312593,
+        "name": "Lisa McClain"
+      },
+      "libertarian": {
+        "total": 5338,
+        "name": "Kevin Vayko"
+      },
+      "democrat": {
+        "total": 138138,
+        "name": "Clinton St. Mosley"
+      }
+    }
+  },
+  "MI-10": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 217437,
+        "name": "John James"
+      },
+      "democrat": {
+        "total": 191363,
+        "name": "Carl J. Marlinga"
+      },
+      "libertarian": {
+        "total": 5339,
+        "name": "Mike Saliba"
+      },
+      "others": {
+        "total": 11162,
+        "name": "Andrea Kirby"
+      }
+    }
+  },
+  "MI-11": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 9713,
+        "name": "Douglas Campbell"
+      },
+      "republican": {
+        "total": 177432,
+        "name": "Nick Somberg"
+      },
+      "democrat": {
+        "total": 260780,
+        "name": "Haley Stevens"
+      }
+    }
+  },
+  "MI-12": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 92490,
+        "name": "James D. Hooper"
+      },
+      "democrat": {
+        "total": 253354,
+        "name": "Rashida Tlaib"
+      },
+      "usgreen": {
+        "total": 8254,
+        "name": "Brenda K. Sanders"
+      },
+      "others": {
+        "total": 9401,
+        "name": "Gary Walkowicz"
+      }
+    }
+  },
+  "MI-13": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 220788,
+        "name": "Shri Thanedar"
+      },
+      "libertarian": {
+        "total": 5726,
+        "name": "Christopher Clark"
+      },
+      "others": {
+        "total": 16218,
+        "name": "Simone Coleman"
+      },
+      "republican": {
+        "total": 78917,
+        "name": "Martell D. Bivings"
+      }
+    }
+  },
+  "MN-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 297,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 220929,
+        "name": "Brad Finstad"
+      },
+      "democrat": {
+        "total": 156375,
+        "name": "Rachel Bohman"
+      }
+    }
+  },
+  "MN-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 175621,
+        "name": "Joe Teirab"
+      },
+      "others": {
+        "total": 9947,
+        "name": "Thomas William Bowman"
+      },
+      "democrat": {
+        "total": 231751,
+        "name": "Angie Craig"
+      }
+    }
+  },
+  "MN-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 240209,
+        "name": "Kelly Morrison"
+      },
+      "others": {
+        "total": 504,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 170427,
+        "name": "Tad Jude"
+      }
+    }
+  },
+  "MN-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 242802,
+        "name": "Betty McCollum"
+      },
+      "republican": {
+        "total": 117618,
+        "name": "May Lor Xiong"
+      },
+      "others": {
+        "total": 623,
+        "name": "Other"
+      }
+    }
+  },
+  "MN-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 261066,
+        "name": "Ilhan Omar"
+      },
+      "others": {
+        "total": 3768,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 86213,
+        "name": "Dalia Al-Aqidi"
+      }
+    }
+  },
+  "MN-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 260095,
+        "name": "Tom Emmer"
+      },
+      "others": {
+        "total": 565,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 155836,
+        "name": "Jeanne Hendricks"
+      }
+    }
+  },
+  "MN-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 114979,
+        "name": "A.J. \"John\" Peters"
+      },
+      "others": {
+        "total": 433,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 275098,
+        "name": "Michelle Fischbach"
+      }
+    }
+  },
+  "MN-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 244498,
+        "name": "Pete Stauber"
+      },
+      "democrat": {
+        "total": 176724,
+        "name": "Jen Schultz"
+      },
+      "others": {
+        "total": 384,
+        "name": "Other"
+      }
+    }
+  },
+  "MO-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 233312,
+        "name": "Wesley Bell"
+      },
+      "republican": {
+        "total": 56453,
+        "name": "Andrew Jones"
+      },
+      "libertarian": {
+        "total": 10070,
+        "name": "Rochelle A. Riggins"
+      },
+      "others": {
+        "total": 2279,
+        "name": "Stephen Ashby"
+      },
+      "usgreen": {
+        "total": 5151,
+        "name": "Don Fitz"
+      }
+    }
+  },
+  "MO-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 8951,
+        "name": "Brandon Daugherty"
+      },
+      "democrat": {
+        "total": 182056,
+        "name": "Ray Hartmann"
+      },
+      "republican": {
+        "total": 233444,
+        "name": "Ann Wagner"
+      },
+      "usgreen": {
+        "total": 3941,
+        "name": "Shelby Davis"
+      }
+    }
+  },
+  "MO-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 9298,
+        "name": "Jordan Rowden"
+      },
+      "democrat": {
+        "total": 138532,
+        "name": "Bethany E. Mann"
+      },
+      "usgreen": {
+        "total": 4013,
+        "name": "William M. Hastings"
+      },
+      "republican": {
+        "total": 240620,
+        "name": "Bob Onder"
+      }
+    }
+  },
+  "MO-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 9240,
+        "name": "Thomas Holbrook"
+      },
+      "republican": {
+        "total": 259886,
+        "name": "Mark Alford"
+      },
+      "others": {
+        "total": 2,
+        "name": "David A. Haave"
+      },
+      "democrat": {
+        "total": 96568,
+        "name": "Jeanette Cass"
+      }
+    }
+  },
+  "MO-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 4414,
+        "name": "Michael Day"
+      },
+      "democrat": {
+        "total": 199900,
+        "name": "Emanuel Cleaver II"
+      },
+      "libertarian": {
+        "total": 6658,
+        "name": "William Truman Wayne"
+      },
+      "republican": {
+        "total": 120957,
+        "name": "Sean E. Smith"
+      }
+    }
+  },
+  "MO-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 3058,
+        "name": "Mike Diel"
+      },
+      "libertarian": {
+        "total": 5919,
+        "name": "Edward A. \"Andy\" Maidment"
+      },
+      "republican": {
+        "total": 265210,
+        "name": "Sam Graves"
+      },
+      "democrat": {
+        "total": 100999,
+        "name": "Pam May"
+      }
+    }
+  },
+  "MO-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 7982,
+        "name": "Kevin Craig"
+      },
+      "republican": {
+        "total": 263231,
+        "name": "Eric Burlison"
+      },
+      "democrat": {
+        "total": 96655,
+        "name": "Missi Hesketh"
+      }
+    }
+  },
+  "MO-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 271249,
+        "name": "Jason Smith"
+      },
+      "libertarian": {
+        "total": 7166,
+        "name": "Jake Dawson"
+      },
+      "democrat": {
+        "total": 77649,
+        "name": "Randi McCallian"
+      }
+    }
+  },
+  "MS-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 223589,
+        "name": "Trent Kelly"
+      },
+      "democrat": {
+        "total": 96697,
+        "name": "Dianne Dodson Black"
+      }
+    }
+  },
+  "MS-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 108956,
+        "name": "Ron Eller"
+      },
+      "democrat": {
+        "total": 177885,
+        "name": "Bennie G. Thompson"
+      }
+    }
+  },
+  "MS-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 265159,
+        "name": "Michael Guest"
+      }
+    }
+  },
+  "MS-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 75771,
+        "name": "Craig Elliot Raybon"
+      },
+      "republican": {
+        "total": 215095,
+        "name": "Mike Ezell"
+      }
+    }
+  },
+  "MT-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 143783,
+        "name": "Monica Tranel"
+      },
+      "libertarian": {
+        "total": 9954,
+        "name": "Dennis Hayes"
+      },
+      "republican": {
+        "total": 168529,
+        "name": "Ryan K. Zinke"
+      }
+    }
+  },
+  "MT-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 93713,
+        "name": "John B. Driscoll"
+      },
+      "republican": {
+        "total": 181832,
+        "name": "Troy Downing"
+      }
+    }
+  },
+  "NC-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 9949,
+        "name": "Thomas Aaron Bailey"
+      },
+      "republican": {
+        "total": 180034,
+        "name": "Laurie Buckhout"
+      },
+      "democrat": {
+        "total": 186341,
+        "name": "Don Davis"
+      }
+    }
+  },
+  "NC-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 8691,
+        "name": "Michael Louis Dublin"
+      },
+      "republican": {
+        "total": 128164,
+        "name": "Alan D. Swain"
+      },
+      "democrat": {
+        "total": 268662,
+        "name": "Deborah K. Ross"
+      }
+    }
+  },
+  "NC-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 248276,
+        "name": "Greg Murphy"
+      },
+      "libertarian": {
+        "total": 72565,
+        "name": "Gheorghe Lucian Cormos"
+      }
+    }
+  },
+  "NC-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 112084,
+        "name": "Eric Blankenburg"
+      },
+      "libertarian": {
+        "total": 8632,
+        "name": "Guy Philip Meilleur"
+      },
+      "democrat": {
+        "total": 308064,
+        "name": "Valerie P. Foushee"
+      }
+    }
+  },
+  "NC-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 238304,
+        "name": "Virginia Foxx"
+      },
+      "democrat": {
+        "total": 162390,
+        "name": "Chuck Hubbard"
+      }
+    }
+  },
+  "NC-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 104017,
+        "name": "Kevin Eugene Hayes"
+      },
+      "republican": {
+        "total": 233303,
+        "name": "Addison McDowell"
+      }
+    }
+  },
+  "NC-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 179512,
+        "name": "Marlando D. Pridgen"
+      },
+      "republican": {
+        "total": 254022,
+        "name": "David Rouzer"
+      }
+    }
+  },
+  "NC-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 161709,
+        "name": "Justin E. Dues"
+      },
+      "republican": {
+        "total": 238640,
+        "name": "Mark Harris"
+      }
+    }
+  },
+  "NC-09": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 22183,
+        "name": "Shelane Camille Etchison"
+      },
+      "democrat": {
+        "total": 140852,
+        "name": "Nigel William Bristow"
+      },
+      "republican": {
+        "total": 210042,
+        "name": "Richard Hudson"
+      }
+    }
+  },
+  "NC-10": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 155383,
+        "name": "Ralph R. Scott Jr."
+      },
+      "others": {
+        "total": 5884,
+        "name": "Marshall Todd Helm"
+      },
+      "libertarian": {
+        "total": 11614,
+        "name": "Steven Richard Feldman"
+      },
+      "republican": {
+        "total": 233814,
+        "name": "Pat Harrigan"
+      }
+    }
+  },
+  "NC-11": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 186977,
+        "name": "Caleb Rudow"
+      },
+      "republican": {
+        "total": 245546,
+        "name": "Chuck Edwards"
+      }
+    }
+  },
+  "NC-12": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 91128,
+        "name": "Addul Ali"
+      },
+      "democrat": {
+        "total": 259627,
+        "name": "Alma S. Adams"
+      }
+    }
+  },
+  "NC-13": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 171835,
+        "name": "Frank Pierce"
+      },
+      "republican": {
+        "total": 243655,
+        "name": "Brad Knott"
+      }
+    }
+  },
+  "NC-14": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 168269,
+        "name": "Pam Genant"
+      },
+      "republican": {
+        "total": 232987,
+        "name": "Tim Moore"
+      }
+    }
+  },
+  "ND-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 249101,
+        "name": "Julie Fedorchak"
+      },
+      "others": {
+        "total": 1455,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 109231,
+        "name": "Trygve Hammer"
+      }
+    }
+  },
+  "NE-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 187559,
+        "name": "Mike Flood"
+      },
+      "democrat": {
+        "total": 124498,
+        "name": "Carol Blood"
+      }
+    }
+  },
+  "NE-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 160198,
+        "name": "Don Bacon"
+      },
+      "democrat": {
+        "total": 154369,
+        "name": "Tony Vargas"
+      }
+    }
+  },
+  "NE-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 59287,
+        "name": "Daniel Ebers"
+      },
+      "republican": {
+        "total": 243481,
+        "name": "Adrian Smith"
+      }
+    }
+  },
+  "NH-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 185941,
+        "name": "Russell Prescott"
+      },
+      "democrat": {
+        "total": 218582,
+        "name": "Chris Pappas"
+      },
+      "others": {
+        "total": 12050,
+        "name": "Other"
+      }
+    }
+  },
+  "NH-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 187813,
+        "name": "Lily Tang Williams"
+      },
+      "democrat": {
+        "total": 211643,
+        "name": "Maggie Goodlander"
+      },
+      "others": {
+        "total": 14946,
+        "name": "Other"
+      }
+    }
+  },
+  "NJ-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 2091,
+        "name": "Austin Johnson"
+      },
+      "usgreen": {
+        "total": 5771,
+        "name": "Robin Brownfield"
+      },
+      "republican": {
+        "total": 144390,
+        "name": "Theodore \"Teddy\" Liddell"
+      },
+      "democrat": {
+        "total": 208808,
+        "name": "Donald Norcross"
+      }
+    }
+  },
+  "NJ-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 153117,
+        "name": "Joseph F. Salerno"
+      },
+      "republican": {
+        "total": 215946,
+        "name": "Jeff Van Drew"
+      },
+      "usgreen": {
+        "total": 2557,
+        "name": "Thomas Cannavo"
+      }
+    }
+  },
+  "NJ-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 1951,
+        "name": "Christopher Russomanno"
+      },
+      "usgreen": {
+        "total": 3478,
+        "name": "Steven W. Welzer"
+      },
+      "republican": {
+        "total": 169454,
+        "name": "Rajesh Mohan"
+      },
+      "democrat": {
+        "total": 202034,
+        "name": "Herb Conaway"
+      },
+      "others": {
+        "total": 2567,
+        "name": "Douglas Wynn"
+      }
+    }
+  },
+  "NJ-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 265652,
+        "name": "Christopher H. Smith"
+      },
+      "usgreen": {
+        "total": 1823,
+        "name": "Barry Bendar"
+      },
+      "libertarian": {
+        "total": 1950,
+        "name": "John Morrison"
+      },
+      "democrat": {
+        "total": 124803,
+        "name": "Matthew Jenkins"
+      }
+    }
+  },
+  "NJ-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 165287,
+        "name": "Mary Jo Guinchard"
+      },
+      "democrat": {
+        "total": 208359,
+        "name": "Josh Gottheimer"
+      },
+      "others": {
+        "total": 2375,
+        "name": "Aamir Arif"
+      },
+      "libertarian": {
+        "total": 2440,
+        "name": "James Tosone"
+      },
+      "usgreen": {
+        "total": 3428,
+        "name": "Beau Forte"
+      }
+    }
+  },
+  "NJ-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 1770,
+        "name": "Matthew Amitrano"
+      },
+      "usgreen": {
+        "total": 4246,
+        "name": "Herbert L. Tarbous"
+      },
+      "others": {
+        "total": 4871,
+        "name": "Fahad Akhtar"
+      },
+      "republican": {
+        "total": 122519,
+        "name": "Scott Fegler"
+      },
+      "democrat": {
+        "total": 170275,
+        "name": "Frank Pallone Jr."
+      }
+    }
+  },
+  "NJ-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 200025,
+        "name": "Sue Altman"
+      },
+      "republican": {
+        "total": 223331,
+        "name": "Thomas H. Kean Jr."
+      },
+      "libertarian": {
+        "total": 3784,
+        "name": "Lana Leguia"
+      },
+      "usgreen": {
+        "total": 4258,
+        "name": "Andrew Black"
+      }
+    }
+  },
+  "NJ-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6714,
+        "name": "Pablo Olivera"
+      },
+      "usgreen": {
+        "total": 5465,
+        "name": "Christian Robbins"
+      },
+      "republican": {
+        "total": 68152,
+        "name": "Anthony Valdes"
+      },
+      "democrat": {
+        "total": 116434,
+        "name": "Rob Menendez"
+      }
+    }
+  },
+  "NJ-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 5027,
+        "name": "Benjamin Taylor"
+      },
+      "democrat": {
+        "total": 130514,
+        "name": "Nellie Pou"
+      },
+      "libertarian": {
+        "total": 3533,
+        "name": "Bruno Pereira"
+      },
+      "republican": {
+        "total": 117939,
+        "name": "Billy Prempeh"
+      }
+    }
+  },
+  "NJ-10": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5960,
+        "name": "Cynthia A. Johnson"
+      },
+      "usgreen": {
+        "total": 3198,
+        "name": "Jon Serrano"
+      },
+      "republican": {
+        "total": 59663,
+        "name": "Carmen Bucco"
+      },
+      "democrat": {
+        "total": 209422,
+        "name": "LaMonica McIver"
+      }
+    }
+  },
+  "NJ-11": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1832,
+        "name": "Joshua Lanzara"
+      },
+      "usgreen": {
+        "total": 4780,
+        "name": "Lily Benavides"
+      },
+      "republican": {
+        "total": 164556,
+        "name": "Joseph Belnome"
+      },
+      "democrat": {
+        "total": 222583,
+        "name": "Mikie Sherrill"
+      }
+    }
+  },
+  "NJ-12": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 4652,
+        "name": "Kim Meudt"
+      },
+      "republican": {
+        "total": 117222,
+        "name": "Darius Mayfield"
+      },
+      "democrat": {
+        "total": 196871,
+        "name": "Bonnie Watson Coleman"
+      },
+      "libertarian": {
+        "total": 2915,
+        "name": "Vic Kaplan"
+      }
+    }
+  },
+  "NM-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 193203,
+        "name": "Melanie Ann Stansbury"
+      },
+      "republican": {
+        "total": 149546,
+        "name": "Steve Jones"
+      }
+    }
+  },
+  "NM-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 127145,
+        "name": "Yvette Herrell"
+      },
+      "democrat": {
+        "total": 138177,
+        "name": "Gabriel Vasquez"
+      }
+    }
+  },
+  "NM-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 162342,
+        "name": "Teresa Leger Fernandez"
+      },
+      "republican": {
+        "total": 126085,
+        "name": "Sharon E. Clahchischilliage"
+      }
+    }
+  },
+  "NV-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8653,
+        "name": "Ron Quince"
+      },
+      "republican": {
+        "total": 143650,
+        "name": "Mark Robertson"
+      },
+      "libertarian": {
+        "total": 2711,
+        "name": "David Havlicek"
+      },
+      "democrat": {
+        "total": 167885,
+        "name": "Dina Titus"
+      }
+    }
+  },
+  "NV-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 15817,
+        "name": "Javi Tachiquin"
+      },
+      "others": {
+        "total": 163848,
+        "name": "Robert Gregory Kidd"
+      },
+      "republican": {
+        "total": 219919,
+        "name": "Mark E. Amodei"
+      }
+    }
+  },
+  "NV-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 191304,
+        "name": "Susie Lee"
+      },
+      "republican": {
+        "total": 181084,
+        "name": "Drew Johnson"
+      }
+    }
+  },
+  "NV-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 148061,
+        "name": "John Lee"
+      },
+      "others": {
+        "total": 4919,
+        "name": "Russell Best"
+      },
+      "libertarian": {
+        "total": 4300,
+        "name": "Timothy John Ferreira"
+      },
+      "democrat": {
+        "total": 174926,
+        "name": "Steven Horsford"
+      }
+    }
+  },
+  "NY-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 183540,
+        "name": "John P. Avlon"
+      },
+      "republican": {
+        "total": 226285,
+        "name": "Nicholas J. LaLota"
+      },
+      "others": {
+        "total": 20635,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 202597,
+        "name": "Andrew R. Garbarino"
+      },
+      "democrat": {
+        "total": 136371,
+        "name": "Rob Lubin"
+      },
+      "others": {
+        "total": 24148,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 280834,
+        "name": "Thomas R. Suozzi"
+      },
+      "republican": {
+        "total": 253983,
+        "name": "Michael J. LiPetri Jr."
+      },
+      "others": {
+        "total": 20197,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 191760,
+        "name": "Laura A. Gillen"
+      },
+      "republican": {
+        "total": 183157,
+        "name": "Anthony P. D'Esposito"
+      },
+      "others": {
+        "total": 17413,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 62529,
+        "name": "Paul King"
+      },
+      "others": {
+        "total": 12842,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 168425,
+        "name": "Gregory W. Meeks"
+      }
+    }
+  },
+  "NY-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 74559,
+        "name": "Thomas Zmich"
+      },
+      "democrat": {
+        "total": 120205,
+        "name": "Grace Meng"
+      },
+      "others": {
+        "total": 16393,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 26715,
+        "name": "William Kregler"
+      },
+      "others": {
+        "total": 5354,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 61668,
+        "name": "Nydia M. Velazquez"
+      }
+    }
+  },
+  "NY-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 54863,
+        "name": "John Delaney"
+      },
+      "others": {
+        "total": 18251,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 168036,
+        "name": "Hakeem Jeffries"
+      }
+    }
+  },
+  "NY-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 60064,
+        "name": "Menachem M. Raitport"
+      },
+      "democrat": {
+        "total": 173207,
+        "name": "Yvette D. Clarke"
+      },
+      "others": {
+        "total": 20063,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-10": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 35513,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 206206,
+        "name": "Daniel Goldman"
+      },
+      "republican": {
+        "total": 37555,
+        "name": "Alexander Dodenhoff"
+      }
+    }
+  },
+  "NY-11": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 93586,
+        "name": "Andrea Morse"
+      },
+      "others": {
+        "total": 13904,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 167099,
+        "name": "Nicole Malliotakis"
+      }
+    }
+  },
+  "NY-12": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 62989,
+        "name": "Mike Zumbluskas"
+      },
+      "others": {
+        "total": 18815,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 260165,
+        "name": "Jerry Nadler"
+      }
+    }
+  },
+  "NY-13": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 181800,
+        "name": "Adriano Espaillat"
+      },
+      "others": {
+        "total": 24268,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 35822,
+        "name": "Ruben D. Vargas"
+      }
+    }
+  },
+  "NY-14": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 59078,
+        "name": "Tina Forte"
+      },
+      "others": {
+        "total": 13125,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 132714,
+        "name": "Alexandria Ocasio-Cortez"
+      }
+    }
+  },
+  "NY-15": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 36010,
+        "name": "Gonzalo Duran"
+      },
+      "others": {
+        "total": 22143,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 130392,
+        "name": "Ritchie Torres"
+      }
+    }
+  },
+  "NY-16": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 217668,
+        "name": "George S. Latimer"
+      },
+      "others": {
+        "total": 27011,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 86408,
+        "name": "Miriam Levitt Flisser"
+      }
+    }
+  },
+  "NY-17": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 197845,
+        "name": "Mike Lawler"
+      },
+      "democrat": {
+        "total": 173899,
+        "name": "Mondaire L. Jones"
+      },
+      "others": {
+        "total": 22216,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-18": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 155129,
+        "name": "Alison Esposito"
+      },
+      "others": {
+        "total": 14053,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 207106,
+        "name": "Pat Ryan"
+      }
+    }
+  },
+  "NY-19": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12389,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 192647,
+        "name": "Josh Riley"
+      },
+      "republican": {
+        "total": 184290,
+        "name": "Marcus Molinaro"
+      }
+    }
+  },
+  "NY-20": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 41963,
+        "name": "Paul D. Tonko"
+      },
+      "others": {
+        "total": 3330,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 27819,
+        "name": "Kevin M. Waltz"
+      }
+    }
+  },
+  "NY-21": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12015,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 132447,
+        "name": "Paula Collins"
+      },
+      "republican": {
+        "total": 215996,
+        "name": "Elise M. Stefanik"
+      }
+    }
+  },
+  "NY-22": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 194450,
+        "name": "John W. Mannion"
+      },
+      "others": {
+        "total": 10874,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 161939,
+        "name": "Brandon M. Williams"
+      }
+    }
+  },
+  "NY-23": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 246969,
+        "name": "Nicholas A. Langworthy"
+      },
+      "democrat": {
+        "total": 128397,
+        "name": "Thomas A. Carle"
+      },
+      "others": {
+        "total": 22255,
+        "name": "Other"
+      }
+    }
+  },
+  "NY-24": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 123317,
+        "name": "David Wagenhauser"
+      },
+      "others": {
+        "total": 19727,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 235867,
+        "name": "Claudia Tenney"
+      }
+    }
+  },
+  "NY-25": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 141195,
+        "name": "Gregg A. Sadwick"
+      },
+      "others": {
+        "total": 19246,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 219175,
+        "name": "Joseph D. Morelle"
+      }
+    }
+  },
+  "NY-26": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 257181,
+        "name": "Timothy M. Kennedy"
+      },
+      "republican": {
+        "total": 133754,
+        "name": "Anthony G. Marecki"
+      },
+      "others": {
+        "total": 21965,
+        "name": "Other"
+      }
+    }
+  },
+  "OH-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 177993,
+        "name": "Orlando Sonza"
+      },
+      "democrat": {
+        "total": 213916,
+        "name": "Greg Landsman"
+      }
+    }
+  },
+  "OH-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4,
+        "name": "Alexander David Schrank"
+      },
+      "republican": {
+        "total": 268211,
+        "name": "David J. Taylor"
+      },
+      "democrat": {
+        "total": 96401,
+        "name": "Samantha Meadows"
+      }
+    }
+  },
+  "OH-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 100355,
+        "name": "Michael Young"
+      },
+      "democrat": {
+        "total": 242632,
+        "name": "Joyce Beatty"
+      }
+    }
+  },
+  "OH-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 125905,
+        "name": "Tamie Wilson"
+      },
+      "republican": {
+        "total": 273297,
+        "name": "Jim Jordan"
+      }
+    }
+  },
+  "OH-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 123024,
+        "name": "Keith Mundy"
+      },
+      "republican": {
+        "total": 255633,
+        "name": "Bob Latta"
+      }
+    }
+  },
+  "OH-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 278607,
+        "name": "Michael A. Rulli"
+      },
+      "democrat": {
+        "total": 149688,
+        "name": "Michael L. Kripchak"
+      },
+      "others": {
+        "total": 12,
+        "name": "Christopher Lafont"
+      }
+    }
+  },
+  "OH-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 144613,
+        "name": "Matt Diemer"
+      },
+      "republican": {
+        "total": 204494,
+        "name": "Max Miller"
+      },
+      "others": {
+        "total": 51264,
+        "name": "Dennis J. Kucinich"
+      }
+    }
+  },
+  "OH-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 140625,
+        "name": "Vanessa Enoch"
+      },
+      "republican": {
+        "total": 237503,
+        "name": "Warren Davidson"
+      }
+    }
+  },
+  "OH-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 15381,
+        "name": "Tom Pruss"
+      },
+      "republican": {
+        "total": 178716,
+        "name": "Derek Merrin"
+      },
+      "democrat": {
+        "total": 181098,
+        "name": "Marcy Kaptur"
+      }
+    }
+  },
+  "OH-10": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 145420,
+        "name": "Amy Cox"
+      },
+      "republican": {
+        "total": 213695,
+        "name": "Mike Turner"
+      },
+      "others": {
+        "total": 11631,
+        "name": "Michael Harbaugh"
+      }
+    }
+  },
+  "OH-11": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 236883,
+        "name": "Shontel Brown"
+      },
+      "others": {
+        "total": 6136,
+        "name": "Sean Freeman"
+      },
+      "republican": {
+        "total": 59394,
+        "name": "Alan Rapoport"
+      }
+    }
+  },
+  "OH-12": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 119738,
+        "name": "Jerrad Christian"
+      },
+      "republican": {
+        "total": 260450,
+        "name": "Troy Balderson"
+      }
+    }
+  },
+  "OH-13": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 188924,
+        "name": "Kevin Coughlin"
+      },
+      "democrat": {
+        "total": 197466,
+        "name": "Emilia Sykes"
+      }
+    }
+  },
+  "OH-14": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 243427,
+        "name": "David P. Joyce"
+      },
+      "democrat": {
+        "total": 140431,
+        "name": "Brian Bob Kenderes"
+      }
+    }
+  },
+  "OH-15": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 151411,
+        "name": "Adam Miller"
+      },
+      "republican": {
+        "total": 196338,
+        "name": "Mike Carey"
+      }
+    }
+  },
+  "OK-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 15766,
+        "name": "Mark Sanders"
+      },
+      "democrat": {
+        "total": 107903,
+        "name": "Dennis Baker"
+      },
+      "republican": {
+        "total": 188832,
+        "name": "Kevin Hern"
+      }
+    }
+  },
+  "OK-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 238123,
+        "name": "Josh Brecheen"
+      },
+      "democrat": {
+        "total": 68841,
+        "name": "Brandon Wade"
+      },
+      "independent": {
+        "total": 14061,
+        "name": "Ronnie Dean Hopkins"
+      }
+    }
+  },
+  "OK-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 0,
+        "name": "Frank D. Lucas"
+      }
+    }
+  },
+  "OK-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 199962,
+        "name": "Tom Cole"
+      },
+      "democrat": {
+        "total": 86641,
+        "name": "Mary Brannon"
+      },
+      "independent": {
+        "total": 19870,
+        "name": "James Stacy"
+      }
+    }
+  },
+  "OK-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 134471,
+        "name": "Madison Horn"
+      },
+      "republican": {
+        "total": 207636,
+        "name": "Stephanie Bice"
+      }
+    }
+  },
+  "OR-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 10840,
+        "name": "Joseph Christman"
+      },
+      "democrat": {
+        "total": 241556,
+        "name": "Suzanne Bonamici"
+      },
+      "others": {
+        "total": 687,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 98908,
+        "name": "Bob Todd"
+      }
+    }
+  },
+  "OR-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 115337,
+        "name": "Dan Ruby"
+      },
+      "republican": {
+        "total": 224601,
+        "name": "Cliff Bentz"
+      },
+      "others": {
+        "total": 11551,
+        "name": "Michael Kurt Stettler"
+      }
+    }
+  },
+  "OR-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 10245,
+        "name": "David W. Walker"
+      },
+      "others": {
+        "total": 13375,
+        "name": "Joe Meyer"
+      },
+      "democrat": {
+        "total": 226405,
+        "name": "Maxine E. Dexter"
+      },
+      "republican": {
+        "total": 84344,
+        "name": "Joanna Harbour"
+      }
+    }
+  },
+  "OR-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 5704,
+        "name": "Dan Bahlen"
+      },
+      "others": {
+        "total": 10769,
+        "name": "Justin Filip"
+      },
+      "democrat": {
+        "total": 195862,
+        "name": "Val Hoyle"
+      },
+      "republican": {
+        "total": 166430,
+        "name": "Monique DeSpain"
+      }
+    }
+  },
+  "OR-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 191365,
+        "name": "Janelle S. Bynum"
+      },
+      "others": {
+        "total": 4650,
+        "name": "Andrea Thorn Townsend"
+      },
+      "independent": {
+        "total": 18665,
+        "name": "Brett Smith"
+      },
+      "libertarian": {
+        "total": 6193,
+        "name": "Sonja Feintech"
+      },
+      "republican": {
+        "total": 180420,
+        "name": "Lori Chavez-DeRemer"
+      }
+    }
+  },
+  "OR-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 157634,
+        "name": "Mike Erickson"
+      },
+      "others": {
+        "total": 562,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 180869,
+        "name": "Andrea Salinas"
+      }
+    }
+  },
+  "PA-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 261390,
+        "name": "Brian Fitzpatrick"
+      },
+      "democrat": {
+        "total": 202042,
+        "name": "Ashley Ehasz"
+      }
+    }
+  },
+  "PA-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 77355,
+        "name": "Aaron Bashir"
+      },
+      "democrat": {
+        "total": 193691,
+        "name": "Brendan F. Boyle"
+      }
+    }
+  },
+  "PA-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 340223,
+        "name": "Dwight Evans"
+      }
+    }
+  },
+  "PA-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 269066,
+        "name": "Madeleine Dean"
+      },
+      "republican": {
+        "total": 186457,
+        "name": "David Winkler"
+      }
+    }
+  },
+  "PA-05": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 267754,
+        "name": "Mary Gay Scanlon"
+      },
+      "republican": {
+        "total": 142355,
+        "name": "Alfeia Goodwin"
+      }
+    }
+  },
+  "PA-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 235625,
+        "name": "Chrissy Houlahan"
+      },
+      "republican": {
+        "total": 183638,
+        "name": "Neil Young"
+      }
+    }
+  },
+  "PA-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 199626,
+        "name": "Susan Wild"
+      },
+      "republican": {
+        "total": 203688,
+        "name": "Ryan E. Mackenzie"
+      }
+    }
+  },
+  "PA-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 189411,
+        "name": "Matt Cartwright"
+      },
+      "republican": {
+        "total": 195663,
+        "name": "Rob Bresnahan Jr."
+      }
+    }
+  },
+  "PA-09": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 115523,
+        "name": "Amanda Waldman"
+      },
+      "republican": {
+        "total": 276212,
+        "name": "Dan Meuser"
+      }
+    }
+  },
+  "PA-10": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 205567,
+        "name": "Scott Perry"
+      },
+      "democrat": {
+        "total": 200434,
+        "name": "Janelle Stelson"
+      }
+    }
+  },
+  "PA-11": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 149641,
+        "name": "Jim Atkinson"
+      },
+      "republican": {
+        "total": 253672,
+        "name": "Lloyd K. Smucker"
+      }
+    }
+  },
+  "PA-12": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 234802,
+        "name": "Summer Lee"
+      },
+      "republican": {
+        "total": 181426,
+        "name": "James Hayes"
+      }
+    }
+  },
+  "PA-13": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 301460,
+        "name": "John Joyce"
+      },
+      "democrat": {
+        "total": 104823,
+        "name": "Beth Farnham"
+      }
+    }
+  },
+  "PA-14": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 268380,
+        "name": "Guy Reschenthaler"
+      },
+      "democrat": {
+        "total": 134755,
+        "name": "Chris Dziados"
+      }
+    }
+  },
+  "PA-15": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 279027,
+        "name": "Glenn \"G.T.\" Thompson"
+      },
+      "democrat": {
+        "total": 111408,
+        "name": "Zach Womer"
+      }
+    }
+  },
+  "PA-16": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 146709,
+        "name": "Preston Nouri"
+      },
+      "republican": {
+        "total": 256923,
+        "name": "Mike Kelly"
+      }
+    }
+  },
+  "PA-17": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 242838,
+        "name": "Chris Deluzio"
+      },
+      "republican": {
+        "total": 207900,
+        "name": "Rob Mercuri"
+      }
+    }
+  },
+  "RI-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 10463,
+        "name": "C.D. Reynolds"
+      },
+      "democrat": {
+        "total": 139352,
+        "name": "Gabe Amo"
+      },
+      "others": {
+        "total": 561,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 70742,
+        "name": "Allen R. Waters"
+      }
+    }
+  },
+  "RI-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 109381,
+        "name": "Steven Corvi"
+      },
+      "democrat": {
+        "total": 153439,
+        "name": "Seth Magaziner"
+      },
+      "others": {
+        "total": 660,
+        "name": "Other"
+      }
+    }
+  },
+  "SC-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 693,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 162582,
+        "name": "Michael B. Moore"
+      },
+      "republican": {
+        "total": 227502,
+        "name": "Nancy Mace"
+      }
+    }
+  },
+  "SC-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 142985,
+        "name": "David Robinson II"
+      },
+      "others": {
+        "total": 786,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 211514,
+        "name": "Joe Wilson"
+      }
+    }
+  },
+  "SC-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 248451,
+        "name": "Sheri Biggs"
+      },
+      "others": {
+        "total": 10527,
+        "name": "Mike Bedenbaugh"
+      },
+      "democrat": {
+        "total": 87735,
+        "name": "Bryon L. Best"
+      }
+    }
+  },
+  "SC-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 206916,
+        "name": "William Timmons"
+      },
+      "others": {
+        "total": 10522,
+        "name": "Mark Hackett"
+      },
+      "democrat": {
+        "total": 128976,
+        "name": "Kathryn Harvey"
+      }
+    }
+  },
+  "SC-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 557,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 130592,
+        "name": "Evangeline Hundley"
+      },
+      "republican": {
+        "total": 228260,
+        "name": "Ralph W. Norman"
+      }
+    }
+  },
+  "SC-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 5279,
+        "name": "Michael Simpson"
+      },
+      "others": {
+        "total": 6282,
+        "name": "Gregg Marcel Dixon"
+      },
+      "democrat": {
+        "total": 182056,
+        "name": "James E. \"Jim\" Clyburn"
+      },
+      "republican": {
+        "total": 112360,
+        "name": "Duke Buckner"
+      }
+    }
+  },
+  "SC-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 240326,
+        "name": "Russell Fry"
+      },
+      "others": {
+        "total": 481,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 129522,
+        "name": "Mal Hyman"
+      }
+    }
+  },
+  "SD-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 303630,
+        "name": "Dusty Johnson"
+      },
+      "democrat": {
+        "total": 117818,
+        "name": "Sheryl Johnson"
+      }
+    }
+  },
+  "TN-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 257825,
+        "name": "Diana Harshbarger"
+      },
+      "independent": {
+        "total": 8353,
+        "name": "Richard Baker"
+      },
+      "democrat": {
+        "total": 64021,
+        "name": "Kevin Jenkins"
+      }
+    }
+  },
+  "TN-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 111316,
+        "name": "Jane George"
+      },
+      "republican": {
+        "total": 250782,
+        "name": "Tim Burchett"
+      }
+    }
+  },
+  "TN-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 10968,
+        "name": "Stephen King"
+      },
+      "republican": {
+        "total": 236519,
+        "name": "Chuck Fleischmann"
+      },
+      "democrat": {
+        "total": 102841,
+        "name": "Jack Allen"
+      }
+    }
+  },
+  "TN-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 10290,
+        "name": "Keith Nolan"
+      },
+      "democrat": {
+        "total": 83832,
+        "name": "Victoria Isabel Broderick"
+      },
+      "republican": {
+        "total": 219133,
+        "name": "Scott DesJarlais"
+      }
+    }
+  },
+  "TN-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 205075,
+        "name": "Andy Ogles"
+      },
+      "independent": {
+        "total": 13252,
+        "name": "Jim Larkin"
+      },
+      "democrat": {
+        "total": 142387,
+        "name": "Maryam Abolfazli"
+      }
+    }
+  },
+  "TN-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 106144,
+        "name": "Lore Bergman"
+      },
+      "republican": {
+        "total": 225543,
+        "name": "John Rose"
+      }
+    }
+  },
+  "TN-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 122764,
+        "name": "Megan Barry"
+      },
+      "independent": {
+        "total": 7900,
+        "name": "Shaun Greene"
+      },
+      "republican": {
+        "total": 191992,
+        "name": "Mark E. Green"
+      }
+    }
+  },
+  "TN-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 85043,
+        "name": "Sarah Freeman"
+      },
+      "independent": {
+        "total": 6861,
+        "name": "James Hart"
+      },
+      "republican": {
+        "total": 240411,
+        "name": "David Kustoff"
+      }
+    }
+  },
+  "TN-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 6770,
+        "name": "Wendell Blankenship"
+      },
+      "republican": {
+        "total": 57411,
+        "name": "Charlotte Bergmann"
+      },
+      "democrat": {
+        "total": 159522,
+        "name": "Steve Cohen"
+      }
+    }
+  },
+  "TX-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 258523,
+        "name": "Nathaniel Moran"
+      }
+    }
+  },
+  "TX-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 214631,
+        "name": "Dan Crenshaw"
+      },
+      "democrat": {
+        "total": 112252,
+        "name": "Peter Filler"
+      }
+    }
+  },
+  "TX-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 142953,
+        "name": "Sandeep Srivastava"
+      },
+      "republican": {
+        "total": 237794,
+        "name": "Keith Self"
+      }
+    }
+  },
+  "TX-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 241603,
+        "name": "Pat Fallon"
+      },
+      "democrat": {
+        "total": 111696,
+        "name": "Simon Cardell"
+      }
+    }
+  },
+  "TX-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 107712,
+        "name": "Ruth \"Truth\" Torres"
+      },
+      "republican": {
+        "total": 192185,
+        "name": "Lance Gooden"
+      }
+    }
+  },
+  "TX-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 98319,
+        "name": "John Love III"
+      },
+      "republican": {
+        "total": 188119,
+        "name": "Jake Ellzey"
+      }
+    }
+  },
+  "TX-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 94651,
+        "name": "Caroline Kane"
+      },
+      "democrat": {
+        "total": 149820,
+        "name": "Lizzie Fletcher"
+      }
+    }
+  },
+  "TX-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 108754,
+        "name": "Laura Jones"
+      },
+      "republican": {
+        "total": 233423,
+        "name": "Morgan Luttrell"
+      }
+    }
+  },
+  "TX-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 184141,
+        "name": "Al Green"
+      }
+    }
+  },
+  "TX-10": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 8309,
+        "name": "Jeff Miller"
+      },
+      "republican": {
+        "total": 221229,
+        "name": "Michael T. McCaul"
+      },
+      "democrat": {
+        "total": 118280,
+        "name": "Theresa Boisseau"
+      }
+    }
+  },
+  "TX-11": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 211975,
+        "name": "August Pfluger"
+      }
+    }
+  },
+  "TX-12": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 215564,
+        "name": "Craig Goldman"
+      },
+      "democrat": {
+        "total": 124154,
+        "name": "Trey J. Hunt"
+      }
+    }
+  },
+  "TX-13": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 240622,
+        "name": "Ronny Jackson"
+      }
+    }
+  },
+  "TX-14": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 95875,
+        "name": "Rhonda Hart"
+      },
+      "republican": {
+        "total": 210320,
+        "name": "Randy Weber"
+      }
+    }
+  },
+  "TX-15": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 95965,
+        "name": "Michelle Vallejo"
+      },
+      "republican": {
+        "total": 127804,
+        "name": "Monica De La Cruz"
+      }
+    }
+  },
+  "TX-16": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 156,
+        "name": "Deliris Montanez"
+      },
+      "democrat": {
+        "total": 131391,
+        "name": "Veronica Escobar"
+      },
+      "republican": {
+        "total": 89281,
+        "name": "Irene Armendariz Jackson"
+      }
+    }
+  },
+  "TX-17": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 193101,
+        "name": "Peter Sessions"
+      },
+      "democrat": {
+        "total": 97941,
+        "name": "Mark Lorenzen"
+      }
+    }
+  },
+  "TX-18": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 76,
+        "name": "Vince Duncan"
+      },
+      "democrat": {
+        "total": 298247,
+        "name": "Sylvester Turner"
+      },
+      "republican": {
+        "total": 135902,
+        "name": "Lana Centonze"
+      }
+    }
+  },
+  "TX-19": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 27461,
+        "name": "Nathan Lewis"
+      },
+      "libertarian": {
+        "total": 23964,
+        "name": "Bernard Johnson"
+      },
+      "republican": {
+        "total": 214950,
+        "name": "Jodey C. Arrington"
+      }
+    }
+  },
+  "TX-20": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 157890,
+        "name": "Joaquin Castro"
+      }
+    }
+  },
+  "TX-21": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 153765,
+        "name": "Kristin Hook"
+      },
+      "republican": {
+        "total": 263744,
+        "name": "Chip Roy"
+      },
+      "libertarian": {
+        "total": 8914,
+        "name": "Bob King"
+      }
+    }
+  },
+  "TX-22": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 127604,
+        "name": "Marquette Greene-Scott"
+      },
+      "republican": {
+        "total": 209285,
+        "name": "Troy E. Nehls"
+      }
+    }
+  },
+  "TX-23": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 109373,
+        "name": "S. Limon"
+      },
+      "republican": {
+        "total": 180720,
+        "name": "Tony Gonzales"
+      }
+    }
+  },
+  "TX-24": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 149518,
+        "name": "Sam Eppler"
+      },
+      "republican": {
+        "total": 227108,
+        "name": "Beth Van Duyne"
+      }
+    }
+  },
+  "TX-25": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1661,
+        "name": "Chad Hagg"
+      },
+      "republican": {
+        "total": 263042,
+        "name": "Roger Williams"
+      }
+    }
+  },
+  "TX-26": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 8773,
+        "name": "Phil Gray"
+      },
+      "democrat": {
+        "total": 138558,
+        "name": "Ernest R. Lineberger III"
+      },
+      "republican": {
+        "total": 241096,
+        "name": "Brandon Gill"
+      }
+    }
+  },
+  "TX-27": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 94596,
+        "name": "Tanya Lloyd"
+      },
+      "republican": {
+        "total": 183980,
+        "name": "Michael Cloud"
+      }
+    }
+  },
+  "TX-28": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 112117,
+        "name": "Jay Furman"
+      },
+      "democrat": {
+        "total": 125490,
+        "name": "Henry Cuellar"
+      }
+    }
+  },
+  "TX-29": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 52830,
+        "name": "Alan Garza"
+      },
+      "democrat": {
+        "total": 99379,
+        "name": "Sylvia Garcia"
+      }
+    }
+  },
+  "TX-30": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 35175,
+        "name": "Jrmar \"JJ\" Jefferson"
+      },
+      "democrat": {
+        "total": 197650,
+        "name": "Jasmine Crockett"
+      }
+    }
+  },
+  "TX-31": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 126470,
+        "name": "Stuart Whitlow"
+      },
+      "republican": {
+        "total": 229087,
+        "name": "John Carter"
+      }
+    }
+  },
+  "TX-32": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 140536,
+        "name": "Julie Johnson"
+      },
+      "libertarian": {
+        "total": 5987,
+        "name": "Kevin A. Hale"
+      },
+      "republican": {
+        "total": 85941,
+        "name": "Darrell Day"
+      }
+    }
+  },
+  "TX-33": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 114289,
+        "name": "Marc Veasey"
+      },
+      "republican": {
+        "total": 51864,
+        "name": "Patrick David Gillespie"
+      }
+    }
+  },
+  "TX-34": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 102780,
+        "name": "Vicente Gonzalez"
+      },
+      "republican": {
+        "total": 97603,
+        "name": "Mayra Flores"
+      }
+    }
+  },
+  "TX-35": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 82610,
+        "name": "Steven Wright"
+      },
+      "democrat": {
+        "total": 170509,
+        "name": "Greg Casar"
+      }
+    }
+  },
+  "TX-36": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 206009,
+        "name": "Brian Babin"
+      },
+      "democrat": {
+        "total": 91009,
+        "name": "Dayna Steele"
+      }
+    }
+  },
+  "TX-37": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 7511,
+        "name": "Girish Altekar"
+      },
+      "democrat": {
+        "total": 252980,
+        "name": "Lloyd Doggett"
+      },
+      "republican": {
+        "total": 80366,
+        "name": "Jennifer Garcia Sharon"
+      }
+    }
+  },
+  "TX-38": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 127640,
+        "name": "Melissa McDonough"
+      },
+      "others": {
+        "total": 94,
+        "name": "Avery L. Ayers"
+      },
+      "republican": {
+        "total": 215030,
+        "name": "Wesley P. Hunt"
+      }
+    }
+  },
+  "UT-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 117319,
+        "name": "Bill Campbell"
+      },
+      "libertarian": {
+        "total": 17601,
+        "name": "Daniel Rhead Cottam"
+      },
+      "republican": {
+        "total": 230975,
+        "name": "Blake D. Moore"
+      }
+    }
+  },
+  "UT-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 205234,
+        "name": "Celeste Maloy"
+      },
+      "others": {
+        "total": 27490,
+        "name": "Cassie Easley"
+      },
+      "democrat": {
+        "total": 121114,
+        "name": "Nathaniel Woodward"
+      }
+    }
+  },
+  "UT-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 122780,
+        "name": "Glenn J. Wright"
+      },
+      "republican": {
+        "total": 242496,
+        "name": "Mike Kennedy"
+      }
+    }
+  },
+  "UT-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 230627,
+        "name": "Burgess Owens"
+      },
+      "democrat": {
+        "total": 109838,
+        "name": "Katrina Fallick-Wang"
+      },
+      "others": {
+        "total": 23203,
+        "name": "Vaughn R. Cook"
+      }
+    }
+  },
+  "VA-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 804,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 269657,
+        "name": "Robert J. Wittman"
+      },
+      "democrat": {
+        "total": 208445,
+        "name": "Leslie C. Mehta"
+      }
+    }
+  },
+  "VA-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 9197,
+        "name": "Robert E. Reid"
+      },
+      "republican": {
+        "total": 207368,
+        "name": "Jen A. Kiggans"
+      },
+      "democrat": {
+        "total": 191666,
+        "name": "Missy Cotter Smasal"
+      },
+      "others": {
+        "total": 471,
+        "name": "Other"
+      }
+    }
+  },
+  "VA-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 93801,
+        "name": "John Sitka III"
+      },
+      "democrat": {
+        "total": 219926,
+        "name": "Robert C. \"Bobby\" Scott"
+      },
+      "others": {
+        "total": 670,
+        "name": "Other"
+      }
+    }
+  },
+  "VA-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 252885,
+        "name": "Jennifer L. McClellan"
+      },
+      "others": {
+        "total": 809,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 121814,
+        "name": "William J. \"Bill\" Moher III"
+      }
+    }
+  },
+  "VA-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 184229,
+        "name": "Gloria Tinsley Witt"
+      },
+      "others": {
+        "total": 2046,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 249564,
+        "name": "John J. McGuire III"
+      }
+    }
+  },
+  "VA-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 7960,
+        "name": "Robert Wells"
+      },
+      "democrat": {
+        "total": 140099,
+        "name": "Ken L. Mitchell"
+      },
+      "republican": {
+        "total": 255849,
+        "name": "Ben L. Cline"
+      },
+      "others": {
+        "total": 507,
+        "name": "Other"
+      }
+    }
+  },
+  "VA-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 203336,
+        "name": "Eugene S. Vindman"
+      },
+      "others": {
+        "total": 1116,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 192847,
+        "name": "Derrick M. Anderson"
+      }
+    }
+  },
+  "VA-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 13612,
+        "name": "David R. Kennedy"
+      },
+      "republican": {
+        "total": 94676,
+        "name": "Jerry W. Torres"
+      },
+      "others": {
+        "total": 1034,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 274593,
+        "name": "Donald S. Beyer Jr."
+      }
+    }
+  },
+  "VA-09": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 748,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 290645,
+        "name": "H. Morgan Griffith"
+      },
+      "democrat": {
+        "total": 109570,
+        "name": "Karen G.H. Baker"
+      }
+    }
+  },
+  "VA-10": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1538,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 196343,
+        "name": "Mike W. Clancy"
+      },
+      "democrat": {
+        "total": 215131,
+        "name": "Suhas Subramanyam"
+      }
+    }
+  },
+  "VA-11": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 273529,
+        "name": "Gerald E. \"Gerry\" Connolly"
+      },
+      "republican": {
+        "total": 134802,
+        "name": "Mike L. Van Meter"
+      },
+      "others": {
+        "total": 1855,
+        "name": "Other"
+      }
+    }
+  },
+  "VT-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 218398,
+        "name": "Becca Balint"
+      },
+      "others": {
+        "total": 30750,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 104451,
+        "name": "Mark Coester"
+      },
+      "independent": {
+        "total": 19286,
+        "name": "Adam Ortiz"
+      }
+    }
+  },
+  "WA-01": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 132538,
+        "name": "Jeb Brewer"
+      },
+      "others": {
+        "total": 907,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 227213,
+        "name": "Suzan DelBene"
+      }
+    }
+  },
+  "WA-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 148167,
+        "name": "Cody Hart"
+      },
+      "democrat": {
+        "total": 263750,
+        "name": "Rick Larsen"
+      },
+      "others": {
+        "total": 1303,
+        "name": "Other"
+      }
+    }
+  },
+  "WA-03": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 199054,
+        "name": "Joe Kent"
+      },
+      "democrat": {
+        "total": 215177,
+        "name": "Marie Gluesenkamp Perez"
+      },
+      "others": {
+        "total": 1673,
+        "name": "Other"
+      }
+    }
+  },
+  "WA-04": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5400,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 289652,
+        "name": "Dan Newhouse"
+      }
+    }
+  },
+  "WA-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 240619,
+        "name": "Michael Baumgartner"
+      },
+      "others": {
+        "total": 593,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 156074,
+        "name": "Carmela Conroy"
+      }
+    }
+  },
+  "WA-06": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 753,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 182182,
+        "name": "Drew C. MacEwen"
+      },
+      "democrat": {
+        "total": 239687,
+        "name": "Emily Randall"
+      }
+    }
+  },
+  "WA-07": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 352286,
+        "name": "Pramila Jayapal"
+      },
+      "others": {
+        "total": 1313,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 66220,
+        "name": "Dan Alexander"
+      }
+    }
+  },
+  "WA-08": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 190675,
+        "name": "Carmen Goers"
+      },
+      "democrat": {
+        "total": 224607,
+        "name": "Kim Schrier"
+      },
+      "others": {
+        "total": 995,
+        "name": "Other"
+      }
+    }
+  },
+  "WA-09": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 182780,
+        "name": "Adam Smith"
+      },
+      "republican": {
+        "total": 90601,
+        "name": "Melissa Chaudhry"
+      },
+      "others": {
+        "total": 5917,
+        "name": "Other"
+      }
+    }
+  },
+  "WA-10": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 203732,
+        "name": "Marilyn Strickland"
+      },
+      "republican": {
+        "total": 143492,
+        "name": "Don Hewett"
+      },
+      "others": {
+        "total": 820,
+        "name": "Other"
+      }
+    }
+  },
+  "WI-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 172402,
+        "name": "Peter Barca"
+      },
+      "usgreen": {
+        "total": 8191,
+        "name": "Chester Todd"
+      },
+      "others": {
+        "total": 385,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 212515,
+        "name": "Bryan Steil"
+      }
+    }
+  },
+  "WI-02": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 320317,
+        "name": "Mark Pocan"
+      },
+      "others": {
+        "total": 583,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 136357,
+        "name": "Erik Olsen"
+      }
+    }
+  },
+  "WI-03": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 309,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 212064,
+        "name": "Derrick Van Orden"
+      },
+      "democrat": {
+        "total": 200808,
+        "name": "Rebecca Cooke"
+      }
+    }
+  },
+  "WI-04": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 8792,
+        "name": "Robert Raymond"
+      },
+      "democrat": {
+        "total": 249938,
+        "name": "Gwen Moore"
+      },
+      "others": {
+        "total": 631,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 74921,
+        "name": "Tim Rogers"
+      }
+    }
+  },
+  "WI-05": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 165653,
+        "name": "Ben Steinhoff"
+      },
+      "others": {
+        "total": 508,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 300521,
+        "name": "Scott Fitzgerald"
+      }
+    }
+  },
+  "WI-06": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 251889,
+        "name": "Glenn Grothman"
+      },
+      "others": {
+        "total": 418,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 159042,
+        "name": "John Zarbano"
+      }
+    }
+  },
+  "WI-07": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 273553,
+        "name": "Tom Tiffany"
+      },
+      "others": {
+        "total": 307,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 156524,
+        "name": "Kyle Kilbourn"
+      }
+    }
+  },
+  "WI-08": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 272,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 358592,
+        "name": "Kristin Lyerly"
+      },
+      "republican": {
+        "total": 482043,
+        "name": "Tony Wied"
+      }
+    }
+  },
+  "WV-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 90038,
+        "name": "Chris Bob Reed"
+      },
+      "others": {
+        "total": 174,
+        "name": "Jim Umberger"
+      },
+      "independent": {
+        "total": 25616,
+        "name": "Wes Holden"
+      },
+      "republican": {
+        "total": 228491,
+        "name": "Carol Miller"
+      }
+    }
+  },
+  "WV-02": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 268190,
+        "name": "Riley Moore"
+      },
+      "democrat": {
+        "total": 110775,
+        "name": "Steven Wendelin"
+      }
+    }
+  },
+  "WY-01": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 16442,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 9223,
+        "name": "Richard Brubaker"
+      },
+      "democrat": {
+        "total": 60778,
+        "name": "Kyle G. Cameron"
+      },
+      "republican": {
+        "total": 184680,
+        "name": "Harriet Hageman"
+      }
+    }
+  }
+}

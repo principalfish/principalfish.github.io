@@ -1,0 +1,1510 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "others": {
+        "total": 898,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 12190,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 1176394,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 693933,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 111025,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 1058,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 190889,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 7951,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 1675,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2911,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 893524,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 1104294,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 11856,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8254,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2352,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 572898,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 1488,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 469953,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 6745485,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 40771,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 5509826,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 75605,
+        "name": "Leonard Peltier"
+      },
+      "libertarian": {
+        "total": 50165,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 17388,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 7664,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 1101255,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 1591,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 1001732,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 857488,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 9564,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 693826,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 14524,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 3367,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "usgreen": {
+        "total": 250,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 171660,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 2153,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 586,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 389,
+        "name": "Michael Anthony Peroutka"
+      },
+      "democrat": {
+        "total": 200152,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 202970,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 1373,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 21256,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 1485,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 502,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 30
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 3583544,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 45831,
+        "name": "Ralph Nader"
+      },
+      "usgreen": {
+        "total": 3917,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 3964522,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 11996,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 18387,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 3085,
+        "name": "Ralph Nader"
+      },
+      "democrat": {
+        "total": 1366149,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 1914254,
+        "name": "George W. Bush"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 231708,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 1737,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 194191,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 1377,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 181098,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 409235,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 4270,
+        "name": "Michael Anthony Peroutka"
+      },
+      "libertarian": {
+        "total": 3844,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2891550,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 4384,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 2345946,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 32442,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 969011,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 1479438,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 1495,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 18058,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 741898,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 1141,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 751957,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 5973,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2992,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 2947,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 434993,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 736456,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 9395,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 4013,
+        "name": "Michael Badnarik"
+      },
+      "independent": {
+        "total": 2899,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 712733,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 1069439,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 8856,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2619,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 2235,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 820299,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 16581,
+        "name": "Ralph Nader"
+      },
+      "usgreen": {
+        "total": 1276,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 1102169,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 2781,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 396842,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 11744,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 330201,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 1965,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5818,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 1047,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 165824,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 211703,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 185139,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 5926,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 164377,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 918,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1334493,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 17756,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 6094,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 1024703,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 3632,
+        "name": "David Keith Cobb"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1803800,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 37524,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1071109,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 15022,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2479183,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 30446,
+        "name": "Ralph Nader"
+      },
+      "usgreen": {
+        "total": 5325,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 2313746,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 10552,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1445014,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 4408,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 1346695,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 27631,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 4639,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4936,
+        "name": "Ralph Nader"
+      },
+      "independent": {
+        "total": 1268,
+        "name": "James Harris"
+      },
+      "libertarian": {
+        "total": 1793,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 684981,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 1073,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 458094,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1259171,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 1455713,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 6649,
+        "name": "Michael Anthony Peroutka"
+      },
+      "libertarian": {
+        "total": 9831,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 173710,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 996,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 266063,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 6168,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 1733,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 1775,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8025,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2041,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 512814,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 978,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 254328,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8025,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2041,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 512814,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 978,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 254328,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8025,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2041,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 512814,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 978,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 254328,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8025,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2041,
+        "name": "Michael Badnarik"
+      },
+      "republican": {
+        "total": 512814,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 978,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 254328,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 397190,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 853,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 418690,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 4838,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 3176,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 4840,
+        "name": "Other"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 340511,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 331237,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 4479,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 1511,
+        "name": "Other"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1911430,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 4519,
+        "name": "Michael Anthony Peroutka"
+      },
+      "usgreen": {
+        "total": 1807,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 1670003,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 19418,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 4514,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 370942,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 1226,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 376930,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 4053,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 2382,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 771,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 28
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 4314280,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 2962567,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 159812,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 11607,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1525849,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 2261,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 1961166,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 11731,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 523,
+        "name": "Michael Anthony Peroutka"
+      },
+      "libertarian": {
+        "total": 851,
+        "name": "Michael Badnarik"
+      },
+      "independent": {
+        "total": 3756,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 196651,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 111052,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 17
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2741165,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 2859764,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 14676,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 12298,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 959792,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 503966,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 943163,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 866831,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 19528,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 7260,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2938095,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 6319,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 2793847,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 10144,
+        "name": "Michael Anthony Peroutka"
+      },
+      "libertarian": {
+        "total": 21185,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 259760,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 1333,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 169046,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 6088,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 907,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 661699,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 12961,
+        "name": "Ralph Nader"
+      },
+      "usgreen": {
+        "total": 1488,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 937974,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 3608,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 149244,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 232584,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 4320,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 964,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 1103,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1036477,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 1384375,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 16428,
+        "name": "Ralph Nader"
+      },
+      "others": {
+        "total": 39,
+        "name": "Other"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 40
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2832704,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 12357,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 4526917,
+        "name": "George W. Bush"
+      },
+      "libertarian": {
+        "total": 38787,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 241199,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 663742,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 19528,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 3375,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 184067,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 121180,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 4494,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 1102,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 1466,
+        "name": "Other"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1454742,
+        "name": "John Kerry"
+      },
+      "republican": {
+        "total": 1716959,
+        "name": "George W. Bush"
+      },
+      "others": {
+        "total": 15634,
+        "name": "Michael Anthony Peroutka"
+      },
+      "libertarian": {
+        "total": 11032,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1510201,
+        "name": "John Kerry"
+      },
+      "usgreen": {
+        "total": 2974,
+        "name": "David Keith Cobb"
+      },
+      "republican": {
+        "total": 1304894,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 23283,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 11955,
+        "name": "Michael Badnarik"
+      },
+      "others": {
+        "total": 5777,
+        "name": "Michael Anthony Peroutka"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 326541,
+        "name": "John Kerry"
+      },
+      "others": {
+        "total": 100,
+        "name": "Michael Anthony Peroutka"
+      },
+      "republican": {
+        "total": 423778,
+        "name": "George W. Bush"
+      },
+      "independent": {
+        "total": 4063,
+        "name": "Ralph Nader"
+      },
+      "libertarian": {
+        "total": 1405,
+        "name": "Michael Badnarik"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3868,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 6464,
+        "name": "Michael Badnarik"
+      },
+      "independent": {
+        "total": 16390,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 1478120,
+        "name": "George W. Bush"
+      },
+      "usgreen": {
+        "total": 2661,
+        "name": "David Keith Cobb"
+      },
+      "democrat": {
+        "total": 1489504,
+        "name": "John Kerry"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1544,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 1171,
+        "name": "Michael Badnarik"
+      },
+      "independent": {
+        "total": 2741,
+        "name": "Ralph Nader"
+      },
+      "republican": {
+        "total": 167629,
+        "name": "George W. Bush"
+      },
+      "democrat": {
+        "total": 70776,
+        "name": "John Kerry"
+      }
+    }
+  }
+}

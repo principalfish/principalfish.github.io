@@ -1,0 +1,1558 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8738,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 4930,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 12075,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 4319,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1462616,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 772412,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 3040,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 2641,
+        "name": "Cornel West"
+      },
+      "independent": {
+        "total": 5670,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 2342,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 184458,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 140026,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 842,
+        "name": "Claudia De La Cruz"
+      },
+      "democrat": {
+        "total": 1582860,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 1770242,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 18319,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 17898,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 5715,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 13255,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 4275,
+        "name": "Jill Stein"
+      },
+      "others": {
+        "total": 3285,
+        "name": "Peter Sonski"
+      },
+      "republican": {
+        "total": 759241,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 396905,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "others": {
+        "total": 273123,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 66662,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 167814,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 6081697,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 9276179,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 12739,
+        "name": "Cornel West"
+      },
+      "independent": {
+        "total": 35623,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 21439,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 17344,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1377441,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1728159,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "others": {
+        "total": 581,
+        "name": "Claudia De La Cruz"
+      },
+      "democrat": {
+        "total": 992053,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 736918,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 14281,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 6729,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 8448,
+        "name": "Robert F. Kennedy"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 289758,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 214351,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 6765,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 2038,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10365,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 294185,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 21076,
+        "name": "Donald Trump"
+      },
+      "independent": {
+        "total": 2778,
+        "name": "Robert F. Kennedy"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 30
+    },
+    "partyInfo": {
+      "others": {
+        "total": 25462,
+        "name": "Claudia De La Cruz"
+      },
+      "libertarian": {
+        "total": 31972,
+        "name": "Chase Oliver"
+      },
+      "democrat": {
+        "total": 4683038,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 6110125,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 43155,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "others": {
+        "total": 858,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 20684,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 18229,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 2663117,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 2548017,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 313044,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 193661,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 8411,
+        "name": "Other"
+      },
+      "usgreen": {
+        "total": 4387,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 2733,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 4462,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 15582,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 2973,
+        "name": "Jill Stein"
+      },
+      "others": {
+        "total": 1818,
+        "name": "Joel Skousen"
+      },
+      "republican": {
+        "total": 605246,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 274972,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "others": {
+        "total": 40942,
+        "name": "Jill Stein"
+      },
+      "independent": {
+        "total": 80426,
+        "name": "Robert F. Kennedy"
+      },
+      "republican": {
+        "total": 2449079,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 3062863,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 32302,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 20425,
+        "name": "Chase Oliver"
+      },
+      "republican": {
+        "total": 1720347,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1163603,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 707278,
+        "name": "Kamala Harris"
+      },
+      "independent": {
+        "total": 13546,
+        "name": "Robert F. Kennedy"
+      },
+      "republican": {
+        "total": 927019,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 18950,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 7218,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 16322,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 7614,
+        "name": "Chase Oliver"
+      },
+      "republican": {
+        "total": 758802,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 544853,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 17784,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 6422,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 8787,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1337494,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 704043,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "others": {
+        "total": 17627,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 7138,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1208505,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 766870,
+        "name": "Kamala Harris"
+      },
+      "libertarian": {
+        "total": 6835,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 23532,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 5286,
+        "name": "Chase Oliver"
+      },
+      "republican": {
+        "total": 377977,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 435652,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 261038,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 165742,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 6937,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 2815,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 5523,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 2471,
+        "name": "Chase Oliver"
+      },
+      "republican": {
+        "total": 212235,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 174614,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 22684,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 28819,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 15570,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 33134,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1035550,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1902577,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "others": {
+        "total": 72316,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 17734,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 26544,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1251308,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 2126545,
+        "name": "Kamala Harris"
+      },
+      "independent": {
+        "total": 18419,
+        "name": "Shiva Ayyadurai"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "others": {
+        "total": 34976,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 22440,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 44607,
+        "name": "Jill Stein"
+      },
+      "independent": {
+        "total": 8994,
+        "name": "Cornel West"
+      },
+      "republican": {
+        "total": 2816636,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 2736533,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 19593,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 15155,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 26886,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 16275,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1519032,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1656979,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 2536,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 2105,
+        "name": "Claudia De La Cruz"
+      },
+      "independent": {
+        "total": 7082,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 1030,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 747744,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 466668,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 23876,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 17135,
+        "name": "Jill Stein"
+      },
+      "others": {
+        "total": 1731,
+        "name": "Peter Sonski"
+      },
+      "republican": {
+        "total": 1751986,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1200599,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 4275,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 11825,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 2878,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 352079,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 231906,
+        "name": "Kamala Harris"
+      },
+      "others": {
+        "total": 21,
+        "name": "Shiva Ayyadurai"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8085,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 6399,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 2887,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 564816,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 369995,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 136153,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 177666,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 2944,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 1011,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 2420,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3089,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 2001,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 1110,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 148905,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 163541,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 70301,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 238245,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 2052,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 766,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 1978,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 22379,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 6059,
+        "name": "Chase Oliver"
+      },
+      "republican": {
+        "total": 751205,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 705197,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8911,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 418496,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 395531,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 3680,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 4425,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10777,
+        "name": "Claudia De La Cruz"
+      },
+      "independent": {
+        "total": 23479,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 10500,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 39041,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1968215,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 2220713,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 3745,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 9553,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 4611,
+        "name": "Jill Stein"
+      },
+      "others": {
+        "total": 3301,
+        "name": "Claudia De La Cruz"
+      },
+      "republican": {
+        "total": 423391,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 478802,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 28
+    },
+    "partyInfo": {
+      "others": {
+        "total": 182364,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 3578899,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 4619195,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2715375,
+        "name": "Kamala Harris"
+      },
+      "others": {
+        "total": 38456,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 2898423,
+        "name": "Donald Trump"
+      },
+      "usgreen": {
+        "total": 24762,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 22125,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 3096,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 6227,
+        "name": "Chase Oliver"
+      },
+      "republican": {
+        "total": 246505,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 112327,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 17
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 28200,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 12968,
+        "name": "Peter Sonski"
+      },
+      "independent": {
+        "total": 12805,
+        "name": "Richard Austing Duncan"
+      },
+      "republican": {
+        "total": 3180116,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 2533699,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 9198,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 21163,
+        "name": "Robert F. Kennedy"
+      },
+      "republican": {
+        "total": 1036213,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 499599,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1240600,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 919480,
+        "name": "Donald Trump"
+      },
+      "others": {
+        "total": 75352,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 9061,
+        "name": "Chase Oliver"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 19
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 33318,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 34538,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 3543308,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 3423042,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4262,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 5045,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 1617,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 2900,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 214406,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 285156,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 12669,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 15155,
+        "name": "Cornel West"
+      },
+      "usgreen": {
+        "total": 8117,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1483747,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1028452,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 2778,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 7204,
+        "name": "Robert F. Kennedy"
+      },
+      "republican": {
+        "total": 272081,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 146859,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 40812,
+        "name": "Robert F. Kennedy"
+      },
+      "republican": {
+        "total": 1966865,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1056265,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 40
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 68557,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 82701,
+        "name": "Jill Stein"
+      },
+      "others": {
+        "total": 8569,
+        "name": "Peter Sonski"
+      },
+      "republican": {
+        "total": 6393597,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 4835250,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "others": {
+        "total": 41890,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 16902,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 8222,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 883818,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 562566,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 1828,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 15871,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 119395,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 235791,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2333778,
+        "name": "Kamala Harris"
+      },
+      "republican": {
+        "total": 2074097,
+        "name": "Donald Trump"
+      },
+      "independent": {
+        "total": 17383,
+        "name": "Cornel West"
+      },
+      "usgreen": {
+        "total": 34880,
+        "name": "Jill Stein"
+      },
+      "libertarian": {
+        "total": 19802,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 23348,
+        "name": "Other"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "others": {
+        "total": 43195,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 16428,
+        "name": "Chase Oliver"
+      },
+      "independent": {
+        "total": 58191,
+        "name": "Robert F. Kennedy"
+      },
+      "usgreen": {
+        "total": 29754,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 1530923,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 2245849,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 8947,
+        "name": "Robert F. Kennedy"
+      },
+      "libertarian": {
+        "total": 3047,
+        "name": "Chase Oliver"
+      },
+      "others": {
+        "total": 2725,
+        "name": "Jill Stein"
+      },
+      "republican": {
+        "total": 533556,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 214309,
+        "name": "Kamala Harris"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "others": {
+        "total": 34277,
+        "name": "Robert F. Kennedy"
+      },
+      "republican": {
+        "total": 1697626,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 1668229,
+        "name": "Kamala Harris"
+      },
+      "libertarian": {
+        "total": 10511,
+        "name": "Chase Oliver"
+      },
+      "usgreen": {
+        "total": 12275,
+        "name": "Jill Stein"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "others": {
+        "total": 4770,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 4193,
+        "name": "Chase Oliver"
+      },
+      "republican": {
+        "total": 192633,
+        "name": "Donald Trump"
+      },
+      "democrat": {
+        "total": 69527,
+        "name": "Kamala Harris"
+      }
+    }
+  }
+}

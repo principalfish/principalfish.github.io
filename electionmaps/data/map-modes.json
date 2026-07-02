@@ -132,12 +132,25 @@
       "parliament": "westminster"
     }
   ],
-  "misc": {},
+  "misc": {
+    "title": "UK Election Maps",
+    "parliamentTabs": [
+      {
+        "parliament": "westminster",
+        "label": "Westminster"
+      },
+      {
+        "parliament": "holyrood",
+        "label": "Holyrood"
+      }
+    ]
+  },
   "parliamentFeatures": {
     "westminster": {
       "features": [
         "predict",
-        "pollTracker"
+        "pollTracker",
+        "postcode"
       ],
       "predictAnchorElectionId": "current-prediction",
       "predictBaselineElectionId": "2024-general",
@@ -238,7 +251,8 @@
     },
     "holyrood": {
       "features": [
-        "predict"
+        "predict",
+        "postcode"
       ],
       "predictAnchorElectionId": "current-holyrood-prediction",
       "predictBaselineElectionId": "2026-holyrood",
@@ -346,7 +360,10 @@
     },
     "2": {
       "name": "westminster-2024",
-      "postcodeSupported": true,
+      "postcode": {
+        "endpoint": "https://api.postcodes.io/postcodes/",
+        "resultProperty": "parliamentary_constituency_2024"
+      },
       "regions": [
         {
           "id": 16,
@@ -452,7 +469,34 @@
     },
     "12": {
       "name": "holyrood-2026",
-      "postcodeSupported": true,
+      "postcode": {
+        "endpoint": "https://api.postcodes.io/scotland/postcodes/",
+        "resultProperty": "scottish_parliamentary_constituency",
+        "boundaryWarning": true,
+        "seatRenames": {
+          "Aberdeen South and North Kincardine": "Aberdeen Deeside and North Kincardine",
+          "Airdrie and Shotts": "Airdrie",
+          "East Lothian": "East Lothian Coast and Lammermuirs",
+          "Edinburgh Eastern": "Edinburgh Eastern, Musselburgh and Tranent",
+          "Edinburgh Northern and Leith": "Edinburgh North Eastern and Leith",
+          "Edinburgh Pentlands": "Edinburgh South Western",
+          "Edinburgh Western": "Edinburgh North Western",
+          "Falkirk East": "Falkirk East and Linlithgow",
+          "Glasgow Cathcart": "Glasgow Cathcart and Pollok",
+          "Glasgow Kelvin": "Glasgow Kelvin and Maryhill",
+          "Glasgow Maryhill and Springburn": "Glasgow Kelvin and Maryhill",
+          "Glasgow Pollok": "Glasgow Cathcart and Pollok",
+          "Glasgow Provan": "Glasgow Easterhouse and Springburn",
+          "Glasgow Shettleston": "Glasgow Baillieston and Shettleston",
+          "Greenock and Inverclyde": "Inverclyde",
+          "Linlithgow": "Falkirk East and Linlithgow",
+          "Midlothian North and Musselburgh": "Midlothian North",
+          "North East Fife": "Fife North East",
+          "Renfrewshire North and West": "Renfrewshire North and Cardonald",
+          "Renfrewshire South": "Renfrewshire West and Levern Valley",
+          "Rutherglen": "Rutherglen and Cambuslang"
+        }
+      },
       "listSeatPattern": "\\bList\\s+\\d+$",
       "voteTotalsViews": [
         {
@@ -507,6 +551,15 @@
       ]
     }
   },
+  "partyKeyAliases": {
+    "ukindependenceparty": "ukip",
+    "reformuk": "reform",
+    "liberaldemocrats": "libdems",
+    "democraticunionistparty": "dup",
+    "ulsterunionistparty": "uu",
+    "uup": "uu",
+    "scottishnationalparty": "snp"
+  },
   "files": {
     "elections": {
       "mapsById": {
@@ -558,6 +611,12 @@
       "colour": "#0087DC"
     },
     {
+      "id": 20,
+      "key": "democrat",
+      "name": "Democratic",
+      "colour": "#1375E1"
+    },
+    {
       "id": 9,
       "key": "dup",
       "name": "Democratic Unionist Party",
@@ -568,6 +627,12 @@
       "key": "green",
       "name": "Green",
       "colour": "#6AB023"
+    },
+    {
+      "id": 22,
+      "key": "independent",
+      "name": "Independent",
+      "colour": "#9B59B6"
     },
     {
       "id": 1,
@@ -586,6 +651,12 @@
       "key": "libdems",
       "name": "Liberal Democrats",
       "colour": "#FAA61A"
+    },
+    {
+      "id": 23,
+      "key": "libertarian",
+      "name": "Libertarian",
+      "colour": "#FED105"
     },
     {
       "id": 7,
@@ -616,6 +687,12 @@
       "key": "remain",
       "name": "Remain",
       "colour": "#F4A11D"
+    },
+    {
+      "id": 21,
+      "key": "republican",
+      "name": "Republican",
+      "colour": "#E81B23"
     },
     {
       "id": 17,
@@ -652,6 +729,12 @@
       "key": "uu",
       "name": "Ulster Unionist Party",
       "colour": "#48A5EE"
+    },
+    {
+      "id": 24,
+      "key": "usgreen",
+      "name": "US Green",
+      "colour": "#17AA5C"
     }
   ]
 }

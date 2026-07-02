@@ -1,0 +1,709 @@
+{
+  "Arizona": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 850,
+        "name": "Sarah Williams"
+      },
+      "usgreen": {
+        "total": 75868,
+        "name": "Eduardo Quintana"
+      },
+      "democrat": {
+        "total": 1676335,
+        "name": "Ruben Gallego"
+      },
+      "republican": {
+        "total": 1595761,
+        "name": "Kari Lake"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 6312594,
+        "name": "Steve Garvey"
+      },
+      "democrat": {
+        "total": 9036252,
+        "name": "Adam B. Schiff"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 14886,
+        "name": "Robert Finley Hyde"
+      },
+      "usgreen": {
+        "total": 14422,
+        "name": "Justin Paglino"
+      },
+      "democrat": {
+        "total": 1000695,
+        "name": "Christopher S. Murphy"
+      },
+      "republican": {
+        "total": 678256,
+        "name": "Matthew M. Corey"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 19555,
+        "name": "Michael \"Dr. Mike\" Katz"
+      },
+      "republican": {
+        "total": 197753,
+        "name": "Eric Hansen"
+      },
+      "democrat": {
+        "total": 283298,
+        "name": "Lisa Blunt Rochester"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 119282,
+        "name": "Ben Everidge"
+      },
+      "libertarian": {
+        "total": 57363,
+        "name": "Feena Bonoan"
+      },
+      "democrat": {
+        "total": 4603077,
+        "name": "Debbie Mucarsel-Powell"
+      },
+      "republican": {
+        "total": 5977706,
+        "name": "Rick Scott"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 29697,
+        "name": "Other"
+      },
+      "usgreen": {
+        "total": 8270,
+        "name": "Emma Jane Avila Pohlman"
+      },
+      "republican": {
+        "total": 160075,
+        "name": "Bob McDermott"
+      },
+      "democrat": {
+        "total": 324194,
+        "name": "Mazie K. Hirono"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 187,
+        "name": "Phillip Beachy"
+      },
+      "libertarian": {
+        "total": 73233,
+        "name": "Andrew Horning"
+      },
+      "democrat": {
+        "total": 1097061,
+        "name": "Valerie McCray"
+      },
+      "republican": {
+        "total": 1659416,
+        "name": "Jim Banks"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "independent"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 21665,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 284338,
+        "name": "Demi Kouzounas"
+      },
+      "independent": {
+        "total": 447553,
+        "name": "Angus S. King Jr."
+      },
+      "democrat": {
+        "total": 88891,
+        "name": "David Allen Costello"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 6726,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 69396,
+        "name": "Mike Scott"
+      },
+      "republican": {
+        "total": 1294344,
+        "name": "Larry Hogan"
+      },
+      "democrat": {
+        "total": 1650912,
+        "name": "Angela Alsobrooks"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 105728,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1365445,
+        "name": "John Deaton"
+      },
+      "democrat": {
+        "total": 2041693,
+        "name": "Elizabeth Ann Warren"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 60146,
+        "name": "Dave Stein"
+      },
+      "usgreen": {
+        "total": 53978,
+        "name": "Douglas P. Marsh"
+      },
+      "libertarian": {
+        "total": 56697,
+        "name": "Joseph Solis-Mullen"
+      },
+      "republican": {
+        "total": 2693680,
+        "name": "Mike Rogers"
+      },
+      "democrat": {
+        "total": 2712686,
+        "name": "Elissa Slotkin"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 49955,
+        "name": "Joyce Lynne Lacey"
+      },
+      "democrat": {
+        "total": 1792441,
+        "name": "Amy Klobuchar"
+      },
+      "libertarian": {
+        "total": 55215,
+        "name": "Rebecca Whiting"
+      },
+      "republican": {
+        "total": 1291712,
+        "name": "Royce White"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 763420,
+        "name": "Roger F. Wicker"
+      },
+      "democrat": {
+        "total": 451981,
+        "name": "Ty Pinkins"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 21130,
+        "name": "Jared Young"
+      },
+      "usgreen": {
+        "total": 20123,
+        "name": "Nathan Kline"
+      },
+      "libertarian": {
+        "total": 35671,
+        "name": "W.C. Young"
+      },
+      "democrat": {
+        "total": 1243728,
+        "name": "Lucas Kunce"
+      },
+      "republican": {
+        "total": 1651907,
+        "name": "Josh Hawley"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 319682,
+        "name": "Tim Sheehy"
+      },
+      "libertarian": {
+        "total": 7272,
+        "name": "Sid Daoud"
+      },
+      "usgreen": {
+        "total": 4003,
+        "name": "Robert Barb"
+      },
+      "democrat": {
+        "total": 276305,
+        "name": "Jon Tester"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2719,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 436493,
+        "name": "Dan Osborn"
+      },
+      "republican": {
+        "total": 499124,
+        "name": "Deb Fischer"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "libertarian": {
+        "total": 20881,
+        "name": "Chris Cunningham"
+      },
+      "others": {
+        "total": 65696,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 677046,
+        "name": "Sam Brown"
+      },
+      "democrat": {
+        "total": 701105,
+        "name": "Jacky S. Rosen"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 27030,
+        "name": "Patricia G. Mooneyham"
+      },
+      "libertarian": {
+        "total": 24242,
+        "name": "Kenneth R. Kaplan"
+      },
+      "usgreen": {
+        "total": 45443,
+        "name": "Christina Khalil"
+      },
+      "republican": {
+        "total": 1773589,
+        "name": "Curtis Bashaw"
+      },
+      "democrat": {
+        "total": 2161491,
+        "name": "Andy Kim"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 405978,
+        "name": "Nella Louise Domenici"
+      },
+      "democrat": {
+        "total": 497333,
+        "name": "Martin Heinrich"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 423014,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 4711298,
+        "name": "Kirsten E. Gillibrand"
+      },
+      "republican": {
+        "total": 3246114,
+        "name": "Michael D. Sapraicone"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1156,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 121602,
+        "name": "Katrina Christiansen"
+      },
+      "republican": {
+        "total": 241569,
+        "name": "Kevin Cramer"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 640,
+        "name": "Tariq K. Shabazz"
+      },
+      "republican": {
+        "total": 2857383,
+        "name": "Bernie Moreno"
+      },
+      "libertarian": {
+        "total": 195648,
+        "name": "Donald C. Kissick"
+      },
+      "democrat": {
+        "total": 2650949,
+        "name": "Sherrod Brown"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 23621,
+        "name": "Marty Selker"
+      },
+      "usgreen": {
+        "total": 66388,
+        "name": "Leila Hazou"
+      },
+      "libertarian": {
+        "total": 89653,
+        "name": "John C. Thomas"
+      },
+      "republican": {
+        "total": 3399295,
+        "name": "Dave McCormick"
+      },
+      "democrat": {
+        "total": 3384180,
+        "name": "Robert P. Casey Jr."
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 1244,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 196039,
+        "name": "Patricia Morgan"
+      },
+      "democrat": {
+        "total": 294665,
+        "name": "Sheldon Whitehouse"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "independent": {
+        "total": 61404,
+        "name": "Tharon Chandler"
+      },
+      "democrat": {
+        "total": 1027461,
+        "name": "Gloria Johnson"
+      },
+      "republican": {
+        "total": 1918743,
+        "name": "Marsha Blackburn"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2825,
+        "name": "Analisa Roche"
+      },
+      "libertarian": {
+        "total": 267039,
+        "name": "Ted Brown"
+      },
+      "democrat": {
+        "total": 5031249,
+        "name": "Colin Allred"
+      },
+      "republican": {
+        "total": 5990741,
+        "name": "Ted Cruz"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 93172,
+        "name": "Carlton E. Bowen"
+      },
+      "democrat": {
+        "total": 464515,
+        "name": "Caroline Gleich"
+      },
+      "republican": {
+        "total": 914700,
+        "name": "John Curtis"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "independent"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 14473,
+        "name": "Other"
+      },
+      "libertarian": {
+        "total": 4530,
+        "name": "Matt Hill"
+      },
+      "independent": {
+        "total": 237370,
+        "name": "Bernie Sanders"
+      },
+      "republican": {
+        "total": 116512,
+        "name": "Gerald Malloy"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8505,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 2415429,
+        "name": "Timothy Michael Kaine"
+      },
+      "republican": {
+        "total": 2018992,
+        "name": "Hung Cao"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 10627,
+        "name": "Other"
+      },
+      "republican": {
+        "total": 1549187,
+        "name": "Raul Garcia"
+      },
+      "democrat": {
+        "total": 2252577,
+        "name": "Maria Cantwell"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 15,
+        "name": "Tim Stevenski"
+      },
+      "libertarian": {
+        "total": 26075,
+        "name": "David Moran"
+      },
+      "democrat": {
+        "total": 207548,
+        "name": "Glenn Elliott"
+      },
+      "republican": {
+        "total": 514079,
+        "name": "Jim Justice"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 2948,
+        "name": "Other"
+      },
+      "independent": {
+        "total": 71066,
+        "name": "Phil Anderson"
+      },
+      "republican": {
+        "total": 1643996,
+        "name": "Eric D. Hovde"
+      },
+      "democrat": {
+        "total": 1672777,
+        "name": "Tammy Baldwin"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican"
+    },
+    "partyInfo": {
+      "others": {
+        "total": 8978,
+        "name": "Other"
+      },
+      "democrat": {
+        "total": 63727,
+        "name": "Scott D. Morrow"
+      },
+      "republican": {
+        "total": 198418,
+        "name": "John Barrasso"
+      }
+    }
+  }
+}

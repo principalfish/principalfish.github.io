@@ -410,6 +410,24 @@ describe('ElectionSummary.summarize electoral-vote tally', () => {
     expect(findParty(data, 'democrat').seats).toBe(54);
     expect(data.totalSeats).toBe(54);
   });
+
+  it('excludes ME/NE congressional-district votes (they repeat the statewide total) but keeps their EV', () => {
+    // Maine's statewide unit carries the full state popular vote; CD-1/CD-2 repeat it. All
+    // three carry EV (2 + 1 + 1). The national vote must count Maine once, the EV all three.
+    const seats = [
+      { seat: 'Maine', region: 'newengland', winner: 'democrat', votes: { democrat: 100, republican: 80 }, ev: 2 },
+      { seat: 'Maine CD-1', region: 'newengland', winner: 'democrat', votes: { democrat: 100, republican: 80 }, ev: 1 },
+      { seat: 'Maine CD-2', region: 'newengland', winner: 'democrat', votes: { democrat: 100, republican: 80 }, ev: 1 },
+    ];
+    const data = ElectionSummary.summarize(seats, 'all');
+    // Votes counted once (statewide only), not 3x.
+    expect(findParty(data, 'democrat').votes).toBe(100);
+    expect(findParty(data, 'republican').votes).toBe(80);
+    expect(data.totalVotes).toBe(180);
+    // But every unit's EV still tallies to the winner (2 + 1 + 1).
+    expect(findParty(data, 'democrat').seats).toBe(4);
+    expect(data.totalSeats).toBe(4);
+  });
 });
 
 // ─── ElectionSummary subtitle: EV margin + hideMajority ───────────────────────

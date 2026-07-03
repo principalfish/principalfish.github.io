@@ -734,11 +734,18 @@ export class ElectionSummary {
       if (!partyStats.has(winner)) partyStats.set(winner, { seats: 0, votes: 0 });
       partyStats.get(winner).seats += weightOf(seat);
 
+      // Presidential Maine/Nebraska congressional-district units ("Maine CD-1", "Nebraska
+      // CD-2") repeat their statewide unit's popular vote — the statewide row already carries
+      // the full state total — so their EV is counted above but their VOTES are excluded from
+      // the national tally. Without this, Maine is counted 2-3x and Nebraska up to 4x. Only
+      // the presidential map is EV-tallied and only its ME/NE units use the " CD-N" suffix.
+      const isEvSubunit = evTally && / CD-\d/.test(seat.seat || '');
+
       // Vote accumulation gate. List seats are excluded from votes in 'all' mode because
       // they're a separate ballot — combining them with constituency votes would
       // double-count the electorate. In 'constituency' and 'list' modes the filter above
       // has already restricted the seat set, so includeVotes is true for every survivor.
-      const includeVotes = mode !== 'all' || !isList;
+      const includeVotes = (mode !== 'all' || !isList) && !isEvSubunit;
       if (includeVotes) {
         Object.entries(seat.votes || {}).forEach(([party, votes]) => {
           // Same 'other' → 'others' fold as for winners, applied per voter party.

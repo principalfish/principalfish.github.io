@@ -1269,6 +1269,35 @@ a {
   display: block;
 }
 
+/* Compact two-party trend chart appended inside the seat popup (US presidential). */
+.maps-state-trend-wrap {
+  margin-top: 0.5rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.12);
+  padding-top: 0.45rem;
+}
+
+.maps-state-trend-title {
+  margin-bottom: 0.2rem;
+  color: #334155;
+  font: 700 0.72rem/1.2 "DM Sans", "Segoe UI", sans-serif;
+}
+
+.maps-state-trend-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.maps-state-trend-grid {
+  stroke: rgba(15, 23, 42, 0.1);
+  stroke-width: 1;
+}
+
+.maps-state-trend-axis {
+  fill: #334155;
+  font: 700 0.6rem/1 "DM Sans", "Segoe UI", sans-serif;
+}
+
 .maps-polltracker-grid-line {
   stroke: rgba(15, 23, 42, 0.1);
   stroke-width: 1;

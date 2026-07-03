@@ -5,7 +5,7 @@ import {
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
 import { manifest, state, page, seatComparisonHidden } from './state.js';
-import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
+import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
@@ -1145,6 +1145,33 @@ const seatPopupList = document.getElementById('mapsSeatPopupList');
 // after a predict projection swaps in new seat data.
 let openSeatName = null;
 
+// One-shot cache for a per-unit two-party trend bundle (the seat-trends artifact). Keyed by
+// path so it stays correct if a future parliament ships its own trend file. The fetch fires
+// lazily on the first seat-popup open for a trends-enabled parliament, never at initial load.
+let stateTrendsPath = null;
+let stateTrendsPromise = null;
+
+/**
+ * Lazily fetches (and memoises) the seat-trends bundle for `path`, resolving to its
+ * `{ unitName: [{year, dem, rep}, ...] }` map. Returns `{}` when there is no path or the
+ * fetch fails, so a missing artifact simply yields no chart rather than throwing.
+ * @param {string|undefined} path - Relative data path from the manifest, or nullish.
+ * @returns {Promise<Record<string, Array<{year:number, dem:number, rep:number}>>>}
+ */
+function loadStateTrends(path) {
+  if (stateTrendsPromise && stateTrendsPath === path) return stateTrendsPromise;
+  stateTrendsPath = path;
+  if (!path) {
+    stateTrendsPromise = Promise.resolve({});
+    return stateTrendsPromise;
+  }
+  const base = page.dataBase || 'data';
+  stateTrendsPromise = fetchJson(`${base}/${path}`)
+    .then((payload) => payload?.units ?? payload ?? {})
+    .catch(() => ({}));
+  return stateTrendsPromise;
+}
+
 /**
  * Creates a .maps-popup-row element with the party colour bar, label, and injected values HTML.
  * CSS custom properties --maps-popup-bar-width and --maps-popup-bar-colour drive the bar.
@@ -1188,6 +1215,67 @@ function renderPopupRows(rows, getValuesHtml, barCap = 75) {
     // present, overrides the party label (e.g. a candidate name in the seat popup).
     seatPopupList.appendChild(buildPopupRow(row.party, barWidth, getValuesHtml(row), row.label));
   });
+}
+
+/**
+ * Appends a compact two-line (Dem/Rep) two-party-share chart to seatPopupList. The x-axis is
+ * data-driven from the years present in `series`, so extending the artifact to earlier elections
+ * needs no change here. Idempotent: removes any prior chart first, so re-renders (e.g. a predict
+ * refresh) never stack duplicates. No-op for an empty series.
+ * @param {Array<{year:number, dem:number, rep:number}>} series - Ascending by year.
+ * @returns {void}
+ */
+function renderStateTrendChart(series) {
+  seatPopupList.querySelector('.maps-state-trend-wrap')?.remove();
+  if (!series?.length) return;
+
+  const width = 428;
+  const height = 132;
+  const margin = { top: 22, right: 10, bottom: 20, left: 30 };
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+
+  const x = d3.scalePoint().domain(series.map((d) => d.year)).range([0, innerW]).padding(0.5);
+  const y = d3.scaleLinear().domain([0, 100]).range([innerH, 0]);
+
+  const svg = d3.create('svg')
+    .attr('viewBox', `0 0 ${width} ${height}`)
+    .attr('class', 'maps-state-trend-svg');
+  const plot = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Reference gridlines + y labels at 0 / 50 (crossover) / 100.
+  [0, 50, 100].forEach((tick) => {
+    plot.append('line').attr('class', 'maps-state-trend-grid')
+      .attr('x1', 0).attr('x2', innerW).attr('y1', y(tick)).attr('y2', y(tick));
+    plot.append('text').attr('class', 'maps-state-trend-axis')
+      .attr('x', -6).attr('y', y(tick)).attr('dy', '0.32em').attr('text-anchor', 'end')
+      .text(tick);
+  });
+  // X-axis year labels, abbreviated ('00', '04', … '24').
+  series.forEach((d) => {
+    plot.append('text').attr('class', 'maps-state-trend-axis')
+      .attr('x', x(d.year)).attr('y', innerH + 14).attr('text-anchor', 'middle')
+      .text(String(d.year).slice(-2));
+  });
+
+  const drawLine = (key, colour) => {
+    plot.append('path')
+      .attr('d', d3.line().x((d) => x(d.year)).y((d) => y(d[key]))(series))
+      .attr('fill', 'none').attr('stroke', colour).attr('stroke-width', 2);
+    plot.selectAll(null).data(series).enter().append('circle')
+      .attr('cx', (d) => x(d.year)).attr('cy', (d) => y(d[key]))
+      .attr('r', 2.2).attr('fill', colour);
+  };
+  // Colours come from the manifest (single source of truth) — series keys are dem/rep,
+  // but the manifest party keys are democrat/republican.
+  drawLine('dem', manifest.colourParty('democrat'));
+  drawLine('rep', manifest.colourParty('republican'));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'maps-state-trend-wrap';
+  wrap.innerHTML = '<div class="maps-state-trend-title">Two-party vote share</div>';
+  wrap.appendChild(svg.node());
+  seatPopupList.appendChild(wrap);
 }
 
 /**
@@ -1342,6 +1430,18 @@ function renderSeatPopup(seatName) {
   });
 
   seatPopup.hidden = false;
+
+  // When this parliament ships a seat-trends bundle, lazily fetch it and append the trend chart.
+  // Gated purely by the manifest flag (no parliament literal), so any parliament can opt in.
+  const trendConfig = manifest.parliamentConfig(state.currentParliament);
+  if (trendConfig.seatTrendsAvailable) {
+    const requestedSeat = seatName;
+    loadStateTrends(trendConfig.seatTrendsDataPath).then((trends) => {
+      // Bail if the popup was closed or switched to another seat while the fetch was in flight.
+      if (openSeatName !== requestedSeat || seatPopup.hidden) return;
+      renderStateTrendChart(buildStateTrendSeries(trends?.[seat.seat] ?? trends?.[seatName]));
+    });
+  }
 }
 
 const seatPopupClose = document.getElementById('mapsSeatPopupClose');

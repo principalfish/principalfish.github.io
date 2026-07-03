@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,8 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
 from db import Database
-from models import Election, ElectionType
+from models import Election, ElectionType, Party
 from export_elections import (
+    DEM_PARTY_ID,
+    REP_PARTY_ID,
     _export_page,
     assign_comparison_elections,
     float_model_entries_first,
@@ -343,3 +346,117 @@ class TestMissingPrebuiltMapFails:
                 )
         # The failure must happen before any results are written for the broken map.
         assert not (output_root / "results").exists()
+
+
+class TestStateTrendsExport:
+    """A full presidential export accumulates a per-state two-party trend artifact.
+
+    Each us_presidential seat's Dem/Rep totals become a per-year two-party share, and a
+    full (non-dry-run) export writes results/us-president-trends-by-state.json with the
+    per-unit series sorted oldest-first regardless of the input election order.
+    """
+
+    # Two-party splits per unit (dem, rep) — chosen so shares are exact 2dp values.
+    _UNITS: dict[str, tuple[int, int]] = {
+        "California": (60, 40),
+        "Texas": (45, 55),
+        "Maine CD-1": (64, 36),
+    }
+
+    @classmethod
+    def _seed_presidential_page(cls, db: Database, tmp_path: Path) -> Path:
+        """Seed a us_presidential map (3 units, 2020 + 2024 elections) and the pre-built map.
+
+        Returns the page output root; the dummy TopoJSON is pre-created so the export does
+        not raise FileNotFoundError on the pre-built-map check.
+        """
+        us_map = db.add_map("us-president", parliament="us_presidential")
+        with db.session() as s:
+            s.add(Party(id=DEM_PARTY_ID, name="Democratic", colour="#1375E1"))
+            s.add(Party(id=REP_PARTY_ID, name="Republican", colour="#E81B23"))
+
+        region = db.add_region(us_map.id, "United States")
+        seat_ids: dict[str, int] = {}
+        for name in cls._UNITS:
+            seat = db.add_seat(us_map.id, name, region_id=region.id, electoral_votes=3)
+            seat_ids[name] = seat.id
+
+        # Add 2020 and 2024; the export loads them 2024-first (descending) to prove the sort.
+        for year in (2020, 2024):
+            election = db.add_election(
+                us_map.id, year, f"{year} US Presidential Election", ElectionType.us_presidential
+            )
+            for name, (dem, rep) in cls._UNITS.items():
+                db.add_vote(election.id, seat_ids[name], party_id=DEM_PARTY_ID, vote_total=dem)
+                db.add_vote(election.id, seat_ids[name], party_id=REP_PARTY_ID, vote_total=rep)
+
+        output_root = tmp_path / "uselectionmaps" / "data"
+        (output_root / "maps").mkdir(parents=True)
+        (output_root / "maps" / f"map-{us_map.id}.topo.json").write_text("{}", encoding="utf-8")
+        return output_root
+
+    def test_full_export_writes_sorted_trend_artifact(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed_presidential_page(db, tmp_path)
+        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+        with db.session() as session:
+            # DESCENDING year order (2024 before 2020) — the artifact must still sort ascending.
+            elections = session.execute(
+                select(Election)
+                .where(Election.type == ElectionType.us_presidential)
+                .options(joinedload(Election.map))
+                .order_by(Election.year.desc())
+            ).scalars().all()
+            _export_page(
+                session=session,
+                elections=list(elections),
+                output_root=output_root,
+                parliaments={"us_presidential"},
+                args=args,
+                manifest_parties=[],
+                manifest_regions_by_map_id={},
+                has_electorate=True,
+                has_electoral_votes=True,
+                single_election_mode=False,
+            )
+
+        trends_path = output_root / "results" / "us-president-trends-by-state.json"
+        assert trends_path.exists()
+        data = json.loads(trends_path.read_text(encoding="utf-8"))
+        assert data["schema"] == "pf-state-trends-v1"
+
+        units = data["units"]
+        assert set(units.keys()) == set(self._UNITS.keys())
+        for series in units.values():
+            assert [entry["year"] for entry in series] == [2020, 2024]  # ascending despite reversed input
+            for entry in series:
+                assert isinstance(entry["year"], int)  # JSON 2020, not 2020.0
+                assert entry["dem"] + entry["rep"] == pytest.approx(100.0)
+
+        california = units["California"]
+        assert california[0]["dem"] == 60.0
+        assert california[0]["rep"] == 40.0
+
+    def test_dry_run_writes_no_trend_artifact(self, db: Database, tmp_path: Path) -> None:
+        output_root = self._seed_presidential_page(db, tmp_path)
+        args = argparse.Namespace(dry_run=True, output_file=None, legacy_files_dir=tmp_path)
+        with db.session() as session:
+            elections = session.execute(
+                select(Election)
+                .where(Election.type == ElectionType.us_presidential)
+                .options(joinedload(Election.map))
+                .order_by(Election.year.desc())
+            ).scalars().all()
+            _export_page(
+                session=session,
+                elections=list(elections),
+                output_root=output_root,
+                parliaments={"us_presidential"},
+                args=args,
+                manifest_parties=[],
+                manifest_regions_by_map_id={},
+                has_electorate=True,
+                has_electoral_votes=True,
+                single_election_mode=False,
+            )
+
+        assert not (output_root / "results" / "us-president-trends-by-state.json").exists()

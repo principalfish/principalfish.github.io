@@ -2,6 +2,15 @@
   "defaultElection": "2024-us-president",
   "elections": [
     {
+      "id": "current-us-house",
+      "name": "2026 Prediction",
+      "type": "us_house_model",
+      "mapId": 21,
+      "parliament": "us_house",
+      "model": true,
+      "comparisonElectionId": "2024-us-house"
+    },
+    {
       "id": "2024-us-house",
       "name": "2024 Election",
       "type": "us_house",
@@ -15,6 +24,15 @@
       "type": "us_house",
       "mapId": 21,
       "parliament": "us_house"
+    },
+    {
+      "id": "current-us-president",
+      "name": "2028 Prediction",
+      "type": "us_presidential_model",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "model": true,
+      "comparisonElectionId": "2024-us-president"
     },
     {
       "id": "2024-us-president",
@@ -31,6 +49,15 @@
       "mapId": 22,
       "parliament": "us_presidential",
       "comparisonElectionId": "2016-us-president"
+    },
+    {
+      "id": "current-us-senate",
+      "name": "2026 Prediction",
+      "type": "us_senate_model",
+      "mapId": 23,
+      "parliament": "us_senate",
+      "model": true,
+      "comparisonElectionId": "2020-us-senate"
     },
     {
       "id": "current-senate",
@@ -124,7 +151,7 @@
       "features": [
         "predict"
       ],
-      "predictAnchorElectionId": "2024-us-house",
+      "predictAnchorElectionId": "current-us-house",
       "predictBaselineElectionId": "2024-us-house",
       "nextElectionYear": 2026,
       "nextElectionLabel": "US House election",
@@ -156,7 +183,7 @@
       "features": [
         "predict"
       ],
-      "predictAnchorElectionId": "2024-us-president",
+      "predictAnchorElectionId": "current-us-president",
       "predictBaselineElectionId": "2024-us-president",
       "nextElectionYear": 2028,
       "nextElectionLabel": "US presidential election",
@@ -188,7 +215,7 @@
       "features": [
         "predict"
       ],
-      "predictAnchorElectionId": "current-senate",
+      "predictAnchorElectionId": "current-us-senate",
       "predictBaselineElectionId": "2020-us-senate",
       "nextElectionYear": 2026,
       "nextElectionLabel": "US Senate election",
@@ -233,7 +260,6 @@
       "name": "us-house-2024",
       "projection": "albersUsa",
       "postcodeSupported": false,
-      "seatComparison": false,
       "regions": [
         {
           "id": 216,
@@ -377,6 +403,9 @@
         "23": "maps/map-23.topo.json"
       },
       "electionsById": {
+        "current-us-house": "results/us-house-forecast.json",
+        "current-us-president": "results/us-president-forecast.json",
+        "current-us-senate": "results/us-senate-forecast.json",
         "2024-us-house": "results/us-house-2024.json",
         "2024-us-president": "results/us-president-2024.json",
         "2024-us-senate": "results/us-senate-2024.json",
@@ -392,7 +421,11 @@
         "current-senate": "results/senate-current.json"
       }
     },
-    "meta": {}
+    "meta": {
+      "us_house": "results/us-house-trends_meta.json",
+      "us_presidential": "results/us-president-trends_meta.json",
+      "us_senate": "results/us-senate-trends_meta.json"
+    }
   },
   "parties": [
     {

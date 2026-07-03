@@ -17,6 +17,17 @@ from scripts.export.naming import party_key_for_party
 # the preceding cycle would compare unrelated seats. See ``assign_comparison_elections``.
 NO_AUTO_COMPARISON_TYPES: frozenset[str] = frozenset({ElectionType.us_senate.value})
 
+# Each US forecast entry compares against the same baseline its model swings from
+# (``models/us/run_us_*_model.py``), so gains / comparison columns read against the
+# result the projection actually moved. The Senate forecast projects the 2026
+# Class-2 field, last contested in 2020 — hence 2020, not the latest Senate cycle.
+# Bump alongside the model baselines when the cycles roll.
+US_MODEL_COMPARISON_IDS: dict[str, str] = {
+    ElectionType.us_house_model.value: "2024-us-house",
+    ElectionType.us_presidential_model.value: "2024-us-president",
+    ElectionType.us_senate_model.value: "2020-us-senate",
+}
+
 
 def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, Any]]:
     """Build the ``settings.parties`` list for the elections manifest.
@@ -150,6 +161,9 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
     - Entries that already have ``comparisonElectionId`` set are skipped.
     - ``model_uns`` entries compare against the most recent UK general
       election in the list.
+    - US forecast entries (``us_*_model``) compare against their model's
+      baseline election via ``US_MODEL_COMPARISON_IDS`` (when present in the
+      list).
     - All other entries compare against the next entry in the list with the
       same ``parliament``, ``mapId`` **and** ``type`` (i.e. the chronologically
       preceding election of the same kind on the same boundaries).  Matching
@@ -177,6 +191,7 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
         (entry["id"] for entry in manifest_entries if entry.get("type") == ElectionType.uk_general.value),
         None,
     )
+    present_ids = {entry.get("id") for entry in manifest_entries}
 
     for index, entry in enumerate(manifest_entries):
         # Skip entries that already have a comparison set (e.g. Current Parliament)
@@ -192,6 +207,11 @@ def assign_comparison_elections(manifest_entries: list[dict[str, Any]]) -> None:
 
         if entry.get("type") == ElectionType.model_uns.value:
             comparison_id = latest_general_id
+        elif entry.get("type") in US_MODEL_COMPARISON_IDS:
+            # US forecasts compare against their model's baseline; only when that
+            # baseline is actually exported, so no dangling reference is written.
+            candidate = US_MODEL_COMPARISON_IDS[str(entry.get("type"))]
+            comparison_id = candidate if candidate in present_ids else None
         else:
             parliament = entry.get("parliament")
             map_id = entry.get("mapId")
@@ -262,6 +282,48 @@ def reorder_manifest_entries(
         return (end, 0, built_pos)
 
     return [entry for _, entry in sorted(enumerate(entries), key=sort_key)]
+
+
+def float_model_entries_first(manifest_entries: list[dict[str, Any]]) -> None:
+    """Move each parliament's forecast (``model: true``) entries to the front of its block.
+
+    The election selector lists a parliament's entries in manifest order, and the
+    UI convention (established by Westminster's ``current-prediction`` and
+    Holyrood's prediction entry) is that the live forecast leads, with the
+    Predict / Poll-tracker links anchored right after it. ``reorder_manifest_entries``
+    keeps whatever position an entry held in the previous manifest, so a forecast
+    that first shipped at the bottom of its block would stay there forever — this
+    pass pins forecasts to the front of their parliament's block regardless.
+
+    Preserves the relative order of the forecasts themselves, the order of all
+    other entries, and the block layout (entries never cross into another
+    parliament's span). In-place; a no-op when forecasts already lead (UK pages).
+
+    Args:
+        manifest_entries: Manifest election list to modify in-place.
+    """
+    models_by_parliament: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for entry in manifest_entries:
+        if entry.get("model"):
+            models_by_parliament[str(entry.get("parliament"))].append(entry)
+    if not models_by_parliament:
+        return
+
+    first_index_by_parliament: dict[str, int] = {}
+    for index, entry in enumerate(manifest_entries):
+        first_index_by_parliament.setdefault(str(entry.get("parliament")), index)
+
+    result: list[dict[str, Any]] = []
+    emitted: set[int] = set()
+    for index, entry in enumerate(manifest_entries):
+        parliament = str(entry.get("parliament"))
+        if first_index_by_parliament.get(parliament) == index:
+            for model_entry in models_by_parliament.get(parliament, []):
+                result.append(model_entry)
+                emitted.add(id(model_entry))
+        if id(entry) not in emitted:
+            result.append(entry)
+    manifest_entries[:] = result
 
 
 def remove_comparison_for_supplemental_entries(manifest_entries: list[dict[str, Any]]) -> None:

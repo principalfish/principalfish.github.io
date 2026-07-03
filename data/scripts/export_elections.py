@@ -71,6 +71,7 @@ from scripts.export.manifest import (
     build_manifest_regions_by_map_id,
     build_map_modes_with_regions,
     assign_comparison_elections,
+    float_model_entries_first,
     reorder_manifest_entries,
     remove_comparison_for_supplemental_entries,
 )
@@ -396,6 +397,28 @@ def main() -> None:
             if latest_simulation is not None:
                 elections = [latest_simulation, *elections]
 
+            # Prepend the latest forecast run for each US election type. Like the
+            # UK model_uns run, only the most recent run per type ships as the
+            # "current forecast" anchor; earlier runs stay in the DB for the
+            # poll-tracker trend history only.
+            latest_us_models: list[Election] = []
+            for _us_model_type in (
+                ElectionType.us_house_model,
+                ElectionType.us_presidential_model,
+                ElectionType.us_senate_model,
+            ):
+                latest_us_model = session.execute(
+                    select(Election)
+                    .where(Election.type == _us_model_type)
+                    .options(joinedload(Election.map))
+                    .order_by(Election.id.desc())
+                    .limit(1)
+                ).scalars().first()
+                if latest_us_model is not None:
+                    latest_us_models.append(latest_us_model)
+            if latest_us_models:
+                elections = [*latest_us_models, *elections]
+
         if args.output_file and len(elections) != 1:
             raise RuntimeError("--output-file supports exactly one target election")
 
@@ -624,7 +647,13 @@ def _export_page(
         }
         # Prediction elections carry ``model: true`` so the front-end shows the
         # predict UI / hides raw vote counts for them.
-        if election.type in (ElectionType.model_uns, ElectionType.holyrood_uns):
+        if election.type in (
+            ElectionType.model_uns,
+            ElectionType.holyrood_uns,
+            ElectionType.us_house_model,
+            ElectionType.us_presidential_model,
+            ElectionType.us_senate_model,
+        ):
             manifest_entry["model"] = True
         manifest_entries.append(manifest_entry)
 
@@ -764,12 +793,19 @@ def _export_page(
     shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
     config = shell if shell else existing
 
-    # model/poll-tracker meta files are keyed by parliament; keep only those belonging to this
-    # page so a page without those features (e.g. US) doesn't reference non-existent meta files.
-    meta_all = existing.get("files", {}).get("meta", {
+    # model/poll-tracker meta files are keyed by parliament; keep only those belonging to
+    # this page. Defaults cover every parliament with a forecast model (the front end
+    # fetches ``data/<files.meta[parliament]>`` for the "Latest poll used" snippet on
+    # model elections and the poll tracker); values from the existing manifest win so
+    # hand-tuned paths survive regeneration.
+    default_meta = {
         "westminster": "results/model_output_trends_meta.json",
         "holyrood": "results/holyrood-prediction-meta.json",
-    })
+        "us_house": "results/us-house-trends_meta.json",
+        "us_presidential": "results/us-president-trends_meta.json",
+        "us_senate": "results/us-senate-trends_meta.json",
+    }
+    meta_all = {**default_meta, **existing.get("files", {}).get("meta", {})}
     meta = {k: v for k, v in meta_all.items() if k in parliaments}
 
     files = {
@@ -846,6 +882,9 @@ def _export_page(
     # Restore supplemental positions the reorder may have overridden (e.g. Current Senate
     # leading the Senate list regardless of the previous manifest's order).
     reposition_supplemental_entries(manifest_entries, parliaments=parliaments)
+    # Forecast entries lead their parliament's block (above Current Senate etc.), with the
+    # Predict / Poll-tracker links anchored after them by the front end.
+    float_model_entries_first(manifest_entries)
 
     # Second comparison pass, now that preserved boundary-changed baselines (e.g.
     # 2021-holyrood-2026) are present and the list is in curated newest-first order.

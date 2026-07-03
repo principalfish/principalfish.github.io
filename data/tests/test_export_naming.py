@@ -19,6 +19,7 @@ from export_elections import (
     file_stem_for_election,
     legacy_party_key_for_vote,
     manifest_id_for_election,
+    manifest_name_for_election,
     normalize_region_name,
     normalize_token,
     normalize_vote_total_value,
@@ -202,6 +203,18 @@ class TestFileStemForElection:
         election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
         assert file_stem_for_election(election) == "us-senate-2024"
 
+    def test_us_house_model_is_fixed_forecast_stem(self) -> None:
+        election = _Election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
+        assert file_stem_for_election(election) == "us-house-forecast"
+
+    def test_us_presidential_model_is_fixed_forecast_stem(self) -> None:
+        election = _Election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
+        assert file_stem_for_election(election) == "us-president-forecast"
+
+    def test_us_senate_model_is_fixed_forecast_stem(self) -> None:
+        election = _Election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
+        assert file_stem_for_election(election) == "us-senate-forecast"
+
     def test_fallback_slugifies_type_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)
         assert file_stem_for_election(election) == "by-election-2025-some-by-election"
@@ -232,6 +245,38 @@ class TestManifestIdForElection:
         election = _Election("2024 US Senate Election", ElectionType.us_senate, year=2024)
         assert manifest_id_for_election(election) == "2024-us-senate"
 
+    def test_us_house_model_is_current_anchor(self) -> None:
+        election = _Election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
+        assert manifest_id_for_election(election) == "current-us-house"
+
+    def test_us_presidential_model_is_current_anchor(self) -> None:
+        election = _Election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
+        assert manifest_id_for_election(election) == "current-us-president"
+
+    def test_us_senate_model_is_current_anchor(self) -> None:
+        election = _Election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
+        assert manifest_id_for_election(election) == "current-us-senate"
+
     def test_fallback_slugifies_year_name(self) -> None:
         election = _Election("Some By-Election", ElectionType.by_election, year=2025)
         assert manifest_id_for_election(election) == "2025-some-by-election"
+
+
+class TestManifestNameForElection:
+    """Human-readable manifest display names, including the US forecast anchors."""
+
+    def test_us_house_model(self) -> None:
+        election = _Election("US House UNS 2026-06-01", ElectionType.us_house_model, year=2026)
+        assert manifest_name_for_election(election) == "2026 Prediction"
+
+    def test_us_presidential_model(self) -> None:
+        election = _Election("US President UNS 2028-06-01", ElectionType.us_presidential_model, year=2028)
+        assert manifest_name_for_election(election) == "2028 Prediction"
+
+    def test_us_senate_model(self) -> None:
+        election = _Election("US Senate UNS 2026-06-01", ElectionType.us_senate_model, year=2026)
+        assert manifest_name_for_election(election) == "2026 Prediction"
+
+    def test_us_house_result_is_year_election(self) -> None:
+        election = _Election("2024 US House Election", ElectionType.us_house, year=2024)
+        assert manifest_name_for_election(election) == "2024 Election"

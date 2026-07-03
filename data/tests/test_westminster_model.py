@@ -241,6 +241,10 @@ class TestProjectSeatVotes:
         assert len(elected) == 1
         assert elected[0]["party_id"] == 10
         assert winners["Labour"] == 1
+        # Projected values are vote counts (turnout held at the baseline seat total);
+        # with zero swing they reproduce the baseline counts exactly.
+        by_party = {r["party_id"]: r["vote_total"] for r in projected}
+        assert by_party == {10: 6000, 20: 4000}
 
     def test_positive_swing_flips_winner(self) -> None:
         # Con starts at 60%, Lab at 40%; swing +25 to Lab flips it

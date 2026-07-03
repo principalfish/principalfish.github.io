@@ -5,7 +5,7 @@
     <p>Import polling data, run projection models, publish outputs, and manage the database.</p>
   </section>
 
-  <div class="console-columns">
+  <div class="console-columns console-columns-three">
     <section class="card console-column">
       <h2>Westminster</h2>
       <div class="action-stack">
@@ -27,6 +27,21 @@
           <button type="submit" class="button button-block">Run Holyrood Model</button>
         </form>
         <a class="button button-block" href="{{ url_for('holyrood.holyrood_outputs') }}">View Holyrood Outputs</a>
+      </div>
+    </section>
+
+    <section class="card console-column">
+      <h2>USA</h2>
+      <div class="action-stack">
+        <form method="post" action="{{ url_for('us.us_import_polls') }}" class="inline-form button-form">
+          <button type="submit" class="button primary button-block">Import US Polls</button>
+        </form>
+        <form method="post" action="{{ url_for('us.run_us_models') }}" class="inline-form button-form">
+          <button type="submit" class="button button-block">Run US Models</button>
+        </form>
+        <a class="button button-block" href="{{ url_for('us.house_outputs') }}">View House Outputs</a>
+        <a class="button button-block" href="{{ url_for('us.president_outputs') }}">View President Outputs</a>
+        <a class="button button-block" href="{{ url_for('us.senate_outputs') }}">View Senate Outputs</a>
       </div>
     </section>
   </div>

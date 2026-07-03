@@ -31,14 +31,15 @@ export function activeMapMode() {
  * Whether the per-seat comparison controls — the "vote share change" choropleth option and
  * the Gains filter — should be hidden for the current election. Both need matching seat keys
  * across the compared cycles, so they are suppressed for referendums (no per-seat swing) and
- * for maps whose mapMode sets `seatComparison: false` (aggregate-only comparison, e.g. the US
- * House, where districts are redrawn between cycles). The aggregate vote-totals delta columns
- * are unaffected — they key off comparison-data presence, not this flag. Absent flag ⇒ shown.
+ * for maps whose mapMode sets `seatComparison: false` (aggregate-only comparison, for maps
+ * whose seats are redrawn between cycles; no current map sets it). The aggregate vote-totals
+ * delta columns are unaffected — they key off comparison-data presence, not this flag.
+ * Absent flag ⇒ shown.
  *
  * Predict view is exempt from the `seatComparison: false` suppression: a projection always runs
- * against a same-cycle baseline on the same map (e.g. House 2024 → projected 2026, identical
- * districts), so per-seat gains are meaningful there even for maps that disable them for the
- * cross-redistricting historical comparison. Referendums stay suppressed regardless.
+ * against a same-cycle baseline on the same map (identical seats), so per-seat gains are
+ * meaningful there even for maps that disable them for the cross-boundary historical
+ * comparison. Referendums stay suppressed regardless.
  * @returns {boolean}
  */
 export function seatComparisonHidden() {

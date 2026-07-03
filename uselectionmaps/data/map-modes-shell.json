@@ -20,7 +20,7 @@
   "parliamentFeatures": {
     "us_house": {
       "features": ["predict"],
-      "predictAnchorElectionId": "2024-us-house",
+      "predictAnchorElectionId": "current-us-house",
       "predictBaselineElectionId": "2024-us-house",
       "nextElectionYear": 2026,
       "nextElectionLabel": "US House election",
@@ -36,7 +36,7 @@
     },
     "us_presidential": {
       "features": ["predict"],
-      "predictAnchorElectionId": "2024-us-president",
+      "predictAnchorElectionId": "current-us-president",
       "predictBaselineElectionId": "2024-us-president",
       "nextElectionYear": 2028,
       "nextElectionLabel": "US presidential election",
@@ -52,7 +52,7 @@
     },
     "us_senate": {
       "features": ["predict"],
-      "predictAnchorElectionId": "current-senate",
+      "predictAnchorElectionId": "current-us-senate",
       "predictBaselineElectionId": "2020-us-senate",
       "nextElectionYear": 2026,
       "nextElectionLabel": "US Senate election",
@@ -76,8 +76,7 @@
     "21": {
       "name": "us-house-2024",
       "projection": "albersUsa",
-      "postcodeSupported": false,
-      "seatComparison": false
+      "postcodeSupported": false
     },
     "22": {
       "name": "us-president-2024",

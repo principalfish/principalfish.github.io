@@ -293,8 +293,8 @@ const dataInfoButton = document.getElementById('mapsDataInfoBtn');
 export function setElectionPreDataFetch() {
   // The Gains filter and "vote share change" choropleth both need matching seat keys across
   // cycles, so they are hidden for referendums and for aggregate-only comparison maps
-  // (mapMode.seatComparison === false, e.g. the US House). The referendum-only data-info
-  // button stays gated on isReferendumType alone.
+  // (mapMode.seatComparison === false). The referendum-only data-info button stays gated on
+  // isReferendumType alone.
   const hideSeatComparison = seatComparisonHidden();
   filterGainsButton.textContent = state.currentElection.byElectionSeats ? 'By-elections' : 'Gains';
   filterGainsButton.hidden = hideSeatComparison;
@@ -413,7 +413,7 @@ export function renderMapControlOptions() {
   // This is the authoritative writer of the gains button's visibility (it runs after
   // setElectionPreDataFetch), so the per-seat comparison gate must be honoured here too:
   // Gains needs matching seat keys across cycles, absent for referendums and aggregate-only
-  // comparison maps (mapMode.seatComparison === false, e.g. the US House).
+  // comparison maps (mapMode.seatComparison === false).
   if (filterGainsButton) filterGainsButton.hidden = isMultiMember || seatComparisonHidden();
   if (choroplethsButton) choroplethsButton.hidden = isMultiMember;
   if (isMultiMember) {

@@ -170,6 +170,8 @@ def file_stem_for_election(election: Election) -> str:
 
     Special cases:
     - ``model_uns`` elections → ``"prediction-simulation"``
+    - ``us_{house,presidential,senate}_model`` elections → the type's fixed
+      forecast stem (``"us-house-forecast"`` etc.).
     - UK general elections matching ``"{year} General Election"`` →
       ``"uk-general-{year}"``
     - All others → ``"{type}-{year}-{name}"`` slugified.
@@ -184,6 +186,15 @@ def file_stem_for_election(election: Election) -> str:
     """
     if election.type == ElectionType.model_uns:
         return "prediction-simulation"
+
+    if election.type == ElectionType.us_house_model:
+        return "us-house-forecast"
+
+    if election.type == ElectionType.us_presidential_model:
+        return "us-president-forecast"
+
+    if election.type == ElectionType.us_senate_model:
+        return "us-senate-forecast"
 
     if election.type == ElectionType.us_house:
         return f"us-house-{election.year}"
@@ -215,6 +226,8 @@ def manifest_id_for_election(election: Election) -> str:
 
     Special cases:
     - ``model_uns`` elections → ``"current-prediction"``
+    - ``us_{house,presidential,senate}_model`` elections → the type's fixed
+      forecast anchor id (``"current-us-house"`` etc.).
     - UK general elections matching ``"{year} General Election"`` →
       ``"{year}-general"``
     - All others → ``"{year}-{name}"`` slugified.
@@ -229,6 +242,15 @@ def manifest_id_for_election(election: Election) -> str:
     """
     if election.type == ElectionType.model_uns:
         return "current-prediction"
+
+    if election.type == ElectionType.us_house_model:
+        return "current-us-house"
+
+    if election.type == ElectionType.us_presidential_model:
+        return "current-us-president"
+
+    if election.type == ElectionType.us_senate_model:
+        return "current-us-senate"
 
     if election.type == ElectionType.us_house:
         return f"{election.year}-us-house"
@@ -256,6 +278,8 @@ def manifest_name_for_election(election: Election) -> str:
     Shortens the verbose DB names to the curated forms used in the front-end:
 
     - ``model_uns`` → ``"Current prediction"``
+    - ``us_{house,presidential,senate}_model`` → ``"2026 Prediction"`` /
+      ``"2028 Prediction"`` (the projected cycle)
     - ``uk_general`` ``"{year} General Election"`` → ``"{year} Election"``
     - ``holyrood_general`` ``"{year} Scottish Parliament Election"`` →
       ``"{year} Election"``
@@ -271,6 +295,17 @@ def manifest_name_for_election(election: Election) -> str:
     """
     if election.type == ElectionType.model_uns:
         return "Current prediction"
+
+    # US forecasts are labelled by the cycle they project (mirrors the shell's
+    # nextElectionYear). Bump when the cycles roll.
+    if election.type == ElectionType.us_house_model:
+        return "2026 Prediction"
+
+    if election.type == ElectionType.us_presidential_model:
+        return "2028 Prediction"
+
+    if election.type == ElectionType.us_senate_model:
+        return "2026 Prediction"
 
     if election.type in (ElectionType.us_house, ElectionType.us_presidential, ElectionType.us_senate):
         return f"{election.year} Election"

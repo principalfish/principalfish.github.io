@@ -4,16 +4,12 @@
       "current": "republican"
     },
     "partyInfo": {
-      "others": {
-        "total": 27081,
-        "name": "John Wayne Howe"
-      },
       "democrat": {
-        "total": 467752,
+        "total": 156985,
         "name": "Mary S. Peltola"
       },
       "republican": {
-        "total": 484682,
+        "total": 164861,
         "name": "Nick Begich"
       }
     }
@@ -649,7 +645,7 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 372383,
+        "total": 288788,
         "name": "Vince Fong"
       }
     }
@@ -1201,19 +1197,19 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 340308,
+        "total": 240213,
         "name": "Lauren Boebert"
       },
       "democrat": {
-        "total": 247262,
+        "total": 188249,
         "name": "Trisha Calvarese"
       },
       "others": {
-        "total": 10894,
+        "total": 7669,
         "name": "Frank Atwood"
       },
       "libertarian": {
-        "total": 20745,
+        "total": 11676,
         "name": "Hannah Goodman"
       }
     }
@@ -1743,7 +1739,7 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 0,
+        "total": 100,
         "name": "Sheila Cherfilus-McCormick"
       }
     }
@@ -3344,16 +3340,12 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 390891,
+        "total": 197151,
         "name": "Jared Forrest Golden"
       },
       "republican": {
-        "total": 387459,
+        "total": 194445,
         "name": "Austin Theriault"
-      },
-      "others": {
-        "total": 420,
-        "name": "Other"
       }
     }
   },
@@ -4623,7 +4615,7 @@
     },
     "partyInfo": {
       "others": {
-        "total": 5960,
+        "total": 4954,
         "name": "Cynthia A. Johnson"
       },
       "usgreen": {
@@ -4631,11 +4623,11 @@
         "name": "Jon Serrano"
       },
       "republican": {
-        "total": 59663,
+        "total": 54405,
         "name": "Carmen Bucco"
       },
       "democrat": {
-        "total": 209422,
+        "total": 182020,
         "name": "LaMonica McIver"
       }
     }
@@ -4855,15 +4847,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 280834,
+        "total": 187651,
         "name": "Thomas R. Suozzi"
       },
       "republican": {
-        "total": 253983,
+        "total": 174693,
         "name": "Michael J. LiPetri Jr."
       },
       "others": {
-        "total": 20197,
+        "total": 19538,
         "name": "Other"
       }
     }
@@ -5292,15 +5284,15 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 257181,
+        "total": 209131,
         "name": "Timothy M. Kennedy"
       },
       "republican": {
-        "total": 133754,
+        "total": 111772,
         "name": "Anthony G. Marecki"
       },
       "others": {
-        "total": 21965,
+        "total": 21501,
         "name": "Other"
       }
     }
@@ -5390,16 +5382,12 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 278607,
+        "total": 245860,
         "name": "Michael A. Rulli"
       },
       "democrat": {
-        "total": 149688,
+        "total": 122515,
         "name": "Michael L. Kripchak"
-      },
-      "others": {
-        "total": 12,
-        "name": "Christopher Lafont"
       }
     }
   },
@@ -5598,7 +5586,7 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 0,
+        "total": 100,
         "name": "Frank D. Lucas"
       }
     }
@@ -6636,11 +6624,11 @@
         "name": "Vince Duncan"
       },
       "democrat": {
-        "total": 298247,
+        "total": 151834,
         "name": "Sylvester Turner"
       },
       "republican": {
-        "total": 135902,
+        "total": 66810,
         "name": "Lana Centonze"
       }
     }
@@ -7618,11 +7606,11 @@
         "name": "Other"
       },
       "democrat": {
-        "total": 358592,
+        "total": 178666,
         "name": "Kristin Lyerly"
       },
       "republican": {
-        "total": 482043,
+        "total": 240040,
         "name": "Tony Wied"
       }
     }

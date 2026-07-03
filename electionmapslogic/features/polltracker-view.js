@@ -159,7 +159,11 @@ function renderPollTrackerChart() {
   });
 
   // Paint the lines and legend, then mount the SVG.
-  pollTrackerDrawLines(plot, { selectedSeries, seatsEnabled, votePctEnabled, seatsLine, votePctLine, showTrackerTooltip, hideTrackerTooltip });
+  pollTrackerDrawLines(plot, {
+    selectedSeries, seatsEnabled, votePctEnabled, seatsLine, votePctLine,
+    showTrackerTooltip, hideTrackerTooltip,
+    useTimeScale, x, visibleTimeline, ySeats, yVotePct,
+  });
   pollTrackerDrawLegend(svg, { width, margin });
   pollTrackerChartWrap.appendChild(svg.node());
 }
@@ -456,11 +460,37 @@ function pollTrackerTooltipHandlers({ svg, tooltip, crosshairLine, margin, inner
  *   - the visible coloured line (solid for seats, dashed for vote %)
  *   - a thicker invisible "hit area" line on top, which catches mousemove/mouseleave for the tooltip.
  * This keeps thin visible lines easy to hover without making the visible stroke fat.
+ *
+ * A d3 line through a single point paints nothing (no segments), so a series whose visible
+ * window holds exactly one reading — a brand-new tracker with one model run, or a party that
+ * only appeared on the final day — would be invisible. Those lone readings get an explicit
+ * point marker instead (filled dot for seats, hollow dot for vote %, echoing solid vs dashed).
  * @param {object} plot
- * @param {{selectedSeries: Array, seatsEnabled: boolean, votePctEnabled: boolean, seatsLine: object, votePctLine: object, showTrackerTooltip: function, hideTrackerTooltip: function}} args
+ * @param {{selectedSeries: Array, seatsEnabled: boolean, votePctEnabled: boolean, seatsLine: object, votePctLine: object, showTrackerTooltip: function, hideTrackerTooltip: function, useTimeScale: boolean, x: object, visibleTimeline: Array<{dateValue: Date}>, ySeats: object, yVotePct: object}} args
  * @returns {void}
  */
-function pollTrackerDrawLines(plot, { selectedSeries, seatsEnabled, votePctEnabled, seatsLine, votePctLine, showTrackerTooltip, hideTrackerTooltip }) {
+function pollTrackerDrawLines(plot, {
+  selectedSeries, seatsEnabled, votePctEnabled, seatsLine, votePctLine,
+  showTrackerTooltip, hideTrackerTooltip, useTimeScale, x, visibleTimeline, ySeats, yVotePct,
+}) {
+  const xAt = (index) => (useTimeScale ? x(visibleTimeline[index]?.dateValue) : x(index));
+  const drawLonePoint = (series, values, yScale, hollow) => {
+    const definedIndices = values
+      .map((value, index) => (Number.isFinite(value) ? index : -1))
+      .filter((index) => index >= 0);
+    if (definedIndices.length !== 1) return;
+    const index = definedIndices[0];
+    plot.append('circle')
+      .attr('cx', xAt(index))
+      .attr('cy', yScale(values[index]))
+      .attr('r', 4.5)
+      .attr('fill', hollow ? '#fff' : series.colour)
+      .attr('stroke', series.colour)
+      .attr('stroke-width', 2)
+      .on('mousemove', (event) => showTrackerTooltip(event, series))
+      .on('mouseleave', hideTrackerTooltip);
+  };
+
   selectedSeries.forEach((series) => {
     if (seatsEnabled) {
       plot.append('path')
@@ -477,6 +507,7 @@ function pollTrackerDrawLines(plot, { selectedSeries, seatsEnabled, votePctEnabl
         .attr('d', seatsLine)
         .on('mousemove', (event) => showTrackerTooltip(event, series))
         .on('mouseleave', hideTrackerTooltip);
+      drawLonePoint(series, series.seats, ySeats, false);
     }
     if (votePctEnabled) {
       plot.append('path')
@@ -494,6 +525,7 @@ function pollTrackerDrawLines(plot, { selectedSeries, seatsEnabled, votePctEnabl
         .attr('d', votePctLine)
         .on('mousemove', (event) => showTrackerTooltip(event, series))
         .on('mouseleave', hideTrackerTooltip);
+      drawLonePoint(series, series.votePct, yVotePct, true);
     }
   });
 }

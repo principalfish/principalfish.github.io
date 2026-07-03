@@ -19,6 +19,7 @@ from models import Election, ElectionType
 from export_elections import (
     _export_page,
     assign_comparison_elections,
+    float_model_entries_first,
     manifest_name_for_election,
     reorder_manifest_entries,
 )
@@ -222,6 +223,90 @@ class TestAssignComparisonElections:
         assert by_id["2024-us-house"]["comparisonElectionId"] == "2022-us-house"
         assert "comparisonElectionId" not in by_id["2022-us-house"]
         assert "comparisonElectionId" not in by_id["2024-us-senate"]
+
+    def test_us_forecasts_compare_against_their_model_baselines(self) -> None:
+        # Each forecast reads gains against the baseline its model swings from —
+        # the Senate forecast against the 2020 Class-2 result, not 2024.
+        entries = [
+            self._entry("current-us-house", "us_house", 21, ElectionType.us_house_model.value),
+            self._entry("current-us-president", "us_presidential", 22, ElectionType.us_presidential_model.value),
+            self._entry("current-us-senate", "us_senate", 23, ElectionType.us_senate_model.value),
+            self._entry("2024-us-house", "us_house", 21, ElectionType.us_house.value),
+            self._entry("2024-us-president", "us_presidential", 22, ElectionType.us_presidential.value),
+            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+            self._entry("2020-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+        ]
+        assign_comparison_elections(entries)
+        by_id = {e["id"]: e for e in entries}
+        assert by_id["current-us-house"]["comparisonElectionId"] == "2024-us-house"
+        assert by_id["current-us-president"]["comparisonElectionId"] == "2024-us-president"
+        assert by_id["current-us-senate"]["comparisonElectionId"] == "2020-us-senate"
+
+    def test_us_forecast_comparison_skipped_when_baseline_absent(self) -> None:
+        # No dangling comparisonElectionId when the baseline isn't exported.
+        entries = [
+            self._entry("current-us-senate", "us_senate", 23, ElectionType.us_senate_model.value),
+            self._entry("2024-us-senate", "us_senate", 23, ElectionType.us_senate.value),
+        ]
+        assign_comparison_elections(entries)
+        assert "comparisonElectionId" not in entries[0]
+
+
+class TestFloatModelEntriesFirst:
+    """Forecast entries lead their parliament's block; everything else keeps its order."""
+
+    @staticmethod
+    def _entry(eid: str, parliament: str, model: bool = False) -> dict[str, Any]:
+        entry: dict[str, Any] = {"id": eid, "parliament": parliament}
+        if model:
+            entry["model"] = True
+        return entry
+
+    def test_moves_trailing_forecasts_to_block_front(self) -> None:
+        # Mirrors the real US page: forecasts first shipped appended at the end.
+        entries = [
+            self._entry("2024-us-house", "us_house"),
+            self._entry("2022-us-house", "us_house"),
+            self._entry("2024-us-president", "us_presidential"),
+            self._entry("current-senate", "us_senate"),
+            self._entry("2024-us-senate", "us_senate"),
+            self._entry("current-us-house", "us_house", model=True),
+            self._entry("current-us-president", "us_presidential", model=True),
+            self._entry("current-us-senate", "us_senate", model=True),
+        ]
+        float_model_entries_first(entries)
+        assert [e["id"] for e in entries] == [
+            "current-us-house",
+            "2024-us-house",
+            "2022-us-house",
+            "current-us-president",
+            "2024-us-president",
+            "current-us-senate",
+            "current-senate",
+            "2024-us-senate",
+        ]
+
+    def test_noop_when_forecasts_already_lead(self) -> None:
+        # The UK pages already lead with their prediction entries — order untouched.
+        entries = [
+            self._entry("current-prediction", "westminster", model=True),
+            self._entry("current-parliament", "westminster"),
+            self._entry("2024-general", "westminster"),
+            self._entry("current-holyrood-prediction", "holyrood", model=True),
+            self._entry("2026-holyrood", "holyrood"),
+        ]
+        before = [e["id"] for e in entries]
+        float_model_entries_first(entries)
+        assert [e["id"] for e in entries] == before
+
+    def test_noop_without_model_entries(self) -> None:
+        entries = [
+            self._entry("2024-us-house", "us_house"),
+            self._entry("2024-us-president", "us_presidential"),
+        ]
+        before = [e["id"] for e in entries]
+        float_model_entries_first(entries)
+        assert [e["id"] for e in entries] == before
 
 
 class TestMissingPrebuiltMapFails:

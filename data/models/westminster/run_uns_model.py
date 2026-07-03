@@ -1019,8 +1019,9 @@ def project_seat_votes(
 
     For each seat, converts baseline raw vote totals to shares, adds the
     region-level swing for every party (clamped to zero), normalises the result
-    to sum to 100 %, and records the party with the highest projected share as
-    the winner.
+    to sum to 100 %, scales it back to vote counts at the seat's baseline
+    turnout, and records the party with the highest projected share as the
+    winner.
 
     Seats with a zero or negative baseline total are skipped.
 
@@ -1039,8 +1040,10 @@ def project_seat_votes(
 
         - **projected_votes** (``list[dict[str, Any]]``): one record per
           seat/party combination with keys ``seat_id``, ``party_id``,
-          ``vote_total`` (normalised percentage, 0–100), and ``elected``
-          (``True`` for the projected winner).
+          ``vote_total`` (a vote count, turnout held at the baseline seat
+          total), and ``elected`` (``True`` for the projected winner). Storing
+          counts, not shares, keeps national aggregation turnout-weighted and
+          consistent with actual/baseline elections.
         - **winners_by_party** (``Counter[str]``): count of projected seat wins
           keyed by party display name.
     """
@@ -1085,7 +1088,9 @@ def project_seat_votes(
                 {
                     "seat_id": seat_id,
                     "party_id": party_id,
-                    "vote_total": pct,
+                    # Scale the projected share back to a vote count at the seat's baseline
+                    # turnout so national totals aggregate turnout-weighted (see docstring).
+                    "vote_total": round((pct / 100.0) * seat_total),
                     "elected": party_id == winner_party_id,
                 }
             )
@@ -1123,6 +1128,12 @@ def write_output_csvs(
         seat_by_id: Seat display names keyed by seat ID.
         party_name_by_id: Party display names keyed by party ID.
     """
+    # projected_votes now carry vote counts; recover each party's within-seat share
+    # for the ``predicted_pct`` column by normalising against the seat's projected total.
+    seat_projected_totals: dict[int, float] = defaultdict(float)
+    for row in projected_votes:
+        seat_projected_totals[int(row["seat_id"])] += float(row["vote_total"] or 0.0)
+
     output_path = Path(output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as handle:
@@ -1134,13 +1145,15 @@ def write_output_csvs(
         for row in projected_votes:
             seat_id = int(row["seat_id"])
             party_id = int(row["party_id"])
+            seat_total = seat_projected_totals.get(seat_id, 0.0)
+            predicted_pct = (float(row["vote_total"]) / seat_total * 100.0) if seat_total > 0 else 0.0
             writer.writerow(
                 {
                     "seat_id": seat_id,
                     "seat_name": seat_by_id[seat_id].seat_name if seat_id in seat_by_id else "",
                     "party_id": party_id,
                     "party_name": party_name_by_id.get(party_id, ""),
-                    "predicted_pct": f"{float(row['vote_total']):.4f}",
+                    "predicted_pct": f"{predicted_pct:.4f}",
                     "elected": bool(row["elected"]),
                 }
             )

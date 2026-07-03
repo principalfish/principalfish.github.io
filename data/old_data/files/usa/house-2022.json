@@ -4,16 +4,12 @@
       "current": "democrat"
     },
     "partyInfo": {
-      "libertarian": {
-        "total": 4999,
-        "name": "Chris Bye"
-      },
       "democrat": {
-        "total": 562869,
+        "total": 137263,
         "name": "Mary S. Peltola"
       },
       "republican": {
-        "total": 576013,
+        "total": 112471,
         "name": "Sarah Palin"
       }
     }
@@ -711,11 +707,11 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 79320,
+        "total": 49859,
         "name": "Rudy Salas"
       },
       "republican": {
-        "total": 110637,
+        "total": 52993,
         "name": "David G. Valadao"
       }
     }
@@ -1502,7 +1498,7 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 0,
+        "total": 100,
         "name": "John H. Rutherford"
       }
     }
@@ -1759,20 +1755,12 @@
     },
     "partyInfo": {
       "democrat": {
-        "total": 180922,
+        "total": 136215,
         "name": "Sheila Cherfilus-McCormick"
       },
       "republican": {
-        "total": 63117,
+        "total": 52151,
         "name": "Drew Montez Clark"
-      },
-      "others": {
-        "total": 549,
-        "name": "Jim Flynn"
-      },
-      "libertarian": {
-        "total": 395,
-        "name": "Mike ter Maat"
       }
     }
   },
@@ -2577,21 +2565,21 @@
       "current": "republican"
     },
     "partyInfo": {
-      "libertarian": {
-        "total": 11983,
-        "name": "William E. Henry"
-      },
-      "others": {
-        "total": 154,
-        "name": "Marla Godette"
+      "republican": {
+        "total": 125537,
+        "name": "Rudy Yakym"
       },
       "democrat": {
-        "total": 125747,
+        "total": 62955,
         "name": "Paul D. Steury"
       },
-      "republican": {
-        "total": 244534,
-        "name": "Rudy Yakym"
+      "others": {
+        "total": 11,
+        "name": "Mike Hubbard"
+      },
+      "libertarian": {
+        "total": 5870,
+        "name": "William E. Henry"
       }
     }
   },
@@ -2953,7 +2941,7 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 0,
+        "total": 100,
         "name": "Mike Johnson"
       }
     }
@@ -3340,20 +3328,12 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 287402,
+        "total": 146142,
         "name": "Bruce Poliquin"
       },
       "democrat": {
-        "total": 318210,
+        "total": 165136,
         "name": "Jared Forrest Golden"
-      },
-      "others": {
-        "total": 393,
-        "name": "Other"
-      },
-      "independent": {
-        "total": 21655,
-        "name": "Tiffany Bond"
       }
     }
   },
@@ -3634,15 +3614,15 @@
     },
     "partyInfo": {
       "others": {
-        "total": 13870,
+        "total": 11469,
         "name": "Richard B. Reisdorf"
       },
       "republican": {
-        "total": 219409,
+        "total": 159621,
         "name": "Brad Finstad"
       },
       "democrat": {
-        "total": 180612,
+        "total": 125457,
         "name": "Jeff Ettinger"
       }
     }
@@ -4293,11 +4273,11 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 190253,
+        "total": 129236,
         "name": "Mike Flood"
       },
       "democrat": {
-        "total": 148712,
+        "total": 93929,
         "name": "Patty Pansing Brooks"
       }
     }
@@ -5103,7 +5083,7 @@
   },
   "NY-19": {
     "seatInfo": {
-      "current": "democrat"
+      "current": "republican"
     },
     "partyInfo": {
       "others": {
@@ -5111,11 +5091,11 @@
         "name": "Other"
       },
       "democrat": {
-        "total": 209505,
+        "total": 141509,
         "name": "Josh Riley"
       },
       "republican": {
-        "total": 210163,
+        "total": 146004,
         "name": "Marcus Molinaro"
       }
     }
@@ -5183,7 +5163,7 @@
     },
     "partyInfo": {
       "republican": {
-        "total": 231822,
+        "total": 192694,
         "name": "Nicholas A. Langworthy"
       },
       "others": {
@@ -5191,7 +5171,7 @@
         "name": "Other"
       },
       "democrat": {
-        "total": 139189,
+        "total": 104114,
         "name": "Max H. Della Pia"
       }
     }
@@ -6836,7 +6816,7 @@
   },
   "TX-34": {
     "seatInfo": {
-      "current": "republican"
+      "current": "democrat"
     },
     "partyInfo": {
       "independent": {
@@ -6844,11 +6824,11 @@
         "name": "Chris Royal"
       },
       "democrat": {
-        "total": 84712,
+        "total": 70896,
         "name": "Vicente Gonzalez"
       },
       "republican": {
-        "total": 74717,
+        "total": 59464,
         "name": "Mayra Flores"
       }
     }

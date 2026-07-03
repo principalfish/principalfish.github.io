@@ -4,7 +4,7 @@
     <h2>Model Trends</h2>
     <div class="chart-grid">
       <div>
-        <h3>Seats by Party Over Time</h3>
+        <h3>{% if shows_electoral_votes %}Electoral Votes{% else %}Seats{% endif %} by Party Over Time</h3>
         <div class="chart-container">
           <canvas id="seats-trend-chart"></canvas>
         </div>
@@ -125,7 +125,7 @@
         });
       };
 
-      createLineChart("seats-trend-chart", trendData.seats_datasets, "Seats");
+      createLineChart("seats-trend-chart", trendData.seats_datasets, {{ ('Electoral Votes' if shows_electoral_votes else 'Seats') | tojson }});
       createLineChart("vote-totals-trend-chart", trendData.vote_pct_datasets, "Vote %");
 
       const selectAll = document.getElementById("select-all-models");

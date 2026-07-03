@@ -40,6 +40,8 @@
       "predictBaselineElectionId": "2024-us-president",
       "nextElectionYear": 2028,
       "nextElectionLabel": "US presidential election",
+      "seatTrendsAvailable": true,
+      "seatTrendsDataPath": "results/us-president-trends-by-state.json",
       "predict": {
         "model": "fptp",
         "title": "User Input (uniform swing)",

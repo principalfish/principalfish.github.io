@@ -25,21 +25,65 @@ def _load(name: str) -> ModuleType:
 us_ev = _load("us_electoral_votes")
 
 
+class TestEraForYear:
+    """_era_for_year: routing to the correct census apportionment."""
+
+    def test_era_boundaries_1960(self) -> None:
+        # Both 1964 and 1968 use the 1960 census.
+        assert us_ev._era_for_year(1964) == 1960
+        assert us_ev._era_for_year(1968) == 1960
+
+    def test_era_boundaries_1970(self) -> None:
+        # 1972, 1976, and 1980 all use the 1970 census.
+        assert us_ev._era_for_year(1972) == 1970
+        assert us_ev._era_for_year(1976) == 1970
+        assert us_ev._era_for_year(1980) == 1970
+
+    def test_era_boundaries_1980(self) -> None:
+        # 1984 and 1988 use the 1980 census.
+        assert us_ev._era_for_year(1984) == 1980
+        assert us_ev._era_for_year(1988) == 1980
+
+    def test_era_boundary_1992(self) -> None:
+        # 1992 is the first election under the 1990 census.
+        assert us_ev._era_for_year(1992) == 1990
+
+    def test_era_boundary_crossings(self) -> None:
+        # Spot-check that consecutive era elections flip correctly.
+        assert us_ev._era_for_year(1968) == 1960
+        assert us_ev._era_for_year(1972) == 1970
+        assert us_ev._era_for_year(1980) == 1970
+        assert us_ev._era_for_year(1984) == 1980
+        assert us_ev._era_for_year(1988) == 1980
+        assert us_ev._era_for_year(1992) == 1990
+        assert us_ev._era_for_year(2000) == 1990
+        assert us_ev._era_for_year(2004) == 2000
+
+
 class TestEvFor:
     """ev_for: per-era lookups and ME/NE special cases."""
 
     def test_california_by_era(self) -> None:
-        assert us_ev.ev_for("California", 2004) == 55
+        assert us_ev.ev_for("California", 1964) == 40   # 1960 census
+        assert us_ev.ev_for("California", 1972) == 45   # 1970 census
+        assert us_ev.ev_for("California", 1984) == 47   # 1980 census
+        assert us_ev.ev_for("California", 2004) == 55   # 2000 census
         assert us_ev.ev_for("California", 2012) == 55
         assert us_ev.ev_for("California", 2024) == 54
 
     def test_texas_by_era(self) -> None:
+        assert us_ev.ev_for("Texas", 1964) == 25  # 1960 census
+        assert us_ev.ev_for("Texas", 1972) == 26  # 1970 census
+        assert us_ev.ev_for("Texas", 1984) == 29  # 1980 census
         assert us_ev.ev_for("Texas", 2000) == 32  # 1990 census
         assert us_ev.ev_for("Texas", 2004) == 34  # 2000 census
         assert us_ev.ev_for("Texas", 2016) == 38
         assert us_ev.ev_for("Texas", 2024) == 40
 
     def test_florida_by_era(self) -> None:
+        assert us_ev.ev_for("Florida", 1964) == 14  # 1960 census
+        assert us_ev.ev_for("Florida", 1972) == 17  # 1970 census
+        assert us_ev.ev_for("Florida", 1984) == 21  # 1980 census
         assert us_ev.ev_for("Florida", 2000) == 25  # 1990 census
         assert us_ev.ev_for("Florida", 2004) == 27  # 2000 census
         assert us_ev.ev_for("Florida", 2016) == 29
@@ -54,6 +98,8 @@ class TestEvFor:
         assert us_ev.ev_for("Pennsylvania", 2000) == 23
 
     def test_dc_constant(self) -> None:
+        # DC gets 3 EVs in all supported years; 23rd Amendment first applied 1964.
+        assert us_ev.ev_for("District of Columbia", 1964) == 3
         assert us_ev.ev_for("District of Columbia", 2000) == 3
         assert us_ev.ev_for("District of Columbia", 2012) == 3
         assert us_ev.ev_for("District of Columbia", 2024) == 3
@@ -99,6 +145,24 @@ class TestEvFor:
 class TestEvMapForYear:
     """ev_map_for_year: full presidential maps sum to 538 and include ME/NE/DC."""
 
+    def test_sum_1964(self) -> None:
+        assert sum(us_ev.ev_map_for_year(1964).values()) == 538  # 1960-census era
+
+    def test_sum_1968(self) -> None:
+        assert sum(us_ev.ev_map_for_year(1968).values()) == 538  # 1960-census era
+
+    def test_sum_1972(self) -> None:
+        assert sum(us_ev.ev_map_for_year(1972).values()) == 538  # 1970-census era
+
+    def test_sum_1980(self) -> None:
+        assert sum(us_ev.ev_map_for_year(1980).values()) == 538  # 1970-census era
+
+    def test_sum_1984(self) -> None:
+        assert sum(us_ev.ev_map_for_year(1984).values()) == 538  # 1980-census era
+
+    def test_sum_1988(self) -> None:
+        assert sum(us_ev.ev_map_for_year(1988).values()) == 538  # 1980-census era
+
     def test_sum_2024(self) -> None:
         assert sum(us_ev.ev_map_for_year(2024).values()) == 538
 
@@ -121,3 +185,19 @@ class TestEvMapForYear:
         assert ev_map["Nebraska CD-2"] == 1
         assert ev_map["Nebraska CD-3"] == 1
         assert ev_map["District of Columbia"] == 3
+
+
+class TestEvByEraTables:
+    """Structural invariants each era table must hold (49 whole units → 529)."""
+
+    def test_every_era_has_49_units_summing_to_529(self) -> None:
+        # 49 whole units (48 non-ME/NE states + DC) at 529 EVs, +ME(4)+NE(5) = 538.
+        for era, table in us_ev.EV_BY_ERA.items():
+            assert len(table) == 49, f"era {era} has {len(table)} units, expected 49"
+            assert sum(table.values()) == 529, f"era {era} sums to {sum(table.values())}, expected 529"
+
+    def test_every_era_excludes_me_ne(self) -> None:
+        # Maine and Nebraska are never in the per-era table; they are special-cased.
+        for era, table in us_ev.EV_BY_ERA.items():
+            assert "Maine" not in table, f"era {era} should not list Maine"
+            assert "Nebraska" not in table, f"era {era} should not list Nebraska"

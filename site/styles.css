@@ -216,6 +216,9 @@ a {
 .card-icon-us {
   background: #dbeafe;
   color: #1d4ed8;
+  /* Flag-emoji glyph (same 🇺🇸 as the electionmaps page banner) needs a larger
+     size than the lettered chips to read at the 1.55rem chip diameter. */
+  font-size: 1.05rem;
 }
 
 .card-icon-image {

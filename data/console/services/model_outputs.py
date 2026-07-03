@@ -103,6 +103,9 @@ def build_outputs_context(
 
         trend_labels: list[str] = []
         party_series: dict[str, dict[str, Any]] = {}
+        # True once any trend entry carries an "e" (electoral votes) value — the President,
+        # whose headline tally is EV rather than the state count. Drives the chart metric.
+        shows_electoral_votes = False
 
         if trend_cache_path is not None and trend_cache_path.exists():
             election_name_by_date: dict[date, str] = {}
@@ -138,12 +141,17 @@ def build_outputs_context(
                             "label": party_name_by_id.get(party_id_int, party_key) if party_id_int is not None else party_key,
                             "colour": party_colour_by_id.get(party_id_int) if party_id_int is not None else None,
                             "seats": [0] * len(as_of_dates_sorted),
+                            "electoral_votes": [0] * len(as_of_dates_sorted),
                             "vote_totals": [0.0] * len(as_of_dates_sorted),
                             "vote_pct": [None] * len(as_of_dates_sorted),
                         }
                         party_series[party_key] = series
 
                     series["seats"][idx] = int(pdata.get("s") or 0)
+                    electoral_votes = pdata.get("e")
+                    if electoral_votes is not None:
+                        series["electoral_votes"][idx] = int(electoral_votes)
+                        shows_electoral_votes = True
                     vote_pct = pdata.get("v")
                     if vote_pct is not None:
                         series["vote_pct"][idx] = float(vote_pct)
@@ -186,6 +194,7 @@ def build_outputs_context(
                             "label": party_name,
                             "colour": party_colour,
                             "seats": [0] * len(election_ids),
+                            "electoral_votes": [0] * len(election_ids),
                             "vote_totals": [0.0] * len(election_ids),
                             "vote_pct": [None] * len(election_ids),
                         }
@@ -196,9 +205,11 @@ def build_outputs_context(
                     if elected:
                         series["seats"][idx] = int(series["seats"][idx]) + 1
 
+        # Rank by the headline tally's latest value: EV for the President, seats otherwise.
+        seats_metric = "electoral_votes" if shows_electoral_votes else "seats"
         ordered_series = sorted(
             party_series.values(),
-            key=lambda item: (-int(item["seats"][-1]) if item["seats"] else 0, str(item["label"])),
+            key=lambda item: (-int(item[seats_metric][-1]) if item[seats_metric] else 0, str(item["label"])),
         )
 
         vote_pct_series: list[list[float]] = []
@@ -235,7 +246,7 @@ def build_outputs_context(
             seats_datasets.append(
                 {
                     "label": item["label"],
-                    "data": item["seats"],
+                    "data": item[seats_metric],
                     "borderColor": colour,
                     "backgroundColor": colour,
                     "fill": False,
@@ -275,6 +286,7 @@ def build_outputs_context(
     return {
         "outputs": items,
         "trend_data": trend_data,
+        "shows_electoral_votes": shows_electoral_votes,
         "show_all": show_all,
         "default_limit": default_limit,
         "total_output_count": total_output_count,
@@ -371,9 +383,18 @@ def build_output_detail_context(
     baseline_region_totals: dict[int | None, float] = {}
     seat_rows: list[dict[str, object]] = []
 
+    # Electoral votes are only meaningful for the Electoral College (US President): each
+    # unit is winner-take-all and the real tally is EV, not the unit count. Seats carry
+    # ``electoral_votes`` only on that map, so summing them per winning party yields a
+    # non-zero total only there — the flag below drives the EV column's visibility.
+    current_ev_by_party: dict[int | None, int] = {}
+    baseline_ev_by_party: dict[int | None, int] = {}
+    seat_ev_by_id: dict[int, int] = {}
+
     votes_by_seat: dict[int, list[tuple[Vote, Seat, Party | None]]] = {}
     for vote, seat, party in current_votes:
         votes_by_seat.setdefault(seat.id, []).append((vote, seat, party))
+        seat_ev_by_id[seat.id] = int(seat.electoral_votes or 0)
         party_key = vote.party_id
         party_name = party.name if party is not None else (vote.candidate_name or "Other")
         if party_key not in party_totals:
@@ -389,10 +410,12 @@ def build_output_detail_context(
         current_region_totals[region_key] = current_region_totals.get(region_key, 0.0) + vote_value
         if vote.elected:
             party_totals[party_key]["seats_won"] = int(party_totals[party_key]["seats_won"]) + 1
+            current_ev_by_party[party_key] = current_ev_by_party.get(party_key, 0) + int(seat.electoral_votes or 0)
 
     baseline_votes_by_seat: dict[int, list[Vote]] = {}
     for vote, seat in baseline_votes:
         baseline_votes_by_seat.setdefault(vote.seat_id, []).append(vote)
+        seat_ev_by_id.setdefault(vote.seat_id, int(seat.electoral_votes or 0))
         vote_value = float(vote.vote_total or 0.0)
         baseline_vote_totals_by_party[vote.party_id] = baseline_vote_totals_by_party.get(vote.party_id, 0.0) + vote_value
         region_key = seat.region_id
@@ -406,6 +429,9 @@ def build_output_detail_context(
         winner = max(votes, key=lambda v: float(v.vote_total or 0.0))
         seats_baseline_winner_by_seat[seat_id] = winner.party_id
         baseline_seats_won_by_party[winner.party_id] = baseline_seats_won_by_party.get(winner.party_id, 0) + 1
+        baseline_ev_by_party[winner.party_id] = baseline_ev_by_party.get(winner.party_id, 0) + seat_ev_by_id.get(seat_id, 0)
+
+    shows_electoral_votes = sum(current_ev_by_party.values()) > 0
 
     for party_id, baseline_wins in baseline_seats_won_by_party.items():
         if party_id not in party_totals:
@@ -457,6 +483,8 @@ def build_output_detail_context(
                 "party_name": row["party_name"],
                 "seats_won": int(row["seats_won"]),
                 "seats_diff_vs_base": int(row["seats_won"]) - int(baseline_seats_won_by_party.get(party_id, 0)),
+                "electoral_votes": current_ev_by_party.get(party_id, 0),
+                "ev_diff_vs_base": current_ev_by_party.get(party_id, 0) - baseline_ev_by_party.get(party_id, 0),
                 "vote_pct": round(
                     ((current_vote_totals_by_party.get(party_id, 0.0) / total_current_vote) * 100.0)
                     if total_current_vote > 0
@@ -479,7 +507,12 @@ def build_output_detail_context(
             }
             for party_id, row in party_totals.items()
         ],
-        key=lambda row: (-int(row["seats_won"]), str(row["party_name"])),
+        # Rank by the headline tally: electoral votes for the President, seats otherwise.
+        key=lambda row: (
+            -int(row["electoral_votes"]) if shows_electoral_votes else -int(row["seats_won"]),
+            -int(row["seats_won"]),
+            str(row["party_name"]),
+        ),
     )
 
     region_party_keys = set(current_region_party_totals.keys()) | set(baseline_region_party_totals.keys())
@@ -525,6 +558,7 @@ def build_output_detail_context(
             "vote_rows": int(total_votes),
         },
         "party_totals": party_totals_rows,
+        "shows_electoral_votes": shows_electoral_votes,
         "region_diff_headers": region_diff_headers,
         "region_diff_matrix_rows": region_diff_matrix_rows,
         "seats": paginated_seats,

@@ -18,13 +18,19 @@
   </section>
 
   <section class="card">
-    <h3>Seat Totals by Party</h3>
+    <h3>{% if shows_electoral_votes %}Electoral Votes{% else %}Seat Totals{% endif %} by Party</h3>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Party</th>
-            <th>Seats Won</th>
+            {% if shows_electoral_votes %}
+              <th>Electoral Votes</th>
+              <th>EV diff vs base</th>
+              <th>States/Units Won</th>
+            {% else %}
+              <th>Seats Won</th>
+            {% endif %}
             <th>Diff vs base election</th>
             <th>Vote %</th>
             <th>Vote % diff vs base</th>
@@ -34,6 +40,10 @@
           {% for row in party_totals %}
             <tr>
               <td>{{ row.party_name }}</td>
+              {% if shows_electoral_votes %}
+                <td>{{ row.electoral_votes }}</td>
+                <td>{% if row.ev_diff_vs_base > 0 %}+{% endif %}{{ row.ev_diff_vs_base }}</td>
+              {% endif %}
               <td>{{ row.seats_won }}</td>
               <td>{% if row.seats_diff_vs_base > 0 %}+{% endif %}{{ row.seats_diff_vs_base }}</td>
               <td>{{ row.vote_pct }}</td>

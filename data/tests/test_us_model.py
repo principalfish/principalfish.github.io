@@ -170,8 +170,9 @@ class TestComputeRegionDiffs:
 
 class TestProjectSeatVotes:
     def test_swing_flips_a_marginal_seat(self) -> None:
-        # Baseline: Rep 51 / Dem 49 in region 10. Apply a +3 Dem / -3 Rep swing → Dem wins.
-        seat_totals: dict[int, dict[int, float]] = {1: {DEMOCRAT: 49.0, REPUBLICAN: 51.0}}
+        # Baseline: Rep 5100 / Dem 4900 (turnout 10000) in region 10.
+        # A +3 Dem / -3 Rep swing on the shares (49→52, 51→48) → Dem wins.
+        seat_totals: dict[int, dict[int, float]] = {1: {DEMOCRAT: 4900.0, REPUBLICAN: 5100.0}}
         region_by_seat_id: dict[int, int | None] = {1: 10}
         region_swings = {10: {DEMOCRAT: 3.0, REPUBLICAN: -3.0}}
         projected, winners = project_seat_votes(
@@ -183,8 +184,12 @@ class TestProjectSeatVotes:
         )
         assert winners["Democratic"] == 1
         assert winners["Republican"] == 0
-        # Every seat's projected shares renormalise to 100.
-        assert sum(row["vote_total"] for row in projected) == pytest.approx(100.0)
+        # Projected values are vote counts, not shares: the seat's total is held at
+        # its baseline turnout (10000), and Democrats now lead on the projected count.
+        by_party = {row["party_id"]: row["vote_total"] for row in projected}
+        assert sum(by_party.values()) == pytest.approx(10000.0, abs=1)
+        assert by_party[DEMOCRAT] == pytest.approx(5200.0, abs=1)
+        assert by_party[DEMOCRAT] > by_party[REPUBLICAN]
 
     def test_zero_swing_reproduces_baseline_winner(self) -> None:
         seat_totals: dict[int, dict[int, float]] = {1: {DEMOCRAT: 40.0, REPUBLICAN: 60.0}}

@@ -418,11 +418,14 @@ def project_seat_votes(
     """Apply regional swings to baseline seat shares and project a winner per seat.
 
     For each seat: convert baseline raw votes to shares, add the region swing for
-    each party (clamped at zero), renormalise to 100 %, and mark the highest-share
-    party elected. Seats with no positive baseline total are skipped.
+    each party (clamped at zero), renormalise to 100 %, scale back to vote counts
+    at the seat's baseline turnout, and mark the highest-share party elected.
+    Seats with no positive baseline total are skipped.
 
     Returns ``(projected_votes, winners_by_party)`` — projected vote rows carry a
-    normalised ``vote_total`` percentage and an ``elected`` flag.
+    ``vote_total`` vote count (turnout held at the baseline seat total) and an
+    ``elected`` flag. Storing counts, not shares, keeps national aggregation
+    turnout-weighted and consistent with actual/baseline elections.
     """
     projected_votes: list[dict[str, Any]] = []
     winners_by_party: Counter[str] = Counter()
@@ -465,7 +468,9 @@ def project_seat_votes(
                 {
                     "seat_id": seat_id,
                     "party_id": party_id,
-                    "vote_total": pct,
+                    # Scale the projected share back to a vote count at the seat's baseline
+                    # turnout so national totals aggregate turnout-weighted (see docstring).
+                    "vote_total": round((pct / 100.0) * seat_total),
                     "elected": party_id == winner_party_id,
                 }
             )

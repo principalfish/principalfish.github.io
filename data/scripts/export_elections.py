@@ -93,6 +93,9 @@ _us_ev_mod = _importlib_util.module_from_spec(_US_EV_SPEC)  # type: ignore[arg-t
 _US_EV_SPEC.loader.exec_module(_us_ev_mod)  # type: ignore[union-attr]
 ev_map_for_year = _us_ev_mod.ev_map_for_year
 
+DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
+REP_PARTY_ID = 21   # Republican
+
 REPO_ROOT = DATA_DIR.parent
 OUTPUT_ROOT_DEFAULT = REPO_ROOT / "electionmaps" / "data"
 LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files" / "westminster"
@@ -460,6 +463,7 @@ def _export_page(
     results_dir = output_root / "results"
 
     manifest_entries: list[dict[str, Any]] = []
+    state_trends: dict[str, list[dict[str, int | float]]] = {}
     default_election_id: str | None = None
     map_files_by_id: dict[str, str] = {}
     data_files_by_election_id: dict[str, str] = {}
@@ -537,6 +541,26 @@ def _export_page(
         if election.type == ElectionType.us_presidential:
             ev_by_unit = ev_map_for_year(election.year)
         result_payload = build_result_payload(seats, votes, election_year=election.year, ev_by_unit=ev_by_unit)
+
+        if election.type == ElectionType.us_presidential:
+            for seat_row in result_payload["seats"]:
+                v20 = 0.0
+                v21 = 0.0
+                for prow in seat_row["p"]:
+                    if prow[0] == DEM_PARTY_ID:
+                        v20 = float(prow[1])
+                    elif prow[0] == REP_PARTY_ID:
+                        v21 = float(prow[1])
+                two_party = v20 + v21
+                if two_party <= 0:
+                    continue
+                state_trends.setdefault(seat_row["n"], []).append(
+                    {
+                        "year": int(election.year),
+                        "dem": round(v20 / two_party * 100.0, 2),
+                        "rep": round(v21 / two_party * 100.0, 2),
+                    }
+                )
 
         if args.output_file:
             output_file = args.output_file.resolve()
@@ -666,6 +690,14 @@ def _export_page(
     if single_election_mode:
         print("Skipping manifest write for single-election export mode")
         return
+
+    if "us_presidential" in parliaments and not args.dry_run:
+        for series in state_trends.values():
+            series.sort(key=lambda entry: entry["year"])
+        write_json(
+            results_dir / "us-president-trends-by-state.json",
+            {"schema": "pf-state-trends-v1", "units": state_trends},
+        )
 
     apply_supplemental_legacy_elections(
         manifest_entries=manifest_entries,

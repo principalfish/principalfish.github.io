@@ -24,6 +24,17 @@ Quirks handled (see the 2024 data):
       party line wins precedence).
     - Louisiana runs a "jungle primary" — its winners are in the ``jungle primary``
       stage rather than ``general``; both stages are read.
+    - Special elections (``special == true``) are excluded: a special general shares the
+      ``general`` stage with the regular general, so counting both double-counts a seat's
+      turnout and scrambles its winner (e.g. NY-19/TX-34 2022, WI-08 2024).
+    - Ranked-choice voting (Alaska, Maine): 538 emits one row per candidate *per round*
+      (``ranked_choice_round`` = 1, 2, …). Only each district's final round is kept — the
+      decisive two-candidate tally — so rounds aren't summed (which otherwise ~4x-inflates
+      totals and can lift an eliminated-transfer runner-up above the actual winner).
+    - Unopposed seats (``unopposed == true``, e.g. FL/LA/OK) report no vote totals, so the
+      district aggregates to zero. The sole winner is given a nominal 100% total
+      (:data:`UNOPPOSED_NOMINAL_VOTES`) so the seat flows through normally rather than being
+      dropped as a zero-vote seat by the forecast model.
     - Non-voting delegates (GU/PR/VI) are dropped by restricting to the 435 voting
       district codes the geometry defines (passed via ``--valid-districts`` or implied
       by skipping rows whose state has no voting districts).
@@ -62,6 +73,14 @@ BALLOT_PARTY_TO_KEY = {
 
 # Major-party codes take precedence when a fusion candidate runs on several lines.
 PARTY_PRECEDENCE = ["REP", "DEM", "DFL", "LIB", "GRE", "IND"]
+
+# Nominal vote total assigned to an unopposed winner. Unopposed US House races report no
+# vote counts (the candidate is often not even on the ballot), so 538 leaves votes blank
+# and the seat aggregates to zero. Giving the sole winner a nominal total makes them 100%
+# so the seat imports, projects (as a safe hold), and displays like any other seat instead
+# of being dropped downstream as a zero-vote seat. The magnitude is a placeholder — only the
+# 100% share is meaningful.
+UNOPPOSED_NOMINAL_VOTES = 100
 
 
 def district_code(state_abbrev: str, office_seat_name: str) -> str:
@@ -139,6 +158,37 @@ def aggregate_unit(
     return party_info, winner_key
 
 
+def keep_final_rcv_round(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Drop all but the final ranked-choice round for RCV districts.
+
+    538 reports each RCV tabulation round as its own row (``ranked_choice_round`` = 1, 2, …).
+    Summing across rounds over-counts turnout and can rank an eliminated-transfer runner-up
+    above the actual winner, so for each district that has any RCV rows we keep only its
+    highest-numbered round (the decisive two-candidate tally). Districts with no RCV rows
+    (empty ``ranked_choice_round``) are returned unchanged.
+
+    Args:
+        rows: Already-filtered 538 rows for a single cycle.
+
+    Returns:
+        The subset of ``rows`` with every non-final RCV round removed.
+    """
+    max_round: dict[str, int] = {}
+    for row in rows:
+        raw_round = row["ranked_choice_round"].strip()
+        if raw_round:
+            code = district_code(row["state_abbrev"], row["office_seat_name"])
+            max_round[code] = max(max_round.get(code, 0), int(raw_round))
+    if not max_round:
+        return rows
+    kept: list[dict[str, Any]] = []
+    for row in rows:
+        code = district_code(row["state_abbrev"], row["office_seat_name"])
+        if code not in max_round or row["ranked_choice_round"].strip() == str(max_round[code]):
+            kept.append(row)
+    return kept
+
+
 def convert(csv_path: Path, year: str) -> dict[str, Any]:
     """Convert the 538 House CSV into the project election-JSON structure.
 
@@ -155,8 +205,13 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
             for row in csv.DictReader(handle)
             if row["cycle"] == year
             and row["stage"] in ("general", "jungle primary")
+            and row["special"] != "true"
             and row["state_abbrev"] not in NON_VOTING_STATES
         ]
+
+    # For ranked-choice districts keep only the final round so rounds aren't summed (see
+    # module docstring); non-RCV rows pass through untouched.
+    rows = keep_final_rcv_round(rows)
 
     # Group rows by district, then by candidate (to merge fusion ballot lines).
     by_district: dict[str, dict[str, dict[str, Any]]] = defaultdict(lambda: defaultdict(lambda: {
@@ -180,6 +235,10 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for code, candidates in by_district.items():
         party_info, winner_key = aggregate_unit(candidates.values(), code)
+        # Unopposed seat: no votes were reported, so it aggregated to zero. Represent the
+        # sole winner as 100% with a nominal total (see UNOPPOSED_NOMINAL_VOTES).
+        if sum(bucket["total"] for bucket in party_info.values()) == 0:
+            party_info[winner_key]["total"] = UNOPPOSED_NOMINAL_VOTES
         result[code] = {"seatInfo": {"current": winner_key}, "partyInfo": party_info}
 
     return dict(sorted(result.items()))

@@ -66,11 +66,13 @@ class TestConverterHelpers:
 
 def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     """Write a minimal 538-shaped CSV with the columns the converter reads."""
-    cols = ["cycle", "stage", "state_abbrev", "office_seat_name", "ballot_party",
-            "candidate_id", "candidate_name", "votes", "winner"]
+    cols = ["cycle", "stage", "special", "state_abbrev", "office_seat_name", "ballot_party",
+            "candidate_id", "candidate_name", "ranked_choice_round", "votes", "winner"]
+    # A row that omits a column gets a sane default: not a special election, no RCV round.
+    defaults = {"special": "false"}
     lines = [",".join(cols)]
     for row in rows:
-        lines.append(",".join(row.get(c, "") for c in cols))
+        lines.append(",".join(row.get(c, defaults.get(c, "")) for c in cols))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -99,6 +101,83 @@ def test_convert_aggregates_fusion_and_drops_delegates(tmp_path: Path) -> None:
     assert ny["partyInfo"]["democrat"]["total"] == 120  # 100 + 20 fusion
     assert ny["partyInfo"]["republican"]["total"] == 80
     assert result["LA-04"]["seatInfo"]["current"] == "republican"
+
+
+def test_convert_excludes_special_elections(tmp_path: Path) -> None:
+    """A special general shares the 'general' stage; it must not be summed into the regular
+    general (which would double turnout and can flip the winner)."""
+    csv_path = tmp_path / "house.csv"
+    _write_csv(csv_path, [
+        # Regular general: Gonzalez (D) wins.
+        {"cycle": "2022", "stage": "general", "special": "false", "state_abbrev": "TX",
+         "office_seat_name": "District 34", "ballot_party": "DEM", "candidate_id": "1",
+         "candidate_name": "Gonzalez", "votes": "70", "winner": "true"},
+        {"cycle": "2022", "stage": "general", "special": "false", "state_abbrev": "TX",
+         "office_seat_name": "District 34", "ballot_party": "REP", "candidate_id": "2",
+         "candidate_name": "Flores", "votes": "59", "winner": "false"},
+        # Earlier special (jungle primary) that Flores (R) won — must be excluded entirely.
+        {"cycle": "2022", "stage": "jungle primary", "special": "true", "state_abbrev": "TX",
+         "office_seat_name": "District 34", "ballot_party": "REP", "candidate_id": "2",
+         "candidate_name": "Flores", "votes": "80", "winner": "true"},
+    ])
+    result = convert_538.convert(csv_path, "2022")
+
+    tx = result["TX-34"]
+    assert tx["seatInfo"]["current"] == "democrat"          # regular-general winner, not the special's
+    assert tx["partyInfo"]["republican"]["total"] == 59     # 59 only, not 59 + 80
+    assert tx["partyInfo"]["democrat"]["total"] == 70
+
+
+def test_convert_keeps_only_final_rcv_round(tmp_path: Path) -> None:
+    """Ranked-choice districts emit one row per candidate per round; only the final round
+    (the decisive tally) is kept, so rounds aren't summed and eliminated candidates drop."""
+    csv_path = tmp_path / "house.csv"
+    rows = []
+    # Round 1: four candidates (Dem leads; two Reps split; a Libertarian).
+    for bp, cid, name, votes in [("DEM", "P", "Peltola", "100"), ("REP", "S", "Palin", "40"),
+                                 ("REP", "B", "Begich", "35"), ("LIB", "Y", "Bye", "5")]:
+        rows.append({"cycle": "2022", "stage": "general", "state_abbrev": "AK",
+                     "office_seat_name": "District 1", "ballot_party": bp, "candidate_id": cid,
+                     "candidate_name": name, "ranked_choice_round": "1", "votes": votes,
+                     "winner": "true" if cid == "P" else "false"})
+    # Round 2: Bye eliminated.
+    for bp, cid, name, votes in [("DEM", "P", "Peltola", "105"), ("REP", "S", "Palin", "42"),
+                                 ("REP", "B", "Begich", "38")]:
+        rows.append({"cycle": "2022", "stage": "general", "state_abbrev": "AK",
+                     "office_seat_name": "District 1", "ballot_party": bp, "candidate_id": cid,
+                     "candidate_name": name, "ranked_choice_round": "2", "votes": votes,
+                     "winner": "true" if cid == "P" else "false"})
+    # Round 3 (final): only Peltola (D) and Palin (R) remain; Peltola wins.
+    for bp, cid, name, votes in [("DEM", "P", "Peltola", "130"), ("REP", "S", "Palin", "90")]:
+        rows.append({"cycle": "2022", "stage": "general", "state_abbrev": "AK",
+                     "office_seat_name": "District 1", "ballot_party": bp, "candidate_id": cid,
+                     "candidate_name": name, "ranked_choice_round": "3", "votes": votes,
+                     "winner": "true" if cid == "P" else "false"})
+    _write_csv(csv_path, rows)
+    result = convert_538.convert(csv_path, "2022")
+
+    ak = result["AK-01"]
+    assert ak["seatInfo"]["current"] == "democrat"
+    assert ak["partyInfo"]["democrat"]["total"] == 130      # final round only, not 100+105+130
+    assert ak["partyInfo"]["republican"]["total"] == 90     # final-round Palin only, no Begich transfer sum
+    assert "libertarian" not in ak["partyInfo"]             # round-1-only Bye is not carried forward
+
+
+def test_convert_unopposed_becomes_100pct(tmp_path: Path) -> None:
+    """Unopposed winners report no votes; the sole winner is given a nominal 100% total so
+    the seat isn't dropped as a zero-vote seat downstream."""
+    csv_path = tmp_path / "house.csv"
+    _write_csv(csv_path, [
+        {"cycle": "2024", "stage": "general", "state_abbrev": "OK", "office_seat_name": "District 3",
+         "ballot_party": "REP", "candidate_id": "1", "candidate_name": "Frank D. Lucas",
+         "unopposed": "true", "votes": "", "winner": "true"},
+    ])
+    result = convert_538.convert(csv_path, "2024")
+
+    ok = result["OK-03"]
+    assert ok["seatInfo"]["current"] == "republican"
+    assert ok["partyInfo"]["republican"]["total"] == convert_538.UNOPPOSED_NOMINAL_VOTES
+    assert ok["partyInfo"]["republican"]["name"] == "Frank D. Lucas"
 
 
 def _seed_us_parties(db: Database) -> None:

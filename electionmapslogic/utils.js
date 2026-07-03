@@ -189,3 +189,22 @@ export function base64urlDecode(payload) {
   const padded = payload.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((payload.length + 3) % 4);
   try { return atob(padded); } catch { return null; }
 }
+
+/**
+ * Normalises and sorts a unit's raw per-election trend entries from the
+ * seat-trends artifact into an ascending numeric series. Malformed entries are
+ * dropped. Data-driven: works for any set of years, so extending the artifact
+ * back to earlier elections needs no code change.
+ * @param {unknown} entries - Raw `[{ year, dem, rep }, ...]` for one unit, or nullish.
+ * @returns {Array<{year:number, dem:number, rep:number}>} Ascending by year.
+ */
+export function buildStateTrendSeries(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .filter((entry) => entry
+      && Number.isFinite(Number(entry.year))
+      && Number.isFinite(Number(entry.dem))
+      && Number.isFinite(Number(entry.rep)))
+    .map((entry) => ({ year: Number(entry.year), dem: Number(entry.dem), rep: Number(entry.rep) }))
+    .sort((a, b) => a.year - b.year);
+}

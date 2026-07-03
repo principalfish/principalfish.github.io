@@ -11,7 +11,7 @@ vi.mock('../state.js', () => ({
   },
 }));
 
-import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass, normalizePostcode, resolveLookupSeatName } from '../utils.js';
+import { normalizeRegionKey, titleCaseFromRegionKey, escapeHtml, formatInt, formatPct, formatSigned, getRegionLabel, clampNumber, roundShare, base64urlEncode, base64urlDecode, deltaClass, normalizePostcode, resolveLookupSeatName, buildStateTrendSeries } from '../utils.js';
 
 describe('escapeHtml', () => {
   it('escapes ampersands', () => {
@@ -386,5 +386,42 @@ describe('resolveLookupSeatName', () => {
   it('returns empty string for empty input', () => {
     expect(resolveLookupSeatName('', seatKeys, null)).toBe('');
     expect(resolveLookupSeatName(null, seatKeys, null)).toBe('');
+  });
+});
+
+describe('buildStateTrendSeries', () => {
+  it('passes a well-formed series through unchanged', () => {
+    expect(buildStateTrendSeries([{ year: 2020, dem: 51.2, rep: 48.8 }]))
+      .toEqual([{ year: 2020, dem: 51.2, rep: 48.8 }]);
+  });
+
+  it('sorts entries ascending by year', () => {
+    const out = buildStateTrendSeries([
+      { year: 2024, dem: 40, rep: 60 },
+      { year: 2016, dem: 45, rep: 55 },
+      { year: 2020, dem: 50, rep: 50 },
+    ]);
+    expect(out.map((entry) => entry.year)).toEqual([2016, 2020, 2024]);
+  });
+
+  it('coerces string-typed numbers', () => {
+    expect(buildStateTrendSeries([{ year: '2020', dem: '51.2', rep: '48.8' }]))
+      .toEqual([{ year: 2020, dem: 51.2, rep: 48.8 }]);
+  });
+
+  it('drops malformed entries', () => {
+    const out = buildStateTrendSeries([
+      { year: 2020, dem: 51, rep: 49 },
+      { year: 2016, dem: 'x', rep: 40 }, // non-numeric dem
+      { year: 2012, rep: 40 },           // missing dem
+      null,                              // nullish entry
+    ]);
+    expect(out).toEqual([{ year: 2020, dem: 51, rep: 49 }]);
+  });
+
+  it('returns an empty array for non-array input', () => {
+    expect(buildStateTrendSeries(undefined)).toEqual([]);
+    expect(buildStateTrendSeries(null)).toEqual([]);
+    expect(buildStateTrendSeries({})).toEqual([]);
   });
 });

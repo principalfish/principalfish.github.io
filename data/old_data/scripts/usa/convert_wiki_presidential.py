@@ -47,7 +47,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from convert_538_presidential import _backfill_me_ne_cd_units
 from regions import STATE_DIVISION
 from us_electoral_votes import ev_map_for_year
-from us_import import PARTY_KEY_TO_NAME
 
 WIKI_URL = "https://en.wikipedia.org/wiki/{year}_United_States_presidential_election"
 USER_AGENT = "principalfish-election-maps/1.0 (research; historical results import)"
@@ -72,11 +71,18 @@ YEAR_CONFIG: dict[int, dict[str, str]] = {
     1996: {"Clinton": "democrat", "Dole": "republican", "Perot": "independent"},
 }
 
-# A YEAR_CONFIG typo pointing at an unknown party key would only surface as a hard failure
-# deep in import_us_election; catch it at load time instead (``others`` is the default key).
-_UNKNOWN_KEYS = {key for cfg in YEAR_CONFIG.values() for key in cfg.values()} - set(PARTY_KEY_TO_NAME)
+# Party keys the downstream importer accepts (mirrors us_import.PARTY_KEY_TO_NAME). Kept as a
+# local literal so this pure HTML→JSON converter needn't import the db-backed importer module.
+# ``others`` is the default for any unconfigured candidate.
+_ALLOWED_PARTY_KEYS = frozenset(
+    {"democrat", "republican", "libertarian", "usgreen", "independent", "others"}
+)
+
+# A YEAR_CONFIG typo pointing at an unknown party key would otherwise only surface as a hard
+# failure deep in import_us_election; catch it at load time instead.
+_UNKNOWN_KEYS = {key for cfg in YEAR_CONFIG.values() for key in cfg.values()} - _ALLOWED_PARTY_KEYS
 if _UNKNOWN_KEYS:
-    raise ValueError(f"YEAR_CONFIG uses party keys not in PARTY_KEY_TO_NAME: {sorted(_UNKNOWN_KEYS)}")
+    raise ValueError(f"YEAR_CONFIG uses unknown party keys: {sorted(_UNKNOWN_KEYS)}")
 
 # Header labels (matched case-insensitively as substrings above a vote column) that mark it as:
 #   skip  — a derived margin/swing column, never a candidate or a total;

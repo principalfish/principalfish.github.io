@@ -1,0 +1,1346 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 690080,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 804283,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 183109,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 10588,
+        "name": "Other"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 78294,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 102000,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 73481,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 4731,
+        "name": "Other"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 543050,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 572086,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 353741,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 18098,
+        "name": "Other"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 505823,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 337324,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 99132,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 8374,
+        "name": "Other"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 5121325,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 3630574,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 2296006,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 83816,
+        "name": "Other"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 629681,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 562850,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 366010,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 10639,
+        "name": "Other"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 682318,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 578313,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 348771,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 6930,
+        "name": "Other"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 126055,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 102313,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 59213,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2154,
+        "name": "Other"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 192619,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 20698,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 9681,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 4574,
+        "name": "Other"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 25
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2072798,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 2173310,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 1053067,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 15317,
+        "name": "Other"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1008966,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 995252,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 309657,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 7250,
+        "name": "Other"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 179310,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 136822,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 53003,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 3707,
+        "name": "Other"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 137013,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 202645,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 130395,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 12089,
+        "name": "Other"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 22
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2453350,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1734096,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 840515,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 22196,
+        "name": "Other"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 848420,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 989375,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 455934,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 12142,
+        "name": "Other"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 586353,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 504891,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 253468,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 9895,
+        "name": "Other"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 390434,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 449951,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 312358,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 4493,
+        "name": "Other"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 665104,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 617178,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 203944,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 6674,
+        "name": "Other"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 815971,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 733386,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 211478,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 29182,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 263420,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 206504,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 206820,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2755,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 263420,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 206504,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 206820,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2755,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 263420,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 206504,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 206820,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2755,
+        "name": "Other"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 988571,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 707094,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 281414,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 7967,
+        "name": "Other"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1318639,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 805039,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 630731,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 19255,
+        "name": "Other"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 18
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1871182,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1554940,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 824813,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 23738,
+        "name": "Other"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1020997,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 747841,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 562506,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 16603,
+        "name": "Other"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 400258,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 487793,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 85626,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 8116,
+        "name": "Other"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1053873,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 811159,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 518741,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 7792,
+        "name": "Other"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 154507,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 144207,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 107225,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 4672,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 217344,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 344346,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 174687,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2906,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 217344,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 344346,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 174687,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2906,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 217344,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 344346,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 174687,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2906,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 217344,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 344346,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 174687,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2906,
+        "name": "Other"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 189148,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 175828,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 132580,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 8762,
+        "name": "Other"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 209040,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 202484,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 121337,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 5084,
+        "name": "Other"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1436206,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1356865,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 521829,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 28694,
+        "name": "Other"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 261617,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 212824,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 91895,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 3650,
+        "name": "Other"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 33
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 3444450,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 2346649,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 1090721,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 45113,
+        "name": "Other"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1114042,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1134661,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 357864,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 5283,
+        "name": "Other"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 99168,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 136244,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 71084,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 1637,
+        "name": "Other"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 21
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1984942,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1894310,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 1036426,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 24286,
+        "name": "Other"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 473066,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 592929,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 319878,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 4486,
+        "name": "Other"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 621314,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 475757,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 354091,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 11481,
+        "name": "Other"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 23
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2239164,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1791841,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 902667,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 26138,
+        "name": "Other"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 213302,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 131601,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 105045,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 3530,
+        "name": "Other"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 479514,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 577507,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 138872,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 6634,
+        "name": "Other"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 124888,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 136718,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 73295,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 1353,
+        "name": "Other"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 933521,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 841300,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 199968,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 7849,
+        "name": "Other"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 32
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2281815,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 2496071,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 1354781,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 21351,
+        "name": "Other"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 183429,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 322632,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 203400,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 34538,
+        "name": "Other"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 133592,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 88122,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 65991,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 1996,
+        "name": "Other"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1038650,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1150517,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 348639,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 20859,
+        "name": "Other"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 993039,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 731235,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 541780,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 22174,
+        "name": "Other"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 331001,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 241974,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 108829,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 1873,
+        "name": "Other"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1041066,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 930855,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 544479,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 14714,
+        "name": "Other"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 68160,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 79347,
+        "name": "George H.W. Bush"
+      },
+      "independent": {
+        "total": 51263,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 1817,
+        "name": "Other"
+      }
+    }
+  }
+}

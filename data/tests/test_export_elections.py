@@ -460,3 +460,76 @@ class TestStateTrendsExport:
             )
 
         assert not (output_root / "results" / "us-president-trends-by-state.json").exists()
+
+
+class TestStateTrendsThirdParty:
+    """The two-party trend normalises over Dem+Rep only, even where a third party wins.
+
+    Covers the 1964–1996 additions: a state a third party carried (Wallace 1968) still yields
+    a valid Dem-vs-Rep point, and a unit with no Dem/Rep vote is dropped by the guard.
+    """
+
+    _IND_PARTY_ID = 22  # any non-Dem/Rep id; the trend counts only DEM/REP totals.
+
+    @classmethod
+    def _seed(cls, db: Database, tmp_path: Path) -> Path:
+        us_map = db.add_map("us-president", parliament="us_presidential")
+        with db.session() as s:
+            s.add(Party(id=DEM_PARTY_ID, name="Democratic", colour="#1375E1"))
+            s.add(Party(id=REP_PARTY_ID, name="Republican", colour="#E81B23"))
+            s.add(Party(id=cls._IND_PARTY_ID, name="Independent", colour="#9B59B6"))
+        region = db.add_region(us_map.id, "United States")
+        seats = {name: db.add_seat(us_map.id, name, region_id=region.id, electoral_votes=7).id
+                 for name in ("Mississippi", "Alabama")}
+        election = db.add_election(
+            us_map.id, 1968, "1968 US Presidential Election", ElectionType.us_presidential
+        )
+        # Mississippi: Wallace wins on votes (45) but Dem 30 / Rep 25 give a real two-party split.
+        db.add_vote(election.id, seats["Mississippi"], party_id=DEM_PARTY_ID, vote_total=30)
+        db.add_vote(election.id, seats["Mississippi"], party_id=REP_PARTY_ID, vote_total=25)
+        db.add_vote(election.id, seats["Mississippi"], party_id=cls._IND_PARTY_ID, vote_total=45)
+        # Alabama: only an Independent vote — no Dem/Rep, so two_party == 0 (synthetic edge).
+        db.add_vote(election.id, seats["Alabama"], party_id=cls._IND_PARTY_ID, vote_total=100)
+
+        output_root = tmp_path / "uselectionmaps" / "data"
+        (output_root / "maps").mkdir(parents=True)
+        (output_root / "maps" / f"map-{us_map.id}.topo.json").write_text("{}", encoding="utf-8")
+        return output_root
+
+    def _run_export(self, db: Database, output_root: Path, tmp_path: Path) -> dict[str, list[dict[str, Any]]]:
+        args = argparse.Namespace(dry_run=False, output_file=None, legacy_files_dir=tmp_path)
+        with db.session() as session:
+            elections = session.execute(
+                select(Election)
+                .where(Election.type == ElectionType.us_presidential)
+                .options(joinedload(Election.map))
+            ).scalars().all()
+            _export_page(
+                session=session,
+                elections=list(elections),
+                output_root=output_root,
+                parliaments={"us_presidential"},
+                args=args,
+                manifest_parties=[],
+                manifest_regions_by_map_id={},
+                has_electorate=True,
+                has_electoral_votes=True,
+                single_election_mode=False,
+            )
+        trends_path = output_root / "results" / "us-president-trends-by-state.json"
+        units: dict[str, list[dict[str, Any]]] = json.loads(trends_path.read_text(encoding="utf-8"))["units"]
+        return units
+
+    def test_third_party_state_normalises_over_two_party(self, db: Database, tmp_path: Path) -> None:
+        units = self._run_export(db, self._seed(db, tmp_path), tmp_path)
+        entry = units["Mississippi"][0]
+        # Wallace's 45 is excluded; the point is Dem/Rep share of Dem+Rep only (30+25=55).
+        assert entry == {"year": 1968, "dem": pytest.approx(54.55, abs=0.01),
+                         "rep": pytest.approx(45.45, abs=0.01)}
+        assert entry["dem"] + entry["rep"] == pytest.approx(100.0)
+        assert "independent" not in entry
+
+    def test_zero_two_party_unit_is_skipped(self, db: Database, tmp_path: Path) -> None:
+        units = self._run_export(db, self._seed(db, tmp_path), tmp_path)
+        assert "Mississippi" in units  # export ran and produced a series...
+        assert "Alabama" not in units  # ...but the no-Dem/Rep unit is dropped by the guard

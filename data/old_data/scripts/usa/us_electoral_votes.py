@@ -17,8 +17,55 @@ from __future__ import annotations
 # (48 non-ME/NE states + DC). Each era's 49-unit sum plus the fixed ME (2+1+1)
 # and NE (2+1+1+1) structure totals 538. The era key is the census whose
 # apportionment the election used, which lags the decennial count by one cycle
-# (1990 census → 1992/1996/2000 elections; 2000 census → 2004/2008; etc.).
+# (1960 census → 1964/1968 elections; 1970 census → 1972/1976/1980; etc.).
+# Source: National Archives Electoral College results pages (archives.gov).
 EV_BY_ERA: dict[int, dict[str, int]] = {
+    1960: {
+        # 49-unit sum = 529; +ME(4)+NE(5) = 538. DC gains 3 EVs via the 23rd
+        # Amendment, first applied in 1964. Source: NARA 1968 results.
+        "Alabama": 10, "Alaska": 3, "Arizona": 5, "Arkansas": 6, "California": 40,
+        "Colorado": 6, "Connecticut": 8, "Delaware": 3, "District of Columbia": 3,
+        "Florida": 14, "Georgia": 12, "Hawaii": 4, "Idaho": 4, "Illinois": 26,
+        "Indiana": 13, "Iowa": 9, "Kansas": 7, "Kentucky": 9, "Louisiana": 10,
+        "Maryland": 10, "Massachusetts": 14, "Michigan": 21, "Minnesota": 10,
+        "Mississippi": 7, "Missouri": 12, "Montana": 4, "Nevada": 3,
+        "New Hampshire": 4, "New Jersey": 17, "New Mexico": 4, "New York": 43,
+        "North Carolina": 13, "North Dakota": 4, "Ohio": 26, "Oklahoma": 8,
+        "Oregon": 6, "Pennsylvania": 29, "Rhode Island": 4, "South Carolina": 8,
+        "South Dakota": 4, "Tennessee": 11, "Texas": 25, "Utah": 4, "Vermont": 3,
+        "Virginia": 12, "Washington": 9, "West Virginia": 7, "Wisconsin": 12,
+        "Wyoming": 3,
+    },
+    1970: {
+        # 49-unit sum = 529; +ME(4)+NE(5) = 538. Source: NARA 1972 results.
+        "Alabama": 9, "Alaska": 3, "Arizona": 6, "Arkansas": 6, "California": 45,
+        "Colorado": 7, "Connecticut": 8, "Delaware": 3, "District of Columbia": 3,
+        "Florida": 17, "Georgia": 12, "Hawaii": 4, "Idaho": 4, "Illinois": 26,
+        "Indiana": 13, "Iowa": 8, "Kansas": 7, "Kentucky": 9, "Louisiana": 10,
+        "Maryland": 10, "Massachusetts": 14, "Michigan": 21, "Minnesota": 10,
+        "Mississippi": 7, "Missouri": 12, "Montana": 4, "Nevada": 3,
+        "New Hampshire": 4, "New Jersey": 17, "New Mexico": 4, "New York": 41,
+        "North Carolina": 13, "North Dakota": 3, "Ohio": 25, "Oklahoma": 8,
+        "Oregon": 6, "Pennsylvania": 27, "Rhode Island": 4, "South Carolina": 8,
+        "South Dakota": 4, "Tennessee": 10, "Texas": 26, "Utah": 4, "Vermont": 3,
+        "Virginia": 12, "Washington": 9, "West Virginia": 6, "Wisconsin": 11,
+        "Wyoming": 3,
+    },
+    1980: {
+        # 49-unit sum = 529; +ME(4)+NE(5) = 538. Source: NARA 1984 results.
+        "Alabama": 9, "Alaska": 3, "Arizona": 7, "Arkansas": 6, "California": 47,
+        "Colorado": 8, "Connecticut": 8, "Delaware": 3, "District of Columbia": 3,
+        "Florida": 21, "Georgia": 12, "Hawaii": 4, "Idaho": 4, "Illinois": 24,
+        "Indiana": 12, "Iowa": 8, "Kansas": 7, "Kentucky": 9, "Louisiana": 10,
+        "Maryland": 10, "Massachusetts": 13, "Michigan": 20, "Minnesota": 10,
+        "Mississippi": 7, "Missouri": 11, "Montana": 4, "Nevada": 4,
+        "New Hampshire": 4, "New Jersey": 16, "New Mexico": 5, "New York": 36,
+        "North Carolina": 13, "North Dakota": 3, "Ohio": 23, "Oklahoma": 8,
+        "Oregon": 7, "Pennsylvania": 25, "Rhode Island": 4, "South Carolina": 8,
+        "South Dakota": 3, "Tennessee": 11, "Texas": 29, "Utah": 5, "Vermont": 3,
+        "Virginia": 12, "Washington": 10, "West Virginia": 6, "Wisconsin": 11,
+        "Wyoming": 3,
+    },
     1990: {
         "Alabama": 9, "Alaska": 3, "Arizona": 8, "Arkansas": 6, "California": 54,
         "Colorado": 8, "Connecticut": 8, "Delaware": 3, "District of Columbia": 3,
@@ -82,8 +129,15 @@ def _era_for_year(year: int) -> int:
     """Return the apportionment era key for a presidential election year.
 
     Each election uses the apportionment from the previous decade's census:
-    ≤2000 → 1990, 2004–2008 → 2000, 2012–2020 → 2010, 2024 and later → 2020.
+    1964–1968 → 1960, 1972–1980 → 1970, 1984–1988 → 1980, 1992–2000 → 1990,
+    2004–2008 → 2000, 2012–2020 → 2010, 2024 and later → 2020.
     """
+    if year <= 1968:
+        return 1960
+    if year <= 1980:
+        return 1970
+    if year <= 1988:
+        return 1980
     if year <= 2000:
         return 1990
     if year <= 2008:

@@ -1,0 +1,1122 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 815576,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 549506,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 13394,
+        "name": "Other"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 119251,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 72584,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 8281,
+        "name": "Other"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 702541,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 454029,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 15303,
+        "name": "Other"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 466578,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 349237,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 11923,
+        "name": "Other"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 47
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 5054917,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 4702233,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 129914,
+        "name": "Other"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 728177,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 621453,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 22764,
+        "name": "Other"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 750241,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 676584,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 16569,
+        "name": "Other"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 139639,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 108647,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 1605,
+        "name": "Other"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 27590,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 159407,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 5880,
+        "name": "Other"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 21
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2618885,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1656701,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 26727,
+        "name": "Other"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1081331,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 714792,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 13549,
+        "name": "Other"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 158625,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 192364,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 3472,
+        "name": "Other"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 253881,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 147272,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 7815,
+        "name": "Other"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 24
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2310939,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 2215940,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 32241,
+        "name": "Other"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1297763,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 860643,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 10215,
+        "name": "Other"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 545355,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 670557,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 9702,
+        "name": "Other"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 554049,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 422636,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 16359,
+        "name": "Other"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 734281,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 580368,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 7868,
+        "name": "Other"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 883702,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 734281,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 10219,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 307131,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 243569,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 4335,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 307131,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 243569,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 4335,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 307131,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 243569,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 4335,
+        "name": "Other"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 876167,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 826304,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 11887,
+        "name": "Other"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1194644,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1401406,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 36755,
+        "name": "Other"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 20
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1965486,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1675783,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 27894,
+        "name": "Other"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 962337,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1109471,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 24982,
+        "name": "Other"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 557890,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 363921,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 9716,
+        "name": "Other"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1084953,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1001619,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 6656,
+        "name": "Other"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 190412,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 168936,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 6326,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 398447,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 259646,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 4279,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 398447,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 259646,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 4279,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 398447,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 259646,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 4279,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 398447,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 259646,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 4279,
+        "name": "Other"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 206040,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 132738,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 11289,
+        "name": "Other"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 281537,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 163696,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 5292,
+        "name": "Other"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1743192,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1320352,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 36009,
+        "name": "Other"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 270341,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 244497,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 6449,
+        "name": "Other"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 36
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 3081871,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 3347882,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 55930,
+        "name": "Other"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1237258,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 890167,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 6945,
+        "name": "Other"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 166559,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 127739,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 2963,
+        "name": "Other"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 23
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2416549,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1939629,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 37521,
+        "name": "Other"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 678367,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 483423,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 9246,
+        "name": "Other"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 560126,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 616206,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 25362,
+        "name": "Other"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 25
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2300087,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 2194944,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 41220,
+        "name": "Other"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 177761,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 225123,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 1736,
+        "name": "Other"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 606443,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 370554,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 9012,
+        "name": "Other"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 165415,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 145560,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 2016,
+        "name": "Other"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 947233,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 679794,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 9223,
+        "name": "Other"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 29
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 3036829,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 2352748,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 37833,
+        "name": "Other"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 428442,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 207343,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 11223,
+        "name": "Other"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 124331,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 115775,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 3227,
+        "name": "Other"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1309162,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 859799,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 22648,
+        "name": "Other"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 903835,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 933516,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 27902,
+        "name": "Other"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 310065,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 341016,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 2230,
+        "name": "Other"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1047499,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 1126794,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 17315,
+        "name": "Other"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 106867,
+        "name": "George H.W. Bush"
+      },
+      "democrat": {
+        "total": 67113,
+        "name": "Michael Dukakis"
+      },
+      "others": {
+        "total": 2571,
+        "name": "Other"
+      }
+    }
+  }
+}

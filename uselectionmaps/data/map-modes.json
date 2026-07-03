@@ -112,7 +112,16 @@
       "name": "2000 Election",
       "type": "us_presidential",
       "mapId": 22,
-      "parliament": "us_presidential"
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1996-us-president"
+    },
+    {
+      "id": "1996-us-president",
+      "name": "1996 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1992-us-president"
     },
     {
       "id": "2022-us-senate",
@@ -127,6 +136,69 @@
       "type": "us_senate",
       "mapId": 23,
       "parliament": "us_senate"
+    },
+    {
+      "id": "1992-us-president",
+      "name": "1992 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1988-us-president"
+    },
+    {
+      "id": "1988-us-president",
+      "name": "1988 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1984-us-president"
+    },
+    {
+      "id": "1984-us-president",
+      "name": "1984 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1980-us-president"
+    },
+    {
+      "id": "1980-us-president",
+      "name": "1980 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1976-us-president"
+    },
+    {
+      "id": "1976-us-president",
+      "name": "1976 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1972-us-president"
+    },
+    {
+      "id": "1972-us-president",
+      "name": "1972 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1968-us-president"
+    },
+    {
+      "id": "1968-us-president",
+      "name": "1968 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential",
+      "comparisonElectionId": "1964-us-president"
+    },
+    {
+      "id": "1964-us-president",
+      "name": "1964 Election",
+      "type": "us_presidential",
+      "mapId": 22,
+      "parliament": "us_presidential"
     }
   ],
   "misc": {
@@ -420,6 +492,15 @@
         "2008-us-president": "results/us-president-2008.json",
         "2004-us-president": "results/us-president-2004.json",
         "2000-us-president": "results/us-president-2000.json",
+        "1996-us-president": "results/us-president-1996.json",
+        "1992-us-president": "results/us-president-1992.json",
+        "1988-us-president": "results/us-president-1988.json",
+        "1984-us-president": "results/us-president-1984.json",
+        "1980-us-president": "results/us-president-1980.json",
+        "1976-us-president": "results/us-president-1976.json",
+        "1972-us-president": "results/us-president-1972.json",
+        "1968-us-president": "results/us-president-1968.json",
+        "1964-us-president": "results/us-president-1964.json",
         "current-senate": "results/senate-current.json"
       }
     },

@@ -1,0 +1,1122 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 872849,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 551899,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 16965,
+        "name": "Other"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 138377,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 62007,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 7221,
+        "name": "Other"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 681416,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 333854,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 10627,
+        "name": "Other"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 534774,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 338646,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 10986,
+        "name": "Other"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 47
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 5467009,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 3922519,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 115895,
+        "name": "Other"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 821818,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 454974,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 18589,
+        "name": "Other"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 890877,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 569597,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 6426,
+        "name": "Other"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 152190,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 101656,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 726,
+        "name": "Other"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 29009,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 180408,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 1871,
+        "name": "Other"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 21
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2730350,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 1448816,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 885,
+        "name": "Other"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1068722,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 706628,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 743,
+        "name": "Other"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 185050,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 147154,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 3642,
+        "name": "Other"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 297523,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 108510,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 5111,
+        "name": "Other"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 24
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2707103,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 2086499,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 25486,
+        "name": "Other"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1377230,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 841481,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 14358,
+        "name": "Other"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 703088,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 605620,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 11097,
+        "name": "Other"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 677296,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 333149,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 11546,
+        "name": "Other"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 822782,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 539589,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 8090,
+        "name": "Other"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1037299,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 651586,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 17937,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 336500,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 214515,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 2129,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 336500,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 214515,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 2129,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 336500,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 214515,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 2129,
+        "name": "Other"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 879918,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 787935,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 8020,
+        "name": "Other"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1310936,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 1239606,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 8911,
+        "name": "Other"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 20
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2251571,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 1529638,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 20449,
+        "name": "Other"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1032603,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 1036364,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 15482,
+        "name": "Other"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 581477,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 352192,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 6523,
+        "name": "Other"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1274188,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 848583,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 0,
+        "name": "Other"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 232450,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 146742,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 5185,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 460054,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 187866,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 4170,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 460054,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 187866,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 4170,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 460054,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 187866,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 4170,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 460054,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 187866,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 4170,
+        "name": "Other"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 188770,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 91655,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 6242,
+        "name": "Other"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 267051,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 120395,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 1508,
+        "name": "Other"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 16
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1933630,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 1261323,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 22909,
+        "name": "Other"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 307101,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 201769,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 5500,
+        "name": "Other"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 36
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 3664763,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 3119609,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 22438,
+        "name": "Other"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1346481,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 824287,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 4593,
+        "name": "Other"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 200336,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 104429,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 4206,
+        "name": "Other"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 23
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2678560,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 1825440,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 43619,
+        "name": "Other"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 861530,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 385080,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 9066,
+        "name": "Other"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 685700,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 536479,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 4348,
+        "name": "Other"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 25
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 2584323,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 2228131,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 32449,
+        "name": "Other"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 212080,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 197106,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 1306,
+        "name": "Other"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 615539,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 344470,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 8531,
+        "name": "Other"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 200267,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 116113,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 1487,
+        "name": "Other"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 990212,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 711714,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 10067,
+        "name": "Other"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 29
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 3433428,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 1949276,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 14867,
+        "name": "Other"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 469105,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 155369,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 5182,
+        "name": "Other"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 135865,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 95730,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 2966,
+        "name": "Other"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1337078,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 796250,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 13307,
+        "name": "Other"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1051670,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 807352,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 24888,
+        "name": "Other"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 405483,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 328125,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 2134,
+        "name": "Other"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 1198800,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 995847,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 17369,
+        "name": "Other"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "republican": {
+        "total": 133241,
+        "name": "Ronald Reagan"
+      },
+      "democrat": {
+        "total": 53370,
+        "name": "Walter Mondale"
+      },
+      "others": {
+        "total": 2357,
+        "name": "Other"
+      }
+    }
+  }
+}

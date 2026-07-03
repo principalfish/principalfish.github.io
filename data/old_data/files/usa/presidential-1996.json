@@ -1,0 +1,1346 @@
+{
+  "Alabama": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 662165,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 769044,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 92149,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 10991,
+        "name": "Other"
+      }
+    }
+  },
+  "Alaska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 80380,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 122746,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 26333,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 12161,
+        "name": "Other"
+      }
+    }
+  },
+  "Arizona": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 653288,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 622073,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 112072,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 16972,
+        "name": "Other"
+      }
+    }
+  },
+  "Arkansas": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 475171,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 325416,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 69884,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 13791,
+        "name": "Other"
+      }
+    }
+  },
+  "California": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 54
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 5119835,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 3828380,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 697847,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 373422,
+        "name": "Other"
+      }
+    }
+  },
+  "Colorado": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 671152,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 691848,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 99629,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 48075,
+        "name": "Other"
+      }
+    }
+  },
+  "Connecticut": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 735740,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 483109,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 139523,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 34242,
+        "name": "Other"
+      }
+    }
+  },
+  "Delaware": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 140355,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 99062,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 28719,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2709,
+        "name": "Other"
+      }
+    }
+  },
+  "District of Columbia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 158220,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 17339,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 3611,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 6556,
+        "name": "Other"
+      }
+    }
+  },
+  "Florida": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 25
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2546870,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 2244536,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 483870,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 28518,
+        "name": "Other"
+      }
+    }
+  },
+  "Georgia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1053849,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1080843,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 146337,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 18042,
+        "name": "Other"
+      }
+    }
+  },
+  "Hawaii": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 205012,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 113943,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 27358,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 13807,
+        "name": "Other"
+      }
+    }
+  },
+  "Idaho": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 165443,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 256595,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 62518,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 7163,
+        "name": "Other"
+      }
+    }
+  },
+  "Illinois": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 22
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2341744,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1587021,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 346408,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 36218,
+        "name": "Other"
+      }
+    }
+  },
+  "Indiana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 887424,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1006693,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 224299,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 17426,
+        "name": "Other"
+      }
+    }
+  },
+  "Iowa": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 620258,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 492644,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 105159,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 16014,
+        "name": "Other"
+      }
+    }
+  },
+  "Kansas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 6
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 387659,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 583245,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 92639,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 10757,
+        "name": "Other"
+      }
+    }
+  },
+  "Kentucky": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 636614,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 623283,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 120396,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 8415,
+        "name": "Other"
+      }
+    }
+  },
+  "Louisiana": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 9
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 927837,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 712586,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 123293,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 20243,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 312788,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 186378,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 85970,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 20761,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-1": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 312788,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 186378,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 85970,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 20761,
+        "name": "Other"
+      }
+    }
+  },
+  "Maine CD-2": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 312788,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 186378,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 85970,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 20761,
+        "name": "Other"
+      }
+    }
+  },
+  "Maryland": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 966207,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 681530,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 115812,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 17321,
+        "name": "Other"
+      }
+    }
+  },
+  "Massachusetts": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 12
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1571763,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 718107,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 227217,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 39699,
+        "name": "Other"
+      }
+    }
+  },
+  "Michigan": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 18
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1989653,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1481212,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 336670,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 41309,
+        "name": "Other"
+      }
+    }
+  },
+  "Minnesota": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 10
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1120438,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 766476,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 257704,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 48022,
+        "name": "Other"
+      }
+    }
+  },
+  "Mississippi": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 394022,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 439838,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 52222,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 7775,
+        "name": "Other"
+      }
+    }
+  },
+  "Missouri": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1025935,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 890016,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 217188,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 24926,
+        "name": "Other"
+      }
+    }
+  },
+  "Montana": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 167922,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 179652,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 55229,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 4458,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 2
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 236761,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 363467,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 71278,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 5909,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-1": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 236761,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 363467,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 71278,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 5909,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-2": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 236761,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 363467,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 71278,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 5909,
+        "name": "Other"
+      }
+    }
+  },
+  "Nebraska CD-3": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 1
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 236761,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 363467,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 71278,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 5909,
+        "name": "Other"
+      }
+    }
+  },
+  "Nevada": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 203974,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 199244,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 43986,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 17075,
+        "name": "Other"
+      }
+    }
+  },
+  "New Hampshire": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 246214,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 196532,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 48390,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 8039,
+        "name": "Other"
+      }
+    }
+  },
+  "New Jersey": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 15
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1652329,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1103078,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 262134,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 58266,
+        "name": "Other"
+      }
+    }
+  },
+  "New Mexico": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 273495,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 232751,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 32257,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 17571,
+        "name": "Other"
+      }
+    }
+  },
+  "New York": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 33
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 3756177,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1933492,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 503458,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 123002,
+        "name": "Other"
+      }
+    }
+  },
+  "North Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 14
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1107849,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1225938,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 168059,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 13961,
+        "name": "Other"
+      }
+    }
+  },
+  "North Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 106905,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 125050,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 32515,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 1941,
+        "name": "Other"
+      }
+    }
+  },
+  "Ohio": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 21
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2148222,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1859883,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 483207,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 43122,
+        "name": "Other"
+      }
+    }
+  },
+  "Oklahoma": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 488105,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 582315,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 130788,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 5505,
+        "name": "Other"
+      }
+    }
+  },
+  "Oregon": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 7
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 649641,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 538152,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 121221,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 68746,
+        "name": "Other"
+      }
+    }
+  },
+  "Pennsylvania": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 23
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2215819,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1801169,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 430984,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 58146,
+        "name": "Other"
+      }
+    }
+  },
+  "Rhode Island": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 4
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 233050,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 104683,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 43723,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 8828,
+        "name": "Other"
+      }
+    }
+  },
+  "South Carolina": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 8
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 506283,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 573458,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 64386,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 7562,
+        "name": "Other"
+      }
+    }
+  },
+  "South Dakota": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 139333,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 150543,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 31250,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2700,
+        "name": "Other"
+      }
+    }
+  },
+  "Tennessee": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 909146,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 863530,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 105918,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 15511,
+        "name": "Other"
+      }
+    }
+  },
+  "Texas": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 32
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 2459683,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 2736167,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 378537,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 37257,
+        "name": "Other"
+      }
+    }
+  },
+  "Utah": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 221633,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 361911,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 66461,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 15624,
+        "name": "Other"
+      }
+    }
+  },
+  "Vermont": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 137894,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 80352,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 31024,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 9179,
+        "name": "Other"
+      }
+    }
+  },
+  "Virginia": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 13
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1091060,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 1138350,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 159861,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 27371,
+        "name": "Other"
+      }
+    }
+  },
+  "Washington": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1123323,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 840712,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 201003,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 88799,
+        "name": "Other"
+      }
+    }
+  },
+  "West Virginia": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 5
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 327812,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 233946,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 71639,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 3062,
+        "name": "Other"
+      }
+    }
+  },
+  "Wisconsin": {
+    "seatInfo": {
+      "current": "democrat",
+      "electoral_votes": 11
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 1071971,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 845029,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 227339,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 51830,
+        "name": "Other"
+      }
+    }
+  },
+  "Wyoming": {
+    "seatInfo": {
+      "current": "republican",
+      "electoral_votes": 3
+    },
+    "partyInfo": {
+      "democrat": {
+        "total": 77934,
+        "name": "Bill Clinton"
+      },
+      "republican": {
+        "total": 105388,
+        "name": "Bob Dole"
+      },
+      "independent": {
+        "total": 25928,
+        "name": "Ross Perot"
+      },
+      "others": {
+        "total": 2321,
+        "name": "Other"
+      }
+    }
+  }
+}

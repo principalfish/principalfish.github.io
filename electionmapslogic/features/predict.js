@@ -118,10 +118,10 @@ export function buildBaselineShares(seats, modelledPartyKeys, aggregateConfig = 
  */
 export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelledPartyKeys, aggregateConfig = null) {
   const totalVotes = baseSeat.turnout;
-  if (totalVotes <= 0) return new Seat(baseSeat);
+  if (totalVotes <= 0) return new Seat({ ...baseSeat, candidates: {} });
 
   const regionKey = normalizeRegionKey(baseSeat.region);
-  if (!regionKey) return new Seat(baseSeat);
+  if (!regionKey) return new Seat({ ...baseSeat, candidates: {} });
   const baseVotes = baseSeat.votes || {};
 
   // Resolve the swing for a party: prefer the seat's own region, fall back to the
@@ -176,7 +176,7 @@ export function projectSeatUniformSwing(baseSeat, swingsByRegionByParty, modelle
   const winner = Object.entries(projected)
     .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))[0]?.[0] || baseSeat.winner || 'others';
 
-  return new Seat({ ...baseSeat, votes: projected, turnout: totalVotes, winner });
+  return new Seat({ ...baseSeat, votes: projected, turnout: totalVotes, winner, candidates: {} });
 }
 
 /**
@@ -638,7 +638,7 @@ class PredictModel {
     // Deep-copy on the zero-swing path: baseSeats are state.comparisonElectionData's Seats, so
     // returning a shallow slice would let state.electionData and state.comparisonElectionData
     // share Seat instances. Cloning keeps the projected and comparison elections independent.
-    if (swings.size === 0) return this.baseSeats.map((seat) => new Seat(seat));
+    if (swings.size === 0) return this.baseSeats.map((seat) => new Seat({ ...seat, candidates: {} }));
     return this.baseSeats.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
   }
 
@@ -1012,7 +1012,7 @@ export class AMSPredict extends PredictModel {
     // valid but different allocation when the source data wasn't itself a clean D'Hondt
     // recomputation (e.g. the "2021 Election (2026 boundaries)" file preserves the historical
     // 2021 list winners rather than re-allocating under the new region structure).
-    if (constSwings.size === 0 && listSwings.size === 0) return this.baseSeats.map((seat) => new Seat(seat));
+    if (constSwings.size === 0 && listSwings.size === 0) return this.baseSeats.map((seat) => new Seat({ ...seat, candidates: {} }));
     // List votes only move when the user edits the list ballot. Editing only the constituency
     // ballot still changes the list allocation — but indirectly, via the updated constituency
     // wins that seed each region's D'Hondt divisors (constWinsByRegion below) — not by applying
@@ -1161,7 +1161,7 @@ export class SenatePredict extends FPTPPredict {
     const swings = this.buildSwings(this.currentInputMap(), this.currentBaselineMap());
     const base = this.projectionBase.length ? this.projectionBase : this.baseSeats;
     const projectedContested = swings.size === 0
-      ? base.map((seat) => new Seat(seat))
+      ? base.map((seat) => new Seat({ ...seat, candidates: {} }))
       : base.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
     if (this.activeTab !== 'chamber') return projectedContested;
     return this.#buildChamber(projectedContested);

@@ -117,7 +117,11 @@ class TestBuildSteps:
         assert labels.index("Import Westminster geometry") < labels.index(
             "Import region populations"
         )
-        assert "Import Holyrood elections" in labels
+        # Holyrood constituency seats must exist before the elections load votes
+        # onto them.
+        assert labels.index("Import Holyrood constituency seats") < labels.index(
+            "Import Holyrood elections"
+        )
 
     def test_refresh_importers_carry_the_flag(self) -> None:
         by_label = {s.label: s for s in build_steps()}

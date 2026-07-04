@@ -115,25 +115,53 @@ Restore buttons run these, and a scheduled run can call `backup_to_drive.sh` dai
 
 ---
 
-## 4) Import every base dataset (from scratch)
+## 4) Rebuild the database from source data
 
-These are the core loaders for the current SQLAlchemy schema in `data/models.py`.
+`scripts/rebuild_database.py` re-imports **every** base dataset — parties, maps,
+regions, seats, and all historical election results (Westminster, Holyrood, US,
+by-elections) — then re-exports the static site data. It runs each importer in
+**ID-preserving `--refresh` mode**, so it never deletes a map/region/seat/party
+or a historical-election row; it only clears+reinserts that election's votes.
+**Polls and model runs are preserved** (their foreign keys stay valid), and one
+failed step does not abort the run (a per-step summary is printed).
 
-From `data/` with environment active:
+One command (from `data/`, environment active):
 
 ```bash
-../election_data/bin/python old_data/import_topojson.py
-../election_data/bin/python old_data/import_parties.py
-../election_data/bin/python old_data/import_general_elections.py
+./election_data/bin/python scripts/rebuild_database.py            # full rebuild
+./election_data/bin/python scripts/rebuild_database.py --dry-run  # list steps only
 ```
 
-Optional regional populations (requires your own CSV/JSON input):
+The data console exposes the same thing as a **"Rebuild Database"** button (Site
+card). Both are byte-idempotent: re-running produces no diff when the source data
+hasn't changed.
+
+### Underlying importers
+
+The orchestrator chains these (all under `old_data/scripts/`, run from `data/`);
+you can also run any one directly with `--refresh`:
 
 ```bash
-../election_data/bin/python old_data/import_region_populations.py \
+./election_data/bin/python old_data/scripts/import_parties.py
+./election_data/bin/python old_data/scripts/westminster/import_topojson.py --refresh
+./election_data/bin/python old_data/scripts/import_region_populations.py \
 	--map-name "UK Constituencies post 2022" \
-	--input old_data/files/region_populations_template.csv
+	--input old_data/files/westminster/region_populations.csv
+./election_data/bin/python old_data/scripts/westminster/import_general_elections.py --refresh
+./election_data/bin/python old_data/scripts/holyrood/import_holyrood_seats.py --refresh
+./election_data/bin/python old_data/scripts/holyrood/import_holyrood_elections.py --refresh
+./election_data/bin/python old_data/scripts/usa/import_house_elections.py \
+	--file old_data/files/usa/house-2024.json --year 2024 \
+	--name "2024 US House Election" --refresh      # + senate / presidential per file
+./election_data/bin/python scripts/by_election_import.py \
+	--url <wikipedia-url> --refresh                # one per line in
+	                                               # old_data/files/westminster/by_elections.txt
 ```
+
+Seat boundary geometry is **not** stored in the database — the site renders from
+the committed `electionmaps/data/maps/map-*.topo.json`. `import_topojson.py`
+(Westminster) and `import_holyrood_seats.py` create seats from those committed
+TopoJSON files; no PostGIS is required.
 
 ---
 

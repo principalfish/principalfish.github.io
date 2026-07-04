@@ -1,7 +1,4 @@
-"""Tests for the get-or-create, geometry-update, and vote-clearing helpers."""
-
-import pytest
-from shapely.geometry import MultiPolygon, box
+"""Tests for the get-or-create and vote-clearing helpers."""
 
 from db import Database
 from models import ElectionType
@@ -40,7 +37,7 @@ class TestGetOrCreateRegion:
 
 
 class TestGetOrCreateSeat:
-    """Covers Database.get_or_create_seat — reuse, creation, and geometry."""
+    """Covers Database.get_or_create_seat — reuse and creation."""
 
     def test_returns_existing(self, db: Database) -> None:
         m = db.add_map("UK")
@@ -54,12 +51,6 @@ class TestGetOrCreateSeat:
         assert result.id is not None
         assert result.seat_name == "Holborn"
 
-    def test_creates_with_shapely_geometry(self, db: Database) -> None:
-        m = db.add_map("UK")
-        poly = MultiPolygon([box(-0.13, 51.52, -0.10, 51.54)])
-        result = db.get_or_create_seat(m.id, "GeomSeat", geometry=poly)
-        assert result.geometry is not None
-
     def test_creates_with_optional_fields(self, db: Database) -> None:
         m = db.add_map("UK")
         region = db.add_region(m.id, "London")
@@ -68,50 +59,6 @@ class TestGetOrCreateSeat:
         )
         assert result.region_id == region.id
         assert result.electorate == 70000
-
-
-class TestUpdateSeatGeometry:
-    """Covers Database.update_seat_geometry — update, clear, missing, key preservation."""
-
-    def test_updates_existing(self, db: Database) -> None:
-        m = db.add_map("UK")
-        seat = db.add_seat(m.id, "Seat")
-        poly = MultiPolygon([box(0.0, 0.0, 1.0, 1.0)])
-        result = db.update_seat_geometry(seat.id, poly)
-        assert result is not None
-        assert result.geometry is not None
-
-    def test_missing_seat_returns_none(self, db: Database) -> None:
-        assert db.update_seat_geometry(9999, None) is None
-
-    def test_clears_geometry(self, db: Database) -> None:
-        m = db.add_map("UK")
-        poly = MultiPolygon([box(0.0, 0.0, 1.0, 1.0)])
-        seat = db.add_seat(m.id, "Seat", geometry=poly)
-        result = db.update_seat_geometry(seat.id, None)
-        assert result is not None
-        assert result.geometry is None
-
-    def test_accepts_geojson_dict(self, db: Database) -> None:
-        m = db.add_map("UK")
-        seat = db.add_seat(m.id, "Seat")
-        geojson = {
-            "type": "MultiPolygon",
-            "coordinates": [
-                [[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.0, 0.0]]]
-            ],
-        }
-        result = db.update_seat_geometry(seat.id, geojson)
-        assert result is not None
-        assert result.geometry is not None
-
-    def test_preserves_seat_id(self, db: Database) -> None:
-        m = db.add_map("UK")
-        seat = db.add_seat(m.id, "Seat")
-        poly = MultiPolygon([box(0.0, 0.0, 1.0, 1.0)])
-        result = db.update_seat_geometry(seat.id, poly)
-        assert result is not None
-        assert result.id == seat.id
 
 
 class TestClearVotesForElection:

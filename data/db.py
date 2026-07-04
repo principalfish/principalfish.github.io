@@ -9,7 +9,6 @@ from contextlib import contextmanager
 from datetime import date
 from typing import Any, Generator, Sequence, cast
 
-from shapely.geometry import MultiPolygon, shape
 from sqlalchemy import create_engine, delete, event, func, select
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session, sessionmaker
@@ -310,13 +309,8 @@ class Database:
         region_id: int | None = None,
         electorate: int | None = None,
         electoral_votes: int | None = None,
-        geometry: MultiPolygon | dict[str, Any] | None = None,
     ) -> Seat:
         """Insert a new Seat row and return it.
-
-        Accepts geometry as either a Shapely MultiPolygon or a GeoJSON dict;
-        a GeoJSON dict is converted to a Shapely geometry before storing
-        (the ``GeometryWKB`` column serialises it to WKB).
 
         Args:
             map_id: Primary key of the parent Map.
@@ -325,16 +319,10 @@ class Database:
             electorate: Optional registered electorate count.
             electoral_votes: Optional number of US Electoral College votes
                 (US states only; omit or pass None for UK constituencies).
-            geometry: Optional boundary geometry as a Shapely MultiPolygon or
-                a GeoJSON geometry dict.
 
         Returns:
             The newly created Seat instance.
         """
-        geom_col = None
-        if geometry is not None:
-            geom_col = shape(geometry) if isinstance(geometry, dict) else geometry
-
         with self.session() as s:
             seat = Seat(
                 map_id=map_id,
@@ -342,7 +330,6 @@ class Database:
                 region_id=region_id,
                 electorate=electorate,
                 electoral_votes=electoral_votes,
-                geometry=geom_col,
             )
             s.add(seat)
             s.flush()
@@ -389,7 +376,6 @@ class Database:
         region_id: int | None = None,
         electorate: int | None = None,
         electoral_votes: int | None = None,
-        geometry: MultiPolygon | dict[str, Any] | None = None,
     ) -> Seat:
         """Return the Seat with the given map and name, creating it if absent.
 
@@ -400,8 +386,6 @@ class Database:
             electorate: Optional registered electorate count.
             electoral_votes: Optional number of US Electoral College votes
                 (US states only; omit or pass None for UK constituencies).
-            geometry: Optional boundary geometry as a Shapely MultiPolygon or
-                a GeoJSON geometry dict.
 
         Returns:
             The existing or newly created Seat instance.
@@ -420,16 +404,7 @@ class Database:
             region_id=region_id,
             electorate=electorate,
             electoral_votes=electoral_votes,
-            geometry=geometry,
         )
-
-    def get_seat_geometry(self, seat_id: int) -> MultiPolygon | None:
-        """Return the geometry of a seat as a Shapely MultiPolygon."""
-        with self.session() as s:
-            seat = s.get(Seat, seat_id)
-            if seat is None or seat.geometry is None:
-                return None
-            return seat.geometry
 
     def set_seat_electorate(self, seat_id: int, electorate: int | None) -> Seat | None:
         """Update the electorate count for a seat.
@@ -446,31 +421,6 @@ class Database:
             if seat is None:
                 return None
             seat.electorate = electorate
-            s.flush()
-            return seat
-
-    def update_seat_geometry(
-        self, seat_id: int, geometry: MultiPolygon | dict[str, Any] | None
-    ) -> Seat | None:
-        """Update the boundary geometry for a seat.
-
-        Accepts geometry as either a Shapely MultiPolygon or a GeoJSON dict;
-        a GeoJSON dict is converted to a Shapely geometry before storing.
-
-        Args:
-            seat_id: Primary key of the Seat row.
-            geometry: New boundary geometry as a Shapely MultiPolygon or a
-                GeoJSON geometry dict, or None to clear it.
-
-        Returns:
-            Updated Seat instance, or None if the seat does not exist.
-        """
-        geom_col = shape(geometry) if isinstance(geometry, dict) else geometry
-        with self.session() as s:
-            seat = s.get(Seat, seat_id)
-            if seat is None:
-                return None
-            seat.geometry = geom_col
             s.flush()
             return seat
 
@@ -746,24 +696,16 @@ class Database:
     ) -> int:
         """Insert many Seat rows in a single session.
 
-        Geometry values in each dict may be GeoJSON dicts or Shapely objects;
-        a GeoJSON dict is converted to a Shapely geometry in-place (the
-        ``GeometryWKB`` column serialises it to WKB on insert).
-
         Args:
             seats: List of dicts with keys matching Seat column names. The
-                optional 'geometry' value may be a GeoJSON dict or a Shapely
-                MultiPolygon. The optional 'electoral_votes' value is an
-                integer Electoral College vote count (US states only).
+                optional 'electoral_votes' value is an integer Electoral
+                College vote count (US states only).
 
         Returns:
             Number of rows inserted.
         """
         with self.session() as s:
             for seat_data in seats:
-                geom = seat_data.get("geometry")
-                if isinstance(geom, dict):
-                    seat_data["geometry"] = shape(geom)
                 s.add(Seat(**seat_data))
             s.flush()
             return len(seats)

@@ -16,8 +16,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from shapely.geometry import MultiPolygon, Polygon, shape
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database
@@ -145,27 +143,6 @@ def decode_topojson(topo: dict[str, Any], object_name: str) -> list[dict[str, An
     return features
 
 
-def ensure_multipolygon(geojson_geom: dict[str, Any]) -> MultiPolygon:
-    """Convert a GeoJSON geometry dict to a Shapely MultiPolygon.
-
-    If the geometry is already a MultiPolygon it is returned unchanged.
-    A plain Polygon is wrapped in a single-member MultiPolygon so that
-    all seats have a uniform geometry type in the database.
-
-    Args:
-        geojson_geom: A GeoJSON geometry dict with at minimum ``"type"``
-            and ``"coordinates"`` keys. Must represent a ``Polygon`` or
-            ``MultiPolygon``.
-
-    Returns:
-        A Shapely ``MultiPolygon`` instance representing the same geometry.
-    """
-    geom = shape(geojson_geom)
-    if isinstance(geom, Polygon):
-        geom = MultiPolygon([geom])
-    return geom
-
-
 def import_file(
     db: Database,
     filepath: str,
@@ -177,7 +154,7 @@ def import_file(
 
     Creates a map record, deduplicates and creates region records from the
     ``region`` property of each feature, then inserts one seat row per
-    feature with its associated MultiPolygon geometry.
+    feature.
 
     If the map already exists and ``skip_existing`` is ``True``, the file
     is silently skipped.  If the map already exists and ``skip_existing``
@@ -185,9 +162,8 @@ def import_file(
 
     When ``refresh`` is ``True`` and the map already exists, the existing
     map is reused (no duplicate is created); regions and seats are looked
-    up by name via the get-or-create helpers and each feature's geometry is
-    refreshed in place, preserving existing map, region, and seat ids (and
-    thus any foreign keys pointing at them).
+    up by name via the get-or-create helpers, preserving existing map,
+    region, and seat ids (and thus any foreign keys pointing at them).
 
     Args:
         db: An open ``Database`` session used for all inserts.
@@ -198,8 +174,7 @@ def import_file(
         skip_existing: When ``True``, skip this file if a map with
             ``map_name`` already exists in the database.
         refresh: When ``True`` and the map already exists, reuse it and
-            update regions and seat geometry in place rather than inserting
-            duplicate rows.
+            update regions in place rather than inserting duplicate rows.
     """
     print(f"\nImporting {filepath} as '{map_name}'...")
 
@@ -233,11 +208,7 @@ def import_file(
             name = feat["properties"]["name"]
             region_key = feat["properties"]["region"]
             region_id = region_cache[region_key]
-            geometry = ensure_multipolygon(feat["geometry"])
-            seat = db.get_or_create_seat(
-                m.id, name, region_id=region_id, geometry=geometry
-            )
-            db.update_seat_geometry(seat.id, geometry)
+            db.get_or_create_seat(m.id, name, region_id=region_id)
 
         print(f"  Refreshed {len(features)} seats")
         return
@@ -256,13 +227,12 @@ def import_file(
             region_cache[region_key] = region.id
     print(f"  Created {len(region_cache)} regions")
 
-    # Create seats with geometry
+    # Create seats
     for feat in features:
         name = feat["properties"]["name"]
         region_key = feat["properties"]["region"]
         region_id = region_cache[region_key]
-        geometry = ensure_multipolygon(feat["geometry"])
-        db.add_seat(m.id, name, region_id=region_id, geometry=geometry)
+        db.add_seat(m.id, name, region_id=region_id)
 
     print(f"  Inserted {len(features)} seats")
 

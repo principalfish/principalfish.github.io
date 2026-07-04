@@ -174,9 +174,9 @@ def build_steps() -> list[Step]:
     """Assemble the full rebuild pipeline in dependency order.
 
     Order: parties -> Westminster geometry -> region populations -> Westminster
-    GEs -> Holyrood boundaries -> Holyrood elections -> US elections ->
-    by-elections -> export. Each base importer runs ID-preserving (``--refresh``
-    where the importer supports it); the export regenerates static data last.
+    GEs -> Holyrood elections -> US elections -> by-elections -> export. Each
+    base importer runs ID-preserving (``--refresh`` where the importer supports
+    it); the export regenerates static data last.
 
     Returns:
         The ordered list of :class:`Step` to execute.
@@ -196,16 +196,6 @@ def build_steps() -> list[Step]:
         Step(
             "Import Westminster general elections",
             OLD_SCRIPTS / "westminster" / "import_general_elections.py",
-            ("--refresh",),
-        ),
-        Step(
-            "Import Holyrood boundaries (2022)",
-            OLD_SCRIPTS / "holyrood" / "import_holyrood_boundaries.py",
-            ("--refresh",),
-        ),
-        Step(
-            "Import Holyrood boundaries (2026)",
-            OLD_SCRIPTS / "holyrood" / "import_holyrood_2026_boundaries.py",
             ("--refresh",),
         ),
         Step(

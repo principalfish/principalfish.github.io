@@ -604,9 +604,9 @@ def _export_page(
         map_path = maps_dir / map_filename
 
         if uses_prebuilt_map:
-            # The TopoJSON for these maps is produced by a dedicated build/import step
-            # (e.g. build_house_topojson.py, import_holyrood_boundaries.py) and lives
-            # directly in maps/. We only need to verify it exists.
+            # The TopoJSON for these maps is produced by a dedicated build step
+            # (e.g. build_house_topojson.py) and lives directly in maps/. We only
+            # need to verify it exists.
             if args.dry_run:
                 print(f"Would write results: {result_path} ({len(result_payload.get('seats', []))} seats)")
                 if election.map_id not in written_map_ids:

@@ -1,9 +1,7 @@
 import enum
 from datetime import date
-from typing import Any, Optional, cast
+from typing import Optional
 
-from shapely import wkb as shapely_wkb
-from shapely.geometry.base import BaseGeometry
 from sqlalchemy import (
     Boolean,
     Date,
@@ -11,10 +9,8 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
-    LargeBinary,
     String,
     Text,
-    types,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -23,36 +19,6 @@ class Base(DeclarativeBase):
     """Declarative base class for all SQLAlchemy ORM models in this project."""
 
     pass
-
-
-class GeometryWKB(types.TypeDecorator[bytes]):
-    """Store a Shapely geometry as plain WKB bytes in a BLOB column.
-
-    Replaces the former PostGIS/geoalchemy2 ``Geometry`` type so the schema is
-    portable to SQLite. The code never runs spatial SQL — geometries are only
-    stored and loaded whole — so a WKB blob is sufficient. Bind values may be a
-    Shapely geometry (stored as WKB); result values are loaded back into Shapely
-    geometries. SRID 4326 is assumed by convention and not encoded in the blob.
-    """
-
-    impl = LargeBinary
-    cache_ok = True
-
-    def process_bind_param(self, value: Any, dialect: Any) -> bytes | None:
-        """Serialise a Shapely geometry (or raw WKB bytes) to WKB bytes."""
-        if value is None:
-            return None
-        if isinstance(value, (bytes, bytearray)):
-            return bytes(value)
-        if isinstance(value, BaseGeometry):
-            return cast(bytes, shapely_wkb.dumps(value))
-        raise TypeError(f"Unsupported geometry value: {type(value)!r}")
-
-    def process_result_value(self, value: Any, dialect: Any) -> BaseGeometry | None:
-        """Load WKB bytes from the database back into a Shapely geometry."""
-        if value is None:
-            return None
-        return shapely_wkb.loads(bytes(value))
 
 
 # ── Enums ────────────────────────────────────────────────────────────────────
@@ -198,9 +164,8 @@ class Region(Base):
 class Seat(Base):
     """ORM model for the ``seats`` table.
 
-    Represents a single parliamentary constituency within a map. Seats hold
-    optional geographic geometry for map rendering, and are linked to votes
-    within an election.
+    Represents a single parliamentary constituency within a map. Seats are
+    linked to votes within an election.
 
     Attributes:
         id: Auto-incrementing primary key.
@@ -210,7 +175,6 @@ class Seat(Base):
         electorate: Optional registered electorate size.
         electoral_votes: Optional number of US Electoral College votes for this
             seat (US states only; ``None`` for UK constituencies).
-        geometry: Optional MULTIPOLYGON geometry (SRID 4326) for the seat boundary.
         map: The owning ``Map`` instance.
         region: The ``Region`` this seat belongs to, if any.
         votes: All ``Vote`` records for this seat across elections.
@@ -224,7 +188,6 @@ class Seat(Base):
     region_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("regions.id"), nullable=True)
     electorate: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     electoral_votes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    geometry: Mapped[Optional[Any]] = mapped_column(GeometryWKB, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="seats")
     region: Mapped[Optional["Region"]] = relationship("Region", back_populates="seats")

@@ -5,13 +5,7 @@ holyrood 2026 seat popup missing candidate names - holyrood importer stores part
 votes only (no candidate_name), so payload rows have no name and fall back to party label.
 populate candidate names in the holyrood import to fix.
 
-
-redo data back end structure
-- ballot type on poll
-- general folder structure needs a rethink
-- regions mapping server any purpose?
-- UI needs thought
-- make brexit part of general export (check party ids are accurate)
-reset database ids
-model_uns -> westminster_uns
-
+- check for uniformity of data / logic across models 
+- check export order logic - unify
+- migrate presidential EV counts to database
+- make a rebuild all data button

@@ -83,6 +83,7 @@ PARTY_KEY_TO_NAME = {
     "labour": "Labour",
     "libdems": "Liberal Democrats",
     "plaidcymru": "Plaid Cymru",
+    "reform": "Reform UK",
     "sdlp": "SDLP",
     "sinnfein": "Sinn Féin",
     "snp": "Scottish National Party",

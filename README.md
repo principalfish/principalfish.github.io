@@ -99,17 +99,19 @@ source election_data/bin/activate
 
 The app uses a single local SQLite database. Point it at a file with the
 `DATABASE_PATH` environment variable (see `.env_example`); the default is
-`/home/philiph/dbs/elections.db`. `SQLITE_DATABASE_PATH` should point at the same
-file (used by the raw-sqlite model read/write paths). Copy `.env_example` to
-`.env` and adjust the paths if needed.
+`/home/philiph/dbs/elections.db`. The ORM and the raw-sqlite model read/write
+paths both read `DATABASE_PATH`. Copy `.env_example` to `.env` and adjust the
+paths if needed.
 
 Tables are created automatically by `Database.create_tables()`
 (`Base.metadata.create_all`). A fresh database can be populated with the base-data
-importers below, or recovered from the Google Drive snapshot
-(`/mnt/f/My Drive/dbs/elections.db`).
+importers below, or recovered from the Google Drive snapshot (under `DRIVE_DBS_DIR`).
 
 The live database stays on local disk — SQLite must not run off the Drive mount.
-`/home/philiph/dbs/backup_to_drive.sh` snapshots it to Google Drive once per day.
+`data/scripts/backup_to_drive.sh` snapshots it to Google Drive (`DRIVE_DBS_DIR`);
+`data/scripts/restore_from_drive.sh` restores it back. The data console's Backup /
+Restore buttons run these, and a scheduled run can call `backup_to_drive.sh` daily
+(without `--force` it skips if a snapshot was already taken today).
 
 ---
 
@@ -210,8 +212,7 @@ sqlite3 "$DATABASE_PATH" "SELECT type, count(*) FROM elections GROUP BY type ORD
 ## 9) Common troubleshooting
 
 - **Wrong database / empty results**
-	- Ensure `DATABASE_PATH` and `SQLITE_DATABASE_PATH` point at the intended
-	  `elections.db` file (see `.env`).
+	- Ensure `DATABASE_PATH` points at the intended `elections.db` file (see `.env`).
 
 - **Database is locked**
 	- SQLite uses WAL journaling; make sure no other writer (e.g. a model run)

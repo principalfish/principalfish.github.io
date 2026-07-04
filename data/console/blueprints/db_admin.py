@@ -13,6 +13,11 @@ from console.services.runner import render_command_result, run_command
 
 bp = Blueprint("db_admin", __name__)
 
+# Versioned backup/restore scripts live in the repo (data/scripts/), not next to
+# the database file. db_admin.py is at data/console/blueprints/db_admin.py, so
+# parents[2] is data/.
+SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
+
 
 @bp.route("/db/backup", methods=["POST"])
 def backup_database() -> ResponseReturnValue:
@@ -28,7 +33,7 @@ def backup_database() -> ResponseReturnValue:
         missing.
     """
     db_dir = Path(get_db().config.database_path).parent
-    script = db_dir / "backup_to_drive.sh"
+    script = SCRIPTS_DIR / "backup_to_drive.sh"
     if not script.exists():
         flash(f"Backup script not found: {script}")
         return redirect(url_for("home.home"))
@@ -65,7 +70,7 @@ def restore_database() -> ResponseReturnValue:
         missing.
     """
     db_dir = Path(get_db().config.database_path).parent
-    script = db_dir / "restore_from_drive.sh"
+    script = SCRIPTS_DIR / "restore_from_drive.sh"
     if not script.exists():
         flash(f"Restore script not found: {script}")
         return redirect(url_for("home.home"))

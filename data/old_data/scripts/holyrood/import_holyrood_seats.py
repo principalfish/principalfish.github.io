@@ -1,16 +1,15 @@
-"""Create Holyrood constituency seats from the committed TopoJSON.
+"""Create Holyrood constituency seats from committed source data.
 
-This replaces the old PostGIS boundary importers (which needed a live ONS
-download + PostGIS to store geometry and regenerate the TopoJSON). Seat geometry
-is no longer stored in the DB — the site renders from the committed
-``electionmaps/data/maps/map-{11,12}.topo.json`` — so the only thing the DB needs
-is the seat *structure*: each constituency's name and its electoral region.
+Seat geometry is not stored in the database — the site renders from the committed
+``electionmaps/data/maps/map-{11,12}.topo.json`` — so the DB only needs the seat
+*structure*: each constituency's name and its electoral region.
 
-Both are already in the committed TopoJSON (``properties.name`` /
-``properties.region``). The one wrinkle is map 12: its TopoJSON carries the
-*curated short* region labels (applied at export via the shell's
-``regionNameOverride``), so we invert that override to store the canonical full
-region names, keeping the DB consistent with map 11 and the rest of the pipeline.
+That constituency -> region mapping has no other clean upstream source (the
+boundary GeoJSON carries names but no region, and the election results carry
+neither), so it is committed as genuine source data at
+``old_data/files/holyrood/constituency_regions.json`` (canonical full region
+names). This importer reads only that file — it never reads the render-tree
+TopoJSON, so the rebuild is not circular.
 
 ID-preserving: uses ``get_or_create_region`` / ``get_or_create_seat``, so running
 it against a populated DB is a no-op (no duplicate maps/regions/seats), and a
@@ -26,7 +25,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -34,39 +32,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from db import Database
 from models import Map
 
-
-@dataclass(frozen=True)
-class HolyroodMapSpec:
-    """A Holyrood constituency map to seed from its committed TopoJSON."""
-
-    map_id: int
-    name: str
-    topojson: str
-    # Committed TopoJSON region label -> canonical DB region name. Empty when the
-    # TopoJSON already uses the canonical names (map 11).
-    region_name_fixups: dict[str, str] = field(default_factory=dict)
-
-
-MAP_SPECS: list[HolyroodMapSpec] = [
-    HolyroodMapSpec(
-        map_id=11,
-        name="Scottish Parliament Constituencies 2021",
-        topojson="electionmaps/data/maps/map-11.topo.json",
-    ),
-    HolyroodMapSpec(
-        map_id=12,
-        name="Scottish Parliament Constituencies 2026",
-        topojson="electionmaps/data/maps/map-12.topo.json",
-        # Invert the shell's regionNameOverride ({full: short}) so the DB stores
-        # the canonical full names, not the display-shortened TopoJSON labels.
-        region_name_fixups={
-            "Central and Lothian W": "Central Scotland and Lothians West",
-            "Edinburgh and Lothian E": "Edinburgh and Lothians East",
-        },
-    ),
-]
-
-REPO_ROOT = Path(__file__).resolve().parents[4]
+SOURCE_FILE = (
+    Path(__file__).resolve().parents[2]
+    / "files"
+    / "holyrood"
+    / "constituency_regions.json"
+)
 
 
 def ensure_map(db: Database, map_id: int, name: str) -> Map:
@@ -93,50 +64,33 @@ def ensure_map(db: Database, map_id: int, name: str) -> Map:
     return result
 
 
-def load_features(topojson_path: Path) -> list[dict[str, str]]:
-    """Return each TopoJSON geometry's ``{name, region}`` properties.
-
-    Args:
-        topojson_path: Path to the committed map TopoJSON.
-
-    Returns:
-        One ``{"name": ..., "region": ...}`` dict per constituency feature.
-    """
-    topo = json.loads(topojson_path.read_text(encoding="utf-8"))
-    object_key = next(iter(topo["objects"]))
-    geometries = topo["objects"][object_key]["geometries"]
-    return [dict(geom["properties"]) for geom in geometries]
-
-
-def import_map_seats(db: Database, spec: HolyroodMapSpec) -> tuple[int, int]:
+def import_map_seats(db: Database, map_id: int, name: str, seats: dict[str, str]) -> int:
     """Create the constituency regions + seats for one Holyrood map.
 
     Args:
         db: Target database.
-        spec: The map to seed.
+        map_id: Fixed primary key for the map.
+        name: Map display name.
+        seats: Mapping of constituency name -> canonical region name.
 
     Returns:
-        ``(regions, seats)`` — the number of distinct regions and seats ensured.
+        The number of constituency seats ensured.
     """
-    holyrood_map = ensure_map(db, spec.map_id, spec.name)
-    features = load_features(REPO_ROOT / spec.topojson)
-
+    holyrood_map = ensure_map(db, map_id, name)
     region_ids: dict[str, int] = {}
-    for feature in features:
-        region_label = spec.region_name_fixups.get(feature["region"], feature["region"])
-        if region_label not in region_ids:
-            region_ids[region_label] = db.get_or_create_region(
-                holyrood_map.id, region_label
+    for seat_name, region_name in seats.items():
+        if region_name not in region_ids:
+            region_ids[region_name] = db.get_or_create_region(
+                holyrood_map.id, region_name
             ).id
         db.get_or_create_seat(
-            holyrood_map.id, feature["name"], region_id=region_ids[region_label]
+            holyrood_map.id, seat_name, region_id=region_ids[region_name]
         )
-
-    return len(region_ids), len(features)
+    return len(seats)
 
 
 def main() -> None:
-    """Seed Holyrood constituency seats for every configured map."""
+    """Seed Holyrood constituency seats for every map in the source file."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--refresh",
@@ -148,12 +102,14 @@ def main() -> None:
     )
     parser.parse_args()
 
+    data = json.loads(SOURCE_FILE.read_text(encoding="utf-8"))
+
     db = Database()
     db.create_tables()
 
-    for spec in MAP_SPECS:
-        regions, seats = import_map_seats(db, spec)
-        print(f"map {spec.map_id} ({spec.name}): {regions} regions, {seats} seats ensured")
+    for map_id_text, entry in data.items():
+        count = import_map_seats(db, int(map_id_text), entry["name"], entry["seats"])
+        print(f"map {map_id_text} ({entry['name']}): {count} constituency seats ensured")
 
 
 if __name__ == "__main__":

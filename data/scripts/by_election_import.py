@@ -529,15 +529,22 @@ def build_import_plan(
 def commit_import_plan(
     db: Database,
     plan: ByElectionImportPlan,
+    refresh: bool = False,
 ) -> ByElectionImportResult:
     """Write a parsed by-election plan to the database.
 
     Inserts one Election row (type ``by_election``) and one Vote row per
     candidate in *plan*. Does not perform any scraping or HTML parsing.
 
+    When ``refresh`` is ``True`` and an election with the same name already
+    exists, that election row is reused (preserving its id and links) and its
+    votes are cleared before re-insertion rather than raising.
+
     Args:
         db: Open database connection to write to.
         plan: Import plan produced by :func:`build_import_plan`.
+        refresh: When ``True``, reuse an existing election of the same name and
+            clear its votes before re-inserting instead of raising.
 
     Returns:
         A :class:`ByElectionImportResult` summarising the inserted election
@@ -546,7 +553,7 @@ def commit_import_plan(
     Raises:
         ValueError: If no seat was matched for the constituency, no candidates
             were parsed, or an election with the same name already exists in
-            the database.
+            the database and ``refresh`` is not set.
     """
     if not plan.seat_id:
         raise ValueError(f"No seat matched for constituency '{plan.constituency_name}'")
@@ -557,16 +564,24 @@ def commit_import_plan(
     # Check if this by-election already exists
     existing = db.get_election_by_name(plan.election_name)
     if existing:
-        raise ValueError(f"Election '{plan.election_name}' already exists (id={existing.id})")
-
-    election = db.add_election(
-        map_id=plan.map_id,
-        year=plan.election_date.year if plan.election_date else 2025,
-        name=plan.election_name,
-        election_type=ElectionType.by_election,
-        parent_election_id=plan.parent_election_id,
-        election_date=plan.election_date,
-    )
+        if not refresh:
+            raise ValueError(
+                f"Election '{plan.election_name}' already exists (id={existing.id})"
+            )
+        cleared = db.clear_votes_for_election(existing.id)
+        print(
+            f"Refreshing '{plan.election_name}': cleared {cleared} existing votes."
+        )
+        election = existing
+    else:
+        election = db.add_election(
+            map_id=plan.map_id,
+            year=plan.election_date.year if plan.election_date else 2025,
+            name=plan.election_name,
+            election_type=ElectionType.by_election,
+            parent_election_id=plan.parent_election_id,
+            election_date=plan.election_date,
+        )
 
     votes_inserted = 0
     for candidate in plan.candidates:
@@ -604,6 +619,8 @@ def main() -> None:
             to ``DEFAULT_MAP_NAME``.
         --dry-run (flag): If set, parse and print only — no database writes
             are performed.
+        --refresh (flag): If set, reuse an existing election of the same name
+            and clear its votes before re-inserting instead of raising.
     """
     parser = argparse.ArgumentParser(description="Import a by-election from Wikipedia")
     parser.add_argument("--url", required=True, help="Wikipedia by-election URL")
@@ -614,6 +631,14 @@ def main() -> None:
     )
     parser.add_argument("--map-name", default=DEFAULT_MAP_NAME, help="Map name")
     parser.add_argument("--dry-run", action="store_true", help="Parse only, don't write to DB")
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help=(
+            "Reuse an existing election row and clear its votes before "
+            "re-inserting, preserving the election id and its links"
+        ),
+    )
     args = parser.parse_args()
 
     db = Database()
@@ -641,7 +666,7 @@ def main() -> None:
         print("\nDry run — no database writes.")
         return
 
-    result = commit_import_plan(db, plan)
+    result = commit_import_plan(db, plan, refresh=args.refresh)
     print(f"\nImported: election #{result.election_id}, {result.votes_inserted} votes")
 
 

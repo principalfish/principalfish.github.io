@@ -77,6 +77,7 @@ def import_us_election(
     name: str,
     state_for_key: Callable[[str], str],
     with_electoral_votes: bool = False,
+    refresh: bool = False,
 ) -> int:
     """Load a converted US election ``{key: {seatInfo, partyInfo}}`` mapping into ``db``.
 
@@ -90,13 +91,22 @@ def import_us_election(
         us_map: The chamber's Map (from :func:`ensure_us_map`).
         election_type: The chamber's :class:`ElectionType`.
         year: Election year (election date is fixed to the November general).
-        name: Unique election name; raises if one already exists.
+        name: Unique election name; raises if one already exists (unless
+            ``refresh`` is set).
         state_for_key: Maps a data key to the state name used for the division lookup
             (e.g. ``"TX-01" -> "Texas"``; for Senate the key already is the state).
         with_electoral_votes: When True, seats carry ``electoral_votes`` from
             ``seatInfo.electoral_votes`` (presidential only).
+        refresh: When True and the election already exists, reuse that election
+            row (preserving its id and links) and clear its votes before
+            re-inserting, instead of raising. Existing seats and their
+            electoral votes are left untouched.
+
+    Returns:
+        The number of Vote rows inserted.
     """
-    if db.get_election_by_name(name) is not None:
+    existing_election = db.get_election_by_name(name)
+    if existing_election is not None and not refresh:
         raise SystemExit(f"Election {name!r} already exists — re-run with --replace to rebuild.")
 
     party_id_by_key = resolve_party_ids(db)
@@ -118,10 +128,16 @@ def import_us_election(
                 electoral_votes=electoral_votes,
             ).id
 
-    election = db.add_election(
-        us_map.id, year, name, election_type,
-        election_date=date(year, 11, 5),
-    )
+    if existing_election is not None:
+        # Refresh: reuse the existing election row so its id and any
+        # parent_election_id links survive, and clear its votes before re-insert.
+        election = existing_election
+        db.clear_votes_for_election(election.id)
+    else:
+        election = db.add_election(
+            us_map.id, year, name, election_type,
+            election_date=date(year, 11, 5),
+        )
 
     votes: list[dict[str, object]] = []
     for key, seat in data.items():

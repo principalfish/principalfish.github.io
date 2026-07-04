@@ -193,7 +193,7 @@ class TestBulkAddVotes:
 
 
 class TestBulkAddSeats:
-    """Covers Database.bulk_add_seats — inserting multiple seat rows including with geometry."""
+    """Covers Database.bulk_add_seats — inserting multiple seat rows."""
 
     def test_inserts_many(self, db: Database) -> None:
         m = db.add_map("UK")
@@ -206,13 +206,3 @@ class TestBulkAddSeats:
         assert count == 3
         fetched = db.get_seats_for_map(m.id)
         assert len(fetched) == 3
-
-    def test_with_geojson_geometry(self, db: Database) -> None:
-        m = db.add_map("UK")
-        geojson = {
-            "type": "MultiPolygon",
-            "coordinates": [[[[-0.13, 51.52], [-0.10, 51.52], [-0.10, 51.54], [-0.13, 51.54], [-0.13, 51.52]]]],
-        }
-        seats: list[dict[str, Any]] = [{"map_id": m.id, "seat_name": "GeoSeat", "geometry": geojson}]
-        count = db.bulk_add_seats(seats)
-        assert count == 1

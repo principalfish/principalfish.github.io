@@ -1,13 +1,12 @@
-"""Tests for the Seat table, geometry handling, and Database seat methods."""
+"""Tests for the Seat table and Database seat methods."""
 
 import pytest
-from shapely.geometry import MultiPolygon, box
 
 from db import Database
 
 
 class TestAddSeat:
-    """Covers Database.add_seat — creation, optional region, geometry inputs, and invalid-map rejection."""
+    """Covers Database.add_seat — creation, optional region, and invalid-map rejection."""
 
     def test_basic(self, db: Database) -> None:
         m = db.add_map("UK")
@@ -15,28 +14,12 @@ class TestAddSeat:
         assert seat.id is not None
         assert seat.seat_name == "Holborn and St Pancras"
         assert seat.region_id is None
-        assert seat.geometry is None
 
     def test_with_region(self, db: Database) -> None:
         m = db.add_map("UK")
         r = db.add_region(m.id, "London")
         seat = db.add_seat(m.id, "Holborn", region_id=r.id)
         assert seat.region_id == r.id
-
-    def test_with_shapely_geometry(self, db: Database) -> None:
-        m = db.add_map("UK")
-        poly = MultiPolygon([box(-0.13, 51.52, -0.10, 51.54)])
-        seat = db.add_seat(m.id, "TestSeat", geometry=poly)
-        assert seat.geometry is not None
-
-    def test_with_geojson_geometry(self, db: Database) -> None:
-        m = db.add_map("UK")
-        geojson = {
-            "type": "MultiPolygon",
-            "coordinates": [[[[-0.13, 51.52], [-0.10, 51.52], [-0.10, 51.54], [-0.13, 51.54], [-0.13, 51.52]]]],
-        }
-        seat = db.add_seat(m.id, "GeoJsonSeat", geometry=geojson)
-        assert seat.geometry is not None
 
     def test_invalid_map_raises(self, db: Database) -> None:
         with pytest.raises(Exception):
@@ -70,23 +53,3 @@ class TestGetSeatsForMap:
         db.add_seat(m.id, "Aldershot")
         seats = db.get_seats_for_map(m.id)
         assert [s.seat_name for s in seats] == ["Aldershot", "Zetland"]
-
-
-class TestSeatGeometry:
-    """Covers Database.get_seat_geometry — roundtrip fidelity, missing seat, and seat with no geometry."""
-
-    def test_roundtrip(self, db: Database) -> None:
-        m = db.add_map("UK")
-        original = MultiPolygon([box(-0.13, 51.52, -0.10, 51.54)])
-        seat = db.add_seat(m.id, "GeoSeat", geometry=original)
-        loaded = db.get_seat_geometry(seat.id)
-        assert loaded is not None
-        assert original.equals_exact(loaded, 1e-6)
-
-    def test_missing_seat_returns_none(self, db: Database) -> None:
-        assert db.get_seat_geometry(9999) is None
-
-    def test_no_geometry_returns_none(self, db: Database) -> None:
-        m = db.add_map("UK")
-        seat = db.add_seat(m.id, "NoGeom")
-        assert db.get_seat_geometry(seat.id) is None

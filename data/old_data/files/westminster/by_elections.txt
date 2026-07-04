@@ -1,0 +1,22 @@
+# By-election source list for the database rebuild (scripts/rebuild_database.py).
+#
+# One by-election per line: a Wikipedia article URL, optionally followed by
+# pipe-separated override fields:
+#
+#     <url> | <parent election name> | <map name>
+#
+# When the parent/map fields are omitted the importer defaults apply:
+#     parent = "2024 General Election"
+#     map    = "UK Constituencies post 2022"
+#
+# Blank lines and lines beginning with '#' are ignored. The URL is the Wikipedia
+# article; the election name (and so the DB row) is taken from the page title on
+# import, exactly as by_election_import.py does.
+#
+# Bootstrapped from the by_election rows in elections.db — all use the defaults.
+
+https://en.wikipedia.org/wiki/2025_Runcorn_and_Helsby_by-election
+https://en.wikipedia.org/wiki/2026_Gorton_and_Denton_by-election
+https://en.wikipedia.org/wiki/2026_Arbroath_and_Broughty_Ferry_by-election
+https://en.wikipedia.org/wiki/2026_Aberdeen_South_by-election
+https://en.wikipedia.org/wiki/2026_Makerfield_by-election

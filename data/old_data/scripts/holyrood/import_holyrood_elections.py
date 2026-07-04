@@ -261,10 +261,28 @@ def import_constituency_results(
     party_cache: dict[str, Party],
     dry_run: bool,
     skip_existing: bool,
+    refresh: bool = False,
 ) -> ImportStats:
     """Import FPTP constituency results for one election.
 
     Creates an Election of type ``holyrood_general`` and inserts Vote rows.
+
+    When ``refresh`` is ``True`` and the election already has votes, the
+    existing election row is reused (preserving its id and links) and its
+    votes are cleared before re-insertion rather than raising.
+
+    Args:
+        db: An open ``Database`` session used for all inserts.
+        spec: The election specification to import.
+        holyrood_map: The map the election's seats belong to.
+        party_cache: Shared cache of ``Party`` rows keyed by party key.
+        dry_run: When ``True``, parse and match without writing.
+        skip_existing: When ``True``, skip an election that already has votes.
+        refresh: When ``True``, reuse an existing election and clear its
+            votes before re-inserting instead of raising.
+
+    Returns:
+        Import statistics for this election.
     """
     from datetime import date
 
@@ -289,13 +307,17 @@ def import_constituency_results(
     if existing_election is not None and not dry_run:
         existing_votes = db.get_votes_for_election(existing_election.id)
         if existing_votes:
-            if skip_existing:
+            if refresh:
+                cleared = db.clear_votes_for_election(existing_election.id)
+                print(f"  Refreshing '{spec.name}': cleared {cleared} existing votes.")
+            elif skip_existing:
                 print(f"  Skipping '{spec.name}' — already has {len(existing_votes)} votes.")
                 return stats
-            raise RuntimeError(
-                f"Election '{spec.name}' already has {len(existing_votes)} votes. "
-                "Use --skip-existing to skip."
-            )
+            else:
+                raise RuntimeError(
+                    f"Election '{spec.name}' already has {len(existing_votes)} votes. "
+                    "Use --skip-existing to skip."
+                )
 
     election: Election | None = None
     if not dry_run:
@@ -375,6 +397,7 @@ def import_list_results(
     party_cache: dict[str, Party],
     dry_run: bool,
     skip_existing: bool,
+    refresh: bool = False,
 ) -> ImportStats:
     """Import regional list results for one election.
 
@@ -384,6 +407,25 @@ def import_list_results(
 
     If the list file does not exist, prints a warning and returns empty stats
     rather than raising an error, so constituency import can still succeed.
+
+    When ``refresh`` is ``True`` and the list election already has votes, the
+    existing election row is reused (preserving its id and links) and its
+    votes are cleared before re-insertion rather than raising.
+
+    Args:
+        db: An open ``Database`` session used for all inserts.
+        spec: The election specification to import.
+        holyrood_map: The map the election's seats belong to.
+        constituency_election_id: Id of the linked constituency election, or
+            None when unavailable.
+        party_cache: Shared cache of ``Party`` rows keyed by party key.
+        dry_run: When ``True``, parse and match without writing.
+        skip_existing: When ``True``, skip an election that already has votes.
+        refresh: When ``True``, reuse an existing election and clear its
+            votes before re-inserting instead of raising.
+
+    Returns:
+        Import statistics for this election.
     """
     from datetime import date
 
@@ -402,13 +444,17 @@ def import_list_results(
     if existing_election is not None and not dry_run:
         existing_votes = db.get_votes_for_election(existing_election.id)
         if existing_votes:
-            if skip_existing:
+            if refresh:
+                cleared = db.clear_votes_for_election(existing_election.id)
+                print(f"  Refreshing '{list_name}': cleared {cleared} existing votes.")
+            elif skip_existing:
                 print(f"  Skipping '{list_name}' — already has {len(existing_votes)} votes.")
                 return stats
-            raise RuntimeError(
-                f"Election '{list_name}' already has {len(existing_votes)} votes. "
-                "Use --skip-existing to skip."
-            )
+            else:
+                raise RuntimeError(
+                    f"Election '{list_name}' already has {len(existing_votes)} votes. "
+                    "Use --skip-existing to skip."
+                )
 
     list_election: Election | None = None
     if not dry_run:
@@ -460,18 +506,15 @@ def import_list_results(
                 seat_name = f"{region_name} List {slot}"
                 if not dry_run:
                     assert list_election is not None
-                    # Ensure the seat exists (created on first encounter)
-                    map_seats = db.get_seats_for_map(holyrood_map.id)
-                    seat_by_name = {s.seat_name: s for s in map_seats}
-                    if seat_name not in seat_by_name:
-                        list_seat = db.add_seat(
-                            holyrood_map.id,
-                            seat_name,
-                            region_id=region.id,
-                            # No geometry for list seats
-                        )
-                    else:
-                        list_seat = seat_by_name[seat_name]
+                    # Ensure the seat exists (created on first encounter);
+                    # get_or_create_seat reuses an existing row so a refresh
+                    # never duplicates list seats.
+                    list_seat = db.get_or_create_seat(
+                        holyrood_map.id,
+                        seat_name,
+                        region_id=region.id,
+                        # No geometry for list seats
+                    )
 
                     # Store ALL parties' regional votes on every list seat so the
                     # front-end can show complete regional list vote totals.
@@ -513,6 +556,14 @@ def main() -> None:
         "--skip-existing",
         action="store_true",
         help="Skip elections that already contain votes",
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help=(
+            "Reuse an existing election row and clear its votes before "
+            "re-inserting, preserving the election id and its links"
+        ),
     )
     parser.add_argument(
         "--dry-run",
@@ -560,7 +611,8 @@ def main() -> None:
 
         # Constituency seats
         stats = import_constituency_results(
-            db, spec, holyrood_map, party_cache, args.dry_run, args.skip_existing
+            db, spec, holyrood_map, party_cache, args.dry_run, args.skip_existing,
+            args.refresh,
         )
 
         print(f"  Constituency seats: {stats.seats_matched}/{stats.seats_seen} matched, "
@@ -575,7 +627,7 @@ def main() -> None:
         # List seats
         list_stats = import_list_results(
             db, spec, holyrood_map, constituency_election_id,
-            party_cache, args.dry_run, args.skip_existing,
+            party_cache, args.dry_run, args.skip_existing, args.refresh,
         )
         print(f"  List seats: {list_stats.list_regions_seen} regions, "
               f"{list_stats.list_seats_inserted} list seats inserted")

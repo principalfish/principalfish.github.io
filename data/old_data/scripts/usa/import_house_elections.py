@@ -33,20 +33,33 @@ MAP_ID = 21
 MAP_NAME = "US House Districts 2024"
 
 
-def import_house(db: Database, file: Path, year: int, name: str, replace: bool = False) -> int:
+def import_house(
+    db: Database,
+    file: Path,
+    year: int,
+    name: str,
+    replace: bool = False,
+    refresh: bool = False,
+) -> int:
     """Load a US House election JSON file into ``db`` and return the vote count.
 
     Args:
         db: Target database (must already have the US Party rows seeded).
         file: Path to the ``house-YYYY.json`` election file.
         year: Election year.
-        name: Unique election name; raises if one already exists.
+        name: Unique election name; raises if one already exists (unless
+            ``refresh`` is set).
         replace: If True, delete and rebuild the US House map first.
+        refresh: If True, reuse an existing election and clear its votes before
+            re-inserting, preserving ids. Implies not ``replace`` (the map is
+            never rebuilt), so no seats or votes are cascade-deleted.
 
     Returns:
         The number of Vote rows inserted.
     """
-    house_map = ensure_us_map(db, MAP_ID, MAP_NAME, "us_house", replace=replace)
+    house_map = ensure_us_map(
+        db, MAP_ID, MAP_NAME, "us_house", replace=replace and not refresh
+    )
     data = json.loads(file.read_text(encoding="utf-8"))
     # A district code's state is its prefix: "TX-01" -> "TX" -> "Texas".
     return import_us_election(
@@ -54,6 +67,7 @@ def import_house(db: Database, file: Path, year: int, name: str, replace: bool =
         election_type=ElectionType.us_house,
         year=year, name=name,
         state_for_key=lambda code: STATE_NAMES[code.split("-")[0]],
+        refresh=refresh,
     )
 
 
@@ -64,11 +78,18 @@ def main() -> None:
     parser.add_argument("--year", type=int, required=True, help="Election year (e.g. 2024)")
     parser.add_argument("--name", required=True, help="Election name (e.g. '2024 US House Election')")
     parser.add_argument("--replace", action="store_true", help="Rebuild the US House map first")
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Reuse an existing election and clear its votes before re-import (preserves ids)",
+    )
     args = parser.parse_args()
 
     db = Database()
     db.create_tables()
-    inserted = import_house(db, args.file, args.year, args.name, replace=args.replace)
+    inserted = import_house(
+        db, args.file, args.year, args.name, replace=args.replace, refresh=args.refresh
+    )
     print(f"Imported {args.name}: {inserted} votes, map id {MAP_ID}")
 
 

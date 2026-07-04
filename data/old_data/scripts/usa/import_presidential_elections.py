@@ -43,9 +43,34 @@ def region_for(unit_name: str) -> str:
     return unit_name.split(" CD-")[0] if " CD-" in unit_name else unit_name
 
 
-def import_presidential(db: Database, file: Path, year: int, name: str, replace: bool = False) -> int:
-    """Load a US presidential election JSON file into ``db`` and return the vote count."""
-    pres_map = ensure_us_map(db, MAP_ID, MAP_NAME, "us_presidential", replace=replace)
+def import_presidential(
+    db: Database,
+    file: Path,
+    year: int,
+    name: str,
+    replace: bool = False,
+    refresh: bool = False,
+) -> int:
+    """Load a US presidential election JSON file into ``db`` and return the vote count.
+
+    Args:
+        db: Target database (must already have the US Party rows seeded).
+        file: Path to the ``presidential-YYYY.json`` election file.
+        year: Election year.
+        name: Unique election name; raises if one already exists (unless
+            ``refresh`` is set).
+        replace: If True, delete and rebuild the US Presidential map first.
+        refresh: If True, reuse an existing election and clear its votes before
+            re-inserting, preserving ids. Implies not ``replace`` (the map is
+            never rebuilt), so no seats, electoral votes, or votes are
+            cascade-deleted.
+
+    Returns:
+        The number of Vote rows inserted.
+    """
+    pres_map = ensure_us_map(
+        db, MAP_ID, MAP_NAME, "us_presidential", replace=replace and not refresh
+    )
     data = json.loads(file.read_text(encoding="utf-8"))
     # An elector unit's state is its name with any " CD-N" district suffix stripped, so
     # ME/NE district units group under their parent state; seats carry electoral votes.
@@ -55,6 +80,7 @@ def import_presidential(db: Database, file: Path, year: int, name: str, replace:
         year=year, name=name,
         state_for_key=region_for,
         with_electoral_votes=True,
+        refresh=refresh,
     )
 
 
@@ -65,11 +91,18 @@ def main() -> None:
     parser.add_argument("--year", type=int, required=True, help="Election year (e.g. 2024)")
     parser.add_argument("--name", required=True, help="Election name (e.g. '2024 US Presidential Election')")
     parser.add_argument("--replace", action="store_true", help="Rebuild the US Presidential map first")
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Reuse an existing election and clear its votes before re-import (preserves ids)",
+    )
     args = parser.parse_args()
 
     db = Database()
     db.create_tables()
-    inserted = import_presidential(db, args.file, args.year, args.name, replace=args.replace)
+    inserted = import_presidential(
+        db, args.file, args.year, args.name, replace=args.replace, refresh=args.refresh
+    )
     print(f"Imported {args.name}: {inserted} votes, map id {MAP_ID}")
 
 

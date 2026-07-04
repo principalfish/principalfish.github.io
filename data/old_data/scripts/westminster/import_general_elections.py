@@ -308,6 +308,14 @@ def main() -> None:
         action="store_true",
         help="Skip elections that already contain votes",
     )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help=(
+            "Reuse an existing election row and clear its votes before "
+            "re-inserting, preserving the election id and its links"
+        ),
+    )
     args = parser.parse_args()
 
     specs = [spec for spec in ELECTION_SPECS if args.only_year is None or spec.year in args.only_year]
@@ -357,17 +365,24 @@ def main() -> None:
         if existing_election is not None and not args.dry_run:
             existing_votes = db.get_votes_for_election(existing_election.id)
             if existing_votes:
-                if args.skip_existing:
+                if args.refresh:
+                    cleared = db.clear_votes_for_election(existing_election.id)
+                    print(
+                        f"Refreshing '{spec.name}': cleared {cleared} existing "
+                        "votes before re-import."
+                    )
+                elif args.skip_existing:
                     print(
                         f"Skipping '{spec.name}' because it already has data "
                         f"({len(existing_votes)} votes)."
                     )
                     continue
-                raise RuntimeError(
-                    f"Election '{spec.name}' already has data "
-                    f"({len(existing_votes)} votes). "
-                    "Refusing to import duplicate rows."
-                )
+                else:
+                    raise RuntimeError(
+                        f"Election '{spec.name}' already has data "
+                        f"({len(existing_votes)} votes). "
+                        "Refusing to import duplicate rows."
+                    )
 
         election = None
         if not args.dry_run:

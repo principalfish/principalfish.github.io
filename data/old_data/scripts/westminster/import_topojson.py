@@ -166,7 +166,13 @@ def ensure_multipolygon(geojson_geom: dict[str, Any]) -> MultiPolygon:
     return geom
 
 
-def import_file(db: Database, filepath: str, map_name: str, skip_existing: bool) -> None:
+def import_file(
+    db: Database,
+    filepath: str,
+    map_name: str,
+    skip_existing: bool,
+    refresh: bool = False,
+) -> None:
     """Import a single TopoJSON file into the database.
 
     Creates a map record, deduplicates and creates region records from the
@@ -177,6 +183,12 @@ def import_file(db: Database, filepath: str, map_name: str, skip_existing: bool)
     is silently skipped.  If the map already exists and ``skip_existing``
     is ``False``, a duplicate map record will be created.
 
+    When ``refresh`` is ``True`` and the map already exists, the existing
+    map is reused (no duplicate is created); regions and seats are looked
+    up by name via the get-or-create helpers and each feature's geometry is
+    refreshed in place, preserving existing map, region, and seat ids (and
+    thus any foreign keys pointing at them).
+
     Args:
         db: An open ``Database`` session used for all inserts.
         filepath: Absolute or relative path to the TopoJSON ``.json`` file
@@ -185,6 +197,9 @@ def import_file(db: Database, filepath: str, map_name: str, skip_existing: bool)
             (e.g. ``"UK Constituencies pre 2019"``).
         skip_existing: When ``True``, skip this file if a map with
             ``map_name`` already exists in the database.
+        refresh: When ``True`` and the map already exists, reuse it and
+            update regions and seat geometry in place rather than inserting
+            duplicate rows.
     """
     print(f"\nImporting {filepath} as '{map_name}'...")
 
@@ -199,12 +214,40 @@ def import_file(db: Database, filepath: str, map_name: str, skip_existing: bool)
     features = decode_topojson(topo, "map")
     print(f"  Decoded {len(features)} geometries")
 
+    if refresh and existing_map is not None:
+        # Reuse the existing map and refresh regions/geometry in place so
+        # that seat ids (and any foreign keys onto them) are preserved.
+        m = existing_map
+        print(f"  Reusing existing map: {m}")
+
+        region_cache: dict[str, int] = {}
+        for feat in features:
+            region_key = feat["properties"]["region"]
+            if region_key not in region_cache:
+                display_name = REGION_DISPLAY_NAMES.get(region_key, region_key)
+                region = db.get_or_create_region(m.id, display_name)
+                region_cache[region_key] = region.id
+        print(f"  Ensured {len(region_cache)} regions")
+
+        for feat in features:
+            name = feat["properties"]["name"]
+            region_key = feat["properties"]["region"]
+            region_id = region_cache[region_key]
+            geometry = ensure_multipolygon(feat["geometry"])
+            seat = db.get_or_create_seat(
+                m.id, name, region_id=region_id, geometry=geometry
+            )
+            db.update_seat_geometry(seat.id, geometry)
+
+        print(f"  Refreshed {len(features)} seats")
+        return
+
     # Create map
     m = db.add_map(map_name)
     print(f"  Created map: {m}")
 
     # Create regions (deduplicated)
-    region_cache: dict[str, int] = {}
+    region_cache = {}
     for feat in features:
         region_key = feat["properties"]["region"]
         if region_key not in region_cache:
@@ -235,6 +278,9 @@ def main() -> None:
     CLI flags:
         --skip-existing: Skip any map whose name already exists in the
             database rather than creating a duplicate.
+        --refresh: Reuse an existing map and update its regions and seat
+            geometry in place instead of inserting duplicate rows,
+            preserving map, region, and seat ids.
     """
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -242,14 +288,34 @@ def main() -> None:
         action="store_true",
         help="Skip map imports when the target map already exists",
     )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help=(
+            "Reuse an existing map and refresh regions and seat geometry in "
+            "place instead of creating duplicate rows (preserves ids)"
+        ),
+    )
     args = parser.parse_args()
 
     base = Path(__file__).resolve().parents[2] / "files" / "westminster"
     db = Database()
     db.create_tables()
 
-    import_file(db, str(base / "650map.json"), "UK Constituencies pre 2019", args.skip_existing)
-    import_file(db, str(base / "650map_new.json"), "UK Constituencies post 2022", args.skip_existing)
+    import_file(
+        db,
+        str(base / "650map.json"),
+        "UK Constituencies pre 2019",
+        args.skip_existing,
+        args.refresh,
+    )
+    import_file(
+        db,
+        str(base / "650map_new.json"),
+        "UK Constituencies post 2022",
+        args.skip_existing,
+        args.refresh,
+    )
 
     # Summary
     print("\n--- Summary ---")

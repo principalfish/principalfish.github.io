@@ -319,6 +319,14 @@ def main() -> None:
         help="Skip if the map already exists in the database",
     )
     parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help=(
+            "Reuse an existing map and refresh regions and seat geometry in "
+            "place instead of creating duplicate rows (preserves ids)"
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Parse data and report without writing to the database or disk",
@@ -382,18 +390,34 @@ def main() -> None:
         return
 
     # ── Import into database ──────────────────────────────────────────────
-    m = db.add_map(MAP_NAME, parliament="holyrood")
-    print(f"Created map: {m}")
+    refreshing = args.refresh and existing_map is not None
+    if refreshing:
+        assert existing_map is not None
+        m = existing_map
+        print(f"Reusing existing map: {m}")
+    else:
+        m = db.add_map(MAP_NAME, parliament="holyrood")
+        print(f"Created map: {m}")
 
     region_cache: dict[str, int] = {}
-    for region_name in REGION_DISPLAY_NAMES:
-        r = db.add_region(m.id, region_name)
-        region_cache[region_name] = r.id
-    for region_name in region_counts:
-        if region_name not in region_cache:
+    if refreshing:
+        for region_name in REGION_DISPLAY_NAMES:
+            r = db.get_or_create_region(m.id, region_name)
+            region_cache[region_name] = r.id
+        for region_name in region_counts:
+            if region_name not in region_cache:
+                r = db.get_or_create_region(m.id, region_name)
+                region_cache[region_name] = r.id
+        print(f"Ensured {len(region_cache)} regions")
+    else:
+        for region_name in REGION_DISPLAY_NAMES:
             r = db.add_region(m.id, region_name)
             region_cache[region_name] = r.id
-    print(f"Created {len(region_cache)} regions")
+        for region_name in region_counts:
+            if region_name not in region_cache:
+                r = db.add_region(m.id, region_name)
+                region_cache[region_name] = r.id
+        print(f"Created {len(region_cache)} regions")
 
     # Create seat rows with geometry.
     # The ONS source is OSGB36 (EPSG:27700); geometry is stored with incorrect SRID 4326 label.
@@ -404,10 +428,21 @@ def main() -> None:
         region_name = feat["properties"]["region"]
         region_id = region_cache.get(region_name)
         geometry = ensure_multipolygon(feat["geometry"])
-        db.add_seat(m.id, constituency_name, region_id=region_id, geometry=geometry)
+        if refreshing:
+            seat = db.get_or_create_seat(
+                m.id, constituency_name, region_id=region_id, geometry=geometry
+            )
+            db.update_seat_geometry(seat.id, geometry)
+        else:
+            db.add_seat(
+                m.id, constituency_name, region_id=region_id, geometry=geometry
+            )
         seat_count += 1
 
-    print(f"Inserted {seat_count} seats")
+    if refreshing:
+        print(f"Refreshed {seat_count} seats")
+    else:
+        print(f"Inserted {seat_count} seats")
 
     # ── Write TopoJSON using WGS84 geometry from PostGIS ─────────────────
     # Use ST_SetSRID to declare the actual CRS (OSGB36), then ST_Transform to WGS84.

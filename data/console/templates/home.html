@@ -53,6 +53,11 @@
         <button type="submit" class="button button-block">Rebuild Site Data</button>
         <small>Regenerate the static map data (current parliament + all elections) from the database.</small>
       </form>
+      <form method="post" action="{{ url_for('site.rebuild_database') }}" class="inline-form button-form"
+            onsubmit="return confirm('Rebuild the DATABASE from source files? This re-imports parties, maps, geometry and every historical election result, and downloads live boundary/by-election data from the internet — it can take many minutes (up to an hour). Your polls and model runs are preserved.');">
+        <button type="submit" class="button button-block button-danger">Rebuild Database</button>
+        <small>Re-import all base data from source (preserves polls &amp; model runs), then rebuild the site. Slow; hits the network.</small>
+      </form>
     </div>
   </section>
 

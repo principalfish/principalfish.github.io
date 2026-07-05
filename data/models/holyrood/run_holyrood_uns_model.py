@@ -145,6 +145,7 @@ import argparse
 import json
 import math
 import re
+import sqlite3
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -167,6 +168,46 @@ from models import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2021 Scottish Parliament Election (2026 Boundaries)"
 LIST_SEATS_PER_REGION = 7
+
+# Single source of truth for the database path: config.py (which reads .env).
+DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
+
+
+def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
+    """Ensure the unified elections/votes tables exist (no-op on the main DB).
+
+    Mirrors the schema in ``models.py``. On the live ``elections.db`` these
+    tables already exist, so this is a no-op; it only materialises them for a
+    fresh database (e.g. in tests).
+    """
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS elections (
+            id INTEGER PRIMARY KEY,
+            map_id INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            name TEXT NOT NULL UNIQUE,
+            type TEXT NOT NULL,
+            parent_election_id INTEGER,
+            election_date TEXT
+        );
+        CREATE TABLE IF NOT EXISTS votes (
+            id INTEGER PRIMARY KEY,
+            election_id INTEGER NOT NULL,
+            seat_id INTEGER NOT NULL,
+            party_id INTEGER,
+            candidate_name TEXT,
+            vote_total REAL,
+            elected INTEGER DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_votes_election_id ON votes(election_id);
+        CREATE INDEX IF NOT EXISTS idx_elections_name ON elections(name);
+    """)
+    conn.commit()
+
+
+def _election_name(as_of_date: date) -> str:
+    """Return the canonical persisted election name for a Holyrood UNS run."""
+    return f"Holyrood UNS {as_of_date.isoformat()}"
 
 # Parties not standing in the 2026 election.
 # Their swing is zeroed out in both the constituency and list passes.
@@ -825,6 +866,110 @@ def run_holyrood_projection(
     return const_projected, list_projected, seat_summary
 
 
+# ── SQLite persistence ────────────────────────────────────────────────────────
+
+
+def persist_projection(
+    map_id: int,
+    as_of_date: date,
+    election_name: str,
+    projected_votes: list[dict[str, Any]],
+    party_name_by_id: dict[int, str],
+    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+) -> tuple[str, int]:
+    """Create a holyrood_uns election row and bulk-insert its projected votes into SQLite.
+
+    All 129 elected rows (73 constituency + 56 list) are persisted as-is,
+    including the intentional duplication of identical vote rows across the 7
+    list seats per region.  Vote totals are rounded to integer counts to match
+    the count-semantics of the persisted Westminster and US model outputs.
+
+    Args:
+        map_id: Primary key of the electoral map the election belongs to.
+        as_of_date: The simulation date; used as the election year source.
+        election_name: Display name for the new election row.
+        projected_votes: Seat/party projection records as produced by
+            ``run_holyrood_projection`` (``const_projected + list_projected``).
+        party_name_by_id: Party display names keyed by party ID; used to
+            populate ``candidate_name`` on each vote row.
+        sqlite_path: Path to the SQLite file to write into.
+
+    Returns:
+        A ``(election_name, election_id)`` tuple with the persisted election's
+        display name and primary key.
+    """
+    with sqlite3.connect(sqlite_path) as conn:
+        ensure_sqlite_schema(conn)
+        cursor = conn.execute(
+            "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
+            (map_id, as_of_date.year, election_name, "holyrood_uns", as_of_date.isoformat()),
+        )
+        election_id = cursor.lastrowid
+        if election_id is None:
+            raise RuntimeError("Failed to obtain election id after INSERT")
+        conn.executemany(
+            "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, vote_total, elected) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    election_id,
+                    int(row["seat_id"]),
+                    int(row["party_id"]),
+                    party_name_by_id.get(int(row["party_id"]), ""),
+                    float(round(row["vote_total"])),
+                    int(bool(row["elected"])),
+                )
+                for row in projected_votes
+            ],
+        )
+        conn.commit()
+    return election_name, int(election_id)
+
+
+def delete_holyrood_uns_for_as_of_date(
+    as_of_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+) -> tuple[int, int]:
+    """Delete the holyrood_uns election (and its votes) for a given date from SQLite.
+
+    Matches the election whose name equals ``_election_name(as_of_date)`` and
+    whose type is ``holyrood_uns``, deleting its vote rows before removing the
+    election row.  Used to make a re-run idempotent.
+
+    Args:
+        as_of_date: The date whose simulation output should be removed.
+        sqlite_path: Path to the SQLite archive file.
+
+    Returns:
+        A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
+        matching election exists or the file does not exist.
+    """
+    if not sqlite_path.exists():
+        return 0, 0
+
+    name = _election_name(as_of_date)
+
+    with sqlite3.connect(sqlite_path) as conn:
+        election_ids = [
+            row[0]
+            for row in conn.execute(
+                "SELECT id FROM elections WHERE name = ? AND type = 'holyrood_uns'", (name,)
+            ).fetchall()
+        ]
+        if not election_ids:
+            return 0, 0
+
+        placeholders = ",".join("?" * len(election_ids))
+        deleted_votes = conn.execute(
+            f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
+        ).rowcount or 0
+        deleted_elections = conn.execute(
+            f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
+        ).rowcount or 0
+        conn.commit()
+
+    return int(deleted_elections), int(deleted_votes)
+
+
 # ── JSON output ───────────────────────────────────────────────────────────────
 
 RESULT_FILE_NAME = "holyrood-prediction.json"
@@ -1052,6 +1197,22 @@ def main() -> None:
     print(f"Running Holyrood UNS projection — baseline: {cfg.constituency_election_name!r} ({mode})")
 
     const_proj, list_proj, seat_summary = run_holyrood_projection(db, cfg)
+
+    if not cfg.dry_run:
+        party_name_by_id = {p.id: p.name for p in db.get_all_parties()}
+        election_name = _election_name(cfg.as_of_date)
+        delete_holyrood_uns_for_as_of_date(cfg.as_of_date)
+        persist_projection(
+            const_election.map_id,
+            cfg.as_of_date,
+            election_name,
+            const_proj + list_proj,
+            party_name_by_id,
+        )
+        print(
+            f"Persisted holyrood_uns election {election_name!r} "
+            f"with {len(const_proj) + len(list_proj)} vote rows"
+        )
 
     print(f"\n{'Party':<30} {'Const':>6} {'List':>6} {'Total':>6}")
     print("-" * 52)

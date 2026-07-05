@@ -924,10 +924,16 @@ def compute_region_diffs(
 ) -> tuple[set[int], dict[int, dict[int, float]], list[dict[str, Any]]]:
     """Derive per-region poll-vs-baseline swings for every party.
 
-    For each region present on the map, computes the difference between the
-    weighted-average poll share (falling back to the national poll average when
-    no regional poll rows are available) and the baseline share (falling back to
-    the national baseline when no regional baseline exists).
+    For each region present on the map, computes a swing in percentage points
+    between the weighted-average regional poll share and the baseline share
+    (falling back to the national baseline when no regional baseline exists).
+
+    When a region has no cross-break poll for a party, we do NOT converge that
+    region toward the national poll level. Instead we apply the *uniform
+    national swing* — the delta between the national poll average and the
+    national baseline — on top of that region's own baseline share. This keeps
+    poll-less regions anchored to their distinctive baseline profile while still
+    moving them by the national trend, matching the US model in ``_common.py``.
 
     Args:
         seats: All seats on the map, used to enumerate region IDs.
@@ -960,24 +966,16 @@ def compute_region_diffs(
     party_universe.update(party_id for _, party_id in weighted_sums.keys())
     region_ids = sorted({seat.region_id for seat in seats if seat.region_id is not None})
 
-    current_region_shares: dict[int, dict[int, float]] = defaultdict(dict)
-    current_national_shares: dict[int, float] = {}
-
+    # National swing delta per party, used as the fallback for regions with no
+    # cross-break poll for that party.
+    national_swing: dict[int, float] = {}
     for party_id in party_universe:
-        avg = weighted_average(weighted_sums[(None, party_id)], total_weights[(None, party_id)])
-        if avg is not None:
-            current_national_shares[party_id] = avg
-
-    for region_id in region_ids:
-        for party_id in party_universe:
-            avg = weighted_average(
-                weighted_sums[(region_id, party_id)],
-                total_weights[(region_id, party_id)],
-            )
-            if avg is None:
-                avg = current_national_shares.get(party_id)
-            if avg is not None:
-                current_region_shares[region_id][party_id] = avg
+        national_poll = weighted_average(
+            weighted_sums[(None, party_id)],
+            total_weights[(None, party_id)],
+        )
+        if national_poll is not None:
+            national_swing[party_id] = national_poll - baseline_national_shares.get(party_id, 0.0)
 
     region_swings: dict[int, dict[int, float]] = defaultdict(dict)
     region_diff_rows: list[dict[str, Any]] = []
@@ -988,10 +986,17 @@ def compute_region_diffs(
                 party_id,
                 baseline_national_shares.get(party_id, 0.0),
             )
-            current_share = current_region_shares.get(region_id, {}).get(party_id)
-            if current_share is None:
-                current_share = baseline_share
-            swing = current_share - baseline_share
+            region_poll = weighted_average(
+                weighted_sums[(region_id, party_id)],
+                total_weights[(region_id, party_id)],
+            )
+            if region_poll is not None:
+                current_share = region_poll
+                swing = region_poll - baseline_share
+            else:
+                # No regional poll: apply the uniform national swing delta.
+                swing = national_swing.get(party_id, 0.0)
+                current_share = baseline_share + swing
             region_swings[region_id][party_id] = swing
             region_diff_rows.append(
                 {

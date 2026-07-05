@@ -185,6 +185,11 @@ class SeatRef:
     seat_name: str
 
 
+# Poll-averaging defaults (shared by the config and the DB fetch helper).
+_DEFAULT_HALF_LIFE_DAYS = 30.0
+_DEFAULT_LOOKBACK_DAYS = 365
+
+
 @dataclass
 class HolyroodSimulationConfig:
     """Configuration for a Holyrood UNS projection run.
@@ -201,6 +206,9 @@ class HolyroodSimulationConfig:
             single-swing behaviour.
         dry_run: When True, compute the projection but skip any DB writes.
         as_of_date: Date label for the projection (used in output names).
+        since_date: Lower bound for poll fieldwork end dates when averaging polls
+            from the DB.  None until a run computes it from the lookback window.
+        half_life_days: Exponential decay half-life in days for poll averaging.
     """
 
     constituency_election_name: str = BASELINE_ELECTION_NAME
@@ -208,6 +216,8 @@ class HolyroodSimulationConfig:
     list_swing_by_region_party: dict[int, dict[int, float]] = field(default_factory=dict)
     dry_run: bool = True
     as_of_date: date = field(default_factory=date.today)
+    since_date: date | None = None
+    half_life_days: float = _DEFAULT_HALF_LIFE_DAYS
 
 
 # ── Poll share helpers ────────────────────────────────────────────────────────
@@ -313,17 +323,13 @@ def compute_holyrood_swings(
     return {region_id: dict(national_swings) for region_id in region_ids}
 
 
-_DEFAULT_HALF_LIFE_DAYS = 28.0
-_DEFAULT_LOOKBACK_DAYS = 365
-
-
 def fetch_holyrood_poll_averages(
     db: "Database",
     map_id: int,
     ballot_suffix: str,
     as_of_date: date,
+    since_date: date,
     half_life_days: float = _DEFAULT_HALF_LIFE_DAYS,
-    lookback_days: int = _DEFAULT_LOOKBACK_DAYS,
 ) -> tuple[dict[int, float], str | None, date | None]:
     """Compute a time-decayed weighted average of Holyrood polls for one ballot type.
 
@@ -340,16 +346,14 @@ def fetch_holyrood_poll_averages(
             (``"_holyrood"`` or ``"_holyrood_list"``).
         as_of_date: Upper bound for poll fieldwork end date; also the reference
             date for recency decay.
+        since_date: Lower bound for poll fieldwork end date; only polls whose
+            fieldwork ended on or after this date are included.
         half_life_days: Exponential decay half-life in days.
-        lookback_days: Only include polls whose fieldwork ended within this many
-            days before ``as_of_date``.
 
     Returns:
         Tuple of (party_id → weighted average %, latest_poll_name, latest_poll_date).
         The averages dict is empty if no qualifying polls are found; latest fields are None.
     """
-    since_date = as_of_date - timedelta(days=lookback_days)
-
     # Build a lookup of pollster_id → identifier for fast filtering
     with db.session() as s:
         pollster_rows = s.execute(
@@ -971,6 +975,12 @@ def main() -> None:
     args = parse_args()
     db = Database(DatabaseConfig.from_env())
 
+    # Stand-in run parameters; a later piece replaces these with parsed CLI args.
+    as_of_date = date.today()
+    half_life_days = _DEFAULT_HALF_LIFE_DAYS
+    lookback_days = _DEFAULT_LOOKBACK_DAYS
+    since_date = as_of_date - timedelta(days=lookback_days)
+
     swing_by_region_party: dict[int, dict[int, float]] = {}
     mode: str
 
@@ -995,10 +1005,10 @@ def main() -> None:
         mode = f"poll shares: {args.poll_shares}"
     else:
         const_polls, latest_poll_name, latest_poll_date = fetch_holyrood_poll_averages(
-            db, const_election.map_id, "_holyrood", date.today()
+            db, const_election.map_id, "_holyrood", as_of_date, since_date, half_life_days
         )
         list_polls, _, _ = fetch_holyrood_poll_averages(
-            db, const_election.map_id, "_holyrood_list", date.today()
+            db, const_election.map_id, "_holyrood_list", as_of_date, since_date, half_life_days
         )
         if const_polls:
             swing_by_region_party = compute_holyrood_swings(
@@ -1035,6 +1045,9 @@ def main() -> None:
         swing_by_region_party=swing_by_region_party,
         list_swing_by_region_party=list_swing_by_region_party,
         dry_run=True,
+        as_of_date=as_of_date,
+        since_date=since_date,
+        half_life_days=half_life_days,
     )
     print(f"Running Holyrood UNS projection — baseline: {cfg.constituency_election_name!r} ({mode})")
 

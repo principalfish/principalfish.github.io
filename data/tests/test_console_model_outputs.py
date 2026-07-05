@@ -61,6 +61,63 @@ def _seed(db: Database) -> dict[str, int]:
     }
 
 
+HOLYROOD_BASELINE_TYPES = [ElectionType.holyrood_general]
+
+
+def _seed_holyrood(db: Database) -> dict[str, int]:
+    """Build a Holyrood baseline + one holyrood_uns model output (const + list seats).
+
+    Float vote totals (including a large duplicated list total) exercise the
+    float-tolerant reads the model_outputs service relies on.
+    """
+    m = db.add_map("Scotland")
+    region = db.add_region(m.id, "Glasgow")
+    snp = db.add_party("SNP", colour="#FDF38E")
+    lab = db.add_party("Labour", colour="#dc2626")
+    const_seat = db.add_seat(m.id, "Glasgow Const 1", region_id=region.id)
+    list_seat = db.add_seat(m.id, "Glasgow List 1", region_id=region.id)
+
+    baseline = db.add_election(
+        m.id, 2021, "2021 Scottish Parliament Election", ElectionType.holyrood_general
+    )
+    db.add_vote(baseline.id, const_seat.id, party_id=snp.id, vote_total=500.0, elected=True)
+    db.add_vote(baseline.id, const_seat.id, party_id=lab.id, vote_total=300.0)
+
+    model = db.add_election(m.id, 2026, "Holyrood UNS 2026-07-05", ElectionType.holyrood_uns)
+    db.add_vote(model.id, const_seat.id, party_id=snp.id, vote_total=520.0, elected=True)
+    db.add_vote(model.id, const_seat.id, party_id=lab.id, vote_total=300.0)
+    db.add_vote(model.id, list_seat.id, party_id=lab.id, vote_total=12000.0, elected=True)
+    db.add_vote(model.id, list_seat.id, party_id=snp.id, vote_total=9000.0)
+
+    return {"map_id": m.id, "baseline_id": baseline.id, "model_id": model.id}
+
+
+class TestHolyroodOutputs:
+    """The shared model-outputs service also serves holyrood_uns elections."""
+
+    def test_lists_holyrood_output(self, db: Database) -> None:
+        _seed_holyrood(db)
+        ctx = build_outputs_context(
+            db, election_type=ElectionType.holyrood_uns, trend_cache_path=None, show_all=True
+        )
+        assert ctx["total_output_count"] == 1
+        assert ctx["outputs"][0]["name"] == "Holyrood UNS 2026-07-05"
+
+    def test_detail_counts_constituency_and_list_seats(self, db: Database) -> None:
+        ids = _seed_holyrood(db)
+        ctx = build_output_detail_context(
+            db,
+            election_id=ids["model_id"],
+            election_type=ElectionType.holyrood_uns,
+            baseline_types=HOLYROOD_BASELINE_TYPES,
+            page=1,
+        )
+        assert ctx is not None
+        assert ctx["election"]["name"] == "Holyrood UNS 2026-07-05"
+        # One constituency + one list seat.
+        assert ctx["pagination"]["total_seats"] == 2
+
+
 class TestBuildOutputsContext:
     """The list page context: counts, items, and derived trend datasets."""
 

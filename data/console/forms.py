@@ -31,6 +31,30 @@ class ModelRunForm(BaseModel):
         return self
 
 
+class HolyroodModelRunForm(BaseModel):
+    """Validated form data for POST /holyrood/run-model."""
+
+    election_name: str
+    as_of_days_back: int = Field(ge=0)
+    since_days_back: int = Field(ge=0)
+    half_life_days: float = Field(gt=0)
+    dry_run: bool = False
+
+    @model_validator(mode="after")
+    def check_since_gte_as_of(self) -> "HolyroodModelRunForm":
+        """Validate that since_days_back is not narrower than as_of_days_back.
+
+        Returns:
+            The validated HolyroodModelRunForm instance.
+
+        Raises:
+            ValueError: If since_days_back is less than as_of_days_back.
+        """
+        if self.since_days_back < self.as_of_days_back:
+            raise ValueError("Since-days-back must be >= as-of-days-back")
+        return self
+
+
 class PollImportForm(BaseModel):
     """Validated form data for POST /import/preview."""
 

@@ -2,27 +2,42 @@
 
 from __future__ import annotations
 
+import json
+import sqlite3
 import sys
+from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyrood"))
 
 import pytest
 
+import run_holyrood_uns_model as hmod
 from db import Database
 from models import Election, ElectionType, Party, Region
 from run_holyrood_uns_model import (
+    _DEFAULT_HALF_LIFE_DAYS,
     HolyroodSimulationConfig,
     SeatRef,
+    _election_name,
     collect_constituency_wins,
     compute_holyrood_swings,
+    constituency_national_vote_shares,
+    dates_to_run_for_cfg,
+    delete_holyrood_uns_for_as_of_date,
     dhondt_allocate_ordered,
+    ensure_sqlite_schema,
+    existing_trend_dates,
     group_list_seats_by_region,
     load_list_regional_votes,
+    persist_projection,
     project_constituency_seats,
     project_list_seats,
     run_holyrood_projection,
+    run_retrospective,
+    update_trend_cache_json,
 )
 
 
@@ -450,3 +465,248 @@ class TestRunHolyroodProjection:
         )
         with pytest.raises(ValueError, match="Constituency election not found"):
             run_holyrood_projection(db, cfg)
+
+
+# ── Parameter defaults ────────────────────────────────────────────────────────
+
+
+class TestParameterDefaults:
+    """Guard the Holyrood defaults that were aligned to Westminster/US."""
+
+    def test_default_half_life_is_30(self) -> None:
+        assert _DEFAULT_HALF_LIFE_DAYS == 30.0
+
+    def test_config_default_half_life_is_30(self) -> None:
+        assert HolyroodSimulationConfig().half_life_days == 30.0
+
+
+# ── constituency_national_vote_shares ─────────────────────────────────────────
+
+
+class TestConstituencyNationalVoteShares:
+    """The trend-cache ``v`` source: constituency-ballot national vote share."""
+
+    def test_basic_shares(self) -> None:
+        const_projected = [
+            {"seat_id": 1, "party_id": 1, "vote_total": 6000.0, "elected": True},
+            {"seat_id": 1, "party_id": 2, "vote_total": 4000.0, "elected": False},
+        ]
+        shares = constituency_national_vote_shares(const_projected)
+        assert shares[1] == pytest.approx(60.0)
+        assert shares[2] == pytest.approx(40.0)
+
+    def test_empty_or_zero_total_returns_empty(self) -> None:
+        assert constituency_national_vote_shares([]) == {}
+        assert constituency_national_vote_shares(
+            [{"seat_id": 1, "party_id": 1, "vote_total": 0.0, "elected": False}]
+        ) == {}
+
+
+# ── SQLite persistence ────────────────────────────────────────────────────────
+
+
+class TestPersistProjection:
+    """persist_projection + delete round-trip against an isolated temp SQLite file."""
+
+    def _project(
+        self, db: Database
+    ) -> tuple[int, list[dict[str, object]], list[dict[str, object]], dict[int, str]]:
+        map_id, const_e, p1, p2, p3, _, _ = TestRunHolyroodProjection()._build_scenario(db)
+        cfg = HolyroodSimulationConfig(
+            constituency_election_name=const_e.name, swing_by_region_party={}, dry_run=True
+        )
+        const_proj, list_proj, _ = run_holyrood_projection(db, cfg)
+        party_names = {p1.id: "SNP", p2.id: "Labour", p3.id: "Conservative"}
+        return map_id, const_proj, list_proj, party_names
+
+    def test_persists_election_and_votes(self, db: Database, tmp_path: Path) -> None:
+        map_id, const_proj, list_proj, party_names = self._project(db)
+        out_db = tmp_path / "elections.db"
+        name = _election_name(date(2026, 7, 5))
+        rows = const_proj + list_proj
+
+        persisted_name, election_id = persist_projection(
+            map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db
+        )
+        assert persisted_name == name
+
+        conn = sqlite3.connect(out_db)
+        try:
+            elections = conn.execute("SELECT name, type, year FROM elections").fetchall()
+            assert elections == [(name, "holyrood_uns", 2026)]
+            total = conn.execute(
+                "SELECT COUNT(*) FROM votes WHERE election_id = ?", (election_id,)
+            ).fetchone()[0]
+            elected = conn.execute(
+                "SELECT COUNT(*) FROM votes WHERE election_id = ? AND elected = 1", (election_id,)
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        assert total == len(rows)
+        # 4 constituency + 6 list winners in the synthetic scenario.
+        assert elected == 10
+
+    def test_delete_then_repersist_is_idempotent(self, db: Database, tmp_path: Path) -> None:
+        map_id, const_proj, list_proj, party_names = self._project(db)
+        out_db = tmp_path / "elections.db"
+        name = _election_name(date(2026, 7, 5))
+        rows = const_proj + list_proj
+
+        persist_projection(map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db)
+        deleted_elections, deleted_votes = delete_holyrood_uns_for_as_of_date(
+            date(2026, 7, 5), sqlite_path=out_db
+        )
+        assert deleted_elections == 1
+        assert deleted_votes == len(rows)
+
+        # Re-persisting the same date must succeed (no UNIQUE(name) collision) and
+        # leave exactly one election.
+        persist_projection(map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db)
+        conn = sqlite3.connect(out_db)
+        try:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM elections WHERE type = 'holyrood_uns'"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        assert count == 1
+
+
+# ── Trend cache ───────────────────────────────────────────────────────────────
+
+
+class TestUpdateTrendCacheJson:
+    """update_trend_cache_json: seats over all ballots, ``v`` from constituency only."""
+
+    def test_v_is_constituency_share_not_inflated_by_list_duplication(
+        self, tmp_path: Path
+    ) -> None:
+        trend = tmp_path / "trends.json"
+        # Party 1 wins the constituency (60% share); party 2 wins two list seats
+        # whose duplicated regional totals are enormous. ``v`` must reflect only the
+        # constituency ballot, so party 2's ``v`` stays 40 (never 7×-inflated).
+        const_proj = [
+            {"seat_id": 1, "party_id": 1, "vote_total": 6000.0, "elected": True},
+            {"seat_id": 1, "party_id": 2, "vote_total": 4000.0, "elected": False},
+        ]
+        list_proj = [
+            {"seat_id": 10, "party_id": 2, "vote_total": 999999.0, "elected": True},
+            {"seat_id": 11, "party_id": 2, "vote_total": 999999.0, "elected": True},
+        ]
+        update_trend_cache_json(
+            1, "Holyrood UNS 2026-07-05", date(2026, 7, 5), const_proj, list_proj, trend_cache_json=trend
+        )
+        entry = json.loads(trend.read_text())[0]
+        parties = entry["parties"]
+        # Seats span both ballots: party 1 = 1 constituency, party 2 = 2 list.
+        assert parties["1"]["s"] == 1
+        assert parties["2"]["s"] == 2
+        # v = constituency share only.
+        assert parties["1"]["v"] == pytest.approx(60.0)
+        assert parties["2"]["v"] == pytest.approx(40.0)
+
+    def test_appends_when_snapshot_changes(self, tmp_path: Path) -> None:
+        trend = tmp_path / "trends.json"
+        first = [{"seat_id": 1, "party_id": 1, "vote_total": 100.0, "elected": True}]
+        second = [{"seat_id": 1, "party_id": 2, "vote_total": 100.0, "elected": True}]
+        update_trend_cache_json(1, "Holyrood UNS 2026-07-01", date(2026, 7, 1), first, [], trend_cache_json=trend)
+        update_trend_cache_json(2, "Holyrood UNS 2026-07-02", date(2026, 7, 2), second, [], trend_cache_json=trend)
+        assert len(json.loads(trend.read_text())) == 2
+
+    def test_skips_unchanged_snapshot(self, tmp_path: Path) -> None:
+        trend = tmp_path / "trends.json"
+        same = [{"seat_id": 1, "party_id": 1, "vote_total": 100.0, "elected": True}]
+        update_trend_cache_json(1, "Holyrood UNS 2026-07-01", date(2026, 7, 1), same, [], trend_cache_json=trend)
+        # Same seat snapshot on the next day → deduplicated (no new entry).
+        update_trend_cache_json(2, "Holyrood UNS 2026-07-02", date(2026, 7, 2), same, [], trend_cache_json=trend)
+        entries = json.loads(trend.read_text())
+        assert len(entries) == 1
+        assert entries[0]["as_of_date"] == "2026-07-01"
+
+
+# ── existing_trend_dates ──────────────────────────────────────────────────────
+
+
+class TestExistingTrendDates:
+    """existing_trend_dates unions the trend JSON dates with SQLite election names."""
+
+    def test_union_of_json_and_sqlite(self, tmp_path: Path) -> None:
+        trend = tmp_path / "trends.json"
+        trend.write_text(
+            json.dumps(
+                [{"election_id": 1, "election_name": "Holyrood UNS 2026-07-01", "as_of_date": "2026-07-01", "parties": {}}]
+            )
+        )
+        out_db = tmp_path / "elections.db"
+        conn = sqlite3.connect(out_db)
+        try:
+            ensure_sqlite_schema(conn)
+            conn.execute(
+                "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
+                (1, 2026, "Holyrood UNS 2026-07-02", "holyrood_uns", "2026-07-02"),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        dates = existing_trend_dates(trend_cache_json=trend, sqlite_path=out_db)
+        assert date(2026, 7, 1) in dates
+        assert date(2026, 7, 2) in dates
+
+
+# ── dates_to_run_for_cfg (gap-fill) ───────────────────────────────────────────
+
+
+class TestDatesToRunForCfg:
+    """Gap-fill date selection for single-date runs."""
+
+    def test_dry_run_returns_only_as_of(self) -> None:
+        cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 5), dry_run=True)
+        assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 5)]
+
+    def test_fills_calendar_gap(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Latest cached date is 2026-07-01; as-of is 2026-07-04 → fill the 3 gap days.
+        monkeypatch.setattr(hmod, "existing_trend_dates", lambda: {date(2026, 7, 1)})
+        cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
+        assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 2), date(2026, 7, 3), date(2026, 7, 4)]
+
+    def test_no_prior_dates_returns_as_of(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(hmod, "existing_trend_dates", lambda: set())
+        cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
+        assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 4)]
+
+
+# ── run_retrospective validation ──────────────────────────────────────────────
+
+
+def _retro_args(**overrides: object) -> SimpleNamespace:
+    base = dict(
+        start_date="2026-07-01",
+        end_date="2026-07-05",
+        lookback_days=365,
+        half_life_days=30.0,
+        reset_existing=False,
+        continue_on_error=False,
+        progress_every=25,
+        dry_run=True,
+        election_name="2021 Test Holyrood Election",
+    )
+    base.update(overrides)
+    return SimpleNamespace(**base)
+
+
+class TestRunRetrospectiveValidation:
+    """run_retrospective rejects invalid ranges before doing any work."""
+
+    def test_end_before_start_raises(self, db: Database) -> None:
+        with pytest.raises(ValueError, match="end-date must be on or after"):
+            run_retrospective(db, _retro_args(start_date="2026-07-05", end_date="2026-07-01"))
+
+    def test_negative_lookback_raises(self, db: Database) -> None:
+        with pytest.raises(ValueError, match="lookback-days"):
+            run_retrospective(db, _retro_args(lookback_days=-1))
+
+    def test_non_positive_half_life_raises(self, db: Database) -> None:
+        with pytest.raises(ValueError, match="half-life-days"):
+            run_retrospective(db, _retro_args(half_life_days=0.0))

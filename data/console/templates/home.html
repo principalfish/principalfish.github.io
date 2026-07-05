@@ -23,9 +23,7 @@
         <form method="post" action="{{ url_for('holyrood.holyrood_import_polls') }}" class="inline-form button-form">
           <button type="submit" class="button primary button-block">Import Scottish Polls</button>
         </form>
-        <form method="post" action="{{ url_for('holyrood.run_holyrood_model') }}" class="inline-form button-form">
-          <button type="submit" class="button button-block">Run Holyrood Model</button>
-        </form>
+        <a class="button button-block" href="{{ url_for('holyrood.run_holyrood_model_form') }}">Run Holyrood Model</a>
         <a class="button button-block" href="{{ url_for('holyrood.holyrood_outputs') }}">View Holyrood Outputs</a>
       </div>
     </section>

@@ -201,8 +201,37 @@ class TestComputeRegionDiffs:
             baseline_national={1: 40.0},
             baseline_regional={10: {1: 40.0}},
         )
-        # swing = 50 (national poll) - 40 (regional baseline) = 10
+        # Equal baselines: level and delta coincide (50 - 40 = 10 either way).
+        # This case can't distinguish the two — see the next test for that.
         assert region_swings[10][1] == pytest.approx(10.0)
+
+    def test_no_regional_poll_uses_national_delta_not_level(self) -> None:
+        """With no regional poll, the fallback is the national swing DELTA, not the level.
+
+        Region 10's baseline (50) differs from the national baseline (30). Only a
+        national poll (35) exists. The correct uniform-swing behaviour applies the
+        national delta (35 - 30 = +5) on top of the region's own baseline, giving a
+        projected share of 55 — it must NOT converge the region to the national
+        poll level (which would give swing 35 - 50 = -15).
+        """
+        seats = [_make_seat(1, 10)]
+        region_by_id = {10: _make_region(10, "Scotland")}
+        _, region_swings, region_diff_rows = self._run(
+            seats=seats,
+            region_by_id=region_by_id,
+            party_name_by_id={1: "SNP"},
+            national_totals={1: 1000.0},
+            weighted_sums={(None, 1): 35.0},
+            total_weights={(None, 1): 1.0},
+            baseline_national={1: 30.0},
+            baseline_regional={10: {1: 50.0}},
+        )
+        # Delta semantics: swing = national_poll(35) - national_baseline(30) = +5.
+        assert region_swings[10][1] == pytest.approx(5.0)
+        # weighted_share = regional_baseline(50) + delta(5) = 55, not the level (35).
+        row = next(r for r in region_diff_rows if r["region_id"] == 10 and r["party_id"] == 1)
+        assert row["weighted_share"] == pytest.approx(55.0)
+        assert row["baseline_share"] == pytest.approx(50.0)
 
     def test_party_universe_union_of_baseline_and_polls(self) -> None:
         seats = [_make_seat(1, 10)]

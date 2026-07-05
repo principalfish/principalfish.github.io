@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+  {% set election_help = (explanations | selectattr('flag', 'equalto', '--election-name') | map(attribute='description') | list | first) %}
+  {% set as_of_help = (explanations | selectattr('flag', 'equalto', '--as-of-days-back') | map(attribute='description') | list | first) %}
+  {% set since_help = (explanations | selectattr('flag', 'equalto', '--since-days-back') | map(attribute='description') | list | first) %}
+  {% set half_life_help = (explanations | selectattr('flag', 'equalto', '--half-life-days') | map(attribute='description') | list | first) %}
+  {% set dry_run_help = (explanations | selectattr('flag', 'equalto', '--dry-run') | map(attribute='description') | list | first) %}
+
+  <section class="card">
+    <h2>Run Holyrood Model</h2>
+    <form method="post" action="{{ url_for('holyrood.run_holyrood_model') }}" class="form">
+      <label for="election_name">{{ election_help }} <span class="arg-flag">(--election-name)</span></label>
+      <select name="election_name" id="election_name" required>
+        {% for election in choices.election_options %}
+          <option value="{{ election.name }}" {% if form_values.election_name == election.name %}selected{% endif %}>{{ election.label }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="as_of_days_back">{{ as_of_help }} <span class="arg-flag">(--as-of-days-back)</span></label>
+      <select name="as_of_days_back" id="as_of_days_back" required>
+        {% for days_value in choices.as_of_days_back %}
+          {% set days_str = days_value|string %}
+          <option value="{{ days_str }}" {% if form_values.as_of_days_back == days_str %}selected{% endif %}>{{ days_str }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="since_days_back">{{ since_help }} <span class="arg-flag">(--since-days-back)</span></label>
+      <select name="since_days_back" id="since_days_back" required>
+        {% for days_value in choices.since_days_back %}
+          {% set days_str = days_value|string %}
+          <option value="{{ days_str }}" {% if form_values.since_days_back == days_str %}selected{% endif %}>{{ days_str }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="half_life_days">{{ half_life_help }} <span class="arg-flag">(--half-life-days)</span></label>
+      <select name="half_life_days" id="half_life_days" required>
+        {% for half_life in choices.half_life_days %}
+          {% set half_life_str = "%.1f"|format(half_life) %}
+          <option value="{{ half_life_str }}" {% if form_values.half_life_days == half_life_str %}selected{% endif %}>{{ half_life_str }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="dry_run">{{ dry_run_help }} <span class="arg-flag">(--dry-run)</span></label>
+      <select name="dry_run" id="dry_run" required>
+        {% for option in choices.dry_run_options %}
+          <option value="{{ option.value }}" {% if form_values.dry_run == option.value %}selected{% endif %}>{{ option.label }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="button primary">Run Model</button>
+    </form>
+  </section>
+
+  {% if run_result %}
+    <section class="card">
+      <h3>Run Result</h3>
+      <p><strong>Command:</strong> {{ run_result.command }}</p>
+      <p><strong>Exit code:</strong> {{ run_result.return_code }}</p>
+      <h4>Stdout</h4>
+      <pre class="terminal-output">{{ run_result.stdout or "(no stdout)" }}</pre>
+      <h4>Stderr</h4>
+      <pre class="terminal-output">{{ run_result.stderr or "(no stderr)" }}</pre>
+
+      {% if run_result.export_result %}
+        <h4>Static Data Export</h4>
+        <p><strong>Command:</strong> {{ run_result.export_result.command }}</p>
+        <p><strong>Exit code:</strong> {{ run_result.export_result.return_code }}</p>
+        <h5>Stdout</h5>
+        <pre class="terminal-output">{{ run_result.export_result.stdout or "(no stdout)" }}</pre>
+        <h5>Stderr</h5>
+        <pre class="terminal-output">{{ run_result.export_result.stderr or "(no stderr)" }}</pre>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endblock %}

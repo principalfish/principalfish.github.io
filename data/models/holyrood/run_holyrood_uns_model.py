@@ -172,6 +172,10 @@ LIST_SEATS_PER_REGION = 7
 # Single source of truth for the database path: config.py (which reads .env).
 DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
 
+# Repository root, used to derive front-end output paths (prediction + trends).
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+HOLYROOD_TREND_CACHE_JSON = _REPO_ROOT / "electionmaps" / "data" / "results" / "holyrood-trends.json"
+
 
 def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
     """Ensure the unified elections/votes tables exist (no-op on the main DB).
@@ -970,6 +974,198 @@ def delete_holyrood_uns_for_as_of_date(
     return int(deleted_elections), int(deleted_votes)
 
 
+# ── Trend cache ───────────────────────────────────────────────────────────────
+
+
+def constituency_national_vote_shares(
+    const_projected: list[dict[str, Any]],
+) -> dict[int, float]:
+    """Compute constituency-ballot national vote shares per party.
+
+    Sums ``vote_total`` per ``party_id`` across the constituency projection only
+    (never the list rows) and divides by the grand total. Using const rows alone
+    means the intentional per-region duplication of list vote rows — where all 7
+    list seats carry identical totals — cannot inflate the national share.
+
+    Args:
+        const_projected: Constituency vote rows from :func:`project_constituency_seats`.
+
+    Returns:
+        Mapping of party_id → national vote share (0–100 scale). Empty if the
+        grand total is not positive.
+    """
+    totals_by_party: dict[int, float] = defaultdict(float)
+    grand_total = 0.0
+    for row in const_projected:
+        v = float(row["vote_total"])
+        totals_by_party[int(row["party_id"])] += v
+        grand_total += v
+    if grand_total <= 0:
+        return {}
+    return {party_id: (v / grand_total) * 100.0 for party_id, v in totals_by_party.items()}
+
+
+def existing_trend_dates(
+    trend_cache_json: Path = HOLYROOD_TREND_CACHE_JSON,
+    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+) -> set[date]:
+    """Return all ``as_of_date`` values that have already been simulated.
+
+    Combines dates from the trend cache JSON with dates derived from the SQLite
+    archive. The JSON only contains dates whose seat snapshot differed from the
+    previous entry (duplicates are skipped), so using it alone would cause
+    gap-filling re-runs for those skipped dates on the next import. The SQLite
+    archive records every run regardless of deduplication, so including it gives
+    a complete picture of which dates have already been processed.
+
+    Returns:
+        A set of ``date`` objects for which a simulation has already been run.
+        Returns an empty set if neither source exists.
+    """
+    dates: set[date] = set()
+
+    if trend_cache_json.exists():
+        with trend_cache_json.open("r", encoding="utf-8") as handle:
+            entries = json.load(handle)
+        for entry in entries:
+            raw = str(entry.get("as_of_date") or "").strip()
+            if not raw:
+                continue
+            try:
+                dates.add(date.fromisoformat(raw))
+            except ValueError:
+                continue
+
+    if sqlite_path.exists():
+        with sqlite3.connect(sqlite_path) as conn:
+            rows = conn.execute(
+                "SELECT name FROM elections WHERE type = 'holyrood_uns'"
+            ).fetchall()
+        for (name,) in rows:
+            m = re.match(r"Holyrood UNS (\d{4}-\d{2}-\d{2})", name or "")
+            if m:
+                try:
+                    dates.add(date.fromisoformat(m.group(1)))
+                except ValueError:
+                    continue
+
+    return dates
+
+
+def update_trend_cache_json(
+    election_id: int,
+    election_name: str,
+    as_of_date: date,
+    const_projected: list[dict[str, Any]],
+    list_projected: list[dict[str, Any]],
+    trend_cache_json: Path = HOLYROOD_TREND_CACHE_JSON,
+) -> None:
+    """Merge this simulation's results into the trend cache JSON.
+
+    Reads the existing ``trend_cache_json``, strips any entry for ``as_of_date``
+    or ``election_id``, then appends a new entry summarising seat counts and
+    constituency-ballot national vote percentages per party. The combined
+    entries are sorted by ``election_id`` before being written back.
+
+    Seat counts are taken across all 129 seats (constituency + list); vote
+    percentages come from :func:`constituency_national_vote_shares` (const rows
+    only, so the list-vote duplication never inflates them).
+
+    **Deduplication logic**: if the new seat snapshot (the multiset of
+    party-seat-count pairs) is identical to that of the immediately preceding
+    cached date, the new entry is omitted and a ``TREND_CACHE_SKIP`` message is
+    printed instead.
+
+    Args:
+        election_id: Primary key of the newly persisted election.
+        election_name: Display name of the newly persisted election.
+        as_of_date: Simulation date; any existing entry for this date is replaced.
+        const_projected: Constituency vote rows from :func:`project_constituency_seats`.
+        list_projected: List seat vote rows from :func:`project_list_seats`.
+    """
+    trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
+
+    const_shares = constituency_national_vote_shares(const_projected)
+
+    seats_by_party: dict[int, int] = defaultdict(int)
+    for row in [*const_projected, *list_projected]:
+        if bool(row["elected"]):
+            seats_by_party[int(row["party_id"])] += 1
+
+    def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
+        """Build a sorted snapshot tuple from a JSON entry's parties map."""
+        snapshot: dict[int, int] = {}
+        for pid_str, pdata in (entry.get("parties") or {}).items():
+            try:
+                party_id = int(pid_str)
+                seats = int(pdata.get("s") or 0)
+            except (ValueError, TypeError):
+                continue
+            if party_id > 0 and seats > 0:
+                snapshot[party_id] = seats
+        return tuple(sorted(snapshot.items()))
+
+    def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
+        """Build a sorted snapshot tuple from a party-seat-count dict."""
+        return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
+
+    existing_entries: list[dict[str, Any]] = []
+    entries_by_date: dict[date, dict[str, Any]] = {}
+    if trend_cache_json.exists():
+        with trend_cache_json.open("r", encoding="utf-8") as handle:
+            entries = json.load(handle)
+        for entry in entries:
+            if str(entry.get("as_of_date") or "").strip() == as_of_date.isoformat():
+                continue
+            if int(entry.get("election_id") or 0) == election_id:
+                continue
+            existing_entries.append(entry)
+            try:
+                parsed_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
+            except ValueError:
+                continue
+            if parsed_date < as_of_date:
+                entries_by_date[parsed_date] = entry
+
+    party_ids = sorted(set(seats_by_party) | set(const_shares))
+    new_entry = {
+        "election_id": election_id,
+        "election_name": election_name,
+        "as_of_date": as_of_date.isoformat(),
+        "parties": {
+            str(party_id): {
+                "s": seats_by_party.get(party_id, 0),
+                "v": round(const_shares.get(party_id, 0.0), 1),
+            }
+            for party_id in party_ids
+        },
+    }
+
+    previous_date = max(entries_by_date.keys(), default=None)
+    previous_snapshot = (
+        seat_snapshot_from_entry(entries_by_date[previous_date])
+        if previous_date is not None
+        else tuple()
+    )
+    current_snapshot = seat_snapshot_from_party_counts(seats_by_party)
+
+    if previous_date is not None and current_snapshot == previous_snapshot:
+        combined = existing_entries
+        print(
+            "TREND_CACHE_SKIP "
+            f"as_of_date={as_of_date.isoformat()} "
+            f"reason=unchanged_seat_snapshot "
+            f"previous_date={previous_date.isoformat()}"
+        )
+    else:
+        combined = existing_entries + [new_entry]
+
+    combined.sort(key=lambda e: int(e.get("election_id") or 0))
+
+    with trend_cache_json.open("w", encoding="utf-8") as handle:
+        json.dump(combined, handle, separators=(",", ":"))
+
+
 # ── JSON output ───────────────────────────────────────────────────────────────
 
 RESULT_FILE_NAME = "holyrood-prediction.json"
@@ -1042,7 +1238,6 @@ def write_result_json(payload: dict[str, Any], output_path: Path) -> None:
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_OUTPUT = _REPO_ROOT / "electionmaps" / "data" / "results" / RESULT_FILE_NAME
 _DEFAULT_META_OUTPUT = _REPO_ROOT / "electionmaps" / "data" / "results" / META_FILE_NAME
 
@@ -1202,12 +1397,15 @@ def main() -> None:
         party_name_by_id = {p.id: p.name for p in db.get_all_parties()}
         election_name = _election_name(cfg.as_of_date)
         delete_holyrood_uns_for_as_of_date(cfg.as_of_date)
-        persist_projection(
+        _persisted_name, election_id = persist_projection(
             const_election.map_id,
             cfg.as_of_date,
             election_name,
             const_proj + list_proj,
             party_name_by_id,
+        )
+        update_trend_cache_json(
+            election_id, election_name, cfg.as_of_date, const_proj, list_proj
         )
         print(
             f"Persisted holyrood_uns election {election_name!r} "

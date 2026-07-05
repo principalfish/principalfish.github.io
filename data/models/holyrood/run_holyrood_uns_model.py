@@ -265,6 +265,21 @@ class HolyroodSimulationConfig:
     half_life_days: float = _DEFAULT_HALF_LIFE_DAYS
 
 
+@dataclass
+class HolyroodRunOutput:
+    """Everything a single-date Holyrood run produces, for display + front-end output."""
+
+    const_projected: list[dict[str, Any]]
+    list_projected: list[dict[str, Any]]
+    seat_summary: dict[str, dict[str, int]]
+    excluded_ids: set[int]
+    all_seats: list[SeatRef]
+    latest_poll_name: str | None
+    latest_poll_date: date | None
+    mode: str
+    election_name: str
+
+
 # ── Poll share helpers ────────────────────────────────────────────────────────
 
 # Flexible name aliases for --poll-shares CLI input
@@ -870,6 +885,333 @@ def run_holyrood_projection(
     return const_projected, list_projected, seat_summary
 
 
+def run_holyrood_simulation(
+    db: Database,
+    cfg: HolyroodSimulationConfig,
+    manual_poll_shares: dict[int, float] | None = None,
+) -> HolyroodRunOutput:
+    """Run a full single-date Holyrood UNS pipeline: swings → projection → persist.
+
+    This is the reusable per-date orchestrator shared by the single-date CLI path
+    (with optional gap-fill backfill) and the retrospective backfill loop.
+
+    Swings come from one of two sources:
+
+    - ``manual_poll_shares`` (constituency-only override, single-run use): the
+      swing is derived directly from the provided party_id → share dict; there is
+      no separate list swing and no latest-poll metadata.
+    - the database (``manual_poll_shares is None``): time-decayed poll averages are
+      fetched separately for constituency (``"_holyrood"``) and list
+      (``"_holyrood_list"``) ballots and turned into swings vs their respective
+      2021 baselines.
+
+    Excluded-party swings are zeroed in both passes. In non-dry-run mode the
+    projection is persisted to SQLite (idempotently, replacing any prior run for
+    the same date) and merged into the trend cache JSON.
+
+    Args:
+        db: Active database connection.
+        cfg: Simulation configuration for a single ``as_of_date``.
+        manual_poll_shares: Optional party_id → share % override that bypasses the
+            DB poll fetch. Only used for single, non-backfilled runs.
+
+    Returns:
+        A :class:`HolyroodRunOutput` bundling the projection, seat summary,
+        excluded party IDs, seat references, and latest-poll metadata.
+
+    Raises:
+        ValueError: If the constituency election is not found.
+    """
+    const_election = db.get_election_by_name(cfg.constituency_election_name)
+    if const_election is None:
+        raise ValueError(f"Baseline election not found: {cfg.constituency_election_name!r}")
+
+    all_seats = load_seat_refs(db, const_election.map_id)
+    region_ids = {s.region_id for s in all_seats if s.region_id is not None}
+    baseline_shares = compute_baseline_national_shares(db, const_election.id)
+
+    since_date = (
+        cfg.since_date
+        if cfg.since_date is not None
+        else cfg.as_of_date - timedelta(days=_DEFAULT_LOOKBACK_DAYS)
+    )
+
+    swing_by_region_party: dict[int, dict[int, float]] = {}
+    list_swing_by_region_party: dict[int, dict[int, float]] = {}
+    latest_poll_name: str | None = None
+    latest_poll_date: date | None = None
+
+    if manual_poll_shares is not None:
+        swing_by_region_party = compute_holyrood_swings(
+            baseline_national_shares=baseline_shares,
+            poll_shares=manual_poll_shares,
+            region_ids=region_ids,
+        )
+        mode = "manual poll shares"
+    else:
+        const_polls, latest_poll_name, latest_poll_date = fetch_holyrood_poll_averages(
+            db, const_election.map_id, "_holyrood", cfg.as_of_date, since_date, cfg.half_life_days
+        )
+        list_polls, _, _ = fetch_holyrood_poll_averages(
+            db, const_election.map_id, "_holyrood_list", cfg.as_of_date, since_date, cfg.half_life_days
+        )
+        if const_polls:
+            swing_by_region_party = compute_holyrood_swings(
+                baseline_national_shares=baseline_shares,
+                poll_shares=const_polls,
+                region_ids=region_ids,
+            )
+        if list_polls:
+            list_baseline_shares = compute_baseline_national_shares(
+                db, find_list_election(db, const_election.id).id
+            )
+            list_swing_by_region_party = compute_holyrood_swings(
+                baseline_national_shares=list_baseline_shares,
+                poll_shares=list_polls,
+                region_ids=region_ids,
+            )
+        if const_polls or list_polls:
+            mode = f"db poll averages (constituency={'yes' if const_polls else 'no'}, list={'yes' if list_polls else 'no'})"
+        else:
+            mode = "zero swing (no polls found)"
+
+    # Zero out swings for excluded parties in both passes, and collect their IDs
+    # so they can be stripped from the output payload too.
+    excluded_ids: set[int] = set()
+    if EXCLUDED_PARTIES:
+        excluded_ids = {
+            p.id for p in db.get_all_parties() if p.name in EXCLUDED_PARTIES
+        }
+        for swing_dict in [swing_by_region_party, list_swing_by_region_party]:
+            for region_swings in swing_dict.values():
+                for party_id in excluded_ids:
+                    region_swings.pop(party_id, None)
+
+    cfg.swing_by_region_party = swing_by_region_party
+    cfg.list_swing_by_region_party = list_swing_by_region_party
+
+    print(f"Running Holyrood UNS projection — baseline: {cfg.constituency_election_name!r} ({mode})")
+    const_proj, list_proj, seat_summary = run_holyrood_projection(db, cfg)
+    election_name = _election_name(cfg.as_of_date)
+
+    if not cfg.dry_run:
+        party_name_by_id = {p.id: p.name for p in db.get_all_parties()}
+        delete_holyrood_uns_for_as_of_date(cfg.as_of_date)
+        _persisted_name, election_id = persist_projection(
+            const_election.map_id,
+            cfg.as_of_date,
+            election_name,
+            const_proj + list_proj,
+            party_name_by_id,
+        )
+        update_trend_cache_json(
+            election_id, election_name, cfg.as_of_date, const_proj, list_proj
+        )
+        print(
+            f"Persisted holyrood_uns election {election_name!r} "
+            f"with {len(const_proj) + len(list_proj)} vote rows"
+        )
+
+    return HolyroodRunOutput(
+        const_projected=const_proj,
+        list_projected=list_proj,
+        seat_summary=seat_summary,
+        excluded_ids=excluded_ids,
+        all_seats=all_seats,
+        latest_poll_name=latest_poll_name,
+        latest_poll_date=latest_poll_date,
+        mode=mode,
+        election_name=election_name,
+    )
+
+
+# ── Backfill helpers ──────────────────────────────────────────────────────────
+
+
+def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
+    """Determine which simulation dates must be run for the given configuration.
+
+    In dry-run mode only ``cfg.as_of_date`` is returned.
+
+    Otherwise the function compares the existing trend cache dates against
+    ``cfg.as_of_date`` and returns any calendar-day gaps between the most-recent
+    cached date and ``cfg.as_of_date``. If there are no gaps the list contains
+    only ``cfg.as_of_date``.
+
+    Args:
+        cfg: The simulation configuration, used for ``as_of_date`` and ``dry_run``.
+
+    Returns:
+        An ordered list of dates to simulate, oldest first.
+    """
+    if cfg.dry_run:
+        return [cfg.as_of_date]
+
+    existing = existing_trend_dates()
+    previous_dates = [value for value in existing if value < cfg.as_of_date]
+    if not previous_dates:
+        return [cfg.as_of_date]
+
+    previous = max(previous_dates)
+    missing: list[date] = []
+    current = previous + timedelta(days=1)
+    while current <= cfg.as_of_date:
+        if current not in existing:
+            missing.append(current)
+        current += timedelta(days=1)
+
+    if missing:
+        return missing
+    return [cfg.as_of_date]
+
+
+def reset_existing_model_outputs(
+    start_date: date, end_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+) -> tuple[int, int, int]:
+    """Delete holyrood_uns elections in [start_date, end_date] and strip matching trend rows.
+
+    Election names follow the pattern ``Holyrood UNS YYYY-MM-DD``, so a
+    lexicographic range on the name column correctly isolates the target dates.
+    The trend cache JSON is rewritten in place with matching rows removed.
+
+    Args:
+        start_date: Inclusive lower bound of the date range to clear.
+        end_date: Inclusive upper bound of the date range to clear.
+        sqlite_path: Path to the SQLite archive file.
+
+    Returns:
+        A 3-tuple ``(deleted_elections, deleted_votes, stripped_json_entries)``.
+    """
+    start_name = f"Holyrood UNS {start_date.isoformat()}"
+    upper_bound = f"Holyrood UNS {(end_date + timedelta(days=1)).isoformat()}"
+
+    deleted_elections = 0
+    deleted_votes = 0
+
+    if sqlite_path.exists():
+        with sqlite3.connect(sqlite_path) as conn:
+            election_ids = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT id FROM elections WHERE name >= ? AND name < ?",
+                    (start_name, upper_bound),
+                ).fetchall()
+            ]
+            if election_ids:
+                placeholders = ",".join("?" * len(election_ids))
+                deleted_votes = conn.execute(
+                    f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
+                ).rowcount or 0
+                deleted_elections = conn.execute(
+                    f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
+                ).rowcount or 0
+                conn.commit()
+
+    stripped_json_entries = 0
+    if HOLYROOD_TREND_CACHE_JSON.exists():
+        with HOLYROOD_TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+            entries = json.load(handle)
+        kept_entries = []
+        for entry in entries:
+            raw = str(entry.get("as_of_date") or "").strip()
+            try:
+                entry_date = date.fromisoformat(raw)
+            except ValueError:
+                kept_entries.append(entry)
+                continue
+            if entry_date < start_date or entry_date > end_date:
+                kept_entries.append(entry)
+            else:
+                stripped_json_entries += 1
+
+        if stripped_json_entries > 0:
+            with HOLYROOD_TREND_CACHE_JSON.open("w", encoding="utf-8") as handle:
+                json.dump(kept_entries, handle, separators=(",", ":"))
+
+    return deleted_elections, deleted_votes, stripped_json_entries
+
+
+def run_retrospective(db: Database, args: argparse.Namespace) -> None:
+    """Run daily Holyrood UNS simulations across a date range for retrospective backfill.
+
+    Args:
+        db: Open Database instance.
+        args: Parsed CLI arguments containing start_date, end_date, lookback_days,
+            half_life_days, reset_existing, continue_on_error, progress_every,
+            dry_run, and election_name.
+
+    Raises:
+        ValueError: If ``end_date`` is before ``start_date``, ``lookback_days``
+            is negative, or ``half_life_days`` is not positive.
+        Exception: Re-raises any exception thrown by ``run_holyrood_simulation``
+            for a given date when ``args.continue_on_error`` is ``False``.
+    """
+    start_date = date.fromisoformat(args.start_date)
+    end_date = date.fromisoformat(args.end_date)
+
+    if end_date < start_date:
+        raise ValueError("--end-date must be on or after --start-date")
+    if args.lookback_days < 0:
+        raise ValueError("--lookback-days must be zero or greater")
+    if args.half_life_days <= 0:
+        raise ValueError("--half-life-days must be greater than zero")
+
+    if args.reset_existing and not args.dry_run:
+        deleted_elections, deleted_votes, stripped_json_entries = reset_existing_model_outputs(
+            start_date, end_date
+        )
+        print(
+            f"RESET deleted_elections={deleted_elections} "
+            f"deleted_votes={deleted_votes} "
+            f"stripped_json_entries={stripped_json_entries}"
+        )
+    elif args.reset_existing and args.dry_run:
+        print("RESET skipped for dry-run mode")
+
+    current = start_date
+    success_count = 0
+    failed_count = 0
+    failures: list[tuple[str, str]] = []
+
+    while current <= end_date:
+        try:
+            cfg = HolyroodSimulationConfig(
+                constituency_election_name=args.election_name,
+                as_of_date=current,
+                since_date=current - timedelta(days=args.lookback_days),
+                half_life_days=args.half_life_days,
+                dry_run=args.dry_run,
+            )
+            output = run_holyrood_simulation(db, cfg)
+            success_count += 1
+
+            if args.progress_every > 0 and success_count % args.progress_every == 0:
+                print(
+                    f"PROGRESS success={success_count} failed={failed_count} "
+                    f"as_of={current.isoformat()} election={output.election_name} "
+                    f"rows={len(output.const_projected) + len(output.list_projected)}"
+                )
+        except Exception as exc:
+            failed_count += 1
+            failures.append((current.isoformat(), str(exc)))
+            print(f"ERROR as_of={current.isoformat()} err={exc}")
+            if not args.continue_on_error:
+                raise
+
+        current += timedelta(days=1)
+
+    print("SUMMARY")
+    print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
+    print(f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
+    print(f"DRY_RUN={args.dry_run}")
+    print(f"SUCCESS={success_count} FAILED={failed_count}")
+
+    if failures:
+        print("FAILURES")
+        for when, message in failures:
+            print(f"{when}\t{message}")
+
+
 # ── SQLite persistence ────────────────────────────────────────────────────────
 
 
@@ -1243,19 +1585,33 @@ _DEFAULT_META_OUTPUT = _REPO_ROOT / "electionmaps" / "data" / "results" / META_F
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments.
+    """Parse CLI arguments for single-date or retrospective Holyrood simulation.
 
-    Arguments:
-        --election-name   Name of the baseline holyrood_general election in the DB.
-                          Defaults to BASELINE_ELECTION_NAME (2021 on 2026 boundaries).
-        --output FILE     Path to write the pf-results-v4 JSON output.
-                          Defaults to electionmaps/data/results/holyrood-prediction.json.
-        --no-output       Skip writing any JSON output file.
-        --poll-shares JSON
-                          JSON dict of party name → VI share % to use as poll
-                          averages, bypassing the DB poll fetch.  Accepts full
-                          party names or short aliases (snp, lab, con, ld, green,
-                          alba).  When omitted, poll averages are read from the DB.
+    Single-date flags (default mode):
+
+    - ``--election-name`` (str): baseline holyrood_general election name.
+    - ``--output FILE`` (str, optional): path for the pf-results-v4 JSON output.
+    - ``--no-output`` (flag): skip writing any JSON output file.
+    - ``--poll-shares JSON`` (str, optional): party name → VI share % override that
+      bypasses the DB poll fetch (also disables gap-fill and the as-of cap).
+    - ``--as-of-date`` (ISO date, optional): upper-bound date for poll inclusion.
+    - ``--as-of-days-back`` (int ≥ 0, default 0): fallback when ``--as-of-date`` absent.
+    - ``--since-date`` (ISO date, optional): lower-bound date for poll inclusion.
+    - ``--since-days-back`` (int ≥ 0, default 30): fallback when ``--since-date`` absent.
+
+    Retrospective mode (triggered by ``--start-date`` + ``--end-date``):
+
+    - ``--start-date`` (ISO date): first date to simulate.
+    - ``--end-date`` (ISO date): last date to simulate.
+    - ``--lookback-days`` (int ≥ 0, default 365): poll history window per date.
+    - ``--reset-existing`` / ``--no-reset-existing``: clear existing holyrood_uns
+      outputs in the date range before backfilling (default: enabled).
+    - ``--continue-on-error`` (flag): log errors and continue rather than raising.
+    - ``--progress-every`` (int, default 25): print progress every N successes.
+
+    Shared flags:
+
+    - ``--half-life-days`` (float, default 30.0), ``--dry-run`` (flag).
     """
     parser = argparse.ArgumentParser(description="Run Holyrood UNS projection")
     parser.add_argument(
@@ -1284,134 +1640,68 @@ def parse_args() -> argparse.Namespace:
             'Example: \'{"snp": 34, "lab": 29, "con": 20, "ld": 7, "green": 8, "alba": 2}\''
         ),
     )
+    parser.add_argument("--half-life-days", type=float, default=30.0)
+    parser.add_argument("--dry-run", action="store_true")
+    # Single-date flags
+    parser.add_argument("--as-of-days-back", type=int, default=0)
+    parser.add_argument("--since-days-back", type=int, default=30)
+    parser.add_argument("--as-of-date", default=None)
+    parser.add_argument("--since-date", default=None)
+    # Retrospective mode flags
+    parser.add_argument("--start-date", default=None, help="First date for retrospective backfill (YYYY-MM-DD)")
+    parser.add_argument("--end-date", default=None, help="Last date for retrospective backfill (YYYY-MM-DD)")
+    parser.add_argument("--lookback-days", type=int, default=365)
+    parser.add_argument(
+        "--reset-existing",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Clear existing holyrood_uns outputs in the date range before backfilling (default: enabled)",
+    )
+    parser.add_argument("--continue-on-error", action="store_true")
+    parser.add_argument("--progress-every", type=int, default=25)
     return parser.parse_args()
 
 
-def main() -> None:
-    """CLI entry point: fetch polls, run the two-pass projection, write output.
+def _build_config_from_args(args: argparse.Namespace) -> HolyroodSimulationConfig:
+    """Construct a HolyroodSimulationConfig from parsed single-date CLI arguments.
 
-    Flow:
-    1. Load the baseline constituency election from the DB (default: 2021 on
-       2026 boundaries) and derive the region and seat structure from its map.
-    2. Compute poll-driven swings:
-       a. If --poll-shares is given, parse that JSON and use it directly for
-          both ballots (constituency swing only; no separate list swing).
-       b. Otherwise, fetch time-decayed poll averages from the DB separately
-          for constituency polls ("_holyrood" suffix) and list polls
-          ("_holyrood_list" suffix).  Each uses its respective 2021 baseline
-          national share to compute the swing.  If only one ballot has polls,
-          the other falls back to zero swing (or to constituency swing in the
-          case of the list pass — see HolyroodSimulationConfig).
-    3. Run run_holyrood_projection(), which executes Pass 1 (FPTP) then Pass 2
-       (D'Hondt) using the separate constituency and list swings.
-    4. Print a seat-count table to stdout.
-    5. Unless --no-output: write the pf-results-v4 JSON to holyrood-prediction.json
-       and the "Latest poll used" snippet to holyrood-prediction-meta.json.
+    Parses ``--as-of-date``/``--as-of-days-back`` and ``--since-date``/``--since-days-back``
+    into concrete dates, validates ordering, and populates the config.
 
-    The ``current-holyrood-prediction`` manifest entry is owned by
-    export_elections.py (run it afterwards); this script never touches
-    map-modes.json.
+    Args:
+        args: Parsed argument namespace from :func:`parse_args`.
+
+    Returns:
+        A ``HolyroodSimulationConfig`` with ``as_of_date``, ``since_date``, and
+        other simulation parameters populated from the CLI arguments.
+
+    Raises:
+        ValueError: If ``since_date`` is later than ``as_of_date``.
     """
-    args = parse_args()
-    db = Database(DatabaseConfig.from_env())
-
-    # Stand-in run parameters; a later piece replaces these with parsed CLI args.
-    as_of_date = date.today()
-    half_life_days = _DEFAULT_HALF_LIFE_DAYS
-    lookback_days = _DEFAULT_LOOKBACK_DAYS
-    since_date = as_of_date - timedelta(days=lookback_days)
-
-    swing_by_region_party: dict[int, dict[int, float]] = {}
-    mode: str
-
-    const_election = db.get_election_by_name(args.election_name)
-    if const_election is None:
-        raise ValueError(f"Baseline election not found: {args.election_name!r}")
-
-    all_seats = load_seat_refs(db, const_election.map_id)
-    region_ids = {s.region_id for s in all_seats if s.region_id is not None}
-    baseline_shares = compute_baseline_national_shares(db, const_election.id)
-
-    list_swing_by_region_party: dict[int, dict[int, float]] = {}
-
-    if args.poll_shares:
-        raw_shares: dict[str, float] = json.loads(args.poll_shares)
-        poll_shares_by_id = resolve_poll_shares(raw_shares, db)
-        swing_by_region_party = compute_holyrood_swings(
-            baseline_national_shares=baseline_shares,
-            poll_shares=poll_shares_by_id,
-            region_ids=region_ids,
-        )
-        mode = f"poll shares: {args.poll_shares}"
-    else:
-        const_polls, latest_poll_name, latest_poll_date = fetch_holyrood_poll_averages(
-            db, const_election.map_id, "_holyrood", as_of_date, since_date, half_life_days
-        )
-        list_polls, _, _ = fetch_holyrood_poll_averages(
-            db, const_election.map_id, "_holyrood_list", as_of_date, since_date, half_life_days
-        )
-        if const_polls:
-            swing_by_region_party = compute_holyrood_swings(
-                baseline_national_shares=baseline_shares,
-                poll_shares=const_polls,
-                region_ids=region_ids,
-            )
-        if list_polls:
-            list_baseline_shares = compute_baseline_national_shares(db, find_list_election(db, const_election.id).id)
-            list_swing_by_region_party = compute_holyrood_swings(
-                baseline_national_shares=list_baseline_shares,
-                poll_shares=list_polls,
-                region_ids=region_ids,
-            )
-        if const_polls or list_polls:
-            mode = f"db poll averages (constituency={'yes' if const_polls else 'no'}, list={'yes' if list_polls else 'no'})"
-        else:
-            mode = "zero swing (no polls found)"
-
-    # Zero out swings for excluded parties in both passes, and collect their IDs
-    # so they can be stripped from the output payload too.
-    excluded_ids: set[int] = set()
-    if EXCLUDED_PARTIES:
-        excluded_ids = {
-            p.id for p in db.get_all_parties() if p.name in EXCLUDED_PARTIES
-        }
-        for swing_dict in [swing_by_region_party, list_swing_by_region_party]:
-            for region_swings in swing_dict.values():
-                for party_id in excluded_ids:
-                    region_swings.pop(party_id, None)
-
-    cfg = HolyroodSimulationConfig(
+    today = date.today()
+    as_of_date = (
+        date.fromisoformat(args.as_of_date)
+        if args.as_of_date
+        else today - timedelta(days=max(0, int(args.as_of_days_back)))
+    )
+    since_date = (
+        date.fromisoformat(args.since_date)
+        if args.since_date
+        else today - timedelta(days=max(0, int(args.since_days_back)))
+    )
+    if since_date > as_of_date:
+        raise ValueError("--since-days-back/--since-date must be older than or equal to as-of")
+    return HolyroodSimulationConfig(
         constituency_election_name=args.election_name,
-        swing_by_region_party=swing_by_region_party,
-        list_swing_by_region_party=list_swing_by_region_party,
-        dry_run=True,
         as_of_date=as_of_date,
         since_date=since_date,
-        half_life_days=half_life_days,
+        half_life_days=args.half_life_days,
+        dry_run=args.dry_run,
     )
-    print(f"Running Holyrood UNS projection — baseline: {cfg.constituency_election_name!r} ({mode})")
 
-    const_proj, list_proj, seat_summary = run_holyrood_projection(db, cfg)
 
-    if not cfg.dry_run:
-        party_name_by_id = {p.id: p.name for p in db.get_all_parties()}
-        election_name = _election_name(cfg.as_of_date)
-        delete_holyrood_uns_for_as_of_date(cfg.as_of_date)
-        _persisted_name, election_id = persist_projection(
-            const_election.map_id,
-            cfg.as_of_date,
-            election_name,
-            const_proj + list_proj,
-            party_name_by_id,
-        )
-        update_trend_cache_json(
-            election_id, election_name, cfg.as_of_date, const_proj, list_proj
-        )
-        print(
-            f"Persisted holyrood_uns election {election_name!r} "
-            f"with {len(const_proj) + len(list_proj)} vote rows"
-        )
-
+def _print_seat_table(seat_summary: dict[str, dict[str, int]]) -> None:
+    """Print the Party/Const/List/Total seat-count table for a run's seat summary."""
     print(f"\n{'Party':<30} {'Const':>6} {'List':>6} {'Total':>6}")
     print("-" * 52)
     total_const = total_list = 0
@@ -1422,25 +1712,127 @@ def main() -> None:
     print("-" * 52)
     print(f"{'TOTAL':<30} {total_const:>6} {total_list:>6} {total_const + total_list:>6}")
 
-    if not args.no_output:
+
+def main() -> None:
+    """CLI entry point: parse arguments and run single-date or retrospective simulation.
+
+    Pass ``--start-date`` and ``--end-date`` for retrospective backfill mode.
+    Without those flags, runs a single-date simulation for the resolved
+    ``as_of_date`` — automatically gap-filling any missing dates between the most
+    recent cached date and ``as_of_date`` — then writes the pf-results-v4 JSON and
+    "Latest poll used" meta for the current date (unless ``--no-output``).
+
+    ``--poll-shares`` forces a single-snapshot run: it bypasses the DB poll fetch
+    and disables both gap-fill and the as-of cap, yielding empty poll meta.
+
+    The ``current-holyrood-prediction`` manifest entry is owned by
+    export_elections.py (run it afterwards); this script never touches
+    map-modes.json.
+    """
+    args = parse_args()
+    db = Database(DatabaseConfig.from_env())
+
+    # --poll-shares is a single-snapshot override and cannot be combined with the
+    # retrospective date range (which fetches DB poll averages per date).
+    if args.poll_shares and (args.start_date or args.end_date):
+        raise ValueError("--poll-shares cannot be combined with --start-date/--end-date")
+
+    # Retrospective backfill mode.
+    if args.start_date and args.end_date:
+        run_retrospective(db, args)
+        return
+
+    cfg = _build_config_from_args(args)
+
+    # Manual poll-shares override is single-run only (no gap-fill / cap).
+    manual_poll_shares: dict[int, float] | None = None
+    if args.poll_shares:
+        manual_poll_shares = resolve_poll_shares(json.loads(args.poll_shares), db)
+
+    # Cap as_of_date at the most recent poll fieldwork end for the map so that the
+    # model does not run past the point where poll data actually exists (decay-only
+    # drift past the last poll produces meaningless trend movement). Skipped for a
+    # manual poll-shares override, which is a deliberate single snapshot.
+    if manual_poll_shares is None:
+        baseline_election = db.get_election_by_name(cfg.constituency_election_name)
+        if baseline_election is not None:
+            polls = db.get_polls_for_map(baseline_election.map_id)
+            if polls:
+                latest_poll_date = max(p.fieldwork_end for p in polls)
+                if cfg.as_of_date > latest_poll_date:
+                    print(
+                        f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
+                        f"to latest poll date {latest_poll_date.isoformat()}"
+                    )
+                    # Shift the window back so its upper bound is latest_poll_date
+                    # but its length (lookback) is preserved.
+                    shift = cfg.as_of_date - latest_poll_date
+                    since = cfg.since_date - shift if cfg.since_date is not None else None
+                    cfg = HolyroodSimulationConfig(
+                        constituency_election_name=cfg.constituency_election_name,
+                        as_of_date=latest_poll_date,
+                        since_date=since,
+                        half_life_days=cfg.half_life_days,
+                        dry_run=cfg.dry_run,
+                    )
+
+    lookback_days = max(0, (cfg.as_of_date - (cfg.since_date or cfg.as_of_date)).days)
+
+    # Gap-fill: run every missing date, but skip gap-fill entirely in manual mode.
+    run_dates = [cfg.as_of_date] if manual_poll_shares is not None else dates_to_run_for_cfg(cfg)
+    if cfg.as_of_date not in run_dates:
+        # Always run the current date last so the front-end write uses it.
+        run_dates = [*run_dates, cfg.as_of_date]
+    if len(run_dates) > 1:
+        print(
+            "AUTO-BACKFILL "
+            f"missing_dates={len(run_dates)} "
+            f"from={run_dates[0].isoformat()} "
+            f"to={run_dates[-1].isoformat()}"
+        )
+
+    final_output: HolyroodRunOutput | None = None
+    for run_date in run_dates:
+        run_cfg = HolyroodSimulationConfig(
+            constituency_election_name=cfg.constituency_election_name,
+            as_of_date=run_date,
+            since_date=run_date - timedelta(days=lookback_days),
+            half_life_days=cfg.half_life_days,
+            dry_run=cfg.dry_run,
+        )
+        output = run_holyrood_simulation(
+            db, run_cfg, manual_poll_shares if run_date == cfg.as_of_date else None
+        )
+        _print_seat_table(output.seat_summary)
+        if run_date == cfg.as_of_date:
+            final_output = output
+
+    # Front-end JSON + meta for the current as_of date (unless --no-output).
+    if final_output is not None and not args.no_output:
         output_path = Path(args.output) if args.output else _DEFAULT_OUTPUT
 
-        seat_name_by_id = {s.id: s.seat_name for s in all_seats}
-        region_by_seat_id = {s.id: s.region_id for s in all_seats}
+        seat_name_by_id = {s.id: s.seat_name for s in final_output.all_seats}
+        region_by_seat_id = {s.id: s.region_id for s in final_output.all_seats}
 
-        payload = build_result_payload(const_proj, list_proj, seat_name_by_id, region_by_seat_id, excluded_ids)
+        payload = build_result_payload(
+            final_output.const_projected,
+            final_output.list_projected,
+            seat_name_by_id,
+            region_by_seat_id,
+            final_output.excluded_ids,
+        )
         write_result_json(payload, output_path)
         print(f"Wrote {len(payload['seats'])} seats → {output_path}")
 
-        # Write meta file for front-end "Latest poll used" snippet
-        if not args.poll_shares and latest_poll_name and latest_poll_date:
-            snippet = f"Latest poll used: {latest_poll_name} ({latest_poll_date.isoformat()})"
+        # Write meta file for front-end "Latest poll used" snippet. Empty for a
+        # manual poll-shares override (no DB poll metadata was captured).
+        if final_output.latest_poll_name and final_output.latest_poll_date:
+            snippet = f"Latest poll used: {final_output.latest_poll_name} ({final_output.latest_poll_date.isoformat()})"
         else:
             snippet = ""
         meta_payload: dict[str, Any] = {"latest_poll_snippet": snippet}
         write_result_json(meta_payload, _DEFAULT_META_OUTPUT)
         print(f"Wrote meta → {_DEFAULT_META_OUTPUT}")
-
 
 
 if __name__ == "__main__":

@@ -8,6 +8,8 @@ openpyxl>=3.1
 xlrd>=2.0
 pydantic>=2.0
 pydantic-settings>=2.0
-mypy>=1.9
+python-dotenv>=1.0
+mypy==2.1.0
+pytest>=8.0
 types-Flask
 types-beautifulsoup4

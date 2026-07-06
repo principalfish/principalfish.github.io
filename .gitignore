@@ -28,6 +28,7 @@ node_modules/
 
 # ── Data & databases ──────────────────────────────────────────────────────────
 data/election_data/*
+data/.venv/
 data/*.db
 *.db-wal
 *.db-shm

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  data:
+    name: Python pipeline (mypy + pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: data/requirements.txt
+
+      # run_tests.sh looks for data/election_data first, then data/.venv.
+      - name: Install dependencies
+        working-directory: data
+        run: |
+          python -m venv .venv
+          ./.venv/bin/pip install -r requirements.txt
+
+      - name: mypy + pytest
+        working-directory: data
+        run: ./run_tests.sh
+
+  frontend:
+    name: Frontend (vitest + built-asset sync)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Vitest
+        run: npm test
+
+      # GitHub Pages serves the committed .min.js/.min.css/vendor bundles as-is
+      # (there is no build step at deploy time), so a source edit without a
+      # rebuild ships stale assets. Rebuild everything and fail on any drift.
+      - name: Check committed built assets are in sync with source
+        run: |
+          npm run vendor:d3
+          npm run minify:electionmaps
+          if ! git diff --exit-code; then
+            echo "::error::Committed built assets are stale. Run 'npm run vendor:d3 && npm run minify:electionmaps' and commit the result."
+            exit 1
+          fi

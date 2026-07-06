@@ -163,7 +163,7 @@ if str(DATA_DIR) not in sys.path:
 from sqlalchemy import select as sa_select
 
 from config import DatabaseConfig
-from db import Database
+from db import Database, ensure_elections_sqlite_schema
 from models import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2021 Scottish Parliament Election (2026 Boundaries)"
@@ -175,38 +175,6 @@ DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
 # Repository root, used to derive front-end output paths (prediction + trends).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 HOLYROOD_TREND_CACHE_JSON = _REPO_ROOT / "electionmaps" / "data" / "results" / "holyrood-trends.json"
-
-
-def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
-    """Ensure the unified elections/votes tables exist (no-op on the main DB).
-
-    Mirrors the schema in ``models.py``. On the live ``elections.db`` these
-    tables already exist, so this is a no-op; it only materialises them for a
-    fresh database (e.g. in tests).
-    """
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS elections (
-            id INTEGER PRIMARY KEY,
-            map_id INTEGER NOT NULL,
-            year INTEGER NOT NULL,
-            name TEXT NOT NULL UNIQUE,
-            type TEXT NOT NULL,
-            parent_election_id INTEGER,
-            election_date TEXT
-        );
-        CREATE TABLE IF NOT EXISTS votes (
-            id INTEGER PRIMARY KEY,
-            election_id INTEGER NOT NULL,
-            seat_id INTEGER NOT NULL,
-            party_id INTEGER,
-            candidate_name TEXT,
-            vote_total REAL,
-            elected INTEGER DEFAULT 0
-        );
-        CREATE INDEX IF NOT EXISTS idx_votes_election_id ON votes(election_id);
-        CREATE INDEX IF NOT EXISTS idx_elections_name ON elections(name);
-    """)
-    conn.commit()
 
 
 def _election_name(as_of_date: date) -> str:
@@ -1245,7 +1213,7 @@ def persist_projection(
         display name and primary key.
     """
     with sqlite3.connect(sqlite_path) as conn:
-        ensure_sqlite_schema(conn)
+        ensure_elections_sqlite_schema(conn)
         cursor = conn.execute(
             "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
             (map_id, as_of_date.year, election_name, "holyrood_uns", as_of_date.isoformat()),

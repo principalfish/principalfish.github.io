@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyroo
 import pytest
 
 import run_holyrood_uns_model as hmod
-from db import Database
+from db import Database, ensure_elections_sqlite_schema
 from models import Election, ElectionType, Party, Region
 from run_holyrood_uns_model import (
     _DEFAULT_HALF_LIFE_DAYS,
@@ -28,7 +28,6 @@ from run_holyrood_uns_model import (
     dates_to_run_for_cfg,
     delete_holyrood_uns_for_as_of_date,
     dhondt_allocate_ordered,
-    ensure_sqlite_schema,
     existing_trend_dates,
     group_list_seats_by_region,
     load_list_regional_votes,
@@ -641,7 +640,7 @@ class TestExistingTrendDates:
         out_db = tmp_path / "elections.db"
         conn = sqlite3.connect(out_db)
         try:
-            ensure_sqlite_schema(conn)
+            ensure_elections_sqlite_schema(conn)
             conn.execute(
                 "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
                 (1, 2026, "Holyrood UNS 2026-07-02", "holyrood_uns", "2026-07-02"),

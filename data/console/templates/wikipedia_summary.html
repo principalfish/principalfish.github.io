@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Wikipedia Catch-Up Summary</h2>
+    <p>
+      {{ progress.total }} polls queued
+      · {{ progress.imported }} imported
+      · {{ progress.failed }} failed
+      · {{ progress.skipped }} skipped
+      · {{ progress.no_importer }} no importer
+    </p>
+    <p><strong>Window:</strong> {{ cutoff_label }}</p>
+    <p>
+      {{ state.skipped_present }} row(s) in the window were already in the database and never
+      entered the queue; {{ state.skipped_unparsed }} Wikipedia row(s) could not be read.
+    </p>
+    {% if state.unrecognised_areas %}
+      <p>
+        Wikipedia rows ignored because their area column was not GB or UK:
+        {% for area, count in state.unrecognised_areas|dictsort %}
+          <code>{{ area or "(blank)" }}</code> &times;{{ count }}{% if not loop.last %}, {% endif %}
+        {% endfor %}.
+        A few table headers here is normal; percentages or dates mean Wikipedia has shifted
+        its columns and polls are going unseen.
+      </p>
+    {% endif %}
+    <div class="actions">
+      <a class="button primary" href="{{ url_for('home.home') }}">Back to home</a>
+      <a class="button" href="{{ url_for('poll_import.import_poll_form') }}">Back to import</a>
+    </div>
+  </section>
+
+  {% if model_error %}
+    <div class="alerts">
+      <div class="alert">{{ model_error }}</div>
+    </div>
+  {% endif %}
+
+  {% if model_output %}
+    <section class="card">
+      <h3>Model and Export</h3>
+      <pre class="terminal-output">{% for line in model_output %}{{ line }}
+{% endfor %}</pre>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <h3>Imported ({{ grouped.imported|length }})</h3>
+    {% if not grouped.imported %}
+      <p>Nothing was imported.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Poll</th>
+              <th>Pollster</th>
+              <th>Fieldwork</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in grouped.imported %}
+              <tr>
+                <td>
+                  {% if item.poll_id %}
+                    <a href="{{ url_for('polls.poll_detail', poll_id=item.poll_id) }}">#{{ item.poll_id }}</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>{{ item.row.pollster_label }}</td>
+                <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
+                <td>{{ item.detail }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Failed ({{ grouped.failed|length }})</h3>
+    {% if not grouped.failed %}
+      <p>No poll failed to import.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Pollster</th>
+              <th>Fieldwork</th>
+              <th>Source</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in grouped.failed %}
+              <tr>
+                <td>{{ item.row.pollster_label }}</td>
+                <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
+                <td>
+                  {% if item.row.source_url %}
+                    <a href="{{ item.row.source_url }}" target="_blank" rel="noopener">Source</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>{{ item.detail }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Skipped ({{ grouped.skipped|length }})</h3>
+    {% if not grouped.skipped %}
+      <p>No poll was skipped.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Pollster</th>
+              <th>Fieldwork</th>
+              <th>Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in grouped.skipped %}
+              <tr>
+                <td>{{ item.row.pollster_label }}</td>
+                <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
+                <td>{{ item.detail }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>No Importer Available ({{ grouped.no_importer|length }})</h3>
+    {% if not grouped.no_importer %}
+      <p>Every queued poll had an importer.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Pollster</th>
+              <th>Fieldwork</th>
+              <th>Source</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in grouped.no_importer %}
+              <tr>
+                <td>{{ item.row.pollster_label }} ({{ item.row.pollster_identifier }})</td>
+                <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
+                <td>
+                  {% if item.row.source_url %}
+                    <a href="{{ item.row.source_url }}" target="_blank" rel="noopener">Source</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>{{ item.detail }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  {% if grouped.pending %}
+    <section class="card">
+      <h3>Not Reviewed ({{ grouped.pending|length }})</h3>
+      <p>The queue was abandoned before these polls were reached.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Pollster</th>
+              <th>Fieldwork</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in grouped.pending %}
+              <tr>
+                <td>{{ item.row.pollster_label }}</td>
+                <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
+                <td>
+                  {% if item.row.source_url %}
+                    <a href="{{ item.row.source_url }}" target="_blank" rel="noopener">Source</a>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

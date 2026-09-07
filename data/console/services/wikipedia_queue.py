@@ -102,6 +102,10 @@ class QueueState(BaseModel):
         skipped_unparsed: Rows the scraper could not read, carried over from
             ``PollIndex.skipped_rows`` so a Wikipedia markup change stays
             visible in the summary.
+        unrecognised_areas: Area-column values the scraper did not recognise,
+            carried over from ``PollIndex.unrecognised_areas``. A few header
+            rows are normal; percentage-shaped keys mean Wikipedia has shifted
+            its columns and polls are going unseen.
     """
 
     items: list[QueueItem]
@@ -110,6 +114,7 @@ class QueueState(BaseModel):
     run_model_at_end: bool = True
     skipped_present: int = 0
     skipped_unparsed: int = 0
+    unrecognised_areas: dict[str, int] = Field(default_factory=dict)
 
 
 def latest_poll_end_date(db: Database, map_name: str) -> date | None:
@@ -235,6 +240,7 @@ def build_queue(
         run_model_at_end=run_model_at_end,
         skipped_present=skipped_present,
         skipped_unparsed=index.skipped_rows,
+        unrecognised_areas=dict(index.unrecognised_areas),
     )
     # Rows pre-marked no_importer must never be presented, including when they
     # sort to the head of the queue.

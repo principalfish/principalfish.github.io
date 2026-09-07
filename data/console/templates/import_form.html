@@ -1,6 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
   <section class="card">
+    <h2>Catch Up from Wikipedia</h2>
+    <p>
+      Cross-references the Wikipedia Westminster voting-intention index against the database,
+      then walks you through every missing poll one at a time, oldest first. Polls already
+      imported never reach the queue, and the UNS model runs once at the end.
+    </p>
+    <p>
+      The queue is held in memory while the console runs, so restarting the server — including
+      the automatic reload after any code change — discards a catch-up in progress.
+    </p>
+    <form method="post" action="{{ url_for('poll_import.wikipedia_start') }}" class="form">
+      <label for="cutoff_date">Only polls ending on or after (optional)</label>
+      <input type="date" id="cutoff_date" name="cutoff_date" />
+
+      <label class="checkbox">
+        <input type="checkbox" name="run_model_at_end" checked />
+        Run the UNS model and export once the queue is finished
+      </label>
+
+      <button type="submit" class="button primary">Catch Up from Wikipedia</button>
+    </form>
+    <p>Leave the date blank to start from the latest Westminster poll already in the database.</p>
+  </section>
+
+  <section class="card">
     <h2>Import Poll</h2>
     <form method="post" action="{{ url_for('poll_import.import_poll_preview') }}" class="form">
       <label for="pollster_identifier">Pollster</label>

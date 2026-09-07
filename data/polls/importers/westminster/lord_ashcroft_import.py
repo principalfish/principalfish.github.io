@@ -148,7 +148,7 @@ def _fetch_bytes(url: str) -> bytes:
         urllib.error.URLError: If the request fails (network error, HTTP error, etc.).
     """
     request = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
-    with urlopen(request) as response:
+    with urlopen(request, timeout=60) as response:
         data: bytes = response.read()
         return data
 

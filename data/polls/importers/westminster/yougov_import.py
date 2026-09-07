@@ -211,7 +211,7 @@ def extract_pdf_text(pdf_url: str) -> str:
         urllib.error.URLError: If the PDF cannot be fetched.
         pypdf.errors.PdfReadError: If the file is not a valid PDF.
     """
-    with urlopen(pdf_url) as response:
+    with urlopen(pdf_url, timeout=60) as response:
         payload = response.read()
 
     with NamedTemporaryFile(suffix=".pdf") as tmp:

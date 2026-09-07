@@ -172,7 +172,7 @@ def extract_pdf_text(pdf_url: str) -> str:
     for candidate in candidate_urls:
         req = Request(candidate, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
         try:
-            with urlopen(req) as response:
+            with urlopen(req, timeout=60) as response:
                 data = response.read()
             if data.startswith(b"%PDF"):
                 payload = data

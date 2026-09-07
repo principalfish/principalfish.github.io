@@ -253,7 +253,7 @@ def extract_workbook(xlsx_url: str) -> Any:
         An openpyxl ``Workbook`` object with ``data_only=True`` (formula
         results are read instead of formula strings).
     """
-    payload = urlopen(xlsx_url).read()
+    payload = urlopen(xlsx_url, timeout=60).read()
     return load_workbook(filename=BytesIO(payload), data_only=True)
 
 

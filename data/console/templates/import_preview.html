@@ -22,29 +22,5 @@
     </form>
   </section>
 
-  <section class="card">
-    <h3>Row Preview</h3>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Party</th>
-            <th>Macro Region</th>
-            <th>Region</th>
-            <th>Percentage</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in plan.rows %}
-            <tr>
-              <td>{{ row.party_name }}</td>
-              <td>{% if row.macro_region is defined %}{{ row.macro_region }}{% endif %}</td>
-              <td>{{ row.region_name }}</td>
-              <td>{{ row.percentage }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+  {% include "_poll_rows_table.html" %}
 {% endblock %}

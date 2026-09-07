@@ -149,7 +149,7 @@ def extract_pdf_text(pdf_url: str) -> str:
         urllib.error.URLError: If the HTTP request fails.
     """
     req = Request(pdf_url, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
-    with urlopen(req) as response:
+    with urlopen(req, timeout=60) as response:
         payload = response.read()
 
     if not payload.startswith(b"%PDF"):

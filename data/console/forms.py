@@ -62,6 +62,14 @@ class PollImportForm(BaseModel):
     source_url: str
 
 
+class WikipediaQueueStartForm(BaseModel):
+    """Validated form data for POST /import/wikipedia/start."""
+
+    # ISO date; blank derives the cutoff from the latest poll already stored.
+    cutoff_date: str = ""
+    run_model_at_end: bool = True
+
+
 class ByElectionPreviewForm(BaseModel):
     """Validated form data for POST /by-elections/preview."""
 

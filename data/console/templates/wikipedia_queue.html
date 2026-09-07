@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Wikipedia Catch-Up</h2>
+    <p>
+      Poll {{ progress.position }} of {{ progress.total }}
+      · {{ progress.imported }} imported
+      · {{ progress.failed }} failed
+      · {{ progress.skipped }} skipped
+      · {{ progress.no_importer }} no importer
+    </p>
+    <p><strong>Pollster:</strong> {{ item.row.pollster_label }} ({{ item.row.pollster_identifier }})</p>
+    <p><strong>Dates on Wikipedia:</strong> {{ item.row.date_label }} ({{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }})</p>
+    <p><strong>Client:</strong> {{ item.row.client or "-" }}</p>
+    <p><strong>Sample size on Wikipedia:</strong> {{ item.row.sample_size_label or "-" }}</p>
+    <p>
+      <strong>Source document:</strong>
+      {% if item.row.source_url %}
+        <a href="{{ item.row.source_url }}" target="_blank" rel="noopener">{{ item.row.source_url }}</a>
+      {% else %}
+        -
+      {% endif %}
+    </p>
+  </section>
+
+  {% if item.warnings %}
+    <div class="alerts">
+      {% for warning in item.warnings %}
+        <div class="alert">{{ warning }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if item.status == "failed" %}
+    <section class="card">
+      <h3>This poll could not be imported</h3>
+      <pre class="terminal-output">{{ item.detail }}</pre>
+      <p>Retry fetches the document again; skip it below to move on.</p>
+      <form method="post" action="{{ url_for('poll_import.wikipedia_skip', token=token) }}" class="inline-form">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
+        <input type="hidden" name="action" value="retry" />
+        <button type="submit" class="button primary">Retry</button>
+      </form>
+    </section>
+  {% elif plan %}
+    <section class="card">
+      <h3>Parsed Document</h3>
+      <p><strong>Pollster:</strong> {{ plan.pollster_name }} ({{ plan.pollster_identifier }})</p>
+      <p><strong>Map:</strong> {{ plan.map_name }}</p>
+      <p><strong>Fieldwork:</strong> {{ plan.parsed.fieldwork_start }} to {{ plan.parsed.fieldwork_end }}</p>
+      <p><strong>Sample size:</strong> {{ plan.parsed.sample_size }}</p>
+      <p><strong>Rows to insert:</strong> {{ plan.rows|length }}</p>
+
+      <form method="post" action="{{ url_for('poll_import.wikipedia_confirm', token=token) }}" class="form">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
+        {% if plan.poll_exists %}
+          <label class="checkbox">
+            <input type="checkbox" name="replace_rows" />
+            Replace the existing rows of poll #{{ plan.poll_id }}
+          </label>
+        {% endif %}
+        <button type="submit" class="button primary">Approve &amp; Import</button>
+      </form>
+    </section>
+
+    {% include "_poll_rows_table.html" %}
+  {% endif %}
+
+  <section class="card">
+    <h3>Skip or Leave</h3>
+    <div class="actions">
+      <form method="post" action="{{ url_for('poll_import.wikipedia_skip', token=token) }}" class="inline-form">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
+        <button type="submit" class="button">Skip this poll</button>
+      </form>
+      <form method="post" action="{{ url_for('poll_import.wikipedia_finish', token=token) }}" class="inline-form">
+        <input type="hidden" name="abandon" value="on" />
+        <button type="submit" class="button button-danger">Abandon queue</button>
+      </form>
+    </div>
+    <p>Abandoning stops the run without importing anything further and without running the model.</p>
+  </section>
+{% endblock %}

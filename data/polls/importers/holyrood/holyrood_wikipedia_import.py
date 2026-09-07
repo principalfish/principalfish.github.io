@@ -18,7 +18,6 @@ import sys
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup, Tag
 from sqlalchemy import select
@@ -27,6 +26,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+
+# `parse_date_range` is re-exported from this module, its historic home, for
+# callers that still import it from here. The redundant alias is what marks a
+# re-export as explicit under strict mypy (``no_implicit_reexport``).
+from polls.importers.wikipedia_common import (
+    clean_text as _clean,
+    fetch_html as _fetch_html,
+    parse_date_range as parse_date_range,
+)
 
 WIKI_URL = (
     "https://en.wikipedia.org/wiki/"
@@ -52,21 +60,6 @@ PARTY_COLUMN_MAP: dict[str, str] = {
     "others": "Others",
 }
 
-_MONTH_MAP: dict[str, int] = {
-    "jan": 1, "january": 1,
-    "feb": 2, "february": 2,
-    "mar": 3, "march": 3,
-    "apr": 4, "april": 4,
-    "may": 5,
-    "jun": 6, "june": 6,
-    "jul": 7, "july": 7,
-    "aug": 8, "august": 8,
-    "sep": 9, "sept": 9, "september": 9,
-    "oct": 10, "october": 10,
-    "nov": 11, "november": 11,
-    "dec": 12, "december": 12,
-}
-
 
 @dataclass
 class ParsedScottishPoll:
@@ -89,14 +82,11 @@ class ParsedScottishPoll:
 
 # ── HTML helpers ──────────────────────────────────────────────────────────────
 
-
-def _clean(value: str) -> str:
-    """Collapse whitespace and strip a string."""
-    return re.sub(r"\s+", " ", value).strip()
+HOLYROOD_USER_AGENT = "Mozilla/5.0 (compatible; holyrood-poll-importer/1.0)"
 
 
 def fetch_html(url: str) -> str:
-    """Fetch HTML content from ``url`` using a browser-like User-Agent.
+    """Fetch HTML content from ``url`` using this importer's User-Agent.
 
     Args:
         url: Fully-qualified URL to fetch.
@@ -107,83 +97,10 @@ def fetch_html(url: str) -> str:
     Raises:
         urllib.error.URLError: If the request fails.
     """
-    req = Request(
-        url,
-        headers={"User-Agent": "Mozilla/5.0 (compatible; holyrood-poll-importer/1.0)"},
-    )
-    with urlopen(req, timeout=30) as response:
-        body: str = response.read().decode("utf-8", errors="replace")
-    return body
+    return _fetch_html(url, user_agent=HOLYROOD_USER_AGENT, timeout=30)
 
 
 # ── Parsing helpers ───────────────────────────────────────────────────────────
-
-
-def parse_date_range(raw: str) -> tuple[date, date] | None:
-    """Parse a fieldwork date-range string into ``(start, end)`` date objects.
-
-    Handles three formats:
-    - Same-month range: ``"1–3 Feb 2026"``
-    - Cross-month range: ``"28 Jan – 3 Feb 2026"``
-    - Single day: ``"3 Feb 2026"``
-
-    En-dashes (–) and em-dashes (—) are normalised to hyphens before matching.
-
-    Args:
-        raw: Raw date string extracted from a Wikipedia table cell.
-
-    Returns:
-        ``(start, end)`` tuple of :class:`datetime.date` objects, or ``None``
-        if the string cannot be parsed.
-    """
-    text = re.sub(r"[–—]", "-", raw).strip()
-    text = re.sub(r"\s+", " ", text)
-
-    # Cross-month: "28 Jan - 3 Feb 2026"
-    cross = re.match(
-        r"(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})",
-        text,
-    )
-    if cross:
-        d1, m1_str, d2, m2_str, yr_str = cross.groups()
-        month1 = _MONTH_MAP.get(m1_str.lower())
-        month2 = _MONTH_MAP.get(m2_str.lower())
-        if month1 and month2:
-            year = int(yr_str)
-            year1 = year if month1 <= month2 else year - 1
-            try:
-                return date(year1, month1, int(d1)), date(year, month2, int(d2))
-            except ValueError:
-                return None
-
-    # Same-month range: "1-3 Feb 2026"
-    same = re.match(
-        r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})",
-        text,
-    )
-    if same:
-        d1, d2, mon_str, yr_str = same.groups()
-        month = _MONTH_MAP.get(mon_str.lower())
-        if month:
-            year = int(yr_str)
-            try:
-                return date(year, month, int(d1)), date(year, month, int(d2))
-            except ValueError:
-                return None
-
-    # Single day: "3 Feb 2026"
-    single = re.match(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})", text)
-    if single:
-        d, mon_str, yr_str = single.groups()
-        month = _MONTH_MAP.get(mon_str.lower())
-        if month:
-            try:
-                d_obj = date(int(yr_str), month, int(d))
-                return d_obj, d_obj
-            except ValueError:
-                return None
-
-    return None
 
 
 def identify_party_columns(header_cells: list[str]) -> dict[int, str]:

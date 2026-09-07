@@ -22,6 +22,54 @@ from console.services.runner import run_command
 
 bp = Blueprint("poll_import", __name__)
 
+# Payload tag for this blueprint's entries in the shared preview cache, so a
+# token minted by another flow cannot be redeemed here.
+PREVIEW_TYPE = "poll_preview"
+
+# One UNS simulation date costs well under a second, and the model back-fills
+# every missing trend date in a single subprocess — a month-long catch-up is a
+# couple of minutes. Half an hour is headroom, not a target.
+MODEL_RUN_TIMEOUT = 1800
+EXPORT_TIMEOUT = 900
+
+
+def _run_model_and_export(*, timeout: int = MODEL_RUN_TIMEOUT) -> list[str]:
+    """Run the UNS model, then export the prediction simulation.
+
+    Args:
+        timeout: Seconds allowed for the model run. The export gets its own
+            fixed allowance.
+
+    Returns:
+        Progress messages for the caller to surface, one per completed step.
+
+    Raises:
+        subprocess.CalledProcessError: If either step exits non-zero.
+        subprocess.TimeoutExpired: If either step outruns its timeout.
+    """
+    messages: list[str] = []
+
+    run_command(
+        [sys.executable, str(UNS_MODEL_SCRIPT)], timeout=timeout
+    ).check_returncode()
+    messages.append("UNS model updated.")
+
+    if EXPORT_ELECTION_SCRIPT.exists():
+        run_command(
+            [
+                sys.executable,
+                str(EXPORT_ELECTION_SCRIPT),
+                "--current-simulation",
+                "--output-file",
+                str(PREDICTION_SIMULATION_OUTPUT),
+            ],
+            cwd=DATA_DIR,
+            timeout=EXPORT_TIMEOUT,
+        ).check_returncode()
+        messages.append("Prediction simulation exported.")
+
+    return messages
+
 
 @bp.route("/import", methods=["GET"])
 def import_poll_form() -> str:
@@ -75,6 +123,7 @@ def import_poll_preview() -> ResponseReturnValue:
 
     token = store_preview(
         {
+            "type": PREVIEW_TYPE,
             "pollster_identifier": pollster_identifier,
             "source_url": source_url,
             "plan": plan,
@@ -105,7 +154,7 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
         Redirect to poll_detail on success, or to import_poll_form on error or expired token.
     """
     cached = get_preview(token)
-    if cached is None:
+    if cached is None or cached.get("type") != PREVIEW_TYPE:
         flash("Preview expired. Please preview again.")
         return redirect(url_for("poll_import.import_poll_form"))
 
@@ -133,23 +182,8 @@ def import_poll_confirm(token: str) -> ResponseReturnValue:
         if run_model:
             try:
                 if result.created_poll or result.inserted_rows or result.replaced_rows:
-                    run_command(
-                        [sys.executable, str(UNS_MODEL_SCRIPT)], timeout=1800
-                    ).check_returncode()
-                    flash("UNS model updated.")
-                    if EXPORT_ELECTION_SCRIPT.exists():
-                        run_command(
-                            [
-                                sys.executable,
-                                str(EXPORT_ELECTION_SCRIPT),
-                                "--current-simulation",
-                                "--output-file",
-                                str(PREDICTION_SIMULATION_OUTPUT),
-                            ],
-                            cwd=DATA_DIR,
-                            timeout=900,
-                        ).check_returncode()
-                        flash("Prediction simulation exported.")
+                    for message in _run_model_and_export():
+                        flash(message)
             except Exception as exc:
                 flash(f"Warning: UNS model run failed: {exc}")
 

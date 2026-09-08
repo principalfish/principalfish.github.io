@@ -169,6 +169,17 @@ class Manifest {
   }
 
   /**
+   * Returns the ids of elections hidden from the given parliament's UI. Hidden elections are
+   * kept in the manifest (still resolvable by an explicit `?election=` id) but omitted from the
+   * election-list nav and skipped when auto-selecting the default landing election.
+   * @param {string} parliament - Parliament key (e.g. "holyrood").
+   * @returns {string[]}
+   */
+  hiddenElectionIds(parliament) {
+    return this.parliamentConfig(parliament).hiddenElectionIds ?? [];
+  }
+
+  /**
    * Returns the parliament tab definitions for the parliament selector, sourced from
    * `misc.parliamentTabs` (each `{ parliament, label }`) — every page's shell supplies its own.
    * @returns {{ parliament: string, label: string }[]}
@@ -1198,10 +1209,16 @@ class AppState {
       // Prefer the predict anchor (the live/current election for this parliament) so that
       // bare parliament-tab clicks land on the most relevant view rather than an arbitrary
       // historical election. Fall back to the manifest default, then the first in the list.
+      // Hidden elections are skipped here so a bare tab click never lands on one (the anchor
+      // itself may be hidden, e.g. Holyrood's forecast — it stays the predict-engine seed but
+      // must not be the default view); an explicit ?election= id above still resolves them.
+      const hidden = new Set(manifest.hiddenElectionIds(this.currentParliament));
+      const visibleElections = parliamentElections.filter((e) => !hidden.has(e.id));
       const anchorId = this.getPredictAnchorElectionId();
       currentElection =
-        (anchorId ? parliamentElections.find((e) => e.id === anchorId) : null)
-        || parliamentElections.find((e) => e.id === manifest.defaultElection)
+        (anchorId && !hidden.has(anchorId) ? parliamentElections.find((e) => e.id === anchorId) : null)
+        || visibleElections.find((e) => e.id === manifest.defaultElection)
+        || visibleElections[0]
         || parliamentElections[0];
     }
 

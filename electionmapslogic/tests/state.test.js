@@ -212,6 +212,30 @@ describe('manifest.buildRegionLabelLookup', () => {
   });
 });
 
+describe('manifest.hiddenElectionIds', () => {
+  beforeEach(() => {
+    manifest.init({
+      parliamentFeatures: {
+        holyrood: { hiddenElectionIds: ['current-holyrood-prediction'] },
+        westminster: {},
+      },
+    });
+  });
+  afterEach(resetManifest);
+
+  it('returns the hidden ids configured for a parliament', () => {
+    expect(manifest.hiddenElectionIds('holyrood')).toEqual(['current-holyrood-prediction']);
+  });
+
+  it('returns an empty array when a parliament configures none', () => {
+    expect(manifest.hiddenElectionIds('westminster')).toEqual([]);
+  });
+
+  it('returns an empty array for an unknown parliament', () => {
+    expect(manifest.hiddenElectionIds('nowhere')).toEqual([]);
+  });
+});
+
 // ─── ElectionSummary.summarize (modes / dedupe / other-fold) ──────────────────
 describe('ElectionSummary.summarize', () => {
   const findParty = (data, key) => data.parties.find((p) => p.party === key);

@@ -166,7 +166,7 @@ from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
 from models import Election, ElectionType, Pollster, Seat
 
-BASELINE_ELECTION_NAME = "2021 Scottish Parliament Election (2026 Boundaries)"
+BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
 LIST_SEATS_PER_REGION = 7
 
 # Single source of truth for the database path: config.py (which reads .env).

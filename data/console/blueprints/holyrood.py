@@ -86,7 +86,7 @@ def holyrood_import_polls() -> ResponseReturnValue:
 
 # Mirrors run_holyrood_uns_model.py's BASELINE_ELECTION_NAME constant; used as
 # the form default when no Holyrood elections are present to populate choices.
-HOLYROOD_DEFAULT_BASELINE_ELECTION = "2021 Scottish Parliament Election (2026 Boundaries)"
+HOLYROOD_DEFAULT_BASELINE_ELECTION = "2026 Scottish Parliament Election"
 
 
 def _choices_for_holyrood_model_form(db: Database) -> dict[str, object]:

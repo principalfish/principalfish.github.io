@@ -283,3 +283,113 @@ class TestParseConstituencyPolls:
         html = _make_html(_TABLE_HEADER + row)
         polls = parse_constituency_polls(html)
         assert polls == []
+
+
+# ── Election reference rows ───────────────────────────────────────────────────
+
+
+_ANALYSIS_HEADER = """
+<tr>
+  <th>Dates conducted</th>
+  <th>Polling firm</th>
+  <th>Pollsters Analysis</th>
+  <th>Sample<br/>size</th>
+  <th>Con</th>
+  <th>Lab</th>
+  <th>LD</th>
+  <th>SNP</th>
+  <th>Green</th>
+  <th>Alba</th>
+  <th>Lead</th>
+</tr>
+"""
+
+# A real poll on the "next election" page: 11 cells against the 11-cell header.
+_ANALYSIS_POLL_ROW = """
+<tr>
+  <td>13–24 Aug 2026</td>
+  <td>Survation</td>
+  <td>Diffley</td>
+  <td>2,036</td>
+  <td>11</td>
+  <td>17</td>
+  <td>10</td>
+  <td>37</td>
+  <td>5</td>
+  <td>1</td>
+  <td>SNP 20</td>
+</tr>
+"""
+
+# The last-election reference row omits the analysis cell, so every party
+# column shifts left by one and the parsed figures are garbage.
+_ANALYSIS_ELECTION_ROW = """
+<tr>
+  <td>7 May 2026</td>
+  <td>2026 Scottish Parliament election</td>
+  <td>—</td>
+  <td>19.2</td>
+  <td>19.0</td>
+  <td>11.5</td>
+  <td>38.4</td>
+  <td>2.3</td>
+  <td>0.8</td>
+  <td>SNP 19</td>
+</tr>
+"""
+
+
+class TestElectionReferenceRows:
+    """The last-election row is not a poll and must never be imported."""
+
+    def test_election_row_is_skipped_and_the_real_poll_is_kept(self) -> None:
+        html = _make_html(_ANALYSIS_HEADER + _ANALYSIS_POLL_ROW + _ANALYSIS_ELECTION_ROW)
+        polls = parse_constituency_polls(html)
+        assert [p.pollster_name for p in polls] == ["Survation"]
+
+    def test_election_row_alone_yields_nothing(self) -> None:
+        html = _make_html(_ANALYSIS_HEADER + _ANALYSIS_ELECTION_ROW)
+        assert parse_constituency_polls(html) == []
+
+    def test_historic_election_label_also_skipped(self) -> None:
+        html = _make_html(_TABLE_HEADER + _TABLE_ROW_BASIC + _TABLE_ROW_ELECTION)
+        polls = parse_constituency_polls(html)
+        assert [p.pollster_name for p in polls] == ["Savanta"]
+
+    def test_a_row_one_cell_short_of_the_header_is_still_imported(self) -> None:
+        # Legitimate poll rows are routinely short (16 per table on the 2026
+        # page), so the guard must key off the pollster name, not cell count.
+        short = """
+        <tr>
+          <td>1–3 Feb 2026</td>
+          <td>Norstat</td>
+          <td>1,020</td>
+          <td>18</td>
+          <td>27</td>
+          <td>8</td>
+          <td>31</td>
+          <td>10</td>
+          <td>2</td>
+        </tr>
+        """
+        html = _make_html(_TABLE_HEADER + short)
+        polls = parse_constituency_polls(html)
+        assert [p.pollster_name for p in polls] == ["Norstat"]
+
+    def test_pollsters_analysis_layout_maps_party_columns(self) -> None:
+        html = _make_html(_ANALYSIS_HEADER + _ANALYSIS_POLL_ROW)
+        polls = parse_constituency_polls(html)
+        assert polls[0].party_percentages == {
+            "Conservative": 11.0,
+            "Labour": 17.0,
+            "Liberal Democrats": 10.0,
+            "Scottish National Party": 37.0,
+            "Scottish Greens": 5.0,
+            "Alba Party": 1.0,
+        }
+
+    def test_samplesize_header_is_recognised(self) -> None:
+        # The header renders as "Sample<br/>size", which collapses to
+        # "Samplesize" — previously unmatched, so sizes were never imported.
+        html = _make_html(_ANALYSIS_HEADER + _ANALYSIS_POLL_ROW)
+        assert parse_constituency_polls(html)[0].sample_size == 2036

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Import Scottish Parliament (Holyrood) constituency voting intention polls from Wikipedia.
 
-Scrapes the Wikipedia opinion-polling page for the 2026 Scottish Parliament
+Scrapes the Wikipedia opinion-polling page for the *next* Scottish Parliament
 election, parses the constituency VI table, and inserts Poll + PollRow records
 into the database linked to the Holyrood constituency map.
+
+The page rolls over after each election: it covered the 2026 election until
+May 2026 and now covers the run-up to 2031. Point ``--url`` at the archived
+page to re-import an earlier cycle.
 
 Usage:
   python data/polls/importers/holyrood_wikipedia_import.py --dry-run
@@ -38,8 +42,19 @@ from polls.importers.wikipedia_common import (
 
 WIKI_URL = (
     "https://en.wikipedia.org/wiki/"
-    "Opinion_polling_for_the_2026_Scottish_Parliament_election"
+    "Opinion_polling_for_the_next_Scottish_Parliament_election"
 )
+
+# Polling tables carry a reference row for the last election result alongside
+# the polls. That row omits the analysis/client cell, so every party column
+# shifts left and the figures parse as garbage — a "poll" dated election day
+# that then dominates the model's decayed average. Reject it on the pollster
+# cell: a real pollster is never named "… election".
+#
+# Do NOT filter on cell count instead — legitimate poll rows are routinely one
+# cell short of the header (16 per table on the 2026 page), so a count check
+# would silently drop them.
+_ELECTION_ROW_RE = re.compile(r"\belection\b", re.IGNORECASE)
 
 DEFAULT_MAP_NAME = "Scottish Parliament Constituencies 2026"
 
@@ -247,7 +262,9 @@ def parse_polls(html: str, ballot: str = BALLOT_CONSTITUENCY) -> list[ParsedScot
     header_cells = [_clean(th.get_text()) for th in all_rows[header_rows_used - 1].find_all(["th", "td"])]
     sample_col: int | None = None
     for idx, cell in enumerate(header_cells):
-        if cell.lower() in ("n", "sample", "sample size"):
+        # "samplesize" with no space: the header is "Sample<br/>size", and
+        # get_text() joins the lines without a separator before _clean runs.
+        if cell.lower() in ("n", "sample", "sample size", "samplesize"):
             sample_col = idx
             break
 
@@ -270,6 +287,10 @@ def parse_polls(html: str, ballot: str = BALLOT_CONSTITUENCY) -> list[ParsedScot
 
         pollster_name = _clean(re.sub(r"\[[^\]]+\]", "", cells[pollster_col])) if len(cells) > pollster_col else ""
         if not pollster_name:
+            continue
+
+        # The last-election reference row is not a poll; see _ELECTION_ROW_RE.
+        if _ELECTION_ROW_RE.search(pollster_name):
             continue
 
         sample_size = (

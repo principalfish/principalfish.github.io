@@ -185,8 +185,12 @@ function renderElectionLinks() {
   };
 
   electionList.innerHTML = '';
+  // Elections marked hidden for this parliament are omitted from the nav (kept in the manifest
+  // and still reachable by an explicit ?election= id) — e.g. Holyrood's retired forecast.
+  const hidden = new Set(manifest.hiddenElectionIds(state.currentParliament));
   let extrasInserted = false;
   state.parliamentElections.forEach((election) => {
+    if (hidden.has(election.id)) return;
     const link = document.createElement('a');
     link.href = state.viewUrl('election', election.id);
     link.className = `maps-election-item${election.id === activeId ? ' active' : ''}`;

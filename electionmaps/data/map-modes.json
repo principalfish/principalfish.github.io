@@ -251,13 +251,15 @@
     },
     "holyrood": {
       "features": [
-        "predict",
         "postcode"
+      ],
+      "hiddenElectionIds": [
+        "current-holyrood-prediction"
       ],
       "predictAnchorElectionId": "current-holyrood-prediction",
       "predictBaselineElectionId": "2026-holyrood",
       "nextElectionYear": 2031,
-      "nextElectionDate": "2031-05-01",
+      "nextElectionDate": null,
       "nextElectionLabel": "Holyrood election",
       "predict": {
         "model": "ams",

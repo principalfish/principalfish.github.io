@@ -231,6 +231,17 @@ _OLD_FORMAT_REGIONAL_INDICES = {
 }
 
 _ENGLAND_REGION_ORDER = ["North", "Midlands", "London", "Rest of South"]
+_COUNTRY_COLUMNS = ["England", "Wales", "Scotland"]
+
+# The country columns lead the region table from September 2026 onwards; before
+# that the table held the four England regions only.
+_REGION_TABLE_HEADER = re.compile(
+    r"(England\s+Wales\s+Scotland\s+)?North\s+Midlands\s+London\s+Rest of\s*South"
+)
+_PERCENT_ROW = re.compile(r"^[ \t]*%(?:[ \t]+%)+[ \t]*$", re.MULTILINE)
+_LABELLED_ROW = re.compile(r"(\D+?)\s+(-?\d+(?:\s+-?\d+)*)")
+_INTEGER_ROW = re.compile(r"-?\d+(?:\s+-?\d+)*")
+_SECOND_QUESTION_PREFIX = "If there were a general election"
 
 
 def _parse_old_format_rows(
@@ -277,93 +288,113 @@ def _parse_old_format_rows(
 def _parse_new_format(
     section: str,
     lines: list[str],
-    row_labels: list[str],
+    page_one_header: str,
 ) -> dict[str, dict[str, float]]:
     """Parse regional vote shares from the newer YouGov PDF layout.
 
-    The newer format splits regional data across two sub-tables:
+    The newer format puts the regional figures in an unlabelled table inside
+    the ``"Region in England"`` block, after a ``"% % ..."`` header row. The
+    table has one row per MRP headline row, in the same order, so its rows are
+    paired with the headline labels by position. Every headline row counts
+    towards that order — including parties outside ``PARTY_NAME_MAP`` such as
+    ``"Your Party"`` and ``"Restore Britain"``, which are then dropped.
 
-    1. **Wales and Scotland** — taken from the penultimate and final integer
-       values of each party's MRP headline cross-tab row.
-    2. **England regions** (North, Midlands, London, Rest of South) — taken
-       from an unlabelled four-column table that appears after a
-       ``"% % % %"`` header within the ``"Region in England"`` block.
+    The table comes in two shapes:
 
-    Parties are matched in the order they first appear in the cross-tab rows,
-    and the same order is used to consume rows from the England table.
+    - **From September 2026** — seven columns: England, Wales, Scotland and
+      the four England regions. Every region is read from the table.
+    - **March to August 2026** — the four England regions only. Wales and
+      Scotland are then the last two values of each party's page-1 headline
+      row, which is only trusted when the page-1 column header ends in the
+      country columns.
 
     Args:
         section: Raw text of the Westminster VI section of the PDF.
         lines: Stripped, non-empty lines from ``section``.
-        row_labels: Party label strings to match against line prefixes, sorted
-            longest-first to avoid partial matches.
+        page_one_header: PDF text before the section, holding the page-1
+            column header.
 
     Returns:
         Mapping of canonical party name to a dict of macro-region name →
         vote-share percentage (as a float).
 
     Raises:
-        ValueError: If the England regions header or ``"% % % %"`` marker
-            cannot be located, or if the England table contains fewer party
-            rows than were found in the cross-tab.
+        ValueError: If the headline rows, the region table header or its
+            ``"%"`` row cannot be located; if the ``"%"`` row's column count
+            disagrees with the header; if the table does not hold one clean row
+            per headline row; or if neither the table nor page 1 carries
+            Wales and Scotland columns.
     """
-    # Step 1: Wales and Scotland — first occurrence of each party (MRP headline rows)
-    wales_scotland: dict[str, dict[str, float]] = {}
-    party_order: list[str] = []
-    for line in lines:
-        matched_label = None
-        for label in row_labels:
-            if line.startswith(f"{label} "):
-                matched_label = label
-                break
-        if matched_label is None:
-            continue
-        values = [int(v) for v in re.findall(r"-?\d+", line)]
-        if len(values) < 3:
-            continue
-        party_name = PARTY_NAME_MAP[matched_label]
-        if party_name not in wales_scotland:
-            wales_scotland[party_name] = {
-                "Wales": float(values[-2]),
-                "Scotland": float(values[-1]),
-            }
-            party_order.append(party_name)
+    # Step 1: MRP headline rows, in order, up to the second question.
+    second_question = next(
+        (i for i, line in enumerate(lines) if line.startswith(_SECOND_QUESTION_PREFIX)),
+        None,
+    )
+    if second_question is None:
+        raise ValueError("Could not find the end of the MRP headline rows in new-format PDF")
+    headline_rows: list[tuple[str, list[int]]] = []
+    for line in lines[:second_question]:
+        match = _LABELLED_ROW.fullmatch(line)
+        if match is not None:
+            headline_rows.append((match.group(1), [int(v) for v in match.group(2).split()]))
+    if not headline_rows:
+        raise ValueError("No MRP headline rows found in new-format PDF")
 
-    # Step 2: England regions — unlabelled table after "% % % %" in the region block
-    block_match = re.search(r"North\s+Midlands\s+London\s+Rest of\s*\n?\s*South", section)
-    if block_match is None:
-        raise ValueError("Could not find England regions table in new-format PDF")
-    pct_match = re.compile(r"%\s+%\s+%\s+%").search(section, block_match.end())
+    # Step 2: region table header, and its column count from the "%" row.
+    header_match = _REGION_TABLE_HEADER.search(section)
+    if header_match is None:
+        raise ValueError("Could not find regions table in new-format PDF")
+    has_country_columns = header_match.group(1) is not None
+    columns = (_COUNTRY_COLUMNS if has_country_columns else []) + _ENGLAND_REGION_ORDER
+    pct_match = _PERCENT_ROW.search(section, header_match.end())
     if pct_match is None:
-        raise ValueError("Could not find '% % % %' header in England regions table")
+        raise ValueError("Could not find '%' header row in regions table")
+    pct_columns = len(pct_match.group().split())
+    if pct_columns != len(columns):
+        raise ValueError(
+            f"Regions table has {pct_columns} columns but its header names "
+            f"{len(columns)}: {columns}"
+        )
+    if not has_country_columns and re.search(r"Wales\s+Scotland", page_one_header) is None:
+        raise ValueError(
+            "Wales and Scotland columns found in neither the regions table nor page 1"
+        )
 
-    england_regions: dict[str, dict[str, float]] = {}
-    party_idx = 0
+    # Step 3: one table row per headline row, directly under the "%" row.
+    table_rows: list[list[int]] = []
     for line in section[pct_match.end():].splitlines():
-        if party_idx >= len(party_order):
+        if len(table_rows) == len(headline_rows):
             break
         line = line.strip()
         if not line:
             continue
-        values = re.findall(r"\d+", line)
-        if len(values) == 4:
-            party_name = party_order[party_idx]
-            england_regions[party_name] = {
-                region: float(values[i])
-                for i, region in enumerate(_ENGLAND_REGION_ORDER)
-            }
-            party_idx += 1
+        values = line.split()
+        if _INTEGER_ROW.fullmatch(line) is None or len(values) != len(columns):
+            raise ValueError(f"Unexpected line in regions table: {line!r}")
+        table_rows.append([int(v) for v in values])
 
-    if len(england_regions) != len(party_order):
+    if len(table_rows) != len(headline_rows):
         raise ValueError(
-            f"England regions table incomplete: expected {len(party_order)} parties, "
-            f"got {len(england_regions)}"
+            f"Regions table incomplete: expected {len(headline_rows)} rows, "
+            f"got {len(table_rows)}"
         )
 
-    return {
-        party_name: {**wales_scotland[party_name], **england_regions[party_name]}
-        for party_name in party_order
-    }
+    result: dict[str, dict[str, float]] = {}
+    for (label, page_one_values), table_values in zip(headline_rows, table_rows):
+        party_name = PARTY_NAME_MAP.get(label)
+        if party_name is None:
+            continue
+        by_column = dict(zip(columns, table_values))
+        if has_country_columns:
+            wales, scotland = by_column["Wales"], by_column["Scotland"]
+        else:
+            wales, scotland = page_one_values[-2:]
+        result[party_name] = {
+            "Wales": float(wales),
+            "Scotland": float(scotland),
+            **{region: float(by_column[region]) for region in _ENGLAND_REGION_ORDER},
+        }
+    return result
 
 
 def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
@@ -397,11 +428,11 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
 
     section = full_text[start_index:end_index]
     lines = [line.strip() for line in section.splitlines() if line.strip()]
-    row_labels = sorted(PARTY_NAME_MAP.keys(), key=len, reverse=True)
 
     if "Region in England" in section:
-        result = _parse_new_format(section, lines, row_labels)
+        result = _parse_new_format(section, lines, full_text[:start_index])
     else:
+        row_labels = sorted(PARTY_NAME_MAP.keys(), key=len, reverse=True)
         result = _parse_old_format_rows(lines, row_labels)
 
     missing_parties = [p for p in PARTY_NAME_MAP.values() if p not in result]
@@ -443,7 +474,9 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
         ValueError: If the sample size or fieldwork window cannot be found in
             the text, or if the headline VI table cannot be parsed.
     """
-    sample_match = re.search(r"Sample Size:\s*([0-9,]+)", pdf_text)
+    # "Sample Size: 2244 GB Adults" until August 2026, "Sample size: 2149
+    # adults in GB" from September.
+    sample_match = re.search(r"Sample size:\s*([0-9,]+)", pdf_text, re.IGNORECASE)
     if not sample_match:
         raise ValueError("Sample size not found in PDF")
 

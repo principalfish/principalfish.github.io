@@ -10,17 +10,26 @@ from datetime import date
 from bs4 import BeautifulSoup, Tag
 
 from polls.importers.us.us_polls_common import (
+    PARTY_SUFFIXES,
+    CandidateColumn,
     Cell,
+    ParsedPollRow,
     ParsedUsPoll,
+    candidate_columns,
     classify_table,
+    clean_pollster_label,
     detect_columns,
     expand_table_grid,
     heading_path,
     is_collapsed,
+    matchup_label,
     merge_polls_by_fieldwork,
     parse_date_range,
+    parse_poll_tables,
     parse_polls,
+    parse_table_rows,
     pollster_identifier,
+    surname,
 )
 
 
@@ -969,3 +978,503 @@ class TestClassifyTableRejections:
         table = _table(HOUSE_STATE_PAGE, "candidate-list")
         assert parse_date_range(expand_table_grid(table)[1][3].text) is not None
         assert classify_table(table) is None
+
+
+# ── Candidate / matchup / row fixtures ────────────────────────────────────────
+
+# Texas: the Senate header shape where each candidate name is a link and the
+# party suffix is a second link inside <small>, plus the pollster-cell variants
+# seen live (a joint partisan sponsor, a footnoted percentage, an em-dash cell).
+TEXAS_PAGE = """
+<html><body><div class="mw-parser-output">
+<div class="mw-heading mw-heading2"><h2 id="General_election">General election</h2></div>
+<div class="mw-heading mw-heading3"><h3 id="Polling">Polling</h3></div>
+<table class="wikitable sortable" id="paxton-talarico">
+<tbody><tr>
+<th>Poll source</th><th>Date(s)<br />administered</th><th>Sample<br />size</th>
+<th>Margin<br />of error</th>
+<th><a href="/wiki/Ken_Paxton" title="Ken Paxton">Ken Paxton</a><br />
+<small>(<a href="/wiki/Republican_Party_(United_States)"
+title="Republican Party (United States)">R</a>)</small></th>
+<th><a href="/wiki/James_Talarico" title="James Talarico">James Talarico</a><br />
+<small>(<a href="/wiki/Democratic_Party_(United_States)"
+title="Democratic Party (United States)">D</a>)</small></th>
+<th>Other</th><th>Undecided</th></tr>
+<tr><td>Fabrizio Ward (R)/ Impact Research (D)<sup class="reference">[ai]</sup></td>
+<td>September 2–4, 2026</td><td>1,000 (LV)</td><td>± 3.1%</td>
+<td><b>49%</b></td><td>41% [k]</td><td>—</td><td>10%</td></tr>
+<tr><td>Rasmussen Reports (R)</td><td>August 10, 2026</td><td>900 (LV)</td><td>± 3.3%</td>
+<td><b>50%</b></td><td>40%</td><td>2%</td><td>8%</td></tr>
+<tr><td>GQR (D)</td><td>July 6–9, 2026</td><td>800 (RV)</td><td>± 3.5%</td>
+<td>44%</td><td><b>45%</b></td><td>3%</td><td>8%</td></tr>
+</tbody></table>
+</div></body></html>
+"""
+
+# Nebraska: a Republican against an independent, with no Democrat on the ballot,
+# plus the "result" row that names a source and a date but holds no numbers.
+NEBRASKA_PAGE = """
+<html><body><div class="mw-parser-output">
+<div class="mw-heading mw-heading2"><h2 id="General_election">General election</h2></div>
+<table class="wikitable sortable" id="ricketts-osborn">
+<tbody><tr>
+<th>Poll source</th><th>Date(s)<br />administered</th><th>Sample<br />size</th>
+<th>Pete Ricketts<br /><small>(R)</small></th><th>Dan Osborn<br /><small>(I)</small></th>
+<th>Undecided</th></tr>
+<tr><td>Change Research</td><td>August 20–23, 2026</td><td>1,100 (LV)</td>
+<td><b>48%</b></td><td>44%</td><td>8%</td></tr>
+<tr><td>2024 election result</td><td>November 5, 2024</td><td>—</td><td>—</td><td>—</td>
+<td>—</td></tr>
+</tbody></table>
+</div></body></html>
+"""
+
+# The state-party and unknown suffixes: Minnesota's DFL, North Dakota's D-NPL,
+# and a third-party label this parser has no party for.
+MINOR_SUFFIX_PAGE = """
+<html><body><div class="mw-parser-output">
+<div class="mw-heading mw-heading2"><h2 id="General_election">General election</h2></div>
+<table class="wikitable sortable" id="minnesota">
+<tbody><tr>
+<th>Poll source</th><th>Date(s)<br />administered</th><th>Sample<br />size</th>
+<th>Peggy Flanagan<br /><small>(DFL)</small></th>
+<th>Michele Tafoya<br /><small>(R)</small></th></tr>
+<tr><td>SurveyUSA</td><td>July 1–3, 2026</td><td>900 (LV)</td><td>49%</td><td>42%</td></tr>
+</tbody></table>
+<table class="wikitable sortable" id="north-dakota">
+<tbody><tr>
+<th>Poll source</th><th>Date(s)<br />administered</th><th>Sample<br />size</th>
+<th>Katrina Christiansen<br /><small>(D-NPL)</small></th>
+<th>Kevin Cramer<br /><small>(R)</small></th></tr>
+<tr><td>DFM Research</td><td>July 8–10, 2026</td><td>600 (LV)</td><td>38%</td><td>52%</td></tr>
+</tbody></table>
+<table class="wikitable sortable" id="unknown-suffix">
+<tbody><tr>
+<th>Poll source</th><th>Date(s)<br />administered</th><th>Sample<br />size</th>
+<th>Dan Cox<br /><small>(R)</small></th><th>Jane Doe<br /><small>(WCP)</small></th></tr>
+<tr><td>Emerson College</td><td>July 8–10, 2026</td><td>600 (LV)</td><td>47%</td><td>9%</td></tr>
+</tbody></table>
+</div></body></html>
+"""
+
+
+def _candidates(
+    html: str, table_id: str, *, allow_party_labels: bool = False
+) -> list[CandidateColumn]:
+    """Return the candidate columns of a fixture table."""
+    info = classify_table(_table(html, table_id))
+    assert info is not None
+    return candidate_columns(
+        info.grid[info.columns.header_row], allow_party_labels=allow_party_labels
+    )
+
+
+def _label(html: str, table_id: str) -> str | None:
+    """Return the matchup label of a fixture table."""
+    return matchup_label(_candidates(html, table_id))
+
+
+def _rows(
+    html: str, table_id: str, *, allow_party_labels: bool = False
+) -> tuple[list[ParsedPollRow], int]:
+    """Return ``(rows, variants_dropped)`` for a fixture table."""
+    info = classify_table(_table(html, table_id))
+    assert info is not None
+    return parse_table_rows(
+        info,
+        candidates=candidate_columns(
+            info.grid[info.columns.header_row], allow_party_labels=allow_party_labels
+        ),
+    )
+
+
+class TestPartySuffixes:
+    def test_canonical_db_party_names(self) -> None:
+        assert PARTY_SUFFIXES["R"] == "Republican"
+        assert PARTY_SUFFIXES["D"] == "Democratic"
+        assert PARTY_SUFFIXES["I"] == "Independent"
+        assert PARTY_SUFFIXES["L"] == "Libertarian"
+        assert PARTY_SUFFIXES["G"] == "US Green"
+
+    def test_state_party_labels_are_democratic(self) -> None:
+        # Minnesota's DFL and North Dakota's D-NPL are the state Democratic
+        # parties, and their candidates are Democrats in the DB.
+        assert PARTY_SUFFIXES["DFL"] == "Democratic"
+        assert PARTY_SUFFIXES["D-NPL"] == "Democratic"
+
+    def test_unknown_suffixes_are_absent(self) -> None:
+        assert "IA" not in PARTY_SUFFIXES
+        assert "WCP" not in PARTY_SUFFIXES
+
+
+class TestSurname:
+    def test_last_token(self) -> None:
+        assert surname("Gavin Newsom") == "Newsom"
+
+    def test_middle_initial(self) -> None:
+        assert surname("Dan S. Sullivan") == "Sullivan"
+
+    def test_apostrophe_name(self) -> None:
+        assert surname("Beto O'Rourke") == "O'Rourke"
+
+    def test_generational_suffixes_are_dropped(self) -> None:
+        assert surname("Hal Rogers Jr.") == "Rogers"
+        assert surname("Robert Kennedy Sr") == "Kennedy"
+        assert surname("Hank Williams III") == "Williams"
+        assert surname("John Doe IV") == "Doe"
+
+    def test_comma_suffix(self) -> None:
+        assert surname("Doe, Jr.") == "Doe"
+
+    def test_footnotes_are_stripped(self) -> None:
+        assert surname("Mary Peltola[3]") == "Peltola"
+
+    def test_single_token_is_its_own_surname(self) -> None:
+        assert surname("Osborn") == "Osborn"
+
+    def test_empty(self) -> None:
+        assert surname("") == ""
+
+
+class TestCandidateColumns:
+    def test_senate_header_text_is_the_full_name(self) -> None:
+        # Senate and House headers are plain text split by <br>, so the header
+        # itself carries the full name.
+        columns = _candidates(SENATE_RACE_PAGE, "el-sayed-rogers")
+        assert [(c.index, c.full_name, c.letter, c.party_name) for c in columns] == [
+            (4, "Abdul El-Sayed", "D", "Democratic"),
+            (5, "Mike Rogers", "R", "Republican"),
+        ]
+        assert [c.surname for c in columns] == ["El-Sayed", "Rogers"]
+
+    def test_president_link_title_supplies_the_full_name(self) -> None:
+        # The presidential page shows surnames only; the full name is in the
+        # header link's title attribute.
+        columns = _candidates(PRESIDENT_PAGE, "vance-newsom")
+        assert [(c.full_name, c.surname, c.letter) for c in columns] == [
+            ("JD Vance", "Vance", "R"),
+            ("Gavin Newsom", "Newsom", "D"),
+        ]
+
+    def test_surname_only_header_without_a_link_stays_as_written(self) -> None:
+        columns = _candidates(PRESIDENT_PAGE, "nevada-vance-newsom")
+        assert [c.full_name for c in columns] == ["Vance", "Newsom"]
+
+    def test_party_suffix_link_is_not_read_as_the_name(self) -> None:
+        # Texas links both the candidate and the "(R)" to articles; only the
+        # candidate's link names the candidate.
+        columns = _candidates(TEXAS_PAGE, "paxton-talarico")
+        assert [c.full_name for c in columns] == ["Ken Paxton", "James Talarico"]
+        assert [c.party_name for c in columns] == ["Republican", "Democratic"]
+
+    def test_non_candidate_headers_are_skipped(self) -> None:
+        columns = _candidates(SENATE_RACE_PAGE, "el-sayed-rogers")
+        assert [c.index for c in columns] == [4, 5]
+
+    def test_state_party_suffixes(self) -> None:
+        assert [
+            (c.letter, c.party_name) for c in _candidates(MINOR_SUFFIX_PAGE, "minnesota")
+        ] == [("DFL", "Democratic"), ("R", "Republican")]
+        assert [
+            (c.letter, c.party_name) for c in _candidates(MINOR_SUFFIX_PAGE, "north-dakota")
+        ] == [("D-NPL", "Democratic"), ("R", "Republican")]
+
+    def test_unknown_suffix_keeps_its_letter_and_has_no_party(self) -> None:
+        columns = _candidates(MINOR_SUFFIX_PAGE, "unknown-suffix")
+        assert columns[1].letter == "WCP"
+        assert columns[1].party_name is None
+        assert columns[1].full_name == "Jane Doe"
+
+    def test_party_labels_need_the_flag(self) -> None:
+        assert _candidates(HOUSE_INDEX_PAGE, "generic-ballot") == []
+
+    def test_party_labels_name_no_candidate(self) -> None:
+        columns = _candidates(HOUSE_INDEX_PAGE, "generic-ballot", allow_party_labels=True)
+        assert [(c.index, c.letter, c.party_name) for c in columns] == [
+            (3, "R", "Republican"),
+            (4, "D", "Democratic"),
+        ]
+        assert [(c.full_name, c.surname) for c in columns] == [("", ""), ("", "")]
+
+    def test_party_label_flag_does_not_disturb_candidate_headers(self) -> None:
+        with_flag = _candidates(TEXAS_PAGE, "paxton-talarico", allow_party_labels=True)
+        assert with_flag == _candidates(TEXAS_PAGE, "paxton-talarico")
+
+
+class TestMatchupLabel:
+    def test_president_nationwide(self) -> None:
+        assert _label(PRESIDENT_PAGE, "vance-newsom") == "Vance (R) vs Newsom (D)"
+
+    def test_senate_race(self) -> None:
+        assert _label(TEXAS_PAGE, "paxton-talarico") == "Paxton (R) vs Talarico (D)"
+
+    def test_republican_against_an_independent(self) -> None:
+        assert _label(NEBRASKA_PAGE, "ricketts-osborn") == "Ricketts (R) vs Osborn (I)"
+
+    def test_same_party_top_two(self) -> None:
+        assert _label(HOUSE_STATE_PAGE, "ca-40") == "Calvert (R) vs Kim (R)"
+
+    def test_alaska_shared_surname_uses_full_names(self) -> None:
+        # Both Dan Sullivans fall back to their full header name; the other two
+        # candidates keep their surname.
+        assert _label(ALASKA_PAGE, "alaska") == (
+            "Dan S. Sullivan (R) vs Dan J. Sullivan (R) vs Heikes (R) vs Peltola (D)"
+        )
+
+    def test_democrat_first_gives_the_same_label(self) -> None:
+        # Michigan lists the Democrat first; the label must still lead with R.
+        assert _label(SENATE_RACE_PAGE, "el-sayed-rogers") == "Rogers (R) vs El-Sayed (D)"
+        reversed_columns = list(reversed(_candidates(SENATE_RACE_PAGE, "el-sayed-rogers")))
+        assert matchup_label(reversed_columns) == "Rogers (R) vs El-Sayed (D)"
+
+    def test_state_party_label_keeps_its_letter(self) -> None:
+        assert _label(MINOR_SUFFIX_PAGE, "minnesota") == "Tafoya (R) vs Flanagan (DFL)"
+
+    def test_unknown_suffix_sorts_last_and_keeps_its_letter(self) -> None:
+        assert _label(MINOR_SUFFIX_PAGE, "unknown-suffix") == "Cox (R) vs Doe (WCP)"
+
+    def test_party_order(self) -> None:
+        columns = [
+            CandidateColumn(0, "US Green", "G", "Green", "Gina Green"),
+            CandidateColumn(1, None, "IA", "Other", "Olive Other"),
+            CandidateColumn(2, "Libertarian", "L", "Lark", "Lee Lark"),
+            CandidateColumn(3, "Independent", "I", "Ives", "Ida Ives"),
+            CandidateColumn(4, "Democratic", "D", "Dean", "Dana Dean"),
+            CandidateColumn(5, "Republican", "R", "Ruiz", "Rosa Ruiz"),
+        ]
+        assert matchup_label(columns) == (
+            "Ruiz (R) vs Dean (D) vs Ives (I) vs Lark (L) vs Green (G) vs Other (IA)"
+        )
+
+    def test_single_candidate_has_no_matchup(self) -> None:
+        assert matchup_label(_candidates(PRESIDENT_PAGE, "vance-newsom")[:1]) is None
+
+    def test_no_candidates_has_no_matchup(self) -> None:
+        assert matchup_label([]) is None
+
+    def test_generic_ballot_party_columns_have_no_matchup(self) -> None:
+        assert (
+            matchup_label(
+                _candidates(HOUSE_INDEX_PAGE, "generic-ballot", allow_party_labels=True)
+            )
+            is None
+        )
+
+
+class TestCleanPollsterLabel:
+    def test_plain_label(self) -> None:
+        assert clean_pollster_label("Emerson College") == ("Emerson College", ())
+
+    def test_partisan_tag_is_stripped_and_returned(self) -> None:
+        label, tags = clean_pollster_label("Rasmussen Reports (R)")
+        assert (label, tags) == ("Rasmussen Reports", ("R",))
+        assert clean_pollster_label("GQR (D)") == ("GQR", ("D",))
+
+    def test_joint_sponsors_keep_both_names(self) -> None:
+        assert clean_pollster_label("Fabrizio Ward (R)/ Impact Research (D)") == (
+            "Fabrizio Ward/ Impact Research",
+            ("R", "D"),
+        )
+
+    def test_footnote_markers_are_stripped(self) -> None:
+        assert clean_pollster_label("Glengariff Group [41]") == ("Glengariff Group", ())
+
+    def test_bracket_reference_is_stripped(self) -> None:
+        assert clean_pollster_label("Emerson College [ai]") == ("Emerson College", ())
+
+    def test_slash_inside_a_name_is_left_alone(self) -> None:
+        assert clean_pollster_label("co/efficient") == ("co/efficient", ())
+
+    def test_empty_cell(self) -> None:
+        assert clean_pollster_label("") == ("", ())
+
+
+class TestParseTableRows:
+    def test_percentage_formats(self) -> None:
+        # <b>49%</b> and "41% [k]" both read as numbers.
+        rows, _ = _rows(TEXAS_PAGE, "paxton-talarico")
+        assert [(r.candidate_name, r.percentage) for r in rows[0].readings] == [
+            ("Ken Paxton", 49.0),
+            ("James Talarico", 41.0),
+        ]
+
+    def test_missing_reading_is_absent_not_zero(self) -> None:
+        # The "with leaners" variant shows "—" for Other; drop the dedupe by
+        # parsing that row's table and checking a candidate cell directly.
+        info = classify_table(
+            _table(
+                "<table id='t'><tr><th>Poll source</th><th>Date(s) administered</th>"
+                "<th>Jane Roe<br /><small>(D)</small></th>"
+                "<th>John Doe<br /><small>(R)</small></th></tr>"
+                "<tr><td>Emerson</td><td>June 3, 2026</td><td>47%</td><td>—</td></tr></table>",
+                "t",
+            )
+        )
+        assert info is not None
+        rows, _ = parse_table_rows(info)
+        assert [(r.candidate_name, r.percentage) for r in rows[0].readings] == [
+            ("Jane Roe", 47.0),
+        ]
+
+    def test_sample_size_and_population(self) -> None:
+        rows, _ = _rows(PRESIDENT_PAGE, "vance-newsom")
+        assert (rows[0].sample_size, rows[0].population) == (1000, "LV")
+
+    def test_sample_population_of_a_registered_voter_poll(self) -> None:
+        rows, _ = _rows(PRESIDENT_PAGE, "nevada-vance-newsom")
+        assert (rows[0].sample_size, rows[0].population) == (600, "RV")
+
+    def test_partisan_tags_are_kept_on_the_row(self) -> None:
+        rows, _ = _rows(TEXAS_PAGE, "paxton-talarico")
+        assert [(r.pollster_label, r.pollster_tags) for r in rows] == [
+            ("Fabrizio Ward/ Impact Research", ("R", "D")),
+            ("Rasmussen Reports", ("R",)),
+            ("GQR", ("D",)),
+        ]
+
+    def test_dates_and_raw_label(self) -> None:
+        rows, _ = _rows(TEXAS_PAGE, "paxton-talarico")
+        assert rows[0].fieldwork_start == date(2026, 9, 2)
+        assert rows[0].fieldwork_end == date(2026, 9, 4)
+        assert rows[0].date_label == "September 2–4, 2026"
+
+    def test_michigan_rowspan_variant_is_dropped(self) -> None:
+        # Two rows share the rowspanned pollster and dates (LV, then "with
+        # leaners"); the first wins and the second is counted.
+        rows, dropped = _rows(SENATE_RACE_PAGE, "el-sayed-rogers")
+        assert dropped == 1
+        assert [(r.pollster_label, r.fieldwork_start) for r in rows] == [
+            ("Glengariff Group", date(2026, 6, 1)),
+            ("Marketing Resource Group", date(2026, 9, 8)),
+        ]
+        assert [reading.percentage for reading in rows[0].readings] == [44.0, 45.0]
+
+    def test_colspan_event_row_is_skipped(self) -> None:
+        # '' | August 18, 2026 | Primary election held — a parseable date, but
+        # no pollster and no numbers.
+        rows, _ = _rows(SENATE_RACE_PAGE, "el-sayed-rogers")
+        assert all(r.date_label != "August 18, 2026" for r in rows)
+
+    def test_row_without_any_reading_is_skipped(self) -> None:
+        rows, dropped = _rows(NEBRASKA_PAGE, "ricketts-osborn")
+        assert dropped == 0
+        assert [r.pollster_label for r in rows] == ["Change Research"]
+
+    def test_alaska_variant_dedupe(self) -> None:
+        rows, dropped = _rows(ALASKA_PAGE, "alaska")
+        assert dropped == 1
+        assert len(rows) == 1
+        percentages = [reading.percentage for reading in rows[0].readings]
+        assert percentages == [40.0, 44.0, 3.0, 2.0]
+
+    def test_external_pollster_link_becomes_the_source_url(self) -> None:
+        rows, _ = _rows(PRESIDENT_PAGE, "vance-newsom")
+        assert rows[0].source_url == "https://example.invalid/poll"
+
+    def test_wiki_internal_pollster_link_is_not_a_source(self) -> None:
+        rows, _ = _rows(SENATE_RACE_PAGE, "el-sayed-rogers")
+        assert rows[0].source_url is None
+
+    def test_generic_ballot_rows_carry_parties_without_candidates(self) -> None:
+        rows, dropped = _rows(HOUSE_INDEX_PAGE, "generic-ballot", allow_party_labels=True)
+        assert dropped == 0
+        assert rows[0].pollster_label == "Decision Desk HQ"
+        # 'Dates updated' is the snapshot the aggregator row reports.
+        assert rows[0].fieldwork_end == date(2026, 6, 29)
+        readings = [(r.party_name, r.candidate_name, r.percentage) for r in rows[0].readings]
+        assert readings == [
+            ("Republican", "", 40.1),
+            ("Democratic", "", 44.3),
+        ]
+        assert rows[0].sample_size is None
+
+    def test_candidates_default_to_the_header_row(self) -> None:
+        info = classify_table(_table(TEXAS_PAGE, "paxton-talarico"))
+        assert info is not None
+        rows, _ = parse_table_rows(info)
+        assert len(rows[0].readings) == 2
+
+    def test_unknown_suffix_reading_has_no_party(self) -> None:
+        rows, _ = _rows(MINOR_SUFFIX_PAGE, "unknown-suffix")
+        assert [(r.party_name, r.candidate_name) for r in rows[0].readings] == [
+            ("Republican", "Dan Cox"),
+            (None, "Jane Doe"),
+        ]
+
+
+class TestParsePollTables:
+    def test_president_page_tables_in_document_order(self) -> None:
+        tables = parse_poll_tables(PRESIDENT_PAGE)
+        assert [table.matchup for table in tables] == [
+            "Vance (R) vs Rubio (R)",
+            "Vance (R) vs Newsom (D)",
+            "Vance (R) vs Harris (D)",
+            "Vance (R) vs Newsom (D)",
+        ]
+
+    def test_contest_rules_are_not_applied_here(self) -> None:
+        # The primary table, the collapsed hypothetical and the statewide table
+        # all come back; piece 6 decides which of them a contest wants.
+        tables = parse_poll_tables(PRESIDENT_PAGE)
+        assert [table.info.collapsed for table in tables] == [False, False, True, False]
+        assert [table.headings[-1].text for table in tables] == [
+            "Nationwide",
+            "JD Vance vs. Gavin Newsom",
+            "Hypothetical polling",
+            "JD Vance vs. Gavin Newsom",
+        ]
+        assert [heading.text for heading in tables[3].headings] == [
+            "Opinion polling",
+            "General election",
+            "Statewide",
+            "Nevada",
+            "JD Vance vs. Gavin Newsom",
+        ]
+
+    def test_senate_race_page(self) -> None:
+        tables = parse_poll_tables(SENATE_RACE_PAGE)
+        # The Predictions table is rejected, and the aggregation table names
+        # parties rather than candidates, so it yields no rows without the flag.
+        assert [table.matchup for table in tables] == [
+            "Rogers (R) vs El-Sayed (D)",
+            "Rogers (R) vs Stevens (D)",
+        ]
+        assert tables[0].variants_dropped == 1
+        assert tables[0].info.collapsed is False
+        assert tables[1].info.collapsed is True
+
+    def test_generic_ballot_aggregation_table(self) -> None:
+        tables = parse_poll_tables(HOUSE_INDEX_PAGE, allow_party_labels=True)
+        assert len(tables) == 1
+        assert tables[0].matchup is None
+        assert tables[0].info.columns.is_aggregation is True
+        assert [column.party_name for column in tables[0].candidates] == [
+            "Republican",
+            "Democratic",
+        ]
+
+    def test_unknown_suffixes_are_surfaced(self) -> None:
+        tables = parse_poll_tables(MINOR_SUFFIX_PAGE)
+        assert [table.unknown_suffixes for table in tables] == [(), (), ("WCP",)]
+        assert [table.matchup for table in tables] == [
+            "Tafoya (R) vs Flanagan (DFL)",
+            "Cramer (R) vs Christiansen (D-NPL)",
+            "Cox (R) vs Doe (WCP)",
+        ]
+
+    def test_headings_are_lifted_onto_the_parsed_table(self) -> None:
+        tables = parse_poll_tables(ALASKA_PAGE)
+        assert tables[0].headings == tables[0].info.headings
+        assert [heading.text for heading in tables[0].headings] == [
+            "General election",
+            "Polling",
+        ]
+
+    def test_tables_without_a_parseable_row_are_dropped(self) -> None:
+        # That page's primary table is a header with no data rows under it.
+        tables = parse_poll_tables(PRESIDENT_PAGE_NO_SECTIONS)
+        assert len(tables) == 1
+        assert tables[0].matchup == "Vance (R) vs Newsom (D)"
+
+    def test_page_without_polling_tables(self) -> None:
+        assert parse_poll_tables(SENATE_SEATS_TABLE) == []

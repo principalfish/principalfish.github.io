@@ -26,9 +26,12 @@ here or in the model — see ``models/us/_common.py``.
 
 The **Table structure** section is the replacement for the positional parsing
 above: a rowspan-aware grid, the heading path a table sits under, whether
-Wikipedia collapsed it, and strict pollster/date column detection. The contest
-layer builds seat- and matchup-scoped rows on top of it; the legacy functions
-stay only until the three wrapper scripts move across.
+Wikipedia collapsed it, and strict pollster/date column detection. The
+**Candidates, matchups and rows** section reads the contents of such a table:
+who the candidates are, the canonical matchup label they form, and one
+:class:`ParsedPollRow` per poll. The contest layer builds seat- and
+matchup-scoped rows on top of them; the legacy functions stay only until the
+three wrapper scripts move across.
 """
 
 from __future__ import annotations
@@ -36,7 +39,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
@@ -588,6 +591,543 @@ def classify_table(table: Tag) -> TableInfo | None:
             collapsed=is_collapsed(table),
         )
     return None
+
+
+# ── Candidates, matchups and rows ─────────────────────────────────────────────
+#
+# Reads the contents of a table the section above classified: the candidate
+# columns named in its header, the canonical matchup label they form, and one
+# row per poll. Nothing here knows about contests, seats or the database —
+# that is the contest layer's job.
+
+
+# Header suffix letter → canonical DB party name. A suffix that is not here
+# (live examples: "(IA)", "(WCP)") is kept as raw text with no party, so the
+# matchup label still reads correctly and the contest layer can warn about it.
+PARTY_SUFFIXES: dict[str, str] = {
+    "R": "Republican",
+    "D": "Democratic",
+    "DFL": "Democratic",
+    "D-NPL": "Democratic",
+    "I": "Independent",
+    "L": "Libertarian",
+    "G": "US Green",
+}
+
+# Plural (and singular) party headers, used by the House generic-ballot
+# aggregation table, which has columns but no candidates. Only recognised when
+# the caller passes ``allow_party_labels=True``.
+_PARTY_LABEL_COLUMNS: dict[str, tuple[str, str]] = {
+    "republicans": ("R", "Republican"),
+    "republican": ("R", "Republican"),
+    "democrats": ("D", "Democratic"),
+    "democratic": ("D", "Democratic"),
+}
+
+# Party order inside a matchup label. Anything else (an unknown suffix) sorts
+# last, and columns of equal rank keep their header order.
+_MATCHUP_PARTY_ORDER: tuple[str, ...] = (
+    "Republican",
+    "Democratic",
+    "Independent",
+    "Libertarian",
+    "US Green",
+)
+
+# "Ken Paxton (R)", "Vance (R)", "Peggy Flanagan (DFL)", "Jane Doe (WCP)".
+_CANDIDATE_HEADER_RE = re.compile(
+    r"^(?P<name>.*?)\s*\(\s*(?P<letter>[A-Za-z][A-Za-z.\-]{0,7})\s*\)$"
+)
+
+# Name suffixes that are never the surname.
+_NAME_SUFFIXES: frozenset[str] = frozenset({"jr", "sr", "ii", "iii", "iv"})
+
+# A partisan sponsor tag on a pollster cell: "Rasmussen Reports (R)".
+_PARTY_TAG_RE = re.compile(
+    r"\(\s*("
+    + "|".join(re.escape(key) for key in sorted(PARTY_SUFFIXES, key=len, reverse=True))
+    + r")\s*\)",
+    re.IGNORECASE,
+)
+
+# A trailing Wikipedia disambiguator on a link title: "Dan Sullivan (politician)".
+_TITLE_DISAMBIGUATOR_RE = re.compile(r"\s*\([^()]*\)\s*$")
+
+# "1,000 (LV)" → 1000 respondents of population "LV".
+_SAMPLE_SIZE_RE = re.compile(r"(\d[\d,]*)")
+_POPULATION_RE = re.compile(r"\(\s*([A-Za-z]{1,4})\s*\)")
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateColumn:
+    """One candidate column of a polling table, read from its header.
+
+    Attributes:
+        index: The column's index in the expanded grid.
+        party_name: Canonical DB party name, or None when the header's suffix
+            is not one :data:`PARTY_SUFFIXES` knows.
+        letter: The suffix exactly as the label should show it ("R", "DFL",
+            "WCP").
+        surname: The candidate's surname, used to build the matchup label.
+        full_name: The candidate's full name, stored on the poll row. Empty for
+            the generic-ballot party-label columns, which name no candidate.
+    """
+
+    index: int
+    party_name: str | None
+    letter: str
+    surname: str
+    full_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateReading:
+    """One candidate's percentage in one poll row.
+
+    Attributes:
+        party_name: Canonical DB party name, or None for an unknown suffix.
+        candidate_name: The candidate's full name, empty for a party column.
+        percentage: The reading as written, not rescaled.
+    """
+
+    party_name: str | None
+    candidate_name: str
+    percentage: float
+
+
+@dataclass(frozen=True, slots=True)
+class ParsedPollRow:
+    """One poll, read from one row of a polling table.
+
+    Attributes:
+        pollster_label: The pollster name with footnotes and partisan tags
+            removed.
+        pollster_tags: The partisan tags stripped from the label, e.g.
+            ``("R",)`` for "Rasmussen Reports (R)".
+        fieldwork_start: First day of fieldwork.
+        fieldwork_end: Last day of fieldwork.
+        date_label: The date cell as written, kept for the review UI.
+        sample_size: Respondents, or None when the table shows none.
+        population: The sampled population code ("LV", "RV", "A"), or None.
+        readings: One entry per candidate column holding a number; columns
+            showing "—" or nothing are absent rather than zero.
+        source_url: The poll's own link from the pollster cell, when the page
+            gives one (the presidential tables do). Wiki-internal links are
+            ignored: they point at the pollster's article, not the poll.
+    """
+
+    pollster_label: str
+    pollster_tags: tuple[str, ...]
+    fieldwork_start: date
+    fieldwork_end: date
+    date_label: str
+    sample_size: int | None
+    population: str | None
+    readings: tuple[CandidateReading, ...]
+    source_url: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ParsedTable:
+    """A classified table together with everything parsed out of it.
+
+    Attributes:
+        info: The classified table.
+        headings: The section path, outermost first (``info.headings``, lifted
+            for convenience).
+        candidates: The candidate columns, in header order.
+        matchup: The canonical matchup label, or None when the table names
+            fewer than two candidates or only party columns.
+        rows: The parsed polls, first-variant-wins within this table.
+        variants_dropped: How many later rows repeated an earlier row's
+            pollster and dates (LV/RV, "with leaners", alternative candidates).
+        unknown_suffixes: Header suffixes that map to no party, in header
+            order and without repeats.
+    """
+
+    info: TableInfo
+    headings: tuple[Heading, ...]
+    candidates: tuple[CandidateColumn, ...]
+    matchup: str | None
+    rows: tuple[ParsedPollRow, ...]
+    variants_dropped: int
+    unknown_suffixes: tuple[str, ...]
+
+
+def _candidate_link_title(cell: Cell, name_text: str) -> str | None:
+    """Return the full name from a header cell's candidate link, if there is one.
+
+    The presidential tables write the header as
+    ``<a title="JD Vance">Vance</a><br /><small>(R)</small>``, so the full name
+    is only in the link title. A cell can hold a second link for the party
+    suffix; it is told apart by its text, which is the suffix rather than part
+    of the candidate's name.
+
+    Args:
+        cell: The header cell.
+        name_text: The header text with the party suffix removed.
+
+    Returns:
+        The link title without any trailing Wikipedia disambiguator, or None.
+    """
+    if cell.tag is None:
+        return None
+    wanted = {token.lower() for token in name_text.split()}
+    for link in cell.tag.find_all("a"):
+        if not isinstance(link, Tag):
+            continue
+        title = _attr_text(link, "title")
+        if title is None:
+            continue
+        link_text = _clean(link.get_text(" ", strip=True))
+        tokens = {token.lower() for token in link_text.split()}
+        if not tokens or not tokens <= wanted:
+            continue
+        return _clean(_TITLE_DISAMBIGUATOR_RE.sub("", title)) or None
+    return None
+
+
+def _candidate_full_name(cell: Cell, name_text: str) -> str:
+    """Resolve a candidate's full name from a header cell.
+
+    The header's own text wins whenever it already holds more than one word:
+    that is the Senate and House shape (``Brian<br />Fitzpatrick (R)``), and it
+    is the only place Alaska's "Dan S. Sullivan" and "Dan J. Sullivan" are told
+    apart — their link titles are disambiguated article names. A one-word
+    header is the presidential shape, a surname, so the link title is used.
+    """
+    if len(name_text.split()) > 1:
+        return name_text
+    return _candidate_link_title(cell, name_text) or name_text
+
+
+def surname(full_name: str) -> str:
+    """Return the surname of a candidate's full name.
+
+    Footnotes and the generational suffixes Jr./Sr./II/III/IV are dropped, then
+    the last remaining token is the surname — including an apostrophe name
+    ("Beto O'Rourke" → "O'Rourke").
+    """
+    tokens = _clean(_FOOTNOTE_RE.sub("", full_name)).replace(",", " ").split()
+    while len(tokens) > 1 and tokens[-1].rstrip(".").lower() in _NAME_SUFFIXES:
+        tokens.pop()
+    return tokens[-1] if tokens else ""
+
+
+def candidate_columns(
+    header_cells: Sequence[Cell],
+    *,
+    allow_party_labels: bool = False,
+) -> list[CandidateColumn]:
+    """Read the candidate columns from a polling table's header row.
+
+    A candidate column is a header of the form ``"{name} ({letter})"``; the
+    letter gives the party via :data:`PARTY_SUFFIXES`, and an unrecognised one
+    is kept as raw text with no party rather than guessed at. Every other
+    header ("Sample size", "Other", "Undecided", "Margin of error") names no
+    candidate and is skipped.
+
+    Args:
+        header_cells: One grid row — the row ``detect_columns`` accepted.
+        allow_party_labels: Also accept the plural party headers
+            "Republicans" / "Democrats". They name no candidate, so such
+            columns carry an empty name and form no matchup. This is the House
+            national generic-ballot aggregation table, which polls parties
+            rather than people.
+
+    Returns:
+        One :class:`CandidateColumn` per candidate, in header order.
+    """
+    columns: list[CandidateColumn] = []
+    seen_tags: set[int] = set()
+    for index, cell in enumerate(header_cells):
+        text = _clean(_FOOTNOTE_RE.sub("", cell.text))
+        if not text:
+            continue
+        # A colspan/rowspan header repeats across the positions it covers; only
+        # its first position is a column of its own.
+        if cell.tag is not None:
+            if id(cell.tag) in seen_tags:
+                continue
+            seen_tags.add(id(cell.tag))
+        if allow_party_labels:
+            label = _PARTY_LABEL_COLUMNS.get(text.lower())
+            if label is not None:
+                letter, party_name = label
+                columns.append(
+                    CandidateColumn(
+                        index=index,
+                        party_name=party_name,
+                        letter=letter,
+                        surname="",
+                        full_name="",
+                    )
+                )
+                continue
+        match = _CANDIDATE_HEADER_RE.match(text)
+        if match is None:
+            continue
+        name_text = _clean(match.group("name"))
+        if not name_text:
+            continue
+        letter = match.group("letter").strip()
+        suffix_party = PARTY_SUFFIXES.get(letter.upper())
+        if suffix_party is not None:
+            letter = letter.upper()
+        full_name = _candidate_full_name(cell, name_text)
+        columns.append(
+            CandidateColumn(
+                index=index,
+                party_name=suffix_party,
+                letter=letter,
+                surname=surname(full_name),
+                full_name=full_name,
+            )
+        )
+    return columns
+
+
+def _matchup_rank(party_name: str | None) -> int:
+    """Return a party's position in a matchup label."""
+    if party_name is None or party_name not in _MATCHUP_PARTY_ORDER:
+        return len(_MATCHUP_PARTY_ORDER)
+    return _MATCHUP_PARTY_ORDER.index(party_name)
+
+
+def matchup_label(columns: Sequence[CandidateColumn]) -> str | None:
+    """Build the canonical ``"{name} ({letter}) vs …"`` label for a table.
+
+    The label is the key a race's polls are grouped and tracked by, so it must
+    not depend on the order Wikipedia happens to list the candidates in: the
+    columns are ordered R, D, I, L, G, then unknown suffixes, and header order
+    within a party. A "Rogers (R) vs El-Sayed (D)" table and an
+    "El-Sayed (D) vs Rogers (R)" table therefore label identically.
+
+    The surname is used, unless two candidates in the same table share one — as
+    Alaska's two Dan Sullivans do — in which case both sides use their full
+    header name, so the label stays unambiguous.
+
+    Returns:
+        The label, or None when the table names fewer than two candidates, or
+        when a column names a party rather than a candidate (the generic
+        ballot, which has no matchup).
+    """
+    if len(columns) < 2 or any(not column.surname for column in columns):
+        return None
+    counts = Counter(column.surname.casefold() for column in columns)
+    ordered = sorted(
+        columns,
+        key=lambda column: (_matchup_rank(column.party_name), column.index),
+    )
+    parts: list[str] = []
+    for column in ordered:
+        shared = counts[column.surname.casefold()] > 1
+        name = column.full_name if shared else column.surname
+        parts.append(f"{name} ({column.letter})")
+    return " vs ".join(parts)
+
+
+def clean_pollster_label(text: str) -> tuple[str, tuple[str, ...]]:
+    """Split a pollster cell into its name and its partisan sponsor tags.
+
+    Wikipedia marks a partisan poll by suffixing the sponsor's party:
+    "Rasmussen Reports (R)", "GQR (D)". A jointly sponsored poll carries one
+    tag per sponsor — "Fabrizio Ward (R)/ Impact Research (D)" — and both
+    houses stay in the name, because the pair is the pollster.
+
+    Returns:
+        ``(label, tags)`` — the name with footnotes and tags removed, and the
+        tags in the order they appeared, uppercased.
+    """
+    stripped = _FOOTNOTE_RE.sub("", text)
+    tags = tuple(match.group(1).upper() for match in _PARTY_TAG_RE.finditer(stripped))
+    cleaned = _clean(_PARTY_TAG_RE.sub("", stripped))
+    return re.sub(r"\s+([/,;])", r"\1", cleaned).strip(), tags
+
+
+def _reading_percentage(text: str) -> float | None:
+    """Parse a candidate cell, or return None when it holds no reading.
+
+    Deliberately strict: after footnotes, the ``%`` sign and whitespace are
+    removed, what is left must be a number. A "—" or an empty cell means the
+    candidate was not offered in that row, which is not the same as zero, and a
+    colspan event row ("Primary election held") reads as no number at all.
+    """
+    cleaned = re.sub(r"\s+", "", _FOOTNOTE_RE.sub("", text)).replace("%", "")
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _parse_sample_cell(text: str) -> tuple[int | None, str | None]:
+    """Split a sample cell such as ``"1,000 (LV)"`` into size and population."""
+    cleaned = _FOOTNOTE_RE.sub("", text)
+    size_match = _SAMPLE_SIZE_RE.search(cleaned)
+    population_match = _POPULATION_RE.search(cleaned)
+    return (
+        int(size_match.group(1).replace(",", "")) if size_match else None,
+        population_match.group(1).upper() if population_match else None,
+    )
+
+
+def _pollster_source_url(cell: Cell) -> str | None:
+    """Return the poll's own link from a pollster cell, if it has one.
+
+    Only absolute links count: the presidential tables link the pollster cell
+    to the poll's own write-up, while other pages link it to the pollster's
+    Wikipedia article, which is not a source for the row.
+    """
+    if cell.tag is None:
+        return None
+    for link in cell.tag.find_all("a"):
+        if not isinstance(link, Tag):
+            continue
+        href = _attr_text(link, "href")
+        if href is not None and href.startswith(("http://", "https://")):
+            return href
+    return None
+
+
+def parse_table_rows(
+    info: TableInfo,
+    *,
+    candidates: Sequence[CandidateColumn] | None = None,
+) -> tuple[list[ParsedPollRow], int]:
+    """Parse one classified table's data rows into polls.
+
+    Rows are skipped when the pollster cell is empty, the date cell does not
+    parse, or no candidate column holds a number — which is how the colspan
+    event rows (``'' | August 18, 2026 | Primary election held``) drop out.
+
+    Wikipedia writes a pollster's variants (likely vs registered voters, "with
+    leaners", a different set of candidates) as extra rows under one rowspanned
+    pollster and date. They are the same poll, so within a table the **first**
+    row for a ``(pollster, start, end)`` wins and the rest are counted.
+
+    Args:
+        info: A table from :func:`classify_table`.
+        candidates: The table's candidate columns. Defaults to reading them
+            from the header without party labels.
+
+    Returns:
+        ``(rows, variants_dropped)``.
+    """
+    columns = info.columns
+    if candidates is None:
+        candidates = candidate_columns(info.grid[columns.header_row])
+
+    rows: list[ParsedPollRow] = []
+    seen: set[tuple[str, date, date]] = set()
+    variants_dropped = 0
+
+    for grid_row in info.data_rows:
+        pollster_cell = grid_row[columns.pollster]
+        label, tags = clean_pollster_label(pollster_cell.text)
+        if not label:
+            continue
+        date_range = parse_date_range(grid_row[columns.date].text)
+        if date_range is None:
+            continue
+        fieldwork_start, fieldwork_end = date_range
+
+        readings: list[CandidateReading] = []
+        for column in candidates:
+            if column.index >= len(grid_row):
+                continue
+            percentage = _reading_percentage(grid_row[column.index].text)
+            if percentage is None:
+                continue
+            readings.append(
+                CandidateReading(
+                    party_name=column.party_name,
+                    candidate_name=column.full_name,
+                    percentage=percentage,
+                )
+            )
+        if not readings:
+            continue
+
+        key = (label.casefold(), fieldwork_start, fieldwork_end)
+        if key in seen:
+            variants_dropped += 1
+            continue
+        seen.add(key)
+
+        sample_text = (
+            grid_row[columns.sample].text
+            if columns.sample is not None and columns.sample < len(grid_row)
+            else ""
+        )
+        sample_size, population = _parse_sample_cell(sample_text)
+        rows.append(
+            ParsedPollRow(
+                pollster_label=label,
+                pollster_tags=tags,
+                fieldwork_start=fieldwork_start,
+                fieldwork_end=fieldwork_end,
+                date_label=_clean(grid_row[columns.date].text),
+                sample_size=sample_size,
+                population=population,
+                readings=tuple(readings),
+                source_url=_pollster_source_url(pollster_cell),
+            )
+        )
+
+    return rows, variants_dropped
+
+
+def parse_poll_tables(
+    html: str,
+    *,
+    allow_party_labels: bool = False,
+) -> list[ParsedTable]:
+    """Parse every polling table on a page, in document order.
+
+    Classifies each table and keeps the ones that yield at least one poll. No
+    contest rule is applied here: primary sections, collapsed hypotheticals and
+    aggregation tables all come back, carrying the heading path, the collapsed
+    flag and the aggregation flag the contest layer selects on.
+
+    Args:
+        html: A fetched Wikipedia page.
+        allow_party_labels: Passed to :func:`candidate_columns`; set for the
+            House generic-ballot page.
+
+    Returns:
+        One :class:`ParsedTable` per table that parsed.
+    """
+    soup = BeautifulSoup(html, "lxml")
+    parsed: list[ParsedTable] = []
+    for table in soup.find_all("table"):
+        if not isinstance(table, Tag) or table.find_parent("table") is not None:
+            continue
+        info = classify_table(table)
+        if info is None:
+            continue
+        candidates = candidate_columns(
+            info.grid[info.columns.header_row],
+            allow_party_labels=allow_party_labels,
+        )
+        rows, variants_dropped = parse_table_rows(info, candidates=candidates)
+        if not rows:
+            continue
+        unknown: list[str] = []
+        for column in candidates:
+            if column.party_name is None and column.letter not in unknown:
+                unknown.append(column.letter)
+        parsed.append(
+            ParsedTable(
+                info=info,
+                headings=info.headings,
+                candidates=tuple(candidates),
+                matchup=matchup_label(candidates),
+                rows=tuple(rows),
+                variants_dropped=variants_dropped,
+                unknown_suffixes=tuple(unknown),
+            )
+        )
+    return parsed
 
 
 # ── Legacy parser ─────────────────────────────────────────────────────────────

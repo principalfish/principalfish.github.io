@@ -1,20 +1,26 @@
-"""State machine behind the Wikipedia catch-up queue for Westminster polls.
+"""State machine behind the reviewed catch-up queues for scraped polls.
 
-Given a scraped :class:`~polls.importers.westminster.wikipedia_index.PollIndex`
-and the database, :func:`build_queue` works out which polls are missing and
-returns a :class:`QueueState` — an ordered, oldest-first worklist the console
-walks one poll at a time. The rest of the module is the cursor: read the current
-item, advance past finished ones, and summarise the run at the end.
+Given scraped rows and the database, :func:`build_queue_from_rows` works out
+which polls are missing and returns a :class:`QueueState` — an ordered worklist
+the console walks one poll at a time. The rest of the module is the cursor: read
+the current item, advance past finished ones, and summarise the run at the end.
+
+The machinery is shared; each contest injects its own policy. What identifies a
+poll, which cutoff applies to a row, how a row is triaged and how the worklist
+is ordered are all callables passed in, so Westminster's three-part identity
+(pollster, start, end) and the US five-part one (plus matchup and seat) run the
+same code. :func:`build_queue` is the Westminster wrapper and is the only entry
+point that knows about :class:`PollIndex`.
 
 This module — not ``wikipedia_index`` — is where the importer registry is
 consulted. The scraper stays free of any console dependency; whether a row has
 an importer is decided here.
 
-Presence is decided per row on ``(pollster identifier, fieldwork start,
-fieldwork end)`` and deliberately **ignores sample size**, so a poll whose
-published sample differs from the figure on Wikipedia cannot be re-imported as a
-duplicate. Rows already in the database are dropped before the queue is built
-and never reach the user.
+Presence is decided per row on the caller's key — for Westminster ``(pollster
+identifier, fieldwork start, fieldwork end)``, which deliberately **ignores
+sample size**, so a poll whose published sample differs from the figure on
+Wikipedia cannot be re-imported as a duplicate. Rows already in the database are
+dropped before the queue is built and never reach the user.
 
 Two notes for callers:
 
@@ -30,17 +36,30 @@ Two notes for callers:
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
+from collections.abc import Set as AbstractSet
 from datetime import date
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
 from db import Database
-from polls.importers.westminster.wikipedia_index import PollIndex, WikipediaPollRow
+from polls.importers.types import PollImportResult, ScrapedPollRow
+from polls.importers.westminster.wikipedia_index import PollIndex
 
 from console.importers_registry import IMPORTERS
 
 QueueStatus = Literal["pending", "imported", "skipped", "failed", "no_importer"]
+
+# The row type a particular queue is built from. The queue itself stores rows as
+# the base type; the injected callables are typed on the concrete one, so a
+# caller's hooks can read its own extra columns without casting.
+RowT = TypeVar("RowT", bound=ScrapedPollRow)
+
+# What identifies a poll for the presence check, and what orders the worklist:
+# a tuple whose shape each caller chooses. Westminster uses ``(identifier,
+# start, end)``; the US adds the matchup and the seat.
+QueueKey = tuple[object, ...]
 
 # Fixed order for the summary tables, so the report reads the same every run.
 QUEUE_STATUSES: tuple[QueueStatus, ...] = (
@@ -57,10 +76,13 @@ NO_CUTOFF = date.min
 
 
 class QueueItem(BaseModel):
-    """One Wikipedia poll row and how far the user has got with it.
+    """One scraped poll row and how far the user has got with it.
 
     Attributes:
-        row: The scraped Wikipedia row this item came from.
+        row: The scraped row this item came from. Declared as the shared base
+            type, but the subclass instance the scraper built is kept as it is
+            (pydantic does not re-validate model instances), so a caller's own
+            hooks and templates can still read its extra columns.
         status: Where the item stands. ``pending`` items still need the user;
             every other value is terminal for this run.
         detail: Human-readable outcome — an error message, or a note such as
@@ -77,7 +99,7 @@ class QueueItem(BaseModel):
             e.g. document dates disagreeing with Wikipedia's.
     """
 
-    row: WikipediaPollRow
+    row: ScrapedPollRow
     status: QueueStatus = "pending"
     detail: str = ""
     poll_id: int | None = None
@@ -94,7 +116,13 @@ class QueueState(BaseModel):
             finished.
         cutoff: Only rows ending on or after this date were considered. This is
             :data:`NO_CUTOFF` when no cutoff was given and the map had no polls
-            to derive one from.
+            to derive one from. When the cutoff was worked out per row rather
+            than for the whole run, this is the weakest bound that was applied
+            — the earliest of those row cutoffs — so the summary line stays
+            true, and ``cutoff_note`` says what really happened.
+        cutoff_note: Short phrase qualifying ``cutoff`` on the summary page,
+            e.g. ``"one cutoff per race"``. Empty when the cutoff was a single
+            date for the whole run.
         run_model_at_end: Whether to run the UNS model and export once the queue
             is finished.
         skipped_present: Rows inside the window that were already in the
@@ -111,6 +139,7 @@ class QueueState(BaseModel):
     items: list[QueueItem]
     index: int = 0
     cutoff: date
+    cutoff_note: str = ""
     run_model_at_end: bool = True
     skipped_present: int = 0
     skipped_unparsed: int = 0
@@ -155,18 +184,136 @@ def existing_poll_keys(
     Returns:
         Set of ``(identifier, fieldwork_start, fieldwork_end)`` tuples.
     """
-    if not identifiers:
-        return set()
+    # The database keys polls on five parts, the last two of which (matchup and
+    # seat) are always NULL for Westminster: projecting them away is exactly
+    # this map's notion of a duplicate.
+    return {key[:3] for key in db.get_poll_keys_for_map(map_id, identifiers)}
 
-    keys: set[tuple[str, date, date]] = set()
-    for pollster in db.get_all_pollsters():
-        if pollster.identifier not in identifiers:
+
+def no_row_cutoff(db: Database, map_id: int | None) -> Callable[[ScrapedPollRow], date]:
+    """Return the do-nothing default cutoff: every scraped row is in the window.
+
+    This is the :func:`build_queue_from_rows` default, used when the caller
+    gives neither an explicit cutoff nor a policy of its own.
+
+    Args:
+        db: Active Database instance. Unused; the signature is the hook's.
+        map_id: Primary key of the map, or None when it does not exist yet.
+            Unused, likewise.
+
+    Returns:
+        A callable mapping any row to :data:`NO_CUTOFF`.
+    """
+
+    def cutoff_for(row: ScrapedPollRow) -> date:
+        return NO_CUTOFF
+
+    return cutoff_for
+
+
+def build_queue_from_rows(
+    db: Database,
+    rows: Sequence[RowT],
+    *,
+    map_name: str,
+    cutoff: date | None = None,
+    run_model_at_end: bool = True,
+    key_fn: Callable[[RowT], QueueKey],
+    present: Callable[[Database, int, set[str]], AbstractSet[QueueKey]],
+    cutoff_fn: Callable[[Database, int | None], Callable[[RowT], date]] = no_row_cutoff,
+    triage: Callable[[RowT], QueueItem],
+    sort_key: Callable[[RowT], QueueKey],
+    skipped_unparsed: int = 0,
+    unrecognised_areas: dict[str, int] | None = None,
+    cutoff_note: str = "",
+) -> QueueState:
+    """Build a review queue from scraped rows and the database.
+
+    Rows are narrowed to those ending on or after their cutoff (inclusive, so a
+    poll ending exactly on the cutoff date cannot hide), then any row already in
+    the database is dropped outright rather than queued as a duplicate the user
+    has to dismiss. What remains is sorted and triaged, and the cursor is left
+    on the first item that actually needs the user.
+
+    Args:
+        db: Active Database instance.
+        rows: Every scraped row, in any order.
+        map_name: Map the polls belong to. An unknown map means nothing can be
+            present, so every row in the window is queued.
+        cutoff: Earliest fieldwork end date to consider, applied to every row.
+            None hands the decision to ``cutoff_fn``.
+        run_model_at_end: Whether the finish step should run the model and
+            export.
+        key_fn: A row's identity, to be looked for among the keys ``present``
+            returns. Both must produce the same shape of tuple.
+        present: Called as ``present(db, map_id, identifiers)`` with the
+            pollster slugs seen in the window; returns the identity of every
+            poll already stored for them on this map.
+        cutoff_fn: Called as ``cutoff_fn(db, map_id)`` when ``cutoff`` is None,
+            and returns the cutoff to apply to a given row — which is how a
+            per-scope window (a different cutoff per race, say) is expressed.
+            It is called once per run, so a lookup table can be built inside it.
+            ``QueueState.cutoff`` then reports the earliest cutoff it handed
+            out, which is the only bound true of the whole run.
+        triage: Turns a queued row into a :class:`QueueItem`, pre-marking rows
+            that cannot be imported so they never interrupt the run.
+        sort_key: Worklist order, applied to the rows that survived.
+        skipped_unparsed: Rows the scraper could not read, for the summary.
+        unrecognised_areas: Scraper histogram of unrecognised column values, for
+            the summary.
+        cutoff_note: Short phrase qualifying the cutoff on the summary page.
+
+    Returns:
+        The initialised :class:`QueueState`, with its cursor on the first item
+        that needs the user — pre-marked rows at the head of the queue are
+        stepped over, so a run whose oldest missing poll has no importer still
+        opens on something actionable.
+    """
+    map_row = db.get_map_by_name(map_name)
+    map_id = None if map_row is None else map_row.id
+
+    row_cutoff: Callable[[RowT], date] = (
+        _fixed_cutoff(cutoff) if cutoff is not None else cutoff_fn(db, map_id)
+    )
+    effective_cutoff = (
+        cutoff
+        if cutoff is not None
+        else min((row_cutoff(row) for row in rows), default=NO_CUTOFF)
+    )
+
+    window = [row for row in rows if row.fieldwork_end >= row_cutoff(row)]
+
+    present_keys: AbstractSet[QueueKey] = frozenset()
+    if map_id is not None:
+        present_keys = present(
+            db,
+            map_id,
+            {row.pollster_identifier for row in window},
+        )
+
+    queued: list[RowT] = []
+    skipped_present = 0
+    for row in window:
+        if key_fn(row) in present_keys:
+            skipped_present += 1
             continue
-        for poll in db.get_polls_by_pollster(pollster.id):
-            if poll.map_id != map_id:
-                continue
-            keys.add((pollster.identifier, poll.fieldwork_start, poll.fieldwork_end))
-    return keys
+        queued.append(row)
+
+    queued.sort(key=sort_key)
+
+    state = QueueState(
+        items=[triage(row) for row in queued],
+        cutoff=effective_cutoff,
+        cutoff_note=cutoff_note,
+        run_model_at_end=run_model_at_end,
+        skipped_present=skipped_present,
+        skipped_unparsed=skipped_unparsed,
+        unrecognised_areas=dict(unrecognised_areas or {}),
+    )
+    # Pre-marked rows must never be presented, including when they sort to the
+    # head of the queue.
+    advance(state)
+    return state
 
 
 def build_queue(
@@ -203,49 +350,23 @@ def build_queue(
         stepped over, so a run whose oldest missing poll has no importer still
         opens on something actionable.
     """
-    map_row = db.get_map_by_name(map_name)
-    map_id = None if map_row is None else map_row.id
+    # Westminster's cutoff is one date for the whole map, so it is resolved here
+    # and handed over as an explicit window rather than through ``cutoff_fn``.
+    effective_cutoff = cutoff or latest_poll_end_date(db, map_name) or NO_CUTOFF
 
-    effective_cutoff = cutoff
-    if effective_cutoff is None and map_id is not None:
-        effective_cutoff = _latest_poll_end_date_for_map(db, map_id)
-    if effective_cutoff is None:
-        effective_cutoff = NO_CUTOFF
-
-    window = [row for row in index.rows if row.fieldwork_end >= effective_cutoff]
-
-    present: set[tuple[str, date, date]] = set()
-    if map_id is not None:
-        present = existing_poll_keys(
-            db,
-            map_id,
-            {row.pollster_identifier for row in window},
-        )
-
-    queued: list[WikipediaPollRow] = []
-    skipped_present = 0
-    for row in window:
-        if _poll_key(row) in present:
-            skipped_present += 1
-            continue
-        queued.append(row)
-
-    queued.sort(
-        key=lambda row: (row.fieldwork_end, row.fieldwork_start, row.pollster_label)
-    )
-
-    state = QueueState(
-        items=[_new_item(row) for row in queued],
+    return build_queue_from_rows(
+        db,
+        index.rows,
+        map_name=map_name,
         cutoff=effective_cutoff,
         run_model_at_end=run_model_at_end,
-        skipped_present=skipped_present,
+        key_fn=_poll_key,
+        present=existing_poll_keys,
+        triage=_new_item,
+        sort_key=_poll_sort_key,
         skipped_unparsed=index.skipped_rows,
         unrecognised_areas=dict(index.unrecognised_areas),
     )
-    # Rows pre-marked no_importer must never be presented, including when they
-    # sort to the head of the queue.
-    advance(state)
-    return state
 
 
 def current_item(state: QueueState) -> QueueItem | None:
@@ -312,6 +433,125 @@ def progress(state: QueueState) -> dict[str, int]:
     }
 
 
+def pending_in_group(
+    state: QueueState,
+    key_fn: Callable[[Any], object],
+    key: object,
+) -> list[int]:
+    """Return the indices of the pending items sharing a group key.
+
+    This is what a bulk "approve the rest of this race" action works through:
+    the caller commits the items at these indices in order, and items that have
+    already been decided are left alone.
+
+    Args:
+        state: The live queue state.
+        key_fn: The group a row belongs to, e.g. its race. Typed on ``Any``
+            because :class:`QueueItem` stores rows as the shared base type,
+            while a caller's grouping naturally reads its own columns.
+        key: The group to collect, as ``key_fn`` would return it.
+
+    Returns:
+        Indices into ``state.items``, in queue order, of every ``pending`` item
+        in that group — including ones before the cursor, which a retry can put
+        back into play.
+    """
+    return [
+        position
+        for position, item in enumerate(state.items)
+        if item.status == "pending" and key_fn(item.row) == key
+    ]
+
+
+def cursor_matches(state: QueueState, raw: str) -> bool:
+    """Return whether a submitted form was rendered for the current cursor.
+
+    The browser's back button and double submits both replay a form for a poll
+    that has already been decided. Acting on one would advance the cursor twice
+    and silently skip an unreviewed poll, so the rendered cursor position rides
+    along in a hidden field and is checked here.
+
+    Args:
+        state: The live queue state.
+        raw: The form's ``expected_index`` field, as submitted.
+
+    Returns:
+        True if ``raw`` is the cursor's current position. A missing, blank or
+        non-numeric value never matches.
+    """
+    try:
+        return int(raw) == state.index
+    except ValueError:
+        return False
+
+
+def apply_skip_or_retry(state: QueueState, action: str) -> None:
+    """Retry or skip the item under the cursor.
+
+    Args:
+        state: The live queue state, mutated in place. A finished queue is left
+            alone.
+        action: ``"retry"`` to clear a failed item's plan and present it again;
+            anything else skips the item for good and advances the cursor.
+    """
+    item = current_item(state)
+    if item is None:
+        return
+
+    if action == "retry":
+        item.status = "pending"
+        item.detail = ""
+        item.plan = None
+        item.warnings = []
+        return
+
+    # Giving up on a failed item keeps its error, so the summary says why.
+    if item.status == "failed" and item.detail:
+        item.detail = f"Skipped after failure: {item.detail}"
+    else:
+        item.detail = "Skipped"
+    item.status = "skipped"
+    advance(state)
+
+
+def describe_import_result(result: PollImportResult) -> str:
+    """Summarise a commit result for the queue item's detail line.
+
+    Args:
+        result: The importer's ``PollImportResult``.
+
+    Returns:
+        A one-line description of what the commit did.
+    """
+    if result.skipped_existing_rows:
+        return f"Poll #{result.poll_id} already had rows, so nothing was inserted"
+
+    detail = f"Poll #{result.poll_id}, {result.inserted_rows} rows inserted"
+    if result.replaced_rows:
+        detail += f", {result.replaced_rows} rows replaced"
+    return detail
+
+
+def cutoff_label(state: QueueState) -> str:
+    """Describe the window a queue considered, naming the no-cutoff sentinel.
+
+    Args:
+        state: The queue state being summarised.
+
+    Returns:
+        A display phrase — the sentinel cutoff means every row on the page was
+        considered, and must not surface as the date ``0001-01-01``. A
+        ``cutoff_note`` is appended in brackets when the run set one.
+    """
+    if state.cutoff == NO_CUTOFF:
+        label = "all polls"
+    else:
+        label = f"polls ending on or after {state.cutoff.isoformat()}"
+    if state.cutoff_note:
+        return f"{label} ({state.cutoff_note})"
+    return label
+
+
 def _latest_poll_end_date_for_map(db: Database, map_id: int) -> date | None:
     """Return the latest fieldwork end date across a map's polls, or None."""
     polls = db.get_polls_for_map(map_id)
@@ -320,12 +560,26 @@ def _latest_poll_end_date_for_map(db: Database, map_id: int) -> date | None:
     return max(poll.fieldwork_end for poll in polls)
 
 
-def _poll_key(row: WikipediaPollRow) -> tuple[str, date, date]:
+def _fixed_cutoff(cutoff: date) -> Callable[[ScrapedPollRow], date]:
+    """Return a cutoff policy applying one date to every row."""
+
+    def cutoff_for(row: ScrapedPollRow) -> date:
+        return cutoff
+
+    return cutoff_for
+
+
+def _poll_key(row: ScrapedPollRow) -> tuple[str, date, date]:
     """Return the sample-size-free identity of a scraped row."""
     return (row.pollster_identifier, row.fieldwork_start, row.fieldwork_end)
 
 
-def _new_item(row: WikipediaPollRow) -> QueueItem:
+def _poll_sort_key(row: ScrapedPollRow) -> tuple[date, date, str]:
+    """Order the Westminster worklist oldest first, then by pollster."""
+    return (row.fieldwork_end, row.fieldwork_start, row.pollster_label)
+
+
+def _new_item(row: ScrapedPollRow) -> QueueItem:
     """Build a queue item, pre-marking rows that cannot be imported.
 
     Args:

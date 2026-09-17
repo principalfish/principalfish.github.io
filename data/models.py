@@ -1,16 +1,19 @@
 import enum
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -330,6 +333,17 @@ class Poll(Base):
     contains one or more ``PollRow`` records holding party-level percentages,
     optionally broken down by region.
 
+    A poll that asks several head-to-head questions (US polls) is stored as
+    one ``Poll`` per question, told apart by ``matchup``. A US state or
+    district poll is attached to its ``Seat``; its rows keep ``region_id``
+    NULL.
+
+    Like ``map``, the ``seat`` relationship is only usable while the loading
+    session is open: every ``Database`` accessor closes its session, so
+    ``db.get_poll(id).seat`` raises ``DetachedInstanceError``. Callers that
+    need the seat either work inside ``db.session()`` or look the seat up by
+    ``seat_id``.
+
     Attributes:
         id: Auto-incrementing primary key.
         pollster_id: Foreign key to the conducting ``Pollster``.
@@ -338,12 +352,21 @@ class Poll(Base):
         fieldwork_end: End date of the fieldwork period.
         sample_size: Optional number of respondents.
         source_url: Optional URL to the published poll source.
+        matchup: Optional label of the candidate pairing polled (e.g.
+            ``"Vance (R) vs Newsom (D)"``). ``None`` for party-only polls.
+        seat_id: Optional foreign key to the ``Seat`` a state or district poll
+            covers. ``None`` for a national poll.
         pollster: The conducting ``Pollster`` instance.
         map: The associated ``Map`` instance.
+        seat: The ``Seat`` this poll covers, if any.
         rows: All ``PollRow`` records belonging to this poll.
     """
 
     __tablename__ = "polls"
+    __table_args__ = (
+        # Serves the per-seat poll lookups of the US model and review queue.
+        Index("ix_polls_map_seat", "map_id", "seat_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     pollster_id: Mapped[int] = mapped_column(Integer, ForeignKey("pollsters.id"), nullable=False)
@@ -352,9 +375,12 @@ class Poll(Base):
     fieldwork_end: Mapped[date] = mapped_column(Date, nullable=False)
     sample_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    matchup: Mapped[str | None] = mapped_column(String, nullable=True)
+    seat_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("seats.id"), nullable=True)  # null = national
 
     pollster: Mapped["Pollster"] = relationship("Pollster", back_populates="polls")
     map: Mapped["Map"] = relationship("Map")
+    seat: Mapped["Seat | None"] = relationship("Seat")
     rows: Mapped[list["PollRow"]] = relationship("PollRow", back_populates="poll", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
@@ -377,6 +403,8 @@ class PollRow(Base):
         party_id: Foreign key to the ``Party`` this figure is for.
         percentage: Voting intention share for the party, as a percentage
             (0–100).
+        candidate_name: Optional name of the candidate the figure is for (US
+            candidate polls). ``None`` for party-only polls.
         poll: The owning ``Poll`` instance.
         region: The ``Region`` this row is scoped to, if any.
         party: The ``Party`` this row refers to.
@@ -389,6 +417,7 @@ class PollRow(Base):
     region_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("regions.id"), nullable=True)  # null = national
     party_id: Mapped[int] = mapped_column(Integer, ForeignKey("parties.id"), nullable=False)
     percentage: Mapped[float] = mapped_column(Float, nullable=False)
+    candidate_name: Mapped[str | None] = mapped_column(String, nullable=True)
 
     poll: Mapped["Poll"] = relationship("Poll", back_populates="rows")
     region: Mapped[Optional["Region"]] = relationship("Region")
@@ -397,3 +426,63 @@ class PollRow(Base):
     def __repr__(self) -> str:
         """Return a debug string representation of the PollRow."""
         return f"<PollRow party={self.party_id} pct={self.percentage}>"
+
+
+# Who set a TrackedMatchup; mirrors the tracked_matchups.source CHECK constraint.
+TrackedMatchupSource = Literal["auto", "manual"]
+
+
+class TrackedMatchup(Base):
+    """ORM model for the ``tracked_matchups`` table.
+
+    Records which ``Poll.matchup`` the US forecast model follows for one race:
+    a whole map (national, ``seat_id`` NULL) or a single seat. At most one row
+    exists per ``(map_id, seat_id)``, enforced by a unique index over
+    ``IFNULL(seat_id, 0)`` because a plain UNIQUE constraint treats every
+    NULL ``seat_id`` as distinct.
+
+    Rows written by the importer have ``source`` ``"auto"``; a user override
+    has ``"manual"`` and is never overwritten by the importer, which still
+    records its latest choice in ``auto_matchup`` so the override can be
+    cleared back to it.
+
+    Attributes:
+        id: Auto-incrementing primary key.
+        map_id: Foreign key to the ``Map`` the race belongs to.
+        seat_id: Optional foreign key to the race's ``Seat``. ``None`` means
+            the map's national race.
+        matchup: The matchup label the model follows. ``None`` means the
+            race's polls are ignored.
+        source: ``"auto"`` (set by the importer) or ``"manual"`` (a user
+            override). See ``TrackedMatchupSource``.
+        auto_matchup: The matchup the importer last chose for the race, kept
+            even while a manual override is in force. ``None`` if the importer
+            has never set one.
+    """
+
+    __tablename__ = "tracked_matchups"
+    __table_args__ = (
+        CheckConstraint("source IN ('auto', 'manual')", name="ck_tracked_matchups_source"),
+        # One row per race; IFNULL folds the national race (NULL seat) onto 0,
+        # which no autoincrement seat id can take.
+        Index(
+            "ux_tracked_matchups_scope",
+            "map_id",
+            text("IFNULL(seat_id, 0)"),
+            unique=True,
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    map_id: Mapped[int] = mapped_column(Integer, ForeignKey("maps.id"), nullable=False)
+    seat_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("seats.id"), nullable=True)  # null = national
+    matchup: Mapped[str | None] = mapped_column(String, nullable=True)  # null = ignore the race's polls
+    source: Mapped[TrackedMatchupSource] = mapped_column(String, nullable=False)
+    auto_matchup: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    def __repr__(self) -> str:
+        """Return a debug string representation of the TrackedMatchup."""
+        return (
+            f"<TrackedMatchup map={self.map_id} seat={self.seat_id} "
+            f"matchup={self.matchup!r} source={self.source}>"
+        )

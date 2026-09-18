@@ -68,13 +68,17 @@ SPEC = UsModelSpec(
     trend_cache_json=RESULTS_DIR / "us-senate-trends.json",
     trend_cache_meta_json=RESULTS_DIR / "us-senate-trends_meta.json",
     seat_name_allowlist=class2_state_allowlist(),
+    # The Senate has no national series of its own: its national swing is the
+    # House generic ballot, polled once and stored on the House map.
+    national_poll_map_name="US House Districts 2024",
 )
 
 
-def main() -> None:
-    """CLI entry point — see module docstring."""
-    main_for_spec(SPEC)
+def main() -> int:
+    """CLI entry point — see module docstring; returns a process exit code."""
+    # int(): _common is imported by bare module name, so it is untyped here.
+    return int(main_for_spec(SPEC))
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

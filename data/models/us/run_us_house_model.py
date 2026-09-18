@@ -33,10 +33,11 @@ SPEC = UsModelSpec(
 )
 
 
-def main() -> None:
-    """CLI entry point — see module docstring."""
-    main_for_spec(SPEC)
+def main() -> int:
+    """CLI entry point — see module docstring; returns a process exit code."""
+    # int(): _common is imported by bare module name, so it is untyped here.
+    return int(main_for_spec(SPEC))
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

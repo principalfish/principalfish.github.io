@@ -16,8 +16,14 @@ Design — "national uniform swing, state-ready":
     rows are added (``region_id`` set), those regions switch to their own swing
     with no code change. That is the "state-ready" property.
 
+Polls are read one :class:`PollReading` per poll (``collect_poll_readings``), not
+one per row, so a race where a party fields several candidates sums to one party
+share. :func:`resolve_poll_scope` says which map that series lives on and which
+matchup it must carry — the Senate borrows the House generic ballot, and the
+President follows the tracked head-to-head.
+
 The pure functions (``weighted_average``, ``build_baseline_vote_state``,
-``aggregate_poll_shares``, ``compute_region_diffs``, ``project_seat_votes``,
+``aggregate_national``, ``compute_region_diffs``, ``project_seat_votes``,
 ``latest_poll_snippet``) are DOM-free and DB-free once fed their inputs, so they
 unit-test in isolation exactly like the Westminster model's.
 """
@@ -31,12 +37,13 @@ import re
 import sqlite3
 import sys
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 # ``data/`` root — home of config.py / db.py / models.py.
 DATA_DIR = Path(__file__).resolve().parents[2]
@@ -45,7 +52,7 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
-from models import Election, Map, Region
+from models import Election, Map, Poll, Region
 
 # Single source of truth for the database path: config.py (which reads .env).
 DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
@@ -54,6 +61,20 @@ DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
 # needed (contrast the Westminster model, which aliases "Other" → "Others").
 # Kept as an explicit identity map so the aggregation code reads the same.
 PARTY_ID_ALIASES: dict[int, int] = {}
+
+# Which matchup a seat's own polls must carry to be used (see ``UsModelSpec``).
+SeatMatchupPolicy = Literal["per_seat", "national"]
+
+
+class TrackedMatchupMissing(ValueError):
+    """No usable national tracked matchup for a spec that requires one.
+
+    Raised for the President, whose national series is a head-to-head between
+    two named candidates: with no matchup chosen there is nothing to average.
+    Both "no ``tracked_matchups`` row at all" and "a row whose ``matchup`` is
+    NULL" (the deliberate *ignore this race* marker) raise it; the message says
+    which, so the console can tell an unconfigured model from a paused one.
+    """
 
 
 @dataclass(frozen=True)
@@ -72,6 +93,19 @@ class UsModelSpec:
         seat_name_allowlist: When set, only seats whose ``seat_name`` is in this set are
             loaded and projected. Used by the Senate runner to restrict the field to the
             2026 Class-2 states; ``None`` projects every seat that has baseline votes.
+        national_poll_map_name: Map holding the **national** poll series, when it is not
+            this spec's own map. The Senate reads the generic ballot from
+            ``"US House Districts 2024"``; ``None`` means "this spec's map".
+        requires_tracked_matchup: When ``True`` the run aborts unless a national tracked
+            matchup is set (the President — see :class:`TrackedMatchupMissing`).
+        seat_matchup_policy: Which matchup a seat's own polls must carry to count.
+            ``"per_seat"`` follows each seat's ``tracked_matchups`` row (Senate, House);
+            ``"national"`` makes every seat follow the national matchup (the President,
+            whose state polls are the same head-to-head). Consumed by the seat-blending
+            step; the national series never uses it.
+        seat_baseline_overrides: Seat name → baseline election name, for seats whose
+            baseline is not ``baseline_election_name`` (the 2026 Senate specials, which
+            swing from 2022 rather than 2020). Consumed by the baseline loader.
     """
 
     map_name: str
@@ -81,6 +115,12 @@ class UsModelSpec:
     trend_cache_json: Path
     trend_cache_meta_json: Path
     seat_name_allowlist: frozenset[str] | None = None
+    national_poll_map_name: str | None = None
+    requires_tracked_matchup: bool = False
+    seat_matchup_policy: SeatMatchupPolicy = "per_seat"
+    # A factory, not a shared ``{}``: a mutable default would be one dict for
+    # every spec ever built.
+    seat_baseline_overrides: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -115,8 +155,76 @@ class SeatRef:
 
 @dataclass
 class LatestPollUsage:
-    """Metadata about the most recent poll consumed during a run."""
+    """Metadata about the most recent poll consumed during a run.
 
+    ``matchup`` is the poll's candidate pairing (the President), ``None`` for a
+    party-only series such as the generic ballot.
+    """
+
+    pollster: str
+    fieldwork_start: date
+    fieldwork_end: date
+    matchup: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PollScope:
+    """Where a run's polls live, resolved once per run from a :class:`UsModelSpec`.
+
+    Only the *polls* move: seats and the baseline always come from the spec's own
+    map (``seat_map_id``). The Senate reads its national swing from the House
+    generic ballot, so its ``national_map_id`` is a different map's.
+
+    Attributes:
+        national_map_id: Map whose ``seat_id IS NULL`` polls form the national series.
+        national_map_name: That map's display name (for messages).
+        national_matchup: The matchup those polls must carry; ``None`` for a
+            party-only series (House, Senate) *and* for an unset/ignored race on a
+            spec that does not require one.
+        seat_map_id: The spec's own map — seats, baseline and seat-level polls.
+        seat_map_name: That map's display name.
+        seat_matchup_policy: Copied from the spec; see :class:`UsModelSpec`.
+    """
+
+    national_map_id: int
+    national_map_name: str
+    national_matchup: str | None
+    seat_map_id: int
+    seat_map_name: str
+    seat_matchup_policy: SeatMatchupPolicy
+
+
+@dataclass(frozen=True, slots=True)
+class PollReading:
+    """One poll's contribution to an average: a single weighted set of shares.
+
+    A poll is the unit, not a poll *row*: a race with several candidates of the
+    same party (Alaska's top-four, a same-party top-two) stores one row per
+    candidate, and those rows are **summed** into one party share here. Averaging
+    them per row instead — which is what accumulating row by row does — would
+    halve a party that ran two candidates.
+
+    Attributes:
+        poll_id: Primary key of the source poll.
+        seat_id: The seat a state/district poll covers; ``None`` for a national poll.
+        matchup: The poll's candidate pairing; ``None`` for a party-only poll.
+        weight: ``exp(-ln2 / half_life × days_since) × pollster_weight``.
+        shares: Party id → summed percentage over the poll's national-scope rows
+            (``region_id IS NULL``), which is every row of a US poll today.
+        region_shares: Region id → party id → summed percentage, for rows that do
+            carry a ``region_id``. Kept separate so a regional breakdown still
+            drives its own region's swing (the module's "state-ready" property).
+        pollster: Display name of the pollster.
+        fieldwork_start: First day of fieldwork.
+        fieldwork_end: Last day of fieldwork.
+    """
+
+    poll_id: int
+    seat_id: int | None
+    matchup: str | None
+    weight: float
+    shares: Mapping[int, float]
+    region_shares: Mapping[int, Mapping[int, float]]
     pollster: str
     fieldwork_start: date
     fieldwork_end: date
@@ -141,14 +249,18 @@ def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:
 
     Returns ``"Latest poll used: <Pollster> (<date>)"`` (a single ISO date when
     start == end, otherwise a ``"start to end"`` range), or ``""`` when no poll was
-    consumed.
+    consumed. A poll with a matchup appends ``" — <matchup>"``; a party-only poll
+    (the generic ballot) reads exactly as it always has.
     """
     if latest_poll_usage is None:
         return ""
     start = latest_poll_usage.fieldwork_start.isoformat()
     end = latest_poll_usage.fieldwork_end.isoformat()
     fieldwork_text = start if start == end else f"{start} to {end}"
-    return f"Latest poll used: {latest_poll_usage.pollster} ({fieldwork_text})"
+    snippet = f"Latest poll used: {latest_poll_usage.pollster} ({fieldwork_text})"
+    if latest_poll_usage.matchup:
+        snippet = f"{snippet} — {latest_poll_usage.matchup}"
+    return snippet
 
 
 def build_baseline_vote_state(
@@ -230,7 +342,7 @@ def build_baseline_vote_state(
     )
 
 
-def aggregate_poll_shares(
+def collect_poll_readings(
     db: Database,
     map_id: int,
     since_date: date,
@@ -238,24 +350,23 @@ def aggregate_poll_shares(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
-) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
-    """Compute time-decayed, pollster-weighted average vote shares from recent polls.
+) -> list[PollReading]:
+    """Read one map's in-window polls into one weighted :class:`PollReading` each.
 
-    For each poll whose fieldwork end date falls in ``[since_date, as_of_date]``, a
-    combined weight ``exp(-λ × days_since) × pollster_weight`` (``λ = ln 2 /
-    half_life_days``) is applied to each of its ``PollRow`` percentages, accumulated
-    by ``(region_id, party_id)`` (``region_id`` is ``None`` for national rows).
+    A poll qualifies when its fieldwork end date falls in ``[since_date,
+    as_of_date]`` and it has rows; its weight is ``exp(-λ × days_since) ×
+    pollster_weight`` (``λ = ln 2 / half_life_days``), exactly as before. Rows are
+    summed per party **within the poll**, so a party running two candidates in one
+    race counts once at its combined share.
 
-    Returns ``(weighted_sums, total_weights, latest_poll_usage)``.
+    Readings keep the DB's order (fieldwork end descending) and carry both national
+    and seat-scoped polls of every matchup; filtering is the caller's job
+    (:func:`aggregate_national`, and the seat-level averaging that follows it).
     """
-    polls = db.get_polls_for_map(map_id)
-    weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
-    total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
-    latest_poll_usage: LatestPollUsage | None = None
-
     decay_lambda = math.log(2.0) / max(half_life_days, 0.001)
+    readings: list[PollReading] = []
 
-    for poll in polls:
+    for poll in db.get_polls_for_map(map_id):
         if poll.fieldwork_end < since_date or poll.fieldwork_end > as_of_date:
             continue
 
@@ -273,29 +384,83 @@ def aggregate_poll_shares(
         if not rows:
             continue
 
-        candidate_poll = LatestPollUsage(
-            pollster=str(pollster_name_by_id.get(poll.pollster_id, f"Pollster {poll.pollster_id}")),
-            fieldwork_start=poll.fieldwork_start,
-            fieldwork_end=poll.fieldwork_end,
+        shares: dict[int, float] = defaultdict(float)
+        region_shares: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+        for row in rows:
+            if row.party_id is None:
+                continue
+            party_id = PARTY_ID_ALIASES.get(row.party_id, row.party_id)
+            if row.region_id is None:
+                shares[party_id] += float(row.percentage)
+            else:
+                region_shares[row.region_id][party_id] += float(row.percentage)
+
+        readings.append(
+            PollReading(
+                poll_id=int(poll.id),
+                seat_id=poll.seat_id,
+                matchup=poll.matchup,
+                weight=poll_weight,
+                shares=dict(shares),
+                region_shares={
+                    region_id: dict(party_shares)
+                    for region_id, party_shares in region_shares.items()
+                },
+                pollster=str(pollster_name_by_id.get(poll.pollster_id, f"Pollster {poll.pollster_id}")),
+                fieldwork_start=poll.fieldwork_start,
+                fieldwork_end=poll.fieldwork_end,
+            )
         )
+
+    return readings
+
+
+def aggregate_national(
+    readings: Iterable[PollReading],
+    national_matchup: str | None,
+) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
+    """Aggregate the national series out of a map's readings.
+
+    Keeps only readings that are national (``seat_id is None``) *and* carry
+    ``national_matchup`` — ``None`` for a party-only series such as the generic
+    ballot, a candidate pairing for the President, whose other matchups and state
+    polls must not leak into the national average.
+
+    Returns ``(weighted_sums, total_weights, latest_poll_usage)`` keyed by
+    ``(region_id, party_id)``, the shape :func:`compute_region_diffs` consumes.
+    Both maps are defaultdicts, so a party absent from the polls reads as 0.
+    """
+    weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
+    total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
+    latest_poll_usage: LatestPollUsage | None = None
+
+    for reading in readings:
+        if reading.seat_id is not None or reading.matchup != national_matchup:
+            continue
+
+        for party_id, share in reading.shares.items():
+            weighted_sums[(None, party_id)] += share * reading.weight
+            total_weights[(None, party_id)] += reading.weight
+        for region_id, party_shares in reading.region_shares.items():
+            for party_id, share in party_shares.items():
+                weighted_sums[(region_id, party_id)] += share * reading.weight
+                total_weights[(region_id, party_id)] += reading.weight
+
         if latest_poll_usage is None or (
-            candidate_poll.fieldwork_end,
-            candidate_poll.fieldwork_start,
-            int(poll.id),
+            reading.fieldwork_end,
+            reading.fieldwork_start,
+            reading.poll_id,
         ) > (
             latest_poll_usage.fieldwork_end,
             latest_poll_usage.fieldwork_start,
             -1,
         ):
-            latest_poll_usage = candidate_poll
-
-        for row in rows:
-            if row.party_id is None:
-                continue
-            party_id = PARTY_ID_ALIASES.get(row.party_id, row.party_id)
-            key = (row.region_id, party_id)
-            weighted_sums[key] += float(row.percentage) * poll_weight
-            total_weights[key] += poll_weight
+            latest_poll_usage = LatestPollUsage(
+                pollster=reading.pollster,
+                fieldwork_start=reading.fieldwork_start,
+                fieldwork_end=reading.fieldwork_end,
+                matchup=reading.matchup,
+            )
 
     return weighted_sums, total_weights, latest_poll_usage
 
@@ -538,6 +703,76 @@ def resolve_simulation_scope(db: Database, spec: UsModelSpec) -> tuple[Map, Elec
         )
 
     return poll_map, baseline
+
+
+def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
+    """Resolve where this spec's polls live, and which matchup they must carry.
+
+    The national series may sit on another map (the Senate borrows the House
+    generic ballot); seats and the baseline never move. The national matchup is
+    the ``tracked_matchups`` row for that map's national race (``seat_id`` NULL).
+
+    Raises:
+        ValueError: If either map is missing.
+        TrackedMatchupMissing: If ``spec.requires_tracked_matchup`` and no matchup
+            is in force — either no row exists, or a row sets ``matchup`` to NULL
+            to ignore the race.
+    """
+    seat_map = db.get_map_by_name(spec.map_name)
+    if seat_map is None:
+        raise ValueError(f"Map not found: {spec.map_name}")
+
+    national_map_name = spec.national_poll_map_name or spec.map_name
+    national_map = seat_map
+    if national_map_name != spec.map_name:
+        found = db.get_map_by_name(national_map_name)
+        if found is None:
+            raise ValueError(f"National poll map not found: {national_map_name}")
+        national_map = found
+
+    tracked = db.get_tracked_matchup(national_map.id, None)
+    national_matchup = tracked.matchup if tracked is not None else None
+
+    if spec.requires_tracked_matchup and national_matchup is None:
+        reason = (
+            "its tracked matchup is set to NULL (this race's polls are ignored)"
+            if tracked is not None
+            else "no tracked matchup has been set"
+        )
+        raise TrackedMatchupMissing(
+            f"{spec.election_name_prefix}: {reason} for the national race on "
+            f"'{national_map_name}'. Choose a matchup in the console before running "
+            "this model."
+        )
+
+    return PollScope(
+        national_map_id=national_map.id,
+        national_map_name=national_map_name,
+        national_matchup=national_matchup,
+        seat_map_id=seat_map.id,
+        seat_map_name=spec.map_name,
+        seat_matchup_policy=spec.seat_matchup_policy,
+    )
+
+
+def latest_poll_date(db: Database, scope: PollScope) -> date | None:
+    """Latest fieldwork end date across the run's **national** poll series.
+
+    Respects the scope: only polls on the national map, national in scope
+    (``seat_id IS NULL``) and carrying the scope's matchup count — so a stale
+    matchup or a state poll can no longer drag the as-of cap forward. Returns
+    ``None`` when the series is empty.
+    """
+    with db.session() as session:
+        statement = select(Poll.fieldwork_end).where(
+            Poll.map_id == scope.national_map_id,
+            Poll.seat_id.is_(None),
+            Poll.matchup.is_(None)
+            if scope.national_matchup is None
+            else Poll.matchup == scope.national_matchup,
+        )
+        end_dates = session.execute(statement).scalars().all()
+    return max(end_dates, default=None)
 
 
 # ── Persistence + trend cache (parameterised by spec) ─────────────────────────
@@ -789,12 +1024,19 @@ def write_trend_cache_meta(
     as_of_date: date,
     since_date: date,
     latest_poll_usage: LatestPollUsage | None,
+    matchup: str | None = None,
 ) -> None:
-    """Overwrite the type's trend metadata JSON (date window + latest poll)."""
+    """Overwrite the type's trend metadata JSON (date window + latest poll).
+
+    ``matchup`` is the national matchup the run followed (the President's tracked
+    head-to-head); ``None`` for a party-only series, which is what the poll
+    tracker shows for the House and Senate.
+    """
     spec.trend_cache_meta_json.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "as_of_date": as_of_date.isoformat(),
         "since_date": since_date.isoformat(),
+        "matchup": matchup,
         "latest_poll_snippet": latest_poll_snippet(latest_poll_usage),
         "latest_poll": (
             {
@@ -900,6 +1142,7 @@ def run_simulation(
     """
     spec = cfg.spec
     poll_map, baseline = resolve_simulation_scope(db, spec)
+    scope = resolve_poll_scope(db, spec)
 
     (
         seats,
@@ -920,14 +1163,17 @@ def run_simulation(
         baseline_region_shares,
     ) = build_baseline_vote_state(db, baseline.id, region_by_seat_id, seat_id_filter)
 
-    weighted_sums, total_weights, latest_poll_usage = aggregate_poll_shares(
+    national_readings = collect_poll_readings(
         db,
-        poll_map.id,
+        scope.national_map_id,
         cfg.since_date,
         cfg.as_of_date,
         cfg.half_life_days,
         pollster_weight_by_id,
         pollster_name_by_id,
+    )
+    weighted_sums, total_weights, latest_poll_usage = aggregate_national(
+        national_readings, scope.national_matchup
     )
 
     party_universe, region_swings, region_diff_rows = compute_region_diffs(
@@ -1094,39 +1340,47 @@ def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSi
     )
 
 
-def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None = None) -> None:
-    """CLI entry point shared by the three runners.
+def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None = None) -> int:
+    """CLI entry point shared by the three runners; returns a process exit code.
 
     Pass ``--start-date`` + ``--end-date`` for retrospective backfill; otherwise a
     single-date run (auto-filling any gap up to ``as_of_date``). The as-of date is
     capped at the latest poll fieldwork date so decay-only drift never invents
     movement past the last real poll.
+
+    Returns ``0`` on success, or ``2`` when the spec needs a national tracked
+    matchup and none is set — the President with no chosen head-to-head. Nothing
+    is written in that case: the scope is resolved before any run.
     """
     parser = build_arg_parser(spec)
     args = parser.parse_args()
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
+    # Resolved first, so a president with no matchup writes no election, no trend
+    # entry and no meta file.
+    try:
+        scope = resolve_poll_scope(db, spec)
+    except TrackedMatchupMissing as exc:
+        print(f"ERROR {exc}", file=sys.stderr)
+        return 2
+
     if args.start_date and args.end_date:
         run_retrospective(db, spec, args)
-        return
+        return 0
 
     cfg = _build_config_from_args(spec, args)
 
-    latest_map = db.get_map_by_name(spec.map_name)
-    if latest_map is not None:
-        polls = db.get_polls_for_map(latest_map.id)
-        if polls:
-            latest_poll_date = max(poll.fieldwork_end for poll in polls)
-            if cfg.as_of_date > latest_poll_date:
-                print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_poll_date.isoformat()}")
-                shift = cfg.as_of_date - latest_poll_date
-                cfg = UsSimulationConfig(
-                    spec=spec,
-                    as_of_date=latest_poll_date,
-                    since_date=cfg.since_date - shift,
-                    half_life_days=cfg.half_life_days,
-                    dry_run=cfg.dry_run,
-                )
+    latest_end = latest_poll_date(db, scope)
+    if latest_end is not None and cfg.as_of_date > latest_end:
+        print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
+        shift = cfg.as_of_date - latest_end
+        cfg = UsSimulationConfig(
+            spec=spec,
+            as_of_date=latest_end,
+            since_date=cfg.since_date - shift,
+            half_life_days=cfg.half_life_days,
+            dry_run=cfg.dry_run,
+        )
 
     run_dates = dates_to_run_for_cfg(cfg)
     if len(run_dates) > 1:
@@ -1176,5 +1430,11 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
 
     if not cfg.dry_run:
         write_trend_cache_meta(
-            spec, cfg.as_of_date, cfg.as_of_date - timedelta(days=lookback_days), latest_poll_usage
+            spec,
+            cfg.as_of_date,
+            cfg.as_of_date - timedelta(days=lookback_days),
+            latest_poll_usage,
+            matchup=scope.national_matchup,
         )
+
+    return 0

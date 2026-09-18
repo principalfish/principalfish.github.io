@@ -12,26 +12,17 @@ endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_route
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 
-from models import ElectionType
-
 from console.db import get_db
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
-    US_HOUSE_MODEL_SCRIPT,
     US_HOUSE_POLLS_IMPORT_SCRIPT,
-    US_HOUSE_TREND_CACHE_JSON,
-    US_PRESIDENT_MODEL_SCRIPT,
     US_PRESIDENT_POLLS_IMPORT_SCRIPT,
-    US_PRESIDENT_TREND_CACHE_JSON,
-    US_SENATE_MODEL_SCRIPT,
     US_SENATE_POLLS_IMPORT_SCRIPT,
-    US_SENATE_TREND_CACHE_JSON,
 )
 from console.services.model_outputs import (
     build_output_detail_context,
@@ -40,64 +31,11 @@ from console.services.model_outputs import (
     delete_selected_model_outputs as delete_selected_outputs,
 )
 from console.services.runner import render_command_result, run_python_script
+from console.services.us_models import US_CHAMBERS, UsChamber, run_us_models_and_export
+
+__all__ = ["US_CHAMBERS", "UsChamber", "bp"]
 
 bp = Blueprint("us", __name__)
-
-
-@dataclass(frozen=True)
-class UsChamber:
-    """Console wiring for one US election type.
-
-    Attributes:
-        slug: URL segment and endpoint-name stem (``"house"``).
-        label: Display name used in headings (``"US House"``).
-        model_type: The forecast-output election type this chamber lists.
-        baseline_type: Real-election type eligible as the seat-level baseline
-            on the output detail page.
-        model_script: The chamber's forecast runner under ``models/us/``.
-        model_args: Extra CLI args for the runner (presidential matchup polls
-            are sparse, so its window is widened).
-        trend_cache_path: The chamber's shipped poll-tracker trend JSON.
-    """
-
-    slug: str
-    label: str
-    model_type: ElectionType
-    baseline_type: ElectionType
-    model_script: Path
-    model_args: tuple[str, ...]
-    trend_cache_path: Path
-
-
-US_CHAMBERS: tuple[UsChamber, ...] = (
-    UsChamber(
-        slug="house",
-        label="US House",
-        model_type=ElectionType.us_house_model,
-        baseline_type=ElectionType.us_house,
-        model_script=US_HOUSE_MODEL_SCRIPT,
-        model_args=(),
-        trend_cache_path=US_HOUSE_TREND_CACHE_JSON,
-    ),
-    UsChamber(
-        slug="president",
-        label="US President",
-        model_type=ElectionType.us_presidential_model,
-        baseline_type=ElectionType.us_presidential,
-        model_script=US_PRESIDENT_MODEL_SCRIPT,
-        model_args=("--since-days-back", "120"),
-        trend_cache_path=US_PRESIDENT_TREND_CACHE_JSON,
-    ),
-    UsChamber(
-        slug="senate",
-        label="US Senate",
-        model_type=ElectionType.us_senate_model,
-        baseline_type=ElectionType.us_senate,
-        model_script=US_SENATE_MODEL_SCRIPT,
-        model_args=(),
-        trend_cache_path=US_SENATE_TREND_CACHE_JSON,
-    ),
-)
 
 
 @bp.route("/us/import-polls", methods=["POST"])
@@ -151,40 +89,27 @@ def run_us_models() -> ResponseReturnValue:
     Runs the House, Senate, and Presidential forecast runners (each persists a
     ``us_*_model`` election and updates its trend JSON), then export_elections.py
     to rewrite the static data files (the export is the single manifest writer).
+    The sequence itself lives in ``console.services.us_models`` — a chamber
+    whose tracked matchup is unset is skipped without stopping the others.
 
     Returns:
         Rendered command_result.html showing combined stdout, stderr, and return code.
     """
-    steps: list[tuple[str, Path, tuple[str, ...]]] = [
-        (f"Run {chamber.label} model", chamber.model_script, chamber.model_args)
-        for chamber in US_CHAMBERS
-    ]
-    steps.append(("Export elections to static data files", EXPORT_ELECTION_SCRIPT, ()))
-
-    for _label, script, _args in steps:
+    scripts: list[Path] = [chamber.model_script for chamber in US_CHAMBERS]
+    scripts.append(EXPORT_ELECTION_SCRIPT)
+    for script in scripts:
         if not script.exists():
             flash(f"Script not found: {script}")
             return redirect(url_for("home.home"))
 
-    combined_stdout: list[str] = []
-    combined_stderr: list[str] = []
-    return_code = 0
-
-    for label, script, args in steps:
-        result = run_python_script(script, *args, timeout=300)
-        combined_stdout.append(f"=== {label} ===\n{result.stdout}")
-        if result.stderr:
-            combined_stderr.append(f"=== {label} ===\n{result.stderr}")
-        if result.returncode != 0:
-            return_code = result.returncode
-            break
+    run = run_us_models_and_export(get_db())
 
     return render_command_result(
         title="Run US Models",
         command="run_us_house_model.py → run_us_presidential_model.py → run_us_senate_model.py → export_elections.py",
-        stdout="\n".join(combined_stdout),
-        stderr="\n".join(combined_stderr),
-        return_code=return_code,
+        stdout=run.stdout,
+        stderr=run.stderr,
+        return_code=run.return_code,
     )
 
 

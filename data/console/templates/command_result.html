@@ -5,7 +5,7 @@
     <p><strong>Command:</strong> {{ command }}</p>
     <p><strong>Exit code:</strong> {{ return_code }}</p>
     <p>
-      <a class="button" href="{{ url_for(back_endpoint) }}">{{ back_label }}</a>
+      <a class="button" href="{{ url_for(back_endpoint, **back_values) }}">{{ back_label }}</a>
     </p>
   </section>
 

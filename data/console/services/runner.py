@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from flask import render_template
@@ -62,8 +62,13 @@ def render_command_result(
     return_code: int,
     back_endpoint: str = "home.home",
     back_label: str = "Back to home",
+    back_values: Mapping[str, str] | None = None,
 ) -> ResponseReturnValue:
-    """Render the shared command_result.html page for a script invocation."""
+    """Render the shared command_result.html page for a script invocation.
+
+    ``back_values`` are passed to ``url_for`` with ``back_endpoint``, for a
+    back link whose page needs a query argument.
+    """
     return render_template(
         "command_result.html",
         title=title,
@@ -73,4 +78,5 @@ def render_command_result(
         return_code=return_code,
         back_endpoint=back_endpoint,
         back_label=back_label,
+        back_values=dict(back_values or {}),
     )

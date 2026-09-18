@@ -47,5 +47,12 @@
       always read. Leave the date blank to start each race from its latest poll already in the
       database.
     </p>
+    <p>
+      The models follow one matchup per race. Choose the national one on the
+      <a href="{{ url_for('us.president_matchup') }}">President matchup</a> page, and override a
+      race's automatic choice on the
+      <a href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate</a> or
+      <a href="{{ url_for('us.race_matchups', chamber='house') }}">House</a> race matchups page.
+    </p>
   </section>
 {% endblock %}

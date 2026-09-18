@@ -7,13 +7,15 @@ blueprint re-exports it for the per-chamber output routes it registers.
 :func:`run_us_models_and_export` runs those runners and then the static export.
 It is Flask-free so it can be called both from ``POST /us/run-models`` and from
 the end of the poll-review queue, and it takes its subprocess runner as an
-argument so tests never shell out.
+argument so tests never shell out. :func:`run_us_chamber_and_export` is the
+same sequence narrowed to one chamber, for the matchup pages' "rebuild
+history" option.
 """
 
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -136,6 +138,11 @@ US_CHAMBERS: tuple[UsChamber, ...] = (
 )
 
 
+US_CHAMBERS_BY_SLUG: Mapping[str, UsChamber] = {
+    chamber.slug: chamber for chamber in US_CHAMBERS
+}
+
+
 @dataclass(frozen=True)
 class UsModelRun:
     """Combined outcome of one "run the US models and export" sequence.
@@ -208,6 +215,57 @@ def run_us_models_and_export(
     Returns:
         The combined :class:`UsModelRun`.
     """
+    return _run_chambers_and_export(db, US_CHAMBERS, runner=runner, rebuild=rebuild)
+
+
+def run_us_chamber_and_export(
+    db: Database,
+    chamber: UsChamber,
+    *,
+    runner: ScriptRunner = run_python_script,
+    rebuild_history: bool,
+) -> UsModelRun:
+    """Run one US chamber's forecast model, then the static export.
+
+    The single-chamber form of :func:`run_us_models_and_export`, with the same
+    matchup gating and stop-on-failure rules: the export only runs once the
+    model has succeeded (or been skipped for want of a matchup).
+
+    Args:
+        db: Active Database instance, used only to read tracked matchups.
+        chamber: The chamber whose model to run.
+        runner: Subprocess runner; injected so tests record calls instead of
+            shelling out.
+        rebuild_history: Whether to append the chamber's
+            :attr:`UsChamber.rebuild_flag`, recomputing its whole trend
+            history rather than only today's point.
+
+    Returns:
+        The combined :class:`UsModelRun`.
+    """
+    rebuild = frozenset({chamber.slug}) if rebuild_history else frozenset()
+    return _run_chambers_and_export(db, (chamber,), runner=runner, rebuild=rebuild)
+
+
+def _run_chambers_and_export(
+    db: Database,
+    chambers: Collection[UsChamber],
+    *,
+    runner: ScriptRunner,
+    rebuild: Collection[str],
+) -> UsModelRun:
+    """Run the given chambers' models in order, then the export.
+
+    Args:
+        db: Active Database instance, used only to read tracked matchups.
+        chambers: The chambers to run, in order.
+        runner: Subprocess runner.
+        rebuild: Chamber slugs to run with their rebuild flag.
+
+    Returns:
+        The combined :class:`UsModelRun`; see :func:`run_us_models_and_export`
+        for the skip and failure rules.
+    """
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
     skipped: list[str] = []
@@ -220,7 +278,7 @@ def run_us_models_and_export(
         return result.returncode
 
     return_code = 0
-    for chamber in US_CHAMBERS:
+    for chamber in chambers:
         if not tracked_matchup_in_force(db, chamber):
             skipped.append(chamber.slug)
             stdout_parts.append(f"=== {chamber.model_step_label} ===\n{NO_MATCHUP_NOTE}")

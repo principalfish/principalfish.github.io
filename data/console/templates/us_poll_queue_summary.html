@@ -67,6 +67,11 @@
     {% else %}
       <p>No race's tracked matchup changed.</p>
     {% endif %}
+    <div class="actions">
+      <a class="button" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate race matchups</a>
+      <a class="button" href="{{ url_for('us.race_matchups', chamber='house') }}">House race matchups</a>
+      <a class="button" href="{{ url_for('us.president_matchup') }}">President matchup</a>
+    </div>
   </section>
 
   {% if model_error %}

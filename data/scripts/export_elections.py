@@ -116,7 +116,7 @@ PAGE_PARLIAMENTS = {
 
 # mapMode keys that the shell doesn't hold verbatim: ``build_map_modes_with_regions`` derives
 # each one at export time (the Senate class cycle resolved to concrete years; the special
-# elections filtered to the ones still ahead). A ``--metadata-only`` refresh therefore has to
+# elections filtered to the ones the next Senate election holds). A ``--metadata-only`` refresh therefore has to
 # re-copy them from the rebuilt mode — and drop the key when the rebuild no longer produces it,
 # so a removed shell entry (or a special whose cycle has passed) disappears from the manifest.
 DERIVED_MODE_KEYS: tuple[str, ...] = ("senateClassNextElection", "senateSpecialElections")
@@ -299,7 +299,9 @@ def main() -> None:
             shell_path = page_root / "map-modes-shell.json"
             shell = json.loads(shell_path.read_text(encoding="utf-8")) if shell_path.exists() else {}
             rebuilt_modes = build_map_modes_with_regions(
-                shell.get("mapModes", {}), manifest_regions_by_map_id
+                shell.get("mapModes", {}),
+                manifest_regions_by_map_id,
+                parliament_features=shell.get("parliamentFeatures", {}),
             )
             refresh_manifest_modes(manifest, rebuilt_modes, manifest_regions_by_map_id)
             if args.dry_run:
@@ -968,7 +970,9 @@ def _export_page(
         "misc": config.get("misc", {}),
         "parliamentFeatures": config.get("parliamentFeatures", {}),
         "mapModes": build_map_modes_with_regions(
-            config.get("mapModes", {}), manifest_regions_by_map_id
+            config.get("mapModes", {}),
+            manifest_regions_by_map_id,
+            parliament_features=config.get("parliamentFeatures", {}),
         ),
         # Hand-authored, jurisdiction-specific party-key aliases (carried through from the
         # page's shell); the front-end's resolvePartyRef reads them so no aliases live in JS.

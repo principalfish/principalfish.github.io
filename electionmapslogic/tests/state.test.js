@@ -661,4 +661,46 @@ describe('AppState member cycle resolution (senate classes + specials)', () => {
     expect(upYear(seats, 'Ohio', 'Husted')).toBe(2028);
     expect(upYear(seats, 'Ohio', 'Moreno')).toBe(2030);
   });
+
+  /** The seat popup's "last · up" years for a member, by state + senator name. */
+  const termYears = (seats, seatName, memberName) =>
+    Seat.memberTermYears(seats.find((s) => s.seat === seatName).members.find((m) => m.name === memberName));
+
+  it("a special's member was last contested at its baseline election — Husted shows 2022", () => {
+    const seats = configure([
+      { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+    ]);
+    const husted = seats.find((s) => s.seat === 'Ohio').members.find((m) => m.name === 'Husted');
+    expect(husted.last).toBe(2022);
+    // Not the six-year-term guess (2026 − 6 = 2020) the popup applies to a regular member.
+    expect(termYears(seats, 'Ohio', 'Husted')).toEqual({ last: 2022, up: 2026 });
+  });
+
+  it('a regular class member still shows last = up − 6, with no `last` stamped', () => {
+    const seats = configure([
+      { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+    ]);
+    const moreno = seats.find((s) => s.seat === 'Ohio').members.find((m) => m.name === 'Moreno');
+    expect(moreno.last).toBeUndefined();
+    expect(termYears(seats, 'Ohio', 'Moreno')).toEqual({ last: 2024, up: 2030 });
+    expect(termYears(seats, 'Alabama', 'Britt')).toEqual({ last: 2022, up: 2028 });
+  });
+
+  it('a special whose baseline id has no year falls back to up − 6', () => {
+    const seats = configure([{ seat: 'Ohio', class: 3, year: 2026, baselineElectionId: 'current-senate' }]);
+    expect(termYears(seats, 'Ohio', 'Husted')).toEqual({ last: 2020, up: 2026 });
+  });
+});
+
+// ─── Seat.memberTermYears ────────────────────────────────────────────────────
+describe('Seat.memberTermYears', () => {
+  it('is null when no cycle year was resolved, so the popup shows just the name', () => {
+    expect(Seat.memberTermYears({ name: 'X' })).toBeNull();
+    expect(Seat.memberTermYears(null)).toBeNull();
+  });
+
+  it('prefers a stamped `last` over the six-year-term guess', () => {
+    expect(Seat.memberTermYears({ up: 2026, last: 2022 })).toEqual({ last: 2022, up: 2026 });
+    expect(Seat.memberTermYears({ up: 2026 })).toEqual({ last: 2020, up: 2026 });
+  });
 });

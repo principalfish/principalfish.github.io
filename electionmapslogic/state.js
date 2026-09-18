@@ -310,6 +310,8 @@ export const manifest = new Manifest();
 // compiled case-insensitively). Compiled regexes are memoised by pattern string, and a
 // malformed pattern falls back to the default rather than throwing.
 const DEFAULT_LIST_SEAT_REGEX = /\bList\s+\d+$/i;
+// A Senate term; a regular member was last contested one full term before it is next up.
+const SENATE_TERM_YEARS = 6;
 const listSeatRegexCache = new Map();
 function listSeatRegexFor(pattern) {
   if (!pattern) return DEFAULT_LIST_SEAT_REGEX;
@@ -607,6 +609,21 @@ export class Seat {
       return false;
     }
     return true;
+  }
+
+  /**
+   * The years a multi-member seat's member was last and is next contested, for the seat popup.
+   * Both are stamped by AppState's cycle resolution: `up` for every member, `last` only for a
+   * special election's member, whose seat was last contested at the special's baseline election
+   * (Ohio's Class-3 seat is up in 2026 but was last contested in 2022, not 2020). Any other
+   * member was last contested one full term before it is next up.
+   * @param {{up?: number, last?: number}} member
+   * @returns {{last: number, up: number}|null} Null when no cycle year was resolved (member
+   *   missing `class`, or no senateClassNextElection), so the popup shows just the name.
+   */
+  static memberTermYears(member) {
+    if (!member?.up) return null;
+    return { last: member.last ?? member.up - SENATE_TERM_YEARS, up: member.up };
   }
 }
 
@@ -1009,6 +1026,22 @@ export class ElectionData {
 
 // ─── Current ─────────────────────────────────────────────────────────────────
 
+// Manifest ids of exported elections are `{year}-{slug}` (`manifest_id_for_election` in the
+// export), so a Senate special's `baselineElectionId` carries the year its seat was last
+// contested. The manifest's election entries hold no year field of their own.
+const ELECTION_ID_YEAR = /^(\d{4})-/;
+
+/**
+ * The year an exported election's manifest id starts with, or null when the id has no
+ * `{year}-` prefix (a missing id, or a non-DB entry such as `current-senate`).
+ * @param {string|undefined} electionId
+ * @returns {number|null}
+ */
+function electionIdYear(electionId) {
+  const match = ELECTION_ID_YEAR.exec(electionId || '');
+  return match ? Number(match[1]) : null;
+}
+
 class AppState {
   constructor() {
     /** Active view name for the current page load ('election' | 'predict' | 'polltracker').
@@ -1331,25 +1364,29 @@ class AppState {
    * `senateSpecialElections` overrides that class year for one member: a special election pulls
    * a single seat forward off its class's normal cycle (Ohio's and Florida's Class-3 seats are
    * contested in 2026, not 2028), so the (seat, class) it names is stamped with the special's
-   * year and shows up in the "up in 2026" filter alongside the regular class.
+   * year and shows up in the "up in 2026" filter alongside the regular class. That member is
+   * also stamped `last` with its baseline election's year (2022), since a special breaks the
+   * "last = up − one term" rule the popup otherwise applies.
    * @returns {void}
    */
   #resolveMemberCycles() {
     const cycleMap = this.mapConfig?.senateClassNextElection;
     const specials = this.mapConfig?.senateSpecialElections || [];
     if (!cycleMap && !specials.length) return;
-    const specialYearBySeatClass = new Map();
+    const specialBySeatClass = new Map();
     specials.forEach((special) => {
       const seatKey = seatLookupKey(special?.seat || '');
       if (!seatKey || special?.year == null) return;
-      specialYearBySeatClass.set(`${seatKey}|${Number(special?.class)}`, special.year);
+      specialBySeatClass.set(`${seatKey}|${Number(special?.class)}`, special);
     });
     this.electionData?.currentSeats?.forEach((seat) => {
       const seatKey = seatLookupKey(seat?.seat || '');
       (seat.members || []).forEach((member) => {
-        const specialYear = specialYearBySeatClass.get(`${seatKey}|${Number(member?.class)}`);
-        const year = specialYear ?? cycleMap?.[member?.class];
+        const special = specialBySeatClass.get(`${seatKey}|${Number(member?.class)}`);
+        const year = special?.year ?? cycleMap?.[member?.class];
         if (year != null) member.up = year;
+        const lastYear = electionIdYear(special?.baselineElectionId);
+        if (lastYear != null) member.last = lastYear;
       });
     });
   }

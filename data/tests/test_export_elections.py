@@ -22,6 +22,7 @@ from export_elections import (
     REP_PARTY_ID,
     _export_page,
     assign_comparison_elections,
+    build_map_modes_with_regions,
     float_model_entries_first,
     manifest_name_for_election,
     refresh_manifest_modes,
@@ -356,6 +357,36 @@ class TestRefreshManifestModes:
         refresh_manifest_modes(manifest, rebuilt, {})
         assert "senateSpecialElections" not in manifest["mapModes"]["23"]
         assert manifest["mapModes"]["23"]["senateClassNextElection"] == {"2": 2026}
+
+    def test_refreshes_specials_through_the_same_live_rule_as_a_full_export(self) -> None:
+        # The metadata-only path rebuilds its modes from the shell exactly as a full export
+        # does, so a later-cycle special and a malformed entry drop out here too.
+        valid = [
+            {"seat": "Florida", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
+            {"seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
+        ]
+        shell = {
+            "parliamentFeatures": {"us_senate": {"nextElectionYear": 2026}},
+            "mapModes": {
+                "23": {
+                    "senateSpecialElections": [
+                        valid[0],
+                        {"seat": "Texas", "class": 1, "year": 2028, "baselineElectionId": "x"},
+                        {"seat": "Maine", "class": 2, "year": "2026", "baselineElectionId": "x"},
+                        valid[1],
+                    ],
+                },
+            },
+        }
+        rebuilt = build_map_modes_with_regions(
+            shell["mapModes"],
+            {"23": []},
+            current_year=2026,
+            parliament_features=shell["parliamentFeatures"],
+        )
+        manifest = self._manifest()
+        refresh_manifest_modes(manifest, rebuilt, {"23": []})
+        assert manifest["mapModes"]["23"]["senateSpecialElections"] == valid
 
     def test_falls_back_to_raw_db_regions_without_a_rebuilt_mode(self) -> None:
         manifest = self._manifest()

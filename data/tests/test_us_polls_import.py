@@ -1476,5 +1476,13 @@ class TestParsePollTables:
         assert len(tables) == 1
         assert tables[0].matchup == "Vance (R) vs Newsom (D)"
 
+    def test_keep_empty_returns_the_dropped_tables(self) -> None:
+        # The contest layer reports a classified table that yielded no rows —
+        # it is how Wikipedia markup drift becomes visible.
+        tables = parse_poll_tables(PRESIDENT_PAGE_NO_SECTIONS, keep_empty=True)
+        assert len(tables) == 2
+        empty = next(table for table in tables if not table.rows)
+        assert empty.headings[-1].text == "Republican primary"
+
     def test_page_without_polling_tables(self) -> None:
         assert parse_poll_tables(SENATE_SEATS_TABLE) == []

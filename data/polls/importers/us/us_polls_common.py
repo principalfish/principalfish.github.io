@@ -106,6 +106,18 @@ class ParsedUsPoll:
 
 # ── HTML helpers ──────────────────────────────────────────────────────────────
 
+# Wikipedia asks automated clients to identify themselves and give a contact
+# point, so every fetch from this repo goes out under one honest name rather
+# than a spoofed browser string.
+USER_AGENT = (
+    "principalfish-election-console/1.0 "
+    "(+https://github.com/principalfish/principalfish.github.io)"
+)
+
+# Seconds to wait on a single page. A US import fetches ~90 pages, so a hung
+# connection has to give up rather than stall the console's start request.
+REQUEST_TIMEOUT_SECONDS = 30
+
 
 def _clean(value: str) -> str:
     """Collapse whitespace and strip a string."""
@@ -113,9 +125,9 @@ def _clean(value: str) -> str:
 
 
 def fetch_html(url: str) -> str:
-    """Fetch HTML from ``url`` with a browser-like User-Agent (UTF-8 decoded)."""
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; us-poll-importer/1.0)"})
-    with urlopen(req, timeout=30) as response:
+    """Fetch HTML from ``url`` with the console's User-Agent (UTF-8 decoded)."""
+    req = Request(url, headers={"User-Agent": USER_AGENT})
+    with urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
         body: str = response.read().decode("utf-8", errors="replace")
     return body
 
@@ -1081,6 +1093,7 @@ def parse_poll_tables(
     html: str,
     *,
     allow_party_labels: bool = False,
+    keep_empty: bool = False,
 ) -> list[ParsedTable]:
     """Parse every polling table on a page, in document order.
 
@@ -1093,6 +1106,10 @@ def parse_poll_tables(
         html: A fetched Wikipedia page.
         allow_party_labels: Passed to :func:`candidate_columns`; set for the
             House generic-ballot page.
+        keep_empty: Also return tables that classified as polling tables but
+            whose every row failed to parse. Dropping them silently is right
+            for the aggregation tables the race pages carry, but hides
+            Wikipedia markup drift from the contest layer, which reports them.
 
     Returns:
         One :class:`ParsedTable` per table that parsed.
@@ -1110,7 +1127,7 @@ def parse_poll_tables(
             allow_party_labels=allow_party_labels,
         )
         rows, variants_dropped = parse_table_rows(info, candidates=candidates)
-        if not rows:
+        if not rows and not keep_empty:
             continue
         unknown: list[str] = []
         for column in candidates:

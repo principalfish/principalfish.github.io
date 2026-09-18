@@ -31,9 +31,7 @@
     <section class="card console-column">
       <h2>USA</h2>
       <div class="action-stack">
-        <form method="post" action="{{ url_for('us.us_import_polls') }}" class="inline-form button-form">
-          <button type="submit" class="button primary button-block">Import US Polls</button>
-        </form>
+        <a class="button primary button-block" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
         <form method="post" action="{{ url_for('us.run_us_models') }}" class="inline-form button-form">
           <button type="submit" class="button button-block">Run US Models</button>
         </form>

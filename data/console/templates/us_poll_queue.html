@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>US Poll Import</h2>
+    <p>
+      Poll {{ progress.position }} of {{ progress.total }}
+      · {{ progress.imported }} imported
+      · {{ progress.failed }} failed
+      · {{ progress.skipped }} skipped
+    </p>
+    <p><strong>Contest:</strong> {{ contest_label }}</p>
+    <p><strong>Race:</strong> {{ row.seat_name or "National" }}</p>
+    <p>
+      <strong>Pollster:</strong> {{ row.pollster_label }}
+      {% for tag in row.pollster_tags %}({{ tag }}){% if not loop.last %} {% endif %}{% endfor %}
+      ({{ row.pollster_identifier }})
+    </p>
+    <p><strong>Dates:</strong> {{ row.date_label }} ({{ row.fieldwork_start }} to {{ row.fieldwork_end }})</p>
+    <p><strong>Sample:</strong> {{ row.sample_size or "-" }}</p>
+    <p><strong>Population:</strong> {{ row.population or "-" }}</p>
+  </section>
+
+  <section class="card">
+    <h3>Matchup</h3>
+    <p><strong>{{ row.matchup or "Party voting intention" }}</strong></p>
+    <p><strong>Section:</strong> {{ row.heading_path or "-" }}</p>
+    <p>
+      <strong>Wikipedia page:</strong>
+      <a href="{{ row.page_url }}" target="_blank" rel="noopener">{{ row.page_url }}</a>
+    </p>
+    <p>
+      <strong>Source:</strong>
+      {% if row.source_url %}
+        <a href="{{ row.source_url }}" target="_blank" rel="noopener">{{ row.source_url }}</a>
+      {% else %}
+        -
+      {% endif %}
+    </p>
+    {% if tracked_label %}
+      <p><strong>Race tracked:</strong> {{ tracked_label }}</p>
+    {% endif %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Party</th>
+            <th scope="col">Candidate</th>
+            <th scope="col">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for reading in row.readings %}
+            <tr>
+              <td>{{ reading.party_name or "Unrecognised party" }}</td>
+              <td>{{ reading.candidate_name or "-" }}</td>
+              <td>{{ "%g"|format(reading.percentage) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if item.warnings %}
+    <div class="alerts">
+      {% for warning in item.warnings %}
+        <div class="alert">{{ warning }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if item.status == "failed" %}
+    <section class="card">
+      <h3>This poll could not be imported</h3>
+      <pre class="terminal-output">{{ item.detail }}</pre>
+      <p>Retry resolves the poll against the database again; skip it below to move on.</p>
+      <form method="post" action="{{ url_for('us_poll_import.skip', token=token) }}" class="inline-form">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}">
+        <input type="hidden" name="action" value="retry">
+        <button type="submit" class="button primary">Retry</button>
+      </form>
+    </section>
+  {% elif plan %}
+    <section class="card">
+      <h3>Approve</h3>
+      <p><strong>Stored as:</strong> {{ plan.pollster_name }}, {{ plan.rows|length }} row(s)</p>
+      <form method="post" action="{{ url_for('us_poll_import.confirm', token=token) }}" class="inline-form">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}">
+        <button type="submit" class="button primary">Approve &amp; Import</button>
+      </form>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <h3>Skip, Approve the Race, or Leave</h3>
+    <div class="actions">
+      <form method="post" action="{{ url_for('us_poll_import.skip', token=token) }}" class="inline-form">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}">
+        <button type="submit" class="button">Skip this poll</button>
+      </form>
+      {% if group_remaining %}
+        <form method="post" action="{{ url_for('us_poll_import.approve_race', token=token) }}" class="inline-form">
+          <input type="hidden" name="expected_index" value="{{ expected_index }}">
+          <button type="submit" class="button">Approve all {{ group_remaining }} remaining in {{ race_label }}</button>
+        </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('us_poll_import.finish', token=token) }}" class="inline-form">
+        <input type="hidden" name="abandon" value="on">
+        <button type="submit" class="button button-danger">Abandon queue</button>
+      </form>
+    </div>
+    <p>
+      Approving the race imports every poll still pending in it without showing each one.
+      Abandoning stops the run without importing anything further and without running the
+      models; the races already imported are still tracked.
+    </p>
+  </section>
+{% endblock %}

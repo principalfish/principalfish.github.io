@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% macro race(item) -%}
+  {{ contest_labels.get(item.row.contest, item.row.contest) }} · {{ item.row.seat_name or "National" }}
+{%- endmacro %}
+
+{% macro status_table(items, last_column) %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Race</th>
+          <th scope="col">Matchup</th>
+          <th scope="col">Pollster</th>
+          <th scope="col">Fieldwork</th>
+          <th scope="col">{{ last_column }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>{{ race(item) }}</td>
+            <td>{{ item.row.matchup or "Party voting intention" }}</td>
+            <td>{{ item.row.pollster_label }}</td>
+            <td>{{ item.row.fieldwork_start }} to {{ item.row.fieldwork_end }}</td>
+            <td>
+              {% if item.poll_id %}
+                <a href="{{ url_for('polls.poll_detail', poll_id=item.poll_id) }}">#{{ item.poll_id }}</a>
+              {% endif %}
+              {{ item.detail }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endmacro %}
+
+{% block content %}
+  <section class="card">
+    <h2>US Poll Import Summary</h2>
+    <p>
+      {{ progress.total }} polls queued
+      · {{ progress.imported }} imported
+      · {{ progress.failed }} failed
+      · {{ progress.skipped }} skipped
+    </p>
+    <p><strong>Window:</strong> {{ cutoff_label }}</p>
+    <p>
+      {{ state.skipped_present }} poll(s) in the window were already in the database and never
+      entered the queue. {{ index.pages_fetched }} Wikipedia page(s) read.
+    </p>
+    <div class="actions">
+      <a class="button primary" href="{{ url_for('home.home') }}">Back to home</a>
+      <a class="button" href="{{ url_for('us_poll_import.import_form') }}">Import again</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Matchup Tracking</h3>
+    {% if auto_tracking %}
+      <ul>
+        {% for count, label in auto_tracking %}
+          <li>{{ count }} {{ label }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No race's tracked matchup changed.</p>
+    {% endif %}
+  </section>
+
+  {% if model_error %}
+    <div class="alerts">
+      <div class="alert">{{ model_error }}</div>
+    </div>
+  {% endif %}
+
+  {% if model_run %}
+    <section class="card">
+      <h3>Models and Export</h3>
+      <p>
+        Return code {{ model_run.return_code }}{% if model_run.skipped %}
+        · skipped: {{ model_run.skipped|sort|join(", ") }}{% endif %}
+      </p>
+      <pre class="terminal-output">{{ model_run.stdout }}</pre>
+      {% if model_run.stderr %}
+        <pre class="terminal-output">{{ model_run.stderr }}</pre>
+      {% endif %}
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <h3>Imported ({{ grouped.imported|length }})</h3>
+    {% if grouped.imported %}
+      {{ status_table(grouped.imported, "Poll") }}
+    {% else %}
+      <p>Nothing was imported.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Failed ({{ grouped.failed|length }})</h3>
+    {% if grouped.failed %}
+      {{ status_table(grouped.failed, "Error") }}
+    {% else %}
+      <p>No poll failed to import.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Skipped ({{ grouped.skipped|length }})</h3>
+    {% if grouped.skipped %}
+      {{ status_table(grouped.skipped, "Detail") }}
+    {% else %}
+      <p>No poll was skipped.</p>
+    {% endif %}
+  </section>
+
+  {% if grouped.pending %}
+    <section class="card">
+      <h3>Not Reviewed ({{ grouped.pending|length }})</h3>
+      <p>The queue was abandoned before these polls were reached.</p>
+      {{ status_table(grouped.pending, "Detail") }}
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <h3>Scrape Diagnostics</h3>
+    <p>
+      The parser is deliberately strict, so a Wikipedia layout change shows up here rather than
+      as silently missing polls.
+    </p>
+
+    <h4>Page failures ({{ index.page_failures|length }})</h4>
+    {% if index.page_failures %}
+      <ul>
+        {% for url, reason in index.page_failures|dictsort %}
+          <li><a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>: {{ reason }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>Every page was read.</p>
+    {% endif %}
+
+    <h4>Notes ({{ index.notes|length }})</h4>
+    {% if index.notes %}
+      <p>Pages not written yet (HTTP 404), skipped contests and ignored filters.</p>
+      <ul>
+        {% for note in index.notes %}
+          <li>{{ note }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
+
+    <h4>Races with only hidden tables ({{ index.collapsed_only_races|length }})</h4>
+    {% if index.collapsed_only_races %}
+      <ul>
+        {% for race_only in index.collapsed_only_races %}
+          <li>
+            {{ contest_labels.get(race_only.contest, race_only.contest) }} ·
+            {{ race_only.seat_name or "National" }}: {{ race_only.available_rows }} hidden row(s),
+            {% if race_only.included %}included{% else %}not imported — re-run with hidden tables included to queue them{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
+
+    <h4>Unknown party suffixes ({{ index.unknown_suffixes|length }})</h4>
+    {% if index.unknown_suffixes %}
+      <ul>
+        {% for suffix, count in index.unknown_suffixes|dictsort %}
+          <li><code>({{ suffix }})</code> in {{ count }} table(s) — those candidates were not imported</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
+
+    <p>
+      <strong>Variants dropped:</strong> {{ index.variants_dropped }}
+      repeat row(s) (likely-voter / with-leaners versions of a poll already read)
+    </p>
+    <p>
+      <strong>Summary rows skipped:</strong> {{ index.summary_rows_skipped }}
+      (a table's own average)
+    </p>
+
+    <h4>Unmatched seats ({{ index.unmatched_seats|length }})</h4>
+    {% if index.unmatched_seats %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Page</th>
+              <th scope="col">Section</th>
+              <th scope="col">Seat</th>
+              <th scope="col">Reason</th>
+              <th scope="col">Rows dropped</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for seat in index.unmatched_seats %}
+              <tr>
+                <td><a href="{{ seat.page_url }}" target="_blank" rel="noopener">{{ seat.page_url }}</a></td>
+                <td>{{ seat.heading_path }}</td>
+                <td>{{ seat.seat_name or "-" }}</td>
+                <td>{{ seat.reason }}</td>
+                <td>{{ seat.dropped_rows }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
+
+    <h4>Empty tables ({{ index.empty_tables|length }})</h4>
+    {% if index.empty_tables %}
+      <ul>
+        {% for table in index.empty_tables %}
+          <li>
+            <a href="{{ table.page_url }}" target="_blank" rel="noopener">{{ table.page_url }}</a>
+            [{{ table.heading_path }}]{% if table.collapsed %} (hidden){% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
+  </section>
+{% endblock %}

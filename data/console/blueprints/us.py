@@ -1,8 +1,9 @@
-"""US election routes: poll import, model runs, and per-chamber outputs.
+"""US election routes: model runs and per-chamber outputs.
 
 Mirrors the Holyrood flow for the three US election types (House / President /
-Senate). One button imports all three types' national polls; one button runs all
-three forecast models and then the static export. The model-output list/detail
+Senate). One button runs all three forecast models and then the static export;
+poll import is the reviewed Wikipedia queue in
+:mod:`console.blueprints.us_poll_import`. The model-output list/detail
 and delete pages reuse the shared, election-type-parameterised service in
 ``console.services.model_outputs`` and the same templates as Westminster and
 Holyrood — but because those templates build URLs from bare endpoint names
@@ -18,68 +19,19 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 
 from console.db import get_db
-from console.paths import (
-    EXPORT_ELECTION_SCRIPT,
-    US_HOUSE_POLLS_IMPORT_SCRIPT,
-    US_PRESIDENT_POLLS_IMPORT_SCRIPT,
-    US_SENATE_POLLS_IMPORT_SCRIPT,
-)
+from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services.model_outputs import (
     build_output_detail_context,
     build_outputs_context,
     delete_model_output as delete_one_output,
     delete_selected_model_outputs as delete_selected_outputs,
 )
-from console.services.runner import render_command_result, run_python_script
+from console.services.runner import render_command_result
 from console.services.us_models import US_CHAMBERS, UsChamber, run_us_models_and_export
 
 __all__ = ["US_CHAMBERS", "UsChamber", "bp"]
 
 bp = Blueprint("us", __name__)
-
-
-@bp.route("/us/import-polls", methods=["POST"])
-def us_import_polls() -> ResponseReturnValue:
-    """POST /us/import-polls — Import national US polls for all three types.
-
-    Runs the House generic-ballot, Senate, and Presidential Wikipedia importers
-    in sequence. Idempotent — each importer skips polls already in the database.
-    Running the forecast models and exporting are separate steps (see
-    ``run_us_models``).
-
-    Returns:
-        Rendered command_result.html showing combined stdout, stderr, and return code.
-    """
-    import_scripts = [
-        ("Import US House generic-ballot polls", US_HOUSE_POLLS_IMPORT_SCRIPT),
-        ("Import US Senate polls", US_SENATE_POLLS_IMPORT_SCRIPT),
-        ("Import US Presidential polls", US_PRESIDENT_POLLS_IMPORT_SCRIPT),
-    ]
-    for _label, script in import_scripts:
-        if not script.exists():
-            flash(f"Script not found: {script}")
-            return redirect(url_for("home.home"))
-
-    combined_stdout: list[str] = []
-    combined_stderr: list[str] = []
-    return_code = 0
-
-    for label, script in import_scripts:
-        result = run_python_script(script, timeout=300)
-        combined_stdout.append(f"=== {label} ===\n{result.stdout}")
-        if result.stderr:
-            combined_stderr.append(f"=== {label} ===\n{result.stderr}")
-        if result.returncode != 0:
-            return_code = result.returncode
-            break
-
-    return render_command_result(
-        title="Import US Polls",
-        command="us_house_generic_ballot_import.py + us_senate_import.py + us_presidential_import.py",
-        stdout="\n".join(combined_stdout),
-        stderr="\n".join(combined_stderr),
-        return_code=return_code,
-    )
 
 
 @bp.route("/us/run-models", methods=["POST"])

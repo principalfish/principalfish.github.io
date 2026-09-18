@@ -19,6 +19,7 @@ from db import Database
 from models import ElectionType
 
 from console import create_app
+from console import paths as console_paths
 from console.services.us_models import UsModelRun, run_us_models_and_export
 
 
@@ -85,8 +86,33 @@ class TestUsRoutesRegistered:
 
     def test_action_routes_exist(self, app: Flask) -> None:
         rules = {str(rule) for rule in app.url_map.iter_rules()}
-        assert "/us/import-polls" in rules
         assert "/us/run-models" in rules
+
+    def test_import_queue_routes_exist(self, app: Flask) -> None:
+        methods = {
+            str(rule): rule.methods or set() for rule in app.url_map.iter_rules()
+        }
+        assert "GET" in methods["/us/import"]
+        assert "POST" in methods["/us/import/start"]
+        assert "GET" in methods["/us/import/<token>"]
+        for suffix in ("confirm", "skip", "approve-group"):
+            assert "POST" in methods[f"/us/import/<token>/{suffix}"]
+        assert {"GET", "POST"} <= methods["/us/import/<token>/finish"]
+
+    def test_legacy_import_route_is_gone(self, app: Flask) -> None:
+        rules = {str(rule) for rule in app.url_map.iter_rules()}
+        endpoints = {rule.endpoint for rule in app.url_map.iter_rules()}
+        assert "/us/import-polls" not in rules
+        assert "us.us_import_polls" not in endpoints
+        assert app.test_client().post("/us/import-polls").status_code == 404
+
+    def test_legacy_import_script_paths_are_gone(self) -> None:
+        for name in (
+            "US_HOUSE_POLLS_IMPORT_SCRIPT",
+            "US_SENATE_POLLS_IMPORT_SCRIPT",
+            "US_PRESIDENT_POLLS_IMPORT_SCRIPT",
+        ):
+            assert not hasattr(console_paths, name)
 
     def test_per_chamber_endpoints_exist(self, app: Flask) -> None:
         endpoints = {rule.endpoint for rule in app.url_map.iter_rules()}
@@ -110,6 +136,14 @@ class TestHomeCard:
             "View Senate Outputs",
         ):
             assert needle in body
+
+    def test_import_us_polls_links_to_the_review_queue(self, app: Flask) -> None:
+        body = app.test_client().get("/").get_data(as_text=True)
+        assert (
+            '<a class="button primary button-block" href="/us/import">'
+            "Import US Polls</a>"
+        ) in body
+        assert "/us/import-polls" not in body
 
 
 class TestUsOutputsPages:

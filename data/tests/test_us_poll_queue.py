@@ -9,14 +9,19 @@ subprocess.
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Generator
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import pytest
+from flask import Flask
+from flask.testing import FlaskClient
 
+from console import create_app
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services import us_poll_queue
+from console.services.preview import PREVIEW_CACHE, store_preview
 from console.services.us_models import UsModelRun
 from console.services.us_poll_queue import (
     AUTO_TRACKING_KEY,
@@ -42,8 +47,14 @@ from console.services.wikipedia_queue import (
 from db import Database
 from polls.importers.us.us_polls_common import CandidateReading, pollster_identifier
 from polls.importers.us.us_wikipedia_polls import (
+    PRESIDENT,
     SENATE_RACES,
+    US_CONTESTS,
     US_CONTESTS_BY_SLUG,
+    CollapsedOnlyRace,
+    EmptyTable,
+    UnmatchedSeat,
+    UsContest,
     UsPollIndex,
     UsPollRow,
     apply_auto_tracked_matchups,
@@ -906,3 +917,866 @@ class TestFinish:
     def test_a_payload_without_a_queue_is_rejected(self, us_db: Database) -> None:
         with pytest.raises(TypeError, match="no queue state"):
             finish_us_queue(us_db, {}, runner=_RecordingRunner())
+
+
+# ── Routes (console.blueprints.us_poll_import) ────────────────────────────────
+
+BLUEPRINT = "console.blueprints.us_poll_import"
+
+ALL_CONTESTS = [contest.slug for contest in US_CONTESTS]
+
+
+class _FakeFetch:
+    """Stand-in for ``fetch_us_poll_index``: records its call, returns an index."""
+
+    def __init__(self, index: UsPollIndex | None = None) -> None:
+        self.index = index if index is not None else _index()
+        self.calls: list[dict[str, Any]] = []
+
+    def __call__(
+        self,
+        db: Database,
+        contests: list[UsContest],
+        *,
+        states: list[str] | None = None,
+        include_collapsed_for_uncovered: bool = False,
+    ) -> UsPollIndex:
+        self.calls.append(
+            {
+                "db": db,
+                "contests": list(contests),
+                "states": states,
+                "include_collapsed_for_uncovered": include_collapsed_for_uncovered,
+            }
+        )
+        return self.index
+
+
+@pytest.fixture()
+def model_runner(monkeypatch: pytest.MonkeyPatch) -> _RecordingRunner:
+    """Swap the blueprint's subprocess runner for a recorder."""
+    runner = _RecordingRunner()
+    monkeypatch.setattr(f"{BLUEPRINT}.run_python_script", runner)
+    return runner
+
+
+@pytest.fixture()
+def client(
+    us_db: Database,
+    model_runner: _RecordingRunner,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[FlaskClient[Any], None, None]:
+    """A test client whose US queue routes use the temporary database."""
+    monkeypatch.setattr(f"{BLUEPRINT}.get_db", lambda: us_db)
+    app: Flask = create_app()
+    app.config["TESTING"] = True
+    PREVIEW_CACHE.clear()
+    yield app.test_client()
+    PREVIEW_CACHE.clear()
+
+
+def _open_queue(
+    client: FlaskClient[Any],
+    monkeypatch: pytest.MonkeyPatch,
+    *rows: UsPollRow,
+    index: UsPollIndex | None = None,
+    **form: Any,
+) -> str:
+    """Start a queue through the start route and return its token."""
+    fetch = _FakeFetch(index if index is not None else _index(*rows))
+    monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
+    data: dict[str, Any] = {"contests": ALL_CONTESTS, "run_model_at_end": "on"}
+    data.update(form)
+    response = client.post("/us/import/start", data=data)
+    assert response.status_code == 302
+    location = response.headers["Location"]
+    assert location.startswith("/us/import/")
+    return str(location).rsplit("/", 1)[-1]
+
+
+def _state(token: str) -> QueueState:
+    state = PREVIEW_CACHE[token][STATE_KEY]
+    assert isinstance(state, QueueState)
+    return state
+
+
+def _michigan_rows(db: Database, count: int) -> list[UsPollRow]:
+    return [
+        _row(db, pollster=f"Pollster {n}", end=date(2026, 6, 4 + n))
+        for n in range(count)
+    ]
+
+
+# A reading whose party is not in the database: planning raises ValueError, so
+# the row fails at review without leaving its race.
+UNPLANNABLE = _readings(("Whig", "Henry Clay", 40.0))
+
+
+def _polls_on(db: Database, map_name: str) -> int:
+    return len(db.get_polls_for_map(_map_id(db, map_name)))
+
+
+def _body(client: FlaskClient[Any], path: str) -> str:
+    return str(client.get(path, follow_redirects=True).get_data(as_text=True))
+
+
+class TestStartRoute:
+    def test_builds_the_queue_and_redirects_to_the_first_step(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fetch = _FakeFetch(_index(_row(us_db), _president_row(us_db)))
+        monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
+
+        response = client.post(
+            "/us/import/start",
+            data={
+                # Submitted out of order and repeated; the form canonicalises.
+                "contests": ["president", "senate_races", "president"],
+                "states": "tx, Michigan",
+                "include_collapsed_for_uncovered": "on",
+            },
+        )
+
+        assert response.status_code == 302
+        token = response.headers["Location"].rsplit("/", 1)[-1]
+        payload = PREVIEW_CACHE[token]
+        assert payload["type"] == "us_wikipedia_queue"
+        assert payload["index"] is fetch.index
+        state = _state(token)
+        assert len(state.items) == 2
+        assert state.index == 0
+        # The checkbox was left unticked.
+        assert state.run_model_at_end is False
+        assert state.cutoff_note == PER_RACE_CUTOFF_NOTE
+
+        (call,) = fetch.calls
+        assert call["db"] is us_db
+        assert call["contests"] == [SENATE_RACES, PRESIDENT]
+        assert call["states"] == ["Texas", "Michigan"]
+        assert call["include_collapsed_for_uncovered"] is True
+
+    def test_a_blank_state_filter_reads_every_state(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fetch = _FakeFetch()
+        monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
+
+        client.post(
+            "/us/import/start", data={"contests": ["senate_races"], "states": " "}
+        )
+
+        assert fetch.calls[0]["states"] is None
+        assert fetch.calls[0]["include_collapsed_for_uncovered"] is False
+
+    def test_an_explicit_cutoff_applies_to_every_race(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        old = _row(us_db, pollster="Old Poll", end=date(2026, 5, 1))
+        new = _row(us_db, pollster="New Poll", end=date(2026, 6, 10))
+
+        token = _open_queue(client, monkeypatch, old, new, cutoff_date="2026-06-01")
+
+        state = _state(token)
+        assert state.cutoff == date(2026, 6, 1)
+        assert state.cutoff_note == ""
+        assert [item.row.pollster_label for item in state.items] == ["New Poll"]
+
+    @pytest.mark.parametrize(
+        ("form", "message"),
+        [
+            ({"contests": []}, "choose at least one contest"),
+            ({"contests": ["governor"]}, "unknown contest(s): governor"),
+            (
+                {"contests": ["senate_races"], "states": "Texas, Narnia"},
+                "not a US state: Narnia",
+            ),
+            (
+                {"contests": ["senate_races"], "cutoff_date": "2026-13-01"},
+                "cutoff date",
+            ),
+        ],
+    )
+    def test_invalid_options_are_rejected_before_any_fetch(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+        form: dict[str, Any],
+        message: str,
+    ) -> None:
+        fetch = _FakeFetch()
+        monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", fetch)
+
+        response = client.post("/us/import/start", data=form)
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/us/import")
+        assert fetch.calls == []
+        body = _body(client, "/us/import")
+        assert "Could not read the import options" in body
+        assert message in body
+        assert PREVIEW_CACHE == {}
+
+    def test_a_scrape_that_raises_is_reported(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def broken(*_args: Any, **_kwargs: Any) -> UsPollIndex:
+            raise RuntimeError("parser exploded")
+
+        monkeypatch.setattr(f"{BLUEPRINT}.fetch_us_poll_index", broken)
+
+        response = client.post("/us/import/start", data={"contests": ALL_CONTESTS})
+
+        assert response.headers["Location"].endswith("/us/import")
+        assert "Wikipedia scrape failed: parser exploded" in _body(client, "/us/import")
+        assert PREVIEW_CACHE == {}
+
+    def test_the_start_page_offers_every_contest(
+        self, client: FlaskClient[Any]
+    ) -> None:
+        body = client.get("/us/import").get_data(as_text=True)
+
+        for contest in US_CONTESTS:
+            assert f'value="{contest.slug}"' in body
+            assert contest.label in body
+        assert 'name="states"' in body
+        assert 'name="cutoff_date"' in body
+        assert 'name="include_collapsed_for_uncovered"' in body
+
+
+class TestStepPage:
+    def test_renders_the_matchup_candidates_and_warnings(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        rows = _michigan_rows(us_db, 3)
+        rows[0] = _row(us_db, pollster="Glengariff Group", pollster_tags=("R",))
+        token = _open_queue(client, monkeypatch, *rows)
+
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+
+        assert "Poll 1 of 3" in body
+        assert "Senate race polls" in body
+        assert "Michigan" in body
+        assert "Glengariff Group" in body
+        assert "(R)" in body
+        assert "600" in body
+        assert "LV" in body
+        assert f"<strong>{MICHIGAN_MATCHUP}</strong>" in body
+        assert "General election › Polling" in body
+        assert 'href="https://en.wikipedia.org/wiki/Example"' in body
+        assert 'href="https://example.invalid/poll"' in body
+        cells = (
+            "Republican",
+            "Mike Rogers",
+            "45",
+            "Democratic",
+            "Abdul El-Sayed",
+            "44",
+        )
+        for cell in cells:
+            assert f"<td>{cell}</td>" in body
+        assert "This will create a new pollster: Glengariff Group (US Senate)." in body
+        assert "Partisan poll: the pollster is tagged (R)." in body
+        assert "Race tracked:</strong> none yet" in body
+        assert "Approve all 3 remaining in Michigan" in body
+        assert 'name="expected_index" value="0"' in body
+        assert "Approve &amp; Import" in body
+        assert "Retry" not in body
+
+        item = _state(token).items[0]
+        assert item.plan is not None
+
+    def test_shows_the_race_s_tracked_matchup_and_its_source(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        us_db.set_tracked_matchup(
+            _map_id(us_db, SENATE_MAP),
+            _seat_id(us_db, SENATE_MAP, "Michigan"),
+            MICHIGAN_MATCHUP,
+            source="auto",
+        )
+        token = _open_queue(client, monkeypatch, _row(us_db))
+
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+
+        assert f"Race tracked:</strong> {MICHIGAN_MATCHUP} (auto)" in body
+
+    def test_the_president_shows_the_national_matchup(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        us_db.set_tracked_matchup(
+            _map_id(us_db, PRESIDENT_MAP), None, NEWSOM_MATCHUP, source="manual"
+        )
+        nevada = _president_row(us_db, seat="Nevada")
+        token = _open_queue(client, monkeypatch, nevada)
+
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+
+        assert f"Race tracked:</strong> {NEWSOM_MATCHUP} (manual)" in body
+        assert "Approve all 1 remaining in Nevada" in body
+
+    def test_the_generic_ballot_has_no_tracked_line(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        generic = _row(
+            us_db,
+            contest="house_national",
+            seat=None,
+            pollster="RealClearPolitics",
+            matchup=None,
+            readings=_readings(
+                ("Republican", "Republicans", 44.0),
+                ("Democratic", "Democrats", 47.0),
+            ),
+        )
+        token = _open_queue(client, monkeypatch, generic)
+
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+
+        assert "<strong>Party voting intention</strong>" in body
+        assert "Race tracked" not in body
+        assert "Approve all 1 remaining in House national generic ballot" in body
+
+    def test_a_planning_failure_offers_retry(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db, readings=UNPLANNABLE))
+
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+
+        assert "This poll could not be imported" in body
+        assert 'name="action" value="retry"' in body
+        assert "Approve &amp; Import" not in body
+        assert _state(token).items[0].status == "failed"
+
+    def test_an_empty_queue_goes_straight_to_the_summary(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch)
+
+        response = client.get(f"/us/import/{token}")
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith(f"/us/import/{token}/finish")
+
+
+class TestConfirmRoute:
+    def test_commits_and_advances(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
+        client.get(f"/us/import/{token}")
+
+        response = client.post(
+            f"/us/import/{token}/confirm", data={"expected_index": "0"}
+        )
+
+        assert response.headers["Location"].endswith(f"/us/import/{token}")
+        state = _state(token)
+        assert state.items[0].status == "imported"
+        assert state.items[0].poll_id is not None
+        assert state.index == 1
+        assert _polls_on(us_db, SENATE_MAP) == 1
+
+    def test_a_stale_expected_index_is_rejected_without_advancing(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
+        client.get(f"/us/import/{token}")
+
+        for stale in ("1", "", "abc"):
+            response = client.post(
+                f"/us/import/{token}/confirm", data={"expected_index": stale}
+            )
+            assert response.headers["Location"].endswith(f"/us/import/{token}")
+
+        state = _state(token)
+        assert state.index == 0
+        assert state.items[0].status == "pending"
+        assert _polls_on(us_db, SENATE_MAP) == 0
+        assert "That step has already been actioned." in _body(
+            client, f"/us/import/{token}"
+        )
+
+    def test_an_item_never_shown_is_not_committed(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db))
+
+        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+
+        assert _state(token).items[0].status == "pending"
+        assert _polls_on(us_db, SENATE_MAP) == 0
+
+    def test_a_commit_failure_stays_under_the_cursor(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
+        client.get(f"/us/import/{token}")
+
+        def failing_commit(*_args: Any) -> None:
+            raise ValueError("disk full")
+
+        monkeypatch.setattr(us_poll_queue, "commit_us_import_plan", failing_commit)
+        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+        # A second submit of the same form must not advance past the failure.
+        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+
+        state = _state(token)
+        assert state.index == 0
+        assert state.items[0].status == "failed"
+        assert state.items[0].detail == "disk full"
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        assert "disk full" in body
+        assert 'name="action" value="retry"' in body
+
+
+class TestSkipRoute:
+    def test_skip_advances(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
+        client.get(f"/us/import/{token}")
+
+        client.post(f"/us/import/{token}/skip", data={"expected_index": "0"})
+
+        state = _state(token)
+        assert state.items[0].status == "skipped"
+        assert state.items[0].detail == "Skipped"
+        assert state.index == 1
+
+    def test_a_stale_skip_is_rejected(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
+
+        client.post(f"/us/import/{token}/skip", data={"expected_index": "1"})
+
+        assert _state(token).index == 0
+        assert _state(token).items[0].status == "pending"
+
+    def test_retry_prepares_the_item_again(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db))
+        real_plan = build_us_import_plan
+        attempts: list[int] = []
+
+        def flaky_plan(db: Database, row: UsPollRow) -> Any:
+            attempts.append(1)
+            if len(attempts) == 1:
+                raise ValueError("transient")
+            return real_plan(db, row)
+
+        monkeypatch.setattr(us_poll_queue, "build_us_import_plan", flaky_plan)
+        client.get(f"/us/import/{token}")
+        assert _state(token).items[0].status == "failed"
+
+        client.post(
+            f"/us/import/{token}/skip",
+            data={"expected_index": "0", "action": "retry"},
+        )
+        item = _state(token).items[0]
+        assert item.status == "pending"
+        assert _state(token).index == 0
+
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        assert "Approve &amp; Import" in body
+        assert item.plan is not None
+        assert len(attempts) == 2
+
+    def test_skipping_a_failure_keeps_its_error(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db, readings=UNPLANNABLE))
+        client.get(f"/us/import/{token}")
+
+        client.post(f"/us/import/{token}/skip", data={"expected_index": "0"})
+
+        item = _state(token).items[0]
+        assert item.status == "skipped"
+        assert item.detail.startswith("Skipped after failure:")
+
+
+class TestApproveGroupRoute:
+    def test_approves_the_rest_of_the_race_and_flashes_a_summary(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        texas = _row(
+            us_db,
+            seat="Texas",
+            pollster="UT Tyler",
+            matchup=TEXAS_MATCHUP,
+            readings=TEXAS_READINGS,
+        )
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 3), texas)
+        client.get(f"/us/import/{token}")
+
+        response = client.post(
+            f"/us/import/{token}/approve-group", data={"expected_index": "0"}
+        )
+
+        assert response.headers["Location"].endswith(f"/us/import/{token}")
+        state = _state(token)
+        assert [item.status for item in state.items] == [
+            "imported",
+            "imported",
+            "imported",
+            "pending",
+        ]
+        assert state.index == 3
+        assert _polls_on(us_db, SENATE_MAP) == 3
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+        assert "Michigan: 3 imported, 0 already stored, 0 failed." in body
+        assert "UT Tyler" in body
+
+    def test_a_failure_is_counted_and_the_batch_carries_on(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        rows = _michigan_rows(us_db, 2)
+        stored = _row(us_db, pollster="Stored", end=date(2026, 6, 20))
+        broken = _row(
+            us_db, pollster="Broken", end=date(2026, 6, 21), readings=UNPLANNABLE
+        )
+        token = _open_queue(client, monkeypatch, *rows, stored, broken)
+        # Stored after the queue was built, so the batch finds it present.
+        _store(us_db, stored)
+
+        client.post(f"/us/import/{token}/approve-group", data={"expected_index": "0"})
+
+        body = client.get(f"/us/import/{token}", follow_redirects=True).get_data(
+            as_text=True
+        )
+        assert "Michigan: 2 imported, 1 already stored, 1 failed." in body
+
+    def test_a_stale_approval_imports_nothing(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
+
+        client.post(f"/us/import/{token}/approve-group", data={"expected_index": "1"})
+
+        assert _state(token).index == 0
+        assert _polls_on(us_db, SENATE_MAP) == 0
+
+
+class TestFinishRoute:
+    def _import_one(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        *,
+        count: int = 1,
+        **form: Any,
+    ) -> str:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, count), **form)
+        client.get(f"/us/import/{token}")
+        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+        return token
+
+    def test_runs_the_models_once_after_an_import(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        token = self._import_one(client, us_db, monkeypatch)
+
+        first = client.get(f"/us/import/{token}", follow_redirects=True)
+        client.get(f"/us/import/{token}/finish")
+
+        # The president has no tracked matchup, so only its step is skipped.
+        assert model_runner.calls == [
+            "run_us_house_model.py",
+            "run_us_senate_model.py",
+            EXPORT_ELECTION_SCRIPT.name,
+        ]
+        body = first.get_data(as_text=True)
+        assert "US Poll Import Summary" in body
+        assert "Models and Export" in body
+        assert "SKIPPED: no tracked presidential matchup set" in body
+        assert "skipped: president" in body
+        assert "1 races tracked for the first time" in body
+        tracked = us_db.get_tracked_matchup(
+            _map_id(us_db, SENATE_MAP), _seat_id(us_db, SENATE_MAP, "Michigan")
+        )
+        assert tracked is not None
+        assert tracked.matchup == MICHIGAN_MATCHUP
+
+    def test_nothing_imported_runs_no_models(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db))
+        client.post(f"/us/import/{token}/skip", data={"expected_index": "0"})
+
+        body = _body(client, f"/us/import/{token}")
+
+        assert model_runner.calls == []
+        assert "Nothing was imported." in body
+        assert "Models and Export" not in body
+
+    def test_the_model_option_off_runs_no_models(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        token = self._import_one(client, us_db, monkeypatch, run_model_at_end="")
+
+        client.get(f"/us/import/{token}/finish")
+
+        assert model_runner.calls == []
+
+    def test_abandon_runs_no_models_but_tracks_what_was_imported(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        token = self._import_one(client, us_db, monkeypatch, count=2)
+
+        response = client.post(f"/us/import/{token}/finish", data={"abandon": "on"})
+        client.get(f"/us/import/{token}/finish")
+
+        assert model_runner.calls == []
+        assert _state(token).run_model_at_end is False
+        body = response.get_data(as_text=True)
+        assert "Not Reviewed (1)" in body
+        assert "1 races tracked for the first time" in body
+
+    def test_a_model_run_that_raises_is_shown(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def timed_out(script: Path, *args: str, timeout: int) -> Any:
+            raise subprocess.TimeoutExpired(cmd=str(script), timeout=timeout)
+
+        monkeypatch.setattr(f"{BLUEPRINT}.run_python_script", timed_out)
+        token = self._import_one(client, us_db, monkeypatch)
+
+        body = client.get(f"/us/import/{token}/finish").get_data(as_text=True)
+
+        assert "US model run failed:" in body
+
+    def test_the_summary_groups_statuses_and_shows_the_diagnostics(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        rows = _michigan_rows(us_db, 2)
+        broken = _row(
+            us_db, pollster="Broken Poll", end=date(2026, 6, 30), readings=UNPLANNABLE
+        )
+        index = UsPollIndex(
+            rows=(*rows, broken),
+            page_failures={"https://en.wikipedia.org/wiki/Gone": "HTTP 500: boom"},
+            notes=(
+                "https://en.wikipedia.org/wiki/Statewide: not present yet (HTTP 404)",
+            ),
+            collapsed_only_races=(
+                CollapsedOnlyRace(
+                    contest="house_districts",
+                    page_url="https://en.wikipedia.org/wiki/Ohio",
+                    seat_name="OH-09",
+                    available_rows=4,
+                    included=False,
+                ),
+            ),
+            unknown_suffixes={"WCP": 2},
+            variants_dropped=41,
+            unmatched_seats=(
+                UnmatchedSeat(
+                    contest="senate_races",
+                    page_url="https://en.wikipedia.org/wiki/Guam",
+                    heading_path="General election › Polling",
+                    seat_name="Guam",
+                    reason="no seat named 'Guam' on the map",
+                    dropped_rows=3,
+                ),
+            ),
+            empty_tables=(
+                EmptyTable(
+                    contest="house_districts",
+                    page_url="https://en.wikipedia.org/wiki/Louisiana",
+                    heading_path="District 5 › General election › Polling",
+                    collapsed=False,
+                ),
+            ),
+            pages_fetched=12,
+            summary_rows_skipped=1,
+        )
+        token = _open_queue(client, monkeypatch, index=index)
+        client.get(f"/us/import/{token}")
+        client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
+        client.get(f"/us/import/{token}")
+        client.post(f"/us/import/{token}/skip", data={"expected_index": "1"})
+        # The broken row fails as it is shown, and the user finishes there.
+        client.get(f"/us/import/{token}")
+
+        body = _body(client, f"/us/import/{token}/finish")
+
+        progress_line = "3 polls queued · 1 imported · 1 failed · 1 skipped"
+        assert progress_line in " ".join(body.split())
+        assert "Imported (1)" in body
+        assert "Failed (1)" in body
+        assert "Skipped (1)" in body
+        assert "Broken Poll" in body
+        assert f"all polls ({PER_RACE_CUTOFF_NOTE})" in body
+        assert "12 Wikipedia page(s) read" in body
+        assert "HTTP 500: boom" in body
+        assert "not present yet (HTTP 404)" in body
+        assert "OH-09" in body
+        assert "4 hidden row(s)" in body
+        assert "<code>(WCP)</code> in 2 table(s)" in body
+        assert "Variants dropped:</strong> 41" in body
+        assert "Summary rows skipped:</strong> 1" in body
+        assert "no seat named &#39;Guam&#39; on the map" in body
+        assert "District 5 › General election › Polling" in body
+
+
+_TOKEN_ROUTES = [
+    ("GET", ""),
+    ("POST", "/confirm"),
+    ("POST", "/skip"),
+    ("POST", "/approve-group"),
+    ("GET", "/finish"),
+    ("POST", "/finish"),
+]
+
+
+class TestTokenGuard:
+    @pytest.mark.parametrize(("method", "suffix"), _TOKEN_ROUTES)
+    def test_an_unknown_token_redirects_to_the_start_page(
+        self, client: FlaskClient[Any], method: str, suffix: str
+    ) -> None:
+        path = f"/us/import/deadbeef{suffix}"
+
+        response = client.open(path, method=method)
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/us/import")
+        body = client.open(path, method=method, follow_redirects=True).get_data(
+            as_text=True
+        )
+        assert "Queue expired or not found" in body
+
+    @pytest.mark.parametrize(("method", "suffix"), _TOKEN_ROUTES)
+    def test_a_westminster_token_is_rejected(
+        self, client: FlaskClient[Any], method: str, suffix: str
+    ) -> None:
+        token = store_preview(
+            {
+                "type": "wikipedia_queue",
+                "state": QueueState(items=[], cutoff=NO_CUTOFF),
+            }
+        )
+
+        response = client.open(f"/us/import/{token}{suffix}", method=method)
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/us/import")
+
+    @pytest.mark.parametrize(
+        ("method", "suffix"),
+        [
+            ("GET", ""),
+            ("POST", "/confirm"),
+            ("POST", "/skip"),
+            ("GET", "/finish"),
+        ],
+    )
+    def test_a_us_token_is_rejected_by_the_westminster_routes(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        method: str,
+        suffix: str,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, _row(us_db))
+
+        response = client.open(f"/import/wikipedia/{token}{suffix}", method=method)
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/import")
+        assert _state(token).items[0].status == "pending"
+
+    def test_a_payload_missing_its_index_is_rejected(
+        self, client: FlaskClient[Any], us_db: Database
+    ) -> None:
+        state = _queue(us_db, _row(us_db))
+        token = store_preview({"type": "us_wikipedia_queue", STATE_KEY: state})
+
+        response = client.get(f"/us/import/{token}")
+
+        assert response.headers["Location"].endswith("/us/import")

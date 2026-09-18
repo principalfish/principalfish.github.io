@@ -22,10 +22,18 @@ share. :func:`resolve_poll_scope` says which map that series lives on and which
 matchup it must carry — the Senate borrows the House generic ballot, and the
 President follows the tracked head-to-head.
 
+A seat that has polls of its own does not have to accept the uniform swing.
+:func:`aggregate_seat_polls` averages those polls into one decided-vote share set
+per seat, and :func:`blend_seat_swings` mixes the implied swing with the uniform
+one at ``α = W / (W + k)``: no polls means the old behaviour exactly, a pile of
+fresh polls means the seat follows them. ``--ignore-seat-polls`` turns the whole
+step off and reproduces the pure uniform-swing projection.
+
 The pure functions (``weighted_average``, ``build_baseline_vote_state``,
-``aggregate_national``, ``compute_region_diffs``, ``project_seat_votes``,
-``latest_poll_snippet``) are DOM-free and DB-free once fed their inputs, so they
-unit-test in isolation exactly like the Westminster model's.
+``aggregate_national``, ``compute_region_diffs``, ``aggregate_seat_polls``,
+``blend_seat_swings``, ``project_seat_votes``, ``latest_poll_snippet``) are
+DOM-free and DB-free once fed their inputs, so they unit-test in isolation
+exactly like the Westminster model's.
 """
 
 from __future__ import annotations
@@ -43,7 +51,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Literal
 
-from sqlalchemy import select, text
+from sqlalchemy import ColumnElement, and_, select, text
 
 # ``data/`` root — home of config.py / db.py / models.py.
 DATA_DIR = Path(__file__).resolve().parents[2]
@@ -52,7 +60,8 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
-from models import Election, Map, Poll, Region
+from models import Election, Map, Poll, Region, TrackedMatchup
+from polls.importers.us.us_geography import parent_seat_name
 
 # Single source of truth for the database path: config.py (which reads .env).
 DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
@@ -64,6 +73,10 @@ PARTY_ID_ALIASES: dict[int, int] = {}
 
 # Which matchup a seat's own polls must carry to be used (see ``UsModelSpec``).
 SeatMatchupPolicy = Literal["per_seat", "national"]
+
+# Party names that stand for the catch-all "everyone else" bucket rather than a
+# named party. See :func:`is_others_party` for why this is matched by name.
+OTHERS_PARTY_NAMES: frozenset[str] = frozenset({"other", "others"})
 
 
 class TrackedMatchupMissing(ValueError):
@@ -134,6 +147,13 @@ class UsSimulationConfig:
         since_date: Lower bound for poll fieldwork end dates.
         half_life_days: Exponential recency-decay half-life in days.
         dry_run: When ``True``, compute everything but write nothing to the DB or disk.
+        seat_prior_weight: ``k`` in ``α = W / (W + k)`` — how much poll weight a
+            seat needs before its own polls outweigh the uniform swing. At the
+            default 1.0 one fresh full-weight poll gives α = 0.5; 0 trusts the
+            seat's polls completely. Never negative (``--seat-prior-weight``).
+        ignore_seat_polls: When ``True``, skip the seat-blending step entirely and
+            project the pure uniform national swing, as the model did before seat
+            polls existed. Useful for comparing the two (``--ignore-seat-polls``).
     """
 
     spec: UsModelSpec
@@ -141,6 +161,8 @@ class UsSimulationConfig:
     since_date: date
     half_life_days: float
     dry_run: bool
+    seat_prior_weight: float = 1.0
+    ignore_seat_polls: bool = False
 
 
 @dataclass
@@ -230,6 +252,38 @@ class PollReading:
     fieldwork_end: date
 
 
+@dataclass(frozen=True, slots=True)
+class SeatPollAverage:
+    """One seat's own polls, averaged into a single decided-vote share set.
+
+    Produced by :func:`aggregate_seat_polls` and consumed by
+    :func:`blend_seat_swings`, which mixes the shares here with the seat's
+    uniform-swing fallback in proportion to :attr:`total_weight`.
+
+    Attributes:
+        total_weight: ``W`` — the summed weight of the readings behind this
+            average, counted **per seat, not per party**, so a party that only
+            some of the polls named does not get its own smaller ``W``. It is the
+            evidence count that drives ``α = W / (W + k)``.
+        shares: Party id → weighted mean of that party's **decided-vote** share
+            (each reading rescaled so its named candidates sum to 100 before
+            averaging, so undecideds do not drag every share — and therefore α's
+            effect — downwards). The mean for a party runs over the readings that
+            actually include it, so a late entrant polled once is averaged over
+            that one poll rather than diluted by the polls that predate it.
+        n_polls: How many readings contributed.
+        matchup: The matchup those readings carried — the seat's tracked matchup
+            under ``"per_seat"``, the national one under ``"national"``. Carried
+            for the ``SEAT_POLL`` diagnostic line, which is the only way to see
+            from a run's output which pairing a seat was projected from.
+    """
+
+    total_weight: float
+    shares: Mapping[int, float]
+    n_polls: int
+    matchup: str | None
+
+
 # ── Pure helpers ──────────────────────────────────────────────────────────────
 
 
@@ -242,6 +296,74 @@ def weighted_average(weighted_sum: float, total_weight: float) -> float | None:
     if total_weight <= 0:
         return None
     return weighted_sum / total_weight
+
+
+def is_others_party(party_name: str) -> bool:
+    """Is this party the catch-all "everyone else" bucket rather than a named one?
+
+    Matched on the party **name**, not an id: party ids are per-database, while
+    the US baselines all carry a party literally named ``"Others"`` (seeded by
+    ``import_parties.py`` alongside Democratic, Republican, Independent,
+    Libertarian and US Green), holding every vote cast for someone outside that
+    list. ``"Other"`` is accepted too, as the Westminster side uses that spelling.
+
+    It matters for seat blending: a Wikipedia poll table's "Other" column is
+    never imported, so "Others" is absent from *every* seat poll. Treating that
+    absence as evidence of zero support — which is the right reading for a named
+    party a poll left out — would wipe a real minor-party vote out of every
+    polled seat.
+    """
+    return party_name.strip().casefold() in OTHERS_PARTY_NAMES
+
+
+def decided_vote_shares(shares: Mapping[int, float]) -> dict[int, float]:
+    """Rescale one poll's party shares so the named candidates sum to 100.
+
+    Poll tables list "Other" and "Undecided" columns that are never imported, so
+    a raw reading sums to 100 minus the undecideds — anywhere from 100 down to
+    about 80. Averaging those raw numbers would make a seat's polls look
+    systematically worse than its baseline (which is a share of *votes cast*),
+    and blending would then read that artefact as a real swing scaled by α.
+
+    Returns ``{}`` for an empty or non-positive reading, which the caller skips.
+    """
+    total = sum(shares.values())
+    if total <= 0:
+        return {}
+    return {party_id: (share / total) * 100.0 for party_id, share in shares.items()}
+
+
+def poll_blend_alpha(total_weight: float, prior_weight: float) -> float:
+    """Weight to give a seat's own polls over its uniform swing: ``W / (W + k)``.
+
+    ``k`` (``--seat-prior-weight``) is the weight of the prior, i.e. of the
+    uniform swing the seat would get with no polls at all. At k = 1 one fresh
+    full-weight poll is worth exactly as much as the prior (α = 0.5) and three
+    are worth 0.75; k = 0 makes the seat follow its polls outright.
+
+    A non-positive ``W`` gives 0 — the fallback, unchanged — so a seat with no
+    usable polls can never divide by zero. A negative ``k`` is clamped to 0
+    rather than allowed to produce a pole at ``W = -k``; the CLI rejects one
+    outright, this is the belt to that braces.
+    """
+    if total_weight <= 0:
+        return 0.0
+    return total_weight / (total_weight + max(prior_weight, 0.0))
+
+
+def baseline_shares_for_seat(base_vote_totals: Mapping[int, float]) -> dict[int, float]:
+    """Convert one seat's baseline raw vote counts into percentage shares.
+
+    Returns ``{}`` when the seat has no positive baseline total (an uncontested
+    or missing baseline), which both the blend and the projection skip.
+    """
+    seat_total = sum(base_vote_totals.values())
+    if seat_total <= 0:
+        return {}
+    return {
+        party_id: (value / seat_total) * 100.0
+        for party_id, value in base_vote_totals.items()
+    }
 
 
 def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:
@@ -539,19 +661,280 @@ def compute_region_diffs(
     return party_universe, region_swings, region_diff_rows
 
 
+def aggregate_seat_polls(
+    readings: Iterable[PollReading],
+    *,
+    seat_matchups: Mapping[int, str | None],
+    national_matchup: str | None,
+    policy: SeatMatchupPolicy,
+) -> dict[int, SeatPollAverage]:
+    """Average each seat's own polls into one :class:`SeatPollAverage`.
+
+    Only a reading that is seat-scoped (``seat_id`` set) and carries **that
+    seat's tracked matchup** counts. Which matchup that is depends on ``policy``:
+
+    * ``"national"`` (the President): every seat follows ``national_matchup``,
+      because a statewide presidential poll is the same head-to-head as the
+      national one. A seat still opts out via a NULL row (below).
+    * ``"per_seat"`` (Senate, House): the seat's own ``tracked_matchups`` row.
+
+    Two kinds of seat contribute nothing:
+
+    * a seat whose tracked row sets ``matchup`` to NULL — the deliberate *ignore
+      this race* marker, which a user sets when the automatic lead table picked
+      the wrong pairing;
+    * under ``"per_seat"``, a seat with **no** tracked row at all. Nothing says
+      which of its pairings is the real race, and averaging across a race's
+      hypotheticals is exactly the noise this pipeline exists to remove. The
+      importer writes an automatic row for every race it stores polls for, so
+      this is the "nobody has reviewed this race yet" case, not a normal one.
+
+    ``seat_matchups`` is keyed by seat id, so ``seat_id in seat_matchups``
+    distinguishes "row exists, matchup NULL" from "no row" — a distinction that
+    only changes the outcome under ``"national"``.
+
+    Args:
+        readings: One map's readings, as returned by :func:`collect_poll_readings`
+            (national and seat-scoped, every matchup — filtering happens here).
+        seat_matchups: Seat id → tracked matchup, ``None`` meaning "ignore this
+            seat". Absent keys mean no tracked row.
+        national_matchup: The scope's national matchup, used under ``"national"``.
+        policy: The spec's :data:`SeatMatchupPolicy`.
+
+    Returns:
+        Seat id → average, for every seat with at least one usable reading.
+    """
+    weighted_sums: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    party_weights: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    seat_weights: dict[int, float] = defaultdict(float)
+    seat_counts: dict[int, int] = defaultdict(int)
+    matchup_by_seat: dict[int, str | None] = {}
+
+    for reading in readings:
+        seat_id = reading.seat_id
+        if seat_id is None:
+            continue
+
+        tracked = seat_id in seat_matchups
+        if tracked and seat_matchups[seat_id] is None:
+            continue
+        if policy == "national":
+            required = national_matchup
+        elif tracked:
+            required = seat_matchups[seat_id]
+        else:
+            continue
+        if reading.matchup != required:
+            continue
+
+        decided = decided_vote_shares(reading.shares)
+        if not decided:
+            continue
+
+        seat_weights[seat_id] += reading.weight
+        seat_counts[seat_id] += 1
+        matchup_by_seat[seat_id] = required
+        for party_id, share in decided.items():
+            weighted_sums[seat_id][party_id] += share * reading.weight
+            party_weights[seat_id][party_id] += reading.weight
+
+    return {
+        seat_id: SeatPollAverage(
+            total_weight=total_weight,
+            shares={
+                party_id: weighted_sums[seat_id][party_id] / party_weight
+                for party_id, party_weight in party_weights[seat_id].items()
+                if party_weight > 0
+            },
+            n_polls=seat_counts[seat_id],
+            matchup=matchup_by_seat[seat_id],
+        )
+        for seat_id, total_weight in seat_weights.items()
+    }
+
+
+def seat_parent_ids(seats: Iterable[SeatRef]) -> dict[int, int]:
+    """Map each split-district seat to the statewide seat it sits inside.
+
+    ``Maine CD-2`` → ``Maine``'s seat id, for the five district seats on the
+    Presidential map. Only pairs where both seats are in ``seats`` are returned,
+    so a run that projects a district without its state simply has no parent for
+    it to inherit from.
+    """
+    id_by_name = {seat.seat_name: seat.id for seat in seats}
+    parents: dict[int, int] = {}
+    for seat in seats:
+        parent_name = parent_seat_name(seat.seat_name)
+        if parent_name is None:
+            continue
+        parent_id = id_by_name.get(parent_name)
+        if parent_id is not None and parent_id != seat.id:
+            parents[seat.id] = parent_id
+    return parents
+
+
+def _blend_order(seat_ids: Iterable[int], parent_seat_by_id: Mapping[int, int]) -> list[int]:
+    """Order seats so a parent is always blended before its district children.
+
+    Ranks by distance to the top of the parent chain, so ``Maine`` precedes
+    ``Maine CD-2`` whatever order the seats arrive in. The walk carries a visited
+    set purely so a malformed (cyclic) parent map cannot hang the model.
+    """
+
+    def depth(seat_id: int) -> int:
+        seen: set[int] = set()
+        steps = 0
+        current = seat_id
+        while current in parent_seat_by_id and current not in seen:
+            seen.add(current)
+            current = parent_seat_by_id[current]
+            steps += 1
+        return steps
+
+    return sorted(seat_ids, key=lambda seat_id: (depth(seat_id), seat_id))
+
+
+def blend_seat_swings(
+    *,
+    seat_averages: Mapping[int, SeatPollAverage],
+    seat_party_vote_totals: Mapping[int, Mapping[int, float]],
+    region_by_seat_id: Mapping[int, int | None],
+    region_swings: Mapping[int, Mapping[int, float]],
+    party_universe: Iterable[int],
+    party_name_by_id: Mapping[int, str],
+    parent_seat_by_id: Mapping[int, int],
+    prior_weight: float,
+) -> dict[int, dict[int, float]]:
+    """Blend each polled seat's own swing with its uniform-swing fallback.
+
+    Per party, ``swing = α·(target − base) + (1 − α)·fallback`` with
+    ``α = W / (W + k)`` (:func:`poll_blend_alpha`), where:
+
+    * ``base`` is the seat's baseline share — so the poll's contribution is the
+      swing *it* implies, not its level;
+    * ``target`` is the party's share in the seat's polls, or **0** when the
+      party is absent from them. Absence is real evidence: a Wikipedia poll table
+      names every candidate polled, so a party missing from it is a party nobody
+      is testing (Nebraska 2026 polls Ricketts against Osborn with no Democrat on
+      the ballot). The exception is "Others" (:func:`is_others_party`), whose
+      column is never imported, so its absence says nothing and it simply keeps
+      the fallback;
+    * ``fallback`` is the parent state's blended swing for an ``X CD-n`` seat
+      whose parent was itself blended, otherwise the seat's region swing from
+      :func:`compute_region_diffs`. So Maine CD-2 rides Maine's polls until it
+      has polls of its own, and every unpolled seat keeps today's behaviour
+      exactly.
+
+    ``W = 0`` gives α = 0 and therefore the fallback unchanged, which is how a
+    district with no polls inherits its state's blend verbatim.
+
+    Args:
+        seat_averages: Output of :func:`aggregate_seat_polls`, already restricted
+            to the seats this run projects.
+        seat_party_vote_totals: Seat id → party id → baseline vote count, as
+            :func:`project_seat_votes` takes it.
+        region_by_seat_id: Seat id → region id.
+        region_swings: Region id → party id → uniform swing.
+        party_universe: Every party the projection covers.
+        party_name_by_id: Party id → name, for the "Others" test.
+        parent_seat_by_id: Child seat id → parent seat id (:func:`seat_parent_ids`).
+        prior_weight: ``k``.
+
+    Returns:
+        Seat id → party id → swing, holding **only** the seats whose swing
+        differs from the region's: those with polls, and those inheriting a
+        parent's blend. Every other seat is absent, and
+        :func:`project_seat_votes` falls back to its region swing.
+    """
+    parties = sorted(party_universe)
+    blended: dict[int, dict[int, float]] = {}
+    seat_ids = {*seat_party_vote_totals, *seat_averages}
+
+    for seat_id in _blend_order(seat_ids, parent_seat_by_id):
+        average = seat_averages.get(seat_id)
+        parent_id = parent_seat_by_id.get(seat_id)
+        inherited = blended.get(parent_id) if parent_id is not None else None
+        if average is None and inherited is None:
+            continue
+
+        region_id = region_by_seat_id.get(seat_id)
+        fallbacks = (
+            inherited
+            if inherited is not None
+            else (region_swings.get(region_id, {}) if region_id is not None else {})
+        )
+
+        alpha = poll_blend_alpha(average.total_weight if average is not None else 0.0, prior_weight)
+        base_shares = baseline_shares_for_seat(seat_party_vote_totals.get(seat_id, {}))
+        poll_shares = average.shares if average is not None else {}
+
+        swings: dict[int, float] = {}
+        for party_id in parties:
+            fallback = fallbacks.get(party_id, 0.0)
+            if alpha <= 0.0:
+                swings[party_id] = fallback
+                continue
+            if party_id in poll_shares:
+                target = poll_shares[party_id]
+            elif is_others_party(party_name_by_id.get(party_id, "")):
+                swings[party_id] = fallback
+                continue
+            else:
+                target = 0.0
+            base = base_shares.get(party_id, 0.0)
+            swings[party_id] = alpha * (target - base) + (1.0 - alpha) * fallback
+
+        blended[seat_id] = swings
+
+    return blended
+
+
+def format_seat_poll_diagnostics(
+    seat_averages: Mapping[int, SeatPollAverage],
+    seat_name_by_id: Mapping[int, str],
+    prior_weight: float,
+) -> list[str]:
+    """One ``SEAT_POLL`` line per polled seat, sorted by seat name.
+
+    ``SEAT_POLL Nebraska n=3 W=2.104 alpha=0.678 matchup=Ricketts (R) vs Osborn (I)``
+    — enough to see, from a run's output alone, which races moved off the uniform
+    swing, how hard, and off which pairing.
+    """
+    named = sorted(
+        (
+            (seat_name_by_id.get(seat_id, f"seat {seat_id}"), seat_id, average)
+            for seat_id, average in seat_averages.items()
+        ),
+        key=lambda entry: (entry[0], entry[1]),
+    )
+    return [
+        f"SEAT_POLL {seat_name} n={average.n_polls} W={average.total_weight:.3f} "
+        f"alpha={poll_blend_alpha(average.total_weight, prior_weight):.3f} "
+        f"matchup={average.matchup or '(none)'}"
+        for seat_name, _seat_id, average in named
+    ]
+
+
 def project_seat_votes(
     seat_party_vote_totals: dict[int, dict[int, float]],
     region_by_seat_id: dict[int, int | None],
     party_universe: set[int],
     region_swings: dict[int, dict[int, float]],
     party_name_by_id: dict[int, str],
+    seat_swings: Mapping[int, Mapping[int, float]] | None = None,
 ) -> tuple[list[dict[str, Any]], Counter[str]]:
-    """Apply regional swings to baseline seat shares and project a winner per seat.
+    """Apply swings to baseline seat shares and project a winner per seat.
 
-    For each seat: convert baseline raw votes to shares, add the region swing for
+    For each seat: convert baseline raw votes to shares, add that seat's swing for
     each party (clamped at zero), renormalise to 100 %, scale back to vote counts
     at the seat's baseline turnout, and mark the highest-share party elected.
     Seats with no positive baseline total are skipped.
+
+    A seat present in ``seat_swings`` uses its own blended swing
+    (:func:`blend_seat_swings`); every other seat uses its region's uniform swing,
+    which is what the whole map did before seat polls existed. Clamping,
+    renormalisation and the winner rule are identical either way — blending only
+    changes which swing goes in.
 
     Returns ``(projected_votes, winners_by_party)`` — projected vote rows carry a
     ``vote_total`` vote count (turnout held at the baseline seat total) and an
@@ -566,18 +949,17 @@ def project_seat_votes(
         if seat_total <= 0:
             continue
 
-        base_share_by_party = {
-            party_id: (value / seat_total) * 100.0
-            for party_id, value in base_vote_totals.items()
-        }
+        base_share_by_party = baseline_shares_for_seat(base_vote_totals)
 
-        region_id = region_by_seat_id.get(seat_id)
-        swing_for_region = region_swings.get(region_id, {}) if region_id is not None else {}
+        swing_for_seat = seat_swings.get(seat_id) if seat_swings is not None else None
+        if swing_for_seat is None:
+            region_id = region_by_seat_id.get(seat_id)
+            swing_for_seat = region_swings.get(region_id, {}) if region_id is not None else {}
 
         projection_raw: dict[int, float] = {}
         for party_id in party_universe:
             baseline_share = base_share_by_party.get(party_id, 0.0)
-            swing = swing_for_region.get(party_id, 0.0)
+            swing = swing_for_seat.get(party_id, 0.0)
             projection_raw[party_id] = max(0.0, baseline_share + swing)
 
         projection_sum = sum(projection_raw.values())
@@ -755,23 +1137,80 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
     )
 
 
-def latest_poll_date(db: Database, scope: PollScope) -> date | None:
-    """Latest fieldwork end date across the run's **national** poll series.
+def _matchup_clause(matchup: str | None) -> ColumnElement[bool]:
+    """``Poll.matchup`` filter that treats ``None`` as "the party-only series"."""
+    return Poll.matchup.is_(None) if matchup is None else Poll.matchup == matchup
 
-    Respects the scope: only polls on the national map, national in scope
-    (``seat_id IS NULL``) and carrying the scope's matchup count — so a stale
-    matchup or a state poll can no longer drag the as-of cap forward. Returns
-    ``None`` when the series is empty.
+
+def latest_poll_date(
+    db: Database, scope: PollScope, *, include_seat_polls: bool = True
+) -> date | None:
+    """Latest fieldwork end date across every poll the run would actually use.
+
+    The as-of cap exists so decay-only drift never invents movement past the last
+    real poll. Once seat polls feed the projection they are real polls too: a
+    Senate race polled a week after the last generic-ballot update genuinely
+    changes the forecast on the day it lands, and a national-only cap would pull
+    ``as_of_date`` back before it and drop it from the window entirely — the
+    seat-blending step would then never see the newest polls in exactly the races
+    it was built for. So the cap covers both series.
+
+    Both halves apply the *same* filters the model does, so a poll it ignores can
+    never move the cap: the national half takes only ``seat_id IS NULL`` polls on
+    the national map carrying the scope's matchup, and the seat half only
+    seat-scoped polls on the seat map carrying that seat's tracked matchup (the
+    national matchup under the ``"national"`` policy, where a NULL tracked row
+    still opts the seat out).
+
+    Args:
+        db: Open database handle.
+        scope: The run's resolved :class:`PollScope`.
+        include_seat_polls: ``False`` restores the national-only cap, so
+            ``--ignore-seat-polls`` reproduces the pre-blending projection whole:
+            same window, same weights, same output.
+
+    Returns:
+        The latest such fieldwork end date, or ``None`` when nothing qualifies.
     """
-    with db.session() as session:
-        statement = select(Poll.fieldwork_end).where(
-            Poll.map_id == scope.national_map_id,
-            Poll.seat_id.is_(None),
-            Poll.matchup.is_(None)
-            if scope.national_matchup is None
-            else Poll.matchup == scope.national_matchup,
+    national_statement = select(Poll.fieldwork_end).where(
+        Poll.map_id == scope.national_map_id,
+        Poll.seat_id.is_(None),
+        _matchup_clause(scope.national_matchup),
+    )
+
+    seat_statement = select(Poll.fieldwork_end).where(
+        Poll.map_id == scope.seat_map_id,
+        Poll.seat_id.is_not(None),
+    )
+    if scope.seat_matchup_policy == "national":
+        opted_out = (
+            select(TrackedMatchup.id)
+            .where(
+                TrackedMatchup.map_id == Poll.map_id,
+                TrackedMatchup.seat_id == Poll.seat_id,
+                TrackedMatchup.matchup.is_(None),
+            )
+            .exists()
         )
-        end_dates = session.execute(statement).scalars().all()
+        seat_statement = seat_statement.where(
+            _matchup_clause(scope.national_matchup), ~opted_out
+        )
+    else:
+        seat_statement = seat_statement.join(
+            TrackedMatchup,
+            and_(
+                TrackedMatchup.map_id == Poll.map_id,
+                TrackedMatchup.seat_id == Poll.seat_id,
+            ),
+        ).where(
+            TrackedMatchup.matchup.is_not(None),
+            Poll.matchup == TrackedMatchup.matchup,
+        )
+
+    with db.session() as session:
+        end_dates = list(session.execute(national_statement).scalars().all())
+        if include_seat_polls:
+            end_dates.extend(session.execute(seat_statement).scalars().all())
     return max(end_dates, default=None)
 
 
@@ -1129,16 +1568,28 @@ def dates_to_run_for_cfg(cfg: UsSimulationConfig) -> list[date]:
 
 def run_simulation(
     db: Database, cfg: UsSimulationConfig
-) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], Counter[str], LatestPollUsage | None, dict[str, int]]:
-    """Run one national-uniform-swing projection for a single ``as_of_date``.
+) -> tuple[
+    str,
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    Counter[str],
+    LatestPollUsage | None,
+    dict[str, int],
+    list[str],
+]:
+    """Run one projection for a single ``as_of_date``.
 
     Resolves scope, loads reference + baseline data, aggregates polls, computes
-    swings, projects seats, and (unless dry-run) deletes any prior run for the
-    date, persists the new model election, and updates the trend JSON.
+    region swings, blends in each seat's own polls, projects seats, and (unless
+    dry-run) deletes any prior run for the date, persists the new model election,
+    and updates the trend JSON.
 
     Returns ``(election_name, projected_votes, region_diff_rows, winners_by_party,
-    latest_poll_usage, electoral_votes_by_party)``. The last is party-name → EV won,
-    non-zero only for the President (whose seats carry ``electoral_votes``).
+    latest_poll_usage, electoral_votes_by_party, seat_poll_diagnostics)``.
+    ``electoral_votes_by_party`` is party-name → EV won, non-zero only for the
+    President (whose seats carry ``electoral_votes``). ``seat_poll_diagnostics``
+    holds the ``SEAT_POLL`` lines, returned rather than printed so a 365-day
+    backfill does not emit one per seat per day.
     """
     spec = cfg.spec
     poll_map, baseline = resolve_simulation_scope(db, spec)
@@ -1187,12 +1638,73 @@ def run_simulation(
         baseline_region_shares,
     )
 
+    # Seat-level polls, blended over the uniform swing they just fell out of.
+    seat_name_by_id = {seat.id: seat.seat_name for seat in seats}
+    seat_swings: dict[int, dict[int, float]] = {}
+    seat_poll_diagnostics: list[str] = []
+    if not cfg.ignore_seat_polls:
+        # The House and the President poll seats on the same map as their national
+        # series, so re-reading it would be a second pass over the same rows.
+        seat_readings = (
+            national_readings
+            if scope.seat_map_id == scope.national_map_id
+            else collect_poll_readings(
+                db,
+                scope.seat_map_id,
+                cfg.since_date,
+                cfg.as_of_date,
+                cfg.half_life_days,
+                pollster_weight_by_id,
+                pollster_name_by_id,
+            )
+        )
+        tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
+        seat_averages = {
+            seat_id: average
+            for seat_id, average in aggregate_seat_polls(
+                seat_readings,
+                seat_matchups={
+                    int(row.seat_id): row.matchup
+                    for row in tracked_rows
+                    if row.seat_id is not None
+                },
+                national_matchup=scope.national_matchup,
+                policy=scope.seat_matchup_policy,
+            ).items()
+            # A seat off this run's allowlist (a Class-1 Senate race) is polled but
+            # not projected, so it must not show up in the diagnostics either.
+            if seat_id in seat_name_by_id
+        }
+        # A candidate who exists only in seat polls — Nebraska's independent, with
+        # no 2020 baseline and no national generic-ballot line — is otherwise
+        # outside the party universe, so neither the blend nor the projection would
+        # ever emit a share for them and the seat's own polls could not be
+        # represented at all. Unpolled seats are untouched: the new party has no
+        # region swing and no baseline there, so it projects at zero.
+        party_universe = party_universe | {
+            party_id for average in seat_averages.values() for party_id in average.shares
+        }
+        seat_swings = blend_seat_swings(
+            seat_averages=seat_averages,
+            seat_party_vote_totals=seat_party_vote_totals,
+            region_by_seat_id=region_by_seat_id,
+            region_swings=region_swings,
+            party_universe=party_universe,
+            party_name_by_id=party_name_by_id,
+            parent_seat_by_id=seat_parent_ids(seats),
+            prior_weight=cfg.seat_prior_weight,
+        )
+        seat_poll_diagnostics = format_seat_poll_diagnostics(
+            seat_averages, seat_name_by_id, cfg.seat_prior_weight
+        )
+
     projected_votes, winners_by_party = project_seat_votes(
         seat_party_vote_totals,
         region_by_seat_id,
         party_universe,
         region_swings,
         party_name_by_id,
+        seat_swings=seat_swings,
     )
 
     election_name = _election_name_pattern(spec, cfg.as_of_date)
@@ -1206,7 +1718,15 @@ def run_simulation(
             ev_by_party[party_name_by_id.get(party_id, str(party_id))] += seat_ev_by_id.get(int(row["seat_id"]), 0)
 
     if cfg.dry_run:
-        return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage, dict(ev_by_party)
+        return (
+            election_name,
+            projected_votes,
+            region_diff_rows,
+            winners_by_party,
+            latest_poll_usage,
+            dict(ev_by_party),
+            seat_poll_diagnostics,
+        )
 
     delete_model_for_as_of_date(spec, cfg.as_of_date)
     persisted_name, persisted_election_id = persist_projection(
@@ -1221,7 +1741,15 @@ def run_simulation(
         spec, persisted_election_id, persisted_name, cfg.as_of_date, projected_votes, seat_ev_by_id
     )
 
-    return persisted_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage, dict(ev_by_party)
+    return (
+        persisted_name,
+        projected_votes,
+        region_diff_rows,
+        winners_by_party,
+        latest_poll_usage,
+        dict(ev_by_party),
+        seat_poll_diagnostics,
+    )
 
 
 def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace) -> None:
@@ -1264,8 +1792,10 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
                 since_date=current - timedelta(days=args.lookback_days),
                 half_life_days=args.half_life_days,
                 dry_run=args.dry_run,
+                seat_prior_weight=args.seat_prior_weight,
+                ignore_seat_polls=args.ignore_seat_polls,
             )
-            election_name, projected_votes, _, _, _, _ = run_simulation(db, cfg)
+            election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
             success_count += 1
             if args.progress_every > 0 and success_count % args.progress_every == 0:
                 print(
@@ -1291,6 +1821,22 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 
+def _non_negative_float(raw: str) -> float:
+    """argparse ``type`` for a float that may not be negative or NaN.
+
+    A negative ``--seat-prior-weight`` has no meaning (it is a prior *weight*) and
+    would put a pole in ``W / (W + k)`` at ``W = -k``, so it is rejected at the
+    CLI rather than silently clamped.
+    """
+    try:
+        value = float(raw)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(f"expected a number, got {raw!r}") from err
+    if math.isnan(value) or value < 0.0:
+        raise argparse.ArgumentTypeError(f"must be zero or greater, got {raw!r}")
+    return value
+
+
 def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     """Build the shared CLI parser for a runner, defaulted from ``spec``."""
     parser = argparse.ArgumentParser(description=f"Run the {spec.election_name_prefix} forecast model.")
@@ -1313,6 +1859,23 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     )
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--progress-every", type=int, default=25)
+    # Seat-poll blending
+    parser.add_argument(
+        "--seat-prior-weight",
+        type=_non_negative_float,
+        default=1.0,
+        metavar="K",
+        help=(
+            "Prior weight k in alpha = W/(W+k), where W is a seat's own poll weight. "
+            "Higher trusts the uniform swing more; 0 follows a seat's polls outright "
+            "(default: 1.0, i.e. one fresh poll is worth as much as the prior)"
+        ),
+    )
+    parser.add_argument(
+        "--ignore-seat-polls",
+        action="store_true",
+        help="Ignore state/district polls and project the pure uniform national swing",
+    )
     return parser
 
 
@@ -1337,6 +1900,8 @@ def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSi
         since_date=since_date,
         half_life_days=args.half_life_days,
         dry_run=args.dry_run,
+        seat_prior_weight=args.seat_prior_weight,
+        ignore_seat_polls=args.ignore_seat_polls,
     )
 
 
@@ -1370,7 +1935,7 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
 
     cfg = _build_config_from_args(spec, args)
 
-    latest_end = latest_poll_date(db, scope)
+    latest_end = latest_poll_date(db, scope, include_seat_polls=not cfg.ignore_seat_polls)
     if latest_end is not None and cfg.as_of_date > latest_end:
         print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
         shift = cfg.as_of_date - latest_end
@@ -1380,6 +1945,8 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             since_date=cfg.since_date - shift,
             half_life_days=cfg.half_life_days,
             dry_run=cfg.dry_run,
+            seat_prior_weight=cfg.seat_prior_weight,
+            ignore_seat_polls=cfg.ignore_seat_polls,
         )
 
     run_dates = dates_to_run_for_cfg(cfg)
@@ -1396,13 +1963,25 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             since_date=run_date - timedelta(days=lookback_days),
             half_life_days=cfg.half_life_days,
             dry_run=cfg.dry_run,
+            seat_prior_weight=cfg.seat_prior_weight,
+            ignore_seat_polls=cfg.ignore_seat_polls,
         )
-        election_name, projected_votes, _, winners_by_party, latest_poll_usage, ev_by_party = run_simulation(db, run_cfg)
+        (
+            election_name,
+            projected_votes,
+            _,
+            winners_by_party,
+            latest_poll_usage,
+            ev_by_party,
+            seat_poll_diagnostics,
+        ) = run_simulation(db, run_cfg)
         seat_ids = {int(row["seat_id"]) for row in projected_votes}
 
         print(f"{spec.election_name_prefix} projection complete")
         print(f"As-of date: {run_cfg.as_of_date.isoformat()}  since: {run_cfg.since_date.isoformat()}")
         print(f"Election: {election_name}  projected seats: {len(seat_ids)}")
+        for line in seat_poll_diagnostics:
+            print(line)
         if len(run_dates) > 1:
             print(f"Backfill progress: {index}/{len(run_dates)}")
         snippet = latest_poll_snippet(latest_poll_usage)
@@ -1425,8 +2004,10 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             since_date=cfg.as_of_date - timedelta(days=lookback_days),
             half_life_days=cfg.half_life_days,
             dry_run=True,
+            seat_prior_weight=cfg.seat_prior_weight,
+            ignore_seat_polls=cfg.ignore_seat_polls,
         )
-        _, _, _, _, latest_poll_usage, _ = run_simulation(db, meta_cfg)
+        _, _, _, _, latest_poll_usage, _, _ = run_simulation(db, meta_cfg)
 
     if not cfg.dry_run:
         write_trend_cache_meta(

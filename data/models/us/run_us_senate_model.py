@@ -13,6 +13,12 @@ Class-3 special and is not up in 2026), which projecting the raw 2020 baseline
 would wrongly include. When the snapshot is unavailable the allowlist is ``None``
 and every 2020-contested seat is projected.
 
+Special elections join that field. 2026 fills two Class-3 seats early (Florida and
+Ohio), which were last contested in **2022**, not 2020 — so they are added to the
+allowlist and given their own baseline election. Both facts come from
+``map-modes-shell.json``, the same hand-authored file the front end's map modes are
+generated from, so the model and the map cannot disagree about which specials are up.
+
 Persists a ``us_senate_model`` election (the projected contested seats) and appends
 a poll-tracker trend entry. The front end's SenatePredict merges these projected
 winners into the full 100-member chamber (``senate-current.json``) for its
@@ -28,6 +34,8 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -35,8 +43,35 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import UsModelSpec, main_for_spec
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-RESULTS_DIR = REPO_ROOT / "uselectionmaps" / "data" / "results"
+US_DATA_DIR = REPO_ROOT / "uselectionmaps" / "data"
+RESULTS_DIR = US_DATA_DIR / "results"
 SENATE_CURRENT_JSON = RESULTS_DIR / "senate-current.json"
+# The hand-authored source of truth behind the generated ``map-modes.json``.
+MAP_MODES_SHELL_JSON = US_DATA_DIR / "map-modes-shell.json"
+
+# ``mapModes`` is keyed by database map id; 23 is "US Senate 2024".
+SENATE_MAP_MODE_KEY = "23"
+SENATE_PARLIAMENT_KEY = "us_senate"
+
+
+@dataclass(frozen=True, slots=True)
+class SenateSpecial:
+    """One special Senate election held alongside a regular cycle.
+
+    Attributes:
+        seat: Seat name as the Senate map spells it (a state, e.g. ``"Ohio"``).
+        seat_class: Class of the seat being filled early — 3 for the 2026 specials.
+            The model does not use it (it projects seats, not classes); the front
+            end needs it to know which sitting member the projection replaces.
+        year: Cycle the special is held in.
+        baseline_election_id: Manifest id of the election this seat swings from
+            (``"2022-us-senate"``), not the 2020 race the rest of the field uses.
+    """
+
+    seat: str
+    seat_class: int
+    year: int
+    baseline_election_id: str
 
 
 def class2_state_allowlist(snapshot_path: Path = SENATE_CURRENT_JSON) -> frozenset[str] | None:
@@ -60,6 +95,77 @@ def class2_state_allowlist(snapshot_path: Path = SENATE_CURRENT_JSON) -> frozens
     return frozenset(states) or None
 
 
+def senate_special_elections(
+    shell_path: Path = MAP_MODES_SHELL_JSON,
+) -> tuple[SenateSpecial, ...]:
+    """Return the special elections the *next* Senate cycle holds.
+
+    Reads ``senateSpecialElections`` from the Senate map mode and keeps only the
+    entries whose ``year`` equals ``parliamentFeatures.us_senate.nextElectionYear``
+    — one shell key decides the cycle, so a special that has been held (or is not
+    yet due) drops out of the model the moment that year moves.
+
+    A missing file, unreadable JSON or a missing key all mean "no specials": the
+    regular Class-2 field still projects, exactly as it did before specials existed.
+    Entries without a seat name or a baseline id are skipped for the same reason —
+    a half-written shell entry must not take the whole runner down at import time.
+    """
+    try:
+        payload = json.loads(shell_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return ()
+    if not isinstance(payload, dict):
+        return ()
+
+    features = payload.get("parliamentFeatures")
+    map_modes = payload.get("mapModes")
+    if not isinstance(features, dict) or not isinstance(map_modes, dict):
+        return ()
+    senate_features = features.get(SENATE_PARLIAMENT_KEY)
+    senate_mode = map_modes.get(SENATE_MAP_MODE_KEY)
+    if not isinstance(senate_features, dict) or not isinstance(senate_mode, dict):
+        return ()
+
+    next_year = senate_features.get("nextElectionYear")
+    entries = senate_mode.get("senateSpecialElections")
+    if not isinstance(next_year, int) or not isinstance(entries, list):
+        return ()
+
+    specials: list[SenateSpecial] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("year") != next_year:
+            continue
+        seat = str(entry.get("seat") or "")
+        baseline_election_id = str(entry.get("baselineElectionId") or "")
+        if not seat or not baseline_election_id:
+            continue
+        specials.append(
+            SenateSpecial(
+                seat=seat,
+                seat_class=int(entry.get("class") or 0),
+                year=next_year,
+                baseline_election_id=baseline_election_id,
+            )
+        )
+    return tuple(specials)
+
+
+def senate_field_allowlist(
+    class2_states: frozenset[str] | None, specials: Sequence[SenateSpecial]
+) -> frozenset[str] | None:
+    """The contested field: every Class-2 state, plus each special's seat.
+
+    ``None`` in means "the Class-2 snapshot was unreadable, project every seat the
+    baseline contested" — and stays ``None``, because narrowing an unknown field
+    down to the two specials would project a two-seat Senate.
+    """
+    if class2_states is None:
+        return None
+    return class2_states | {special.seat for special in specials}
+
+
+SENATE_SPECIALS: tuple[SenateSpecial, ...] = senate_special_elections()
+
 SPEC = UsModelSpec(
     map_name="US Senate 2024",
     baseline_election_name="2020 US Senate Election",
@@ -67,10 +173,14 @@ SPEC = UsModelSpec(
     election_name_prefix="US Senate UNS",
     trend_cache_json=RESULTS_DIR / "us-senate-trends.json",
     trend_cache_meta_json=RESULTS_DIR / "us-senate-trends_meta.json",
-    seat_name_allowlist=class2_state_allowlist(),
+    seat_name_allowlist=senate_field_allowlist(class2_state_allowlist(), SENATE_SPECIALS),
     # The Senate has no national series of its own: its national swing is the
     # House generic ballot, polled once and stored on the House map.
     national_poll_map_name="US House Districts 2024",
+    # Florida and Ohio are Class-3 specials: they swing from 2022, not 2020.
+    seat_baseline_overrides={
+        special.seat: special.baseline_election_id for special in SENATE_SPECIALS
+    },
 )
 
 

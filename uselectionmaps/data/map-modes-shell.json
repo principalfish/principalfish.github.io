@@ -95,7 +95,11 @@
       "senateClassCycle": {
         "base": { "1": 2018, "2": 2020, "3": 2022 },
         "period": 6
-      }
+      },
+      "senateSpecialElections": [
+        { "seat": "Florida", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate" },
+        { "seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate" }
+      ]
     }
   }
 }

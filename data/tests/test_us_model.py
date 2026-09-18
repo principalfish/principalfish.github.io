@@ -9,10 +9,12 @@ the repository's real trend files.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import math
+import shutil
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -26,6 +28,7 @@ from sqlalchemy import text
 from db import Database
 from models import ElectionType, Map, Party, Pollster, Seat
 
+import _common
 from _common import (
     LatestPollUsage,
     PARTY_ID_ALIASES,
@@ -39,6 +42,7 @@ from _common import (
     baseline_shares_for_seat,
     blend_seat_swings,
     build_arg_parser,
+    build_baseline_vote_state,
     collect_poll_readings,
     compute_region_diffs,
     decided_vote_shares,
@@ -48,8 +52,12 @@ from _common import (
     latest_poll_snippet,
     main_for_spec,
     poll_blend_alpha,
+    poll_date_bounds,
     project_seat_votes,
+    rebuild_window,
     resolve_poll_scope,
+    resolve_seat_baselines,
+    resolve_special_baselines,
     run_simulation,
     seat_parent_ids,
     update_trend_cache_json,
@@ -1982,3 +1990,622 @@ class TestLatestPollDateWithSeatPolls:
 
         # … and moves only once a state poll of the tracked pairing lands.
         assert latest_poll_date(db, scope) == date(2028, 6, 10)
+
+
+# ── Senate specials: the shell key ────────────────────────────────────────────
+
+
+REPO_SHELL_JSON = (
+    Path(__file__).resolve().parents[2] / "uselectionmaps" / "data" / "map-modes-shell.json"
+)
+
+# The 2026 Class-2 field without the two specials: 33 states.
+CLASS2_2026 = (
+    "Alabama", "Alaska", "Arkansas", "Colorado", "Delaware", "Georgia", "Idaho",
+    "Illinois", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Massachusetts",
+    "Michigan", "Minnesota", "Mississippi", "Montana", "Nebraska", "New Hampshire",
+    "New Jersey", "New Mexico", "North Carolina", "Oklahoma", "Oregon", "Rhode Island",
+    "South Carolina", "South Dakota", "Tennessee", "Texas", "Virginia", "West Virginia",
+    "Wyoming",
+)
+
+
+def _shell_copy(tmp_path: Path) -> Path:
+    """The repo's real shell, copied so a test can edit it without touching the original."""
+    path = tmp_path / "map-modes-shell.json"
+    shutil.copy(REPO_SHELL_JSON, path)
+    return path
+
+
+def _edit_shell(path: Path, edit: Any) -> Path:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    edit(payload)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+class TestSenateSpecialElections:
+    def test_the_shipped_shell_holds_florida_and_ohio_from_2022(self, tmp_path: Path) -> None:
+        from run_us_senate_model import SenateSpecial, senate_special_elections
+
+        specials = senate_special_elections(_shell_copy(tmp_path))
+
+        assert specials == (
+            SenateSpecial(seat="Florida", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
+            SenateSpecial(seat="Ohio", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
+        )
+
+    def test_a_missing_shell_means_no_specials(self, tmp_path: Path) -> None:
+        from run_us_senate_model import senate_special_elections
+
+        assert senate_special_elections(tmp_path / "does-not-exist.json") == ()
+
+    def test_unreadable_json_means_no_specials(self, tmp_path: Path) -> None:
+        from run_us_senate_model import senate_special_elections
+
+        path = tmp_path / "map-modes-shell.json"
+        path.write_text("{not json", encoding="utf-8")
+
+        assert senate_special_elections(path) == ()
+
+    def test_a_missing_key_means_no_specials(self, tmp_path: Path) -> None:
+        from run_us_senate_model import senate_special_elections
+
+        path = _edit_shell(
+            _shell_copy(tmp_path),
+            lambda payload: payload["mapModes"]["23"].pop("senateSpecialElections"),
+        )
+
+        assert senate_special_elections(path) == ()
+
+    def test_a_missing_next_election_year_means_no_specials(self, tmp_path: Path) -> None:
+        from run_us_senate_model import senate_special_elections
+
+        path = _edit_shell(
+            _shell_copy(tmp_path),
+            lambda payload: payload["parliamentFeatures"]["us_senate"].pop("nextElectionYear"),
+        )
+
+        assert senate_special_elections(path) == ()
+
+    def test_an_entry_for_another_cycle_is_ignored(self, tmp_path: Path) -> None:
+        from run_us_senate_model import senate_special_elections
+
+        def move_florida_to_2028(payload: dict[str, Any]) -> None:
+            payload["mapModes"]["23"]["senateSpecialElections"][0]["year"] = 2028
+
+        path = _edit_shell(_shell_copy(tmp_path), move_florida_to_2028)
+
+        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+
+    def test_every_entry_drops_out_once_the_cycle_moves_on(self, tmp_path: Path) -> None:
+        from run_us_senate_model import senate_special_elections
+
+        def next_cycle(payload: dict[str, Any]) -> None:
+            payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2028
+
+        assert senate_special_elections(_edit_shell(_shell_copy(tmp_path), next_cycle)) == ()
+
+    def test_an_entry_without_a_seat_or_baseline_is_skipped(self, tmp_path: Path) -> None:
+        from run_us_senate_model import senate_special_elections
+
+        def half_written(payload: dict[str, Any]) -> None:
+            entries = payload["mapModes"]["23"]["senateSpecialElections"]
+            entries[0].pop("baselineElectionId")
+            entries.append({"class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"})
+
+        path = _edit_shell(_shell_copy(tmp_path), half_written)
+
+        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+
+
+class TestSenateFieldAllowlist:
+    def test_class_2_states_plus_the_specials(self) -> None:
+        from run_us_senate_model import SenateSpecial, senate_field_allowlist
+
+        specials = [
+            SenateSpecial(seat="Ohio", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
+        ]
+
+        assert senate_field_allowlist(frozenset({"Georgia", "Maine"}), specials) == frozenset(
+            {"Georgia", "Maine", "Ohio"}
+        )
+
+    def test_an_unknown_field_stays_unknown(self) -> None:
+        # No Class-2 snapshot means "project every baseline seat"; adding the
+        # specials to None would shrink the Senate to two seats.
+        from run_us_senate_model import SenateSpecial, senate_field_allowlist
+
+        specials = [
+            SenateSpecial(seat="Ohio", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
+        ]
+
+        assert senate_field_allowlist(None, specials) is None
+
+    def test_the_shipped_spec_adds_both_specials_on_their_2022_baseline(self) -> None:
+        from run_us_senate_model import SPEC
+
+        assert dict(SPEC.seat_baseline_overrides) == {
+            "Florida": "2022-us-senate",
+            "Ohio": "2022-us-senate",
+        }
+        assert SPEC.seat_name_allowlist is not None
+        assert {"Florida", "Ohio"} <= SPEC.seat_name_allowlist
+        # 33 Class-2 states plus the two Class-3 specials.
+        assert len(SPEC.seat_name_allowlist) == 35
+
+
+# ── Senate specials: resolving the baseline election ──────────────────────────
+
+
+def _senate_elections(db: Database) -> tuple[Map, int, int]:
+    senate_map = db.add_map(SENATE_MAP, parliament="us_senate")
+    e2020 = db.add_election(senate_map.id, 2020, "2020 US Senate Election", ElectionType.us_senate)
+    e2022 = db.add_election(senate_map.id, 2022, "2022 US Senate Election", ElectionType.us_senate)
+    return senate_map, int(e2020.id), int(e2022.id)
+
+
+class TestResolveSpecialBaselines:
+    def test_a_manifest_id_resolves_to_its_election(self, db: Database) -> None:
+        senate_map, _e2020, e2022 = _senate_elections(db)
+
+        assert resolve_special_baselines(db, senate_map.id, ["2022-us-senate", "2022-us-senate"]) == {
+            "2022-us-senate": e2022
+        }
+
+    def test_no_ids_resolve_to_nothing(self, db: Database) -> None:
+        senate_map, _e2020, _e2022 = _senate_elections(db)
+
+        assert resolve_special_baselines(db, senate_map.id, []) == {}
+
+    def test_an_unknown_id_raises_naming_it_and_the_known_ones(self, db: Database) -> None:
+        senate_map, _e2020, _e2022 = _senate_elections(db)
+
+        with pytest.raises(ValueError) as excinfo:
+            resolve_special_baselines(db, senate_map.id, ["2022-us-senate", "2018-us-senate"])
+
+        message = str(excinfo.value)
+        assert "2018-us-senate" in message
+        assert "2020-us-senate, 2022-us-senate" in message
+
+    def test_an_election_on_another_map_does_not_resolve(self, db: Database) -> None:
+        senate_map, _e2020, _e2022 = _senate_elections(db)
+        other_map = db.add_map("Elsewhere", parliament="us_senate")
+        db.add_election(other_map.id, 2018, "2018 US Senate Election", ElectionType.us_senate)
+
+        with pytest.raises(ValueError, match="2018-us-senate"):
+            resolve_special_baselines(db, senate_map.id, ["2018-us-senate"])
+
+    def test_seat_names_are_joined_to_this_runs_seats(self, db: Database) -> None:
+        senate_map, _e2020, e2022 = _senate_elections(db)
+        seats = [SeatRef(id=7, region_id=1, seat_name="Ohio"), SeatRef(id=8, region_id=1, seat_name="Texas")]
+
+        resolved = resolve_seat_baselines(
+            db,
+            senate_map.id,
+            seats,
+            # Florida is not projected in this run, so it is dropped, not an error.
+            {"Ohio": "2022-us-senate", "Florida": "2022-us-senate"},
+        )
+
+        assert resolved == {7: e2022}
+
+    def test_no_overrides_never_touch_the_map(self, db: Database) -> None:
+        assert resolve_seat_baselines(db, 999, [], {}) == {}
+
+
+# ── Senate specials: the baseline loader ──────────────────────────────────────
+
+
+class TestBuildBaselineVoteStateOverrides:
+    def test_ohio_uses_2022_votes_while_the_rest_use_2020(self, db: Database) -> None:
+        dem, rep = _parties(db)
+        senate_map, e2020, e2022 = _senate_elections(db)
+        region = db.add_region(senate_map.id, "East North Central")
+        ohio = db.add_seat(senate_map.id, "Ohio", region_id=region.id)
+        georgia = db.add_seat(senate_map.id, "Georgia", region_id=region.id)
+        texas = db.add_seat(senate_map.id, "Texas", region_id=region.id)
+        # 2020 has a (made-up) Ohio row that must be ignored; 2022 has a Georgia
+        # row that must be ignored — each seat comes from exactly one election.
+        for seat, election_id, rep_votes, dem_votes in (
+            (ohio, e2020, 100.0, 900.0),
+            (georgia, e2020, 490.0, 510.0),
+            (texas, e2020, 580.0, 420.0),
+            (ohio, e2022, 530.0, 470.0),
+            (georgia, e2022, 480.0, 520.0),
+        ):
+            db.add_vote(election_id, seat.id, party_id=rep.id, vote_total=rep_votes)
+            db.add_vote(election_id, seat.id, party_id=dem.id, vote_total=dem_votes)
+        region_by_seat_id: dict[int, int | None] = {s.id: region.id for s in (ohio, georgia, texas)}
+
+        seat_totals, national_totals, national_shares, region_shares = build_baseline_vote_state(
+            db, e2020, region_by_seat_id, None, {ohio.id: e2022}
+        )
+
+        assert dict(seat_totals[ohio.id]) == {rep.id: 530.0, dem.id: 470.0}
+        assert dict(seat_totals[georgia.id]) == {rep.id: 490.0, dem.id: 510.0}
+        assert dict(seat_totals[texas.id]) == {rep.id: 580.0, dem.id: 420.0}
+        assert dict(national_totals) == {rep.id: 1600.0, dem.id: 1400.0}
+        assert national_shares[rep.id] == pytest.approx(1600.0 / 3000.0 * 100.0)
+        assert region_shares[region.id][rep.id] == pytest.approx(1600.0 / 3000.0 * 100.0)
+
+    def test_the_seat_filter_still_applies_to_an_override(self, db: Database) -> None:
+        dem, rep = _parties(db)
+        senate_map, e2020, e2022 = _senate_elections(db)
+        ohio = db.add_seat(senate_map.id, "Ohio")
+        texas = db.add_seat(senate_map.id, "Texas")
+        db.add_vote(e2020, texas.id, party_id=rep.id, vote_total=580.0)
+        db.add_vote(e2022, ohio.id, party_id=rep.id, vote_total=530.0)
+
+        seat_totals, _, _, _ = build_baseline_vote_state(
+            db, e2020, {}, {texas.id}, {ohio.id: e2022}
+        )
+
+        assert set(seat_totals) == {texas.id}
+
+    def test_no_overrides_is_the_old_behaviour(self, db: Database) -> None:
+        dem, rep = _parties(db)
+        senate_map, e2020, e2022 = _senate_elections(db)
+        ohio = db.add_seat(senate_map.id, "Ohio")
+        db.add_vote(e2020, ohio.id, party_id=rep.id, vote_total=100.0)
+        db.add_vote(e2022, ohio.id, party_id=rep.id, vote_total=530.0)
+
+        with_none = build_baseline_vote_state(db, e2020, {}, None)
+        with_empty = build_baseline_vote_state(db, e2020, {}, None, {})
+
+        assert dict(with_none[0][ohio.id]) == {rep.id: 100.0}
+        assert dict(with_empty[0][ohio.id]) == {rep.id: 100.0}
+
+
+# ── Senate specials: end to end ───────────────────────────────────────────────
+
+
+class TestSenateSpecialsEndToEnd:
+    """The shell → allowlist + overrides → run, as the real Senate runner wires it."""
+
+    @staticmethod
+    def _world(db: Database, tmp_path: Path, *, with_specials: bool = True) -> Any:
+        """33 Class-2 states on 2020, Florida and Ohio on 2022, and Arizona as an off-class trap.
+
+        Arizona's 2020 race was a Class-3 special, so it has 2020 votes but no
+        Class-2 seat; Georgia has 2022 votes it must not take. The generic ballot
+        sits on the House map, as it does live.
+        """
+        from run_us_senate_model import (
+            class2_state_allowlist,
+            senate_field_allowlist,
+            senate_special_elections,
+        )
+
+        assert len(CLASS2_2026) == 33
+        dem, rep, _independent, _others = _us_parties(db)
+        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        pollster = db.add_pollster("YouGov", "yougov_us_house")
+        _add_poll(
+            db,
+            map_id=house_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(dem.id, 50.0), (rep.id, 50.0)],
+        )
+        senate_map, e2020, e2022 = _senate_elections(db)
+        region = db.add_region(senate_map.id, "Everywhere")
+        seats = {
+            name: db.add_seat(senate_map.id, name, region_id=region.id)
+            for name in (*CLASS2_2026, "Arizona", "Florida", "Ohio")
+        }
+        for name in (*CLASS2_2026, "Arizona"):
+            db.add_vote(e2020, seats[name].id, party_id=rep.id, vote_total=600.0)
+            db.add_vote(e2020, seats[name].id, party_id=dem.id, vote_total=400.0)
+        for name in ("Florida", "Ohio", "Arizona", "Georgia"):
+            db.add_vote(e2022, seats[name].id, party_id=rep.id, vote_total=550.0)
+            db.add_vote(e2022, seats[name].id, party_id=dem.id, vote_total=450.0)
+
+        snapshot = tmp_path / "senate-current.json"
+        snapshot.write_text(
+            json.dumps(
+                {
+                    "seats": [
+                        *({"n": name, "members": [{"class": 2}, {"class": 3}]} for name in CLASS2_2026),
+                        *(
+                            {"n": name, "members": [{"class": 1}, {"class": 3}]}
+                            for name in ("Arizona", "Florida", "Ohio")
+                        ),
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        shell = _shell_copy(tmp_path)
+        if not with_specials:
+            _edit_shell(shell, lambda payload: payload["mapModes"]["23"].pop("senateSpecialElections"))
+        specials = senate_special_elections(shell)
+        spec = UsModelSpec(
+            map_name=SENATE_MAP,
+            baseline_election_name="2020 US Senate Election",
+            election_type="us_test_model",
+            election_name_prefix="US Test UNS",
+            trend_cache_json=tmp_path / "trends.json",
+            trend_cache_meta_json=tmp_path / "trends_meta.json",
+            seat_name_allowlist=senate_field_allowlist(class2_state_allowlist(snapshot), specials),
+            national_poll_map_name=HOUSE_MAP,
+            seat_baseline_overrides={special.seat: special.baseline_election_id for special in specials},
+        )
+        return SimpleNamespace(
+            spec=spec, seats=seats, dem=dem, rep=rep, pollster=pollster, senate_map=senate_map
+        )
+
+    def test_a_dry_run_projects_35_seats(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        world = self._world(db, tmp_path)
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["run_us_senate_model.py", "--dry-run", "--as-of-date", "2026-06-01", "--since-date", "2026-04-01"],
+        )
+
+        assert main_for_spec(world.spec, db_factory=lambda: db) == 0
+
+        assert "projected seats: 35" in capsys.readouterr().out
+        # A dry run writes nothing.
+        assert not world.spec.trend_cache_json.exists()
+        assert not world.spec.trend_cache_meta_json.exists()
+
+    def test_the_specials_are_the_two_extra_seats(self, db: Database, tmp_path: Path) -> None:
+        world = self._world(db, tmp_path)
+        _, projected, _, _, _, _, _ = run_simulation(db, _cfg(world.spec))
+        projected_ids = {int(row["seat_id"]) for row in projected}
+        by_id = {seat.id: name for name, seat in world.seats.items()}
+
+        assert sorted(by_id[seat_id] for seat_id in projected_ids) == sorted(
+            (*CLASS2_2026, "Florida", "Ohio")
+        )
+
+    def test_without_the_shell_key_the_field_is_the_33_class_2_seats(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        world = self._world(db, tmp_path, with_specials=False)
+
+        _, projected, _, _, _, _, _ = run_simulation(db, _cfg(world.spec))
+
+        assert len({int(row["seat_id"]) for row in projected}) == 33
+
+    def test_ohio_swings_from_2022_and_georgia_from_2020(self, db: Database, tmp_path: Path) -> None:
+        world = self._world(db, tmp_path)
+        rep = world.rep
+
+        _, projected, _, _, _, _, _ = run_simulation(db, _cfg(world.spec))
+
+        # Baseline national R share: 33 seats at 600/1000 and two at 550/1000 →
+        # 20900/35000 = 59.71. The generic ballot is 50/50, so the swing is −9.71.
+        swing = 50.0 - 20900.0 / 35000.0 * 100.0
+        assert _shares_by_party(projected, world.seats["Ohio"].id)[rep.id] == pytest.approx(55.0 + swing, abs=0.05)
+        assert _shares_by_party(projected, world.seats["Florida"].id)[rep.id] == pytest.approx(55.0 + swing, abs=0.05)
+        assert _shares_by_party(projected, world.seats["Georgia"].id)[rep.id] == pytest.approx(60.0 + swing, abs=0.05)
+
+    def test_a_specials_own_polls_blend_against_its_2022_baseline(self, db: Database, tmp_path: Path) -> None:
+        world = self._world(db, tmp_path)
+        rep, dem, ohio = world.rep, world.dem, world.seats["Ohio"]
+        matchup = "Husted (R) vs Brown (D)"
+        db.set_tracked_matchup(world.senate_map.id, ohio.id, matchup, source="auto")
+        _add_poll(
+            db,
+            map_id=world.senate_map.id,
+            pollster=world.pollster,
+            end=date(2026, 6, 1),
+            rows=[(rep.id, 40.0), (dem.id, 60.0)],
+            seat_id=ohio.id,
+            matchup=matchup,
+        )
+
+        _, projected, _, _, _, _, diagnostics = run_simulation(db, _cfg(world.spec))
+
+        # α = 0.5: half the way from the 2022 baseline (55) to the poll (40), plus
+        # half the uniform swing. On the 2020 baseline Ohio would have no votes and
+        # would not be projected at all.
+        swing = 50.0 - 20900.0 / 35000.0 * 100.0
+        assert diagnostics == [f"SEAT_POLL Ohio n=1 W=1.000 alpha=0.500 matchup={matchup}"]
+        assert _shares_by_party(projected, ohio.id)[rep.id] == pytest.approx(
+            55.0 + 0.5 * (40.0 - 55.0) + 0.5 * swing, abs=0.05
+        )
+
+    def test_an_unresolvable_baseline_id_fails_the_run_clearly(self, db: Database, tmp_path: Path) -> None:
+        world = self._world(db, tmp_path)
+        spec = dataclasses.replace(
+            world.spec, seat_baseline_overrides={"Ohio": "2022-us-senate-special"}
+        )
+
+        with pytest.raises(ValueError, match="2022-us-senate-special"):
+            run_simulation(db, _cfg(spec))
+
+
+# ── --rebuild-history: the window ─────────────────────────────────────────────
+
+
+class TestRebuildWindow:
+    def test_no_existing_dates_means_nothing_to_rebuild(self) -> None:
+        assert rebuild_window([], date(2026, 1, 1), date(2026, 6, 1)) is None
+
+    def test_a_single_date_rebuilds_just_that_date(self) -> None:
+        day = date(2026, 3, 1)
+
+        assert rebuild_window({day}, date(2026, 1, 1), date(2026, 6, 1)) == (day, day)
+
+    def test_a_gap_is_spanned_not_skipped(self) -> None:
+        # Unsorted on purpose: the helper must not trust input order.
+        existing = {date(2026, 3, 10), date(2026, 3, 1), date(2026, 3, 4)}
+
+        assert rebuild_window(existing, date(2026, 1, 1), date(2026, 6, 1)) == (
+            date(2026, 3, 1),
+            date(2026, 3, 10),
+        )
+
+    def test_polls_wider_than_the_series_leave_it_alone(self) -> None:
+        existing = {date(2026, 3, 1), date(2026, 3, 10)}
+
+        assert rebuild_window(existing, date(2025, 1, 1), date(2026, 12, 31)) == (
+            date(2026, 3, 1),
+            date(2026, 3, 10),
+        )
+
+    def test_polls_narrower_than_the_series_trim_both_ends(self) -> None:
+        existing = {date(2026, 3, 1), date(2026, 3, 10)}
+
+        assert rebuild_window(existing, date(2026, 3, 3), date(2026, 3, 8)) == (
+            date(2026, 3, 3),
+            date(2026, 3, 8),
+        )
+
+    def test_a_series_entirely_outside_the_polls_is_left_alone(self) -> None:
+        existing = {date(2026, 3, 1), date(2026, 3, 10)}
+
+        assert rebuild_window(existing, date(2026, 4, 1), date(2026, 5, 1)) is None
+        assert rebuild_window(existing, date(2025, 1, 1), date(2026, 2, 1)) is None
+
+    def test_unknown_poll_bounds_rebuild_the_whole_series(self) -> None:
+        existing = {date(2026, 3, 1), date(2026, 3, 10)}
+
+        assert rebuild_window(existing, None, None) == (date(2026, 3, 1), date(2026, 3, 10))
+
+
+class TestPollDateBounds:
+    def test_first_and_last_usable_poll(self, db: Database, tmp_path: Path) -> None:
+        dem, rep = _parties(db)
+        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        pollster = db.add_pollster("YouGov", "yougov_us_house")
+        for end in (date(2026, 5, 1), date(2026, 6, 10), date(2026, 5, 20)):
+            _add_poll(db, map_id=house_map.id, pollster=pollster, end=end, rows=[(dem.id, 50.0)])
+        scope = resolve_poll_scope(db, _us_spec(tmp_path, map_name=HOUSE_MAP))
+
+        assert poll_date_bounds(db, scope) == (date(2026, 5, 1), date(2026, 6, 10))
+        assert latest_poll_date(db, scope) == date(2026, 6, 10)
+
+    def test_no_polls_is_none_both_ways(self, db: Database, tmp_path: Path) -> None:
+        db.add_map(HOUSE_MAP, parliament="us_house")
+        scope = resolve_poll_scope(db, _us_spec(tmp_path, map_name=HOUSE_MAP))
+
+        assert poll_date_bounds(db, scope) == (None, None)
+
+
+# ── --rebuild-history: the CLI ────────────────────────────────────────────────
+
+
+class TestRebuildHistoryFlag:
+    @pytest.mark.parametrize(
+        "runner", ["run_us_house_model", "run_us_presidential_model", "run_us_senate_model"]
+    )
+    def test_every_runner_accepts_the_flag(self, runner: str) -> None:
+        # The console appends exactly this spelling (console.services.us_models).
+        module = __import__(runner)
+        parser = build_arg_parser(module.SPEC)
+
+        assert parser.parse_args(["--rebuild-history"]).rebuild_history is True
+        assert parser.parse_args([]).rebuild_history is False
+
+
+class TestRebuildHistoryRun:
+    """``main_for_spec`` with the run and every disk/DB write swapped for recorders.
+
+    ``persist_projection`` and friends default to the configured (live) database
+    path, so the orchestration is tested with ``run_simulation``, the reset, the
+    trend-date lookup and the meta writer all replaced — nothing here touches the
+    real database or the repo's trend files.
+    """
+
+    EXISTING = {date(2026, 5, 25), date(2026, 6, 2), date(2026, 6, 4)}
+
+    def _run(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        argv: list[str],
+    ) -> SimpleNamespace:
+        dem, rep = _parties(db)
+        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        pollster = db.add_pollster("YouGov", "yougov_us_house")
+        for end in (date(2026, 6, 1), date(2026, 6, 10)):
+            _add_poll(
+                db, map_id=house_map.id, pollster=pollster, end=end, rows=[(dem.id, 50.0), (rep.id, 50.0)]
+            )
+        spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
+        calls = SimpleNamespace(runs=[], resets=[], metas=[])
+
+        def fake_run(_db: Database, cfg: UsSimulationConfig) -> tuple[Any, ...]:
+            calls.runs.append(cfg)
+            return (f"US Test UNS {cfg.as_of_date}", [], [], Counter(), None, {}, [])
+
+        def fake_reset(_spec: UsModelSpec, start: date, end: date, *_: Any) -> tuple[int, int, int]:
+            calls.resets.append((start, end))
+            return 0, 0, 0
+
+        def fake_meta(_spec: UsModelSpec, as_of: date, since: date, *_: Any, **__: Any) -> None:
+            calls.metas.append((as_of, since))
+
+        monkeypatch.setattr(_common, "run_simulation", fake_run)
+        monkeypatch.setattr(_common, "reset_existing_model_outputs", fake_reset)
+        monkeypatch.setattr(_common, "write_trend_cache_meta", fake_meta)
+        monkeypatch.setattr(_common, "existing_trend_dates", lambda *_a, **_k: set(self.EXISTING))
+        monkeypatch.setattr(sys, "argv", ["run_us_house_model.py", *argv])
+
+        assert main_for_spec(spec, db_factory=lambda: db) == 0
+        return calls
+
+    # As-of 20 June caps to the last poll (10 June) and shifts the window with it,
+    # so the single-date run looks back 80 days: 22 March → 10 June.
+    ARGV = ["--as-of-date", "2026-06-20", "--since-date", "2026-04-01"]
+
+    def test_existing_dates_are_recomputed_then_the_meta_is_written(
+        self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls = self._run(db, tmp_path, monkeypatch, [*self.ARGV, "--rebuild-history"])
+        run_dates = [cfg.as_of_date for cfg in calls.runs]
+
+        # 25 May predates the first poll, so the rebuild starts on 1 June and runs
+        # through the last existing date (4 June), gap included …
+        assert calls.resets == [(date(2026, 6, 1), date(2026, 6, 4))]
+        assert run_dates[:4] == [date(2026, 6, day) for day in (1, 2, 3, 4)]
+        # … then the normal single-date path fills forward to the capped as-of …
+        assert run_dates[4:] == [date(2026, 6, day) for day in range(5, 11)]
+        # … and still writes the meta, once, for the capped as-of.
+        assert calls.metas == [(date(2026, 6, 10), date(2026, 3, 22))]
+        # The rebuild uses the single-date run's window, not --lookback-days' 365.
+        assert all(cfg.as_of_date - cfg.since_date == timedelta(days=80) for cfg in calls.runs)
+        assert not any(cfg.dry_run for cfg in calls.runs)
+
+    def test_without_the_flag_history_is_left_alone(
+        self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls = self._run(db, tmp_path, monkeypatch, self.ARGV)
+
+        assert calls.resets == []
+        assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, day) for day in range(5, 11)]
+        assert calls.metas == [(date(2026, 6, 10), date(2026, 3, 22))]
+
+    def test_the_rebuild_resets_even_with_no_reset_existing(
+        self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls = self._run(
+            db, tmp_path, monkeypatch, [*self.ARGV, "--rebuild-history", "--no-reset-existing"]
+        )
+
+        assert calls.resets == [(date(2026, 6, 1), date(2026, 6, 4))]
+
+    def test_a_dry_run_skips_the_rebuild(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        calls = self._run(db, tmp_path, monkeypatch, [*self.ARGV, "--rebuild-history", "--dry-run"])
+
+        assert "REBUILD-HISTORY skipped for dry-run mode" in capsys.readouterr().out
+        assert calls.resets == []
+        assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, 10)]
+        assert calls.metas == []

@@ -45,7 +45,7 @@ import re
 import sqlite3
 import sys
 from collections import Counter, defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -60,8 +60,9 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
-from models import Election, Map, Poll, Region, TrackedMatchup
+from models import Election, Map, Poll, Region, TrackedMatchup, Vote
 from polls.importers.us.us_geography import parent_seat_name
+from scripts.export.naming import manifest_id_for_election
 
 # Single source of truth for the database path: config.py (which reads .env).
 DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
@@ -116,9 +117,13 @@ class UsModelSpec:
             ``"national"`` makes every seat follow the national matchup (the President,
             whose state polls are the same head-to-head). Consumed by the seat-blending
             step; the national series never uses it.
-        seat_baseline_overrides: Seat name → baseline election name, for seats whose
-            baseline is not ``baseline_election_name`` (the 2026 Senate specials, which
-            swing from 2022 rather than 2020). Consumed by the baseline loader.
+        seat_baseline_overrides: Seat name → the **manifest id** of the election that
+            seat's baseline comes from, for seats whose baseline is not
+            ``baseline_election_name`` (the 2026 Senate specials, which swing from 2022
+            rather than 2020). Manifest ids rather than election names, because the
+            source of truth is ``map-modes-shell.json``, which names elections the way
+            the exported manifest does; :func:`resolve_special_baselines` turns them
+            into rows. Consumed by the baseline loader.
     """
 
     map_name: str
@@ -390,6 +395,7 @@ def build_baseline_vote_state(
     baseline_election_id: int,
     region_by_seat_id: dict[int, int | None],
     seat_id_filter: set[int] | None = None,
+    seat_baseline_election_ids: Mapping[int, int] | None = None,
 ) -> tuple[
     dict[int, dict[int, float]],
     dict[int, float],
@@ -402,6 +408,13 @@ def build_baseline_vote_state(
     derive swings. When ``seat_id_filter`` is supplied, votes for seats outside it
     are ignored (the Senate Class-2 restriction).
 
+    ``seat_baseline_election_ids`` moves individual seats onto a different election:
+    a 2026 Senate special fills a Class-3 seat last contested in **2022**, so Ohio
+    and Florida swing from the 2022 race while the rest of the field swings from
+    2020. Each override election contributes *only* the seats pointed at it, and
+    those seats are dropped from the spec's own baseline — so a state that appears
+    in both elections is counted once, on the override.
+
     Returns ``(seat_party_vote_totals, national_party_totals,
     baseline_national_shares, baseline_region_shares)`` where the two share maps
     are 0–100 percentages.
@@ -413,30 +426,43 @@ def build_baseline_vote_state(
     if not baseline_votes:
         raise ValueError("Baseline election has no votes")
 
+    overrides = dict(seat_baseline_election_ids or {})
+    # ``None`` means "every seat but the overridden ones"; a set means "only these".
+    sources: list[tuple[Sequence[Vote], set[int] | None]] = [(baseline_votes, None)]
+    for election_id in sorted(set(overrides.values())):
+        seat_ids = {seat_id for seat_id, other in overrides.items() if other == election_id}
+        sources.append((db.get_votes_for_election(election_id), seat_ids))
+
     seat_party_vote_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
     region_party_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
     region_totals: dict[int, float] = defaultdict(float)
     national_party_totals: dict[int, float] = defaultdict(float)
     national_total = 0.0
 
-    for vote in baseline_votes:
-        if vote.vote_total is None or vote.party_id is None:
-            continue
-        seat_id = vote.seat_id
-        if seat_id_filter is not None and seat_id not in seat_id_filter:
-            continue
-        party_id = PARTY_ID_ALIASES.get(vote.party_id, vote.party_id)
-        value = float(vote.vote_total)
-        seat_party_vote_totals[seat_id][party_id] += value
+    for votes, only_seat_ids in sources:
+        for vote in votes:
+            if vote.vote_total is None or vote.party_id is None:
+                continue
+            seat_id = vote.seat_id
+            if only_seat_ids is None:
+                if seat_id in overrides:
+                    continue
+            elif seat_id not in only_seat_ids:
+                continue
+            if seat_id_filter is not None and seat_id not in seat_id_filter:
+                continue
+            party_id = PARTY_ID_ALIASES.get(vote.party_id, vote.party_id)
+            value = float(vote.vote_total)
+            seat_party_vote_totals[seat_id][party_id] += value
 
-        national_party_totals[party_id] += value
-        national_total += value
+            national_party_totals[party_id] += value
+            national_total += value
 
-        region_id = region_by_seat_id.get(seat_id)
-        if region_id is None:
-            continue
-        region_party_totals[region_id][party_id] += value
-        region_totals[region_id] += value
+            region_id = region_by_seat_id.get(seat_id)
+            if region_id is None:
+                continue
+            region_party_totals[region_id][party_id] += value
+            region_totals[region_id] += value
 
     if not seat_party_vote_totals:
         raise ValueError("No baseline seat-party vote totals available")
@@ -1087,6 +1113,80 @@ def resolve_simulation_scope(db: Database, spec: UsModelSpec) -> tuple[Map, Elec
     return poll_map, baseline
 
 
+def resolve_special_baselines(
+    db: Database, map_id: int, manifest_election_ids: Iterable[str]
+) -> dict[str, int]:
+    """Resolve manifest election ids to election primary keys, over one map's elections.
+
+    ``map-modes-shell.json`` names a special's baseline the way the exported
+    manifest does (``"2022-us-senate"``) — that is the id the front end fetches, so
+    the shell can hold one value the model and the map both understand. The model
+    needs the row, so each id is matched against
+    :func:`~scripts.export.naming.manifest_id_for_election` over the map's elections.
+
+    Args:
+        db: Open database handle.
+        map_id: The map whose elections may be named (the Senate map, for specials).
+        manifest_election_ids: The ids to resolve; duplicates and an empty set are fine.
+
+    Returns:
+        Manifest id → election id, one entry per distinct input id.
+
+    Raises:
+        ValueError: If any id matches no election on the map. A typo in the shell
+            would otherwise leave the seat silently on the wrong baseline, which
+            reads as a modelling error rather than a configuration one.
+    """
+    wanted = set(manifest_election_ids)
+    if not wanted:
+        return {}
+
+    elections = db.get_elections_for_map(map_id)
+    manifest_ids = {election: manifest_id_for_election(election) for election in elections}
+    resolved = {
+        manifest_id: int(election.id)
+        for election, manifest_id in manifest_ids.items()
+        if manifest_id in wanted
+    }
+
+    missing = sorted(wanted - set(resolved))
+    if missing:
+        known = ", ".join(sorted(manifest_ids.values())) or "(none)"
+        raise ValueError(
+            f"Unknown baseline election id(s) {', '.join(missing)} on map_id={map_id}. "
+            f"Known ids: {known}"
+        )
+    return resolved
+
+
+def resolve_seat_baselines(
+    db: Database, map_id: int, seats: Iterable[SeatRef], seat_baseline_overrides: Mapping[str, str]
+) -> dict[int, int]:
+    """Seat id → baseline election id, for the seats whose baseline is overridden.
+
+    Overrides are written against seat *names* (the shell has no seat ids), so they
+    are joined to this run's seats here. A named seat this run does not project —
+    a special outside the allowlist — is dropped rather than raising: it has no
+    baseline to override.
+
+    Raises:
+        ValueError: If an override names an election id that this map has no
+            election for (see :func:`resolve_special_baselines`).
+    """
+    if not seat_baseline_overrides:
+        return {}
+
+    election_id_by_manifest_id = resolve_special_baselines(
+        db, map_id, seat_baseline_overrides.values()
+    )
+    seat_id_by_name = {seat.seat_name: seat.id for seat in seats}
+    return {
+        seat_id_by_name[seat_name]: election_id_by_manifest_id[manifest_id]
+        for seat_name, manifest_id in seat_baseline_overrides.items()
+        if seat_name in seat_id_by_name
+    }
+
+
 def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
     """Resolve where this spec's polls live, and which matchup they must carry.
 
@@ -1142,10 +1242,8 @@ def _matchup_clause(matchup: str | None) -> ColumnElement[bool]:
     return Poll.matchup.is_(None) if matchup is None else Poll.matchup == matchup
 
 
-def latest_poll_date(
-    db: Database, scope: PollScope, *, include_seat_polls: bool = True
-) -> date | None:
-    """Latest fieldwork end date across every poll the run would actually use.
+def _poll_end_dates(db: Database, scope: PollScope, *, include_seat_polls: bool) -> list[date]:
+    """Fieldwork end dates of every poll this run would actually use.
 
     The as-of cap exists so decay-only drift never invents movement past the last
     real poll. Once seat polls feed the projection they are real polls too: a
@@ -1170,7 +1268,7 @@ def latest_poll_date(
             same window, same weights, same output.
 
     Returns:
-        The latest such fieldwork end date, or ``None`` when nothing qualifies.
+        Every qualifying fieldwork end date, unsorted and with duplicates.
     """
     national_statement = select(Poll.fieldwork_end).where(
         Poll.map_id == scope.national_map_id,
@@ -1211,7 +1309,29 @@ def latest_poll_date(
         end_dates = list(session.execute(national_statement).scalars().all())
         if include_seat_polls:
             end_dates.extend(session.execute(seat_statement).scalars().all())
-    return max(end_dates, default=None)
+    return end_dates
+
+
+def latest_poll_date(
+    db: Database, scope: PollScope, *, include_seat_polls: bool = True
+) -> date | None:
+    """Latest fieldwork end date across every poll the run would use, or ``None``.
+
+    This is the as-of cap — see :func:`_poll_end_dates` for which polls count.
+    """
+    return max(_poll_end_dates(db, scope, include_seat_polls=include_seat_polls), default=None)
+
+
+def poll_date_bounds(
+    db: Database, scope: PollScope, *, include_seat_polls: bool = True
+) -> tuple[date | None, date | None]:
+    """``(first, last)`` fieldwork end date across every poll the run would use.
+
+    ``(None, None)`` when the run has no usable polls at all. The first date bounds
+    a ``--rebuild-history`` window the way the last one caps ``as_of_date``.
+    """
+    end_dates = _poll_end_dates(db, scope, include_seat_polls=include_seat_polls)
+    return min(end_dates, default=None), max(end_dates, default=None)
 
 
 # ── Persistence + trend cache (parameterised by spec) ─────────────────────────
@@ -1612,7 +1732,13 @@ def run_simulation(
         national_party_totals,
         baseline_national_shares,
         baseline_region_shares,
-    ) = build_baseline_vote_state(db, baseline.id, region_by_seat_id, seat_id_filter)
+    ) = build_baseline_vote_state(
+        db,
+        baseline.id,
+        region_by_seat_id,
+        seat_id_filter,
+        resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
+    )
 
     national_readings = collect_poll_readings(
         db,
@@ -1752,6 +1878,42 @@ def run_simulation(
     )
 
 
+def rebuild_window(
+    existing_dates: Iterable[date], first_poll: date | None, last_poll: date | None
+) -> tuple[date, date] | None:
+    """Pick the ``[start, end]`` range ``--rebuild-history`` should recompute.
+
+    A rebuild follows a change that moves every historical point at once — a new
+    tracked matchup, a seat baseline override, the Senate specials joining the
+    field — so the series' own dates set the range: from the earliest trend date to
+    the latest, gaps included (a contiguous re-run fills them).
+
+    The poll bounds then trim it. Before the first poll there is no poll-tracker
+    series to speak of, and past the last poll the single-date path's as-of cap
+    already pins where the series ends, so recomputing beyond either end would
+    write points the normal run never would.
+
+    Args:
+        existing_dates: Every ``as_of_date`` the trend series already holds.
+        first_poll: Earliest usable poll's fieldwork end date, or ``None``.
+        last_poll: Latest usable poll's fieldwork end date, or ``None``.
+
+    Returns:
+        The inclusive range to recompute, or ``None`` when nothing qualifies —
+        an empty series, or one lying entirely outside the poll window.
+    """
+    dates = sorted(existing_dates)
+    if not dates:
+        return None
+
+    start, end = dates[0], dates[-1]
+    if first_poll is not None:
+        start = max(start, first_poll)
+    if last_poll is not None:
+        end = min(end, last_poll)
+    return (start, end) if start <= end else None
+
+
 def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace) -> None:
     """Run daily projections across ``[--start-date, --end-date]`` to backfill trends.
 
@@ -1760,15 +1922,53 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
     """
     start_date = date.fromisoformat(args.start_date)
     end_date = date.fromisoformat(args.end_date)
-
     if end_date < start_date:
         raise ValueError("--end-date must be on or after --start-date")
-    if args.lookback_days < 0:
+
+    run_retrospective_range(
+        db,
+        spec,
+        args,
+        start_date=start_date,
+        end_date=end_date,
+        lookback_days=args.lookback_days,
+        reset_existing=bool(args.reset_existing),
+    )
+
+
+def run_retrospective_range(
+    db: Database,
+    spec: UsModelSpec,
+    args: argparse.Namespace,
+    *,
+    start_date: date,
+    end_date: date,
+    lookback_days: int,
+    reset_existing: bool,
+) -> None:
+    """Run daily projections across an explicit ``[start_date, end_date]``.
+
+    The body of :func:`run_retrospective`, taking its range as arguments rather
+    than from ``--start-date`` / ``--end-date`` so ``--rebuild-history`` can drive
+    the same loop over a range it computed itself. The half-life, dry-run, seat
+    blending, error handling and progress settings still come from ``args``.
+    Two things are passed separately because a rebuild must not take them from
+    the backfill flags: ``lookback_days`` (a rebuild reuses the single-date run's
+    ``--since-*`` window, so rebuilt points match the ones the daily run writes,
+    not ``--lookback-days``' 365) and ``reset_existing`` (a rebuild always clears
+    the range it replaces, whatever ``--no-reset-existing`` says).
+
+    Raises:
+        ValueError: On an invalid date range, negative lookback, or non-positive half-life.
+    """
+    if end_date < start_date:
+        raise ValueError("end_date must be on or after start_date")
+    if lookback_days < 0:
         raise ValueError("--lookback-days must be zero or greater")
     if args.half_life_days <= 0:
         raise ValueError("--half-life-days must be greater than zero")
 
-    if args.reset_existing and not args.dry_run:
+    if reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
             spec, start_date, end_date
         )
@@ -1776,7 +1976,7 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
             f"RESET deleted_elections={deleted_elections} "
             f"deleted_votes={deleted_votes} stripped_trend_rows={stripped}"
         )
-    elif args.reset_existing and args.dry_run:
+    elif reset_existing and args.dry_run:
         print("RESET skipped for dry-run mode")
 
     current = start_date
@@ -1789,7 +1989,7 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
             cfg = UsSimulationConfig(
                 spec=spec,
                 as_of_date=current,
-                since_date=current - timedelta(days=args.lookback_days),
+                since_date=current - timedelta(days=lookback_days),
                 half_life_days=args.half_life_days,
                 dry_run=args.dry_run,
                 seat_prior_weight=args.seat_prior_weight,
@@ -1812,7 +2012,7 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
 
     print("SUMMARY")
     print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
-    print(f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
+    print(f"LOOKBACK_DAYS={lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
     print(f"DRY_RUN={args.dry_run} SUCCESS={success_count} FAILED={failed_count}")
     for when, message in failures:
         print(f"FAILURE {when}\t{message}")
@@ -1859,6 +2059,15 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     )
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--progress-every", type=int, default=25)
+    parser.add_argument(
+        "--rebuild-history",
+        action="store_true",
+        help=(
+            "Before the normal run, recompute every date already in the trend series. "
+            "Use after a change that moves the whole history — a new tracked matchup, "
+            "a seat baseline override, or the Senate specials joining the field"
+        ),
+    )
     # Seat-poll blending
     parser.add_argument(
         "--seat-prior-weight",
@@ -1905,13 +2114,53 @@ def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSi
     )
 
 
+def _rebuild_history(
+    db: Database,
+    spec: UsModelSpec,
+    args: argparse.Namespace,
+    cfg: UsSimulationConfig,
+    *,
+    first_poll: date | None,
+    lookback_days: int,
+) -> None:
+    """``--rebuild-history``: recompute the existing trend series in place.
+
+    Runs before the single-date path rather than instead of it, because that path
+    is the one that writes the trend meta file (and fills any dates after the
+    rebuilt range). ``cfg.as_of_date`` is already capped at the last poll, so it
+    is the window's upper bound.
+    """
+    if cfg.dry_run:
+        print("REBUILD-HISTORY skipped for dry-run mode")
+        return
+
+    window = rebuild_window(existing_trend_dates(spec), first_poll, cfg.as_of_date)
+    if window is None:
+        print("REBUILD-HISTORY nothing to rebuild")
+        return
+
+    start_date, end_date = window
+    print(f"REBUILD-HISTORY from={start_date.isoformat()} to={end_date.isoformat()}")
+    run_retrospective_range(
+        db,
+        spec,
+        args,
+        start_date=start_date,
+        end_date=end_date,
+        lookback_days=lookback_days,
+        reset_existing=True,
+    )
+
+
 def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None = None) -> int:
     """CLI entry point shared by the three runners; returns a process exit code.
 
     Pass ``--start-date`` + ``--end-date`` for retrospective backfill; otherwise a
     single-date run (auto-filling any gap up to ``as_of_date``). The as-of date is
     capped at the latest poll fieldwork date so decay-only drift never invents
-    movement past the last real poll.
+    movement past the last real poll. ``--rebuild-history`` first recomputes every
+    existing trend date inside the poll window (see :func:`rebuild_window`), then
+    carries on into that single-date run, which writes the meta file.
 
     Returns ``0`` on success, or ``2`` when the spec needs a national tracked
     matchup and none is set — the President with no chosen head-to-head. Nothing
@@ -1935,7 +2184,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
 
     cfg = _build_config_from_args(spec, args)
 
-    latest_end = latest_poll_date(db, scope, include_seat_polls=not cfg.ignore_seat_polls)
+    first_poll, latest_end = poll_date_bounds(
+        db, scope, include_seat_polls=not cfg.ignore_seat_polls
+    )
     if latest_end is not None and cfg.as_of_date > latest_end:
         print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
         shift = cfg.as_of_date - latest_end
@@ -1949,11 +2200,15 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             ignore_seat_polls=cfg.ignore_seat_polls,
         )
 
+    lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
+
+    if args.rebuild_history:
+        _rebuild_history(db, spec, args, cfg, first_poll=first_poll, lookback_days=lookback_days)
+
     run_dates = dates_to_run_for_cfg(cfg)
     if len(run_dates) > 1:
         print(f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}")
 
-    lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
     latest_poll_usage: LatestPollUsage | None = None
 
     for index, run_date in enumerate(run_dates, start=1):

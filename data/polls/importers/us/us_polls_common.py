@@ -5,7 +5,7 @@ This module reads a *table* and applies no editorial rule: which tables count,
 which seat they belong to and what happens to their rows is the contest layer's
 job (``us_wikipedia_polls.py``).
 
-Three sections, in the order a page flows through them:
+Four sections, in the order a page flows through them:
 
 - **HTML helpers** fetch a page and read its date cells.
 - **Table structure** turns a ``<table>`` into a rowspan-aware grid, the
@@ -28,6 +28,7 @@ aggregators.
 
 from __future__ import annotations
 
+import math
 import re
 from collections import Counter
 from collections.abc import Sequence
@@ -164,11 +165,11 @@ def parse_date_range(raw: str) -> tuple[date, date] | None:
 # headings it sits under, whether Wikipedia collapsed it, and which columns hold
 # the pollster, the fieldwork dates and the sample size.
 #
-# It is deliberately stricter than the legacy parser below. A table counts as a
-# polling table only when its header names **both** a pollster/source column and
-# a date column, so candidate lists, "Predictions", redistricting and seat-count
-# tables are rejected on structure — not on whether one of their cells happens
-# to hold a parseable date.
+# It is deliberately strict. A table counts as a polling table only when its
+# header names **both** a pollster/source column and a date column, so candidate
+# lists, "Predictions", redistricting and seat-count tables are rejected on
+# structure — not on whether one of their cells happens to hold a parseable
+# date.
 
 
 # Heading levels a section path is built from. h1 is the page title.
@@ -181,6 +182,12 @@ MAX_HEADER_ROW_SCAN = 3
 # Upper bound on a single cell's rowspan/colspan, so hand-edited markup with an
 # absurd span can't blow the grid up.
 _MAX_SPAN = 64
+
+# Upper bounds on a whole expanded grid. A real polling table is about a dozen
+# columns wide and a few hundred rows long; a grid past either bound is markup
+# that would cost memory and time to expand, and is never a poll table.
+_MAX_GRID_WIDTH = 200
+_MAX_GRID_CELLS = 100_000
 
 _FOOTNOTE_RE = re.compile(r"\[[^\]]*\]")
 
@@ -298,7 +305,8 @@ def _span_value(tag: Tag, name: str, *, zero: int) -> int:
     """Read a rowspan/colspan attribute, defaulting to 1 when it is unusable.
 
     ``rowspan="0"`` means "to the end of the section" in HTML, so callers pass
-    the number of remaining rows as ``zero``.
+    the number of remaining rows as ``zero``. Either way the span is capped at
+    :data:`_MAX_SPAN`.
     """
     raw = _attr_text(tag, name)
     if raw is None:
@@ -307,9 +315,16 @@ def _span_value(tag: Tag, name: str, *, zero: int) -> int:
         value = int(raw.strip())
     except ValueError:
         return 1
-    if value <= 0:
-        return zero
-    return min(value, _MAX_SPAN)
+    return min(zero if value <= 0 else value, _MAX_SPAN)
+
+
+def _own_rows(table: Tag) -> list[Tag]:
+    """Return a table's ``<tr>`` elements, leaving out those of nested tables."""
+    return [
+        row
+        for row in table.find_all("tr")
+        if isinstance(row, Tag) and row.find_parent("table") is table
+    ]
 
 
 def expand_table_grid(table: Tag) -> list[list[Cell]]:
@@ -325,18 +340,22 @@ def expand_table_grid(table: Tag) -> list[list[Cell]]:
     Rows of nested tables are ignored, and short rows are padded with empty
     cells so every row has the same length.
 
+    The grid is bounded: a table wider than :data:`_MAX_GRID_WIDTH` columns, or
+    whose rows × width would pass :data:`_MAX_GRID_CELLS`, is abandoned as soon
+    as a cell crosses the bound, so hostile markup costs no more than a real
+    table. Callers tell that apart from a table with no rows at all by
+    :func:`_own_rows` being non-empty.
+
     Args:
         table: The ``<table>`` element.
 
     Returns:
-        One list of :class:`Cell` per ``<tr>``, all of the same length.
+        One list of :class:`Cell` per ``<tr>``, all of the same length, or an
+        empty list when the table has no rows or is too large to expand.
     """
-    rows = [
-        row
-        for row in table.find_all("tr")
-        if isinstance(row, Tag) and row.find_parent("table") is table
-    ]
+    rows = _own_rows(table)
     placed: list[dict[int, Cell]] = [{} for _ in rows]
+    max_width = min(_MAX_GRID_WIDTH, _MAX_GRID_CELLS // max(1, len(rows)))
 
     for row_index, row in enumerate(rows):
         column = 0
@@ -347,6 +366,8 @@ def expand_table_grid(table: Tag) -> list[list[Cell]]:
                 column += 1
             row_span = _span_value(tag, "rowspan", zero=len(rows) - row_index)
             col_span = _span_value(tag, "colspan", zero=1)
+            if column + col_span > max_width:
+                return []
             text = _clean(tag.get_text(" ", strip=True))
             is_header = tag.name == "th"
             for row_offset in range(row_span):
@@ -534,10 +555,15 @@ def classify_table(table: Tag) -> TableInfo | None:
         table: Any ``<table>`` on a polling page.
 
     Returns:
-        The classified table, or None when no candidate header row names both a
-        pollster and a date column.
+        The classified table, or None when the table is empty, too large to
+        expand, or no candidate header row names both a pollster and a date
+        column.
     """
-    grid = expand_table_grid(table)
+    return _classify_grid(table, expand_table_grid(table))
+
+
+def _classify_grid(table: Tag, grid: list[list[Cell]]) -> TableInfo | None:
+    """Classify a table whose grid has already been expanded."""
     if not grid:
         return None
     for index, row in enumerate(grid[:MAX_HEADER_ROW_SCAN]):
@@ -713,6 +739,21 @@ class ParsedTable:
     rows: tuple[ParsedPollRow, ...]
     variants_dropped: int
     unknown_suffixes: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class PageTables:
+    """Every polling table on a page, plus the tables too large to read.
+
+    Attributes:
+        tables: The parsed tables, in document order.
+        oversized: The heading path of each table :func:`expand_table_grid`
+            abandoned for passing its size bounds, in document order. Such a
+            table was never classified, so it is reported whatever it held.
+    """
+
+    tables: tuple[ParsedTable, ...]
+    oversized: tuple[tuple[Heading, ...], ...]
 
 
 def _candidate_link_title(cell: Cell, name_text: str) -> str | None:
@@ -913,12 +954,19 @@ def _reading_percentage(text: str) -> float | None:
     removed, what is left must be a number. A "—" or an empty cell means the
     candidate was not offered in that row, which is not the same as zero, and a
     colspan event row ("Primary election held") reads as no number at all.
+
+    The number must also be a percentage — finite and within 0–100 — because
+    ``float`` happily accepts "inf", "nan" and "1e400", and none of those (nor a
+    stray "150") may reach the model as a vote share.
     """
     cleaned = re.sub(r"\s+", "", _FOOTNOTE_RE.sub("", text)).replace("%", "")
     try:
-        return float(cleaned)
+        value = float(cleaned)
     except ValueError:
         return None
+    if not math.isfinite(value) or not 0 <= value <= 100:
+        return None
+    return value
 
 
 def _parse_sample_cell(text: str) -> tuple[int | None, str | None]:
@@ -1043,13 +1091,16 @@ def parse_poll_tables(
     *,
     allow_party_labels: bool = False,
     keep_empty: bool = False,
-) -> list[ParsedTable]:
+) -> PageTables:
     """Parse every polling table on a page, in document order.
 
     Classifies each table and keeps the ones that yield at least one poll. No
     contest rule is applied here: primary sections, collapsed hypotheticals and
     aggregation tables all come back, carrying the heading path, the collapsed
     flag and the aggregation flag the contest layer selects on.
+
+    A table too large to expand is not dropped silently: its heading path is
+    returned in :attr:`PageTables.oversized` for the contest layer to report.
 
     Args:
         html: A fetched Wikipedia page.
@@ -1061,14 +1112,19 @@ def parse_poll_tables(
             Wikipedia markup drift from the contest layer, which reports them.
 
     Returns:
-        One :class:`ParsedTable` per table that parsed.
+        A :class:`PageTables`.
     """
     soup = BeautifulSoup(html, "lxml")
     parsed: list[ParsedTable] = []
+    oversized: list[tuple[Heading, ...]] = []
     for table in soup.find_all("table"):
         if not isinstance(table, Tag) or table.find_parent("table") is not None:
             continue
-        info = classify_table(table)
+        grid = expand_table_grid(table)
+        if not grid and _own_rows(table):
+            oversized.append(tuple(heading_path(table)))
+            continue
+        info = _classify_grid(table, grid)
         if info is None:
             continue
         candidates = candidate_columns(
@@ -1093,7 +1149,7 @@ def parse_poll_tables(
                 unknown_suffixes=tuple(unknown),
             )
         )
-    return parsed
+    return PageTables(tables=tuple(parsed), oversized=tuple(oversized))
 
 
 # ── Pollster identity ─────────────────────────────────────────────────────────

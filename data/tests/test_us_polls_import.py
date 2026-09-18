@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
 from bs4 import BeautifulSoup, Tag
 
 from polls.importers.us.us_polls_common import (
@@ -387,6 +388,14 @@ def _heading_texts(table: Tag) -> list[str]:
     return [heading.text for heading in heading_path(table)]
 
 
+def _too_wide_table(table_id: str) -> str:
+    """A poll-shaped table whose second row spans 1,000 cells × colspan 64."""
+    return (
+        f"<table id='{table_id}'><tr><th>Poll source</th><th>Date(s) administered</th></tr>"
+        "<tr>" + "<td colspan='64'>x</td>" * 1000 + "</tr></table>"
+    )
+
+
 class TestExpandTableGrid:
     def test_rowspan_value_repeats_into_every_row_it_covers(self) -> None:
         # Michigan's shape: one pollster and one date cell serve the LV row and
@@ -496,13 +505,40 @@ class TestExpandTableGrid:
         ]
 
     def test_header_cells_keep_their_tag_for_later_stages(self) -> None:
-        # Piece 5 reads the candidate's full name off the <a title>.
+        # candidate_columns reads the candidate's full name off the <a title>.
         grid = expand_table_grid(_table(PRESIDENT_PAGE, "vance-newsom"))
         candidate = grid[0][4]
         assert candidate.tag is not None
         link = candidate.tag.find("a")
         assert isinstance(link, Tag)
         assert link.get("title") == "JD Vance"
+
+    def test_rowspan_zero_is_capped_like_any_other_span(self) -> None:
+        # rowspan="0" means "to the end of the table", but the 64-row cap
+        # still applies: row 64 gets its own first cell back.
+        body = "".join(f"<tr><td>row {index}</td></tr>" for index in range(1, 100))
+        table = _table(
+            f"<table id='t'><tr><td rowspan='0'>spans</td><td>a</td></tr>{body}</table>",
+            "t",
+        )
+        grid = expand_table_grid(table)
+        assert len(grid) == 100
+        assert grid[63][0].text == "spans"
+        assert grid[64][0].text == "row 64"
+
+    def test_a_row_past_the_width_bound_empties_the_grid(self) -> None:
+        # 1,000 cells of colspan 64 would expand to 64,000 columns.
+        assert expand_table_grid(_table(_too_wide_table("t"), "t")) == []
+
+    def test_a_grid_past_the_cell_bound_is_empty(self) -> None:
+        # 600 rows × 200 columns is 120,000 cells, although no row is too wide.
+        rows = ("<tr>" + "<td colspan='50'>x</td>" * 4 + "</tr>") * 600
+        assert expand_table_grid(_table(f"<table id='t'>{rows}</table>", "t")) == []
+
+    def test_a_row_exactly_at_the_width_bound_is_kept(self) -> None:
+        row = "<td colspan='64'>x</td>" * 3 + "<td colspan='8'>y</td>"
+        grid = expand_table_grid(_table(f"<table id='t'><tr>{row}</tr></table>", "t"))
+        assert len(grid[0]) == 200
 
     def test_nested_table_rows_are_ignored(self) -> None:
         table = _table(
@@ -535,7 +571,7 @@ class TestHeadingPath:
         ]
 
     def test_primary_section_is_visible_in_the_path(self) -> None:
-        # Piece 6 rejects any path containing a heading starting "primar".
+        # accepts_table rejects any path containing a heading starting "primar".
         assert _heading_texts(_table(PRESIDENT_PAGE, "primary-nationwide")) == [
             "Opinion polling",
             "Republican primary",
@@ -768,6 +804,9 @@ class TestClassifyTable:
         assert info is not None
         assert info.columns.header_row == 1
         assert len(info.data_rows) == 1
+
+    def test_oversized_table_is_rejected(self) -> None:
+        assert classify_table(_table(_too_wide_table("t"), "t")) is None
 
     def test_empty_table_is_rejected(self) -> None:
         assert classify_table(_table("<table id='t'></table>", "t")) is None
@@ -1137,6 +1176,39 @@ class TestParseTableRows:
             ("Jane Roe", 47.0),
         ]
 
+    @pytest.mark.parametrize("cell", ["inf", "-inf", "nan", "1e400", "150%", "-5%"])
+    def test_a_reading_must_be_a_finite_percentage(self, cell: str) -> None:
+        info = classify_table(
+            _table(
+                "<table id='t'><tr><th>Poll source</th><th>Date(s) administered</th>"
+                "<th>Jane Roe<br /><small>(D)</small></th>"
+                "<th>John Doe<br /><small>(R)</small></th></tr>"
+                f"<tr><td>Emerson</td><td>June 3, 2026</td><td>47%</td><td>{cell}</td></tr>"
+                "</table>",
+                "t",
+            )
+        )
+        assert info is not None
+        rows, _ = parse_table_rows(info)
+        assert [(r.candidate_name, r.percentage) for r in rows[0].readings] == [
+            ("Jane Roe", 47.0),
+        ]
+
+    def test_readings_at_the_percentage_bounds_are_kept(self) -> None:
+        info = classify_table(
+            _table(
+                "<table id='t'><tr><th>Poll source</th><th>Date(s) administered</th>"
+                "<th>Jane Roe<br /><small>(D)</small></th>"
+                "<th>John Doe<br /><small>(R)</small></th></tr>"
+                "<tr><td>Emerson</td><td>June 3, 2026</td><td>100%</td><td>0%</td></tr>"
+                "</table>",
+                "t",
+            )
+        )
+        assert info is not None
+        rows, _ = parse_table_rows(info)
+        assert [r.percentage for r in rows[0].readings] == [100.0, 0.0]
+
     def test_sample_size_and_population(self) -> None:
         rows, _ = _rows(PRESIDENT_PAGE, "vance-newsom")
         assert (rows[0].sample_size, rows[0].population) == (1000, "LV")
@@ -1225,7 +1297,7 @@ class TestParseTableRows:
 
 class TestParsePollTables:
     def test_president_page_tables_in_document_order(self) -> None:
-        tables = parse_poll_tables(PRESIDENT_PAGE)
+        tables = parse_poll_tables(PRESIDENT_PAGE).tables
         assert [table.matchup for table in tables] == [
             "Vance (R) vs Rubio (R)",
             "Vance (R) vs Newsom (D)",
@@ -1235,8 +1307,8 @@ class TestParsePollTables:
 
     def test_contest_rules_are_not_applied_here(self) -> None:
         # The primary table, the collapsed hypothetical and the statewide table
-        # all come back; piece 6 decides which of them a contest wants.
-        tables = parse_poll_tables(PRESIDENT_PAGE)
+        # all come back; accepts_table decides which of them a contest wants.
+        tables = parse_poll_tables(PRESIDENT_PAGE).tables
         assert [table.info.collapsed for table in tables] == [False, False, True, False]
         assert [table.headings[-1].text for table in tables] == [
             "Nationwide",
@@ -1253,7 +1325,7 @@ class TestParsePollTables:
         ]
 
     def test_senate_race_page(self) -> None:
-        tables = parse_poll_tables(SENATE_RACE_PAGE)
+        tables = parse_poll_tables(SENATE_RACE_PAGE).tables
         # The Predictions table is rejected, and the aggregation table names
         # parties rather than candidates, so it yields no rows without the flag.
         assert [table.matchup for table in tables] == [
@@ -1265,7 +1337,7 @@ class TestParsePollTables:
         assert tables[1].info.collapsed is True
 
     def test_generic_ballot_aggregation_table(self) -> None:
-        tables = parse_poll_tables(HOUSE_INDEX_PAGE, allow_party_labels=True)
+        tables = parse_poll_tables(HOUSE_INDEX_PAGE, allow_party_labels=True).tables
         assert len(tables) == 1
         assert tables[0].matchup is None
         assert tables[0].info.columns.is_aggregation is True
@@ -1275,7 +1347,7 @@ class TestParsePollTables:
         ]
 
     def test_unknown_suffixes_are_surfaced(self) -> None:
-        tables = parse_poll_tables(MINOR_SUFFIX_PAGE)
+        tables = parse_poll_tables(MINOR_SUFFIX_PAGE).tables
         assert [table.unknown_suffixes for table in tables] == [(), (), ("WCP",)]
         assert [table.matchup for table in tables] == [
             "Tafoya (R) vs Flanagan (DFL)",
@@ -1284,7 +1356,7 @@ class TestParsePollTables:
         ]
 
     def test_headings_are_lifted_onto_the_parsed_table(self) -> None:
-        tables = parse_poll_tables(ALASKA_PAGE)
+        tables = parse_poll_tables(ALASKA_PAGE).tables
         assert tables[0].headings == tables[0].info.headings
         assert [heading.text for heading in tables[0].headings] == [
             "General election",
@@ -1293,17 +1365,32 @@ class TestParsePollTables:
 
     def test_tables_without_a_parseable_row_are_dropped(self) -> None:
         # That page's primary table is a header with no data rows under it.
-        tables = parse_poll_tables(PRESIDENT_PAGE_NO_SECTIONS)
+        tables = parse_poll_tables(PRESIDENT_PAGE_NO_SECTIONS).tables
         assert len(tables) == 1
         assert tables[0].matchup == "Vance (R) vs Newsom (D)"
 
     def test_keep_empty_returns_the_dropped_tables(self) -> None:
         # The contest layer reports a classified table that yielded no rows —
         # it is how Wikipedia markup drift becomes visible.
-        tables = parse_poll_tables(PRESIDENT_PAGE_NO_SECTIONS, keep_empty=True)
+        tables = parse_poll_tables(PRESIDENT_PAGE_NO_SECTIONS, keep_empty=True).tables
         assert len(tables) == 2
         empty = next(table for table in tables if not table.rows)
         assert empty.headings[-1].text == "Republican primary"
 
     def test_page_without_polling_tables(self) -> None:
-        assert parse_poll_tables(SENATE_SEATS_TABLE) == []
+        assert parse_poll_tables(SENATE_SEATS_TABLE).tables == ()
+
+    def test_an_oversized_table_is_reported_by_its_heading_path(self) -> None:
+        html = (
+            "<h2 id='General_election'>General election</h2>"
+            "<h3 id='Polling'>Polling</h3>" + _too_wide_table("t")
+        )
+        page = parse_poll_tables(html)
+        assert page.tables == ()
+        assert [[heading.text for heading in path] for path in page.oversized] == [
+            ["General election", "Polling"],
+        ]
+
+    def test_an_empty_table_is_not_oversized(self) -> None:
+        page = parse_poll_tables("<table id='t'></table>")
+        assert (page.tables, page.oversized) == ((), ())

@@ -27,7 +27,6 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Iterator
-from datetime import date
 
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel

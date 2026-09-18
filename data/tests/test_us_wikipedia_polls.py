@@ -9,6 +9,7 @@ temporary one per test).
 from __future__ import annotations
 
 import dataclasses
+import logging
 from collections.abc import Mapping
 from datetime import date
 from email.message import Message
@@ -17,6 +18,7 @@ from urllib.error import HTTPError
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+import polls.importers.us.us_wikipedia_polls as us_wikipedia_polls
 from db import Database
 from polls.importers.us.us_polls_common import CandidateReading
 from polls.importers.us.us_wikipedia_polls import (
@@ -29,6 +31,8 @@ from polls.importers.us.us_wikipedia_polls import (
     SENATE_RACES,
     US_CONTESTS,
     US_CONTESTS_BY_SLUG,
+    NoMatchupTable,
+    OversizedTable,
     UsContest,
     UsPollRow,
     apply_auto_tracked_matchups,
@@ -51,6 +55,14 @@ ALASKA_URL = f"{WIKI}/2026_United_States_Senate_election_in_Alaska"
 DELAWARE_URL = f"{WIKI}/2026_United_States_Senate_election_in_Delaware"
 FLORIDA_URL = f"{WIKI}/2026_United_States_Senate_election_in_Florida"
 FLORIDA_SPECIAL_URL = f"{WIKI}/2026_United_States_Senate_special_election_in_Florida"
+TEXAS_SENATE_URL = f"{WIKI}/2026_United_States_Senate_election_in_Texas"
+
+# Other spellings of Texas's Senate page: each resolves to Texas.
+TEXAS_SENATE_VARIANT_URLS = (
+    f"{WIKI}/2026_United_States_Senate_election_in__Texas",
+    f"{WIKI}/2026_United_States_Senate_election_in_texas",
+    f"{WIKI}/2026_United_States_Senate_election_in_x/Texas",
+)
 
 CALIFORNIA_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_California"
 TEXAS_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_Texas"
@@ -243,6 +255,56 @@ DELAWARE_PAGE = """
 </div></div>
 </div></body></html>
 """
+
+
+# Nebraska with a single-candidate general-election table: it forms no matchup,
+# so none of its rows can be used by the Senate model.
+NEBRASKA_SINGLE_CANDIDATE_PAGE = """
+<html><body><div class="mw-parser-output">
+<div class="mw-heading mw-heading2"><h2 id="General_election">General election</h2></div>
+<div class="mw-heading mw-heading3"><h3 id="Polling">Polling</h3></div>
+<table class="wikitable sortable" id="ricketts-only">
+<tbody><tr>
+<th>Poll source</th><th>Date(s)<br />administered</th><th>Sample<br />size</th>
+<th>Pete Ricketts<br /><small>(R)</small></th><th>Undecided</th></tr>
+<tr><td>Change Research</td><td>July 1–3, 2026</td><td>800 (LV)</td>
+<td>48%</td><td>12%</td></tr>
+</tbody></table>
+</div></body></html>
+"""
+
+# A nationwide presidential table naming one candidate. Stored, it would be a
+# national poll with neither seat nor matchup — the legacy poll shape.
+PRESIDENT_SINGLE_CANDIDATE_PAGE = """
+<html><body><div class="mw-parser-output">
+<div class="mw-heading mw-heading2"><h2 id="Opinion_polling">Opinion polling</h2></div>
+<div class="mw-heading mw-heading3"><h3 id="General_election">General election</h3></div>
+<div class="mw-heading mw-heading4"><h4 id="Nationwide">Nationwide</h4></div>
+<table class="wikitable sortable" id="vance-only">
+<tbody><tr>
+<th>Poll source</th><th>Date(s)<br />administered</th><th>Sample<br />size</th>
+<th>Vance<br /><small>(R)</small></th><th>Undecided</th></tr>
+<tr><td>Emerson College</td><td>June 24–26, 2026</td><td>1,000 (LV)</td>
+<td>45%</td><td>55%</td></tr>
+</tbody></table>
+</div></body></html>
+"""
+
+# Delaware's only table is a hidden single-candidate hypothetical.
+DELAWARE_SINGLE_CANDIDATE_PAGE = DELAWARE_PAGE.replace(
+    "<th>Jane Doe<br /><small>(R)</small></th>", "<th>Undecided</th>"
+)
+
+# Michigan with a table far too wide to expand: one row of 1,000 cells, each
+# spanning 64 columns.
+MICHIGAN_OVERSIZED_PAGE = (
+    '<html><body><div class="mw-parser-output">'
+    '<div class="mw-heading mw-heading2"><h2 id="General_election">General election</h2></div>'
+    '<div class="mw-heading mw-heading3"><h3 id="Polling">Polling</h3></div>'
+    "<table class='wikitable'><tr><th>Poll source</th><th>Date(s) administered</th></tr>"
+    "<tr>" + "<td colspan='64'>x</td>" * 1000 + "</tr></table>"
+    "</div></body></html>"
+)
 
 
 def _senate_state_page(candidate_r: str, candidate_d: str) -> str:
@@ -567,34 +629,59 @@ class TestContests:
 
 class TestDiscoverSenatePages:
     def test_finds_thirty_five_races(self) -> None:
-        urls = discover_senate_pages(SENATE_INDEX_PAGE)
+        urls = discover_senate_pages(SENATE_INDEX_PAGE).urls
         assert len(urls) == 35
 
     def test_includes_both_specials_and_excludes_territories(self) -> None:
-        urls = discover_senate_pages(SENATE_INDEX_PAGE)
+        urls = discover_senate_pages(SENATE_INDEX_PAGE).urls
         assert FLORIDA_SPECIAL_URL in urls
         assert f"{WIKI}/2026_United_States_Senate_special_election_in_Ohio" in urls
         assert not any("Guam" in url for url in urls)
         assert not any("2024" in url for url in urls)
 
     def test_repeated_link_is_deduped(self) -> None:
-        urls = discover_senate_pages(SENATE_INDEX_PAGE)
+        urls = discover_senate_pages(SENATE_INDEX_PAGE).urls
         assert urls.count(f"{WIKI}/2026_United_States_Senate_election_in_Texas") == 1
+
+    def test_variant_spellings_of_one_state_are_capped_at_two_pages(self) -> None:
+        html = _link(TEXAS_SENATE_URL, "Texas") + "".join(
+            _link(url, "Texas") for url in TEXAS_SENATE_VARIANT_URLS
+        )
+        discovered = discover_senate_pages(html)
+        # Two pages reach the duplicate-seat check; the rest are reported.
+        assert discovered.urls == (TEXAS_SENATE_URL, TEXAS_SENATE_VARIANT_URLS[0])
+        assert discovered.dropped == {
+            url: "Texas already has 2 race pages on the index"
+            for url in TEXAS_SENATE_VARIANT_URLS[1:]
+        }
+
+    def test_the_page_count_is_capped(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(us_wikipedia_polls, "_MAX_DISCOVERED_PAGES", 30)
+        discovered = discover_senate_pages(SENATE_INDEX_PAGE)
+        assert len(discovered.urls) == 30
+        assert len(discovered.dropped) == 5
+        assert set(discovered.dropped.values()) == {
+            "past the 30-page limit on one index's race pages"
+        }
+
+    def test_a_normal_index_drops_nothing(self) -> None:
+        assert discover_senate_pages(SENATE_INDEX_PAGE).dropped == {}
+        assert discover_house_pages(HOUSE_INDEX_PAGE).dropped == {}
 
     def test_relative_hrefs_become_absolute(self) -> None:
         html = _link("/wiki/2026_United_States_Senate_election_in_Maine", "Maine")
-        assert discover_senate_pages(html) == [
-            f"{WIKI}/2026_United_States_Senate_election_in_Maine"
-        ]
+        assert discover_senate_pages(html).urls == (
+            f"{WIKI}/2026_United_States_Senate_election_in_Maine",
+        )
 
 
 class TestDiscoverHousePages:
     def test_finds_fifty_state_pages(self) -> None:
-        urls = discover_house_pages(HOUSE_INDEX_PAGE)
+        urls = discover_house_pages(HOUSE_INDEX_PAGE).urls
         assert len(urls) == 50
 
     def test_forty_four_plural_and_six_at_large(self) -> None:
-        urls = discover_house_pages(HOUSE_INDEX_PAGE)
+        urls = discover_house_pages(HOUSE_INDEX_PAGE).urls
         at_large = [url for url in urls if "_election_in_" in url]
         multi = [url for url in urls if "_elections_in_" in url]
         assert len(multi) == 44
@@ -602,7 +689,7 @@ class TestDiscoverHousePages:
         assert VERMONT_URL in at_large
 
     def test_dc_and_territories_are_excluded(self) -> None:
-        urls = discover_house_pages(HOUSE_INDEX_PAGE)
+        urls = discover_house_pages(HOUSE_INDEX_PAGE).urls
         assert not any("District_of_Columbia" in url for url in urls)
         assert not any("Mariana" in url for url in urls)
         assert not any("Guam" in url for url in urls)
@@ -651,6 +738,19 @@ class TestFetchPages:
         result = fetch_pages(["a", "b", "c"], fetcher=fetcher)
         assert result.pages == {"a": "A", "c": "C"}
         assert result.failures == {"b": "RuntimeError: connection reset"}
+
+    def test_a_failed_fetch_is_logged_with_its_traceback(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        fetcher = FakeFetcher({}, errors={"b": RuntimeError("connection reset")})
+        with caplog.at_level(logging.WARNING, logger=us_wikipedia_polls.__name__):
+            result = fetch_pages(["b"], fetcher=fetcher)
+        assert result.failures == {"b": "RuntimeError: connection reset"}
+        [record] = caplog.records
+        assert record.levelno == logging.WARNING
+        assert record.getMessage() == "Fetching b failed"
+        assert record.exc_info is not None
+        assert record.exc_info[0] is RuntimeError
 
     def test_http_error_other_than_404_is_a_failure(self) -> None:
         fetcher = FakeFetcher({}, errors={"b": HTTPError("b", 503, "Busy", Message(), None)})
@@ -957,6 +1057,107 @@ class TestCollapsedOnlyFallback:
         assert page.collapsed_only_races == ()
 
 
+class TestNoMatchupTables:
+    """A contest whose polls need a matchup never yields a row without one."""
+
+    def test_a_single_candidate_senate_table_is_reported_not_imported(
+        self, us_db: Database
+    ) -> None:
+        page = rows_for_page(
+            SENATE_RACES,
+            NEBRASKA_URL,
+            NEBRASKA_SINGLE_CANDIDATE_PAGE,
+            seat_ids=_seat_ids(us_db, SENATE_RACES.map_name),
+        )
+        assert page.rows == ()
+        assert page.no_matchup_tables == (
+            NoMatchupTable(
+                contest="senate_races",
+                page_url=NEBRASKA_URL,
+                heading_path="General election › Polling",
+                seat_name="Nebraska",
+                dropped_rows=1,
+            ),
+        )
+
+    def test_a_single_candidate_national_president_table_is_reported(
+        self, us_db: Database
+    ) -> None:
+        page = rows_for_page(
+            PRESIDENT,
+            PRESIDENT_URL,
+            PRESIDENT_SINGLE_CANDIDATE_PAGE,
+            seat_ids=_seat_ids(us_db, PRESIDENT.map_name),
+        )
+        assert page.rows == ()
+        assert [(t.seat_name, t.dropped_rows) for t in page.no_matchup_tables] == [
+            (None, 1)
+        ]
+
+    def test_the_generic_ballot_needs_no_matchup(self, us_db: Database) -> None:
+        page = rows_for_page(
+            HOUSE_NATIONAL,
+            HOUSE_INDEX_URL,
+            HOUSE_INDEX_PAGE,
+            seat_ids=_seat_ids(us_db, HOUSE_NATIONAL.map_name),
+        )
+        assert _matchups(page.rows) == [None, None]
+        assert page.no_matchup_tables == ()
+
+    def test_an_opted_in_hidden_table_without_a_matchup_is_reported(
+        self, us_db: Database
+    ) -> None:
+        page = rows_for_page(
+            SENATE_RACES,
+            DELAWARE_URL,
+            DELAWARE_SINGLE_CANDIDATE_PAGE,
+            seat_ids=_seat_ids(us_db, SENATE_RACES.map_name),
+            include_collapsed_for_uncovered=True,
+        )
+        assert page.rows == ()
+        assert page.collapsed_only_races == ()
+        assert [(t.seat_name, t.dropped_rows) for t in page.no_matchup_tables] == [
+            ("Delaware", 1)
+        ]
+
+    def test_the_run_reports_them(self, us_db: Database) -> None:
+        index = fetch_us_poll_index(
+            us_db,
+            [SENATE_RACES],
+            states=["Nebraska"],
+            fetcher=_full_fetcher(**{NEBRASKA_URL: NEBRASKA_SINGLE_CANDIDATE_PAGE}),
+        )
+        assert index.rows == ()
+        assert [t.page_url for t in index.no_matchup_tables] == [NEBRASKA_URL]
+
+
+class TestOversizedTables:
+    def test_a_table_too_large_to_read_is_reported(self, us_db: Database) -> None:
+        page = rows_for_page(
+            SENATE_RACES,
+            MICHIGAN_URL,
+            MICHIGAN_OVERSIZED_PAGE,
+            seat_ids=_seat_ids(us_db, SENATE_RACES.map_name),
+        )
+        assert page.rows == ()
+        assert page.oversized_tables == (
+            OversizedTable(
+                contest="senate_races",
+                page_url=MICHIGAN_URL,
+                heading_path="General election › Polling",
+            ),
+        )
+
+    def test_the_run_reports_them(self, us_db: Database) -> None:
+        index = fetch_us_poll_index(
+            us_db,
+            [SENATE_RACES],
+            states=["Michigan"],
+            fetcher=_full_fetcher(**{MICHIGAN_URL: MICHIGAN_OVERSIZED_PAGE}),
+        )
+        assert [t.page_url for t in index.oversized_tables] == [MICHIGAN_URL]
+
+
 # ── House ─────────────────────────────────────────────────────────────────────
 
 
@@ -1202,6 +1403,38 @@ class TestFetchUsPollIndex:
         assert [row.matchup for row in index.rows] == ["Scott (R) vs Doe (D)"]
         assert FLORIDA_SPECIAL_URL in index.page_failures
         assert "already covered by" in index.page_failures[FLORIDA_SPECIAL_URL]
+
+    def test_a_second_page_for_one_seat_is_never_fetched(
+        self, us_db: Database
+    ) -> None:
+        fetcher = _full_fetcher(
+            **{
+                SENATE_INDEX_URL: _link(FLORIDA_URL, "Florida")
+                + _link(FLORIDA_SPECIAL_URL, "Florida (special)"),
+                FLORIDA_URL: _senate_state_page("Rick Scott", "Jane Doe"),
+                FLORIDA_SPECIAL_URL: _senate_state_page("Ashley Moody", "Ann Lee"),
+            }
+        )
+        fetch_us_poll_index(us_db, [SENATE_RACES], fetcher=fetcher)
+        assert fetcher.requested == [SENATE_INDEX_URL, FLORIDA_URL]
+
+    def test_variant_spellings_of_one_state_cost_no_requests(
+        self, us_db: Database
+    ) -> None:
+        index_html = _link(TEXAS_SENATE_URL, "Texas") + "".join(
+            _link(url, "Texas") for url in TEXAS_SENATE_VARIANT_URLS
+        )
+        fetcher = _full_fetcher(
+            **{
+                SENATE_INDEX_URL: index_html,
+                TEXAS_SENATE_URL: _senate_state_page("Ken Paxton", "James Talarico"),
+            }
+        )
+        index = fetch_us_poll_index(us_db, [SENATE_RACES], fetcher=fetcher)
+        assert fetcher.requested == [SENATE_INDEX_URL, TEXAS_SENATE_URL]
+        assert set(index.page_failures) == set(TEXAS_SENATE_VARIANT_URLS)
+        assert "already covered by" in index.page_failures[TEXAS_SENATE_VARIANT_URLS[0]]
+        assert [row.seat_name for row in index.rows] == ["Texas"]
 
     def test_state_filter_limits_the_pages_fetched(self, us_db: Database) -> None:
         fetcher = _full_fetcher()
@@ -1462,6 +1695,22 @@ class TestBuildUsImportPlan:
         row = _michigan_row(import_db).model_copy(update={"seat_name": "Narnia"})
         with pytest.raises(ValueError, match="no seat named"):
             build_us_import_plan(import_db, row)
+
+    def test_a_race_row_without_a_matchup_is_rejected(
+        self, import_db: Database
+    ) -> None:
+        row = _michigan_row(import_db).model_copy(update={"matchup": None})
+        with pytest.raises(ValueError, match="no matchup"):
+            build_us_import_plan(import_db, row)
+
+    def test_a_national_president_row_without_a_matchup_is_rejected(
+        self, import_db: Database
+    ) -> None:
+        # Stored, it would match the legacy "no seat, no matchup" poll shape.
+        row = _page_rows(import_db, PRESIDENT, PRESIDENT_URL, PRESIDENT_PAGE)[0]
+        assert row.seat_name is None
+        with pytest.raises(ValueError, match="no matchup"):
+            build_us_import_plan(import_db, row.model_copy(update={"matchup": None}))
 
     def test_a_row_with_no_resolvable_party_is_rejected(
         self, db: Database
@@ -1823,6 +2072,29 @@ class TestRunImporter:
         assert "unknown party suffix: (WCP) in 1 table(s)" in out
         assert "collapsed-only race: Delaware (senate_races)" in out
         assert "repeat row(s) dropped" in out
+
+    def test_dropped_tables_are_printed(
+        self, import_db: Database, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        run_importer(
+            [SENATE_RACES],
+            ["--state", "Michigan", "--state", "Nebraska"],
+            db=import_db,
+            fetcher=_full_fetcher(
+                **{
+                    MICHIGAN_URL: MICHIGAN_OVERSIZED_PAGE,
+                    NEBRASKA_URL: NEBRASKA_SINGLE_CANDIDATE_PAGE,
+                }
+            ),
+        )
+        out = capsys.readouterr().out
+        assert (
+            f"table with no matchup: {NEBRASKA_URL} [General election › Polling] "
+            "(1 row(s) dropped)"
+        ) in out
+        assert (
+            f"table too large to read: {MICHIGAN_URL} [General election › Polling]"
+        ) in out
 
     def test_a_page_failure_fails_the_run(
         self, import_db: Database, capsys: pytest.CaptureFixture[str]

@@ -20,7 +20,7 @@ reported on :class:`UsPollIndex` rather than dropped — the console's summary
 page is the only place Wikipedia markup drift becomes visible.
 
 The **Importing** section then turns one scraped row into a
-:class:`UsImportPlan` and writes it as a ``Poll`` plus its ``PollRow``\ s, and
+:class:`UsImportPlan` and writes it as a ``Poll`` plus its ``PollRow``\\ s, and
 points each race at its lead matchup. The **Command line** section is the
 wrapper scripts' shared entry point, which lists by default and only writes
 under ``--commit``.
@@ -32,6 +32,7 @@ fetcher, so no test touches the network.
 from __future__ import annotations
 
 import argparse
+import logging
 import re
 import sys
 from collections import Counter
@@ -69,6 +70,8 @@ from polls.importers.us.us_polls_common import (
 )
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
+
+logger = logging.getLogger(__name__)
 
 WIKIPEDIA_BASE = "https://en.wikipedia.org"
 
@@ -128,6 +131,15 @@ _STATE_BY_KEY: dict[str, str] = {
 
 _HEADING_SEPARATOR = " › "
 
+# At most this many race pages are taken per state from an index. One is the
+# norm; a second is let through so that one state holding two races in one
+# cycle still reaches the duplicate-seat check, which reports it. Variant
+# spellings of one state's page beyond that cannot grow the fetch list.
+_MAX_PAGES_PER_STATE = 2
+
+# Backstop on the race pages taken from one index, whatever ``keep`` admits.
+_MAX_DISCOVERED_PAGES = _MAX_PAGES_PER_STATE * len(STATE_POSTAL)
+
 
 @dataclass(frozen=True, slots=True)
 class UsContest:
@@ -177,6 +189,16 @@ class UsContest:
     def is_per_state(self) -> bool:
         """True when each of the contest's pages covers one state's races."""
         return self.discovery != "none"
+
+    @property
+    def requires_matchup(self) -> bool:
+        """True when every poll must name a matchup to be usable.
+
+        The model and the matchup pages only read a poll through its matchup,
+        so in such a contest a poll without one would be stored and then never
+        used.
+        """
+        return self.matchup_policy != "none"
 
 
 HOUSE_NATIONAL = UsContest(
@@ -263,8 +285,8 @@ class UsPollRow(ScrapedPollRow):
         sample_size: Respondents, or None when the table showed none.
         population: Sampled population code — "LV", "RV", "A".
         is_lead: True on the rows of the race's lead table: the first visible,
-            accepted table with a matchup. Piece 7 promotes its matchup to the
-            race's automatic tracked matchup.
+            accepted table with a matchup. :func:`apply_auto_tracked_matchups`
+            promotes its matchup to the race's automatic tracked matchup.
         collapsed: True when the row came from a hidden hypothetical table,
             which only happens under the collapsed-only opt-in.
         pollster_tags: Partisan sponsor tags stripped from the pollster cell,
@@ -331,6 +353,44 @@ class EmptyTable:
 
 
 @dataclass(frozen=True, slots=True)
+class NoMatchupTable:
+    """A table whose rows were dropped because they form no matchup.
+
+    Only reported for a contest whose polls need one
+    (:attr:`UsContest.requires_matchup`): a table naming fewer than two
+    candidates would store polls the model can never read.
+
+    Attributes:
+        contest: The contest slug.
+        page_url: The page the table sits on.
+        heading_path: The table's section path as display text.
+        seat_name: The seat the table resolved to, or None for a national one.
+        dropped_rows: How many parsed poll rows were lost with it.
+    """
+
+    contest: str
+    page_url: str
+    heading_path: str
+    seat_name: str | None
+    dropped_rows: int
+
+
+@dataclass(frozen=True, slots=True)
+class OversizedTable:
+    """A table too large to read, abandoned before it was classified.
+
+    Attributes:
+        contest: The contest slug.
+        page_url: The page the table sits on.
+        heading_path: The table's section path as display text.
+    """
+
+    contest: str
+    page_url: str
+    heading_path: str
+
+
+@dataclass(frozen=True, slots=True)
 class CollapsedOnlyRace:
     """A race whose only general-election tables are collapsed hypotheticals.
 
@@ -348,6 +408,20 @@ class CollapsedOnlyRace:
     seat_name: str | None
     available_rows: int
     included: bool
+
+
+@dataclass(frozen=True, slots=True)
+class DiscoveredPages:
+    """The race pages an index page links to.
+
+    Attributes:
+        urls: One absolute URL per race page to fetch, in index order.
+        dropped: URL → reason for each race link left out for passing a cap
+            (:data:`_MAX_PAGES_PER_STATE` or :data:`_MAX_DISCOVERED_PAGES`).
+    """
+
+    urls: tuple[str, ...]
+    dropped: Mapping[str, str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -380,6 +454,8 @@ class PageRows:
         variants_dropped: Repeat rows (LV/RV, "with leaners") dropped.
         summary_rows_skipped: Rows dropped for naming a summary "pollster"
             (the generic-ballot table's "Average" row).
+        no_matchup_tables: Accepted tables dropped for forming no matchup.
+        oversized_tables: Tables too large to read.
     """
 
     rows: tuple[UsPollRow, ...]
@@ -389,6 +465,8 @@ class PageRows:
     unknown_suffixes: Mapping[str, int]
     variants_dropped: int
     summary_rows_skipped: int = 0
+    no_matchup_tables: tuple[NoMatchupTable, ...] = ()
+    oversized_tables: tuple[OversizedTable, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -404,7 +482,8 @@ class UsPollIndex:
         rows: The poll rows, contest by contest in page order.
         page_failures: URL → reason for every page that could not be read or
             could not be placed (a second page claiming a seat another page
-            already owns).
+            already owns, or a race link past a discovery cap). Pages that
+            could not be placed are never fetched.
         notes: Remarks that are not failures, e.g. a page that is not written
             yet.
         collapsed_only_races: Races whose only tables are hypotheticals.
@@ -416,6 +495,11 @@ class UsPollIndex:
         pages_fetched: How many pages were read, for the summary line.
         summary_rows_skipped: Rows dropped for naming a summary "pollster"
             (the generic-ballot table's "Average" row).
+        no_matchup_tables: Tables dropped because, in a contest whose polls
+            need a matchup, they named fewer than two candidates. Their rows
+            are never queued: such a poll could not be used, and a national
+            one would be indistinguishable from a legacy poll.
+        oversized_tables: Tables abandoned for being too large to read.
     """
 
     rows: tuple[UsPollRow, ...]
@@ -428,6 +512,8 @@ class UsPollIndex:
     empty_tables: tuple[EmptyTable, ...]
     pages_fetched: int
     summary_rows_skipped: int = 0
+    no_matchup_tables: tuple[NoMatchupTable, ...] = ()
+    oversized_tables: tuple[OversizedTable, ...] = ()
 
 
 # ── Page discovery ────────────────────────────────────────────────────────────
@@ -446,8 +532,15 @@ def _discovered_pages(
     pattern: re.Pattern[str],
     *,
     keep: Callable[[str], bool],
-) -> list[str]:
+) -> DiscoveredPages:
     """Return the absolute URLs of an index page's race links, deduped.
+
+    A repeated link is dropped silently — the live index links each race more
+    than once. Distinct links are bounded by the state they resolve to, not by
+    their spelling: past :data:`_MAX_PAGES_PER_STATE` pages for one state, or
+    :data:`_MAX_DISCOVERED_PAGES` in all, a link is reported in
+    :attr:`DiscoveredPages.dropped` instead, so an index full of variant
+    spellings cannot turn into hundreds of requests.
 
     Args:
         html: The index page source.
@@ -457,11 +550,13 @@ def _discovered_pages(
 
     Returns:
         One absolute ``https://en.wikipedia.org/wiki/…`` URL per race page, in
-        the order the index first links it.
+        the order the index first links it, plus the links left out.
     """
     soup = BeautifulSoup(html, "lxml")
     urls: list[str] = []
+    dropped: dict[str, str] = {}
     seen: set[str] = set()
+    pages_per_state: Counter[str] = Counter()
     for link in soup.find_all("a"):
         if not isinstance(link, Tag):
             continue
@@ -474,15 +569,27 @@ def _discovered_pages(
         slug = match.group(1)
         if slug in seen:
             continue
+        seen.add(slug)
         state = state_from_page_slug(slug)
         if state is None or not keep(state):
             continue
-        seen.add(slug)
-        urls.append(f"{WIKIPEDIA_BASE}/wiki/{slug}")
-    return urls
+        url = f"{WIKIPEDIA_BASE}/wiki/{slug}"
+        if pages_per_state[state] >= _MAX_PAGES_PER_STATE:
+            dropped[url] = (
+                f"{state} already has {_MAX_PAGES_PER_STATE} race pages on the index"
+            )
+            continue
+        if len(urls) >= _MAX_DISCOVERED_PAGES:
+            dropped[url] = (
+                f"past the {_MAX_DISCOVERED_PAGES}-page limit on one index's race pages"
+            )
+            continue
+        pages_per_state[state] += 1
+        urls.append(url)
+    return DiscoveredPages(urls=tuple(urls), dropped=dropped)
 
 
-def discover_senate_pages(html: str) -> list[str]:
+def discover_senate_pages(html: str) -> DiscoveredPages:
     """Return the Senate race pages linked from the 2026 Senate index.
 
     The index links each race as an absolute URL matching
@@ -494,12 +601,13 @@ def discover_senate_pages(html: str) -> list[str]:
         html: The Senate index page source.
 
     Returns:
-        One URL per race page, deduped, in index order.
+        One URL per race page, deduped, in index order, plus any links left
+        out for passing a discovery cap.
     """
     return _discovered_pages(html, _SENATE_PAGE_RE, keep=lambda state: True)
 
 
-def discover_house_pages(html: str) -> list[str]:
+def discover_house_pages(html: str) -> DiscoveredPages:
     """Return the per-state House pages linked from the 2026 House index.
 
     The index links 44 multi-district states as
@@ -513,7 +621,8 @@ def discover_house_pages(html: str) -> list[str]:
         html: The House index page source.
 
     Returns:
-        One URL per state page, deduped, in index order.
+        One URL per state page, deduped, in index order, plus any links left
+        out for passing a discovery cap.
     """
     return _discovered_pages(
         html,
@@ -540,8 +649,10 @@ def _fetch_one(url: str, fetcher: Fetcher) -> tuple[str | None, str | None, str 
     except Exception as err:  # noqa: BLE001 - per-URL boundary, see below
         # One unreachable page out of ~90 must not abort a whole import run,
         # and a fetcher is free to raise anything (socket, TLS, decoding), so
-        # the boundary is deliberately broad. Nothing is swallowed: the reason
-        # is reported on the index and rendered on the summary page.
+        # the boundary is deliberately broad. Nothing is swallowed: the
+        # traceback is logged, and the reason is reported on the index and
+        # rendered on the summary page.
+        logger.warning("Fetching %s failed", url, exc_info=True)
         return None, f"{type(err).__name__}: {err}", None
 
 
@@ -867,6 +978,9 @@ def rows_for_page(
     it is always reported, and under ``include_collapsed_for_uncovered`` its
     hidden tables' rows are imported too, flagged ``collapsed`` and never lead.
 
+    In a contest that :attr:`~UsContest.requires_matchup`, a table forming no
+    matchup contributes no rows and is reported in ``no_matchup_tables``.
+
     Args:
         contest: The contest being scraped.
         page_url: The page's URL, used for the seat rule and row source links.
@@ -877,14 +991,14 @@ def rows_for_page(
     Returns:
         The page's rows and everything it could not place.
     """
-    tables = parse_poll_tables(
+    page_tables = parse_poll_tables(
         html,
         allow_party_labels=contest.allow_party_labels,
         keep_empty=True,
     )
     visible: list[ParsedTable] = []
     hidden: list[ParsedTable] = []
-    for table in tables:
+    for table in page_tables.tables:
         if not accepts_table(contest, table):
             continue
         (hidden if table.info.collapsed else visible).append(table)
@@ -892,6 +1006,7 @@ def rows_for_page(
     rows: list[UsPollRow] = []
     unmatched: list[UnmatchedSeat] = []
     empty: list[EmptyTable] = []
+    no_matchup: list[NoMatchupTable] = []
     unknown: Counter[str] = Counter()
     variants_dropped = 0
     summary_rows_skipped = 0
@@ -915,6 +1030,9 @@ def rows_for_page(
         if seat.unmatched is not None:
             unmatched.append(seat.unmatched)
             continue
+        if _lacks_matchup(contest, table):
+            no_matchup.append(_no_matchup_table(contest, page_url, table, seat))
+            continue
         is_lead = seat.seat_name not in seats_with_lead and is_lead_table(table)
         if is_lead:
             seats_with_lead.add(seat.seat_name)
@@ -934,6 +1052,7 @@ def rows_for_page(
         include=include_collapsed_for_uncovered,
         rows=rows,
         empty=empty,
+        no_matchup=no_matchup,
         unknown=unknown,
     )
     variants_dropped += collapsed_variants
@@ -947,6 +1066,36 @@ def rows_for_page(
         unknown_suffixes=dict(unknown),
         variants_dropped=variants_dropped,
         summary_rows_skipped=summary_rows_skipped,
+        no_matchup_tables=tuple(no_matchup),
+        oversized_tables=tuple(
+            OversizedTable(
+                contest=contest.slug,
+                page_url=page_url,
+                heading_path=_headings_text(headings),
+            )
+            for headings in page_tables.oversized
+        ),
+    )
+
+
+def _lacks_matchup(contest: UsContest, table: ParsedTable) -> bool:
+    """Report whether a table's rows would be unusable for want of a matchup."""
+    return contest.requires_matchup and table.matchup is None
+
+
+def _no_matchup_table(
+    contest: UsContest,
+    page_url: str,
+    table: ParsedTable,
+    seat: _SeatRef,
+) -> NoMatchupTable:
+    """Describe a table dropped by :func:`_lacks_matchup`."""
+    return NoMatchupTable(
+        contest=contest.slug,
+        page_url=page_url,
+        heading_path=_headings_text(table.headings),
+        seat_name=seat.seat_name,
+        dropped_rows=len(table.rows),
     )
 
 
@@ -960,6 +1109,7 @@ def _collapsed_fallback(
     include: bool,
     rows: list[UsPollRow],
     empty: list[EmptyTable],
+    no_matchup: list[NoMatchupTable],
     unknown: Counter[str],
 ) -> tuple[list[CollapsedOnlyRace], int, int]:
     """Report, and optionally import, the hidden tables of uncovered races.
@@ -970,7 +1120,13 @@ def _collapsed_fallback(
     always flagged ``collapsed``, so the review step can say where they came
     from.
 
-    ``rows``, ``empty`` and ``unknown`` are appended to in place.
+    A hidden table that forms no matchup where the contest needs one is left
+    out of the race's available rows; it is reported in ``no_matchup`` only
+    when ``include`` is set, since otherwise nothing was going to be imported
+    from it anyway.
+
+    ``rows``, ``empty``, ``no_matchup`` and ``unknown`` are appended to in
+    place.
 
     Returns:
         The uncovered races, how many repeat rows their tables dropped, and how
@@ -996,6 +1152,10 @@ def _collapsed_fallback(
                     collapsed=True,
                 )
             )
+            continue
+        if _lacks_matchup(contest, table):
+            if include:
+                no_matchup.append(_no_matchup_table(contest, page_url, table, seat))
             continue
         grouped.setdefault(seat.seat_name, []).append((seat, table))
 
@@ -1066,18 +1226,58 @@ def _contest_page_urls(
     *,
     index_html: str | None,
     wanted_states: Sequence[str] | None,
-) -> list[str]:
-    """List the pages a contest should read, honouring the state filter."""
+) -> tuple[list[str], dict[str, str]]:
+    """List the pages a contest should read, honouring the state filter.
+
+    Returns:
+        ``(urls, failures)`` — the pages to fetch, and URL → reason for each
+        page that is not to be fetched because it could not be placed: a race
+        link past a discovery cap, or a second page for a seat another page
+        already claims. Both are decided here, before any fetch, so an
+        unplaceable page costs no request.
+    """
     urls = list(contest.page_urls)
+    failures: dict[str, str] = {}
     if index_html is not None:
+        discovered: DiscoveredPages | None = None
         if contest.discovery == "senate_index":
-            urls.extend(discover_senate_pages(index_html))
+            discovered = discover_senate_pages(index_html)
         elif contest.discovery == "house_index":
-            urls.extend(discover_house_pages(index_html))
-    if wanted_states is None or not contest.is_per_state:
-        return list(dict.fromkeys(urls))
-    allowed = set(wanted_states)
-    return [url for url in dict.fromkeys(urls) if state_from_page_slug(url) in allowed]
+            discovered = discover_house_pages(index_html)
+        if discovered is not None:
+            urls.extend(discovered.urls)
+            failures.update(discovered.dropped)
+    wanted = list(dict.fromkeys(urls))
+    if not contest.is_per_state:
+        return wanted, failures
+
+    if wanted_states is not None:
+        allowed = set(wanted_states)
+        wanted = [url for url in wanted if state_from_page_slug(url) in allowed]
+        failures = {
+            url: reason
+            for url, reason in failures.items()
+            if state_from_page_slug(url) in allowed
+        }
+
+    # A seat is named after its state, so two pages for one state — a regular
+    # and a special race in the same cycle — cannot be told apart. The first
+    # page keeps the seat and the rest are reported.
+    kept: list[str] = []
+    claimed: dict[str, str] = {}
+    for url in wanted:
+        state = state_from_page_slug(url)
+        owner = claimed.get(state) if state is not None else None
+        if owner is not None:
+            failures[url] = (
+                f"{state} is already covered by {owner} — "
+                "two races for one seat cannot be told apart"
+            )
+            continue
+        if state is not None:
+            claimed[state] = url
+        kept.append(url)
+    return kept, failures
 
 
 def fetch_us_poll_index(
@@ -1096,7 +1296,9 @@ def fetch_us_poll_index(
     find that out. Then the index pages (a contest's race pages are links on
     one), then every race page, then the parsing. A page fetched for one
     contest is reused by another — the House index is both
-    ``house_national``'s only page and ``house_districts``' directory.
+    ``house_national``'s only page and ``house_districts``' directory. A race
+    page that could not be placed (see :func:`_contest_page_urls`) is reported
+    in ``page_failures`` and never fetched.
 
     ``db`` is read only: each contest's map supplies the seat names its rows can
     attach to. A table whose seat is not on that map is reported in
@@ -1148,9 +1350,11 @@ def fetch_us_poll_index(
             notes.append(
                 f"{contest.slug}: no race pages — its index could not be read"
             )
-        urls_by_contest[contest.slug] = _contest_page_urls(
+        urls, unplaced = _contest_page_urls(
             contest, index_html=index_html, wanted_states=wanted_states
         )
+        urls_by_contest[contest.slug] = urls
+        page_failures.update(unplaced)
 
     outstanding = [
         url
@@ -1166,27 +1370,18 @@ def fetch_us_poll_index(
     rows: list[UsPollRow] = []
     unmatched: list[UnmatchedSeat] = []
     empty: list[EmptyTable] = []
+    no_matchup: list[NoMatchupTable] = []
+    oversized: list[OversizedTable] = []
     collapsed_only: list[CollapsedOnlyRace] = []
     unknown_suffixes: Counter[str] = Counter()
     variants_dropped = 0
     summary_rows_skipped = 0
 
     for contest, seat_ids in scoped:
-        claimed: dict[str, str] = {}
         for url in urls_by_contest[contest.slug]:
             html = pages.get(url)
             if html is None:
                 continue
-            claim = state_from_page_slug(url) if contest.is_per_state else None
-            if claim is not None:
-                owner = claimed.get(claim)
-                if owner is not None:
-                    page_failures[url] = (
-                        f"{claim} is already covered by {owner} — "
-                        "two races for one seat cannot be told apart"
-                    )
-                    continue
-                claimed[claim] = url
             page_rows = rows_for_page(
                 contest,
                 url,
@@ -1197,6 +1392,8 @@ def fetch_us_poll_index(
             rows.extend(page_rows.rows)
             unmatched.extend(page_rows.unmatched_seats)
             empty.extend(page_rows.empty_tables)
+            no_matchup.extend(page_rows.no_matchup_tables)
+            oversized.extend(page_rows.oversized_tables)
             collapsed_only.extend(page_rows.collapsed_only_races)
             unknown_suffixes.update(page_rows.unknown_suffixes)
             variants_dropped += page_rows.variants_dropped
@@ -1213,6 +1410,8 @@ def fetch_us_poll_index(
         empty_tables=tuple(empty),
         pages_fetched=len(pages),
         summary_rows_skipped=summary_rows_skipped,
+        no_matchup_tables=tuple(no_matchup),
+        oversized_tables=tuple(oversized),
     )
 
 
@@ -1286,11 +1485,18 @@ def build_us_import_plan(db: Database, row: UsPollRow) -> UsImportPlan:
     Raises:
         ValueError: If the row names no known contest, its map is missing, its
             seat is not on that map, or none of its readings resolve to a
-            party — all of which would otherwise store a poll with no figures.
+            party — all of which would otherwise store a poll with no figures —
+            or if its contest needs a matchup and the row has none, which would
+            store a poll nothing can read.
     """
     contest = US_CONTESTS_BY_SLUG.get(row.contest)
     if contest is None:
         raise ValueError(f"unknown contest: {row.contest!r}")
+    if contest.requires_matchup and row.matchup is None:
+        raise ValueError(
+            f"{row.pollster_label!r} has no matchup, which every"
+            f" {contest.slug} poll needs"
+        )
 
     poll_map = db.get_map_by_name(row.map_name)
     if poll_map is None:
@@ -1506,8 +1712,9 @@ def apply_auto_tracked_matchups(
         contest = US_CONTESTS_BY_SLUG.get(row.contest)
         if contest is None or contest.matchup_policy != "auto_lead":
             continue
-        # A national row cannot name a race, and piece 1 rejects an automatic
-        # write with no matchup, so both are left to the user.
+        # A national row cannot name a race, and Database.set_tracked_matchup
+        # rejects an automatic write with no matchup, so both are left to the
+        # user.
         if not row.is_lead or row.matchup is None or row.seat_name is None:
             continue
         if row.map_name not in scopes:
@@ -1612,6 +1819,16 @@ def _diagnostic_lines(index: UsPollIndex) -> list[str]:
         lines.append(
             f"  empty table: {table.page_url} [{table.heading_path}]"
             f"{' (collapsed)' if table.collapsed else ''}"
+        )
+    for no_matchup in index.no_matchup_tables:
+        lines.append(
+            f"  table with no matchup: {no_matchup.page_url} "
+            f"[{no_matchup.heading_path}] ({no_matchup.dropped_rows} row(s) dropped)"
+        )
+    for oversized in index.oversized_tables:
+        lines.append(
+            f"  table too large to read: {oversized.page_url} "
+            f"[{oversized.heading_path}]"
         )
     return lines
 

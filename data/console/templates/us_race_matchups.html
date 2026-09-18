@@ -6,7 +6,8 @@
       Each race's polls are read for its tracked matchup only. The importer sets it to the
       race's lead poll table (<em>auto</em>); a <em>manual</em> choice made here is never
       overwritten by later imports. <em>Ignore</em> leaves the race to the national swing, and
-      <em>Use automatic</em> follows the importer again.
+      <em>Use automatic</em> follows the importer again — or, for a race the importer has not
+      chosen a matchup for yet, stops tracking it until an import does.
     </p>
     <p>{{ races|length }} race(s) on {{ map_name }} with stored matchup polls or a tracked matchup.</p>
     <div class="actions">

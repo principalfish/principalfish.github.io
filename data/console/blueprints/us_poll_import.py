@@ -12,16 +12,22 @@ What the US flow adds:
 - **Several contests in one run** — the House generic ballot, House districts,
   Senate races and the President — each on its own map.
 - **"Approve all remaining in this race"**, since a race is reviewed as a block.
-- **A finish step with two jobs**: automatic matchup tracking over what was
-  imported, then the three US models and the export, once.
+- **A finish step with two jobs**: automatic matchup tracking over every
+  scraped row, then the three US models and the export, once.
 
 The queue lives in the shared preview cache under one token, as a payload of
 type :data:`US_QUEUE_PREVIEW_TYPE` holding the ``QueueState`` under
-``STATE_KEY`` and the scraped ``UsPollIndex`` under :data:`INDEX_KEY` (kept for
-the summary's diagnostics). The finish step adds its results under the service's
-``AUTO_TRACKING_KEY``, ``MODEL_RUN_KEY`` and ``MODEL_ERROR_KEY``. The payload
-type keeps the Westminster and US queues apart: each flow's routes reject the
-other's tokens as expired.
+``STATE_KEY`` and the scraped ``UsPollIndex`` under ``INDEX_KEY`` (tracked over
+by the finish step, and kept for the summary's diagnostics). The finish step
+adds its results under the service's ``AUTO_TRACKING_KEY`` (or
+``AUTO_TRACKING_ERROR_KEY``), ``MODEL_RUN_KEY`` and ``MODEL_ERROR_KEY``. The
+payload type keeps the Westminster and US queues apart: each flow's routes
+reject the other's tokens as expired.
+
+The payload is mutated in place across requests, and Flask's dev server is
+threaded, so every route that reads or moves a queue holds that queue's lock
+(:func:`_serialised`) for the whole request. Without it a double submit could
+pass the cursor check twice and commit the same poll twice.
 
 As with the Westminster queue, the cache is process-local, so a server restart
 discards an in-flight run and its token then redirects to the start page.
@@ -29,7 +35,11 @@ discards an in-flight run and its token then redirects to the start page.
 
 from __future__ import annotations
 
+import functools
 import logging
+import threading
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -53,7 +63,9 @@ from console.forms import UsQueueStartForm
 from console.services.preview import get_preview, store_preview
 from console.services.runner import run_python_script
 from console.services.us_poll_queue import (
+    AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
+    INDEX_KEY,
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
     STATE_KEY,
@@ -85,8 +97,11 @@ bp = Blueprint("us_poll_import", __name__)
 #: redeem the other's token.
 US_QUEUE_PREVIEW_TYPE = "us_wikipedia_queue"
 
-#: Payload key holding the scraped ``UsPollIndex``, for the summary page.
-INDEX_KEY = "index"
+# One lock per queue token, created on the token's first request and dropped
+# once the token has left the preview cache. The guard protects the dict itself;
+# each queue's lock serialises that queue's requests.
+_QUEUE_LOCKS: dict[str, threading.Lock] = {}
+_QUEUE_LOCKS_GUARD = threading.Lock()
 
 # What each automatic-tracking outcome means, in the order the summary lists
 # them (the importer's own order).
@@ -97,6 +112,46 @@ _AUTO_TRACKING_LABELS: dict[str, str] = {
     "kept_manual": "races kept on a manual override",
     "no_polls": "lead matchups skipped because none of their polls are stored",
 }
+
+
+@contextmanager
+def _queue_lock(token: str) -> Iterator[None]:
+    """Hold one queue's lock for the duration of a request.
+
+    The per-token lock is looked up (or created) under the module guard, which
+    also drops the locks of tokens no longer in the preview cache, so the map
+    never outgrows the cache. Dropping a lock is safe even if a request still
+    holds it: its token is gone, so every request for it ends as expired.
+
+    Args:
+        token: Token from the request path; need not be live.
+    """
+    with _QUEUE_LOCKS_GUARD:
+        for stale in [known for known in _QUEUE_LOCKS if get_preview(known) is None]:
+            del _QUEUE_LOCKS[stale]
+        lock = _QUEUE_LOCKS.setdefault(token, threading.Lock())
+    with lock:
+        yield
+
+
+def _serialised(
+    view: Callable[[str], ResponseReturnValue],
+) -> Callable[[str], ResponseReturnValue]:
+    """Run a queue route under its token's lock (see :func:`_queue_lock`).
+
+    The routes check the cursor and then act on the shared, in-place payload.
+    Under the threaded dev server two submits of one form could otherwise both
+    pass the ``expected_index`` check before either advanced the cursor, and
+    both commit the same poll. Holding the lock across the check and the action
+    makes the second submit see the moved cursor and be rejected as stale.
+    """
+
+    @functools.wraps(view)
+    def locked(token: str) -> ResponseReturnValue:
+        with _queue_lock(token):
+            return view(token)
+
+    return locked
 
 
 @bp.route("/us/import", methods=["GET"])
@@ -123,7 +178,8 @@ def start() -> ResponseReturnValue:
 
     Returns:
         Redirect to the queue's first step, or back to the start form with a
-        flash message if the options are invalid or the scrape fails.
+        flash message if the options are invalid, or the scrape or building the
+        queue fails.
     """
     try:
         form = UsQueueStartForm.model_validate(
@@ -150,20 +206,21 @@ def start() -> ResponseReturnValue:
             states=form.states or None,
             include_collapsed_for_uncovered=form.include_collapsed_for_uncovered,
         )
+        state = build_us_queue(
+            db,
+            index,
+            cutoff=form.cutoff_date,
+            run_model_at_end=form.run_model_at_end,
+        )
     except Exception as err:  # noqa: BLE001 - request boundary, reported below
         # Per-page fetch failures are already recorded on the index; anything
-        # that escapes is a parser or database fault. It is logged in full and
-        # surfaced to the user instead of a bare 500.
-        logger.exception("US Wikipedia scrape failed")
-        flash(f"Wikipedia scrape failed: {err}")
+        # that escapes is a parser fault, or a database fault while scraping or
+        # building the queue. It is logged in full and surfaced to the user
+        # instead of a bare 500.
+        logger.exception("Starting the US import failed")
+        flash(f"Could not start the US import: {err}")
         return redirect(url_for("us_poll_import.import_form"))
 
-    state = build_us_queue(
-        db,
-        index,
-        cutoff=form.cutoff_date,
-        run_model_at_end=form.run_model_at_end,
-    )
     token = store_preview(
         {"type": US_QUEUE_PREVIEW_TYPE, STATE_KEY: state, INDEX_KEY: index}
     )
@@ -171,6 +228,7 @@ def start() -> ResponseReturnValue:
 
 
 @bp.route("/us/import/<token>", methods=["GET"])
+@_serialised
 def queue(token: str) -> ResponseReturnValue:
     """GET /us/import/<token> — Show the queue's current poll for approval.
 
@@ -219,12 +277,16 @@ def queue(token: str) -> ResponseReturnValue:
 
 
 @bp.route("/us/import/<token>/confirm", methods=["POST"])
+@_serialised
 def confirm(token: str) -> ResponseReturnValue:
     """POST /us/import/<token>/confirm — Import the queue's current poll.
 
-    The commit re-checks presence inside its own transaction, so a poll stored
-    since the queue was built is skipped rather than duplicated. A commit
-    failure leaves the item under the cursor for a retry.
+    The commit re-checks presence, so a poll stored since the queue was built
+    is skipped rather than duplicated. That check is not atomic with the
+    write, so it is the queue's lock that stops a double submit from
+    committing the poll twice: the second request waits, then finds the cursor
+    moved and is rejected as stale. A commit failure leaves the item under the
+    cursor for a retry.
 
     Args:
         token: Token identifying the cached US queue.
@@ -263,6 +325,7 @@ def confirm(token: str) -> ResponseReturnValue:
 
 
 @bp.route("/us/import/<token>/skip", methods=["POST"])
+@_serialised
 def skip(token: str) -> ResponseReturnValue:
     """POST /us/import/<token>/skip — Skip or retry the queue's current poll.
 
@@ -295,6 +358,7 @@ def skip(token: str) -> ResponseReturnValue:
 
 
 @bp.route("/us/import/<token>/approve-group", methods=["POST"])
+@_serialised
 def approve_race(token: str) -> ResponseReturnValue:
     """POST /us/import/<token>/approve-group — Import the rest of the current race.
 
@@ -339,13 +403,15 @@ def approve_race(token: str) -> ResponseReturnValue:
 
 
 @bp.route("/us/import/<token>/finish", methods=["GET", "POST"])
+@_serialised
 def finish(token: str) -> ResponseReturnValue:
     """GET,POST /us/import/<token>/finish — Close a US catch-up run and report on it.
 
-    Applies automatic matchup tracking over what was imported, then runs the
+    Applies automatic matchup tracking over every scraped row, then runs the
     US models and the export once, if the run was started with that option,
-    was not abandoned and imported anything. Both results are recorded on the
-    cached payload, so refreshing the summary repeats neither.
+    was not abandoned and imported anything. Both results — or a tracking
+    failure's message — are recorded on the cached payload, so refreshing the
+    summary repeats neither.
 
     Args:
         token: Token identifying the cached US queue.
@@ -377,6 +443,7 @@ def finish(token: str) -> ResponseReturnValue:
         cutoff_label=cutoff_label(state),
         contest_labels={contest.slug: contest.label for contest in US_CONTESTS},
         auto_tracking=_auto_tracking_lines(auto_tracking),
+        auto_tracking_error=payload.get(AUTO_TRACKING_ERROR_KEY, ""),
         model_run=payload.get(MODEL_RUN_KEY),
         model_error=payload.get(MODEL_ERROR_KEY, ""),
     )

@@ -693,6 +693,19 @@ class TestPresidentMatchupPage:
         assert db.get_tracked_matchup(map_id, None) is None
         assert "Cleared the national matchup" in _flashes(client, response)[0]
 
+    def test_none_with_nothing_set_says_there_was_nothing_to_clear(
+        self, app: Flask, db: Database
+    ) -> None:
+        _seed_president_matchups(db)
+        client = app.test_client()
+
+        response = client.post("/us/president/matchup", data={"matchup": ""})
+
+        assert response.status_code == 302
+        assert _flashes(client, response) == [
+            "No national matchup was set, so there was nothing to clear."
+        ]
+
     def test_rebuild_runs_the_president_model_with_rebuild_history(
         self, app: Flask, db: Database, recording_runner: _RecordingRunner
     ) -> None:
@@ -913,7 +926,10 @@ class TestRaceMatchupsPage:
         assert (tracked.matchup, tracked.source) == (PAXTON_TALARICO, "auto")
         assert _flashes(client, response) == ["Texas: The race now follows its automatic matchup."]
 
-    def test_auto_without_a_tracked_row_is_flashed(self, app: Flask, db: Database) -> None:
+    def test_auto_without_a_tracked_row_says_there_was_nothing_to_reset(
+        self, app: Flask, db: Database
+    ) -> None:
+        # Like clearing an unset national matchup: nothing to do, not a refusal.
         seeded = _seed_senate_races(db)
         client = app.test_client()
 
@@ -922,7 +938,33 @@ class TestRaceMatchupsPage:
         )
 
         assert response.status_code == 302
-        assert "no tracked matchup to reset" in _flashes(client, response)[0]
+        assert _flashes(client, response) == [
+            "Texas: The race is not tracked, so there was nothing to reset."
+        ]
+        assert db.get_tracked_matchup(seeded["map_id"], seeded["texas"]) is None
+
+    @pytest.mark.parametrize("legacy_auto_row", [False, True])
+    def test_auto_on_a_race_the_importer_never_set_stops_tracking_it(
+        self, app: Flask, db: Database, legacy_auto_row: bool
+    ) -> None:
+        seeded = _seed_senate_races(db)
+        map_id, texas = seeded["map_id"], seeded["texas"]
+        # Set by hand only, so the importer's auto_matchup is NULL.
+        db.set_tracked_matchup(map_id, texas, CORNYN_TALARICO, source="manual")
+        if legacy_auto_row:
+            # What "Use automatic" used to leave behind: (NULL, auto).
+            db.clear_tracked_matchup_override(map_id, texas)
+        client = app.test_client()
+
+        response = client.post(f"/us/matchups/{map_id}/{texas}", data={"action": "auto"})
+
+        assert db.get_tracked_matchup(map_id, texas) is None
+        (message,) = _flashes(client, response)
+        assert message.startswith("Texas: The importer has not chosen a matchup")
+        assert "now not tracked" in message
+        page = client.get("/us/matchups?chamber=senate").get_data(as_text=True)
+        texas_row = page[page.index('<th scope="row">Texas</th>'):]
+        assert "Not tracked (polls ignored)" in texas_row[: texas_row.index("</tr>")]
 
     def test_ignore_stores_null_as_manual(self, app: Flask, db: Database) -> None:
         seeded = _seed_senate_races(db)

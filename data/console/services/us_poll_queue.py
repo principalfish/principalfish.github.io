@@ -22,15 +22,17 @@ What makes the US queue different from Westminster's:
   race by race), and :func:`approve_group` commits the rest of a race in one
   go.
 - **A finish step with two jobs.** Automatic matchup tracking is applied over
-  what was imported, then the three US models and the export run once.
+  every row the run scraped, then the three US models and the export run once.
 
 The finish step records its results on the cached payload under
-:data:`AUTO_TRACKING_KEY`, :data:`MODEL_RUN_KEY` and :data:`MODEL_ERROR_KEY`,
-so refreshing the summary page repeats neither.
+:data:`AUTO_TRACKING_KEY` (or :data:`AUTO_TRACKING_ERROR_KEY`),
+:data:`MODEL_RUN_KEY` and :data:`MODEL_ERROR_KEY`, so refreshing the summary
+page repeats neither.
 """
 
 from __future__ import annotations
 
+import logging
 import subprocess
 from collections.abc import Callable, MutableMapping, Sequence
 from collections.abc import Set as AbstractSet
@@ -66,15 +68,26 @@ from console.services.wikipedia_queue import (
     pending_in_group,
 )
 
+logger = logging.getLogger(__name__)
+
 #: ``QueueState.cutoff_note`` when each race was windowed on its own polls.
 PER_RACE_CUTOFF_NOTE = "one cutoff per race"
 
 #: Payload key holding the ``QueueState``. The blueprint stores it there.
 STATE_KEY = "state"
 
+#: Payload key holding the scraped ``UsPollIndex`` the queue was built from.
+#: The blueprint stores it there; the finish step tracks over all its rows.
+INDEX_KEY = "index"
+
 #: Payload key for the automatic-tracking outcome counts
 #: (``apply_auto_tracked_matchups``'s dict), written once by the finish step.
 AUTO_TRACKING_KEY = "auto_tracking"
+
+#: Payload key for the message of an automatic-tracking pass that raised,
+#: written once instead of :data:`AUTO_TRACKING_KEY` so a refresh does not
+#: retry it.
+AUTO_TRACKING_ERROR_KEY = "auto_tracking_error"
 
 #: Payload key for the ``UsModelRun`` of the finish step, written once. None
 #: when the run raised before producing one (see :data:`MODEL_ERROR_KEY`).
@@ -318,9 +331,16 @@ def confirm_us_item(db: Database, item: QueueItem) -> None:
     """Commit a prepared item, re-checking that the poll is still missing.
 
     The presence re-check is the commit's own: it looks for the five-part
-    identity inside the transaction that would write the poll, so a poll stored
-    since the queue was built — by another queue, the CLI, or an earlier item of
-    this one — is skipped rather than duplicated.
+    identity in the session that would write the poll, so a poll stored since
+    the queue was built — by another queue, the CLI, or an earlier item of this
+    one — is skipped rather than duplicated.
+
+    That check is not atomic with the write, though: pysqlite defers ``BEGIN``
+    to the first write, so the presence SELECT runs outside the transaction and
+    two commits of the same row racing each other can both pass it. The
+    blueprint therefore serialises every request on one queue behind a
+    per-token lock; nothing guards two *different* queues (or the CLI) storing
+    the same poll at the same instant.
 
     The cursor is not moved; the caller advances unless the item ``failed``,
     which is left under the cursor for a retry, as in the UK queue.
@@ -540,13 +560,20 @@ def _race_warnings(db: Database, row: UsPollRow, plan: UsImportPlan) -> list[str
     if plan.seat_id is None:
         return warnings
     tracked = db.get_tracked_matchup(plan.map_id, plan.seat_id)
-    if tracked is None or tracked.source != "manual":
+    if tracked is None:
         return warnings
-    if tracked.matchup is None:
+    # A NULL matchup silences the race whoever stored it: a manual "ignore", or
+    # an automatic row the importer never gave a matchup.
+    if tracked.matchup is None and tracked.source == "manual":
         warnings.append(
             "This race is manually set to be ignored: the model will not use this poll."
         )
-    elif tracked.matchup != row.matchup:
+    elif tracked.matchup is None:
+        warnings.append(
+            "This race is tracked with no matchup (auto), so the model ignores its "
+            "polls until automatic tracking sets one."
+        )
+    elif tracked.source == "manual" and tracked.matchup != row.matchup:
         warnings.append(
             f"This race is manually set to follow {tracked.matchup}: the model "
             "will ignore this poll."
@@ -564,13 +591,20 @@ def finish_us_queue(
     runner: ScriptRunner,
     abandon: bool = False,
 ) -> None:
-    """Close a queue run: track the imported races, then run the models once.
+    """Close a queue run: track every scraped race, then run the models once.
 
-    Automatic tracking points each Senate and House race whose lead table was
-    imported at that matchup (manual overrides stand). It is applied even when
-    the run is abandoned: it is bookkeeping for polls that are already stored,
-    and a race left untracked would have its polls ignored by the model until
-    the next run happened to import another of its lead polls.
+    Automatic tracking points each Senate and House race at its lead table's
+    matchup (manual overrides stand). It runs over **every** row of the scraped
+    index, as the CLI does, not only the rows this run imported: a race whose
+    new lead polls were already stored, or fell before the cutoff, must still
+    move off a stale pairing. A lead matchup with nothing stored is skipped
+    (``no_polls``), so an unimported, unstored lead never becomes tracked.
+
+    Tracking is applied even when the run is abandoned: it is bookkeeping for
+    polls that are already stored, and a race left untracked would have its
+    polls ignored by the model until the next run. If it raises — a race's row
+    created by another connection at the same moment is an ``IntegrityError``
+    — the message is recorded instead and the model run still goes ahead.
 
     The models and the export then run once, if the run asked for that, was not
     abandoned, and imported anything. Both results are recorded on the
@@ -579,27 +613,38 @@ def finish_us_queue(
     Args:
         db: Active Database instance.
         payload: The cached queue payload, holding the ``QueueState`` under
-            :data:`STATE_KEY`. Results are written to it under
-            :data:`AUTO_TRACKING_KEY`, :data:`MODEL_RUN_KEY` and, if the model
-            run raised, :data:`MODEL_ERROR_KEY`.
+            :data:`STATE_KEY` and the ``UsPollIndex`` under :data:`INDEX_KEY`.
+            Results are written to it under :data:`AUTO_TRACKING_KEY` (or
+            :data:`AUTO_TRACKING_ERROR_KEY` if tracking raised),
+            :data:`MODEL_RUN_KEY` and, if the model run raised,
+            :data:`MODEL_ERROR_KEY`.
         runner: Subprocess runner handed to ``run_us_models_and_export``.
         abandon: True when the user left the queue early; turns the model run
             off for good, as in the UK queue.
 
     Raises:
-        TypeError: If the payload holds no ``QueueState``.
+        TypeError: If the payload holds no ``QueueState`` or no ``UsPollIndex``.
     """
     state = payload.get(STATE_KEY)
     if not isinstance(state, QueueState):
         raise TypeError("the payload holds no queue state")
+    index = payload.get(INDEX_KEY)
+    if not isinstance(index, UsPollIndex):
+        raise TypeError("the payload holds no scraped index")
 
     if abandon:
         state.run_model_at_end = False
 
-    imported = [_us_row(item.row) for item in state.items if item.status == "imported"]
-    if AUTO_TRACKING_KEY not in payload:
-        payload[AUTO_TRACKING_KEY] = apply_auto_tracked_matchups(db, imported)
+    if AUTO_TRACKING_KEY not in payload and AUTO_TRACKING_ERROR_KEY not in payload:
+        try:
+            payload[AUTO_TRACKING_KEY] = apply_auto_tracked_matchups(db, index.rows)
+        except (ValueError, SQLAlchemyError) as err:
+            logger.warning("US automatic matchup tracking failed", exc_info=True)
+            payload[AUTO_TRACKING_ERROR_KEY] = (
+                f"Automatic matchup tracking failed: {err}"
+            )
 
+    imported = any(item.status == "imported" for item in state.items)
     if MODEL_RUN_KEY in payload or not state.run_model_at_end or not imported:
         return
     try:

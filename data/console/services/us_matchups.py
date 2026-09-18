@@ -10,8 +10,9 @@ Two pages decide which of a race's stored matchups the US models follow:
 
 Both only ever accept a label that some stored poll already carries, so a typo
 or a stale form cannot point a race at a matchup with no polls. Refusals are
-raised as :class:`MatchupChoiceError` for the routes to flash. The module is
-Flask-free, like the other console services.
+raised as :class:`MatchupChoiceError` for the routes to flash. Clearing or
+resetting a choice that is not there is not a refusal: both pages say there
+was nothing to do. The module is Flask-free, like the other console services.
 """
 
 from __future__ import annotations
@@ -139,7 +140,7 @@ def set_national_matchup(db: Database, map_id: int, matchup: str | None) -> str:
                 "Cleared the national matchup; the President model will not run"
                 " until one is chosen."
             )
-        return "No national matchup was set."
+        return "No national matchup was set, so there was nothing to clear."
 
     labels = {summary.matchup for summary in national_matchup_summaries(db, map_id)}
     if matchup not in labels:
@@ -206,24 +207,22 @@ def apply_race_matchup_action(
         action: ``"set"`` follows ``matchup`` as a manual override;
             ``"ignore"`` stores a manual NULL so the models skip the race's
             polls; ``"auto"`` drops the override and follows the importer's
-            lead-table choice again.
+            lead-table choice again (see :func:`_reset_to_automatic`).
         matchup: The label for ``"set"``; ignored by the other actions.
 
     Returns:
-        A confirmation message.
+        A confirmation message, including for ``"auto"`` on a race with no
+        tracked row, which has nothing to reset.
 
     Raises:
         MatchupChoiceError: On an unknown action, a label not stored for this
-            seat on this map, a seat that is not on the map, or ``"auto"`` for
-            a race with no tracked row.
+            seat on this map, or a seat that is not on the map.
     """
     if action not in RACE_MATCHUP_ACTIONS:
         raise MatchupChoiceError(f"Unknown matchup action {action!r}.")
 
     if action == "auto":
-        if not db.clear_tracked_matchup_override(map_id, seat_id):
-            raise MatchupChoiceError("This race has no tracked matchup to reset.")
-        return "The race now follows its automatic matchup."
+        return _reset_to_automatic(db, map_id, seat_id)
 
     chosen: str | None = None
     if action == "set":
@@ -246,3 +245,52 @@ def apply_race_matchup_action(
     if chosen is None:
         return "The race's polls are now ignored."
     return f"The race now tracks {chosen}."
+
+
+def _reset_to_automatic(db: Database, map_id: int, seat_id: int) -> str:
+    """Drop a race's override so it follows the importer's lead table again.
+
+    A race the importer has already judged goes back to its ``auto_matchup``.
+    A race it never judged has no ``auto_matchup``, and copying that across
+    would store ``(NULL, "auto")`` — a race silently ignored while it looks
+    automatic. Its row is deleted instead: the race shows as not tracked,
+    which the per-seat models treat the same way (its polls are unused), until
+    an import finds its lead table with polls stored and tracks it.
+
+    The read and the write are separate statements. An import storing the
+    race's first ``auto_matchup`` in between would be deleted with the row,
+    and restored by the next import; the console and an import are not run
+    against each other in practice.
+
+    Args:
+        db: Active Database instance.
+        map_id: Primary key of the race's map.
+        seat_id: Primary key of the race's seat.
+
+    Returns:
+        A message saying what happened, or that there was nothing to reset.
+
+    Raises:
+        MatchupChoiceError: If the seat does not exist or is on another map,
+            as for the other actions — "nothing to reset" would hide that.
+    """
+    seat = db.get_seat(seat_id)
+    if seat is None:
+        raise MatchupChoiceError(f"seat {seat_id} does not exist")
+    if seat.map_id != map_id:
+        raise MatchupChoiceError(
+            f"seat {seat_id} belongs to map {seat.map_id}, not map {map_id}"
+        )
+
+    tracked = db.get_tracked_matchup(map_id, seat_id)
+    if tracked is None:
+        return "The race is not tracked, so there was nothing to reset."
+    if tracked.auto_matchup is None:
+        db.delete_tracked_matchup(map_id, seat_id)
+        return (
+            "The importer has not chosen a matchup for this race yet, so it is now"
+            " not tracked and its polls are unused until an import tracks its lead"
+            " matchup."
+        )
+    db.clear_tracked_matchup_override(map_id, seat_id)
+    return "The race now follows its automatic matchup."

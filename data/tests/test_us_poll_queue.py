@@ -9,6 +9,7 @@ subprocess.
 from __future__ import annotations
 
 import subprocess
+import threading
 from collections.abc import Generator
 from datetime import date
 from pathlib import Path
@@ -17,14 +18,18 @@ from typing import Any
 import pytest
 from flask import Flask
 from flask.testing import FlaskClient
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 from console import create_app
+from console.blueprints import us_poll_import
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services import us_poll_queue
 from console.services.preview import PREVIEW_CACHE, store_preview
 from console.services.us_models import UsModelRun
 from console.services.us_poll_queue import (
+    AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
+    INDEX_KEY,
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
     PER_RACE_CUTOFF_NOTE,
@@ -69,6 +74,7 @@ PRESIDENT_MAP = "US Presidential 2024"
 
 MICHIGAN_MATCHUP = "Rogers (R) vs El-Sayed (D)"
 TEXAS_MATCHUP = "Paxton (R) vs Talarico (D)"
+CORNYN_MATCHUP = "Cornyn (R) vs Talarico (D)"
 NEWSOM_MATCHUP = "Vance (R) vs Newsom (D)"
 SHAPIRO_MATCHUP = "Vance (R) vs Shapiro (D)"
 
@@ -149,6 +155,10 @@ MICHIGAN_READINGS = _readings(
 TEXAS_READINGS = _readings(
     ("Republican", "Ken Paxton", 47.0),
     ("Democratic", "James Talarico", 45.0),
+)
+CORNYN_READINGS = _readings(
+    ("Republican", "John Cornyn", 46.0),
+    ("Democratic", "James Talarico", 44.0),
 )
 NEWSOM_READINGS = _readings(
     ("Republican", "JD Vance", 45.0),
@@ -309,11 +319,12 @@ class TestCutoffs:
 
     def test_scopes_do_not_leak_across_maps(self, us_db: Database) -> None:
         # A legacy national, matchup-less poll on the Senate map shares the
-        # (seat None, matchup None) scope with the House generic ballot.
-        senate_national = _row(
-            us_db, seat=None, pollster="Legacy", end=date(2026, 9, 1), matchup=None
+        # (seat None, matchup None) scope with the House generic ballot. The
+        # importer no longer stores such a poll, so it is seeded directly.
+        legacy = us_db.add_pollster("Legacy", "legacy_us_senate")
+        us_db.add_poll(
+            legacy.id, _map_id(us_db, SENATE_MAP), date(2026, 8, 29), date(2026, 9, 1)
         )
-        _store(us_db, senate_national)
         generic_ballot = _row(
             us_db,
             contest="house_national",
@@ -628,6 +639,17 @@ class TestWarnings:
         item = _prepared(us_db, _row(us_db))
         assert _has(item, "manually set to be ignored")
 
+    def test_automatic_row_with_no_matchup(self, us_db: Database) -> None:
+        senate = _map_id(us_db, SENATE_MAP)
+        michigan = _seat_id(us_db, SENATE_MAP, "Michigan")
+        # The state an old "Use automatic" left behind: (NULL, auto).
+        us_db.set_tracked_matchup(senate, michigan, None, source="manual")
+        us_db.clear_tracked_matchup_override(senate, michigan)
+
+        item = _prepared(us_db, _row(us_db))
+
+        assert _has(item, "tracked with no matchup (auto)")
+
     def test_manual_override_that_matches_and_automatic_rows_are_quiet(
         self, us_db: Database
     ) -> None:
@@ -787,7 +809,7 @@ def _imported_payload(
     state = _queue(db, *rows, run_model_at_end=run_model_at_end)
     for key in dict.fromkeys(group_key(item.row) for item in state.items):
         approve_group(db, state, key)
-    return {"type": "us_wikipedia_queue", STATE_KEY: state}
+    return {"type": "us_wikipedia_queue", STATE_KEY: state, INDEX_KEY: _index(*rows)}
 
 
 class _TrackingSpy:
@@ -870,7 +892,7 @@ class TestFinish:
         prepare_us_item(us_db, state.items[0], state)
         _store(us_db, row)
         confirm_us_item(us_db, state.items[0])
-        payload: dict[str, Any] = {STATE_KEY: state}
+        payload: dict[str, Any] = {STATE_KEY: state, INDEX_KEY: _index(row)}
         runner = _RecordingRunner()
 
         finish_us_queue(us_db, payload, runner=runner)
@@ -878,7 +900,8 @@ class TestFinish:
         assert state.items[0].status == "skipped"
         assert runner.calls == []
         assert MODEL_RUN_KEY not in payload
-        assert set(payload[AUTO_TRACKING_KEY].values()) == {0}
+        # The race is still tracked: its lead poll is stored, if not by this run.
+        assert payload[AUTO_TRACKING_KEY]["created"] == 1
 
     def test_the_model_option_off_runs_no_models(self, us_db: Database) -> None:
         runner = _RecordingRunner()
@@ -914,9 +937,97 @@ class TestFinish:
         assert payload[STATE_KEY].run_model_at_end is False
         assert payload[AUTO_TRACKING_KEY]["created"] == 1
 
+    def test_tracking_follows_a_new_lead_whose_polls_are_already_stored(
+        self, us_db: Database
+    ) -> None:
+        senate = _map_id(us_db, SENATE_MAP)
+        texas_id = _seat_id(us_db, SENATE_MAP, "Texas")
+        _store(
+            us_db,
+            _row(
+                us_db,
+                seat="Texas",
+                matchup=CORNYN_MATCHUP,
+                readings=CORNYN_READINGS,
+                start=date(2026, 3, 1),
+                end=date(2026, 3, 4),
+            ),
+        )
+        us_db.set_tracked_matchup(senate, texas_id, CORNYN_MATCHUP, source="auto")
+        # The race's new lead table was stored by another run (the CLI, say),
+        # so this run never queues it.
+        texas_lead = _row(
+            us_db, seat="Texas", matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS
+        )
+        _store(us_db, texas_lead)
+        payload = _imported_payload(us_db, texas_lead, _row(us_db))
+
+        finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert [_us_seat(item) for item in payload[STATE_KEY].items] == ["Michigan"]
+        assert payload[AUTO_TRACKING_KEY]["updated"] == 1
+        texas = us_db.get_tracked_matchup(senate, texas_id)
+        assert texas is not None
+        assert (texas.matchup, texas.source) == (TEXAS_MATCHUP, "auto")
+
+    @pytest.mark.parametrize(
+        ("error", "fragment"),
+        [
+            (
+                IntegrityError(
+                    "INSERT INTO tracked_matchups",
+                    {},
+                    Exception("UNIQUE constraint failed"),
+                ),
+                "UNIQUE constraint failed",
+            ),
+            (
+                ValueError("seat 7 belongs to map 3, not map 2"),
+                "seat 7 belongs to map 3, not map 2",
+            ),
+        ],
+    )
+    def test_a_tracking_failure_is_recorded_once_and_the_models_still_run(
+        self,
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        error: Exception,
+        fragment: str,
+    ) -> None:
+        calls: list[int] = []
+
+        def failing(db: Database, rows: list[UsPollRow]) -> dict[str, int]:
+            calls.append(len(rows))
+            raise error
+
+        monkeypatch.setattr(us_poll_queue, "apply_auto_tracked_matchups", failing)
+        runner = _RecordingRunner()
+        payload = _imported_payload(us_db, _row(us_db))
+
+        finish_us_queue(us_db, payload, runner=runner)
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert calls == [1]
+        assert AUTO_TRACKING_KEY not in payload
+        message = payload[AUTO_TRACKING_ERROR_KEY]
+        assert message.startswith("Automatic matchup tracking failed: ")
+        assert fragment in message
+        assert len(runner.calls) == 3
+
     def test_a_payload_without_a_queue_is_rejected(self, us_db: Database) -> None:
         with pytest.raises(TypeError, match="no queue state"):
             finish_us_queue(us_db, {}, runner=_RecordingRunner())
+
+    def test_a_payload_without_an_index_is_rejected(self, us_db: Database) -> None:
+        payload: dict[str, Any] = {STATE_KEY: _queue(us_db, _row(us_db))}
+
+        with pytest.raises(TypeError, match="no scraped index"):
+            finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+
+def _us_seat(item: QueueItem) -> str | None:
+    assert isinstance(item.row, UsPollRow)
+    return item.row.seat_name
 
 
 # ── Routes (console.blueprints.us_poll_import) ────────────────────────────────
@@ -1137,7 +1248,32 @@ class TestStartRoute:
         response = client.post("/us/import/start", data={"contests": ALL_CONTESTS})
 
         assert response.headers["Location"].endswith("/us/import")
-        assert "Wikipedia scrape failed: parser exploded" in _body(client, "/us/import")
+        assert "Could not start the US import: parser exploded" in _body(
+            client, "/us/import"
+        )
+        assert PREVIEW_CACHE == {}
+
+    def test_a_queue_build_that_raises_is_reported(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def locked(*_args: Any, **_kwargs: Any) -> QueueState:
+            raise OperationalError("SELECT", {}, Exception("database is locked"))
+
+        monkeypatch.setattr(
+            f"{BLUEPRINT}.fetch_us_poll_index", _FakeFetch(_index(_row(us_db)))
+        )
+        monkeypatch.setattr(f"{BLUEPRINT}.build_us_queue", locked)
+
+        response = client.post("/us/import/start", data={"contests": ALL_CONTESTS})
+
+        assert response.status_code == 302
+        assert response.headers["Location"].endswith("/us/import")
+        body = _body(client, "/us/import")
+        assert "Could not start the US import:" in body
+        assert "database is locked" in body
         assert PREVIEW_CACHE == {}
 
     def test_the_start_page_offers_every_contest(
@@ -1627,6 +1763,38 @@ class TestFinishRoute:
 
         assert "US model run failed:" in body
 
+    def test_a_tracking_failure_is_shown_and_not_retried(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        calls: list[int] = []
+
+        def colliding(db: Database, rows: list[UsPollRow]) -> dict[str, int]:
+            calls.append(len(rows))
+            raise IntegrityError(
+                "INSERT INTO tracked_matchups",
+                {},
+                Exception("UNIQUE constraint failed"),
+            )
+
+        monkeypatch.setattr(us_poll_queue, "apply_auto_tracked_matchups", colliding)
+        token = self._import_one(client, us_db, monkeypatch)
+
+        first = client.get(f"/us/import/{token}/finish")
+        second = client.get(f"/us/import/{token}/finish")
+
+        assert first.status_code == second.status_code == 200
+        assert calls == [1]
+        body = second.get_data(as_text=True)
+        assert "Automatic matchup tracking failed:" in body
+        assert "UNIQUE constraint failed" in body
+        assert "No race&#39;s tracked matchup changed." not in body
+        # The polls are stored, so the models still ran, once.
+        assert len(model_runner.calls) == 3
+
     def test_the_summary_groups_statuses_and_shows_the_diagnostics(
         self,
         client: FlaskClient[Any],
@@ -1780,3 +1948,85 @@ class TestTokenGuard:
         response = client.get(f"/us/import/{token}")
 
         assert response.headers["Location"].endswith("/us/import")
+
+
+
+class TestConcurrentSubmits:
+    """The dev server is threaded: one queue's requests must not interleave."""
+
+    def test_a_double_confirm_commits_one_poll(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
+        client.get(f"/us/import/{token}")
+
+        # Hold the first commit until a second one arrives (or a second has
+        # passed), so two submits that both got past the cursor check are
+        # certain to overlap rather than depending on thread timing.
+        real_commit = commit_us_import_plan
+        entered: list[str] = []
+        entered_guard = threading.Lock()
+        second_arrived = threading.Event()
+
+        def gated_commit(db: Database, row: UsPollRow, plan: Any) -> Any:
+            with entered_guard:
+                entered.append(threading.current_thread().name)
+                is_first = len(entered) == 1
+            if is_first:
+                second_arrived.wait(timeout=1.0)
+            else:
+                second_arrived.set()
+            return real_commit(db, row, plan)
+
+        monkeypatch.setattr(us_poll_queue, "commit_us_import_plan", gated_commit)
+        clients = [client, client.application.test_client()]
+        statuses: list[int] = []
+
+        def submit(submitter: FlaskClient[Any]) -> None:
+            response = submitter.post(
+                f"/us/import/{token}/confirm", data={"expected_index": "0"}
+            )
+            statuses.append(response.status_code)
+
+        threads = [
+            threading.Thread(target=submit, args=(submitter,), name=f"submit-{n}")
+            for n, submitter in enumerate(clients)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=10)
+
+        assert statuses == [302, 302]
+        assert len(entered) == 1
+        assert _polls_on(us_db, SENATE_MAP) == 1
+        state = _state(token)
+        assert [item.status for item in state.items] == ["imported", "pending"]
+        assert state.index == 1
+        # Each client carries its own flash messages.
+        stale = [
+            "That step has already been actioned."
+            in _body(submitter, f"/us/import/{token}")
+            for submitter in clients
+        ]
+        assert sorted(stale) == [False, True]
+
+    def test_the_lock_of_a_token_that_has_left_the_cache_is_dropped(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        gone = _open_queue(client, monkeypatch, _row(us_db))
+        client.get(f"/us/import/{gone}")
+        assert gone in us_poll_import._QUEUE_LOCKS
+        PREVIEW_CACHE.pop(gone)
+        live = _open_queue(client, monkeypatch, _row(us_db))
+
+        client.get(f"/us/import/{live}")
+
+        assert gone not in us_poll_import._QUEUE_LOCKS
+        assert live in us_poll_import._QUEUE_LOCKS

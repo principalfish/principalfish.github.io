@@ -58,7 +58,12 @@
 
   <section class="card">
     <h3>Matchup Tracking</h3>
-    {% if auto_tracking %}
+    {% if auto_tracking_error %}
+      <div class="alerts">
+        <div class="alert">{{ auto_tracking_error }}</div>
+      </div>
+      <p>The polls imported above are stored; set any race's matchup on the pages below.</p>
+    {% elif auto_tracking %}
       <ul>
         {% for count, label in auto_tracking %}
           <li>{{ count }} {{ label }}</li>

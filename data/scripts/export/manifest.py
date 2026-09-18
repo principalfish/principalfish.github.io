@@ -103,9 +103,10 @@ def build_map_modes_with_regions(
         map_modes: Per-map config keyed by string map id.
         regions_by_map_id: Region lists keyed by string map id, as built by
             :func:`build_manifest_regions_by_map_id`.
-        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against;
-            defaults to the current calendar year. Injectable so exports (and tests) can
-            pin a year rather than depend on the wall clock.
+        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against, and
+            to expire past ``senateSpecialElections`` entries at; defaults to the current
+            calendar year. Injectable so exports (and tests) can pin a year rather than
+            depend on the wall clock.
 
     Returns:
         A new dict keyed by string map id, each value being the mapMode config with a
@@ -128,6 +129,16 @@ def build_map_modes_with_regions(
         cycle = entry.pop("senateClassCycle", None)
         if cycle:
             entry["senateClassNextElection"] = _senate_class_next_election(cycle, current_year)
+        # Senate special elections (an off-cycle vacancy contested alongside the regular class,
+        # e.g. Ohio and Florida's Class-3 seats in 2026) are carried through verbatim, minus any
+        # entry whose year has already passed — so a special expires from the manifest once its
+        # cycle is over rather than lingering until someone edits the shell.
+        if "senateSpecialElections" in entry:
+            entry["senateSpecialElections"] = [
+                special
+                for special in entry["senateSpecialElections"]
+                if int(special.get("year", 0)) >= current_year
+            ]
         merged[map_id_str] = entry
     return merged
 

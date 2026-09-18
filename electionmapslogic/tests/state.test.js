@@ -585,3 +585,80 @@ describe('AppState.shouldShowCountdown', () => {
     expect(state.shouldShowCountdown()).toBe(false);
   });
 });
+
+// ─── AppState.setupMapData: Senate member cycles ─────────────────────────────
+describe('AppState member cycle resolution (senate classes + specials)', () => {
+  let saved;
+
+  // Ohio holds a Class-3 special in 2026 (the manifest entry); Alabama is an ordinary state
+  // whose Class-3 seat stays on the regular 2028 cycle.
+  const buildSeats = () => [
+    new Seat({ seat: 'Ohio', region: 'east north central', winner: 'republican', members: [
+      { party: 'republican', name: 'Husted', class: 3 },
+      { party: 'republican', name: 'Moreno', class: 1 },
+    ] }),
+    new Seat({ seat: 'Alabama', region: 'east south central', winner: 'republican', members: [
+      { party: 'republican', name: 'Britt', class: 3 },
+      { party: 'republican', name: 'Tuberville', class: 2 },
+    ] }),
+  ];
+
+  function configure(specials) {
+    manifest.init({
+      parties: [], elections: [], files: {}, parliamentFeatures: {},
+      mapModes: {
+        23: {
+          name: 'us-senate-2024',
+          regions: [],
+          senateClassNextElection: { 1: 2030, 2: 2026, 3: 2028 },
+          ...(specials ? { senateSpecialElections: specials } : {}),
+        },
+      },
+    });
+    state.currentElection = { id: 'current-senate', mapId: 23, multiMember: true };
+    state.electionData = { currentSeats: buildSeats() };
+    state.comparisonElectionData = null;
+    state.setupMapData();
+    return state.electionData.currentSeats;
+  }
+
+  /** Reads a member's stamped "next up" year by state + senator name. */
+  const upYear = (seats, seatName, memberName) =>
+    seats.find((s) => s.seat === seatName).members.find((m) => m.name === memberName).up;
+
+  beforeEach(() => {
+    saved = { election: state.currentElection, data: state.electionData, comparison: state.comparisonElectionData };
+  });
+
+  afterEach(() => {
+    state.currentElection = saved.election;
+    state.electionData = saved.data;
+    state.comparisonElectionData = saved.comparison;
+  });
+
+  it('stamps each member with its class cycle year when there are no specials', () => {
+    const seats = configure(null);
+    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2028);
+    expect(upYear(seats, 'Ohio', 'Moreno')).toBe(2030);
+    expect(upYear(seats, 'Alabama', 'Tuberville')).toBe(2026);
+  });
+
+  it("a special overrides only that seat's matching class — Husted is up in 2026", () => {
+    const seats = configure([
+      { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+    ]);
+    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2026);
+    // The state's other class, and the same class elsewhere, keep the regular cycle.
+    expect(upYear(seats, 'Ohio', 'Moreno')).toBe(2030);
+    expect(upYear(seats, 'Alabama', 'Britt')).toBe(2028);
+  });
+
+  it('ignores a special naming a seat or class that is not in the chamber', () => {
+    const seats = configure([
+      { seat: 'Ohio', class: 2, year: 2026, baselineElectionId: '2022-us-senate' },
+      { seat: 'Narnia', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+    ]);
+    expect(upYear(seats, 'Ohio', 'Husted')).toBe(2028);
+    expect(upYear(seats, 'Ohio', 'Moreno')).toBe(2030);
+  });
+});

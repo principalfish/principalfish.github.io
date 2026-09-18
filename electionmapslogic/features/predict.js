@@ -1090,6 +1090,10 @@ export class AMSPredict extends PredictModel {
  *     carried-over Class-1 (last elected 2024) and Class-3 (2022) senators taken from the
  *     chamber snapshot — rendered as a multi-member composition like the Current Senate page.
  *
+ * States holding a special election this cycle (Ohio and Florida in 2026) contest a seat off the
+ * regular class, listed in the mapMode's `senateSpecialElections`; the controller loads their
+ * separate baseline and adds them via `setSpecialSeats`, so both views cover the full field.
+ *
  * The chamber snapshot (senate-current.json: all 100 members with their permanent class) is
  * fetched by the controller and handed in via `setChamberSeats` before the first projection,
  * so the model itself stays DOM-free and does no I/O. Both views run off the one swing ballot;
@@ -1107,6 +1111,9 @@ export class SenatePredict extends FPTPPredict {
     this.reprojectOnTabChange = true;
     /** @type {Seat[]} Full 100-member chamber snapshot; empty until the controller loads it. */
     this.chamberSeats = [];
+    /** @type {Map<string, number>} seat lookup key → the class contested at a special election
+     * there this cycle. Populated by `setSpecialSeats`; seats absent from it contest Class 2. */
+    this.specialClassBySeat = new Map();
     // Snapshot the projection baseline (the 2020 Class-2 seats, currently in comparisonElectionData)
     // so projecting stays independent of comparisonElectionData — which the controller repoints at
     // the current chamber for the full-Senate view's delta column. Ballot swing baselines were
@@ -1123,6 +1130,37 @@ export class SenatePredict extends FPTPPredict {
    */
   setChamberSeats(seats) {
     this.chamberSeats = Array.isArray(seats) ? seats : [];
+  }
+
+  /**
+   * Adds the seats contested at a special election to the projection. A special contests a
+   * seat off its class's normal cycle (Ohio's and Florida's Class-3 seats in 2026), so its
+   * baseline row comes from a different election than the regular class's — the controller
+   * fetches those baselines and hands the seats in here, once, before the first projection.
+   *
+   * The seats join `projectionBase` (so they are projected and appear in the seats-up view and
+   * its comparison), and the ballot baseline is recomputed over the enlarged base so the input
+   * grid's regional starting shares include them. `specials` records each seat's contested
+   * class for `#buildChamber`; a seat whose baseline failed to load is inert there, because the
+   * merge only replaces a member when the seat actually has a projected winner.
+   * @param {Seat[]} seats - Baseline seats for the special contests.
+   * @param {Array<{seat: string, class?: number}>} specials - The mapMode's special entries.
+   */
+  setSpecialSeats(seats, specials) {
+    (Array.isArray(specials) ? specials : []).forEach((special) => {
+      const seatKey = seatLookupKey(special?.seat || '');
+      if (seatKey) this.specialClassBySeat.set(seatKey, Number(special?.class) || 2);
+    });
+    const known = new Set(this.projectionBase.map((seat) => seatLookupKey(seat.seat)));
+    const added = (Array.isArray(seats) ? seats : []).filter((seat) => {
+      const seatKey = seatLookupKey(seat?.seat || '');
+      if (!seatKey || known.has(seatKey)) return false;
+      known.add(seatKey);
+      return true;
+    });
+    if (!added.length) return;
+    this.projectionBase = [...this.projectionBase, ...added];
+    this.ballots.forEach((ballot) => { ballot.baseline = this.baselineFor(this.projectionBase); });
   }
 
   /** True when the active view is the full-chamber composition (rendered multi-member). */
@@ -1168,11 +1206,13 @@ export class SenatePredict extends FPTPPredict {
   }
 
   /**
-   * Merges the projected Class-2 winners into the chamber snapshot: each state's Class-2 member
-   * takes the projected party; Class-1 and Class-3 members carry over unchanged. The seat winner
-   * is recomputed for the map fill — a party when both members share it, else 'split' (matching
-   * how senate-current colours split states). Falls back to the projected contested seats when
-   * the snapshot hasn't loaded yet.
+   * Merges the projected winners into the chamber snapshot: each state's contested member takes
+   * the projected party; the other members carry over unchanged. The contested member is the
+   * Class-2 one, except in a state holding a special election, where it is the class that
+   * special contests (Ohio and Florida 2026: Class 3). The seat winner is recomputed for the
+   * map fill — a party when both members share it, else 'split' (matching how senate-current
+   * colours split states). Falls back to the projected contested seats when the snapshot hasn't
+   * loaded yet.
    * @param {Seat[]} projectedContested
    * @returns {Seat[]}
    */
@@ -1182,9 +1222,11 @@ export class SenatePredict extends FPTPPredict {
     projectedContested.forEach((seat) => winnerByState.set(seatLookupKey(seat.seat), seat.winner));
 
     return this.chamberSeats.map((seat) => {
-      const projectedWinner = winnerByState.get(seatLookupKey(seat.seat));
+      const seatKey = seatLookupKey(seat.seat);
+      const projectedWinner = winnerByState.get(seatKey);
+      const contestedClass = this.specialClassBySeat.get(seatKey) ?? 2;
       const members = (seat.members || []).map((member) => {
-        if (Number(member?.class) !== 2 || !projectedWinner) return { ...member };
+        if (Number(member?.class) !== contestedClass || !projectedWinner) return { ...member };
         return { ...member, party: projectedWinner, name: `${manifest.labelParty(projectedWinner)} (projected)` };
       });
       const parties = members.map((m) => m.party);

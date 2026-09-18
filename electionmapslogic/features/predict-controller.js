@@ -14,9 +14,10 @@
 // Apply / Reset clicks call runPredictProjection, which re-projects from the model and
 // re-renders.
 
-import { state, manifest, ElectionData, buildRouteSearchParams } from '../state.js';
+import { state, manifest, ElectionData, activeMapMode, buildRouteSearchParams } from '../state.js';
 import { predictModelClassFor } from './predict.js';
 import { fetchJson } from '../files.js';
+import { seatLookupKey } from '../utils.js';
 import {
   renderHeader,
   renderMap,
@@ -101,6 +102,13 @@ export async function activatePredictView() {
   // the model — the engine stays I/O-free. No-op for models without a chamber snapshot.
   if (typeof state.predictModel.setChamberSeats === 'function') {
     await loadPredictChamberSeats(parliamentConfig, state.predictModel);
+  }
+
+  // Senate specials (Ohio / Florida 2026) are contested off the regular class, so their baseline
+  // rows live in a different election file than the one activateElection fetched. Load them once,
+  // before the first projection, for the same reason: the engine does no I/O.
+  if (typeof state.predictModel.setSpecialSeats === 'function') {
+    await loadPredictSpecialSeats(state.predictModel);
   }
 
   // The Apply action ("Use current forecast") only exists where the anchor election is a
@@ -349,6 +357,49 @@ async function loadPredictChamberSeats(parliamentConfig, model) {
   } catch (error) {
     console.error('Senate chamber snapshot load failed', error);
   }
+}
+
+/**
+ * Loads the baseline seats for the special elections the active map declares
+ * (`mapMode.senateSpecialElections`, exported from the page shell) and hands them to the model
+ * via `setSpecialSeats`. Each entry names the manifest election its seat was last contested at
+ * (Ohio / Florida 2026 → the 2022 cycle, not the Class-2 baseline the page already loaded), so
+ * entries are grouped by that id and each file is fetched exactly once; only the named seats are
+ * taken from it.
+ *
+ * Every failure mode is a silent no-op — no specials declared, an id that doesn't resolve, a
+ * failed fetch — leaving the page projecting the regular class alone rather than breaking.
+ * @param {object} model - The predict model exposing `setSpecialSeats`.
+ * @returns {Promise<void>}
+ */
+async function loadPredictSpecialSeats(model) {
+  const specials = activeMapMode().senateSpecialElections || [];
+  if (!specials.length) return;
+
+  const specialsByBaselineId = new Map();
+  specials.forEach((special) => {
+    const baselineId = special?.baselineElectionId;
+    if (!baselineId) return;
+    if (!specialsByBaselineId.has(baselineId)) specialsByBaselineId.set(baselineId, []);
+    specialsByBaselineId.get(baselineId).push(special);
+  });
+
+  const seats = [];
+  for (const [baselineId, entries] of specialsByBaselineId) {
+    const baselineElection = manifest.getElectionFromId(baselineId);
+    if (!baselineElection) continue;
+    const wanted = new Set(entries.map((special) => seatLookupKey(special?.seat || '')));
+    try {
+      const { dataFile } = manifest.resolveElectionFiles(baselineElection);
+      const baselineData = await fetchJson(`data/${dataFile}`);
+      const matching = new ElectionData(baselineData).currentSeats
+        .filter((seat) => wanted.has(seatLookupKey(seat.seat)));
+      seats.push(...matching);
+    } catch (error) {
+      console.error('Senate special baseline load failed', error);
+    }
+  }
+  model.setSpecialSeats(seats, specials);
 }
 
 /**

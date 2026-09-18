@@ -84,3 +84,44 @@ class TestBuildMapModesWithRegions:
         # The original mapMode dict is untouched (a fresh dict is built per map).
         assert "senateClassCycle" in modes["23"]
         assert "senateClassNextElection" not in modes["23"]
+
+
+class TestSenateSpecialElections:
+    """Special-election entries pass through verbatim until their cycle has passed."""
+
+    SPECIALS = [
+        {"seat": "Florida", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
+        {"seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"},
+    ]
+
+    def test_upcoming_specials_are_carried_through_unchanged(self) -> None:
+        modes = {"23": {"senateSpecialElections": self.SPECIALS}}
+        result = build_map_modes_with_regions(modes, {"23": []}, current_year=2025)
+        assert result["23"]["senateSpecialElections"] == self.SPECIALS
+
+    def test_election_year_still_counts_as_upcoming(self) -> None:
+        # Year-granular like senateClassNextElection: the special reads as "up" all year.
+        modes = {"23": {"senateSpecialElections": self.SPECIALS}}
+        result = build_map_modes_with_regions(modes, {"23": []}, current_year=2026)
+        assert len(result["23"]["senateSpecialElections"]) == 2
+
+    def test_past_specials_expire_after_their_cycle(self) -> None:
+        modes = {
+            "23": {
+                "senateSpecialElections": [
+                    *self.SPECIALS,
+                    {"seat": "Texas", "class": 1, "year": 2030, "baselineElectionId": "x"},
+                ]
+            }
+        }
+        result = build_map_modes_with_regions(modes, {"23": []}, current_year=2027)
+        assert [s["seat"] for s in result["23"]["senateSpecialElections"]] == ["Texas"]
+
+    def test_key_is_absent_when_the_shell_has_none(self) -> None:
+        result = build_map_modes_with_regions({"23": {}}, {"23": []}, current_year=2026)
+        assert "senateSpecialElections" not in result["23"]
+
+    def test_does_not_mutate_the_shell_list(self) -> None:
+        modes = {"23": {"senateSpecialElections": [dict(self.SPECIALS[0])]}}
+        build_map_modes_with_regions(modes, {"23": []}, current_year=2030)
+        assert len(modes["23"]["senateSpecialElections"]) == 1

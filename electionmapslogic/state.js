@@ -1327,14 +1327,28 @@ class AppState {
    * each member's next-up election year onto `member.up` from its permanent `class`. This lets
    * the cycle filter, tally, and seat popup read `member.up` unchanged while the year itself is
    * manifest-driven and time-aware (resolved at export). No-op when there's no class→year map.
+   *
+   * `senateSpecialElections` overrides that class year for one member: a special election pulls
+   * a single seat forward off its class's normal cycle (Ohio's and Florida's Class-3 seats are
+   * contested in 2026, not 2028), so the (seat, class) it names is stamped with the special's
+   * year and shows up in the "up in 2026" filter alongside the regular class.
    * @returns {void}
    */
   #resolveMemberCycles() {
     const cycleMap = this.mapConfig?.senateClassNextElection;
-    if (!cycleMap) return;
+    const specials = this.mapConfig?.senateSpecialElections || [];
+    if (!cycleMap && !specials.length) return;
+    const specialYearBySeatClass = new Map();
+    specials.forEach((special) => {
+      const seatKey = seatLookupKey(special?.seat || '');
+      if (!seatKey || special?.year == null) return;
+      specialYearBySeatClass.set(`${seatKey}|${Number(special?.class)}`, special.year);
+    });
     this.electionData?.currentSeats?.forEach((seat) => {
+      const seatKey = seatLookupKey(seat?.seat || '');
       (seat.members || []).forEach((member) => {
-        const year = cycleMap[member?.class];
+        const specialYear = specialYearBySeatClass.get(`${seatKey}|${Number(member?.class)}`);
+        const year = specialYear ?? cycleMap?.[member?.class];
         if (year != null) member.up = year;
       });
     });

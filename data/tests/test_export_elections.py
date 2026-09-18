@@ -24,6 +24,7 @@ from export_elections import (
     assign_comparison_elections,
     float_model_entries_first,
     manifest_name_for_election,
+    refresh_manifest_modes,
     reorder_manifest_entries,
 )
 
@@ -310,6 +311,59 @@ class TestFloatModelEntriesFirst:
         before = [e["id"] for e in entries]
         float_model_entries_first(entries)
         assert [e["id"] for e in entries] == before
+
+
+class TestRefreshManifestModes:
+    """``--metadata-only`` refreshes the derived mapMode keys and nothing else."""
+
+    @staticmethod
+    def _manifest() -> dict[str, Any]:
+        return {
+            "mapModes": {
+                "23": {
+                    "name": "us-senate-2024",
+                    "projection": "albersUsa",
+                    "regions": [{"id": 1, "name": "Stale"}],
+                    "senateClassNextElection": {"2": 2020},
+                    "senateSpecialElections": [{"seat": "Ohio", "class": 3, "year": 2020}],
+                },
+            },
+        }
+
+    def test_replaces_regions_and_derived_keys_but_keeps_config(self) -> None:
+        manifest = self._manifest()
+        specials = [{"seat": "Ohio", "class": 3, "year": 2026, "baselineElectionId": "2022-us-senate"}]
+        rebuilt = {
+            "23": {
+                "regions": [{"id": 1, "name": "East North Central"}],
+                "senateClassNextElection": {"2": 2026},
+                "senateSpecialElections": specials,
+            },
+        }
+        refresh_manifest_modes(manifest, rebuilt, {"23": [{"id": 1, "name": "East North Central"}]})
+        mode = manifest["mapModes"]["23"]
+        assert mode["regions"] == [{"id": 1, "name": "East North Central"}]
+        assert mode["senateClassNextElection"] == {"2": 2026}
+        assert mode["senateSpecialElections"] == specials
+        # Hand-authored config is left alone.
+        assert mode["projection"] == "albersUsa"
+
+    def test_drops_a_derived_key_the_rebuild_no_longer_produces(self) -> None:
+        # The shell dropped the specials (or they expired) — the manifest must follow, or the
+        # front end keeps projecting a contest that is over.
+        manifest = self._manifest()
+        rebuilt = {"23": {"regions": [], "senateClassNextElection": {"2": 2026}}}
+        refresh_manifest_modes(manifest, rebuilt, {})
+        assert "senateSpecialElections" not in manifest["mapModes"]["23"]
+        assert manifest["mapModes"]["23"]["senateClassNextElection"] == {"2": 2026}
+
+    def test_falls_back_to_raw_db_regions_without_a_rebuilt_mode(self) -> None:
+        manifest = self._manifest()
+        refresh_manifest_modes(manifest, {}, {"23": [{"id": 9, "name": "Pacific"}]})
+        mode = manifest["mapModes"]["23"]
+        assert mode["regions"] == [{"id": 9, "name": "Pacific"}]
+        # With no shell to rebuild from, the derived keys are left as they are rather than wiped.
+        assert mode["senateSpecialElections"] == [{"seat": "Ohio", "class": 3, "year": 2020}]
 
 
 class TestMissingPrebuiltMapFails:

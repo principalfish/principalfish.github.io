@@ -202,3 +202,87 @@ describe('ensurePredictSimulation', () => {
     expect(fetchJson).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('activatePredictView Senate special elections', () => {
+  // Regular Class-2 baseline (what activateElection would have loaded), and the separate
+  // baseline election the 2026 specials are swung from.
+  const classBaseline = { seats: [{ n: 'Alpha', r: 'east', w: 'republican', p: [['republican', 600], ['democrat', 400]] }] };
+  const specialBaseline = { seats: [
+    { n: 'Ohio', r: 'west', w: 'republican', p: [['republican', 700], ['democrat', 300]] },
+    { n: 'Florida', r: 'south', w: 'republican', p: [['republican', 550], ['democrat', 450]] },
+    { n: 'Georgia', r: 'south', w: 'democrat', p: [['democrat', 510], ['republican', 490]] },
+  ] };
+  const specials = [
+    { seat: 'Florida', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+    { seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' },
+  ];
+  const predictConfig = {
+    model: 'senate',
+    modelledPartyKeys: ['democrat', 'republican'],
+    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'] }],
+    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+  };
+
+  /** Configures a Senate-shaped parliament whose map declares (or doesn't) special elections.
+   * Distinct parliament keys per test keep the module-level simulation cache from leaking. */
+  function configureSenate(parliament, { specialElections }) {
+    manifest.init({
+      parliamentFeatures: { [parliament]: { nextElectionYear: 2026, predict: predictConfig } },
+      elections: [{ id: '2020-us-senate', mapId: 23 }, { id: '2022-us-senate', mapId: 23 }],
+      mapModes: { 23: { name: 'us-senate-2024', regions: [], ...(specialElections ? { senateSpecialElections: specialElections } : {}) } },
+      files: { elections: {
+        mapsById: { 23: 'maps/m.topo.json' },
+        electionsById: { '2020-us-senate': 'results/2020.json', '2022-us-senate': 'results/2022.json' },
+      } },
+    });
+    state.currentParliament = parliament;
+    state.currentElection = { id: '2020-us-senate', mapId: 23 };
+    state.comparisonElectionData = new ElectionData(classBaseline);
+    state.currentRegionLabelsByKey = new Map([['east', 'East'], ['west', 'West'], ['south', 'South']]);
+  }
+
+  /** Runs activatePredictView far enough to load the specials; it then throws on the absent
+   * window.location, which is swallowed the same way the gating tests do. */
+  async function runActivate() {
+    try {
+      await activatePredictView();
+    } catch { /* expected: no window in node; the special load already ran */ }
+  }
+
+  beforeEach(() => { fetchJson.mockReset(); });
+
+  it('fetches each distinct special baseline once and adds only the named seats', async () => {
+    configureSenate('p_specials', { specialElections: specials });
+    fetchJson.mockResolvedValue(specialBaseline);
+    await runActivate();
+    // Both specials share the 2022 baseline, so it is fetched once — and Georgia, which is in
+    // that file but is not a special, stays out of the projection.
+    expect(fetchJson).toHaveBeenCalledTimes(1);
+    expect(fetchJson).toHaveBeenCalledWith('data/results/2022.json');
+    expect(state.predictModel.projectionBase.map((s) => s.seat).sort()).toEqual(['Alpha', 'Florida', 'Ohio']);
+  });
+
+  it('no-ops when the map declares no special elections', async () => {
+    configureSenate('p_nospecials', { specialElections: null });
+    await runActivate();
+    expect(fetchJson).not.toHaveBeenCalled();
+    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+  });
+
+  it('a failed baseline fetch is a no-op: the regular class still projects', async () => {
+    configureSenate('p_specialfail', { specialElections: specials });
+    fetchJson.mockRejectedValue(new Error('404'));
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await runActivate();
+    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+    expect(state.predictModel.project().map((s) => s.seat)).toEqual(['Alpha']);
+    logged.mockRestore();
+  });
+
+  it('skips a special whose baseline election id does not resolve', async () => {
+    configureSenate('p_badid', { specialElections: [{ seat: 'Ohio', class: 3, year: 2026, baselineElectionId: 'missing' }] });
+    await runActivate();
+    expect(fetchJson).not.toHaveBeenCalled();
+    expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+  });
+});

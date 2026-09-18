@@ -1,8 +1,13 @@
-"""US national opinion-poll importers (Wikipedia-driven).
+"""US opinion-poll importers (Wikipedia-driven).
 
-One thin importer per election type (House generic ballot, Presidential, Senate),
-all sharing :mod:`polls.importers.us.us_polls_common`. Each scrapes a national
-two-party polling table and inserts national ``PollRow`` rows (``region_id=NULL``)
-against the type's US map, feeding the national-uniform-swing forecast runners in
-``models/us``.
+:mod:`~polls.importers.us.us_polls_common` parses a polling table,
+:mod:`~polls.importers.us.us_geography` names US seats, and
+:mod:`~polls.importers.us.us_wikipedia_polls` holds the contest rules (which
+pages and tables count, which seat and matchup a table belongs to) together
+with the import plan, the commit and the shared command line.
+
+One thin wrapper script per chamber runs those contests: the House generic
+ballot plus the district polls, the Senate race pages, and the presidential
+nationwide and statewide pages. Each lists what it found and writes nothing
+unless given ``--commit``.
 """

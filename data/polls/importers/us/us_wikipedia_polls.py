@@ -12,12 +12,18 @@ module supplies the rules, one set per **contest**:
   "District N" heading for a House district, a "Statewide › Nevada" heading for
   the President);
 - which table is the race's **lead** — the first visible one, whose matchup
-  piece 7 promotes to the race's automatic tracked matchup.
+  becomes the race's automatic tracked matchup.
 
-Nothing here writes to the database. ``db`` is read only to turn a seat *name*
-into the seat id on the contest's map, and every rule that fails to place a
-table is reported on :class:`UsPollIndex` rather than dropped: the console's
-summary page is the only place Wikipedia markup drift becomes visible.
+Scraping writes nothing: ``db`` is read only to turn a seat *name* into the
+seat id on the contest's map, and every rule that fails to place a table is
+reported on :class:`UsPollIndex` rather than dropped — the console's summary
+page is the only place Wikipedia markup drift becomes visible.
+
+The **Importing** section then turns one scraped row into a
+:class:`UsImportPlan` and writes it as a ``Poll`` plus its ``PollRow``\ s, and
+points each race at its lead matchup. The **Command line** section is the
+wrapper scripts' shared entry point, which lists by default and only writes
+under ``--commit``.
 
 Fetching is injectable end to end — every test passes a dict-backed fake
 fetcher, so no test touches the network.
@@ -25,12 +31,14 @@ fetcher, so no test touches the network.
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Literal
 from urllib.error import HTTPError
@@ -41,7 +49,8 @@ from bs4 import BeautifulSoup, Tag
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from db import Database
-from polls.importers.types import ScrapedPollRow
+from models import Poll, PollRow, Pollster, Seat
+from polls.importers.types import PollImportResult, ScrapedPollRow
 from polls.importers.us.us_geography import (
     AT_LARGE_STATES,
     HOUSE_DISTRICT_COUNTS,
@@ -58,6 +67,8 @@ from polls.importers.us.us_polls_common import (
     parse_poll_tables,
     pollster_identifier,
 )
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 WIKIPEDIA_BASE = "https://en.wikipedia.org"
 
@@ -89,7 +100,7 @@ SectionRule = Literal["general_election", "generic_ballot"]
 #: How a table's seat is worked out.
 SeatRule = Literal["national", "senate_state", "house_district", "president"]
 
-#: What the contest's matchups mean, which is piece 7's automatic-tracking rule.
+#: What the contest's matchups mean — the automatic-tracking rule.
 MatchupPolicy = Literal["auto_lead", "national_setting", "none"]
 
 # "District 3", "District 40" — the h2 a multi-district House page groups a
@@ -143,6 +154,9 @@ class UsContest:
         allow_party_labels: Accept "Republicans"/"Democrats" column headers,
             which the generic-ballot aggregation table uses in place of
             candidates.
+        summary_pollster_labels: Pollster labels that are a summary of the
+            table's other rows rather than a source of their own. Matched
+            case-insensitively and never imported.
     """
 
     slug: str
@@ -157,6 +171,7 @@ class UsContest:
     seat_rule: SeatRule = "national"
     matchup_policy: MatchupPolicy = "auto_lead"
     allow_party_labels: bool = False
+    summary_pollster_labels: tuple[str, ...] = ()
 
     @property
     def is_per_state(self) -> bool:
@@ -175,6 +190,10 @@ HOUSE_NATIONAL = UsContest(
     seat_rule="national",
     matchup_policy="none",
     allow_party_labels=True,
+    # The aggregation table ends with an "Average" row: the mean of the six
+    # aggregators above it. Importing it would store a seventh pollster and
+    # count every aggregator twice in the national average.
+    summary_pollster_labels=("Average",),
 )
 
 HOUSE_DISTRICTS = UsContest(
@@ -227,7 +246,8 @@ class UsPollRow(ScrapedPollRow):
 
     The queue reads the inherited fields (dates, pollster, sample label, source
     URL, matchup); everything below is what the US review step shows and what
-    piece 7 turns into a ``Poll`` plus its ``PollRow``\\ s.
+    :func:`commit_us_import_plan` turns into a ``Poll`` plus its
+    ``PollRow``\\ s.
 
     Attributes:
         contest: The :class:`UsContest` slug the row was read under.
@@ -358,6 +378,8 @@ class PageRows:
         collapsed_only_races: Races on this page with no visible rows.
         unknown_suffixes: Party suffix → number of accepted tables carrying it.
         variants_dropped: Repeat rows (LV/RV, "with leaners") dropped.
+        summary_rows_skipped: Rows dropped for naming a summary "pollster"
+            (the generic-ballot table's "Average" row).
     """
 
     rows: tuple[UsPollRow, ...]
@@ -366,6 +388,7 @@ class PageRows:
     collapsed_only_races: tuple[CollapsedOnlyRace, ...]
     unknown_suffixes: Mapping[str, int]
     variants_dropped: int
+    summary_rows_skipped: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -391,6 +414,8 @@ class UsPollIndex:
         unmatched_seats: Tables whose seat could not be resolved.
         empty_tables: Accepted tables that produced no rows.
         pages_fetched: How many pages were read, for the summary line.
+        summary_rows_skipped: Rows dropped for naming a summary "pollster"
+            (the generic-ballot table's "Average" row).
     """
 
     rows: tuple[UsPollRow, ...]
@@ -402,6 +427,7 @@ class UsPollIndex:
     unmatched_seats: tuple[UnmatchedSeat, ...]
     empty_tables: tuple[EmptyTable, ...]
     pages_fetched: int
+    summary_rows_skipped: int = 0
 
 
 # ── Page discovery ────────────────────────────────────────────────────────────
@@ -721,10 +747,10 @@ def _resolve_seat(
 def is_lead_table(table: ParsedTable) -> bool:
     """Report whether a table can be a race's lead table.
 
-    The lead table is what piece 7 reads the race's automatic tracked matchup
-    off, so a table that forms no matchup cannot be one however early it
-    appears: that rules out the generic-ballot party columns, a single-candidate
-    table, and Wikipedia's occasional stray.
+    The lead table is what :func:`apply_auto_tracked_matchups` reads a race's
+    automatic tracked matchup off, so a table that forms no matchup cannot be
+    one however early it appears: that rules out the generic-ballot party
+    columns, a single-candidate table, and Wikipedia's occasional stray.
     """
     return bool(table.rows) and len(table.candidates) >= 2 and table.matchup is not None
 
@@ -757,6 +783,18 @@ def _table_notes(table: ParsedTable, *, collapsed: bool) -> tuple[str, ...]:
     return tuple(notes)
 
 
+def _is_summary_row(contest: UsContest, pollster_label: str) -> bool:
+    """Report whether a row summarises the table rather than reporting a poll.
+
+    Wikipedia's generic-ballot aggregation table ends with an "Average" row —
+    the mean of the aggregators above it. It parses like any other row, so it
+    would otherwise be stored as a pollster of its own and count every
+    aggregator twice.
+    """
+    label = pollster_label.strip().lower()
+    return any(label == name.lower() for name in contest.summary_pollster_labels)
+
+
 def _rows_for_table(
     contest: UsContest,
     page_url: str,
@@ -765,13 +803,22 @@ def _rows_for_table(
     *,
     is_lead: bool,
     collapsed: bool,
-) -> list[UsPollRow]:
-    """Turn one accepted table's parsed rows into contest rows."""
+) -> tuple[list[UsPollRow], int]:
+    """Turn one accepted table's parsed rows into contest rows.
+
+    Returns:
+        The rows, and how many summary rows were skipped.
+    """
     heading_path = _headings_text(table.headings)
     anchor = _innermost_anchor(table.headings)
     section_url = f"{page_url}#{anchor}" if anchor else page_url
     notes = _table_notes(table, collapsed=collapsed)
-    return [
+    wanted = [
+        parsed
+        for parsed in table.rows
+        if not _is_summary_row(contest, parsed.pollster_label)
+    ]
+    rows = [
         UsPollRow(
             fieldwork_start=parsed.fieldwork_start,
             fieldwork_end=parsed.fieldwork_end,
@@ -797,8 +844,9 @@ def _rows_for_table(
             pollster_tags=parsed.pollster_tags,
             notes=notes,
         )
-        for parsed in table.rows
+        for parsed in wanted
     ]
+    return rows, len(table.rows) - len(wanted)
 
 
 def rows_for_page(
@@ -846,6 +894,7 @@ def rows_for_page(
     empty: list[EmptyTable] = []
     unknown: Counter[str] = Counter()
     variants_dropped = 0
+    summary_rows_skipped = 0
     seats_with_rows: set[str | None] = set()
     seats_with_lead: set[str | None] = set()
 
@@ -869,14 +918,14 @@ def rows_for_page(
         is_lead = seat.seat_name not in seats_with_lead and is_lead_table(table)
         if is_lead:
             seats_with_lead.add(seat.seat_name)
-        rows.extend(
-            _rows_for_table(
-                contest, page_url, table, seat, is_lead=is_lead, collapsed=False
-            )
+        table_rows, skipped = _rows_for_table(
+            contest, page_url, table, seat, is_lead=is_lead, collapsed=False
         )
+        rows.extend(table_rows)
+        summary_rows_skipped += skipped
         seats_with_rows.add(seat.seat_name)
 
-    collapsed_only, collapsed_variants = _collapsed_fallback(
+    collapsed_only, collapsed_variants, collapsed_summary = _collapsed_fallback(
         contest,
         page_url,
         hidden,
@@ -888,6 +937,7 @@ def rows_for_page(
         unknown=unknown,
     )
     variants_dropped += collapsed_variants
+    summary_rows_skipped += collapsed_summary
 
     return PageRows(
         rows=tuple(rows),
@@ -896,6 +946,7 @@ def rows_for_page(
         collapsed_only_races=tuple(collapsed_only),
         unknown_suffixes=dict(unknown),
         variants_dropped=variants_dropped,
+        summary_rows_skipped=summary_rows_skipped,
     )
 
 
@@ -910,7 +961,7 @@ def _collapsed_fallback(
     rows: list[UsPollRow],
     empty: list[EmptyTable],
     unknown: Counter[str],
-) -> tuple[list[CollapsedOnlyRace], int]:
+) -> tuple[list[CollapsedOnlyRace], int, int]:
     """Report, and optionally import, the hidden tables of uncovered races.
 
     A race with a visible table is left alone: its hypotheticals are answers to
@@ -922,8 +973,9 @@ def _collapsed_fallback(
     ``rows``, ``empty`` and ``unknown`` are appended to in place.
 
     Returns:
-        The uncovered races, and how many repeat rows their tables dropped
-        (counted only when they were imported).
+        The uncovered races, how many repeat rows their tables dropped, and how
+        many summary rows they skipped (both counted only when the tables were
+        imported).
     """
     grouped: dict[str | None, list[tuple[_SeatRef, ParsedTable]]] = {}
     for table in hidden:
@@ -949,6 +1001,7 @@ def _collapsed_fallback(
 
     races: list[CollapsedOnlyRace] = []
     variants_dropped = 0
+    summary_rows_skipped = 0
     for seat_name, entries in grouped.items():
         races.append(
             CollapsedOnlyRace(
@@ -964,12 +1017,12 @@ def _collapsed_fallback(
         for seat, table in entries:
             unknown.update(table.unknown_suffixes)
             variants_dropped += table.variants_dropped
-            rows.extend(
-                _rows_for_table(
-                    contest, page_url, table, seat, is_lead=False, collapsed=True
-                )
+            table_rows, skipped = _rows_for_table(
+                contest, page_url, table, seat, is_lead=False, collapsed=True
             )
-    return races, variants_dropped
+            rows.extend(table_rows)
+            summary_rows_skipped += skipped
+    return races, variants_dropped, summary_rows_skipped
 
 
 # ── The run ───────────────────────────────────────────────────────────────────
@@ -995,12 +1048,17 @@ def normalise_states(states: Iterable[str]) -> tuple[list[str], list[str]]:
     return names, unknown
 
 
+def _seat_ids_by_map_id(db: Database, map_id: int) -> dict[str, int]:
+    """Return seat name → id for a map."""
+    return {seat.seat_name: seat.id for seat in db.get_seats_for_map(map_id)}
+
+
 def _seat_ids_for_map(db: Database, map_name: str) -> Mapping[str, int] | None:
     """Return seat name → id for a map, or None when the map does not exist."""
     poll_map = db.get_map_by_name(map_name)
     if poll_map is None:
         return None
-    return {seat.seat_name: seat.id for seat in db.get_seats_for_map(poll_map.id)}
+    return _seat_ids_by_map_id(db, poll_map.id)
 
 
 def _contest_page_urls(
@@ -1111,6 +1169,7 @@ def fetch_us_poll_index(
     collapsed_only: list[CollapsedOnlyRace] = []
     unknown_suffixes: Counter[str] = Counter()
     variants_dropped = 0
+    summary_rows_skipped = 0
 
     for contest, seat_ids in scoped:
         claimed: dict[str, str] = {}
@@ -1141,6 +1200,7 @@ def fetch_us_poll_index(
             collapsed_only.extend(page_rows.collapsed_only_races)
             unknown_suffixes.update(page_rows.unknown_suffixes)
             variants_dropped += page_rows.variants_dropped
+            summary_rows_skipped += page_rows.summary_rows_skipped
 
     return UsPollIndex(
         rows=tuple(rows),
@@ -1152,4 +1212,534 @@ def fetch_us_poll_index(
         unmatched_seats=tuple(unmatched),
         empty_tables=tuple(empty),
         pages_fetched=len(pages),
+        summary_rows_skipped=summary_rows_skipped,
     )
+
+
+# ── Importing ─────────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True, slots=True)
+class PlannedUsPollRow:
+    """One reading of a scraped poll, resolved to a database party.
+
+    Attributes:
+        party_id: Primary key of the ``Party`` the reading belongs to.
+        party_name: That party's name, for the review page.
+        candidate_name: The candidate polled, or None for a party column
+            (the generic ballot).
+        percentage: The reading as written, not rescaled.
+    """
+
+    party_id: int
+    party_name: str
+    candidate_name: str | None
+    percentage: float
+
+
+@dataclass(frozen=True, slots=True)
+class UsImportPlan:
+    """Everything one scraped row would write, worked out before writing it.
+
+    Attributes:
+        map_id: The contest's map.
+        seat_id: The seat the poll covers, or None for a national reading.
+        pollster_identifier: The pollster slug, contest suffix included.
+        pollster_name: The pollster's stored name — its existing one, or the
+            name it would be created under.
+        pollster_exists: False when the commit would create the pollster.
+        rows: The readings that resolved to a party, in table order.
+        unknown_parties: Readings that did not, named by their party or, for
+            an unrecognised suffix, by their candidate. Reported, not imported.
+        warnings: Human-readable remarks for the review step.
+    """
+
+    map_id: int
+    seat_id: int | None
+    pollster_identifier: str
+    pollster_name: str
+    pollster_exists: bool
+    rows: tuple[PlannedUsPollRow, ...]
+    unknown_parties: tuple[str, ...]
+    warnings: tuple[str, ...]
+
+
+def build_us_import_plan(db: Database, row: UsPollRow) -> UsImportPlan:
+    """Resolve a scraped row against the database, without writing anything.
+
+    The seat is looked up by *name* on the contest's map rather than trusted
+    from the row: a queued row can be hours old, and the name is the stable
+    identity.
+
+    A reading whose party is unknown — an unrecognised suffix, or a party the
+    database does not hold — is reported and left out rather than failing the
+    row: Wikipedia's minor-party columns should not cost the import its
+    two-party readings.
+
+    Args:
+        db: Database to resolve against. Nothing is written.
+        row: The scraped row to plan.
+
+    Returns:
+        A :class:`UsImportPlan`.
+
+    Raises:
+        ValueError: If the row names no known contest, its map is missing, its
+            seat is not on that map, or none of its readings resolve to a
+            party — all of which would otherwise store a poll with no figures.
+    """
+    contest = US_CONTESTS_BY_SLUG.get(row.contest)
+    if contest is None:
+        raise ValueError(f"unknown contest: {row.contest!r}")
+
+    poll_map = db.get_map_by_name(row.map_name)
+    if poll_map is None:
+        raise ValueError(f"no map named {row.map_name!r}")
+
+    seat_id: int | None = None
+    if row.seat_name is not None:
+        seat_id = _seat_ids_by_map_id(db, poll_map.id).get(row.seat_name)
+        if seat_id is None:
+            raise ValueError(f"no seat named {row.seat_name!r} on {row.map_name!r}")
+
+    party_ids = {party.name: party.id for party in db.get_all_parties()}
+    planned: list[PlannedUsPollRow] = []
+    unknown: list[str] = []
+    warnings: list[str] = []
+    for reading in row.readings:
+        if reading.party_name is None:
+            label = reading.candidate_name or "(unnamed column)"
+            if label not in unknown:
+                unknown.append(label)
+                warnings.append(f"no party for {label} — unrecognised suffix")
+            continue
+        party_id = party_ids.get(reading.party_name)
+        if party_id is None:
+            if reading.party_name not in unknown:
+                unknown.append(reading.party_name)
+                warnings.append(
+                    f"party not in the database: {reading.party_name!r}"
+                )
+            continue
+        planned.append(
+            PlannedUsPollRow(
+                party_id=party_id,
+                party_name=reading.party_name,
+                candidate_name=reading.candidate_name or None,
+                percentage=reading.percentage,
+            )
+        )
+
+    if not planned:
+        raise ValueError(
+            f"no reading of {row.pollster_label!r} resolved to a party"
+            f" (saw: {', '.join(unknown) or 'nothing'})"
+        )
+
+    pollster = db.get_pollster_by_identifier(row.pollster_identifier)
+    return UsImportPlan(
+        map_id=poll_map.id,
+        seat_id=seat_id,
+        pollster_identifier=row.pollster_identifier,
+        pollster_name=(
+            pollster.name
+            if pollster is not None
+            else f"{row.pollster_label} ({contest.pollster_label})"
+        ),
+        pollster_exists=pollster is not None,
+        rows=tuple(planned),
+        unknown_parties=tuple(unknown),
+        warnings=tuple(warnings),
+    )
+
+
+def commit_us_import_plan(
+    db: Database,
+    row: UsPollRow,
+    plan: UsImportPlan,
+) -> PollImportResult:
+    """Write one planned poll, pollster and rows in a single transaction.
+
+    Everything happens in one session, so a row that fails to insert takes its
+    poll and its pollster back out with it rather than leaving a poll with no
+    figures behind.
+
+    The poll's identity is the five-tuple ``(pollster identifier, fieldwork
+    start, fieldwork end, matchup, seat)``, compared with ``IS`` so that a null
+    matchup or a national scope matches itself. It is re-checked here and not
+    only when the plan was built: the queue can have been sitting on the plan
+    while another import stored the same poll.
+
+    Rows are national *within their seat* (``region_id`` NULL) — the seat is on
+    the poll. Two candidates of one party each get their own row; the model
+    sums them.
+
+    Args:
+        db: Database to write to.
+        row: The scraped row the plan was built from.
+        plan: Its :class:`UsImportPlan`.
+
+    Returns:
+        A :class:`PollImportResult`. An already-stored poll comes back with
+        ``skipped_existing_rows`` set and its id, having written nothing.
+
+    Raises:
+        ValueError: If the plan's seat is no longer on its map.
+    """
+    with db.session() as session:
+        existing_id = session.execute(
+            select(Poll.id)
+            .join(Pollster, Poll.pollster_id == Pollster.id)
+            .where(
+                Poll.map_id == plan.map_id,
+                Pollster.identifier == plan.pollster_identifier,
+                Poll.fieldwork_start == row.fieldwork_start,
+                Poll.fieldwork_end == row.fieldwork_end,
+                Poll.matchup.is_not_distinct_from(row.matchup),
+                Poll.seat_id.is_not_distinct_from(plan.seat_id),
+            )
+        ).scalar()
+        if existing_id is not None:
+            return PollImportResult(
+                created_pollster=False,
+                created_poll=False,
+                poll_id=existing_id,
+                inserted_rows=0,
+                replaced_rows=0,
+                skipped_existing_rows=True,
+            )
+
+        if plan.seat_id is not None:
+            seat = session.get(Seat, plan.seat_id)
+            if seat is None or seat.map_id != plan.map_id:
+                raise ValueError(f"seat {plan.seat_id} is not on map {plan.map_id}")
+
+        pollster = session.execute(
+            select(Pollster).where(Pollster.identifier == plan.pollster_identifier)
+        ).scalar_one_or_none()
+        created_pollster = pollster is None
+        if pollster is None:
+            pollster = Pollster(
+                name=plan.pollster_name,
+                identifier=plan.pollster_identifier,
+                weight=1.0,
+            )
+            session.add(pollster)
+            session.flush()
+
+        poll = Poll(
+            pollster_id=pollster.id,
+            map_id=plan.map_id,
+            fieldwork_start=row.fieldwork_start,
+            fieldwork_end=row.fieldwork_end,
+            sample_size=row.sample_size,
+            source_url=row.source_url,
+            matchup=row.matchup,
+            seat_id=plan.seat_id,
+        )
+        session.add(poll)
+        session.flush()
+        poll_id = poll.id
+        session.add_all(
+            [
+                PollRow(
+                    poll_id=poll_id,
+                    region_id=None,
+                    party_id=planned.party_id,
+                    percentage=planned.percentage,
+                    candidate_name=planned.candidate_name,
+                )
+                for planned in plan.rows
+            ]
+        )
+
+    return PollImportResult(
+        created_pollster=created_pollster,
+        created_poll=True,
+        poll_id=poll_id,
+        inserted_rows=len(plan.rows),
+        replaced_rows=0,
+        skipped_existing_rows=False,
+    )
+
+
+#: The outcomes :func:`apply_auto_tracked_matchups` counts, in report order.
+AUTO_TRACKING_OUTCOMES: tuple[str, ...] = (
+    "created",
+    "updated",
+    "unchanged",
+    "kept_manual",
+    "no_polls",
+)
+
+
+def apply_auto_tracked_matchups(
+    db: Database,
+    rows: Sequence[UsPollRow],
+) -> dict[str, int]:
+    """Point each ``auto_lead`` race at its lead table's matchup.
+
+    Only the contests whose ``matchup_policy`` is ``"auto_lead"`` (the Senate
+    races and the House districts) nominate their own matchup: the President
+    follows one matchup the user picks, and the generic ballot has none.
+
+    A race is only tracked once it has **stored** polls for that matchup, so a
+    run whose every poll was a duplicate, or whose rows all failed, does not
+    move a race onto a matchup the model would then find empty. A manual
+    override is never overwritten — :meth:`Database.set_tracked_matchup`
+    reports that as ``kept_manual`` and still records the automatic value.
+
+    Args:
+        db: Database to write to.
+        rows: The scraped rows of a run, in any order. Rows that are not a
+            race's lead are ignored.
+
+    Returns:
+        A count per outcome: ``created``, ``updated``, ``unchanged``,
+        ``kept_manual`` (a manual override stood) and ``no_polls`` (the race's
+        matchup has nothing stored).
+    """
+    counts = dict.fromkeys(AUTO_TRACKING_OUTCOMES, 0)
+    scopes: dict[str, tuple[int, Mapping[str, int]] | None] = {}
+    leads: dict[tuple[int, int], str] = {}
+    for row in rows:
+        contest = US_CONTESTS_BY_SLUG.get(row.contest)
+        if contest is None or contest.matchup_policy != "auto_lead":
+            continue
+        # A national row cannot name a race, and piece 1 rejects an automatic
+        # write with no matchup, so both are left to the user.
+        if not row.is_lead or row.matchup is None or row.seat_name is None:
+            continue
+        if row.map_name not in scopes:
+            poll_map = db.get_map_by_name(row.map_name)
+            scopes[row.map_name] = (
+                None
+                if poll_map is None
+                else (poll_map.id, _seat_ids_by_map_id(db, poll_map.id))
+            )
+        scope = scopes[row.map_name]
+        if scope is None:
+            continue
+        map_id, seat_ids = scope
+        seat_id = seat_ids.get(row.seat_name)
+        if seat_id is None:
+            continue
+        # One lead table per race; a second page claiming the seat is already a
+        # page failure, so the first wins here.
+        leads.setdefault((map_id, seat_id), row.matchup)
+
+    stored_scopes: dict[int, dict[tuple[int | None, str | None], date]] = {}
+    for (map_id, seat_id), matchup in leads.items():
+        if map_id not in stored_scopes:
+            stored_scopes[map_id] = db.get_latest_poll_end_by_scope(map_id)
+        if (seat_id, matchup) not in stored_scopes[map_id]:
+            counts["no_polls"] += 1
+            continue
+        outcome = db.set_tracked_matchup(map_id, seat_id, matchup, source="auto")
+        counts[outcome] += 1
+    return counts
+
+
+# ── Command line ──────────────────────────────────────────────────────────────
+
+
+def _scope_label(row: UsPollRow) -> tuple[str, str]:
+    """Render a row's race and matchup for the listing."""
+    return (
+        row.seat_name or "National",
+        row.matchup or "party voting intention",
+    )
+
+
+def _listing_lines(index: UsPollIndex) -> list[str]:
+    """Render the run's rows as counts per contest, race and matchup."""
+    lines: list[str] = []
+    for contest in US_CONTESTS:
+        rows = [row for row in index.rows if row.contest == contest.slug]
+        if not rows:
+            continue
+        races = {row.seat_name for row in rows}
+        lines.append(
+            f"{contest.label} [{contest.slug}]: "
+            f"{len(rows)} poll(s) across {len(races)} race(s)"
+        )
+        counts: Counter[tuple[str, str]] = Counter()
+        leads: set[tuple[str, str]] = set()
+        for row in rows:
+            scope = _scope_label(row)
+            counts[scope] += 1
+            if row.is_lead:
+                leads.add(scope)
+        for (seat, matchup), count in sorted(counts.items()):
+            flag = "  [lead]" if (seat, matchup) in leads else ""
+            lines.append(f"    {seat} — {matchup}: {count}{flag}")
+    if not lines:
+        lines.append("No polls found.")
+    return lines
+
+
+def _diagnostic_lines(index: UsPollIndex) -> list[str]:
+    """Render everything the run could not place, so drift is visible."""
+    lines = [f"Pages fetched: {index.pages_fetched}"]
+    for url, reason in index.page_failures.items():
+        lines.append(f"  page failed: {url}: {reason}")
+    for note in index.notes:
+        lines.append(f"  note: {note}")
+    for race in index.collapsed_only_races:
+        lines.append(
+            f"  collapsed-only race: {race.seat_name} ({race.contest}) — "
+            f"{race.available_rows} hidden row(s), "
+            f"{'included' if race.included else 'not imported'}"
+        )
+    for suffix, count in sorted(index.unknown_suffixes.items()):
+        lines.append(f"  unknown party suffix: ({suffix}) in {count} table(s)")
+    if index.variants_dropped:
+        lines.append(
+            f"  {index.variants_dropped} repeat row(s) dropped "
+            "(likely-voter / with-leaners variants)"
+        )
+    if index.summary_rows_skipped:
+        lines.append(
+            f"  {index.summary_rows_skipped} summary row(s) skipped "
+            "(a table's own average)"
+        )
+    for seat in index.unmatched_seats:
+        lines.append(
+            f"  unplaced table: {seat.page_url} [{seat.heading_path}]: "
+            f"{seat.reason} ({seat.dropped_rows} row(s) dropped)"
+        )
+    for table in index.empty_tables:
+        lines.append(
+            f"  empty table: {table.page_url} [{table.heading_path}]"
+            f"{' (collapsed)' if table.collapsed else ''}"
+        )
+    return lines
+
+
+def _import_rows(db: Database, rows: Sequence[UsPollRow]) -> dict[str, int]:
+    """Plan and commit every scraped row, reporting what each one did.
+
+    A row that cannot be planned or committed is counted and described, and
+    the run carries on: one unplaceable poll should not cost the other 280.
+    """
+    counts = dict.fromkeys(
+        ("created", "skipped", "failed", "pollsters_created", "rows_written"), 0
+    )
+    for row in rows:
+        try:
+            plan = build_us_import_plan(db, row)
+            result = commit_us_import_plan(db, row, plan)
+        except (ValueError, SQLAlchemyError) as err:
+            counts["failed"] += 1
+            print(f"  FAILED {row.seat_name or 'National'} {row.pollster_label}: {err}")
+            continue
+        for warning in plan.warnings:
+            print(f"  WARNING {row.pollster_label}: {warning}")
+        if result.skipped_existing_rows:
+            counts["skipped"] += 1
+            continue
+        counts["created"] += 1
+        counts["rows_written"] += result.inserted_rows
+        counts["pollsters_created"] += int(result.created_pollster)
+    return counts
+
+
+def _build_arg_parser(default_contests: Sequence[UsContest]) -> argparse.ArgumentParser:
+    """Build the CLI parser for a wrapper script's contests."""
+    slugs = [contest.slug for contest in default_contests]
+    parser = argparse.ArgumentParser(
+        description=(
+            "Scrape US polls from Wikipedia. Lists what it found and writes "
+            "nothing unless --commit is given."
+        )
+    )
+    parser.add_argument(
+        "--contest",
+        action="append",
+        choices=slugs,
+        metavar="SLUG",
+        help=(
+            "Limit the run to one contest, repeatable "
+            f"(default: {', '.join(slugs)})"
+        ),
+    )
+    parser.add_argument(
+        "--state",
+        action="append",
+        metavar="STATE",
+        help="Limit the race pages to one state, by name or postal code; repeatable",
+    )
+    parser.add_argument(
+        "--include-collapsed-for-uncovered",
+        action="store_true",
+        help="Import hidden hypothetical tables for races with no visible table",
+    )
+    parser.add_argument(
+        "--commit",
+        action="store_true",
+        help="Write the polls and apply automatic matchup tracking",
+    )
+    return parser
+
+
+def run_importer(
+    default_contests: Sequence[UsContest],
+    argv: Sequence[str] | None = None,
+    *,
+    db: Database | None = None,
+    fetcher: Fetcher = fetch_html,
+) -> int:
+    """Run a wrapper script's contests and print what they found.
+
+    The default is a **dry run**: it fetches, parses and lists, and writes
+    nothing. ``--commit`` stores the polls and then points each ``auto_lead``
+    race at its lead table's matchup.
+
+    Args:
+        default_contests: The contests this wrapper covers, which ``--contest``
+            can narrow.
+        argv: Command-line arguments; None reads ``sys.argv``.
+        db: Database to use. None opens the configured one — tests inject a
+            temporary database here.
+        fetcher: Page fetcher. Tests inject a dict-backed fake.
+
+    Returns:
+        A process exit code: 0 when every page was read and every row either
+        imported or already stored, 1 otherwise.
+    """
+    args = _build_arg_parser(default_contests).parse_args(argv)
+    contests = [
+        contest
+        for contest in default_contests
+        if args.contest is None or contest.slug in args.contest
+    ]
+    database = db if db is not None else Database()
+
+    index = fetch_us_poll_index(
+        database,
+        contests,
+        states=args.state,
+        include_collapsed_for_uncovered=args.include_collapsed_for_uncovered,
+        fetcher=fetcher,
+    )
+    for line in _listing_lines(index):
+        print(line)
+    for line in _diagnostic_lines(index):
+        print(line)
+
+    if not args.commit:
+        print(f"Dry run: {len(index.rows)} poll(s) found, nothing written.")
+        return 1 if index.page_failures else 0
+
+    counts = _import_rows(database, index.rows)
+    tracking = apply_auto_tracked_matchups(database, index.rows)
+    print(
+        f"Imported: created={counts['created']} skipped={counts['skipped']} "
+        f"failed={counts['failed']} rows={counts['rows_written']} "
+        f"new pollsters={counts['pollsters_created']}"
+    )
+    print(
+        "Tracked matchups: "
+        + " ".join(f"{name}={tracking[name]}" for name in AUTO_TRACKING_OUTCOMES)
+    )
+    return 1 if counts["failed"] or index.page_failures else 0

@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Import US Senate national (Dem/Rep) polling from Wikipedia.
+"""Import US Senate race polling from Wikipedia, race page by race page.
 
-There is no state-free national Senate poll series; the 2026 Senate elections
-page's "Opinion polling" section carries the **generic congressional ballot**
-poll-aggregation wikitable (the same series the House page shows — rows are
-aggregators dated by "Dates updated"). That generic ballot is the standard proxy
-for the national Senate swing, so each import records the aggregators' snapshot
-as national ``PollRow`` rows against the US Senate map (map 23), feeding
-``models/us/run_us_senate_model.py``.
+The 2026 Senate elections article links one page per race (33 regular contests
+plus the Florida and Ohio specials). Each page's visible, non-aggregation
+general-election tables are imported against the state's seat on the US Senate
+map, and the first such table of a race — the one Wikipedia promotes, its
+nominees — sets that race's automatically tracked matchup.
+
+This script used to import the generic congressional ballot as a proxy for the
+national Senate swing. That series is now imported once, against the House map,
+by ``us_house_generic_ballot_import.py``; the Senate model reads it from there.
+
+The default is a dry run: it lists what it found and writes nothing.
 
 Usage:
-    python data/polls/importers/us/us_senate_import.py --dry-run
-    python data/polls/importers/us/us_senate_import.py --url <page>
+    python data/polls/importers/us/us_senate_import.py
+    python data/polls/importers/us/us_senate_import.py --commit
+    python data/polls/importers/us/us_senate_import.py --state Michigan --commit
 """
 
 from __future__ import annotations
@@ -21,21 +26,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from polls.importers.us.us_polls_common import run_importer
-
-DEFAULT_URL = "https://en.wikipedia.org/wiki/2026_United_States_Senate_elections"
-DEFAULT_MAP_NAME = "US Senate 2024"
+from polls.importers.us.us_wikipedia_polls import SENATE_RACES, run_importer
 
 
-def main() -> None:
+def main() -> int:
     """CLI entry point — see module docstring."""
-    run_importer(
-        default_url=DEFAULT_URL,
-        map_name=DEFAULT_MAP_NAME,
-        pollster_suffix="_us_senate",
-        pollster_label="US Senate",
-    )
+    return run_importer([SENATE_RACES])
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

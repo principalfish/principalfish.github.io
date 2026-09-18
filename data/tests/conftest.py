@@ -18,6 +18,27 @@ from config import DatabaseConfig
 from db import Database
 
 
+@pytest.fixture(autouse=True)
+def _never_open_the_live_database(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Generator[None, None, None]:
+    """Point every default ``Database()`` at a throwaway file for each test.
+
+    ``config.py`` loads ``.env`` with ``override=True`` at import, so the live
+    ``DATABASE_PATH`` is in the environment for the whole run. Any code path
+    that builds a default ``Database()`` — the console's ``get_db`` singleton,
+    a script's ``main()`` — would otherwise open the live database. Setting the
+    variable per test wins, because ``DatabaseConfig.from_env`` reads the
+    environment at call time rather than at import.
+    """
+    import console.db
+
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "default-guard.db"))
+    console.db.reset_db()
+    yield
+    console.db.reset_db()
+
+
 @pytest.fixture()
 def db(tmp_path: Path) -> Generator[Database, None, None]:
     """Provide a Database instance with clean tables for every test.

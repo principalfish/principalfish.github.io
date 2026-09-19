@@ -423,6 +423,20 @@
       "neutralFill": "#e5e7eb",
       "hideMajority": true,
       "postcodeSupported": false,
+      "senateSpecialElections": [
+        {
+          "seat": "Florida",
+          "class": 3,
+          "year": 2026,
+          "baselineElectionId": "2022-us-senate"
+        },
+        {
+          "seat": "Ohio",
+          "class": 3,
+          "year": 2026,
+          "baselineElectionId": "2022-us-senate"
+        }
+      ],
       "regions": [
         {
           "id": 231,

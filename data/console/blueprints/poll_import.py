@@ -30,9 +30,9 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
 from pydantic import ValidationError
 
+from polls.importers.types import ScrapedPollRow
 from polls.importers.westminster.wikipedia_index import (
     WikipediaIndexError,
-    WikipediaPollRow,
     fetch_poll_index,
 )
 
@@ -48,12 +48,15 @@ from console.paths import (
 from console.services.preview import get_preview, pop_preview, store_preview
 from console.services.runner import run_command
 from console.services.wikipedia_queue import (
-    NO_CUTOFF,
     QueueItem,
     QueueState,
     advance,
+    apply_skip_or_retry,
     build_queue,
     current_item,
+    cursor_matches,
+    cutoff_label,
+    describe_import_result,
     existing_poll_keys,
     progress,
     summarise,
@@ -385,7 +388,7 @@ def wikipedia_confirm(token: str) -> ResponseReturnValue:
 
     item.status = "imported"
     item.poll_id = result.poll_id
-    item.detail = _import_detail(result)
+    item.detail = describe_import_result(result)
     item.plan = None
     advance(state)
     return redirect(url_for("poll_import.wikipedia_queue", token=token))
@@ -416,24 +419,10 @@ def wikipedia_skip(token: str) -> ResponseReturnValue:
     if not _cursor_matches(state):
         return _stale_step(token)
 
-    item = current_item(state)
-    if item is None:
+    if current_item(state) is None:
         return redirect(url_for("poll_import.wikipedia_finish", token=token))
 
-    if request.form.get("action") == "retry":
-        item.status = "pending"
-        item.detail = ""
-        item.plan = None
-        item.warnings = []
-    else:
-        # Giving up on a failed item keeps its error, so the summary says why.
-        if item.status == "failed" and item.detail:
-            item.detail = f"Skipped after failure: {item.detail}"
-        else:
-            item.detail = "Skipped"
-        item.status = "skipped"
-        advance(state)
-
+    apply_skip_or_retry(state, request.form.get("action", ""))
     return redirect(url_for("poll_import.wikipedia_queue", token=token))
 
 
@@ -479,7 +468,7 @@ def wikipedia_finish(token: str) -> ResponseReturnValue:
         state=state,
         grouped=summarise(state),
         progress=progress(state),
-        cutoff_label=_cutoff_label(state),
+        cutoff_label=cutoff_label(state),
         model_output=payload.get("model_output"),
         model_error=payload.get("model_error", ""),
     )
@@ -518,23 +507,14 @@ def _stale_step(token: str) -> ResponseReturnValue:
 def _cursor_matches(state: QueueState) -> bool:
     """Return whether the submitted form was rendered for the current cursor.
 
-    The browser's back button and double submits both replay a form for a poll
-    that has already been decided. Acting on one would advance the cursor twice
-    and silently skip an unreviewed poll, so the rendered cursor position rides
-    along in a hidden field and is checked here.
-
     Args:
         state: The live queue state.
 
     Returns:
-        True if the form's ``expected_index`` is the cursor's current position.
-        A missing or non-numeric value never matches.
+        True if the form's hidden ``expected_index`` field is the cursor's
+        current position. A missing or non-numeric value never matches.
     """
-    raw = request.form.get("expected_index", "")
-    try:
-        return int(raw) == state.index
-    except ValueError:
-        return False
+    return cursor_matches(state, request.form.get("expected_index", ""))
 
 
 def _prepare_item(item: QueueItem) -> None:
@@ -565,7 +545,7 @@ def _prepare_item(item: QueueItem) -> None:
     item.warnings = _plan_warnings(row, plan)
 
 
-def _plan_warnings(row: WikipediaPollRow, plan: Any) -> list[str]:
+def _plan_warnings(row: ScrapedPollRow, plan: Any) -> list[str]:
     """Compare a parsed poll document against the Wikipedia row that cited it.
 
     The date check is the one that matters: a citation pointing at the wrong
@@ -626,36 +606,3 @@ def _parse_sample_size(label: str) -> int | None:
     if match is None:
         return None
     return int(match.group(0).replace(",", ""))
-
-
-def _import_detail(result: Any) -> str:
-    """Summarise a commit result for the queue item's detail line.
-
-    Args:
-        result: The importer's ``PollImportResult``.
-
-    Returns:
-        A one-line description of what the commit did.
-    """
-    if result.skipped_existing_rows:
-        return f"Poll #{result.poll_id} already had rows, so nothing was inserted"
-
-    detail = f"Poll #{result.poll_id}, {result.inserted_rows} rows inserted"
-    if result.replaced_rows:
-        detail += f", {result.replaced_rows} rows replaced"
-    return detail
-
-
-def _cutoff_label(state: QueueState) -> str:
-    """Describe the window a queue considered, naming the no-cutoff sentinel.
-
-    Args:
-        state: The queue state being summarised.
-
-    Returns:
-        A display phrase — the sentinel cutoff means every row on the page was
-        considered, and must not surface as the date ``0001-01-01``.
-    """
-    if state.cutoff == NO_CUTOFF:
-        return "all polls"
-    return f"polls ending on or after {state.cutoff.isoformat()}"

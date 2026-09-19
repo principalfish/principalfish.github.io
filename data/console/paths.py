@@ -21,9 +21,6 @@ PREDICTION_SIMULATION_OUTPUT = REPO_ROOT / "electionmaps" / "data" / "results" /
 UNS_TREND_CACHE_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.json"
 HOLYROOD_TREND_CACHE_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "holyrood-trends.json"
 
-US_HOUSE_POLLS_IMPORT_SCRIPT = DATA_DIR / "polls" / "importers" / "us" / "us_house_generic_ballot_import.py"
-US_SENATE_POLLS_IMPORT_SCRIPT = DATA_DIR / "polls" / "importers" / "us" / "us_senate_import.py"
-US_PRESIDENT_POLLS_IMPORT_SCRIPT = DATA_DIR / "polls" / "importers" / "us" / "us_presidential_import.py"
 US_HOUSE_MODEL_SCRIPT = DATA_DIR / "models" / "us" / "run_us_house_model.py"
 US_SENATE_MODEL_SCRIPT = DATA_DIR / "models" / "us" / "run_us_senate_model.py"
 US_PRESIDENT_MODEL_SCRIPT = DATA_DIR / "models" / "us" / "run_us_presidential_model.py"

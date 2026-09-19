@@ -7,10 +7,20 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import date
-from typing import Any, Generator, Sequence, cast
+from typing import Any, Generator, Literal, Sequence, cast
 
-from sqlalchemy import create_engine, delete, event, func, select
+from sqlalchemy import (
+    ColumnElement,
+    create_engine,
+    delete,
+    event,
+    func,
+    or_,
+    select,
+    update,
+)
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -26,8 +36,30 @@ from models import (
     Pollster,
     Region,
     Seat,
+    TrackedMatchup,
+    TrackedMatchupSource,
     Vote,
 )
+
+# Outcome of Database.set_tracked_matchup; see its docstring.
+TrackedMatchupWrite = Literal["created", "updated", "unchanged", "kept_manual"]
+
+
+@dataclass(frozen=True, slots=True)
+class MatchupSummary:
+    """Stored polls for one matchup within one race of a map.
+
+    Attributes:
+        seat_id: Seat the polls cover, or None for the map's national polls.
+        matchup: The matchup label shared by the polls.
+        poll_count: Number of polls stored for this seat and matchup.
+        latest_fieldwork_end: Most recent fieldwork end date among them.
+    """
+
+    seat_id: int | None
+    matchup: str
+    poll_count: int
+    latest_fieldwork_end: date
 
 
 def ensure_elections_sqlite_schema(conn: sqlite3.Connection) -> None:
@@ -827,6 +859,8 @@ class Database:
         *,
         sample_size: int | None = None,
         source_url: str | None = None,
+        matchup: str | None = None,
+        seat_id: int | None = None,
     ) -> Poll:
         """Insert a new Poll row and return it.
 
@@ -837,11 +871,21 @@ class Database:
             fieldwork_end: Last date of fieldwork (inclusive).
             sample_size: Optional number of respondents.
             source_url: Optional URL of the published poll tables.
+            matchup: Optional candidate-pairing label (e.g.
+                'Vance (R) vs Newsom (D)'); None for party-only polls.
+            seat_id: Optional primary key of the Seat a state or district poll
+                covers; None for a national poll.
 
         Returns:
             The newly created Poll instance.
+
+        Raises:
+            ValueError: If seat_id is given and names no seat, or names a seat
+                on a different map.
         """
         with self.session() as s:
+            if seat_id is not None:
+                self._require_seat_on_map(s, map_id, seat_id)
             poll = Poll(
                 pollster_id=pollster_id,
                 map_id=map_id,
@@ -849,6 +893,8 @@ class Database:
                 fieldwork_end=fieldwork_end,
                 sample_size=sample_size,
                 source_url=source_url,
+                matchup=matchup,
+                seat_id=seat_id,
             )
             s.add(poll)
             s.flush()
@@ -922,6 +968,7 @@ class Database:
         percentage: float,
         *,
         region_id: int | None = None,
+        candidate_name: str | None = None,
     ) -> PollRow:
         """Insert a new PollRow and return it.
 
@@ -931,6 +978,8 @@ class Database:
             percentage: Vote-share percentage for the party (0–100).
             region_id: Optional primary key of the Region if this is a
                 sub-national breakdown row.
+            candidate_name: Optional name of the candidate the figure is for
+                (US candidate polls).
 
         Returns:
             The newly created PollRow instance.
@@ -941,6 +990,7 @@ class Database:
                 party_id=party_id,
                 percentage=percentage,
                 region_id=region_id,
+                candidate_name=candidate_name,
             )
             s.add(row)
             s.flush()
@@ -986,7 +1036,8 @@ class Database:
 
         Args:
             rows: List of dicts with keys matching PollRow column names
-                (poll_id, party_id, percentage, region_id).
+                (poll_id, party_id, percentage, and the optional region_id
+                and candidate_name).
 
         Returns:
             Number of rows inserted.
@@ -996,3 +1047,383 @@ class Database:
             s.add_all(objs)
             s.flush()
             return len(objs)
+
+    # ── poll lookups by scope ─────────────────────────────────────────────
+
+    def get_poll_keys_for_map(
+        self,
+        map_id: int,
+        identifiers: set[str],
+    ) -> set[tuple[str, date, date, str | None, int | None]]:
+        """Return the identity of every poll stored on a map for these pollsters.
+
+        Identity is ``(pollster identifier, fieldwork start, fieldwork end,
+        matchup, seat id)``, so the same pollster and dates count as a
+        different poll when the matchup or the seat differs.
+
+        Args:
+            map_id: Only polls on this map are returned.
+            identifiers: Pollster slugs to look up. Slugs with no pollster row
+                simply match nothing.
+
+        Returns:
+            Set of ``(identifier, fieldwork_start, fieldwork_end, matchup,
+            seat_id)`` tuples; empty when ``identifiers`` is empty.
+        """
+        if not identifiers:
+            return set()
+        with self.session() as s:
+            rows = s.execute(
+                select(
+                    Pollster.identifier,
+                    Poll.fieldwork_start,
+                    Poll.fieldwork_end,
+                    Poll.matchup,
+                    Poll.seat_id,
+                )
+                .join(Pollster, Poll.pollster_id == Pollster.id)
+                .where(Poll.map_id == map_id, Pollster.identifier.in_(identifiers))
+            ).tuples()
+            return set(rows)
+
+    def get_latest_poll_end_by_scope(
+        self, map_id: int
+    ) -> dict[tuple[int | None, str | None], date]:
+        """Return the latest fieldwork end date per (seat, matchup) on a map.
+
+        Args:
+            map_id: Primary key of the Map.
+
+        Returns:
+            Mapping of ``(seat_id, matchup)`` to the most recent
+            ``fieldwork_end`` among that scope's polls. National polls have a
+            ``None`` seat id and party-only polls a ``None`` matchup. Scopes
+            with no polls are absent.
+        """
+        with self.session() as s:
+            rows = s.execute(
+                select(Poll.seat_id, Poll.matchup, func.max(Poll.fieldwork_end))
+                .where(Poll.map_id == map_id)
+                .group_by(Poll.seat_id, Poll.matchup)
+            ).tuples()
+            return {(seat_id, matchup): latest for seat_id, matchup, latest in rows}
+
+    def get_matchup_summaries(self, map_id: int) -> list[MatchupSummary]:
+        """Summarise the stored polls of each matchup in each race of a map.
+
+        Polls without a matchup are left out.
+
+        Args:
+            map_id: Primary key of the Map.
+
+        Returns:
+            One MatchupSummary per ``(seat_id, matchup)``, ordered by seat id
+            (national first), then most polls first, then matchup label.
+        """
+        poll_count = func.count(Poll.id).label("poll_count")
+        with self.session() as s:
+            rows = s.execute(
+                select(
+                    Poll.seat_id,
+                    Poll.matchup,
+                    poll_count,
+                    func.max(Poll.fieldwork_end),
+                )
+                .where(Poll.map_id == map_id, Poll.matchup.is_not(None))
+                .group_by(Poll.seat_id, Poll.matchup)
+                .order_by(
+                    Poll.seat_id.asc().nullsfirst(),
+                    poll_count.desc(),
+                    Poll.matchup,
+                )
+            ).tuples()
+            return [
+                MatchupSummary(
+                    seat_id=seat_id,
+                    matchup=matchup,
+                    poll_count=count,
+                    latest_fieldwork_end=latest,
+                )
+                for seat_id, matchup, count, latest in rows
+                if matchup is not None  # narrows the type; WHERE already drops NULL
+            ]
+
+    # ── tracked matchups ──────────────────────────────────────────────────
+
+    def get_tracked_matchup(
+        self, map_id: int, seat_id: int | None = None
+    ) -> TrackedMatchup | None:
+        """Return the tracked-matchup row for one race, or None if unset.
+
+        Args:
+            map_id: Primary key of the Map.
+            seat_id: Primary key of the race's Seat, or None for the map's
+                national race.
+
+        Returns:
+            Matching TrackedMatchup instance, or None.
+        """
+        with self.session() as s:
+            return self._find_tracked_matchup(s, map_id, seat_id)
+
+    def get_tracked_matchups_for_map(self, map_id: int) -> Sequence[TrackedMatchup]:
+        """Return every tracked-matchup row on a map, national race first.
+
+        Args:
+            map_id: Primary key of the Map.
+
+        Returns:
+            Sequence of TrackedMatchup instances ordered by seat id.
+        """
+        with self.session() as s:
+            return (
+                s.execute(
+                    select(TrackedMatchup)
+                    .where(TrackedMatchup.map_id == map_id)
+                    .order_by(TrackedMatchup.seat_id.asc().nullsfirst())
+                )
+                .scalars()
+                .all()
+            )
+
+    def set_tracked_matchup(
+        self,
+        map_id: int,
+        seat_id: int | None,
+        matchup: str | None,
+        *,
+        source: TrackedMatchupSource,
+    ) -> TrackedMatchupWrite:
+        """Record the matchup the model should follow for one race.
+
+        An ``"auto"`` write (from the importer) always stores ``matchup`` as
+        the row's ``auto_matchup``, but only changes the effective ``matchup``
+        of a new row or a row whose source is still ``"auto"``: a manual
+        override is never overwritten. A ``"manual"`` write sets ``matchup``
+        and marks the row ``"manual"``, leaving ``auto_matchup`` as it was
+        (None on a new row).
+
+        Every decision about an existing row is made by the UPDATE statement
+        itself, never by the preceding SELECT: pysqlite defers ``BEGIN`` to the
+        first write, so that SELECT runs outside the transaction and an
+        override committed by another connection in between would otherwise be
+        silently overwritten. The insert path is guarded instead by the unique
+        scope index, so a race there raises ``IntegrityError`` rather than
+        storing a second row for the same race; callers that may collide
+        should retry.
+
+        Args:
+            map_id: Primary key of the Map.
+            seat_id: Primary key of the race's Seat, or None for the map's
+                national race.
+            matchup: The matchup label to follow. None means the race's polls
+                are ignored, which only a manual write may ask for.
+            source: ``"auto"`` for the importer, ``"manual"`` for a user
+                override.
+
+        Returns:
+            ``"created"`` if no row existed for the race; ``"kept_manual"`` for
+            an auto write to a manual row (the override stands, although
+            ``auto_matchup`` may have changed); ``"unchanged"`` if the row
+            already held these values; otherwise ``"updated"``.
+
+        Raises:
+            ValueError: If source is ``"auto"`` and matchup is None, which
+                would silence a race the importer has no way to judge; if
+                seat_id names no seat, or a seat on a different map.
+            IntegrityError: If another connection created the race's row
+                between this call's lookup and its insert.
+        """
+        if source == "auto" and matchup is None:
+            raise ValueError(
+                "an automatic write cannot clear a race's matchup;"
+                " only a manual override may ignore a race"
+            )
+        with self.session() as s:
+            if seat_id is not None:
+                self._require_seat_on_map(s, map_id, seat_id)
+            row = self._find_tracked_matchup(s, map_id, seat_id)
+            if row is None:
+                s.add(
+                    TrackedMatchup(
+                        map_id=map_id,
+                        seat_id=seat_id,
+                        matchup=matchup,
+                        source=source,
+                        auto_matchup=matchup if source == "auto" else None,
+                    )
+                )
+                return "created"
+
+            if source == "manual":
+                # Writes unless the row is already a manual override holding
+                # this very matchup, so rowcount alone tells the two apart.
+                needs_write = or_(
+                    TrackedMatchup.source != "manual",
+                    TrackedMatchup.matchup.is_distinct_from(matchup),
+                )
+                applied = self._update_tracked_matchup(
+                    s,
+                    row.id,
+                    needs_write,
+                    matchup=matchup,
+                    source="manual",
+                )
+                return "updated" if applied else "unchanged"
+
+            auto_changed = self._update_tracked_matchup(
+                s,
+                row.id,
+                TrackedMatchup.auto_matchup.is_distinct_from(matchup),
+                auto_matchup=matchup,
+            )
+            matchup_changed = self._update_tracked_matchup(
+                s,
+                row.id,
+                TrackedMatchup.source == "auto",
+                TrackedMatchup.matchup.is_distinct_from(matchup),
+                matchup=matchup,
+            )
+            if matchup_changed:
+                return "updated"
+            # The effective matchup did not move: either a manual override
+            # blocked it or the row already held this value. Re-read the source
+            # rather than trusting the lookup above.
+            source_now = s.execute(
+                select(TrackedMatchup.source).where(TrackedMatchup.id == row.id)
+            ).scalar_one_or_none()
+            if source_now == "manual":
+                return "kept_manual"
+            return "updated" if auto_changed else "unchanged"
+
+    def clear_tracked_matchup_override(self, map_id: int, seat_id: int | None) -> bool:
+        """Drop a race's manual override so it follows the importer again.
+
+        Sets the row's ``matchup`` to its ``auto_matchup`` and its source to
+        ``"auto"``. A row the importer never set therefore ends up with a
+        None matchup until the next import sets one.
+
+        One statement does the whole job, copying ``auto_matchup`` inside the
+        UPDATE, so a value written by another connection since this call
+        started cannot be rolled back to a stale one.
+
+        Args:
+            map_id: Primary key of the Map.
+            seat_id: Primary key of the race's Seat, or None for the map's
+                national race.
+
+        Returns:
+            True if the race has a tracked row (now following the importer),
+            False if it has none and nothing was changed.
+        """
+        with self.session() as s:
+            result = s.execute(
+                update(TrackedMatchup)
+                .where(
+                    TrackedMatchup.map_id == map_id,
+                    # IS rather than =, so a None seat matches the national row.
+                    TrackedMatchup.seat_id.is_not_distinct_from(seat_id),
+                )
+                .values(matchup=TrackedMatchup.auto_matchup, source="auto"),
+                # Nothing reads the ORM objects afterwards, and neither the
+                # criteria nor the column-to-column SET is evaluatable in
+                # Python, so skip the session-synchronising SELECT.
+                execution_options={"synchronize_session": False},
+            )
+            return bool(cast("CursorResult[Any]", result).rowcount)
+
+    def delete_tracked_matchup(self, map_id: int, seat_id: int | None) -> bool:
+        """Delete the tracked-matchup row for one race.
+
+        Args:
+            map_id: Primary key of the Map.
+            seat_id: Primary key of the race's Seat, or None for the map's
+                national race.
+
+        Returns:
+            True if a row was deleted, False if the race had none.
+        """
+        with self.session() as s:
+            row = self._find_tracked_matchup(s, map_id, seat_id)
+            if row is None:
+                return False
+            s.delete(row)
+            return True
+
+    @staticmethod
+    def _find_tracked_matchup(
+        s: Session, map_id: int, seat_id: int | None
+    ) -> TrackedMatchup | None:
+        """Return one race's tracked-matchup row within an open session.
+
+        Args:
+            s: Open session to query with.
+            map_id: Primary key of the Map.
+            seat_id: Primary key of the race's Seat, or None for the map's
+                national race.
+
+        Returns:
+            Matching TrackedMatchup instance, or None.
+        """
+        return s.execute(
+            select(TrackedMatchup).where(
+                TrackedMatchup.map_id == map_id,
+                # IS rather than =, so a None seat matches the national row.
+                TrackedMatchup.seat_id.is_not_distinct_from(seat_id),
+            )
+        ).scalar_one_or_none()
+
+    @staticmethod
+    def _update_tracked_matchup(
+        s: Session,
+        tracked_id: int,
+        *conditions: ColumnElement[bool],
+        **values: str | None,
+    ) -> bool:
+        """Conditionally update one tracked-matchup row, reporting whether it ran.
+
+        Args:
+            s: Open session to write with.
+            tracked_id: Primary key of the TrackedMatchup row.
+            *conditions: Extra criteria the row must still satisfy; they are
+                evaluated by SQLite as part of the write, so the caller need
+                not have read a consistent row first.
+            **values: Columns to set.
+
+        Returns:
+            True if the row matched every condition and was written.
+        """
+        result = s.execute(
+            update(TrackedMatchup)
+            .where(TrackedMatchup.id == tracked_id, *conditions)
+            .values(**values),
+            # See clear_tracked_matchup_override for why synchronisation is off.
+            execution_options={"synchronize_session": False},
+        )
+        return bool(cast("CursorResult[Any]", result).rowcount)
+
+    @staticmethod
+    def _require_seat_on_map(s: Session, map_id: int, seat_id: int) -> None:
+        """Raise unless *seat_id* names a seat belonging to *map_id*.
+
+        The foreign key only proves the seat exists; a seat from another map
+        would be stored happily and then never be found by anything that looks
+        the race up by map.
+
+        Args:
+            s: Open session to query with.
+            map_id: Primary key of the Map the seat must belong to.
+            seat_id: Primary key of the Seat to check.
+
+        Raises:
+            ValueError: If no such seat exists, or it belongs to another map.
+        """
+        owner_map_id = s.execute(
+            select(Seat.map_id).where(Seat.id == seat_id)
+        ).scalar_one_or_none()
+        if owner_map_id is None:
+            raise ValueError(f"seat {seat_id} does not exist")
+        if owner_map_id != map_id:
+            raise ValueError(
+                f"seat {seat_id} belongs to map {owner_map_id}, not map {map_id}"
+            )

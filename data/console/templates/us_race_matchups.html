@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>{{ chamber.label }} Race Matchups</h2>
+    <p>
+      Each race's polls are read for its tracked matchup only. The importer sets it to the
+      race's lead poll table (<em>auto</em>); a <em>manual</em> choice made here is never
+      overwritten by later imports. <em>Ignore</em> leaves the race to the national swing, and
+      <em>Use automatic</em> follows the importer again — or, for a race the importer has not
+      chosen a matchup for yet, stops tracking it until an import does.
+    </p>
+    <p>{{ races|length }} race(s) on {{ map_name }} with stored matchup polls or a tracked matchup.</p>
+    <div class="actions">
+      {% if chamber.slug == "senate" %}
+        <a class="button" href="{{ url_for('us.race_matchups', chamber='house') }}">House race matchups</a>
+      {% else %}
+        <a class="button" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate race matchups</a>
+      {% endif %}
+      <a class="button" href="{{ url_for('us.president_matchup') }}">President matchup</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Races</h3>
+    {% if races %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Race</th>
+              <th scope="col">Following</th>
+              <th scope="col">Automatic</th>
+              <th scope="col">Stored matchups</th>
+              <th scope="col">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for race in races %}
+              <tr>
+                <th scope="row">{{ race.seat_name }}</th>
+                <td>
+                  {% if not race.is_tracked %}
+                    Not tracked (polls ignored)
+                  {% elif race.matchup is none %}
+                    Ignored ({{ race.source }})
+                  {% else %}
+                    {{ race.matchup }} ({{ race.source }})
+                  {% endif %}
+                </td>
+                <td>{{ race.auto_matchup or "-" }}</td>
+                <td>
+                  {% if race.labels %}
+                    <ul>
+                      {% for summary in race.labels %}
+                        <li>
+                          {{ summary.matchup }} — {{ summary.poll_count }} poll(s), latest
+                          <time datetime="{{ summary.latest_fieldwork_end.isoformat() }}">{{ summary.latest_fieldwork_end }}</time>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  <form method="post" action="{{ url_for('us.set_race_matchup', map_id=map_id, seat_id=race.seat_id) }}"
+                        class="inline-form">
+                    {% if race.labels %}
+                      <select name="matchup" aria-label="Matchup for {{ race.seat_name }}">
+                        {% for summary in race.labels %}
+                          <option value="{{ summary.matchup }}"
+                                  {% if summary.matchup == race.matchup %}selected{% endif %}>{{ summary.matchup }}</option>
+                        {% endfor %}
+                      </select>
+                      <button type="submit" class="button" name="action" value="set">Follow</button>
+                    {% endif %}
+                    <button type="submit" class="button" name="action" value="ignore">Ignore</button>
+                    {% if race.is_tracked %}
+                      <button type="submit" class="button" name="action" value="auto">Use automatic</button>
+                    {% endif %}
+                    <label class="checkbox">
+                      <input type="checkbox" name="rebuild_history">
+                      Rebuild {{ chamber.label }} history
+                    </label>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No race on {{ map_name }} has stored matchup polls or a tracked matchup yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

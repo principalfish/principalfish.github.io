@@ -8,6 +8,10 @@ splits). Persists a ``us_presidential_model`` election and appends a poll-tracke
 trend entry. The electoral-vote tally itself is computed by the front end from the
 per-unit winners and each seat's ``electoral_votes``.
 
+Presidential polls are stored one poll per matchup, so the run follows the
+national tracked matchup chosen in the console. With none set it writes nothing
+and exits 2.
+
 Usage:
     python data/models/us/run_us_presidential_model.py --dry-run
     python data/models/us/run_us_presidential_model.py --as-of-date 2028-06-01
@@ -33,13 +37,20 @@ SPEC = UsModelSpec(
     election_name_prefix="US President UNS",
     trend_cache_json=RESULTS_DIR / "us-president-trends.json",
     trend_cache_meta_json=RESULTS_DIR / "us-president-trends_meta.json",
+    # The national series is a head-to-head between two named candidates, so the
+    # run needs to know which one: with no tracked matchup it exits 2.
+    requires_tracked_matchup=True,
+    # Statewide presidential polls ask the same head-to-head as the national ones,
+    # so they follow the national matchup rather than a per-seat one.
+    seat_matchup_policy="national",
 )
 
 
-def main() -> None:
-    """CLI entry point — see module docstring."""
-    main_for_spec(SPEC)
+def main() -> int:
+    """CLI entry point — see module docstring; returns a process exit code."""
+    # int(): _common is imported by bare module name, so it is untyped here.
+    return int(main_for_spec(SPEC))
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

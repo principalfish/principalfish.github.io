@@ -28,6 +28,11 @@ US_MODEL_COMPARISON_IDS: dict[str, str] = {
     ElectionType.us_senate_model.value: "2020-us-senate",
 }
 
+# ``parliamentFeatures`` key whose ``nextElectionYear`` decides which Senate specials are
+# live. The Senate model (``models/us/run_us_senate_model.py``) reads the same key from the
+# same shell, so the export and the model agree on the contested field.
+SENATE_PARLIAMENT_KEY = "us_senate"
+
 
 def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, Any]]:
     """Build the ``settings.parties`` list for the elections manifest.
@@ -89,6 +94,8 @@ def build_map_modes_with_regions(
     map_modes: dict[str, Any],
     regions_by_map_id: dict[str, list[dict[str, Any]]],
     current_year: int | None = None,
+    *,
+    parliament_features: dict[str, Any],
 ) -> dict[str, Any]:
     """Build the ``mapModes`` block, attaching DB-derived regions to each map.
 
@@ -103,9 +110,13 @@ def build_map_modes_with_regions(
         map_modes: Per-map config keyed by string map id.
         regions_by_map_id: Region lists keyed by string map id, as built by
             :func:`build_manifest_regions_by_map_id`.
-        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against;
-            defaults to the current calendar year. Injectable so exports (and tests) can
-            pin a year rather than depend on the wall clock.
+        current_year: Year to resolve Senate ``senateClassCycle`` "next up" years against, and
+            to expire past ``senateSpecialElections`` entries at; defaults to the current
+            calendar year. Injectable so exports (and tests) can pin a year rather than
+            depend on the wall clock.
+        parliament_features: The page's ``parliamentFeatures`` block. Its
+            ``us_senate.nextElectionYear`` picks the ``senateSpecialElections`` entries
+            that are live (see :func:`_live_senate_specials`).
 
     Returns:
         A new dict keyed by string map id, each value being the mapMode config with a
@@ -113,6 +124,7 @@ def build_map_modes_with_regions(
     """
     if current_year is None:
         current_year = date.today().year
+    special_year = senate_next_election_year(parliament_features)
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)
@@ -128,8 +140,99 @@ def build_map_modes_with_regions(
         cycle = entry.pop("senateClassCycle", None)
         if cycle:
             entry["senateClassNextElection"] = _senate_class_next_election(cycle, current_year)
+        # Senate special elections (an off-cycle vacancy contested alongside the regular class,
+        # e.g. Ohio and Florida's Class-3 seats in 2026) are filtered here, once, to the ones the
+        # next Senate election holds; the front end then uses the list as-is.
+        if "senateSpecialElections" in entry:
+            entry["senateSpecialElections"] = _live_senate_specials(
+                entry["senateSpecialElections"], special_year, current_year
+            )
         merged[map_id_str] = entry
     return merged
+
+
+def _is_int(value: object) -> bool:
+    """True for a JSON integer (``bool`` is an ``int`` subclass, so it is excluded)."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def senate_next_election_year(parliament_features: object) -> int | None:
+    """Return ``parliamentFeatures.us_senate.nextElectionYear``, or ``None`` when unset.
+
+    Shared with the Senate model (``models/us/run_us_senate_model.py``), so both read
+    the cycle the same way — a non-integer (``2026.0``, ``true``) counts as unset.
+    """
+    if not isinstance(parliament_features, dict):
+        return None
+    senate = parliament_features.get(SENATE_PARLIAMENT_KEY)
+    if not isinstance(senate, dict):
+        return None
+    year = senate.get("nextElectionYear")
+    return year if _is_int(year) else None
+
+
+def senate_specials_for_year(entries: object, year: int) -> list[dict[str, Any]]:
+    """Keep the well-formed ``senateSpecialElections`` entries held in ``year``.
+
+    The one parser for the shell's specials, shared by the export and the Senate
+    model so they cannot disagree about which entries count. An entry is skipped,
+    rather than taking its caller down, when it is not an object, or has a
+    non-integer ``year`` (``2026.0`` included) or ``class``, or no non-blank string
+    ``seat`` or ``baselineElectionId`` — the front end needs all four to find the
+    member the special replaces and to load its baseline, and the model needs the
+    seat and baseline to project it.
+
+    Args:
+        entries: The shell's ``senateSpecialElections`` value; anything but a list
+            keeps nothing.
+        year: The cycle to keep.
+
+    Returns:
+        Copies of the matching entries, in shell order.
+    """
+    if not isinstance(entries, list):
+        return []
+    kept: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        entry_year = entry.get("year")
+        if not _is_int(entry_year) or entry_year != year or not _is_int(entry.get("class")):
+            continue
+        if not all(
+            isinstance(entry.get(key), str) and entry[key].strip()
+            for key in ("seat", "baselineElectionId")
+        ):
+            continue
+        kept.append(dict(entry))
+    return kept
+
+
+def _live_senate_specials(
+    entries: object, next_year: int | None, current_year: int
+) -> list[dict[str, Any]]:
+    """Keep the special elections the next Senate election holds.
+
+    This is the one rule for which specials are live: an entry's ``year`` must equal
+    ``parliamentFeatures.us_senate.nextElectionYear``, the same test the Senate model
+    applies, so a 2028 special added during the 2026 cycle is neither projected by the
+    model nor by front-end Predict. A next-election year that has already passed keeps
+    nothing, so a stale shell cannot resurrect a finished cycle.
+
+    Entries are parsed defensively by :func:`senate_specials_for_year`, so a malformed
+    one is skipped rather than taking the export down.
+
+    Args:
+        entries: The shell's ``senateSpecialElections`` value.
+        next_year: The Senate's next election year, or ``None`` when the shell has none.
+        current_year: The export year; a ``next_year`` before it keeps nothing.
+
+    Returns:
+        Copies of the live entries, in shell order.
+    """
+    if next_year is None or next_year < current_year:
+        return []
+    return senate_specials_for_year(entries, next_year)
 
 
 def _senate_class_next_election(cycle: dict[str, Any], current_year: int) -> dict[str, int]:

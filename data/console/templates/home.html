@@ -31,12 +31,13 @@
     <section class="card console-column">
       <h2>USA</h2>
       <div class="action-stack">
-        <form method="post" action="{{ url_for('us.us_import_polls') }}" class="inline-form button-form">
-          <button type="submit" class="button primary button-block">Import US Polls</button>
-        </form>
+        <a class="button primary button-block" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
         <form method="post" action="{{ url_for('us.run_us_models') }}" class="inline-form button-form">
           <button type="submit" class="button button-block">Run US Models</button>
         </form>
+        <a class="button button-block" href="{{ url_for('us.president_matchup') }}">President Matchup</a>
+        <a class="button button-block" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate Race Matchups</a>
+        <a class="button button-block" href="{{ url_for('us.race_matchups', chamber='house') }}">House Race Matchups</a>
         <a class="button button-block" href="{{ url_for('us.house_outputs') }}">View House Outputs</a>
         <a class="button button-block" href="{{ url_for('us.president_outputs') }}">View President Outputs</a>
         <a class="button button-block" href="{{ url_for('us.senate_outputs') }}">View Senate Outputs</a>

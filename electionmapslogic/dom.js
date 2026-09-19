@@ -4,7 +4,7 @@ import {
   mesh as topojsonMesh,
   merge as topojsonMerge,
 } from '../site/vendor/topojson-client.v3.esm.js';
-import { manifest, state, page, seatComparisonHidden } from './state.js';
+import { manifest, state, page, seatComparisonHidden, Seat } from './state.js';
 import { escapeHtml, formatInt, formatPct, formatSigned, deltaClass, getRegionLabel, seatLookupKey, normalizeRegionKey, clampNumber, DEFAULT_PARTY_COLOUR, buildStateTrendSeries } from './utils.js';
 import { fetchJson } from './files.js';
 
@@ -1378,13 +1378,11 @@ function renderSeatPopup(seatName) {
       party: member.party,
       pct: 100,
       label: member.name,
-      up: member.up,
+      years: Seat.memberTermYears(member),
     }));
-    // Terms are 6 years, so a seat was last contested six years before it is next up. The
-    // bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
-    // Guard an unresolved cycle year (member missing `class`, or no senateClassNextElection)
-    // so the row shows just the name rather than "last NaN · up undefined".
-    renderPopupRows(rows, (row) => (row.up ? `<span>last ${row.up - 6} · up ${row.up}</span>` : ''), 70);
+    // The bar is just a colour accent here, so cap it short to clear the wide "last/up" value.
+    // An unresolved cycle year gives null years, so the row shows just the name.
+    renderPopupRows(rows, (row) => (row.years ? `<span>last ${row.years.last} · up ${row.years.up}</span>` : ''), 70);
     seatPopup.hidden = false;
     return;
   }

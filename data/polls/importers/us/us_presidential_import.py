@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Import US Presidential national head-to-head polling (Dem/Rep) from Wikipedia.
+"""Import US presidential polling from Wikipedia: nationwide and statewide.
 
-Scrapes the nationwide two-party polling table for the next presidential cycle and
-inserts national ``PollRow`` rows against the US Presidential map (map 22), feeding
-``models/us/run_us_presidential_model.py``.
+Scrapes the next cycle's nationwide opinion-polling article plus the statewide
+one (which does not exist yet — a 404 is reported as a note, not a failure).
+Every candidate line-up is stored as its own poll, told apart by its matchup,
+with the candidates' names on the rows; a statewide table is attached to the
+seat its heading names. Which matchup the forecast follows is a console
+setting, not something this importer decides.
 
-Nationwide presidential polling early in a cycle is often reported as many
-hypothetical candidate matchups. The parser keys on the "Democratic" / "Republican"
-header columns, so point ``--url`` at whichever page/section carries a clean
-two-party column layout.
+The default is a dry run: it lists what it found and writes nothing.
 
 Usage:
-    python data/polls/importers/us/us_presidential_import.py --dry-run
-    python data/polls/importers/us/us_presidential_import.py --url <page>
+    python data/polls/importers/us/us_presidential_import.py
+    python data/polls/importers/us/us_presidential_import.py --commit
 """
 
 from __future__ import annotations
@@ -22,24 +22,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from polls.importers.us.us_polls_common import run_importer
-
-DEFAULT_URL = (
-    "https://en.wikipedia.org/wiki/"
-    "Nationwide_opinion_polling_for_the_2028_United_States_presidential_election"
-)
-DEFAULT_MAP_NAME = "US Presidential 2024"
+from polls.importers.us.us_wikipedia_polls import PRESIDENT, run_importer
 
 
-def main() -> None:
+def main() -> int:
     """CLI entry point — see module docstring."""
-    run_importer(
-        default_url=DEFAULT_URL,
-        map_name=DEFAULT_MAP_NAME,
-        pollster_suffix="_us_president",
-        pollster_label="US President",
-    )
+    return run_importer([PRESIDENT])
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

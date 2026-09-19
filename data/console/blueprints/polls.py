@@ -17,7 +17,7 @@ from flask import (
 from flask.typing import ResponseReturnValue
 from sqlalchemy import delete, func, select
 
-from models import Party, Poll, PollRow, Pollster, Region
+from models import Party, Poll, PollRow, Pollster, Region, Seat
 
 from console.db import get_db
 
@@ -64,6 +64,11 @@ def poll_list() -> str:
 def poll_detail(poll_id: int) -> ResponseReturnValue:
     """GET /polls/<poll_id> — Show party×region percentage matrix for a single poll.
 
+    A US poll also shows its seat (for a state or district poll), its matchup,
+    and the candidate behind each row. Rows are keyed by party *and*
+    candidate, because a same-party race (two Republicans in a top-four
+    primary) stores one row per candidate.
+
     Args:
         poll_id: Primary key of the Poll row.
 
@@ -80,6 +85,11 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
 
         pollster = session.get(Pollster, poll.pollster_id)
 
+        # By id inside the session: ``poll.seat`` is a relationship, which
+        # cannot load once the session has closed.
+        seat = session.get(Seat, poll.seat_id) if poll.seat_id is not None else None
+        seat_name = seat.seat_name if seat is not None else None
+
         rows = session.execute(
             select(PollRow, Party, Region)
             .join(Party, PollRow.party_id == Party.id)
@@ -91,29 +101,35 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
     region_headers = sorted(
         {region.name if region is not None else "National" for _, _, region in rows}
     )
-    party_names = sorted({party.name for _, party, _ in rows})
+    row_keys = sorted(
+        {(party.name, row.candidate_name or "") for row, party, _ in rows}
+    )
 
-    matrix: dict[str, dict[str, float | str]] = {
-        party_name: {region_name: "" for region_name in region_headers}
-        for party_name in party_names
+    matrix: dict[tuple[str, str], dict[str, float | str]] = {
+        key: {region_name: "" for region_name in region_headers} for key in row_keys
     }
 
     for row, party, region in rows:
         region_name = region.name if region is not None else "National"
-        matrix[party.name][region_name] = row.percentage
+        matrix[(party.name, row.candidate_name or "")][region_name] = row.percentage
 
     matrix_rows = [
         {
             "party": party_name,
-            "cells": [matrix[party_name][region_name] for region_name in region_headers],
+            "candidate": candidate_name,
+            "cells": [
+                matrix[(party_name, candidate_name)][name] for name in region_headers
+            ],
         }
-        for party_name in party_names
+        for party_name, candidate_name in row_keys
     ]
 
     return render_template(
         "poll_detail.html",
         poll=poll,
         pollster=pollster,
+        seat_name=seat_name,
+        show_candidates=any(candidate for _, candidate in row_keys),
         region_headers=region_headers,
         matrix_rows=matrix_rows,
     )

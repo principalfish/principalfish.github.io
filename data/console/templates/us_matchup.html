@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>National Presidential Matchup</h2>
+    <p>
+      Choose the head-to-head the President model follows on {{ map_name }}. Its national
+      polls and every statewide presidential poll are read for this matchup only; with none
+      chosen, the President model does not run.
+    </p>
+    <p>
+      <strong>Currently tracking:</strong>
+      {% if tracked is none %}
+        nothing
+      {% elif tracked.matchup is none %}
+        nothing (ignored, {{ tracked.source }})
+      {% else %}
+        {{ tracked.matchup }} ({{ tracked.source }})
+        {% if tracked.matchup not in stored_labels %}— no stored polls{% endif %}
+      {% endif %}
+    </p>
+
+    <form method="post" action="{{ url_for('us.president_matchup') }}" class="form">
+      <fieldset>
+        <legend>Matchup</legend>
+        {% for summary in summaries %}
+          <label class="checkbox">
+            <input type="radio" name="matchup" value="{{ summary.matchup }}"
+                   {% if tracked is not none and tracked.matchup == summary.matchup %}checked{% endif %}>
+            {{ summary.matchup }} — {{ summary.poll_count }} poll(s), latest ending
+            <time datetime="{{ summary.latest_fieldwork_end.isoformat() }}">{{ summary.latest_fieldwork_end }}</time>
+          </label>
+        {% else %}
+          <p>No national presidential polls with a matchup are stored yet.</p>
+        {% endfor %}
+        <label class="checkbox">
+          <input type="radio" name="matchup" value=""
+                 {% if tracked is none or tracked.matchup is none %}checked{% endif %}>
+          None
+        </label>
+      </fieldset>
+
+      <label class="checkbox">
+        <input type="checkbox" name="rebuild_history">
+        Rebuild president history (runs the President model over its whole trend history, then
+        the export)
+      </label>
+
+      <button type="submit" class="button primary">Save</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h3>Related</h3>
+    <div class="actions">
+      <a class="button" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate race matchups</a>
+      <a class="button" href="{{ url_for('us.race_matchups', chamber='house') }}">House race matchups</a>
+      <a class="button" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
+    </div>
+  </section>
+{% endblock %}

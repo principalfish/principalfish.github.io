@@ -27,11 +27,11 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Iterator
-from datetime import date
 
 from bs4 import BeautifulSoup, Tag
 from pydantic import BaseModel
 
+from polls.importers.types import ScrapedPollRow
 from polls.importers.wikipedia_common import clean_text, fetch_html, parse_date_range
 
 WIKI_URL = (
@@ -71,33 +71,23 @@ class WikipediaIndexError(RuntimeError):
     """
 
 
-class WikipediaPollRow(BaseModel):
+class WikipediaPollRow(ScrapedPollRow):
     """One GB/UK poll as listed in the Wikipedia national-results tables.
 
+    The dates, pollster, sample size and source URL are inherited from
+    :class:`~polls.importers.types.ScrapedPollRow`; this page carries two more
+    columns of its own. ``fieldwork_start`` comes from the date cell plus the
+    year of the enclosing section, and ``matchup`` is always None — Westminster
+    rows are plain party voting intention.
+
     Attributes:
-        fieldwork_start: First day of fieldwork, from the date cell plus the
-            year of the enclosing section.
-        fieldwork_end: Last day of fieldwork.
-        date_label: Raw date-cell text, for display (carries no year).
-        pollster_label: Pollster name with citation markers stripped.
-        pollster_identifier: Canonical snake_case pollster slug.
         client: Commissioning client, column 2. Display only — the ``polls``
             table has no client column.
-        sample_size_label: Raw sample-size cell text, column 4. Display only.
-        source_url: External URL resolved from the row's citation, or ``""``
-            when no citation on the row resolves to one.
         citation_id: The ``cite_note`` href fragment (e.g. ``"cite_note-31"``),
             never the visible citation number. ``""`` when the row cites nothing.
     """
 
-    fieldwork_start: date
-    fieldwork_end: date
-    date_label: str
-    pollster_label: str
-    pollster_identifier: str
     client: str
-    sample_size_label: str
-    source_url: str
     citation_id: str
 
 

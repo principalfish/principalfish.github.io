@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Import US Polls from Wikipedia</h2>
+    <p>
+      Reads the chosen contests' Wikipedia pages, cross-references every poll against the
+      database, then walks you through the missing ones race by race. Polls already imported
+      never reach the queue. At the end each Senate and House race is pointed at its lead
+      matchup (manual overrides stand), and the US models and the export run once.
+    </p>
+    <p>
+      Reading every page takes 20–40 seconds. The queue is held in memory while the console
+      runs, so restarting the server — including the automatic reload after any code change —
+      discards an import in progress.
+    </p>
+    <form method="post" action="{{ url_for('us_poll_import.start') }}" class="form">
+      <fieldset>
+        <legend>Contests</legend>
+        {% for contest in contests %}
+          <label class="checkbox">
+            <input type="checkbox" name="contests" value="{{ contest.slug }}" checked>
+            {{ contest.label }}
+          </label>
+        {% endfor %}
+      </fieldset>
+
+      <label for="states">Only these states (optional)</label>
+      <input id="states" type="text" name="states" placeholder="e.g. Texas, MI, Nebraska">
+
+      <label for="cutoff_date">Only polls ending on or after (optional)</label>
+      <input id="cutoff_date" type="date" name="cutoff_date">
+
+      <label class="checkbox">
+        <input type="checkbox" name="run_model_at_end" checked>
+        Run the US models and export once the queue is finished
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" name="include_collapsed_for_uncovered">
+        Include hidden hypothetical tables for races with no visible poll table
+      </label>
+
+      <button type="submit" class="button primary">Import US Polls</button>
+    </form>
+    <p>
+      The state filter applies to House district and Senate race pages; national polls are
+      always read. Leave the date blank to start each race from its latest poll already in the
+      database.
+    </p>
+    <p>
+      The models follow one matchup per race. Choose the national one on the
+      <a href="{{ url_for('us.president_matchup') }}">President matchup</a> page, and override a
+      race's automatic choice on the
+      <a href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate</a> or
+      <a href="{{ url_for('us.race_matchups', chamber='house') }}">House</a> race matchups page.
+    </p>
+  </section>
+{% endblock %}

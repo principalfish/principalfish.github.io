@@ -20,7 +20,7 @@ script, so pointing the path somewhere harmless would still launch python).
 from __future__ import annotations
 
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -32,7 +32,7 @@ import pytest
 from flask import Flask
 
 from db import Database
-from polls.importers.types import PollImportResult
+from polls.importers.types import PollImportResult, ScrapedPollRow
 from polls.importers.westminster.wikipedia_index import (
     PollIndex,
     WikipediaIndexError,
@@ -55,8 +55,14 @@ from console.services.wikipedia_queue import (
     QueueState,
     QueueStatus,
     advance,
+    apply_skip_or_retry,
     build_queue,
+    build_queue_from_rows,
     current_item,
+    cursor_matches,
+    cutoff_label,
+    describe_import_result,
+    pending_in_group,
     progress,
     summarise,
 )
@@ -1525,3 +1531,584 @@ class TestStart:
         ).get_data(as_text=True)
 
         assert "Wikipedia page could not be read: layout changed" in body
+
+
+# ── D. the generalised queue ──────────────────────────────────────────────────
+# build_queue (section B) is one caller of build_queue_from_rows; these exercise
+# the injected hooks the way the US queue will use them — a five-part identity,
+# a cutoff per (seat, matchup) scope and its own worklist order — plus the
+# helpers the routes used to own.
+
+SCOPED_MAP_NAME = "US Senate 2024"
+
+
+class _ScopedRow(ScrapedPollRow):
+    """A scraped row carrying a seat, standing in for the US queue's row type."""
+
+    seat_id: int | None = None
+
+
+def _scoped_row(
+    identifier: str,
+    start: date,
+    end: date,
+    *,
+    matchup: str | None = None,
+    seat_id: int | None = None,
+    label: str = "",
+) -> _ScopedRow:
+    """Build a seat- and matchup-scoped row."""
+    return _ScopedRow(
+        fieldwork_start=start,
+        fieldwork_end=end,
+        date_label=f"{start.day}-{end.day} {end:%b}",
+        pollster_label=label or identifier.replace("_", " ").title(),
+        pollster_identifier=identifier,
+        sample_size_label="800",
+        source_url="https://example.test/race",
+        matchup=matchup,
+        seat_id=seat_id,
+    )
+
+
+def _scoped(item: QueueItem) -> _ScopedRow:
+    """Read an item's row back as the subclass it was built from.
+
+    ``QueueItem.row`` is declared as the shared base type, so assertions about a
+    contest's own columns narrow through here.
+    """
+    row = item.row
+    assert isinstance(row, _ScopedRow)
+    return row
+
+
+def _scope_key(row: _ScopedRow) -> tuple[str, date, date, str | None, int | None]:
+    """The US identity: pollster and dates, then matchup and seat."""
+    return (
+        row.pollster_identifier,
+        row.fieldwork_start,
+        row.fieldwork_end,
+        row.matchup,
+        row.seat_id,
+    )
+
+
+def _scope_present(
+    db: Database, map_id: int, identifiers: set[str]
+) -> set[tuple[str, date, date, str | None, int | None]]:
+    """Presence straight off the five-part database key."""
+    return db.get_poll_keys_for_map(map_id, identifiers)
+
+
+def _scope_cutoffs(
+    db: Database, map_id: int | None
+) -> Callable[[_ScopedRow], date]:
+    """One cutoff per (seat, matchup): a scope with no stored polls has none."""
+    latest = {} if map_id is None else db.get_latest_poll_end_by_scope(map_id)
+
+    def cutoff_for(row: _ScopedRow) -> date:
+        return latest.get((row.seat_id, row.matchup), NO_CUTOFF)
+
+    return cutoff_for
+
+
+def _scope_sort_key(row: _ScopedRow) -> tuple[int, str, date]:
+    """Race first, then matchup, then oldest first — not the Westminster order."""
+    return (row.seat_id or 0, row.matchup or "", row.fieldwork_end)
+
+
+def _always_pending(row: _ScopedRow) -> QueueItem:
+    """Triage with no importer registry behind it: everything needs the user."""
+    return QueueItem(row=row)
+
+
+def _build_scoped_queue(
+    db: Database,
+    rows: list[_ScopedRow],
+    *,
+    cutoff: date | None = None,
+    cutoff_note: str = "",
+) -> QueueState:
+    """Build a queue with the five-part identity and the per-scope cutoff."""
+    return build_queue_from_rows(
+        db,
+        rows,
+        map_name=SCOPED_MAP_NAME,
+        cutoff=cutoff,
+        key_fn=_scope_key,
+        present=_scope_present,
+        cutoff_fn=_scope_cutoffs,
+        triage=_always_pending,
+        sort_key=_scope_sort_key,
+        cutoff_note=cutoff_note,
+    )
+
+
+def _seed_scoped_map(db: Database) -> dict[str, int]:
+    """Create a map with two seats and one pollster."""
+    scoped = db.add_map(SCOPED_MAP_NAME)
+    texas = db.add_seat(scoped.id, "Texas")
+    georgia = db.add_seat(scoped.id, "Georgia")
+    pollster = db.add_pollster("Emerson College (US Senate)", "emerson_us_senate")
+    return {
+        "map_id": scoped.id,
+        "texas_id": texas.id,
+        "georgia_id": georgia.id,
+        "pollster_id": pollster.id,
+    }
+
+
+class TestInjectedIdentity:
+    """The key hook decides what counts as the same poll."""
+
+    def test_the_same_dates_under_another_matchup_are_queued(
+        self, db: Database
+    ) -> None:
+        seeded = _seed_scoped_map(db)
+        db.add_poll(
+            seeded["pollster_id"],
+            seeded["map_id"],
+            date(2026, 8, 10),
+            date(2026, 8, 12),
+            matchup="Paxton (R) vs Talarico (D)",
+            seat_id=seeded["texas_id"],
+        )
+        rows = [
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 8, 10),
+                date(2026, 8, 12),
+                matchup="Paxton (R) vs Talarico (D)",
+                seat_id=seeded["texas_id"],
+            ),
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 8, 10),
+                date(2026, 8, 12),
+                matchup="Paxton (R) vs Crockett (D)",
+                seat_id=seeded["texas_id"],
+            ),
+        ]
+
+        state = _build_scoped_queue(db, rows, cutoff=date(2026, 1, 1))
+
+        assert state.skipped_present == 1
+        assert [item.row.matchup for item in state.items] == [
+            "Paxton (R) vs Crockett (D)"
+        ]
+
+    def test_the_same_dates_in_another_seat_are_queued(self, db: Database) -> None:
+        seeded = _seed_scoped_map(db)
+        db.add_poll(
+            seeded["pollster_id"],
+            seeded["map_id"],
+            date(2026, 8, 10),
+            date(2026, 8, 12),
+            matchup="Ossoff (D) vs Collins (R)",
+            seat_id=seeded["georgia_id"],
+        )
+        rows = [
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 8, 10),
+                date(2026, 8, 12),
+                matchup="Ossoff (D) vs Collins (R)",
+                seat_id=seeded["georgia_id"],
+            ),
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 8, 10),
+                date(2026, 8, 12),
+                matchup="Ossoff (D) vs Collins (R)",
+                seat_id=seeded["texas_id"],
+            ),
+        ]
+
+        state = _build_scoped_queue(db, rows, cutoff=date(2026, 1, 1))
+
+        assert state.skipped_present == 1
+        assert [_scoped(item).seat_id for item in state.items] == [
+            seeded["texas_id"]
+        ]
+
+    def test_the_row_subclass_survives_the_base_typed_field(
+        self, db: Database
+    ) -> None:
+        # QueueItem.row is declared as ScrapedPollRow; the templates and the
+        # per-contest hooks still read the scraper's own columns off it.
+        _seed_scoped_map(db)
+        row = _scoped_row(
+            "emerson_us_senate", date(2026, 8, 1), date(2026, 8, 3), seat_id=None
+        )
+
+        state = _build_scoped_queue(db, [row])
+
+        assert state.items[0].row is row
+        assert isinstance(state.items[0].row, _ScopedRow)
+
+
+class TestInjectedCutoff:
+    """cutoff_fn windows each scope separately; an explicit cutoff overrides it."""
+
+    def test_each_scope_keeps_its_own_window(self, db: Database) -> None:
+        seeded = _seed_scoped_map(db)
+        db.add_poll(
+            seeded["pollster_id"],
+            seeded["map_id"],
+            date(2026, 7, 30),
+            date(2026, 8, 1),
+            matchup="Paxton (R) vs Talarico (D)",
+            seat_id=seeded["texas_id"],
+        )
+        rows = [
+            # Behind Texas's own cutoff: dropped.
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 6, 1),
+                date(2026, 6, 3),
+                matchup="Paxton (R) vs Talarico (D)",
+                seat_id=seeded["texas_id"],
+            ),
+            # Ahead of it: queued.
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 8, 20),
+                date(2026, 8, 22),
+                matchup="Paxton (R) vs Talarico (D)",
+                seat_id=seeded["texas_id"],
+            ),
+            # A quiet race has no stored poll, so nothing of its own is old.
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 1, 5),
+                date(2026, 1, 7),
+                matchup="Ossoff (D) vs Collins (R)",
+                seat_id=seeded["georgia_id"],
+            ),
+        ]
+
+        state = _build_scoped_queue(db, rows)
+
+        # Sorted by the injected key, so Texas (seeded first) leads.
+        assert [item.row.fieldwork_end for item in state.items] == [
+            date(2026, 8, 22),
+            date(2026, 1, 7),
+        ]
+
+    def test_the_reported_cutoff_is_the_weakest_bound_applied(
+        self, db: Database
+    ) -> None:
+        seeded = _seed_scoped_map(db)
+        for seat_id, end in (
+            (seeded["texas_id"], date(2026, 8, 1)),
+            (seeded["georgia_id"], date(2026, 6, 1)),
+        ):
+            db.add_poll(
+                seeded["pollster_id"],
+                seeded["map_id"],
+                end,
+                end,
+                matchup="M",
+                seat_id=seat_id,
+            )
+        rows = [
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 9, 1),
+                date(2026, 9, 2),
+                matchup="M",
+                seat_id=seat_id,
+            )
+            for seat_id in (seeded["texas_id"], seeded["georgia_id"])
+        ]
+
+        state = _build_scoped_queue(db, rows)
+
+        assert state.cutoff == date(2026, 6, 1)
+        assert len(state.items) == 2
+
+    def test_a_scope_with_no_polls_leaves_the_run_uncapped(
+        self, db: Database
+    ) -> None:
+        seeded = _seed_scoped_map(db)
+        db.add_poll(
+            seeded["pollster_id"],
+            seeded["map_id"],
+            date(2026, 8, 1),
+            date(2026, 8, 1),
+            matchup="M",
+            seat_id=seeded["texas_id"],
+        )
+        rows = [
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 9, 1),
+                date(2026, 9, 2),
+                matchup="M",
+                seat_id=seeded["texas_id"],
+            ),
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 9, 1),
+                date(2026, 9, 2),
+                matchup="M",
+                seat_id=seeded["georgia_id"],
+            ),
+        ]
+
+        state = _build_scoped_queue(db, rows)
+
+        assert state.cutoff == NO_CUTOFF
+
+    def test_an_explicit_cutoff_overrides_the_per_scope_one(
+        self, db: Database
+    ) -> None:
+        seeded = _seed_scoped_map(db)
+        db.add_poll(
+            seeded["pollster_id"],
+            seeded["map_id"],
+            date(2026, 7, 30),
+            date(2026, 8, 1),
+            matchup="M",
+            seat_id=seeded["texas_id"],
+        )
+        row = _scoped_row(
+            "emerson_us_senate",
+            date(2026, 6, 1),
+            date(2026, 6, 3),
+            matchup="M",
+            seat_id=seeded["texas_id"],
+        )
+
+        state = _build_scoped_queue(db, [row], cutoff=date(2026, 1, 1))
+
+        assert state.cutoff == date(2026, 1, 1)
+        assert len(state.items) == 1
+
+    def test_the_default_policy_takes_every_row(self, db: Database) -> None:
+        _seed_scoped_map(db)
+        row = _scoped_row("emerson_us_senate", date(2001, 1, 1), date(2001, 1, 2))
+
+        state = build_queue_from_rows(
+            db,
+            [row],
+            map_name=SCOPED_MAP_NAME,
+            key_fn=_scope_key,
+            present=_scope_present,
+            triage=_always_pending,
+            sort_key=_scope_sort_key,
+        )
+
+        assert state.cutoff == NO_CUTOFF
+        assert len(state.items) == 1
+
+
+class TestInjectedSortKey:
+    """The worklist order is the caller's, not the Westminster one."""
+
+    def test_rows_are_ordered_by_the_injected_key(self, db: Database) -> None:
+        seeded = _seed_scoped_map(db)
+        rows = [
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 8, 20),
+                date(2026, 8, 22),
+                matchup="Ossoff (D) vs Collins (R)",
+                seat_id=seeded["georgia_id"],
+            ),
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 9, 1),
+                date(2026, 9, 3),
+                matchup="Paxton (R) vs Talarico (D)",
+                seat_id=seeded["texas_id"],
+            ),
+            _scoped_row(
+                "emerson_us_senate",
+                date(2026, 7, 1),
+                date(2026, 7, 3),
+                matchup="Paxton (R) vs Talarico (D)",
+                seat_id=seeded["texas_id"],
+            ),
+        ]
+
+        state = _build_scoped_queue(db, rows, cutoff=date(2026, 1, 1))
+
+        # Seat id ascending (Texas was seeded first), then the older Texas row —
+        # date order alone would have put Georgia's row in the middle.
+        assert [
+            (_scoped(item).seat_id, item.row.fieldwork_end) for item in state.items
+        ] == [
+            (seeded["texas_id"], date(2026, 7, 3)),
+            (seeded["texas_id"], date(2026, 9, 3)),
+            (seeded["georgia_id"], date(2026, 8, 22)),
+        ]
+
+
+class TestPendingInGroup:
+    """Bulk approval works from the pending items of one group."""
+
+    def _grouped_state(self) -> QueueState:
+        rows = [
+            _scoped_row("a", date(2026, 8, 1), date(2026, 8, 2), seat_id=1),
+            _scoped_row("b", date(2026, 8, 3), date(2026, 8, 4), seat_id=1),
+            _scoped_row("c", date(2026, 8, 5), date(2026, 8, 6), seat_id=2),
+            _scoped_row("d", date(2026, 8, 7), date(2026, 8, 8), seat_id=1),
+        ]
+        return QueueState(
+            items=[QueueItem(row=row) for row in rows], cutoff=NO_CUTOFF
+        )
+
+    def test_only_pending_items_of_that_group_are_returned(self) -> None:
+        state = self._grouped_state()
+        _mark(state.items[1], "imported")
+
+        assert pending_in_group(state, lambda row: row.seat_id, 1) == [0, 3]
+        assert pending_in_group(state, lambda row: row.seat_id, 2) == [2]
+
+    def test_items_before_the_cursor_still_count(self) -> None:
+        state = self._grouped_state()
+        state.index = 2
+
+        assert pending_in_group(state, lambda row: row.seat_id, 1) == [0, 1, 3]
+
+    def test_an_unknown_group_is_empty(self) -> None:
+        assert pending_in_group(self._grouped_state(), lambda row: row.seat_id, 9) == []
+
+
+class TestCursorMatches:
+    """The hidden expected_index guard, lifted out of the route."""
+
+    def test_the_rendered_position_matches(self) -> None:
+        assert cursor_matches(QueueState(items=[], index=3, cutoff=NO_CUTOFF), "3")
+
+    def test_a_stale_position_does_not(self) -> None:
+        assert not cursor_matches(QueueState(items=[], index=3, cutoff=NO_CUTOFF), "2")
+
+    def test_a_non_numeric_value_does_not(self) -> None:
+        assert not cursor_matches(QueueState(items=[], index=0, cutoff=NO_CUTOFF), "up")
+
+    def test_a_blank_value_does_not(self) -> None:
+        assert not cursor_matches(QueueState(items=[], index=0, cutoff=NO_CUTOFF), "")
+
+
+class TestApplySkipOrRetry:
+    """Retry re-presents the item; anything else gives up on it."""
+
+    def _state(self) -> QueueState:
+        rows = [
+            _scoped_row("a", date(2026, 8, 1), date(2026, 8, 2)),
+            _scoped_row("b", date(2026, 8, 3), date(2026, 8, 4)),
+        ]
+        return QueueState(
+            items=[QueueItem(row=row) for row in rows], cutoff=NO_CUTOFF
+        )
+
+    def test_retry_clears_the_failure_and_holds_the_cursor(self) -> None:
+        state = self._state()
+        _mark(state.items[0], "failed", detail="boom")
+        state.items[0].plan = object()
+        state.items[0].warnings = ["stale"]
+
+        apply_skip_or_retry(state, "retry")
+
+        assert state.index == 0
+        assert state.items[0].status == "pending"
+        assert state.items[0].detail == ""
+        assert state.items[0].plan is None
+        assert state.items[0].warnings == []
+
+    def test_skipping_advances_the_cursor(self) -> None:
+        state = self._state()
+
+        apply_skip_or_retry(state, "skip")
+
+        assert state.index == 1
+        assert state.items[0].status == "skipped"
+        assert state.items[0].detail == "Skipped"
+
+    def test_skipping_a_failed_item_keeps_its_error(self) -> None:
+        state = self._state()
+        _mark(state.items[0], "failed", detail="boom")
+
+        apply_skip_or_retry(state, "")
+
+        assert state.items[0].status == "skipped"
+        assert state.items[0].detail == "Skipped after failure: boom"
+        assert state.index == 1
+
+    def test_a_finished_queue_is_left_alone(self) -> None:
+        state = self._state()
+        state.index = 2
+
+        apply_skip_or_retry(state, "skip")
+
+        assert [item.status for item in state.items] == ["pending", "pending"]
+
+
+class TestCutoffLabel:
+    """The summary's window phrase, including the per-scope note."""
+
+    def test_the_sentinel_reads_as_all_polls(self) -> None:
+        assert cutoff_label(QueueState(items=[], cutoff=NO_CUTOFF)) == "all polls"
+
+    def test_a_date_is_spelled_out(self) -> None:
+        state = QueueState(items=[], cutoff=date(2026, 7, 31))
+
+        assert cutoff_label(state) == "polls ending on or after 2026-07-31"
+
+    def test_the_note_qualifies_the_sentinel(self) -> None:
+        state = QueueState(
+            items=[], cutoff=NO_CUTOFF, cutoff_note="one cutoff per race"
+        )
+
+        assert cutoff_label(state) == "all polls (one cutoff per race)"
+
+    def test_the_note_qualifies_a_date(self) -> None:
+        state = QueueState(
+            items=[], cutoff=date(2026, 6, 1), cutoff_note="one cutoff per race"
+        )
+
+        assert cutoff_label(state) == (
+            "polls ending on or after 2026-06-01 (one cutoff per race)"
+        )
+
+    def test_a_built_queue_carries_the_note(self, db: Database) -> None:
+        _seed_scoped_map(db)
+        row = _scoped_row("emerson_us_senate", date(2026, 8, 1), date(2026, 8, 2))
+
+        state = _build_scoped_queue(db, [row], cutoff_note="one cutoff per race")
+
+        assert cutoff_label(state) == "all polls (one cutoff per race)"
+
+
+class TestDescribeImportResult:
+    """The detail line a committed item carries into the summary."""
+
+    def _result(
+        self, *, inserted: int = 0, replaced: int = 0, skipped: bool = False
+    ) -> PollImportResult:
+        return PollImportResult(
+            created_pollster=False,
+            created_poll=True,
+            poll_id=77,
+            inserted_rows=inserted,
+            replaced_rows=replaced,
+            skipped_existing_rows=skipped,
+        )
+
+    def test_inserted_rows_are_counted(self) -> None:
+        assert (
+            describe_import_result(self._result(inserted=104))
+            == "Poll #77, 104 rows inserted"
+        )
+
+    def test_replaced_rows_are_appended(self) -> None:
+        assert describe_import_result(self._result(inserted=0, replaced=104)) == (
+            "Poll #77, 0 rows inserted, 104 rows replaced"
+        )
+
+    def test_an_untouched_poll_says_so(self) -> None:
+        assert describe_import_result(self._result(skipped=True)) == (
+            "Poll #77 already had rows, so nothing was inserted"
+        )

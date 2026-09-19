@@ -617,3 +617,98 @@ describe('SenatePredict (seats-up projection + full-chamber composition)', () =>
     expect(alpha.winner).toBe('democrat');
   });
 });
+
+describe('SenatePredict special elections', () => {
+  const config = {
+    modelledPartyKeys: ['democrat', 'republican'],
+    aggregate: { key: 'national', label: 'National', excludeRegions: [] },
+    gridSections: [{ id: 'us', columnKeys: ['democrat', 'republican'], containsAggregate: true }],
+    tabs: [{ key: 'seatsup', label: 'Seats up' }, { key: 'chamber', label: 'Full Senate' }],
+  };
+
+  // Regular Class-2 baseline (the 2020 cycle): one seat, in its own region so the special's
+  // seat can't be confused with it by a region-wide swing.
+  const buildBaseSeats = () => [
+    new Seat({ seat: 'Alpha', region: 'east', winner: 'republican', votes: { republican: 600, democrat: 400 } }),
+  ];
+
+  // The special's baseline row comes from a different election (the 2022 cycle) — here a
+  // heavily Republican Ohio, which pulls the 'west' region baseline with it once added.
+  const buildSpecialSeats = () => [
+    new Seat({ seat: 'Ohio', region: 'west', winner: 'republican', votes: { republican: 700, democrat: 300 } }),
+  ];
+  const specials = [{ seat: 'Ohio', class: 3, year: 2026, baselineElectionId: '2022-us-senate' }];
+
+  // Chamber snapshot: Ohio's contested seat is the Class-3 one (the special); Alabama's
+  // Class-3 senator is on the regular cycle and must not be touched by the projection.
+  const buildChamberSeats = () => [
+    new Seat({ seat: 'Ohio', region: 'west', winner: 'republican', members: [
+      { party: 'republican', name: 'Ohio R3', class: 3 },
+      { party: 'republican', name: 'Ohio R1', class: 1 },
+    ] }),
+    new Seat({ seat: 'Alabama', region: 'west', winner: 'republican', members: [
+      { party: 'republican', name: 'Alabama R3', class: 3 },
+      { party: 'republican', name: 'Alabama R2', class: 2 },
+    ] }),
+  ];
+
+  beforeEach(() => {
+    state.comparisonElectionData = { currentSeats: buildBaseSeats() };
+    state.currentRegionLabelsByKey = new Map([['east', 'East'], ['west', 'West']]);
+  });
+
+  it('adds the special seat to the seats-up projection and its comparison', () => {
+    const model = new SenatePredict(2026, config);
+    model.setSpecialSeats(buildSpecialSeats(), specials);
+    expect(model.project().map((s) => s.seat).sort()).toEqual(['Alpha', 'Ohio']);
+    expect(model.comparisonSeatsForView().map((s) => s.seat).sort()).toEqual(['Alpha', 'Ohio']);
+  });
+
+  it('recomputes the ballot baseline over the enlarged base', () => {
+    const model = new SenatePredict(2026, config);
+    expect(model.currentBaselineMap().has('west')).toBe(false);
+    model.setSpecialSeats(buildSpecialSeats(), specials);
+    // The special's region now has baseline shares, and the national aggregate has absorbed it
+    // (1000 R600/D400 + 1000 R700/D300 -> R65/D35).
+    expect(model.currentBaselineMap().get('west').get('republican')).toBe(70);
+    expect(model.currentBaselineMap().get('national').get('republican')).toBe(65);
+  });
+
+  it('does not add a special seat already present in the projection base', () => {
+    const model = new SenatePredict(2026, config);
+    model.setSpecialSeats(buildBaseSeats(), [{ seat: 'Alpha', class: 3, year: 2026 }]);
+    expect(model.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+  });
+
+  it('chamber view replaces the special state class-3 member but not another state\'s', () => {
+    const model = new SenatePredict(2026, config);
+    model.setChamberSeats(buildChamberSeats());
+    model.setSpecialSeats(buildSpecialSeats(), specials);
+    model.setActiveTab('chamber');
+    // Swing nationally to the Democrats (baseline R65/D35 over the enlarged base): the
+    // aggregate swing falls through to every region, flipping Ohio's special seat.
+    model.setShare('national', 'democrat', 60);
+    model.setShare('national', 'republican', 40);
+    const chamber = model.project();
+
+    const ohio = chamber.find((s) => s.seat === 'Ohio');
+    expect(ohio.members.find((m) => m.class === 3).party).toBe('democrat');
+    expect(ohio.members.find((m) => m.class === 1).party).toBe('republican');
+    expect(ohio.winner).toBe('split');
+
+    // Alabama is not a special state, so its Class-3 senator carries over untouched — only a
+    // Class-2 member there could be replaced, and it has no projected seat this cycle.
+    const alabama = chamber.find((s) => s.seat === 'Alabama');
+    expect(alabama.members.map((m) => m.party)).toEqual(['republican', 'republican']);
+  });
+
+  it('is inert when the special baseline failed to load (no seats handed in)', () => {
+    const model = new SenatePredict(2026, config);
+    model.setChamberSeats(buildChamberSeats());
+    model.setSpecialSeats([], specials);
+    model.setActiveTab('chamber');
+    expect(model.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+    const ohio = model.project().find((s) => s.seat === 'Ohio');
+    expect(ohio.members.map((m) => m.name)).toEqual(['Ohio R3', 'Ohio R1']);
+  });
+});

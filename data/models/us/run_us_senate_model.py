@@ -42,6 +42,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _common import UsModelSpec, main_for_spec
 
+# Importable because ``_common`` (above) puts ``data/`` on the path, as it does for
+# its own ``scripts.export.naming`` import. The export's parser is the one rule
+# for which shell specials count, so the model reuses it rather than a copy.
+from scripts.export.manifest import senate_next_election_year, senate_specials_for_year
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 US_DATA_DIR = REPO_ROOT / "uselectionmaps" / "data"
 RESULTS_DIR = US_DATA_DIR / "results"
@@ -51,7 +56,6 @@ MAP_MODES_SHELL_JSON = US_DATA_DIR / "map-modes-shell.json"
 
 # ``mapModes`` is keyed by database map id; 23 is "US Senate 2024".
 SENATE_MAP_MODE_KEY = "23"
-SENATE_PARLIAMENT_KEY = "us_senate"
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,8 +111,10 @@ def senate_special_elections(
 
     A missing file, unreadable JSON or a missing key all mean "no specials": the
     regular Class-2 field still projects, exactly as it did before specials existed.
-    Entries without a seat name or a baseline id are skipped for the same reason —
-    a half-written shell entry must not take the whole runner down at import time.
+    Malformed entries are skipped for the same reason — a half-written shell entry
+    must not take the whole runner down at import time — by the export's own
+    :func:`~scripts.export.manifest.senate_specials_for_year`, so the model and the
+    exported manifest always agree on the field.
     """
     try:
         payload = json.loads(shell_path.read_text(encoding="utf-8"))
@@ -117,37 +123,23 @@ def senate_special_elections(
     if not isinstance(payload, dict):
         return ()
 
-    features = payload.get("parliamentFeatures")
     map_modes = payload.get("mapModes")
-    if not isinstance(features, dict) or not isinstance(map_modes, dict):
-        return ()
-    senate_features = features.get(SENATE_PARLIAMENT_KEY)
-    senate_mode = map_modes.get(SENATE_MAP_MODE_KEY)
-    if not isinstance(senate_features, dict) or not isinstance(senate_mode, dict):
+    senate_mode = map_modes.get(SENATE_MAP_MODE_KEY) if isinstance(map_modes, dict) else None
+    next_year = senate_next_election_year(payload.get("parliamentFeatures"))
+    if not isinstance(senate_mode, dict) or next_year is None:
         return ()
 
-    next_year = senate_features.get("nextElectionYear")
-    entries = senate_mode.get("senateSpecialElections")
-    if not isinstance(next_year, int) or not isinstance(entries, list):
-        return ()
-
-    specials: list[SenateSpecial] = []
-    for entry in entries:
-        if not isinstance(entry, dict) or entry.get("year") != next_year:
-            continue
-        seat = str(entry.get("seat") or "")
-        baseline_election_id = str(entry.get("baselineElectionId") or "")
-        if not seat or not baseline_election_id:
-            continue
-        specials.append(
-            SenateSpecial(
-                seat=seat,
-                seat_class=int(entry.get("class") or 0),
-                year=next_year,
-                baseline_election_id=baseline_election_id,
-            )
+    return tuple(
+        SenateSpecial(
+            seat=entry["seat"],
+            seat_class=entry["class"],
+            year=next_year,
+            baseline_election_id=entry["baselineElectionId"],
         )
-    return tuple(specials)
+        for entry in senate_specials_for_year(
+            senate_mode.get("senateSpecialElections"), next_year
+        )
+    )
 
 
 def senate_field_allowlist(

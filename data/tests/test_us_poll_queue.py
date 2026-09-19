@@ -8,6 +8,7 @@ subprocess.
 
 from __future__ import annotations
 
+import dataclasses
 import subprocess
 import threading
 from collections.abc import Generator
@@ -58,6 +59,8 @@ from polls.importers.us.us_wikipedia_polls import (
     US_CONTESTS_BY_SLUG,
     CollapsedOnlyRace,
     EmptyTable,
+    NoMatchupTable,
+    OversizedTable,
     UnmatchedSeat,
     UsContest,
     UsPollIndex,
@@ -1870,6 +1873,54 @@ class TestFinishRoute:
         assert "Summary rows skipped:</strong> 1" in body
         assert "no seat named &#39;Guam&#39; on the map" in body
         assert "District 5 › General election › Polling" in body
+
+    def test_the_summary_shows_no_matchup_and_oversized_tables(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        index = dataclasses.replace(
+            _index(),
+            no_matchup_tables=(
+                NoMatchupTable(
+                    contest="senate_races",
+                    page_url="https://en.wikipedia.org/wiki/Iowa",
+                    heading_path="General election › Polling › Hinson",
+                    seat_name="Iowa",
+                    dropped_rows=5,
+                ),
+            ),
+            oversized_tables=(
+                OversizedTable(
+                    contest="house_districts",
+                    page_url="https://en.wikipedia.org/wiki/Huge",
+                    heading_path="District 7 › Polling",
+                ),
+            ),
+        )
+        token = _open_queue(client, monkeypatch, index=index)
+
+        body = _body(client, f"/us/import/{token}/finish")
+
+        assert "Tables with no matchup (1)" in body
+        assert "General election › Polling › Hinson" in body
+        assert "Iowa</td>" in body
+        assert "<td>5</td>" in body
+        assert "Oversized tables (1)" in body
+        assert "https://en.wikipedia.org/wiki/Huge" in body
+        assert "[District 7 › Polling]" in body
+
+    def test_the_summary_says_none_without_those_diagnostics(
+        self,
+        client: FlaskClient[Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        token = _open_queue(client, monkeypatch)
+
+        body = _body(client, f"/us/import/{token}/finish")
+
+        assert "Tables with no matchup (0)" in body
+        assert "Oversized tables (0)" in body
 
 
 _TOKEN_ROUTES = [

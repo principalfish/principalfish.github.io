@@ -25,6 +25,8 @@ from models import ElectionType
 from console import create_app
 from console import paths as console_paths
 from console.services.us_models import (
+    REBUILD_TIMEOUT_SECONDS,
+    STEP_TIMEOUT_SECONDS,
     US_CHAMBERS_BY_SLUG,
     UsModelRun,
     run_us_chamber_and_export,
@@ -1138,3 +1140,128 @@ class TestRunUsChamberAndExport:
 
         assert runner.calls == [("run_us_senate_model.py", ("--since-days-back", "60"))]
         assert run.return_code == 1
+
+
+# ── Rebuild timeouts ──────────────────────────────────────────────────────────
+
+
+class _TimeoutRecorder:
+    """Runner that records each step's timeout and can fail one script."""
+
+    def __init__(self, *, fail: str | None = None, error: Exception | None = None) -> None:
+        self.timeouts: list[tuple[str, int]] = []
+        self._fail = fail
+        self._error = error
+
+    def __call__(
+        self, script: Path, *args: str, timeout: int
+    ) -> subprocess.CompletedProcess[str]:
+        self.timeouts.append((script.name, timeout))
+        if script.name == self._fail and self._error is not None:
+            raise self._error
+        return subprocess.CompletedProcess(
+            args=[str(script), *args], returncode=0, stdout="", stderr=""
+        )
+
+
+class TestRebuildTimeout:
+    def test_the_rebuild_timeout_is_much_larger_than_a_step(self) -> None:
+        assert REBUILD_TIMEOUT_SECONDS >= 10 * STEP_TIMEOUT_SECONDS
+
+    def test_only_rebuilt_chambers_get_the_rebuild_timeout(self, db: Database) -> None:
+        map_id = _seed_president_map(db)
+        db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
+        runner = _TimeoutRecorder()
+
+        run_us_models_and_export(db, runner=runner, rebuild={"senate"})
+
+        assert runner.timeouts == [
+            ("run_us_house_model.py", STEP_TIMEOUT_SECONDS),
+            ("run_us_presidential_model.py", STEP_TIMEOUT_SECONDS),
+            ("run_us_senate_model.py", REBUILD_TIMEOUT_SECONDS),
+            ("export_elections.py", STEP_TIMEOUT_SECONDS),
+        ]
+
+    def test_a_timed_out_step_propagates_from_the_service(self, db: Database) -> None:
+        runner = _TimeoutRecorder(
+            fail="run_us_senate_model.py",
+            error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
+        )
+
+        with pytest.raises(subprocess.TimeoutExpired):
+            run_us_chamber_and_export(
+                db, US_CHAMBERS_BY_SLUG["senate"], runner=runner, rebuild_history=True
+            )
+
+
+class TestRebuildRouteFailure:
+    """A rebuild whose subprocess dies renders a result page, not a 500."""
+
+    @pytest.fixture(autouse=True)
+    def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+
+    @pytest.mark.parametrize(
+        ("error", "error_name", "partial"),
+        [
+            (
+                subprocess.TimeoutExpired(
+                    ["python", "run_us_presidential_model.py"],
+                    3600,
+                    output=b"REBUILD-HISTORY from=2026-08-01 to=2026-09-10\n",
+                ),
+                "TimeoutExpired",
+                "REBUILD-HISTORY from=2026-08-01 to=2026-09-10",
+            ),
+            (FileNotFoundError(2, "No such file or directory"), "FileNotFoundError", None),
+        ],
+    )
+    def test_the_page_says_history_may_be_partial(
+        self,
+        app: Flask,
+        db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        error: Exception,
+        error_name: str,
+        partial: str | None,
+    ) -> None:
+        _seed_president_matchups(db)
+        runner = _TimeoutRecorder(fail="run_us_presidential_model.py", error=error)
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        response = app.test_client().post(
+            "/us/president/matchup",
+            data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
+        )
+
+        assert response.status_code == 200
+        body = html.unescape(response.get_data(as_text=True))
+        assert "Rebuild US President History" in body
+        assert "trend history may be partial" in body
+        assert "Re-run the rebuild" in body
+        assert error_name in body
+        if partial is not None:
+            assert partial in body
+        # The export never runs over a half-rebuilt history.
+        assert [name for name, _timeout in runner.timeouts] == ["run_us_presidential_model.py"]
+        assert 'href="/us/president/matchup"' in body
+
+    def test_a_race_rebuild_timeout_is_caught_too(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seeded = _seed_senate_races(db)
+        runner = _TimeoutRecorder(
+            fail="run_us_senate_model.py",
+            error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
+        )
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        response = app.test_client().post(
+            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+        )
+
+        assert response.status_code == 200
+        body = html.unescape(response.get_data(as_text=True))
+        assert "Rebuild US Senate History" in body
+        assert "trend history may be partial" in body

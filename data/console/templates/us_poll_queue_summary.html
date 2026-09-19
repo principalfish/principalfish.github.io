@@ -242,5 +242,50 @@
     {% else %}
       <p>None.</p>
     {% endif %}
+
+    <h4>Tables with no matchup ({{ index.no_matchup_tables|length }})</h4>
+    {% if index.no_matchup_tables %}
+      <p>These tables name fewer than two candidates, so their polls could never be used and were not queued.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Page</th>
+              <th scope="col">Section</th>
+              <th scope="col">Race</th>
+              <th scope="col">Rows dropped</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for table in index.no_matchup_tables %}
+              <tr>
+                <td><a href="{{ table.page_url }}" target="_blank" rel="noopener">{{ table.page_url }}</a></td>
+                <td>{{ table.heading_path }}</td>
+                <td>{{ contest_labels.get(table.contest, table.contest) }} · {{ table.seat_name or "National" }}</td>
+                <td>{{ table.dropped_rows }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
+
+    <h4>Oversized tables ({{ index.oversized_tables|length }})</h4>
+    {% if index.oversized_tables %}
+      <p>Too large to read safely, so skipped unread.</p>
+      <ul>
+        {% for table in index.oversized_tables %}
+          <li>
+            {{ contest_labels.get(table.contest, table.contest) }} ·
+            <a href="{{ table.page_url }}" target="_blank" rel="noopener">{{ table.page_url }}</a>
+            [{{ table.heading_path }}]
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>None.</p>
+    {% endif %}
   </section>
 {% endblock %}

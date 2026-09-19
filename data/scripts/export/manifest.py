@@ -124,7 +124,7 @@ def build_map_modes_with_regions(
     """
     if current_year is None:
         current_year = date.today().year
-    special_year = _senate_next_election_year(parliament_features)
+    special_year = senate_next_election_year(parliament_features)
     merged: dict[str, Any] = {}
     for map_id_str, mode in map_modes.items():
         entry = dict(mode)
@@ -156,13 +156,56 @@ def _is_int(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def _senate_next_election_year(parliament_features: dict[str, Any]) -> int | None:
-    """Return ``parliamentFeatures.us_senate.nextElectionYear``, or ``None`` when unset."""
+def senate_next_election_year(parliament_features: object) -> int | None:
+    """Return ``parliamentFeatures.us_senate.nextElectionYear``, or ``None`` when unset.
+
+    Shared with the Senate model (``models/us/run_us_senate_model.py``), so both read
+    the cycle the same way — a non-integer (``2026.0``, ``true``) counts as unset.
+    """
+    if not isinstance(parliament_features, dict):
+        return None
     senate = parliament_features.get(SENATE_PARLIAMENT_KEY)
     if not isinstance(senate, dict):
         return None
     year = senate.get("nextElectionYear")
     return year if _is_int(year) else None
+
+
+def senate_specials_for_year(entries: object, year: int) -> list[dict[str, Any]]:
+    """Keep the well-formed ``senateSpecialElections`` entries held in ``year``.
+
+    The one parser for the shell's specials, shared by the export and the Senate
+    model so they cannot disagree about which entries count. An entry is skipped,
+    rather than taking its caller down, when it is not an object, or has a
+    non-integer ``year`` (``2026.0`` included) or ``class``, or no non-blank string
+    ``seat`` or ``baselineElectionId`` — the front end needs all four to find the
+    member the special replaces and to load its baseline, and the model needs the
+    seat and baseline to project it.
+
+    Args:
+        entries: The shell's ``senateSpecialElections`` value; anything but a list
+            keeps nothing.
+        year: The cycle to keep.
+
+    Returns:
+        Copies of the matching entries, in shell order.
+    """
+    if not isinstance(entries, list):
+        return []
+    kept: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        entry_year = entry.get("year")
+        if not _is_int(entry_year) or entry_year != year or not _is_int(entry.get("class")):
+            continue
+        if not all(
+            isinstance(entry.get(key), str) and entry[key].strip()
+            for key in ("seat", "baselineElectionId")
+        ):
+            continue
+        kept.append(dict(entry))
+    return kept
 
 
 def _live_senate_specials(
@@ -176,10 +219,8 @@ def _live_senate_specials(
     model nor by front-end Predict. A next-election year that has already passed keeps
     nothing, so a stale shell cannot resurrect a finished cycle.
 
-    Entries are parsed defensively: one that is not an object, or has a non-integer
-    ``year``, a non-integer ``class``, or no ``seat`` or ``baselineElectionId``, is
-    skipped rather than taking the export down. The front end needs all four to find the
-    member the special replaces and to load its baseline.
+    Entries are parsed defensively by :func:`senate_specials_for_year`, so a malformed
+    one is skipped rather than taking the export down.
 
     Args:
         entries: The shell's ``senateSpecialElections`` value.
@@ -189,22 +230,9 @@ def _live_senate_specials(
     Returns:
         Copies of the live entries, in shell order.
     """
-    if next_year is None or next_year < current_year or not isinstance(entries, list):
+    if next_year is None or next_year < current_year:
         return []
-    live: list[dict[str, Any]] = []
-    for entry in entries:
-        if not isinstance(entry, dict):
-            continue
-        year = entry.get("year")
-        if not _is_int(year) or year != next_year or not _is_int(entry.get("class")):
-            continue
-        if not all(
-            isinstance(entry.get(key), str) and entry[key].strip()
-            for key in ("seat", "baselineElectionId")
-        ):
-            continue
-        live.append(dict(entry))
-    return live
+    return senate_specials_for_year(entries, next_year)
 
 
 def _senate_class_next_election(cycle: dict[str, Any], current_year: int) -> dict[str, int]:

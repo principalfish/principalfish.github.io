@@ -36,6 +36,16 @@ from console.services.runner import run_python_script
 
 STEP_TIMEOUT_SECONDS = 300
 
+# A rebuild recomputes one projection per day of trend history, and the runner
+# deletes the old points before it starts, so a timeout there leaves history
+# half-written rather than merely stale. The shipped President series already
+# spans ~21 months (December 2024 onwards) and only grows; at an estimated few
+# hundred milliseconds to a couple of seconds per day (each day re-reads the
+# map's polls and writes a full projection), that is several minutes today and
+# past 300 s within the cycle. An hour covers a two-year daily series at nearly
+# five seconds a day, and still bounds a genuinely hung runner.
+REBUILD_TIMEOUT_SECONDS = 3600
+
 REBUILD_HISTORY_FLAG = "--rebuild-history"
 
 EXPORT_STEP_LABEL = "Export elections to static data files"
@@ -208,9 +218,10 @@ def run_us_models_and_export(
             shelling out.
         rebuild: Chamber slugs whose whole trend history should be recomputed.
             Unknown slugs are ignored. Each named chamber's runner gets its
-            :attr:`UsChamber.rebuild_flag`; chambers outside the set are run
-            exactly as before, so an unsupported flag can only affect a run the
-            caller explicitly asked to rebuild.
+            :attr:`UsChamber.rebuild_flag` and :data:`REBUILD_TIMEOUT_SECONDS`;
+            chambers outside the set are run exactly as before, so an
+            unsupported flag can only affect a run the caller explicitly asked
+            to rebuild.
 
     Returns:
         The combined :class:`UsModelRun`.
@@ -265,13 +276,20 @@ def _run_chambers_and_export(
     Returns:
         The combined :class:`UsModelRun`; see :func:`run_us_models_and_export`
         for the skip and failure rules.
+
+    Raises:
+        subprocess.SubprocessError: A step timed out (``TimeoutExpired``) or
+            otherwise failed to run; propagated from ``runner``.
+        OSError: The interpreter could not be started.
     """
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
     skipped: list[str] = []
 
-    def run_step(label: str, script: Path, args: tuple[str, ...]) -> int:
-        result = runner(script, *args, timeout=STEP_TIMEOUT_SECONDS)
+    def run_step(
+        label: str, script: Path, args: tuple[str, ...], *, timeout: int = STEP_TIMEOUT_SECONDS
+    ) -> int:
+        result = runner(script, *args, timeout=timeout)
         stdout_parts.append(f"=== {label} ===\n{result.stdout}")
         if result.stderr:
             stderr_parts.append(f"=== {label} ===\n{result.stderr}")
@@ -285,10 +303,14 @@ def _run_chambers_and_export(
             continue
 
         args = chamber.model_args
+        timeout = STEP_TIMEOUT_SECONDS
         if chamber.slug in rebuild:
             args = (*args, chamber.rebuild_flag)
+            timeout = REBUILD_TIMEOUT_SECONDS
 
-        return_code = run_step(chamber.model_step_label, chamber.model_script, args)
+        return_code = run_step(
+            chamber.model_step_label, chamber.model_script, args, timeout=timeout
+        )
         if return_code != 0:
             break
     else:

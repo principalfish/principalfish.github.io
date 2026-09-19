@@ -16,6 +16,7 @@ endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_route
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -51,6 +52,14 @@ from console.services.us_models import (
 )
 
 __all__ = ["US_CHAMBERS", "UsChamber", "bp"]
+
+# Shown when a rebuild's subprocess dies part-way. The runner deletes the old
+# points before recomputing them, so the history on disk may now be partial.
+REBUILD_INTERRUPTED_NOTE = (
+    "The rebuild did not finish, so this chamber's trend history may be partial: "
+    "the runner clears the old points before recomputing them. Re-run the rebuild "
+    "to restore it; the export was not run."
+)
 
 bp = Blueprint("us", __name__)
 
@@ -237,7 +246,8 @@ def _rebuild_history(
     """Rerun one chamber's model over its whole trend history, then export.
 
     ``run_python_script`` is looked up on this module at call time, so tests
-    can monkeypatch it.
+    can monkeypatch it. A step that times out or cannot be started renders a
+    failed result saying the history may be partial, instead of a 500.
 
     Args:
         db: Active Database instance.
@@ -248,20 +258,43 @@ def _rebuild_history(
     Returns:
         The rendered command result.
     """
-    run = run_us_chamber_and_export(
-        db, chamber, runner=run_python_script, rebuild_history=True
-    )
     command_args = " ".join((*chamber.model_args, chamber.rebuild_flag))
-    return render_command_result(
-        title=f"Rebuild {chamber.label} History",
-        command=f"{chamber.model_script.name} {command_args} → {EXPORT_STEP_LABEL}",
-        stdout=run.stdout,
-        stderr=run.stderr,
-        return_code=run.return_code,
-        back_endpoint=back_endpoint,
-        back_label="Back to matchups",
-        back_values=back_values,
-    )
+
+    def result_page(*, stdout: str, stderr: str, return_code: int) -> ResponseReturnValue:
+        return render_command_result(
+            title=f"Rebuild {chamber.label} History",
+            command=f"{chamber.model_script.name} {command_args} → {EXPORT_STEP_LABEL}",
+            stdout=stdout,
+            stderr=stderr,
+            return_code=return_code,
+            back_endpoint=back_endpoint,
+            back_label="Back to matchups",
+            back_values=back_values,
+        )
+
+    try:
+        run = run_us_chamber_and_export(
+            db, chamber, runner=run_python_script, rebuild_history=True
+        )
+    except (subprocess.SubprocessError, OSError) as err:
+        partial_output = _output_text(getattr(err, "stdout", None))
+        return result_page(
+            stdout="\n".join(filter(None, (REBUILD_INTERRUPTED_NOTE, partial_output))),
+            stderr=f"{type(err).__name__}: {err}",
+            return_code=1,
+        )
+    return result_page(stdout=run.stdout, stderr=run.stderr, return_code=run.return_code)
+
+
+def _output_text(output: str | bytes | None) -> str:
+    """A subprocess error's captured output as text.
+
+    ``TimeoutExpired`` carries whatever the step printed before it was killed —
+    as bytes on POSIX even when the run asked for text.
+    """
+    if isinstance(output, bytes):
+        return output.decode("utf-8", errors="replace")
+    return output or ""
 
 
 def _register_chamber_routes(chamber: UsChamber) -> None:

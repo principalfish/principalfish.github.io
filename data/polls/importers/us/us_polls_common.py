@@ -929,6 +929,35 @@ def matchup_label(columns: Sequence[CandidateColumn]) -> str | None:
     return " vs ".join(parts)
 
 
+# One ``"{name} ({letter})"`` part of a :func:`matchup_label`; the letter is the
+# last parenthesised group, so a name holding its own brackets still parses.
+_MATCHUP_PART_LETTER_RE = re.compile(r"\(([^()]*)\)\s*$")
+
+
+def matchup_stored_candidate_count(label: str) -> int:
+    """How many candidate rows a complete poll of this matchup stores.
+
+    The inverse of :func:`matchup_label`, kept beside it so the two cannot drift:
+    the label is the only record of which candidates a poll's table named, since
+    a blank cell stores no row at all. Only candidates with a suffix
+    :data:`PARTY_SUFFIXES` knows are counted, because an unrecognised suffix's
+    column is never imported — every poll of that matchup lacks it alike, which
+    is not the same as one poll leaving a known candidate blank.
+
+    Args:
+        label: A matchup label as :func:`matchup_label` builds it.
+
+    Returns:
+        The number of parts whose party letter is a known suffix.
+    """
+    count = 0
+    for part in label.split(" vs "):
+        match = _MATCHUP_PART_LETTER_RE.search(part)
+        if match is not None and match.group(1).strip().upper() in PARTY_SUFFIXES:
+            count += 1
+    return count
+
+
 def clean_pollster_label(text: str) -> tuple[str, tuple[str, ...]]:
     """Split a pollster cell into its name and its partisan sponsor tags.
 

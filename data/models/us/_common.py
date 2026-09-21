@@ -2355,7 +2355,11 @@ def rebuild_window(
 
     Returns:
         The inclusive range to recompute, or ``None`` when nothing qualifies —
-        an empty series, or one lying entirely outside the poll window.
+        an empty series, or one lying entirely outside the poll window. The two
+        are not the same thing and this function does not try to distinguish
+        them: it stays pure, and :func:`_rebuild_history` (which knows the poll
+        bounds it passed in) decides that an empty series is left alone while a
+        series outside the poll window is rebuilt over the poll window instead.
     """
     dates = sorted(existing_dates)
     if not dates:
@@ -2520,7 +2524,9 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
         help=(
             "Before the normal run, recompute every date already in the trend series. "
             "Use after a change that moves the whole history — a new tracked matchup, "
-            "a seat baseline override, or the Senate specials joining the field"
+            "a seat baseline override, or the Senate specials joining the field. "
+            "It picks its own range and as-of date, so it cannot be combined with "
+            "--start-date/--end-date or --as-of-date/--as-of-days-back"
         ),
     )
     # Seat-poll blending
@@ -2591,6 +2597,14 @@ def _rebuild_history(
     backwards: switching the President from a matchup polled to 09-10 to one last
     polled on 08-20 would otherwise leave 08-21..09-10 on the old matchup, and no
     later daily run would ever revisit them.
+
+    The window is therefore chosen *before* anything is dropped: dropping first
+    would delete a series lying wholly outside the poll window and then rebuild
+    nothing in its place. :func:`rebuild_window` returns ``None`` for two
+    different reasons and this is where they are told apart — an empty series (or
+    one with no poll to anchor it) really has nothing to rebuild, while a series
+    wholly outside the poll window is replaced by the poll window itself,
+    ``[first_poll, as_of]``, which is the range a fresh series would have.
     """
     if cfg.dry_run:
         print("REBUILD-HISTORY skipped for dry-run mode")
@@ -2598,14 +2612,17 @@ def _rebuild_history(
 
     sqlite_path = database_file(db)
     existing = existing_trend_dates(spec, sqlite_path)
-    _drop_points_outside(
-        spec, existing, keep_from=first_poll, keep_to=cfg.as_of_date, sqlite_path=sqlite_path
-    )
 
     window = rebuild_window(existing, first_poll, cfg.as_of_date)
     if window is None:
-        print("REBUILD-HISTORY nothing to rebuild")
-        return
+        if not existing or first_poll is None or first_poll > cfg.as_of_date:
+            print("REBUILD-HISTORY nothing to rebuild")
+            return
+        window = (first_poll, cfg.as_of_date)
+
+    _drop_points_outside(
+        spec, existing, keep_from=first_poll, keep_to=cfg.as_of_date, sqlite_path=sqlite_path
+    )
 
     start_date, end_date = window
     print(f"REBUILD-HISTORY from={start_date.isoformat()} to={end_date.isoformat()}")
@@ -2676,17 +2693,31 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     matchup and none is set — the President with no chosen head-to-head. Nothing
     is written in that case: the scope is resolved before any run.
 
-    ``--rebuild-history`` with ``--start-date`` / ``--end-date`` is a usage error
-    (exit 2 via ``parser.error``) rather than a backfill that silently ignores
-    the rebuild.
+    ``--rebuild-history`` with any flag that would dictate the range is a usage
+    error (exit 2 via ``parser.error``) rather than a run that silently
+    contradicts itself: ``--start-date`` / ``--end-date`` would ignore the
+    rebuild, and an explicit ``--as-of-date`` / ``--as-of-days-back`` in the past
+    would delete every point above it (the as-of cap only ever lowers the date,
+    so a rebuild has no way to put them back).
     """
     parser = build_arg_parser(spec)
     args = parser.parse_args()
-    if args.rebuild_history and (args.start_date or args.end_date):
-        parser.error(
-            "--rebuild-history cannot be combined with --start-date/--end-date; "
-            "a rebuild picks its own range from the existing trend series"
+    if args.rebuild_history:
+        # `--as-of-days-back` has no None default, but 0 (today) is what a run
+        # that did not pass it uses, so it doubles as "not given".
+        overridden = (
+            ("--start-date", args.start_date is not None),
+            ("--end-date", args.end_date is not None),
+            ("--as-of-date", args.as_of_date is not None),
+            ("--as-of-days-back", int(args.as_of_days_back) != 0),
         )
+        for flag, was_given in overridden:
+            if was_given:
+                parser.error(
+                    f"--rebuild-history cannot be combined with {flag}; a rebuild picks "
+                    "its own range from the existing trend series and its own as-of date "
+                    "from the latest poll"
+                )
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     # Resolved first, so a president with no matchup writes no election, no trend

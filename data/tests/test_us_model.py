@@ -2814,6 +2814,22 @@ class TestPollDateBounds:
 # ── --rebuild-history: the CLI ────────────────────────────────────────────────
 
 
+def _freeze_today(monkeypatch: pytest.MonkeyPatch, day: date) -> None:
+    """Pin the run's notion of today inside ``_common``.
+
+    ``--rebuild-history`` rejects ``--as-of-date``/``--as-of-days-back`` (they
+    would delete every point above the as-of), so a rebuild test cannot state the
+    as-of on the command line and fixes today instead — which is what the flags
+    were standing in for. ``_common`` only ever calls ``date.today`` and
+    ``date.fromisoformat``, so those are the only two this stub needs.
+    """
+    monkeypatch.setattr(
+        _common,
+        "date",
+        SimpleNamespace(today=lambda: day, fromisoformat=date.fromisoformat),
+    )
+
+
 class TestRebuildHistoryFlag:
     @pytest.mark.parametrize(
         "runner", ["run_us_house_model", "run_us_presidential_model", "run_us_senate_model"]
@@ -2844,7 +2860,9 @@ class TestRebuildHistoryRun:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         argv: list[str],
+        existing: set[date] | None = None,
     ) -> SimpleNamespace:
+        series = self.EXISTING if existing is None else existing
         dem, rep = _parties(db)
         house_map = db.add_map(HOUSE_MAP, parliament="us_house")
         pollster = db.add_pollster("YouGov", "yougov_us_house")
@@ -2869,15 +2887,18 @@ class TestRebuildHistoryRun:
         monkeypatch.setattr(_common, "run_simulation", fake_run)
         monkeypatch.setattr(_common, "reset_existing_model_outputs", fake_reset)
         monkeypatch.setattr(_common, "write_trend_cache_meta", fake_meta)
-        monkeypatch.setattr(_common, "existing_trend_dates", lambda *_a, **_k: set(self.EXISTING))
+        monkeypatch.setattr(_common, "existing_trend_dates", lambda *_a, **_k: set(series))
         monkeypatch.setattr(sys, "argv", ["run_us_house_model.py", *argv])
+        _freeze_today(monkeypatch, self.TODAY)
 
         assert main_for_spec(spec, db_factory=lambda: db) == 0
         return calls
 
-    # As-of 20 June caps to the last poll (10 June) and shifts the window with it,
-    # so the single-date run looks back 80 days: 22 March → 10 June.
-    ARGV = ["--as-of-date", "2026-06-20", "--since-date", "2026-04-01"]
+    # Today is 20 June, which caps to the last poll (10 June) and shifts the
+    # window with it, so the single-date run looks back 80 days: 22 March → 10
+    # June. Today rather than --as-of-date because --rebuild-history rejects it.
+    TODAY = date(2026, 6, 20)
+    ARGV = ["--since-date", "2026-04-01"]
 
     def test_existing_dates_are_recomputed_then_the_meta_is_written(
         self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2931,6 +2952,51 @@ class TestRebuildHistoryRun:
         assert calls.resets == []
         assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, 10)]
         assert calls.metas == []
+
+    def test_a_series_wholly_before_the_polls_is_dropped_and_rebuilt(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        # Every existing point predates the first poll (1 June), so the series
+        # and the poll window do not overlap at all. The old points still go —
+        # they are on the superseded basis — but the poll window is rebuilt in
+        # their place rather than the series being deleted and left empty.
+        calls = self._run(
+            db,
+            tmp_path,
+            monkeypatch,
+            [*self.ARGV, "--rebuild-history"],
+            existing={date(2026, 5, 20), date(2026, 5, 25)},
+        )
+        out = capsys.readouterr().out
+
+        assert calls.resets == [
+            (date(2026, 5, 20), date(2026, 5, 31)),
+            (date(2026, 6, 1), date(2026, 6, 10)),
+        ]
+        rebuilt = [cfg.as_of_date for cfg in calls.runs[:10]]
+        assert rebuilt == [date(2026, 6, day) for day in range(1, 11)]
+        assert "REBUILD-HISTORY from=2026-06-01 to=2026-06-10" in out
+        assert "nothing to rebuild" not in out
+
+    def test_an_empty_series_is_left_alone(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        # The other reason rebuild_window returns None: there is no history to
+        # recompute, so nothing is dropped and nothing is rebuilt — the ordinary
+        # single-date run writes the first point.
+        calls = self._run(db, tmp_path, monkeypatch, [*self.ARGV, "--rebuild-history"], existing=set())
+
+        assert "REBUILD-HISTORY nothing to rebuild" in capsys.readouterr().out
+        assert calls.resets == []
+        assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, 10)]
 
 
 # ── partial readings (a blank candidate cell) ─────────────────────────────────
@@ -3591,13 +3657,22 @@ class TestDatabasePathAtCallTime:
 # ── --rebuild-history: usage errors and the real thing ────────────────────────
 
 
+class _StopAfterParsing(Exception):
+    """Raised by a stub ``db_factory`` to prove argument parsing let the run through."""
+
+
 class TestRebuildHistoryRejectsABackfillRange:
     @pytest.mark.parametrize(
-        "extra",
+        ("extra", "named"),
         [
-            ["--start-date", "2026-06-01"],
-            ["--end-date", "2026-06-10"],
-            ["--start-date", "2026-06-01", "--end-date", "2026-06-10"],
+            (["--start-date", "2026-06-01"], "--start-date"),
+            (["--end-date", "2026-06-10"], "--end-date"),
+            (["--start-date", "2026-06-01", "--end-date", "2026-06-10"], "--start-date"),
+            # An explicit as-of is rejected too: the cap only ever lowers the
+            # as-of date, so a past one would delete every point above it and
+            # rebuild only up to it.
+            (["--as-of-date", "2026-06-01"], "--as-of-date"),
+            (["--as-of-days-back", "30"], "--as-of-days-back"),
         ],
     )
     def test_is_a_usage_error_before_any_database_is_opened(
@@ -3606,6 +3681,7 @@ class TestRebuildHistoryRejectsABackfillRange:
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
         extra: list[str],
+        named: str,
     ) -> None:
         spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
         monkeypatch.setattr(
@@ -3619,7 +3695,23 @@ class TestRebuildHistoryRejectsABackfillRange:
             main_for_spec(spec, db_factory=no_database)
 
         assert exc_info.value.code == 2
-        assert "--rebuild-history cannot be combined" in capsys.readouterr().err
+        assert f"--rebuild-history cannot be combined with {named}" in capsys.readouterr().err
+
+    def test_the_flag_alone_is_accepted(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The as-of flags' defaults (None and 0) must not read as "given".
+        spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
+        monkeypatch.setattr(sys, "argv", ["run_us_house_model.py", "--dry-run", "--rebuild-history"])
+
+        opened = SimpleNamespace(count=0)
+
+        def counting_database() -> Database:
+            opened.count += 1
+            raise _StopAfterParsing
+
+        with pytest.raises(_StopAfterParsing):
+            main_for_spec(spec, db_factory=counting_database)
+
+        assert opened.count == 1
 
 
 VANCE_SHAPIRO = "Vance (R) vs Shapiro (D)"
@@ -3694,16 +3786,8 @@ class TestRebuildHistoryEndToEnd:
         assert before[date(2026, 9, 10)] == {dem.id}
 
         db.set_tracked_matchup(president_map.id, None, VANCE_SHAPIRO, source="manual")
-        self._main(
-            db,
-            spec,
-            monkeypatch,
-            "--rebuild-history",
-            "--as-of-date",
-            "2026-09-10",
-            "--since-date",
-            "2026-07-12",
-        )
+        _freeze_today(monkeypatch, date(2026, 9, 10))
+        self._main(db, spec, monkeypatch, "--rebuild-history", "--since-date", "2026-07-12")
 
         after = _model_winners(only_the_test_database, spec)
         # The cap moved back to Shapiro's last poll, and nothing survives past it …
@@ -3741,16 +3825,8 @@ class TestRebuildHistoryEndToEnd:
         self._main(db, spec, monkeypatch, "--start-date", "2026-05-20", "--end-date", "2026-06-10")
         assert min(_model_winners(only_the_test_database, spec)) == date(2026, 5, 20)
 
-        self._main(
-            db,
-            spec,
-            monkeypatch,
-            "--rebuild-history",
-            "--as-of-date",
-            "2026-06-10",
-            "--since-date",
-            "2026-04-11",
-        )
+        _freeze_today(monkeypatch, date(2026, 6, 10))
+        self._main(db, spec, monkeypatch, "--rebuild-history", "--since-date", "2026-04-11")
 
         assert set(_model_winners(only_the_test_database, spec)) == _days(
             date(2026, 6, 1), date(2026, 6, 10)

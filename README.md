@@ -445,7 +445,11 @@ Each runner also takes `--dry-run`, `--as-of-date`, `--half-life-days`, and
 `--lookback-days`), then does the normal run. Use it after anything that moves
 the whole history: a new tracked matchup, a baseline override, or new Senate
 seats. **Run it once for the Senate**, so its trend series moves from 33 to 35
-seats.
+seats. It picks its own range and its own as-of date, so combining it with
+`--start-date`/`--end-date` or `--as-of-date`/`--as-of-days-back` is a usage
+error (exit 2): a past as-of would delete every trend point above it and rebuild
+only up to it. If the whole series lies outside the poll window, the points are
+still dropped and the poll window `[first poll, as-of]` is rebuilt in their place.
 
 ### Senate specials (Ohio, Florida)
 

@@ -252,6 +252,15 @@ class PollReading:
             with the matchup's own candidate count by :func:`aggregate_seat_polls`
             to spot a poll that left a candidate's cell blank, which the summed
             ``shares`` cannot show.
+        candidate_shares: Candidate name → summed percentage over the same rows,
+            the name casefolded and stripped so it can be matched against the
+            matchup label. Says *which* candidate is missing, where
+            ``candidate_count`` only says that one is: a race naming several
+            candidates of one party (Alaska's four-way) hides the gap in
+            ``shares``, and the count alone cannot tell a missing Libertarian on
+            3% from a missing Republican on 40%. Rows with no stored candidate
+            name contribute nothing here, so a poll predating the candidate
+            column leaves it empty and falls back to the count.
     """
 
     poll_id: int
@@ -264,6 +273,7 @@ class PollReading:
     fieldwork_start: date
     fieldwork_end: date
     candidate_count: int
+    candidate_shares: Mapping[str, float]
 
 
 @dataclass(frozen=True, slots=True)
@@ -580,6 +590,7 @@ def collect_poll_readings(
 
         shares: dict[int, float] = defaultdict(float)
         region_shares: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+        candidate_shares: dict[str, float] = defaultdict(float)
         candidate_count = 0
         for row in rows:
             if row.party_id is None:
@@ -588,6 +599,9 @@ def collect_poll_readings(
             if row.region_id is None:
                 shares[party_id] += float(row.percentage)
                 candidate_count += 1
+                name = (row.candidate_name or "").strip().casefold()
+                if name:
+                    candidate_shares[name] += float(row.percentage)
             else:
                 region_shares[row.region_id][party_id] += float(row.percentage)
 
@@ -606,6 +620,7 @@ def collect_poll_readings(
                 fieldwork_start=poll.fieldwork_start,
                 fieldwork_end=poll.fieldwork_end,
                 candidate_count=candidate_count,
+                candidate_shares=dict(candidate_shares),
             )
         )
 

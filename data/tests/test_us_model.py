@@ -372,13 +372,17 @@ def _add_poll(
     map_id: int,
     pollster: Pollster,
     end: date,
-    rows: list[tuple[int, float]],
+    rows: list[tuple[int, float]] | list[tuple[int, float, str]],
     start: date | None = None,
     seat_id: int | None = None,
     matchup: str | None = None,
     region_id: int | None = None,
 ) -> int:
-    """Store one poll and its rows; ``rows`` may repeat a party (same-party candidates)."""
+    """Store one poll and its rows; ``rows`` may repeat a party (same-party candidates).
+
+    A row is ``(party_id, percentage)``, or ``(party_id, percentage, candidate_name)``
+    where the test cares which candidate a figure belongs to.
+    """
     poll = db.add_poll(
         pollster.id,
         map_id,
@@ -387,8 +391,15 @@ def _add_poll(
         matchup=matchup,
         seat_id=seat_id,
     )
-    for party_id, percentage in rows:
-        db.add_poll_row(poll.id, party_id, percentage, region_id=region_id)
+    for row in rows:
+        candidate_name = row[2] if len(row) == 3 else None
+        db.add_poll_row(
+            poll.id,
+            row[0],
+            row[1],
+            region_id=region_id,
+            candidate_name=candidate_name,
+        )
     return int(poll.id)
 
 
@@ -443,6 +454,94 @@ class TestCollectPollReadings:
         assert readings[0].shares[dem.id] == pytest.approx(40.0)
         # The summing hides how many candidates were polled; the count keeps it.
         assert readings[0].candidate_count == 4
+
+    def test_candidate_shares_name_each_figure(self, db: Database) -> None:
+        # Alaska again, with names: the two Republicans are indistinguishable in
+        # `shares`, so a missing one can only be spotted per candidate.
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Alaska Survey", "alaska_survey_us_senate")
+        senate_map = db.add_map(SENATE_MAP, parliament="us_senate")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[
+                (rep.id, 25.0, "Dan S. Sullivan"),
+                (rep.id, 4.0, "Dan J. Sullivan"),
+                (dem.id, 44.0, "Mary Peltola"),
+            ],
+        )
+
+        readings = _readings(db, senate_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].shares[rep.id] == pytest.approx(29.0)
+        assert readings[0].candidate_count == 3
+        assert readings[0].candidate_shares == {
+            "dan s. sullivan": pytest.approx(25.0),
+            "dan j. sullivan": pytest.approx(4.0),
+            "mary peltola": pytest.approx(44.0),
+        }
+
+    def test_rows_without_a_candidate_name_leave_the_shares_empty(
+        self, db: Database
+    ) -> None:
+        # A poll stored before candidate names were kept: the count still works.
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Old Poll", "old_poll_us_house")
+        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        _add_poll(
+            db,
+            map_id=house_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(dem.id, 48.0), (rep.id, 47.0)],
+        )
+
+        readings = _readings(db, house_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].candidate_shares == {}
+        assert readings[0].candidate_count == 2
+
+    def test_a_candidate_name_is_matched_case_and_space_insensitively(
+        self, db: Database
+    ) -> None:
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Spacey", "spacey_us_senate")
+        senate_map = db.add_map(SENATE_MAP, parliament="us_senate")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(rep.id, 45.0, "  Kurt ALME  "), (dem.id, 25.0, "Alani Bankhead")],
+        )
+
+        readings = _readings(db, senate_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].candidate_shares == {
+            "kurt alme": pytest.approx(45.0),
+            "alani bankhead": pytest.approx(25.0),
+        }
+
+    def test_one_candidates_rows_are_summed_under_their_name(
+        self, db: Database
+    ) -> None:
+        # Defensive: a table that lists a candidate twice must not lose a figure.
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Doubler", "doubler_us_senate")
+        senate_map = db.add_map(SENATE_MAP, parliament="us_senate")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(rep.id, 20.0, "Kurt Alme"), (rep.id, 5.0, "Kurt Alme"), (dem.id, 30.0, "Alani Bankhead")],
+        )
+
+        readings = _readings(db, senate_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].candidate_shares["kurt alme"] == pytest.approx(25.0)
 
     def test_weight_is_decay_times_pollster_weight(self, db: Database) -> None:
         dem, rep = _parties(db)
@@ -924,12 +1023,15 @@ def _reading(
     shares: dict[int, float],
     *,
     candidate_count: int | None = None,
+    candidate_shares: dict[str, float] | None = None,
     end: date = date(2026, 6, 1),
     pollster: str = "Pollster",
 ) -> Any:
     """A bare :class:`PollReading` for the pure seat-averaging tests.
 
-    ``candidate_count`` defaults to one row per party in ``shares``.
+    ``candidate_count`` defaults to one row per party in ``shares``, and
+    ``candidate_shares`` to empty — the shape of a poll stored before candidate
+    names were kept, which exercises the count path.
     """
     return SimpleNamespace(
         poll_id=abs(hash((seat_id, matchup, weight, tuple(sorted(shares.items()))))) % 10_000,
@@ -942,6 +1044,7 @@ def _reading(
         fieldwork_start=end,
         fieldwork_end=end,
         candidate_count=len(shares) if candidate_count is None else candidate_count,
+        candidate_shares={} if candidate_shares is None else candidate_shares,
     )
 
 

@@ -35,6 +35,7 @@ from polls.importers.us.us_polls_common import CandidateColumn, matchup_label
 import _common
 from _common import (
     LatestPollUsage,
+    MATERIAL_CANDIDATE_SHARE,
     PARTY_ID_ALIASES,
     SeatPollAverage,
     SeatRef,
@@ -1000,10 +1001,12 @@ class TestTrendCacheMeta:
 
 
 INDEPENDENT = 22
+LIBERTARIAN = 23
 OTHERS = 25
 
 NE_SENATE = "Ricketts (R) vs Osborn (I)"
 NE_HYPOTHETICAL = "Ricketts (R) vs Kleeb (D)"
+NE_SENATE_THREE = "Ricketts (R) vs Osborn (I) vs Siadek (L)"
 
 
 def _us_parties(db: Database) -> tuple[Party, Party, Party, Party]:
@@ -2763,6 +2766,10 @@ class TestRebuildHistoryRun:
 
 
 MI_SENATE = "Rogers (R) vs El-Sayed (D)"
+MT_01 = "Downing (R) vs Tranel (D) vs Sheedy (L)"
+ALASKA = "Dan S. Sullivan (R) vs Dan J. Sullivan (R) vs Heikes (R) vs Peltola (D)"
+IA_01 = "Miller-Meeks (R) vs Bohannan (D) vs Bridgford (I)"
+OH_10 = "Turner (R) vs Knickerbocker (D) vs McMasters (L)"
 
 
 class TestMatchupStoredCandidateCount:
@@ -2860,12 +2867,26 @@ class TestMajorPartyNames:
 
 
 class TestPartialSeatReadings:
-    def test_a_reading_missing_a_candidate_is_skipped(self) -> None:
-        # The worked example: B polled Rogers at 48 and left El-Sayed blank.
-        # Rescaled, B would read R 100 and drag the average to R 75.53.
+    """The materiality rule: a blank cell only disqualifies a poll if it is big.
+
+    The shapes here are the live races the rule was measured against (see the
+    issue plan's ground-truth table), so a change of verdict here is a change of
+    verdict in production.
+    """
+
+    def test_a_material_missing_candidate_is_skipped(self) -> None:
+        # The worked disaster: B polled Rogers at 48 and left El-Sayed blank.
+        # Rescaled, B would read R 100 and drag the average to R 75.53. El-Sayed
+        # polls 48.94 in the complete reading, so he is material and B goes.
         readings = [
-            _reading(7, MI_SENATE, 1.0, {REPUBLICAN: 51.06, DEMOCRAT: 48.94}),
-            _reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0}),
+            _reading(
+                7,
+                MI_SENATE,
+                1.0,
+                {REPUBLICAN: 51.06, DEMOCRAT: 48.94},
+                candidate_shares={"mike rogers": 51.06, "abdul el-sayed": 48.94},
+            ),
+            _reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0}, candidate_shares={"mike rogers": 48.0}),
         ]
 
         average = aggregate_seat_polls(
@@ -2875,7 +2896,258 @@ class TestPartialSeatReadings:
         assert average.shares[REPUBLICAN] == pytest.approx(51.06)
         assert average.shares[DEMOCRAT] == pytest.approx(48.94)
         assert (average.n_polls, average.n_skipped) == (1, 1)
+        assert average.blocking_candidates == ("El-Sayed",)
         assert average.total_weight == pytest.approx(1.0)
+
+    def test_an_immaterial_missing_candidate_is_admitted(self) -> None:
+        # MT-01: two complete readings put Sheedy (L) on 5, so the two that leave
+        # his cell blank are still worth averaging. Today's rule dropped both.
+        sheedy = 5.0
+        assert sheedy < MATERIAL_CANDIDATE_SHARE
+        complete = [
+            (44.0, 44.0, sheedy),
+            (42.0, 41.0, sheedy),
+        ]
+        readings = [
+            _reading(
+                9,
+                MT_01,
+                1.0,
+                {REPUBLICAN: rep, DEMOCRAT: dem, LIBERTARIAN: lib},
+                candidate_shares={"ryan downing": rep, "monica tranel": dem, "sid sheedy": lib},
+            )
+            for rep, dem, lib in complete
+        ] + [
+            _reading(
+                9,
+                MT_01,
+                1.0,
+                {REPUBLICAN: rep, DEMOCRAT: dem},
+                candidate_shares={"ryan downing": rep, "monica tranel": dem},
+            )
+            for rep, dem in ((48.0, 43.0), (43.0, 45.0))
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={9: MT_01}, national_matchup=None, policy="per_seat"
+        )[9]
+
+        assert (average.n_polls, average.n_skipped) == (4, 0)
+        assert average.blocking_candidates == ()
+
+    def test_a_missing_candidate_is_seen_even_when_their_party_is_present(self) -> None:
+        # Alaska names three Republicans. A poll that drops the second of them
+        # still stores Republican rows, so only a per-candidate test finds the
+        # gap — and finding it is not the same as minding it: he polls 4.
+        readings = [
+            _reading(
+                3,
+                ALASKA,
+                1.0,
+                {REPUBLICAN: 29.0, DEMOCRAT: 44.0},
+                candidate_count=4,
+                candidate_shares={
+                    "dan s. sullivan": 22.0,
+                    "dan j. sullivan": 4.0,
+                    "gerald heikes": 3.0,
+                    "mary peltola": 44.0,
+                },
+            ),
+            _reading(
+                3,
+                ALASKA,
+                1.0,
+                {REPUBLICAN: 28.0, DEMOCRAT: 45.0},
+                candidate_count=3,
+                candidate_shares={
+                    "dan s. sullivan": 24.0,
+                    "gerald heikes": 4.0,
+                    "mary peltola": 45.0,
+                },
+            ),
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={3: ALASKA}, national_matchup=None, policy="per_seat"
+        )[3]
+
+        assert (average.n_polls, average.n_skipped) == (2, 0)
+
+        # Proof the gap was actually seen and not simply read as complete: the
+        # same pair, with the missing Republican polling over the threshold,
+        # blocks — and the rule names him, not his party.
+        readings[0].candidate_shares["dan j. sullivan"] = MATERIAL_CANDIDATE_SHARE
+        material = aggregate_seat_polls(
+            readings, seat_matchups={3: ALASKA}, national_matchup=None, policy="per_seat"
+        )[3]
+
+        assert (material.n_polls, material.n_skipped) == (1, 1)
+        assert material.blocking_candidates == ("Dan J. Sullivan",)
+
+    def test_a_material_third_party_candidate_still_blocks(self) -> None:
+        # IA-01: Bridgford (I) polls 11 where both major parties are present, so
+        # the reading missing him is thrown out and says so by name.
+        bridgford = MATERIAL_CANDIDATE_SHARE + 1.0
+        readings = [
+            _reading(
+                4,
+                IA_01,
+                1.0,
+                {REPUBLICAN: 35.0, DEMOCRAT: 40.0, INDEPENDENT: bridgford},
+                candidate_shares={
+                    "mariannette miller-meeks": 35.0,
+                    "christina bohannan": 40.0,
+                    "nicole bridgford": bridgford,
+                },
+            ),
+            _reading(
+                4,
+                IA_01,
+                1.0,
+                {REPUBLICAN: 39.0, DEMOCRAT: 43.0},
+                candidate_shares={
+                    "mariannette miller-meeks": 39.0,
+                    "christina bohannan": 43.0,
+                },
+            ),
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={4: IA_01}, national_matchup=None, policy="per_seat"
+        )[4]
+
+        assert (average.n_polls, average.n_skipped) == (1, 1)
+        assert average.blocking_candidates == ("Bridgford",)
+
+    def test_a_candidate_exactly_on_the_threshold_is_material(self) -> None:
+        # The comparison is ``>=``: a candidate standing exactly on the constant
+        # blocks, and the same race one hundredth below it does not.
+        def readings_with(share: float) -> list[Any]:
+            return [
+                _reading(
+                    4,
+                    IA_01,
+                    1.0,
+                    {REPUBLICAN: 45.0, DEMOCRAT: 45.0, INDEPENDENT: share},
+                    candidate_shares={
+                        "mariannette miller-meeks": 45.0,
+                        "christina bohannan": 45.0,
+                        "nicole bridgford": share,
+                    },
+                ),
+                _reading(
+                    4,
+                    IA_01,
+                    1.0,
+                    {REPUBLICAN: 50.0, DEMOCRAT: 50.0},
+                    candidate_shares={
+                        "mariannette miller-meeks": 50.0,
+                        "christina bohannan": 50.0,
+                    },
+                ),
+            ]
+
+        def skipped(share: float) -> Any:
+            return aggregate_seat_polls(
+                readings_with(share),
+                seat_matchups={4: IA_01},
+                national_matchup=None,
+                policy="per_seat",
+            )[4].n_skipped
+
+        assert skipped(MATERIAL_CANDIDATE_SHARE) == 1
+        assert skipped(MATERIAL_CANDIDATE_SHARE - 0.01) == 0
+
+    def test_with_no_complete_reading_a_minor_candidate_is_presumed_immaterial(self) -> None:
+        # OH-10: every stored poll leaves McMasters (L) blank, so there is
+        # nothing to measure him against. A Libertarian gets the benefit of the
+        # doubt — today's rule left this seat with no usable readings at all.
+        readings = [
+            _reading(
+                5,
+                OH_10,
+                1.0,
+                {REPUBLICAN: rep, DEMOCRAT: dem},
+                candidate_shares={"mike turner": rep, "amy knickerbocker": dem},
+            )
+            for rep, dem in ((47.0, 42.0), (45.0, 44.0))
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={5: OH_10}, national_matchup=None, policy="per_seat"
+        )[5]
+
+        assert (average.n_polls, average.n_skipped) == (2, 0)
+        assert average.blocking_candidates == ()
+
+    def test_with_no_complete_reading_a_major_candidate_is_presumed_material(self) -> None:
+        # The same race with the Democrat blank instead: the one-side-numbered
+        # disaster, which the fallback must still refuse even unmeasured. The
+        # seat keeps its uniform-swing fallback.
+        averages = aggregate_seat_polls(
+            [
+                _reading(
+                    5,
+                    OH_10,
+                    1.0,
+                    {REPUBLICAN: rep, LIBERTARIAN: lib},
+                    candidate_shares={"mike turner": rep, "bob mcmasters": lib},
+                )
+                for rep, lib in ((47.0, 4.0), (45.0, 5.0))
+            ],
+            seat_matchups={5: OH_10},
+            national_matchup=None,
+            policy="per_seat",
+        )
+
+        assert averages[5] == SeatPollAverage(
+            total_weight=0.0,
+            shares={},
+            n_polls=0,
+            matchup=OH_10,
+            n_skipped=2,
+            blocking_candidates=("Knickerbocker",),
+        )
+        blended = blend_seat_swings(
+            seat_averages=averages,
+            seat_party_vote_totals={5: {REPUBLICAN: 600.0, DEMOCRAT: 400.0}},
+            region_by_seat_id={5: 1},
+            region_swings={1: {REPUBLICAN: -5.0, DEMOCRAT: 5.0}},
+            party_universe={REPUBLICAN, DEMOCRAT},
+            party_name_by_id={},
+            parent_seat_by_id={},
+            prior_weight=1.0,
+        )
+        assert blended == {}
+
+    def test_an_unimported_candidate_is_not_expected(self) -> None:
+        matchup = f"{MI_SENATE} vs Doe (WCP)"
+        readings = [_reading(7, matchup, 1.0, {REPUBLICAN: 45.0, DEMOCRAT: 44.0})]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={7: matchup}, national_matchup=None, policy="per_seat"
+        )[7]
+
+        assert (average.n_polls, average.n_skipped) == (1, 0)
+
+    def test_an_unimported_candidate_is_not_expected_of_a_named_reading_either(self) -> None:
+        # (WCP) is never imported, so a poll that names everyone else is complete.
+        matchup = f"{MI_SENATE} vs Doe (WCP)"
+        readings = [
+            _reading(
+                7,
+                matchup,
+                1.0,
+                {REPUBLICAN: 45.0, DEMOCRAT: 44.0},
+                candidate_shares={"mike rogers": 45.0, "abdul el-sayed": 44.0},
+            )
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={7: matchup}, national_matchup=None, policy="per_seat"
+        )[7]
+
+        assert (average.n_polls, average.n_skipped) == (1, 0)
 
     def test_same_party_candidates_are_counted_row_by_row(self) -> None:
         # Alaska's four-way race sums to two parties, but a full poll stores four rows.
@@ -2892,19 +3164,12 @@ class TestPartialSeatReadings:
         assert (average.n_polls, average.n_skipped) == (1, 1)
         assert average.shares[REPUBLICAN] == pytest.approx(45.0 / 85.0 * 100.0)
 
-    def test_an_unimported_candidate_is_not_expected(self) -> None:
-        matchup = f"{MI_SENATE} vs Doe (WCP)"
-        readings = [_reading(7, matchup, 1.0, {REPUBLICAN: 45.0, DEMOCRAT: 44.0})]
-
-        average = aggregate_seat_polls(
-            readings, seat_matchups={7: matchup}, national_matchup=None, policy="per_seat"
-        )[7]
-
-        assert (average.n_polls, average.n_skipped) == (1, 0)
-
-    def test_a_seat_with_only_partial_readings_keeps_its_fallback(self) -> None:
+    def test_a_reading_with_no_candidate_names_falls_back_to_the_row_count(self) -> None:
+        # A poll stored before the candidate column cannot say who is missing, so
+        # it keeps the old rule — and a seat with only such readings keeps its
+        # fallback, with no ``blocked_by`` to report.
         averages = aggregate_seat_polls(
-            [_reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0})],
+            [_reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0}, candidate_shares={})],
             seat_matchups={7: MI_SENATE},
             national_matchup=None,
             policy="per_seat",
@@ -2925,7 +3190,7 @@ class TestPartialSeatReadings:
         )
         assert blended == {}
         assert format_seat_poll_diagnostics(averages, {7: "Michigan"}, 1.0) == [
-            f"SEAT_POLL Michigan n=0 W=0.000 alpha=0.000 matchup={MI_SENATE} skipped_partial=1"
+            f"SEAT_POLL Michigan n=0 W=0.000 alpha=0.000 matchup={MI_SENATE} skipped_material=1"
         ]
 
     def test_run_simulation_reports_the_skipped_reading(self, db: Database, tmp_path: Path) -> None:
@@ -2945,7 +3210,40 @@ class TestPartialSeatReadings:
         _, _, _, _, _, _, diagnostics = run_simulation(db, _cfg(world.spec))
 
         assert diagnostics == [
-            f"SEAT_POLL Nebraska n=1 W=1.000 alpha=0.500 matchup={NE_SENATE} skipped_partial=1"
+            f"SEAT_POLL Nebraska n=1 W=1.000 alpha=0.500 matchup={NE_SENATE} skipped_material=1"
+        ]
+
+    def test_run_simulation_uses_a_poll_missing_only_a_minor_candidate(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        # End to end: the second poll stores two of the matchup's three
+        # candidates, so the row-count rule dropped it. Siadek (L) polls 4 in the
+        # complete poll, so the new rule keeps both — n=2, nothing skipped.
+        world = TestRunSimulationSeatBlending._senate_world(db, tmp_path)
+        libertarian = db.add_party("Libertarian", short_name="L")
+        db.set_tracked_matchup(world.map_id, world.nebraska.id, NE_SENATE_THREE, source="auto")
+        for rows in (
+            [
+                (world.rep.id, 45.0, "Pete Ricketts"),
+                (world.independent.id, 40.0, "Dan Osborn"),
+                (libertarian.id, 4.0, "Gene Siadek"),
+            ],
+            [(world.rep.id, 48.0, "Pete Ricketts"), (world.independent.id, 44.0, "Dan Osborn")],
+        ):
+            _add_poll(
+                db,
+                map_id=world.map_id,
+                pollster=world.pollster,
+                end=date(2026, 6, 1),
+                rows=rows,
+                seat_id=world.nebraska.id,
+                matchup=NE_SENATE_THREE,
+            )
+
+        _, _, _, _, _, _, diagnostics = run_simulation(db, _cfg(world.spec))
+
+        assert diagnostics == [
+            f"SEAT_POLL Nebraska n=2 W=2.000 alpha=0.667 matchup={NE_SENATE_THREE}"
         ]
 
 

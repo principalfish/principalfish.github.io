@@ -15,6 +15,7 @@ from polls.importers.us.us_polls_common import (
     CandidateColumn,
     Cell,
     ParsedPollRow,
+    _reading_percentage,
     candidate_columns,
     classify_table,
     clean_pollster_label,
@@ -1208,6 +1209,53 @@ class TestParseTableRows:
         assert info is not None
         rows, _ = parse_table_rows(info)
         assert [r.percentage for r in rows[0].readings] == [100.0, 0.0]
+
+    @pytest.mark.parametrize(
+        ("cell", "expected"),
+        [
+            ("<1%", 0.5),
+            ("< 1", 0.5),
+            ("<1", 0.5),
+            ("<0.5%", 0.25),
+            ("<10%", 5.0),
+        ],
+    )
+    def test_an_upper_bound_reads_as_half_the_bound(
+        self, cell: str, expected: float
+    ) -> None:
+        # "<1%" states an interval, not a figure. Reading it as nothing would
+        # make a sub-1% candidate look absent, which is how the model decides a
+        # poll is unusable.
+        assert _reading_percentage(cell) == expected
+
+    @pytest.mark.parametrize("cell", ["<", "<%", "< ", "<abc", "<-1", "1<"])
+    def test_a_bound_with_no_number_is_still_nothing(self, cell: str) -> None:
+        assert _reading_percentage(cell) is None
+
+    def test_an_ordinary_percentage_is_unchanged(self) -> None:
+        assert _reading_percentage("1%") == 1.0
+        assert _reading_percentage("47") == 47.0
+
+    def test_a_bounded_cell_now_produces_a_reading(self) -> None:
+        # Through the parser: the Libertarian column used to vanish entirely.
+        info = classify_table(
+            _table(
+                "<table id='t'><tr><th>Poll source</th><th>Date(s) administered</th>"
+                "<th>Jane Roe<br /><small>(D)</small></th>"
+                "<th>John Doe<br /><small>(R)</small></th>"
+                "<th>Kim Lee<br /><small>(L)</small></th></tr>"
+                "<tr><td>Emerson</td><td>June 3, 2026</td><td>47%</td><td>45%</td>"
+                "<td>&lt;1%</td></tr></table>",
+                "t",
+            )
+        )
+        assert info is not None
+        rows, _ = parse_table_rows(info)
+        assert [(r.candidate_name, r.percentage) for r in rows[0].readings] == [
+            ("Jane Roe", 47.0),
+            ("John Doe", 45.0),
+            ("Kim Lee", 0.5),
+        ]
 
     def test_sample_size_and_population(self) -> None:
         rows, _ = _rows(PRESIDENT_PAGE, "vance-newsom")

@@ -976,6 +976,10 @@ def clean_pollster_label(text: str) -> tuple[str, tuple[str, ...]]:
     return re.sub(r"\s+([/,;])", r"\1", cleaned).strip(), tags
 
 
+# A cell stating an upper bound ("<1", "< 0.5") once whitespace and "%" are gone.
+_UPPER_BOUND_RE = re.compile(r"^<(\d+(?:\.\d+)?)$")
+
+
 def _reading_percentage(text: str) -> float | None:
     """Parse a candidate cell, or return None when it holds no reading.
 
@@ -984,13 +988,21 @@ def _reading_percentage(text: str) -> float | None:
     candidate was not offered in that row, which is not the same as zero, and a
     colspan event row ("Primary election held") reads as no number at all.
 
+    One inequality is recognised: a cell such as "<1%" states an upper bound
+    rather than a figure, and reads as **half the bound** (0.5), the midpoint of
+    the interval it describes. Reading it as nothing would be worse than
+    slightly wrong — a minor candidate polling under 1% would look absent, which
+    is what the model uses to decide a poll is unusable. A bare "<" is still
+    nothing.
+
     The number must also be a percentage — finite and within 0–100 — because
     ``float`` happily accepts "inf", "nan" and "1e400", and none of those (nor a
     stray "150") may reach the model as a vote share.
     """
     cleaned = re.sub(r"\s+", "", _FOOTNOTE_RE.sub("", text)).replace("%", "")
+    below = _UPPER_BOUND_RE.match(cleaned)
     try:
-        value = float(cleaned)
+        value = float(below.group(1)) / 2 if below is not None else float(cleaned)
     except ValueError:
         return None
     if not math.isfinite(value) or not 0 <= value <= 100:

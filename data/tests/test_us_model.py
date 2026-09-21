@@ -2001,7 +2001,7 @@ class TestLatestPollDateWithSeatPolls:
     def _senate_scope(
         db: Database, tmp_path: Path
     ) -> tuple[Any, Map, dict[str, Seat], Party, Party, Pollster]:
-        dem, rep, _independent, _others = _us_parties(db)
+        dem, rep, independent, _others = _us_parties(db)
         pollster = db.add_pollster("YouGov", "yougov_us_house")
         house_map = db.add_map(HOUSE_MAP, parliament="us_house")
         _add_poll(
@@ -2015,19 +2015,20 @@ class TestLatestPollDateWithSeatPolls:
             db, SENATE_MAP, "us_senate", {"Nebraska": {rep.id: 600.0, dem.id: 400.0}}
         )
         spec = _us_spec(tmp_path, map_name=SENATE_MAP, national_poll_map_name=HOUSE_MAP)
-        return resolve_poll_scope(db, spec), senate_map, seats, dem, rep, pollster
+        return resolve_poll_scope(db, spec), senate_map, seats, independent, rep, pollster
 
     def test_a_tracked_seat_poll_extends_the_cap(self, db: Database, tmp_path: Path) -> None:
         # The generic ballot last updated on 1 June; a Nebraska poll landed on the
         # 20th. Capping back to the 1st would drop it from the window entirely.
-        scope, senate_map, seats, _dem, rep, pollster = self._senate_scope(db, tmp_path)
+        # The poll numbers both candidates the matchup names, so the model uses it.
+        scope, senate_map, seats, independent, rep, pollster = self._senate_scope(db, tmp_path)
         db.set_tracked_matchup(senate_map.id, seats["Nebraska"].id, NE_SENATE, source="auto")
         _add_poll(
             db,
             map_id=senate_map.id,
             pollster=pollster,
             end=date(2026, 6, 20),
-            rows=[(rep.id, 50.0)],
+            rows=[(rep.id, 50.0), (independent.id, 44.0)],
             seat_id=seats["Nebraska"].id,
             matchup=NE_SENATE,
         )
@@ -2036,7 +2037,7 @@ class TestLatestPollDateWithSeatPolls:
         assert latest_poll_date(db, scope, include_seat_polls=False) == date(2026, 6, 1)
 
     def test_an_untracked_or_off_matchup_seat_poll_does_not(self, db: Database, tmp_path: Path) -> None:
-        scope, senate_map, seats, _dem, rep, pollster = self._senate_scope(db, tmp_path)
+        scope, senate_map, seats, _independent, rep, pollster = self._senate_scope(db, tmp_path)
         db.set_tracked_matchup(senate_map.id, seats["Nebraska"].id, NE_SENATE, source="auto")
         _add_poll(
             db,
@@ -2051,7 +2052,7 @@ class TestLatestPollDateWithSeatPolls:
         assert latest_poll_date(db, scope) == date(2026, 6, 1)
 
     def test_a_null_tracked_row_keeps_its_seat_out_of_the_cap(self, db: Database, tmp_path: Path) -> None:
-        scope, senate_map, seats, _dem, rep, pollster = self._senate_scope(db, tmp_path)
+        scope, senate_map, seats, _independent, rep, pollster = self._senate_scope(db, tmp_path)
         db.set_tracked_matchup(senate_map.id, seats["Nebraska"].id, None, source="manual")
         _add_poll(
             db,
@@ -2112,6 +2113,176 @@ class TestLatestPollDateWithSeatPolls:
 
         # … and moves only once a state poll of the tracked pairing lands.
         assert latest_poll_date(db, scope) == date(2028, 6, 10)
+
+
+# The three candidates NE_SENATE_THREE names, as a poll table stores them.
+RICKETTS = "Pete Ricketts"
+OSBORN = "Dan Osborn"
+SIADEK = "Preston Siadek"
+
+
+class TestAsOfCapAppliesTheMaterialityRule:
+    """The cap and the forecast judge a seat poll with one function.
+
+    A reading the model throws away must not move ``as_of_date`` — nor, through
+    :func:`poll_date_bounds`, the ``--rebuild-history`` window's start. Before
+    this the seat half of the cap filtered in SQL only, so the newest poll in a
+    race could set the as-of date and then be discarded by the very run it dated.
+    """
+
+    @staticmethod
+    def _world(db: Database, tmp_path: Path, *, siadek: float, partial_end: date) -> Any:
+        """Nebraska polled twice: once naming all three candidates, once not.
+
+        ``siadek`` is the Libertarian's share in the complete reading — the only
+        measurement of him the race has, so it is what decides whether the poll
+        that leaves his cell blank is usable. ``partial_end`` dates that poll, so
+        one call can put it at the top of the window and another at the bottom.
+        """
+        dem, rep, independent, _others = _us_parties(db)
+        libertarian = db.add_party("Libertarian", short_name="L")
+        pollster = db.add_pollster("YouGov", "yougov_us_house")
+        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        _add_poll(
+            db,
+            map_id=house_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(dem.id, 50.0), (rep.id, 50.0)],
+        )
+        senate_map, seats = _seat_map_with_baseline(
+            db, SENATE_MAP, "us_senate", {"Nebraska": {rep.id: 600.0, dem.id: 400.0}}
+        )
+        nebraska = seats["Nebraska"]
+        db.set_tracked_matchup(senate_map.id, nebraska.id, NE_SENATE_THREE, source="auto")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 5),
+            rows=[
+                (rep.id, 45.0, RICKETTS),
+                (independent.id, 42.0, OSBORN),
+                (libertarian.id, siadek, SIADEK),
+            ],
+            seat_id=nebraska.id,
+            matchup=NE_SENATE_THREE,
+        )
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=partial_end,
+            rows=[(rep.id, 48.0, RICKETTS), (independent.id, 44.0, OSBORN)],
+            seat_id=nebraska.id,
+            matchup=NE_SENATE_THREE,
+        )
+        spec = _us_spec(tmp_path, map_name=SENATE_MAP, national_poll_map_name=HOUSE_MAP)
+        return SimpleNamespace(
+            spec=spec,
+            scope=resolve_poll_scope(db, spec),
+            map_id=senate_map.id,
+            seat_id=nebraska.id,
+        )
+
+    def test_a_material_gap_keeps_the_newest_poll_out_of_the_cap(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        # Siadek polls over the threshold, so the 20 June poll that omits him is
+        # discarded — and the cap stays on the newest poll the run can use.
+        world = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE + 1.0,
+            partial_end=date(2026, 6, 20),
+        )
+
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 5)
+
+    def test_an_immaterial_gap_still_moves_the_cap(self, db: Database, tmp_path: Path) -> None:
+        # The same poll, the same gap, a smaller candidate: the model uses it, so
+        # the cap must follow it forward or the run would never see it.
+        world = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE - 1.0,
+            partial_end=date(2026, 6, 20),
+        )
+
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 20)
+
+    def test_a_material_gap_moves_the_rebuild_window_start_forward(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        # The mirror image: the discarded poll is now the *oldest*, so it is
+        # first_poll that must not follow it back.
+        material = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE + 1.0,
+            partial_end=date(2026, 5, 1),
+        )
+
+        assert poll_date_bounds(db, material.scope) == (date(2026, 6, 1), date(2026, 6, 5))
+
+    def test_an_immaterial_gap_still_pulls_the_rebuild_window_start_back(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        immaterial = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE - 1.0,
+            partial_end=date(2026, 5, 1),
+        )
+
+        assert poll_date_bounds(db, immaterial.scope) == (date(2026, 5, 1), date(2026, 6, 5))
+
+    @pytest.mark.parametrize(
+        ("siadek", "expected_cap"),
+        [
+            (MATERIAL_CANDIDATE_SHARE + 1.0, date(2026, 6, 5)),
+            (MATERIAL_CANDIDATE_SHARE - 1.0, date(2026, 6, 20)),
+        ],
+    )
+    def test_the_capping_date_belongs_to_a_poll_the_model_used(
+        self, db: Database, tmp_path: Path, siadek: float, expected_cap: date
+    ) -> None:
+        # The tie between the two: whatever the cap returns, the seat average the
+        # forecast builds on that same day ends on that very date. Asserted for
+        # both verdicts, so neither half can drift without this failing.
+        world = self._world(db, tmp_path, siadek=siadek, partial_end=date(2026, 6, 20))
+
+        cap = latest_poll_date(db, world.scope)
+        assert cap == expected_cap
+
+        readings = collect_poll_readings(
+            db, world.map_id, date(2026, 1, 1), cap, 30.0, {}, {}
+        )
+        average = aggregate_seat_polls(
+            readings,
+            seat_matchups={world.seat_id: NE_SENATE_THREE},
+            national_matchup=None,
+            policy="per_seat",
+        )[world.seat_id]
+
+        assert average.latest_poll is not None
+        assert average.latest_poll.fieldwork_end == cap
+
+    @pytest.mark.parametrize(
+        "siadek", [MATERIAL_CANDIDATE_SHARE + 1.0, MATERIAL_CANDIDATE_SHARE - 1.0]
+    )
+    def test_ignore_seat_polls_still_takes_the_national_only_path(
+        self, db: Database, tmp_path: Path, siadek: float
+    ) -> None:
+        # --ignore-seat-polls promises the pre-blending window exactly, whichever
+        # way the materiality rule would have gone on the seat polls.
+        world = self._world(db, tmp_path, siadek=siadek, partial_end=date(2026, 5, 1))
+
+        assert latest_poll_date(db, world.scope, include_seat_polls=False) == date(2026, 6, 1)
+        assert poll_date_bounds(db, world.scope, include_seat_polls=False) == (
+            date(2026, 6, 1),
+            date(2026, 6, 1),
+        )
 
 
 # ── Senate specials: the shell key ────────────────────────────────────────────

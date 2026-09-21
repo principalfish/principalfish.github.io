@@ -60,7 +60,7 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
-from models import Election, Map, Poll, Region, TrackedMatchup, Vote
+from models import Election, Map, Poll, PollRow, Region, TrackedMatchup, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
@@ -317,7 +317,7 @@ class SeatPollAverage:
         n_skipped: Readings of that matchup left out for a **material** missing
             candidate — one the matchup names whose cell this poll left blank and
             who polls large enough for rescaling without them to distort the rest
-            (see :func:`aggregate_seat_polls`). A poll missing only a minor
+            (see :func:`usable_seat_readings`). A poll missing only a minor
             candidate is *used*, not counted here. A seat whose every reading was
             skipped still gets an average — with no weight and no shares, so it
             blends to its fallback — purely so the diagnostic line can say why.
@@ -777,7 +777,7 @@ def _matched_candidate_share(
     its candidates as :func:`matchup_label` wrote them — a surname, or a full
     name where two surnames collided — so the two are matched with
     :func:`candidate_matches` rather than by key lookup. Both passes of
-    :func:`aggregate_seat_polls` go through here, so a candidate resolves to the
+    :func:`usable_seat_readings` go through here, so a candidate resolves to the
     same row whichever pass is looking.
 
     Args:
@@ -799,21 +799,20 @@ def _matched_candidate_share(
 
 @dataclass(frozen=True, slots=True)
 class _SeatReading:
-    """A seat reading that survived :func:`aggregate_seat_polls`' first pass.
+    """A seat reading after :func:`usable_seat_readings`' first pass.
 
-    Pass 1 resolves which matchup the seat is tracked on and works out which of
-    that matchup's candidates the reading is missing; pass 2 decides, against the
-    whole race's measurements, whether those absences matter. Keeping the
-    intermediate state here lets the readings be walked twice without re-running
-    the filters or re-parsing the label.
+    Pass 1 works out which of the race's named candidates the reading is
+    missing; pass 2 decides, against the whole race's measurements, whether
+    those absences matter. Keeping the intermediate state here lets the readings
+    be walked twice without re-parsing the matchup label.
 
     Attributes:
         reading: The reading itself.
-        seat_id: Its seat — non-NULL, since national readings are filtered out.
+        seat_id: Its seat, or ``None`` for a reading that belongs to no race
+            here — which, like a ``None`` :attr:`required`, means there are no
+            named candidates to miss.
         required: The matchup the seat is tracked on; ``None`` for a party-only
             series, which names no candidates to miss.
-        decided: :func:`decided_vote_shares` of the reading, already known to be
-            non-empty.
         missing: The matchup's candidates with no matching stored row. Always
             empty when :attr:`unnamed`, where who is missing cannot be known.
         unnamed: The reading stores no candidate names at all — a poll from
@@ -821,11 +820,151 @@ class _SeatReading:
     """
 
     reading: PollReading
-    seat_id: int
+    seat_id: int | None
     required: str | None
-    decided: Mapping[int, float]
     missing: tuple[MatchupCandidate, ...]
     unnamed: bool
+
+
+def usable_seat_readings(
+    readings: Sequence[PollReading],
+    required_by_seat: Mapping[int, str | None],
+) -> tuple[list[PollReading], dict[int, tuple[str, ...]]]:
+    """Split seat readings into the usable ones and the candidates that blocked the rest.
+
+    This is the materiality rule itself, factored out so the forecast
+    (:func:`aggregate_seat_polls`) and the as-of cap (:func:`_poll_end_dates`)
+    cannot drift apart: a reading the model would discard must not be allowed to
+    move ``as_of_date`` or ``first_poll``, and the only way to guarantee that is
+    for one function to answer both questions.
+
+    A reading is skipped only when a **material** candidate the matchup names has
+    no row of its own — the poll left that candidate's cell blank. Rescaling what
+    is left to 100 hands the missing share to the others, so a poll of R 48 with
+    the Democrat blank reads as R 100. A row count alone cannot tell that
+    disaster from a table with no Libertarian column, so materiality is measured
+    instead: a missing candidate blocks the reading when their mean raw stored
+    share over that race's **complete** readings — those with a row for every
+    candidate the matchup names — is at least :data:`MATERIAL_CANDIDATE_SHARE`.
+    Hence two passes: one to measure the complete readings, one to judge the rest
+    against them.
+
+    Three cases fall outside that measurement:
+
+    * a race with **no** complete reading has nothing to measure, so the missing
+      candidate's own party decides — a major-party one (:data:`MAJOR_PARTY_NAMES`)
+      is presumed material, anyone else immaterial. The failure this rule guards
+      against is a major-party omission by construction, whereas a blank
+      third-party candidate is the ordinary "the table had no column for them";
+    * a reading whose rows carry **no** candidate names cannot say *who* is
+      missing, so it falls back to the row-count test this rule replaced
+      (:func:`matchup_stored_candidate_count`);
+    * a party-only series (no ``required`` matchup) names no candidates to miss.
+
+    Only :attr:`PollReading.seat_id`, :attr:`PollReading.candidate_shares` and
+    :attr:`PollReading.candidate_count` are read, so a caller that has no use for
+    the rest — the cap, which only wants dates — may leave them empty.
+
+    Args:
+        readings: Seat readings already restricted to those each seat is tracked
+            on. Which matchup that is belongs to the caller; this function only
+            judges the gaps in the readings it is handed.
+        required_by_seat: Seat id → that seat's resolved matchup, ``None`` for a
+            party-only series. A reading whose seat is absent here, or which is
+            not seat-scoped at all, names no race and is returned usable.
+
+    Returns:
+        ``(usable, blocking_by_seat)`` — the usable readings in input order, and
+        seat id → the matchup's own names for the candidates whose absence
+        blocked a reading of that seat, sorted and de-duplicated. Seats that
+        blocked nothing are absent, as is a seat blocked only by the count-only
+        compatibility path, which cannot know who is missing.
+    """
+    # Pass 1: work out what each reading is missing, and measure the complete ones.
+    candidates_by_label: dict[str, tuple[MatchupCandidate, ...]] = {}
+    complete_sums: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    complete_counts: dict[int, int] = defaultdict(int)
+    records: list[_SeatReading] = []
+
+    for reading in readings:
+        seat_id = reading.seat_id
+        required = None if seat_id is None else required_by_seat.get(seat_id)
+        unnamed = required is not None and not reading.candidate_shares
+        missing: tuple[MatchupCandidate, ...] = ()
+
+        if seat_id is not None and required is not None and not unnamed:
+            named = candidates_by_label.get(required)
+            if named is None:
+                # A race's readings all share one label, so parse it once.
+                named = matchup_candidates(required)
+                candidates_by_label[required] = named
+            matched: dict[str, float] = {}
+            absent: list[MatchupCandidate] = []
+            for candidate in named:
+                share = _matched_candidate_share(candidate, reading.candidate_shares)
+                if share is None:
+                    absent.append(candidate)
+                else:
+                    matched[candidate.name] = share
+            missing = tuple(absent)
+            if not missing:
+                # Complete: every named candidate has a row, so this reading is
+                # the evidence the incomplete ones are judged against.
+                for name, share in matched.items():
+                    complete_sums[seat_id][name] += share
+                complete_counts[seat_id] += 1
+
+        records.append(
+            _SeatReading(
+                reading=reading,
+                seat_id=seat_id,
+                required=required,
+                missing=missing,
+                unnamed=unnamed,
+            )
+        )
+
+    # Pass 2: judge each reading's gaps against the race as a whole.
+    usable: list[PollReading] = []
+    blocking_by_seat: dict[int, set[str]] = defaultdict(set)
+
+    for record in records:
+        seat_id = record.seat_id
+        required = record.required
+        if seat_id is None or required is None:
+            usable.append(record.reading)
+            continue
+
+        # A skip names the candidates that caused it, except on the count-only
+        # compatibility path, which cannot know who is missing.
+        blocking: tuple[str, ...] = ()
+        skip = False
+        if record.unnamed:
+            skip = record.reading.candidate_count < matchup_stored_candidate_count(required)
+        elif record.missing:
+            n_complete = complete_counts.get(seat_id, 0)
+            if n_complete:
+                sums = complete_sums[seat_id]
+                blocking = tuple(
+                    candidate.name
+                    for candidate in record.missing
+                    if sums.get(candidate.name, 0.0) / n_complete >= MATERIAL_CANDIDATE_SHARE
+                )
+            else:
+                blocking = tuple(
+                    candidate.name
+                    for candidate in record.missing
+                    if candidate.party_name in MAJOR_PARTY_NAMES
+                )
+
+        if skip or blocking:
+            blocking_by_seat[seat_id].update(blocking)
+            continue
+        usable.append(record.reading)
+
+    return usable, {
+        seat_id: tuple(sorted(names)) for seat_id, names in blocking_by_seat.items() if names
+    }
 
 
 def aggregate_seat_polls(
@@ -860,29 +999,10 @@ def aggregate_seat_polls(
     distinguishes "row exists, matchup NULL" from "no row" — a distinction that
     only changes the outcome under ``"national"``.
 
-    A reading of the right matchup is skipped only when a **material** candidate
-    the matchup names has no row of its own — the poll left that candidate's cell
-    blank. Rescaling what is left to 100 hands the missing share to the others, so
-    a poll of R 48 with the Democrat blank reads as R 100. A row count alone
-    cannot tell that disaster from a table with no Libertarian column, so
-    materiality is measured instead: a missing candidate blocks the reading when
-    their mean raw stored share over that race's **complete** readings — those
-    with a row for every candidate the matchup names — is at least
-    :data:`MATERIAL_CANDIDATE_SHARE`. Hence two passes: one to measure the
-    complete readings, one to judge the rest against them.
-
-    Three cases fall outside that measurement:
-
-    * a race with **no** complete reading has nothing to measure, so the missing
-      candidate's own party decides — a major-party one (:data:`MAJOR_PARTY_NAMES`)
-      is presumed material, anyone else immaterial. The failure this rule guards
-      against is a major-party omission by construction, whereas a blank
-      third-party candidate is the ordinary "the table had no column for them";
-    * a reading whose rows carry **no** candidate names cannot say *who* is
-      missing, so it falls back to the row-count test this rule replaced
-      (:func:`matchup_stored_candidate_count`);
-    * a party-only series (no ``required`` matchup) names no candidates to miss.
-
+    Resolving *which* matchup a seat is tracked on is this function's own job;
+    judging whether a reading of that matchup is usable is
+    :func:`usable_seat_readings`', which the as-of cap calls with the same
+    already-resolved requirement so the two can never disagree about a poll.
     Skipped readings are counted in :attr:`SeatPollAverage.n_skipped`, and the
     candidates that blocked them named in
     :attr:`SeatPollAverage.blocking_candidates`.
@@ -904,16 +1024,13 @@ def aggregate_seat_polls(
     seat_weights: dict[int, float] = defaultdict(float)
     seat_counts: dict[int, int] = defaultdict(int)
     skipped_counts: dict[int, int] = defaultdict(int)
-    blocking_by_seat: dict[int, set[str]] = defaultdict(set)
     latest_by_seat: dict[int, PollReading] = {}
-    matchup_by_seat: dict[int, str | None] = {}
 
-    # Pass 1: keep the readings that carry their seat's tracked matchup, and
-    # measure each named candidate over the complete ones.
-    candidates_by_label: dict[str, tuple[MatchupCandidate, ...]] = {}
-    complete_sums: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    complete_counts: dict[int, int] = defaultdict(int)
-    kept: list[_SeatReading] = []
+    # Keep the readings that carry their seat's tracked matchup, alongside the
+    # requirement that admitted them and the decided shares they contribute.
+    # ``Iterable`` is still consumed exactly once.
+    kept: list[tuple[int, PollReading, dict[int, float]]] = []
+    required_by_seat: dict[int, str | None] = {}
 
     for reading in readings:
         seat_id = reading.seat_id
@@ -936,74 +1053,17 @@ def aggregate_seat_polls(
         if not decided:
             continue
 
-        unnamed = required is not None and not reading.candidate_shares
-        missing: tuple[MatchupCandidate, ...] = ()
-        if required is not None and not unnamed:
-            named = candidates_by_label.get(required)
-            if named is None:
-                # A race's readings all share one label, so parse it once.
-                named = matchup_candidates(required)
-                candidates_by_label[required] = named
-            matched: dict[str, float] = {}
-            absent: list[MatchupCandidate] = []
-            for candidate in named:
-                share = _matched_candidate_share(candidate, reading.candidate_shares)
-                if share is None:
-                    absent.append(candidate)
-                else:
-                    matched[candidate.name] = share
-            missing = tuple(absent)
-            if not missing:
-                # Complete: every named candidate has a row, so this reading is
-                # the evidence the incomplete ones are judged against.
-                for name, share in matched.items():
-                    complete_sums[seat_id][name] += share
-                complete_counts[seat_id] += 1
+        required_by_seat[seat_id] = required
+        kept.append((seat_id, reading, decided))
 
-        kept.append(
-            _SeatReading(
-                reading=reading,
-                seat_id=seat_id,
-                required=required,
-                decided=decided,
-                missing=missing,
-                unnamed=unnamed,
-            )
-        )
+    usable, blocking_by_seat = usable_seat_readings(
+        [reading for _, reading, _ in kept], required_by_seat
+    )
+    usable_poll_ids = {reading.poll_id for reading in usable}
 
-    # Pass 2: judge each reading's gaps against the race as a whole.
-    for record in kept:
-        seat_id = record.seat_id
-        reading = record.reading
-        required = record.required
-        # A skip names the candidates that caused it, except on the count-only
-        # compatibility path, which cannot know who is missing.
-        blocking: tuple[str, ...] = ()
-        skip = False
-        if required is None:
-            pass
-        elif record.unnamed:
-            skip = reading.candidate_count < matchup_stored_candidate_count(required)
-        elif record.missing:
-            n_complete = complete_counts.get(seat_id, 0)
-            if n_complete:
-                sums = complete_sums[seat_id]
-                blocking = tuple(
-                    candidate.name
-                    for candidate in record.missing
-                    if sums.get(candidate.name, 0.0) / n_complete >= MATERIAL_CANDIDATE_SHARE
-                )
-            else:
-                blocking = tuple(
-                    candidate.name
-                    for candidate in record.missing
-                    if candidate.party_name in MAJOR_PARTY_NAMES
-                )
-
-        matchup_by_seat[seat_id] = required
-        if skip or blocking:
+    for seat_id, reading, decided in kept:
+        if reading.poll_id not in usable_poll_ids:
             skipped_counts[seat_id] += 1
-            blocking_by_seat[seat_id].update(blocking)
             continue
 
         seat_weights[seat_id] += reading.weight
@@ -1015,7 +1075,7 @@ def aggregate_seat_polls(
             reading.poll_id,
         ) > (latest.fieldwork_end, latest.fieldwork_start, latest.poll_id):
             latest_by_seat[seat_id] = reading
-        for party_id, share in record.decided.items():
+        for party_id, share in decided.items():
             weighted_sums[seat_id][party_id] += share * reading.weight
             party_weights[seat_id][party_id] += reading.weight
 
@@ -1028,9 +1088,9 @@ def aggregate_seat_polls(
                 if party_weight > 0
             },
             n_polls=seat_counts.get(seat_id, 0),
-            matchup=matchup_by_seat[seat_id],
+            matchup=required_by_seat[seat_id],
             n_skipped=skipped_counts.get(seat_id, 0),
-            blocking_candidates=tuple(sorted(blocking_by_seat.get(seat_id, ()))),
+            blocking_candidates=blocking_by_seat.get(seat_id, ()),
             latest_poll=(
                 poll_usage(latest_by_seat[seat_id]) if seat_id in latest_by_seat else None
             ),
@@ -1538,19 +1598,25 @@ def _poll_end_dates(db: Database, scope: PollScope, *, include_seat_polls: bool)
     it was built for. So the cap covers both series.
 
     Both halves apply the *same* filters the model does, so a poll it ignores can
-    never move the cap: the national half takes only ``seat_id IS NULL`` polls on
-    the national map carrying the scope's matchup, and the seat half only
+    never move the cap — nor, through :func:`poll_date_bounds`, the rebuild
+    window's start. The national half takes only ``seat_id IS NULL`` polls on the
+    national map carrying the scope's matchup. The seat half takes only
     seat-scoped polls on the seat map, of a seat the run projects
     (:attr:`PollScope.projected_seat_ids`), carrying that seat's tracked matchup
     (the national matchup under the ``"national"`` policy, where a NULL tracked
-    row still opts the seat out).
+    row still opts the seat out) — and then, because the rest of the model's test
+    is not expressible in SQL, hands those polls' rows to the very function the
+    forecast decides with, :func:`usable_seat_readings`. A seat poll that leaves
+    a material candidate's cell blank is discarded by the model, so it does not
+    move the cap either.
 
     Args:
         db: Open database handle.
         scope: The run's resolved :class:`PollScope`.
         include_seat_polls: ``False`` restores the national-only cap, so
             ``--ignore-seat-polls`` reproduces the pre-blending projection whole:
-            same window, same weights, same output.
+            same window, same weights, same output. The seat query and its
+            companion row query are not run at all.
 
     Returns:
         Every qualifying fieldwork end date, unsorted and with duplicates.
@@ -1561,7 +1627,9 @@ def _poll_end_dates(db: Database, scope: PollScope, *, include_seat_polls: bool)
         _matchup_clause(scope.national_matchup),
     )
 
-    seat_statement = select(Poll.fieldwork_end).where(
+    # Widened from the end date alone: the materiality predicate needs to know
+    # which poll, which seat and which pairing each date belongs to.
+    seat_statement = select(Poll.id, Poll.seat_id, Poll.matchup, Poll.fieldwork_end).where(
         Poll.map_id == scope.seat_map_id,
         Poll.seat_id.is_not(None),
     )
@@ -1596,8 +1664,59 @@ def _poll_end_dates(db: Database, scope: PollScope, *, include_seat_polls: bool)
 
     with db.session() as session:
         end_dates = list(session.execute(national_statement).scalars().all())
-        if include_seat_polls:
-            end_dates.extend(session.execute(seat_statement).scalars().all())
+        if not include_seat_polls:
+            return end_dates
+        seat_polls = session.execute(seat_statement).all()
+        # One companion query for the rows of exactly those polls, re-using the
+        # select above as a subquery so the poll ids never become bind parameters.
+        row_statement = select(
+            PollRow.poll_id, PollRow.party_id, PollRow.percentage, PollRow.candidate_name
+        ).where(
+            PollRow.poll_id.in_(seat_statement.with_only_columns(Poll.id)),
+            PollRow.region_id.is_(None),
+        )
+        poll_rows = session.execute(row_statement).all()
+
+    # Accumulated exactly as :func:`collect_poll_readings` does, so the predicate
+    # sees the same names and the same row count it would see in a real run.
+    shares_by_poll: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    counts_by_poll: dict[int, int] = defaultdict(int)
+    for poll_id, party_id, percentage, candidate_name in poll_rows:
+        if party_id is None:
+            continue
+        counts_by_poll[poll_id] += 1
+        name = (candidate_name or "").strip().casefold()
+        if name:
+            shares_by_poll[poll_id][name] += float(percentage)
+
+    # Only the fields the predicate reads carry real values; it never looks at a
+    # weight, a party share or a pollster, and the cap has no use for them.
+    readings = [
+        PollReading(
+            poll_id=poll_id,
+            seat_id=seat_id,
+            matchup=matchup,
+            weight=1.0,
+            shares={},
+            region_shares={},
+            pollster="",
+            fieldwork_start=fieldwork_end,
+            fieldwork_end=fieldwork_end,
+            candidate_count=counts_by_poll.get(poll_id, 0),
+            candidate_shares=dict(shares_by_poll.get(poll_id, {})),
+        )
+        for poll_id, seat_id, matchup, fieldwork_end in seat_polls
+    ]
+    # The SQL has already pinned every selected poll to the matchup the model
+    # requires of its seat — the seat's ``tracked_matchups`` row under
+    # ``"per_seat"``, the national matchup under ``"national"`` — so each row
+    # carries the resolved requirement with it.
+    required_by_seat: dict[int, str | None] = {
+        seat_id: matchup for _, seat_id, matchup, _ in seat_polls
+    }
+
+    usable, _blocking = usable_seat_readings(readings, required_by_seat)
+    end_dates.extend(reading.fieldwork_end for reading in usable)
     return end_dates
 
 

@@ -2785,6 +2785,80 @@ class TestMatchupStoredCandidateCount:
         assert us_polls_common.matchup_stored_candidate_count("Smith (R) vs Flanagan (DFL)") == 2
 
 
+class TestMatchupCandidates:
+    """Reading a label back into the candidates it names."""
+
+    def test_alaskas_four_way_keeps_every_candidate_and_party(self) -> None:
+        # Two Republicans share a surname, so the label carries their full names.
+        candidates = us_polls_common.matchup_candidates(
+            "Dan S. Sullivan (R) vs Dan J. Sullivan (R) vs Heikes (R) vs Peltola (D)"
+        )
+
+        assert [c.name for c in candidates] == [
+            "Dan S. Sullivan",
+            "Dan J. Sullivan",
+            "Heikes",
+            "Peltola",
+        ]
+        assert [c.party_name for c in candidates] == [
+            "Republican",
+            "Republican",
+            "Republican",
+            "Democratic",
+        ]
+
+    def test_an_unknown_suffix_is_dropped(self) -> None:
+        candidates = us_polls_common.matchup_candidates(f"{MI_SENATE} vs Doe (WCP)")
+
+        assert [c.name for c in candidates] == ["Rogers", "El-Sayed"]
+
+    def test_a_multi_letter_suffix_keeps_its_own_letter(self) -> None:
+        candidates = us_polls_common.matchup_candidates("Smith (R) vs Flanagan (DFL)")
+
+        assert [(c.letter, c.party_name) for c in candidates] == [
+            ("R", "Republican"),
+            ("DFL", "Democratic"),
+        ]
+
+    def test_a_label_with_no_known_suffix_yields_nothing(self) -> None:
+        assert us_polls_common.matchup_candidates("Generic Republican vs Doe (WCP)") == ()
+
+
+class TestCandidateMatches:
+    """Matching a label's name against a stored row's candidate name."""
+
+    def test_a_surname_matches_the_full_stored_name(self) -> None:
+        assert us_polls_common.candidate_matches("Heikes", "Gerald Heikes")
+
+    def test_a_full_name_matches_itself(self) -> None:
+        assert us_polls_common.candidate_matches("Dan S. Sullivan", "Dan S. Sullivan")
+
+    def test_an_apostrophe_surname_matches(self) -> None:
+        assert us_polls_common.candidate_matches("O'Rourke", "Beto O'Rourke")
+
+    def test_a_different_candidate_does_not_match(self) -> None:
+        assert not us_polls_common.candidate_matches("Heikes", "Mary Peltola")
+
+    def test_matching_ignores_case_and_surrounding_space(self) -> None:
+        assert us_polls_common.candidate_matches("  heikes ", "Gerald HEIKES")
+
+    def test_a_generational_suffix_is_ignored_on_the_stored_name(self) -> None:
+        assert us_polls_common.candidate_matches("Doe", "John Doe Jr.")
+
+
+class TestMajorPartyNames:
+    def test_the_two_major_parties_are_major(self) -> None:
+        assert {"Democratic", "Republican"} == set(us_polls_common.MAJOR_PARTY_NAMES)
+
+    def test_a_dfl_candidate_counts_as_major(self) -> None:
+        (candidate,) = us_polls_common.matchup_candidates("Flanagan (DFL)")
+        assert candidate.party_name in us_polls_common.MAJOR_PARTY_NAMES
+
+    def test_an_independent_is_not_major(self) -> None:
+        (candidate,) = us_polls_common.matchup_candidates("Osborn (I)")
+        assert candidate.party_name not in us_polls_common.MAJOR_PARTY_NAMES
+
+
 class TestPartialSeatReadings:
     def test_a_reading_missing_a_candidate_is_skipped(self) -> None:
         # The worked example: B polled Rogers at 48 and left El-Sayed blank.

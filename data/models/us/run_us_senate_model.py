@@ -36,6 +36,7 @@ import json
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -101,6 +102,8 @@ def class2_state_allowlist(snapshot_path: Path = SENATE_CURRENT_JSON) -> frozens
 
 def senate_special_elections(
     shell_path: Path = MAP_MODES_SHELL_JSON,
+    *,
+    current_year: int | None = None,
 ) -> tuple[SenateSpecial, ...]:
     """Return the special elections the *next* Senate cycle holds.
 
@@ -109,13 +112,24 @@ def senate_special_elections(
     — one shell key decides the cycle, so a special that has been held (or is not
     yet due) drops out of the model the moment that year moves.
 
+    A next-election year that has already passed keeps nothing, so a shell nobody
+    has bumped since the cycle ended cannot leave the model projecting a finished
+    race. The export applies the same test before it ships the key, so the model
+    and the exported manifest cannot disagree about the field.
+
     A missing file, unreadable JSON or a missing key all mean "no specials": the
     regular Class-2 field still projects, exactly as it did before specials existed.
     Malformed entries are skipped for the same reason — a half-written shell entry
     must not take the whole runner down at import time — by the export's own
     :func:`~scripts.export.manifest.senate_specials_for_year`, so the model and the
     exported manifest always agree on the field.
+
+    Args:
+        shell_path: The hand-authored map-modes shell to read.
+        current_year: The year to judge the cycle against; defaults to today's.
+            Injectable so a test need not depend on the calendar.
     """
+    year_now = date.today().year if current_year is None else current_year
     try:
         payload = json.loads(shell_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
@@ -126,7 +140,7 @@ def senate_special_elections(
     map_modes = payload.get("mapModes")
     senate_mode = map_modes.get(SENATE_MAP_MODE_KEY) if isinstance(map_modes, dict) else None
     next_year = senate_next_election_year(payload.get("parliamentFeatures"))
-    if not isinstance(senate_mode, dict) or next_year is None:
+    if not isinstance(senate_mode, dict) or next_year is None or next_year < year_now:
         return ()
 
     return tuple(

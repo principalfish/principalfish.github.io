@@ -2321,7 +2321,7 @@ class TestSenateSpecialElections:
     def test_the_shipped_shell_holds_florida_and_ohio_from_2022(self, tmp_path: Path) -> None:
         from run_us_senate_model import SenateSpecial, senate_special_elections
 
-        specials = senate_special_elections(_shell_copy(tmp_path))
+        specials = senate_special_elections(_shell_copy(tmp_path), current_year=2026)
 
         assert specials == (
             SenateSpecial(seat="Florida", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
@@ -2369,7 +2369,9 @@ class TestSenateSpecialElections:
 
         path = _edit_shell(_shell_copy(tmp_path), move_florida_to_2028)
 
-        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2026)
+        ] == ["Ohio"]
 
     def test_every_entry_drops_out_once_the_cycle_moves_on(self, tmp_path: Path) -> None:
         from run_us_senate_model import senate_special_elections
@@ -2378,6 +2380,43 @@ class TestSenateSpecialElections:
             payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2028
 
         assert senate_special_elections(_edit_shell(_shell_copy(tmp_path), next_cycle)) == ()
+
+    def test_a_cycle_that_has_already_passed_keeps_nothing(self, tmp_path: Path) -> None:
+        # A shell nobody bumped after the cycle ended must not leave the model
+        # projecting a finished race, which is the export's rule too.
+        from run_us_senate_model import senate_special_elections
+
+        def stale_cycle(payload: dict[str, Any]) -> None:
+            payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2024
+            for entry in payload["mapModes"]["23"]["senateSpecialElections"]:
+                entry["year"] = 2024
+
+        path = _edit_shell(_shell_copy(tmp_path), stale_cycle)
+
+        assert senate_special_elections(path, current_year=2026) == ()
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2024)
+        ] == ["Florida", "Ohio"]
+
+    def test_the_model_and_the_export_agree_on_one_shell(self, tmp_path: Path) -> None:
+        # One rule, two readers: the runner's own filter and the export's, over
+        # the same payload, must name the same seats — including when the cycle
+        # has passed and neither should keep anything.
+        from scripts.export.manifest import _live_senate_specials, senate_next_election_year
+
+        from run_us_senate_model import senate_special_elections
+
+        path = _shell_copy(tmp_path)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        entries = payload["mapModes"]["23"]["senateSpecialElections"]
+        next_year = senate_next_election_year(payload.get("parliamentFeatures"))
+
+        for year in (2024, 2026, 2027):
+            model = [s.seat for s in senate_special_elections(path, current_year=year)]
+            exported = [
+                str(entry["seat"]) for entry in _live_senate_specials(entries, next_year, year)
+            ]
+            assert model == exported, f"disagreed for current_year={year}"
 
     def test_an_entry_without_a_seat_or_baseline_is_skipped(self, tmp_path: Path) -> None:
         from run_us_senate_model import senate_special_elections
@@ -2389,7 +2428,9 @@ class TestSenateSpecialElections:
 
         path = _edit_shell(_shell_copy(tmp_path), half_written)
 
-        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2026)
+        ] == ["Ohio"]
 
     def test_malformed_entries_are_skipped_as_the_export_skips_them(self, tmp_path: Path) -> None:
         # The export's rules: an integer year and class, and a non-blank string
@@ -2415,7 +2456,9 @@ class TestSenateSpecialElections:
 
         path = _edit_shell(_shell_copy(tmp_path), malformed)
 
-        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2026)
+        ] == ["Ohio"]
 
 
 class TestSenateFieldAllowlist:

@@ -300,6 +300,33 @@ def test_failed_drive_push_keeps_the_archive_and_the_old_copy(
     assert (archive / backup.DRIVE_PUSH_STAMP).stat().st_mtime < second.stat().st_mtime
 
 
+def test_drive_dropping_out_mid_push_keeps_the_archive(
+    source_db: Path, folders: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive, sync = folders
+    tmp = sync / f"{backup.SYNC_NAME}.tmp"
+
+    # The mount goes stale part way through: the copy fails, and so does
+    # removing what it left behind.
+    def stale(src: Path, dst: Path) -> NoReturn:
+        raise OSError(errno.ENODEV, "No such device")
+
+    real_unlink = Path.unlink
+
+    def unlink(self: Path, missing_ok: bool = False) -> None:
+        if self == tmp:
+            raise OSError(errno.ENODEV, "No such device")
+        real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(shutil, "copyfile", stale)
+    monkeypatch.setattr(Path, "unlink", unlink)
+    made = run(source_db, folders, push=True)
+    monkeypatch.undo()
+
+    assert made is not None and made.exists()
+    assert backup._archives(archive) == [made]
+
+
 def test_mounted_drive_with_no_archives_pushes_nothing(
     folders: tuple[Path, Path],
 ) -> None:

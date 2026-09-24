@@ -39,7 +39,7 @@ import sqlite3
 import threading
 import time
 from collections.abc import Iterator
-from contextlib import closing, contextmanager
+from contextlib import closing, contextmanager, suppress
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -229,7 +229,10 @@ def _push_to_drive(archive_dir: Path, sync_dir: Path | None, force: bool) -> boo
         # Drive is nearly full, so running out of space here is a real case.
         # A half-written .tmp would sit in the Drive folder, syncing, forever.
         log.exception("Drive push of %s failed; the local archive stands", newest)
-        tmp.unlink(missing_ok=True)
+        # The mount can drop out mid-copy, and then removing the .tmp fails
+        # too; that mustn't turn the made archive into a failed backup.
+        with suppress(OSError):
+            tmp.unlink(missing_ok=True)
         return False
 
     stamp.write_text(_today(), encoding="utf-8")

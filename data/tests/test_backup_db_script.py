@@ -36,7 +36,7 @@ def test_backup_then_unchanged(
 ) -> None:
     assert backup_db.main([]) == 0
     assert "Archived to" in capsys.readouterr().out
-    assert len(backup._archives(str(env["archive"]))) == 1
+    assert len(backup._archives(env["archive"])) == 1
     assert os.listdir(env["sync"]) == [backup.SYNC_NAME]
 
     assert backup_db.main(["backup"]) == 0
@@ -48,7 +48,7 @@ def test_push_passes_through(
 ) -> None:
     seen: dict[str, bool] = {}
 
-    def fake(push: bool = False) -> str | None:
+    def fake(push: bool = False) -> Path | None:
         seen["push"] = push
         return None
 
@@ -116,3 +116,17 @@ def test_restore_with_nothing_to_restore_is_an_error(
 def test_push_with_restore_is_rejected(env: dict[str, Path]) -> None:
     with pytest.raises(SystemExit):
         backup_db.main(["restore", "--push"])
+
+
+def test_a_locked_database_is_an_error_not_a_traceback(
+    env: dict[str, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def locked(push: bool = False) -> Path | None:
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(backup, "backup_database", locked)
+
+    assert backup_db.main([]) == 1
+    assert "database is locked" in capsys.readouterr().err

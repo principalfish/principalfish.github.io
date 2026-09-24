@@ -98,7 +98,7 @@ def test_backup_route_forces_the_drive_push(
 ) -> None:
     seen: dict[str, bool] = {}
 
-    def fake(push: bool = False) -> str | None:
+    def fake(push: bool = False) -> Path | None:
         seen["push"] = push
         return None
 
@@ -112,7 +112,7 @@ def test_backup_route_forces_the_drive_push(
 def test_backup_route_reports_a_failure(
     app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def fail(push: bool = False) -> str | None:
+    def fail(push: bool = False) -> Path | None:
         raise RuntimeError("the copy didn't come out intact")
 
     monkeypatch.setattr(backup, "backup_database", fail)
@@ -137,7 +137,7 @@ def test_restore_route_drops_connections_then_restores(
     monkeypatch.setattr(db_admin, "reset_db", lambda: order.append("reset"))
     real_restore = backup.restore_latest
 
-    def restore() -> str:
+    def restore() -> Path:
         order.append("restore")
         return real_restore()
 
@@ -168,3 +168,88 @@ def test_home_shows_the_new_buttons(app: Flask) -> None:
     assert "Restore newest archive" in body
     assert 'action="/db/backup"' in body
     assert 'action="/db/restore"' in body
+
+
+def test_a_locked_database_is_reported_not_a_500(
+    app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # sqlite3.Error isn't an OSError; an import holding the write lock raises it.
+    def locked(push: bool = False) -> Path | None:
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(backup, "backup_database", locked)
+    response = app.test_client().post("/db/backup")
+
+    assert response.status_code == 200
+    assert "Backup failed: database is locked" in response.get_data(as_text=True)
+
+
+def test_restore_reports_a_locked_database(
+    app: Flask, live_db: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def locked() -> Path:
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(backup, "restore_latest", locked)
+    response = app.test_client().post("/db/restore")
+
+    assert response.status_code == 200
+    assert "Restore failed: database is locked" in response.get_data(as_text=True)
+
+
+# --- cross-site requests ----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Sec-Fetch-Site": "cross-site"},
+        {"Sec-Fetch-Site": "same-site"},
+        {"Origin": "http://evil.example"},
+        {"Origin": "null"},
+    ],
+)
+@pytest.mark.parametrize("route", ["/db/backup", "/db/restore"])
+def test_a_cross_site_post_is_refused(
+    app: Flask,
+    live_db: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    route: str,
+    headers: dict[str, str],
+) -> None:
+    ran: list[str] = []
+    monkeypatch.setattr(backup, "backup_database", lambda push=False: ran.append("b"))
+    monkeypatch.setattr(backup, "restore_latest", lambda: ran.append("r"))
+
+    response = app.test_client().post(route, headers=headers)
+
+    assert response.status_code == 403
+    assert ran == []
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Sec-Fetch-Site": "same-origin"},
+        {"Sec-Fetch-Site": "none"},
+        {"Origin": "http://localhost"},
+        {},
+    ],
+)
+def test_a_same_origin_post_is_allowed(
+    app: Flask,
+    live_db: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    headers: dict[str, str],
+) -> None:
+    ran: list[bool] = []
+
+    def fake(push: bool = False) -> Path | None:
+        ran.append(push)
+        return None
+
+    monkeypatch.setattr(backup, "backup_database", fake)
+    response = app.test_client().post("/db/backup", headers=headers)
+
+    assert response.status_code == 200
+    assert ran == [True]

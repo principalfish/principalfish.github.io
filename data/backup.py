@@ -30,8 +30,7 @@ test suite's per-test ``monkeypatch.setenv`` is honoured (see
 
 from __future__ import annotations
 
-import functools
-import glob
+import fcntl
 import gzip
 import logging
 import os
@@ -39,10 +38,11 @@ import shutil
 import sqlite3
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Iterator
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from typing import ParamSpec, TypeVar
+from pathlib import Path
 
 from config import DatabaseConfig
 
@@ -54,6 +54,9 @@ SYNC_NAME = "elections.db.gz"
 # Records the date of the last Drive push, so automatic backups refresh the
 # Drive copy at most once a day. Lives beside the archives, not on Drive.
 DRIVE_PUSH_STAMP = ".last_drive_push"
+
+# Held (flock) for the whole of a backup or restore. Lives beside the archives.
+LOCK_NAME = ".lock"
 
 # Big enough to keep the per-read overhead negligible on a ~500 MB file, small
 # enough that nothing close to the whole database is ever held in memory.
@@ -73,40 +76,45 @@ _backup_wanted = threading.Event()
 _backup_thread: threading.Thread | None = None
 _backup_thread_lock = threading.Lock()
 
-# Backup and restore share fixed temporary names (elections.db.partial, ...), so
-# two running at once in one process — the console's Backup button while the
-# background thread is mid-backup — would write over each other's files.
-_run_lock = threading.Lock()
 
-_P = ParamSpec("_P")
-_R = TypeVar("_R")
+@contextmanager
+def _exclusive(archive_dir: Path) -> Iterator[None]:
+    """Hold the archive folder's lock: one backup or restore at a time.
 
-
-def _serialised(fn: Callable[_P, _R]) -> Callable[_P, _R]:
-    """Run ``fn`` under ``_run_lock``, one backup or restore at a time."""
-
-    @functools.wraps(fn)
-    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
-        with _run_lock:
-            return fn(*args, **kwargs)
-
-    return wrapper
+    Backup and restore share fixed temporary names (``elections.db.partial``,
+    ...). Two at once — the console's background thread and its Backup button,
+    or the console and ``backup_db.py`` in another process — would sweep and
+    overwrite each other's files and could publish a truncated archive. An
+    flock covers both cases: each call opens its own descriptor, so threads in
+    one process wait on each other just as separate processes do.
+    """
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    with open(archive_dir / LOCK_NAME, "a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
 
 
-def _database_path() -> str:
+def _database_path() -> Path:
     """The live database, from the same setting the rest of the app uses."""
-    return DatabaseConfig.from_env().database_path
+    return Path(DatabaseConfig.from_env().database_path)
 
 
-def _archive_dir() -> str:
-    return os.environ.get("ELECTIONS_ARCHIVE_DIR") or os.path.expanduser(
-        "~/dbs/elections"
-    )
+def _archive_dir() -> Path:
+    configured = os.environ.get("ELECTIONS_ARCHIVE_DIR")
+    return Path(configured) if configured else Path.home() / "dbs" / "elections"
 
 
-def _sync_dir() -> str:
-    """The Drive folder, or empty when Drive pushes are off."""
-    return os.environ.get("ELECTIONS_BACKUP_DIR") or ""
+def _sync_dir() -> Path | None:
+    """The Drive folder, or None when Drive pushes are off."""
+    configured = os.environ.get("ELECTIONS_BACKUP_DIR")
+    return Path(configured) if configured else None
+
+
+def _as_sync_dir(sync_dir: str | Path | None) -> Path | None:
+    """An explicit ``sync_dir`` argument: None means the default, "" means off."""
+    if sync_dir is None:
+        return _sync_dir()
+    return Path(sync_dir) if str(sync_dir) else None
 
 
 def _keep() -> int:
@@ -128,42 +136,49 @@ def _today() -> str:
     return date.today().strftime("%Y-%m-%d")
 
 
-def _archives(folder: str) -> list[str]:
+def _archives(folder: Path) -> list[Path]:
     """Archives oldest first. The stamp sorts as text in the same order."""
-    return sorted(glob.glob(os.path.join(folder, "elections-*.db.gz")))
+    return sorted(folder.glob("elections-*.db.gz"))
 
 
-def _prune(folder: str, keep: int) -> None:
+def _prune(folder: Path, keep: int) -> None:
     if keep > 0:
         for old in _archives(folder)[:-keep]:
-            os.remove(old)
+            old.unlink()
 
 
-def _intact(path: str) -> bool:
+def _sqlite_backup(source: Path, target: Path) -> None:
+    """Copy ``source`` into ``target`` with SQLite's backup API."""
+    with (
+        closing(sqlite3.connect(source)) as src,
+        closing(sqlite3.connect(target)) as dst,
+    ):
+        src.backup(dst)
+
+
+def _intact(path: Path) -> bool:
     """Whether ``path`` is a SQLite database that passes its integrity check.
 
     A file that isn't a database at all makes SQLite raise rather than report a
     failed check; for our purposes that is the same answer.
     """
-    check = sqlite3.connect(path)
-    try:
-        row = check.execute("PRAGMA integrity_check").fetchone()
-        return row is not None and row[0] == "ok"
-    except sqlite3.DatabaseError:
-        return False
-    finally:
-        check.close()
+    with closing(sqlite3.connect(path)) as check:
+        try:
+            row = check.execute("PRAGMA integrity_check").fetchone()
+        except sqlite3.DatabaseError:
+            return False
+    return row is not None and row[0] == "ok"
 
 
-def _same_contents(a: str, b: str) -> bool:
+def _same_contents(a: Path, b: Path) -> bool:
     """Byte-for-byte comparison that never loads either file whole.
 
     Sizes first: a real change almost always changes the compressed size, so
     the chunked read below only runs when the answer is probably "same".
     """
-    if os.path.getsize(a) != os.path.getsize(b):
+    if a.stat().st_size != b.stat().st_size:
         return False
-    with open(a, "rb") as fa, open(b, "rb") as fb:
+    with a.open("rb") as fa, b.open("rb") as fb:
         while True:
             ca = fa.read(_CHUNK)
             cb = fb.read(_CHUNK)
@@ -173,55 +188,61 @@ def _same_contents(a: str, b: str) -> bool:
                 return True
 
 
-def _push_to_drive(archive_dir: str, sync_dir: str, force: bool) -> bool:
+def _push_to_drive(archive_dir: Path, sync_dir: Path | None, force: bool) -> bool:
     """Overwrite the Drive copy with the newest archive, at most once a day.
 
     Returns whether a push happened. Without ``force`` the push is skipped when
     the Drive copy was already refreshed today, or when no archive has been
     made since the last push (so an idle day doesn't re-upload the same file).
+    A failed push is logged, not raised: the local archive is already made, and
+    the next push catches Drive up.
     """
     # Drive syncs whatever lands in its folder, so copying is the whole job.
     # Missing means not mounted — Drive for Desktop restarting drops the mount
     # out from under WSL, and the archive is already safely on disk, so it
     # isn't worth an error. The next push catches Drive up.
-    if not sync_dir or not os.path.isdir(sync_dir):
+    if sync_dir is None or not sync_dir.is_dir():
         return False
     existing = _archives(archive_dir)
     if not existing:
         return False
     newest = existing[-1]
 
-    stamp = os.path.join(archive_dir, DRIVE_PUSH_STAMP)
-    if not force and os.path.exists(stamp):
-        with open(stamp, encoding="utf-8") as f:
-            pushed_today = f.read().strip() == _today()
-        if pushed_today or os.path.getmtime(newest) <= os.path.getmtime(stamp):
+    stamp = archive_dir / DRIVE_PUSH_STAMP
+    if not force and stamp.exists():
+        pushed_today = stamp.read_text(encoding="utf-8").strip() == _today()
+        if pushed_today or newest.stat().st_mtime <= stamp.stat().st_mtime:
             return False
 
     # Written under a temporary name and moved into place, so Drive never
     # syncs a half-written file over the last good copy.
-    target = os.path.join(sync_dir, SYNC_NAME)
-    tmp = target + ".tmp"
-    # copyfile, not copy2: Drive's mount refuses to have permissions set on
-    # it, and copy2 does that after writing the bytes — so the file lands and
-    # then the call raises, which reads as a failed backup. Only the contents
-    # matter here anyway.
-    shutil.copyfile(newest, tmp)
-    os.replace(tmp, target)
+    target = sync_dir / SYNC_NAME
+    tmp = sync_dir / f"{SYNC_NAME}.tmp"
+    try:
+        # copyfile, not copy2: Drive's mount refuses to have permissions set on
+        # it, and copy2 does that after writing the bytes — so the file lands
+        # and then the call raises, which reads as a failed backup. Only the
+        # contents matter here anyway.
+        shutil.copyfile(newest, tmp)
+        tmp.replace(target)
+    except OSError:
+        # Drive is nearly full, so running out of space here is a real case.
+        # A half-written .tmp would sit in the Drive folder, syncing, forever.
+        log.exception("Drive push of %s failed; the local archive stands", newest)
+        tmp.unlink(missing_ok=True)
+        return False
 
-    with open(stamp, "w", encoding="utf-8") as f:
-        f.write(_today())
+    stamp.write_text(_today(), encoding="utf-8")
     return True
 
 
-@_serialised
 def backup_database(
-    archive_dir: str | None = None,
-    sync_dir: str | None = None,
+    archive_dir: str | Path | None = None,
+    sync_dir: str | Path | None = None,
     keep: int | None = None,
-    db_path: str | None = None,
+    db_path: str | Path | None = None,
     push: bool = False,
-) -> str | None:
+) -> Path | None:
     """Archive the database locally, and refresh the Drive copy if it is due.
 
     SQLite's own backup rather than a file copy: the console may be part way
@@ -231,7 +252,7 @@ def backup_database(
 
     Args:
         archive_dir: Local archive folder (default ``ELECTIONS_ARCHIVE_DIR``).
-        sync_dir: Drive folder (default ``ELECTIONS_BACKUP_DIR``; empty = off).
+        sync_dir: Drive folder (default ``ELECTIONS_BACKUP_DIR``; "" = off).
         keep: Local archives to keep (default ``ELECTIONS_BACKUP_KEEP``).
         db_path: Database to back up (default ``DATABASE_PATH``).
         push: Refresh the Drive copy even if it was already pushed today.
@@ -241,83 +262,76 @@ def backup_database(
         had changed since the last archive. Whether Drive was pushed does not
         affect the return value.
     """
-    archive_dir = _archive_dir() if archive_dir is None else archive_dir
-    sync_dir = _sync_dir() if sync_dir is None else sync_dir
+    archive = _archive_dir() if archive_dir is None else Path(archive_dir)
+    sync = _as_sync_dir(sync_dir)
     keep = _keep() if keep is None else keep
-    db_path = _database_path() if db_path is None else db_path
+    db = _database_path() if db_path is None else Path(db_path)
 
-    if not os.path.exists(db_path):
+    if not db.exists():
         return None
-    os.makedirs(archive_dir, exist_ok=True)
 
     # The plain newest copy below is named elections.db; pointing the archive
     # folder at the live database's own folder would overwrite the database.
-    latest = os.path.join(archive_dir, "elections.db")
-    if os.path.abspath(latest) == os.path.abspath(db_path):
-        raise ValueError(f"archive folder {archive_dir} holds the live database itself")
+    # realpath, so a symlinked archive folder can't slip past.
+    latest = archive / "elections.db"
+    if os.path.realpath(latest) == os.path.realpath(db):
+        raise ValueError(f"archive folder {archive} holds the live database itself")
 
-    # Written under a temporary name and moved into place, so an interrupted
-    # copy never leaves a half-finished file where the good one should be. A
-    # partial left by a run that died isn't a database and sqlite3 would refuse
-    # to open it, which would block every backup from here on, so it goes.
-    partial = os.path.join(archive_dir, "elections.db.partial")
-    gz_partial = os.path.join(archive_dir, "elections.db.gz.partial")
-    for leftover in (partial, gz_partial):
-        if os.path.exists(leftover):
-            os.remove(leftover)
+    with _exclusive(archive):
+        # Written under a temporary name and moved into place, so an
+        # interrupted copy never leaves a half-finished file where the good one
+        # should be. A partial left by a run that died isn't a database and
+        # sqlite3 would refuse to open it, which would block every backup from
+        # here on, so it goes.
+        partial = archive / "elections.db.partial"
+        gz_partial = archive / "elections.db.gz.partial"
+        for leftover in (partial, gz_partial):
+            leftover.unlink(missing_ok=True)
 
-    source = sqlite3.connect(db_path)
-    target = sqlite3.connect(partial)
-    try:
-        with target:
-            source.backup(target)
-    finally:
-        source.close()
-        target.close()
+        _sqlite_backup(db, partial)
+        if not _intact(partial):
+            partial.unlink()
+            raise RuntimeError("the copy didn't come out intact — not keeping it")
 
-    if not _intact(partial):
-        os.remove(partial)
-        raise RuntimeError("the copy didn't come out intact — not keeping it")
+        # One plain copy that's always the newest, so getting the database back
+        # doesn't mean choosing between dated files or unzipping anything.
+        partial.replace(latest)
 
-    # One plain copy that's always the newest, so getting the database back
-    # doesn't mean choosing between dated files or unzipping anything.
-    os.replace(partial, latest)
+        # mtime=0: identical data gzips to identical bytes. That makes an
+        # archive matching the last one recognisable, so a request that changed
+        # nothing — a POST that only previewed, or an edit saved back to what it
+        # was — doesn't fill the folder. Streamed through a file object rather
+        # than gzip.compress(f.read()), so the database is never held in memory
+        # whole.
+        with latest.open("rb") as src, gz_partial.open("wb") as dest:
+            with gzip.GzipFile(
+                fileobj=dest, mode="wb", mtime=0, compresslevel=_GZIP_LEVEL
+            ) as gz:
+                shutil.copyfileobj(src, gz, _CHUNK)
 
-    # mtime=0: identical data gzips to identical bytes. That makes an archive
-    # matching the last one recognisable, so a request that changed nothing —
-    # a POST that only previewed, or an edit saved back to what it was —
-    # doesn't fill the folder. Streamed through a file object rather than
-    # gzip.compress(f.read()), so the database is never held in memory whole.
-    with open(latest, "rb") as src, open(gz_partial, "wb") as dest:
-        with gzip.GzipFile(
-            fileobj=dest, mode="wb", mtime=0, compresslevel=_GZIP_LEVEL
-        ) as gz:
-            shutil.copyfileobj(src, gz, _CHUNK)
+        existing = _archives(archive)
+        made: Path | None
+        if existing and _same_contents(existing[-1], gz_partial):
+            gz_partial.unlink()
+            made = None
+        else:
+            made = archive / f"elections-{_stamp()}.db.gz"
+            gz_partial.replace(made)
+            _prune(archive, keep)
 
-    existing = _archives(archive_dir)
-    made: str | None
-    if existing and _same_contents(existing[-1], gz_partial):
-        os.remove(gz_partial)
-        made = None
-    else:
-        made = os.path.join(archive_dir, f"elections-{_stamp()}.db.gz")
-        os.replace(gz_partial, made)
-        _prune(archive_dir, keep)
-
-    # Considered even when nothing new was archived: a push skipped earlier —
-    # throttled, or the mount was down — still gets caught up on the next day.
-    _push_to_drive(archive_dir, sync_dir, force=push)
+        # Considered even when nothing new was archived: a push skipped earlier
+        # — throttled, or the mount was down — still gets caught up next day.
+        _push_to_drive(archive, sync, force=push)
     return made
 
 
-def _restore_source(archive_dir: str, sync_dir: str) -> str | None:
+def _restore_source(archive_dir: Path, sync_dir: Path | None) -> Path | None:
     """The archive a restore would use: newest local, else the Drive copy."""
     local = _archives(archive_dir)
     if local:
         return local[-1]
-    drive = os.path.join(sync_dir, SYNC_NAME) if sync_dir else ""
-    if drive and os.path.isfile(drive):
-        return drive
+    if sync_dir is not None and (sync_dir / SYNC_NAME).is_file():
+        return sync_dir / SYNC_NAME
     return None
 
 
@@ -325,13 +339,13 @@ def _restore_source(archive_dir: str, sync_dir: str) -> str | None:
 class BackupStatus:
     """Where backups go and what is there — for a dry run, touching nothing."""
 
-    db_path: str
-    archive_dir: str
-    sync_dir: str
+    db_path: Path
+    archive_dir: Path
+    sync_dir: Path | None
     sync_mounted: bool
     archives: int
-    newest_archive: str | None
-    restore_source: str | None
+    newest_archive: Path | None
+    restore_source: Path | None
     last_drive_push: str | None
 
 
@@ -340,29 +354,25 @@ def status() -> BackupStatus:
     archive_dir = _archive_dir()
     sync_dir = _sync_dir()
     archives = _archives(archive_dir)
-    stamp = os.path.join(archive_dir, DRIVE_PUSH_STAMP)
-    last_push: str | None = None
-    if os.path.isfile(stamp):
-        with open(stamp, encoding="utf-8") as f:
-            last_push = f.read().strip() or None
+    stamp = archive_dir / DRIVE_PUSH_STAMP
+    last_push = stamp.read_text(encoding="utf-8").strip() if stamp.is_file() else ""
     return BackupStatus(
         db_path=_database_path(),
         archive_dir=archive_dir,
         sync_dir=sync_dir,
-        sync_mounted=bool(sync_dir) and os.path.isdir(sync_dir),
+        sync_mounted=sync_dir is not None and sync_dir.is_dir(),
         archives=len(archives),
         newest_archive=archives[-1] if archives else None,
         restore_source=_restore_source(archive_dir, sync_dir),
-        last_drive_push=last_push,
+        last_drive_push=last_push or None,
     )
 
 
-@_serialised
 def restore_latest(
-    db_path: str | None = None,
-    archive_dir: str | None = None,
-    sync_dir: str | None = None,
-) -> str:
+    db_path: str | Path | None = None,
+    archive_dir: str | Path | None = None,
+    sync_dir: str | Path | None = None,
+) -> Path:
     """Replace the database with the newest archive.
 
     The newest local archive is preferred; with none on disk (a fresh machine),
@@ -378,70 +388,62 @@ def restore_latest(
         FileNotFoundError: Neither a local nor a Drive archive exists.
         RuntimeError: The archive didn't unpack to an intact database.
     """
-    db_path = _database_path() if db_path is None else db_path
-    archive_dir = _archive_dir() if archive_dir is None else archive_dir
-    sync_dir = _sync_dir() if sync_dir is None else sync_dir
+    db = _database_path() if db_path is None else Path(db_path)
+    archive = _archive_dir() if archive_dir is None else Path(archive_dir)
+    sync = _as_sync_dir(sync_dir)
 
-    source = _restore_source(archive_dir, sync_dir)
-    if source is None:
-        checked = os.path.join(archive_dir, "elections-*.db.gz")
-        if sync_dir:
-            checked += f" or {os.path.join(sync_dir, SYNC_NAME)}"
-        raise FileNotFoundError(f"no archive to restore from (checked {checked})")
+    with _exclusive(archive):
+        source = _restore_source(archive, sync)
+        if source is None:
+            checked = str(archive / "elections-*.db.gz")
+            if sync is not None:
+                checked += f" or {sync / SYNC_NAME}"
+            raise FileNotFoundError(f"no archive to restore from (checked {checked})")
 
-    os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+        db.parent.mkdir(parents=True, exist_ok=True)
 
-    # Unpacked under a temporary name, so a bad archive never touches the
-    # live database — it is only swapped in once it has passed the check.
-    partial = db_path + ".partial"
-    if os.path.exists(partial):
-        os.remove(partial)
-    try:
-        with gzip.open(source, "rb") as src, open(partial, "wb") as dest:
-            shutil.copyfileobj(src, dest, _CHUNK)
-    except (OSError, EOFError) as exc:
-        if os.path.exists(partial):
-            os.remove(partial)
-        raise RuntimeError(f"{source} didn't unpack — not restoring it") from exc
+        # Unpacked under a temporary name, so a bad archive never touches the
+        # live database — it is only swapped in once it has passed the check.
+        partial = db.with_name(f"{db.name}.partial")
+        partial.unlink(missing_ok=True)
+        try:
+            with gzip.open(source, "rb") as src, partial.open("wb") as dest:
+                shutil.copyfileobj(src, dest, _CHUNK)
+        except (OSError, EOFError) as exc:
+            partial.unlink(missing_ok=True)
+            raise RuntimeError(f"{source} didn't unpack — not restoring it") from exc
 
-    if not _intact(partial):
-        os.remove(partial)
-        raise RuntimeError(f"{source} didn't come out intact — not restoring it")
+        if not _intact(partial):
+            partial.unlink()
+            raise RuntimeError(f"{source} didn't come out intact — not restoring it")
 
-    if os.path.exists(db_path):
-        _save_prerestore(db_path)
+        if db.exists():
+            _save_prerestore(db)
 
-    os.replace(partial, db_path)
-    # The live database runs in WAL mode. A -wal file left from the replaced
-    # database would be replayed against the restored one and corrupt it; its
-    # committed contents are already in the .prerestore copy.
-    for suffix in ("-wal", "-shm"):
-        if os.path.exists(db_path + suffix):
-            os.remove(db_path + suffix)
+        # The live database runs in WAL mode. A -wal file left from the replaced
+        # database would be replayed against the restored one and corrupt it;
+        # its committed contents are already in the .prerestore copy. Removed
+        # before the swap, so a crash in between can't pair the restored
+        # database with the old WAL.
+        for suffix in ("-wal", "-shm"):
+            db.with_name(f"{db.name}{suffix}").unlink(missing_ok=True)
+        partial.replace(db)
     return source
 
 
-def _save_prerestore(db_path: str) -> None:
+def _save_prerestore(db: Path) -> None:
     """Keep the database being replaced as ``<db>.prerestore``.
 
     Through SQLite's backup where possible, so committed changes still sitting
     in the WAL file come along too. A database too broken for SQLite to read —
     often the reason for restoring — is copied as plain bytes instead.
     """
-    keep = db_path + ".prerestore"
-    if os.path.exists(keep):
-        os.remove(keep)
+    keep = db.with_name(f"{db.name}.prerestore")
+    keep.unlink(missing_ok=True)
     try:
-        source = sqlite3.connect(db_path)
-        target = sqlite3.connect(keep)
-        try:
-            with target:
-                source.backup(target)
-        finally:
-            source.close()
-            target.close()
+        _sqlite_backup(db, keep)
     except sqlite3.DatabaseError:
-        shutil.copyfile(db_path, keep)
+        shutil.copyfile(db, keep)
 
 
 def _backup_worker() -> None:

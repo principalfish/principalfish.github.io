@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -91,11 +92,11 @@ def main(argv: list[str] | None = None) -> int:
         # backup_database returns None for a missing database as well as an
         # unchanged one; a terminal run should say which.
         db_path = backup.status().db_path
-        if not Path(db_path).is_file():
+        if not db_path.is_file():
             print(f"Error: database not found: {db_path}", file=sys.stderr)
             return 1
         made = backup.backup_database(push=args.push)
-    except (OSError, RuntimeError, ValueError) as exc:
+    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import os
+import sqlite3
 
-from flask import Blueprint
+from flask import Blueprint, abort, request
 from flask.typing import ResponseReturnValue
 
 import backup
@@ -12,6 +12,32 @@ from console.db import reset_db
 from console.services.runner import render_command_result
 
 bp = Blueprint("db_admin", __name__)
+
+# What a browser sends on a request the page's own form made; "none" is a
+# request typed in or bookmarked, which a hostile page can't produce.
+_SAME_SITE = ("same-origin", "none")
+
+
+@bp.before_request
+def same_origin_only() -> None:
+    """Refuse POSTs another site's page made the browser send (CSRF).
+
+    These routes restore or rewrite the live database, and the only guard in
+    the page is a ``confirm()`` that a forged form never shows. Browsers mark
+    every request with ``Sec-Fetch-Site`` (older ones with ``Origin`` on a
+    POST); a request with neither isn't from a browser, so it can't be forged
+    this way and is let through — curl, and the test client.
+    """
+    if request.method != "POST":
+        return
+    site = request.headers.get("Sec-Fetch-Site")
+    if site is not None:
+        if site not in _SAME_SITE:
+            abort(403)
+        return
+    origin = request.headers.get("Origin")
+    if origin is not None and origin != request.host_url.rstrip("/"):
+        abort(403)
 
 
 def _status_lines() -> list[str]:
@@ -44,7 +70,9 @@ def backup_database() -> ResponseReturnValue:
     try:
         made = backup.backup_database(push=True)
         stdout = f"Archived to {made}" if made else "Unchanged since the last archive"
-    except (OSError, RuntimeError, ValueError) as exc:
+    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
+        # sqlite3.Error isn't an OSError: "database is locked" while an import
+        # holds the write lock would otherwise be a 500 page.
         stderr, code = f"Backup failed: {exc}", 1
     stdout = "\n".join([stdout, "", *_status_lines()]).strip()
 
@@ -75,10 +103,11 @@ def restore_database() -> ResponseReturnValue:
     try:
         used = backup.restore_latest()
         stdout = f"Restored from {used}"
-        kept = f"{backup.status().db_path}.prerestore"
-        if os.path.exists(kept):
+        db = backup.status().db_path
+        kept = db.with_name(f"{db.name}.prerestore")
+        if kept.exists():
             stdout += f"\nPrevious database kept as {kept}"
-    except (OSError, RuntimeError) as exc:
+    except (OSError, RuntimeError, sqlite3.Error) as exc:
         stderr, code = f"Restore failed: {exc}", 1
 
     return render_command_result(

@@ -35,6 +35,7 @@ from polls.importers.us.us_polls_common import CandidateColumn, matchup_label
 import _common
 from _common import (
     LatestPollUsage,
+    MATERIAL_CANDIDATE_SHARE,
     PARTY_ID_ALIASES,
     SeatPollAverage,
     SeatRef,
@@ -372,13 +373,17 @@ def _add_poll(
     map_id: int,
     pollster: Pollster,
     end: date,
-    rows: list[tuple[int, float]],
+    rows: list[tuple[int, float]] | list[tuple[int, float, str]],
     start: date | None = None,
     seat_id: int | None = None,
     matchup: str | None = None,
     region_id: int | None = None,
 ) -> int:
-    """Store one poll and its rows; ``rows`` may repeat a party (same-party candidates)."""
+    """Store one poll and its rows; ``rows`` may repeat a party (same-party candidates).
+
+    A row is ``(party_id, percentage)``, or ``(party_id, percentage, candidate_name)``
+    where the test cares which candidate a figure belongs to.
+    """
     poll = db.add_poll(
         pollster.id,
         map_id,
@@ -387,8 +392,15 @@ def _add_poll(
         matchup=matchup,
         seat_id=seat_id,
     )
-    for party_id, percentage in rows:
-        db.add_poll_row(poll.id, party_id, percentage, region_id=region_id)
+    for row in rows:
+        candidate_name = row[2] if len(row) == 3 else None
+        db.add_poll_row(
+            poll.id,
+            row[0],
+            row[1],
+            region_id=region_id,
+            candidate_name=candidate_name,
+        )
     return int(poll.id)
 
 
@@ -443,6 +455,94 @@ class TestCollectPollReadings:
         assert readings[0].shares[dem.id] == pytest.approx(40.0)
         # The summing hides how many candidates were polled; the count keeps it.
         assert readings[0].candidate_count == 4
+
+    def test_candidate_shares_name_each_figure(self, db: Database) -> None:
+        # Alaska again, with names: the two Republicans are indistinguishable in
+        # `shares`, so a missing one can only be spotted per candidate.
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Alaska Survey", "alaska_survey_us_senate")
+        senate_map = db.add_map(SENATE_MAP, parliament="us_senate")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[
+                (rep.id, 25.0, "Dan S. Sullivan"),
+                (rep.id, 4.0, "Dan J. Sullivan"),
+                (dem.id, 44.0, "Mary Peltola"),
+            ],
+        )
+
+        readings = _readings(db, senate_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].shares[rep.id] == pytest.approx(29.0)
+        assert readings[0].candidate_count == 3
+        assert readings[0].candidate_shares == {
+            "dan s. sullivan": pytest.approx(25.0),
+            "dan j. sullivan": pytest.approx(4.0),
+            "mary peltola": pytest.approx(44.0),
+        }
+
+    def test_rows_without_a_candidate_name_leave_the_shares_empty(
+        self, db: Database
+    ) -> None:
+        # A poll stored before candidate names were kept: the count still works.
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Old Poll", "old_poll_us_house")
+        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        _add_poll(
+            db,
+            map_id=house_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(dem.id, 48.0), (rep.id, 47.0)],
+        )
+
+        readings = _readings(db, house_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].candidate_shares == {}
+        assert readings[0].candidate_count == 2
+
+    def test_a_candidate_name_is_matched_case_and_space_insensitively(
+        self, db: Database
+    ) -> None:
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Spacey", "spacey_us_senate")
+        senate_map = db.add_map(SENATE_MAP, parliament="us_senate")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(rep.id, 45.0, "  Kurt ALME  "), (dem.id, 25.0, "Alani Bankhead")],
+        )
+
+        readings = _readings(db, senate_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].candidate_shares == {
+            "kurt alme": pytest.approx(45.0),
+            "alani bankhead": pytest.approx(25.0),
+        }
+
+    def test_one_candidates_rows_are_summed_under_their_name(
+        self, db: Database
+    ) -> None:
+        # Defensive: a table that lists a candidate twice must not lose a figure.
+        dem, rep = _parties(db)
+        pollster = db.add_pollster("Doubler", "doubler_us_senate")
+        senate_map = db.add_map(SENATE_MAP, parliament="us_senate")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(rep.id, 20.0, "Kurt Alme"), (rep.id, 5.0, "Kurt Alme"), (dem.id, 30.0, "Alani Bankhead")],
+        )
+
+        readings = _readings(db, senate_map.id, as_of=date(2026, 6, 1))
+
+        assert readings[0].candidate_shares["kurt alme"] == pytest.approx(25.0)
 
     def test_weight_is_decay_times_pollster_weight(self, db: Database) -> None:
         dem, rep = _parties(db)
@@ -901,10 +1001,12 @@ class TestTrendCacheMeta:
 
 
 INDEPENDENT = 22
+LIBERTARIAN = 23
 OTHERS = 25
 
 NE_SENATE = "Ricketts (R) vs Osborn (I)"
 NE_HYPOTHETICAL = "Ricketts (R) vs Kleeb (D)"
+NE_SENATE_THREE = "Ricketts (R) vs Osborn (I) vs Siadek (L)"
 
 
 def _us_parties(db: Database) -> tuple[Party, Party, Party, Party]:
@@ -924,12 +1026,15 @@ def _reading(
     shares: dict[int, float],
     *,
     candidate_count: int | None = None,
+    candidate_shares: dict[str, float] | None = None,
     end: date = date(2026, 6, 1),
     pollster: str = "Pollster",
 ) -> Any:
     """A bare :class:`PollReading` for the pure seat-averaging tests.
 
-    ``candidate_count`` defaults to one row per party in ``shares``.
+    ``candidate_count`` defaults to one row per party in ``shares``, and
+    ``candidate_shares`` to empty — the shape of a poll stored before candidate
+    names were kept, which exercises the count path.
     """
     return SimpleNamespace(
         poll_id=abs(hash((seat_id, matchup, weight, tuple(sorted(shares.items()))))) % 10_000,
@@ -942,6 +1047,7 @@ def _reading(
         fieldwork_start=end,
         fieldwork_end=end,
         candidate_count=len(shares) if candidate_count is None else candidate_count,
+        candidate_shares={} if candidate_shares is None else candidate_shares,
     )
 
 
@@ -1895,7 +2001,7 @@ class TestLatestPollDateWithSeatPolls:
     def _senate_scope(
         db: Database, tmp_path: Path
     ) -> tuple[Any, Map, dict[str, Seat], Party, Party, Pollster]:
-        dem, rep, _independent, _others = _us_parties(db)
+        dem, rep, independent, _others = _us_parties(db)
         pollster = db.add_pollster("YouGov", "yougov_us_house")
         house_map = db.add_map(HOUSE_MAP, parliament="us_house")
         _add_poll(
@@ -1909,19 +2015,20 @@ class TestLatestPollDateWithSeatPolls:
             db, SENATE_MAP, "us_senate", {"Nebraska": {rep.id: 600.0, dem.id: 400.0}}
         )
         spec = _us_spec(tmp_path, map_name=SENATE_MAP, national_poll_map_name=HOUSE_MAP)
-        return resolve_poll_scope(db, spec), senate_map, seats, dem, rep, pollster
+        return resolve_poll_scope(db, spec), senate_map, seats, independent, rep, pollster
 
     def test_a_tracked_seat_poll_extends_the_cap(self, db: Database, tmp_path: Path) -> None:
         # The generic ballot last updated on 1 June; a Nebraska poll landed on the
         # 20th. Capping back to the 1st would drop it from the window entirely.
-        scope, senate_map, seats, _dem, rep, pollster = self._senate_scope(db, tmp_path)
+        # The poll numbers both candidates the matchup names, so the model uses it.
+        scope, senate_map, seats, independent, rep, pollster = self._senate_scope(db, tmp_path)
         db.set_tracked_matchup(senate_map.id, seats["Nebraska"].id, NE_SENATE, source="auto")
         _add_poll(
             db,
             map_id=senate_map.id,
             pollster=pollster,
             end=date(2026, 6, 20),
-            rows=[(rep.id, 50.0)],
+            rows=[(rep.id, 50.0), (independent.id, 44.0)],
             seat_id=seats["Nebraska"].id,
             matchup=NE_SENATE,
         )
@@ -1930,7 +2037,7 @@ class TestLatestPollDateWithSeatPolls:
         assert latest_poll_date(db, scope, include_seat_polls=False) == date(2026, 6, 1)
 
     def test_an_untracked_or_off_matchup_seat_poll_does_not(self, db: Database, tmp_path: Path) -> None:
-        scope, senate_map, seats, _dem, rep, pollster = self._senate_scope(db, tmp_path)
+        scope, senate_map, seats, _independent, rep, pollster = self._senate_scope(db, tmp_path)
         db.set_tracked_matchup(senate_map.id, seats["Nebraska"].id, NE_SENATE, source="auto")
         _add_poll(
             db,
@@ -1945,7 +2052,7 @@ class TestLatestPollDateWithSeatPolls:
         assert latest_poll_date(db, scope) == date(2026, 6, 1)
 
     def test_a_null_tracked_row_keeps_its_seat_out_of_the_cap(self, db: Database, tmp_path: Path) -> None:
-        scope, senate_map, seats, _dem, rep, pollster = self._senate_scope(db, tmp_path)
+        scope, senate_map, seats, _independent, rep, pollster = self._senate_scope(db, tmp_path)
         db.set_tracked_matchup(senate_map.id, seats["Nebraska"].id, None, source="manual")
         _add_poll(
             db,
@@ -2008,6 +2115,176 @@ class TestLatestPollDateWithSeatPolls:
         assert latest_poll_date(db, scope) == date(2028, 6, 10)
 
 
+# The three candidates NE_SENATE_THREE names, as a poll table stores them.
+RICKETTS = "Pete Ricketts"
+OSBORN = "Dan Osborn"
+SIADEK = "Preston Siadek"
+
+
+class TestAsOfCapAppliesTheMaterialityRule:
+    """The cap and the forecast judge a seat poll with one function.
+
+    A reading the model throws away must not move ``as_of_date`` — nor, through
+    :func:`poll_date_bounds`, the ``--rebuild-history`` window's start. Before
+    this the seat half of the cap filtered in SQL only, so the newest poll in a
+    race could set the as-of date and then be discarded by the very run it dated.
+    """
+
+    @staticmethod
+    def _world(db: Database, tmp_path: Path, *, siadek: float, partial_end: date) -> Any:
+        """Nebraska polled twice: once naming all three candidates, once not.
+
+        ``siadek`` is the Libertarian's share in the complete reading — the only
+        measurement of him the race has, so it is what decides whether the poll
+        that leaves his cell blank is usable. ``partial_end`` dates that poll, so
+        one call can put it at the top of the window and another at the bottom.
+        """
+        dem, rep, independent, _others = _us_parties(db)
+        libertarian = db.add_party("Libertarian", short_name="L")
+        pollster = db.add_pollster("YouGov", "yougov_us_house")
+        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        _add_poll(
+            db,
+            map_id=house_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(dem.id, 50.0), (rep.id, 50.0)],
+        )
+        senate_map, seats = _seat_map_with_baseline(
+            db, SENATE_MAP, "us_senate", {"Nebraska": {rep.id: 600.0, dem.id: 400.0}}
+        )
+        nebraska = seats["Nebraska"]
+        db.set_tracked_matchup(senate_map.id, nebraska.id, NE_SENATE_THREE, source="auto")
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 5),
+            rows=[
+                (rep.id, 45.0, RICKETTS),
+                (independent.id, 42.0, OSBORN),
+                (libertarian.id, siadek, SIADEK),
+            ],
+            seat_id=nebraska.id,
+            matchup=NE_SENATE_THREE,
+        )
+        _add_poll(
+            db,
+            map_id=senate_map.id,
+            pollster=pollster,
+            end=partial_end,
+            rows=[(rep.id, 48.0, RICKETTS), (independent.id, 44.0, OSBORN)],
+            seat_id=nebraska.id,
+            matchup=NE_SENATE_THREE,
+        )
+        spec = _us_spec(tmp_path, map_name=SENATE_MAP, national_poll_map_name=HOUSE_MAP)
+        return SimpleNamespace(
+            spec=spec,
+            scope=resolve_poll_scope(db, spec),
+            map_id=senate_map.id,
+            seat_id=nebraska.id,
+        )
+
+    def test_a_material_gap_keeps_the_newest_poll_out_of_the_cap(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        # Siadek polls over the threshold, so the 20 June poll that omits him is
+        # discarded — and the cap stays on the newest poll the run can use.
+        world = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE + 1.0,
+            partial_end=date(2026, 6, 20),
+        )
+
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 5)
+
+    def test_an_immaterial_gap_still_moves_the_cap(self, db: Database, tmp_path: Path) -> None:
+        # The same poll, the same gap, a smaller candidate: the model uses it, so
+        # the cap must follow it forward or the run would never see it.
+        world = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE - 1.0,
+            partial_end=date(2026, 6, 20),
+        )
+
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 20)
+
+    def test_a_material_gap_moves_the_rebuild_window_start_forward(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        # The mirror image: the discarded poll is now the *oldest*, so it is
+        # first_poll that must not follow it back.
+        material = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE + 1.0,
+            partial_end=date(2026, 5, 1),
+        )
+
+        assert poll_date_bounds(db, material.scope) == (date(2026, 6, 1), date(2026, 6, 5))
+
+    def test_an_immaterial_gap_still_pulls_the_rebuild_window_start_back(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        immaterial = self._world(
+            db,
+            tmp_path,
+            siadek=MATERIAL_CANDIDATE_SHARE - 1.0,
+            partial_end=date(2026, 5, 1),
+        )
+
+        assert poll_date_bounds(db, immaterial.scope) == (date(2026, 5, 1), date(2026, 6, 5))
+
+    @pytest.mark.parametrize(
+        ("siadek", "expected_cap"),
+        [
+            (MATERIAL_CANDIDATE_SHARE + 1.0, date(2026, 6, 5)),
+            (MATERIAL_CANDIDATE_SHARE - 1.0, date(2026, 6, 20)),
+        ],
+    )
+    def test_the_capping_date_belongs_to_a_poll_the_model_used(
+        self, db: Database, tmp_path: Path, siadek: float, expected_cap: date
+    ) -> None:
+        # The tie between the two: whatever the cap returns, the seat average the
+        # forecast builds on that same day ends on that very date. Asserted for
+        # both verdicts, so neither half can drift without this failing.
+        world = self._world(db, tmp_path, siadek=siadek, partial_end=date(2026, 6, 20))
+
+        cap = latest_poll_date(db, world.scope)
+        assert cap == expected_cap
+
+        readings = collect_poll_readings(
+            db, world.map_id, date(2026, 1, 1), cap, 30.0, {}, {}
+        )
+        average = aggregate_seat_polls(
+            readings,
+            seat_matchups={world.seat_id: NE_SENATE_THREE},
+            national_matchup=None,
+            policy="per_seat",
+        )[world.seat_id]
+
+        assert average.latest_poll is not None
+        assert average.latest_poll.fieldwork_end == cap
+
+    @pytest.mark.parametrize(
+        "siadek", [MATERIAL_CANDIDATE_SHARE + 1.0, MATERIAL_CANDIDATE_SHARE - 1.0]
+    )
+    def test_ignore_seat_polls_still_takes_the_national_only_path(
+        self, db: Database, tmp_path: Path, siadek: float
+    ) -> None:
+        # --ignore-seat-polls promises the pre-blending window exactly, whichever
+        # way the materiality rule would have gone on the seat polls.
+        world = self._world(db, tmp_path, siadek=siadek, partial_end=date(2026, 5, 1))
+
+        assert latest_poll_date(db, world.scope, include_seat_polls=False) == date(2026, 6, 1)
+        assert poll_date_bounds(db, world.scope, include_seat_polls=False) == (
+            date(2026, 6, 1),
+            date(2026, 6, 1),
+        )
+
+
 # ── Senate specials: the shell key ────────────────────────────────────────────
 
 
@@ -2044,7 +2321,7 @@ class TestSenateSpecialElections:
     def test_the_shipped_shell_holds_florida_and_ohio_from_2022(self, tmp_path: Path) -> None:
         from run_us_senate_model import SenateSpecial, senate_special_elections
 
-        specials = senate_special_elections(_shell_copy(tmp_path))
+        specials = senate_special_elections(_shell_copy(tmp_path), current_year=2026)
 
         assert specials == (
             SenateSpecial(seat="Florida", seat_class=3, year=2026, baseline_election_id="2022-us-senate"),
@@ -2092,7 +2369,9 @@ class TestSenateSpecialElections:
 
         path = _edit_shell(_shell_copy(tmp_path), move_florida_to_2028)
 
-        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2026)
+        ] == ["Ohio"]
 
     def test_every_entry_drops_out_once_the_cycle_moves_on(self, tmp_path: Path) -> None:
         from run_us_senate_model import senate_special_elections
@@ -2101,6 +2380,43 @@ class TestSenateSpecialElections:
             payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2028
 
         assert senate_special_elections(_edit_shell(_shell_copy(tmp_path), next_cycle)) == ()
+
+    def test_a_cycle_that_has_already_passed_keeps_nothing(self, tmp_path: Path) -> None:
+        # A shell nobody bumped after the cycle ended must not leave the model
+        # projecting a finished race, which is the export's rule too.
+        from run_us_senate_model import senate_special_elections
+
+        def stale_cycle(payload: dict[str, Any]) -> None:
+            payload["parliamentFeatures"]["us_senate"]["nextElectionYear"] = 2024
+            for entry in payload["mapModes"]["23"]["senateSpecialElections"]:
+                entry["year"] = 2024
+
+        path = _edit_shell(_shell_copy(tmp_path), stale_cycle)
+
+        assert senate_special_elections(path, current_year=2026) == ()
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2024)
+        ] == ["Florida", "Ohio"]
+
+    def test_the_model_and_the_export_agree_on_one_shell(self, tmp_path: Path) -> None:
+        # One rule, two readers: the runner's own filter and the export's, over
+        # the same payload, must name the same seats — including when the cycle
+        # has passed and neither should keep anything.
+        from scripts.export.manifest import _live_senate_specials, senate_next_election_year
+
+        from run_us_senate_model import senate_special_elections
+
+        path = _shell_copy(tmp_path)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        entries = payload["mapModes"]["23"]["senateSpecialElections"]
+        next_year = senate_next_election_year(payload.get("parliamentFeatures"))
+
+        for year in (2024, 2026, 2027):
+            model = [s.seat for s in senate_special_elections(path, current_year=year)]
+            exported = [
+                str(entry["seat"]) for entry in _live_senate_specials(entries, next_year, year)
+            ]
+            assert model == exported, f"disagreed for current_year={year}"
 
     def test_an_entry_without_a_seat_or_baseline_is_skipped(self, tmp_path: Path) -> None:
         from run_us_senate_model import senate_special_elections
@@ -2112,7 +2428,9 @@ class TestSenateSpecialElections:
 
         path = _edit_shell(_shell_copy(tmp_path), half_written)
 
-        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2026)
+        ] == ["Ohio"]
 
     def test_malformed_entries_are_skipped_as_the_export_skips_them(self, tmp_path: Path) -> None:
         # The export's rules: an integer year and class, and a non-blank string
@@ -2138,7 +2456,9 @@ class TestSenateSpecialElections:
 
         path = _edit_shell(_shell_copy(tmp_path), malformed)
 
-        assert [special.seat for special in senate_special_elections(path)] == ["Ohio"]
+        assert [
+            special.seat for special in senate_special_elections(path, current_year=2026)
+        ] == ["Ohio"]
 
 
 class TestSenateFieldAllowlist:
@@ -2537,6 +2857,22 @@ class TestPollDateBounds:
 # ── --rebuild-history: the CLI ────────────────────────────────────────────────
 
 
+def _freeze_today(monkeypatch: pytest.MonkeyPatch, day: date) -> None:
+    """Pin the run's notion of today inside ``_common``.
+
+    ``--rebuild-history`` rejects ``--as-of-date``/``--as-of-days-back`` (they
+    would delete every point above the as-of), so a rebuild test cannot state the
+    as-of on the command line and fixes today instead — which is what the flags
+    were standing in for. ``_common`` only ever calls ``date.today`` and
+    ``date.fromisoformat``, so those are the only two this stub needs.
+    """
+    monkeypatch.setattr(
+        _common,
+        "date",
+        SimpleNamespace(today=lambda: day, fromisoformat=date.fromisoformat),
+    )
+
+
 class TestRebuildHistoryFlag:
     @pytest.mark.parametrize(
         "runner", ["run_us_house_model", "run_us_presidential_model", "run_us_senate_model"]
@@ -2567,7 +2903,9 @@ class TestRebuildHistoryRun:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         argv: list[str],
+        existing: set[date] | None = None,
     ) -> SimpleNamespace:
+        series = self.EXISTING if existing is None else existing
         dem, rep = _parties(db)
         house_map = db.add_map(HOUSE_MAP, parliament="us_house")
         pollster = db.add_pollster("YouGov", "yougov_us_house")
@@ -2592,15 +2930,18 @@ class TestRebuildHistoryRun:
         monkeypatch.setattr(_common, "run_simulation", fake_run)
         monkeypatch.setattr(_common, "reset_existing_model_outputs", fake_reset)
         monkeypatch.setattr(_common, "write_trend_cache_meta", fake_meta)
-        monkeypatch.setattr(_common, "existing_trend_dates", lambda *_a, **_k: set(self.EXISTING))
+        monkeypatch.setattr(_common, "existing_trend_dates", lambda *_a, **_k: set(series))
         monkeypatch.setattr(sys, "argv", ["run_us_house_model.py", *argv])
+        _freeze_today(monkeypatch, self.TODAY)
 
         assert main_for_spec(spec, db_factory=lambda: db) == 0
         return calls
 
-    # As-of 20 June caps to the last poll (10 June) and shifts the window with it,
-    # so the single-date run looks back 80 days: 22 March → 10 June.
-    ARGV = ["--as-of-date", "2026-06-20", "--since-date", "2026-04-01"]
+    # Today is 20 June, which caps to the last poll (10 June) and shifts the
+    # window with it, so the single-date run looks back 80 days: 22 March → 10
+    # June. Today rather than --as-of-date because --rebuild-history rejects it.
+    TODAY = date(2026, 6, 20)
+    ARGV = ["--since-date", "2026-04-01"]
 
     def test_existing_dates_are_recomputed_then_the_meta_is_written(
         self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2655,11 +2996,60 @@ class TestRebuildHistoryRun:
         assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, 10)]
         assert calls.metas == []
 
+    def test_a_series_wholly_before_the_polls_is_dropped_and_rebuilt(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        # Every existing point predates the first poll (1 June), so the series
+        # and the poll window do not overlap at all. The old points still go —
+        # they are on the superseded basis — but the poll window is rebuilt in
+        # their place rather than the series being deleted and left empty.
+        calls = self._run(
+            db,
+            tmp_path,
+            monkeypatch,
+            [*self.ARGV, "--rebuild-history"],
+            existing={date(2026, 5, 20), date(2026, 5, 25)},
+        )
+        out = capsys.readouterr().out
+
+        assert calls.resets == [
+            (date(2026, 5, 20), date(2026, 5, 31)),
+            (date(2026, 6, 1), date(2026, 6, 10)),
+        ]
+        rebuilt = [cfg.as_of_date for cfg in calls.runs[:10]]
+        assert rebuilt == [date(2026, 6, day) for day in range(1, 11)]
+        assert "REBUILD-HISTORY from=2026-06-01 to=2026-06-10" in out
+        assert "nothing to rebuild" not in out
+
+    def test_an_empty_series_is_left_alone(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        # The other reason rebuild_window returns None: there is no history to
+        # recompute, so nothing is dropped and nothing is rebuilt — the ordinary
+        # single-date run writes the first point.
+        calls = self._run(db, tmp_path, monkeypatch, [*self.ARGV, "--rebuild-history"], existing=set())
+
+        assert "REBUILD-HISTORY nothing to rebuild" in capsys.readouterr().out
+        assert calls.resets == []
+        assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, 10)]
+
 
 # ── partial readings (a blank candidate cell) ─────────────────────────────────
 
 
 MI_SENATE = "Rogers (R) vs El-Sayed (D)"
+MT_01 = "Downing (R) vs Tranel (D) vs Sheedy (L)"
+ALASKA = "Dan S. Sullivan (R) vs Dan J. Sullivan (R) vs Heikes (R) vs Peltola (D)"
+IA_01 = "Miller-Meeks (R) vs Bohannan (D) vs Bridgford (I)"
+OH_10 = "Turner (R) vs Knickerbocker (D) vs McMasters (L)"
 
 
 class TestMatchupStoredCandidateCount:
@@ -2682,13 +3072,101 @@ class TestMatchupStoredCandidateCount:
         assert us_polls_common.matchup_stored_candidate_count("Smith (R) vs Flanagan (DFL)") == 2
 
 
+class TestMatchupCandidates:
+    """Reading a label back into the candidates it names."""
+
+    def test_alaskas_four_way_keeps_every_candidate_and_party(self) -> None:
+        # Two Republicans share a surname, so the label carries their full names.
+        candidates = us_polls_common.matchup_candidates(
+            "Dan S. Sullivan (R) vs Dan J. Sullivan (R) vs Heikes (R) vs Peltola (D)"
+        )
+
+        assert [c.name for c in candidates] == [
+            "Dan S. Sullivan",
+            "Dan J. Sullivan",
+            "Heikes",
+            "Peltola",
+        ]
+        assert [c.party_name for c in candidates] == [
+            "Republican",
+            "Republican",
+            "Republican",
+            "Democratic",
+        ]
+
+    def test_an_unknown_suffix_is_dropped(self) -> None:
+        candidates = us_polls_common.matchup_candidates(f"{MI_SENATE} vs Doe (WCP)")
+
+        assert [c.name for c in candidates] == ["Rogers", "El-Sayed"]
+
+    def test_a_multi_letter_suffix_keeps_its_own_letter(self) -> None:
+        candidates = us_polls_common.matchup_candidates("Smith (R) vs Flanagan (DFL)")
+
+        assert [(c.letter, c.party_name) for c in candidates] == [
+            ("R", "Republican"),
+            ("DFL", "Democratic"),
+        ]
+
+    def test_a_label_with_no_known_suffix_yields_nothing(self) -> None:
+        assert us_polls_common.matchup_candidates("Generic Republican vs Doe (WCP)") == ()
+
+
+class TestCandidateMatches:
+    """Matching a label's name against a stored row's candidate name."""
+
+    def test_a_surname_matches_the_full_stored_name(self) -> None:
+        assert us_polls_common.candidate_matches("Heikes", "Gerald Heikes")
+
+    def test_a_full_name_matches_itself(self) -> None:
+        assert us_polls_common.candidate_matches("Dan S. Sullivan", "Dan S. Sullivan")
+
+    def test_an_apostrophe_surname_matches(self) -> None:
+        assert us_polls_common.candidate_matches("O'Rourke", "Beto O'Rourke")
+
+    def test_a_different_candidate_does_not_match(self) -> None:
+        assert not us_polls_common.candidate_matches("Heikes", "Mary Peltola")
+
+    def test_matching_ignores_case_and_surrounding_space(self) -> None:
+        assert us_polls_common.candidate_matches("  heikes ", "Gerald HEIKES")
+
+    def test_a_generational_suffix_is_ignored_on_the_stored_name(self) -> None:
+        assert us_polls_common.candidate_matches("Doe", "John Doe Jr.")
+
+
+class TestMajorPartyNames:
+    def test_the_two_major_parties_are_major(self) -> None:
+        assert {"Democratic", "Republican"} == set(us_polls_common.MAJOR_PARTY_NAMES)
+
+    def test_a_dfl_candidate_counts_as_major(self) -> None:
+        (candidate,) = us_polls_common.matchup_candidates("Flanagan (DFL)")
+        assert candidate.party_name in us_polls_common.MAJOR_PARTY_NAMES
+
+    def test_an_independent_is_not_major(self) -> None:
+        (candidate,) = us_polls_common.matchup_candidates("Osborn (I)")
+        assert candidate.party_name not in us_polls_common.MAJOR_PARTY_NAMES
+
+
 class TestPartialSeatReadings:
-    def test_a_reading_missing_a_candidate_is_skipped(self) -> None:
-        # The worked example: B polled Rogers at 48 and left El-Sayed blank.
-        # Rescaled, B would read R 100 and drag the average to R 75.53.
+    """The materiality rule: a blank cell only disqualifies a poll if it is big.
+
+    The shapes here are the live races the rule was measured against (see the
+    issue plan's ground-truth table), so a change of verdict here is a change of
+    verdict in production.
+    """
+
+    def test_a_material_missing_candidate_is_skipped(self) -> None:
+        # The worked disaster: B polled Rogers at 48 and left El-Sayed blank.
+        # Rescaled, B would read R 100 and drag the average to R 75.53. El-Sayed
+        # polls 48.94 in the complete reading, so he is material and B goes.
         readings = [
-            _reading(7, MI_SENATE, 1.0, {REPUBLICAN: 51.06, DEMOCRAT: 48.94}),
-            _reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0}),
+            _reading(
+                7,
+                MI_SENATE,
+                1.0,
+                {REPUBLICAN: 51.06, DEMOCRAT: 48.94},
+                candidate_shares={"mike rogers": 51.06, "abdul el-sayed": 48.94},
+            ),
+            _reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0}, candidate_shares={"mike rogers": 48.0}),
         ]
 
         average = aggregate_seat_polls(
@@ -2698,7 +3176,258 @@ class TestPartialSeatReadings:
         assert average.shares[REPUBLICAN] == pytest.approx(51.06)
         assert average.shares[DEMOCRAT] == pytest.approx(48.94)
         assert (average.n_polls, average.n_skipped) == (1, 1)
+        assert average.blocking_candidates == ("El-Sayed",)
         assert average.total_weight == pytest.approx(1.0)
+
+    def test_an_immaterial_missing_candidate_is_admitted(self) -> None:
+        # MT-01: two complete readings put Sheedy (L) on 5, so the two that leave
+        # his cell blank are still worth averaging. Today's rule dropped both.
+        sheedy = 5.0
+        assert sheedy < MATERIAL_CANDIDATE_SHARE
+        complete = [
+            (44.0, 44.0, sheedy),
+            (42.0, 41.0, sheedy),
+        ]
+        readings = [
+            _reading(
+                9,
+                MT_01,
+                1.0,
+                {REPUBLICAN: rep, DEMOCRAT: dem, LIBERTARIAN: lib},
+                candidate_shares={"ryan downing": rep, "monica tranel": dem, "sid sheedy": lib},
+            )
+            for rep, dem, lib in complete
+        ] + [
+            _reading(
+                9,
+                MT_01,
+                1.0,
+                {REPUBLICAN: rep, DEMOCRAT: dem},
+                candidate_shares={"ryan downing": rep, "monica tranel": dem},
+            )
+            for rep, dem in ((48.0, 43.0), (43.0, 45.0))
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={9: MT_01}, national_matchup=None, policy="per_seat"
+        )[9]
+
+        assert (average.n_polls, average.n_skipped) == (4, 0)
+        assert average.blocking_candidates == ()
+
+    def test_a_missing_candidate_is_seen_even_when_their_party_is_present(self) -> None:
+        # Alaska names three Republicans. A poll that drops the second of them
+        # still stores Republican rows, so only a per-candidate test finds the
+        # gap — and finding it is not the same as minding it: he polls 4.
+        readings = [
+            _reading(
+                3,
+                ALASKA,
+                1.0,
+                {REPUBLICAN: 29.0, DEMOCRAT: 44.0},
+                candidate_count=4,
+                candidate_shares={
+                    "dan s. sullivan": 22.0,
+                    "dan j. sullivan": 4.0,
+                    "gerald heikes": 3.0,
+                    "mary peltola": 44.0,
+                },
+            ),
+            _reading(
+                3,
+                ALASKA,
+                1.0,
+                {REPUBLICAN: 28.0, DEMOCRAT: 45.0},
+                candidate_count=3,
+                candidate_shares={
+                    "dan s. sullivan": 24.0,
+                    "gerald heikes": 4.0,
+                    "mary peltola": 45.0,
+                },
+            ),
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={3: ALASKA}, national_matchup=None, policy="per_seat"
+        )[3]
+
+        assert (average.n_polls, average.n_skipped) == (2, 0)
+
+        # Proof the gap was actually seen and not simply read as complete: the
+        # same pair, with the missing Republican polling over the threshold,
+        # blocks — and the rule names him, not his party.
+        readings[0].candidate_shares["dan j. sullivan"] = MATERIAL_CANDIDATE_SHARE
+        material = aggregate_seat_polls(
+            readings, seat_matchups={3: ALASKA}, national_matchup=None, policy="per_seat"
+        )[3]
+
+        assert (material.n_polls, material.n_skipped) == (1, 1)
+        assert material.blocking_candidates == ("Dan J. Sullivan",)
+
+    def test_a_material_third_party_candidate_still_blocks(self) -> None:
+        # IA-01: Bridgford (I) polls 11 where both major parties are present, so
+        # the reading missing him is thrown out and says so by name.
+        bridgford = MATERIAL_CANDIDATE_SHARE + 1.0
+        readings = [
+            _reading(
+                4,
+                IA_01,
+                1.0,
+                {REPUBLICAN: 35.0, DEMOCRAT: 40.0, INDEPENDENT: bridgford},
+                candidate_shares={
+                    "mariannette miller-meeks": 35.0,
+                    "christina bohannan": 40.0,
+                    "nicole bridgford": bridgford,
+                },
+            ),
+            _reading(
+                4,
+                IA_01,
+                1.0,
+                {REPUBLICAN: 39.0, DEMOCRAT: 43.0},
+                candidate_shares={
+                    "mariannette miller-meeks": 39.0,
+                    "christina bohannan": 43.0,
+                },
+            ),
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={4: IA_01}, national_matchup=None, policy="per_seat"
+        )[4]
+
+        assert (average.n_polls, average.n_skipped) == (1, 1)
+        assert average.blocking_candidates == ("Bridgford",)
+
+    def test_a_candidate_exactly_on_the_threshold_is_material(self) -> None:
+        # The comparison is ``>=``: a candidate standing exactly on the constant
+        # blocks, and the same race one hundredth below it does not.
+        def readings_with(share: float) -> list[Any]:
+            return [
+                _reading(
+                    4,
+                    IA_01,
+                    1.0,
+                    {REPUBLICAN: 45.0, DEMOCRAT: 45.0, INDEPENDENT: share},
+                    candidate_shares={
+                        "mariannette miller-meeks": 45.0,
+                        "christina bohannan": 45.0,
+                        "nicole bridgford": share,
+                    },
+                ),
+                _reading(
+                    4,
+                    IA_01,
+                    1.0,
+                    {REPUBLICAN: 50.0, DEMOCRAT: 50.0},
+                    candidate_shares={
+                        "mariannette miller-meeks": 50.0,
+                        "christina bohannan": 50.0,
+                    },
+                ),
+            ]
+
+        def skipped(share: float) -> Any:
+            return aggregate_seat_polls(
+                readings_with(share),
+                seat_matchups={4: IA_01},
+                national_matchup=None,
+                policy="per_seat",
+            )[4].n_skipped
+
+        assert skipped(MATERIAL_CANDIDATE_SHARE) == 1
+        assert skipped(MATERIAL_CANDIDATE_SHARE - 0.01) == 0
+
+    def test_with_no_complete_reading_a_minor_candidate_is_presumed_immaterial(self) -> None:
+        # OH-10: every stored poll leaves McMasters (L) blank, so there is
+        # nothing to measure him against. A Libertarian gets the benefit of the
+        # doubt — today's rule left this seat with no usable readings at all.
+        readings = [
+            _reading(
+                5,
+                OH_10,
+                1.0,
+                {REPUBLICAN: rep, DEMOCRAT: dem},
+                candidate_shares={"mike turner": rep, "amy knickerbocker": dem},
+            )
+            for rep, dem in ((47.0, 42.0), (45.0, 44.0))
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={5: OH_10}, national_matchup=None, policy="per_seat"
+        )[5]
+
+        assert (average.n_polls, average.n_skipped) == (2, 0)
+        assert average.blocking_candidates == ()
+
+    def test_with_no_complete_reading_a_major_candidate_is_presumed_material(self) -> None:
+        # The same race with the Democrat blank instead: the one-side-numbered
+        # disaster, which the fallback must still refuse even unmeasured. The
+        # seat keeps its uniform-swing fallback.
+        averages = aggregate_seat_polls(
+            [
+                _reading(
+                    5,
+                    OH_10,
+                    1.0,
+                    {REPUBLICAN: rep, LIBERTARIAN: lib},
+                    candidate_shares={"mike turner": rep, "bob mcmasters": lib},
+                )
+                for rep, lib in ((47.0, 4.0), (45.0, 5.0))
+            ],
+            seat_matchups={5: OH_10},
+            national_matchup=None,
+            policy="per_seat",
+        )
+
+        assert averages[5] == SeatPollAverage(
+            total_weight=0.0,
+            shares={},
+            n_polls=0,
+            matchup=OH_10,
+            n_skipped=2,
+            blocking_candidates=("Knickerbocker",),
+        )
+        blended = blend_seat_swings(
+            seat_averages=averages,
+            seat_party_vote_totals={5: {REPUBLICAN: 600.0, DEMOCRAT: 400.0}},
+            region_by_seat_id={5: 1},
+            region_swings={1: {REPUBLICAN: -5.0, DEMOCRAT: 5.0}},
+            party_universe={REPUBLICAN, DEMOCRAT},
+            party_name_by_id={},
+            parent_seat_by_id={},
+            prior_weight=1.0,
+        )
+        assert blended == {}
+
+    def test_an_unimported_candidate_is_not_expected(self) -> None:
+        matchup = f"{MI_SENATE} vs Doe (WCP)"
+        readings = [_reading(7, matchup, 1.0, {REPUBLICAN: 45.0, DEMOCRAT: 44.0})]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={7: matchup}, national_matchup=None, policy="per_seat"
+        )[7]
+
+        assert (average.n_polls, average.n_skipped) == (1, 0)
+
+    def test_an_unimported_candidate_is_not_expected_of_a_named_reading_either(self) -> None:
+        # (WCP) is never imported, so a poll that names everyone else is complete.
+        matchup = f"{MI_SENATE} vs Doe (WCP)"
+        readings = [
+            _reading(
+                7,
+                matchup,
+                1.0,
+                {REPUBLICAN: 45.0, DEMOCRAT: 44.0},
+                candidate_shares={"mike rogers": 45.0, "abdul el-sayed": 44.0},
+            )
+        ]
+
+        average = aggregate_seat_polls(
+            readings, seat_matchups={7: matchup}, national_matchup=None, policy="per_seat"
+        )[7]
+
+        assert (average.n_polls, average.n_skipped) == (1, 0)
 
     def test_same_party_candidates_are_counted_row_by_row(self) -> None:
         # Alaska's four-way race sums to two parties, but a full poll stores four rows.
@@ -2715,19 +3444,12 @@ class TestPartialSeatReadings:
         assert (average.n_polls, average.n_skipped) == (1, 1)
         assert average.shares[REPUBLICAN] == pytest.approx(45.0 / 85.0 * 100.0)
 
-    def test_an_unimported_candidate_is_not_expected(self) -> None:
-        matchup = f"{MI_SENATE} vs Doe (WCP)"
-        readings = [_reading(7, matchup, 1.0, {REPUBLICAN: 45.0, DEMOCRAT: 44.0})]
-
-        average = aggregate_seat_polls(
-            readings, seat_matchups={7: matchup}, national_matchup=None, policy="per_seat"
-        )[7]
-
-        assert (average.n_polls, average.n_skipped) == (1, 0)
-
-    def test_a_seat_with_only_partial_readings_keeps_its_fallback(self) -> None:
+    def test_a_reading_with_no_candidate_names_falls_back_to_the_row_count(self) -> None:
+        # A poll stored before the candidate column cannot say who is missing, so
+        # it keeps the old rule — and a seat with only such readings keeps its
+        # fallback, with no ``blocked_by`` to report.
         averages = aggregate_seat_polls(
-            [_reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0})],
+            [_reading(7, MI_SENATE, 1.0, {REPUBLICAN: 48.0}, candidate_shares={})],
             seat_matchups={7: MI_SENATE},
             national_matchup=None,
             policy="per_seat",
@@ -2748,7 +3470,7 @@ class TestPartialSeatReadings:
         )
         assert blended == {}
         assert format_seat_poll_diagnostics(averages, {7: "Michigan"}, 1.0) == [
-            f"SEAT_POLL Michigan n=0 W=0.000 alpha=0.000 matchup={MI_SENATE} skipped_partial=1"
+            f"SEAT_POLL Michigan n=0 W=0.000 alpha=0.000 matchup={MI_SENATE} skipped_material=1"
         ]
 
     def test_run_simulation_reports_the_skipped_reading(self, db: Database, tmp_path: Path) -> None:
@@ -2768,7 +3490,40 @@ class TestPartialSeatReadings:
         _, _, _, _, _, _, diagnostics = run_simulation(db, _cfg(world.spec))
 
         assert diagnostics == [
-            f"SEAT_POLL Nebraska n=1 W=1.000 alpha=0.500 matchup={NE_SENATE} skipped_partial=1"
+            f"SEAT_POLL Nebraska n=1 W=1.000 alpha=0.500 matchup={NE_SENATE} skipped_material=1"
+        ]
+
+    def test_run_simulation_uses_a_poll_missing_only_a_minor_candidate(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        # End to end: the second poll stores two of the matchup's three
+        # candidates, so the row-count rule dropped it. Siadek (L) polls 4 in the
+        # complete poll, so the new rule keeps both — n=2, nothing skipped.
+        world = TestRunSimulationSeatBlending._senate_world(db, tmp_path)
+        libertarian = db.add_party("Libertarian", short_name="L")
+        db.set_tracked_matchup(world.map_id, world.nebraska.id, NE_SENATE_THREE, source="auto")
+        for rows in (
+            [
+                (world.rep.id, 45.0, "Pete Ricketts"),
+                (world.independent.id, 40.0, "Dan Osborn"),
+                (libertarian.id, 4.0, "Gene Siadek"),
+            ],
+            [(world.rep.id, 48.0, "Pete Ricketts"), (world.independent.id, 44.0, "Dan Osborn")],
+        ):
+            _add_poll(
+                db,
+                map_id=world.map_id,
+                pollster=world.pollster,
+                end=date(2026, 6, 1),
+                rows=rows,
+                seat_id=world.nebraska.id,
+                matchup=NE_SENATE_THREE,
+            )
+
+        _, _, _, _, _, _, diagnostics = run_simulation(db, _cfg(world.spec))
+
+        assert diagnostics == [
+            f"SEAT_POLL Nebraska n=2 W=2.000 alpha=0.667 matchup={NE_SENATE_THREE}"
         ]
 
 
@@ -2945,13 +3700,22 @@ class TestDatabasePathAtCallTime:
 # ── --rebuild-history: usage errors and the real thing ────────────────────────
 
 
+class _StopAfterParsing(Exception):
+    """Raised by a stub ``db_factory`` to prove argument parsing let the run through."""
+
+
 class TestRebuildHistoryRejectsABackfillRange:
     @pytest.mark.parametrize(
-        "extra",
+        ("extra", "named"),
         [
-            ["--start-date", "2026-06-01"],
-            ["--end-date", "2026-06-10"],
-            ["--start-date", "2026-06-01", "--end-date", "2026-06-10"],
+            (["--start-date", "2026-06-01"], "--start-date"),
+            (["--end-date", "2026-06-10"], "--end-date"),
+            (["--start-date", "2026-06-01", "--end-date", "2026-06-10"], "--start-date"),
+            # An explicit as-of is rejected too: the cap only ever lowers the
+            # as-of date, so a past one would delete every point above it and
+            # rebuild only up to it.
+            (["--as-of-date", "2026-06-01"], "--as-of-date"),
+            (["--as-of-days-back", "30"], "--as-of-days-back"),
         ],
     )
     def test_is_a_usage_error_before_any_database_is_opened(
@@ -2960,6 +3724,7 @@ class TestRebuildHistoryRejectsABackfillRange:
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
         extra: list[str],
+        named: str,
     ) -> None:
         spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
         monkeypatch.setattr(
@@ -2973,7 +3738,23 @@ class TestRebuildHistoryRejectsABackfillRange:
             main_for_spec(spec, db_factory=no_database)
 
         assert exc_info.value.code == 2
-        assert "--rebuild-history cannot be combined" in capsys.readouterr().err
+        assert f"--rebuild-history cannot be combined with {named}" in capsys.readouterr().err
+
+    def test_the_flag_alone_is_accepted(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The as-of flags' defaults (None and 0) must not read as "given".
+        spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
+        monkeypatch.setattr(sys, "argv", ["run_us_house_model.py", "--dry-run", "--rebuild-history"])
+
+        opened = SimpleNamespace(count=0)
+
+        def counting_database() -> Database:
+            opened.count += 1
+            raise _StopAfterParsing
+
+        with pytest.raises(_StopAfterParsing):
+            main_for_spec(spec, db_factory=counting_database)
+
+        assert opened.count == 1
 
 
 VANCE_SHAPIRO = "Vance (R) vs Shapiro (D)"
@@ -3048,16 +3829,8 @@ class TestRebuildHistoryEndToEnd:
         assert before[date(2026, 9, 10)] == {dem.id}
 
         db.set_tracked_matchup(president_map.id, None, VANCE_SHAPIRO, source="manual")
-        self._main(
-            db,
-            spec,
-            monkeypatch,
-            "--rebuild-history",
-            "--as-of-date",
-            "2026-09-10",
-            "--since-date",
-            "2026-07-12",
-        )
+        _freeze_today(monkeypatch, date(2026, 9, 10))
+        self._main(db, spec, monkeypatch, "--rebuild-history", "--since-date", "2026-07-12")
 
         after = _model_winners(only_the_test_database, spec)
         # The cap moved back to Shapiro's last poll, and nothing survives past it …
@@ -3095,16 +3868,8 @@ class TestRebuildHistoryEndToEnd:
         self._main(db, spec, monkeypatch, "--start-date", "2026-05-20", "--end-date", "2026-06-10")
         assert min(_model_winners(only_the_test_database, spec)) == date(2026, 5, 20)
 
-        self._main(
-            db,
-            spec,
-            monkeypatch,
-            "--rebuild-history",
-            "--as-of-date",
-            "2026-06-10",
-            "--since-date",
-            "2026-04-11",
-        )
+        _freeze_today(monkeypatch, date(2026, 6, 10))
+        self._main(db, spec, monkeypatch, "--rebuild-history", "--since-date", "2026-04-11")
 
         assert set(_model_winners(only_the_test_database, spec)) == _days(
             date(2026, 6, 1), date(2026, 6, 10)

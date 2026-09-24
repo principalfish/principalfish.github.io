@@ -934,13 +934,35 @@ def matchup_label(columns: Sequence[CandidateColumn]) -> str | None:
 _MATCHUP_PART_LETTER_RE = re.compile(r"\(([^()]*)\)\s*$")
 
 
-def matchup_stored_candidate_count(label: str) -> int:
-    """How many candidate rows a complete poll of this matchup stores.
+# The parties a missing candidate is presumed to matter for when a race has no
+# complete poll to measure against. DFL and D-NPL reach this through
+# PARTY_SUFFIXES, which maps them to "Democratic"; I, L and G do not.
+MAJOR_PARTY_NAMES: frozenset[str] = frozenset({"Democratic", "Republican"})
+
+
+@dataclass(frozen=True, slots=True)
+class MatchupCandidate:
+    """One candidate named by a :func:`matchup_label`.
+
+    Attributes:
+        name: The label's own text for this candidate — a surname, or the full
+            name where :func:`matchup_label` had to disambiguate a collision.
+        letter: The party letter as the label spells it ("R", "DFL").
+        party_name: The canonical party :data:`PARTY_SUFFIXES` maps it to.
+    """
+
+    name: str
+    letter: str
+    party_name: str
+
+
+def matchup_candidates(label: str) -> tuple[MatchupCandidate, ...]:
+    """Read back the candidates a :func:`matchup_label` names.
 
     The inverse of :func:`matchup_label`, kept beside it so the two cannot drift:
     the label is the only record of which candidates a poll's table named, since
     a blank cell stores no row at all. Only candidates with a suffix
-    :data:`PARTY_SUFFIXES` knows are counted, because an unrecognised suffix's
+    :data:`PARTY_SUFFIXES` knows are returned, because an unrecognised suffix's
     column is never imported — every poll of that matchup lacks it alike, which
     is not the same as one poll leaving a known candidate blank.
 
@@ -948,14 +970,57 @@ def matchup_stored_candidate_count(label: str) -> int:
         label: A matchup label as :func:`matchup_label` builds it.
 
     Returns:
-        The number of parts whose party letter is a known suffix.
+        One :class:`MatchupCandidate` per part with a known party letter, in the
+        label's own order.
     """
-    count = 0
+    candidates: list[MatchupCandidate] = []
     for part in label.split(" vs "):
         match = _MATCHUP_PART_LETTER_RE.search(part)
-        if match is not None and match.group(1).strip().upper() in PARTY_SUFFIXES:
-            count += 1
-    return count
+        if match is None:
+            continue
+        letter = match.group(1).strip()
+        party_name = PARTY_SUFFIXES.get(letter.upper())
+        if party_name is None:
+            continue
+        candidates.append(
+            MatchupCandidate(
+                name=part[: match.start()].strip(),
+                letter=letter,
+                party_name=party_name,
+            )
+        )
+    return tuple(candidates)
+
+
+def matchup_stored_candidate_count(label: str) -> int:
+    """How many candidate rows a complete poll of this matchup stores.
+
+    Args:
+        label: A matchup label as :func:`matchup_label` builds it.
+
+    Returns:
+        The number of parts whose party letter is a known suffix.
+    """
+    return len(matchup_candidates(label))
+
+
+def candidate_matches(part_name: str, stored_name: str) -> bool:
+    """Whether a label's name and a stored row's candidate name are the same person.
+
+    A label carries a surname where that is unambiguous and the full name where
+    it is not, while a row always stores the full name — so both forms have to
+    match. Comparison is casefolded.
+
+    Args:
+        part_name: The name as :func:`matchup_candidates` read it off the label.
+        stored_name: The candidate name stored on a poll row.
+
+    Returns:
+        True when the label's name is the stored name or its surname.
+    """
+    wanted = part_name.strip().casefold()
+    stored = stored_name.strip().casefold()
+    return wanted == stored or wanted == surname(stored_name).strip().casefold()
 
 
 def clean_pollster_label(text: str) -> tuple[str, tuple[str, ...]]:
@@ -976,6 +1041,10 @@ def clean_pollster_label(text: str) -> tuple[str, tuple[str, ...]]:
     return re.sub(r"\s+([/,;])", r"\1", cleaned).strip(), tags
 
 
+# A cell stating an upper bound ("<1", "< 0.5") once whitespace and "%" are gone.
+_UPPER_BOUND_RE = re.compile(r"^<(\d+(?:\.\d+)?)$")
+
+
 def _reading_percentage(text: str) -> float | None:
     """Parse a candidate cell, or return None when it holds no reading.
 
@@ -984,13 +1053,21 @@ def _reading_percentage(text: str) -> float | None:
     candidate was not offered in that row, which is not the same as zero, and a
     colspan event row ("Primary election held") reads as no number at all.
 
+    One inequality is recognised: a cell such as "<1%" states an upper bound
+    rather than a figure, and reads as **half the bound** (0.5), the midpoint of
+    the interval it describes. Reading it as nothing would be worse than
+    slightly wrong — a minor candidate polling under 1% would look absent, which
+    is what the model uses to decide a poll is unusable. A bare "<" is still
+    nothing.
+
     The number must also be a percentage — finite and within 0–100 — because
     ``float`` happily accepts "inf", "nan" and "1e400", and none of those (nor a
     stray "150") may reach the model as a vote share.
     """
     cleaned = re.sub(r"\s+", "", _FOOTNOTE_RE.sub("", text)).replace("%", "")
+    below = _UPPER_BOUND_RE.match(cleaned)
     try:
-        value = float(cleaned)
+        value = float(below.group(1)) / 2 if below is not None else float(cleaned)
     except ValueError:
         return None
     if not math.isfinite(value) or not 0 <= value <= 100:

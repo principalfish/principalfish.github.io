@@ -26,7 +26,7 @@ pipeline that powers its interactive UK election maps.
 |------|------------|
 | `models.py`, `db.py`, `config.py` | SQLAlchemy schema, DB access, configuration |
 | `console/` | Local web console for the data (`create_app`) |
-| `server.py` | Local data preview server (`:5000`) |
+| `server.py` | Local data preview server (`:5055`) |
 | `old_data/` | Base-data importers (TopoJSON maps, parties, general elections) |
 | `polls/` | Wikipedia-driven poll importers |
 | `models/` | Election models — `westminster/`, `holyrood/` (UNS retrospective), `us/` (House, President, Senate forecasts) |
@@ -226,7 +226,7 @@ From `data/`:
 ```
 
 Server URL:
-- `http://127.0.0.1:5000/`
+- `http://127.0.0.1:5055/`
 
 ---
 

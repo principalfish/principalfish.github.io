@@ -21,4 +21,4 @@ if __name__ == "__main__":
     # run ended with, in case it was stopped before its backup thread ran.
     if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
         backup.request_backup()
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5055, debug=True)

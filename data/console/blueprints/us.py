@@ -18,9 +18,10 @@ from __future__ import annotations
 
 import subprocess
 import threading
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from typing import Protocol
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
@@ -50,6 +51,7 @@ from console.services.us_models import (
     US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
     UsChamber,
+    UsModelRun,
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
@@ -57,11 +59,21 @@ from console.services.us_models import (
 __all__ = ["US_CHAMBERS", "UsChamber", "bp"]
 
 # Shown when a rebuild's subprocess dies part-way. The runner deletes the old
-# points before recomputing them, so the history on disk may now be partial.
+# points before recomputing them, so the history on disk may now be partial. A
+# model step that dies stops the sequence before the export; the export itself
+# writes its files in place, so one that dies may have rewritten only some.
 REBUILD_INTERRUPTED_NOTE = (
     "The rebuild did not finish, so this chamber's trend history may be partial: "
     "the runner clears the old points before recomputing them. Re-run the rebuild "
-    "to restore it; the export was not run."
+    "to restore it; the export did not run, or did not finish."
+)
+
+# Shown when a plain model run's subprocess dies part-way. Chambers that
+# finished first have saved new outputs the export never picked up, and an
+# export that died may have rewritten only some of its files.
+RUN_INTERRUPTED_NOTE = (
+    "The run did not finish, so the models and the export may be out of step: "
+    "re-run them. The export did not run, or did not finish."
 )
 
 bp = Blueprint("us", __name__)
@@ -114,6 +126,9 @@ def run_us_models() -> ResponseReturnValue:
     The sequence itself lives in ``console.services.us_models`` — a chamber
     whose tracked matchup is unset is skipped without stopping the others.
 
+    A step that times out or cannot be started renders a failed result saying
+    the models and the export may be out of step, instead of a 500.
+
     Returns:
         Rendered command_result.html showing combined stdout, stderr, and return code.
     """
@@ -124,14 +139,22 @@ def run_us_models() -> ResponseReturnValue:
             flash(f"Script not found: {script}")
             return redirect(url_for("home.home"))
 
-    run = run_us_models_and_export(get_db())
+    def result_page(*, stdout: str, stderr: str, return_code: int) -> ResponseReturnValue:
+        return render_command_result(
+            title="Run US Models",
+            command="run_us_house_model.py → run_us_presidential_model.py → run_us_senate_model.py → export_elections.py",
+            stdout=stdout,
+            stderr=stderr,
+            return_code=return_code,
+        )
 
-    return render_command_result(
-        title="Run US Models",
-        command="run_us_house_model.py → run_us_presidential_model.py → run_us_senate_model.py → export_elections.py",
-        stdout=run.stdout,
-        stderr=run.stderr,
-        return_code=run.return_code,
+    db = get_db()
+    # ``run_python_script`` is looked up here at call time, so tests can
+    # monkeypatch it, as for :func:`_rebuild_history`.
+    return _guarded_run(
+        lambda: run_us_models_and_export(db, runner=run_python_script),
+        note=RUN_INTERRUPTED_NOTE,
+        result_page=result_page,
     )
 
 
@@ -323,20 +346,61 @@ def _rebuild_history(
                 "running; wait for it to finish, then rebuild again."
             )
             return redirect(url_for(back_endpoint, **(back_values or {})))
-        try:
-            run = run_us_chamber_and_export(
+        return _guarded_run(
+            lambda: run_us_chamber_and_export(
                 db, chamber, runner=run_python_script, rebuild_history=True
-            )
-        except (subprocess.SubprocessError, OSError) as err:
-            partial_output = _output_text(getattr(err, "stdout", None))
-            return result_page(
-                stdout="\n".join(
-                    filter(None, (REBUILD_INTERRUPTED_NOTE, partial_output)),
-                ),
-                stderr=f"{type(err).__name__}: {err}",
-                return_code=1,
-            )
-    return result_page(stdout=run.stdout, stderr=run.stderr, return_code=run.return_code)
+            ),
+            note=REBUILD_INTERRUPTED_NOTE,
+            result_page=result_page,
+        )
+
+
+class _ResultPage(Protocol):
+    """Renders a model run's result page from its output and return code."""
+
+    def __call__(
+        self,
+        *,
+        stdout: str,
+        stderr: str,
+        return_code: int,
+    ) -> ResponseReturnValue: ...
+
+
+def _guarded_run(
+    run: Callable[[], UsModelRun],
+    *,
+    note: str,
+    result_page: _ResultPage,
+) -> ResponseReturnValue:
+    """Run a model sequence and render its result, even if a step dies.
+
+    A step that times out or cannot be started raises out of the service. Here
+    that becomes a failed result page, led by ``note`` and whatever the step
+    printed before it died, instead of a 500.
+
+    Args:
+        run: Runs the sequence and returns its combined outcome.
+        note: What an interrupted run leaves behind, shown above its output.
+        result_page: Renders the page from the output and return code.
+
+    Returns:
+        The rendered result page.
+    """
+    try:
+        outcome = run()
+    except (subprocess.SubprocessError, OSError) as err:
+        partial_output = _output_text(getattr(err, "stdout", None))
+        return result_page(
+            stdout="\n".join(filter(None, (note, partial_output))),
+            stderr=f"{type(err).__name__}: {err}",
+            return_code=1,
+        )
+    return result_page(
+        stdout=outcome.stdout,
+        stderr=outcome.stderr,
+        return_code=outcome.return_code,
+    )
 
 
 def _output_text(output: str | bytes | None) -> str:

@@ -483,7 +483,7 @@ class TestRunUsModelsRoute:
         monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
         captured: dict[str, object] = {}
 
-        def fake_run(database: Database) -> UsModelRun:
+        def fake_run(database: Database, *, runner: object = None) -> UsModelRun:
             captured["db"] = database
             return UsModelRun(
                 stdout="=== Run US President model ===\nSKIPPED: no tracked presidential matchup set",
@@ -501,6 +501,60 @@ class TestRunUsModelsRoute:
         body = response.get_data(as_text=True)
         assert "Run US Models" in body
         assert "SKIPPED: no tracked presidential matchup set" in body
+
+    @pytest.mark.parametrize(
+        ("fail", "error", "error_name", "partial"),
+        [
+            (
+                "run_us_house_model.py",
+                subprocess.TimeoutExpired(
+                    ["python", "run_us_house_model.py"],
+                    600,
+                    output=b"HOUSE step reached 2026-09-10\n",
+                ),
+                "TimeoutExpired",
+                "HOUSE step reached 2026-09-10",
+            ),
+            (
+                "run_us_house_model.py",
+                FileNotFoundError(2, "No such file or directory"),
+                "FileNotFoundError",
+                None,
+            ),
+            (
+                "export_elections.py",
+                subprocess.TimeoutExpired(["python", "export_elections.py"], 300),
+                "TimeoutExpired",
+                None,
+            ),
+        ],
+    )
+    def test_an_interrupted_run_renders_a_result_not_a_500(
+        self,
+        app: Flask,
+        db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        fail: str,
+        error: Exception,
+        error_name: str,
+        partial: str | None,
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        runner = _TimeoutRecorder(fail=fail, error=error)
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        response = app.test_client().post("/us/run-models")
+
+        assert response.status_code == 200
+        body = html.unescape(response.get_data(as_text=True))
+        assert "Run US Models" in body
+        assert "The run did not finish" in body
+        assert "The export did not run, or did not finish." in body
+        assert error_name in body
+        if partial is not None:
+            assert partial in body
+        # The sequence stopped at the failing step.
+        assert [name for name, _ in runner.timeouts][-1] == fail
 
 
 # ── Matchup pages ─────────────────────────────────────────────────────────

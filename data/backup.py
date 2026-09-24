@@ -30,6 +30,7 @@ test suite's per-test ``monkeypatch.setenv`` is honoured (see
 
 from __future__ import annotations
 
+import functools
 import glob
 import gzip
 import logging
@@ -38,8 +39,10 @@ import shutil
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from typing import ParamSpec, TypeVar
 
 from config import DatabaseConfig
 
@@ -69,6 +72,25 @@ BACKUP_SETTLE_SECONDS: float = 2.0
 _backup_wanted = threading.Event()
 _backup_thread: threading.Thread | None = None
 _backup_thread_lock = threading.Lock()
+
+# Backup and restore share fixed temporary names (elections.db.partial, ...), so
+# two running at once in one process — the console's Backup button while the
+# background thread is mid-backup — would write over each other's files.
+_run_lock = threading.Lock()
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _serialised(fn: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``fn`` under ``_run_lock``, one backup or restore at a time."""
+
+    @functools.wraps(fn)
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+        with _run_lock:
+            return fn(*args, **kwargs)
+
+    return wrapper
 
 
 def _database_path() -> str:
@@ -192,6 +214,7 @@ def _push_to_drive(archive_dir: str, sync_dir: str, force: bool) -> bool:
     return True
 
 
+@_serialised
 def backup_database(
     archive_dir: str | None = None,
     sync_dir: str | None = None,
@@ -334,6 +357,7 @@ def status() -> BackupStatus:
     )
 
 
+@_serialised
 def restore_latest(
     db_path: str | None = None,
     archive_dir: str | None = None,

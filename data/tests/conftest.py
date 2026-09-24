@@ -31,9 +31,16 @@ def _never_open_the_live_database(
     variable per test wins, because ``DatabaseConfig.from_env`` reads the
     environment at call time rather than at import.
     """
+    import backup
     import console.db
 
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "default-guard.db"))
+    # The console's after_request hook starts a background backup of the
+    # default database. It must never run from a test: by the time its thread
+    # wakes, this fixture has restored the live DATABASE_PATH.
+    monkeypatch.setattr(backup, "request_backup", lambda: None)
+    monkeypatch.setenv("ELECTIONS_ARCHIVE_DIR", str(tmp_path / "backup-guard"))
+    monkeypatch.delenv("ELECTIONS_BACKUP_DIR", raising=False)
     console.db.reset_db()
     yield
     console.db.reset_db()

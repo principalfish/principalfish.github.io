@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import os
 
-from flask import Flask
+from flask import Flask, Response, request
+
+import backup
 
 
 def create_app() -> Flask:
@@ -40,5 +42,23 @@ def create_app() -> Flask:
         db_admin_bp,
     ):
         app.register_blueprint(blueprint)
+
+    @app.after_request
+    def backup_after_write(response: Response) -> Response:
+        """Ask for a backup after any request that could have changed the DB.
+
+        Hooked here rather than called from each route: most writes happen in
+        scripts the routes launch as subprocesses, and a new route would
+        eventually be added without the call. A write that changed nothing
+        gzips to the same bytes as the last archive, so none gets written.
+        The db_admin routes back up or restore themselves.
+        """
+        if app.config.get("TESTING"):
+            return response
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") and not (
+            request.endpoint or ""
+        ).startswith("db_admin."):
+            backup.request_backup()
+        return response
 
     return app

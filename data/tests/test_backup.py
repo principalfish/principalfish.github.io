@@ -10,6 +10,7 @@ import gzip
 import os
 import sqlite3
 import sys
+import threading
 from pathlib import Path
 from typing import NoReturn
 
@@ -397,3 +398,25 @@ def test_restore_of_a_corrupt_archive_raises(
     assert rows(str(source_db)) == ["a"]
     assert not os.path.exists(str(source_db) + ".partial")
     assert not os.path.exists(str(source_db) + ".prerestore")
+
+
+# --- serialisation -------------------------------------------------------------
+
+
+def test_backup_waits_for_a_running_backup_or_restore(
+    source_db: Path, folders: tuple[str, str]
+) -> None:
+    # Held here as a running backup would hold it; a second caller (the
+    # console's Backup button) must wait rather than share the temp files.
+    finished = threading.Event()
+
+    def second() -> None:
+        run(source_db, folders)
+        finished.set()
+
+    with backup._run_lock:
+        worker = threading.Thread(target=second)
+        worker.start()
+        assert not finished.wait(0.3)
+    worker.join(5)
+    assert finished.is_set()

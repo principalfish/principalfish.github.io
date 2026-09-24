@@ -1,91 +1,90 @@
-"""Database admin routes: snapshot to / restore from the Google Drive copy."""
+"""Database admin routes: back up to the local archive and Drive, or restore."""
 
 from __future__ import annotations
 
-import shlex
-from pathlib import Path
+import os
 
-from flask import Blueprint, flash, redirect, url_for
+from flask import Blueprint
 from flask.typing import ResponseReturnValue
 
-from console.db import get_db, reset_db
-from console.services.runner import render_command_result, run_command
+import backup
+from console.db import reset_db
+from console.services.runner import render_command_result
 
 bp = Blueprint("db_admin", __name__)
 
-# Versioned backup/restore scripts live in the repo (data/scripts/), not next to
-# the database file. db_admin.py is at data/console/blueprints/db_admin.py, so
-# parents[2] is data/.
-SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
+
+def _status_lines() -> list[str]:
+    """Where backups live now, for the bottom of a result page."""
+    state = backup.status()
+    if state.sync_dir:
+        mount = "mounted" if state.sync_mounted else "MISSING — not pushed"
+        drive = f"{state.sync_dir} ({mount})"
+    else:
+        drive = "off (ELECTIONS_BACKUP_DIR not set)"
+    return [
+        f"Archive dir:     {state.archive_dir} ({state.archives} archives)",
+        f"Drive dir:       {drive}",
+        f"Last Drive push: {state.last_drive_push or 'never'}",
+    ]
 
 
 @bp.route("/db/backup", methods=["POST"])
 def backup_database() -> ResponseReturnValue:
-    """POST /db/backup — Snapshot the local SQLite database to Google Drive.
+    """POST /db/backup — Archive the database now and push the Drive copy.
 
-    Runs ``backup_to_drive.sh --force``: a manual click backs up immediately,
-    bypassing the script's once-per-day guard (the scheduled run keeps it). The
-    script logs to ``backup.log``, so the tail of that log is appended to the
-    result for visibility.
+    Runs in the request (~20 s on the full database) rather than on the
+    background thread, so the page can report the outcome. ``push=True``
+    refreshes Drive even if the day's automatic push has already happened.
 
     Returns:
-        Rendered command_result.html, or a redirect to home if the script is
-        missing.
+        Rendered command_result.html.
     """
-    db_dir = Path(get_db().config.database_path).parent
-    script = SCRIPTS_DIR / "backup_to_drive.sh"
-    if not script.exists():
-        flash(f"Backup script not found: {script}")
-        return redirect(url_for("home.home"))
-
-    command = ["bash", str(script), "--force"]
-    result = run_command(command, cwd=db_dir, timeout=900)
-
-    log_path = db_dir / "backup.log"
-    stdout = result.stdout
-    if log_path.exists():
-        tail = "\n".join(log_path.read_text(encoding="utf-8").splitlines()[-12:])
-        stdout = f"{stdout}\n\n--- backup.log (tail) ---\n{tail}".strip()
+    stdout, stderr, code = "", "", 0
+    try:
+        made = backup.backup_database(push=True)
+        stdout = f"Archived to {made}" if made else "Unchanged since the last archive"
+    except (OSError, RuntimeError, ValueError) as exc:
+        stderr, code = f"Backup failed: {exc}", 1
+    stdout = "\n".join([stdout, "", *_status_lines()]).strip()
 
     return render_command_result(
-        title="Backup Database to Drive",
-        command=shlex.join(command),
+        title="Backup Database",
+        command="backup.backup_database(push=True)",
         stdout=stdout,
-        stderr=result.stderr,
-        return_code=result.returncode,
+        stderr=stderr,
+        return_code=code,
     )
 
 
 @bp.route("/db/restore", methods=["POST"])
 def restore_database() -> ResponseReturnValue:
-    """POST /db/restore — Restore the local SQLite database from the Drive snapshot.
+    """POST /db/restore — Replace the database with the newest archive.
 
-    Closes the server's DB connections and drops the cached engine, runs
-    ``restore_from_drive.sh`` (Drive -> local, with integrity checks and a
-    ``.prerestore`` safety copy), then leaves the cache cleared so the next
-    request reconnects to the restored file.
+    Drops the cached engine first so no pooled connection holds the file
+    while it is swapped; the next ``get_db()`` reconnects to the restored
+    database. The newest local archive is used, else the Drive copy, and the
+    replaced database is kept as ``<db>.prerestore``.
 
     Returns:
-        Rendered command_result.html, or a redirect to home if the script is
-        missing.
+        Rendered command_result.html.
     """
-    db_dir = Path(get_db().config.database_path).parent
-    script = SCRIPTS_DIR / "restore_from_drive.sh"
-    if not script.exists():
-        flash(f"Restore script not found: {script}")
-        return redirect(url_for("home.home"))
-
-    # Close open connections and drop the cached engine so the DB file can be
-    # swapped safely; the next get_db() call reconnects to the restored DB.
     reset_db()
 
-    command = ["bash", str(script)]
-    result = run_command(command, cwd=db_dir, timeout=900)
+    stdout, stderr, code = "", "", 0
+    try:
+        used = backup.restore_latest()
+        stdout = f"Restored from {used}"
+        kept = f"{backup.status().db_path}.prerestore"
+        if os.path.exists(kept):
+            stdout += f"\nPrevious database kept as {kept}"
+    except (OSError, RuntimeError) as exc:
+        stderr, code = f"Restore failed: {exc}", 1
 
     return render_command_result(
-        title="Restore Database from Drive",
-        command=shlex.join(command),
-        stdout=result.stdout,
-        stderr=result.stderr,
-        return_code=result.returncode,
+        title="Restore Database",
+        command="backup.restore_latest()",
+        stdout=stdout,
+        stderr=stderr,
+        return_code=code,
     )

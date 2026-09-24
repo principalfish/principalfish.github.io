@@ -420,6 +420,8 @@ export if anything was imported and the checkbox was ticked. Abandoning still
 applies tracking but skips the model run. The summary lists page failures and 404
 notes, collapsed-only races, unknown suffixes, dropped variants, unmatched seats
 and the tracking outcomes.
+A page over 8 MiB, or cut off mid-download, is listed as a page failure; the rest
+of the import carries on.
 
 ### Matchups
 

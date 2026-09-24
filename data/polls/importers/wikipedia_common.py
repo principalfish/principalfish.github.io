@@ -13,9 +13,19 @@ from __future__ import annotations
 
 import re
 from datetime import date
+from http.client import IncompleteRead
 from urllib.request import Request, urlopen
 
 DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; poll-importer/1.0)"
+
+# Hard ceiling on one response body. MediaWiki caps a page's expanded wikitext
+# at ~2 MB (the post-expand include size), and the rendered HTML of a
+# table-heavy polling article runs a small multiple of that, so no real
+# Wikipedia article reaches 8 MiB. The biggest US race page (as of 2026-09) is
+# ~1 MB, so this is at least 8x headroom, and it also covers the UK Westminster
+# polling index (the largest article this repo reads). It turns an unbounded
+# response body into a fixed per-request limit.
+MAX_PAGE_BYTES = 8 * 1024 * 1024
 
 _MONTH_MAP: dict[str, int] = {
     "jan": 1, "january": 1,
@@ -33,11 +43,16 @@ _MONTH_MAP: dict[str, int] = {
 }
 
 
+class PageTooLargeError(ValueError):
+    """Raised when a fetched page exceeds the configured byte limit."""
+
+
 def fetch_html(
     url: str,
     *,
     user_agent: str = DEFAULT_USER_AGENT,
     timeout: int = 60,
+    max_bytes: int = MAX_PAGE_BYTES,
 ) -> str:
     """Fetch HTML content from ``url`` using a browser-like User-Agent.
 
@@ -46,16 +61,34 @@ def fetch_html(
         user_agent: Value of the ``User-Agent`` request header. Wikipedia
             rejects requests that do not send one.
         timeout: Socket timeout in seconds, passed to ``urlopen``.
+        max_bytes: Largest response body accepted, in bytes. At most
+            ``max_bytes + 1`` bytes are read, so an oversized page is never
+            buffered in full.
 
     Returns:
         UTF-8 decoded response body, with undecodable bytes replaced.
 
     Raises:
         urllib.error.URLError: If the request fails.
+        http.client.IncompleteRead: If the connection closed before the
+            ``Content-Length`` promised had arrived.
+        PageTooLargeError: If the response body exceeds ``max_bytes``.
     """
     req = Request(url, headers={"User-Agent": user_agent})
     with urlopen(req, timeout=timeout) as response:
-        body: str = response.read().decode("utf-8", errors="replace")
+        raw = response.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            limit_mib = max_bytes / (1024 * 1024)
+            raise PageTooLargeError(
+                f"{url} returned more than {limit_mib:g} MiB; not read",
+            )
+        # A bounded read(n) returns a cut-off body without complaint (unlike a
+        # bare read()), so check the response is not still owed bytes; else a
+        # dropped connection would parse as a page with its later polls missing.
+        remaining = getattr(response, "length", None)
+        if remaining:
+            raise IncompleteRead(raw, remaining)
+        body: str = raw.decode("utf-8", errors="replace")
     return body
 
 

@@ -34,9 +34,10 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
-from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup, Tag
+
+from polls.importers import wikipedia_common
 
 _MONTH_MAP: dict[str, int] = {
     "jan": 1, "january": 1,
@@ -75,11 +76,22 @@ def _clean(value: str) -> str:
 
 
 def fetch_html(url: str) -> str:
-    """Fetch HTML from ``url`` with the console's User-Agent (UTF-8 decoded)."""
-    req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-        body: str = response.read().decode("utf-8", errors="replace")
-    return body
+    """Fetch HTML from ``url`` with the console's User-Agent (UTF-8 decoded).
+
+    The shared helper does the fetch, so the US import gets the same size cap
+    and truncation check as the UK importers.
+
+    Raises:
+        urllib.error.URLError: If the request fails.
+        http.client.IncompleteRead: If the connection dropped mid-body.
+        wikipedia_common.PageTooLargeError: If the body exceeds
+            ``wikipedia_common.MAX_PAGE_BYTES``.
+    """
+    return wikipedia_common.fetch_html(
+        url,
+        user_agent=USER_AGENT,
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
 
 
 def parse_date_range(raw: str) -> tuple[date, date] | None:

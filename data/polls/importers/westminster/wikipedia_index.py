@@ -217,6 +217,9 @@ def fetch_poll_index(*, url: str = WIKI_URL, html: str | None = None) -> PollInd
         WikipediaIndexError: If the national-results section cannot be found,
             or contains no year subsection with a parseable year.
         urllib.error.URLError: If ``html`` is not supplied and the fetch fails.
+        http.client.IncompleteRead: If the connection dropped mid-body.
+        wikipedia_common.PageTooLargeError: If the fetched page exceeds
+            ``wikipedia_common.MAX_PAGE_BYTES``.
     """
     source = fetch_html(url) if html is None else html
     soup = BeautifulSoup(source, "lxml")

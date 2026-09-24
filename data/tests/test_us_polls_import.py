@@ -10,6 +10,8 @@ from datetime import date
 import pytest
 from bs4 import BeautifulSoup, Tag
 
+from polls.importers import wikipedia_common
+from polls.importers.us import us_polls_common
 from polls.importers.us.us_polls_common import (
     PARTY_SUFFIXES,
     CandidateColumn,
@@ -30,6 +32,45 @@ from polls.importers.us.us_polls_common import (
     pollster_identifier,
     surname,
 )
+from polls.importers.wikipedia_common import PageTooLargeError
+
+
+class TestFetchHtml:
+    URL = "https://en.wikipedia.org/wiki/Example"
+
+    def test_delegates_to_the_shared_capped_helper(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # The size cap and truncation check live in the shared helper
+        # (tested in test_wikipedia_common); this pins that the US import
+        # goes through it under its own User-Agent and timeout.
+        calls: list[tuple[str, str, int]] = []
+
+        def fake_fetch(url: str, *, user_agent: str, timeout: int) -> str:
+            calls.append((url, user_agent, timeout))
+            return "<html></html>"
+
+        monkeypatch.setattr(wikipedia_common, "fetch_html", fake_fetch)
+        assert us_polls_common.fetch_html(self.URL) == "<html></html>"
+        assert calls == [
+            (
+                self.URL,
+                us_polls_common.USER_AGENT,
+                us_polls_common.REQUEST_TIMEOUT_SECONDS,
+            ),
+        ]
+
+    def test_oversized_page_error_propagates(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_fetch(url: str, *, user_agent: str, timeout: int) -> str:
+            raise PageTooLargeError(f"{url} returned more than 8 MiB; not read")
+
+        monkeypatch.setattr(wikipedia_common, "fetch_html", fake_fetch)
+        with pytest.raises(PageTooLargeError, match="8 MiB"):
+            us_polls_common.fetch_html(self.URL)
 
 
 class TestParseDateRange:

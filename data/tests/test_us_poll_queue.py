@@ -9,6 +9,7 @@ subprocess.
 from __future__ import annotations
 
 import dataclasses
+import html
 import subprocess
 import threading
 from collections.abc import Generator
@@ -42,6 +43,7 @@ from console.services.us_poll_queue import (
     finish_us_queue,
     group_key,
     prepare_us_item,
+    tracking_changed,
 )
 from console.services.wikipedia_queue import (
     NO_CUTOFF,
@@ -170,6 +172,13 @@ NEWSOM_READINGS = _readings(
 SHAPIRO_READINGS = _readings(
     ("Republican", "JD Vance", 46.0),
     ("Democratic", "Josh Shapiro", 43.0),
+)
+
+
+_REBUILD_CAVEAT = (
+    "Only today's trend point follows a moved matchup. To move the earlier "
+    "points, open that chamber's race matchups and press Use automatic on one "
+    "of its races with Rebuild history ticked."
 )
 
 
@@ -889,22 +898,73 @@ class TestFinish:
         assert payload[AUTO_TRACKING_KEY] is first_tracking
         assert payload[MODEL_RUN_KEY] is first_run
 
-    def test_nothing_imported_runs_no_models(self, us_db: Database) -> None:
+    def _skipped_but_stored_payload(self, us_db: Database) -> dict[str, Any]:
+        """A run that imported nothing: its one row was stored beforehand."""
         row = _row(us_db)
         state = _queue(us_db, row)
         prepare_us_item(us_db, state.items[0], state)
         _store(us_db, row)
         confirm_us_item(us_db, state.items[0])
-        payload: dict[str, Any] = {STATE_KEY: state, INDEX_KEY: _index(row)}
+        assert state.items[0].status == "skipped"
+        return {STATE_KEY: state, INDEX_KEY: _index(row)}
+
+    def test_a_tracking_only_run_runs_the_models_once(self, us_db: Database) -> None:
+        payload = self._skipped_but_stored_payload(us_db)
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner)
+        finish_us_queue(us_db, payload, runner=runner)
+
+        # Nothing was imported, but the race was tracked for the first time, so
+        # the forecast must move onto it — once, however often it is refreshed.
+        assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert isinstance(payload[MODEL_RUN_KEY], UsModelRun)
+        assert len(runner.calls) == 3
+
+    def test_unchanged_tracking_with_nothing_imported_runs_no_models(
+        self, us_db: Database
+    ) -> None:
+        us_db.set_tracked_matchup(
+            _map_id(us_db, SENATE_MAP),
+            _seat_id(us_db, SENATE_MAP, "Michigan"),
+            MICHIGAN_MATCHUP,
+            source="auto",
+        )
+        payload = self._skipped_but_stored_payload(us_db)
         runner = _RecordingRunner()
 
         finish_us_queue(us_db, payload, runner=runner)
 
-        assert state.items[0].status == "skipped"
+        assert payload[AUTO_TRACKING_KEY]["unchanged"] == 1
+        assert not payload[AUTO_TRACKING_KEY]["created"]
+        assert not payload[AUTO_TRACKING_KEY]["updated"]
         assert runner.calls == []
         assert MODEL_RUN_KEY not in payload
-        # The race is still tracked: its lead poll is stored, if not by this run.
+
+    def test_abandoning_a_tracking_only_run_runs_no_models(
+        self, us_db: Database
+    ) -> None:
+        payload = self._skipped_but_stored_payload(us_db)
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner, abandon=True)
+
         assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert runner.calls == []
+        assert MODEL_RUN_KEY not in payload
+
+    def test_tracking_from_an_earlier_request_still_counts(
+        self, us_db: Database
+    ) -> None:
+        # The tracking outcome is read off the payload, so a refresh after an
+        # earlier request applied it still runs the models it called for.
+        payload = self._skipped_but_stored_payload(us_db)
+        payload[AUTO_TRACKING_KEY] = {"created": 0, "updated": 2, "unchanged": 0}
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert len(runner.calls) == 3
 
     def test_the_model_option_off_runs_no_models(self, us_db: Database) -> None:
         runner = _RecordingRunner()
@@ -1031,6 +1091,24 @@ class TestFinish:
 def _us_seat(item: QueueItem) -> str | None:
     assert isinstance(item.row, UsPollRow)
     return item.row.seat_name
+
+
+class TestTrackingChanged:
+    @pytest.mark.parametrize(
+        ("counts", "changed"),
+        [
+            (None, False),
+            ({}, False),
+            ({"created": 0, "updated": 0, "unchanged": 3}, False),
+            ({"kept_manual": 2, "no_polls": 1}, False),
+            ({"created": 1}, True),
+            ({"created": 0, "updated": 1}, True),
+        ],
+    )
+    def test_created_or_updated_counts_as_a_change(
+        self, counts: dict[str, int] | None, changed: bool
+    ) -> None:
+        assert tracking_changed(counts) is changed
 
 
 # ── Routes (console.blueprints.us_poll_import) ────────────────────────────────
@@ -1697,6 +1775,8 @@ class TestFinishRoute:
         assert "SKIPPED: no tracked presidential matchup set" in body
         assert "skipped: president" in body
         assert "1 races tracked for the first time" in body
+        # Tracking moved and the models ran, so the older points are flagged.
+        assert _REBUILD_CAVEAT in " ".join(html.unescape(body).split())
         tracked = us_db.get_tracked_matchup(
             _map_id(us_db, SENATE_MAP), _seat_id(us_db, SENATE_MAP, "Michigan")
         )
@@ -1718,6 +1798,7 @@ class TestFinishRoute:
         assert model_runner.calls == []
         assert "Nothing was imported." in body
         assert "Models and Export" not in body
+        assert "move the earlier points" not in body
 
     def test_the_model_option_off_runs_no_models(
         self,
@@ -1728,9 +1809,12 @@ class TestFinishRoute:
     ) -> None:
         token = self._import_one(client, us_db, monkeypatch, run_model_at_end="")
 
-        client.get(f"/us/import/{token}/finish")
+        body = _body(client, f"/us/import/{token}/finish")
 
         assert model_runner.calls == []
+        # Tracking moved, but no model ran, so no trend point follows it yet.
+        assert "1 races tracked for the first time" in body
+        assert "move the earlier points" not in body
 
     def test_abandon_runs_no_models_but_tracks_what_was_imported(
         self,

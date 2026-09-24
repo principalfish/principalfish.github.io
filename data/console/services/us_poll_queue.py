@@ -22,7 +22,8 @@ What makes the US queue different from Westminster's:
   race by race), and :func:`approve_group` commits the rest of a race in one
   go.
 - **A finish step with two jobs.** Automatic matchup tracking is applied over
-  every row the run scraped, then the three US models and the export run once.
+  every row the run scraped, then the three US models and the export run once
+  if the run imported anything or moved a race's tracked matchup.
 
 The finish step records its results on the cached payload under
 :data:`AUTO_TRACKING_KEY` (or :data:`AUTO_TRACKING_ERROR_KEY`),
@@ -34,7 +35,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
-from collections.abc import Callable, MutableMapping, Sequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from datetime import date
@@ -584,6 +585,22 @@ def _race_warnings(db: Database, row: UsPollRow, plan: UsImportPlan) -> list[str
 # ── Finishing ─────────────────────────────────────────────────────────────────
 
 
+def tracking_changed(counts: Mapping[str, int] | None) -> bool:
+    """Whether an automatic-tracking pass pointed any race at a new matchup.
+
+    Args:
+        counts: ``apply_auto_tracked_matchups``'s outcome counts, or None when
+            tracking has not run or raised.
+
+    Returns:
+        True when a race was tracked for the first time or moved to a new
+        lead matchup.
+    """
+    if not counts:
+        return False
+    return bool(counts.get("created") or counts.get("updated"))
+
+
 def finish_us_queue(
     db: Database,
     payload: MutableMapping[str, Any],
@@ -607,8 +624,13 @@ def finish_us_queue(
     — the message is recorded instead and the model run still goes ahead.
 
     The models and the export then run once, if the run asked for that, was not
-    abandoned, and imported anything. Both results are recorded on the
-    payload, so a refresh of the summary repeats neither.
+    abandoned, and either imported anything or moved a race onto a new tracked
+    matchup — a run whose only effect was tracking must still move the forecast
+    off the old pairing. Both results are recorded on the payload, so a refresh
+    of the summary repeats neither. The tracking outcome is read back off the
+    payload, so it counts on a refresh too, when an earlier request applied it.
+    A tracking pass that raised counts as no change, even if it moved some
+    races before failing; its error is shown on the summary instead.
 
     Args:
         db: Active Database instance.
@@ -644,8 +666,10 @@ def finish_us_queue(
                 f"Automatic matchup tracking failed: {err}"
             )
 
+    if MODEL_RUN_KEY in payload or not state.run_model_at_end:
+        return
     imported = any(item.status == "imported" for item in state.items)
-    if MODEL_RUN_KEY in payload or not state.run_model_at_end or not imported:
+    if not imported and not tracking_changed(payload.get(AUTO_TRACKING_KEY)):
         return
     try:
         payload[MODEL_RUN_KEY] = run_us_models_and_export(db, runner=runner)

@@ -69,6 +69,13 @@
           <li>{{ count }} {{ label }}</li>
         {% endfor %}
       </ul>
+      {% if tracking_changed and model_run and model_run.return_code == 0 %}
+        <p>
+          Only today's trend point follows a moved matchup. To move the earlier
+          points, open that chamber's race matchups and press Use automatic on one
+          of its races with Rebuild history ticked.
+        </p>
+      {% endif %}
     {% else %}
       <p>No race's tracked matchup changed.</p>
     {% endif %}

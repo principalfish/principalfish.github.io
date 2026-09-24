@@ -416,10 +416,12 @@ partisan tag, summed or excluded candidates, not the race's lead table, …):
   a row that fails is marked failed and the rest still commit.
 
 Finishing applies automatic matchup tracking once, then runs the models and the
-export if anything was imported and the checkbox was ticked. Abandoning still
-applies tracking but skips the model run. The summary lists page failures and 404
-notes, collapsed-only races, unknown suffixes, dropped variants, unmatched seats
-and the tracking outcomes.
+export if the checkbox was ticked and the run imported anything or moved a race
+onto a new matchup. Only today's trend point follows a moved matchup; the summary
+says so, and a history rebuild on the matchup pages moves the earlier points.
+Abandoning still applies tracking but skips the model run. The summary lists page
+failures and 404 notes, collapsed-only races, unknown suffixes, dropped variants,
+unmatched seats and the tracking outcomes.
 A page over 8 MiB, or cut off mid-download, is listed as a page failure; the rest
 of the import carries on. So is a page that would take the pages kept past 256 MiB
 of memory.

@@ -11,12 +11,20 @@ import os
 from flask import Flask, Response, request
 
 import backup
+from console.csrf import same_origin_only
 
 
 def create_app() -> Flask:
     """Build and configure the console Flask application."""
     app = Flask(__name__, template_folder="templates", static_folder="static")
+    # The secret only signs the flash-message session; there are no CSRF tokens.
+    # Every route instead refuses cross-site POSTs (``console.csrf``, which says
+    # why), and only the console's own host names are answered, so a hostile
+    # domain re-pointed at 127.0.0.1 (DNS rebinding) cannot pass as same-origin.
+    # Revisit both the day the console is reachable beyond localhost.
     app.config["SECRET_KEY"] = os.environ.get("POLLS_SECRET_KEY", "local-polls-dev-key")
+    app.config["TRUSTED_HOSTS"] = ["127.0.0.1", "localhost"]
+    app.before_request(same_origin_only)
 
     from console.blueprints.by_elections import bp as by_elections_bp
     from console.blueprints.db_admin import bp as db_admin_bp

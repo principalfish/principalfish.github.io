@@ -254,6 +254,17 @@ From `data/`:
 Server URL:
 - `http://127.0.0.1:5055/`
 
+It answers only `127.0.0.1` / `localhost`, and refuses a POST made from another
+site's page (`data/console/csrf.py`).
+
+The Werkzeug debugger and auto-reloader are off by default: the debugger runs
+arbitrary code for anything that can reach the port. For reload-on-save while
+developing:
+
+```bash
+CONSOLE_DEBUG=1 ../election_data/bin/python server.py
+```
+
 ---
 
 ## 8) Quick validation queries

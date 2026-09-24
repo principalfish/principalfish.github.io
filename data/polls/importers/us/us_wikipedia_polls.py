@@ -61,8 +61,10 @@ from polls.importers.us.us_geography import (
     state_from_page_slug,
 )
 from polls.importers.us.us_polls_common import (
+    MAX_PAGE_GRID_CELLS,
     CandidateReading,
     Heading,
+    PageTables,
     ParsedTable,
     fetch_html,
     parse_poll_tables,
@@ -1067,15 +1069,41 @@ def rows_for_page(
         variants_dropped=variants_dropped,
         summary_rows_skipped=summary_rows_skipped,
         no_matchup_tables=tuple(no_matchup),
-        oversized_tables=tuple(
+        oversized_tables=_oversized_tables(contest, page_url, page_tables),
+    )
+
+
+def _oversized_tables(
+    contest: UsContest,
+    page_url: str,
+    page_tables: PageTables,
+) -> tuple[OversizedTable, ...]:
+    """Report a page's unread tables: each oversized one, then any skipped.
+
+    The tables skipped once the page's grid budget ran out become one line, so
+    the report stays bounded however many there were.
+    """
+    oversized = [
+        OversizedTable(
+            contest=contest.slug,
+            page_url=page_url,
+            heading_path=_headings_text(headings),
+        )
+        for headings in page_tables.oversized
+    ]
+    if page_tables.budget_skipped:
+        oversized.append(
             OversizedTable(
                 contest=contest.slug,
                 page_url=page_url,
-                heading_path=_headings_text(headings),
-            )
-            for headings in page_tables.oversized
-        ),
-    )
+                heading_path=(
+                    f"{page_tables.budget_skipped} further table(s) not read: "
+                    f"the page's {MAX_PAGE_GRID_CELLS:,}-cell grid budget "
+                    "was reached"
+                ),
+            ),
+        )
+    return tuple(oversized)
 
 
 def _lacks_matchup(contest: UsContest, table: ParsedTable) -> bool:

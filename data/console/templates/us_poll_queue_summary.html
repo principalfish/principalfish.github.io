@@ -274,7 +274,8 @@
 
     <h4>Oversized tables ({{ index.oversized_tables|length }})</h4>
     {% if index.oversized_tables %}
-      <p>Too large to read safely, so skipped unread.</p>
+      <p>Too large to read safely, or skipped once the page's grid budget ran
+        out, so not read.</p>
       <ul>
         {% for table in index.oversized_tables %}
           <li>

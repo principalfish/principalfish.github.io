@@ -20,7 +20,11 @@ from sqlalchemy.exc import IntegrityError
 
 import polls.importers.us.us_wikipedia_polls as us_wikipedia_polls
 from db import Database
-from polls.importers.us.us_polls_common import CandidateReading
+from polls.importers.us.us_polls_common import (
+    CandidateReading,
+    PageTables,
+    parse_poll_tables,
+)
 from polls.importers.us.us_wikipedia_polls import (
     HOUSE_DISTRICTS,
     HOUSE_INDEX_URL,
@@ -1156,6 +1160,29 @@ class TestOversizedTables:
             fetcher=_full_fetcher(**{MICHIGAN_URL: MICHIGAN_OVERSIZED_PAGE}),
         )
         assert [t.page_url for t in index.oversized_tables] == [MICHIGAN_URL]
+
+    def test_tables_skipped_past_the_page_budget_are_one_line(
+        self,
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def parse_with_skips(html: str, **kwargs: bool) -> PageTables:
+            page = parse_poll_tables(html, **kwargs)
+            return dataclasses.replace(page, budget_skipped=5)
+
+        monkeypatch.setattr(us_wikipedia_polls, "parse_poll_tables", parse_with_skips)
+        page = rows_for_page(
+            SENATE_RACES,
+            MICHIGAN_URL,
+            MICHIGAN_OVERSIZED_PAGE,
+            seat_ids=_seat_ids(us_db, SENATE_RACES.map_name),
+        )
+        # The per-table line first, then one line for all the skipped tables.
+        assert [t.heading_path for t in page.oversized_tables] == [
+            "General election › Polling",
+            "5 further table(s) not read: "
+            "the page's 400,000-cell grid budget was reached",
+        ]
 
 
 # ── House ─────────────────────────────────────────────────────────────────────

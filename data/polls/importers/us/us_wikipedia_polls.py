@@ -145,6 +145,12 @@ _MAX_PAGES_PER_STATE = 2
 # Backstop on the race pages taken from one index, whatever ``keep`` admits.
 _MAX_DISCOVERED_PAGES = _MAX_PAGES_PER_STATE * len(STATE_POSTAL)
 
+# Most rejected race links one index reports by URL; the rest are only counted.
+# A real index drops 0-2 (one state holding a regular and a special race in the
+# same cycle), so 50 is far past it while bounding the cached queue payload and
+# keeping the summary's page-failure list readable.
+_MAX_DROPPED_LINKS = 50
+
 # Most memory the page sources kept by one ``fetch_pages`` batch may hold,
 # measured with ``sys.getsizeof``: CPython stores a whole string at 2 bytes per
 # character once it holds one non-Latin-1 character (an en dash, which nearly
@@ -431,11 +437,15 @@ class DiscoveredPages:
     Attributes:
         urls: One absolute URL per race page to fetch, in index order.
         dropped: URL → reason for each race link left out for passing a cap
-            (:data:`_MAX_PAGES_PER_STATE` or :data:`_MAX_DISCOVERED_PAGES`).
+            (:data:`_MAX_PAGES_PER_STATE` or :data:`_MAX_DISCOVERED_PAGES`), at
+            most :data:`_MAX_DROPPED_LINKS` of them.
+        dropped_overflow: How many more links were left out past that, counted
+            rather than listed.
     """
 
     urls: tuple[str, ...]
     dropped: Mapping[str, str]
+    dropped_overflow: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -497,7 +507,10 @@ class UsPollIndex:
         page_failures: URL → reason for every page that could not be read or
             could not be placed (a second page claiming a seat another page
             already owns, or a race link past a discovery cap). Pages that
-            could not be placed are never fetched.
+            could not be placed are never fetched. Past
+            :data:`_MAX_DROPPED_LINKS` rejected links on one index, the rest
+            are one entry keyed ``"<contest>: N more discovery link(s)
+            dropped"`` — the only key that is not a URL.
         notes: Remarks that are not failures, e.g. a page that is not written
             yet.
         collapsed_only_races: Races whose only tables are hypotheticals.
@@ -554,7 +567,9 @@ def _discovered_pages(
     their spelling: past :data:`_MAX_PAGES_PER_STATE` pages for one state, or
     :data:`_MAX_DISCOVERED_PAGES` in all, a link is reported in
     :attr:`DiscoveredPages.dropped` instead, so an index full of variant
-    spellings cannot turn into hundreds of requests.
+    spellings cannot turn into hundreds of requests. That report is itself
+    capped at :data:`_MAX_DROPPED_LINKS` links; any more are only counted, in
+    :attr:`DiscoveredPages.dropped_overflow`.
 
     Args:
         html: The index page source.
@@ -569,8 +584,17 @@ def _discovered_pages(
     soup = BeautifulSoup(html, "lxml")
     urls: list[str] = []
     dropped: dict[str, str] = {}
+    overflow = 0
     seen: set[str] = set()
     pages_per_state: Counter[str] = Counter()
+
+    def drop(url: str, reason: str) -> None:
+        nonlocal overflow
+        if len(dropped) < _MAX_DROPPED_LINKS:
+            dropped[url] = reason
+        else:
+            overflow += 1
+
     for link in soup.find_all("a"):
         if not isinstance(link, Tag):
             continue
@@ -589,18 +613,25 @@ def _discovered_pages(
             continue
         url = f"{WIKIPEDIA_BASE}/wiki/{slug}"
         if pages_per_state[state] >= _MAX_PAGES_PER_STATE:
-            dropped[url] = (
-                f"{state} already has {_MAX_PAGES_PER_STATE} race pages on the index"
+            drop(
+                url,
+                f"{state} already has {_MAX_PAGES_PER_STATE} race pages on the index",
             )
             continue
         if len(urls) >= _MAX_DISCOVERED_PAGES:
-            dropped[url] = (
-                f"past the {_MAX_DISCOVERED_PAGES}-page limit on one index's race pages"
+            drop(
+                url,
+                f"past the {_MAX_DISCOVERED_PAGES}-page limit on one index's "
+                "race pages",
             )
             continue
         pages_per_state[state] += 1
         urls.append(url)
-    return DiscoveredPages(urls=tuple(urls), dropped=dropped)
+    return DiscoveredPages(
+        urls=tuple(urls),
+        dropped=dropped,
+        dropped_overflow=overflow,
+    )
 
 
 def discover_senate_pages(html: str) -> DiscoveredPages:
@@ -1311,8 +1342,8 @@ def _contest_page_urls(
     """
     urls = list(contest.page_urls)
     failures: dict[str, str] = {}
+    discovered: DiscoveredPages | None = None
     if index_html is not None:
-        discovered: DiscoveredPages | None = None
         if contest.discovery == "senate_index":
             discovered = discover_senate_pages(index_html)
         elif contest.discovery == "house_index":
@@ -1332,6 +1363,16 @@ def _contest_page_urls(
             for url, reason in failures.items()
             if state_from_page_slug(url) in allowed
         }
+    if discovered is not None and discovered.dropped_overflow:
+        # Added after the state filter, which would drop it (the key names no
+        # state), and keyed by contest so the two indexes' entries stay apart.
+        # Under a filter the count covers every state: overflow links are not
+        # kept, so they cannot be filtered.
+        count = discovered.dropped_overflow
+        failures[f"{contest.slug}: {count} more discovery link(s) dropped"] = (
+            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected "
+            "race links"
+        )
 
     # A seat is named after its state, so two pages for one state — a regular
     # and a special race in the same cycle — cannot be told apart. The first

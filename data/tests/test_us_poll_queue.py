@@ -1810,7 +1810,10 @@ class TestFinishRoute:
         )
         index = UsPollIndex(
             rows=(*rows, broken),
-            page_failures={"https://en.wikipedia.org/wiki/Gone": "HTTP 500: boom"},
+            page_failures={
+                "https://en.wikipedia.org/wiki/Gone": "HTTP 500: boom",
+                "senate_races: 7 more discovery link(s) dropped": "past the cap",
+            },
             notes=(
                 "https://en.wikipedia.org/wiki/Statewide: not present yet (HTTP 404)",
             ),
@@ -1865,6 +1868,10 @@ class TestFinishRoute:
         assert f"all polls ({PER_RACE_CUTOFF_NOTE})" in body
         assert "12 Wikipedia page(s) read" in body
         assert "HTTP 500: boom" in body
+        assert 'href="https://en.wikipedia.org/wiki/Gone"' in body
+        # A synthetic failure key is shown as text, not as a dead link.
+        assert "senate_races: 7 more discovery link(s) dropped" in body
+        assert 'href="senate_races' not in body
         assert "not present yet (HTTP 404)" in body
         assert "OH-09" in body
         assert "4 hidden row(s)" in body

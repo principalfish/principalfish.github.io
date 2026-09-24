@@ -145,7 +145,14 @@
     {% if index.page_failures %}
       <ul>
         {% for url, reason in index.page_failures|dictsort %}
-          <li><a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>: {{ reason }}</li>
+          <li>
+            {% if url.startswith("http") %}
+              <a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>:
+            {% else %}
+              {{ url }}:
+            {% endif %}
+            {{ reason }}
+          </li>
         {% endfor %}
       </ul>
     {% else %}

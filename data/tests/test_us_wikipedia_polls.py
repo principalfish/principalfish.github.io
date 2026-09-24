@@ -69,6 +69,14 @@ TEXAS_SENATE_VARIANT_URLS = (
     f"{WIKI}/2026_United_States_Senate_election_in_x/Texas",
 )
 
+
+def _texas_variants(count: int) -> list[str]:
+    """``count`` distinct Senate race links that all resolve to Texas."""
+    return [
+        f"{WIKI}/2026_United_States_Senate_election_in_x{i}/Texas" for i in range(count)
+    ]
+
+
 CALIFORNIA_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_California"
 TEXAS_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_Texas"
 VERMONT_URL = f"{WIKI}/2026_United_States_House_of_Representatives_election_in_Vermont"
@@ -670,8 +678,19 @@ class TestDiscoverSenatePages:
         }
 
     def test_a_normal_index_drops_nothing(self) -> None:
-        assert discover_senate_pages(SENATE_INDEX_PAGE).dropped == {}
-        assert discover_house_pages(HOUSE_INDEX_PAGE).dropped == {}
+        for discovered in (
+            discover_senate_pages(SENATE_INDEX_PAGE),
+            discover_house_pages(HOUSE_INDEX_PAGE),
+        ):
+            assert discovered.dropped == {}
+            assert discovered.dropped_overflow == 0
+
+    def test_the_dropped_list_is_capped_and_the_rest_counted(self) -> None:
+        html = "".join(_link(url, "Texas") for url in _texas_variants(200))
+        discovered = discover_senate_pages(html)
+        assert len(discovered.urls) == 2
+        assert len(discovered.dropped) == 50
+        assert discovered.dropped_overflow == 148
 
     def test_relative_hrefs_become_absolute(self) -> None:
         html = _link("/wiki/2026_United_States_Senate_election_in_Maine", "Maine")
@@ -1529,6 +1548,35 @@ class TestFetchUsPollIndex:
         )
         fetch_us_poll_index(us_db, [SENATE_RACES], fetcher=fetcher)
         assert fetcher.requested == [SENATE_INDEX_URL, FLORIDA_URL]
+
+    @pytest.mark.parametrize("states", [None, ["Texas"]])
+    def test_overflowing_drops_are_reported_as_one_line(
+        self,
+        us_db: Database,
+        states: list[str] | None,
+    ) -> None:
+        # The line names no state, so a state filter must not remove it.
+        index_html = "".join(_link(url, "Texas") for url in _texas_variants(60))
+        fetcher = _full_fetcher(**{SENATE_INDEX_URL: index_html})
+        index = fetch_us_poll_index(
+            us_db,
+            [SENATE_RACES],
+            states=states,
+            fetcher=fetcher,
+        )
+        overflow = {
+            key: reason
+            for key, reason in index.page_failures.items()
+            if not key.startswith("http")
+        }
+        assert overflow == {
+            "senate_races: 8 more discovery link(s) dropped": (
+                "past the 50-link cap on one index's rejected race links"
+            ),
+        }
+        # 50 listed drops, the second Texas page the duplicate-seat check
+        # refuses, and the one overflow line.
+        assert len(index.page_failures) == 52
 
     def test_variant_spellings_of_one_state_cost_no_requests(
         self, us_db: Database

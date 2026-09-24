@@ -73,7 +73,7 @@ This guide covers local setup for the `data/` part of the repo end-to-end:
 
 - Linux/macOS shell
 - Python 3.10+
-- `sqlite3` CLI (for inspection/backups)
+- `sqlite3` CLI (for inspection)
 - Network access (poll importers fetch remote PDFs/XLSX/HTML)
 
 ---
@@ -111,13 +111,39 @@ still opens the database named in `.env`. To run a script against a copy, edit
 
 Tables are created automatically by `Database.create_tables()`
 (`Base.metadata.create_all`). A fresh database can be populated with the base-data
-importers below, or recovered from the Google Drive snapshot (under `DRIVE_DBS_DIR`).
+importers below, or restored from a backup (below).
+
+### Backups
 
 The live database stays on local disk — SQLite must not run off the Drive mount.
-`data/scripts/backup_to_drive.sh` snapshots it to Google Drive (`DRIVE_DBS_DIR`);
-`data/scripts/restore_from_drive.sh` restores it back. The data console's Backup /
-Restore buttons run these, and a scheduled run can call `backup_to_drive.sh` daily
-(without `--force` it skips if a snapshot was already taken today).
+`data/backup.py` backs it up with SQLite's own backup API (safe mid-write) and
+integrity-checks the copy:
+
+- **Local archives** (`ELECTIONS_ARCHIVE_DIR`, default `~/dbs/elections`): a dated
+  `elections-<UTC stamp>.db.gz` whenever the data has changed, plus a plain newest
+  `elections.db`. The newest `ELECTIONS_BACKUP_KEEP` (default 30) are kept.
+- **Google Drive** (`ELECTIONS_BACKUP_DIR`, e.g. `/mnt/g/My Drive/dbs`): one file,
+  `elections.db.gz`, overwritten at most once a day. Drive is nearly full and each
+  overwrite leaves a revision that counts against the quota, so history lives
+  locally. If the Drive folder isn't mounted the push is skipped, not failed.
+
+The data console backs up by itself after any request that could write (including
+the scripts it launches) and once on startup. Its **Backup now** button archives
+immediately and refreshes the Drive copy regardless of the daily limit; **Restore
+newest archive** restores from the newest local archive, or the Drive copy if
+there is none, keeping the replaced database as `<db>.prerestore`.
+
+From a terminal — after running a writing script directly, for example:
+
+```bash
+./election_data/bin/python scripts/backup_db.py            # archive if changed; Drive if due
+./election_data/bin/python scripts/backup_db.py --push     # ...and refresh Drive now
+./election_data/bin/python scripts/backup_db.py --dry-run  # show paths and state only
+./election_data/bin/python scripts/backup_db.py restore    # restore (stop the console first)
+```
+
+A backup of the full database takes about 20 s (most of it gzip and the integrity
+check); the archive is about 136 MB.
 
 ---
 
@@ -490,7 +516,7 @@ console first. Until step 2 the console, models and export cannot read polls fro
 that database.
 
 1. **Back up** — `sqlite3 "$DATABASE_PATH" ".backup /home/philiph/dbs/elections.pre-us-seat-polls-<date>.db"`,
-   plus the console's **Backup to Drive**.
+   plus the console's **Backup now**.
 2. **Migrate** — adds `polls.matchup`, `polls.seat_id`, `poll_rows.candidate_name`
    and the `tracked_matchups` table. Idempotent, one transaction.
    ```bash

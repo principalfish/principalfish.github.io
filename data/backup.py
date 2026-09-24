@@ -38,6 +38,7 @@ import shutil
 import sqlite3
 import threading
 import time
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
 from config import DatabaseConfig
@@ -54,6 +55,11 @@ DRIVE_PUSH_STAMP = ".last_drive_push"
 # Big enough to keep the per-read overhead negligible on a ~500 MB file, small
 # enough that nothing close to the whole database is ever held in memory.
 _CHUNK = 1024 * 1024
+
+# gzip's default level 9 takes ~68 s on the 481 MB database for the same 136 MB
+# that level 6 gives in ~13 s (measured 2026-09-24). Fixed, because dedup
+# compares archive bytes: a different level makes every archive look changed.
+_GZIP_LEVEL = 6
 
 # One console action can write more than once — an import touches many rows,
 # sometimes in several transactions. Pausing before copying folds a burst into
@@ -260,7 +266,9 @@ def backup_database(
     # doesn't fill the folder. Streamed through a file object rather than
     # gzip.compress(f.read()), so the database is never held in memory whole.
     with open(latest, "rb") as src, open(gz_partial, "wb") as dest:
-        with gzip.GzipFile(fileobj=dest, mode="wb", mtime=0) as gz:
+        with gzip.GzipFile(
+            fileobj=dest, mode="wb", mtime=0, compresslevel=_GZIP_LEVEL
+        ) as gz:
             shutil.copyfileobj(src, gz, _CHUNK)
 
     existing = _archives(archive_dir)
@@ -277,6 +285,53 @@ def backup_database(
     # throttled, or the mount was down — still gets caught up on the next day.
     _push_to_drive(archive_dir, sync_dir, force=push)
     return made
+
+
+def _restore_source(archive_dir: str, sync_dir: str) -> str | None:
+    """The archive a restore would use: newest local, else the Drive copy."""
+    local = _archives(archive_dir)
+    if local:
+        return local[-1]
+    drive = os.path.join(sync_dir, SYNC_NAME) if sync_dir else ""
+    if drive and os.path.isfile(drive):
+        return drive
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class BackupStatus:
+    """Where backups go and what is there — for a dry run, touching nothing."""
+
+    db_path: str
+    archive_dir: str
+    sync_dir: str
+    sync_mounted: bool
+    archives: int
+    newest_archive: str | None
+    restore_source: str | None
+    last_drive_push: str | None
+
+
+def status() -> BackupStatus:
+    """Report the current settings and archive state without writing anything."""
+    archive_dir = _archive_dir()
+    sync_dir = _sync_dir()
+    archives = _archives(archive_dir)
+    stamp = os.path.join(archive_dir, DRIVE_PUSH_STAMP)
+    last_push: str | None = None
+    if os.path.isfile(stamp):
+        with open(stamp, encoding="utf-8") as f:
+            last_push = f.read().strip() or None
+    return BackupStatus(
+        db_path=_database_path(),
+        archive_dir=archive_dir,
+        sync_dir=sync_dir,
+        sync_mounted=bool(sync_dir) and os.path.isdir(sync_dir),
+        archives=len(archives),
+        newest_archive=archives[-1] if archives else None,
+        restore_source=_restore_source(archive_dir, sync_dir),
+        last_drive_push=last_push,
+    )
 
 
 def restore_latest(
@@ -303,16 +358,11 @@ def restore_latest(
     archive_dir = _archive_dir() if archive_dir is None else archive_dir
     sync_dir = _sync_dir() if sync_dir is None else sync_dir
 
-    local = _archives(archive_dir)
-    drive = os.path.join(sync_dir, SYNC_NAME) if sync_dir else ""
-    if local:
-        source = local[-1]
-    elif drive and os.path.isfile(drive):
-        source = drive
-    else:
+    source = _restore_source(archive_dir, sync_dir)
+    if source is None:
         checked = os.path.join(archive_dir, "elections-*.db.gz")
-        if drive:
-            checked += f" or {drive}"
+        if sync_dir:
+            checked += f" or {os.path.join(sync_dir, SYNC_NAME)}"
         raise FileNotFoundError(f"no archive to restore from (checked {checked})")
 
     os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)

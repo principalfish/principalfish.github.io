@@ -17,6 +17,9 @@ endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_route
 from __future__ import annotations
 
 import subprocess
+import threading
+from collections.abc import Iterator, Sequence
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -62,6 +65,43 @@ REBUILD_INTERRUPTED_NOTE = (
 )
 
 bp = Blueprint("us", __name__)
+
+# One lock per chamber, so two history rebuilds of one chamber cannot run at
+# once: the runner deletes a chamber's trend points before recomputing them,
+# and the threaded dev server makes a double submit reach it twice. The same
+# pattern as the poll queue's per-token locks (``us_poll_import._queue_lock``),
+# but created up front, since the chambers are a fixed three. Process-local:
+# it does not guard against a second server process or a concurrent CLI run.
+_REBUILD_LOCKS: dict[str, threading.Lock] = {
+    chamber.slug: threading.Lock() for chamber in US_CHAMBERS
+}
+
+
+@contextmanager
+def _rebuild_locks(chambers: Sequence[UsChamber]) -> Iterator[UsChamber | None]:
+    """Hold every named chamber's rebuild lock, or none of them.
+
+    Each lock is tried without blocking, so a second submit is told a rebuild
+    is running instead of queueing silently behind an hour-long one.
+
+    Args:
+        chambers: The chambers about to be rebuilt, each at most once (a
+            chamber's lock is not re-entrant, so a repeat would read as busy).
+
+    Yields:
+        None once every lock is held (all are released on exit), or the first
+        chamber whose lock another request holds — in which case any locks
+        already taken have been released and nothing may run.
+    """
+    with ExitStack() as held:
+        for chamber in chambers:
+            lock = _REBUILD_LOCKS[chamber.slug]
+            if not lock.acquire(blocking=False):
+                held.close()
+                yield chamber
+                return
+            held.callback(lock.release)
+        yield None
 
 
 @bp.route("/us/run-models", methods=["POST"])
@@ -249,6 +289,9 @@ def _rebuild_history(
     can monkeypatch it. A step that times out or cannot be started renders a
     failed result saying the history may be partial, instead of a 500.
 
+    Only one rebuild of a chamber runs at a time (see :func:`_rebuild_locks`);
+    a second is refused with a flash and sent back.
+
     Args:
         db: Active Database instance.
         chamber: The chamber to rebuild.
@@ -256,7 +299,8 @@ def _rebuild_history(
         back_values: URL values for ``back_endpoint``.
 
     Returns:
-        The rendered command result.
+        The rendered command result, or a redirect back when a rebuild of this
+        chamber is already running.
     """
     command_args = " ".join((*chamber.model_args, chamber.rebuild_flag))
 
@@ -272,17 +316,26 @@ def _rebuild_history(
             back_values=back_values,
         )
 
-    try:
-        run = run_us_chamber_and_export(
-            db, chamber, runner=run_python_script, rebuild_history=True
-        )
-    except (subprocess.SubprocessError, OSError) as err:
-        partial_output = _output_text(getattr(err, "stdout", None))
-        return result_page(
-            stdout="\n".join(filter(None, (REBUILD_INTERRUPTED_NOTE, partial_output))),
-            stderr=f"{type(err).__name__}: {err}",
-            return_code=1,
-        )
+    with _rebuild_locks([chamber]) as busy:
+        if busy is not None:
+            flash(
+                f"History not rebuilt: a {busy.label} history rebuild is already "
+                "running; wait for it to finish, then rebuild again."
+            )
+            return redirect(url_for(back_endpoint, **(back_values or {})))
+        try:
+            run = run_us_chamber_and_export(
+                db, chamber, runner=run_python_script, rebuild_history=True
+            )
+        except (subprocess.SubprocessError, OSError) as err:
+            partial_output = _output_text(getattr(err, "stdout", None))
+            return result_page(
+                stdout="\n".join(
+                    filter(None, (REBUILD_INTERRUPTED_NOTE, partial_output)),
+                ),
+                stderr=f"{type(err).__name__}: {err}",
+                return_code=1,
+            )
     return result_page(stdout=run.stdout, stderr=run.stderr, return_code=run.return_code)
 
 

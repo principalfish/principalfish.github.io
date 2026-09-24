@@ -24,9 +24,11 @@ from models import ElectionType
 
 from console import create_app
 from console import paths as console_paths
+from console.blueprints import us as us_blueprint
 from console.services.us_models import (
     REBUILD_TIMEOUT_SECONDS,
     STEP_TIMEOUT_SECONDS,
+    US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
     UsModelRun,
     run_us_chamber_and_export,
@@ -1265,3 +1267,93 @@ class TestRebuildRouteFailure:
         body = html.unescape(response.get_data(as_text=True))
         assert "Rebuild US Senate History" in body
         assert "trend history may be partial" in body
+
+
+class TestRebuildLocks:
+    """Only one history rebuild of a chamber runs at a time."""
+
+    @pytest.fixture(autouse=True)
+    def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+
+    def _post_texas_rebuild(
+        self,
+        app: Flask,
+        db: Database,
+    ) -> tuple[FlaskClient[Response], Response]:
+        seeded = _seed_senate_races(db)
+        client = app.test_client()
+        response = client.post(
+            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+        )
+        return client, response
+
+    def test_a_held_lock_refuses_the_rebuild(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        with us_blueprint._REBUILD_LOCKS["senate"]:
+            client, response = self._post_texas_rebuild(app, db)
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/us/matchups?chamber=senate"
+        assert recording_runner.calls == []
+        assert _flashes(client, response)[-1] == (
+            "History not rebuilt: a US Senate history rebuild is already running; "
+            "wait for it to finish, then rebuild again."
+        )
+
+    def test_the_lock_is_free_after_a_rebuild(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        _, response = self._post_texas_rebuild(app, db)
+
+        assert response.status_code == 200
+        assert not us_blueprint._REBUILD_LOCKS["senate"].locked()
+
+    def test_the_lock_is_free_after_a_failed_rebuild(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        runner = _TimeoutRecorder(
+            fail="run_us_senate_model.py",
+            error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
+        )
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        _, response = self._post_texas_rebuild(app, db)
+
+        assert "trend history may be partial" in html.unescape(
+            response.get_data(as_text=True)
+        )
+        assert not us_blueprint._REBUILD_LOCKS["senate"].locked()
+
+    def test_a_held_senate_lock_does_not_block_the_president(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        _seed_president_matchups(db)
+
+        with us_blueprint._REBUILD_LOCKS["senate"]:
+            response = app.test_client().post(
+                "/us/president/matchup",
+                data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
+            )
+
+        assert response.status_code == 200
+        assert "run_us_presidential_model.py" in recording_runner.scripts
+
+    def test_taking_several_releases_the_ones_taken_when_one_is_busy(self) -> None:
+        house, president, senate = (
+            US_CHAMBERS_BY_SLUG[slug] for slug in ("house", "president", "senate")
+        )
+        with us_blueprint._REBUILD_LOCKS["president"]:
+            with us_blueprint._rebuild_locks([house, president, senate]) as busy:
+                assert busy is president
+                # House was taken first and must already be free again.
+                assert not us_blueprint._REBUILD_LOCKS["house"].locked()
+        assert not any(lock.locked() for lock in us_blueprint._REBUILD_LOCKS.values())
+
+    def test_taking_several_holds_them_all_until_exit(self) -> None:
+        with us_blueprint._rebuild_locks(US_CHAMBERS) as busy:
+            assert busy is None
+            assert all(lock.locked() for lock in us_blueprint._REBUILD_LOCKS.values())
+        assert not any(lock.locked() for lock in us_blueprint._REBUILD_LOCKS.values())

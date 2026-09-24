@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import threading
 from collections.abc import Mapping
 from datetime import date
 from email.message import Message
@@ -776,6 +777,90 @@ class TestFetchPages:
             "y: not present yet (HTTP 404)",
             "x: not present yet (HTTP 404)",
         )
+
+
+class TestFetchPagesBounds:
+    KIB = 1024
+    BUDGET_REASON = "dropped: keeping it would pass this batch's 1 MiB page budget"
+
+    def test_pages_past_the_run_budget_are_failures(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(us_wikipedia_polls, "MAX_TOTAL_PAGE_BYTES", 1024 * self.KIB)
+        sizes = {"a": 600, "b": 600, "c": 300, "d": 200}
+        fetcher = FakeFetcher({url: url * kib * self.KIB for url, kib in sizes.items()})
+        result = fetch_pages(list(sizes), fetcher=fetcher, max_workers=2)
+        # b would pass the budget and is dropped; c still fits after it.
+        assert list(result.pages) == ["a", "c"]
+        assert result.failures == {
+            "b": self.BUDGET_REASON,
+            "d": self.BUDGET_REASON,
+        }
+
+    def test_memory_not_characters_is_counted(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # 400K characters with one en dash hold ~800 KiB, so two do not fit in
+        # 1 MiB although their characters would.
+        monkeypatch.setattr(us_wikipedia_polls, "MAX_TOTAL_PAGE_BYTES", 1024 * self.KIB)
+        page = "–" + "a" * (400 * self.KIB - 1)
+        fetcher = FakeFetcher({"a": page, "b": page})
+        result = fetch_pages(["a", "b"], fetcher=fetcher)
+        assert list(result.pages) == ["a"]
+        assert result.failures == {"b": self.BUDGET_REASON}
+
+    def test_the_budget_follows_request_order_not_finish_order(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # z is asked for first but held until y has its page, so it finishes
+        # last; it is still the one kept.
+        monkeypatch.setattr(us_wikipedia_polls, "MAX_TOTAL_PAGE_BYTES", 1024 * self.KIB)
+        y_done = threading.Event()
+        z_saw_y: list[bool] = []
+
+        def fetcher(url: str) -> str:
+            if url == "z":
+                z_saw_y.append(y_done.wait(timeout=5))
+                return "z" * 600 * self.KIB
+            page = "y" * 600 * self.KIB
+            y_done.set()
+            return page
+
+        result = fetch_pages(["z", "y"], fetcher=fetcher, max_workers=2)
+        assert z_saw_y == [True]
+        assert list(result.pages) == ["z"]
+        assert list(result.failures) == ["y"]
+
+    def test_finished_pages_cannot_pile_up_behind_a_slow_one(self) -> None:
+        # With 2 workers at most 4 fetches are outstanding. While the first page
+        # blocks, only the 3 after it may be fetched, never all 20.
+        others_done = threading.Semaphore(0)
+        fetched_while_blocked: list[int] = []
+        requested: list[str] = []
+        lock = threading.Lock()
+
+        def fetcher(url: str) -> str:
+            with lock:
+                requested.append(url)
+            if url != "u0":
+                others_done.release()
+                return url
+            # Wait for the three the window allows, then give an unbounded
+            # pool time to fetch far more before counting.
+            for _ in range(3):
+                others_done.acquire(timeout=5)
+            others_done.acquire(timeout=0.2)
+            with lock:
+                fetched_while_blocked.append(len(requested) - 1)
+            return url
+
+        urls = [f"u{i}" for i in range(20)]
+        result = fetch_pages(urls, fetcher=fetcher, max_workers=2)
+        assert fetched_while_blocked == [3]
+        assert list(result.pages) == urls
 
 
 # ── President ─────────────────────────────────────────────────────────────────

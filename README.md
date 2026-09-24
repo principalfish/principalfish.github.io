@@ -421,7 +421,8 @@ applies tracking but skips the model run. The summary lists page failures and 40
 notes, collapsed-only races, unknown suffixes, dropped variants, unmatched seats
 and the tracking outcomes.
 A page over 8 MiB, or cut off mid-download, is listed as a page failure; the rest
-of the import carries on.
+of the import carries on. So is a page that would take the pages kept past 256 MiB
+of memory.
 
 ### Matchups
 

@@ -35,7 +35,7 @@ import argparse
 import logging
 import re
 import sys
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -96,6 +96,9 @@ PRESIDENT_PAGE_URLS: tuple[str, ...] = (
 #: A page fetcher: takes a URL, returns the page source, raises on failure.
 Fetcher = Callable[[str], str]
 
+#: One fetch's outcome: ``(html, failure, note)``, exactly one of them set.
+_FetchResult = tuple[str | None, str | None, str | None]
+
 #: Where a contest's pages come from beyond its fixed ``page_urls``.
 PageDiscovery = Literal["none", "senate_index", "house_index"]
 
@@ -141,6 +144,15 @@ _MAX_PAGES_PER_STATE = 2
 
 # Backstop on the race pages taken from one index, whatever ``keep`` admits.
 _MAX_DISCOVERED_PAGES = _MAX_PAGES_PER_STATE * len(STATE_POSTAL)
+
+# Most memory the page sources kept by one ``fetch_pages`` batch may hold,
+# measured with ``sys.getsizeof``: CPython stores a whole string at 2 bytes per
+# character once it holds one non-Latin-1 character (an en dash, which nearly
+# every Wikipedia page has), so a character count would understate it by half.
+# A real batch keeps ~90 pages of a few hundred KB, ~1 MB the largest seen, so
+# even 90 x 1 MB x 2 bytes (~180 MB) fits. It caps the worst case well below the
+# ~1.4 GB that 90 pages at the 8 MiB per-page cap could otherwise hold.
+MAX_TOTAL_PAGE_BYTES = 256 * 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -636,7 +648,7 @@ def discover_house_pages(html: str) -> DiscoveredPages:
 # ── Fetching ──────────────────────────────────────────────────────────────────
 
 
-def _fetch_one(url: str, fetcher: Fetcher) -> tuple[str | None, str | None, str | None]:
+def _fetch_one(url: str, fetcher: Fetcher) -> _FetchResult:
     """Fetch one page, turning every failure into text.
 
     Returns:
@@ -673,6 +685,17 @@ def fetch_pages(
     A 404 is not treated as a failure: an article for a future cycle simply may
     not exist yet, which is the case for the presidential Statewide page today.
 
+    Memory is bounded two ways. Each fetch is capped at
+    :data:`~polls.importers.wikipedia_common.MAX_PAGE_BYTES` by the fetcher,
+    and at most ``2 * max_workers`` fetches are outstanding (running, or done
+    but not yet read) at once, so finished pages cannot pile up behind a slow
+    one. The pages kept are capped at :data:`MAX_TOTAL_PAGE_BYTES` of memory in
+    total: a page that would pass it is still fetched, but dropped and reported
+    as a failure, and a smaller page after it may still fit. Parsing each page
+    as it arrives was considered and not done — it would turn
+    :func:`fetch_us_poll_index`'s index-then-pages flow inside out for a saving
+    these bounds already give.
+
     Args:
         urls: Pages to fetch. Repeats are fetched once.
         fetcher: Injection point — tests pass a dict-backed fake.
@@ -689,16 +712,38 @@ def fetch_pages(
     if not wanted:
         return FetchedPages(pages=pages, failures=failures, notes=())
 
-    with ThreadPoolExecutor(max_workers=max(1, max_workers)) as pool:
-        futures: list[Future[tuple[str | None, str | None, str | None]]] = [
-            pool.submit(_fetch_one, url, fetcher) for url in wanted
-        ]
+    workers = max(1, max_workers)
+    budget = MAX_TOTAL_PAGE_BYTES
+    kept = 0
+    queued = iter(wanted)
+    outstanding: deque[tuple[str, Future[_FetchResult]]] = deque()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+
+        def submit_next() -> None:
+            url = next(queued, None)
+            if url is not None:
+                outstanding.append((url, pool.submit(_fetch_one, url, fetcher)))
+
+        for _ in range(2 * workers):
+            submit_next()
         # Read the futures in request order, so the index is deterministic
-        # whatever order the pool finishes them in.
-        for url, future in zip(wanted, futures, strict=True):
+        # whatever order the pool finishes them in. Each is dropped as it is
+        # read, so a page is held only by ``pages`` once kept.
+        while outstanding:
+            url, future = outstanding.popleft()
             html, failure, note = future.result()
+            del future
+            submit_next()
             if html is not None:
-                pages[url] = html
+                size = sys.getsizeof(html)
+                if kept + size > budget:
+                    failure = (
+                        "dropped: keeping it would pass this batch's "
+                        f"{budget // (1024 * 1024)} MiB page budget"
+                    )
+                else:
+                    pages[url] = html
+                    kept += size
             if failure is not None:
                 failures[url] = failure
             if note is not None:

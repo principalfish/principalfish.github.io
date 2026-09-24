@@ -15,7 +15,9 @@ history" option.
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Collection, Mapping
+import threading
+from collections.abc import Collection, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -207,6 +209,51 @@ def _output_text(output: str | bytes | None) -> str:
     if isinstance(output, bytes):
         return output.decode("utf-8", errors="replace")
     return output or ""
+
+
+# Held by every console run of the US models: an ordinary run, a one-chamber
+# history rebuild, a rebuild of all three, and the poll queue's finish step.
+# One lock, not one per chamber, because every run ends with the export, which
+# publishes *every* chamber's trend history: a run that exported while another
+# chamber's rebuild had cleared its points would publish that half-cleared
+# history. The threaded dev server makes a double submit reach a run twice.
+# Process-local: it does not guard against a second server process or a
+# concurrent CLI run. Nor does it cover the console's other full exports (site
+# data, by-elections, Holyrood), which also rewrite the US files: one export at
+# a time across the whole console is a wider question than the US runs.
+MODEL_RUN_LOCK = threading.Lock()
+
+
+@contextmanager
+def model_run_slot() -> Iterator[bool]:
+    """Hold the console's one US model-run slot, if it is free.
+
+    The lock is tried without blocking, so a second submit is told a run is in
+    progress instead of queueing silently behind an hour-long rebuild.
+
+    Yields:
+        True while the slot is held (it is released on exit), or False when
+        another request holds it — in which case nothing may run.
+    """
+    if not MODEL_RUN_LOCK.acquire(blocking=False):
+        yield False
+        return
+    try:
+        yield True
+    finally:
+        MODEL_RUN_LOCK.release()
+
+
+def busy_message(refused: str) -> str:
+    """The message for a run refused because another one holds the slot.
+
+    Args:
+        refused: What did not happen, e.g. ``"History not rebuilt"``.
+    """
+    return (
+        f"{refused}: another US model run or history rebuild is in progress; "
+        "wait for it to finish, then try again."
+    )
 
 
 def tracked_matchup_in_force(db: Database, chamber: UsChamber) -> bool:

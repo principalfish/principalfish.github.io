@@ -59,6 +59,7 @@ from polls.importers.us.us_wikipedia_polls import (
 from console.services.us_models import (
     ScriptRunner,
     UsModelRunInterrupted,
+    model_run_slot,
     run_us_models_and_export,
 )
 from console.services.wikipedia_queue import (
@@ -94,8 +95,9 @@ AUTO_TRACKING_KEY = "auto_tracking"
 AUTO_TRACKING_ERROR_KEY = "auto_tracking_error"
 
 #: Payload key for the ``UsModelRun`` of the finish step, written once. When a
-#: step died part-way it is the partial run up to that step, with return code 1
-#: (see :data:`MODEL_ERROR_KEY`).
+#: step died part-way it is the partial run up to that step, with return code 1;
+#: None when the run was refused because another was in progress (see
+#: :data:`MODEL_ERROR_KEY`).
 MODEL_RUN_KEY = "model_run"
 
 #: Payload key for the message of a model run that raised.
@@ -642,8 +644,8 @@ def finish_us_queue(
             :data:`STATE_KEY` and the ``UsPollIndex`` under :data:`INDEX_KEY`.
             Results are written to it under :data:`AUTO_TRACKING_KEY` (or
             :data:`AUTO_TRACKING_ERROR_KEY` if tracking raised),
-            :data:`MODEL_RUN_KEY` and, if the model run raised,
-            :data:`MODEL_ERROR_KEY`.
+            :data:`MODEL_RUN_KEY` and, if the model run raised or was refused
+            because another run was in progress, :data:`MODEL_ERROR_KEY`.
         runner: Subprocess runner handed to ``run_us_models_and_export``.
         abandon: True when the user left the queue early; turns the model run
             off for good, as in the UK queue.
@@ -675,10 +677,21 @@ def finish_us_queue(
     imported = any(item.status == "imported" for item in state.items)
     if not imported and not tracking_changed(payload.get(AUTO_TRACKING_KEY)):
         return
-    try:
-        payload[MODEL_RUN_KEY] = run_us_models_and_export(db, runner=runner)
-    except UsModelRunInterrupted as err:
-        # Keep what finished before the failing step, as the Run US Models page
-        # does, so the summary shows which chambers saved new outputs.
-        payload[MODEL_RUN_KEY] = err.partial
-        payload[MODEL_ERROR_KEY] = f"US model run failed: {err}"
+    with model_run_slot() as free:
+        if not free:
+            # Recorded, not retried, like any finish result: a refresh long
+            # after the other run has ended must not start a surprise run.
+            payload[MODEL_RUN_KEY] = None
+            payload[MODEL_ERROR_KEY] = (
+                "US models not run: another US model run or history rebuild "
+                "was in progress. Run US Models from the home page once it "
+                "finishes."
+            )
+            return
+        try:
+            payload[MODEL_RUN_KEY] = run_us_models_and_export(db, runner=runner)
+        except UsModelRunInterrupted as err:
+            # Keep what finished before the failing step, as the Run US Models
+            # page does, so the summary shows which chambers saved new outputs.
+            payload[MODEL_RUN_KEY] = err.partial
+            payload[MODEL_ERROR_KEY] = f"US model run failed: {err}"

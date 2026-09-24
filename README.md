@@ -440,12 +440,20 @@ The model only uses the polls of a seat's **tracked matchup**.
   **set** a stored label, **ignore** the race's polls, or go back to **auto**. An
   automatic update never overwrites a manual override.
 
-Both pages have an optional "rebuild history" checkbox (see `--rebuild-history`).
+Both matchup pages have an optional "rebuild history" checkbox for their own
+chamber, and **Run US Models** on the home page has one for all three (see
+`--rebuild-history`).
 
 ### Model runs
 
-**Run US Models** (home page) runs House → President → Senate → export. The CLI
-equivalent, with the console's poll windows:
+**Run US Models** (home page) runs House → President → Senate → export. Its
+**Rebuild all US history** box appends `--rebuild-history` to all three runners
+(each under the long rebuild timeout), after a confirmation: one blocking request
+that can take hours. The console runs one US model run at a time — ordinary runs,
+rebuilds and the import queue's finish step alike — and refuses any other while
+one is in progress, since each ends with an export of every chamber. (The
+console's other full exports — site data, by-elections, Holyrood — are not
+serialised with them.) The CLI equivalent, with the console's poll windows:
 
 ```bash
 ./election_data/bin/python models/us/run_us_house_model.py --since-days-back 60

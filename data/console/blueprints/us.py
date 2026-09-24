@@ -16,9 +16,7 @@ endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_route
 
 from __future__ import annotations
 
-import threading
-from collections.abc import Callable, Iterator, Sequence
-from contextlib import ExitStack, contextmanager
+from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol
 
@@ -52,6 +50,8 @@ from console.services.us_models import (
     UsChamber,
     UsModelRun,
     UsModelRunInterrupted,
+    busy_message,
+    model_run_slot,
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
@@ -68,6 +68,16 @@ REBUILD_INTERRUPTED_NOTE = (
     "to restore it; the export did not run, or did not finish."
 )
 
+# The same for a rebuild of every chamber: the one whose step died may have a
+# partial history, and those rebuilt before it were never exported.
+REBUILD_ALL_INTERRUPTED_NOTE = (
+    "The rebuild did not finish, so the trend history of the chamber it stopped "
+    "on may be partial: the runner clears the old points before recomputing them. "
+    "Any chamber rebuilt before it (shown below) has a new history the export "
+    "never picked up. Re-run the rebuild; if only the export failed, every "
+    "history is complete and just needs exporting."
+)
+
 # Shown when a plain model run's subprocess dies part-way. Chambers that
 # finished first have saved new outputs the export never picked up, and an
 # export that died may have rewritten only some of its files.
@@ -77,44 +87,6 @@ RUN_INTERRUPTED_NOTE = (
 )
 
 bp = Blueprint("us", __name__)
-
-# One lock per chamber, so two history rebuilds of one chamber cannot run at
-# once: the runner deletes a chamber's trend points before recomputing them,
-# and the threaded dev server makes a double submit reach it twice. The same
-# pattern as the poll queue's per-token locks (``us_poll_import._queue_lock``),
-# but created up front, since the chambers are a fixed three. Process-local:
-# it does not guard against a second server process or a concurrent CLI run.
-_REBUILD_LOCKS: dict[str, threading.Lock] = {
-    chamber.slug: threading.Lock() for chamber in US_CHAMBERS
-}
-
-
-@contextmanager
-def _rebuild_locks(chambers: Sequence[UsChamber]) -> Iterator[UsChamber | None]:
-    """Hold every named chamber's rebuild lock, or none of them.
-
-    Each lock is tried without blocking, so a second submit is told a rebuild
-    is running instead of queueing silently behind an hour-long one.
-
-    Args:
-        chambers: The chambers about to be rebuilt, each at most once (a
-            chamber's lock is not re-entrant, so a repeat would read as busy).
-
-    Yields:
-        None once every lock is held (all are released on exit), or the first
-        chamber whose lock another request holds — in which case any locks
-        already taken have been released and nothing may run.
-    """
-    with ExitStack() as held:
-        for chamber in chambers:
-            lock = _REBUILD_LOCKS[chamber.slug]
-            if not lock.acquire(blocking=False):
-                held.close()
-                yield chamber
-                return
-            held.callback(lock.release)
-        yield None
-
 
 @bp.route("/us/run-models", methods=["POST"])
 def run_us_models() -> ResponseReturnValue:
@@ -126,11 +98,19 @@ def run_us_models() -> ResponseReturnValue:
     The sequence itself lives in ``console.services.us_models`` — a chamber
     whose tracked matchup is unset is skipped without stopping the others.
 
+    With the form's ``rebuild_history`` box ticked, every chamber's runner
+    recomputes its whole trend history (``--rebuild-history``, under the long
+    rebuild timeout), one after another: a single request that can take hours.
+    Either way the run holds the console's one model-run slot
+    (:func:`~console.services.us_models.model_run_slot`), so it is refused with
+    a flash while another run or rebuild is in progress.
+
     A step that times out or cannot be started renders a failed result saying
     the models and the export may be out of step, instead of a 500.
 
     Returns:
-        Rendered command_result.html showing combined stdout, stderr, and return code.
+        Rendered command_result.html showing combined stdout, stderr, and return
+        code, or a redirect home when another run is in progress.
     """
     scripts: list[Path] = [chamber.model_script for chamber in US_CHAMBERS]
     scripts.append(EXPORT_ELECTION_SCRIPT)
@@ -139,23 +119,43 @@ def run_us_models() -> ResponseReturnValue:
             flash(f"Script not found: {script}")
             return redirect(url_for("home.home"))
 
+    rebuild = _rebuild_requested()
+    command = " → ".join(
+        [
+            f"{chamber.model_script.name}"
+            + (f" {chamber.rebuild_flag}" if rebuild else "")
+            for chamber in US_CHAMBERS
+        ]
+        + [EXPORT_ELECTION_SCRIPT.name]
+    )
+
     def result_page(*, stdout: str, stderr: str, return_code: int) -> ResponseReturnValue:
         return render_command_result(
-            title="Run US Models",
-            command="run_us_house_model.py → run_us_presidential_model.py → run_us_senate_model.py → export_elections.py",
+            title="Rebuild US History" if rebuild else "Run US Models",
+            command=command,
             stdout=stdout,
             stderr=stderr,
             return_code=return_code,
         )
 
     db = get_db()
-    # ``run_python_script`` is looked up here at call time, so tests can
-    # monkeypatch it, as for :func:`_rebuild_history`.
-    return _guarded_run(
-        lambda: run_us_models_and_export(db, runner=run_python_script),
-        note=RUN_INTERRUPTED_NOTE,
-        result_page=result_page,
+    slugs = (
+        frozenset(chamber.slug for chamber in US_CHAMBERS) if rebuild else frozenset()
     )
+    with model_run_slot() as free:
+        if not free:
+            refused = "History not rebuilt" if rebuild else "Models not run"
+            flash(busy_message(refused))
+            return redirect(url_for("home.home"))
+        # ``run_python_script`` is looked up here at call time, so tests can
+        # monkeypatch it, as for :func:`_rebuild_history`.
+        return _guarded_run(
+            lambda: run_us_models_and_export(
+                db, runner=run_python_script, rebuild=slugs
+            ),
+            note=REBUILD_ALL_INTERRUPTED_NOTE if rebuild else RUN_INTERRUPTED_NOTE,
+            result_page=result_page,
+        )
 
 
 @bp.route("/us/president/matchup", methods=["GET", "POST"])
@@ -312,8 +312,9 @@ def _rebuild_history(
     can monkeypatch it. A step that times out or cannot be started renders a
     failed result saying the history may be partial, instead of a 500.
 
-    Only one rebuild of a chamber runs at a time (see :func:`_rebuild_locks`);
-    a second is refused with a flash and sent back.
+    It holds the console's one model-run slot
+    (:func:`~console.services.us_models.model_run_slot`), so while another run
+    or rebuild is in progress it is refused with a flash and sent back.
 
     Args:
         db: Active Database instance.
@@ -322,8 +323,8 @@ def _rebuild_history(
         back_values: URL values for ``back_endpoint``.
 
     Returns:
-        The rendered command result, or a redirect back when a rebuild of this
-        chamber is already running.
+        The rendered command result, or a redirect back when another run is in
+        progress.
     """
     command_args = " ".join((*chamber.model_args, chamber.rebuild_flag))
 
@@ -339,12 +340,9 @@ def _rebuild_history(
             back_values=back_values,
         )
 
-    with _rebuild_locks([chamber]) as busy:
-        if busy is not None:
-            flash(
-                f"History not rebuilt: a {busy.label} history rebuild is already "
-                "running; wait for it to finish, then rebuild again."
-            )
+    with model_run_slot() as free:
+        if not free:
+            flash(busy_message("History not rebuilt"))
             return redirect(url_for(back_endpoint, **(back_values or {})))
         return _guarded_run(
             lambda: run_us_chamber_and_export(

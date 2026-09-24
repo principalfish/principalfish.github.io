@@ -27,7 +27,7 @@ from console.blueprints import us_poll_import
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services import us_poll_queue
 from console.services.preview import PREVIEW_CACHE, store_preview
-from console.services.us_models import UsModelRun
+from console.services.us_models import MODEL_RUN_LOCK, UsModelRun
 from console.services.us_poll_queue import (
     AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
@@ -993,6 +993,26 @@ class TestFinish:
         assert payload[MODEL_ERROR_KEY].startswith(
             "US model run failed: Run US House model did not finish: TimeoutExpired"
         )
+
+    def test_a_run_in_progress_defers_the_models_and_says_so(
+        self, us_db: Database
+    ) -> None:
+        runner = _RecordingRunner()
+        payload = _imported_payload(us_db, _row(us_db))
+
+        with MODEL_RUN_LOCK:
+            finish_us_queue(us_db, payload, runner=runner)
+        # Recorded, not retried: a refresh once the other run has ended does
+        # not start a surprise run; the summary points at the home page.
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert runner.calls == []
+        assert payload[MODEL_RUN_KEY] is None
+        assert payload[MODEL_ERROR_KEY] == (
+            "US models not run: another US model run or history rebuild was in "
+            "progress. Run US Models from the home page once it finishes."
+        )
+        assert not MODEL_RUN_LOCK.locked()
 
     def test_abandon_runs_no_models_but_still_tracks(self, us_db: Database) -> None:
         runner = _RecordingRunner()

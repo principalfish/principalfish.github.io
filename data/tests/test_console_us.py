@@ -330,12 +330,14 @@ class _RecordingRunner:
 
     def __init__(self, return_codes: dict[str, int] | None = None) -> None:
         self.calls: list[tuple[str, tuple[str, ...]]] = []
+        self.timeouts: dict[str, int] = {}
         self._return_codes = return_codes or {}
 
     def __call__(
         self, script: Path, *args: str, timeout: int
     ) -> subprocess.CompletedProcess[str]:
         self.calls.append((script.name, args))
+        self.timeouts[script.name] = timeout
         code = self._return_codes.get(script.name, 0)
         return subprocess.CompletedProcess(
             args=[str(script), *args],
@@ -566,6 +568,33 @@ class TestRunUsModelsRoute:
         # The sequence stopped at the failing step.
         assert [name for name, _ in runner.timeouts][-1] == fail
 
+    def test_a_run_whose_model_fails_leads_with_the_note(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        runner = _RecordingRunner(return_codes={"run_us_house_model.py": 2})
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        body = html.unescape(
+            app.test_client().post("/us/run-models").get_data(as_text=True)
+        )
+
+        assert "The run did not finish" in body
+        assert "ran run_us_house_model.py" in body
+
+    def test_a_successful_run_has_no_note(
+        self,
+        app: Flask,
+        db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+
+        body = app.test_client().post("/us/run-models").get_data(as_text=True)
+
+        assert "did not finish" not in body
+
     def test_an_interrupted_run_shows_the_chambers_that_finished(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -615,8 +644,15 @@ class TestRebuildAllHistory:
         ]
         for script in recording_runner.scripts[:3]:
             assert recording_runner.args_for(script)[-1] == "--rebuild-history"
-        body = response.get_data(as_text=True)
+            # A rebuild at the ordinary step timeout would be killed part-way.
+            assert recording_runner.timeouts[script] == REBUILD_TIMEOUT_SECONDS
+        assert recording_runner.timeouts["export_elections.py"] == STEP_TIMEOUT_SECONDS
+        body = html.unescape(response.get_data(as_text=True))
         assert "Rebuild US History" in body
+        # The page shows the command that ran, poll windows included.
+        assert (
+            "run_us_house_model.py --since-days-back 60 --rebuild-history" in body
+        )
         assert not MODEL_RUN_LOCK.locked()
 
     @pytest.mark.parametrize(
@@ -643,6 +679,22 @@ class TestRebuildAllHistory:
             f"{refused}: another US model run or history rebuild is in progress; "
             "wait for it to finish, then try again."
         )
+
+    def test_a_rebuild_whose_model_fails_says_history_may_be_partial(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Exiting non-zero stops the sequence like a timeout does, after the
+        # runner may have cleared that chamber's points.
+        runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        response = app.test_client().post(
+            "/us/run-models", data={"rebuild_history": "on"}
+        )
+
+        body = html.unescape(response.get_data(as_text=True))
+        assert "the chamber it stopped on may be partial" in body
+        assert "export_elections.py" not in runner.scripts
 
     def test_an_interrupted_rebuild_says_history_may_be_partial(
         self, app: Flask, monkeypatch: pytest.MonkeyPatch
@@ -671,7 +723,8 @@ class TestRebuildAllHistory:
 
         form = body[body.index('action="/us/run-models"') :]
         form = form[: form.index("</form>")]
-        assert 'name="rebuild_history"' in form
+        # No ``value``: the browser then sends "on", which the route matches.
+        assert '<input type="checkbox" name="rebuild_history">' in form
         assert "Rebuild all US history" in form
         assert "return !this.rebuild_history.checked || confirm(" in form
         assert "can take hours" in form
@@ -1524,6 +1577,18 @@ class TestModelRunSlot:
 
         assert response.status_code == 200
         assert not MODEL_RUN_LOCK.locked()
+
+    def test_a_chamber_rebuild_whose_model_fails_says_history_may_be_partial(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        _, response = self._post_texas_rebuild(app, db)
+
+        body = html.unescape(response.get_data(as_text=True))
+        assert "trend history may be partial" in body
+        assert "Re-run the rebuild" in body
 
     def test_the_lock_is_free_after_a_failed_rebuild(
         self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch

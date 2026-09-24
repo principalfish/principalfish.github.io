@@ -347,6 +347,11 @@ def _own_rows(table: Tag) -> list[Tag]:
     ]
 
 
+def _width_limit(row_count: int, max_cells: int) -> int:
+    """The widest a grid of ``row_count`` rows may grow within ``max_cells``."""
+    return min(_MAX_GRID_WIDTH, max(0, max_cells) // max(1, row_count))
+
+
 def expand_table_grid(
     table: Tag,
     *,
@@ -382,7 +387,7 @@ def expand_table_grid(
     """
     rows = _own_rows(table)
     placed: list[dict[int, Cell]] = [{} for _ in rows]
-    max_width = min(_MAX_GRID_WIDTH, max(0, max_cells) // max(1, len(rows)))
+    max_width = _width_limit(len(rows), max_cells)
 
     for row_index, row in enumerate(rows):
         column = 0
@@ -1242,10 +1247,11 @@ def parse_poll_tables(
     returned in :attr:`PageTables.oversized` for the contest layer to report.
     The whole page shares a budget of :data:`MAX_PAGE_GRID_CELLS` grid cells,
     charged for every grid expanded (kept or not, since the cost was paid) and
-    for every refused expansion at the most it was allowed to place, so the
-    cells a page places never exceed the budget. A table that does not fit in
-    what is left is reported as oversized; once the budget is spent, every
-    later table is only counted, in :attr:`PageTables.budget_skipped`.
+    for every refused expansion at the most it can have placed (its rows times
+    the width limit), so the cells a page places never exceed the budget. A
+    table that does not fit in what is left is reported as oversized; once the
+    budget is spent, every later table is only counted, in
+    :attr:`PageTables.budget_skipped`.
 
     Args:
         html: A fetched Wikipedia page.
@@ -1272,10 +1278,12 @@ def parse_poll_tables(
             continue
         max_cells = min(_MAX_GRID_CELLS, remaining)
         grid = expand_table_grid(table, max_cells=max_cells)
-        if not grid and _own_rows(table):
+        own_rows = 0 if grid else len(_own_rows(table))
+        if own_rows:
             oversized.append(tuple(heading_path(table)))
-            # A refused expansion may already have placed this many cells.
-            remaining -= max_cells
+            # Charged the most a refused expansion can have placed: every row
+            # filled to the width limit (never more than ``max_cells``).
+            remaining -= own_rows * _width_limit(own_rows, max_cells)
             continue
         if grid:
             remaining -= len(grid) * len(grid[0])

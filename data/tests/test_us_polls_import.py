@@ -438,6 +438,12 @@ def _too_wide_table(table_id: str) -> str:
     )
 
 
+def _tall_too_wide_table(table_id: str, *, rows: int) -> str:
+    """A table of ``rows`` rows, each spanning 256 columns (past the 200 limit)."""
+    wide_row = "<tr>" + "<td colspan='64'>x</td>" * 4 + "</tr>"
+    return f"<table id='{table_id}'>" + wide_row * rows + "</table>"
+
+
 def _block_table(table_id: str, rows: int, width: int) -> str:
     """A non-poll table of ``rows`` × ``width`` plain cells."""
     return (
@@ -1528,13 +1534,24 @@ class TestPageGridBudget:
         assert page.budget_skipped == 0
         assert page.oversized == ()
 
-    def test_tables_past_the_budget_are_refused_then_counted(self) -> None:
+    def test_tables_past_the_budget_are_refused_then_counted(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # 1,000 cells left after the poll table: "a" takes 400, and "b" (30 rows
+        # wanting 900) is refused at 20 columns, which charges the last 600.
+        poll = _table(SENATE_RACE_PAGE, "el-sayed-rogers")
+        poll_grid = expand_table_grid(poll)
+        poll_cells = len(poll_grid) * len(poll_grid[0])
+        monkeypatch.setattr(
+            us_polls_common, "MAX_PAGE_GRID_CELLS", poll_cells + 1_000
+        )
         html = (
             "<h2 id='General_election'>General election</h2>"
             + self._page(
-                _block_table("a", rows=20, width=20),  # 400 cells, fits
+                _block_table("a", rows=20, width=20),
                 "<h3 id='Crossing'>Crossing</h3>"
-                + _block_table("b", rows=30, width=20),  # 600: does not fit
+                + _block_table("b", rows=30, width=30),
                 _block_table("c", rows=1, width=1),
                 _block_table("d", rows=1, width=1),
             )
@@ -1582,15 +1599,28 @@ class TestPageGridBudget:
         assert page.budget_skipped == 0
         assert len(page.tables) == 1
 
-    def test_refused_tables_spend_the_budget(
+    def test_big_refused_tables_spend_the_budget(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        # Each refusal is charged the 100,000 cells it was allowed, so four of
-        # them spend the real budget and everything after is only counted.
+        # 500 rows at the 200-column limit is 100,000 cells a refusal may have
+        # placed, so four of these spend the real budget; the rest are counted.
         monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", 400_000)
-        wide = "".join(_too_wide_table(f"w{i}") for i in range(5))
-        page = parse_poll_tables(wide + self._page())
+        tall = "".join(_tall_too_wide_table(f"w{i}", rows=500) for i in range(5))
+        page = parse_poll_tables(tall + self._page())
         assert len(page.oversized) == 4
         assert page.budget_skipped == 2
         assert page.tables == ()
+
+    def test_small_refused_tables_leave_the_budget_for_real_ones(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # A two-row too-wide table can place at most 400 cells, so a handful of
+        # them (~1 KB of markup) cannot starve the poll table after them.
+        monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", 400_000)
+        wide = "".join(_too_wide_table(f"w{i}") for i in range(10))
+        page = parse_poll_tables(wide + self._page())
+        assert len(page.oversized) == 10
+        assert page.budget_skipped == 0
+        assert len(page.tables) == 1

@@ -12,13 +12,18 @@ from types import SimpleNamespace
 import pytest
 from flask import Flask
 
+import backup
 from console import create_app
+from console.forms import UsQueueStartForm
 
 CROSS_SITE = [
     {"Sec-Fetch-Site": "cross-site"},
     {"Sec-Fetch-Site": "same-site"},
     {"Origin": "http://evil.example"},
     {"Origin": "null"},
+    # Same host, another port (e.g. the static site's dev server): a check
+    # comparing host names only would let this through.
+    {"Origin": "http://localhost:8000"},
 ]
 SAME_ORIGIN = [
     {"Sec-Fetch-Site": "same-origin"},
@@ -152,3 +157,31 @@ def test_a_cross_site_get_is_not_refused(app: Flask) -> None:
     )
 
     assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("headers", "backups"),
+    [({"Sec-Fetch-Site": "cross-site"}, 0), ({"Sec-Fetch-Site": "same-origin"}, 1)],
+)
+def test_only_a_post_that_passes_the_guard_asks_for_a_backup(
+    monkeypatch: pytest.MonkeyPatch,
+    headers: dict[str, str],
+    backups: int,
+) -> None:
+    # The backup hook is skipped under TESTING, so this app runs without it.
+    app = create_app()
+    requested: list[bool] = []
+    monkeypatch.setattr(backup, "request_backup", lambda: requested.append(True))
+    monkeypatch.setattr(
+        "console.blueprints.us_poll_import.UsQueueStartForm",
+        SimpleNamespace(model_validate=_raise_validation_error),
+    )
+
+    app.test_client().post("/us/import/start", headers=headers)
+
+    assert len(requested) == backups
+
+
+def _raise_validation_error(data: object) -> None:
+    """A start form that always fails validation, so the route only redirects."""
+    UsQueueStartForm.model_validate({})

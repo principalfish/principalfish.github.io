@@ -685,6 +685,20 @@ class TestDiscoverSenatePages:
             assert discovered.dropped == {}
             assert discovered.dropped_overflow == 0
 
+    def test_page_cap_drops_are_capped_too(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The other drop site: links past the per-index page cap.
+        monkeypatch.setattr(us_wikipedia_polls, "_MAX_DISCOVERED_PAGES", 30)
+        monkeypatch.setattr(us_wikipedia_polls, "_MAX_DROPPED_LINKS", 2)
+        discovered = discover_senate_pages(SENATE_INDEX_PAGE)
+        assert len(discovered.urls) == 30
+        assert set(discovered.dropped.values()) == {
+            "past the 30-page limit on one index's race pages"
+        }
+        assert len(discovered.dropped) == 2
+        assert discovered.dropped_overflow == 3
+
     def test_the_dropped_list_is_capped_and_the_rest_counted(self) -> None:
         html = "".join(_link(url, "Texas") for url in _texas_variants(200))
         discovered = discover_senate_pages(html)
@@ -1577,6 +1591,23 @@ class TestFetchUsPollIndex:
         # 50 listed drops, the second Texas page the duplicate-seat check
         # refuses, and the one overflow line.
         assert len(index.page_failures) == 52
+
+    def test_the_overflow_line_survives_a_contest_that_is_not_per_state(
+        self,
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # No contest is like this today (discovery implies per-state), but the
+        # early return for one must not lose the overflow line.
+        monkeypatch.setattr(
+            us_wikipedia_polls.UsContest, "is_per_state", property(lambda self: False)
+        )
+        index_html = "".join(_link(url, "Texas") for url in _texas_variants(60))
+        fetcher = _full_fetcher(**{SENATE_INDEX_URL: index_html})
+
+        index = fetch_us_poll_index(us_db, [SENATE_RACES], fetcher=fetcher)
+
+        assert "senate_races: 8 more discovery link(s) dropped" in index.page_failures
 
     def test_variant_spellings_of_one_state_cost_no_requests(
         self, us_db: Database

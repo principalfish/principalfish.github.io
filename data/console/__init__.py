@@ -59,9 +59,12 @@ def create_app() -> Flask:
         scripts the routes launch as subprocesses, and a new route would
         eventually be added without the call. A write that changed nothing
         gzips to the same bytes as the last archive, so none gets written.
-        The db_admin routes back up or restore themselves.
+        The db_admin routes back up or restore themselves. A 4xx is a request
+        refused before it did anything (the cross-site guard's 403, an
+        untrusted host's 400, a bad form), so it asks for none; a 5xx may have
+        written part of its change before failing, so it still does.
         """
-        if app.config.get("TESTING"):
+        if app.config.get("TESTING") or 400 <= response.status_code < 500:
             return response
         if request.method in ("POST", "PUT", "PATCH", "DELETE") and not (
             request.endpoint or ""

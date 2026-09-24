@@ -1351,9 +1351,21 @@ def _contest_page_urls(
         if discovered is not None:
             urls.extend(discovered.urls)
             failures.update(discovered.dropped)
+    # One line for the rejected links past the cap. It is kept out of
+    # ``failures`` until the state filter has run, which would drop it (the key
+    # names no state), and keyed by contest so two indexes' entries stay apart.
+    # Under a filter the count covers every state: overflow links are not
+    # kept, so they cannot be filtered.
+    overflow: dict[str, str] = {}
+    if discovered is not None and discovered.dropped_overflow:
+        count = discovered.dropped_overflow
+        overflow[f"{contest.slug}: {count} more discovery link(s) dropped"] = (
+            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected "
+            "race links"
+        )
     wanted = list(dict.fromkeys(urls))
     if not contest.is_per_state:
-        return wanted, failures
+        return wanted, {**failures, **overflow}
 
     if wanted_states is not None:
         allowed = set(wanted_states)
@@ -1363,16 +1375,7 @@ def _contest_page_urls(
             for url, reason in failures.items()
             if state_from_page_slug(url) in allowed
         }
-    if discovered is not None and discovered.dropped_overflow:
-        # Added after the state filter, which would drop it (the key names no
-        # state), and keyed by contest so the two indexes' entries stay apart.
-        # Under a filter the count covers every state: overflow links are not
-        # kept, so they cannot be filtered.
-        count = discovered.dropped_overflow
-        failures[f"{contest.slug}: {count} more discovery link(s) dropped"] = (
-            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected "
-            "race links"
-        )
+    failures.update(overflow)
 
     # A seat is named after its state, so two pages for one state — a regular
     # and a special race in the same cycle — cannot be told apart. The first

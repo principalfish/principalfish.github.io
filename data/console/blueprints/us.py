@@ -88,6 +88,7 @@ RUN_INTERRUPTED_NOTE = (
 
 bp = Blueprint("us", __name__)
 
+
 @bp.route("/us/run-models", methods=["POST"])
 def run_us_models() -> ResponseReturnValue:
     """POST /us/run-models — Re-run all three US forecast models and refresh exports.
@@ -122,14 +123,24 @@ def run_us_models() -> ResponseReturnValue:
     rebuild = _rebuild_requested()
     command = " → ".join(
         [
-            f"{chamber.model_script.name}"
-            + (f" {chamber.rebuild_flag}" if rebuild else "")
+            " ".join(
+                (
+                    chamber.model_script.name,
+                    *chamber.model_args,
+                    *((chamber.rebuild_flag,) if rebuild else ()),
+                ),
+            )
             for chamber in US_CHAMBERS
         ]
         + [EXPORT_ELECTION_SCRIPT.name]
     )
 
-    def result_page(*, stdout: str, stderr: str, return_code: int) -> ResponseReturnValue:
+    def result_page(
+        *,
+        stdout: str,
+        stderr: str,
+        return_code: int,
+    ) -> ResponseReturnValue:
         return render_command_result(
             title="Rebuild US History" if rebuild else "Run US Models",
             command=command,
@@ -376,7 +387,9 @@ def _guarded_run(
     A step that times out or cannot be started raises out of the service. Here
     that becomes a failed result page instead of a 500: ``note``, then every
     finished step's output and whatever the dying step printed, so the page
-    shows which chambers finished before it.
+    shows which chambers finished before it. A step that exits non-zero stops
+    the sequence the same way (before the export, after a rebuild may have
+    cleared its points), so its page leads with ``note`` too.
 
     Args:
         run: Runs the sequence and returns its combined outcome.
@@ -394,8 +407,11 @@ def _guarded_run(
             stderr="\n".join(filter(None, (err.partial.stderr, str(err)))),
             return_code=1,
         )
+    stdout = outcome.stdout
+    if outcome.return_code != 0:
+        stdout = "\n".join(filter(None, (note, stdout)))
     return result_page(
-        stdout=outcome.stdout,
+        stdout=stdout,
         stderr=outcome.stderr,
         return_code=outcome.return_code,
     )

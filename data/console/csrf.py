@@ -13,6 +13,14 @@ reads the headers a browser stamps on every request, which a hostile page
 cannot set. They only mean what they say for the console's own host names, so
 ``create_app`` also pins ``TRUSTED_HOSTS``; otherwise a hostile domain
 re-pointed at 127.0.0.1 (DNS rebinding) would be same-origin with itself.
+
+Only POSTs are checked. One GET changes state: a poll queue's finish step
+(``/import/wikipedia/<token>/finish`` and ``/us/import/<token>/finish``) applies
+matchup tracking and can start a model run, because the summary page it renders
+is reloadable. It is safe from a hostile page anyway: the path needs the
+queue's token, a random ``uuid4`` that only this console's own pages ever
+show, so a forged request cannot name a live queue. Making the finish step
+POST-only would need its summary split into a separate page.
 """
 
 from __future__ import annotations

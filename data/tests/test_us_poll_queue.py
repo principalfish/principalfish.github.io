@@ -282,15 +282,19 @@ def _prepared(db: Database, row: UsPollRow, *others: UsPollRow) -> QueueItem:
 class _RecordingRunner:
     """Stand-in for ``run_python_script`` that records calls."""
 
-    def __init__(self) -> None:
+    def __init__(self, return_codes: dict[str, int] | None = None) -> None:
         self.calls: list[str] = []
+        self._return_codes = return_codes or {}
 
     def __call__(
         self, script: Path, *args: str, timeout: int
     ) -> subprocess.CompletedProcess[str]:
         self.calls.append(script.name)
         return subprocess.CompletedProcess(
-            args=[str(script), *args], returncode=0, stdout="ok", stderr=""
+            args=[str(script), *args],
+            returncode=self._return_codes.get(script.name, 0),
+            stdout="ok",
+            stderr="",
         )
 
 
@@ -950,6 +954,26 @@ class TestFinish:
         finish_us_queue(us_db, payload, runner=runner, abandon=True)
 
         assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert runner.calls == []
+        assert MODEL_RUN_KEY not in payload
+
+    def test_a_tracking_pass_that_raised_with_nothing_imported_runs_nothing(
+        self,
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # A raised pass counts as no change, so with nothing imported there is
+        # no reason to run the models.
+        def failing(db: Database, rows: list[UsPollRow]) -> dict[str, int]:
+            raise ValueError("boom")
+
+        monkeypatch.setattr(us_poll_queue, "apply_auto_tracked_matchups", failing)
+        payload = self._skipped_but_stored_payload(us_db)
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert AUTO_TRACKING_ERROR_KEY in payload
         assert runner.calls == []
         assert MODEL_RUN_KEY not in payload
 
@@ -1840,6 +1864,24 @@ class TestFinishRoute:
         assert model_runner.calls == []
         # Tracking moved, but no model ran, so no trend point follows it yet.
         assert "1 races tracked for the first time" in body
+        assert "move the earlier points" not in body
+
+    def test_a_failed_model_run_shows_no_rebuild_note(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Tracking moved, but the Senate model failed, so not even today's
+        # point follows the new matchup: the note would be false.
+        runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
+        monkeypatch.setattr(f"{BLUEPRINT}.run_python_script", runner)
+        token = self._import_one(client, us_db, monkeypatch)
+
+        body = _body(client, f"/us/import/{token}/finish")
+
+        assert "1 races tracked for the first time" in body
+        assert "Return code 1" in body
         assert "move the earlier points" not in body
 
     def test_abandon_runs_no_models_but_tracks_what_was_imported(

@@ -12,6 +12,8 @@ from urllib.request import Request
 import pytest
 
 from polls.importers import wikipedia_common
+from polls.importers.holyrood import holyrood_wikipedia_import
+from polls.importers.us import us_polls_common
 from polls.importers.wikipedia_common import (
     MAX_PAGE_BYTES,
     PageTooLargeError,
@@ -109,3 +111,37 @@ class TestFetchHtml:
     ) -> None:
         _serve(monkeypatch, 100, promised=None)
         assert fetch_html(URL) == "a" * 100
+
+
+class TestRequestSettings:
+    """The helper's User-Agent and timeout reach ``urlopen``; callers set them."""
+
+    def _capture(self, monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
+        seen: list[tuple[str, int]] = []
+
+        def fake_urlopen(req: Request, timeout: int) -> _FakeResponse:
+            seen.append((req.get_header("User-agent") or "", timeout))
+            return _FakeResponse(10)
+
+        monkeypatch.setattr(wikipedia_common, "urlopen", fake_urlopen)
+        return seen
+
+    def test_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen = self._capture(monkeypatch)
+        fetch_html(URL)
+        assert seen == [(wikipedia_common.DEFAULT_USER_AGENT, 60)]
+
+    def test_the_holyrood_wrapper_sends_its_own(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        seen = self._capture(monkeypatch)
+        holyrood_wikipedia_import.fetch_html(URL)
+        assert seen == [(holyrood_wikipedia_import.HOLYROOD_USER_AGENT, 30)]
+
+    def test_the_us_helper_sends_its_own(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen = self._capture(monkeypatch)
+        us_polls_common.fetch_html(URL)
+        assert seen == [
+            (us_polls_common.USER_AGENT, us_polls_common.REQUEST_TIMEOUT_SECONDS),
+        ]

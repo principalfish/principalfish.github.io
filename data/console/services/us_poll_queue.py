@@ -34,7 +34,6 @@ page repeats neither.
 from __future__ import annotations
 
 import logging
-import subprocess
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
@@ -57,7 +56,11 @@ from polls.importers.us.us_wikipedia_polls import (
     commit_us_import_plan,
 )
 
-from console.services.us_models import ScriptRunner, run_us_models_and_export
+from console.services.us_models import (
+    ScriptRunner,
+    UsModelRunInterrupted,
+    run_us_models_and_export,
+)
 from console.services.wikipedia_queue import (
     NO_CUTOFF,
     QueueItem,
@@ -90,8 +93,9 @@ AUTO_TRACKING_KEY = "auto_tracking"
 #: retry it.
 AUTO_TRACKING_ERROR_KEY = "auto_tracking_error"
 
-#: Payload key for the ``UsModelRun`` of the finish step, written once. None
-#: when the run raised before producing one (see :data:`MODEL_ERROR_KEY`).
+#: Payload key for the ``UsModelRun`` of the finish step, written once. When a
+#: step died part-way it is the partial run up to that step, with return code 1
+#: (see :data:`MODEL_ERROR_KEY`).
 MODEL_RUN_KEY = "model_run"
 
 #: Payload key for the message of a model run that raised.
@@ -673,6 +677,8 @@ def finish_us_queue(
         return
     try:
         payload[MODEL_RUN_KEY] = run_us_models_and_export(db, runner=runner)
-    except (subprocess.SubprocessError, OSError) as err:
-        payload[MODEL_RUN_KEY] = None
+    except UsModelRunInterrupted as err:
+        # Keep what finished before the failing step, as the Run US Models page
+        # does, so the summary shows which chambers saved new outputs.
+        payload[MODEL_RUN_KEY] = err.partial
         payload[MODEL_ERROR_KEY] = f"US model run failed: {err}"

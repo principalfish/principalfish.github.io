@@ -16,7 +16,6 @@ endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_route
 
 from __future__ import annotations
 
-import subprocess
 import threading
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
@@ -52,6 +51,7 @@ from console.services.us_models import (
     US_CHAMBERS_BY_SLUG,
     UsChamber,
     UsModelRun,
+    UsModelRunInterrupted,
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
@@ -376,8 +376,9 @@ def _guarded_run(
     """Run a model sequence and render its result, even if a step dies.
 
     A step that times out or cannot be started raises out of the service. Here
-    that becomes a failed result page, led by ``note`` and whatever the step
-    printed before it died, instead of a 500.
+    that becomes a failed result page instead of a 500: ``note``, then every
+    finished step's output and whatever the dying step printed, so the page
+    shows which chambers finished before it.
 
     Args:
         run: Runs the sequence and returns its combined outcome.
@@ -389,11 +390,10 @@ def _guarded_run(
     """
     try:
         outcome = run()
-    except (subprocess.SubprocessError, OSError) as err:
-        partial_output = _output_text(getattr(err, "stdout", None))
+    except UsModelRunInterrupted as err:
         return result_page(
-            stdout="\n".join(filter(None, (note, partial_output))),
-            stderr=f"{type(err).__name__}: {err}",
+            stdout="\n".join(filter(None, (note, err.partial.stdout))),
+            stderr="\n".join(filter(None, (err.partial.stderr, str(err)))),
             return_code=1,
         )
     return result_page(
@@ -401,17 +401,6 @@ def _guarded_run(
         stderr=outcome.stderr,
         return_code=outcome.return_code,
     )
-
-
-def _output_text(output: str | bytes | None) -> str:
-    """A subprocess error's captured output as text.
-
-    ``TimeoutExpired`` carries whatever the step printed before it was killed —
-    as bytes on POSIX even when the run asked for text.
-    """
-    if isinstance(output, bytes):
-        return output.decode("utf-8", errors="replace")
-    return output or ""
 
 
 def _register_chamber_routes(chamber: UsChamber) -> None:

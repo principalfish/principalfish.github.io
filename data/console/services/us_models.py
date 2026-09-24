@@ -172,6 +172,43 @@ class UsModelRun:
     skipped: frozenset[str]
 
 
+class UsModelRunInterrupted(subprocess.SubprocessError):
+    """A step timed out or could not be started, part-way through a run.
+
+    A :class:`subprocess.SubprocessError`, so callers that already catch that
+    (and ``OSError``) still do. The original error is its ``__cause__``.
+
+    Attributes:
+        step: Label of the step that died.
+        partial: The run up to that point: every finished step's output, then
+            whatever the dying step printed, under its own heading. Its
+            ``return_code`` is 1. It shows which chambers finished, and so
+            saved outputs the export never picked up.
+    """
+
+    def __init__(self, step: str, partial: UsModelRun, cause: BaseException) -> None:
+        # Every constructor argument goes to ``args``, so copy and pickle, which
+        # rebuild an exception from its args, still work.
+        super().__init__(step, partial, cause)
+        self.step = step
+        self.partial = partial
+        self.cause = cause
+
+    def __str__(self) -> str:
+        return f"{self.step} did not finish: {type(self.cause).__name__}: {self.cause}"
+
+
+def _output_text(output: str | bytes | None) -> str:
+    """A subprocess error's captured output as text.
+
+    ``TimeoutExpired`` carries whatever the step printed before it was killed —
+    as bytes on POSIX even when the run asked for text.
+    """
+    if isinstance(output, bytes):
+        return output.decode("utf-8", errors="replace")
+    return output or ""
+
+
 def tracked_matchup_in_force(db: Database, chamber: UsChamber) -> bool:
     """Whether ``chamber``'s required national tracked matchup is set.
 
@@ -225,6 +262,10 @@ def run_us_models_and_export(
 
     Returns:
         The combined :class:`UsModelRun`.
+
+    Raises:
+        UsModelRunInterrupted: A step timed out or could not be started. It
+            carries the output of every step before it.
     """
     return _run_chambers_and_export(db, US_CHAMBERS, runner=runner, rebuild=rebuild)
 
@@ -253,6 +294,9 @@ def run_us_chamber_and_export(
 
     Returns:
         The combined :class:`UsModelRun`.
+
+    Raises:
+        UsModelRunInterrupted: A step timed out or could not be started.
     """
     rebuild = frozenset({chamber.slug}) if rebuild_history else frozenset()
     return _run_chambers_and_export(db, (chamber,), runner=runner, rebuild=rebuild)
@@ -278,9 +322,9 @@ def _run_chambers_and_export(
         for the skip and failure rules.
 
     Raises:
-        subprocess.SubprocessError: A step timed out (``TimeoutExpired``) or
-            otherwise failed to run; propagated from ``runner``.
-        OSError: The interpreter could not be started.
+        UsModelRunInterrupted: A step timed out (``TimeoutExpired``), otherwise
+            failed to run, or could not be started (``OSError``). It carries
+            the output of every step before it and is chained to the original.
     """
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
@@ -289,7 +333,22 @@ def _run_chambers_and_export(
     def run_step(
         label: str, script: Path, args: tuple[str, ...], *, timeout: int = STEP_TIMEOUT_SECONDS
     ) -> int:
-        result = runner(script, *args, timeout=timeout)
+        try:
+            result = runner(script, *args, timeout=timeout)
+        except (subprocess.SubprocessError, OSError) as err:
+            stdout_parts.append(
+                f"=== {label} ===\n{_output_text(getattr(err, 'stdout', None))}"
+            )
+            partial_stderr = _output_text(getattr(err, "stderr", None))
+            if partial_stderr:
+                stderr_parts.append(f"=== {label} ===\n{partial_stderr}")
+            partial = UsModelRun(
+                stdout="\n".join(stdout_parts),
+                stderr="\n".join(stderr_parts),
+                return_code=1,
+                skipped=frozenset(skipped),
+            )
+            raise UsModelRunInterrupted(label, partial, err) from err
         stdout_parts.append(f"=== {label} ===\n{result.stdout}")
         if result.stderr:
             stderr_parts.append(f"=== {label} ===\n{result.stderr}")

@@ -985,8 +985,14 @@ class TestFinish:
 
         finish_us_queue(us_db, payload, runner=timed_out)
 
-        assert payload[MODEL_RUN_KEY] is None
-        assert payload[MODEL_ERROR_KEY].startswith("US model run failed:")
+        # The first step died, so the partial run holds just its heading.
+        run = payload[MODEL_RUN_KEY]
+        assert isinstance(run, UsModelRun)
+        assert run.return_code == 1
+        assert run.stdout.startswith("=== Run US House model ===")
+        assert payload[MODEL_ERROR_KEY].startswith(
+            "US model run failed: Run US House model did not finish: TimeoutExpired"
+        )
 
     def test_abandon_runs_no_models_but_still_tracks(self, us_db: Database) -> None:
         runner = _RecordingRunner()

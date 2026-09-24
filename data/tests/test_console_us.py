@@ -7,6 +7,7 @@ so the pages render against a fresh SQLite database per test.
 from __future__ import annotations
 
 import html
+import pickle
 import re
 import subprocess
 import sys
@@ -31,6 +32,7 @@ from console.services.us_models import (
     US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
     UsModelRun,
+    UsModelRunInterrupted,
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
@@ -555,6 +557,28 @@ class TestRunUsModelsRoute:
             assert partial in body
         # The sequence stopped at the failing step.
         assert [name for name, _ in runner.timeouts][-1] == fail
+
+    def test_an_interrupted_run_shows_the_chambers_that_finished(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        runner = _TimeoutRecorder(
+            fail="export_elections.py",
+            error=subprocess.TimeoutExpired(["python", "export_elections.py"], 300),
+        )
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        body = html.unescape(
+            app.test_client().post("/us/run-models").get_data(as_text=True)
+        )
+
+        # Both models that ran finished; only the export died.
+        assert "=== Run US House model ===" in body
+        assert "=== Run US Senate model ===" in body
+        assert (
+            "Export elections to static data files did not finish: TimeoutExpired"
+            in body
+        )
 
 
 # ── Matchup pages ─────────────────────────────────────────────────────────
@@ -1244,10 +1268,50 @@ class TestRebuildTimeout:
             error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
         )
 
-        with pytest.raises(subprocess.TimeoutExpired):
+        with pytest.raises(UsModelRunInterrupted) as caught:
             run_us_chamber_and_export(
                 db, US_CHAMBERS_BY_SLUG["senate"], runner=runner, rebuild_history=True
             )
+        # Still a SubprocessError, chained to the original, for older callers.
+        assert isinstance(caught.value, subprocess.SubprocessError)
+        assert isinstance(caught.value.__cause__, subprocess.TimeoutExpired)
+        # Rebuilt from its args, so copy and pickle keep the partial run.
+        copied = pickle.loads(pickle.dumps(caught.value))
+        assert (copied.step, copied.partial) == (
+            caught.value.step,
+            caught.value.partial,
+        )
+        assert str(copied) == str(caught.value)
+
+    def test_an_interrupted_run_keeps_the_steps_that_finished(
+        self, db: Database
+    ) -> None:
+        # House finishes; Senate times out after printing a line; no export.
+        runner = _TimeoutRecorder(
+            fail="run_us_senate_model.py",
+            error=subprocess.TimeoutExpired(
+                ["python", "run_us_senate_model.py"],
+                300,
+                output=b"SENATE reached 2026-09-10\n",
+                stderr=b"warning: slow\n",
+            ),
+        )
+
+        with pytest.raises(UsModelRunInterrupted) as caught:
+            run_us_models_and_export(db, runner=runner)
+
+        interrupted = caught.value
+        assert interrupted.step == "Run US Senate model"
+        assert str(interrupted).startswith("Run US Senate model did not finish:")
+        partial = interrupted.partial
+        assert partial.return_code == 1
+        # President has no tracked matchup here, so it was skipped, not run.
+        assert partial.skipped == frozenset({"president"})
+        assert partial.stdout.split("\n=== ")[0] == "=== Run US House model ===\n"
+        senate = "=== Run US Senate model ===\nSENATE reached 2026-09-10"
+        assert senate in partial.stdout
+        assert "Export" not in partial.stdout
+        assert partial.stderr == "=== Run US Senate model ===\nwarning: slow\n"
 
 
 class TestRebuildRouteFailure:

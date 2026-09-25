@@ -303,7 +303,7 @@ class TableInfo:
         return self.grid[self.columns.header_row + 1 :]
 
 
-def _attr_text(tag: Tag, name: str) -> str | None:
+def attr_text(tag: Tag, name: str) -> str | None:
     """Read an attribute as a single string, or None when absent or empty."""
     value = tag.get(name)
     if isinstance(value, list):
@@ -328,7 +328,7 @@ def _span_value(tag: Tag, name: str, *, zero: int) -> int:
     the number of remaining rows as ``zero``. Either way the span is capped at
     :data:`_MAX_SPAN`.
     """
-    raw = _attr_text(tag, name)
+    raw = attr_text(tag, name)
     if raw is None:
         return 1
     try:
@@ -436,12 +436,12 @@ def _heading_text(heading: Tag) -> str:
 
 def _heading_anchor(heading: Tag) -> str | None:
     """Return the id a ``page_url#anchor`` link should use for a heading."""
-    own_id = _attr_text(heading, "id")
+    own_id = attr_text(heading, "id")
     if own_id is not None:
         return own_id
     headline = heading.find("span", class_="mw-headline")
     if isinstance(headline, Tag):
-        return _attr_text(headline, "id")
+        return attr_text(headline, "id")
     return None
 
 
@@ -816,7 +816,7 @@ def _candidate_link_title(cell: Cell, name_text: str) -> str | None:
     for link in cell.tag.find_all("a"):
         if not isinstance(link, Tag):
             continue
-        title = _attr_text(link, "title")
+        title = attr_text(link, "title")
         if title is None:
             continue
         link_text = _clean(link.get_text(" ", strip=True))
@@ -1136,7 +1136,7 @@ def _pollster_source_url(cell: Cell) -> str | None:
     for link in cell.tag.find_all("a"):
         if not isinstance(link, Tag):
             continue
-        href = _attr_text(link, "href")
+        href = attr_text(link, "href")
         if href is not None and href.startswith(("http://", "https://")):
             return href
     return None

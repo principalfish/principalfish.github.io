@@ -68,6 +68,7 @@ from polls.importers.us.us_polls_common import (
     Heading,
     PageTables,
     ParsedTable,
+    attr_text,
     fetch_html,
     parse_poll_tables,
     pollster_identifier,
@@ -546,14 +547,6 @@ class UsPollIndex:
 # ── Page discovery ────────────────────────────────────────────────────────────
 
 
-def _href(link: Tag) -> str | None:
-    """Read an ``<a href>`` as a single string, or None when it has none."""
-    value = link.get("href")
-    if isinstance(value, list):
-        value = " ".join(value)
-    return value or None
-
-
 def _discovered_pages(
     html: str,
     pattern: re.Pattern[str],
@@ -598,7 +591,7 @@ def _discovered_pages(
     for link in soup.find_all("a"):
         if not isinstance(link, Tag):
             continue
-        href = _href(link)
+        href = attr_text(link, "href")
         if href is None:
             continue
         match = pattern.match(href)

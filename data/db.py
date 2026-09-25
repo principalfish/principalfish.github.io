@@ -1434,9 +1434,14 @@ def default_sqlite_path() -> Path:
     """The configured database file, read from the environment on every call.
 
     Deliberately not a module constant: a path computed at import is whatever
-    ``.env`` said when the module was first loaded, so a test (or any caller)
-    that points ``DATABASE_PATH`` elsewhere afterwards would still write — and
-    delete — against the original database.
+    ``.env`` said when the module was first loaded, so an in-process caller
+    (in practice, a test's ``monkeypatch.setenv``) that points ``DATABASE_PATH``
+    elsewhere afterwards would still write — and delete — against the original
+    database.
+
+    This does **not** make a shell-level ``DATABASE_PATH=... python script.py``
+    safe: ``config`` loads ``.env`` with ``override=True`` at import, so the
+    exported value is replaced by ``.env``'s and the live database is used.
     """
     return Path(DatabaseConfig.from_env().database_path)
 

@@ -5,9 +5,11 @@ Each test gets a fully fresh set of tables (drop + create) so tests
 are completely isolated from each other.
 """
 
+import sqlite3
 import sys
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 # Ensure the parent data/ package is importable from tests/
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -44,6 +46,27 @@ def _never_open_the_live_database(
     console.db.reset_db()
     yield
     console.db.reset_db()
+
+
+@pytest.fixture()
+def only_the_test_database(db: Database, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Refuse any raw ``sqlite3.connect`` except to the ``db`` fixture's file.
+
+    Checked before connecting, so a writer that falls back to a path fixed at
+    import (whatever ``.env`` said) fails here instead of opening that database.
+    SQLAlchemy connects through ``sqlite3.dbapi2`` and is unaffected.
+    """
+    allowed = Path(db.config.database_path).resolve()
+    real_connect = sqlite3.connect
+
+    def guarded(database: Any, *args: Any, **kwargs: Any) -> sqlite3.Connection:
+        if Path(database).resolve() != allowed:
+            raise AssertionError(f"sqlite3.connect outside the test database: {database}")
+        connection: sqlite3.Connection = real_connect(database, *args, **kwargs)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", guarded)
+    return allowed
 
 
 @pytest.fixture()

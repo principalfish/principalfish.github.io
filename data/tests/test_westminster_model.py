@@ -16,13 +16,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westmin
 
 import pytest
 
+import run_uns_model as wmod
+from db import Database
 from run_uns_model import (
     LatestPollUsage,
     PARTY_ID_ALIASES,
     SeatRef,
+    SimulationConfig,
     compute_region_diffs,
+    dates_to_run_for_cfg,
+    delete_model_uns_for_as_of_date,
+    existing_trend_dates,
     latest_poll_snippet,
+    persist_projection,
     project_seat_votes,
+    reset_existing_model_outputs,
     weighted_average,
 )
 
@@ -331,3 +339,57 @@ class TestProjectSeatVotes:
         )
         assert winners["Labour"] == 1
         assert winners["Conservative"] == 1
+
+
+# ── the database path is resolved when called ─────────────────────────────────
+
+
+class TestDatabasePathAtCallTime:
+    """The raw-``sqlite3`` writers read ``DATABASE_PATH`` when called, not at import."""
+
+    def test_the_default_follows_database_path_when_called(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        monkeypatch.setenv("DATABASE_PATH", str(only_the_test_database))
+        monkeypatch.setattr(wmod, "TREND_CACHE_JSON", tmp_path / "trends.json")
+        uk_map = db.add_map("Test Westminster Map")
+
+        for day in (1, 2):
+            as_of = date(2026, 6, day)
+            persist_projection(uk_map.id, as_of, f"UNS {as_of}", [], {})
+
+        assert existing_trend_dates() == {date(2026, 6, 1), date(2026, 6, 2)}
+        cleared = reset_existing_model_outputs(date(2026, 6, 2), date(2026, 6, 2))
+        assert cleared == (1, 0, 0)
+        assert delete_model_uns_for_as_of_date(date(2026, 6, 1)) == (1, 0)
+        assert existing_trend_dates() == set()
+
+
+class TestDatesToRunForCfg:
+    def test_gap_fill_reads_the_database_it_is_given(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: list[Path | None] = []
+
+        def existing(sqlite_path: Path | None = None) -> set[date]:
+            seen.append(sqlite_path)
+            return {date(2026, 6, 1)}
+
+        monkeypatch.setattr(wmod, "existing_trend_dates", existing)
+        cfg = SimulationConfig(
+            map_name="Test Westminster Map",
+            baseline_election_name="Baseline",
+            as_of_date=date(2026, 6, 3),
+            since_date=date(2026, 1, 1),
+            half_life_days=30.0,
+            output_csv=None,
+            dry_run=False,
+        )
+        run_db = tmp_path / "run.db"
+
+        assert dates_to_run_for_cfg(cfg, run_db) == [date(2026, 6, 2), date(2026, 6, 3)]
+        assert seen == [run_db]

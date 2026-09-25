@@ -69,7 +69,6 @@ from models import Election, Map, Poll, PollRow, Region, TrackedMatchup, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
-    US_PRESIDENTIAL_MAP_NAME,
     MatchupCandidate,
     candidate_matches,
     matchup_candidates,

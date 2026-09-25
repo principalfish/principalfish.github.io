@@ -34,6 +34,7 @@ from run_holyrood_uns_model import (
     persist_projection,
     project_constituency_seats,
     project_list_seats,
+    reset_existing_model_outputs,
     run_holyrood_projection,
     run_retrospective,
     update_trend_cache_json,
@@ -572,6 +573,35 @@ class TestPersistProjection:
         assert count == 1
 
 
+class TestDatabasePathAtCallTime:
+    """The raw-``sqlite3`` writers read ``DATABASE_PATH`` when called, not at import."""
+
+    def test_the_default_follows_database_path_when_called(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        monkeypatch.setenv("DATABASE_PATH", str(only_the_test_database))
+        trend = tmp_path / "trends.json"
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
+        holyrood_map = db.add_map("Test Holyrood Map", parliament="holyrood")
+
+        for day in (1, 2):
+            as_of = date(2026, 7, day)
+            persist_projection(holyrood_map.id, as_of, _election_name(as_of), [], {})
+
+        assert existing_trend_dates(trend_cache_json=trend) == {
+            date(2026, 7, 1),
+            date(2026, 7, 2),
+        }
+        cleared = reset_existing_model_outputs(date(2026, 7, 2), date(2026, 7, 2))
+        assert cleared == (1, 0, 0)
+        assert delete_holyrood_uns_for_as_of_date(date(2026, 7, 1)) == (1, 0)
+        assert existing_trend_dates(trend_cache_json=trend) == set()
+
+
 # ── Trend cache ───────────────────────────────────────────────────────────────
 
 
@@ -666,14 +696,32 @@ class TestDatesToRunForCfg:
 
     def test_fills_calendar_gap(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Latest cached date is 2026-07-01; as-of is 2026-07-04 → fill the 3 gap days.
-        monkeypatch.setattr(hmod, "existing_trend_dates", lambda: {date(2026, 7, 1)})
+        monkeypatch.setattr(
+            hmod, "existing_trend_dates", lambda **_k: {date(2026, 7, 1)}
+        )
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
         assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 2), date(2026, 7, 3), date(2026, 7, 4)]
 
     def test_no_prior_dates_returns_as_of(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(hmod, "existing_trend_dates", lambda: set())
+        monkeypatch.setattr(hmod, "existing_trend_dates", lambda **_k: set())
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
         assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 4)]
+
+    def test_gap_fill_reads_the_database_it_is_given(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: list[Path | None] = []
+
+        def existing(sqlite_path: Path | None = None) -> set[date]:
+            seen.append(sqlite_path)
+            return {date(2026, 7, 1)}
+
+        monkeypatch.setattr(hmod, "existing_trend_dates", existing)
+        cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 3), dry_run=False)
+        run_db = tmp_path / "run.db"
+
+        assert dates_to_run_for_cfg(cfg, run_db) == [date(2026, 7, 2), date(2026, 7, 3)]
+        assert seen == [run_db]
 
 
 # ── run_retrospective validation ──────────────────────────────────────────────

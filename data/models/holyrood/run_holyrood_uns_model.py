@@ -999,7 +999,9 @@ def run_holyrood_simulation(
 # ── Backfill helpers ──────────────────────────────────────────────────────────
 
 
-def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
+def dates_to_run_for_cfg(
+    cfg: HolyroodSimulationConfig, sqlite_path: Path | None = None
+) -> list[date]:
     """Determine which simulation dates must be run for the given configuration.
 
     In dry-run mode only ``cfg.as_of_date`` is returned.
@@ -1011,6 +1013,8 @@ def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
 
     Args:
         cfg: The simulation configuration, used for ``as_of_date`` and ``dry_run``.
+        sqlite_path: The database whose model elections count as already run
+            (see :func:`existing_trend_dates`).
 
     Returns:
         An ordered list of dates to simulate, oldest first.
@@ -1018,7 +1022,7 @@ def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
     if cfg.dry_run:
         return [cfg.as_of_date]
 
-    existing = existing_trend_dates()
+    existing = existing_trend_dates(sqlite_path=sqlite_path)
     previous_dates = [value for value in existing if value < cfg.as_of_date]
     if not previous_dates:
         return [cfg.as_of_date]
@@ -1766,7 +1770,11 @@ def main() -> None:
     lookback_days = max(0, (cfg.as_of_date - (cfg.since_date or cfg.as_of_date)).days)
 
     # Gap-fill: run every missing date, but skip gap-fill entirely in manual mode.
-    run_dates = [cfg.as_of_date] if manual_poll_shares is not None else dates_to_run_for_cfg(cfg)
+    run_dates = (
+        [cfg.as_of_date]
+        if manual_poll_shares is not None
+        else dates_to_run_for_cfg(cfg, database_file(db))
+    )
     if cfg.as_of_date not in run_dates:
         # Always run the current date last so the front-end write uses it.
         run_dates = [*run_dates, cfg.as_of_date]

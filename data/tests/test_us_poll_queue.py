@@ -40,10 +40,12 @@ from console.services.us_poll_queue import (
     approve_group,
     build_us_queue,
     confirm_us_item,
+    contest_label,
     finish_us_queue,
     group_key,
     prepare_us_item,
     tracking_changed,
+    us_row,
 )
 from console.services.wikipedia_queue import (
     NO_CUTOFF,
@@ -53,6 +55,7 @@ from console.services.wikipedia_queue import (
     current_item,
 )
 from db import Database
+from polls.importers.types import ScrapedPollRow
 from polls.importers.us.us_polls_common import CandidateReading, pollster_identifier
 from polls.importers.us.us_wikipedia_polls import (
     PRESIDENT,
@@ -1483,6 +1486,24 @@ class TestStepPage:
 
         assert f"Race tracked:</strong> {MICHIGAN_MATCHUP} (auto)" in body
 
+    def test_an_ignored_race_says_so(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        us_db.set_tracked_matchup(
+            _map_id(us_db, SENATE_MAP),
+            _seat_id(us_db, SENATE_MAP, "Michigan"),
+            None,
+            source="manual",
+        )
+        token = _open_queue(client, monkeypatch, _row(us_db))
+
+        body = client.get(f"/us/import/{token}").get_data(as_text=True)
+
+        assert "Race tracked:</strong> ignored (manual)" in body
+
     def test_the_president_shows_the_national_matchup(
         self,
         client: FlaskClient[Any],
@@ -2240,3 +2261,30 @@ class TestConcurrentSubmits:
 
         assert gone not in us_poll_import._QUEUE_LOCKS
         assert live in us_poll_import._QUEUE_LOCKS
+
+
+# ── Row and label helpers ─────────────────────────────────────────────────────
+
+
+class TestUsRow:
+    def test_refuses_a_row_that_is_not_a_us_row(self) -> None:
+        row = ScrapedPollRow(
+            fieldwork_start=date(2026, 6, 1),
+            fieldwork_end=date(2026, 6, 2),
+            date_label="1–2 Jun",
+            pollster_label="YouGov",
+            pollster_identifier="yougov",
+            sample_size_label="1,000",
+            source_url="https://example.org/poll",
+        )
+
+        with pytest.raises(TypeError, match="expected a UsPollRow, got ScrapedPollRow"):
+            us_row(row)
+
+
+class TestContestLabel:
+    def test_a_known_contest_uses_its_label(self) -> None:
+        assert contest_label(PRESIDENT.slug) == PRESIDENT.label
+
+    def test_an_unknown_contest_falls_back_to_its_slug(self) -> None:
+        assert contest_label("not-a-contest") == "not-a-contest"

@@ -664,7 +664,9 @@ class TestResolvePollScope:
         db.add_map(PRESIDENT_MAP, parliament="us_president")
         spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, requires_tracked_matchup=True)
 
-        with pytest.raises(TrackedMatchupMissingError, match="no tracked matchup has been set"):
+        with pytest.raises(
+            TrackedMatchupMissingError, match="no tracked matchup has been set"
+        ):
             resolve_poll_scope(db, spec)
 
     def test_president_with_a_null_matchup_row_counts_as_ignored(self, db: Database, tmp_path: Path) -> None:
@@ -3651,27 +3653,6 @@ class TestAsOfCapFollowsTheAllowlist:
 
 
 # ── the US model's database path is resolved when called ──────────────────────
-
-
-@pytest.fixture()
-def only_the_test_database(db: Database, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Refuse any raw ``sqlite3.connect`` except to the ``db`` fixture's file.
-
-    Checked before connecting, so a writer that falls back to a path fixed at
-    import (whatever ``.env`` said) fails here instead of opening that database.
-    SQLAlchemy connects through ``sqlite3.dbapi2`` and is unaffected.
-    """
-    allowed = Path(db.config.database_path).resolve()
-    real_connect = sqlite3.connect
-
-    def guarded(database: Any, *args: Any, **kwargs: Any) -> sqlite3.Connection:
-        if Path(database).resolve() != allowed:
-            raise AssertionError(f"sqlite3.connect outside the test database: {database}")
-        connection: sqlite3.Connection = real_connect(database, *args, **kwargs)
-        return connection
-
-    monkeypatch.setattr(sqlite3, "connect", guarded)
-    return allowed
 
 
 class TestDatabasePathAtCallTime:

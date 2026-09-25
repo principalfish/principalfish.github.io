@@ -146,8 +146,11 @@ class QueueState(BaseModel):
     unrecognised_areas: dict[str, int] = Field(default_factory=dict)
 
 
-def latest_poll_end_date(db: Database, map_name: str) -> date | None:
-    """Return the latest fieldwork end date recorded for a map.
+def latest_poll_end_date_for_map_name(db: Database, map_name: str) -> date | None:
+    """Return the latest fieldwork end date recorded for a map, found by name.
+
+    Resolves the map by name first, then reads the same date
+    :func:`_latest_poll_end_date_for_map` reads by map id.
 
     Args:
         db: Active Database instance.
@@ -352,7 +355,9 @@ def build_queue(
     """
     # Westminster's cutoff is one date for the whole map, so it is resolved here
     # and handed over as an explicit window rather than through ``cutoff_fn``.
-    effective_cutoff = cutoff or latest_poll_end_date(db, map_name) or NO_CUTOFF
+    effective_cutoff = (
+        cutoff or latest_poll_end_date_for_map_name(db, map_name) or NO_CUTOFF
+    )
 
     return build_queue_from_rows(
         db,

@@ -202,7 +202,7 @@ def build_us_queue(
     ]
 
     items = [item for part in parts for item in part.items]
-    items.sort(key=lambda item: _sort_key(_us_row(item.row)))
+    items.sort(key=lambda item: _sort_key(us_row(item.row)))
     if cutoff is not None:
         effective_cutoff = cutoff
     else:
@@ -234,8 +234,8 @@ def group_key(row: ScrapedPollRow) -> GroupKey:
     Raises:
         TypeError: If the row is not a US row.
     """
-    us_row = _us_row(row)
-    return (us_row.contest, us_row.seat_id)
+    narrowed = us_row(row)
+    return (narrowed.contest, narrowed.seat_id)
 
 
 def _poll_key(row: UsPollRow) -> QueueKey:
@@ -292,8 +292,12 @@ def _new_item(row: UsPollRow) -> QueueItem:
     return QueueItem(row=row)
 
 
-def _us_row(row: ScrapedPollRow) -> UsPollRow:
-    """Narrow a queued row back to the US row the scraper built."""
+def us_row(row: ScrapedPollRow) -> UsPollRow:
+    """Narrow a queued row back to the US row the scraper built.
+
+    Raises:
+        TypeError: If the row is not a US row, which a US payload never holds.
+    """
     if not isinstance(row, UsPollRow):
         raise TypeError(f"expected a UsPollRow, got {type(row).__name__}")
     return row
@@ -320,7 +324,7 @@ def prepare_us_item(db: Database, item: QueueItem, state: QueueState) -> None:
     if item.status != "pending" or item.plan is not None:
         return
 
-    row = _us_row(item.row)
+    row = us_row(item.row)
     try:
         plan = build_us_import_plan(db, row)
         warnings = _review_warnings(db, row, plan, item, state)
@@ -361,7 +365,7 @@ def confirm_us_item(db: Database, item: QueueItem) -> None:
     if item.status != "pending" or not isinstance(item.plan, UsImportPlan):
         return
 
-    row = _us_row(item.row)
+    row = us_row(item.row)
     try:
         result = commit_us_import_plan(db, row, item.plan)
     except (ValueError, SQLAlchemyError) as err:
@@ -517,7 +521,7 @@ def _other_matchups(
     for other in items:
         if other is item:
             continue
-        other_row = _us_row(other.row)
+        other_row = us_row(other.row)
         if (
             other_row.pollster_identifier == row.pollster_identifier
             and other_row.fieldwork_start == row.fieldwork_start

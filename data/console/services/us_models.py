@@ -72,7 +72,7 @@ class ScriptRunner(Protocol):
     ) -> subprocess.CompletedProcess[str]: ...
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class UsChamber:
     """Console wiring for one US election type.
 
@@ -150,7 +150,7 @@ US_CHAMBERS_BY_SLUG: Mapping[str, UsChamber] = {
 }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class UsModelRun:
     """Combined outcome of one "run the US models and export" sequence.
 

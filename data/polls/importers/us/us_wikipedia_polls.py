@@ -45,6 +45,8 @@ from typing import Literal
 from urllib.error import HTTPError
 
 from bs4 import BeautifulSoup, Tag
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 # ``data/`` root — home of db.py / models.py.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -70,8 +72,6 @@ from polls.importers.us.us_polls_common import (
     parse_poll_tables,
     pollster_identifier,
 )
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 

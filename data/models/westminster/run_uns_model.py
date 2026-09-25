@@ -32,11 +32,13 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from db import Database, ensure_elections_sqlite_schema
+from db import (
+    Database,
+    database_file,
+    default_sqlite_path,
+    ensure_elections_sqlite_schema,
+)
 from models import Election, Map, Region
-
-# Single source of truth for the database path: config.py (which reads .env).
-DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
 # so that poll data reported under "Other" is applied to the same party that holds the
@@ -109,7 +111,7 @@ class LatestPollUsage:
     fieldwork_end: date
 
 
-def existing_trend_dates() -> set[date]:
+def existing_trend_dates(sqlite_path: Path | None = None) -> set[date]:
     """Return all ``as_of_date`` values that have already been simulated.
 
     Combines dates from the trend cache JSON with dates derived from the SQLite
@@ -119,10 +121,16 @@ def existing_trend_dates() -> set[date]:
     archive records every run regardless of deduplication, so including it gives
     a complete picture of which dates have already been processed.
 
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
+
+    Args:
+        sqlite_path: Path to the SQLite archive file.
+
     Returns:
         A set of ``date`` objects for which a simulation has already been run.
         Returns an empty set if neither source exists.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     dates: set[date] = set()
 
     if TREND_CACHE_JSON.exists():
@@ -137,8 +145,8 @@ def existing_trend_dates() -> set[date]:
             except ValueError:
                 continue
 
-    if DEFAULT_SQLITE_PATH.exists():
-        with sqlite3.connect(DEFAULT_SQLITE_PATH) as conn:
+    if sqlite_path.exists():
+        with sqlite3.connect(sqlite_path) as conn:
             rows = conn.execute("SELECT name FROM elections").fetchall()
         for (name,) in rows:
             m = re.match(r"UNS (\d{4}-\d{2}-\d{2})", name or "")
@@ -285,13 +293,15 @@ def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
 
 
 def reset_existing_model_outputs(
-    start_date: date, end_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+    start_date: date, end_date: date, sqlite_path: Path | None = None
 ) -> tuple[int, int, int]:
     """Delete model_uns elections in [start_date, end_date] from SQLite and strip matching rows from the trend cache CSV.
 
     Election names follow the pattern ``UNS YYYY-MM-DD``, so a lexicographic
     range on the name column correctly isolates the target dates. The trend
     cache CSV is rewritten in place with matching rows removed.
+
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Args:
         start_date: Inclusive lower bound of the date range to clear.
@@ -301,6 +311,7 @@ def reset_existing_model_outputs(
     Returns:
         A 3-tuple ``(deleted_elections, deleted_votes, stripped_csv_rows)``.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     start_name = f"UNS {start_date.isoformat()}"
     upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
 
@@ -377,7 +388,7 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
     if args.reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
-            start_date, end_date
+            start_date, end_date, database_file(db)
         )
         print(
             f"RESET deleted_elections={deleted_elections} "
@@ -434,11 +445,15 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
 
 
-def delete_model_uns_for_as_of_date(as_of_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH) -> tuple[int, int]:
+def delete_model_uns_for_as_of_date(
+    as_of_date: date, sqlite_path: Path | None = None
+) -> tuple[int, int]:
     """Delete all model_uns elections (and their votes) for a given date from SQLite.
 
     Matches elections whose name starts with ``"UNS {as_of_date}"`` and
     deletes their vote rows before removing the election rows.
+
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Args:
         as_of_date: The date whose simulation output should be removed.
@@ -448,6 +463,7 @@ def delete_model_uns_for_as_of_date(as_of_date: date, sqlite_path: Path = DEFAUL
         A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
         matching elections exist or the file does not exist.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     if not sqlite_path.exists():
         return 0, 0
 
@@ -1166,9 +1182,11 @@ def persist_projection(
     election_name: str,
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
-    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+    sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
     """Create a model_uns election row and bulk-insert all projected vote rows into SQLite.
+
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Args:
         map_id: Primary key of the electoral map the election belongs to.
@@ -1184,6 +1202,7 @@ def persist_projection(
         A ``(election_name, election_id)`` tuple with the persisted election's
         display name and primary key.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     with sqlite3.connect(sqlite_path) as conn:
         ensure_elections_sqlite_schema(conn)
         cursor = conn.execute(
@@ -1428,7 +1447,7 @@ def run_simulation(
     if cfg.dry_run:
         return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
-    delete_model_uns_for_as_of_date(cfg.as_of_date)
+    delete_model_uns_for_as_of_date(cfg.as_of_date, database_file(db))
 
     persisted_name, persisted_election_id = persist_projection(
         poll_map.id,
@@ -1436,6 +1455,7 @@ def run_simulation(
         election_name,
         projected_votes,
         party_name_by_id,
+        database_file(db),
     )
 
     update_trend_cache_json(

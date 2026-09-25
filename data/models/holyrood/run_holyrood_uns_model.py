@@ -163,14 +163,16 @@ if str(DATA_DIR) not in sys.path:
 from sqlalchemy import select as sa_select
 
 from config import DatabaseConfig
-from db import Database, ensure_elections_sqlite_schema
+from db import (
+    Database,
+    database_file,
+    default_sqlite_path,
+    ensure_elections_sqlite_schema,
+)
 from models import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
 LIST_SEATS_PER_REGION = 7
-
-# Single source of truth for the database path: config.py (which reads .env).
-DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
 
 # Repository root, used to derive front-end output paths (prediction + trends).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -964,13 +966,14 @@ def run_holyrood_simulation(
 
     if not cfg.dry_run:
         party_name_by_id = {p.id: p.name for p in db.get_all_parties()}
-        delete_holyrood_uns_for_as_of_date(cfg.as_of_date)
+        delete_holyrood_uns_for_as_of_date(cfg.as_of_date, database_file(db))
         _persisted_name, election_id = persist_projection(
             const_election.map_id,
             cfg.as_of_date,
             election_name,
             const_proj + list_proj,
             party_name_by_id,
+            database_file(db),
         )
         update_trend_cache_json(
             election_id, election_name, cfg.as_of_date, const_proj, list_proj
@@ -1034,13 +1037,15 @@ def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
 
 
 def reset_existing_model_outputs(
-    start_date: date, end_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+    start_date: date, end_date: date, sqlite_path: Path | None = None
 ) -> tuple[int, int, int]:
     """Delete holyrood_uns elections in [start_date, end_date] and strip matching trend rows.
 
     Election names follow the pattern ``Holyrood UNS YYYY-MM-DD``, so a
     lexicographic range on the name column correctly isolates the target dates.
     The trend cache JSON is rewritten in place with matching rows removed.
+
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Args:
         start_date: Inclusive lower bound of the date range to clear.
@@ -1050,6 +1055,7 @@ def reset_existing_model_outputs(
     Returns:
         A 3-tuple ``(deleted_elections, deleted_votes, stripped_json_entries)``.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     start_name = f"Holyrood UNS {start_date.isoformat()}"
     upper_bound = f"Holyrood UNS {(end_date + timedelta(days=1)).isoformat()}"
 
@@ -1126,7 +1132,7 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
     if args.reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped_json_entries = reset_existing_model_outputs(
-            start_date, end_date
+            start_date, end_date, database_file(db)
         )
         print(
             f"RESET deleted_elections={deleted_elections} "
@@ -1189,7 +1195,7 @@ def persist_projection(
     election_name: str,
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
-    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+    sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
     """Create a holyrood_uns election row and bulk-insert its projected votes into SQLite.
 
@@ -1197,6 +1203,8 @@ def persist_projection(
     including the intentional duplication of identical vote rows across the 7
     list seats per region.  Vote totals are rounded to integer counts to match
     the count-semantics of the persisted Westminster and US model outputs.
+
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Args:
         map_id: Primary key of the electoral map the election belongs to.
@@ -1212,6 +1220,7 @@ def persist_projection(
         A ``(election_name, election_id)`` tuple with the persisted election's
         display name and primary key.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     with sqlite3.connect(sqlite_path) as conn:
         ensure_elections_sqlite_schema(conn)
         cursor = conn.execute(
@@ -1241,13 +1250,15 @@ def persist_projection(
 
 
 def delete_holyrood_uns_for_as_of_date(
-    as_of_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+    as_of_date: date, sqlite_path: Path | None = None
 ) -> tuple[int, int]:
     """Delete the holyrood_uns election (and its votes) for a given date from SQLite.
 
     Matches the election whose name equals ``_election_name(as_of_date)`` and
     whose type is ``holyrood_uns``, deleting its vote rows before removing the
     election row.  Used to make a re-run idempotent.
+
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Args:
         as_of_date: The date whose simulation output should be removed.
@@ -1257,6 +1268,7 @@ def delete_holyrood_uns_for_as_of_date(
         A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
         matching election exists or the file does not exist.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     if not sqlite_path.exists():
         return 0, 0
 
@@ -1317,7 +1329,7 @@ def constituency_national_vote_shares(
 
 def existing_trend_dates(
     trend_cache_json: Path = HOLYROOD_TREND_CACHE_JSON,
-    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+    sqlite_path: Path | None = None,
 ) -> set[date]:
     """Return all ``as_of_date`` values that have already been simulated.
 
@@ -1328,10 +1340,17 @@ def existing_trend_dates(
     archive records every run regardless of deduplication, so including it gives
     a complete picture of which dates have already been processed.
 
+    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
+
+    Args:
+        trend_cache_json: Path to the Holyrood trend cache JSON.
+        sqlite_path: Path to the SQLite archive file.
+
     Returns:
         A set of ``date`` objects for which a simulation has already been run.
         Returns an empty set if neither source exists.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     dates: set[date] = set()
 
     if trend_cache_json.exists():

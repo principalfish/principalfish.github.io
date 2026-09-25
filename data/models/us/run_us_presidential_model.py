@@ -25,13 +25,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _common import UsModelSpec, main_for_spec
+from _common import US_PRESIDENTIAL_MAP_NAME, UsModelSpec, main_for_spec
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RESULTS_DIR = REPO_ROOT / "uselectionmaps" / "data" / "results"
 
 SPEC = UsModelSpec(
-    map_name="US Presidential 2024",
+    map_name=US_PRESIDENTIAL_MAP_NAME,
     baseline_election_name="2024 US Presidential Election",
     election_type="us_presidential_model",
     election_name_prefix="US President UNS",

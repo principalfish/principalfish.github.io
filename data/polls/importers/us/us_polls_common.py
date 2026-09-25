@@ -39,6 +39,10 @@ from bs4 import BeautifulSoup, Tag
 
 from polls.importers import wikipedia_common
 
+# The forecast map the President's polls are imported onto, the presidential
+# model runs on, and the console's President chamber tracks a matchup for.
+US_PRESIDENTIAL_MAP_NAME = "US Presidential 2024"
+
 _MONTH_MAP: dict[str, int] = {
     "jan": 1, "january": 1,
     "feb": 2, "february": 2,

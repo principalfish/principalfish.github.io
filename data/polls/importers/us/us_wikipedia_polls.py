@@ -64,6 +64,7 @@ from polls.importers.us.us_geography import (
 )
 from polls.importers.us.us_polls_common import (
     MAX_PAGE_GRID_CELLS,
+    US_PRESIDENTIAL_MAP_NAME,
     CandidateReading,
     Heading,
     PageTables,
@@ -264,7 +265,7 @@ SENATE_RACES = UsContest(
 PRESIDENT = UsContest(
     slug="president",
     label="Presidential polls",
-    map_name="US Presidential 2024",
+    map_name=US_PRESIDENTIAL_MAP_NAME,
     pollster_suffix="_us_president",
     pollster_label="US President",
     page_urls=PRESIDENT_PAGE_URLS,

@@ -24,6 +24,7 @@ from typing import Protocol
 
 from db import Database
 from models import ElectionType
+from polls.importers.us.us_polls_common import US_PRESIDENTIAL_MAP_NAME
 
 from console.paths import (
     EXPORT_ELECTION_SCRIPT,
@@ -131,7 +132,7 @@ US_CHAMBERS: tuple[UsChamber, ...] = (
         model_script=US_PRESIDENT_MODEL_SCRIPT,
         model_args=("--since-days-back", "120"),
         trend_cache_path=US_PRESIDENT_TREND_CACHE_JSON,
-        tracked_matchup_map_name="US Presidential 2024",
+        tracked_matchup_map_name=US_PRESIDENTIAL_MAP_NAME,
     ),
     UsChamber(
         slug="senate",

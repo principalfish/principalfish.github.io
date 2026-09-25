@@ -56,6 +56,7 @@ from polls.importers.us.us_wikipedia_polls import (
     UsPollIndex,
     UsPollRow,
     fetch_us_poll_index,
+    join_headings,
 )
 
 from console.db import get_db
@@ -272,6 +273,7 @@ def queue(token: str) -> ResponseReturnValue:
         plan=plan,
         contest_label=contest_label(row.contest),
         race_label=race_label(row),
+        heading_label=join_headings(row.headings),
         tracked_label=_tracked_label(db, row, plan),
         group_remaining=len(pending_in_group(state, group_key, group_key(row))),
         progress=progress(state),

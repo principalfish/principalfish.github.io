@@ -907,7 +907,7 @@ class TestPresidentRows:
             PRESIDENT_PAGE,
             seat_ids=_seat_ids(us_db, PRESIDENT.map_name),
         )
-        nationwide = [row for row in page.rows if "Nationwide" in row.heading_path]
+        nationwide = [row for row in page.rows if "Nationwide" in row.headings]
         assert len(nationwide) == 2
         assert {row.seat_name for row in nationwide} == {None}
         assert {row.seat_id for row in nationwide} == {None}
@@ -927,9 +927,12 @@ class TestPresidentRows:
         assert len(nevada) == 1
         assert nevada[0].seat_id == seat_ids["Nevada"]
         assert nevada[0].matchup == "Vance (R) vs Newsom (D)"
-        assert nevada[0].heading_path == (
-            "Opinion polling › General election › Statewide › Nevada › "
-            "JD Vance vs. Gavin Newsom"
+        assert nevada[0].headings == (
+            "Opinion polling",
+            "General election",
+            "Statewide",
+            "Nevada",
+            "JD Vance vs. Gavin Newsom",
         )
 
     def test_primary_sections_are_excluded(self, us_db: Database) -> None:
@@ -940,7 +943,11 @@ class TestPresidentRows:
             seat_ids=_seat_ids(us_db, PRESIDENT.map_name),
         )
         assert not any("Rubio" in (row.matchup or "") for row in page.rows)
-        assert not any("primary" in row.heading_path.lower() for row in page.rows)
+        assert not any(
+            "primary" in heading.lower()
+            for row in page.rows
+            for heading in row.headings
+        )
 
     def test_collapsed_hypotheticals_are_skipped_when_visible_rows_exist(
         self, us_db: Database
@@ -1345,7 +1352,7 @@ class TestHouseDistrictRows:
             seat_ids=_seat_ids(us_db, HOUSE_DISTRICTS.map_name),
         )
         assert [row.seat_name for row in page.rows] == ["VT-01"]
-        assert page.rows[0].heading_path == "General election › Predictions › Polling"
+        assert page.rows[0].headings == ("General election", "Predictions", "Polling")
 
     def test_general_election_table_with_no_district_heading_is_unmatched(
         self, us_db: Database

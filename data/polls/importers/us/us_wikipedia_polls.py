@@ -136,7 +136,8 @@ _STATE_BY_KEY: dict[str, str] = {
     **{postal.lower(): name for name, postal in STATE_POSTAL.items()},
 }
 
-_HEADING_SEPARATOR = " › "
+# Joins a section path for display: "General election › Polling".
+HEADING_SEPARATOR = " › "
 
 # At most this many race pages are taken per state from an index. One is the
 # norm; a second is let through so that one state holding two races in one
@@ -296,8 +297,9 @@ class UsPollRow(ScrapedPollRow):
     Attributes:
         contest: The :class:`UsContest` slug the row was read under.
         page_url: The Wikipedia page it was read from.
-        heading_path: The section path as display text, e.g.
-            ``"General election › Polling"``.
+        headings: The section path's headings, outermost first, e.g.
+            ``("General election", "Polling")``. :func:`join_headings`
+            renders it for display.
         seat_name: The seat on ``map_name``, or None for a national reading.
         seat_id: That seat's database id, or None for a national reading.
         map_name: The contest's forecast map.
@@ -318,7 +320,7 @@ class UsPollRow(ScrapedPollRow):
 
     contest: str
     page_url: str
-    heading_path: str
+    headings: tuple[str, ...]
     seat_name: str | None
     seat_id: int | None
     map_name: str
@@ -780,9 +782,14 @@ def fetch_pages(
 # ── Section, seat and lead rules ──────────────────────────────────────────────
 
 
+def join_headings(headings: Iterable[str]) -> str:
+    """Render a section path for display: ``"General election › Polling"``."""
+    return HEADING_SEPARATOR.join(headings)
+
+
 def _headings_text(headings: Sequence[Heading]) -> str:
-    """Render a heading path for display: ``"General election › Polling"``."""
-    return _HEADING_SEPARATOR.join(heading.text for heading in headings)
+    """Render a parsed table's heading path for display."""
+    return join_headings(heading.text for heading in headings)
 
 
 def _innermost_anchor(headings: Sequence[Heading]) -> str | None:
@@ -992,7 +999,7 @@ def _rows_for_table(
     Returns:
         The rows, and how many summary rows were skipped.
     """
-    heading_path = _headings_text(table.headings)
+    headings = tuple(heading.text for heading in table.headings)
     anchor = _innermost_anchor(table.headings)
     section_url = f"{page_url}#{anchor}" if anchor else page_url
     notes = _table_notes(table, collapsed=collapsed)
@@ -1015,7 +1022,7 @@ def _rows_for_table(
             matchup=table.matchup,
             contest=contest.slug,
             page_url=page_url,
-            heading_path=heading_path,
+            headings=headings,
             seat_name=seat.seat_name,
             seat_id=seat.seat_id,
             map_name=contest.map_name,

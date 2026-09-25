@@ -23,7 +23,7 @@
   <section class="card">
     <h3>Matchup</h3>
     <p><strong>{{ row.matchup or "Party voting intention" }}</strong></p>
-    <p><strong>Section:</strong> {{ row.heading_path or "-" }}</p>
+    <p><strong>Section:</strong> {{ heading_label or "-" }}</p>
     <p>
       <strong>Wikipedia page:</strong>
       <a href="{{ row.page_url }}" target="_blank" rel="noopener">{{ row.page_url }}</a>

@@ -83,7 +83,7 @@ CORNYN_MATCHUP = "Cornyn (R) vs Talarico (D)"
 NEWSOM_MATCHUP = "Vance (R) vs Newsom (D)"
 SHAPIRO_MATCHUP = "Vance (R) vs Shapiro (D)"
 
-NATIONWIDE_PATH = "Opinion polling › General election › Nationwide"
+NATIONWIDE_PATH = ("Opinion polling", "General election", "Nationwide")
 
 ALASKA_URL = (
     "https://en.wikipedia.org/wiki/2026_United_States_Senate_election_in_Alaska"
@@ -192,7 +192,7 @@ def _row(
     end: date = date(2026, 6, 4),
     matchup: str | None = MICHIGAN_MATCHUP,
     readings: tuple[CandidateReading, ...] = MICHIGAN_READINGS,
-    heading_path: str = "General election › Polling",
+    headings: tuple[str, ...] = ("General election", "Polling"),
     **overrides: Any,
 ) -> UsPollRow:
     """Build a scraped row the way the contest layer would."""
@@ -208,7 +208,7 @@ def _row(
         "matchup": matchup,
         "contest": contest,
         "page_url": "https://en.wikipedia.org/wiki/Example",
-        "heading_path": heading_path,
+        "headings": headings,
         "seat_name": seat,
         "seat_id": None if seat is None else _seat_id(db, spec.map_name, seat),
         "map_name": spec.map_name,
@@ -229,7 +229,7 @@ def _president_row(db: Database, **overrides: Any) -> UsPollRow:
         "pollster": "Emerson College",
         "matchup": NEWSOM_MATCHUP,
         "readings": NEWSOM_READINGS,
-        "heading_path": f"{NATIONWIDE_PATH} › JD Vance vs. Gavin Newsom",
+        "headings": (*NATIONWIDE_PATH, "JD Vance vs. Gavin Newsom"),
     }
     fields.update(overrides)
     return _row(db, **fields)
@@ -577,7 +577,7 @@ class TestWarnings:
             us_db,
             matchup=SHAPIRO_MATCHUP,
             readings=SHAPIRO_READINGS,
-            heading_path=f"{NATIONWIDE_PATH} › JD Vance vs. Josh Shapiro",
+            headings=(*NATIONWIDE_PATH, "JD Vance vs. Josh Shapiro"),
         )
         # Same pollster and matchup, another seat: a different poll.
         nevada = _president_row(us_db, seat="Nevada", matchup="Vance (R) vs Harris (D)")

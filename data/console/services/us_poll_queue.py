@@ -117,8 +117,6 @@ _CONTEST_ORDER: dict[str, int] = {
     contest.slug: position for position, contest in enumerate(US_CONTESTS)
 }
 
-_HEADING_SEPARATOR = " › "
-
 
 @dataclass(frozen=True, slots=True)
 class BulkOutcome:
@@ -493,7 +491,7 @@ def _heading_warnings(row: UsPollRow) -> list[str]:
     """
     headings = [
         text
-        for text in row.heading_path.split(_HEADING_SEPARATOR)
+        for text in row.headings
         if _names_a_matchup(text)
     ]
     if not headings:

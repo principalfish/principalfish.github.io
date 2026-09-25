@@ -62,6 +62,7 @@ from console.db import get_db
 from console.forms import UsQueueStartForm
 from console.services.preview import get_preview, store_preview
 from console.services.runner import run_python_script
+from console.services.us_matchups import matchup_in_force
 from console.services.us_poll_queue import (
     AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
@@ -526,7 +527,7 @@ def _tracked_label(
     tracked = db.get_tracked_matchup(map_id, seat_id)
     if tracked is None:
         return "none yet"
-    if tracked.matchup is None:
+    if not matchup_in_force(tracked):
         return f"ignored ({tracked.source})"
     return f"{tracked.matchup} ({tracked.source})"
 

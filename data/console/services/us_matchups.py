@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal, get_args
+from typing import Literal, TypeGuard, get_args
 
 from db import Database, MatchupSummary
-from models import TrackedMatchupSource
+from models import TrackedMatchup, TrackedMatchupSource
 from polls.importers.us.us_wikipedia_polls import US_CONTESTS_BY_SLUG
 
 # Chamber slug → the contest whose seat-level polls and automatic lead-table
@@ -65,6 +65,15 @@ class RaceMatchups:
     source: TrackedMatchupSource | None
     auto_matchup: str | None
     labels: tuple[MatchupSummary, ...]
+
+
+def matchup_in_force(tracked: TrackedMatchup | None) -> TypeGuard[TrackedMatchup]:
+    """Whether the models will follow this race's tracked matchup.
+
+    A missing ``tracked_matchups`` row and a row whose ``matchup`` is NULL
+    (the deliberate *ignore this race* marker) both mean no.
+    """
+    return tracked is not None and tracked.matchup is not None
 
 
 def race_map_name(chamber_slug: str) -> str | None:

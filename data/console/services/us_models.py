@@ -36,6 +36,7 @@ from console.paths import (
     US_SENATE_TREND_CACHE_JSON,
 )
 from console.services.runner import run_python_script
+from console.services.us_matchups import matchup_in_force
 
 STEP_TIMEOUT_SECONDS = 300
 
@@ -275,8 +276,7 @@ def tracked_matchup_in_force(db: Database, chamber: UsChamber) -> bool:
     if poll_map is None:
         return False
 
-    tracked = db.get_tracked_matchup(poll_map.id, None)
-    return tracked is not None and tracked.matchup is not None
+    return matchup_in_force(db.get_tracked_matchup(poll_map.id, None))
 
 
 def run_us_models_and_export(

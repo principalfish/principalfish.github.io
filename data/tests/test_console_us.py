@@ -21,10 +21,11 @@ from flask import Flask, Response
 from flask.testing import FlaskClient
 
 from db import Database
-from models import ElectionType
+from models import ElectionType, TrackedMatchup
 
 from console import create_app
 from console import paths as console_paths
+from console.services.us_matchups import matchup_in_force
 from console.services.us_models import (
     MODEL_RUN_LOCK,
     REBUILD_TIMEOUT_SECONDS,
@@ -844,6 +845,23 @@ class TestMatchupRoutesRegistered:
         body = app.test_client().get("/us/import").get_data(as_text=True)
         assert 'href="/us/president/matchup"' in body
         assert 'href="/us/matchups?chamber=senate"' in body
+
+
+class TestMatchupInForce:
+    """The one rule the queue, the model runner and the queue page share."""
+
+    def test_no_row_is_not_in_force(self) -> None:
+        assert not matchup_in_force(None)
+
+    def test_an_ignored_race_is_not_in_force(self) -> None:
+        tracked = TrackedMatchup(map_id=1, seat_id=None, matchup=None, source="manual")
+        assert not matchup_in_force(tracked)
+
+    def test_a_set_matchup_is_in_force(self) -> None:
+        tracked = TrackedMatchup(
+            map_id=1, seat_id=None, matchup="Vance (R) vs Newsom (D)", source="auto"
+        )
+        assert matchup_in_force(tracked)
 
 
 class TestPresidentMatchupPage:

@@ -56,6 +56,7 @@ from polls.importers.us.us_wikipedia_polls import (
     commit_us_import_plan,
 )
 
+from console.services.us_matchups import matchup_in_force
 from console.services.us_models import (
     ScriptRunner,
     UsModelRunInterrupted,
@@ -552,7 +553,7 @@ def _race_warnings(db: Database, row: UsPollRow, plan: UsImportPlan) -> list[str
 
     if contest.matchup_policy == "national_setting":
         tracked = db.get_tracked_matchup(plan.map_id, None)
-        if tracked is None or tracked.matchup is None:
+        if not matchup_in_force(tracked):
             return [
                 "No national presidential matchup is set, so the president "
                 "model will not run until one is chosen."

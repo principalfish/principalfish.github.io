@@ -72,9 +72,11 @@ from console.services.us_poll_queue import (
     approve_group,
     build_us_queue,
     confirm_us_item,
+    contest_label,
     finish_us_queue,
     group_key,
     prepare_us_item,
+    race_label,
     tracking_changed,
     us_row,
 )
@@ -261,16 +263,14 @@ def queue(token: str) -> ResponseReturnValue:
 
     row = us_row(item.row)
     plan = item.plan if isinstance(item.plan, UsImportPlan) else None
-    contest = US_CONTESTS_BY_SLUG.get(row.contest)
-    contest_label = contest.label if contest is not None else row.contest
     return render_template(
         "us_poll_queue.html",
         token=token,
         item=item,
         row=row,
         plan=plan,
-        contest_label=contest_label,
-        race_label=row.seat_name or contest_label,
+        contest_label=contest_label(row.contest),
+        race_label=race_label(row),
         tracked_label=_tracked_label(db, row, plan),
         group_remaining=len(pending_in_group(state, group_key, group_key(row))),
         progress=progress(state),
@@ -395,11 +395,9 @@ def approve_race(token: str) -> ResponseReturnValue:
 
     row = us_row(item.row)
     outcome = approve_group(get_db(), state, group_key(row))
-    contest = US_CONTESTS_BY_SLUG.get(row.contest)
-    race = row.seat_name or (contest.label if contest is not None else row.contest)
     flash(
-        f"{race}: {outcome.imported} imported, {outcome.skipped} already stored, "
-        f"{outcome.failed} failed."
+        f"{race_label(row)}: {outcome.imported} imported, "
+        f"{outcome.skipped} already stored, {outcome.failed} failed."
     )
     return redirect(url_for("us_poll_import.queue", token=token))
 

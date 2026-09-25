@@ -303,6 +303,17 @@ def us_row(row: ScrapedPollRow) -> UsPollRow:
     return row
 
 
+def contest_label(slug: str) -> str:
+    """The contest's display label, or the slug itself for an unknown contest."""
+    contest = US_CONTESTS_BY_SLUG.get(slug)
+    return contest.label if contest is not None else slug
+
+
+def race_label(row: UsPollRow) -> str:
+    """Name a row's race: its seat, or its contest for a national row."""
+    return row.seat_name or contest_label(row.contest)
+
+
 # ── Reviewing one item ────────────────────────────────────────────────────────
 
 

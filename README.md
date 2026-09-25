@@ -197,52 +197,34 @@ TopoJSON files; no PostGIS is required.
 
 ---
 
-## 5) Import polls (Wikipedia-driven)
+## 5) Import polls
 
-### Mapping refresh only
+Poll imports run through the data console (start it as in section 7):
 
-From `data/`:
-
-```bash
-./election_data/bin/python polls/build_wikipedia_poll_mappings.py
-```
-
-### Full poll import pipeline
-
-From `data/`:
-
-```bash
-./election_data/bin/python polls/update_mapping_and_import_new.py --include-unimported-parsers
-```
-
-Notes:
-- `--include-unimported-parsers` is important for fresh databases.
-- Without it, parsers with no historical rows can be skipped.
-
-Wrapper script alternative:
-
-```bash
-./update_polls.sh --include-unimported-parsers
-```
+- **Westminster:** **Import Poll** (`/import`) imports one pollster's release
+  from its URL, or opens the Wikipedia catch-up queue, which scrapes the
+  national polling page and walks each poll not yet stored, one at a time,
+  for review.
+- **Holyrood:** **Import Scottish Polls**.
+- **US:** **Import US Polls**; see section 11.
 
 ---
 
 ## 6) Run UNS retrospective
 
-From repo root:
+The Westminster model backfills a date range when given both `--start-date` and
+`--end-date` (without them it runs a single date). From `data/`:
 
 ```bash
-cd data/models/westminster
-../../election_data/bin/python run_retrospective_uns.py --continue-on-error
+./election_data/bin/python models/westminster/run_uns_model.py \
+	--start-date YYYY-MM-DD --end-date YYYY-MM-DD --continue-on-error
 ```
 
 Useful options:
-- `--start-date YYYY-MM-DD`
-- `--end-date YYYY-MM-DD`
 - `--lookback-days 365`
 - `--half-life-days 30`
 - `--dry-run`
-- `--no-reset-existing` (preserve existing `model_uns` elections and trend CSV; default behavior is to clear them before backfill)
+- `--no-reset-existing` (preserve existing `model_uns` elections and trend cache; default behavior is to clear them before backfill)
 - `--reset-existing` (explicitly force reset behavior; enabled by default)
 
 ---
@@ -308,9 +290,10 @@ sqlite3 "$DATABASE_PATH" "SELECT poll_id, COUNT(*) AS zero_rows FROM poll_rows W
 
 ## 10) Static election-map export (manifest + files)
 
-Use scripts under `data/scripts/` to generate static files for `electionmaps/`.
+`data/scripts/export_elections.py` generates the static files for `electionmaps/`
+and `uselectionmaps/`.
 
-### Bulk export (all non-simulation elections)
+### Bulk export (all elections + the latest model runs)
 
 From repo root:
 
@@ -331,23 +314,12 @@ data/election_data/bin/python data/scripts/export_elections.py --election-name "
 data/election_data/bin/python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
 
-### Wrapper export (all elections + latest simulation)
-
-```bash
-data/election_data/bin/python data/scripts/run_export_targets.py
-```
-
 ### Metadata-only manifest refresh
 
-```bash
-data/election_data/bin/python data/scripts/export_manifest_metadata.py
-```
-
-### UKIP/Reform DB split migration
+Updates only the parties and per-map regions in `map-modes.json`:
 
 ```bash
-data/election_data/bin/python data/scripts/split_ukip_reform_parties.py --dry-run
-data/election_data/bin/python data/scripts/split_ukip_reform_parties.py
+data/election_data/bin/python data/scripts/export_elections.py --metadata-only
 ```
 
 ### Manifest contract used by webpage

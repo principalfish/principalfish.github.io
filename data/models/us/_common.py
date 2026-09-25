@@ -59,7 +59,12 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from db import Database, ensure_elections_sqlite_schema
+from db import (
+    Database,
+    database_file,
+    default_sqlite_path,
+    ensure_elections_sqlite_schema,
+)
 from models import Election, Map, Poll, PollRow, Region, TrackedMatchup, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
@@ -1744,27 +1749,6 @@ def poll_date_bounds(
 
 
 # ── Persistence + trend cache (parameterised by spec) ─────────────────────────
-
-
-def default_sqlite_path() -> Path:
-    """The configured database file, read from the environment on every call.
-
-    Deliberately not a module constant: a path computed at import is whatever
-    ``.env`` said when the module was first loaded, so a test (or any caller)
-    that points ``DATABASE_PATH`` elsewhere afterwards would still write — and
-    delete — against the original database.
-    """
-    return Path(DatabaseConfig.from_env().database_path)
-
-
-def database_file(db: Database) -> Path:
-    """The SQLite file ``db`` is connected to.
-
-    The raw-``sqlite3`` writers below take a path rather than a
-    :class:`Database`; the orchestration passes this one so a run writes to the
-    same database it read its polls and baseline from.
-    """
-    return Path(db.config.database_path)
 
 
 def _election_name_pattern(spec: UsModelSpec, as_of_date: date) -> str:

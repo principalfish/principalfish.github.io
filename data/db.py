@@ -9,6 +9,7 @@ import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 from typing import Any, Generator, Literal, Sequence, cast
 
 from sqlalchemy import (
@@ -1427,3 +1428,24 @@ class Database:
             raise ValueError(
                 f"seat {seat_id} belongs to map {owner_map_id}, not map {map_id}"
             )
+
+
+def default_sqlite_path() -> Path:
+    """The configured database file, read from the environment on every call.
+
+    Deliberately not a module constant: a path computed at import is whatever
+    ``.env`` said when the module was first loaded, so a test (or any caller)
+    that points ``DATABASE_PATH`` elsewhere afterwards would still write — and
+    delete — against the original database.
+    """
+    return Path(DatabaseConfig.from_env().database_path)
+
+
+def database_file(db: Database) -> Path:
+    """The SQLite file ``db`` is connected to.
+
+    The model runners' raw-``sqlite3`` writers take a path rather than a
+    :class:`Database`; their orchestration passes this one so a run writes to
+    the same database it read its polls and baseline from.
+    """
+    return Path(db.config.database_path)

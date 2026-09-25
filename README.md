@@ -80,15 +80,15 @@ This guide covers local setup for the `data/` part of the repo end-to-end:
 
 ## 2) Python environment
 
-From repo root:
+From `data/`:
 
 ```bash
 python3 -m venv election_data
 source election_data/bin/activate
-pip install -r data/requirements.txt
+pip install -r requirements.txt
 ```
 
-If `election_data` already exists, just activate it:
+If `election_data` already exists, just activate it (from `data/`):
 
 ```bash
 source election_data/bin/activate
@@ -201,14 +201,18 @@ TopoJSON files; no PostGIS is required.
 
 ### Mapping refresh only
 
+From `data/`:
+
 ```bash
-../election_data/bin/python polls/build_wikipedia_poll_mappings.py
+./election_data/bin/python polls/build_wikipedia_poll_mappings.py
 ```
 
 ### Full poll import pipeline
 
+From `data/`:
+
 ```bash
-../election_data/bin/python polls/update_mapping_and_import_new.py --include-unimported-parsers
+./election_data/bin/python polls/update_mapping_and_import_new.py --include-unimported-parsers
 ```
 
 Notes:
@@ -225,11 +229,11 @@ Wrapper script alternative:
 
 ## 6) Run UNS retrospective
 
-From `data/models/westminster/`:
+From repo root:
 
 ```bash
 cd data/models/westminster
-../../../election_data/bin/python run_retrospective_uns.py --continue-on-error
+../../election_data/bin/python run_retrospective_uns.py --continue-on-error
 ```
 
 Useful options:
@@ -248,7 +252,7 @@ Useful options:
 From `data/`:
 
 ```bash
-../election_data/bin/python server.py
+./election_data/bin/python server.py
 ```
 
 Server URL:
@@ -262,7 +266,7 @@ arbitrary code for anything that can reach the port. For reload-on-save while
 developing:
 
 ```bash
-CONSOLE_DEBUG=1 ../election_data/bin/python server.py
+CONSOLE_DEBUG=1 ./election_data/bin/python server.py
 ```
 
 ---
@@ -311,39 +315,39 @@ Use scripts under `data/scripts/` to generate static files for `electionmaps/`.
 From repo root:
 
 ```bash
-./election_data/bin/python data/scripts/export_elections.py
+data/election_data/bin/python data/scripts/export_elections.py
 ```
 
 Dry-run:
 
 ```bash
-./election_data/bin/python data/scripts/export_elections.py --dry-run
+data/election_data/bin/python data/scripts/export_elections.py --dry-run
 ```
 
 ### Targeted exports
 
 ```bash
-./election_data/bin/python data/scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
-./election_data/bin/python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
+data/election_data/bin/python data/scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
+data/election_data/bin/python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
 
 ### Wrapper export (all elections + latest simulation)
 
 ```bash
-./election_data/bin/python data/scripts/run_export_targets.py
+data/election_data/bin/python data/scripts/run_export_targets.py
 ```
 
 ### Metadata-only manifest refresh
 
 ```bash
-./election_data/bin/python data/scripts/export_manifest_metadata.py
+data/election_data/bin/python data/scripts/export_manifest_metadata.py
 ```
 
 ### UKIP/Reform DB split migration
 
 ```bash
-./election_data/bin/python data/scripts/split_ukip_reform_parties.py --dry-run
-./election_data/bin/python data/scripts/split_ukip_reform_parties.py
+data/election_data/bin/python data/scripts/split_ukip_reform_parties.py --dry-run
+data/election_data/bin/python data/scripts/split_ukip_reform_parties.py
 ```
 
 ### Manifest contract used by webpage

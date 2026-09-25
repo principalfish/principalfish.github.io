@@ -12,15 +12,20 @@ Run the full check suite — strict `mypy` first (it gates the run), then `pytes
 
     cd data && ./run_tests.sh
 
-`run_tests.sh` forwards extra args to pytest, so you can narrow a run:
+`run_tests.sh` forwards extra args to pytest, appended *after* `tests/` — so a
+`-k` filter narrows the run, but a file path does not (both `tests/` and the
+path get collected, i.e. the whole suite still runs):
 
-    cd data && ./run_tests.sh tests/test_export_payload.py    # one file
-    cd data && ./run_tests.sh -k model_outputs -q             # by keyword
+    cd data && ./run_tests.sh -k model_outputs -q             # narrows: by keyword
 
 Run a single step with the venv interpreter directly:
 
     cd data && ./election_data/bin/python -m mypy             # type-check only (data/mypy.ini, strict)
     cd data && ./election_data/bin/python -m pytest tests/ -q # tests only
+
+For one file, call pytest directly instead of through `run_tests.sh`:
+
+    cd data && ./election_data/bin/python -m pytest tests/test_export_payload.py -q
 
 Tests live in `data/tests/`; shared DB fixtures are in `data/tests/conftest.py`
 (each test gets a fresh temporary SQLite database, so real data is never touched).

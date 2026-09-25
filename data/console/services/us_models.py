@@ -108,11 +108,6 @@ class UsChamber:
     rebuild_flag: str = REBUILD_HISTORY_FLAG
 
     @property
-    def tracked_matchup_required(self) -> bool:
-        """Whether this chamber's model refuses to run without a tracked matchup."""
-        return self.tracked_matchup_map_name is not None
-
-    @property
     def model_step_label(self) -> str:
         """Heading used for this chamber's block of model output."""
         return f"Run {self.label} model"

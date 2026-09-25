@@ -92,7 +92,7 @@ OTHERS_PARTY_NAMES: frozenset[str] = frozenset({"other", "others"})
 MATERIAL_CANDIDATE_SHARE: float = 10.0
 
 
-class TrackedMatchupMissing(ValueError):
+class TrackedMatchupMissingError(ValueError):
     """No usable national tracked matchup for a spec that requires one.
 
     Raised for the President, whose national series is a head-to-head between
@@ -123,7 +123,7 @@ class UsModelSpec:
             this spec's own map. The Senate reads the generic ballot from
             ``"US House Districts 2024"``; ``None`` means "this spec's map".
         requires_tracked_matchup: When ``True`` the run aborts unless a national tracked
-            matchup is set (the President — see :class:`TrackedMatchupMissing`).
+            matchup is set (the President — see :class:`TrackedMatchupMissingError`).
         seat_matchup_policy: Which matchup a seat's own polls must carry to count.
             ``"per_seat"`` follows each seat's ``tracked_matchups`` row (Senate, House);
             ``"national"`` makes every seat follow the national matchup (the President,
@@ -1533,7 +1533,7 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
 
     Raises:
         ValueError: If either map is missing.
-        TrackedMatchupMissing: If ``spec.requires_tracked_matchup`` and no matchup
+        TrackedMatchupMissingError: If ``spec.requires_tracked_matchup`` and no matchup
             is in force — either no row exists, or a row sets ``matchup`` to NULL
             to ignore the race.
     """
@@ -1558,7 +1558,7 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
             if tracked is not None
             else "no tracked matchup has been set"
         )
-        raise TrackedMatchupMissing(
+        raise TrackedMatchupMissingError(
             f"{spec.election_name_prefix}: {reason} for the national race on "
             f"'{national_map_name}'. Choose a matchup in the console before running "
             "this model."
@@ -2724,7 +2724,7 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     # entry and no meta file.
     try:
         scope = resolve_poll_scope(db, spec)
-    except TrackedMatchupMissing as exc:
+    except TrackedMatchupMissingError as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
 

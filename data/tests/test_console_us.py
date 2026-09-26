@@ -110,7 +110,7 @@ class TestUsRoutesRegistered:
         assert "GET" in methods["/us/import"]
         assert "POST" in methods["/us/import/start"]
         assert "GET" in methods["/us/import/<token>"]
-        for suffix in ("confirm", "skip", "approve-group"):
+        for suffix in ("confirm", "skip", "approve-race"):
             assert "POST" in methods[f"/us/import/<token>/{suffix}"]
         assert {"GET", "POST"} <= methods["/us/import/<token>/finish"]
 

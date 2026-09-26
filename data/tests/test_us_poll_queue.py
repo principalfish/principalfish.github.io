@@ -1733,7 +1733,7 @@ class TestApproveGroupRoute:
         client.get(f"/us/import/{token}")
 
         response = client.post(
-            f"/us/import/{token}/approve-group", data={"expected_index": "0"}
+            f"/us/import/{token}/approve-race", data={"expected_index": "0"}
         )
 
         assert response.headers["Location"].endswith(f"/us/import/{token}")
@@ -1765,7 +1765,7 @@ class TestApproveGroupRoute:
         # Stored after the queue was built, so the batch finds it present.
         _store(us_db, stored)
 
-        client.post(f"/us/import/{token}/approve-group", data={"expected_index": "0"})
+        client.post(f"/us/import/{token}/approve-race", data={"expected_index": "0"})
 
         body = client.get(f"/us/import/{token}", follow_redirects=True).get_data(
             as_text=True
@@ -1780,7 +1780,7 @@ class TestApproveGroupRoute:
     ) -> None:
         token = _open_queue(client, monkeypatch, *_michigan_rows(us_db, 2))
 
-        client.post(f"/us/import/{token}/approve-group", data={"expected_index": "1"})
+        client.post(f"/us/import/{token}/approve-race", data={"expected_index": "1"})
 
         assert _state(token).index == 0
         assert _polls_on(us_db, SENATE_MAP) == 0
@@ -2086,7 +2086,7 @@ _TOKEN_ROUTES = [
     ("GET", ""),
     ("POST", "/confirm"),
     ("POST", "/skip"),
-    ("POST", "/approve-group"),
+    ("POST", "/approve-race"),
     ("GET", "/finish"),
     ("POST", "/finish"),
 ]

@@ -358,10 +358,10 @@ def skip(token: str) -> ResponseReturnValue:
     return redirect(url_for("us_poll_import.queue", token=token))
 
 
-@bp.route("/us/import/<token>/approve-group", methods=["POST"])
+@bp.route("/us/import/<token>/approve-race", methods=["POST"])
 @_serialised
 def approve_race(token: str) -> ResponseReturnValue:
-    """POST /us/import/<token>/approve-group — Import the rest of the current race.
+    """POST /us/import/<token>/approve-race — Import the rest of the current race.
 
     The race is the one of the poll under the cursor — never a value from the
     form — so a stale or tampered submission cannot approve another race.

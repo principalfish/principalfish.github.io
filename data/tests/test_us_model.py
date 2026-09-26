@@ -343,7 +343,7 @@ def _us_spec(
     *,
     map_name: str,
     national_poll_map_name: str | None = None,
-    requires_tracked_matchup: bool = False,
+    tracked_matchup_required: bool = False,
     seat_matchup_policy: str = "per_seat",
 ) -> UsModelSpec:
     """A spec whose trend files live under ``tmp_path`` — never the repo's own."""
@@ -357,7 +357,7 @@ def _us_spec(
             trend_cache_json=tmp_path / "trends.json",
             trend_cache_meta_json=tmp_path / "trends_meta.json",
             national_poll_map_name=national_poll_map_name,
-            requires_tracked_matchup=requires_tracked_matchup,
+            tracked_matchup_required=tracked_matchup_required,
             seat_matchup_policy=seat_matchup_policy,
         ),
     )
@@ -635,12 +635,12 @@ class TestResolvePollScope:
         from run_us_senate_model import SPEC as SENATE_SPEC
 
         assert SENATE_SPEC.national_poll_map_name == HOUSE_MAP
-        assert SENATE_SPEC.requires_tracked_matchup is False
+        assert SENATE_SPEC.tracked_matchup_required is False
 
     def test_shipped_president_spec_requires_a_matchup(self) -> None:
         from run_us_presidential_model import SPEC as PRESIDENT_SPEC
 
-        assert PRESIDENT_SPEC.requires_tracked_matchup is True
+        assert PRESIDENT_SPEC.tracked_matchup_required is True
         assert PRESIDENT_SPEC.seat_matchup_policy == "national"
         assert PRESIDENT_SPEC.national_poll_map_name is None
 
@@ -662,7 +662,7 @@ class TestResolvePollScope:
 
     def test_president_without_a_tracked_row_raises(self, db: Database, tmp_path: Path) -> None:
         db.add_map(PRESIDENT_MAP, parliament="us_president")
-        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, requires_tracked_matchup=True)
+        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
 
         with pytest.raises(TrackedMatchupMissing, match="no tracked matchup has been set"):
             resolve_poll_scope(db, spec)
@@ -672,7 +672,7 @@ class TestResolvePollScope:
         # "never configured", but just as unrunnable for the President.
         president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
         db.set_tracked_matchup(president_map.id, None, None, source="manual")
-        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, requires_tracked_matchup=True)
+        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
 
         with pytest.raises(TrackedMatchupMissing, match="polls are ignored"):
             resolve_poll_scope(db, spec)
@@ -683,7 +683,7 @@ class TestResolvePollScope:
         spec = _us_spec(
             tmp_path,
             map_name=PRESIDENT_MAP,
-            requires_tracked_matchup=True,
+            tracked_matchup_required=True,
             seat_matchup_policy="national",
         )
 
@@ -853,7 +853,7 @@ class TestLatestPollDate:
                 **cast(dict[str, Any], later),
             )
 
-        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, requires_tracked_matchup=True)
+        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
         scope = resolve_poll_scope(db, spec)
 
         # The later polls are a different matchup and a state poll, so the cap
@@ -899,7 +899,7 @@ class TestMainForSpecWithoutMatchup:
         spec = _us_spec(
             tmp_path,
             map_name=PRESIDENT_MAP,
-            requires_tracked_matchup=True,
+            tracked_matchup_required=True,
             seat_matchup_policy="national",
         )
         monkeypatch.setattr(sys, "argv", ["run_us_presidential_model.py", "--dry-run"])
@@ -922,7 +922,7 @@ class TestMainForSpecWithoutMatchup:
     ) -> None:
         president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
         db.set_tracked_matchup(president_map.id, None, None, source="manual")
-        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, requires_tracked_matchup=True)
+        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
         monkeypatch.setattr(sys, "argv", ["run_us_presidential_model.py", "--dry-run"])
 
         assert main_for_spec(spec, db_factory=lambda: db) == 2
@@ -937,7 +937,7 @@ class TestMainForSpecWithoutMatchup:
         # The scope is resolved before the retrospective branch, so --start-date
         # cannot sneak past the missing matchup.
         db.add_map(PRESIDENT_MAP, parliament="us_president")
-        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, requires_tracked_matchup=True)
+        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
         monkeypatch.setattr(
             sys,
             "argv",
@@ -960,7 +960,7 @@ class TestMainForSpecWithoutMatchup:
 
 class TestTrendCacheMeta:
     def test_includes_the_matchup_when_set(self, tmp_path: Path) -> None:
-        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, requires_tracked_matchup=True)
+        spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
         usage = LatestPollUsage(
             pollster="Emerson",
             fieldwork_start=date(2028, 5, 30),
@@ -1904,7 +1904,7 @@ class TestRunSimulationSeatBlending:
         spec = _us_spec(
             tmp_path,
             map_name=PRESIDENT_MAP,
-            requires_tracked_matchup=True,
+            tracked_matchup_required=True,
             seat_matchup_policy="national",
         )
 
@@ -1954,7 +1954,7 @@ class TestRunSimulationSeatBlending:
         spec = _us_spec(
             tmp_path,
             map_name=PRESIDENT_MAP,
-            requires_tracked_matchup=True,
+            tracked_matchup_required=True,
             seat_matchup_policy="national",
         )
 
@@ -2093,7 +2093,7 @@ class TestLatestPollDateWithSeatPolls:
         spec = _us_spec(
             tmp_path,
             map_name=PRESIDENT_MAP,
-            requires_tracked_matchup=True,
+            tracked_matchup_required=True,
             seat_matchup_policy="national",
         )
         scope = resolve_poll_scope(db, spec)
@@ -3819,7 +3819,7 @@ class TestRebuildHistoryEndToEnd:
         spec = _us_spec(
             tmp_path,
             map_name=PRESIDENT_MAP,
-            requires_tracked_matchup=True,
+            tracked_matchup_required=True,
             seat_matchup_policy="national",
         )
         db.set_tracked_matchup(president_map.id, None, VANCE_NEWSOM, source="manual")

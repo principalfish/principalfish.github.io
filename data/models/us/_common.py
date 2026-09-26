@@ -122,7 +122,7 @@ class UsModelSpec:
         national_poll_map_name: Map holding the **national** poll series, when it is not
             this spec's own map. The Senate reads the generic ballot from
             ``"US House Districts 2024"``; ``None`` means "this spec's map".
-        requires_tracked_matchup: When ``True`` the run aborts unless a national tracked
+        tracked_matchup_required: When ``True`` the run aborts unless a national tracked
             matchup is set (the President — see :class:`TrackedMatchupMissing`).
         seat_matchup_policy: Which matchup a seat's own polls must carry to count.
             ``"per_seat"`` follows each seat's ``tracked_matchups`` row (Senate, House);
@@ -146,7 +146,7 @@ class UsModelSpec:
     trend_cache_meta_json: Path
     seat_name_allowlist: frozenset[str] | None = None
     national_poll_map_name: str | None = None
-    requires_tracked_matchup: bool = False
+    tracked_matchup_required: bool = False
     seat_matchup_policy: SeatMatchupPolicy = "per_seat"
     # A factory, not a shared ``{}``: a mutable default would be one dict for
     # every spec ever built.
@@ -1533,7 +1533,7 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
 
     Raises:
         ValueError: If either map is missing.
-        TrackedMatchupMissing: If ``spec.requires_tracked_matchup`` and no matchup
+        TrackedMatchupMissing: If ``spec.tracked_matchup_required`` and no matchup
             is in force — either no row exists, or a row sets ``matchup`` to NULL
             to ignore the race.
     """
@@ -1552,7 +1552,7 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
     tracked = db.get_tracked_matchup(national_map.id, None)
     national_matchup = tracked.matchup if tracked is not None else None
 
-    if spec.requires_tracked_matchup and national_matchup is None:
+    if spec.tracked_matchup_required and national_matchup is None:
         reason = (
             "its tracked matchup is set to NULL (this race's polls are ignored)"
             if tracked is not None

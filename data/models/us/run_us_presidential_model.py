@@ -39,7 +39,7 @@ SPEC = UsModelSpec(
     trend_cache_meta_json=RESULTS_DIR / "us-president-trends_meta.json",
     # The national series is a head-to-head between two named candidates, so the
     # run needs to know which one: with no tracked matchup it exits 2.
-    requires_tracked_matchup=True,
+    tracked_matchup_required=True,
     # Statewide presidential polls ask the same head-to-head as the national ones,
     # so they follow the national matchup rather than a per-seat one.
     seat_matchup_policy="national",

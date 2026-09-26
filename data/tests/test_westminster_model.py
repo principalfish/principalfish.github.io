@@ -1,17 +1,19 @@
 """Tests for the Westminster UNS simulation model.
 
-Covers the pure projection functions, plus the contract that the SQLite and
-trend-cache writers resolve their paths when called rather than at import.
+Covers the pure projection functions, the database helpers that load the map,
+baseline and polls for a run, and the contract that the SQLite and trend-cache
+writers resolve their paths when called rather than at import.
 """
 
 from __future__ import annotations
 
 import inspect
 import json
+import re
 import sqlite3
 import sys
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from contextlib import closing
 from datetime import date
 from pathlib import Path
@@ -24,27 +26,38 @@ import pytest
 
 import run_uns_model
 from db import Database
+from models import ElectionType, Poll
 from run_uns_model import (
     LatestPollUsage,
     PARTY_ID_ALIASES,
     SeatRef,
     SimulationConfig,
+    aggregate_poll_shares,
+    build_baseline_vote_state,
+    build_reference_data,
     compute_region_diffs,
     database_file,
     dates_to_run_for_cfg,
     default_sqlite_path,
     delete_model_uns_for_as_of_date,
     existing_trend_dates,
+    fetch_seat_refs,
     latest_poll_snippet,
     persist_projection,
     project_seat_votes,
     reset_existing_model_outputs,
+    resolve_simulation_scope,
     run_simulation,
     update_trend_cache_json,
     weighted_average,
     write_trend_cache_meta,
 )
-from tests.uk_fixtures import add_poll_with_rows, seed_westminster_world
+from tests.uk_fixtures import (
+    WESTMINSTER_BASELINE_VOTES,
+    WestminsterWorld,
+    add_poll_with_rows,
+    seed_westminster_world,
+)
 
 
 # ── weighted_average ──────────────────────────────────────────────────────────
@@ -351,6 +364,826 @@ class TestProjectSeatVotes:
         )
         assert winners["Labour"] == 1
         assert winners["Conservative"] == 1
+
+
+# ── Database helpers: shared seeding ──────────────────────────────────────────
+
+# The simulation window most aggregation tests use.
+_SINCE = date(2026, 5, 1)
+_AS_OF = date(2026, 6, 10)
+
+# An aggregation result: ``(weighted_sums, total_weights, latest_poll_usage)``.
+_Aggregate = tuple[
+    dict[tuple[int | None, int], float],
+    dict[tuple[int | None, int], float],
+    Any,
+]
+
+
+def _simulation_config(
+    world: WestminsterWorld,
+    *,
+    map_name: str | None = None,
+    baseline_election_name: str | None = None,
+    since_date: date = _SINCE,
+    as_of_date: date = _AS_OF,
+    dry_run: bool = True,
+) -> SimulationConfig:
+    """A config for ``world``, defaulting to its map and baseline election."""
+    return SimulationConfig(
+        map_name=map_name if map_name is not None else world.map_name,
+        baseline_election_name=(
+            baseline_election_name
+            if baseline_election_name is not None
+            else world.baseline_election_name
+        ),
+        as_of_date=as_of_date,
+        since_date=since_date,
+        half_life_days=7.0,
+        output_csv=None,
+        dry_run=dry_run,
+    )
+
+
+def _seed_election(
+    db: Database,
+    map_id: int,
+    name: str,
+    votes: Sequence[tuple[int, int | None, float | None]],
+) -> int:
+    """Add a 2024 ``uk_general`` election on ``map_id`` and return its id.
+
+    Each vote is ``(seat_id, party_id, vote_total)``; ``None`` party ids and
+    totals are stored as NULL.
+    """
+    election = db.add_election(map_id, 2024, name, ElectionType.uk_general)
+    for seat_id, party_id, vote_total in votes:
+        db.add_vote(election.id, seat_id, party_id=party_id, vote_total=vote_total)
+    return int(election.id)
+
+
+def _seed_regionless_seat(
+    db: Database, world: WestminsterWorld, votes: Mapping[str, float]
+) -> int:
+    """Add "Aberdeen South" (no region) with ``votes`` in the 2024 baseline.
+
+    ``votes`` maps party name to vote total. Returns the seat id.
+    """
+    seat = db.add_seat(world.map_id, "Aberdeen South")
+    for party_name, total in votes.items():
+        db.add_vote(
+            world.baseline_election_id,
+            seat.id,
+            party_id=world.party_ids[party_name],
+            vote_total=total,
+        )
+    return int(seat.id)
+
+
+def _region_by_seat_id(world: WestminsterWorld) -> dict[int, int | None]:
+    """The seeded seats' regions, keyed by seat id."""
+    return {
+        world.seat_ids[seat_name]: world.region_ids[region_name]
+        for seat_name, (region_name, _) in WESTMINSTER_BASELINE_VOTES.items()
+    }
+
+
+def _add_poll(
+    db: Database,
+    world: WestminsterWorld,
+    fieldwork_end: date,
+    national: Mapping[int, float],
+    *,
+    pollster: str = "pollster_a",
+    fieldwork_start: date | None = None,
+    regional: Mapping[int, Mapping[int, float]] | None = None,
+) -> Poll:
+    """Add a poll on ``world``'s map by the pollster with identifier ``pollster``."""
+    return add_poll_with_rows(
+        db,
+        map_id=world.map_id,
+        pollster_identifier=pollster,
+        fieldwork_end=fieldwork_end,
+        fieldwork_start=fieldwork_start,
+        national=national,
+        regional=regional,
+    )
+
+
+def _aggregate(
+    db: Database,
+    world: WestminsterWorld,
+    *,
+    since_date: date = _SINCE,
+    as_of_date: date = _AS_OF,
+    half_life_days: float = 7.0,
+    pollster_weight_by_id: dict[int, float] | None = None,
+    pollster_name_by_id: dict[int, str] | None = None,
+) -> _Aggregate:
+    """Run ``aggregate_poll_shares`` over ``world``'s map."""
+    return cast(
+        _Aggregate,
+        aggregate_poll_shares(
+            db,
+            world.map_id,
+            since_date,
+            as_of_date,
+            half_life_days,
+            pollster_weight_by_id or {},
+            pollster_name_by_id or {},
+        ),
+    )
+
+
+# ── resolve_simulation_scope ──────────────────────────────────────────────────
+
+
+class TestResolveSimulationScope:
+    """Tests for resolve_simulation_scope — map/baseline lookup and since_date."""
+
+    def test_missing_map_raises(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+
+        with pytest.raises(ValueError, match="^Map not found: Nowhere$"):
+            resolve_simulation_scope(db, _simulation_config(world, map_name="Nowhere"))
+
+    def test_missing_baseline_raises(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        cfg = _simulation_config(world, baseline_election_name="1997 General Election")
+
+        with pytest.raises(
+            ValueError, match="^Baseline election not found: 1997 General Election$"
+        ):
+            resolve_simulation_scope(db, cfg)
+
+    def test_baseline_on_another_map_raises(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        other_map = db.add_map("Scottish Parliament 2021", parliament="holyrood")
+        db.add_election(
+            other_map.id, 2021, "2021 Holyrood", ElectionType.holyrood_general
+        )
+        cfg = _simulation_config(world, baseline_election_name="2021 Holyrood")
+
+        message = (
+            f"Baseline election map_id={other_map.id} does not match map "
+            "'UK Constituencies post 2022'"
+        )
+        with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+            resolve_simulation_scope(db, cfg)
+
+    def test_sentinel_since_date_becomes_the_baseline_year(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        cfg = _simulation_config(world, since_date=date(1900, 1, 1))
+
+        poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
+
+        assert poll_map.id == world.map_id
+        assert baseline.id == world.baseline_election_id
+        assert since_date == date(2024, 1, 1)
+
+    @pytest.mark.parametrize(
+        "since_date", [date(2026, 5, 1), date(1900, 1, 2), date(1899, 12, 31)]
+    )
+    def test_other_since_dates_pass_through(
+        self, db: Database, since_date: date
+    ) -> None:
+        world = seed_westminster_world(db)
+        cfg = _simulation_config(world, since_date=since_date)
+
+        poll_map, baseline, resolved = resolve_simulation_scope(db, cfg)
+
+        assert poll_map.name == "UK Constituencies post 2022"
+        assert baseline.name == "2024 General Election"
+        assert resolved == since_date
+
+
+# ── fetch_seat_refs ───────────────────────────────────────────────────────────
+
+
+class TestFetchSeatRefs:
+    """Tests for fetch_seat_refs — one SeatRef per seat on the map, by name."""
+
+    def test_seats_ordered_by_name_with_regionless_seat_kept(
+        self, db: Database
+    ) -> None:
+        world = seed_westminster_world(db)
+        orphan = db.add_seat(world.map_id, "Aberdeen South")
+        other_map = db.add_map("Another Map")
+        db.add_seat(other_map.id, "Aardvark Central")
+
+        refs = fetch_seat_refs(db, world.map_id)
+
+        seat_ids = world.seat_ids
+        region_ids = world.region_ids
+        assert refs == [
+            SeatRef(id=orphan.id, region_id=None, seat_name="Aberdeen South"),
+            SeatRef(
+                id=seat_ids["Cardiff East"],
+                region_id=region_ids["Wales"],
+                seat_name="Cardiff East",
+            ),
+            SeatRef(
+                id=seat_ids["Glasgow North"],
+                region_id=region_ids["Scotland"],
+                seat_name="Glasgow North",
+            ),
+            SeatRef(
+                id=seat_ids["Hexham"],
+                region_id=region_ids["North East England"],
+                seat_name="Hexham",
+            ),
+            SeatRef(
+                id=seat_ids["Holborn and St Pancras"],
+                region_id=region_ids["London"],
+                seat_name="Holborn and St Pancras",
+            ),
+        ]
+
+    def test_map_without_seats_gives_empty_list(self, db: Database) -> None:
+        empty_map = db.add_map("Empty Map")
+
+        assert fetch_seat_refs(db, empty_map.id) == []
+
+
+# ── build_reference_data ──────────────────────────────────────────────────────
+
+
+class TestBuildReferenceData:
+    """Tests for build_reference_data — the simulation's lookup tables."""
+
+    def test_lookup_tables(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        orphan_id = _seed_regionless_seat(db, world, {})
+        weighted = db.add_pollster("Weighted Ltd", "weighted", weight=0.5)
+        unweighted_poll = add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="unweighted",
+            pollster_name="Unweighted Ltd",
+            pollster_weight=None,
+            fieldwork_end=_AS_OF,
+            national={},
+        )
+        stored = db.get_pollster_by_identifier("unweighted")
+        assert stored is not None
+        assert stored.weight is None
+
+        (
+            seats,
+            regions,
+            seat_by_id,
+            region_by_id,
+            region_by_seat_id,
+            party_name_by_id,
+            pollster_weight_by_id,
+            pollster_name_by_id,
+        ) = build_reference_data(db, world.map_id)
+
+        assert [seat.seat_name for seat in seats] == [
+            "Aberdeen South",
+            "Cardiff East",
+            "Glasgow North",
+            "Hexham",
+            "Holborn and St Pancras",
+        ]
+        assert len(regions) == 12
+        assert len(seat_by_id) == 5
+        assert {seat_id: seat.seat_name for seat_id, seat in seat_by_id.items()} == {
+            orphan_id: "Aberdeen South",
+            world.seat_ids["Cardiff East"]: "Cardiff East",
+            world.seat_ids["Glasgow North"]: "Glasgow North",
+            world.seat_ids["Hexham"]: "Hexham",
+            world.seat_ids["Holborn and St Pancras"]: "Holborn and St Pancras",
+        }
+        assert len(region_by_id) == 12
+        assert region_by_id[world.region_ids["Wales"]].name == "Wales"
+        assert region_by_id[world.region_ids["London"]].name == "London"
+        assert region_by_seat_id == {
+            orphan_id: None,
+            world.seat_ids["Cardiff East"]: world.region_ids["Wales"],
+            world.seat_ids["Glasgow North"]: world.region_ids["Scotland"],
+            world.seat_ids["Hexham"]: world.region_ids["North East England"],
+            world.seat_ids["Holborn and St Pancras"]: world.region_ids["London"],
+        }
+        assert len(party_name_by_id) == 15
+        assert party_name_by_id[world.party_ids["Labour"]] == "Labour"
+        assert party_name_by_id[7] == "Other"
+        assert party_name_by_id[15] == "Others"
+        assert pollster_weight_by_id == {
+            weighted.id: 0.5,
+            unweighted_poll.pollster_id: 1.0,
+        }
+        assert pollster_name_by_id == {
+            weighted.id: "Weighted Ltd",
+            unweighted_poll.pollster_id: "Unweighted Ltd",
+        }
+
+    def test_empty_map_and_no_pollsters(self, db: Database) -> None:
+        empty_map = db.add_map("Empty Map")
+
+        (
+            seats,
+            regions,
+            seat_by_id,
+            region_by_id,
+            region_by_seat_id,
+            party_name_by_id,
+            pollster_weight_by_id,
+            pollster_name_by_id,
+        ) = build_reference_data(db, empty_map.id)
+
+        assert seats == []
+        assert list(regions) == []
+        assert seat_by_id == {}
+        assert region_by_id == {}
+        assert region_by_seat_id == {}
+        assert party_name_by_id == {}
+        assert pollster_weight_by_id == {}
+        assert pollster_name_by_id == {}
+
+
+# ── build_baseline_vote_state ─────────────────────────────────────────────────
+
+
+class TestBuildBaselineVoteState:
+    """Tests for build_baseline_vote_state — baseline totals and shares."""
+
+    def test_election_without_votes_raises(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        election_id = _seed_election(db, world.map_id, "Empty Election", [])
+
+        with pytest.raises(ValueError, match="^Baseline election has no votes$"):
+            build_baseline_vote_state(db, election_id, _region_by_seat_id(world))
+
+    def test_votes_without_party_or_total_raise(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        hexham = world.seat_ids["Hexham"]
+        election_id = _seed_election(
+            db,
+            world.map_id,
+            "Independents Only",
+            [(hexham, None, 5000.0), (hexham, world.party_ids["Labour"], None)],
+        )
+
+        with pytest.raises(
+            ValueError, match="^No baseline seat-party vote totals available$"
+        ):
+            build_baseline_vote_state(db, election_id, _region_by_seat_id(world))
+
+    def test_totals_and_shares(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        p = world.party_ids
+        r = world.region_ids
+
+        seat_totals, national_totals, national_shares, region_shares = (
+            build_baseline_vote_state(
+                db, world.baseline_election_id, _region_by_seat_id(world)
+            )
+        )
+
+        assert len(seat_totals) == 4
+        assert seat_totals[world.seat_ids["Holborn and St Pancras"]] == {
+            p["Labour"]: 20000.0,
+            p["Conservative"]: 6000.0,
+            p["Green"]: 5000.0,
+            p["Liberal Democrats"]: 4000.0,
+            p["Reform UK"]: 3000.0,
+            p["Others"]: 2000.0,
+        }
+        assert national_totals == {
+            p["Labour"]: 67000.0,
+            p["Conservative"]: 32000.0,
+            p["Reform UK"]: 18000.0,
+            p["Scottish National Party"]: 12000.0,
+            p["Green"]: 11500.0,
+            p["Liberal Democrats"]: 11500.0,
+            p["Plaid Cymru"]: 5000.0,
+            p["Others"]: 3000.0,
+        }
+        # National total 160000.
+        assert national_shares == pytest.approx(
+            {
+                p["Labour"]: 41.875,
+                p["Conservative"]: 20.0,
+                p["Reform UK"]: 11.25,
+                p["Scottish National Party"]: 7.5,
+                p["Green"]: 7.1875,
+                p["Liberal Democrats"]: 7.1875,
+                p["Plaid Cymru"]: 3.125,
+                p["Others"]: 1.875,
+            }
+        )
+        assert set(region_shares) == {
+            r["London"],
+            r["Scotland"],
+            r["Wales"],
+            r["North East England"],
+        }
+        # London is Holborn and St Pancras alone: 40000 votes.
+        assert region_shares[r["London"]] == pytest.approx(
+            {
+                p["Labour"]: 50.0,
+                p["Conservative"]: 15.0,
+                p["Green"]: 12.5,
+                p["Liberal Democrats"]: 10.0,
+                p["Reform UK"]: 7.5,
+                p["Others"]: 5.0,
+            }
+        )
+        # Wales is Cardiff East alone: 34000 votes.
+        assert region_shares[r["Wales"]][p["Plaid Cymru"]] == pytest.approx(
+            100 * 5000 / 34000
+        )
+
+    def test_other_is_merged_into_others(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        hexham = world.seat_ids["Hexham"]
+        north_east = world.region_ids["North East England"]
+        # Hexham's baseline has "Other" (id 7) at 1000 of 51000 votes.
+
+        seat_totals, national_totals, national_shares, region_shares = (
+            build_baseline_vote_state(
+                db, world.baseline_election_id, _region_by_seat_id(world)
+            )
+        )
+
+        assert 7 not in seat_totals[hexham]
+        assert seat_totals[hexham][15] == 1000.0
+        assert 7 not in national_totals
+        assert national_totals[15] == 3000.0
+        assert 7 not in national_shares
+        assert 7 not in region_shares[north_east]
+        assert region_shares[north_east][15] == pytest.approx(100 * 1000 / 51000)
+
+    def test_alias_sums_other_and_others_in_the_same_seat(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        hexham = world.seat_ids["Hexham"]
+        labour = world.party_ids["Labour"]
+        election_id = _seed_election(
+            db,
+            world.map_id,
+            "Both Others",
+            [(hexham, 7, 300.0), (hexham, 15, 200.0), (hexham, labour, 500.0)],
+        )
+
+        seat_totals, national_totals, national_shares, _ = build_baseline_vote_state(
+            db, election_id, _region_by_seat_id(world)
+        )
+
+        assert seat_totals == {hexham: {15: 500.0, labour: 500.0}}
+        assert national_totals == {15: 500.0, labour: 500.0}
+        assert national_shares == pytest.approx({15: 50.0, labour: 50.0})
+
+    def test_regionless_seat_counts_nationally_but_not_regionally(
+        self, db: Database
+    ) -> None:
+        world = seed_westminster_world(db)
+        orphan_id = _seed_regionless_seat(db, world, {"Labour": 40000.0})
+        region_by_seat_id = _region_by_seat_id(world)
+        region_by_seat_id[orphan_id] = None
+        p = world.party_ids
+        r = world.region_ids
+
+        seat_totals, national_totals, national_shares, region_shares = (
+            build_baseline_vote_state(
+                db, world.baseline_election_id, region_by_seat_id
+            )
+        )
+
+        assert seat_totals[orphan_id] == {p["Labour"]: 40000.0}
+        assert national_totals[p["Labour"]] == 107000.0
+        # National total grows to 200000.
+        assert national_shares[p["Labour"]] == pytest.approx(53.5)
+        assert set(region_shares) == {
+            r["London"],
+            r["Scotland"],
+            r["Wales"],
+            r["North East England"],
+        }
+        assert region_shares[r["London"]][p["Labour"]] == pytest.approx(50.0)
+
+    def test_region_with_zero_votes_gets_no_shares(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        east_midlands = world.region_ids["East Midlands"]
+        seat = db.add_seat(world.map_id, "Derby North", region_id=east_midlands)
+        labour = world.party_ids["Labour"]
+        db.add_vote(
+            world.baseline_election_id, seat.id, party_id=labour, vote_total=0.0
+        )
+        region_by_seat_id = _region_by_seat_id(world)
+        region_by_seat_id[seat.id] = east_midlands
+
+        seat_totals, _, national_shares, region_shares = build_baseline_vote_state(
+            db, world.baseline_election_id, region_by_seat_id
+        )
+
+        assert seat_totals[seat.id] == {labour: 0.0}
+        assert east_midlands not in region_shares
+        assert len(region_shares) == 4
+        assert national_shares[labour] == pytest.approx(41.875)
+
+    def test_all_zero_totals_give_no_national_shares(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        hexham = world.seat_ids["Hexham"]
+        labour = world.party_ids["Labour"]
+        election_id = _seed_election(
+            db, world.map_id, "Zero Turnout", [(hexham, labour, 0.0)]
+        )
+
+        seat_totals, national_totals, national_shares, region_shares = (
+            build_baseline_vote_state(db, election_id, _region_by_seat_id(world))
+        )
+
+        assert seat_totals == {hexham: {labour: 0.0}}
+        assert national_totals == {labour: 0.0}
+        assert national_shares == {}
+        assert region_shares == {}
+
+
+# ── aggregate_poll_shares ─────────────────────────────────────────────────────
+
+
+class TestAggregatePollShares:
+    """Tests for aggregate_poll_shares — decayed, pollster-weighted poll sums."""
+
+    def test_no_polls_gives_empty_sums_and_no_latest_poll(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+
+        weighted_sums, total_weights, latest = _aggregate(db, world)
+
+        assert weighted_sums == {}
+        assert total_weights == {}
+        assert latest is None
+
+    def test_polls_outside_the_window_are_skipped(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        _add_poll(db, world, date(2026, 4, 30), {labour: 10.0})
+        _add_poll(db, world, date(2026, 5, 1), {labour: 20.0})
+        _add_poll(db, world, date(2026, 6, 10), {labour: 30.0})
+        _add_poll(db, world, date(2026, 6, 11), {labour: 90.0})
+
+        weighted_sums, total_weights, latest = _aggregate(db, world)
+
+        # Both window ends are inclusive; 2026-05-01 is 40 days before as_of.
+        assert weighted_sums == pytest.approx(
+            {(None, labour): 20.0 * 0.5 ** (40 / 7) + 30.0}
+        )
+        assert total_weights == pytest.approx({(None, labour): 0.5 ** (40 / 7) + 1.0})
+        assert latest.fieldwork_end == date(2026, 6, 10)
+
+    def test_decay_weight_halves_every_half_life(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        conservative = world.party_ids["Conservative"]
+        green = world.party_ids["Green"]
+        _add_poll(db, world, date(2026, 6, 10), {green: 8.0})
+        _add_poll(db, world, date(2026, 6, 3), {labour: 40.0})
+        _add_poll(db, world, date(2026, 5, 27), {conservative: 30.0})
+
+        weighted_sums, total_weights, _ = _aggregate(db, world, half_life_days=7.0)
+
+        assert total_weights == pytest.approx(
+            {(None, green): 1.0, (None, labour): 0.5, (None, conservative): 0.25}
+        )
+        assert weighted_sums == pytest.approx(
+            {(None, green): 8.0, (None, labour): 20.0, (None, conservative): 7.5}
+        )
+
+    @pytest.mark.parametrize("half_life_days", [0.0, -5.0])
+    def test_non_positive_half_life_is_clamped(
+        self, db: Database, half_life_days: float
+    ) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        conservative = world.party_ids["Conservative"]
+        green = world.party_ids["Green"]
+        _add_poll(db, world, date(2026, 6, 10), {labour: 40.0})
+        _add_poll(db, world, date(2026, 6, 9), {conservative: 30.0})
+        _add_poll(db, world, date(2026, 6, 8), {green: 8.0})
+
+        _, total_weights, _ = _aggregate(db, world, half_life_days=half_life_days)
+
+        # Clamped to 0.001 days: one day old halves the weight 1000 times, and
+        # two days old underflows to 0.0, which skips the poll.
+        assert set(total_weights) == {(None, labour), (None, conservative)}
+        assert total_weights[(None, labour)] == 1.0
+        assert total_weights[(None, conservative)] > 0.0
+        assert total_weights[(None, conservative)] == pytest.approx(
+            0.5**1000, rel=1e-9
+        )
+
+    def test_pollster_weight_scales_the_poll(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        conservative = world.party_ids["Conservative"]
+        weighted = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="weighted")
+        _add_poll(db, world, _AS_OF, {conservative: 30.0}, pollster="unlisted")
+
+        weighted_sums, total_weights, _ = _aggregate(
+            db, world, pollster_weight_by_id={weighted.pollster_id: 0.5}
+        )
+
+        # A pollster missing from the weight map counts at 1.0.
+        assert total_weights == pytest.approx(
+            {(None, labour): 0.5, (None, conservative): 1.0}
+        )
+        assert weighted_sums == pytest.approx(
+            {(None, labour): 20.0, (None, conservative): 30.0}
+        )
+
+    def test_zero_pollster_weight_counts_in_full_pins_current_behaviour(
+        self, db: Database
+    ) -> None:
+        """Pins current behaviour: ``weight or 1.0`` turns a 0.0 weight into 1.0.
+
+        A pollster weighted 0.0 is presumably meant to be ignored, but the
+        falsy check makes it count at full weight.
+        """
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        poll = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="zeroed")
+
+        weighted_sums, total_weights, latest = _aggregate(
+            db, world, pollster_weight_by_id={poll.pollster_id: 0.0}
+        )
+
+        assert total_weights == {(None, labour): 1.0}
+        assert weighted_sums == {(None, labour): 40.0}
+        assert latest is not None
+
+    def test_negative_pollster_weight_skips_the_poll(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        poll = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="negative")
+
+        weighted_sums, total_weights, latest = _aggregate(
+            db, world, pollster_weight_by_id={poll.pollster_id: -1.0}
+        )
+
+        assert weighted_sums == {}
+        assert total_weights == {}
+        assert latest is None
+
+    def test_poll_without_rows_is_skipped(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        older = _add_poll(db, world, date(2026, 6, 9), {labour: 40.0})
+        _add_poll(db, world, _AS_OF, {}, pollster="empty")
+
+        weighted_sums, _, latest = _aggregate(
+            db, world, pollster_name_by_id={older.pollster_id: "Pollster A"}
+        )
+
+        # The newer, empty poll is not the latest poll used.
+        assert latest == LatestPollUsage(
+            pollster="Pollster A",
+            fieldwork_start=date(2026, 6, 7),
+            fieldwork_end=date(2026, 6, 9),
+        )
+        assert set(weighted_sums) == {(None, labour)}
+
+    def test_row_without_party_is_skipped(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # ``poll_rows.party_id`` is NOT NULL, so a party-less row can't be seeded;
+        # serve one alongside the real rows to reach the guard.
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        _add_poll(db, world, _AS_OF, {labour: 40.0})
+        real_rows = db.get_rows_for_poll
+        partyless = SimpleNamespace(region_id=None, party_id=None, percentage=50.0)
+        monkeypatch.setattr(
+            db,
+            "get_rows_for_poll",
+            lambda poll_id: [*real_rows(poll_id), partyless],
+        )
+
+        weighted_sums, total_weights, _ = _aggregate(db, world)
+
+        assert weighted_sums == {(None, labour): 40.0}
+        assert total_weights == {(None, labour): 1.0}
+
+    def test_other_is_merged_into_others(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        scotland = world.region_ids["Scotland"]
+        _add_poll(
+            db,
+            world,
+            _AS_OF,
+            {7: 3.0, 15: 2.0},
+            regional={scotland: {7: 4.0}},
+        )
+
+        weighted_sums, total_weights, _ = _aggregate(db, world)
+
+        assert len(weighted_sums) == 2
+        assert weighted_sums == {(None, 15): 5.0, (scotland, 15): 4.0}
+        assert total_weights == {(None, 15): 2.0, (scotland, 15): 1.0}
+
+    def test_national_and_regional_rows_keyed_separately(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        snp = world.party_ids["Scottish National Party"]
+        scotland = world.region_ids["Scotland"]
+        wales = world.region_ids["Wales"]
+        _add_poll(
+            db,
+            world,
+            _AS_OF,
+            {labour: 40.0, snp: 3.0},
+            regional={scotland: {labour: 35.0, snp: 30.0}, wales: {labour: 38.0}},
+        )
+
+        weighted_sums, total_weights, _ = _aggregate(db, world)
+
+        assert weighted_sums == {
+            (None, labour): 40.0,
+            (None, snp): 3.0,
+            (scotland, labour): 35.0,
+            (scotland, snp): 30.0,
+            (wales, labour): 38.0,
+        }
+        assert set(total_weights) == set(weighted_sums)
+
+    def test_latest_poll_is_the_one_ending_last(self, db: Database) -> None:
+        # Beta ends later but started earlier, so only ``fieldwork_end`` picks it.
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        added = {
+            pollster: _add_poll(
+                db,
+                world,
+                end,
+                {labour: 40.0},
+                pollster=pollster,
+                fieldwork_start=start,
+            )
+            for pollster, start, end in (
+                ("beta", date(2026, 6, 1), date(2026, 6, 9)),
+                ("alpha", date(2026, 6, 7), date(2026, 6, 8)),
+            )
+        }
+
+        _, _, latest = _aggregate(
+            db,
+            world,
+            pollster_name_by_id={
+                added["alpha"].pollster_id: "Alpha",
+                added["beta"].pollster_id: "Beta",
+            },
+        )
+
+        assert latest == LatestPollUsage(
+            pollster="Beta",
+            fieldwork_start=date(2026, 6, 1),
+            fieldwork_end=date(2026, 6, 9),
+        )
+
+    @pytest.mark.parametrize("later_start_first", [True, False])
+    def test_same_end_date_ties_go_to_the_later_start(
+        self, db: Database, later_start_first: bool
+    ) -> None:
+        world = seed_westminster_world(db)
+        labour = world.party_ids["Labour"]
+        polls = [
+            ("beta", date(2026, 6, 7)),
+            ("alpha", date(2026, 6, 1)),
+        ]
+        added = {
+            pollster: _add_poll(
+                db,
+                world,
+                date(2026, 6, 9),
+                {labour: 40.0},
+                pollster=pollster,
+                fieldwork_start=start,
+            )
+            for pollster, start in (polls if later_start_first else polls[::-1])
+        }
+
+        _, _, latest = _aggregate(
+            db,
+            world,
+            pollster_name_by_id={
+                added["alpha"].pollster_id: "Alpha",
+                added["beta"].pollster_id: "Beta",
+            },
+        )
+
+        assert latest == LatestPollUsage(
+            pollster="Beta",
+            fieldwork_start=date(2026, 6, 7),
+            fieldwork_end=date(2026, 6, 9),
+        )
+
+    def test_unnamed_pollster_falls_back_to_its_id(self, db: Database) -> None:
+        world = seed_westminster_world(db)
+        poll = _add_poll(db, world, _AS_OF, {world.party_ids["Labour"]: 40.0})
+
+        _, _, latest = _aggregate(db, world)
+
+        assert latest.pollster == f"Pollster {poll.pollster_id}"
 
 
 # ── Database and trend-cache paths resolve when called ────────────────────────

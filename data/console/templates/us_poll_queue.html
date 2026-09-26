@@ -61,8 +61,8 @@
       <pre class="terminal-output">{{ item.detail }}</pre>
       <p>Retry resolves the poll against the database again; skip it below to move on.</p>
       <form method="post" action="{{ url_for('us_poll_import.skip', token=token) }}" class="inline-form">
-        <input type="hidden" name="expected_index" value="{{ expected_index }}">
-        <input type="hidden" name="action" value="retry">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
+        <input type="hidden" name="action" value="retry" />
         <button type="submit" class="button primary">Retry</button>
       </form>
     </section>
@@ -71,7 +71,7 @@
       <h3>Approve</h3>
       <p><strong>Stored as:</strong> {{ plan.pollster_name }}, {{ plan.rows|length }} row(s)</p>
       <form method="post" action="{{ url_for('us_poll_import.confirm', token=token) }}" class="inline-form">
-        <input type="hidden" name="expected_index" value="{{ expected_index }}">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
         <button type="submit" class="button primary">Approve &amp; Import</button>
       </form>
     </section>
@@ -81,17 +81,17 @@
     <h3>Skip, Approve the Race, or Leave</h3>
     <div class="actions">
       <form method="post" action="{{ url_for('us_poll_import.skip', token=token) }}" class="inline-form">
-        <input type="hidden" name="expected_index" value="{{ expected_index }}">
+        <input type="hidden" name="expected_index" value="{{ expected_index }}" />
         <button type="submit" class="button">Skip this poll</button>
       </form>
       {% if group_remaining %}
         <form method="post" action="{{ url_for('us_poll_import.approve_race', token=token) }}" class="inline-form">
-          <input type="hidden" name="expected_index" value="{{ expected_index }}">
+          <input type="hidden" name="expected_index" value="{{ expected_index }}" />
           <button type="submit" class="button">Approve all {{ group_remaining }} remaining in {{ race_label }}</button>
         </form>
       {% endif %}
       <form method="post" action="{{ url_for('us_poll_import.finish', token=token) }}" class="inline-form">
-        <input type="hidden" name="abandon" value="on">
+        <input type="hidden" name="abandon" value="on" />
         <button type="submit" class="button button-danger">Abandon queue</button>
       </form>
     </div>

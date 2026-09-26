@@ -1,4 +1,3 @@
-- match template style in the new US templates (attribute order, input tag form)
 - README: state the cwd on the remaining command blocks (sections 3, 4, 11); fix section 10 - says "from repo root" but runs ./election_data/bin/python (should be data/election_data/bin/python)
 - add hover text on map (hover is currently disabled - dom.js sets mouseenter to null)
 - check for uniformity of data / logic across models

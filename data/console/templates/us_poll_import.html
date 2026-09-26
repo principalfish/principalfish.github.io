@@ -18,25 +18,25 @@
         <legend>Contests</legend>
         {% for contest in contests %}
           <label class="checkbox">
-            <input type="checkbox" name="contests" value="{{ contest.slug }}" checked>
+            <input type="checkbox" name="contests" value="{{ contest.slug }}" checked />
             {{ contest.label }}
           </label>
         {% endfor %}
       </fieldset>
 
       <label for="states">Only these states (optional)</label>
-      <input id="states" type="text" name="states" placeholder="e.g. Texas, MI, Nebraska">
+      <input type="text" id="states" name="states" placeholder="e.g. Texas, MI, Nebraska" />
 
       <label for="cutoff_date">Only polls ending on or after (optional)</label>
-      <input id="cutoff_date" type="date" name="cutoff_date">
+      <input type="date" id="cutoff_date" name="cutoff_date" />
 
       <label class="checkbox">
-        <input type="checkbox" name="run_model_at_end" checked>
+        <input type="checkbox" name="run_model_at_end" checked />
         Run the US models and export once the queue is finished
       </label>
 
       <label class="checkbox">
-        <input type="checkbox" name="include_collapsed_for_uncovered">
+        <input type="checkbox" name="include_collapsed_for_uncovered" />
         Include hidden hypothetical tables for races with no visible poll table
       </label>
 

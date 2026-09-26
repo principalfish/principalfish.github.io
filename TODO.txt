@@ -1,19 +1,13 @@
-
-add hover text on map - some thought on seatPreview
-
-- check for uniformity of data / logic across models
-- check export order logic - unify
-- migrate presidential EV counts to database
-
-deferred from the US poll queue work (PR #62) - the rest is planned in 3 issues
-- add CSRF to the console POSTs (left out: localhost, single user, needs Flask-WTF + 28 forms)
 - merge the two state normalisers (us_wikipedia_polls vs us_geography) - changes seat/heading resolution, decide first
-- rename requires_tracked_matchup to match UsChamber's flag (16 test refs, cosmetic)
+- rename requires_tracked_matchup to match UsChamber's tracked_matchup_required (21 refs, cosmetic)
 - rename the /approve-group URL to /approve-race
 - re-import races whose stored polls have "<1%" gaps (parser fix only helps new imports)
 - move the CLI out of us_wikipedia_polls.py - print()s in a module the console imports
 - unify error types in the US modules (bare ValueError vs subclasses vs TypeError)
 - parameterise _poll_rows_table.html so the US queue page can reuse it
 - match template style in the new US templates (attribute order, input tag form)
-- README: state the cwd on the remaining command blocks (outside sections 2, 5-7, 10)
-- stop the test suite rewriting tracked model_output_trends.json (TREND_CACHE_JSON bound at import)
+- README: state the cwd on the remaining command blocks (sections 3, 4, 11); fix section 10 - says "from repo root" but runs ./election_data/bin/python (should be data/election_data/bin/python)
+- add hover text on map (hover is currently disabled - dom.js sets mouseenter to null)
+- check for uniformity of data / logic across models
+- check export order logic - unify
+- presidential EV counts: seats.electoral_votes exists, but export still uses the per-era table in old_data/scripts/usa/us_electoral_votes.py - needs per-era storage in the DB

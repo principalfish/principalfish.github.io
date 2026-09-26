@@ -48,6 +48,7 @@ from polls.importers.us.us_polls_common import surname
 from polls.importers.us.us_wikipedia_polls import (
     US_CONTESTS,
     US_CONTESTS_BY_SLUG,
+    UsImportError,
     UsImportPlan,
     UsPollIndex,
     UsPollRow,
@@ -202,7 +203,7 @@ def build_us_queue(
     ]
 
     items = [item for part in parts for item in part.items]
-    items.sort(key=lambda item: _sort_key(_us_row(item.row)))
+    items.sort(key=lambda item: _sort_key(narrow_us_row(item.row)))
     if cutoff is not None:
         effective_cutoff = cutoff
     else:
@@ -234,7 +235,7 @@ def group_key(row: ScrapedPollRow) -> GroupKey:
     Raises:
         TypeError: If the row is not a US row.
     """
-    us_row = _us_row(row)
+    us_row = narrow_us_row(row)
     return (us_row.contest, us_row.seat_id)
 
 
@@ -292,8 +293,12 @@ def _new_item(row: UsPollRow) -> QueueItem:
     return QueueItem(row=row)
 
 
-def _us_row(row: ScrapedPollRow) -> UsPollRow:
-    """Narrow a queued row back to the US row the scraper built."""
+def narrow_us_row(row: ScrapedPollRow) -> UsPollRow:
+    """Narrow a queued row back to the US row the scraper built.
+
+    Raises:
+        TypeError: If the row is not a US row, which a US payload never holds.
+    """
     if not isinstance(row, UsPollRow):
         raise TypeError(f"expected a UsPollRow, got {type(row).__name__}")
     return row
@@ -320,11 +325,11 @@ def prepare_us_item(db: Database, item: QueueItem, state: QueueState) -> None:
     if item.status != "pending" or item.plan is not None:
         return
 
-    row = _us_row(item.row)
+    row = narrow_us_row(item.row)
     try:
         plan = build_us_import_plan(db, row)
         warnings = _review_warnings(db, row, plan, item, state)
-    except (ValueError, SQLAlchemyError) as err:
+    except (UsImportError, SQLAlchemyError) as err:
         item.status = "failed"
         item.detail = str(err)
         item.warnings = []
@@ -361,10 +366,10 @@ def confirm_us_item(db: Database, item: QueueItem) -> None:
     if item.status != "pending" or not isinstance(item.plan, UsImportPlan):
         return
 
-    row = _us_row(item.row)
+    row = narrow_us_row(item.row)
     try:
         result = commit_us_import_plan(db, row, item.plan)
-    except (ValueError, SQLAlchemyError) as err:
+    except (UsImportError, SQLAlchemyError) as err:
         item.status = "failed"
         item.detail = str(err)
         return
@@ -517,7 +522,7 @@ def _other_matchups(
     for other in items:
         if other is item:
             continue
-        other_row = _us_row(other.row)
+        other_row = narrow_us_row(other.row)
         if (
             other_row.pollster_identifier == row.pollster_identifier
             and other_row.fieldwork_start == row.fieldwork_start

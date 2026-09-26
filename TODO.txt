@@ -1,5 +1,3 @@
-- move the CLI out of us_wikipedia_polls.py - print()s in a module the console imports
-- unify error types in the US modules (bare ValueError vs subclasses vs TypeError)
 - parameterise _poll_rows_table.html so the US queue page can reuse it
 - match template style in the new US templates (attribute order, input tag form)
 - README: state the cwd on the remaining command blocks (sections 3, 4, 11); fix section 10 - says "from repo root" but runs ./election_data/bin/python (should be data/election_data/bin/python)

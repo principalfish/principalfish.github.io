@@ -65,6 +65,7 @@ from polls.importers.us.us_wikipedia_polls import (
     OversizedTable,
     UnmatchedSeat,
     UsContest,
+    UsImportError,
     UsPollIndex,
     UsPollRow,
     apply_auto_tracked_matchups,
@@ -510,6 +511,20 @@ class TestPrepare:
         assert "no seat named 'Narnia'" in item.detail
         assert item.plan is None
 
+    def test_a_stray_value_error_is_not_taken_for_a_bad_row(
+        self, us_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def buggy(*args: object) -> None:
+            raise ValueError("a bug, not a bad row")
+
+        state = _queue(us_db, _row(us_db))
+        item = state.items[0]
+        monkeypatch.setattr(us_poll_queue, "_review_warnings", buggy)
+
+        with pytest.raises(ValueError, match="a bug, not a bad row"):
+            prepare_us_item(us_db, item, state)
+        assert item.status == "pending"
+
     def test_a_prepared_item_is_not_rebuilt(self, us_db: Database) -> None:
         state = _queue(us_db, _row(us_db))
         item = state.items[0]
@@ -733,11 +748,26 @@ class TestConfirm:
         assert item.status == "pending"
         assert us_db.get_polls_for_map(_map_id(us_db, SENATE_MAP)) == []
 
+    def test_a_stray_value_error_is_not_taken_for_a_bad_row(
+        self, us_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def buggy(*args: object) -> None:
+            raise ValueError("a bug, not a bad row")
+
+        state = _queue(us_db, _row(us_db))
+        item = state.items[0]
+        prepare_us_item(us_db, item, state)
+        monkeypatch.setattr(us_poll_queue, "commit_us_import_plan", buggy)
+
+        with pytest.raises(ValueError, match="a bug, not a bad row"):
+            confirm_us_item(us_db, item)
+        assert item.status == "pending"
+
     def test_a_commit_failure_marks_the_item_failed(
         self, us_db: Database, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         def broken(*args: object) -> None:
-            raise ValueError("seat 7 is not on map 2")
+            raise UsImportError("seat 7 is not on map 2")
 
         state = _queue(us_db, _row(us_db))
         item = state.items[0]
@@ -1620,7 +1650,7 @@ class TestConfirmRoute:
         client.get(f"/us/import/{token}")
 
         def failing_commit(*_args: Any) -> None:
-            raise ValueError("disk full")
+            raise UsImportError("disk full")
 
         monkeypatch.setattr(us_poll_queue, "commit_us_import_plan", failing_commit)
         client.post(f"/us/import/{token}/confirm", data={"expected_index": "0"})
@@ -1679,7 +1709,7 @@ class TestSkipRoute:
         def flaky_plan(db: Database, row: UsPollRow) -> Any:
             attempts.append(1)
             if len(attempts) == 1:
-                raise ValueError("transient")
+                raise UsImportError("transient")
             return real_plan(db, row)
 
         monkeypatch.setattr(us_poll_queue, "build_us_import_plan", flaky_plan)

@@ -74,6 +74,7 @@ from console.services.us_poll_queue import (
     confirm_us_item,
     finish_us_queue,
     group_key,
+    narrow_us_row,
     prepare_us_item,
     tracking_changed,
 )
@@ -258,7 +259,7 @@ def queue(token: str) -> ResponseReturnValue:
     db = get_db()
     prepare_us_item(db, item, state)
 
-    row = _us_row(item.row)
+    row = narrow_us_row(item.row)
     plan = item.plan if isinstance(item.plan, UsImportPlan) else None
     contest = US_CONTESTS_BY_SLUG.get(row.contest)
     contest_label = contest.label if contest is not None else row.contest
@@ -392,7 +393,7 @@ def approve_race(token: str) -> ResponseReturnValue:
     if item is None:
         return redirect(url_for("us_poll_import.finish", token=token))
 
-    row = _us_row(item.row)
+    row = narrow_us_row(item.row)
     outcome = approve_group(get_db(), state, group_key(row))
     contest = US_CONTESTS_BY_SLUG.get(row.contest)
     race = row.seat_name or (contest.label if contest is not None else row.contest)
@@ -487,17 +488,6 @@ def _stale_step(token: str) -> ResponseReturnValue:
 def _cursor_matches(state: QueueState) -> bool:
     """Return whether the submitted form was rendered for the current cursor."""
     return cursor_matches(state, request.form.get("expected_index", ""))
-
-
-def _us_row(row: object) -> UsPollRow:
-    """Narrow a queued row back to the US row the scraper built.
-
-    Raises:
-        TypeError: If the row is not a US row, which a US payload never holds.
-    """
-    if not isinstance(row, UsPollRow):
-        raise TypeError(f"expected a UsPollRow, got {type(row).__name__}")
-    return row
 
 
 def _tracked_label(

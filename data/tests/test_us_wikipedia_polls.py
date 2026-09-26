@@ -19,6 +19,7 @@ from urllib.error import HTTPError
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+import polls.importers.us.us_poll_cli as us_poll_cli
 import polls.importers.us.us_wikipedia_polls as us_wikipedia_polls
 from db import Database
 from polls.importers.us.us_polls_common import (
@@ -40,6 +41,7 @@ from polls.importers.us.us_wikipedia_polls import (
     NoMatchupTable,
     OversizedTable,
     UsContest,
+    UsImportError,
     UsPollRow,
     apply_auto_tracked_matchups,
     build_us_import_plan,
@@ -1872,26 +1874,26 @@ class TestBuildUsImportPlan:
 
     def test_an_unknown_contest_is_rejected(self, import_db: Database) -> None:
         row = _michigan_row(import_db).model_copy(update={"contest": "governors"})
-        with pytest.raises(ValueError, match="unknown contest"):
+        with pytest.raises(UsImportError, match="unknown contest"):
             build_us_import_plan(import_db, row)
 
     def test_a_missing_map_is_rejected(self, import_db: Database) -> None:
         row = _michigan_row(import_db).model_copy(update={"map_name": "US Senate 2030"})
-        with pytest.raises(ValueError, match="no map named"):
+        with pytest.raises(UsImportError, match="no map named"):
             build_us_import_plan(import_db, row)
 
     def test_a_seat_that_is_not_on_the_map_is_rejected(
         self, import_db: Database
     ) -> None:
         row = _michigan_row(import_db).model_copy(update={"seat_name": "Narnia"})
-        with pytest.raises(ValueError, match="no seat named"):
+        with pytest.raises(UsImportError, match="no seat named"):
             build_us_import_plan(import_db, row)
 
     def test_a_race_row_without_a_matchup_is_rejected(
         self, import_db: Database
     ) -> None:
         row = _michigan_row(import_db).model_copy(update={"matchup": None})
-        with pytest.raises(ValueError, match="no matchup"):
+        with pytest.raises(UsImportError, match="no matchup"):
             build_us_import_plan(import_db, row)
 
     def test_a_national_president_row_without_a_matchup_is_rejected(
@@ -1900,7 +1902,7 @@ class TestBuildUsImportPlan:
         # Stored, it would match the legacy "no seat, no matchup" poll shape.
         row = _page_rows(import_db, PRESIDENT, PRESIDENT_URL, PRESIDENT_PAGE)[0]
         assert row.seat_name is None
-        with pytest.raises(ValueError, match="no matchup"):
+        with pytest.raises(UsImportError, match="no matchup"):
             build_us_import_plan(import_db, row.model_copy(update={"matchup": None}))
 
     def test_a_row_with_no_resolvable_party_is_rejected(
@@ -1912,7 +1914,7 @@ class TestBuildUsImportPlan:
         assert senate is not None
         db.add_seat(senate.id, "Michigan")
         row = _michigan_row(db)
-        with pytest.raises(ValueError, match="resolved to a party"):
+        with pytest.raises(UsImportError, match="resolved to a party"):
             build_us_import_plan(db, row)
 
 
@@ -2085,7 +2087,7 @@ class TestCommitUsImportPlan:
         row = _michigan_row(import_db)
         plan = build_us_import_plan(import_db, row)
         house_seat = _seat_ids(import_db, "US House Districts 2024")["CA-03"]
-        with pytest.raises(ValueError, match="not on map"):
+        with pytest.raises(UsImportError, match="not on map"):
             commit_us_import_plan(
                 import_db, row, dataclasses.replace(plan, seat_id=house_seat)
             )
@@ -2300,6 +2302,21 @@ class TestRunImporter:
         )
         assert code == 1
         assert "page failed" in capsys.readouterr().out
+
+    def test_a_stray_value_error_is_not_taken_for_a_bad_row(
+        self, import_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def buggy(*args: object) -> None:
+            raise ValueError("a bug, not a bad row")
+
+        monkeypatch.setattr(us_poll_cli, "build_us_import_plan", buggy)
+        with pytest.raises(ValueError, match="a bug, not a bad row"):
+            run_importer(
+                [SENATE_RACES],
+                ["--state", "Michigan", "--commit"],
+                db=import_db,
+                fetcher=_full_fetcher(),
+            )
 
     def test_an_unimportable_row_is_reported_and_the_rest_import(
         self, us_db: Database, capsys: pytest.CaptureFixture[str]

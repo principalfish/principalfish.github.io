@@ -27,6 +27,7 @@ from polls.importers.us.us_wikipedia_polls import (
     US_CONTESTS,
     Fetcher,
     UsContest,
+    UsImportError,
     UsPollIndex,
     UsPollRow,
     apply_auto_tracked_matchups,
@@ -133,7 +134,7 @@ def _import_rows(db: Database, rows: Sequence[UsPollRow]) -> dict[str, int]:
         try:
             plan = build_us_import_plan(db, row)
             result = commit_us_import_plan(db, row, plan)
-        except (ValueError, SQLAlchemyError) as err:
+        except (UsImportError, SQLAlchemyError) as err:
             counts["failed"] += 1
             print(f"  FAILED {row.seat_name or 'National'} {row.pollster_label}: {err}")
             continue

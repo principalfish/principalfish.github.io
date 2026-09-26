@@ -1526,6 +1526,14 @@ def fetch_us_poll_index(
 # ── Importing ─────────────────────────────────────────────────────────────────
 
 
+class UsImportError(ValueError):
+    """A scraped row that cannot be planned or stored; the message says why.
+
+    Callers mark that one row failed and carry on, so they catch this by name:
+    a stray ``ValueError`` from a bug is not taken for a bad row.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class PlannedUsPollRow:
     """One reading of a scraped poll, resolved to a database party.
@@ -1591,7 +1599,7 @@ def build_us_import_plan(db: Database, row: UsPollRow) -> UsImportPlan:
         A :class:`UsImportPlan`.
 
     Raises:
-        ValueError: If the row names no known contest, its map is missing, its
+        UsImportError: If the row names no known contest, its map is missing, its
             seat is not on that map, or none of its readings resolve to a
             party — all of which would otherwise store a poll with no figures —
             or if its contest needs a matchup and the row has none, which would
@@ -1599,22 +1607,22 @@ def build_us_import_plan(db: Database, row: UsPollRow) -> UsImportPlan:
     """
     contest = US_CONTESTS_BY_SLUG.get(row.contest)
     if contest is None:
-        raise ValueError(f"unknown contest: {row.contest!r}")
+        raise UsImportError(f"unknown contest: {row.contest!r}")
     if contest.requires_matchup and row.matchup is None:
-        raise ValueError(
+        raise UsImportError(
             f"{row.pollster_label!r} has no matchup, which every"
             f" {contest.slug} poll needs"
         )
 
     poll_map = db.get_map_by_name(row.map_name)
     if poll_map is None:
-        raise ValueError(f"no map named {row.map_name!r}")
+        raise UsImportError(f"no map named {row.map_name!r}")
 
     seat_id: int | None = None
     if row.seat_name is not None:
         seat_id = _seat_ids_by_map_id(db, poll_map.id).get(row.seat_name)
         if seat_id is None:
-            raise ValueError(f"no seat named {row.seat_name!r} on {row.map_name!r}")
+            raise UsImportError(f"no seat named {row.seat_name!r} on {row.map_name!r}")
 
     party_ids = {party.name: party.id for party in db.get_all_parties()}
     planned: list[PlannedUsPollRow] = []
@@ -1645,7 +1653,7 @@ def build_us_import_plan(db: Database, row: UsPollRow) -> UsImportPlan:
         )
 
     if not planned:
-        raise ValueError(
+        raise UsImportError(
             f"no reading of {row.pollster_label!r} resolved to a party"
             f" (saw: {', '.join(unknown) or 'nothing'})"
         )
@@ -1698,7 +1706,7 @@ def commit_us_import_plan(
         ``skipped_existing_rows`` set and its id, having written nothing.
 
     Raises:
-        ValueError: If the plan's seat is no longer on its map.
+        UsImportError: If the plan's seat is no longer on its map.
     """
     with db.session() as session:
         existing_id = session.execute(
@@ -1726,7 +1734,7 @@ def commit_us_import_plan(
         if plan.seat_id is not None:
             seat = session.get(Seat, plan.seat_id)
             if seat is None or seat.map_id != plan.map_id:
-                raise ValueError(f"seat {plan.seat_id} is not on map {plan.map_id}")
+                raise UsImportError(f"seat {plan.seat_id} is not on map {plan.map_id}")
 
         pollster = session.execute(
             select(Pollster).where(Pollster.identifier == plan.pollster_identifier)

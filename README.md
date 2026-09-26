@@ -80,12 +80,12 @@ This guide covers local setup for the `data/` part of the repo end-to-end:
 
 ## 2) Python environment
 
-From repo root:
+From `data/`, where the data subsystem's commands below also run:
 
 ```bash
 python3 -m venv election_data
 source election_data/bin/activate
-pip install -r data/requirements.txt
+pip install -r requirements.txt
 ```
 
 If `election_data` already exists, just activate it:
@@ -133,7 +133,7 @@ immediately and refreshes the Drive copy regardless of the daily limit; **Restor
 newest archive** restores from the newest local archive, or the Drive copy if
 there is none, keeping the replaced database as `<db>.prerestore`.
 
-From a terminal — after running a writing script directly, for example:
+From a terminal in `data/` — after running a writing script directly, for example:
 
 ```bash
 ./election_data/bin/python scripts/backup_db.py            # archive if changed; Drive if due
@@ -248,7 +248,7 @@ Useful options:
 From `data/`:
 
 ```bash
-../election_data/bin/python server.py
+./election_data/bin/python server.py
 ```
 
 Server URL:
@@ -262,7 +262,7 @@ arbitrary code for anything that can reach the port. For reload-on-save while
 developing:
 
 ```bash
-CONSOLE_DEBUG=1 ../election_data/bin/python server.py
+CONSOLE_DEBUG=1 ./election_data/bin/python server.py
 ```
 
 ---
@@ -306,44 +306,44 @@ sqlite3 "$DATABASE_PATH" "SELECT poll_id, COUNT(*) AS zero_rows FROM poll_rows W
 
 Use scripts under `data/scripts/` to generate static files for `electionmaps/`.
 
+All commands in this section run from `data/`.
+
 ### Bulk export (all non-simulation elections)
 
-From repo root:
-
 ```bash
-./election_data/bin/python data/scripts/export_elections.py
+./election_data/bin/python scripts/export_elections.py
 ```
 
 Dry-run:
 
 ```bash
-./election_data/bin/python data/scripts/export_elections.py --dry-run
+./election_data/bin/python scripts/export_elections.py --dry-run
 ```
 
 ### Targeted exports
 
 ```bash
-./election_data/bin/python data/scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
-./election_data/bin/python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
+./election_data/bin/python scripts/export_elections.py --election-name "2019 General Election" --output-file /tmp/2019.json
+./election_data/bin/python scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
 
 ### Wrapper export (all elections + latest simulation)
 
 ```bash
-./election_data/bin/python data/scripts/run_export_targets.py
+./election_data/bin/python scripts/run_export_targets.py
 ```
 
 ### Metadata-only manifest refresh
 
 ```bash
-./election_data/bin/python data/scripts/export_manifest_metadata.py
+./election_data/bin/python scripts/export_manifest_metadata.py
 ```
 
 ### UKIP/Reform DB split migration
 
 ```bash
-./election_data/bin/python data/scripts/split_ukip_reform_parties.py --dry-run
-./election_data/bin/python data/scripts/split_ukip_reform_parties.py
+./election_data/bin/python scripts/split_ukip_reform_parties.py --dry-run
+./election_data/bin/python scripts/split_ukip_reform_parties.py
 ```
 
 ### Manifest contract used by webpage

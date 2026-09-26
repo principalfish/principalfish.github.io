@@ -18,6 +18,7 @@ from polls.importers.us.us_geography import (
     HOUSE_DISTRICT_COUNTS,
     PRESIDENT_DISTRICT_STATES,
     STATE_POSTAL,
+    canonical_state,
     house_seat_name,
     parent_seat_name,
     president_seat_for_heading,
@@ -80,6 +81,40 @@ class TestTables:
         states = set(STATE_POSTAL) - {"District of Columbia"}
         assert set(HOUSE_DISTRICT_COUNTS) == states
         assert sum(HOUSE_DISTRICT_COUNTS.values()) == HOUSE_SEAT_COUNT
+
+
+class TestCanonicalState:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("Texas", "Texas"),
+            ("new york", "New York"),
+            ("  New   Mexico[a] ", "New Mexico"),
+            ("district of columbia", "District of Columbia"),
+        ],
+    )
+    def test_names_resolve(self, text: str, expected: str) -> None:
+        assert canonical_state(text) == expected
+        assert canonical_state(text, allow_postal=True) == expected
+
+    @pytest.mark.parametrize("code", ["TX", "or", "In", "dc"])
+    def test_postal_codes_need_the_opt_in(self, code: str) -> None:
+        assert canonical_state(code) is None
+
+    @pytest.mark.parametrize(
+        ("code", "expected"),
+        [("TX", "Texas"), ("or", "Oregon"), (" In ", "Indiana"), ("dc", "District of Columbia")],
+    )
+    def test_postal_codes_resolve_when_allowed(self, code: str, expected: str) -> None:
+        assert canonical_state(code, allow_postal=True) == expected
+
+    def test_every_state_round_trips_through_its_postal_code(self) -> None:
+        for name, postal in STATE_POSTAL.items():
+            assert canonical_state(postal, allow_postal=True) == name
+
+    @pytest.mark.parametrize("text", ["Narnia", "Puerto Rico", "PR", "", "   "])
+    def test_unknown_is_none(self, text: str) -> None:
+        assert canonical_state(text, allow_postal=True) is None
 
 
 class TestStateFromPageSlug:
@@ -272,6 +307,9 @@ class TestPresidentSeatForHeading:
             "Maine's 3rd congressional district",
             "Nebraska (CD-4)",
             "Maine CD-0",
+            # Postal codes are for typed filters, not scraped headings.
+            "OR",
+            "IN",
             "",
             "   ",
         ],

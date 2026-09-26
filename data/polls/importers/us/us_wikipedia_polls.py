@@ -56,6 +56,7 @@ from polls.importers.us.us_geography import (
     AT_LARGE_STATES,
     HOUSE_DISTRICT_COUNTS,
     STATE_POSTAL,
+    canonical_state,
     house_seat_name,
     president_seat_for_heading,
     state_from_page_slug,
@@ -126,13 +127,6 @@ _HOUSE_PAGE_RE = re.compile(
     r"^(?:https?://en\.wikipedia\.org)?/wiki/"
     r"(2026_United_States_House_of_Representatives_elections?_in_[^#?]+)$"
 )
-
-# Postal code → state name, so ``states=["TX"]`` filters as well as
-# ``states=["Texas"]``.
-_STATE_BY_KEY: dict[str, str] = {
-    **{name.lower(): name for name in STATE_POSTAL},
-    **{postal.lower(): name for name, postal in STATE_POSTAL.items()},
-}
 
 _HEADING_SEPARATOR = " › "
 
@@ -1304,7 +1298,7 @@ def normalise_states(states: Iterable[str]) -> tuple[list[str], list[str]]:
     names: list[str] = []
     unknown: list[str] = []
     for value in states:
-        canonical = _STATE_BY_KEY.get(value.strip().lower())
+        canonical = canonical_state(value, allow_postal=True)
         if canonical is None:
             unknown.append(value)
         elif canonical not in names:

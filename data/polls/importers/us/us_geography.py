@@ -150,6 +150,9 @@ HOUSE_DISTRICT_COUNTS: dict[str, int] = {
 PRESIDENT_DISTRICT_STATES: dict[str, int] = {"Maine": 2, "Nebraska": 3}
 
 _STATES_BY_LOWER_NAME: dict[str, str] = {name.lower(): name for name in STATE_POSTAL}
+_STATES_BY_LOWER_POSTAL: dict[str, str] = {
+    postal.lower(): name for name, postal in STATE_POSTAL.items()
+}
 
 # Heading spellings of the District of Columbia that are not its canonical name.
 _DC_ALIASES: frozenset[str] = frozenset(
@@ -184,9 +187,23 @@ def _clean(text: str) -> str:
     return _WHITESPACE_RE.sub(" ", _FOOTNOTE_RE.sub("", text)).strip()
 
 
-def _canonical_state(name: str) -> str | None:
-    """Look a state name up case-insensitively, returning its canonical spelling."""
-    return _STATES_BY_LOWER_NAME.get(_clean(name).lower())
+def canonical_state(text: str, *, allow_postal: bool = False) -> str | None:
+    """Look a state up case-insensitively, returning its canonical spelling.
+
+    Args:
+        text: A state name, footnotes and stray whitespace allowed.
+        allow_postal: Also accept a postal code ("tx"). Only for text a person
+            typed — scraped headings and slugs stay name-only, so a stray "OR"
+            or "IN" heading is not taken for a state.
+
+    Returns:
+        The canonical state name, or None if the text names no state.
+    """
+    key = _clean(text).lower()
+    name = _STATES_BY_LOWER_NAME.get(key)
+    if name is None and allow_postal:
+        name = _STATES_BY_LOWER_POSTAL.get(key)
+    return name
 
 
 def state_from_page_slug(slug_or_url: str) -> str | None:
@@ -216,7 +233,7 @@ def state_from_page_slug(slug_or_url: str) -> str | None:
     candidate = tail if separator else text
     if candidate.lower().startswith("the "):
         candidate = candidate[4:]
-    return _canonical_state(candidate)
+    return canonical_state(candidate)
 
 
 def house_seat_name(state: str, district: int | None) -> str | None:
@@ -232,7 +249,7 @@ def house_seat_name(state: str, district: int | None) -> str | None:
         Columbia (which has no House seat on the map, only a delegate), or the
         district number is outside the state's range.
     """
-    canonical = _canonical_state(state)
+    canonical = canonical_state(state)
     if canonical is None:
         return None
     seat_count = HOUSE_DISTRICT_COUNTS.get(canonical)
@@ -271,7 +288,7 @@ def president_seat_for_heading(text: str) -> str | None:
         match = pattern.match(cleaned)
         if match is None:
             continue
-        state = _canonical_state(match["state"])
+        state = canonical_state(match["state"])
         if state is None:
             return None
         district_count = PRESIDENT_DISTRICT_STATES.get(state)
@@ -279,7 +296,7 @@ def president_seat_for_heading(text: str) -> str | None:
         if district_count is None or not 1 <= number <= district_count:
             return None
         return f"{state} CD-{number}"
-    return _canonical_state(cleaned)
+    return canonical_state(cleaned)
 
 
 def parent_seat_name(seat_name: str) -> str | None:
@@ -299,7 +316,7 @@ def parent_seat_name(seat_name: str) -> str | None:
     match = _CD_SUFFIX_RE.match(_clean(seat_name))
     if match is None:
         return None
-    state = _canonical_state(match["state"])
+    state = canonical_state(match["state"])
     if state is None or state not in PRESIDENT_DISTRICT_STATES:
         return None
     return state

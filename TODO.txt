@@ -1,4 +1,3 @@
-- merge the two state normalisers (us_wikipedia_polls vs us_geography) - changes seat/heading resolution, decide first
 - rename requires_tracked_matchup to match UsChamber's tracked_matchup_required (21 refs, cosmetic)
 - rename the /approve-group URL to /approve-race
 - re-import races whose stored polls have "<1%" gaps (parser fix only helps new imports)

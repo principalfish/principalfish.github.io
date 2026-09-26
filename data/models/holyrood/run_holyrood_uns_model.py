@@ -148,6 +148,7 @@ import re
 import sqlite3
 import sys
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -169,12 +170,30 @@ from models import Election, ElectionType, Pollster, Seat
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
 LIST_SEATS_PER_REGION = 7
 
-# Single source of truth for the database path: config.py (which reads .env).
-DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
-
 # Repository root, used to derive front-end output paths (prediction + trends).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 HOLYROOD_TREND_CACHE_JSON = _REPO_ROOT / "electionmaps" / "data" / "results" / "holyrood-trends.json"
+
+
+def default_sqlite_path() -> Path:
+    """The configured database file, read from the environment on every call.
+
+    Deliberately not a module constant: a path computed at import is whatever
+    ``.env`` said when the module was first loaded, so a test (or any caller)
+    that points ``DATABASE_PATH`` elsewhere afterwards would still write — and
+    delete — against the original database.
+    """
+    return Path(DatabaseConfig.from_env().database_path)
+
+
+def database_file(db: Database) -> Path:
+    """The SQLite file ``db`` is connected to.
+
+    The raw-``sqlite3`` writers below take a path rather than a
+    :class:`Database`; the orchestration passes this one so a run writes to the
+    same database it read its polls and baseline from.
+    """
+    return Path(db.config.database_path)
 
 
 def _election_name(as_of_date: date) -> str:
@@ -964,13 +983,15 @@ def run_holyrood_simulation(
 
     if not cfg.dry_run:
         party_name_by_id = {p.id: p.name for p in db.get_all_parties()}
-        delete_holyrood_uns_for_as_of_date(cfg.as_of_date)
+        sqlite_path = database_file(db)
+        delete_holyrood_uns_for_as_of_date(cfg.as_of_date, sqlite_path)
         _persisted_name, election_id = persist_projection(
             const_election.map_id,
             cfg.as_of_date,
             election_name,
             const_proj + list_proj,
             party_name_by_id,
+            sqlite_path,
         )
         update_trend_cache_json(
             election_id, election_name, cfg.as_of_date, const_proj, list_proj
@@ -996,7 +1017,9 @@ def run_holyrood_simulation(
 # ── Backfill helpers ──────────────────────────────────────────────────────────
 
 
-def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
+def dates_to_run_for_cfg(
+    cfg: HolyroodSimulationConfig, sqlite_path: Path | None = None
+) -> list[date]:
     """Determine which simulation dates must be run for the given configuration.
 
     In dry-run mode only ``cfg.as_of_date`` is returned.
@@ -1008,6 +1031,9 @@ def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
 
     Args:
         cfg: The simulation configuration, used for ``as_of_date`` and ``dry_run``.
+        sqlite_path: Path to the SQLite archive file, passed to
+            :func:`existing_trend_dates`. ``None`` resolves the configured
+            database when called.
 
     Returns:
         An ordered list of dates to simulate, oldest first.
@@ -1015,7 +1041,7 @@ def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
     if cfg.dry_run:
         return [cfg.as_of_date]
 
-    existing = existing_trend_dates()
+    existing = existing_trend_dates(sqlite_path=sqlite_path)
     previous_dates = [value for value in existing if value < cfg.as_of_date]
     if not previous_dates:
         return [cfg.as_of_date]
@@ -1034,7 +1060,10 @@ def dates_to_run_for_cfg(cfg: HolyroodSimulationConfig) -> list[date]:
 
 
 def reset_existing_model_outputs(
-    start_date: date, end_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+    start_date: date,
+    end_date: date,
+    sqlite_path: Path | None = None,
+    trend_cache_json: Path | None = None,
 ) -> tuple[int, int, int]:
     """Delete holyrood_uns elections in [start_date, end_date] and strip matching trend rows.
 
@@ -1045,11 +1074,18 @@ def reset_existing_model_outputs(
     Args:
         start_date: Inclusive lower bound of the date range to clear.
         end_date: Inclusive upper bound of the date range to clear.
-        sqlite_path: Path to the SQLite archive file.
+        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
+            configured database when called.
+        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
+            module's ``HOLYROOD_TREND_CACHE_JSON`` when called.
 
     Returns:
         A 3-tuple ``(deleted_elections, deleted_votes, stripped_json_entries)``.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
+    trend_cache_json = (
+        trend_cache_json if trend_cache_json is not None else HOLYROOD_TREND_CACHE_JSON
+    )
     start_name = f"Holyrood UNS {start_date.isoformat()}"
     upper_bound = f"Holyrood UNS {(end_date + timedelta(days=1)).isoformat()}"
 
@@ -1076,8 +1112,8 @@ def reset_existing_model_outputs(
                 conn.commit()
 
     stripped_json_entries = 0
-    if HOLYROOD_TREND_CACHE_JSON.exists():
-        with HOLYROOD_TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+    if trend_cache_json.exists():
+        with trend_cache_json.open("r", encoding="utf-8") as handle:
             entries = json.load(handle)
         kept_entries = []
         for entry in entries:
@@ -1093,7 +1129,7 @@ def reset_existing_model_outputs(
                 stripped_json_entries += 1
 
         if stripped_json_entries > 0:
-            with HOLYROOD_TREND_CACHE_JSON.open("w", encoding="utf-8") as handle:
+            with trend_cache_json.open("w", encoding="utf-8") as handle:
                 json.dump(kept_entries, handle, separators=(",", ":"))
 
     return deleted_elections, deleted_votes, stripped_json_entries
@@ -1126,7 +1162,7 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
     if args.reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped_json_entries = reset_existing_model_outputs(
-            start_date, end_date
+            start_date, end_date, database_file(db)
         )
         print(
             f"RESET deleted_elections={deleted_elections} "
@@ -1189,7 +1225,7 @@ def persist_projection(
     election_name: str,
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
-    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+    sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
     """Create a holyrood_uns election row and bulk-insert its projected votes into SQLite.
 
@@ -1206,12 +1242,14 @@ def persist_projection(
             ``run_holyrood_projection`` (``const_projected + list_projected``).
         party_name_by_id: Party display names keyed by party ID; used to
             populate ``candidate_name`` on each vote row.
-        sqlite_path: Path to the SQLite file to write into.
+        sqlite_path: Path to the SQLite file to write into. ``None`` resolves the
+            configured database when called.
 
     Returns:
         A ``(election_name, election_id)`` tuple with the persisted election's
         display name and primary key.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     with sqlite3.connect(sqlite_path) as conn:
         ensure_elections_sqlite_schema(conn)
         cursor = conn.execute(
@@ -1241,7 +1279,7 @@ def persist_projection(
 
 
 def delete_holyrood_uns_for_as_of_date(
-    as_of_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+    as_of_date: date, sqlite_path: Path | None = None
 ) -> tuple[int, int]:
     """Delete the holyrood_uns election (and its votes) for a given date from SQLite.
 
@@ -1251,12 +1289,14 @@ def delete_holyrood_uns_for_as_of_date(
 
     Args:
         as_of_date: The date whose simulation output should be removed.
-        sqlite_path: Path to the SQLite archive file.
+        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
+            configured database when called.
 
     Returns:
         A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
         matching election exists or the file does not exist.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     if not sqlite_path.exists():
         return 0, 0
 
@@ -1316,8 +1356,8 @@ def constituency_national_vote_shares(
 
 
 def existing_trend_dates(
-    trend_cache_json: Path = HOLYROOD_TREND_CACHE_JSON,
-    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+    trend_cache_json: Path | None = None,
+    sqlite_path: Path | None = None,
 ) -> set[date]:
     """Return all ``as_of_date`` values that have already been simulated.
 
@@ -1328,10 +1368,20 @@ def existing_trend_dates(
     archive records every run regardless of deduplication, so including it gives
     a complete picture of which dates have already been processed.
 
+    Args:
+        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
+            module's ``HOLYROOD_TREND_CACHE_JSON`` when called.
+        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
+            configured database when called.
+
     Returns:
         A set of ``date`` objects for which a simulation has already been run.
         Returns an empty set if neither source exists.
     """
+    trend_cache_json = (
+        trend_cache_json if trend_cache_json is not None else HOLYROOD_TREND_CACHE_JSON
+    )
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     dates: set[date] = set()
 
     if trend_cache_json.exists():
@@ -1368,7 +1418,7 @@ def update_trend_cache_json(
     as_of_date: date,
     const_projected: list[dict[str, Any]],
     list_projected: list[dict[str, Any]],
-    trend_cache_json: Path = HOLYROOD_TREND_CACHE_JSON,
+    trend_cache_json: Path | None = None,
 ) -> None:
     """Merge this simulation's results into the trend cache JSON.
 
@@ -1392,7 +1442,12 @@ def update_trend_cache_json(
         as_of_date: Simulation date; any existing entry for this date is replaced.
         const_projected: Constituency vote rows from :func:`project_constituency_seats`.
         list_projected: List seat vote rows from :func:`project_list_seats`.
+        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
+            module's ``HOLYROOD_TREND_CACHE_JSON`` when called.
     """
+    trend_cache_json = (
+        trend_cache_json if trend_cache_json is not None else HOLYROOD_TREND_CACHE_JSON
+    )
     trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
 
     const_shares = constituency_national_vote_shares(const_projected)
@@ -1681,7 +1736,7 @@ def _print_seat_table(seat_summary: dict[str, dict[str, int]]) -> None:
     print(f"{'TOTAL':<30} {total_const:>6} {total_list:>6} {total_const + total_list:>6}")
 
 
-def main() -> None:
+def main(db_factory: Callable[[], Database] | None = None) -> None:
     """CLI entry point: parse arguments and run single-date or retrospective simulation.
 
     Pass ``--start-date`` and ``--end-date`` for retrospective backfill mode.
@@ -1696,9 +1751,13 @@ def main() -> None:
     The ``current-holyrood-prediction`` manifest entry is owned by
     export_elections.py (run it afterwards); this script never touches
     map-modes.json.
+
+    Args:
+        db_factory: Builds the database to read from and write to. ``None``
+            opens the configured database.
     """
     args = parse_args()
-    db = Database(DatabaseConfig.from_env())
+    db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     # --poll-shares is a single-snapshot override and cannot be combined with the
     # retrospective date range (which fetches DB poll averages per date).
@@ -1747,7 +1806,11 @@ def main() -> None:
     lookback_days = max(0, (cfg.as_of_date - (cfg.since_date or cfg.as_of_date)).days)
 
     # Gap-fill: run every missing date, but skip gap-fill entirely in manual mode.
-    run_dates = [cfg.as_of_date] if manual_poll_shares is not None else dates_to_run_for_cfg(cfg)
+    run_dates = (
+        [cfg.as_of_date]
+        if manual_poll_shares is not None
+        else dates_to_run_for_cfg(cfg, database_file(db))
+    )
     if cfg.as_of_date not in run_dates:
         # Always run the current date last so the front-end write uses it.
         run_dates = [*run_dates, cfg.as_of_date]

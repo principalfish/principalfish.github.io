@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import sqlite3
 import sys
+from contextlib import closing
 from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
@@ -25,7 +27,9 @@ from run_holyrood_uns_model import (
     collect_constituency_wins,
     compute_holyrood_swings,
     constituency_national_vote_shares,
+    database_file,
     dates_to_run_for_cfg,
+    default_sqlite_path,
     delete_holyrood_uns_for_as_of_date,
     dhondt_allocate_ordered,
     existing_trend_dates,
@@ -34,10 +38,13 @@ from run_holyrood_uns_model import (
     persist_projection,
     project_constituency_seats,
     project_list_seats,
+    reset_existing_model_outputs,
     run_holyrood_projection,
+    run_holyrood_simulation,
     run_retrospective,
     update_trend_cache_json,
 )
+from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
 
 
 # ── dhondt_allocate_ordered ───────────────────────────────────────────────────
@@ -666,12 +673,14 @@ class TestDatesToRunForCfg:
 
     def test_fills_calendar_gap(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Latest cached date is 2026-07-01; as-of is 2026-07-04 → fill the 3 gap days.
-        monkeypatch.setattr(hmod, "existing_trend_dates", lambda: {date(2026, 7, 1)})
+        monkeypatch.setattr(
+            hmod, "existing_trend_dates", lambda *_a, **_k: {date(2026, 7, 1)}
+        )
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
         assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 2), date(2026, 7, 3), date(2026, 7, 4)]
 
     def test_no_prior_dates_returns_as_of(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setattr(hmod, "existing_trend_dates", lambda: set())
+        monkeypatch.setattr(hmod, "existing_trend_dates", lambda *_a, **_k: set())
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
         assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 4)]
 
@@ -709,3 +718,319 @@ class TestRunRetrospectiveValidation:
     def test_non_positive_half_life_raises(self, db: Database) -> None:
         with pytest.raises(ValueError, match="half-life-days"):
             run_retrospective(db, _retro_args(half_life_days=0.0))
+
+
+# ── Database and trend-cache paths resolve when called ────────────────────────
+
+# The path parameters the guard below must find. Listed so that deriving them
+# from the module can never silently find nothing.
+_EXPECTED_PATH_PARAMETERS = frozenset(
+    {
+        ("dates_to_run_for_cfg", "sqlite_path"),
+        ("delete_holyrood_uns_for_as_of_date", "sqlite_path"),
+        ("existing_trend_dates", "sqlite_path"),
+        ("existing_trend_dates", "trend_cache_json"),
+        ("persist_projection", "sqlite_path"),
+        ("reset_existing_model_outputs", "sqlite_path"),
+        ("reset_existing_model_outputs", "trend_cache_json"),
+        ("update_trend_cache_json", "trend_cache_json"),
+    }
+)
+
+
+def _path_parameter_defaults() -> dict[tuple[str, str], object]:
+    """``(function, parameter) → default`` for every defaulted ``Path`` parameter.
+
+    Covers every function defined in the model module whose parameter is
+    annotated with ``Path`` (``Path`` or ``Path | None``) and has a default.
+    """
+    defaults: dict[tuple[str, str], object] = {}
+    for name, function in inspect.getmembers(hmod, inspect.isfunction):
+        if function.__module__ != hmod.__name__:
+            continue
+        for parameter in inspect.signature(function).parameters.values():
+            if "Path" not in str(parameter.annotation):
+                continue
+            if parameter.default is inspect.Parameter.empty:
+                continue
+            defaults[(name, parameter.name)] = parameter.default
+    return defaults
+
+
+def _assert_path_defaults_are_none() -> None:
+    """Fail before any I/O if a path default has been bound at definition time.
+
+    A default bound when the function is defined would be the live database or
+    the real ``electionmaps/data/results/`` trend file.
+    """
+    defaults = _path_parameter_defaults()
+    assert _EXPECTED_PATH_PARAMETERS <= defaults.keys()
+    bound = {key: value for key, value in defaults.items() if value is not None}
+    assert bound == {}
+
+
+def _touch_configured_database() -> Path:
+    """Create the conftest guard file ``DATABASE_PATH`` points at, and return it.
+
+    A writer that fell back to the configured database would then connect to it
+    (tripping ``only_the_test_database``) instead of skipping a missing file.
+    """
+    configured: Path = default_sqlite_path()
+    configured.touch()
+    return configured
+
+
+def _seed_holyrood_polls(db: Database, world: HolyroodWorld) -> None:
+    """One constituency and one list poll, both ending on 2026-05-30."""
+    parties = world.party_ids
+    add_poll_with_rows(
+        db,
+        map_id=world.map_id,
+        pollster_identifier="test_holyrood",
+        fieldwork_end=date(2026, 5, 30),
+        national={
+            parties["Scottish National Party"]: 40.0,
+            parties["Labour"]: 35.0,
+            parties["Conservative"]: 15.0,
+        },
+    )
+    add_poll_with_rows(
+        db,
+        map_id=world.map_id,
+        pollster_identifier="test_holyrood_list",
+        fieldwork_end=date(2026, 5, 30),
+        national={
+            parties["Scottish National Party"]: 35.0,
+            parties["Labour"]: 30.0,
+            parties["Conservative"]: 20.0,
+        },
+    )
+
+
+def _persist_stale_run(db: Database, world: HolyroodWorld, as_of_date: date) -> None:
+    """An empty earlier run for ``as_of_date``, saved into ``db``'s file."""
+    persist_projection(
+        world.map_id,
+        as_of_date,
+        _election_name(as_of_date),
+        [],
+        {},
+        database_file(db),
+    )
+
+
+def _holyrood_uns_elections(sqlite_path: Path) -> list[tuple[str, int]]:
+    """``(name, elected vote rows)`` for every ``holyrood_uns`` election in the file."""
+    with closing(sqlite3.connect(sqlite_path)) as conn:
+        rows = conn.execute(
+            "SELECT e.name, COALESCE(SUM(v.elected), 0) FROM elections e "
+            "LEFT JOIN votes v ON v.election_id = e.id "
+            "WHERE e.type = 'holyrood_uns' GROUP BY e.id ORDER BY e.name"
+        ).fetchall()
+    return [(str(name), int(elected)) for name, elected in rows]
+
+
+class TestDatabasePathAtCallTime:
+    """The writers' default paths follow ``DATABASE_PATH`` and the module global
+    as they are when called, never as they were when the module was imported.
+    """
+
+    def test_every_path_parameter_defaults_to_none(self) -> None:
+        _assert_path_defaults_are_none()
+
+    def test_the_default_follows_database_path_when_called(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        monkeypatch.setenv("DATABASE_PATH", str(only_the_test_database))
+        trend = tmp_path / "trends.json"
+        trend.write_text(
+            json.dumps([{"as_of_date": "2026-05-31"}, {"as_of_date": "2026-06-02"}]),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
+        world = seed_holyrood_world(db)
+        vote = {
+            "seat_id": world.constituency_seat_ids["Glasgow Southside"],
+            "party_id": world.party_ids["Labour"],
+            "vote_total": 100.0,
+            "elected": True,
+        }
+
+        for as_of_date, votes in ((date(2026, 6, 1), []), (date(2026, 6, 2), [vote])):
+            name = f"Holyrood UNS {as_of_date.isoformat()}"
+            persist_projection(world.map_id, as_of_date, name, votes, {})
+
+        assert default_sqlite_path() == only_the_test_database
+        assert database_file(db).resolve() == only_the_test_database
+        assert existing_trend_dates() == {
+            date(2026, 5, 31),
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+        }
+        assert reset_existing_model_outputs(date(2026, 6, 2), date(2026, 6, 2)) == (
+            1,
+            1,
+            1,
+        )
+        assert delete_holyrood_uns_for_as_of_date(date(2026, 6, 1)) == (1, 0)
+        assert existing_trend_dates() == {date(2026, 5, 31)}
+
+    def test_the_default_is_reread_on_every_call(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "first.db"))
+        assert default_sqlite_path() == tmp_path / "first.db"
+
+        monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "second.db"))
+        assert default_sqlite_path() == tmp_path / "second.db"
+
+    def test_the_trend_file_follows_the_module_global_when_called(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend = tmp_path / "trends" / "holyrood-trends.json"
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
+
+        update_trend_cache_json(1, "Holyrood UNS 2026-06-01", date(2026, 6, 1), [], [])
+
+        entries = json.loads(trend.read_text())
+        assert [entry["as_of_date"] for entry in entries] == ["2026-06-01"]
+
+    def test_dates_to_run_reads_the_database_it_is_given(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        configured = _touch_configured_database()
+        assert configured != only_the_test_database
+        monkeypatch.setattr(
+            hmod, "HOLYROOD_TREND_CACHE_JSON", tmp_path / "missing-trends.json"
+        )
+        world = seed_holyrood_world(db)
+        _persist_stale_run(db, world, date(2026, 6, 1))
+        cfg = HolyroodSimulationConfig(as_of_date=date(2026, 6, 3), dry_run=False)
+
+        assert dates_to_run_for_cfg(cfg, database_file(db)) == [
+            date(2026, 6, 2),
+            date(2026, 6, 3),
+        ]
+
+    def test_run_holyrood_simulation_writes_to_the_database_it_read_from(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        configured = _touch_configured_database()
+        assert configured != only_the_test_database
+        trend = tmp_path / "trends.json"
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
+        world = seed_holyrood_world(db)
+        _seed_holyrood_polls(db, world)
+        # A stale run for the same date, which the simulation must replace.
+        _persist_stale_run(db, world, date(2026, 6, 1))
+        cfg = HolyroodSimulationConfig(
+            constituency_election_name=world.constituency_election_name,
+            as_of_date=date(2026, 6, 1),
+            since_date=date(2026, 5, 1),
+            dry_run=False,
+        )
+
+        output = run_holyrood_simulation(db, cfg)
+
+        assert output.election_name == "Holyrood UNS 2026-06-01"
+        # 4 constituency winners plus 3 list winners in each of 2 regions.
+        assert _holyrood_uns_elections(only_the_test_database) == [
+            ("Holyrood UNS 2026-06-01", 10)
+        ]
+        assert configured.stat().st_size == 0
+        assert trend.exists()
+
+    def test_run_retrospective_resets_the_database_it_read_from(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        configured = _touch_configured_database()
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", tmp_path / "trends.json")
+        world = seed_holyrood_world(db)
+        _seed_holyrood_polls(db, world)
+        _persist_stale_run(db, world, date(2026, 6, 1))
+
+        run_retrospective(
+            db,
+            _retro_args(
+                start_date="2026-06-01",
+                end_date="2026-06-01",
+                lookback_days=30,
+                reset_existing=True,
+                dry_run=False,
+                election_name=world.constituency_election_name,
+            ),
+        )
+
+        assert (
+            "RESET deleted_elections=1 deleted_votes=0 stripped_json_entries=0"
+            in capsys.readouterr().out
+        )
+        assert _holyrood_uns_elections(only_the_test_database) == [
+            ("Holyrood UNS 2026-06-01", 10)
+        ]
+        assert configured.stat().st_size == 0
+
+    def test_main_gap_fills_from_the_database_it_read_from(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        configured = _touch_configured_database()
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", tmp_path / "trends.json")
+        # ``--no-output`` skips both; pointed at tmp in case that ever changes.
+        output = tmp_path / "prediction.json"
+        meta_output = tmp_path / "prediction-meta.json"
+        monkeypatch.setattr(hmod, "_DEFAULT_OUTPUT", output)
+        monkeypatch.setattr(hmod, "_DEFAULT_META_OUTPUT", meta_output)
+        world = seed_holyrood_world(db)
+        _seed_holyrood_polls(db, world)
+        _persist_stale_run(db, world, date(2026, 5, 28))
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "run_holyrood_uns_model.py",
+                "--no-output",
+                "--as-of-date",
+                "2026-05-30",
+                "--since-date",
+                "2026-05-01",
+            ],
+        )
+
+        hmod.main(db_factory=lambda: db)
+
+        # The stale 05-28 run is read from ``db``, so only 05-29 and 05-30 run.
+        assert _holyrood_uns_elections(only_the_test_database) == [
+            ("Holyrood UNS 2026-05-28", 0),
+            ("Holyrood UNS 2026-05-29", 10),
+            ("Holyrood UNS 2026-05-30", 10),
+        ]
+        assert configured.stat().st_size == 0
+        assert not output.exists()
+        assert not meta_output.exists()

@@ -1,25 +1,58 @@
-<section class="card">
-  <h3>Row Preview</h3>
+{#
+  A poll's rows as a table. Each column is a dict:
+    heading   — the column header;
+    attribute — the row attribute shown in it;
+    blank     — shown when the attribute is missing, None or "" (default: empty);
+    format    — optional printf-style format for the value, e.g. "%g".
+#}
+
+{# The UK queue and import preview show an import plan's rows. #}
+{% set plan_row_columns = [
+  {"heading": "Party", "attribute": "party_name"},
+  {"heading": "Macro Region", "attribute": "macro_region"},
+  {"heading": "Region", "attribute": "region_name"},
+  {"heading": "Percentage", "attribute": "percentage"},
+] %}
+
+{% macro poll_rows_table(rows, columns, title=none) %}
+  {% if title %}
+    <section class="card">
+      <h3>{{ title }}</h3>
+      {{ _table(rows, columns) }}
+    </section>
+  {% else %}
+    {{ _table(rows, columns) }}
+  {% endif %}
+{% endmacro %}
+
+{% macro _table(rows, columns) %}
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th>Party</th>
-          <th>Macro Region</th>
-          <th>Region</th>
-          <th>Percentage</th>
+          {% for column in columns %}
+            <th scope="col">{{ column.heading }}</th>
+          {% endfor %}
         </tr>
       </thead>
       <tbody>
-        {% for row in plan.rows %}
+        {% for row in rows %}
           <tr>
-            <td>{{ row.party_name }}</td>
-            <td>{% if row.macro_region is defined %}{{ row.macro_region }}{% endif %}</td>
-            <td>{{ row.region_name }}</td>
-            <td>{{ row.percentage }}</td>
+            {% for column in columns %}
+              {% set value = row[column.attribute] %}
+              <td>
+                {%- if value is not defined or value is none or value == "" -%}
+                  {{ column.blank | default("") }}
+                {%- elif column.format -%}
+                  {{ column.format | format(value) }}
+                {%- else -%}
+                  {{ value }}
+                {%- endif -%}
+              </td>
+            {% endfor %}
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</section>
+{% endmacro %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_poll_rows_table.html" import plan_row_columns, poll_rows_table %}
 {% block content %}
   <section class="card">
     <h2>Wikipedia Catch-Up</h2>
@@ -63,7 +64,7 @@
       </form>
     </section>
 
-    {% include "_poll_rows_table.html" %}
+    {{ poll_rows_table(plan.rows, plan_row_columns, title="Row Preview") }}
   {% endif %}
 
   <section class="card">

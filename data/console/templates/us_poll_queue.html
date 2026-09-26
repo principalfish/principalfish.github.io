@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_poll_rows_table.html" import poll_rows_table %}
 {% block content %}
   <section class="card">
     <h2>US Poll Import</h2>
@@ -39,26 +40,11 @@
     {% if tracked_label %}
       <p><strong>Race tracked:</strong> {{ tracked_label }}</p>
     {% endif %}
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Party</th>
-            <th scope="col">Candidate</th>
-            <th scope="col">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for reading in row.readings %}
-            <tr>
-              <td>{{ reading.party_name or "Unrecognised party" }}</td>
-              <td>{{ reading.candidate_name or "-" }}</td>
-              <td>{{ "%g"|format(reading.percentage) }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    {{ poll_rows_table(row.readings, [
+      {"heading": "Party", "attribute": "party_name", "blank": "Unrecognised party"},
+      {"heading": "Candidate", "attribute": "candidate_name", "blank": "-"},
+      {"heading": "%", "attribute": "percentage", "format": "%g"},
+    ]) }}
   </section>
 
   {% if item.warnings %}

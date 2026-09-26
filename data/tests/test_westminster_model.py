@@ -2,12 +2,14 @@
 
 Covers the pure projection functions, the database helpers that load the map,
 baseline and polls for a run, the contract that the SQLite and trend-cache
-writers resolve their paths when called rather than at import, and those
-writers' file and SQLite I/O.
+writers resolve their paths when called rather than at import, those writers'
+file and SQLite I/O, and the orchestration (run_simulation,
+run_retrospective, the CLI parsing and main).
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
 import inspect
 import json
@@ -368,6 +370,31 @@ class TestProjectSeatVotes:
         assert winners["Labour"] == 1
         assert winners["Conservative"] == 1
 
+    def test_all_shares_swung_to_zero_fall_back_to_the_baseline(self) -> None:
+        seat_votes = {1: {10: 6000.0, 20: 4000.0}}
+        region_swings = {99: {10: -70.0, 20: -50.0}}
+
+        projected, winners = project_seat_votes(
+            seat_votes, {1: 99}, {10, 20}, region_swings, {10: "Labour"}
+        )
+
+        # Both clamp to zero, so the unswung 60/40 baseline is used instead.
+        assert {row["party_id"]: row["vote_total"] for row in projected} == {
+            10: 6000,
+            20: 4000,
+        }
+        assert winners == Counter({"Labour": 1})
+
+    def test_seat_with_no_share_in_the_universe_is_skipped(self) -> None:
+        # The seat's only party is outside the universe, so even the baseline
+        # fallback sums to zero.
+        projected, winners = project_seat_votes(
+            {1: {10: 6000.0}}, {1: 99}, {30}, {99: {30: -5.0}}, {30: "Green"}
+        )
+
+        assert projected == []
+        assert sum(winners.values()) == 0
+
 
 # ── Database helpers: shared seeding ──────────────────────────────────────────
 
@@ -391,6 +418,7 @@ def _simulation_config(
     since_date: date = _SINCE,
     as_of_date: date = _AS_OF,
     dry_run: bool = True,
+    output_csv: str | None = None,
 ) -> SimulationConfig:
     """A config for ``world``, defaulting to its map and baseline election."""
     return SimulationConfig(
@@ -403,7 +431,7 @@ def _simulation_config(
         as_of_date=as_of_date,
         since_date=since_date,
         half_life_days=7.0,
-        output_csv=None,
+        output_csv=output_csv,
         dry_run=dry_run,
     )
 
@@ -2270,3 +2298,1016 @@ class TestUpdateTrendCacheJson:
                 [_vote(1, 2, 60.0, elected=True)],
                 trend_json,
             )
+
+
+# ── Orchestration: shared helpers ─────────────────────────────────────────────
+
+
+def _guard_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, test_database: Path
+) -> tuple[Path, Path]:
+    """Point the trend globals at ``tmp_path`` and arm the configured database.
+
+    ``DATABASE_PATH`` stays on conftest's guard file. Creating it means a writer
+    that ignored its ``database_file(db)`` hand-off would connect to it (and trip
+    ``only_the_test_database``) instead of skipping a missing file. That only
+    proves anything while the guard file is not ``test_database`` (the ``db``
+    fixture's file), so this checks first. Returns the ``(trend JSON, meta
+    JSON)`` paths, neither of which exists yet.
+    """
+    configured: Path = default_sqlite_path().resolve()
+    assert configured != test_database
+    configured.touch()
+    trend_json = tmp_path / "results" / "model_output_trends.json"
+    meta_json = tmp_path / "results" / "model_output_trends_meta.json"
+    monkeypatch.setattr(run_uns_model, "TREND_CACHE_JSON", trend_json)
+    monkeypatch.setattr(run_uns_model, "TREND_CACHE_META_JSON", meta_json)
+    return trend_json, meta_json
+
+
+def _seed_swing_poll(
+    db: Database,
+    world: WestminsterWorld,
+    fieldwork_end: date,
+    *,
+    pollster: str = "pollster_a",
+) -> Poll:
+    """Add a poll that swings 5 points from Conservative to Labour nationally.
+
+    Baseline national shares are Labour 41.875 and Conservative 20.0, so the
+    poll's 46.875 / 15.0 is +5 / -5. That flips Hexham (Conservative 39.2,
+    Labour 35.3) to Labour. Scotland also gets an SNP cross-break of 30.0
+    against its 34.29 baseline, a -4.29 regional swing.
+    """
+    return _add_poll(
+        db,
+        world,
+        fieldwork_end,
+        {world.party_ids["Labour"]: 46.875, world.party_ids["Conservative"]: 15.0},
+        pollster=pollster,
+        regional={
+            world.region_ids["Scotland"]: {
+                world.party_ids["Scottish National Party"]: 30.0
+            }
+        },
+    )
+
+
+def _parse_args(monkeypatch: pytest.MonkeyPatch, *argv: str) -> argparse.Namespace:
+    """Parse ``argv`` with the model's CLI parser."""
+    monkeypatch.setattr(sys, "argv", ["run_uns_model.py", *argv])
+    return cast(argparse.Namespace, run_uns_model.parse_args())
+
+
+def _world_argv(world: WestminsterWorld) -> list[str]:
+    """``--map-name`` / ``--baseline-election-name`` for ``world``.
+
+    Passed explicitly so the tests don't depend on the CLI defaults, which
+    follow the latest general election. Later flags in an argv override them.
+    """
+    return [
+        "--map-name",
+        world.map_name,
+        "--baseline-election-name",
+        world.baseline_election_name,
+    ]
+
+
+def _retrospective_args(
+    monkeypatch: pytest.MonkeyPatch, world: WestminsterWorld, *argv: str
+) -> argparse.Namespace:
+    """Parse ``argv`` for ``world``'s map and baseline."""
+    return _parse_args(monkeypatch, *_world_argv(world), *argv)
+
+
+def _run_main(
+    db: Database, monkeypatch: pytest.MonkeyPatch, world: WestminsterWorld, *argv: str
+) -> None:
+    """Run the CLI entry point against ``db`` for ``world``'s map and baseline."""
+    monkeypatch.setattr(sys, "argv", ["run_uns_model.py", *_world_argv(world), *argv])
+    run_uns_model.main(db_factory=lambda: db)
+
+
+def _elected_party(votes: Sequence[dict[str, Any]], seat_id: int) -> int:
+    """The party id of the one elected row for ``seat_id``."""
+    elected = [
+        int(row["party_id"])
+        for row in votes
+        if int(row["seat_id"]) == seat_id and row["elected"]
+    ]
+    assert len(elected) == 1
+    return elected[0]
+
+
+# ── run_simulation ────────────────────────────────────────────────────────────
+
+
+class TestRunSimulation:
+    """Tests for run_simulation — one date's projection, end to end.
+
+    ``TestDatabasePathAtCallTime`` already covers replacing a prior run for the
+    same date in the ``db`` file.
+    """
+
+    def test_dry_run_writes_nothing(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+
+        name, projected, region_diffs, winners, latest = run_simulation(
+            db, _simulation_config(world, as_of_date=date(2026, 6, 10))
+        )
+
+        assert name == "UNS 2026-06-10"
+        # 4 seats x 8 parties (the baseline's, with "Other" merged).
+        assert len(projected) == 32
+        assert len(region_diffs) == 32
+        assert winners == Counter({"Labour": 4})
+        assert latest.fieldwork_end == date(2026, 6, 9)
+        assert _model_uns_elections(only_the_test_database) == []
+        assert not trend_json.exists()
+
+    def test_poll_swing_flips_a_seat_and_is_persisted(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        hexham = world.seat_ids["Hexham"]
+        labour = world.party_ids["Labour"]
+        conservative = world.party_ids["Conservative"]
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+        # Without polls the 2024 result stands: Hexham stays Conservative.
+        _, unswung, _, unswung_winners, _ = run_simulation(
+            db, _simulation_config(world, as_of_date=date(2026, 6, 8))
+        )
+        assert _elected_party(unswung, hexham) == conservative
+        assert unswung_winners == Counter({"Labour": 3, "Conservative": 1})
+
+        name, projected, _, winners, _ = run_simulation(
+            db, _simulation_config(world, as_of_date=date(2026, 6, 10), dry_run=False)
+        )
+
+        assert winners == Counter({"Labour": 4})
+        assert _elected_party(projected, hexham) == labour
+        assert _model_uns_elections(only_the_test_database) == [(name, 32)]
+        election = db.get_election_by_name("UNS 2026-06-10")
+        assert election is not None
+        persisted = [
+            vote
+            for vote in db.get_votes_for_election(election.id)
+            if vote.seat_id == hexham and vote.elected
+        ]
+        assert [vote.party_id for vote in persisted] == [labour]
+        entries = _read_json(trend_json)
+        assert len(entries) == 1
+        assert entries[0]["election_id"] == election.id
+        assert entries[0]["as_of_date"] == "2026-06-10"
+        assert entries[0]["parties"][str(labour)]["s"] == 4
+        assert entries[0]["parties"][str(conservative)]["s"] == 0
+
+    def test_writes_the_output_csvs(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+        output_csv = tmp_path / "csv" / "projection.csv"
+
+        run_simulation(
+            db,
+            _simulation_config(
+                world, as_of_date=date(2026, 6, 10), output_csv=str(output_csv)
+            ),
+        )
+
+        with output_csv.open(encoding="utf-8", newline="") as handle:
+            seat_rows = list(csv.DictReader(handle))
+        assert len(seat_rows) == 32
+        assert [
+            row["party_name"]
+            for row in seat_rows
+            if row["seat_name"] == "Hexham" and row["elected"] == "True"
+        ] == ["Labour"]
+        diff_csv = tmp_path / "csv" / "projection_regional_diffs.csv"
+        with diff_csv.open(encoding="utf-8", newline="") as handle:
+            diff_rows = list(csv.DictReader(handle))
+        assert len(diff_rows) == 32
+        scotland_snp = [
+            row
+            for row in diff_rows
+            if row["region_name"] == "Scotland"
+            and row["party_name"] == "Scottish National Party"
+        ]
+        assert [row["swing"] for row in scotland_snp] == ["-4.2857"]
+
+
+# ── run_retrospective ─────────────────────────────────────────────────────────
+
+
+class TestRunRetrospective:
+    """Tests for run_retrospective — daily runs across a date range."""
+
+    @pytest.mark.parametrize(
+        ("argv", "message"),
+        [
+            (
+                ["--start-date", "2026-06-10", "--end-date", "2026-06-09"],
+                "--end-date must be on or after --start-date",
+            ),
+            (
+                ["--start-date", "2026-06-09", "--end-date", "2026-06-10"]
+                + ["--lookback-days", "-1"],
+                "--lookback-days must be zero or greater",
+            ),
+            (
+                ["--start-date", "2026-06-09", "--end-date", "2026-06-10"]
+                + ["--half-life-days", "0"],
+                "--half-life-days must be greater than zero",
+            ),
+        ],
+    )
+    def test_invalid_arguments_raise(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+        argv: list[str],
+        message: str,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        args = _parse_args(monkeypatch, *argv)
+
+        with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+            run_uns_model.run_retrospective(db, args)
+        assert capsys.readouterr().out == ""
+
+    def test_resets_the_range_then_runs_each_day(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+        _seed_model_run(db, world, "UNS 2026-06-09", 2)
+        _seed_model_run(db, world, "UNS 2026-06-11", 1)
+        _write_json(
+            trend_json,
+            [_trend_entry(1, "2026-06-01"), _trend_entry(2, "2026-06-09")],
+        )
+        args = _retrospective_args(
+            monkeypatch,
+            world,
+            "--start-date",
+            "2026-06-09",
+            "--end-date",
+            "2026-06-10",
+            "--lookback-days",
+            "30",
+            "--half-life-days",
+            "7",
+            "--progress-every",
+            "1",
+        )
+
+        run_uns_model.run_retrospective(db, args)
+
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == (
+            "RESET deleted_elections=1 deleted_votes=2 stripped_csv_rows=1"
+        )
+        progress = [line for line in lines if line.startswith("PROGRESS")]
+        assert progress == [
+            "PROGRESS success=1 failed=0 as_of=2026-06-09 "
+            "election=UNS 2026-06-09 rows=32",
+            "PROGRESS success=2 failed=0 as_of=2026-06-10 "
+            "election=UNS 2026-06-10 rows=32",
+        ]
+        assert lines[lines.index("SUMMARY") :] == [
+            "SUMMARY",
+            "START=2026-06-09 END=2026-06-10",
+            "LOOKBACK_DAYS=30 HALF_LIFE_DAYS=7.0",
+            "DRY_RUN=False",
+            "SUCCESS=2 FAILED=0",
+        ]
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-09", 32),
+            ("UNS 2026-06-10", 32),
+            ("UNS 2026-06-11", 1),
+        ]
+        # 2026-06-10's seats match 2026-06-09's, so the dedup leaves it out.
+        assert [entry["as_of_date"] for entry in _read_json(trend_json)] == [
+            "2026-06-01",
+            "2026-06-09",
+        ]
+
+    def test_dry_run_skips_the_reset_and_reports_progress_every_n(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+        _seed_model_run(db, world, "UNS 2026-06-09", 2)
+        args = _retrospective_args(
+            monkeypatch,
+            world,
+            "--start-date",
+            "2026-06-08",
+            "--end-date",
+            "2026-06-10",
+            "--progress-every",
+            "2",
+            "--dry-run",
+        )
+
+        run_uns_model.run_retrospective(db, args)
+
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == "RESET skipped for dry-run mode"
+        assert [line for line in lines if line.startswith("PROGRESS")] == [
+            "PROGRESS success=2 failed=0 as_of=2026-06-09 "
+            "election=UNS 2026-06-09 rows=32",
+        ]
+        assert "DRY_RUN=True" in lines
+        assert "SUCCESS=3 FAILED=0" in lines
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-09", 2)
+        ]
+        assert not trend_json.exists()
+
+    @pytest.mark.parametrize("extra", [[], ["--dry-run"]])
+    def test_no_reset_and_no_progress(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+        extra: list[str],
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        args = _retrospective_args(
+            monkeypatch,
+            world,
+            "--start-date",
+            "2026-06-09",
+            "--end-date",
+            "2026-06-10",
+            "--no-reset-existing",
+            "--progress-every",
+            "0",
+            *extra,
+        )
+
+        run_uns_model.run_retrospective(db, args)
+
+        # The proof that no reset ran: the reset step prints a RESET line
+        # whenever it runs or is skipped for a dry run, and here prints none.
+        lines = capsys.readouterr().out.splitlines()
+        assert not any(line.startswith("RESET") for line in lines)
+        assert not any(line.startswith("PROGRESS") for line in lines)
+        assert "SUCCESS=2 FAILED=0" in lines
+
+    def test_continue_on_error_records_failures(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        args = _retrospective_args(
+            monkeypatch,
+            world,
+            "--start-date",
+            "2026-06-09",
+            "--end-date",
+            "2026-06-10",
+            "--baseline-election-name",
+            "Missing Election",
+            "--continue-on-error",
+            "--dry-run",
+        )
+
+        run_uns_model.run_retrospective(db, args)
+
+        lines = capsys.readouterr().out.splitlines()
+        error = "Baseline election not found: Missing Election"
+        assert [line for line in lines if line.startswith("ERROR")] == [
+            f"ERROR as_of=2026-06-09 err={error}",
+            f"ERROR as_of=2026-06-10 err={error}",
+        ]
+        assert "SUCCESS=0 FAILED=2" in lines
+        assert lines[lines.index("FAILURES") :] == [
+            "FAILURES",
+            f"2026-06-09\t{error}",
+            f"2026-06-10\t{error}",
+        ]
+
+    def test_without_continue_on_error_the_first_failure_raises(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        args = _retrospective_args(
+            monkeypatch,
+            world,
+            "--start-date",
+            "2026-06-09",
+            "--end-date",
+            "2026-06-10",
+            "--baseline-election-name",
+            "Missing Election",
+            "--dry-run",
+        )
+
+        with pytest.raises(
+            ValueError, match="^Baseline election not found: Missing Election$"
+        ):
+            run_uns_model.run_retrospective(db, args)
+
+        assert capsys.readouterr().out.splitlines() == [
+            "RESET skipped for dry-run mode",
+            "ERROR as_of=2026-06-09 err=Baseline election not found: "
+            "Missing Election",
+        ]
+
+
+# ── parse_args / _build_config_from_args ──────────────────────────────────────
+
+
+class _FixedDate(date):
+    """``date`` whose ``today()`` is pinned to 2026-06-15."""
+
+    @classmethod
+    def today(cls) -> _FixedDate:
+        return cls(2026, 6, 15)
+
+
+class TestParseArgs:
+    """Tests for parse_args — the CLI flags and their defaults."""
+
+    def test_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        assert vars(_parse_args(monkeypatch)) == {
+            "map_name": "UK Constituencies post 2022",
+            # The one test tied to the CLI default; the rest pass it explicitly.
+            "baseline_election_name": run_uns_model.BASELINE_ELECTION_NAME,
+            "half_life_days": 30.0,
+            "dry_run": False,
+            "as_of_days_back": 0,
+            "since_days_back": 30,
+            "as_of_date": None,
+            "since_date": None,
+            "output_csv": None,
+            "start_date": None,
+            "end_date": None,
+            "lookback_days": 365,
+            "reset_existing": True,
+            "continue_on_error": False,
+            "progress_every": 25,
+        }
+
+    @pytest.mark.parametrize(
+        ("flag", "expected"),
+        [("--no-reset-existing", False), ("--reset-existing", True)],
+    )
+    def test_reset_existing_flags(
+        self, monkeypatch: pytest.MonkeyPatch, flag: str, expected: bool
+    ) -> None:
+        assert _parse_args(monkeypatch, flag).reset_existing is expected
+
+
+class TestBuildConfigFromArgs:
+    """Tests for _build_config_from_args — single-date CLI flags to a config."""
+
+    @staticmethod
+    def _build(monkeypatch: pytest.MonkeyPatch, *argv: str) -> SimulationConfig:
+        """Build the config for ``argv`` with today pinned to 2026-06-15."""
+        monkeypatch.setattr(run_uns_model, "date", _FixedDate)
+        args = _parse_args(monkeypatch, *argv)
+        return run_uns_model._build_config_from_args(args)
+
+    def test_explicit_dates(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        cfg = self._build(
+            monkeypatch,
+            "--map-name",
+            "Test Map",
+            "--baseline-election-name",
+            "Test Baseline",
+            "--as-of-date",
+            "2026-06-10",
+            "--since-date",
+            "2026-05-01",
+            "--as-of-days-back",
+            "3",
+            "--since-days-back",
+            "5",
+            "--half-life-days",
+            "14",
+            "--output-csv",
+            "out.csv",
+            "--dry-run",
+        )
+
+        # Explicit dates win over the days-back fallbacks.
+        assert cfg == SimulationConfig(
+            map_name="Test Map",
+            baseline_election_name="Test Baseline",
+            as_of_date=date(2026, 6, 10),
+            since_date=date(2026, 5, 1),
+            half_life_days=14.0,
+            output_csv="out.csv",
+            dry_run=True,
+        )
+
+    @pytest.mark.parametrize(
+        ("argv", "as_of_date", "since_date"),
+        [
+            ([], date(2026, 6, 15), date(2026, 5, 16)),
+            (
+                ["--as-of-days-back", "2", "--since-days-back", "10"],
+                date(2026, 6, 13),
+                date(2026, 6, 5),
+            ),
+            # Negative counts are clamped to today.
+            (
+                ["--as-of-days-back", "-3", "--since-days-back", "-1"],
+                date(2026, 6, 15),
+                date(2026, 6, 15),
+            ),
+        ],
+    )
+    def test_days_back_count_from_today(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        argv: list[str],
+        as_of_date: date,
+        since_date: date,
+    ) -> None:
+        cfg = self._build(monkeypatch, *argv)
+
+        assert (cfg.as_of_date, cfg.since_date) == (as_of_date, since_date)
+        assert cfg.dry_run is False
+        assert cfg.output_csv is None
+
+    def test_since_after_as_of_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        with pytest.raises(
+            ValueError,
+            match="^--since-days-back/--since-date must be older than or equal to "
+            "as-of$",
+        ):
+            self._build(
+                monkeypatch,
+                "--as-of-date",
+                "2026-06-10",
+                "--since-date",
+                "2026-06-11",
+            )
+
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+
+class TestMain:
+    """Tests for main — the CLI entry point, run against the ``db`` fixture."""
+
+    def test_retrospective_branch(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json, meta_json = _guard_writes(
+            tmp_path, monkeypatch, only_the_test_database
+        )
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--start-date",
+            "2026-06-09",
+            "--end-date",
+            "2026-06-10",
+        )
+
+        out = capsys.readouterr().out
+        assert "RESET deleted_elections=0 deleted_votes=0 stripped_csv_rows=0" in out
+        assert "SUCCESS=2 FAILED=0" in out
+        # The single-date path (its summary and the meta file) never runs.
+        assert "UNS simulation complete" not in out
+        assert not meta_json.exists()
+        assert [name for name, _ in _model_uns_elections(only_the_test_database)] == [
+            "UNS 2026-06-09",
+            "UNS 2026-06-10",
+        ]
+
+    def test_caps_as_of_at_the_latest_poll_and_shifts_the_window(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 8))
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-12",
+            "--since-date",
+            "2026-05-13",
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == (
+            "CAPPING as_of_date from 2026-06-12 to latest poll date 2026-06-08"
+        )
+        # The 30-day window moves back by the 4 capped days.
+        assert lines[1:12] == [
+            "UNS simulation complete",
+            f"Map: {world.map_name}",
+            f"Baseline election: {world.baseline_election_name}",
+            "As-of date: 2026-06-08",
+            "Since date: 2026-05-09",
+            "Half-life days: 30.0",
+            "Election name: UNS 2026-06-08",
+            "Projected seats: 4",
+            "Projected vote rows: 32",
+            "Latest poll used: pollster_a (2026-06-06 to 2026-06-08)",
+            "Top projected seat winners:",
+        ]
+        assert lines[12] == "- Labour: 4"
+        assert not any(line.startswith("AUTO-BACKFILL") for line in lines)
+        assert not any(line.startswith("Backfill progress") for line in lines)
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-08", 32)
+        ]
+        assert _read_json(meta_json) == {
+            "as_of_date": "2026-06-08",
+            "since_date": "2026-05-09",
+            "latest_poll_snippet": (
+                "Latest poll used: pollster_a (2026-06-06 to 2026-06-08)"
+            ),
+            "latest_poll": {
+                "pollster": "pollster_a",
+                "fieldwork_start": "2026-06-06",
+                "fieldwork_end": "2026-06-08",
+            },
+        }
+
+    def test_without_polls_runs_the_requested_date_unswung(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-12",
+            "--since-date",
+            "2026-05-13",
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        assert not any(line.startswith("CAPPING") for line in lines)
+        assert not any(line.startswith("Latest poll used") for line in lines)
+        assert "As-of date: 2026-06-12" in lines
+        assert "- Labour: 3" in lines
+        assert "- Conservative: 1" in lines
+        assert _read_json(meta_json) == {
+            "as_of_date": "2026-06-12",
+            "since_date": "2026-05-13",
+            "latest_poll_snippet": "",
+            "latest_poll": None,
+        }
+
+    def test_unknown_map_raises(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+
+        with pytest.raises(ValueError, match="^Map not found: Nowhere$"):
+            _run_main(db, monkeypatch, world, "--map-name", "Nowhere", "--dry-run")
+
+    def test_backfills_the_days_since_the_last_run(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        # The trend JSON is absent, so the last run (06-06) is only in SQLite:
+        # finding it proves ``main`` hands ``dates_to_run_for_cfg`` its database.
+        _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+        _seed_model_run(db, world, "UNS 2026-06-06", 1)
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-09",
+            "--since-date",
+            "2026-05-10",
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == "AUTO-BACKFILL missing_dates=3 from=2026-06-07 to=2026-06-09"
+        assert [line for line in lines if line.startswith("Backfill progress")] == [
+            "Backfill progress: 1/3",
+            "Backfill progress: 2/3",
+            "Backfill progress: 3/3",
+        ]
+        # Each day keeps the requested 30-day window.
+        assert [line for line in lines if line.startswith("Since date")] == [
+            "Since date: 2026-05-08",
+            "Since date: 2026-05-09",
+            "Since date: 2026-05-10",
+        ]
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-06", 1),
+            ("UNS 2026-06-07", 32),
+            ("UNS 2026-06-08", 32),
+            ("UNS 2026-06-09", 32),
+        ]
+        assert _read_json(meta_json)["as_of_date"] == "2026-06-09"
+
+    def test_meta_is_rerun_when_as_of_already_ran(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 7), pollster="alpha")
+        _seed_swing_poll(db, world, date(2026, 6, 9), pollster="beta")
+        _seed_model_run(db, world, "UNS 2026-06-06", 1)
+        _seed_model_run(db, world, "UNS 2026-06-09", 1)
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-09",
+            "--since-date",
+            "2026-05-10",
+        )
+
+        # 06-09 already ran, so only the gap runs; its last day used alpha's poll.
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == "AUTO-BACKFILL missing_dates=2 from=2026-06-07 to=2026-06-08"
+        assert [line for line in lines if line.startswith("Latest poll used")] == [
+            "Latest poll used: alpha (2026-06-05 to 2026-06-07)",
+            "Latest poll used: alpha (2026-06-05 to 2026-06-07)",
+        ]
+        # The existing 06-09 run is not replaced by the dry meta re-run...
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-06", 1),
+            ("UNS 2026-06-07", 32),
+            ("UNS 2026-06-08", 32),
+            ("UNS 2026-06-09", 1),
+        ]
+        # ...but the meta describes 06-09, whose latest poll is beta's.
+        assert _read_json(meta_json) == {
+            "as_of_date": "2026-06-09",
+            "since_date": "2026-05-10",
+            "latest_poll_snippet": (
+                "Latest poll used: beta (2026-06-07 to 2026-06-09)"
+            ),
+            "latest_poll": {
+                "pollster": "beta",
+                "fieldwork_start": "2026-06-07",
+                "fieldwork_end": "2026-06-09",
+            },
+        }
+
+    def test_dry_run_writes_nothing(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json, meta_json = _guard_writes(
+            tmp_path, monkeypatch, only_the_test_database
+        )
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+        # With a dry run the gap since 06-06 is not backfilled either.
+        _seed_model_run(db, world, "UNS 2026-06-06", 1)
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-09",
+            "--since-date",
+            "2026-05-10",
+            "--dry-run",
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == "UNS simulation complete"
+        assert "Election name: UNS 2026-06-09" in lines
+        assert not meta_json.exists()
+        assert not trend_json.exists()
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-06", 1)
+        ]
+
+    def test_prints_the_regional_swing_summary(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-09",
+            "--since-date",
+            "2026-05-10",
+            "--dry-run",
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        summary = lines[lines.index("Weighted regional diffs (swing) snapshot:") + 1 :]
+        unswung = (
+            "Green: +0.00, Labour: +5.00, Liberal Democrats: +0.00, Others: +0.00, "
+            "Plaid Cymru: +0.00, Reform UK: +0.00"
+        )
+        # Regions sorted by name, parties by name; Scotland's SNP swing comes
+        # from its cross-break, everyone else's from the national delta.
+        assert summary == [
+            f"- London: Conservative: -5.00, {unswung}, "
+            "Scottish National Party: +0.00",
+            f"- North East England: Conservative: -5.00, {unswung}, "
+            "Scottish National Party: +0.00",
+            f"- Scotland: Conservative: -5.00, {unswung}, "
+            "Scottish National Party: -4.29",
+            f"- Wales: Conservative: -5.00, {unswung}, "
+            "Scottish National Party: +0.00",
+        ]
+
+    def test_region_without_key_parties_is_left_out_of_the_summary(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_westminster_world(db)
+        ni_map = db.add_map("Northern Ireland Map")
+        region = db.add_region(ni_map.id, "Northern Ireland")
+        seat = db.add_seat(ni_map.id, "Belfast East", region_id=region.id)
+        _seed_election(
+            db,
+            ni_map.id,
+            "NI Baseline",
+            [
+                (seat.id, world.party_ids["Democratic Unionist Party"], 20000.0),
+                (seat.id, world.party_ids["Alliance"], 15000.0),
+            ],
+        )
+
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--map-name",
+            "Northern Ireland Map",
+            "--baseline-election-name",
+            "NI Baseline",
+            "--as-of-date",
+            "2026-06-09",
+            "--since-date",
+            "2026-05-10",
+            "--dry-run",
+        )
+
+        lines = capsys.readouterr().out.splitlines()
+        assert "- Democratic Unionist Party: 1" in lines
+        assert lines[-1] == "Weighted regional diffs (swing) snapshot:"
+
+    def test_without_a_factory_opens_the_configured_database(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        monkeypatch.setenv("DATABASE_PATH", str(only_the_test_database))
+        world = seed_westminster_world(db)
+        _seed_swing_poll(db, world, date(2026, 6, 9))
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "run_uns_model.py",
+                *_world_argv(world),
+                "--as-of-date",
+                "2026-06-09",
+                "--since-date",
+                "2026-05-10",
+            ],
+        )
+
+        run_uns_model.main()
+
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-09", 32)
+        ]

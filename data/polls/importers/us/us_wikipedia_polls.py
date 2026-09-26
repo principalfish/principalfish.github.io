@@ -35,7 +35,7 @@ import argparse
 import logging
 import re
 import sys
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -61,8 +61,10 @@ from polls.importers.us.us_geography import (
     state_from_page_slug,
 )
 from polls.importers.us.us_polls_common import (
+    MAX_PAGE_GRID_CELLS,
     CandidateReading,
     Heading,
+    PageTables,
     ParsedTable,
     fetch_html,
     parse_poll_tables,
@@ -93,6 +95,9 @@ PRESIDENT_PAGE_URLS: tuple[str, ...] = (
 
 #: A page fetcher: takes a URL, returns the page source, raises on failure.
 Fetcher = Callable[[str], str]
+
+#: One fetch's outcome: ``(html, failure, note)``, exactly one of them set.
+_FetchResult = tuple[str | None, str | None, str | None]
 
 #: Where a contest's pages come from beyond its fixed ``page_urls``.
 PageDiscovery = Literal["none", "senate_index", "house_index"]
@@ -139,6 +144,21 @@ _MAX_PAGES_PER_STATE = 2
 
 # Backstop on the race pages taken from one index, whatever ``keep`` admits.
 _MAX_DISCOVERED_PAGES = _MAX_PAGES_PER_STATE * len(STATE_POSTAL)
+
+# Most rejected race links one index reports by URL; the rest are only counted.
+# A real index drops 0-2 (one state holding a regular and a special race in the
+# same cycle), so 50 is far past it while bounding the cached queue payload and
+# keeping the summary's page-failure list readable.
+_MAX_DROPPED_LINKS = 50
+
+# Most memory the page sources kept by one ``fetch_pages`` batch may hold,
+# measured with ``sys.getsizeof``: CPython stores a whole string at 2 bytes per
+# character once it holds one non-Latin-1 character (an en dash, which nearly
+# every Wikipedia page has), so a character count would understate it by half.
+# A real batch keeps ~90 pages of a few hundred KB, ~1 MB the largest seen, so
+# even 90 x 1 MB x 2 bytes (~180 MB) fits. It caps the worst case well below the
+# ~1.4 GB that 90 pages at the 8 MiB per-page cap could otherwise hold.
+MAX_TOTAL_PAGE_BYTES = 256 * 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -417,11 +437,15 @@ class DiscoveredPages:
     Attributes:
         urls: One absolute URL per race page to fetch, in index order.
         dropped: URL → reason for each race link left out for passing a cap
-            (:data:`_MAX_PAGES_PER_STATE` or :data:`_MAX_DISCOVERED_PAGES`).
+            (:data:`_MAX_PAGES_PER_STATE` or :data:`_MAX_DISCOVERED_PAGES`), at
+            most :data:`_MAX_DROPPED_LINKS` of them.
+        dropped_overflow: How many more links were left out past that, counted
+            rather than listed.
     """
 
     urls: tuple[str, ...]
     dropped: Mapping[str, str]
+    dropped_overflow: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -483,7 +507,10 @@ class UsPollIndex:
         page_failures: URL → reason for every page that could not be read or
             could not be placed (a second page claiming a seat another page
             already owns, or a race link past a discovery cap). Pages that
-            could not be placed are never fetched.
+            could not be placed are never fetched. Past
+            :data:`_MAX_DROPPED_LINKS` rejected links on one index, the rest
+            are one entry keyed ``"<contest>: N more discovery link(s)
+            dropped"`` — the only key that is not a URL.
         notes: Remarks that are not failures, e.g. a page that is not written
             yet.
         collapsed_only_races: Races whose only tables are hypotheticals.
@@ -540,7 +567,9 @@ def _discovered_pages(
     their spelling: past :data:`_MAX_PAGES_PER_STATE` pages for one state, or
     :data:`_MAX_DISCOVERED_PAGES` in all, a link is reported in
     :attr:`DiscoveredPages.dropped` instead, so an index full of variant
-    spellings cannot turn into hundreds of requests.
+    spellings cannot turn into hundreds of requests. That report is itself
+    capped at :data:`_MAX_DROPPED_LINKS` links; any more are only counted, in
+    :attr:`DiscoveredPages.dropped_overflow`.
 
     Args:
         html: The index page source.
@@ -555,8 +584,17 @@ def _discovered_pages(
     soup = BeautifulSoup(html, "lxml")
     urls: list[str] = []
     dropped: dict[str, str] = {}
+    overflow = 0
     seen: set[str] = set()
     pages_per_state: Counter[str] = Counter()
+
+    def drop(url: str, reason: str) -> None:
+        nonlocal overflow
+        if len(dropped) < _MAX_DROPPED_LINKS:
+            dropped[url] = reason
+        else:
+            overflow += 1
+
     for link in soup.find_all("a"):
         if not isinstance(link, Tag):
             continue
@@ -575,18 +613,25 @@ def _discovered_pages(
             continue
         url = f"{WIKIPEDIA_BASE}/wiki/{slug}"
         if pages_per_state[state] >= _MAX_PAGES_PER_STATE:
-            dropped[url] = (
-                f"{state} already has {_MAX_PAGES_PER_STATE} race pages on the index"
+            drop(
+                url,
+                f"{state} already has {_MAX_PAGES_PER_STATE} race pages on the index",
             )
             continue
         if len(urls) >= _MAX_DISCOVERED_PAGES:
-            dropped[url] = (
-                f"past the {_MAX_DISCOVERED_PAGES}-page limit on one index's race pages"
+            drop(
+                url,
+                f"past the {_MAX_DISCOVERED_PAGES}-page limit on one index's "
+                "race pages",
             )
             continue
         pages_per_state[state] += 1
         urls.append(url)
-    return DiscoveredPages(urls=tuple(urls), dropped=dropped)
+    return DiscoveredPages(
+        urls=tuple(urls),
+        dropped=dropped,
+        dropped_overflow=overflow,
+    )
 
 
 def discover_senate_pages(html: str) -> DiscoveredPages:
@@ -634,7 +679,7 @@ def discover_house_pages(html: str) -> DiscoveredPages:
 # ── Fetching ──────────────────────────────────────────────────────────────────
 
 
-def _fetch_one(url: str, fetcher: Fetcher) -> tuple[str | None, str | None, str | None]:
+def _fetch_one(url: str, fetcher: Fetcher) -> _FetchResult:
     """Fetch one page, turning every failure into text.
 
     Returns:
@@ -671,6 +716,17 @@ def fetch_pages(
     A 404 is not treated as a failure: an article for a future cycle simply may
     not exist yet, which is the case for the presidential Statewide page today.
 
+    Memory is bounded two ways. Each fetch is capped at
+    :data:`~polls.importers.wikipedia_common.MAX_PAGE_BYTES` by the fetcher,
+    and at most ``2 * max_workers`` fetches are outstanding (running, or done
+    but not yet read) at once, so finished pages cannot pile up behind a slow
+    one. The pages kept are capped at :data:`MAX_TOTAL_PAGE_BYTES` of memory in
+    total: a page that would pass it is still fetched, but dropped and reported
+    as a failure, and a smaller page after it may still fit. Parsing each page
+    as it arrives was considered and not done — it would turn
+    :func:`fetch_us_poll_index`'s index-then-pages flow inside out for a saving
+    these bounds already give.
+
     Args:
         urls: Pages to fetch. Repeats are fetched once.
         fetcher: Injection point — tests pass a dict-backed fake.
@@ -687,16 +743,38 @@ def fetch_pages(
     if not wanted:
         return FetchedPages(pages=pages, failures=failures, notes=())
 
-    with ThreadPoolExecutor(max_workers=max(1, max_workers)) as pool:
-        futures: list[Future[tuple[str | None, str | None, str | None]]] = [
-            pool.submit(_fetch_one, url, fetcher) for url in wanted
-        ]
+    workers = max(1, max_workers)
+    budget = MAX_TOTAL_PAGE_BYTES
+    kept = 0
+    queued = iter(wanted)
+    outstanding: deque[tuple[str, Future[_FetchResult]]] = deque()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+
+        def submit_next() -> None:
+            url = next(queued, None)
+            if url is not None:
+                outstanding.append((url, pool.submit(_fetch_one, url, fetcher)))
+
+        for _ in range(2 * workers):
+            submit_next()
         # Read the futures in request order, so the index is deterministic
-        # whatever order the pool finishes them in.
-        for url, future in zip(wanted, futures, strict=True):
+        # whatever order the pool finishes them in. Each is dropped as it is
+        # read, so a page is held only by ``pages`` once kept.
+        while outstanding:
+            url, future = outstanding.popleft()
             html, failure, note = future.result()
+            del future
+            submit_next()
             if html is not None:
-                pages[url] = html
+                size = sys.getsizeof(html)
+                if kept + size > budget:
+                    failure = (
+                        "dropped: keeping it would pass this batch's "
+                        f"{budget // (1024 * 1024)} MiB page budget"
+                    )
+                else:
+                    pages[url] = html
+                    kept += size
             if failure is not None:
                 failures[url] = failure
             if note is not None:
@@ -1067,15 +1145,41 @@ def rows_for_page(
         variants_dropped=variants_dropped,
         summary_rows_skipped=summary_rows_skipped,
         no_matchup_tables=tuple(no_matchup),
-        oversized_tables=tuple(
+        oversized_tables=_oversized_tables(contest, page_url, page_tables),
+    )
+
+
+def _oversized_tables(
+    contest: UsContest,
+    page_url: str,
+    page_tables: PageTables,
+) -> tuple[OversizedTable, ...]:
+    """Report a page's unread tables: each oversized one, then any skipped.
+
+    The tables skipped once the page's grid budget ran out become one line, so
+    the report stays bounded however many there were.
+    """
+    oversized = [
+        OversizedTable(
+            contest=contest.slug,
+            page_url=page_url,
+            heading_path=_headings_text(headings),
+        )
+        for headings in page_tables.oversized
+    ]
+    if page_tables.budget_skipped:
+        oversized.append(
             OversizedTable(
                 contest=contest.slug,
                 page_url=page_url,
-                heading_path=_headings_text(headings),
-            )
-            for headings in page_tables.oversized
-        ),
-    )
+                heading_path=(
+                    f"{page_tables.budget_skipped} further table(s) not read: "
+                    f"the page's {MAX_PAGE_GRID_CELLS:,}-cell grid budget "
+                    "was reached"
+                ),
+            ),
+        )
+    return tuple(oversized)
 
 
 def _lacks_matchup(contest: UsContest, table: ParsedTable) -> bool:
@@ -1238,8 +1342,8 @@ def _contest_page_urls(
     """
     urls = list(contest.page_urls)
     failures: dict[str, str] = {}
+    discovered: DiscoveredPages | None = None
     if index_html is not None:
-        discovered: DiscoveredPages | None = None
         if contest.discovery == "senate_index":
             discovered = discover_senate_pages(index_html)
         elif contest.discovery == "house_index":
@@ -1247,9 +1351,21 @@ def _contest_page_urls(
         if discovered is not None:
             urls.extend(discovered.urls)
             failures.update(discovered.dropped)
+    # One line for the rejected links past the cap. It is kept out of
+    # ``failures`` until the state filter has run, which would drop it (the key
+    # names no state), and keyed by contest so two indexes' entries stay apart.
+    # Under a filter the count covers every state: overflow links are not
+    # kept, so they cannot be filtered.
+    overflow: dict[str, str] = {}
+    if discovered is not None and discovered.dropped_overflow:
+        count = discovered.dropped_overflow
+        overflow[f"{contest.slug}: {count} more discovery link(s) dropped"] = (
+            f"past the {_MAX_DROPPED_LINKS}-link cap on one index's rejected "
+            "race links"
+        )
     wanted = list(dict.fromkeys(urls))
     if not contest.is_per_state:
-        return wanted, failures
+        return wanted, {**failures, **overflow}
 
     if wanted_states is not None:
         allowed = set(wanted_states)
@@ -1259,6 +1375,7 @@ def _contest_page_urls(
             for url, reason in failures.items()
             if state_from_page_slug(url) in allowed
         }
+    failures.update(overflow)
 
     # A seat is named after its state, so two pages for one state — a regular
     # and a special race in the same cycle — cannot be told apart. The first

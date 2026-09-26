@@ -69,6 +69,13 @@
           <li>{{ count }} {{ label }}</li>
         {% endfor %}
       </ul>
+      {% if tracking_changed and model_run and model_run.return_code == 0 %}
+        <p>
+          Only today's trend point follows a moved matchup. To move the earlier
+          points, open that chamber's race matchups and press Use automatic on one
+          of its races with Rebuild history ticked.
+        </p>
+      {% endif %}
     {% else %}
       <p>No race's tracked matchup changed.</p>
     {% endif %}
@@ -145,7 +152,14 @@
     {% if index.page_failures %}
       <ul>
         {% for url, reason in index.page_failures|dictsort %}
-          <li><a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>: {{ reason }}</li>
+          <li>
+            {% if url.startswith("http") %}
+              <a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>:
+            {% else %}
+              {{ url }}:
+            {% endif %}
+            {{ reason }}
+          </li>
         {% endfor %}
       </ul>
     {% else %}
@@ -274,7 +288,8 @@
 
     <h4>Oversized tables ({{ index.oversized_tables|length }})</h4>
     {% if index.oversized_tables %}
-      <p>Too large to read safely, so skipped unread.</p>
+      <p>Too large to read safely, or skipped once the page's grid budget ran
+        out, so not read.</p>
       <ul>
         {% for table in index.oversized_tables %}
           <li>

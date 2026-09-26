@@ -254,6 +254,17 @@ From `data/`:
 Server URL:
 - `http://127.0.0.1:5055/`
 
+It answers only `127.0.0.1` / `localhost`, and refuses a POST made from another
+site's page (`data/console/csrf.py`).
+
+The Werkzeug debugger and auto-reloader are off by default: the debugger runs
+arbitrary code for anything that can reach the port. For reload-on-save while
+developing:
+
+```bash
+CONSOLE_DEBUG=1 ../election_data/bin/python server.py
+```
+
 ---
 
 ## 8) Quick validation queries
@@ -416,10 +427,15 @@ partisan tag, summed or excluded candidates, not the race's lead table, …):
   a row that fails is marked failed and the rest still commit.
 
 Finishing applies automatic matchup tracking once, then runs the models and the
-export if anything was imported and the checkbox was ticked. Abandoning still
-applies tracking but skips the model run. The summary lists page failures and 404
-notes, collapsed-only races, unknown suffixes, dropped variants, unmatched seats
-and the tracking outcomes.
+export if the checkbox was ticked and the run imported anything or moved a race
+onto a new matchup. Only today's trend point follows a moved matchup; the summary
+says so, and a history rebuild on the matchup pages moves the earlier points.
+Abandoning still applies tracking but skips the model run. The summary lists page
+failures and 404 notes, collapsed-only races, unknown suffixes, dropped variants,
+unmatched seats and the tracking outcomes.
+A page over 8 MiB, or cut off mid-download, is listed as a page failure; the rest
+of the import carries on. So is a page that would take the pages kept past 256 MiB
+of memory.
 
 ### Matchups
 
@@ -435,12 +451,20 @@ The model only uses the polls of a seat's **tracked matchup**.
   **set** a stored label, **ignore** the race's polls, or go back to **auto**. An
   automatic update never overwrites a manual override.
 
-Both pages have an optional "rebuild history" checkbox (see `--rebuild-history`).
+Both matchup pages have an optional "rebuild history" checkbox for their own
+chamber, and **Run US Models** on the home page has one for all three (see
+`--rebuild-history`).
 
 ### Model runs
 
-**Run US Models** (home page) runs House → President → Senate → export. The CLI
-equivalent, with the console's poll windows:
+**Run US Models** (home page) runs House → President → Senate → export. Its
+**Rebuild all US history** box appends `--rebuild-history` to all three runners
+(each under the long rebuild timeout), after a confirmation: one blocking request
+that can take hours. The console runs one US model run at a time — ordinary runs,
+rebuilds and the import queue's finish step alike — and refuses any other while
+one is in progress, since each ends with an export of every chamber. (The
+console's other full exports — site data, by-elections, Holyrood — are not
+serialised with them.) The CLI equivalent, with the console's poll windows:
 
 ```bash
 ./election_data/bin/python models/us/run_us_house_model.py --since-days-back 60

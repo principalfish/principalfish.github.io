@@ -22,7 +22,8 @@ What makes the US queue different from Westminster's:
   race by race), and :func:`approve_group` commits the rest of a race in one
   go.
 - **A finish step with two jobs.** Automatic matchup tracking is applied over
-  every row the run scraped, then the three US models and the export run once.
+  every row the run scraped, then the three US models and the export run once
+  if the run imported anything or moved a race's tracked matchup.
 
 The finish step records its results on the cached payload under
 :data:`AUTO_TRACKING_KEY` (or :data:`AUTO_TRACKING_ERROR_KEY`),
@@ -33,8 +34,7 @@ page repeats neither.
 from __future__ import annotations
 
 import logging
-import subprocess
-from collections.abc import Callable, MutableMapping, Sequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from datetime import date
@@ -56,7 +56,12 @@ from polls.importers.us.us_wikipedia_polls import (
     commit_us_import_plan,
 )
 
-from console.services.us_models import ScriptRunner, run_us_models_and_export
+from console.services.us_models import (
+    ScriptRunner,
+    UsModelRunInterrupted,
+    model_run_slot,
+    run_us_models_and_export,
+)
 from console.services.wikipedia_queue import (
     NO_CUTOFF,
     QueueItem,
@@ -89,8 +94,10 @@ AUTO_TRACKING_KEY = "auto_tracking"
 #: retry it.
 AUTO_TRACKING_ERROR_KEY = "auto_tracking_error"
 
-#: Payload key for the ``UsModelRun`` of the finish step, written once. None
-#: when the run raised before producing one (see :data:`MODEL_ERROR_KEY`).
+#: Payload key for the ``UsModelRun`` of the finish step, written once. When a
+#: step died part-way it is the partial run up to that step, with return code 1;
+#: None when the run was refused because another was in progress (see
+#: :data:`MODEL_ERROR_KEY`).
 MODEL_RUN_KEY = "model_run"
 
 #: Payload key for the message of a model run that raised.
@@ -584,6 +591,22 @@ def _race_warnings(db: Database, row: UsPollRow, plan: UsImportPlan) -> list[str
 # ── Finishing ─────────────────────────────────────────────────────────────────
 
 
+def tracking_changed(counts: Mapping[str, int] | None) -> bool:
+    """Whether an automatic-tracking pass pointed any race at a new matchup.
+
+    Args:
+        counts: ``apply_auto_tracked_matchups``'s outcome counts, or None when
+            tracking has not run or raised.
+
+    Returns:
+        True when a race was tracked for the first time or moved to a new
+        lead matchup.
+    """
+    if not counts:
+        return False
+    return bool(counts.get("created") or counts.get("updated"))
+
+
 def finish_us_queue(
     db: Database,
     payload: MutableMapping[str, Any],
@@ -607,8 +630,13 @@ def finish_us_queue(
     — the message is recorded instead and the model run still goes ahead.
 
     The models and the export then run once, if the run asked for that, was not
-    abandoned, and imported anything. Both results are recorded on the
-    payload, so a refresh of the summary repeats neither.
+    abandoned, and either imported anything or moved a race onto a new tracked
+    matchup — a run whose only effect was tracking must still move the forecast
+    off the old pairing. Both results are recorded on the payload, so a refresh
+    of the summary repeats neither. The tracking outcome is read back off the
+    payload, so it counts on a refresh too, when an earlier request applied it.
+    A tracking pass that raised counts as no change, even if it moved some
+    races before failing; its error is shown on the summary instead.
 
     Args:
         db: Active Database instance.
@@ -616,8 +644,8 @@ def finish_us_queue(
             :data:`STATE_KEY` and the ``UsPollIndex`` under :data:`INDEX_KEY`.
             Results are written to it under :data:`AUTO_TRACKING_KEY` (or
             :data:`AUTO_TRACKING_ERROR_KEY` if tracking raised),
-            :data:`MODEL_RUN_KEY` and, if the model run raised,
-            :data:`MODEL_ERROR_KEY`.
+            :data:`MODEL_RUN_KEY` and, if the model run raised or was refused
+            because another run was in progress, :data:`MODEL_ERROR_KEY`.
         runner: Subprocess runner handed to ``run_us_models_and_export``.
         abandon: True when the user left the queue early; turns the model run
             off for good, as in the UK queue.
@@ -644,11 +672,26 @@ def finish_us_queue(
                 f"Automatic matchup tracking failed: {err}"
             )
 
-    imported = any(item.status == "imported" for item in state.items)
-    if MODEL_RUN_KEY in payload or not state.run_model_at_end or not imported:
+    if MODEL_RUN_KEY in payload or not state.run_model_at_end:
         return
-    try:
-        payload[MODEL_RUN_KEY] = run_us_models_and_export(db, runner=runner)
-    except (subprocess.SubprocessError, OSError) as err:
-        payload[MODEL_RUN_KEY] = None
-        payload[MODEL_ERROR_KEY] = f"US model run failed: {err}"
+    imported = any(item.status == "imported" for item in state.items)
+    if not imported and not tracking_changed(payload.get(AUTO_TRACKING_KEY)):
+        return
+    with model_run_slot() as free:
+        if not free:
+            # Recorded, not retried, like any finish result: a refresh long
+            # after the other run has ended must not start a surprise run.
+            payload[MODEL_RUN_KEY] = None
+            payload[MODEL_ERROR_KEY] = (
+                "US models not run: another US model run or history rebuild "
+                "was in progress. Run US Models from the home page once it "
+                "finishes."
+            )
+            return
+        try:
+            payload[MODEL_RUN_KEY] = run_us_models_and_export(db, runner=runner)
+        except UsModelRunInterrupted as err:
+            # Keep what finished before the failing step, as the Run US Models
+            # page does, so the summary shows which chambers saved new outputs.
+            payload[MODEL_RUN_KEY] = err.partial
+            payload[MODEL_ERROR_KEY] = f"US model run failed: {err}"

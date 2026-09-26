@@ -50,9 +50,29 @@ def live_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def test_a_post_asks_for_a_backup(app: Flask, requested: list[bool]) -> None:
     app.config["TESTING"] = False
-    app.test_client().post("/no-such-route")
+    app.add_url_rule("/wrote", "wrote", lambda: "ok", methods=["POST"])
+    app.test_client().post("/wrote")
 
     assert requested == [True]
+
+
+def test_a_failed_post_still_asks(app: Flask, requested: list[bool]) -> None:
+    # A 5xx may have written part of its change before failing.
+    app.config["TESTING"] = False
+    app.add_url_rule(
+        "/half-wrote", "half_wrote", lambda: ("boom", 500), methods=["POST"]
+    )
+    app.test_client().post("/half-wrote")
+
+    assert requested == [True]
+
+
+def test_a_refused_post_does_not(app: Flask, requested: list[bool]) -> None:
+    # A 4xx never reached a route that writes (here, no route at all).
+    app.config["TESTING"] = False
+    app.test_client().post("/no-such-route")
+
+    assert requested == []
 
 
 def test_a_get_does_not(app: Flask, requested: list[bool]) -> None:

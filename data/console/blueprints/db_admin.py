@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from flask import Blueprint, abort, request
+from flask import Blueprint
 from flask.typing import ResponseReturnValue
 
 import backup
@@ -12,33 +12,6 @@ from console.db import reset_db
 from console.services.runner import render_command_result
 
 bp = Blueprint("db_admin", __name__)
-
-# What a browser sends on a request the page's own form made; "none" is a
-# request typed in or bookmarked, which a hostile page can't produce.
-_SAME_SITE = ("same-origin", "none")
-
-
-@bp.before_request
-def same_origin_only() -> None:
-    """Refuse POSTs another site's page made the browser send (CSRF).
-
-    These routes restore or rewrite the live database, and the only guard in
-    the page is a ``confirm()`` that a forged form never shows. Browsers mark
-    every request with ``Sec-Fetch-Site`` (older ones with ``Origin`` on a
-    POST); a request with neither isn't from a browser, so it can't be forged
-    this way and is let through — curl, and the test client.
-    """
-    if request.method != "POST":
-        return
-    site = request.headers.get("Sec-Fetch-Site")
-    if site is not None:
-        if site not in _SAME_SITE:
-            abort(403)
-        return
-    origin = request.headers.get("Origin")
-    if origin is not None and origin != request.host_url.rstrip("/"):
-        abort(403)
-
 
 def _status_lines() -> list[str]:
     """Where backups live now, for the bottom of a result page."""

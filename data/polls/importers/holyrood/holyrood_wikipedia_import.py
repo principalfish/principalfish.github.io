@@ -111,6 +111,9 @@ def fetch_html(url: str) -> str:
 
     Raises:
         urllib.error.URLError: If the request fails.
+        http.client.IncompleteRead: If the connection dropped mid-body.
+        wikipedia_common.PageTooLargeError: If the page exceeds
+            ``wikipedia_common.MAX_PAGE_BYTES``.
     """
     return _fetch_html(url, user_agent=HOLYROOD_USER_AGENT, timeout=30)
 

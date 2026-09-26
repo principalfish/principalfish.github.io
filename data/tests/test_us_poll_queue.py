@@ -9,6 +9,7 @@ subprocess.
 from __future__ import annotations
 
 import dataclasses
+import html
 import subprocess
 import threading
 from collections.abc import Generator
@@ -26,7 +27,7 @@ from console.blueprints import us_poll_import
 from console.paths import EXPORT_ELECTION_SCRIPT
 from console.services import us_poll_queue
 from console.services.preview import PREVIEW_CACHE, store_preview
-from console.services.us_models import UsModelRun
+from console.services.us_models import MODEL_RUN_LOCK, UsModelRun
 from console.services.us_poll_queue import (
     AUTO_TRACKING_ERROR_KEY,
     AUTO_TRACKING_KEY,
@@ -42,6 +43,7 @@ from console.services.us_poll_queue import (
     finish_us_queue,
     group_key,
     prepare_us_item,
+    tracking_changed,
 )
 from console.services.wikipedia_queue import (
     NO_CUTOFF,
@@ -173,6 +175,13 @@ SHAPIRO_READINGS = _readings(
 )
 
 
+_REBUILD_CAVEAT = (
+    "Only today's trend point follows a moved matchup. To move the earlier "
+    "points, open that chamber's race matchups and press Use automatic on one "
+    "of its races with Rebuild history ticked."
+)
+
+
 def _row(
     db: Database,
     *,
@@ -273,15 +282,19 @@ def _prepared(db: Database, row: UsPollRow, *others: UsPollRow) -> QueueItem:
 class _RecordingRunner:
     """Stand-in for ``run_python_script`` that records calls."""
 
-    def __init__(self) -> None:
+    def __init__(self, return_codes: dict[str, int] | None = None) -> None:
         self.calls: list[str] = []
+        self._return_codes = return_codes or {}
 
     def __call__(
         self, script: Path, *args: str, timeout: int
     ) -> subprocess.CompletedProcess[str]:
         self.calls.append(script.name)
         return subprocess.CompletedProcess(
-            args=[str(script), *args], returncode=0, stdout="ok", stderr=""
+            args=[str(script), *args],
+            returncode=self._return_codes.get(script.name, 0),
+            stdout="ok",
+            stderr="",
         )
 
 
@@ -889,22 +902,93 @@ class TestFinish:
         assert payload[AUTO_TRACKING_KEY] is first_tracking
         assert payload[MODEL_RUN_KEY] is first_run
 
-    def test_nothing_imported_runs_no_models(self, us_db: Database) -> None:
+    def _skipped_but_stored_payload(self, us_db: Database) -> dict[str, Any]:
+        """A run that imported nothing: its one row was stored beforehand."""
         row = _row(us_db)
         state = _queue(us_db, row)
         prepare_us_item(us_db, state.items[0], state)
         _store(us_db, row)
         confirm_us_item(us_db, state.items[0])
-        payload: dict[str, Any] = {STATE_KEY: state, INDEX_KEY: _index(row)}
+        assert state.items[0].status == "skipped"
+        return {STATE_KEY: state, INDEX_KEY: _index(row)}
+
+    def test_a_tracking_only_run_runs_the_models_once(self, us_db: Database) -> None:
+        payload = self._skipped_but_stored_payload(us_db)
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner)
+        finish_us_queue(us_db, payload, runner=runner)
+
+        # Nothing was imported, but the race was tracked for the first time, so
+        # the forecast must move onto it — once, however often it is refreshed.
+        assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert isinstance(payload[MODEL_RUN_KEY], UsModelRun)
+        assert len(runner.calls) == 3
+
+    def test_unchanged_tracking_with_nothing_imported_runs_no_models(
+        self, us_db: Database
+    ) -> None:
+        us_db.set_tracked_matchup(
+            _map_id(us_db, SENATE_MAP),
+            _seat_id(us_db, SENATE_MAP, "Michigan"),
+            MICHIGAN_MATCHUP,
+            source="auto",
+        )
+        payload = self._skipped_but_stored_payload(us_db)
         runner = _RecordingRunner()
 
         finish_us_queue(us_db, payload, runner=runner)
 
-        assert state.items[0].status == "skipped"
+        assert payload[AUTO_TRACKING_KEY]["unchanged"] == 1
+        assert not payload[AUTO_TRACKING_KEY]["created"]
+        assert not payload[AUTO_TRACKING_KEY]["updated"]
         assert runner.calls == []
         assert MODEL_RUN_KEY not in payload
-        # The race is still tracked: its lead poll is stored, if not by this run.
+
+    def test_abandoning_a_tracking_only_run_runs_no_models(
+        self, us_db: Database
+    ) -> None:
+        payload = self._skipped_but_stored_payload(us_db)
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner, abandon=True)
+
         assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert runner.calls == []
+        assert MODEL_RUN_KEY not in payload
+
+    def test_a_tracking_pass_that_raised_with_nothing_imported_runs_nothing(
+        self,
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # A raised pass counts as no change, so with nothing imported there is
+        # no reason to run the models.
+        def failing(db: Database, rows: list[UsPollRow]) -> dict[str, int]:
+            raise ValueError("boom")
+
+        monkeypatch.setattr(us_poll_queue, "apply_auto_tracked_matchups", failing)
+        payload = self._skipped_but_stored_payload(us_db)
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert AUTO_TRACKING_ERROR_KEY in payload
+        assert runner.calls == []
+        assert MODEL_RUN_KEY not in payload
+
+    def test_tracking_from_an_earlier_request_still_counts(
+        self, us_db: Database
+    ) -> None:
+        # The tracking outcome is read off the payload, so a refresh after an
+        # earlier request applied it still runs the models it called for.
+        payload = self._skipped_but_stored_payload(us_db)
+        payload[AUTO_TRACKING_KEY] = {"created": 0, "updated": 2, "unchanged": 0}
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert len(runner.calls) == 3
 
     def test_the_model_option_off_runs_no_models(self, us_db: Database) -> None:
         runner = _RecordingRunner()
@@ -925,8 +1009,34 @@ class TestFinish:
 
         finish_us_queue(us_db, payload, runner=timed_out)
 
+        # The first step died, so the partial run holds just its heading.
+        run = payload[MODEL_RUN_KEY]
+        assert isinstance(run, UsModelRun)
+        assert run.return_code == 1
+        assert run.stdout.startswith("=== Run US House model ===")
+        assert payload[MODEL_ERROR_KEY].startswith(
+            "US model run failed: Run US House model did not finish: TimeoutExpired"
+        )
+
+    def test_a_run_in_progress_defers_the_models_and_says_so(
+        self, us_db: Database
+    ) -> None:
+        runner = _RecordingRunner()
+        payload = _imported_payload(us_db, _row(us_db))
+
+        with MODEL_RUN_LOCK:
+            finish_us_queue(us_db, payload, runner=runner)
+        # Recorded, not retried: a refresh once the other run has ended does
+        # not start a surprise run; the summary points at the home page.
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert runner.calls == []
         assert payload[MODEL_RUN_KEY] is None
-        assert payload[MODEL_ERROR_KEY].startswith("US model run failed:")
+        assert payload[MODEL_ERROR_KEY] == (
+            "US models not run: another US model run or history rebuild was in "
+            "progress. Run US Models from the home page once it finishes."
+        )
+        assert not MODEL_RUN_LOCK.locked()
 
     def test_abandon_runs_no_models_but_still_tracks(self, us_db: Database) -> None:
         runner = _RecordingRunner()
@@ -1031,6 +1141,24 @@ class TestFinish:
 def _us_seat(item: QueueItem) -> str | None:
     assert isinstance(item.row, UsPollRow)
     return item.row.seat_name
+
+
+class TestTrackingChanged:
+    @pytest.mark.parametrize(
+        ("counts", "changed"),
+        [
+            (None, False),
+            ({}, False),
+            ({"created": 0, "updated": 0, "unchanged": 3}, False),
+            ({"kept_manual": 2, "no_polls": 1}, False),
+            ({"created": 1}, True),
+            ({"created": 0, "updated": 1}, True),
+        ],
+    )
+    def test_created_or_updated_counts_as_a_change(
+        self, counts: dict[str, int] | None, changed: bool
+    ) -> None:
+        assert tracking_changed(counts) is changed
 
 
 # ── Routes (console.blueprints.us_poll_import) ────────────────────────────────
@@ -1697,6 +1825,8 @@ class TestFinishRoute:
         assert "SKIPPED: no tracked presidential matchup set" in body
         assert "skipped: president" in body
         assert "1 races tracked for the first time" in body
+        # Tracking moved and the models ran, so the older points are flagged.
+        assert _REBUILD_CAVEAT in " ".join(html.unescape(body).split())
         tracked = us_db.get_tracked_matchup(
             _map_id(us_db, SENATE_MAP), _seat_id(us_db, SENATE_MAP, "Michigan")
         )
@@ -1718,6 +1848,7 @@ class TestFinishRoute:
         assert model_runner.calls == []
         assert "Nothing was imported." in body
         assert "Models and Export" not in body
+        assert "move the earlier points" not in body
 
     def test_the_model_option_off_runs_no_models(
         self,
@@ -1728,9 +1859,30 @@ class TestFinishRoute:
     ) -> None:
         token = self._import_one(client, us_db, monkeypatch, run_model_at_end="")
 
-        client.get(f"/us/import/{token}/finish")
+        body = _body(client, f"/us/import/{token}/finish")
 
         assert model_runner.calls == []
+        # Tracking moved, but no model ran, so no trend point follows it yet.
+        assert "1 races tracked for the first time" in body
+        assert "move the earlier points" not in body
+
+    def test_a_failed_model_run_shows_no_rebuild_note(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Tracking moved, but the Senate model failed, so not even today's
+        # point follows the new matchup: the note would be false.
+        runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
+        monkeypatch.setattr(f"{BLUEPRINT}.run_python_script", runner)
+        token = self._import_one(client, us_db, monkeypatch)
+
+        body = _body(client, f"/us/import/{token}/finish")
+
+        assert "1 races tracked for the first time" in body
+        assert "Return code 1" in body
+        assert "move the earlier points" not in body
 
     def test_abandon_runs_no_models_but_tracks_what_was_imported(
         self,
@@ -1810,7 +1962,10 @@ class TestFinishRoute:
         )
         index = UsPollIndex(
             rows=(*rows, broken),
-            page_failures={"https://en.wikipedia.org/wiki/Gone": "HTTP 500: boom"},
+            page_failures={
+                "https://en.wikipedia.org/wiki/Gone": "HTTP 500: boom",
+                "senate_races: 7 more discovery link(s) dropped": "past the cap",
+            },
             notes=(
                 "https://en.wikipedia.org/wiki/Statewide: not present yet (HTTP 404)",
             ),
@@ -1865,6 +2020,10 @@ class TestFinishRoute:
         assert f"all polls ({PER_RACE_CUTOFF_NOTE})" in body
         assert "12 Wikipedia page(s) read" in body
         assert "HTTP 500: boom" in body
+        assert 'href="https://en.wikipedia.org/wiki/Gone"' in body
+        # A synthetic failure key is shown as text, not as a dead link.
+        assert "senate_races: 7 more discovery link(s) dropped" in body
+        assert 'href="senate_races' not in body
         assert "not present yet (HTTP 404)" in body
         assert "OH-09" in body
         assert "4 hidden row(s)" in body

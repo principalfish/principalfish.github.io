@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import threading
 from collections.abc import Mapping
 from datetime import date
 from email.message import Message
@@ -20,7 +21,11 @@ from sqlalchemy.exc import IntegrityError
 
 import polls.importers.us.us_wikipedia_polls as us_wikipedia_polls
 from db import Database
-from polls.importers.us.us_polls_common import CandidateReading
+from polls.importers.us.us_polls_common import (
+    CandidateReading,
+    PageTables,
+    parse_poll_tables,
+)
 from polls.importers.us.us_wikipedia_polls import (
     HOUSE_DISTRICTS,
     HOUSE_INDEX_URL,
@@ -63,6 +68,14 @@ TEXAS_SENATE_VARIANT_URLS = (
     f"{WIKI}/2026_United_States_Senate_election_in_texas",
     f"{WIKI}/2026_United_States_Senate_election_in_x/Texas",
 )
+
+
+def _texas_variants(count: int) -> list[str]:
+    """``count`` distinct Senate race links that all resolve to Texas."""
+    return [
+        f"{WIKI}/2026_United_States_Senate_election_in_x{i}/Texas" for i in range(count)
+    ]
+
 
 CALIFORNIA_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_California"
 TEXAS_URL = f"{WIKI}/2026_United_States_House_of_Representatives_elections_in_Texas"
@@ -665,8 +678,33 @@ class TestDiscoverSenatePages:
         }
 
     def test_a_normal_index_drops_nothing(self) -> None:
-        assert discover_senate_pages(SENATE_INDEX_PAGE).dropped == {}
-        assert discover_house_pages(HOUSE_INDEX_PAGE).dropped == {}
+        for discovered in (
+            discover_senate_pages(SENATE_INDEX_PAGE),
+            discover_house_pages(HOUSE_INDEX_PAGE),
+        ):
+            assert discovered.dropped == {}
+            assert discovered.dropped_overflow == 0
+
+    def test_page_cap_drops_are_capped_too(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The other drop site: links past the per-index page cap.
+        monkeypatch.setattr(us_wikipedia_polls, "_MAX_DISCOVERED_PAGES", 30)
+        monkeypatch.setattr(us_wikipedia_polls, "_MAX_DROPPED_LINKS", 2)
+        discovered = discover_senate_pages(SENATE_INDEX_PAGE)
+        assert len(discovered.urls) == 30
+        assert set(discovered.dropped.values()) == {
+            "past the 30-page limit on one index's race pages"
+        }
+        assert len(discovered.dropped) == 2
+        assert discovered.dropped_overflow == 3
+
+    def test_the_dropped_list_is_capped_and_the_rest_counted(self) -> None:
+        html = "".join(_link(url, "Texas") for url in _texas_variants(200))
+        discovered = discover_senate_pages(html)
+        assert len(discovered.urls) == 2
+        assert len(discovered.dropped) == 50
+        assert discovered.dropped_overflow == 148
 
     def test_relative_hrefs_become_absolute(self) -> None:
         html = _link("/wiki/2026_United_States_Senate_election_in_Maine", "Maine")
@@ -772,6 +810,90 @@ class TestFetchPages:
             "y: not present yet (HTTP 404)",
             "x: not present yet (HTTP 404)",
         )
+
+
+class TestFetchPagesBounds:
+    KIB = 1024
+    BUDGET_REASON = "dropped: keeping it would pass this batch's 1 MiB page budget"
+
+    def test_pages_past_the_run_budget_are_failures(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(us_wikipedia_polls, "MAX_TOTAL_PAGE_BYTES", 1024 * self.KIB)
+        sizes = {"a": 600, "b": 600, "c": 300, "d": 200}
+        fetcher = FakeFetcher({url: url * kib * self.KIB for url, kib in sizes.items()})
+        result = fetch_pages(list(sizes), fetcher=fetcher, max_workers=2)
+        # b would pass the budget and is dropped; c still fits after it.
+        assert list(result.pages) == ["a", "c"]
+        assert result.failures == {
+            "b": self.BUDGET_REASON,
+            "d": self.BUDGET_REASON,
+        }
+
+    def test_memory_not_characters_is_counted(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # 400K characters with one en dash hold ~800 KiB, so two do not fit in
+        # 1 MiB although their characters would.
+        monkeypatch.setattr(us_wikipedia_polls, "MAX_TOTAL_PAGE_BYTES", 1024 * self.KIB)
+        page = "–" + "a" * (400 * self.KIB - 1)
+        fetcher = FakeFetcher({"a": page, "b": page})
+        result = fetch_pages(["a", "b"], fetcher=fetcher)
+        assert list(result.pages) == ["a"]
+        assert result.failures == {"b": self.BUDGET_REASON}
+
+    def test_the_budget_follows_request_order_not_finish_order(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # z is asked for first but held until y has its page, so it finishes
+        # last; it is still the one kept.
+        monkeypatch.setattr(us_wikipedia_polls, "MAX_TOTAL_PAGE_BYTES", 1024 * self.KIB)
+        y_done = threading.Event()
+        z_saw_y: list[bool] = []
+
+        def fetcher(url: str) -> str:
+            if url == "z":
+                z_saw_y.append(y_done.wait(timeout=5))
+                return "z" * 600 * self.KIB
+            page = "y" * 600 * self.KIB
+            y_done.set()
+            return page
+
+        result = fetch_pages(["z", "y"], fetcher=fetcher, max_workers=2)
+        assert z_saw_y == [True]
+        assert list(result.pages) == ["z"]
+        assert list(result.failures) == ["y"]
+
+    def test_finished_pages_cannot_pile_up_behind_a_slow_one(self) -> None:
+        # With 2 workers at most 4 fetches are outstanding. While the first page
+        # blocks, only the 3 after it may be fetched, never all 20.
+        others_done = threading.Semaphore(0)
+        fetched_while_blocked: list[int] = []
+        requested: list[str] = []
+        lock = threading.Lock()
+
+        def fetcher(url: str) -> str:
+            with lock:
+                requested.append(url)
+            if url != "u0":
+                others_done.release()
+                return url
+            # Wait for the three the window allows, then give an unbounded
+            # pool time to fetch far more before counting.
+            for _ in range(3):
+                others_done.acquire(timeout=5)
+            others_done.acquire(timeout=0.2)
+            with lock:
+                fetched_while_blocked.append(len(requested) - 1)
+            return url
+
+        urls = [f"u{i}" for i in range(20)]
+        result = fetch_pages(urls, fetcher=fetcher, max_workers=2)
+        assert fetched_while_blocked == [3]
+        assert list(result.pages) == urls
 
 
 # ── President ─────────────────────────────────────────────────────────────────
@@ -1157,6 +1279,29 @@ class TestOversizedTables:
         )
         assert [t.page_url for t in index.oversized_tables] == [MICHIGAN_URL]
 
+    def test_tables_skipped_past_the_page_budget_are_one_line(
+        self,
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def parse_with_skips(html: str, **kwargs: bool) -> PageTables:
+            page = parse_poll_tables(html, **kwargs)
+            return dataclasses.replace(page, budget_skipped=5)
+
+        monkeypatch.setattr(us_wikipedia_polls, "parse_poll_tables", parse_with_skips)
+        page = rows_for_page(
+            SENATE_RACES,
+            MICHIGAN_URL,
+            MICHIGAN_OVERSIZED_PAGE,
+            seat_ids=_seat_ids(us_db, SENATE_RACES.map_name),
+        )
+        # The per-table line first, then one line for all the skipped tables.
+        assert [t.heading_path for t in page.oversized_tables] == [
+            "General election › Polling",
+            "5 further table(s) not read: "
+            "the page's 400,000-cell grid budget was reached",
+        ]
+
 
 # ── House ─────────────────────────────────────────────────────────────────────
 
@@ -1417,6 +1562,52 @@ class TestFetchUsPollIndex:
         )
         fetch_us_poll_index(us_db, [SENATE_RACES], fetcher=fetcher)
         assert fetcher.requested == [SENATE_INDEX_URL, FLORIDA_URL]
+
+    @pytest.mark.parametrize("states", [None, ["Texas"]])
+    def test_overflowing_drops_are_reported_as_one_line(
+        self,
+        us_db: Database,
+        states: list[str] | None,
+    ) -> None:
+        # The line names no state, so a state filter must not remove it.
+        index_html = "".join(_link(url, "Texas") for url in _texas_variants(60))
+        fetcher = _full_fetcher(**{SENATE_INDEX_URL: index_html})
+        index = fetch_us_poll_index(
+            us_db,
+            [SENATE_RACES],
+            states=states,
+            fetcher=fetcher,
+        )
+        overflow = {
+            key: reason
+            for key, reason in index.page_failures.items()
+            if not key.startswith("http")
+        }
+        assert overflow == {
+            "senate_races: 8 more discovery link(s) dropped": (
+                "past the 50-link cap on one index's rejected race links"
+            ),
+        }
+        # 50 listed drops, the second Texas page the duplicate-seat check
+        # refuses, and the one overflow line.
+        assert len(index.page_failures) == 52
+
+    def test_the_overflow_line_survives_a_contest_that_is_not_per_state(
+        self,
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # No contest is like this today (discovery implies per-state), but the
+        # early return for one must not lose the overflow line.
+        monkeypatch.setattr(
+            us_wikipedia_polls.UsContest, "is_per_state", property(lambda self: False)
+        )
+        index_html = "".join(_link(url, "Texas") for url in _texas_variants(60))
+        fetcher = _full_fetcher(**{SENATE_INDEX_URL: index_html})
+
+        index = fetch_us_poll_index(us_db, [SENATE_RACES], fetcher=fetcher)
+
+        assert "senate_races: 8 more discovery link(s) dropped" in index.page_failures
 
     def test_variant_spellings_of_one_state_cost_no_requests(
         self, us_db: Database

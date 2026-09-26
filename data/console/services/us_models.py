@@ -15,7 +15,9 @@ history" option.
 from __future__ import annotations
 
 import subprocess
-from collections.abc import Collection, Mapping
+import threading
+from collections.abc import Collection, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -172,6 +174,88 @@ class UsModelRun:
     skipped: frozenset[str]
 
 
+class UsModelRunInterrupted(subprocess.SubprocessError):
+    """A step timed out or could not be started, part-way through a run.
+
+    A :class:`subprocess.SubprocessError`, so callers that already catch that
+    (and ``OSError``) still do. The original error is its ``__cause__``.
+
+    Attributes:
+        step: Label of the step that died.
+        partial: The run up to that point: every finished step's output, then
+            whatever the dying step printed, under its own heading. Its
+            ``return_code`` is 1. It shows which chambers finished, and so
+            saved outputs the export never picked up.
+    """
+
+    def __init__(self, step: str, partial: UsModelRun, cause: BaseException) -> None:
+        # Every constructor argument goes to ``args``, so copy and pickle, which
+        # rebuild an exception from its args, still work.
+        super().__init__(step, partial, cause)
+        self.step = step
+        self.partial = partial
+        self.cause = cause
+
+    def __str__(self) -> str:
+        return f"{self.step} did not finish: {type(self.cause).__name__}: {self.cause}"
+
+
+def _output_text(output: str | bytes | None) -> str:
+    """A subprocess error's captured output as text.
+
+    ``TimeoutExpired`` carries whatever the step printed before it was killed —
+    as bytes on POSIX even when the run asked for text.
+    """
+    if isinstance(output, bytes):
+        return output.decode("utf-8", errors="replace")
+    return output or ""
+
+
+# Held by every console run of the US models: an ordinary run, a one-chamber
+# history rebuild, a rebuild of all three, and the poll queue's finish step.
+# One lock, not one per chamber, because every run ends with the export, which
+# publishes *every* chamber's trend history: a run that exported while another
+# chamber's rebuild had cleared its points would publish that half-cleared
+# history. The threaded dev server makes a double submit reach a run twice.
+# Process-local: it does not guard against a second server process or a
+# concurrent CLI run. Nor does it cover the console's other full exports (site
+# data, by-elections, Holyrood), which also rewrite the US files: one export at
+# a time across the whole console is a wider question than the US runs.
+MODEL_RUN_LOCK = threading.Lock()
+
+
+@contextmanager
+def model_run_slot() -> Iterator[bool]:
+    """Hold the console's one US model-run slot, if it is free.
+
+    The lock is tried without blocking, so a second submit is told a run is in
+    progress instead of queueing silently behind an hour-long rebuild.
+
+    Yields:
+        True while the slot is held (it is released on exit), or False when
+        another request holds it — in which case nothing may run.
+    """
+    if not MODEL_RUN_LOCK.acquire(blocking=False):
+        yield False
+        return
+    try:
+        yield True
+    finally:
+        MODEL_RUN_LOCK.release()
+
+
+def busy_message(refused: str) -> str:
+    """The message for a run refused because another one holds the slot.
+
+    Args:
+        refused: What did not happen, e.g. ``"History not rebuilt"``.
+    """
+    return (
+        f"{refused}: another US model run or history rebuild is in progress; "
+        "wait for it to finish, then try again."
+    )
+
+
 def tracked_matchup_in_force(db: Database, chamber: UsChamber) -> bool:
     """Whether ``chamber``'s required national tracked matchup is set.
 
@@ -225,6 +309,10 @@ def run_us_models_and_export(
 
     Returns:
         The combined :class:`UsModelRun`.
+
+    Raises:
+        UsModelRunInterrupted: A step timed out or could not be started. It
+            carries the output of every step before it.
     """
     return _run_chambers_and_export(db, US_CHAMBERS, runner=runner, rebuild=rebuild)
 
@@ -253,6 +341,9 @@ def run_us_chamber_and_export(
 
     Returns:
         The combined :class:`UsModelRun`.
+
+    Raises:
+        UsModelRunInterrupted: A step timed out or could not be started.
     """
     rebuild = frozenset({chamber.slug}) if rebuild_history else frozenset()
     return _run_chambers_and_export(db, (chamber,), runner=runner, rebuild=rebuild)
@@ -278,9 +369,9 @@ def _run_chambers_and_export(
         for the skip and failure rules.
 
     Raises:
-        subprocess.SubprocessError: A step timed out (``TimeoutExpired``) or
-            otherwise failed to run; propagated from ``runner``.
-        OSError: The interpreter could not be started.
+        UsModelRunInterrupted: A step timed out (``TimeoutExpired``), otherwise
+            failed to run, or could not be started (``OSError``). It carries
+            the output of every step before it and is chained to the original.
     """
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
@@ -289,7 +380,22 @@ def _run_chambers_and_export(
     def run_step(
         label: str, script: Path, args: tuple[str, ...], *, timeout: int = STEP_TIMEOUT_SECONDS
     ) -> int:
-        result = runner(script, *args, timeout=timeout)
+        try:
+            result = runner(script, *args, timeout=timeout)
+        except (subprocess.SubprocessError, OSError) as err:
+            stdout_parts.append(
+                f"=== {label} ===\n{_output_text(getattr(err, 'stdout', None))}"
+            )
+            partial_stderr = _output_text(getattr(err, "stderr", None))
+            if partial_stderr:
+                stderr_parts.append(f"=== {label} ===\n{partial_stderr}")
+            partial = UsModelRun(
+                stdout="\n".join(stdout_parts),
+                stderr="\n".join(stderr_parts),
+                return_code=1,
+                skipped=frozenset(skipped),
+            )
+            raise UsModelRunInterrupted(label, partial, err) from err
         stdout_parts.append(f"=== {label} ===\n{result.stdout}")
         if result.stderr:
             stderr_parts.append(f"=== {label} ===\n{result.stderr}")

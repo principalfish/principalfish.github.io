@@ -7,6 +7,7 @@ so the pages render against a fresh SQLite database per test.
 from __future__ import annotations
 
 import html
+import pickle
 import re
 import subprocess
 import sys
@@ -25,10 +26,13 @@ from models import ElectionType
 from console import create_app
 from console import paths as console_paths
 from console.services.us_models import (
+    MODEL_RUN_LOCK,
     REBUILD_TIMEOUT_SECONDS,
     STEP_TIMEOUT_SECONDS,
     US_CHAMBERS_BY_SLUG,
     UsModelRun,
+    UsModelRunInterrupted,
+    model_run_slot,
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
@@ -326,12 +330,14 @@ class _RecordingRunner:
 
     def __init__(self, return_codes: dict[str, int] | None = None) -> None:
         self.calls: list[tuple[str, tuple[str, ...]]] = []
+        self.timeouts: dict[str, int] = {}
         self._return_codes = return_codes or {}
 
     def __call__(
         self, script: Path, *args: str, timeout: int
     ) -> subprocess.CompletedProcess[str]:
         self.calls.append((script.name, args))
+        self.timeouts[script.name] = timeout
         code = self._return_codes.get(script.name, 0)
         return subprocess.CompletedProcess(
             args=[str(script), *args],
@@ -481,8 +487,14 @@ class TestRunUsModelsRoute:
         monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
         captured: dict[str, object] = {}
 
-        def fake_run(database: Database) -> UsModelRun:
+        def fake_run(
+            database: Database,
+            *,
+            runner: object = None,
+            rebuild: frozenset[str] = frozenset(),
+        ) -> UsModelRun:
             captured["db"] = database
+            captured["rebuild"] = rebuild
             return UsModelRun(
                 stdout="=== Run US President model ===\nSKIPPED: no tracked presidential matchup set",
                 stderr="",
@@ -496,9 +508,226 @@ class TestRunUsModelsRoute:
 
         assert response.status_code == 200
         assert captured["db"] is db
+        # No box ticked: an ordinary run, rebuilding nothing.
+        assert captured["rebuild"] == frozenset()
         body = response.get_data(as_text=True)
         assert "Run US Models" in body
         assert "SKIPPED: no tracked presidential matchup set" in body
+
+    @pytest.mark.parametrize(
+        ("fail", "error", "error_name", "partial"),
+        [
+            (
+                "run_us_house_model.py",
+                subprocess.TimeoutExpired(
+                    ["python", "run_us_house_model.py"],
+                    600,
+                    output=b"HOUSE step reached 2026-09-10\n",
+                ),
+                "TimeoutExpired",
+                "HOUSE step reached 2026-09-10",
+            ),
+            (
+                "run_us_house_model.py",
+                FileNotFoundError(2, "No such file or directory"),
+                "FileNotFoundError",
+                None,
+            ),
+            (
+                "export_elections.py",
+                subprocess.TimeoutExpired(["python", "export_elections.py"], 300),
+                "TimeoutExpired",
+                None,
+            ),
+        ],
+    )
+    def test_an_interrupted_run_renders_a_result_not_a_500(
+        self,
+        app: Flask,
+        db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        fail: str,
+        error: Exception,
+        error_name: str,
+        partial: str | None,
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        runner = _TimeoutRecorder(fail=fail, error=error)
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        response = app.test_client().post("/us/run-models")
+
+        assert response.status_code == 200
+        body = html.unescape(response.get_data(as_text=True))
+        assert "Run US Models" in body
+        assert "The run did not finish" in body
+        assert "The export did not run, or did not finish." in body
+        assert error_name in body
+        if partial is not None:
+            assert partial in body
+        # The sequence stopped at the failing step.
+        assert [name for name, _ in runner.timeouts][-1] == fail
+
+    def test_a_run_whose_model_fails_leads_with_the_note(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        runner = _RecordingRunner(return_codes={"run_us_house_model.py": 2})
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        body = html.unescape(
+            app.test_client().post("/us/run-models").get_data(as_text=True)
+        )
+
+        assert "The run did not finish" in body
+        assert "ran run_us_house_model.py" in body
+
+    def test_a_successful_run_has_no_note(
+        self,
+        app: Flask,
+        db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        recording_runner: _RecordingRunner,
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+
+        body = app.test_client().post("/us/run-models").get_data(as_text=True)
+
+        assert "did not finish" not in body
+
+    def test_an_interrupted_run_shows_the_chambers_that_finished(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+        runner = _TimeoutRecorder(
+            fail="export_elections.py",
+            error=subprocess.TimeoutExpired(["python", "export_elections.py"], 300),
+        )
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        body = html.unescape(
+            app.test_client().post("/us/run-models").get_data(as_text=True)
+        )
+
+        # Both models that ran finished; only the export died.
+        assert "=== Run US House model ===" in body
+        assert "=== Run US Senate model ===" in body
+        assert (
+            "Export elections to static data files did not finish: TimeoutExpired"
+            in body
+        )
+
+
+class TestRebuildAllHistory:
+    """The home page's "rebuild all US history" box on Run US Models."""
+
+    @pytest.fixture(autouse=True)
+    def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+
+    def test_ticked_rebuilds_every_chamber_then_exports(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        map_id = _seed_president_map(db)
+        db.set_tracked_matchup(map_id, None, VANCE_NEWSOM, source="manual")
+
+        response = app.test_client().post(
+            "/us/run-models", data={"rebuild_history": "on"}
+        )
+
+        assert response.status_code == 200
+        assert recording_runner.scripts == [
+            "run_us_house_model.py",
+            "run_us_presidential_model.py",
+            "run_us_senate_model.py",
+            "export_elections.py",
+        ]
+        for script in recording_runner.scripts[:3]:
+            assert recording_runner.args_for(script)[-1] == "--rebuild-history"
+            # A rebuild at the ordinary step timeout would be killed part-way.
+            assert recording_runner.timeouts[script] == REBUILD_TIMEOUT_SECONDS
+        assert recording_runner.timeouts["export_elections.py"] == STEP_TIMEOUT_SECONDS
+        body = html.unescape(response.get_data(as_text=True))
+        assert "Rebuild US History" in body
+        # The page shows the command that ran, poll windows included.
+        assert (
+            "run_us_house_model.py --since-days-back 60 --rebuild-history" in body
+        )
+        assert not MODEL_RUN_LOCK.locked()
+
+    @pytest.mark.parametrize(
+        ("form", "refused"),
+        [({"rebuild_history": "on"}, "History not rebuilt"), ({}, "Models not run")],
+    )
+    def test_a_run_in_progress_refuses_it_and_runs_nothing(
+        self,
+        app: Flask,
+        recording_runner: _RecordingRunner,
+        form: dict[str, str],
+        refused: str,
+    ) -> None:
+        # An ordinary run is refused too: its export would publish whatever
+        # half-cleared history a rebuild in progress had left.
+        client = app.test_client()
+        with MODEL_RUN_LOCK:
+            response = client.post("/us/run-models", data=form)
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/"
+        assert recording_runner.calls == []
+        assert _flashes(client, response)[-1] == (
+            f"{refused}: another US model run or history rebuild is in progress; "
+            "wait for it to finish, then try again."
+        )
+
+    def test_a_rebuild_whose_model_fails_says_history_may_be_partial(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Exiting non-zero stops the sequence like a timeout does, after the
+        # runner may have cleared that chamber's points.
+        runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        response = app.test_client().post(
+            "/us/run-models", data={"rebuild_history": "on"}
+        )
+
+        body = html.unescape(response.get_data(as_text=True))
+        assert "the chamber it stopped on may be partial" in body
+        assert "export_elections.py" not in runner.scripts
+
+    def test_an_interrupted_rebuild_says_history_may_be_partial(
+        self, app: Flask, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        runner = _TimeoutRecorder(
+            fail="run_us_senate_model.py",
+            error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
+        )
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        response = app.test_client().post(
+            "/us/run-models", data={"rebuild_history": "on"}
+        )
+
+        assert response.status_code == 200
+        body = html.unescape(response.get_data(as_text=True))
+        assert "Rebuild US History" in body
+        assert "the chamber it stopped on may be partial" in body
+        assert "Re-run the rebuild" in body
+        assert "=== Run US House model ===" in body
+        assert ("run_us_senate_model.py", REBUILD_TIMEOUT_SECONDS) in runner.timeouts
+        assert not MODEL_RUN_LOCK.locked()
+
+    def test_the_home_page_offers_the_box_behind_a_warning(self, app: Flask) -> None:
+        body = html.unescape(app.test_client().get("/").get_data(as_text=True))
+
+        form = body[body.index('action="/us/run-models"') :]
+        form = form[: form.index("</form>")]
+        # No ``value``: the browser then sends "on", which the route matches.
+        assert '<input type="checkbox" name="rebuild_history">' in form
+        assert "Rebuild all US history" in form
+        assert "return !this.rebuild_history.checked || confirm(" in form
+        assert "can take hours" in form
 
 
 # ── Matchup pages ─────────────────────────────────────────────────────────
@@ -1188,10 +1417,50 @@ class TestRebuildTimeout:
             error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
         )
 
-        with pytest.raises(subprocess.TimeoutExpired):
+        with pytest.raises(UsModelRunInterrupted) as caught:
             run_us_chamber_and_export(
                 db, US_CHAMBERS_BY_SLUG["senate"], runner=runner, rebuild_history=True
             )
+        # Still a SubprocessError, chained to the original, for older callers.
+        assert isinstance(caught.value, subprocess.SubprocessError)
+        assert isinstance(caught.value.__cause__, subprocess.TimeoutExpired)
+        # Rebuilt from its args, so copy and pickle keep the partial run.
+        copied = pickle.loads(pickle.dumps(caught.value))
+        assert (copied.step, copied.partial) == (
+            caught.value.step,
+            caught.value.partial,
+        )
+        assert str(copied) == str(caught.value)
+
+    def test_an_interrupted_run_keeps_the_steps_that_finished(
+        self, db: Database
+    ) -> None:
+        # House finishes; Senate times out after printing a line; no export.
+        runner = _TimeoutRecorder(
+            fail="run_us_senate_model.py",
+            error=subprocess.TimeoutExpired(
+                ["python", "run_us_senate_model.py"],
+                300,
+                output=b"SENATE reached 2026-09-10\n",
+                stderr=b"warning: slow\n",
+            ),
+        )
+
+        with pytest.raises(UsModelRunInterrupted) as caught:
+            run_us_models_and_export(db, runner=runner)
+
+        interrupted = caught.value
+        assert interrupted.step == "Run US Senate model"
+        assert str(interrupted).startswith("Run US Senate model did not finish:")
+        partial = interrupted.partial
+        assert partial.return_code == 1
+        # President has no tracked matchup here, so it was skipped, not run.
+        assert partial.skipped == frozenset({"president"})
+        assert partial.stdout.split("\n=== ")[0] == "=== Run US House model ===\n"
+        senate = "=== Run US Senate model ===\nSENATE reached 2026-09-10"
+        assert senate in partial.stdout
+        assert "Export" not in partial.stdout
+        assert partial.stderr == "=== Run US Senate model ===\nwarning: slow\n"
 
 
 class TestRebuildRouteFailure:
@@ -1265,3 +1534,106 @@ class TestRebuildRouteFailure:
         body = html.unescape(response.get_data(as_text=True))
         assert "Rebuild US Senate History" in body
         assert "trend history may be partial" in body
+
+
+class TestModelRunSlot:
+    """Only one US model run or history rebuild runs at a time."""
+
+    @pytest.fixture(autouse=True)
+    def _use_temp_db(self, db: Database, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("console.blueprints.us.get_db", lambda: db)
+
+    def _post_texas_rebuild(
+        self,
+        app: Flask,
+        db: Database,
+    ) -> tuple[FlaskClient[Response], Response]:
+        seeded = _seed_senate_races(db)
+        client = app.test_client()
+        response = client.post(
+            f"/us/matchups/{seeded['map_id']}/{seeded['texas']}",
+            data={"action": "set", "matchup": PAXTON_TALARICO, "rebuild_history": "on"},
+        )
+        return client, response
+
+    def test_a_run_in_progress_refuses_the_rebuild(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        with MODEL_RUN_LOCK:
+            client, response = self._post_texas_rebuild(app, db)
+
+        assert response.status_code == 302
+        assert response.headers["Location"] == "/us/matchups?chamber=senate"
+        assert recording_runner.calls == []
+        assert _flashes(client, response)[-1] == (
+            "History not rebuilt: another US model run or history rebuild is in "
+            "progress; wait for it to finish, then try again."
+        )
+
+    def test_the_lock_is_free_after_a_rebuild(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        _, response = self._post_texas_rebuild(app, db)
+
+        assert response.status_code == 200
+        assert not MODEL_RUN_LOCK.locked()
+
+    def test_a_chamber_rebuild_whose_model_fails_says_history_may_be_partial(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        runner = _RecordingRunner(return_codes={"run_us_senate_model.py": 1})
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        _, response = self._post_texas_rebuild(app, db)
+
+        body = html.unescape(response.get_data(as_text=True))
+        assert "trend history may be partial" in body
+        assert "Re-run the rebuild" in body
+
+    def test_the_lock_is_free_after_a_failed_rebuild(
+        self, app: Flask, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        runner = _TimeoutRecorder(
+            fail="run_us_senate_model.py",
+            error=subprocess.TimeoutExpired(["python", "run_us_senate_model.py"], 3600),
+        )
+        monkeypatch.setattr("console.blueprints.us.run_python_script", runner)
+
+        _, response = self._post_texas_rebuild(app, db)
+
+        assert "trend history may be partial" in html.unescape(
+            response.get_data(as_text=True)
+        )
+        assert not MODEL_RUN_LOCK.locked()
+
+    def test_a_senate_rebuild_in_progress_blocks_a_president_rebuild(
+        self, app: Flask, db: Database, recording_runner: _RecordingRunner
+    ) -> None:
+        # Every run ends with the export, which would publish the Senate's
+        # half-cleared history, so one run at a time across chambers.
+        _seed_president_matchups(db)
+
+        with MODEL_RUN_LOCK:
+            response = app.test_client().post(
+                "/us/president/matchup",
+                data={"matchup": VANCE_NEWSOM, "rebuild_history": "on"},
+            )
+
+        assert response.status_code == 302
+        assert recording_runner.calls == []
+
+    def test_the_slot_is_held_for_the_run_and_released_after(self) -> None:
+        with model_run_slot() as free:
+            assert free
+            assert MODEL_RUN_LOCK.locked()
+            with model_run_slot() as second:
+                assert not second
+            # A refused second request must not release the first's hold.
+            assert MODEL_RUN_LOCK.locked()
+        assert not MODEL_RUN_LOCK.locked()
+
+    def test_the_slot_is_released_when_the_run_raises(self) -> None:
+        with pytest.raises(RuntimeError):
+            with model_run_slot():
+                raise RuntimeError("boom")
+        assert not MODEL_RUN_LOCK.locked()

@@ -32,8 +32,18 @@
       <h2>USA</h2>
       <div class="action-stack">
         <a class="button primary button-block" href="{{ url_for('us_poll_import.import_form') }}">Import US Polls</a>
-        <form method="post" action="{{ url_for('us.run_us_models') }}" class="inline-form button-form">
+        <form method="post" action="{{ url_for('us.run_us_models') }}" class="inline-form button-form"
+              onsubmit="return !this.rebuild_history.checked || confirm('Rebuild ALL US history? The House, President and Senate models each recompute their whole trend history, one after another, then the export runs. This page stays open and blocked until it finishes, which can take hours.');">
+          <label class="checkbox">
+            <input type="checkbox" name="rebuild_history">
+            Rebuild all US history (runs each chamber's model over its whole trend
+            history, then the export)
+          </label>
           <button type="submit" class="button button-block">Run US Models</button>
+          <small>
+            With the box ticked this rebuilds all three chambers in one blocking
+            request; it can take hours.
+          </small>
         </form>
         <a class="button button-block" href="{{ url_for('us.president_matchup') }}">President Matchup</a>
         <a class="button button-block" href="{{ url_for('us.race_matchups', chamber='senate') }}">Senate Race Matchups</a>

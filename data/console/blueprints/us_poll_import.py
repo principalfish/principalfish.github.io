@@ -75,6 +75,7 @@ from console.services.us_poll_queue import (
     finish_us_queue,
     group_key,
     prepare_us_item,
+    tracking_changed,
 )
 from console.services.wikipedia_queue import (
     QueueState,
@@ -408,10 +409,10 @@ def finish(token: str) -> ResponseReturnValue:
     """GET,POST /us/import/<token>/finish — Close a US catch-up run and report on it.
 
     Applies automatic matchup tracking over every scraped row, then runs the
-    US models and the export once, if the run was started with that option,
-    was not abandoned and imported anything. Both results — or a tracking
-    failure's message — are recorded on the cached payload, so refreshing the
-    summary repeats neither.
+    US models and the export once, if the run was started with that option, was
+    not abandoned, and imported anything or moved a race's tracked matchup. Both
+    results — or a tracking failure's message — are recorded on the cached
+    payload, so refreshing the summary repeats neither.
 
     Args:
         token: Token identifying the cached US queue.
@@ -443,6 +444,7 @@ def finish(token: str) -> ResponseReturnValue:
         cutoff_label=cutoff_label(state),
         contest_labels={contest.slug: contest.label for contest in US_CONTESTS},
         auto_tracking=_auto_tracking_lines(auto_tracking),
+        tracking_changed=tracking_changed(auto_tracking),
         auto_tracking_error=payload.get(AUTO_TRACKING_ERROR_KEY, ""),
         model_run=payload.get(MODEL_RUN_KEY),
         model_error=payload.get(MODEL_ERROR_KEY, ""),

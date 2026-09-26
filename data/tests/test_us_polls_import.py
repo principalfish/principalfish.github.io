@@ -10,6 +10,8 @@ from datetime import date
 import pytest
 from bs4 import BeautifulSoup, Tag
 
+from polls.importers import wikipedia_common
+from polls.importers.us import us_polls_common
 from polls.importers.us.us_polls_common import (
     PARTY_SUFFIXES,
     CandidateColumn,
@@ -30,6 +32,45 @@ from polls.importers.us.us_polls_common import (
     pollster_identifier,
     surname,
 )
+from polls.importers.wikipedia_common import PageTooLargeError
+
+
+class TestFetchHtml:
+    URL = "https://en.wikipedia.org/wiki/Example"
+
+    def test_delegates_to_the_shared_capped_helper(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # The size cap and truncation check live in the shared helper
+        # (tested in test_wikipedia_common); this pins that the US import
+        # goes through it under its own User-Agent and timeout.
+        calls: list[tuple[str, str, int]] = []
+
+        def fake_fetch(url: str, *, user_agent: str, timeout: int) -> str:
+            calls.append((url, user_agent, timeout))
+            return "<html></html>"
+
+        monkeypatch.setattr(wikipedia_common, "fetch_html", fake_fetch)
+        assert us_polls_common.fetch_html(self.URL) == "<html></html>"
+        assert calls == [
+            (
+                self.URL,
+                us_polls_common.USER_AGENT,
+                us_polls_common.REQUEST_TIMEOUT_SECONDS,
+            ),
+        ]
+
+    def test_oversized_page_error_propagates(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_fetch(url: str, *, user_agent: str, timeout: int) -> str:
+            raise PageTooLargeError(f"{url} returned more than 8 MiB; not read")
+
+        monkeypatch.setattr(wikipedia_common, "fetch_html", fake_fetch)
+        with pytest.raises(PageTooLargeError, match="8 MiB"):
+            us_polls_common.fetch_html(self.URL)
 
 
 class TestParseDateRange:
@@ -397,6 +438,21 @@ def _too_wide_table(table_id: str) -> str:
     )
 
 
+def _tall_too_wide_table(table_id: str, *, rows: int) -> str:
+    """A table of ``rows`` rows, each spanning 256 columns (past the 200 limit)."""
+    wide_row = "<tr>" + "<td colspan='64'>x</td>" * 4 + "</tr>"
+    return f"<table id='{table_id}'>" + wide_row * rows + "</table>"
+
+
+def _block_table(table_id: str, rows: int, width: int) -> str:
+    """A non-poll table of ``rows`` × ``width`` plain cells."""
+    return (
+        f"<table id='{table_id}'>"
+        + ("<tr>" + "<td>x</td>" * width + "</tr>") * rows
+        + "</table>"
+    )
+
+
 class TestExpandTableGrid:
     def test_rowspan_value_repeats_into_every_row_it_covers(self) -> None:
         # Michigan's shape: one pollster and one date cell serve the LV row and
@@ -552,6 +608,16 @@ class TestExpandTableGrid:
         assert len(grid) == 2
         assert _texts(grid[1]) == ["Emerson inner rows", "June 3, 2026"]
 
+
+    def test_max_cells_abandons_at_the_smaller_bound(self) -> None:
+        table = _table(_block_table("t", rows=10, width=5), "t")
+        assert expand_table_grid(table, max_cells=49) == []
+        assert len(expand_table_grid(table, max_cells=50)) == 10
+
+    def test_a_non_positive_max_cells_reads_nothing(self) -> None:
+        table = _table(_block_table("t", rows=2, width=2), "t")
+        assert expand_table_grid(table, max_cells=0) == []
+        assert expand_table_grid(table, max_cells=-5) == []
 
 class TestHeadingPath:
     def test_nationwide_president_table(self) -> None:
@@ -1442,3 +1508,119 @@ class TestParsePollTables:
     def test_an_empty_table_is_not_oversized(self) -> None:
         page = parse_poll_tables("<table id='t'></table>")
         assert (page.tables, page.oversized) == ((), ())
+
+
+class TestPageGridBudget:
+    """One page shares a grid budget across its tables.
+
+    The budget is shrunk to 1,000 cells so the fixtures stay small; the rule
+    does not depend on the real figure.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _small_budget(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", 1_000)
+
+    def _page(self, *tables: str) -> str:
+        poll = str(_table(SENATE_RACE_PAGE, "el-sayed-rogers"))
+        return "<html><body>" + poll + "".join(tables) + "</body></html>"
+
+    def test_a_normal_page_skips_nothing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", 400_000)
+        page = parse_poll_tables(SENATE_RACE_PAGE)
+        assert page.budget_skipped == 0
+        assert page.oversized == ()
+
+    def test_tables_past_the_budget_are_refused_then_counted(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # 1,000 cells left after the poll table: "a" takes 400, and "b" (30 rows
+        # wanting 900) is refused at 20 columns, which charges the last 600.
+        poll = _table(SENATE_RACE_PAGE, "el-sayed-rogers")
+        poll_grid = expand_table_grid(poll)
+        poll_cells = len(poll_grid) * len(poll_grid[0])
+        monkeypatch.setattr(
+            us_polls_common, "MAX_PAGE_GRID_CELLS", poll_cells + 1_000
+        )
+        html = (
+            "<h2 id='General_election'>General election</h2>"
+            + self._page(
+                _block_table("a", rows=20, width=20),
+                "<h3 id='Crossing'>Crossing</h3>"
+                + _block_table("b", rows=30, width=30),
+                _block_table("c", rows=1, width=1),
+                _block_table("d", rows=1, width=1),
+            )
+        )
+        page = parse_poll_tables(html)
+        # The poll table before the filler is parsed as normal.
+        assert [table.matchup for table in page.tables] == [
+            "Rogers (R) vs El-Sayed (D)",
+        ]
+        assert [[h.text for h in path][-1] for path in page.oversized] == [
+            "Crossing",
+        ]
+        assert page.budget_skipped == 2
+
+    def test_expanded_cells_never_exceed_the_budget(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # Every expansion counts: read as a poll table, rejected, or refused.
+        built: list[int] = []
+        real_expand = us_polls_common.expand_table_grid
+
+        def counting_expand(table: Tag, *, max_cells: int) -> list[list[Cell]]:
+            grid = real_expand(table, max_cells=max_cells)
+            # A refusal may have placed up to max_cells before giving up.
+            built.append(len(grid) * len(grid[0]) if grid else max_cells)
+            return grid
+
+        monkeypatch.setattr(us_polls_common, "expand_table_grid", counting_expand)
+        tables = (_block_table(f"t{i}", rows=10, width=10) for i in range(20))
+        page = parse_poll_tables(self._page(*tables))
+        assert sum(built) <= 1_000
+        assert page.budget_skipped > 0
+
+    def test_a_table_over_the_per_table_bound_leaves_budget_for_later_tables(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # With the real budget, one too-wide table is refused by the per-table
+        # bound and charged 100,000; the poll table after it is still read.
+        monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", 400_000)
+        html = _too_wide_table("wide") + self._page()
+        page = parse_poll_tables(html)
+        assert len(page.oversized) == 1
+        assert page.budget_skipped == 0
+        assert len(page.tables) == 1
+
+    def test_big_refused_tables_spend_the_budget(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # 500 rows at the 200-column limit is 100,000 cells a refusal may have
+        # placed, so four of these spend the real budget; the rest are counted.
+        monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", 400_000)
+        tall = "".join(_tall_too_wide_table(f"w{i}", rows=500) for i in range(5))
+        page = parse_poll_tables(tall + self._page())
+        assert len(page.oversized) == 4
+        assert page.budget_skipped == 2
+        assert page.tables == ()
+
+    def test_small_refused_tables_leave_the_budget_for_real_ones(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        # A two-row too-wide table can place at most 400 cells, so a handful of
+        # them (~1 KB of markup) cannot starve the poll table after them.
+        monkeypatch.setattr(us_polls_common, "MAX_PAGE_GRID_CELLS", 400_000)
+        wide = "".join(_too_wide_table(f"w{i}") for i in range(10))
+        page = parse_poll_tables(wide + self._page())
+        assert len(page.oversized) == 10
+        assert page.budget_skipped == 0
+        assert len(page.tables) == 1

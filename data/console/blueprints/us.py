@@ -16,8 +16,9 @@ endpoints, registered from :data:`US_CHAMBERS` by :func:`_register_chamber_route
 
 from __future__ import annotations
 
-import subprocess
+from collections.abc import Callable
 from pathlib import Path
+from typing import Protocol
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 from flask.typing import ResponseReturnValue
@@ -47,6 +48,10 @@ from console.services.us_models import (
     US_CHAMBERS,
     US_CHAMBERS_BY_SLUG,
     UsChamber,
+    UsModelRun,
+    UsModelRunInterrupted,
+    busy_message,
+    model_run_slot,
     run_us_chamber_and_export,
     run_us_models_and_export,
 )
@@ -54,11 +59,31 @@ from console.services.us_models import (
 __all__ = ["US_CHAMBERS", "UsChamber", "bp"]
 
 # Shown when a rebuild's subprocess dies part-way. The runner deletes the old
-# points before recomputing them, so the history on disk may now be partial.
+# points before recomputing them, so the history on disk may now be partial. A
+# model step that dies stops the sequence before the export; the export itself
+# writes its files in place, so one that dies may have rewritten only some.
 REBUILD_INTERRUPTED_NOTE = (
     "The rebuild did not finish, so this chamber's trend history may be partial: "
     "the runner clears the old points before recomputing them. Re-run the rebuild "
-    "to restore it; the export was not run."
+    "to restore it; the export did not run, or did not finish."
+)
+
+# The same for a rebuild of every chamber: the one whose step died may have a
+# partial history, and those rebuilt before it were never exported.
+REBUILD_ALL_INTERRUPTED_NOTE = (
+    "The rebuild did not finish, so the trend history of the chamber it stopped "
+    "on may be partial: the runner clears the old points before recomputing them. "
+    "Any chamber rebuilt before it (shown below) has a new history the export "
+    "never picked up. Re-run the rebuild; if only the export failed, every "
+    "history is complete and just needs exporting."
+)
+
+# Shown when a plain model run's subprocess dies part-way. Chambers that
+# finished first have saved new outputs the export never picked up, and an
+# export that died may have rewritten only some of its files.
+RUN_INTERRUPTED_NOTE = (
+    "The run did not finish, so the models and the export may be out of step: "
+    "re-run them. The export did not run, or did not finish."
 )
 
 bp = Blueprint("us", __name__)
@@ -74,8 +99,19 @@ def run_us_models() -> ResponseReturnValue:
     The sequence itself lives in ``console.services.us_models`` — a chamber
     whose tracked matchup is unset is skipped without stopping the others.
 
+    With the form's ``rebuild_history`` box ticked, every chamber's runner
+    recomputes its whole trend history (``--rebuild-history``, under the long
+    rebuild timeout), one after another: a single request that can take hours.
+    Either way the run holds the console's one model-run slot
+    (:func:`~console.services.us_models.model_run_slot`), so it is refused with
+    a flash while another run or rebuild is in progress.
+
+    A step that times out or cannot be started renders a failed result saying
+    the models and the export may be out of step, instead of a 500.
+
     Returns:
-        Rendered command_result.html showing combined stdout, stderr, and return code.
+        Rendered command_result.html showing combined stdout, stderr, and return
+        code, or a redirect home when another run is in progress.
     """
     scripts: list[Path] = [chamber.model_script for chamber in US_CHAMBERS]
     scripts.append(EXPORT_ELECTION_SCRIPT)
@@ -84,15 +120,53 @@ def run_us_models() -> ResponseReturnValue:
             flash(f"Script not found: {script}")
             return redirect(url_for("home.home"))
 
-    run = run_us_models_and_export(get_db())
-
-    return render_command_result(
-        title="Run US Models",
-        command="run_us_house_model.py → run_us_presidential_model.py → run_us_senate_model.py → export_elections.py",
-        stdout=run.stdout,
-        stderr=run.stderr,
-        return_code=run.return_code,
+    rebuild = _rebuild_requested()
+    command = " → ".join(
+        [
+            " ".join(
+                (
+                    chamber.model_script.name,
+                    *chamber.model_args,
+                    *((chamber.rebuild_flag,) if rebuild else ()),
+                ),
+            )
+            for chamber in US_CHAMBERS
+        ]
+        + [EXPORT_ELECTION_SCRIPT.name]
     )
+
+    def result_page(
+        *,
+        stdout: str,
+        stderr: str,
+        return_code: int,
+    ) -> ResponseReturnValue:
+        return render_command_result(
+            title="Rebuild US History" if rebuild else "Run US Models",
+            command=command,
+            stdout=stdout,
+            stderr=stderr,
+            return_code=return_code,
+        )
+
+    db = get_db()
+    slugs = (
+        frozenset(chamber.slug for chamber in US_CHAMBERS) if rebuild else frozenset()
+    )
+    with model_run_slot() as free:
+        if not free:
+            refused = "History not rebuilt" if rebuild else "Models not run"
+            flash(busy_message(refused))
+            return redirect(url_for("home.home"))
+        # ``run_python_script`` is looked up here at call time, so tests can
+        # monkeypatch it, as for :func:`_rebuild_history`.
+        return _guarded_run(
+            lambda: run_us_models_and_export(
+                db, runner=run_python_script, rebuild=slugs
+            ),
+            note=REBUILD_ALL_INTERRUPTED_NOTE if rebuild else RUN_INTERRUPTED_NOTE,
+            result_page=result_page,
+        )
 
 
 @bp.route("/us/president/matchup", methods=["GET", "POST"])
@@ -249,6 +323,10 @@ def _rebuild_history(
     can monkeypatch it. A step that times out or cannot be started renders a
     failed result saying the history may be partial, instead of a 500.
 
+    It holds the console's one model-run slot
+    (:func:`~console.services.us_models.model_run_slot`), so while another run
+    or rebuild is in progress it is refused with a flash and sent back.
+
     Args:
         db: Active Database instance.
         chamber: The chamber to rebuild.
@@ -256,7 +334,8 @@ def _rebuild_history(
         back_values: URL values for ``back_endpoint``.
 
     Returns:
-        The rendered command result.
+        The rendered command result, or a redirect back when another run is in
+        progress.
     """
     command_args = " ".join((*chamber.model_args, chamber.rebuild_flag))
 
@@ -272,29 +351,70 @@ def _rebuild_history(
             back_values=back_values,
         )
 
-    try:
-        run = run_us_chamber_and_export(
-            db, chamber, runner=run_python_script, rebuild_history=True
+    with model_run_slot() as free:
+        if not free:
+            flash(busy_message("History not rebuilt"))
+            return redirect(url_for(back_endpoint, **(back_values or {})))
+        return _guarded_run(
+            lambda: run_us_chamber_and_export(
+                db, chamber, runner=run_python_script, rebuild_history=True
+            ),
+            note=REBUILD_INTERRUPTED_NOTE,
+            result_page=result_page,
         )
-    except (subprocess.SubprocessError, OSError) as err:
-        partial_output = _output_text(getattr(err, "stdout", None))
+
+
+class _ResultPage(Protocol):
+    """Renders a model run's result page from its output and return code."""
+
+    def __call__(
+        self,
+        *,
+        stdout: str,
+        stderr: str,
+        return_code: int,
+    ) -> ResponseReturnValue: ...
+
+
+def _guarded_run(
+    run: Callable[[], UsModelRun],
+    *,
+    note: str,
+    result_page: _ResultPage,
+) -> ResponseReturnValue:
+    """Run a model sequence and render its result, even if a step dies.
+
+    A step that times out or cannot be started raises out of the service. Here
+    that becomes a failed result page instead of a 500: ``note``, then every
+    finished step's output and whatever the dying step printed, so the page
+    shows which chambers finished before it. A step that exits non-zero stops
+    the sequence the same way (before the export, after a rebuild may have
+    cleared its points), so its page leads with ``note`` too.
+
+    Args:
+        run: Runs the sequence and returns its combined outcome.
+        note: What an interrupted run leaves behind, shown above its output.
+        result_page: Renders the page from the output and return code.
+
+    Returns:
+        The rendered result page.
+    """
+    try:
+        outcome = run()
+    except UsModelRunInterrupted as err:
         return result_page(
-            stdout="\n".join(filter(None, (REBUILD_INTERRUPTED_NOTE, partial_output))),
-            stderr=f"{type(err).__name__}: {err}",
+            stdout="\n".join(filter(None, (note, err.partial.stdout))),
+            stderr="\n".join(filter(None, (err.partial.stderr, str(err)))),
             return_code=1,
         )
-    return result_page(stdout=run.stdout, stderr=run.stderr, return_code=run.return_code)
-
-
-def _output_text(output: str | bytes | None) -> str:
-    """A subprocess error's captured output as text.
-
-    ``TimeoutExpired`` carries whatever the step printed before it was killed —
-    as bytes on POSIX even when the run asked for text.
-    """
-    if isinstance(output, bytes):
-        return output.decode("utf-8", errors="replace")
-    return output or ""
+    stdout = outcome.stdout
+    if outcome.return_code != 0:
+        stdout = "\n".join(filter(None, (note, stdout)))
+    return result_page(
+        stdout=stdout,
+        stderr=outcome.stderr,
+        return_code=outcome.return_code,
+    )
 
 
 def _register_chamber_routes(chamber: UsChamber) -> None:

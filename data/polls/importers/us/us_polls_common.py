@@ -34,9 +34,10 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
-from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup, Tag
+
+from polls.importers import wikipedia_common
 
 _MONTH_MAP: dict[str, int] = {
     "jan": 1, "january": 1,
@@ -75,11 +76,22 @@ def _clean(value: str) -> str:
 
 
 def fetch_html(url: str) -> str:
-    """Fetch HTML from ``url`` with the console's User-Agent (UTF-8 decoded)."""
-    req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-        body: str = response.read().decode("utf-8", errors="replace")
-    return body
+    """Fetch HTML from ``url`` with the console's User-Agent (UTF-8 decoded).
+
+    The shared helper does the fetch, so the US import gets the same size cap
+    and truncation check as the UK importers.
+
+    Raises:
+        urllib.error.URLError: If the request fails.
+        http.client.IncompleteRead: If the connection dropped mid-body.
+        wikipedia_common.PageTooLargeError: If the body exceeds
+            ``wikipedia_common.MAX_PAGE_BYTES``.
+    """
+    return wikipedia_common.fetch_html(
+        url,
+        user_agent=USER_AGENT,
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
 
 
 def parse_date_range(raw: str) -> tuple[date, date] | None:
@@ -188,6 +200,14 @@ _MAX_SPAN = 64
 # that would cost memory and time to expand, and is never a poll table.
 _MAX_GRID_WIDTH = 200
 _MAX_GRID_CELLS = 100_000
+
+# Upper bound on the grid cells one page may expand across all its tables. The
+# per-table bound above does not stop a page of many large tables: a
+# ``<td rowspan=64 colspan=64>`` is ~30 bytes of markup and 4,096 cells. The
+# biggest real page, a 52-district House state page, needs ~16,000 cells and a
+# heavy Senate race page ~10,000, so this is 20x the largest real page while
+# capping one page at ~400,000 cells (~25-30 MB, freed once its rows are read).
+MAX_PAGE_GRID_CELLS = 400_000
 
 _FOOTNOTE_RE = re.compile(r"\[[^\]]*\]")
 
@@ -327,7 +347,16 @@ def _own_rows(table: Tag) -> list[Tag]:
     ]
 
 
-def expand_table_grid(table: Tag) -> list[list[Cell]]:
+def _width_limit(row_count: int, max_cells: int) -> int:
+    """The widest a grid of ``row_count`` rows may grow within ``max_cells``."""
+    return min(_MAX_GRID_WIDTH, max(0, max_cells) // max(1, row_count))
+
+
+def expand_table_grid(
+    table: Tag,
+    *,
+    max_cells: int = _MAX_GRID_CELLS,
+) -> list[list[Cell]]:
     """Expand a table into a rectangular grid, resolving rowspan and colspan.
 
     Reading cells by position is wrong on Wikipedia's polling tables: a pollster
@@ -341,13 +370,16 @@ def expand_table_grid(table: Tag) -> list[list[Cell]]:
     cells so every row has the same length.
 
     The grid is bounded: a table wider than :data:`_MAX_GRID_WIDTH` columns, or
-    whose rows × width would pass :data:`_MAX_GRID_CELLS`, is abandoned as soon
-    as a cell crosses the bound, so hostile markup costs no more than a real
-    table. Callers tell that apart from a table with no rows at all by
+    whose rows × width would pass ``max_cells``, is abandoned as soon as a cell
+    crosses the bound, so hostile markup costs no more than a real table.
+    Callers tell that apart from a table with no rows at all by
     :func:`_own_rows` being non-empty.
 
     Args:
         table: The ``<table>`` element.
+        max_cells: The most cells the grid may hold. Defaults to the per-table
+            bound; :func:`parse_poll_tables` passes less once the page's own
+            budget is running out.
 
     Returns:
         One list of :class:`Cell` per ``<tr>``, all of the same length, or an
@@ -355,7 +387,7 @@ def expand_table_grid(table: Tag) -> list[list[Cell]]:
     """
     rows = _own_rows(table)
     placed: list[dict[int, Cell]] = [{} for _ in rows]
-    max_width = min(_MAX_GRID_WIDTH, _MAX_GRID_CELLS // max(1, len(rows)))
+    max_width = _width_limit(len(rows), max_cells)
 
     for row_index, row in enumerate(rows):
         column = 0
@@ -748,12 +780,18 @@ class PageTables:
     Attributes:
         tables: The parsed tables, in document order.
         oversized: The heading path of each table :func:`expand_table_grid`
-            abandoned for passing its size bounds, in document order. Such a
-            table was never classified, so it is reported whatever it held.
+            abandoned for passing its size bounds, or for not fitting in what
+            was left of the page's grid budget, in document order. Such a table
+            was never classified, so it is reported whatever it held.
+        budget_skipped: How many later tables were not read at all because
+            the page's grid budget (:data:`MAX_PAGE_GRID_CELLS`) had run out.
+            A count, not a list, so a page of thousands of tiny tables cannot
+            turn into thousands of report lines.
     """
 
     tables: tuple[ParsedTable, ...]
     oversized: tuple[tuple[Heading, ...], ...]
+    budget_skipped: int = 0
 
 
 def _candidate_link_title(cell: Cell, name_text: str) -> str | None:
@@ -1207,6 +1245,13 @@ def parse_poll_tables(
 
     A table too large to expand is not dropped silently: its heading path is
     returned in :attr:`PageTables.oversized` for the contest layer to report.
+    The whole page shares a budget of :data:`MAX_PAGE_GRID_CELLS` grid cells,
+    charged for every grid expanded (kept or not, since the cost was paid) and
+    for every refused expansion at the most it can have placed (its rows times
+    the width limit), so the cells a page places never exceed the budget. A
+    table that does not fit in what is left is reported as oversized; once the
+    budget is spent, every later table is only counted, in
+    :attr:`PageTables.budget_skipped`.
 
     Args:
         html: A fetched Wikipedia page.
@@ -1223,13 +1268,25 @@ def parse_poll_tables(
     soup = BeautifulSoup(html, "lxml")
     parsed: list[ParsedTable] = []
     oversized: list[tuple[Heading, ...]] = []
+    remaining = MAX_PAGE_GRID_CELLS
+    budget_skipped = 0
     for table in soup.find_all("table"):
         if not isinstance(table, Tag) or table.find_parent("table") is not None:
             continue
-        grid = expand_table_grid(table)
-        if not grid and _own_rows(table):
-            oversized.append(tuple(heading_path(table)))
+        if remaining <= 0:
+            budget_skipped += 1
             continue
+        max_cells = min(_MAX_GRID_CELLS, remaining)
+        grid = expand_table_grid(table, max_cells=max_cells)
+        own_rows = 0 if grid else len(_own_rows(table))
+        if own_rows:
+            oversized.append(tuple(heading_path(table)))
+            # Charged the most a refused expansion can have placed: every row
+            # filled to the width limit (never more than ``max_cells``).
+            remaining -= own_rows * _width_limit(own_rows, max_cells)
+            continue
+        if grid:
+            remaining -= len(grid) * len(grid[0])
         info = _classify_grid(table, grid)
         if info is None:
             continue
@@ -1255,7 +1312,11 @@ def parse_poll_tables(
                 unknown_suffixes=tuple(unknown),
             )
         )
-    return PageTables(tables=tuple(parsed), oversized=tuple(oversized))
+    return PageTables(
+        tables=tuple(parsed),
+        oversized=tuple(oversized),
+        budget_skipped=budget_skipped,
+    )
 
 
 # ── Pollster identity ─────────────────────────────────────────────────────────

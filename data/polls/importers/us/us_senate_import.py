@@ -26,7 +26,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from polls.importers.us.us_wikipedia_polls import SENATE_RACES, run_importer
+from polls.importers.us.us_poll_cli import run_importer
+from polls.importers.us.us_wikipedia_polls import SENATE_RACES
 
 
 def main() -> int:

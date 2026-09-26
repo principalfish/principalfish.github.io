@@ -1,4 +1,3 @@
-- re-import races whose stored polls have "<1%" gaps (parser fix only helps new imports)
 - move the CLI out of us_wikipedia_polls.py - print()s in a module the console imports
 - unify error types in the US modules (bare ValueError vs subclasses vs TypeError)
 - parameterise _poll_rows_table.html so the US queue page can reuse it

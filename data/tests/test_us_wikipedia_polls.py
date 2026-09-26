@@ -26,6 +26,7 @@ from polls.importers.us.us_polls_common import (
     PageTables,
     parse_poll_tables,
 )
+from polls.importers.us.us_poll_cli import run_importer
 from polls.importers.us.us_wikipedia_polls import (
     HOUSE_DISTRICTS,
     HOUSE_INDEX_URL,
@@ -49,7 +50,6 @@ from polls.importers.us.us_wikipedia_polls import (
     fetch_us_poll_index,
     normalise_states,
     rows_for_page,
-    run_importer,
 )
 
 WIKI = "https://en.wikipedia.org/wiki"

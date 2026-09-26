@@ -1,12 +1,14 @@
 """Tests for the Westminster UNS simulation model.
 
 Covers the pure projection functions, the database helpers that load the map,
-baseline and polls for a run, and the contract that the SQLite and trend-cache
-writers resolve their paths when called rather than at import.
+baseline and polls for a run, the contract that the SQLite and trend-cache
+writers resolve their paths when called rather than at import, and those
+writers' file and SQLite I/O.
 """
 
 from __future__ import annotations
 
+import csv
 import inspect
 import json
 import re
@@ -50,6 +52,7 @@ from run_uns_model import (
     run_simulation,
     update_trend_cache_json,
     weighted_average,
+    write_output_csvs,
     write_trend_cache_meta,
 )
 from tests.uk_fixtures import (
@@ -1394,3 +1397,876 @@ class TestDatabasePathAtCallTime:
         assert [entry["as_of_date"] for entry in entries] == ["2026-06-01"]
         meta = json.loads(trend_cache_meta_json.read_text())
         assert meta["as_of_date"] == "2026-06-01"
+
+
+# ── File and SQLite I/O: shared helpers ───────────────────────────────────────
+
+
+def _vote(
+    seat_id: int, party_id: int, vote_total: float, *, elected: bool = False
+) -> dict[str, Any]:
+    """One projected seat/party row, shaped like ``project_seat_votes`` output."""
+    return {
+        "seat_id": seat_id,
+        "party_id": party_id,
+        "vote_total": vote_total,
+        "elected": elected,
+    }
+
+
+def _trend_entry(
+    election_id: int | None,
+    as_of_date: str,
+    parties: Mapping[str, object] | None = None,
+) -> dict[str, Any]:
+    """A trend-cache JSON entry; ``parties`` maps party id to ``{"s", "v"}``."""
+    return {
+        "election_id": election_id,
+        "election_name": f"UNS {as_of_date}",
+        "as_of_date": as_of_date,
+        "parties": dict(parties) if parties is not None else {},
+    }
+
+
+def _write_json(path: Path, payload: object) -> None:
+    """Write ``payload`` as JSON to ``path``, creating parent directories."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _read_json(path: Path) -> Any:
+    """Parse the JSON file at ``path``."""
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _seed_model_run(
+    db: Database,
+    world: WestminsterWorld,
+    name: str,
+    vote_count: int,
+    election_type: ElectionType = ElectionType.model_uns,
+) -> int:
+    """Add an election (``model_uns`` by default) with ``vote_count`` Labour votes.
+
+    Votes go on the seeded seats in name order, so ``vote_count`` is at most 4.
+    Returns the election id.
+    """
+    election = db.add_election(world.map_id, 2026, name, election_type)
+    seat_ids = [world.seat_ids[seat] for seat in sorted(world.seat_ids)]
+    assert vote_count <= len(seat_ids)
+    for seat_id in seat_ids[:vote_count]:
+        db.add_vote(
+            election.id,
+            seat_id,
+            party_id=world.party_ids["Labour"],
+            vote_total=100.0,
+        )
+    return int(election.id)
+
+
+def _vote_count(sqlite_path: Path, election_ids: Sequence[int]) -> int:
+    """How many vote rows in the file belong to ``election_ids``."""
+    placeholders = ",".join("?" * len(election_ids))
+    with closing(sqlite3.connect(sqlite_path)) as conn:
+        (count,) = conn.execute(
+            f"SELECT COUNT(*) FROM votes WHERE election_id IN ({placeholders})",
+            list(election_ids),
+        ).fetchone()
+    return int(count)
+
+
+# ── write_output_csvs ─────────────────────────────────────────────────────────
+
+
+class TestWriteOutputCsvs:
+    """Tests for write_output_csvs — the seat projection and regional diff CSVs."""
+
+    def test_writes_both_csvs(self, tmp_path: Path) -> None:
+        _assert_path_defaults_are_none()
+        output_csv = tmp_path / "out" / "projection.csv"
+        projected = [
+            _vote(1, 20, 600.0, elected=True),
+            _vote(1, 10, 400.0),
+            _vote(2, 10, 1000.0),
+            _vote(2, 20, 2000.0, elected=True),
+            # Seat 3 is not in ``seat_by_id``; party 99 has no name.
+            _vote(3, 99, 50.0, elected=True),
+        ]
+        region_diff_rows = [
+            {
+                "region_id": 7,
+                "region_name": "Scotland",
+                "party_id": 10,
+                "party_name": "Labour",
+                "baseline_share": 35.123456,
+                "weighted_share": 40.0,
+                "swing": 4.87654,
+            },
+        ]
+
+        write_output_csvs(
+            str(output_csv),
+            projected,
+            region_diff_rows,
+            {
+                1: SeatRef(id=1, region_id=7, seat_name="Hexham"),
+                2: SeatRef(id=2, region_id=7, seat_name="Cardiff East"),
+            },
+            {10: "Labour", 20: "Conservative"},
+        )
+
+        with output_csv.open(encoding="utf-8", newline="") as handle:
+            seat_rows = list(csv.DictReader(handle))
+        # Shares are normalised within each seat, not raw vote counts.
+        assert seat_rows == [
+            {
+                "seat_id": "1",
+                "seat_name": "Hexham",
+                "party_id": "20",
+                "party_name": "Conservative",
+                "predicted_pct": "60.0000",
+                "elected": "True",
+            },
+            {
+                "seat_id": "1",
+                "seat_name": "Hexham",
+                "party_id": "10",
+                "party_name": "Labour",
+                "predicted_pct": "40.0000",
+                "elected": "False",
+            },
+            {
+                "seat_id": "2",
+                "seat_name": "Cardiff East",
+                "party_id": "10",
+                "party_name": "Labour",
+                "predicted_pct": "33.3333",
+                "elected": "False",
+            },
+            {
+                "seat_id": "2",
+                "seat_name": "Cardiff East",
+                "party_id": "20",
+                "party_name": "Conservative",
+                "predicted_pct": "66.6667",
+                "elected": "True",
+            },
+            {
+                "seat_id": "3",
+                "seat_name": "",
+                "party_id": "99",
+                "party_name": "",
+                "predicted_pct": "100.0000",
+                "elected": "True",
+            },
+        ]
+        diff_csv = tmp_path / "out" / "projection_regional_diffs.csv"
+        with diff_csv.open(encoding="utf-8", newline="") as handle:
+            diff_rows = list(csv.DictReader(handle))
+        assert diff_rows == [
+            {
+                "region_id": "7",
+                "region_name": "Scotland",
+                "party_id": "10",
+                "party_name": "Labour",
+                "baseline_share": "35.1235",
+                "weighted_share": "40.0000",
+                "swing": "4.8765",
+            },
+        ]
+
+    def test_zero_total_seat_gets_zero_percent(self, tmp_path: Path) -> None:
+        _assert_path_defaults_are_none()
+        output_csv = tmp_path / "zero.csv"
+
+        write_output_csvs(
+            str(output_csv),
+            [_vote(1, 10, 0.0), _vote(1, 20, 0.0)],
+            [],
+            {1: SeatRef(id=1, region_id=None, seat_name="Nowhere")},
+            {10: "Labour", 20: "Conservative"},
+        )
+
+        with output_csv.open(encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        assert [row["predicted_pct"] for row in rows] == ["0.0000", "0.0000"]
+        diff_csv = tmp_path / "zero_regional_diffs.csv"
+        assert diff_csv.read_text(encoding="utf-8").splitlines() == [
+            "region_id,region_name,party_id,party_name,baseline_share,"
+            "weighted_share,swing"
+        ]
+
+
+# ── write_trend_cache_meta ────────────────────────────────────────────────────
+
+
+class TestWriteTrendCacheMeta:
+    """Tests for write_trend_cache_meta — the latest-run metadata JSON."""
+
+    def test_with_latest_poll(self, tmp_path: Path) -> None:
+        _assert_path_defaults_are_none()
+        meta_json = tmp_path / "results" / "meta.json"
+        usage = LatestPollUsage(
+            pollster="YouGov",
+            fieldwork_start=date(2026, 6, 7),
+            fieldwork_end=date(2026, 6, 8),
+        )
+
+        write_trend_cache_meta(date(2026, 6, 10), date(2026, 5, 11), usage, meta_json)
+
+        assert _read_json(meta_json) == {
+            "as_of_date": "2026-06-10",
+            "since_date": "2026-05-11",
+            "latest_poll_snippet": (
+                "Latest poll used: YouGov (2026-06-07 to 2026-06-08)"
+            ),
+            "latest_poll": {
+                "pollster": "YouGov",
+                "fieldwork_start": "2026-06-07",
+                "fieldwork_end": "2026-06-08",
+            },
+        }
+
+    def test_without_latest_poll_overwrites(self, tmp_path: Path) -> None:
+        _assert_path_defaults_are_none()
+        meta_json = tmp_path / "meta.json"
+        _write_json(meta_json, {"as_of_date": "2026-01-01", "stale": True})
+
+        write_trend_cache_meta(date(2026, 6, 10), date(2026, 5, 11), None, meta_json)
+
+        assert _read_json(meta_json) == {
+            "as_of_date": "2026-06-10",
+            "since_date": "2026-05-11",
+            "latest_poll_snippet": "",
+            "latest_poll": None,
+        }
+
+
+# ── persist_projection ────────────────────────────────────────────────────────
+
+
+class TestPersistProjection:
+    """Tests for persist_projection — the model_uns election and its vote rows."""
+
+    def test_writes_election_and_votes(
+        self, db: Database, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        hexham = world.seat_ids["Hexham"]
+        labour = world.party_ids["Labour"]
+        conservative = world.party_ids["Conservative"]
+        reform = world.party_ids["Reform UK"]
+
+        name, election_id = persist_projection(
+            world.map_id,
+            date(2026, 6, 10),
+            "UNS 2026-06-10",
+            [
+                _vote(hexham, labour, 21000.5, elected=True),
+                _vote(hexham, conservative, 19000.0),
+                _vote(hexham, reform, 8000.0),
+            ],
+            {labour: "Labour", conservative: "Conservative"},
+            only_the_test_database,
+        )
+
+        assert name == "UNS 2026-06-10"
+        election = db.get_election_by_name("UNS 2026-06-10")
+        assert election is not None
+        assert election.id == election_id
+        assert election.type == ElectionType.model_uns
+        assert election.map_id == world.map_id
+        assert election.year == 2026
+        assert election.election_date == date(2026, 6, 10)
+        votes = db.get_votes_for_election(election_id)
+        assert len(votes) == 3
+        assert {
+            vote.party_id: (
+                vote.seat_id,
+                vote.candidate_name,
+                vote.vote_total,
+                vote.elected,
+            )
+            for vote in votes
+        } == {
+            labour: (hexham, "Labour", 21000.5, True),
+            conservative: (hexham, "Conservative", 19000.0, False),
+            # A party missing from the name map gets an empty candidate name.
+            reform: (hexham, "", 8000.0, False),
+        }
+
+
+# ── delete_model_uns_for_as_of_date ───────────────────────────────────────────
+
+
+class TestDeleteModelUnsForAsOfDate:
+    """Tests for delete_model_uns_for_as_of_date — removing one date's runs."""
+
+    def test_missing_file_deletes_nothing(
+        self, tmp_path: Path, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        missing = tmp_path / "missing.db"
+
+        # Connecting would trip ``only_the_test_database``.
+        assert delete_model_uns_for_as_of_date(date(2026, 6, 1), missing) == (0, 0)
+        assert not missing.exists()
+
+    def test_no_matching_election_deletes_nothing(
+        self, db: Database, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        _seed_model_run(db, world, "UNS 2026-06-02", 2)
+
+        assert delete_model_uns_for_as_of_date(
+            date(2026, 6, 1), only_the_test_database
+        ) == (0, 0)
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-02", 2)
+        ]
+
+    def test_deletes_every_run_for_the_date_and_its_votes(
+        self, db: Database, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        first = _seed_model_run(db, world, "UNS 2026-06-01", 2)
+        rerun = _seed_model_run(db, world, "UNS 2026-06-01 rerun", 1)
+        _seed_model_run(db, world, "UNS 2026-06-10", 3)
+        _seed_model_run(db, world, "UNS 2026-06-02", 4)
+        baseline_votes = len(db.get_votes_for_election(world.baseline_election_id))
+
+        deleted = delete_model_uns_for_as_of_date(
+            date(2026, 6, 1), only_the_test_database
+        )
+
+        assert deleted == (2, 3)
+        assert _vote_count(only_the_test_database, [first, rerun]) == 0
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-06-02", 4),
+            ("UNS 2026-06-10", 3),
+        ]
+        assert (
+            len(db.get_votes_for_election(world.baseline_election_id))
+            == baseline_votes
+        )
+
+    def test_matches_by_name_not_type_pins_current_behaviour(
+        self, db: Database, only_the_test_database: Path
+    ) -> None:
+        """Pins current behaviour: any election named for the date is deleted.
+
+        The query filters on ``name LIKE 'UNS <date>%'`` only, not on
+        ``type = 'model_uns'``, so a differently typed election that shares the
+        naming scheme is deleted along with its votes.
+        """
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        other_type = _seed_model_run(
+            db, world, "UNS 2026-06-01 manual", 2, ElectionType.model_run
+        )
+
+        deleted = delete_model_uns_for_as_of_date(
+            date(2026, 6, 1), only_the_test_database
+        )
+
+        assert deleted == (1, 2)
+        assert db.get_election_by_name("UNS 2026-06-01 manual") is None
+        assert _vote_count(only_the_test_database, [other_type]) == 0
+
+
+# ── reset_existing_model_outputs ──────────────────────────────────────────────
+
+
+class TestResetExistingModelOutputs:
+    """Tests for reset_existing_model_outputs — clearing a date range of runs."""
+
+    def test_clears_the_range_from_sqlite_and_the_trend_json(
+        self, db: Database, tmp_path: Path, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        _seed_model_run(db, world, "UNS 2026-05-31", 1)
+        in_range = [
+            _seed_model_run(db, world, "UNS 2026-06-01", 2),
+            _seed_model_run(db, world, "UNS 2026-06-02", 3),
+            _seed_model_run(db, world, "UNS 2026-06-02 late", 4),
+        ]
+        _seed_model_run(db, world, "UNS 2026-06-03", 1)
+        trend_json = tmp_path / "trends.json"
+        _write_json(
+            trend_json,
+            [
+                _trend_entry(1, "2026-05-31"),
+                _trend_entry(2, "2026-06-01"),
+                _trend_entry(3, "not-a-date"),
+                _trend_entry(4, "2026-06-02"),
+                {"election_id": 5},
+                _trend_entry(6, "2026-06-03"),
+            ],
+        )
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database, trend_json
+        )
+
+        assert result == (3, 9, 2)
+        assert _vote_count(only_the_test_database, in_range) == 0
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-05-31", 1),
+            ("UNS 2026-06-03", 1),
+        ]
+        # Entries whose date can't be parsed are kept.
+        assert _read_json(trend_json) == [
+            _trend_entry(1, "2026-05-31"),
+            _trend_entry(3, "not-a-date"),
+            {"election_id": 5},
+            _trend_entry(6, "2026-06-03"),
+        ]
+
+    def test_range_matches_names_of_any_type_pins_current_behaviour(
+        self, db: Database, tmp_path: Path, only_the_test_database: Path
+    ) -> None:
+        """Pins current behaviour: the range deletes any election named in it.
+
+        The query filters on the name range only, not on ``type = 'model_uns'``,
+        so a differently typed election whose name falls inside the range is
+        deleted along with its votes.
+        """
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        other_type = _seed_model_run(
+            db, world, "UNS 2026-06-01 manual", 3, ElectionType.model_run
+        )
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            only_the_test_database,
+            tmp_path / "missing.json",
+        )
+
+        assert result == (1, 3, 0)
+        assert db.get_election_by_name("UNS 2026-06-01 manual") is None
+        assert _vote_count(only_the_test_database, [other_type]) == 0
+
+    def test_nothing_in_range_leaves_both_untouched(
+        self, db: Database, tmp_path: Path, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        _seed_model_run(db, world, "UNS 2026-05-31", 1)
+        trend_json = tmp_path / "trends.json"
+        original = json.dumps([_trend_entry(1, "2026-05-31")], indent=2)
+        trend_json.write_text(original, encoding="utf-8")
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database, trend_json
+        )
+
+        assert result == (0, 0, 0)
+        assert _model_uns_elections(only_the_test_database) == [
+            ("UNS 2026-05-31", 1)
+        ]
+        # Not rewritten: the rewrite would drop the indentation.
+        assert trend_json.read_text(encoding="utf-8") == original
+
+    def test_missing_database_and_trend_json(
+        self, tmp_path: Path, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        missing_db = tmp_path / "missing.db"
+        missing_json = tmp_path / "missing.json"
+
+        assert reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 2), missing_db, missing_json
+        ) == (0, 0, 0)
+        assert not missing_db.exists()
+        assert not missing_json.exists()
+
+
+# ── existing_trend_dates ──────────────────────────────────────────────────────
+
+
+class TestExistingTrendDates:
+    """Tests for existing_trend_dates — dates already run, from JSON and SQLite."""
+
+    def test_union_of_trend_json_and_sqlite(
+        self, db: Database, tmp_path: Path, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+        world = seed_westminster_world(db)
+        _seed_model_run(db, world, "UNS 2026-06-02", 1)
+        _seed_model_run(db, world, "UNS 2026-06-03 rerun", 1)
+        # Matches the pattern but is no calendar date.
+        _seed_model_run(db, world, "UNS 2026-13-45", 1)
+        _seed_model_run(db, world, "Projection 2026-06-04", 1)
+        trend_json = tmp_path / "trends.json"
+        _write_json(
+            trend_json,
+            [
+                _trend_entry(1, "2026-06-01"),
+                _trend_entry(2, "2026-06-02"),
+                _trend_entry(3, ""),
+                _trend_entry(4, "   "),
+                {"election_id": 5, "as_of_date": None},
+                {"election_id": 6},
+                _trend_entry(7, "2026-02-30"),
+            ],
+        )
+
+        assert existing_trend_dates(trend_json, only_the_test_database) == {
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            date(2026, 6, 3),
+        }
+
+    def test_neither_source_gives_empty_set(
+        self, tmp_path: Path, only_the_test_database: Path
+    ) -> None:
+        _assert_path_defaults_are_none()
+
+        assert (
+            existing_trend_dates(tmp_path / "missing.json", tmp_path / "missing.db")
+            == set()
+        )
+
+
+# ── dates_to_run_for_cfg ──────────────────────────────────────────────────────
+
+
+class TestDatesToRunForCfg:
+    """Tests for dates_to_run_for_cfg — the as-of date plus any missed days."""
+
+    @staticmethod
+    def _run(
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        sqlite_path: Path,
+        existing: Sequence[str],
+        *,
+        as_of_date: date = date(2026, 6, 10),
+        dry_run: bool = False,
+    ) -> list[date]:
+        """Run with ``existing`` as the trend JSON's dates; return the plan."""
+        trend_json = tmp_path / "trends.json"
+        _write_json(
+            trend_json,
+            [_trend_entry(n, value) for n, value in enumerate(existing, start=1)],
+        )
+        monkeypatch.setattr(run_uns_model, "TREND_CACHE_JSON", trend_json)
+        world = seed_westminster_world(db)
+        cfg = _simulation_config(world, as_of_date=as_of_date, dry_run=dry_run)
+        planned: list[date] = dates_to_run_for_cfg(cfg, sqlite_path)
+        return planned
+
+    def test_dry_run_only_runs_the_as_of_date(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+
+        planned = self._run(
+            db,
+            tmp_path,
+            monkeypatch,
+            only_the_test_database,
+            ["2026-06-05"],
+            dry_run=True,
+        )
+
+        assert planned == [date(2026, 6, 10)]
+
+    def test_no_earlier_run_only_runs_the_as_of_date(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+
+        planned = self._run(
+            db,
+            tmp_path,
+            monkeypatch,
+            only_the_test_database,
+            ["2026-06-10", "2026-06-12"],
+        )
+
+        assert planned == [date(2026, 6, 10)]
+
+    def test_fills_the_gap_after_the_latest_earlier_run(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+
+        # 2026-06-05 is missing too, but only days after the latest run are filled.
+        planned = self._run(
+            db,
+            tmp_path,
+            monkeypatch,
+            only_the_test_database,
+            ["2026-06-01", "2026-06-04", "2026-06-07"],
+        )
+
+        assert planned == [date(2026, 6, 8), date(2026, 6, 9), date(2026, 6, 10)]
+
+    def test_gap_before_an_existing_as_of_run_skips_the_as_of_date(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+
+        planned = self._run(
+            db,
+            tmp_path,
+            monkeypatch,
+            only_the_test_database,
+            ["2026-06-07", "2026-06-10"],
+        )
+
+        assert planned == [date(2026, 6, 8), date(2026, 6, 9)]
+
+    def test_no_gap_reruns_the_as_of_date(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        _assert_path_defaults_are_none()
+
+        planned = self._run(
+            db,
+            tmp_path,
+            monkeypatch,
+            only_the_test_database,
+            ["2026-06-09", "2026-06-10"],
+        )
+
+        assert planned == [date(2026, 6, 10)]
+
+
+# ── update_trend_cache_json ───────────────────────────────────────────────────
+
+
+class TestUpdateTrendCacheJson:
+    """Tests for update_trend_cache_json — merging a run into the trend cache."""
+
+    def test_replaces_same_date_and_same_id_and_sorts_by_election_id(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json = tmp_path / "trends.json"
+        _write_json(
+            trend_json,
+            [
+                _trend_entry(5, "2026-06-03", {"2": {"s": 1, "v": 50.0}}),
+                _trend_entry(2, "2026-06-01", {"2": {"s": 3, "v": 60.0}}),
+                # Same date as the new run.
+                _trend_entry(7, "2026-06-05", {"1": {"s": 2, "v": 40.0}}),
+                # Same election id as the new run.
+                _trend_entry(9, "2026-06-04", {"1": {"s": 2, "v": 40.0}}),
+            ],
+        )
+
+        update_trend_cache_json(
+            9,
+            "UNS 2026-06-05",
+            date(2026, 6, 5),
+            [
+                _vote(1, 2, 600.0, elected=True),
+                _vote(1, 1, 400.0),
+                _vote(2, 2, 500.0, elected=True),
+                _vote(2, 1, 200.0),
+                _vote(2, 6, 100.0),
+            ],
+            trend_json,
+        )
+
+        assert _read_json(trend_json) == [
+            _trend_entry(2, "2026-06-01", {"2": {"s": 3, "v": 60.0}}),
+            _trend_entry(5, "2026-06-03", {"2": {"s": 1, "v": 50.0}}),
+            {
+                "election_id": 9,
+                "election_name": "UNS 2026-06-05",
+                "as_of_date": "2026-06-05",
+                # 1800 votes in all: party 1 has 600, party 2 1100, party 6 100.
+                "parties": {
+                    "1": {"s": 0, "v": 33.3},
+                    "2": {"s": 2, "v": 61.1},
+                    "6": {"s": 0, "v": 5.6},
+                },
+            },
+        ]
+        assert "TREND_CACHE_SKIP" not in capsys.readouterr().out
+
+    def test_zero_votes_give_zero_percentages(self, tmp_path: Path) -> None:
+        _assert_path_defaults_are_none()
+        trend_json = tmp_path / "nested" / "trends.json"
+
+        update_trend_cache_json(
+            3,
+            "UNS 2026-06-05",
+            date(2026, 6, 5),
+            [_vote(1, 2, 0.0, elected=True), _vote(1, 1, 0.0)],
+            trend_json,
+        )
+
+        assert _read_json(trend_json) == [
+            {
+                "election_id": 3,
+                "election_name": "UNS 2026-06-05",
+                "as_of_date": "2026-06-05",
+                "parties": {"1": {"s": 0, "v": 0.0}, "2": {"s": 1, "v": 0.0}},
+            },
+        ]
+
+    def test_first_entry_is_kept_even_with_no_seats(self, tmp_path: Path) -> None:
+        _assert_path_defaults_are_none()
+        trend_json = tmp_path / "trends.json"
+        # Only a later date exists, so there is no earlier snapshot to compare.
+        _write_json(trend_json, [_trend_entry(8, "2026-06-09")])
+
+        update_trend_cache_json(
+            3, "UNS 2026-06-05", date(2026, 6, 5), [_vote(1, 2, 10.0)], trend_json
+        )
+
+        assert [entry["election_id"] for entry in _read_json(trend_json)] == [3, 8]
+
+    def test_unchanged_seats_skip_the_entry(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """An unchanged seat snapshot is omitted, and its date's old entry dropped.
+
+        This is the documented dedup: the same-date entry is stripped, and a
+        run whose seats match the previous date's is not added, so the JSON
+        holds only changed snapshots (``existing_trend_dates`` reads SQLite for
+        the rest).
+        """
+        _assert_path_defaults_are_none()
+        trend_json = tmp_path / "trends.json"
+        _write_json(
+            trend_json,
+            [
+                _trend_entry(3, "2026-06-03", {"2": {"s": 2, "v": 55.0}}),
+                _trend_entry(4, "2026-06-05", {"1": {"s": 2, "v": 45.0}}),
+            ],
+        )
+
+        update_trend_cache_json(
+            9,
+            "UNS 2026-06-05",
+            date(2026, 6, 5),
+            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
+            trend_json,
+        )
+
+        assert _read_json(trend_json) == [
+            _trend_entry(3, "2026-06-03", {"2": {"s": 2, "v": 55.0}})
+        ]
+        assert capsys.readouterr().out == (
+            "TREND_CACHE_SKIP as_of_date=2026-06-05 "
+            "reason=unchanged_seat_snapshot previous_date=2026-06-03\n"
+        )
+
+    def test_compares_with_the_latest_earlier_date_only(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json = tmp_path / "trends.json"
+        # The first and last entries match the new seats; the latest earlier
+        # one (2026-06-03) does not, so the new entry is added.
+        _write_json(
+            trend_json,
+            [
+                _trend_entry(1, "2026-06-01", {"2": {"s": 2}}),
+                _trend_entry(2, "2026-06-03", {"1": {"s": 2}}),
+                _trend_entry(3, "2026-06-07", {"2": {"s": 2}}),
+            ],
+        )
+
+        update_trend_cache_json(
+            9,
+            "UNS 2026-06-05",
+            date(2026, 6, 5),
+            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
+            trend_json,
+        )
+
+        assert [entry["election_id"] for entry in _read_json(trend_json)] == [
+            1,
+            2,
+            3,
+            9,
+        ]
+        assert capsys.readouterr().out == ""
+
+    def test_malformed_previous_parties_are_ignored(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _assert_path_defaults_are_none()
+        trend_json = tmp_path / "trends.json"
+        previous = _trend_entry(
+            3,
+            "2026-06-03",
+            {
+                "abc": {"s": 3},
+                "0": {"s": 5},
+                "1": {"s": "x"},
+                "4": {"s": [1]},
+                "6": {},
+                "8": {"s": 0},
+                "2": {"s": 2},
+            },
+        )
+        undated = {"election_id": None, "as_of_date": "not-a-date"}
+        _write_json(trend_json, [previous, undated])
+
+        update_trend_cache_json(
+            9,
+            "UNS 2026-06-05",
+            date(2026, 6, 5),
+            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
+            trend_json,
+        )
+
+        # Only {"2": 2 seats} survives from the previous entry, which matches,
+        # so the run is skipped. The undated entry is kept and sorts first.
+        assert _read_json(trend_json) == [undated, previous]
+        assert "previous_date=2026-06-03" in capsys.readouterr().out
+
+    def test_null_party_entry_raises_pins_current_behaviour(
+        self, tmp_path: Path
+    ) -> None:
+        """Pins current behaviour: a ``null`` party value raises ``AttributeError``.
+
+        The previous entry's snapshot guard catches only ``ValueError`` and
+        ``TypeError`` for malformed party entries, so ``None.get`` escapes.
+        """
+        _assert_path_defaults_are_none()
+        trend_json = tmp_path / "trends.json"
+        _write_json(trend_json, [_trend_entry(3, "2026-06-03", {"2": None})])
+
+        with pytest.raises(AttributeError):
+            update_trend_cache_json(
+                9,
+                "UNS 2026-06-05",
+                date(2026, 6, 5),
+                [_vote(1, 2, 60.0, elected=True)],
+                trend_json,
+            )

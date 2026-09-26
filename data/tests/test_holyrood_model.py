@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import argparse
 import inspect
 import json
 import sqlite3
 import sys
 from contextlib import closing
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyrood"))
@@ -24,6 +26,8 @@ from run_holyrood_uns_model import (
     HolyroodSimulationConfig,
     SeatRef,
     _election_name,
+    _print_seat_table,
+    build_result_payload,
     collect_constituency_wins,
     compute_holyrood_swings,
     constituency_national_vote_shares,
@@ -33,16 +37,19 @@ from run_holyrood_uns_model import (
     delete_holyrood_uns_for_as_of_date,
     dhondt_allocate_ordered,
     existing_trend_dates,
+    fetch_holyrood_poll_averages,
     group_list_seats_by_region,
     load_list_regional_votes,
     persist_projection,
     project_constituency_seats,
     project_list_seats,
     reset_existing_model_outputs,
+    resolve_poll_shares,
     run_holyrood_projection,
     run_holyrood_simulation,
     run_retrospective,
     update_trend_cache_json,
+    write_result_json,
 )
 from tests.uk_fixtures import HolyroodWorld, add_poll_with_rows, seed_holyrood_world
 
@@ -297,6 +304,406 @@ class TestComputeHolyroodSwings:
             region_ids=set(),
         )
         assert swings == {}
+
+
+# ── resolve_poll_shares ───────────────────────────────────────────────────────
+
+
+class TestResolvePollShares:
+    """resolve_poll_shares: ``--poll-shares`` names and aliases to party ids."""
+
+    def test_aliases_and_full_names_resolve_to_party_ids(self, db: Database) -> None:
+        parties = seed_holyrood_world(db).party_ids
+
+        shares = resolve_poll_shares(
+            {
+                " SNP ": 34,
+                "lab": 29.5,
+                "Liberal Democrats": 8,
+                "Reform UK": 7,
+                "greens": 6,
+            },
+            db,
+        )
+
+        assert shares == {
+            parties["Scottish National Party"]: 34.0,
+            parties["Labour"]: 29.5,
+            parties["Liberal Democrats"]: 8.0,
+            parties["Reform UK"]: 7.0,
+            parties["Scottish Greens"]: 6.0,
+        }
+        assert {type(value) for value in shares.values()} == {float}
+
+    def test_unknown_names_are_warned_about_and_skipped(
+        self, db: Database, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        parties = seed_holyrood_world(db).party_ids
+
+        # A name outside the alias table is looked up as typed, so a lower-case
+        # "reform uk" misses although "Reform UK" exists.
+        shares = resolve_poll_shares(
+            {"lab": 30, "Monster Raving Loony": 1, "reform uk": 5}, db
+        )
+
+        assert shares == {parties["Labour"]: 30.0}
+        out = capsys.readouterr().out
+        assert (
+            "WARNING: party not found in DB: 'Monster Raving Loony' "
+            "(resolved to 'Monster Raving Loony') — skipped"
+        ) in out
+        assert (
+            "WARNING: party not found in DB: 'reform uk' (resolved to 'reform uk') "
+            "— skipped"
+        ) in out
+
+
+# ── fetch_holyrood_poll_averages ──────────────────────────────────────────────
+
+_POLL_SINCE = date(2026, 6, 1)
+_POLL_AS_OF = date(2026, 6, 30)
+
+
+def _add_holyrood_poll(
+    db: Database,
+    world: HolyroodWorld,
+    identifier: str,
+    fieldwork_end: date,
+    shares: dict[str, float],
+    *,
+    pollster_name: str | None = None,
+    pollster_weight: float | None = 1.0,
+    map_id: int | None = None,
+) -> None:
+    """One national poll for ``identifier``, with shares keyed by party name."""
+    add_poll_with_rows(
+        db,
+        map_id=world.map_id if map_id is None else map_id,
+        pollster_identifier=identifier,
+        pollster_name=pollster_name,
+        pollster_weight=pollster_weight,
+        fieldwork_end=fieldwork_end,
+        national={world.party_ids[name]: share for name, share in shares.items()},
+    )
+
+
+def _fetch(
+    db: Database,
+    world: HolyroodWorld,
+    suffix: str = "_holyrood",
+    half_life_days: float = 1e9,
+) -> tuple[dict[int, float], str | None, date | None]:
+    """Averages for ``suffix`` over the June window.
+
+    The default half-life is so long that decay is negligible, so an average is
+    the plain (pollster-weighted) mean unless a test sets its own half-life.
+    """
+    result: tuple[dict[int, float], str | None, date | None] = (
+        fetch_holyrood_poll_averages(
+            db, world.map_id, suffix, _POLL_AS_OF, _POLL_SINCE, half_life_days
+        )
+    )
+    return result
+
+
+class TestFetchHolyroodPollAverages:
+    """fetch_holyrood_poll_averages: decayed, weighted averages for one ballot."""
+
+    def test_the_suffix_selects_the_ballot(self, db: Database) -> None:
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        other_map = db.add_map("Another Holyrood Map", parliament="holyrood")
+        _add_holyrood_poll(
+            db,
+            world,
+            "const_holyrood",
+            _POLL_AS_OF,
+            {"Scottish National Party": 40.0},
+            pollster_name="Constituency Pollster",
+        )
+        _add_holyrood_poll(
+            db,
+            world,
+            "list_holyrood_list",
+            _POLL_AS_OF,
+            {"Scottish National Party": 30.0},
+            pollster_name="List Pollster",
+        )
+        # A Westminster pollster on the same map, and a Holyrood pollster on
+        # another map: neither is part of either average.
+        _add_holyrood_poll(
+            db, world, "yougov", _POLL_AS_OF, {"Scottish National Party": 99.0}
+        )
+        _add_holyrood_poll(
+            db,
+            world,
+            "elsewhere_holyrood",
+            _POLL_AS_OF,
+            {"Scottish National Party": 99.0},
+            map_id=other_map.id,
+        )
+
+        averages, latest_name, latest_date = _fetch(db, world, "_holyrood")
+        assert averages == {snp: pytest.approx(40.0)}
+        assert (latest_name, latest_date) == ("Constituency Pollster", _POLL_AS_OF)
+
+        averages, latest_name, latest_date = _fetch(db, world, "_holyrood_list")
+        assert averages == {snp: pytest.approx(30.0)}
+        assert (latest_name, latest_date) == ("List Pollster", _POLL_AS_OF)
+
+    def test_the_window_includes_both_bounds(self, db: Database) -> None:
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        for fieldwork_end, share in (
+            (_POLL_SINCE - timedelta(days=1), 90.0),
+            (_POLL_SINCE, 10.0),
+            (_POLL_AS_OF, 30.0),
+            (_POLL_AS_OF + timedelta(days=1), 90.0),
+        ):
+            _add_holyrood_poll(
+                db,
+                world,
+                "a_holyrood",
+                fieldwork_end,
+                {"Scottish National Party": share},
+            )
+
+        averages, latest_name, latest_date = _fetch(db, world)
+        assert averages == {snp: pytest.approx(20.0)}
+        assert (latest_name, latest_date) == ("a_holyrood", _POLL_AS_OF)
+
+    def test_older_polls_decay_by_the_half_life(self, db: Database) -> None:
+        world = seed_holyrood_world(db)
+        parties = world.party_ids
+        _add_holyrood_poll(
+            db, world, "a_holyrood", _POLL_AS_OF, {"Scottish National Party": 40.0}
+        )
+        _add_holyrood_poll(
+            db,
+            world,
+            "b_holyrood",
+            _POLL_AS_OF - timedelta(days=10),
+            {"Scottish National Party": 10.0, "Labour": 20.0},
+        )
+
+        averages, _, _ = _fetch(db, world, half_life_days=10.0)
+
+        # SNP: (40 × 1 + 10 × 0.5) / 1.5. Labour is only in the older poll, so its
+        # weight cancels out of its own average.
+        assert averages == {
+            parties["Scottish National Party"]: pytest.approx(30.0),
+            parties["Labour"]: pytest.approx(20.0),
+        }
+
+    @pytest.mark.parametrize(
+        ("weight", "expected"),
+        [(3.0, 35.0), (None, 30.0)],
+        ids=["weight-3", "weight-None-counts-as-1"],
+    )
+    def test_the_pollster_weight_scales_its_polls(
+        self, db: Database, weight: float | None, expected: float
+    ) -> None:
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        _add_holyrood_poll(
+            db,
+            world,
+            "weighted_holyrood",
+            _POLL_AS_OF,
+            {"Scottish National Party": 40.0},
+            pollster_weight=weight,
+        )
+        _add_holyrood_poll(
+            db, world, "plain_holyrood", _POLL_AS_OF, {"Scottish National Party": 20.0}
+        )
+
+        averages, _, _ = _fetch(db, world)
+
+        assert averages == {snp: pytest.approx(expected)}
+
+    def test_zero_pollster_weight_counts_in_full_pins_current_behaviour(
+        self, db: Database
+    ) -> None:
+        # ``float(p.weight or 1.0)`` turns a stored 0.0 into 1.0, so a pollster
+        # weighted out still counts in full: 30, where ignoring it would give 20.
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        _add_holyrood_poll(
+            db,
+            world,
+            "zero_holyrood",
+            _POLL_AS_OF,
+            {"Scottish National Party": 40.0},
+            pollster_weight=0.0,
+        )
+        _add_holyrood_poll(
+            db, world, "plain_holyrood", _POLL_AS_OF, {"Scottish National Party": 20.0}
+        )
+
+        averages, _, _ = _fetch(db, world)
+
+        assert averages == {snp: pytest.approx(30.0)}
+
+    def test_a_negative_pollster_weight_skips_its_polls(self, db: Database) -> None:
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        # The skipped poll is the newest, so it must not become the latest poll.
+        _add_holyrood_poll(
+            db,
+            world,
+            "negative_holyrood",
+            _POLL_AS_OF,
+            {"Scottish National Party": 40.0},
+            pollster_weight=-1.0,
+        )
+        _add_holyrood_poll(
+            db,
+            world,
+            "plain_holyrood",
+            _POLL_AS_OF - timedelta(days=1),
+            {"Scottish National Party": 20.0},
+        )
+
+        averages, latest_name, latest_date = _fetch(db, world)
+        assert averages == {snp: pytest.approx(20.0)}
+        assert (latest_name, latest_date) == (
+            "plain_holyrood",
+            _POLL_AS_OF - timedelta(days=1),
+        )
+
+    def test_a_poll_without_rows_is_not_used(self, db: Database) -> None:
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        _add_holyrood_poll(db, world, "empty_holyrood", _POLL_AS_OF, {})
+        _add_holyrood_poll(
+            db,
+            world,
+            "plain_holyrood",
+            _POLL_AS_OF - timedelta(days=2),
+            {"Scottish National Party": 40.0},
+        )
+
+        averages, latest_name, latest_date = _fetch(db, world)
+        assert averages == {snp: pytest.approx(40.0)}
+        assert (latest_name, latest_date) == (
+            "plain_holyrood",
+            _POLL_AS_OF - timedelta(days=2),
+        )
+
+    def test_rows_without_a_party_or_percentage_are_skipped(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # ``poll_rows.party_id`` and ``percentage`` are NOT NULL, so such rows
+        # can't be seeded; serve them alongside the real rows to reach the guard.
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        _add_holyrood_poll(
+            db, world, "a_holyrood", _POLL_AS_OF, {"Scottish National Party": 40.0}
+        )
+        real_rows = db.get_rows_for_poll
+        partyless = SimpleNamespace(party_id=None, percentage=50.0)
+        shareless = SimpleNamespace(party_id=world.party_ids["Labour"], percentage=None)
+        monkeypatch.setattr(
+            db,
+            "get_rows_for_poll",
+            lambda poll_id: [*real_rows(poll_id), partyless, shareless],
+        )
+
+        averages, _, _ = _fetch(db, world)
+
+        assert averages == {snp: pytest.approx(40.0)}
+
+    @pytest.mark.parametrize(
+        "identifier",
+        ["a_holyrood_list", "yougov"],
+        ids=["other-ballot-only", "westminster-only"],
+    )
+    def test_no_usable_polls_returns_empty(
+        self, db: Database, identifier: str
+    ) -> None:
+        world = seed_holyrood_world(db)
+        _add_holyrood_poll(
+            db, world, identifier, _POLL_AS_OF, {"Scottish National Party": 40.0}
+        )
+        # In the ballot, but outside the window.
+        _add_holyrood_poll(
+            db,
+            world,
+            "late_holyrood",
+            _POLL_AS_OF + timedelta(days=1),
+            {"Scottish National Party": 40.0},
+        )
+
+        assert _fetch(db, world) == ({}, None, None)
+
+    def test_no_polls_at_all_returns_empty(self, db: Database) -> None:
+        world = seed_holyrood_world(db)
+
+        assert _fetch(db, world) == ({}, None, None)
+
+    @pytest.mark.parametrize(
+        "newest_first", [True, False], ids=["newest-first", "oldest-first"]
+    )
+    def test_the_latest_poll_is_the_latest_fieldwork_end(
+        self, db: Database, monkeypatch: pytest.MonkeyPatch, newest_first: bool
+    ) -> None:
+        world = seed_holyrood_world(db)
+        _add_holyrood_poll(
+            db,
+            world,
+            "newer_holyrood",
+            _POLL_AS_OF - timedelta(days=1),
+            {"Scottish National Party": 40.0},
+            pollster_name="Newer Pollster",
+        )
+        _add_holyrood_poll(
+            db,
+            world,
+            "older_holyrood",
+            _POLL_AS_OF - timedelta(days=5),
+            {"Scottish National Party": 30.0},
+            pollster_name="Older Pollster",
+        )
+        # ``get_polls_for_map`` sorts newest first, so serve the polls in both
+        # orders: the fieldwork-end comparison, not the query order, must decide.
+        real_polls = db.get_polls_for_map
+        monkeypatch.setattr(
+            db,
+            "get_polls_for_map",
+            lambda map_id: sorted(
+                real_polls(map_id),
+                key=lambda poll: poll.fieldwork_end,
+                reverse=newest_first,
+            ),
+        )
+
+        _, latest_name, latest_date = _fetch(db, world)
+
+        assert (latest_name, latest_date) == (
+            "Newer Pollster",
+            _POLL_AS_OF - timedelta(days=1),
+        )
+
+    def test_regional_rows_are_averaged_into_the_national_share_pins_current_behaviour(
+        self, db: Database
+    ) -> None:
+        # Rows are averaged whatever their ``region_id``, so a regional row pulls
+        # the national share: 30, where the national row alone gives 40. Holyrood
+        # polls are national-only today, so this is latent.
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="a_holyrood",
+            fieldwork_end=_POLL_AS_OF,
+            national={snp: 40.0},
+            regional={world.region_ids["Glasgow"]: {snp: 20.0}},
+        )
+
+        averages, _, _ = _fetch(db, world)
+
+        assert averages == {snp: pytest.approx(30.0)}
 
 
 # ── Integration test with test DB ─────────────────────────────────────────────
@@ -630,6 +1037,30 @@ class TestUpdateTrendCacheJson:
         assert len(entries) == 1
         assert entries[0]["as_of_date"] == "2026-07-01"
 
+    def test_null_party_entry_raises_pins_current_behaviour(
+        self, tmp_path: Path
+    ) -> None:
+        # ``seat_snapshot_from_entry`` catches only ValueError/TypeError, so a
+        # previous-date entry whose party value is null raises AttributeError.
+        trend = tmp_path / "trends.json"
+        trend.write_text(
+            json.dumps(
+                [{"election_id": 1, "as_of_date": "2026-07-01", "parties": {"1": None}}]
+            ),
+            encoding="utf-8",
+        )
+        rows = [{"seat_id": 1, "party_id": 1, "vote_total": 100.0, "elected": True}]
+
+        with pytest.raises(AttributeError):
+            update_trend_cache_json(
+                2,
+                "Holyrood UNS 2026-07-02",
+                date(2026, 7, 2),
+                rows,
+                [],
+                trend_cache_json=trend,
+            )
+
 
 # ── existing_trend_dates ──────────────────────────────────────────────────────
 
@@ -685,6 +1116,217 @@ class TestDatesToRunForCfg:
         assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 4)]
 
 
+# ── reset_existing_model_outputs / delete_holyrood_uns_for_as_of_date ─────────
+
+
+def _seed_holyrood_run(
+    db: Database, world: HolyroodWorld, as_of_date: date
+) -> None:
+    """A two-vote ``holyrood_uns`` run for ``as_of_date``, saved into ``db``."""
+    seat_id = world.constituency_seat_ids["Glasgow Southside"]
+    rows = [
+        {
+            "seat_id": seat_id,
+            "party_id": world.party_ids["Labour"],
+            "vote_total": 200.0,
+            "elected": True,
+        },
+        {
+            "seat_id": seat_id,
+            "party_id": world.party_ids["Scottish National Party"],
+            "vote_total": 100.0,
+            "elected": False,
+        },
+    ]
+    persist_projection(
+        world.map_id,
+        as_of_date,
+        _election_name(as_of_date),
+        rows,
+        {},
+        database_file(db),
+    )
+
+
+def _election_names_and_votes(sqlite_path: Path) -> dict[str, int]:
+    """Every election's name → its vote row count."""
+    with closing(sqlite3.connect(sqlite_path)) as conn:
+        rows = conn.execute(
+            "SELECT e.name, COUNT(v.id) FROM elections e "
+            "LEFT JOIN votes v ON v.election_id = e.id GROUP BY e.id"
+        ).fetchall()
+    return {str(name): int(count) for name, count in rows}
+
+
+def _trend_entries(*dates: str) -> list[dict[str, object]]:
+    """Trend entries with ascending election ids, one per ``as_of_date``."""
+    return [
+        {"election_id": index, "as_of_date": raw, "parties": {}}
+        for index, raw in enumerate(dates, start=1)
+    ]
+
+
+class TestResetExistingModelOutputs:
+    """reset_existing_model_outputs clears one date range from SQLite and the trends."""
+
+    def test_deletes_runs_inside_the_range_only(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", tmp_path / "trends.json")
+        world = seed_holyrood_world(db)
+        for as_of_date in (
+            date(2026, 5, 31),
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            date(2026, 6, 3),
+        ):
+            _seed_holyrood_run(db, world, as_of_date)
+        before = _election_names_and_votes(only_the_test_database)
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database
+        )
+
+        assert result == (2, 4, 0)
+        expected = dict(before)
+        del expected["Holyrood UNS 2026-06-01"]
+        del expected["Holyrood UNS 2026-06-02"]
+        # The baselines and the runs either side of the range keep their votes.
+        assert _election_names_and_votes(only_the_test_database) == expected
+        assert not (tmp_path / "trends.json").exists()
+
+    def test_a_range_with_no_runs_leaves_the_database_alone(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", tmp_path / "trends.json")
+        world = seed_holyrood_world(db)
+        # Runs on both sides of the range, each one day out.
+        _seed_holyrood_run(db, world, date(2026, 5, 31))
+        _seed_holyrood_run(db, world, date(2026, 6, 3))
+        before = _election_names_and_votes(only_the_test_database)
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database
+        )
+
+        assert result == (0, 0, 0)
+        assert _election_names_and_votes(only_the_test_database) == before
+
+    def test_range_matches_names_of_any_type_pins_current_behaviour(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        # The range is on the name alone, unlike the per-date delete and
+        # ``existing_trend_dates``, which also require ``type = 'holyrood_uns'``.
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", tmp_path / "trends.json")
+        world = seed_holyrood_world(db)
+        db.add_election(
+            world.map_id,
+            2026,
+            "Holyrood UNS 2026-06-01",
+            ElectionType.model_uns,
+            election_date=date(2026, 6, 1),
+        )
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 1), only_the_test_database
+        )
+
+        assert result == (1, 0, 0)
+        assert "Holyrood UNS 2026-06-01" not in _election_names_and_votes(
+            only_the_test_database
+        )
+
+    def test_a_missing_database_file_is_skipped(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        trend = tmp_path / "trends.json"
+        trend.write_text(json.dumps(_trend_entries("2026-06-01")), encoding="utf-8")
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
+        absent = tmp_path / "absent.db"
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 1), absent
+        )
+
+        assert result == (0, 0, 1)
+        assert not absent.exists()
+
+    def test_strips_trend_entries_inside_the_range(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        trend = tmp_path / "trends.json"
+        entries = _trend_entries(
+            "2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03", "not-a-date"
+        )
+        entries.append({"election_id": 6, "parties": {}})
+        trend.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 2), tmp_path / "absent.db"
+        )
+
+        assert result == (0, 0, 2)
+        # Undated and unparseable entries are kept; the file is rewritten compactly.
+        assert trend.read_text(encoding="utf-8") == (
+            '[{"election_id":1,"as_of_date":"2026-05-31","parties":{}},'
+            '{"election_id":4,"as_of_date":"2026-06-03","parties":{}},'
+            '{"election_id":5,"as_of_date":"not-a-date","parties":{}},'
+            '{"election_id":6,"parties":{}}]'
+        )
+
+    def test_the_trend_file_is_untouched_when_nothing_is_in_range(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        trend = tmp_path / "trends.json"
+        original = json.dumps(_trend_entries("2026-05-31", "2026-06-03"), indent=2)
+        trend.write_text(original, encoding="utf-8")
+        monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
+
+        result = reset_existing_model_outputs(
+            date(2026, 6, 1), date(2026, 6, 2), tmp_path / "absent.db"
+        )
+
+        assert result == (0, 0, 0)
+        assert trend.read_text(encoding="utf-8") == original
+
+
+class TestDeleteHolyroodUnsForAsOfDate:
+    """delete_holyrood_uns_for_as_of_date removes one date's ``holyrood_uns`` run."""
+
+    def test_matches_the_holyrood_uns_type_only(
+        self, db: Database, only_the_test_database: Path
+    ) -> None:
+        world = seed_holyrood_world(db)
+        db.add_election(
+            world.map_id,
+            2026,
+            "Holyrood UNS 2026-06-01",
+            ElectionType.model_uns,
+            election_date=date(2026, 6, 1),
+        )
+        before = _election_names_and_votes(only_the_test_database)
+
+        result = delete_holyrood_uns_for_as_of_date(
+            date(2026, 6, 1), only_the_test_database
+        )
+
+        assert result == (0, 0)
+        assert _election_names_and_votes(only_the_test_database) == before
+
+
 # ── run_retrospective validation ──────────────────────────────────────────────
 
 
@@ -718,6 +1360,296 @@ class TestRunRetrospectiveValidation:
     def test_non_positive_half_life_raises(self, db: Database) -> None:
         with pytest.raises(ValueError, match="half-life-days"):
             run_retrospective(db, _retro_args(half_life_days=0.0))
+
+
+# ── build_result_payload / write_result_json / _print_seat_table ──────────────
+
+
+class TestBuildResultPayload:
+    """build_result_payload: both ballots merged into one ``pf-results-v4`` list."""
+
+    def test_merges_ballots_into_seats_sorted_by_name(self) -> None:
+        const_projected = [
+            {"seat_id": 1, "party_id": 10, "vote_total": 1000.456, "elected": False},
+            {"seat_id": 1, "party_id": 20, "vote_total": 2000.0, "elected": True},
+        ]
+        # The list seat has the higher id and comes second, but sorts first by
+        # name; its winner is the party with fewer votes, as D'Hondt allows.
+        list_projected = [
+            {"seat_id": 2, "party_id": 10, "vote_total": 300.0, "elected": True},
+            {"seat_id": 2, "party_id": 20, "vote_total": 500.0, "elected": False},
+        ]
+
+        payload = build_result_payload(
+            const_projected,
+            list_projected,
+            {1: "Zetland", 2: "Aberdeen List 1"},
+            {1: 7, 2: 8},
+        )
+
+        assert payload == {
+            "schema": "pf-results-v4",
+            "seats": [
+                {
+                    "n": "Aberdeen List 1",
+                    "r": 8,
+                    "w": 10,
+                    "p": [[20, 500.0], [10, 300.0]],
+                },
+                {
+                    "n": "Zetland",
+                    "r": 7,
+                    "w": 20,
+                    "p": [[20, 2000.0], [10, 1000.46]],
+                },
+            ],
+        }
+
+    def test_an_unknown_seat_falls_back_to_its_id(self) -> None:
+        const_projected = [
+            {"seat_id": 3, "party_id": 10, "vote_total": 100.0, "elected": False},
+        ]
+
+        payload = build_result_payload(const_projected, [], {}, {})
+
+        assert payload["seats"] == [
+            {"n": "seat_3", "r": None, "w": None, "p": [[10, 100.0]]}
+        ]
+
+    def test_excluded_parties_are_removed(self) -> None:
+        const_projected = [
+            {"seat_id": 1, "party_id": 10, "vote_total": 100.0, "elected": False},
+            {"seat_id": 1, "party_id": 30, "vote_total": 900.0, "elected": True},
+            # A seat with only excluded rows drops out altogether.
+            {"seat_id": 2, "party_id": 30, "vote_total": 900.0, "elected": True},
+        ]
+
+        payload = build_result_payload(
+            const_projected, [], {1: "Alpha", 2: "Bravo"}, {1: 7, 2: 7}, {30}
+        )
+
+        # The excluded winner's row is gone, so the seat has no winner either.
+        assert payload["seats"] == [
+            {"n": "Alpha", "r": 7, "w": None, "p": [[10, 100.0]]}
+        ]
+
+
+class TestWriteResultJson:
+    """write_result_json writes compact UTF-8 JSON, creating parent directories."""
+
+    def test_creates_parents_and_keeps_non_ascii(self, tmp_path: Path) -> None:
+        output = tmp_path / "nested" / "results" / "prediction.json"
+
+        write_result_json({"n": "Sinn Féin", "p": [[1, 2.5]]}, output)
+
+        assert output.read_bytes() == '{"n":"Sinn Féin","p":[[1,2.5]]}'.encode()
+
+
+class TestPrintSeatTable:
+    """_print_seat_table prints parties by total seats, most first, then a total."""
+
+    def test_prints_parties_by_total_then_the_total(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # Listed fewest seats first. Sorting by constituency seats would put
+        # Labour first, and by list seats would put the Conservatives second.
+        _print_seat_table(
+            {
+                "Conservative": {"constituency": 0, "list": 2, "total": 2},
+                "Labour": {"constituency": 3, "list": 0, "total": 3},
+                "Scottish National Party": {"constituency": 1, "list": 4, "total": 5},
+            }
+        )
+
+        assert capsys.readouterr().out.split("\n") == [
+            "",
+            "Party                           Const   List  Total",
+            "-" * 52,
+            "Scottish National Party             1      4      5",
+            "Labour                              3      0      3",
+            "Conservative                        0      2      2",
+            "-" * 52,
+            "TOTAL                               4      6     10",
+            "",
+        ]
+
+
+# ── parse_args / _build_config_from_args ──────────────────────────────────────
+
+
+class _FixedDate(date):
+    """``date`` whose ``today()`` is pinned to 2026-06-15."""
+
+    @classmethod
+    def today(cls) -> _FixedDate:
+        return cls(2026, 6, 15)
+
+
+def _parse_args(monkeypatch: pytest.MonkeyPatch, *argv: str) -> argparse.Namespace:
+    """Parse ``argv`` with the model's CLI parser."""
+    monkeypatch.setattr(sys, "argv", ["run_holyrood_uns_model.py", *argv])
+    return cast(argparse.Namespace, hmod.parse_args())
+
+
+class TestParseArgs:
+    """parse_args: the CLI flags and their defaults."""
+
+    def test_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        assert vars(_parse_args(monkeypatch)) == {
+            # The one test tied to the CLI default; the rest pass it explicitly.
+            "election_name": hmod.BASELINE_ELECTION_NAME,
+            "output": None,
+            "no_output": False,
+            "poll_shares": None,
+            "half_life_days": 30.0,
+            "dry_run": False,
+            "as_of_days_back": 0,
+            "since_days_back": 30,
+            "as_of_date": None,
+            "since_date": None,
+            "start_date": None,
+            "end_date": None,
+            "lookback_days": 365,
+            "reset_existing": True,
+            "continue_on_error": False,
+            "progress_every": 25,
+        }
+
+    def test_every_flag_is_parsed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        args = _parse_args(
+            monkeypatch,
+            "--election-name",
+            "Test Baseline",
+            "--output",
+            "out.json",
+            "--no-output",
+            "--poll-shares",
+            '{"snp": 34}',
+            "--half-life-days",
+            "14",
+            "--dry-run",
+            "--as-of-days-back",
+            "2",
+            "--since-days-back",
+            "9",
+            "--as-of-date",
+            "2026-06-10",
+            "--since-date",
+            "2026-05-01",
+            "--start-date",
+            "2026-04-01",
+            "--end-date",
+            "2026-04-05",
+            "--lookback-days",
+            "60",
+            "--no-reset-existing",
+            "--continue-on-error",
+            "--progress-every",
+            "5",
+        )
+
+        assert vars(args) == {
+            "election_name": "Test Baseline",
+            "output": "out.json",
+            "no_output": True,
+            "poll_shares": '{"snp": 34}',
+            "half_life_days": 14.0,
+            "dry_run": True,
+            "as_of_days_back": 2,
+            "since_days_back": 9,
+            "as_of_date": "2026-06-10",
+            "since_date": "2026-05-01",
+            "start_date": "2026-04-01",
+            "end_date": "2026-04-05",
+            "lookback_days": 60,
+            "reset_existing": False,
+            "continue_on_error": True,
+            "progress_every": 5,
+        }
+
+
+class TestBuildConfigFromArgs:
+    """_build_config_from_args: single-date CLI flags to a simulation config."""
+
+    @staticmethod
+    def _build(
+        monkeypatch: pytest.MonkeyPatch, *argv: str
+    ) -> HolyroodSimulationConfig:
+        """Build the config for ``argv`` with today pinned to 2026-06-15."""
+        monkeypatch.setattr(hmod, "date", _FixedDate)
+        args = _parse_args(monkeypatch, "--election-name", "Test Baseline", *argv)
+        config: HolyroodSimulationConfig = hmod._build_config_from_args(args)
+        return config
+
+    def test_explicit_dates_win_over_days_back(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cfg = self._build(
+            monkeypatch,
+            "--as-of-date",
+            "2026-06-10",
+            "--since-date",
+            "2026-05-01",
+            "--as-of-days-back",
+            "3",
+            "--since-days-back",
+            "5",
+            "--half-life-days",
+            "14",
+            "--dry-run",
+        )
+
+        assert cfg == HolyroodSimulationConfig(
+            constituency_election_name="Test Baseline",
+            as_of_date=date(2026, 6, 10),
+            since_date=date(2026, 5, 1),
+            half_life_days=14.0,
+            dry_run=True,
+        )
+
+    @pytest.mark.parametrize(
+        ("argv", "as_of_date", "since_date"),
+        [
+            ([], date(2026, 6, 15), date(2026, 5, 16)),
+            (
+                ["--as-of-days-back", "2", "--since-days-back", "10"],
+                date(2026, 6, 13),
+                date(2026, 6, 5),
+            ),
+            # Negative counts are clamped to today, and equal dates are allowed.
+            (
+                ["--as-of-days-back", "-3", "--since-days-back", "-1"],
+                date(2026, 6, 15),
+                date(2026, 6, 15),
+            ),
+        ],
+    )
+    def test_days_back_count_from_today(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        argv: list[str],
+        as_of_date: date,
+        since_date: date,
+    ) -> None:
+        cfg = self._build(monkeypatch, *argv)
+
+        assert cfg == HolyroodSimulationConfig(
+            constituency_election_name="Test Baseline",
+            as_of_date=as_of_date,
+            since_date=since_date,
+            half_life_days=30.0,
+            dry_run=False,
+        )
+
+    def test_since_after_as_of_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        with pytest.raises(
+            ValueError,
+            match="^--since-days-back/--since-date must be older than or equal to "
+            "as-of$",
+        ):
+            self._build(
+                monkeypatch, "--as-of-date", "2026-06-10", "--since-date", "2026-06-11"
+            )
 
 
 # ── Database and trend-cache paths resolve when called ────────────────────────

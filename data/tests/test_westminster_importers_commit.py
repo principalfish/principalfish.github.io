@@ -44,11 +44,7 @@ from polls.importers.westminster import (
     techne_import,
     yougov_import,
 )
-from tests.uk_fixtures import (
-    WestminsterWorld,
-    add_poll_with_rows,
-    seed_westminster_world,
-)
+from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
 
 # ── The importers and their commit variants ───────────────────────────────────
 
@@ -365,9 +361,9 @@ class TestCommitPollster:
 
     @_over(ALL_IMPORTERS)
     def test_absent_pollster_is_created_with_unit_weight_and_mapping(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         plan = _plan(importer, world, pollster_exists=False)
 
         result = _commit(importer, db, plan)
@@ -382,9 +378,9 @@ class TestCommitPollster:
 
     @_over(ALL_IMPORTERS)
     def test_existing_pollster_is_reused_without_renaming(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded = _seed_pollster(db)
         plan = _plan(importer, world, pollster_exists=True, pollster_id=seeded.id)
 
@@ -400,10 +396,10 @@ class TestCommitPollster:
 
     @_over(ALL_IMPORTERS)
     def test_pollster_missing_at_commit_raises_and_writes_nothing(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         """The plan says the pollster exists, but the DB no longer has it."""
-        world = seed_westminster_world(db)
+        world = westminster_world
         plan = _plan(importer, world, pollster_exists=True, pollster_id=99)
 
         with pytest.raises(ValueError, match="Pollster lookup failed during commit"):
@@ -421,9 +417,13 @@ class TestCommitRegionsMapping:
         "stored_mapping", [_OLD_MAPPING, None], ids=["different", "unset"]
     )
     def test_variant_b_updates_a_changed_mapping(
-        self, importer: ModuleType, db: Database, stored_mapping: str | None
+        self,
+        importer: ModuleType,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        stored_mapping: str | None,
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded = _seed_pollster(db, regions_mapping=stored_mapping)
         plan = _plan(importer, world, pollster_exists=True, pollster_id=seeded.id)
 
@@ -437,9 +437,9 @@ class TestCommitRegionsMapping:
 
     @_over(VARIANT_B)
     def test_variant_b_leaves_an_equal_mapping_alone(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded = _seed_pollster(db, regions_mapping=_NEW_MAPPING)
         plan = _plan(importer, world, pollster_exists=True, pollster_id=seeded.id)
 
@@ -456,9 +456,13 @@ class TestCommitRegionsMapping:
         "stored_mapping", [_OLD_MAPPING, None], ids=["different", "unset"]
     )
     def test_variant_a_leaves_the_mapping_untouched(
-        self, importer: ModuleType, db: Database, stored_mapping: str | None
+        self,
+        importer: ModuleType,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        stored_mapping: str | None,
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded = _seed_pollster(db, regions_mapping=stored_mapping)
         plan = _plan(importer, world, pollster_exists=True, pollster_id=seeded.id)
 
@@ -476,9 +480,9 @@ class TestCommitPoll:
 
     @_over(ALL_IMPORTERS)
     def test_absent_poll_is_created_with_plan_metadata_and_rows(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         plan = _plan(importer, world, pollster_exists=False)
 
         result = _commit(importer, db, plan)
@@ -501,10 +505,14 @@ class TestCommitPoll:
         "stored_url", [_OLD_SOURCE_URL, _SOURCE_URL], ids=["changed", "unchanged"]
     )
     def test_matching_poll_is_reused_with_the_plan_source_url(
-        self, importer: ModuleType, db: Database, stored_url: str
+        self,
+        importer: ModuleType,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        stored_url: str,
     ) -> None:
         """A rowless matching poll gets the plan's rows and source URL."""
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded_pollster = _seed_pollster(db)
         seeded_poll = _seed_poll(db, world, source_url=stored_url)
         plan = _plan(
@@ -527,9 +535,9 @@ class TestCommitPoll:
 
     @_over(ALL_IMPORTERS)
     def test_differing_sample_size_commits_a_new_poll(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded_pollster = _seed_pollster(db)
         labour = world.party_ids["Labour"]
         near_miss = _seed_poll(
@@ -558,10 +566,10 @@ class TestCommitStalePlan:
 
     @_over(ALL_IMPORTERS)
     def test_poll_and_pollster_ids_missing_from_the_plan_are_found(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         """A plan built before the poll existed still lands on the stored poll."""
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded_pollster = _seed_pollster(db)
         seeded_poll = _seed_poll(db, world)
         plan = _plan(importer, world, pollster_exists=True)
@@ -578,7 +586,7 @@ class TestCommitStalePlan:
 
     @_over(ALL_IMPORTERS)
     def test_stale_absent_pollster_raises_integrity_error_pins_current_behaviour(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         """A plan saying the pollster is new, committed after it was created, fails.
 
@@ -586,7 +594,7 @@ class TestCommitStalePlan:
         the unique identifier. A preview confirmed after another import of the
         same new pollster would fail this way rather than reuse it.
         """
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_pollster(db)
         plan = _plan(importer, world, pollster_exists=False)
 
@@ -606,10 +614,10 @@ class TestCommitExistingRows:
 
     @_over(ALL_IMPORTERS)
     def test_existing_rows_are_kept_without_replace_rows(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         """The default keeps the rows but still refreshes the source URL."""
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded_pollster = _seed_pollster(db)
         national = {world.party_ids["Labour"]: 40.0, world.party_ids["Green"]: 9.0}
         seeded_poll = _seed_poll(db, world, national=national)
@@ -637,9 +645,9 @@ class TestCommitExistingRows:
 
     @_over(ALL_IMPORTERS)
     def test_replace_rows_swaps_only_this_polls_rows(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         seeded_pollster = _seed_pollster(db)
         labour = world.party_ids["Labour"]
         green = world.party_ids["Green"]
@@ -678,9 +686,9 @@ class TestFindExistingPoll:
 
     @_over(ALL_IMPORTERS)
     def test_poll_matching_all_five_keys_is_found(
-        self, importer: ModuleType, db: Database
+        self, importer: ModuleType, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         pollster = _seed_pollster(db)
         seeded_poll = _seed_poll(db, world)
 
@@ -697,10 +705,14 @@ class TestFindExistingPoll:
         ["pollster", "map", "fieldwork_start", "fieldwork_end", "sample_size"],
     )
     def test_poll_differing_in_one_key_is_not_found(
-        self, importer: ModuleType, db: Database, differing_key: str
+        self,
+        importer: ModuleType,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        differing_key: str,
     ) -> None:
         """A poll matching on every key but ``differing_key`` is not a match."""
-        world = seed_westminster_world(db)
+        world = westminster_world
         pollster = _seed_pollster(db)
         db.add_pollster("Rival Pollster", "rival_pollster")
         other_map_id = db.add_map("Other Map", parliament="westminster").id

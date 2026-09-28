@@ -8,19 +8,25 @@ in a later test. Only read-only model functions are called.
 
 from __future__ import annotations
 
+import sqlite3
 import sys
+from collections.abc import Generator
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 _MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
 sys.path.insert(0, str(_MODELS_DIR / "westminster"))
 sys.path.insert(0, str(_MODELS_DIR / "holyrood"))
 
 import pytest
+from sqlalchemy import func, select
+from sqlalchemy.exc import OperationalError
 
+from config import DatabaseConfig
 from console.importers_registry import IMPORTERS
 from db import Database
-from models import ElectionType
+from models import Base, ElectionType, Party
 from polls.importers.holyrood import holyrood_wikipedia_import
 from polls.importers.westminster import (
     find_out_now_import,
@@ -42,12 +48,15 @@ from run_uns_model import (
 from tests.uk_fixtures import (
     HOLYROOD_LIST_SEATS_PER_REGION,
     WESTMINSTER_BASELINE_VOTES,
+    WESTMINSTER_PARTY_NAMES,
     WESTMINSTER_REGION_NAMES,
     FakeUrlResponse,
     FakeXlrdBook,
     FakeXlrdSheet,
+    WestminsterWorld,
     add_poll_with_rows,
     build_workbook,
+    copy_database,
     seed_holyrood_world,
     seed_westminster_world,
     workbook_bytes,
@@ -180,6 +189,203 @@ class TestSeedWestminsterWorld:
         assert set(winners) == set(world.seat_ids.values())
         assert winners[world.seat_ids["Hexham"]] == world.party_ids["Conservative"]
         assert winners[world.seat_ids["Glasgow North"]] == world.party_ids["Labour"]
+
+
+@pytest.fixture()
+def empty_database(tmp_path: Path) -> Generator[Database, None, None]:
+    """A second fresh database beside ``db``, with tables and no rows."""
+    config = DatabaseConfig.model_construct(database_path=str(tmp_path / "second.db"))
+    database = Database(config)
+    database.create_tables()
+    yield database
+    database.engine.dispose()
+
+
+def _every_table(database: Database) -> dict[str, list[tuple[Any, ...]]]:
+    """Return every table's rows, in primary-key order, keyed by table name."""
+    with database.engine.connect() as connection:
+        return {
+            table.name: [
+                tuple(row)
+                for row in connection.execute(
+                    select(table).order_by(*table.primary_key.columns)
+                )
+            ]
+            for table in Base.metadata.sorted_tables
+        }
+
+
+def _party_count(database: Database) -> int:
+    """Return how many parties ``database`` holds."""
+    with database.session() as session:
+        count: int = session.execute(
+            select(func.count()).select_from(Party)
+        ).scalar_one()
+    return count
+
+
+class TestWestminsterWorldFixture:
+    """``westminster_world`` restores the session template into each test's ``db``."""
+
+    def test_restored_world_matches_a_fresh_seed(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        empty_database: Database,
+    ) -> None:
+        """Same ids and every table row for row as seeding ``db`` directly."""
+        fresh_world = seed_westminster_world(empty_database)
+
+        restored, fresh = _every_table(db), _every_table(empty_database)
+
+        assert westminster_world == fresh_world
+        for name in ("maps", "regions", "parties", "seats", "elections", "votes"):
+            assert restored[name], name
+        assert restored == fresh
+
+    def test_orm_writes_continue_the_seeded_ids(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        """Reads find the seeded rows; new rows take the next free ids."""
+        labour = db.get_party_by_name("Labour")
+        party = db.add_party("New Party")
+        pollster = db.add_pollster("New Pollster", "new_pollster")
+        poll = db.add_poll(
+            pollster.id, westminster_world.map_id, date(2026, 6, 1), date(2026, 6, 3)
+        )
+        db.add_poll_row(poll.id, party.id, 12.0)
+
+        assert labour is not None
+        assert labour.id == westminster_world.party_ids["Labour"]
+        next_party_id = len(WESTMINSTER_PARTY_NAMES) + 1
+        assert party.id == next_party_id
+        assert (pollster.id, poll.id) == (1, 1)
+        assert [row.party_id for row in db.get_rows_for_poll(poll.id)] == [
+            next_party_id
+        ]
+
+    def test_the_copy_is_in_the_database_file(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        only_the_test_database: Path,
+    ) -> None:
+        """A new raw connection to ``db``'s file reads the whole world."""
+        connection = sqlite3.connect(only_the_test_database)
+        try:
+            parties = connection.execute("SELECT count(*) FROM parties").fetchone()
+            votes = connection.execute("SELECT count(*) FROM votes").fetchone()
+        finally:
+            connection.close()
+
+        seeded_votes = sum(
+            len(seat_votes) for _, seat_votes in WESTMINSTER_BASELINE_VOTES.values()
+        )
+        assert parties == (len(WESTMINSTER_PARTY_NAMES),)
+        assert votes == (seeded_votes,)
+
+    def test_the_restore_passes_the_raw_connect_guard(
+        self,
+        db: Database,
+        only_the_test_database: Path,
+        _westminster_template: tuple[Database, WestminsterWorld],
+    ) -> None:
+        """Both engines open fresh connections while ``sqlite3.connect`` is guarded.
+
+        The template is a file other than ``db``'s, so the guard would refuse it
+        if the restore connected through ``sqlite3.connect``.
+        """
+        template, _ = _westminster_template
+        template.engine.dispose()
+        db.engine.dispose()
+
+        copy_database(template, db)
+
+        assert _party_count(db) == len(WESTMINSTER_PARTY_NAMES)
+
+    def test_the_template_refuses_writes(
+        self, _westminster_template: tuple[Database, WestminsterWorld]
+    ) -> None:
+        """A stray write to the template fails instead of reaching later restores."""
+        template, _ = _westminster_template
+        seeded = _party_count(template)
+
+        with pytest.raises(OperationalError, match="attempt to write a readonly"):
+            template.add_party("Leaked Party")
+
+        assert _party_count(template) == seeded
+
+    def test_writes_stay_in_the_tests_own_copy(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        _westminster_template: tuple[Database, WestminsterWorld],
+        empty_database: Database,
+    ) -> None:
+        """A write to ``db`` reaches neither the template nor the next restore."""
+        template, _ = _westminster_template
+        seeded = _party_count(template)
+        db.add_party("Only In This Test")
+
+        copy_database(template, empty_database)
+
+        assert _party_count(db) == seeded + 1
+        assert _party_count(template) == seeded
+        assert _party_count(empty_database) == seeded
+        assert empty_database.get_party_by_name("Only In This Test") is None
+
+    def test_a_connection_open_across_the_copy_reads_it(
+        self,
+        _westminster_template: tuple[Database, WestminsterWorld],
+        empty_database: Database,
+    ) -> None:
+        """A pooled connection that read the empty tables is not left stale."""
+        template, _ = _westminster_template
+        count_parties = select(func.count()).select_from(Party)
+
+        with empty_database.engine.connect() as held:
+            before = held.execute(count_parties).scalar_one()
+            copy_database(template, empty_database)
+            after = held.execute(count_parties).scalar_one()
+
+        assert before == 0
+        assert after == len(WESTMINSTER_PARTY_NAMES)
+
+    def test_a_target_with_rows_is_refused(
+        self,
+        db: Database,
+        _westminster_template: tuple[Database, WestminsterWorld],
+    ) -> None:
+        """Copying over rows would discard them, so it fails and changes nothing."""
+        template, _ = _westminster_template
+        db.add_party("Already here")
+
+        with pytest.raises(
+            RuntimeError, match=r"^copy would discard rows in \['parties'\]$"
+        ):
+            copy_database(template, db)
+
+        with db.session() as session:
+            names = session.scalars(select(Party.name)).all()
+        assert names == ["Already here"]
+
+    def test_rows_in_a_table_outside_the_orm_are_refused(
+        self,
+        db: Database,
+        _westminster_template: tuple[Database, WestminsterWorld],
+    ) -> None:
+        """The guard reads the target's own tables, not just the ORM metadata."""
+        template, _ = _westminster_template
+        with db.engine.begin() as connection:
+            connection.exec_driver_sql("CREATE TABLE scratch (value INTEGER)")
+            connection.exec_driver_sql("INSERT INTO scratch VALUES (1)")
+
+        with pytest.raises(
+            RuntimeError, match=r"^copy would discard rows in \['scratch'\]$"
+        ):
+            copy_database(template, db)
+
+        assert _party_count(db) == 0
 
 
 class TestSeedHolyroodWorld:

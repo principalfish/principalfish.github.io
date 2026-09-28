@@ -61,7 +61,6 @@ from tests.uk_fixtures import (
     WESTMINSTER_BASELINE_VOTES,
     WestminsterWorld,
     add_poll_with_rows,
-    seed_westminster_world,
 )
 
 
@@ -532,14 +531,18 @@ def _aggregate(
 class TestResolveSimulationScope:
     """Tests for resolve_simulation_scope — map/baseline lookup and since_date."""
 
-    def test_missing_map_raises(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_missing_map_raises(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
 
         with pytest.raises(ValueError, match="^Map not found: Nowhere$"):
             resolve_simulation_scope(db, _simulation_config(world, map_name="Nowhere"))
 
-    def test_missing_baseline_raises(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_missing_baseline_raises(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         cfg = _simulation_config(world, baseline_election_name="1997 General Election")
 
         with pytest.raises(
@@ -547,8 +550,10 @@ class TestResolveSimulationScope:
         ):
             resolve_simulation_scope(db, cfg)
 
-    def test_baseline_on_another_map_raises(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_baseline_on_another_map_raises(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         other_map = db.add_map("Scottish Parliament 2021", parliament="holyrood")
         db.add_election(
             other_map.id, 2021, "2021 Holyrood", ElectionType.holyrood_general
@@ -562,8 +567,10 @@ class TestResolveSimulationScope:
         with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
             resolve_simulation_scope(db, cfg)
 
-    def test_sentinel_since_date_becomes_the_baseline_year(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_sentinel_since_date_becomes_the_baseline_year(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         cfg = _simulation_config(world, since_date=date(1900, 1, 1))
 
         poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
@@ -576,9 +583,9 @@ class TestResolveSimulationScope:
         "since_date", [date(2026, 5, 1), date(1900, 1, 2), date(1899, 12, 31)]
     )
     def test_other_since_dates_pass_through(
-        self, db: Database, since_date: date
+        self, db: Database, westminster_world: WestminsterWorld, since_date: date
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         cfg = _simulation_config(world, since_date=since_date)
 
         poll_map, baseline, resolved = resolve_simulation_scope(db, cfg)
@@ -595,9 +602,9 @@ class TestFetchSeatRefs:
     """Tests for fetch_seat_refs — one SeatRef per seat on the map, by name."""
 
     def test_seats_ordered_by_name_with_regionless_seat_kept(
-        self, db: Database
+        self, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         orphan = db.add_seat(world.map_id, "Aberdeen South")
         other_map = db.add_map("Another Map")
         db.add_seat(other_map.id, "Aardvark Central")
@@ -642,8 +649,10 @@ class TestFetchSeatRefs:
 class TestBuildReferenceData:
     """Tests for build_reference_data — the simulation's lookup tables."""
 
-    def test_lookup_tables(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_lookup_tables(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         orphan_id = _seed_regionless_seat(db, world, {})
         weighted = db.add_pollster("Weighted Ltd", "weighted", weight=0.5)
         unweighted_poll = add_poll_with_rows(
@@ -739,15 +748,19 @@ class TestBuildReferenceData:
 class TestBuildBaselineVoteState:
     """Tests for build_baseline_vote_state — baseline totals and shares."""
 
-    def test_election_without_votes_raises(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_election_without_votes_raises(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         election_id = _seed_election(db, world.map_id, "Empty Election", [])
 
         with pytest.raises(ValueError, match="^Baseline election has no votes$"):
             build_baseline_vote_state(db, election_id, _region_by_seat_id(world))
 
-    def test_votes_without_party_or_total_raise(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_votes_without_party_or_total_raise(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         hexham = world.seat_ids["Hexham"]
         election_id = _seed_election(
             db,
@@ -761,8 +774,10 @@ class TestBuildBaselineVoteState:
         ):
             build_baseline_vote_state(db, election_id, _region_by_seat_id(world))
 
-    def test_totals_and_shares(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_totals_and_shares(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         p = world.party_ids
         r = world.region_ids
 
@@ -826,8 +841,10 @@ class TestBuildBaselineVoteState:
             100 * 5000 / 34000
         )
 
-    def test_other_is_merged_into_others(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_other_is_merged_into_others(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         hexham = world.seat_ids["Hexham"]
         north_east = world.region_ids["North East England"]
         # Hexham's baseline has "Other" (id 7) at 1000 of 51000 votes.
@@ -846,8 +863,10 @@ class TestBuildBaselineVoteState:
         assert 7 not in region_shares[north_east]
         assert region_shares[north_east][15] == pytest.approx(100 * 1000 / 51000)
 
-    def test_alias_sums_other_and_others_in_the_same_seat(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_alias_sums_other_and_others_in_the_same_seat(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         hexham = world.seat_ids["Hexham"]
         labour = world.party_ids["Labour"]
         election_id = _seed_election(
@@ -866,9 +885,9 @@ class TestBuildBaselineVoteState:
         assert national_shares == pytest.approx({15: 50.0, labour: 50.0})
 
     def test_regionless_seat_counts_nationally_but_not_regionally(
-        self, db: Database
+        self, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         orphan_id = _seed_regionless_seat(db, world, {"Labour": 40000.0})
         region_by_seat_id = _region_by_seat_id(world)
         region_by_seat_id[orphan_id] = None
@@ -893,8 +912,10 @@ class TestBuildBaselineVoteState:
         }
         assert region_shares[r["London"]][p["Labour"]] == pytest.approx(50.0)
 
-    def test_region_with_zero_votes_gets_no_shares(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_region_with_zero_votes_gets_no_shares(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         east_midlands = world.region_ids["East Midlands"]
         seat = db.add_seat(world.map_id, "Derby North", region_id=east_midlands)
         labour = world.party_ids["Labour"]
@@ -913,8 +934,10 @@ class TestBuildBaselineVoteState:
         assert len(region_shares) == 4
         assert national_shares[labour] == pytest.approx(41.875)
 
-    def test_all_zero_totals_give_no_national_shares(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_all_zero_totals_give_no_national_shares(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         hexham = world.seat_ids["Hexham"]
         labour = world.party_ids["Labour"]
         election_id = _seed_election(
@@ -937,8 +960,10 @@ class TestBuildBaselineVoteState:
 class TestAggregatePollShares:
     """Tests for aggregate_poll_shares — decayed, pollster-weighted poll sums."""
 
-    def test_no_polls_gives_empty_sums_and_no_latest_poll(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_no_polls_gives_empty_sums_and_no_latest_poll(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
 
         weighted_sums, total_weights, latest = _aggregate(db, world)
 
@@ -946,8 +971,10 @@ class TestAggregatePollShares:
         assert total_weights == {}
         assert latest is None
 
-    def test_polls_outside_the_window_are_skipped(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_polls_outside_the_window_are_skipped(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         labour = world.party_ids["Labour"]
         _add_poll(db, world, date(2026, 4, 30), {labour: 10.0})
         _add_poll(db, world, date(2026, 5, 1), {labour: 20.0})
@@ -963,8 +990,10 @@ class TestAggregatePollShares:
         assert total_weights == pytest.approx({(None, labour): 0.5 ** (40 / 7) + 1.0})
         assert latest.fieldwork_end == date(2026, 6, 10)
 
-    def test_decay_weight_halves_every_half_life(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_decay_weight_halves_every_half_life(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         labour = world.party_ids["Labour"]
         conservative = world.party_ids["Conservative"]
         green = world.party_ids["Green"]
@@ -983,9 +1012,9 @@ class TestAggregatePollShares:
 
     @pytest.mark.parametrize("half_life_days", [0.0, -5.0])
     def test_non_positive_half_life_is_clamped(
-        self, db: Database, half_life_days: float
+        self, db: Database, westminster_world: WestminsterWorld, half_life_days: float
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         labour = world.party_ids["Labour"]
         conservative = world.party_ids["Conservative"]
         green = world.party_ids["Green"]
@@ -1004,8 +1033,10 @@ class TestAggregatePollShares:
             0.5**1000, rel=1e-9
         )
 
-    def test_pollster_weight_scales_the_poll(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_pollster_weight_scales_the_poll(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         labour = world.party_ids["Labour"]
         conservative = world.party_ids["Conservative"]
         weighted = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="weighted")
@@ -1024,14 +1055,14 @@ class TestAggregatePollShares:
         )
 
     def test_zero_pollster_weight_counts_in_full_pins_current_behaviour(
-        self, db: Database
+        self, db: Database, westminster_world: WestminsterWorld
     ) -> None:
         """Pins current behaviour: ``weight or 1.0`` turns a 0.0 weight into 1.0.
 
         A pollster weighted 0.0 is presumably meant to be ignored, but the
         falsy check makes it count at full weight.
         """
-        world = seed_westminster_world(db)
+        world = westminster_world
         labour = world.party_ids["Labour"]
         poll = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="zeroed")
 
@@ -1043,8 +1074,10 @@ class TestAggregatePollShares:
         assert weighted_sums == {(None, labour): 40.0}
         assert latest is not None
 
-    def test_negative_pollster_weight_skips_the_poll(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_negative_pollster_weight_skips_the_poll(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         labour = world.party_ids["Labour"]
         poll = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="negative")
 
@@ -1056,8 +1089,10 @@ class TestAggregatePollShares:
         assert total_weights == {}
         assert latest is None
 
-    def test_poll_without_rows_is_skipped(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_poll_without_rows_is_skipped(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         labour = world.party_ids["Labour"]
         older = _add_poll(db, world, date(2026, 6, 9), {labour: 40.0})
         _add_poll(db, world, _AS_OF, {}, pollster="empty")
@@ -1075,11 +1110,14 @@ class TestAggregatePollShares:
         assert set(weighted_sums) == {(None, labour)}
 
     def test_row_without_party_is_skipped(
-        self, db: Database, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         # ``poll_rows.party_id`` is NOT NULL, so a party-less row can't be seeded;
         # serve one alongside the real rows to reach the guard.
-        world = seed_westminster_world(db)
+        world = westminster_world
         labour = world.party_ids["Labour"]
         _add_poll(db, world, _AS_OF, {labour: 40.0})
         real_rows = db.get_rows_for_poll
@@ -1095,8 +1133,10 @@ class TestAggregatePollShares:
         assert weighted_sums == {(None, labour): 40.0}
         assert total_weights == {(None, labour): 1.0}
 
-    def test_other_is_merged_into_others(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_other_is_merged_into_others(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         scotland = world.region_ids["Scotland"]
         _add_poll(
             db,
@@ -1112,8 +1152,10 @@ class TestAggregatePollShares:
         assert weighted_sums == {(None, 15): 5.0, (scotland, 15): 4.0}
         assert total_weights == {(None, 15): 2.0, (scotland, 15): 1.0}
 
-    def test_national_and_regional_rows_keyed_separately(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_national_and_regional_rows_keyed_separately(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         labour = world.party_ids["Labour"]
         snp = world.party_ids["Scottish National Party"]
         scotland = world.region_ids["Scotland"]
@@ -1137,9 +1179,11 @@ class TestAggregatePollShares:
         }
         assert set(total_weights) == set(weighted_sums)
 
-    def test_latest_poll_is_the_one_ending_last(self, db: Database) -> None:
+    def test_latest_poll_is_the_one_ending_last(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
         # Beta ends later but started earlier, so only ``fieldwork_end`` picks it.
-        world = seed_westminster_world(db)
+        world = westminster_world
         labour = world.party_ids["Labour"]
         added = {
             pollster: _add_poll(
@@ -1173,9 +1217,9 @@ class TestAggregatePollShares:
 
     @pytest.mark.parametrize("later_start_first", [True, False])
     def test_same_end_date_ties_go_to_the_later_start(
-        self, db: Database, later_start_first: bool
+        self, db: Database, westminster_world: WestminsterWorld, later_start_first: bool
     ) -> None:
-        world = seed_westminster_world(db)
+        world = westminster_world
         labour = world.party_ids["Labour"]
         polls = [
             ("beta", date(2026, 6, 7)),
@@ -1208,8 +1252,10 @@ class TestAggregatePollShares:
             fieldwork_end=date(2026, 6, 9),
         )
 
-    def test_unnamed_pollster_falls_back_to_its_id(self, db: Database) -> None:
-        world = seed_westminster_world(db)
+    def test_unnamed_pollster_falls_back_to_its_id(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
         poll = _add_poll(db, world, _AS_OF, {world.party_ids["Labour"]: 40.0})
 
         _, _, latest = _aggregate(db, world)
@@ -1264,6 +1310,7 @@ class TestDatabasePathAtCallTime:
     def test_the_default_follows_database_path_when_called(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -1276,7 +1323,7 @@ class TestDatabasePathAtCallTime:
             encoding="utf-8",
         )
         monkeypatch.setattr(run_uns_model, "TREND_CACHE_JSON", trend_cache_json)
-        world = seed_westminster_world(db)
+        world = westminster_world
         vote = {
             "seat_id": world.seat_ids["Hexham"],
             "party_id": world.party_ids["Labour"],
@@ -1314,6 +1361,7 @@ class TestDatabasePathAtCallTime:
     def test_dates_to_run_reads_the_database_it_is_given(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -1327,7 +1375,7 @@ class TestDatabasePathAtCallTime:
         monkeypatch.setattr(
             run_uns_model, "TREND_CACHE_JSON", tmp_path / "missing-trends.json"
         )
-        world = seed_westminster_world(db)
+        world = westminster_world
         persist_projection(
             world.map_id,
             date(2026, 6, 1),
@@ -1354,6 +1402,7 @@ class TestDatabasePathAtCallTime:
     def test_run_simulation_writes_to_the_database_it_read_from(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -1367,7 +1416,7 @@ class TestDatabasePathAtCallTime:
         configured.touch()
         trend_cache_json = tmp_path / "trends.json"
         monkeypatch.setattr(run_uns_model, "TREND_CACHE_JSON", trend_cache_json)
-        world = seed_westminster_world(db)
+        world = westminster_world
         add_poll_with_rows(
             db,
             map_id=world.map_id,
@@ -1677,10 +1726,13 @@ class TestPersistProjection:
     """Tests for persist_projection — the model_uns election and its vote rows."""
 
     def test_writes_election_and_votes(
-        self, db: Database, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         hexham = world.seat_ids["Hexham"]
         labour = world.party_ids["Labour"]
         conservative = world.party_ids["Conservative"]
@@ -1742,10 +1794,13 @@ class TestDeleteModelUnsForAsOfDate:
         assert not missing.exists()
 
     def test_no_matching_election_deletes_nothing(
-        self, db: Database, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_model_run(db, world, "UNS 2026-06-02", 2)
 
         assert delete_model_uns_for_as_of_date(
@@ -1756,10 +1811,13 @@ class TestDeleteModelUnsForAsOfDate:
         ]
 
     def test_deletes_every_run_for_the_date_and_its_votes(
-        self, db: Database, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         first = _seed_model_run(db, world, "UNS 2026-06-01", 2)
         rerun = _seed_model_run(db, world, "UNS 2026-06-01 rerun", 1)
         _seed_model_run(db, world, "UNS 2026-06-10", 3)
@@ -1782,7 +1840,10 @@ class TestDeleteModelUnsForAsOfDate:
         )
 
     def test_matches_by_name_not_type_pins_current_behaviour(
-        self, db: Database, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        only_the_test_database: Path,
     ) -> None:
         """Pins current behaviour: any election named for the date is deleted.
 
@@ -1791,7 +1852,7 @@ class TestDeleteModelUnsForAsOfDate:
         naming scheme is deleted along with its votes.
         """
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         other_type = _seed_model_run(
             db, world, "UNS 2026-06-01 manual", 2, ElectionType.model_run
         )
@@ -1812,10 +1873,14 @@ class TestResetExistingModelOutputs:
     """Tests for reset_existing_model_outputs — clearing a date range of runs."""
 
     def test_clears_the_range_from_sqlite_and_the_trend_json(
-        self, db: Database, tmp_path: Path, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_model_run(db, world, "UNS 2026-05-31", 1)
         in_range = [
             _seed_model_run(db, world, "UNS 2026-06-01", 2),
@@ -1855,7 +1920,11 @@ class TestResetExistingModelOutputs:
         ]
 
     def test_range_matches_names_of_any_type_pins_current_behaviour(
-        self, db: Database, tmp_path: Path, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        only_the_test_database: Path,
     ) -> None:
         """Pins current behaviour: the range deletes any election named in it.
 
@@ -1864,7 +1933,7 @@ class TestResetExistingModelOutputs:
         deleted along with its votes.
         """
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         other_type = _seed_model_run(
             db, world, "UNS 2026-06-01 manual", 3, ElectionType.model_run
         )
@@ -1881,10 +1950,14 @@ class TestResetExistingModelOutputs:
         assert _vote_count(only_the_test_database, [other_type]) == 0
 
     def test_nothing_in_range_leaves_both_untouched(
-        self, db: Database, tmp_path: Path, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_model_run(db, world, "UNS 2026-05-31", 1)
         trend_json = tmp_path / "trends.json"
         original = json.dumps([_trend_entry(1, "2026-05-31")], indent=2)
@@ -1922,10 +1995,14 @@ class TestExistingTrendDates:
     """Tests for existing_trend_dates — dates already run, from JSON and SQLite."""
 
     def test_union_of_trend_json_and_sqlite(
-        self, db: Database, tmp_path: Path, only_the_test_database: Path
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_model_run(db, world, "UNS 2026-06-02", 1)
         _seed_model_run(db, world, "UNS 2026-06-03 rerun", 1)
         # Matches the pattern but is no calendar date.
@@ -1970,7 +2047,7 @@ class TestDatesToRunForCfg:
 
     @staticmethod
     def _run(
-        db: Database,
+        world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         sqlite_path: Path,
@@ -1986,14 +2063,13 @@ class TestDatesToRunForCfg:
             [_trend_entry(n, value) for n, value in enumerate(existing, start=1)],
         )
         monkeypatch.setattr(run_uns_model, "TREND_CACHE_JSON", trend_json)
-        world = seed_westminster_world(db)
         cfg = _simulation_config(world, as_of_date=as_of_date, dry_run=dry_run)
         planned: list[date] = dates_to_run_for_cfg(cfg, sqlite_path)
         return planned
 
     def test_dry_run_only_runs_the_as_of_date(
         self,
-        db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -2001,7 +2077,7 @@ class TestDatesToRunForCfg:
         _assert_path_defaults_are_none()
 
         planned = self._run(
-            db,
+            westminster_world,
             tmp_path,
             monkeypatch,
             only_the_test_database,
@@ -2013,7 +2089,7 @@ class TestDatesToRunForCfg:
 
     def test_no_earlier_run_only_runs_the_as_of_date(
         self,
-        db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -2021,7 +2097,7 @@ class TestDatesToRunForCfg:
         _assert_path_defaults_are_none()
 
         planned = self._run(
-            db,
+            westminster_world,
             tmp_path,
             monkeypatch,
             only_the_test_database,
@@ -2032,7 +2108,7 @@ class TestDatesToRunForCfg:
 
     def test_fills_the_gap_after_the_latest_earlier_run(
         self,
-        db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -2041,7 +2117,7 @@ class TestDatesToRunForCfg:
 
         # 2026-06-05 is missing too, but only days after the latest run are filled.
         planned = self._run(
-            db,
+            westminster_world,
             tmp_path,
             monkeypatch,
             only_the_test_database,
@@ -2052,7 +2128,7 @@ class TestDatesToRunForCfg:
 
     def test_gap_before_an_existing_as_of_run_skips_the_as_of_date(
         self,
-        db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -2060,7 +2136,7 @@ class TestDatesToRunForCfg:
         _assert_path_defaults_are_none()
 
         planned = self._run(
-            db,
+            westminster_world,
             tmp_path,
             monkeypatch,
             only_the_test_database,
@@ -2071,7 +2147,7 @@ class TestDatesToRunForCfg:
 
     def test_no_gap_reruns_the_as_of_date(
         self,
-        db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -2079,7 +2155,7 @@ class TestDatesToRunForCfg:
         _assert_path_defaults_are_none()
 
         planned = self._run(
-            db,
+            westminster_world,
             tmp_path,
             monkeypatch,
             only_the_test_database,
@@ -2412,13 +2488,14 @@ class TestRunSimulation:
     def test_dry_run_writes_nothing(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
         trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
 
         name, projected, region_diffs, winners, latest = run_simulation(
@@ -2437,13 +2514,14 @@ class TestRunSimulation:
     def test_poll_swing_flips_a_seat_and_is_persisted(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
         trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         hexham = world.seat_ids["Hexham"]
         labour = world.party_ids["Labour"]
         conservative = world.party_ids["Conservative"]
@@ -2480,13 +2558,14 @@ class TestRunSimulation:
     def test_writes_the_output_csvs(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
         output_csv = tmp_path / "csv" / "projection.csv"
 
@@ -2564,6 +2643,7 @@ class TestRunRetrospective:
     def test_resets_the_range_then_runs_each_day(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -2571,7 +2651,7 @@ class TestRunRetrospective:
     ) -> None:
         _assert_path_defaults_are_none()
         trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
         _seed_model_run(db, world, "UNS 2026-06-09", 2)
         _seed_model_run(db, world, "UNS 2026-06-11", 1)
@@ -2628,6 +2708,7 @@ class TestRunRetrospective:
     def test_dry_run_skips_the_reset_and_reports_progress_every_n(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -2635,7 +2716,7 @@ class TestRunRetrospective:
     ) -> None:
         _assert_path_defaults_are_none()
         trend_json, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
         _seed_model_run(db, world, "UNS 2026-06-09", 2)
         args = _retrospective_args(
@@ -2669,6 +2750,7 @@ class TestRunRetrospective:
     def test_no_reset_and_no_progress(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -2677,7 +2759,7 @@ class TestRunRetrospective:
     ) -> None:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         args = _retrospective_args(
             monkeypatch,
             world,
@@ -2703,6 +2785,7 @@ class TestRunRetrospective:
     def test_continue_on_error_records_failures(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -2710,7 +2793,7 @@ class TestRunRetrospective:
     ) -> None:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         args = _retrospective_args(
             monkeypatch,
             world,
@@ -2742,6 +2825,7 @@ class TestRunRetrospective:
     def test_without_continue_on_error_the_first_failure_raises(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -2749,7 +2833,7 @@ class TestRunRetrospective:
     ) -> None:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         args = _retrospective_args(
             monkeypatch,
             world,
@@ -2915,6 +2999,7 @@ class TestMain:
     def test_retrospective_branch(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -2924,7 +3009,7 @@ class TestMain:
         trend_json, meta_json = _guard_writes(
             tmp_path, monkeypatch, only_the_test_database
         )
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
 
         _run_main(
@@ -2951,6 +3036,7 @@ class TestMain:
     def test_caps_as_of_at_the_latest_poll_and_shifts_the_window(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -2958,7 +3044,7 @@ class TestMain:
     ) -> None:
         _assert_path_defaults_are_none()
         _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 8))
 
         _run_main(
@@ -3011,6 +3097,7 @@ class TestMain:
     def test_without_polls_runs_the_requested_date_unswung(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -3018,7 +3105,7 @@ class TestMain:
     ) -> None:
         _assert_path_defaults_are_none()
         _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
 
         _run_main(
             db,
@@ -3046,13 +3133,14 @@ class TestMain:
     def test_unknown_map_raises(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
 
         with pytest.raises(ValueError, match="^Map not found: Nowhere$"):
             _run_main(db, monkeypatch, world, "--map-name", "Nowhere", "--dry-run")
@@ -3060,6 +3148,7 @@ class TestMain:
     def test_backfills_the_days_since_the_last_run(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -3069,7 +3158,7 @@ class TestMain:
         # The trend JSON is absent, so the last run (06-06) is only in SQLite:
         # finding it proves ``main`` hands ``dates_to_run_for_cfg`` its database.
         _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
         _seed_model_run(db, world, "UNS 2026-06-06", 1)
 
@@ -3107,6 +3196,7 @@ class TestMain:
     def test_meta_is_rerun_when_as_of_already_ran(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -3114,7 +3204,7 @@ class TestMain:
     ) -> None:
         _assert_path_defaults_are_none()
         _, meta_json = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 7), pollster="alpha")
         _seed_swing_poll(db, world, date(2026, 6, 9), pollster="beta")
         _seed_model_run(db, world, "UNS 2026-06-06", 1)
@@ -3161,6 +3251,7 @@ class TestMain:
     def test_dry_run_writes_nothing(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -3170,7 +3261,7 @@ class TestMain:
         trend_json, meta_json = _guard_writes(
             tmp_path, monkeypatch, only_the_test_database
         )
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
         # With a dry run the gap since 06-06 is not backfilled either.
         _seed_model_run(db, world, "UNS 2026-06-06", 1)
@@ -3198,6 +3289,7 @@ class TestMain:
     def test_prints_the_regional_swing_summary(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -3205,7 +3297,7 @@ class TestMain:
     ) -> None:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
 
         _run_main(
@@ -3241,6 +3333,7 @@ class TestMain:
     def test_region_without_key_parties_is_left_out_of_the_summary(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
@@ -3248,7 +3341,7 @@ class TestMain:
     ) -> None:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        world = seed_westminster_world(db)
+        world = westminster_world
         ni_map = db.add_map("Northern Ireland Map")
         region = db.add_region(ni_map.id, "Northern Ireland")
         seat = db.add_seat(ni_map.id, "Belfast East", region_id=region.id)
@@ -3284,6 +3377,7 @@ class TestMain:
     def test_without_a_factory_opens_the_configured_database(
         self,
         db: Database,
+        westminster_world: WestminsterWorld,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
@@ -3291,7 +3385,7 @@ class TestMain:
         _assert_path_defaults_are_none()
         _guard_writes(tmp_path, monkeypatch, only_the_test_database)
         monkeypatch.setenv("DATABASE_PATH", str(only_the_test_database))
-        world = seed_westminster_world(db)
+        world = westminster_world
         _seed_swing_poll(db, world, date(2026, 6, 9))
         monkeypatch.setattr(
             sys,

@@ -6,7 +6,9 @@ The module-level tables are read-only (tuples and ``MappingProxyType``) because
 every test shares them.
 
 - :func:`seed_westminster_world`: the map, regions, parties, seats and 2024
-  baseline that the Westminster importers and UNS model look up by name.
+  baseline that the Westminster importers and UNS model look up by name. Most
+  tests take conftest's ``westminster_world`` fixture instead, which restores a
+  copy seeded once per session (see :func:`copy_database`).
 - :func:`seed_holyrood_world`: a two-region Holyrood map with constituency and
   list seats plus the linked constituency and list elections.
 - :func:`add_poll_with_rows`: one poll (and its pollster, if new) with national
@@ -19,6 +21,7 @@ every test shares them.
 
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -204,6 +207,40 @@ def seed_westminster_world(db: Database) -> WestminsterWorld:
         region_ids=MappingProxyType(region_ids),
         seat_ids=MappingProxyType(seat_ids),
     )
+
+
+def copy_database(source: Database, target: Database) -> None:
+    """Replace the empty ``target`` database with a copy of ``source``.
+
+    Uses SQLite's online backup API over each engine's own pooled DBAPI
+    connection, so the copy goes through SQLAlchemy's driver rather than
+    ``sqlite3.connect`` (which ``only_the_test_database`` guards) and lands in the
+    target file itself; every connection to it then reads the copy.
+
+    Raises:
+        RuntimeError: Any table in ``target`` (in the ORM metadata or not)
+            already holds rows, which the copy would silently discard.
+    """
+    with (
+        source.engine.raw_connection() as source_connection,
+        target.engine.raw_connection() as target_connection,
+    ):
+        source_sqlite = source_connection.driver_connection
+        target_sqlite = target_connection.driver_connection
+        assert isinstance(source_sqlite, sqlite3.Connection)
+        assert isinstance(target_sqlite, sqlite3.Connection)
+        tables = target_sqlite.execute(
+            "SELECT name FROM sqlite_master"
+            " WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+        ).fetchall()
+        occupied = [
+            name
+            for (name,) in tables
+            if target_sqlite.execute(f'SELECT 1 FROM "{name}" LIMIT 1').fetchone()
+        ]
+        if occupied:
+            raise RuntimeError(f"copy would discard rows in {occupied}")
+        source_sqlite.backup(target_sqlite)
 
 
 # ── Holyrood ──────────────────────────────────────────────────────────────────

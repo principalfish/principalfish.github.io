@@ -15,9 +15,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
+from sqlalchemy import event
 
 from config import DatabaseConfig
 from db import Database
+from tests.uk_fixtures import WestminsterWorld, copy_database, seed_westminster_world
 
 
 @pytest.fixture(autouse=True)
@@ -60,6 +62,48 @@ def db(tmp_path: Path) -> Generator[Database, None, None]:
     database.create_tables()
     yield database
     database.engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def _westminster_template(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Generator[tuple[Database, WestminsterWorld], None, None]:
+    """Seed the Westminster world once per session, for ``westminster_world``.
+
+    Session fixtures are set up before the autouse guard above, so the config
+    names the temporary file explicitly (as ``db`` does) and never reads
+    ``DATABASE_PATH``. Once seeded, every connection to the template is
+    ``query_only``: a stray write would otherwise reach every later restore.
+    """
+    path = tmp_path_factory.mktemp("westminster") / "template.db"
+    template = Database(DatabaseConfig.model_construct(database_path=str(path)))
+    template.create_tables()
+    world = seed_westminster_world(template)
+
+    @event.listens_for(template.engine, "connect")
+    def _read_only(dbapi_connection: Any, _connection_record: Any) -> None:
+        dbapi_connection.execute("PRAGMA query_only = ON")
+
+    # Drop the pooled connections opened while seeding; new ones get the pragma.
+    template.engine.dispose()
+    yield template, world
+    template.engine.dispose()
+
+
+@pytest.fixture()
+def westminster_world(
+    db: Database, _westminster_template: tuple[Database, WestminsterWorld]
+) -> WestminsterWorld:
+    """Restore the seeded Westminster world into ``db`` and return its ids.
+
+    Equivalent to ``seed_westminster_world(db)``, but a page copy of a session
+    template (well under 1ms) instead of ~50ms of ORM inserts. The copy replaces
+    ``db``'s contents, so it must be the first writer to ``db``; a ``db`` that
+    already holds rows fails the setup.
+    """
+    template, world = _westminster_template
+    copy_database(template, db)
+    return world
 
 
 @pytest.fixture()

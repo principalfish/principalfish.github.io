@@ -11,50 +11,50 @@ raises if called, and individual tests opt in to a real recording stand-in
 monkeypatching over that tripwire. A test that forgets to opt in fails loudly
 instead of silently reaching a real subprocess.
 
-The trend-cache autouse fixture matters here specifically because of a bug
-caught while building the sibling Westminster test file (piece 23): ``_flashes``
-follows a delete/not-found redirect and renders ``/holyrood/outputs``, which
-always reads ``HOLYROOD_TREND_CACHE_JSON``. An opt-in, per-test patch would
-leave that route reading the real, tracked
+The trend-cache autouse fixture matters here specifically because of the
+``_flashes``-follows-a-redirect hazard: a delete/not-found response redirects
+to ``/holyrood/outputs``, and that route always reads
+``HOLYROOD_TREND_CACHE_JSON``. An opt-in, per-test patch would leave that
+route reading the real, tracked
 ``electionmaps/data/results/holyrood-trends.json`` on every test that reaches
-``/holyrood/outputs`` only via a redirect.
+``/holyrood/outputs`` only via a redirect (see test_console_westminster.py's
+module docstring, which has the equivalent guard for ``UNS_TREND_CACHE_JSON``).
 """
 
 from __future__ import annotations
 
-import html
 import json
-import re
 import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import NoReturn, cast
+from typing import cast
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
-from flask import Flask, Response
-from flask.testing import FlaskClient
+from flask import Flask
 
 from db import Database
 from models import ElectionType
 
-from console import create_app
 from console.blueprints.holyrood import (
     _choices_for_holyrood_model_form,
     _holyrood_model_arg_explanations,
 )
 from console.paths import HOLYROOD_MODEL_SCRIPT
 
+from tests.console_fixtures import (
+    RecordingRunner as _RecordingRunner,
+    app,
+    command_line as _command_line,
+    flashes as _flashes,
+    flashes_on_page as _flashes_on_page,
+    forbid_call,
+    pre_after_heading as _pre_after_heading,
+    select_block as _select_block,
+)
 from tests.uk_fixtures import HolyroodWorld, seed_holyrood_world
-
-
-@pytest.fixture()
-def app() -> Flask:
-    application = create_app()
-    application.config["TESTING"] = True
-    return application
 
 
 @pytest.fixture(autouse=True)
@@ -74,20 +74,6 @@ def holyrood_trend_json(
     return path
 
 
-def _raise_run_command_not_patched(*_args: object, **_kwargs: object) -> NoReturn:
-    raise AssertionError(
-        "run_command was called without opting in to the recording_runner "
-        "fixture (or a locally constructed _RecordingRunner)"
-    )
-
-
-def _raise_run_python_script_not_patched(*_args: object, **_kwargs: object) -> NoReturn:
-    raise AssertionError(
-        "run_python_script was called without opting in to a locally "
-        "constructed _RecordingScriptRunner"
-    )
-
-
 @pytest.fixture(autouse=True)
 def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tripwire: fail loudly if a test reaches the real subprocess runners.
@@ -99,45 +85,14 @@ def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     ``run_python_script`` fails here instead of spawning a real model run,
     export, or poll import.
     """
-    monkeypatch.setattr(
-        "console.blueprints.holyrood.run_command", _raise_run_command_not_patched
+    forbid_call(
+        monkeypatch, "console.blueprints.holyrood.run_command", "recording_runner"
     )
-    monkeypatch.setattr(
+    forbid_call(
+        monkeypatch,
         "console.blueprints.holyrood.run_python_script",
-        _raise_run_python_script_not_patched,
+        "a locally constructed _RecordingScriptRunner",
     )
-
-
-class _RecordingRunner:
-    """Stand-in for ``console.services.runner.run_command`` that records calls."""
-
-    def __init__(self, return_codes: dict[str, int] | None = None) -> None:
-        self.calls: list[tuple[str, ...]] = []
-        self.timeouts: list[int] = []
-        self._return_codes = return_codes or {}
-
-    def __call__(
-        self,
-        command: "list[str] | tuple[str, ...]",
-        *,
-        cwd: Path | None = None,
-        timeout: int,
-    ) -> subprocess.CompletedProcess[str]:
-        args = tuple(command)
-        self.calls.append(args)
-        self.timeouts.append(timeout)
-        script_name = Path(args[1]).name if len(args) > 1 else ""
-        code = self._return_codes.get(script_name, 0)
-        return subprocess.CompletedProcess(
-            args=list(args),
-            returncode=code,
-            stdout=f"ran {script_name}",
-            stderr="boom" if code else "",
-        )
-
-    @property
-    def scripts(self) -> list[str]:
-        return [Path(call[1]).name for call in self.calls]
 
 
 @pytest.fixture()
@@ -178,58 +133,6 @@ class _RecordingScriptRunner:
             stdout=f"ran {script.name}",
             stderr="",
         )
-
-
-_ALERT = re.compile(r'<div class="alert">(.*?)</div>', re.DOTALL)
-
-
-def _flashes(client: FlaskClient[Response], response: Response) -> list[str]:
-    """Follow ``response``'s redirect and return the flashed messages it renders.
-
-    Read from the page rather than the session, matching
-    ``test_console_westminster.py``'s helper.
-    """
-    body = client.get(response.headers["Location"]).get_data(as_text=True)
-    return [html.unescape(message.strip()) for message in _ALERT.findall(body)]
-
-
-def _flashes_on_page(body: str) -> list[str]:
-    """Return the flashed messages rendered directly into ``body`` (no redirect)."""
-    return [html.unescape(message.strip()) for message in _ALERT.findall(body)]
-
-
-def _select_block(body: str, field_name: str) -> str:
-    """Return the inner HTML of the ``<select name="field_name">`` block."""
-    match = re.search(
-        rf'<select name="{field_name}"[^>]*>(.*?)</select>', body, re.DOTALL
-    )
-    assert match is not None, f"no <select name={field_name!r}> in body"
-    return match.group(1)
-
-
-def _pre_after_heading(body: str, tag: str, heading: str) -> str:
-    """Return the (unescaped) text of the ``<pre>`` right after ``<tag>heading``.
-
-    Distinguishes the model-run's Stdout/Stderr (``<h4>``) from the export
-    step's (``<h5>``) and the import-polls command result's (``<h3>``), so a
-    swapped label or a stdout/stderr mix-up is caught.
-    """
-    match = re.search(
-        rf"<{tag}>{heading}</{tag}>\s*" + r'<pre class="terminal-output">(.*?)</pre>',
-        body,
-        re.DOTALL,
-    )
-    assert match is not None, f"no <{tag}>{heading}</{tag}> section in body"
-    return html.unescape(match.group(1).strip())
-
-
-def _command_line(body: str) -> str:
-    """Return the (unescaped) text of the first ``<strong>Command:</strong>`` line."""
-    match = re.search(
-        r"<strong>Command:</strong>\s*(.*?)</p>", body, re.DOTALL
-    )
-    assert match is not None, "no <strong>Command:</strong> line in body"
-    return html.unescape(match.group(1).strip())
 
 
 def _valid_form(world: HolyroodWorld, **overrides: str) -> dict[str, str]:

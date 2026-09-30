@@ -1,20 +1,17 @@
 """Tests for the console Westminster blueprint: model-run form/execute and outputs
 pages.
 
-Route tests monkeypatch the blueprint's ``get_db`` to the shared temp-DB fixture,
-and its ``run_command`` to a local recording stand-in, so no subprocess is spawned
+Route tests monkeypatch the blueprint's ``get_db`` to the shared temp-DB fixture.
+``run_command`` is patched by an autouse tripwire that fails any test that
+reaches it without requesting ``recording_runner``, so no subprocess is spawned
 and nothing is written to the live database, the real trend cache, or
 ``electionmaps/``.
 """
 
 from __future__ import annotations
 
-import html
 import json
-import re
-import subprocess
 import sys
-from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 from typing import cast
@@ -22,27 +19,27 @@ from typing import cast
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest
-from flask import Flask, Response
-from flask.testing import FlaskClient
+from flask import Flask
 
 from db import Database
 from models import ElectionType
 
-from console import create_app
 from console.blueprints.westminster import (
     _choices_for_model_form,
     _model_arg_explanations,
 )
 from console.paths import PREDICTION_SIMULATION_OUTPUT, UNS_MODEL_SCRIPT
 
+from tests.console_fixtures import (
+    RecordingRunner as _RecordingRunner,
+    app,
+    flashes as _flashes,
+    flashes_on_page as _flashes_on_page,
+    forbid_call,
+    pre_after_heading as _pre_after_heading,
+    select_block as _select_block,
+)
 from tests.uk_fixtures import WestminsterWorld
-
-
-@pytest.fixture()
-def app() -> Flask:
-    application = create_app()
-    application.config["TESTING"] = True
-    return application
 
 
 @pytest.fixture(autouse=True)
@@ -66,32 +63,17 @@ def uns_trend_json(
     return path
 
 
-class _RecordingRunner:
-    """Stand-in for ``console.services.runner.run_command`` that records calls."""
+@pytest.fixture(autouse=True)
+def _no_unpatched_subprocess_calls(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tripwire: fail loudly if a test reaches the real subprocess runner.
 
-    def __init__(self, return_codes: dict[str, int] | None = None) -> None:
-        self.calls: list[tuple[str, ...]] = []
-        self.timeouts: list[int] = []
-        self._return_codes = return_codes or {}
-
-    def __call__(
-        self, command: Sequence[str], *, cwd: Path | None = None, timeout: int
-    ) -> subprocess.CompletedProcess[str]:
-        args = tuple(command)
-        self.calls.append(args)
-        self.timeouts.append(timeout)
-        script_name = Path(args[1]).name if len(args) > 1 else ""
-        code = self._return_codes.get(script_name, 0)
-        return subprocess.CompletedProcess(
-            args=list(args),
-            returncode=code,
-            stdout=f"ran {script_name}",
-            stderr="boom" if code else "",
-        )
-
-    @property
-    def scripts(self) -> list[str]:
-        return [Path(call[1]).name for call in self.calls]
+    Mirrors test_console_holyrood.py's tripwire: a test that forgets to
+    request ``recording_runner`` fails here instead of spawning a real model
+    run or export.
+    """
+    forbid_call(
+        monkeypatch, "console.blueprints.westminster.run_command", "recording_runner"
+    )
 
 
 @pytest.fixture()
@@ -108,48 +90,6 @@ class _FixedDate(date):
     @classmethod
     def today(cls) -> "_FixedDate":
         return cls(2026, 5, 20)
-
-
-_ALERT = re.compile(r'<div class="alert">(.*?)</div>', re.DOTALL)
-
-
-def _flashes(client: FlaskClient[Response], response: Response) -> list[str]:
-    """Follow ``response``'s redirect and return the flashed messages it renders.
-
-    Read from the page rather than the session, matching ``test_console_us.py``'s
-    helper.
-    """
-    body = client.get(response.headers["Location"]).get_data(as_text=True)
-    return [html.unescape(message.strip()) for message in _ALERT.findall(body)]
-
-
-def _flashes_on_page(body: str) -> list[str]:
-    """Return the flashed messages rendered directly into ``body`` (no redirect)."""
-    return [html.unescape(message.strip()) for message in _ALERT.findall(body)]
-
-
-def _select_block(body: str, field_name: str) -> str:
-    """Return the inner HTML of the ``<select name="field_name">`` block."""
-    match = re.search(
-        rf'<select name="{field_name}"[^>]*>(.*?)</select>', body, re.DOTALL
-    )
-    assert match is not None, f"no <select name={field_name!r}> in body"
-    return match.group(1)
-
-
-def _pre_after_heading(body: str, tag: str, heading: str) -> str:
-    """Return the (unescaped) text of the ``<pre>`` right after ``<tag>heading``.
-
-    Distinguishes the model-run's Stdout/Stderr (``<h4>``) from the export
-    step's (``<h5>``), so a swapped label or a stdout/stderr mix-up is caught.
-    """
-    match = re.search(
-        rf"<{tag}>{heading}</{tag}>\s*" + r'<pre class="terminal-output">(.*?)</pre>',
-        body,
-        re.DOTALL,
-    )
-    assert match is not None, f"no <{tag}>{heading}</{tag}> section in body"
-    return html.unescape(match.group(1).strip())
 
 
 def _valid_form(world: WestminsterWorld, **overrides: str) -> dict[str, str]:

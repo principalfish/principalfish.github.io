@@ -1,4 +1,4 @@
-"""Tests for scripts.export.legacy — supplemental-entry repositioning.
+"""Tests for scripts.export.legacy — registration, conversion and repositioning.
 
 ``reposition_supplemental_entries`` re-applies each supplemental's configured
 ``insertBeforeId`` / ``insertAfterId`` after ``reorder_manifest_entries`` (which sorts by the
@@ -8,6 +8,7 @@ so a page only repositions its own supplementals. Pure function operating on a l
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import pytest
 
+from scripts.export import legacy
 from scripts.export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTIONS,
     apply_supplemental_legacy_elections,
@@ -143,3 +145,264 @@ class TestApplySupplementalPrebuilt:
         # Consistent with the missing-sourceFile error: dry-run validates inputs too.
         with pytest.raises(FileNotFoundError):
             self._apply([], tmp_path / "results", tmp_path, dry_run=True)
+
+
+@pytest.fixture()
+def uk_supplemental(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    """Isolate supplemental configuration from repository election files."""
+    supplemental: dict[str, Any] = {
+        "id": "synthetic-uk",
+        "name": "Synthetic UK boundaries",
+        "type": "uk_general",
+        "mapId": 42,
+        "sourceFile": "synthetic-source.json",
+        "resultFile": "synthetic-result.json",
+        "insertAfterId": "anchor",
+    }
+    other_parliament: dict[str, Any] = {
+        "id": "synthetic-senate",
+        "name": "Synthetic Senate",
+        "type": "us_senate",
+        "mapId": 99,
+        "parliament": "us_senate",
+        "resultFile": "missing-senate.json",
+        "prebuilt": True,
+    }
+    monkeypatch.setattr(
+        legacy, "SUPPLEMENTAL_LEGACY_ELECTIONS", [supplemental, other_parliament],
+    )
+    return supplemental
+
+
+_LEGACY_UK_PAYLOAD: dict[str, Any] = {
+    "Zulu": {
+        "seatInfo": {"region": "North-East", "current": "Labour"},
+        "partyInfo": {
+            "conservative": {"total": 25},
+            "labour": {"total": 75},
+            "green": {"total": 0},
+        },
+    },
+    "Alpha": {
+        "seatInfo": {"region": "South West", "current": "Conservative"},
+        "partyInfo": {"conservative": {"total": 60.5}, "labour": {"total": 39}},
+    },
+}
+_UK_PARTIES: list[dict[str, Any]] = [
+    {"key": "labour", "id": 17},
+    {"key": "conservative", "id": 29},
+    {"key": "green", "id": 31},
+]
+_UK_REGIONS: dict[str, list[dict[str, Any]]] = {
+    "42": [{"name": "North East", "id": 73}, {"name": "South-West", "id": 84}],
+    "99": [{"name": "North East", "id": 999}],
+}
+_UK_ENTRY: dict[str, Any] = {
+    "id": "synthetic-uk",
+    "name": "Synthetic UK boundaries",
+    "type": "uk_general",
+    "mapId": 42,
+    "parliament": "westminster",
+}
+
+
+def _write_uk_source(tmp_path: Path, payload: dict[str, Any]) -> Path:
+    source = tmp_path / "legacy" / "synthetic-source.json"
+    source.parent.mkdir()
+    source.write_text(json.dumps(payload), encoding="utf-8")
+    return source
+
+
+def _apply_uk(
+    tmp_path: Path,
+    entries: list[dict[str, Any]],
+    *,
+    maps: dict[str, str] | None = None,
+    data: dict[str, str] | None = None,
+    dry_run: bool = False,
+    parties: list[dict[str, Any]] | None = None,
+    regions: dict[str, list[dict[str, Any]]] | None = None,
+    parliaments: set[str] | None = None,
+) -> tuple[dict[str, str], dict[str, str]]:
+    maps = {} if maps is None else maps
+    data = {} if data is None else data
+    apply_supplemental_legacy_elections(
+        entries, maps, data, tmp_path / "results", tmp_path / "legacy", dry_run,
+        manifest_parties=parties,
+        manifest_regions_by_map_id=regions,
+        parliaments={"westminster"} if parliaments is None else parliaments,
+    )
+    return maps, data
+
+
+@pytest.mark.parametrize("missing_source_name", [False, True])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_uk_missing_source_fails_before_manifest_registration(
+    tmp_path: Path, uk_supplemental: dict[str, Any], missing_source_name: bool,
+    dry_run: bool,
+) -> None:
+    if missing_source_name:
+        del uk_supplemental["sourceFile"]
+    anchor = {"id": "anchor", "parliament": "westminster"}
+    entries = [anchor]
+    maps = {"7": "maps/unrelated.json"}
+    data = {"other": "results/unrelated.json"}
+    error = ValueError if missing_source_name else FileNotFoundError
+    message = (
+        "define a 'sourceFile'" if missing_source_name else "synthetic-source.json"
+    )
+    with pytest.raises(error, match=message):
+        _apply_uk(tmp_path, entries, maps=maps, data=data, dry_run=dry_run)
+    assert entries == [anchor]
+    # Reference planning precedes source validation, even when validation fails.
+    assert maps == {"7": "maps/unrelated.json", "42": "maps/map-42.topo.json"}
+    assert data == {
+        "other": "results/unrelated.json",
+        "synthetic-uk": "results/synthetic-result.json",
+    }
+    assert not (tmp_path / "results").exists()
+
+
+def test_uk_legacy_conversion_uses_parties_and_map_scoped_regions(
+    tmp_path: Path, uk_supplemental: dict[str, Any],
+) -> None:
+    source = _write_uk_source(tmp_path, _LEGACY_UK_PAYLOAD)
+    original = source.read_bytes()
+    entries: list[dict[str, Any]] = []
+    maps, data = _apply_uk(
+        tmp_path, entries, parties=_UK_PARTIES, regions=_UK_REGIONS,
+    )
+    assert json.loads((tmp_path / "results/synthetic-result.json").read_text()) == {
+        "schema": "pf-results-v4",
+        "seats": [
+            {"n": "Alpha", "r": 84, "w": 29, "p": [[29, 60.5], [17, 39]]},
+            {"n": "Zulu", "r": 73, "w": 17, "p": [[17, 75], [29, 25]]},
+        ],
+    }
+    assert entries == [_UK_ENTRY]
+    assert maps == {"42": "maps/map-42.topo.json"}
+    assert data == {"synthetic-uk": "results/synthetic-result.json"}
+    assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    "mode",
+    ["schema", "no-parties", "empty-parties", "no-regions", "empty-regions"],
+)
+def test_uk_raw_payload_passthrough(
+    tmp_path: Path, uk_supplemental: dict[str, Any], mode: str,
+) -> None:
+    payload = (
+        {"schema": "pf-results-v4", "seats": [{"n": "Raw", "p": [[17, 5]]}]}
+        if mode == "schema" else _LEGACY_UK_PAYLOAD
+    )
+    _write_uk_source(tmp_path, payload)
+    parties = (
+        None if mode == "no-parties" else [] if mode == "empty-parties"
+        else _UK_PARTIES
+    )
+    regions = (
+        None if mode == "no-regions" else {} if mode == "empty-regions"
+        else _UK_REGIONS
+    )
+    entries: list[dict[str, Any]] = []
+    _apply_uk(tmp_path, entries, parties=parties, regions=regions)
+    result = tmp_path / "results/synthetic-result.json"
+    assert json.loads(result.read_text()) == payload
+    assert entries == [_UK_ENTRY]
+
+
+@pytest.mark.parametrize("position, anchor_exists", [
+    ("insertAfterId", True), ("insertAfterId", False),
+    ("insertBeforeId", True), ("insertBeforeId", False), ("none", False),
+])
+def test_uk_manifest_insertion_and_existing_reference_preservation(
+    tmp_path: Path, uk_supplemental: dict[str, Any], position: str, anchor_exists: bool,
+) -> None:
+    uk_supplemental.pop("insertAfterId")
+    if position != "none":
+        uk_supplemental[position] = "anchor"
+    _write_uk_source(tmp_path, _LEGACY_UK_PAYLOAD)
+    first = {"id": "first", "parliament": "holyrood", "custom": 123}
+    anchor = {"id": "anchor", "parliament": "westminster"}
+    last = {"id": "last", "parliament": "us_senate"}
+    entries: list[dict[str, Any]] = (
+        [first, anchor, last] if anchor_exists else [first, last]
+    )
+    maps = {"42": "maps/custom-uk.json", "99": "maps/senate.json"}
+    data = {"last": "results/unrelated.json"}
+    sentinel = tmp_path / "results/unrelated.json"
+    sentinel.parent.mkdir()
+    sentinel.write_bytes(b"unchanged foreign results")
+    returned_maps, returned_data = _apply_uk(tmp_path, entries, maps=maps, data=data)
+    expected = (
+        [first, anchor, _UK_ENTRY, last] if position == "insertAfterId"
+        else [first, _UK_ENTRY, anchor, last]
+    ) if anchor_exists else [first, last, _UK_ENTRY]
+    assert entries == expected
+    assert returned_maps is maps and returned_data is data
+    assert maps == {"42": "maps/custom-uk.json", "99": "maps/senate.json"}
+    assert data == {
+        "last": "results/unrelated.json",
+        "synthetic-uk": "results/synthetic-result.json",
+    }
+    assert sentinel.read_bytes() == b"unchanged foreign results"
+    assert not (tmp_path / "results/missing-senate.json").exists()
+
+
+def test_uk_existing_entry_replaced_in_place_with_flags(
+    tmp_path: Path, uk_supplemental: dict[str, Any],
+) -> None:
+    uk_supplemental.update({"multiMember": True, "upcomingElections": True})
+    _write_uk_source(tmp_path, _LEGACY_UK_PAYLOAD)
+    first = {"id": "first", "parliament": "holyrood"}
+    stale = {"id": "synthetic-uk", "name": "Outdated", "obsolete": True}
+    anchor = {"id": "anchor", "parliament": "westminster"}
+    entries: list[dict[str, Any]] = [first, stale, anchor]
+    _apply_uk(tmp_path, entries)
+    expected = {**_UK_ENTRY, "multiMember": True, "upcomingElections": True}
+    assert entries == [first, expected, anchor]
+    assert entries[0] is first and entries[2] is anchor
+
+
+def test_uk_dry_run_plans_references_without_reading_or_writing_json(
+    tmp_path: Path, uk_supplemental: dict[str, Any],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source = _write_uk_source(tmp_path, {})
+    source.write_text("invalid JSON is not parsed in a dry run", encoding="utf-8")
+    result = tmp_path / "results/synthetic-result.json"
+    result.parent.mkdir()
+    result.write_bytes(b"previous result remains untouched")
+    before = {
+        p.relative_to(tmp_path): p.read_bytes()
+        for p in tmp_path.rglob("*") if p.is_file()
+    }
+    entries: list[dict[str, Any]] = [{"id": "anchor"}]
+    maps, data = _apply_uk(
+        tmp_path, entries, dry_run=True, parties=_UK_PARTIES, regions=_UK_REGIONS,
+    )
+    assert entries == [{"id": "anchor"}, _UK_ENTRY]
+    assert maps == {"42": "maps/map-42.topo.json"}
+    assert data == {"synthetic-uk": "results/synthetic-result.json"}
+    after = {
+        p.relative_to(tmp_path): p.read_bytes()
+        for p in tmp_path.rglob("*") if p.is_file()
+    }
+    assert after == before
+    output = capsys.readouterr().out
+    assert "Would write supplemental results" in output
+    assert "synthetic-result.json" in output and "synthetic-source.json" in output
+
+
+def test_uk_parliament_filter_skips_source_validation_and_all_changes(
+    tmp_path: Path, uk_supplemental: dict[str, Any],
+) -> None:
+    entries = [{"id": "existing", "parliament": "holyrood"}]
+    maps = {"8": "maps/holyrood.json"}
+    data = {"existing": "results/holyrood.json"}
+    _apply_uk(tmp_path, entries, maps=maps, data=data, parliaments={"holyrood"})
+    assert entries == [{"id": "existing", "parliament": "holyrood"}]
+    assert maps == {"8": "maps/holyrood.json"}
+    assert data == {"existing": "results/holyrood.json"}
+    assert not (tmp_path / "results").exists()

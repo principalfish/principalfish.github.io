@@ -117,7 +117,8 @@ def _fetch(year: int) -> str:
     request = Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urlopen(request, timeout=30) as response:  # noqa: S310 - fixed https Wikipedia host
-            return response.read().decode("utf-8", "replace")
+            text: str = response.read().decode("utf-8", "replace")
+            return text
     except (URLError, HTTPError) as err:
         raise ValueError(f"Could not fetch {url}: {err}") from err
 
@@ -381,8 +382,8 @@ def convert(year: int, html: str | None = None) -> dict[str, Any]:
     # Stamp per-unit electoral votes from the year's apportionment era (the JSON's EV field
     # is otherwise inert at import, but this keeps the file self-consistent and summing to 538).
     ev_map = ev_map_for_year(year)
-    for unit, data in result.items():
-        data["seatInfo"]["electoral_votes"] = ev_map.get(unit, 0)
+    for unit_name, data in result.items():
+        data["seatInfo"]["electoral_votes"] = ev_map.get(unit_name, 0)
 
     return dict(sorted(result.items()))
 

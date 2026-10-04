@@ -340,7 +340,10 @@ class TestParseFieldwork:
         """
         lines = ["Fieldwork dates: Friday 31st to Tuesday 4th November 2025"]
 
-        with pytest.raises(ValueError, match="day 31 must be in range"):
+        with pytest.raises(
+            ValueError,
+            match=r"day (?:31 must be in range|is out of range for month)",
+        ):
             _parse_fieldwork(lines)
 
 

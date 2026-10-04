@@ -1,6 +1,6 @@
 """Unit tests for the 2026 Holyrood results scraper.
 
-All tests use synthetic HTML — no network access or database required.
+All tests use synthetic HTML; database cases use temporary SQLite fixtures.
 
 The constituency table's real shape is ``[seat] + 7 x (swatch, data)``, so a
 full data row has 15 cells. One real row (``Glasgow Central``) has 14: its
@@ -11,9 +11,15 @@ which must never be parsed positionally.
 
 from __future__ import annotations
 
+import json
+import sys
+from pathlib import Path
+
 import pytest
 from bs4 import BeautifulSoup, Tag
 
+from db import Database
+from scripts import scrape_holyrood_2026 as scraper
 from scripts.scrape_holyrood_2026 import (
     MapIndex,
     build_list_payload,
@@ -645,3 +651,216 @@ class TestBuildListPayload:
         assert isinstance(seats, dict)
         assert "others" not in seats
         assert sum(seats.values()) == 7
+
+
+def test_build_map_index_scopes_and_normalizes_constituencies(db: Database) -> None:
+    decoy = db.add_map("Decoy Holyrood", parliament="holyrood")
+    decoy_region = db.add_region(decoy.id, "Wrong region")
+    db.add_seat(decoy.id, "Alpha & Beta", region_id=decoy_region.id)
+    map_row = db.add_map(scraper.DEFAULT_MAP_NAME, parliament="holyrood")
+    north = db.add_region(map_row.id, "North-East")
+    south = db.add_region(map_row.id, "South & West")
+    db.add_seat(map_row.id, "Alpha & Beta", region_id=north.id)
+    db.add_seat(map_row.id, "King's Seat", region_id=south.id)
+    db.add_seat(map_row.id, "North-East List 1", region_id=north.id)
+    db.add_seat(map_row.id, "No assigned region")
+
+    index = scraper.build_map_index(db, scraper.DEFAULT_MAP_NAME)
+
+    assert index.region_by_key == {
+        "northeast": "North-East",
+        "southandwest": "South & West",
+    }
+    assert index.region_for_seat == {
+        "alphaandbeta": "North-East",
+        "kingsseat": "South & West",
+    }
+    with pytest.raises(ValueError, match="Map 'Missing map' not found"):
+        scraper.build_map_index(db, "Missing map")
+    with pytest.raises(ValueError, match="does not match any seat"):
+        scraper.count_constituency_seats(
+            [scraper.ConstituencyRow("No assigned region", "snp")],
+            index,
+        )
+    with pytest.raises(ValueError, match="does not match any region"):
+        scraper.build_list_payload(
+            [scraper.RegionRow("Missing region", {"snp": 100})],
+            {},
+            index,
+        )
+
+
+@pytest.mark.parametrize("warnings", [False, True])
+def test_report_counts_votes_seats_and_upstream_discrepancies(
+    capsys: pytest.CaptureFixture[str],
+    warnings: bool,
+) -> None:
+    result = scraper.ScrapeResult(
+        constituencies=[
+            scraper.ConstituencyRow(
+                "Alpha",
+                "snp",
+                [
+                    scraper.PartyResult("snp", "Alice", 1200),
+                    scraper.PartyResult("others", "", 200),
+                ],
+                others_missing=warnings,
+            ),
+            scraper.ConstituencyRow(
+                "Beta",
+                "labour",
+                [scraper.PartyResult("labour", "Bob", 600)],
+                others_partial=warnings,
+            ),
+        ],
+        regions=[
+            scraper.RegionRow(
+                "North",
+                {"snp": 20},
+                total_discrepancy=10 if warnings else 0,
+            ),
+            scraper.RegionRow("South", {"labour": 30}),
+        ],
+    )
+    constituency = scraper.build_constituency_payload(result.constituencies)
+    listed: dict[str, dict[str, object]] = {
+        "North": {"seats": {"snp": 2}, "constituencySeatsWon": {"snp": 1}},
+        "South": {"seats": {"labour": 1}, "constituencySeatsWon": {"labour": 1}},
+    }
+
+    scraper._report(result, constituency, listed)
+
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[:6] == [
+        "Constituencies: 2",
+        "Regions: 2",
+        "Party entries: 3",
+        "Total constituency votes: 2,000",
+        "Entries missing a candidate name: 1",
+        "Seats with an 'others' entry: 1 (200 votes)",
+    ]
+    seat_totals = [line.split() for line in lines if line.startswith("  ")]
+    assert seat_totals[:3] == [["snp", "3"], ["labour", "2"], ["TOTAL", "5"]]
+    output = "\n".join(lines)
+    assert ("Warning:" in output) == warnings
+    if warnings:
+        assert "'others' key omitted:" in output and "  - Alpha" in lines
+        assert "the 'others' total under-counts:" in output and "  - Beta" in lines
+        assert "do not match the stated 'Total'" in output
+        assert "  - North: off by +10" in lines
+
+
+@pytest.mark.parametrize("field", ["seats", "constituencySeatsWon"])
+def test_report_rejects_non_dictionary_seat_counts(field: str) -> None:
+    block: dict[str, object] = {"seats": {}, "constituencySeatsWon": {}}
+    block[field] = ["invalid"]
+    with pytest.raises(TypeError, match=f"Expected '{field}' to be a dict"):
+        scraper._report(scraper.ScrapeResult([], []), {}, {"North": block})
+
+
+def _synthetic_page_and_map(db: Database) -> tuple[str, dict[str, int]]:
+    map_row = db.add_map(scraper.DEFAULT_MAP_NAME, parliament="holyrood")
+    regions = [db.add_region(map_row.id, f"Region {i}") for i in range(8)]
+    region_seat_counts = {region.name: 0 for region in regions}
+    rows: list[str] = []
+    for i in range(73):
+        region = regions[0 if i < 13 else 1 + (i - 13) % 7]
+        db.add_seat(map_row.id, f"Seat {i}", region_id=region.id, electorate=99999)
+        region_seat_counts[region.name] += 1
+        rows.append(str(_make_row(f"Seat {i}", _full_cells())))
+    db.add_seat(map_row.id, "Region 0 List 1", region_id=regions[0].id)
+    html = (
+        '<table class="wikitable">'
+        + _CONSTITUENCY_HEADER
+        + "".join(rows)
+        + "</table>"
+        + str(_region_table())
+    )
+    return html, region_seat_counts
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_main_parses_synthetic_page_and_writes_only_requested_outputs(
+    db: Database,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    dry_run: bool,
+) -> None:
+    html, constituency_counts = _synthetic_page_and_map(db)
+    fetched: list[str] = []
+
+    def fetch_html(url: str) -> str:
+        fetched.append(url)
+        return html
+
+    monkeypatch.setattr(scraper, "fetch_html", fetch_html)
+    monkeypatch.setenv("DATABASE_PATH", str(db.config.database_path))
+    output_dir = tmp_path / "scraped-results"
+    sentinel = tmp_path / "unrelated.json"
+    sentinel.write_text("leave untouched", encoding="utf-8")
+    url = "https://example.invalid/synthetic-holyrood"
+    args = ["scraper", "--url", url, "--out-dir", str(output_dir)]
+    if dry_run:
+        args.append("--dry-run")
+    monkeypatch.setattr(sys, "argv", args)
+    map_row = db.get_map_by_name(scraper.DEFAULT_MAP_NAME)
+    assert map_row is not None
+    seats_before = {
+        seat.id: (seat.seat_name, seat.region_id, seat.electorate)
+        for seat in db.get_seats_for_map(map_row.id)
+    }
+
+    scraper.main()
+
+    assert fetched == [url]
+    map_row = db.get_map_by_name(scraper.DEFAULT_MAP_NAME)
+    assert map_row is not None
+    assert {
+        seat.id: (seat.seat_name, seat.region_id, seat.electorate)
+        for seat in db.get_seats_for_map(map_row.id)
+    } == seats_before
+    assert db.get_elections_for_map(map_row.id) == []
+    assert sentinel.read_text() == "leave untouched"
+    output = capsys.readouterr().out
+    assert "Constituencies: 73" in output and "Regions: 8" in output
+    if dry_run:
+        assert not output_dir.exists()
+        assert "Dry run — no files written." in output
+        assert "Wrote " not in output
+        return
+
+    assert {path.name for path in output_dir.iterdir()} == {
+        "holyrood-2026.json",
+        "holyrood-2026-list.json",
+    }
+    constituency_file = output_dir / "holyrood-2026.json"
+    list_file = output_dir / "holyrood-2026-list.json"
+    expected_parties = {
+        key: {"name": f"Cand {i}", "total": votes}
+        for i, (key, votes) in enumerate(
+            zip(
+                PARTY_KEYS[:-1],
+                [12000, 9000, 1000, 2000, 800, 4000],
+                strict=True,
+            ),
+        )
+    }
+    assert json.loads(constituency_file.read_text()) == {
+        f"Seat {i}": {
+            "seatInfo": {"current": "snp", "electorate": None},
+            "partyInfo": expected_parties,
+        }
+        for i in range(73)
+    }
+    assert json.loads(list_file.read_text()) == {
+        region: {
+            "regionVotes": {**CSLW_VOTES, "others": 13814},
+            "seats": {"labour": 2, "conservative": 1, "green": 1, "reform": 3},
+            "constituencySeatsWon": {"snp": count},
+        }
+        for region, count in constituency_counts.items()
+    }
+    assert f"Wrote {constituency_file}" in output and f"Wrote {list_file}" in output
+    assert constituency_file.read_text().endswith("\n")
+    assert list_file.read_text().endswith("\n")

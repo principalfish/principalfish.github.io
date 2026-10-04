@@ -11,6 +11,7 @@ import re
 import sqlite3
 import sys
 from collections import Counter, defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
@@ -35,8 +36,27 @@ from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
 from models import Election, Map, Region
 
-# Single source of truth for the database path: config.py (which reads .env).
-DEFAULT_SQLITE_PATH = Path(DatabaseConfig.from_env().database_path)
+
+def default_sqlite_path() -> Path:
+    """The configured database file, read from the environment on every call.
+
+    Deliberately not a module constant: a path computed at import is whatever
+    ``.env`` said when the module was first loaded, so a test (or any caller)
+    that points ``DATABASE_PATH`` elsewhere afterwards would still write — and
+    delete — against the original database.
+    """
+    return Path(DatabaseConfig.from_env().database_path)
+
+
+def database_file(db: Database) -> Path:
+    """The SQLite file ``db`` is connected to.
+
+    The raw-``sqlite3`` writers below take a path rather than a
+    :class:`Database`; the orchestration passes this one so a run writes to the
+    same database it read its polls and baseline from.
+    """
+    return Path(db.config.database_path)
+
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
 # so that poll data reported under "Other" is applied to the same party that holds the
@@ -109,7 +129,9 @@ class LatestPollUsage:
     fieldwork_end: date
 
 
-def existing_trend_dates() -> set[date]:
+def existing_trend_dates(
+    trend_cache_json: Path | None = None, sqlite_path: Path | None = None
+) -> set[date]:
     """Return all ``as_of_date`` values that have already been simulated.
 
     Combines dates from the trend cache JSON with dates derived from the SQLite
@@ -119,14 +141,24 @@ def existing_trend_dates() -> set[date]:
     archive records every run regardless of deduplication, so including it gives
     a complete picture of which dates have already been processed.
 
+    Args:
+        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
+            module's ``TREND_CACHE_JSON`` when called.
+        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
+            configured database when called.
+
     Returns:
         A set of ``date`` objects for which a simulation has already been run.
         Returns an empty set if neither source exists.
     """
+    trend_cache_json = (
+        trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
+    )
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     dates: set[date] = set()
 
-    if TREND_CACHE_JSON.exists():
-        with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+    if trend_cache_json.exists():
+        with trend_cache_json.open("r", encoding="utf-8") as handle:
             entries = json.load(handle)
         for entry in entries:
             raw = str(entry.get("as_of_date") or "").strip()
@@ -137,8 +169,8 @@ def existing_trend_dates() -> set[date]:
             except ValueError:
                 continue
 
-    if DEFAULT_SQLITE_PATH.exists():
-        with sqlite3.connect(DEFAULT_SQLITE_PATH) as conn:
+    if sqlite_path.exists():
+        with sqlite3.connect(sqlite_path) as conn:
             rows = conn.execute("SELECT name FROM elections").fetchall()
         for (name,) in rows:
             m = re.match(r"UNS (\d{4}-\d{2}-\d{2})", name or "")
@@ -151,7 +183,9 @@ def existing_trend_dates() -> set[date]:
     return dates
 
 
-def dates_to_run_for_cfg(cfg: SimulationConfig) -> list[date]:
+def dates_to_run_for_cfg(
+    cfg: SimulationConfig, sqlite_path: Path | None = None
+) -> list[date]:
     """Determine which simulation dates must be run for the given configuration.
 
     In dry-run mode only ``cfg.as_of_date`` is returned.
@@ -163,6 +197,9 @@ def dates_to_run_for_cfg(cfg: SimulationConfig) -> list[date]:
 
     Args:
         cfg: The simulation configuration, used for ``as_of_date`` and ``dry_run``.
+        sqlite_path: Path to the SQLite archive file, passed to
+            :func:`existing_trend_dates`. ``None`` resolves the configured
+            database when called.
 
     Returns:
         An ordered list of dates to simulate, oldest first.
@@ -170,7 +207,7 @@ def dates_to_run_for_cfg(cfg: SimulationConfig) -> list[date]:
     if cfg.dry_run:
         return [cfg.as_of_date]
 
-    existing = existing_trend_dates()
+    existing = existing_trend_dates(sqlite_path=sqlite_path)
     previous_dates = [value for value in existing if value < cfg.as_of_date]
     if not previous_dates:
         return [cfg.as_of_date]
@@ -285,7 +322,10 @@ def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
 
 
 def reset_existing_model_outputs(
-    start_date: date, end_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH
+    start_date: date,
+    end_date: date,
+    sqlite_path: Path | None = None,
+    trend_cache_json: Path | None = None,
 ) -> tuple[int, int, int]:
     """Delete model_uns elections in [start_date, end_date] from SQLite and strip matching rows from the trend cache CSV.
 
@@ -296,11 +336,18 @@ def reset_existing_model_outputs(
     Args:
         start_date: Inclusive lower bound of the date range to clear.
         end_date: Inclusive upper bound of the date range to clear.
-        sqlite_path: Path to the SQLite archive file.
+        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
+            configured database when called.
+        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
+            module's ``TREND_CACHE_JSON`` when called.
 
     Returns:
         A 3-tuple ``(deleted_elections, deleted_votes, stripped_csv_rows)``.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
+    trend_cache_json = (
+        trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
+    )
     start_name = f"UNS {start_date.isoformat()}"
     upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
 
@@ -327,8 +374,8 @@ def reset_existing_model_outputs(
                 conn.commit()
 
     stripped_json_entries = 0
-    if TREND_CACHE_JSON.exists():
-        with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+    if trend_cache_json.exists():
+        with trend_cache_json.open("r", encoding="utf-8") as handle:
             entries = json.load(handle)
         kept_entries = []
         for entry in entries:
@@ -344,7 +391,7 @@ def reset_existing_model_outputs(
                 stripped_json_entries += 1
 
         if stripped_json_entries > 0:
-            with TREND_CACHE_JSON.open("w", encoding="utf-8") as handle:
+            with trend_cache_json.open("w", encoding="utf-8") as handle:
                 json.dump(kept_entries, handle, separators=(",", ":"))
 
     return deleted_elections, deleted_votes, stripped_json_entries
@@ -377,7 +424,7 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
     if args.reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
-            start_date, end_date
+            start_date, end_date, database_file(db)
         )
         print(
             f"RESET deleted_elections={deleted_elections} "
@@ -434,7 +481,9 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
 
 
-def delete_model_uns_for_as_of_date(as_of_date: date, sqlite_path: Path = DEFAULT_SQLITE_PATH) -> tuple[int, int]:
+def delete_model_uns_for_as_of_date(
+    as_of_date: date, sqlite_path: Path | None = None
+) -> tuple[int, int]:
     """Delete all model_uns elections (and their votes) for a given date from SQLite.
 
     Matches elections whose name starts with ``"UNS {as_of_date}"`` and
@@ -442,12 +491,14 @@ def delete_model_uns_for_as_of_date(as_of_date: date, sqlite_path: Path = DEFAUL
 
     Args:
         as_of_date: The date whose simulation output should be removed.
-        sqlite_path: Path to the SQLite archive file.
+        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
+            configured database when called.
 
     Returns:
         A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
         matching elections exist or the file does not exist.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     if not sqlite_path.exists():
         return 0, 0
 
@@ -834,11 +885,13 @@ def write_trend_cache_meta(
     as_of_date: date,
     since_date: date,
     latest_poll_usage: LatestPollUsage | None,
+    trend_cache_meta_json: Path | None = None,
 ) -> None:
     """Overwrite the trend cache metadata JSON with the current simulation's metadata.
 
-    Creates ``TREND_CACHE_META_JSON`` (and any missing parent directories) with a
-    JSON object containing the simulation date range and latest-poll information.
+    Creates the metadata JSON, ``TREND_CACHE_META_JSON`` by default (and any
+    missing parent directories), with a JSON object containing the simulation
+    date range and latest-poll information.
 
     The written JSON has the following structure::
 
@@ -858,8 +911,15 @@ def write_trend_cache_meta(
         since_date: The simulation's lower-bound date for poll inclusion.
         latest_poll_usage: Metadata about the most recent poll used, or ``None``
             if no polls were consumed.
+        trend_cache_meta_json: Path to write. ``None`` reads the module's
+            ``TREND_CACHE_META_JSON`` when called.
     """
-    TREND_CACHE_META_JSON.parent.mkdir(parents=True, exist_ok=True)
+    trend_cache_meta_json = (
+        trend_cache_meta_json
+        if trend_cache_meta_json is not None
+        else TREND_CACHE_META_JSON
+    )
+    trend_cache_meta_json.parent.mkdir(parents=True, exist_ok=True)
 
     payload = {
         "as_of_date": as_of_date.isoformat(),
@@ -876,7 +936,7 @@ def write_trend_cache_meta(
         ),
     }
 
-    with TREND_CACHE_META_JSON.open("w", encoding="utf-8") as handle:
+    with trend_cache_meta_json.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, separators=(",", ":"))
 
 
@@ -1166,7 +1226,7 @@ def persist_projection(
     election_name: str,
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
-    sqlite_path: Path = DEFAULT_SQLITE_PATH,
+    sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
     """Create a model_uns election row and bulk-insert all projected vote rows into SQLite.
 
@@ -1178,12 +1238,14 @@ def persist_projection(
             ``project_seat_votes``.
         party_name_by_id: Party display names keyed by party ID; used to
             populate ``candidate_name`` on each vote row.
-        sqlite_path: Path to the SQLite file to write into.
+        sqlite_path: Path to the SQLite file to write into. ``None`` resolves the
+            configured database when called.
 
     Returns:
         A ``(election_name, election_id)`` tuple with the persisted election's
         display name and primary key.
     """
+    sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     with sqlite3.connect(sqlite_path) as conn:
         ensure_elections_sqlite_schema(conn)
         cursor = conn.execute(
@@ -1217,13 +1279,14 @@ def update_trend_cache_json(
     election_name: str,
     as_of_date: date,
     projected_votes: list[dict[str, Any]],
+    trend_cache_json: Path | None = None,
 ) -> None:
     """Merge this simulation's results into the trend cache JSON.
 
-    Reads the existing ``TREND_CACHE_JSON``, strips any entry for ``as_of_date``
-    or ``election_id``, then appends a new entry summarising seat counts and
-    normalised vote percentages per party. The combined entries are sorted by
-    ``election_id`` before being written back.
+    Reads the existing trend cache JSON (``TREND_CACHE_JSON`` by default),
+    strips any entry for ``as_of_date`` or ``election_id``, then appends a new
+    entry summarising seat counts and normalised vote percentages per party. The
+    combined entries are sorted by ``election_id`` before being written back.
 
     **Deduplication logic**: if the new seat snapshot (the multiset of
     party-seat-count pairs) is identical to that of the immediately preceding
@@ -1236,8 +1299,13 @@ def update_trend_cache_json(
         as_of_date: Simulation date; any existing entry for this date is replaced.
         projected_votes: Seat/party projection records as produced by
             ``project_seat_votes``.
+        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
+            module's ``TREND_CACHE_JSON`` when called.
     """
-    TREND_CACHE_JSON.parent.mkdir(parents=True, exist_ok=True)
+    trend_cache_json = (
+        trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
+    )
+    trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
 
     vote_totals_by_party: dict[int, float] = defaultdict(float)
     seats_by_party: dict[int, int] = defaultdict(int)
@@ -1268,8 +1336,8 @@ def update_trend_cache_json(
 
     existing_entries: list[dict[str, Any]] = []
     entries_by_date: dict[date, dict[str, Any]] = {}
-    if TREND_CACHE_JSON.exists():
-        with TREND_CACHE_JSON.open("r", encoding="utf-8") as handle:
+    if trend_cache_json.exists():
+        with trend_cache_json.open("r", encoding="utf-8") as handle:
             entries = json.load(handle)
         for entry in entries:
             if str(entry.get("as_of_date") or "").strip() == as_of_date.isoformat():
@@ -1318,7 +1386,7 @@ def update_trend_cache_json(
 
     combined.sort(key=lambda e: int(e.get("election_id") or 0))
 
-    with TREND_CACHE_JSON.open("w", encoding="utf-8") as handle:
+    with trend_cache_json.open("w", encoding="utf-8") as handle:
         json.dump(combined, handle, separators=(",", ":"))
 
 
@@ -1428,7 +1496,8 @@ def run_simulation(
     if cfg.dry_run:
         return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
-    delete_model_uns_for_as_of_date(cfg.as_of_date)
+    sqlite_path = database_file(db)
+    delete_model_uns_for_as_of_date(cfg.as_of_date, sqlite_path)
 
     persisted_name, persisted_election_id = persist_projection(
         poll_map.id,
@@ -1436,6 +1505,7 @@ def run_simulation(
         election_name,
         projected_votes,
         party_name_by_id,
+        sqlite_path,
     )
 
     update_trend_cache_json(
@@ -1448,17 +1518,21 @@ def run_simulation(
     return persisted_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
 
-def main() -> None:
+def main(db_factory: Callable[[], Database] | None = None) -> None:
     """CLI entry point: parse arguments and run single-date or retrospective simulation.
 
     Pass ``--start-date`` and ``--end-date`` for retrospective backfill mode.
     Without those flags, runs a single-date simulation (with automatic backfill
     of any gap between the most-recent cached date and ``as_of_date``).
+
+    Args:
+        db_factory: Builds the database to read from and write to. ``None``
+            opens the configured database.
     """
     args = parse_args()
-    # Read polls and elections from Supabase. Model runs are written to
-    # SQLite only — Supabase never receives simulation data.
-    db = Database(DatabaseConfig.from_env())
+    # Read polls and elections from SQLite, and write the model runs back to
+    # the same SQLite file.
+    db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     if args.start_date and args.end_date:
         run_retrospective(db, args)
@@ -1493,7 +1567,7 @@ def main() -> None:
                     dry_run=cfg.dry_run,
                 )
 
-    run_dates = dates_to_run_for_cfg(cfg)
+    run_dates = dates_to_run_for_cfg(cfg, database_file(db))
     if len(run_dates) > 1:
         print(
             "AUTO-BACKFILL "

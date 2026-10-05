@@ -42,7 +42,11 @@ from model_support.cli import (
     validate_half_life,
     validate_run_arguments,
 )
-from model_support.polling import PollAggregation, PollContributor, effective_pollster_weight
+from model_support.polling import (
+    PollAggregation,
+    PollContributor,
+    effective_pollster_weight,
+)
 from models import Election, Map, Region
 
 
@@ -772,7 +776,11 @@ def aggregate_poll_shares(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
-) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
+) -> tuple[
+    dict[tuple[int | None, int], float],
+    dict[tuple[int | None, int], float],
+    LatestPollUsage | None,
+]:
     """Compute time-decayed, pollster-weighted average vote shares from recent polls.
 
     For each poll whose fieldwork end date falls in ``[since_date, as_of_date]``,
@@ -808,8 +816,13 @@ def aggregate_poll_shares(
           most recent poll included, or ``None`` if no polls were consumed.
     """
     result = collect_poll_shares(
-        db, map_id, since_date, as_of_date, half_life_days,
-        pollster_weight_by_id, pollster_name_by_id,
+        db,
+        map_id,
+        since_date,
+        as_of_date,
+        half_life_days,
+        pollster_weight_by_id,
+        pollster_name_by_id,
     )
     latest = result.latest
     latest_usage = (
@@ -819,7 +832,8 @@ def aggregate_poll_shares(
             fieldwork_end=latest.fieldwork_end,
             poll_id=latest.poll_id,
         )
-        if latest is not None else None
+        if latest is not None
+        else None
     )
     return result.weighted_sums, result.total_weights, latest_usage
 

@@ -429,8 +429,18 @@ class TestFetchHolyroodPollAverages:
     @pytest.mark.parametrize("suffix", ["_holyrood", "_holyrood_list"])
     @pytest.mark.parametrize(
         "excluded",
-        ["rowless", "partyless", "shareless", "regional-only", "zero-weight",
-         "negative-weight", "wrong-map", "wrong-ballot", "too-old", "future"],
+        [
+            "rowless",
+            "partyless",
+            "shareless",
+            "regional-only",
+            "zero-weight",
+            "negative-weight",
+            "wrong-map",
+            "wrong-ballot",
+            "too-old",
+            "future",
+        ],
     )
     def test_contributors_match_usable_national_observations(
         self,
@@ -442,32 +452,54 @@ class TestFetchHolyroodPollAverages:
         world = seed_holyrood_world(db)
         party = world.party_ids["Labour"]
         accepted = add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier=f"accepted{suffix}",
-            pollster_name="Accepted", fieldwork_end=_POLL_AS_OF - timedelta(days=1),
+            db,
+            map_id=world.map_id,
+            pollster_identifier=f"accepted{suffix}",
+            pollster_name="Accepted",
+            fieldwork_end=_POLL_AS_OF - timedelta(days=1),
             national={party: 0.0},
         )
-        map_id = db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
+        map_id = (
+            db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
+        )
         end = (
-            _POLL_SINCE - timedelta(days=1) if excluded == "too-old" else
-            _POLL_AS_OF + timedelta(days=1) if excluded == "future" else _POLL_AS_OF
+            _POLL_SINCE - timedelta(days=1)
+            if excluded == "too-old"
+            else _POLL_AS_OF + timedelta(days=1)
+            if excluded == "future"
+            else _POLL_AS_OF
         )
         rejected = add_poll_with_rows(
-            db, map_id=map_id,
-            pollster_identifier="unrelated" if excluded == "wrong-ballot" else f"rejected{suffix}",
-            pollster_weight={"zero-weight": 0.0, "negative-weight": -1.0}.get(excluded, 1.0),
+            db,
+            map_id=map_id,
+            pollster_identifier="unrelated"
+            if excluded == "wrong-ballot"
+            else f"rejected{suffix}",
+            pollster_weight={"zero-weight": 0.0, "negative-weight": -1.0}.get(
+                excluded, 1.0
+            ),
             fieldwork_end=end,
             national={} if excluded in {"rowless", "regional-only"} else {party: 90.0},
-            regional={world.region_ids["Glasgow"]: {party: 90.0}} if excluded == "regional-only" else None,
+            regional={world.region_ids["Glasgow"]: {party: 90.0}}
+            if excluded == "regional-only"
+            else None,
         )
         if excluded in {"partyless", "shareless"}:
             real_rows = db.get_rows_for_poll
             monkeypatch.setattr(
-                db, "get_rows_for_poll",
-                lambda poll_id: [SimpleNamespace(
-                    party_id=None if excluded == "partyless" else party,
-                    percentage=None if excluded == "shareless" else 90.0,
-                    region_id=None,
-                )] if poll_id == rejected.id else real_rows(poll_id),
+                db,
+                "get_rows_for_poll",
+                lambda poll_id: (
+                    [
+                        SimpleNamespace(
+                            party_id=None if excluded == "partyless" else party,
+                            percentage=None if excluded == "shareless" else 90.0,
+                            region_id=None,
+                        )
+                    ]
+                    if poll_id == rejected.id
+                    else real_rows(poll_id)
+                ),
             )
 
         result = hmod.collect_holyrood_poll_shares(
@@ -479,7 +511,9 @@ class TestFetchHolyroodPollAverages:
         assert result.latest is not None
         assert result.latest.fieldwork_end == accepted.fieldwork_end
         assert _fetch(db, world, suffix) == (
-            {party: 0.0}, "Accepted", accepted.fieldwork_end
+            {party: 0.0},
+            "Accepted",
+            accepted.fieldwork_end,
         )
 
     @pytest.mark.parametrize("suffix", ["_holyrood", "_holyrood_list"])
@@ -488,8 +522,11 @@ class TestFetchHolyroodPollAverages:
     ) -> None:
         world = seed_holyrood_world(db)
         add_poll_with_rows(
-            db, map_id=world.map_id, pollster_identifier=f"regional{suffix}",
-            fieldwork_end=_POLL_AS_OF, national={},
+            db,
+            map_id=world.map_id,
+            pollster_identifier=f"regional{suffix}",
+            fieldwork_end=_POLL_AS_OF,
+            national={},
             regional={world.region_ids["Glasgow"]: {world.party_ids["Labour"]: 50.0}},
         )
         assert _fetch(db, world, suffix) == ({}, None, None)
@@ -2514,22 +2551,36 @@ class TestRunHolyroodSimulation:
         world = seed_holyrood_world(db)
         other_ballot = "_holyrood_list" if latest_ballot == "_holyrood" else "_holyrood"
         for label, suffix in (("older", other_ballot), ("latest", latest_ballot)):
-            end = _POLL_END - timedelta(days=1 if label == "older" and tie_break == "end" else 0)
-            start = _POLL_END - timedelta(days=3 if label == "older" and tie_break == "start" else 2)
+            end = _POLL_END - timedelta(
+                days=1 if label == "older" and tie_break == "end" else 0
+            )
+            start = _POLL_END - timedelta(
+                days=3 if label == "older" and tie_break == "start" else 2
+            )
             add_poll_with_rows(
-                db, map_id=world.map_id, pollster_identifier=f"{label}{suffix}",
-                pollster_name=label, fieldwork_start=start, fieldwork_end=end,
+                db,
+                map_id=world.map_id,
+                pollster_identifier=f"{label}{suffix}",
+                pollster_name=label,
+                fieldwork_start=start,
+                fieldwork_end=end,
                 national={world.party_ids["Labour"]: 0.0},
             )
         real_polls = db.get_polls_for_map
         monkeypatch.setattr(
-            db, "get_polls_for_map",
-            lambda map_id: sorted(real_polls(map_id), key=lambda poll: poll.id, reverse=reverse),
+            db,
+            "get_polls_for_map",
+            lambda map_id: sorted(
+                real_polls(map_id), key=lambda poll: poll.id, reverse=reverse
+            ),
         )
 
         output = run_holyrood_simulation(db, _simulation_config(world))
 
-        assert (output.latest_poll_name, output.latest_poll_date) == ("latest", _POLL_END)
+        assert (output.latest_poll_name, output.latest_poll_date) == (
+            "latest",
+            _POLL_END,
+        )
         assert output.mode == "db poll averages (constituency=yes, list=yes)"
 
     def test_without_a_since_date_the_window_is_the_last_365_days(
@@ -3062,7 +3113,7 @@ class TestMain:
             "Holyrood UNS 2026-05-30"
         ]
         assert _read_json(outputs.meta) == {
-            "latest_poll_snippet": "Latest poll used: Early Pollster (2026-05-09)"
+            "latest_poll_snippet": "Latest poll used: List Pollster (2026-05-30)"
         }
         assert outputs.configured.stat().st_size == 0
 
@@ -3107,9 +3158,7 @@ class TestMain:
             10,
         )
         assert _read_json(outputs.meta) == {
-            "latest_poll_snippet": (
-                "Latest poll used: Constituency Pollster (2026-05-30)"
-            )
+            "latest_poll_snippet": ("Latest poll used: List Pollster (2026-05-30)")
         }
         assert outputs.prediction.exists()
         assert outputs.configured.stat().st_size == 0
@@ -3216,9 +3265,7 @@ class TestMain:
         assert not outputs.trend.exists()
         assert outputs.prediction.exists()
         assert _read_json(outputs.meta) == {
-            "latest_poll_snippet": (
-                "Latest poll used: Constituency Pollster (2026-05-30)"
-            )
+            "latest_poll_snippet": ("Latest poll used: List Pollster (2026-05-30)")
         }
 
     def test_manual_poll_shares_run_once_uncapped_with_an_empty_snippet(

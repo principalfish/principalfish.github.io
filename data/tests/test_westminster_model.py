@@ -1005,8 +1005,16 @@ class TestAggregatePollShares:
 
     @pytest.mark.parametrize(
         "excluded",
-        ["rowless", "partyless", "shareless", "zero-weight", "negative-weight",
-         "wrong-map", "too-old", "future"],
+        [
+            "rowless",
+            "partyless",
+            "shareless",
+            "zero-weight",
+            "negative-weight",
+            "wrong-map",
+            "too-old",
+            "future",
+        ],
     )
     @pytest.mark.parametrize("regional", [False, True])
     def test_contributors_match_usable_observations(
@@ -1021,33 +1029,52 @@ class TestAggregatePollShares:
         party = world.party_ids["Labour"]
         region = world.region_ids["Scotland"] if regional else None
         accepted = _add_poll(
-            db, world, _AS_OF - timedelta(days=1),
+            db,
+            world,
+            _AS_OF - timedelta(days=1),
             {} if regional else {party: 0.0},
             regional={region: {party: 0.0}} if region is not None else None,
         )
-        map_id = db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
+        map_id = (
+            db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
+        )
         end = (
-            _SINCE - timedelta(days=1) if excluded == "too-old" else
-            _AS_OF + timedelta(days=1) if excluded == "future" else _AS_OF
+            _SINCE - timedelta(days=1)
+            if excluded == "too-old"
+            else _AS_OF + timedelta(days=1)
+            if excluded == "future"
+            else _AS_OF
         )
         rejected = add_poll_with_rows(
-            db, map_id=map_id, pollster_identifier="rejected",
+            db,
+            map_id=map_id,
+            pollster_identifier="rejected",
             fieldwork_end=end,
             national={} if excluded == "rowless" else {party: 90.0},
         )
         if excluded in {"partyless", "shareless"}:
             real_rows = db.get_rows_for_poll
             monkeypatch.setattr(
-                db, "get_rows_for_poll",
-                lambda poll_id: [SimpleNamespace(
-                    party_id=None if excluded == "partyless" else party,
-                    percentage=None if excluded == "shareless" else 90.0,
-                    region_id=None,
-                )] if poll_id == rejected.id else real_rows(poll_id),
+                db,
+                "get_rows_for_poll",
+                lambda poll_id: (
+                    [
+                        SimpleNamespace(
+                            party_id=None if excluded == "partyless" else party,
+                            percentage=None if excluded == "shareless" else 90.0,
+                            region_id=None,
+                        )
+                    ]
+                    if poll_id == rejected.id
+                    else real_rows(poll_id)
+                ),
             )
-        weights = {rejected.pollster_id: {
-            "zero-weight": 0.0, "negative-weight": -1.0,
-        }.get(excluded, 1.0)}
+        weights = {
+            rejected.pollster_id: {
+                "zero-weight": 0.0,
+                "negative-weight": -1.0,
+            }.get(excluded, 1.0)
+        }
 
         result = run_uns_model.collect_poll_shares(
             db, world.map_id, _SINCE, _AS_OF, 7.0, weights, {}

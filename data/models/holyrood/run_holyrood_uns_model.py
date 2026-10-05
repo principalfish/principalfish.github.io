@@ -175,7 +175,11 @@ from model_support.cli import (
     validate_manual_share,
     validate_run_arguments,
 )
-from model_support.polling import PollAggregation, PollContributor, effective_pollster_weight
+from model_support.polling import (
+    PollAggregation,
+    PollContributor,
+    effective_pollster_weight,
+)
 from models import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
@@ -437,7 +441,7 @@ def fetch_holyrood_poll_averages(
 
 
 def collect_holyrood_poll_shares(
-    db: "Database",
+    db: Database,
     map_id: int,
     ballot_suffix: str,
     as_of_date: date,
@@ -987,10 +991,20 @@ def run_holyrood_simulation(
         mode = "manual poll shares"
     else:
         const_result = collect_holyrood_poll_shares(
-            db, const_election.map_id, "_holyrood", cfg.as_of_date, since_date, cfg.half_life_days
+            db,
+            const_election.map_id,
+            "_holyrood",
+            cfg.as_of_date,
+            since_date,
+            cfg.half_life_days,
         )
         list_result = collect_holyrood_poll_shares(
-            db, const_election.map_id, "_holyrood_list", cfg.as_of_date, since_date, cfg.half_life_days
+            db,
+            const_election.map_id,
+            "_holyrood_list",
+            cfg.as_of_date,
+            since_date,
+            cfg.half_life_days,
         )
         const_polls = const_result.averages
         list_polls = list_result.averages

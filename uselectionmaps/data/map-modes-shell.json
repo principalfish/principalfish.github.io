@@ -4,12 +4,12 @@
     "title": "US Elections",
     "parliamentTabs": [
       {
-        "parliament": "us_presidential",
-        "label": "President"
-      },
-      {
         "parliament": "us_senate",
         "label": "Senate"
+      },
+      {
+        "parliament": "us_presidential",
+        "label": "President"
       },
       {
         "parliament": "us_house",
@@ -23,6 +23,7 @@
       "predictAnchorElectionId": "current-us-house",
       "predictBaselineElectionId": "2024-us-house",
       "nextElectionYear": 2026,
+      "nextElectionDate": "2026-11-03T00:00:00-05:00",
       "nextElectionLabel": "US House election",
       "predict": {
         "model": "fptp",
@@ -57,6 +58,7 @@
       "predictAnchorElectionId": "current-us-senate",
       "predictBaselineElectionId": "2020-us-senate",
       "nextElectionYear": 2026,
+      "nextElectionDate": "2026-11-03T00:00:00-05:00",
       "nextElectionLabel": "US Senate election",
       "predict": {
         "model": "senate",

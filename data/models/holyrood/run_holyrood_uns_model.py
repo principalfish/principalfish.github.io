@@ -165,6 +165,17 @@ from sqlalchemy import select as sa_select
 
 from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
+from model_support.cli import (
+    parse_manual_shares,
+    single_date_window,
+    validate_date_range,
+    validate_date_window,
+    validate_day_count,
+    validate_half_life,
+    validate_manual_share,
+    validate_run_arguments,
+)
+from model_support.polling import effective_pollster_weight, latest_poll_key
 from models import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
@@ -251,6 +262,11 @@ class HolyroodSimulationConfig:
     since_date: date | None = None
     half_life_days: float = _DEFAULT_HALF_LIFE_DAYS
 
+    def __post_init__(self) -> None:
+        validate_half_life(self.half_life_days)
+        if self.since_date is not None:
+            validate_date_window(self.since_date, self.as_of_date)
+
 
 @dataclass
 class HolyroodRunOutput:
@@ -308,12 +324,13 @@ def resolve_poll_shares(
     """
     result: dict[int, float] = {}
     for raw_name, pct in raw_shares.items():
+        share = validate_manual_share(pct)
         canonical = _PARTY_NAME_ALIASES.get(raw_name.strip().lower(), raw_name.strip())
         party = db.get_party_by_name(canonical)
         if party is None:
             print(f"WARNING: party not found in DB: {raw_name!r} (resolved to {canonical!r}) — skipped")
             continue
-        result[party.id] = float(pct)
+        result[party.id] = share
     return result
 
 
@@ -414,17 +431,19 @@ def fetch_holyrood_poll_averages(
         p.id: p.name for p in pollster_rows
     }
     pollster_weight_by_id: dict[int, float] = {
-        p.id: float(p.weight or 1.0) for p in pollster_rows
+        p.id: effective_pollster_weight(p.weight) for p in pollster_rows
     }
 
     polls = db.get_polls_for_map(map_id)
-    decay_lambda = math.log(2.0) / max(half_life_days, 0.001)
+    validate_half_life(half_life_days)
+    validate_date_window(since_date, as_of_date)
 
     weighted_sums: dict[int, float] = defaultdict(float)
     total_weights: dict[int, float] = defaultdict(float)
     polls_used = 0
     latest_poll_name: str | None = None
     latest_poll_date: date | None = None
+    latest_key: tuple[date, date, int] | None = None
 
     for poll in polls:
         # Only include polls from pollsters whose identifier ends with ballot_suffix
@@ -434,7 +453,7 @@ def fetch_holyrood_poll_averages(
             continue
 
         days_since = (as_of_date - poll.fieldwork_end).days
-        decay_weight = math.exp(-decay_lambda * float(days_since))
+        decay_weight = math.exp(-math.log(2.0) * float(days_since) / half_life_days)
         poll_weight = decay_weight * pollster_weight_by_id.get(poll.pollster_id, 1.0)
         if poll_weight <= 0:
             continue
@@ -450,7 +469,11 @@ def fetch_holyrood_poll_averages(
             total_weights[row.party_id] += poll_weight
 
         polls_used += 1
-        if latest_poll_date is None or poll.fieldwork_end > latest_poll_date:
+        candidate_key = latest_poll_key(
+            poll.fieldwork_end, poll.fieldwork_start, int(poll.id)
+        )
+        if latest_key is None or candidate_key > latest_key:
+            latest_key = candidate_key
             latest_poll_date = poll.fieldwork_end
             latest_poll_name = pollster_name_by_id.get(poll.pollster_id)
 
@@ -909,6 +932,9 @@ def run_holyrood_simulation(
     Raises:
         ValueError: If the constituency election is not found.
     """
+    if manual_poll_shares is not None:
+        for share in manual_poll_shares.values():
+            validate_manual_share(share)
     const_election = db.get_election_by_name(cfg.constituency_election_name)
     if const_election is None:
         raise ValueError(f"Baseline election not found: {cfg.constituency_election_name!r}")
@@ -1153,12 +1179,9 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     start_date = date.fromisoformat(args.start_date)
     end_date = date.fromisoformat(args.end_date)
 
-    if end_date < start_date:
-        raise ValueError("--end-date must be on or after --start-date")
-    if args.lookback_days < 0:
-        raise ValueError("--lookback-days must be zero or greater")
-    if args.half_life_days <= 0:
-        raise ValueError("--half-life-days must be greater than zero")
+    validate_date_range(start_date, end_date)
+    validate_day_count(args.lookback_days, "--lookback-days")
+    validate_half_life(args.half_life_days)
 
     if args.reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped_json_entries = reset_existing_model_outputs(
@@ -1701,19 +1724,8 @@ def _build_config_from_args(args: argparse.Namespace) -> HolyroodSimulationConfi
     Raises:
         ValueError: If ``since_date`` is later than ``as_of_date``.
     """
-    today = date.today()
-    as_of_date = (
-        date.fromisoformat(args.as_of_date)
-        if args.as_of_date
-        else today - timedelta(days=max(0, int(args.as_of_days_back)))
-    )
-    since_date = (
-        date.fromisoformat(args.since_date)
-        if args.since_date
-        else today - timedelta(days=max(0, int(args.since_days_back)))
-    )
-    if since_date > as_of_date:
-        raise ValueError("--since-days-back/--since-date must be older than or equal to as-of")
+    validate_half_life(args.half_life_days)
+    since_date, as_of_date = single_date_window(args, date.today())
     return HolyroodSimulationConfig(
         constituency_election_name=args.election_name,
         as_of_date=as_of_date,
@@ -1757,12 +1769,14 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             opens the configured database.
     """
     args = parse_args()
-    db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     # --poll-shares is a single-snapshot override and cannot be combined with the
     # retrospective date range (which fetches DB poll averages per date).
     if args.poll_shares and (args.start_date or args.end_date):
         raise ValueError("--poll-shares cannot be combined with --start-date/--end-date")
+    validate_run_arguments(args, date.today())
+    raw_manual_shares = parse_manual_shares(args.poll_shares) if args.poll_shares else None
+    db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     # Retrospective backfill mode.
     if args.start_date and args.end_date:
@@ -1773,8 +1787,8 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
 
     # Manual poll-shares override is single-run only (no gap-fill / cap).
     manual_poll_shares: dict[int, float] | None = None
-    if args.poll_shares:
-        manual_poll_shares = resolve_poll_shares(json.loads(args.poll_shares), db)
+    if raw_manual_shares is not None:
+        manual_poll_shares = resolve_poll_shares(raw_manual_shares, db)
 
     # Cap as_of_date at the most recent poll fieldwork end for the map so that the
     # model does not run past the point where poll data actually exists (decay-only

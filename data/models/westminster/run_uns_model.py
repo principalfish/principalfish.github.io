@@ -12,7 +12,7 @@ import sqlite3
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -34,6 +34,15 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
+from model_support.cli import (
+    single_date_window,
+    validate_date_range,
+    validate_date_window,
+    validate_day_count,
+    validate_half_life,
+    validate_run_arguments,
+)
+from model_support.polling import effective_pollster_weight, latest_poll_key
 from models import Election, Map, Region
 
 
@@ -94,6 +103,10 @@ class SimulationConfig:
     output_csv: str | None
     dry_run: bool
 
+    def __post_init__(self) -> None:
+        validate_half_life(self.half_life_days)
+        validate_date_window(self.since_date, self.as_of_date)
+
 
 @dataclass
 class SeatRef:
@@ -127,6 +140,7 @@ class LatestPollUsage:
     pollster: str
     fieldwork_start: date
     fieldwork_end: date
+    poll_id: int = field(default=-1, compare=False)
 
 
 def existing_trend_dates(
@@ -297,19 +311,8 @@ def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
     Raises:
         ValueError: If ``since_date`` is later than ``as_of_date``.
     """
-    today = date.today()
-    as_of_date = (
-        date.fromisoformat(args.as_of_date)
-        if args.as_of_date
-        else today - timedelta(days=max(0, int(args.as_of_days_back)))
-    )
-    since_date = (
-        date.fromisoformat(args.since_date)
-        if args.since_date
-        else today - timedelta(days=max(0, int(args.since_days_back)))
-    )
-    if since_date > as_of_date:
-        raise ValueError("--since-days-back/--since-date must be older than or equal to as-of")
+    validate_half_life(args.half_life_days)
+    since_date, as_of_date = single_date_window(args, date.today())
     return SimulationConfig(
         map_name=args.map_name,
         baseline_election_name=args.baseline_election_name,
@@ -415,12 +418,9 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     start_date = date.fromisoformat(args.start_date)
     end_date = date.fromisoformat(args.end_date)
 
-    if end_date < start_date:
-        raise ValueError("--end-date must be on or after --start-date")
-    if args.lookback_days < 0:
-        raise ValueError("--lookback-days must be zero or greater")
-    if args.half_life_days <= 0:
-        raise ValueError("--half-life-days must be greater than zero")
+    validate_date_range(start_date, end_date)
+    validate_day_count(args.lookback_days, "--lookback-days")
+    validate_half_life(args.half_life_days)
 
     if args.reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
@@ -656,7 +656,7 @@ def build_reference_data(db: Database, map_id: int) -> tuple[
     all_parties = db.get_all_parties()
     party_name_by_id = {party.id: party.name for party in all_parties}
     pollster_weight_by_id = {
-        pollster.id: (pollster.weight if pollster.weight is not None else 1.0)
+        pollster.id: effective_pollster_weight(pollster.weight)
         for pollster in db.get_all_pollsters()
     }
     pollster_name_by_id = {
@@ -812,7 +812,8 @@ def aggregate_poll_shares(
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
     latest_poll_usage: LatestPollUsage | None = None
 
-    decay_lambda = math.log(2.0) / max(half_life_days, 0.001)
+    validate_half_life(half_life_days)
+    validate_date_window(since_date, as_of_date)
 
     for poll in polls:
         if poll.fieldwork_end < since_date or poll.fieldwork_end > as_of_date:
@@ -822,8 +823,8 @@ def aggregate_poll_shares(
         if days_since < 0:
             continue
 
-        decay_weight = math.exp(-decay_lambda * float(days_since))
-        pollster_weight = float(pollster_weight_by_id.get(poll.pollster_id, 1.0) or 1.0)
+        decay_weight = math.exp(-math.log(2.0) * float(days_since) / half_life_days)
+        pollster_weight = effective_pollster_weight(pollster_weight_by_id.get(poll.pollster_id))
         poll_weight = decay_weight * pollster_weight
         if poll_weight <= 0:
             continue
@@ -836,15 +837,16 @@ def aggregate_poll_shares(
             pollster=str(pollster_name_by_id.get(poll.pollster_id, f"Pollster {poll.pollster_id}")),
             fieldwork_start=poll.fieldwork_start,
             fieldwork_end=poll.fieldwork_end,
+            poll_id=int(poll.id),
         )
-        if latest_poll_usage is None or (
+        if latest_poll_usage is None or latest_poll_key(
             candidate_poll.fieldwork_end,
             candidate_poll.fieldwork_start,
-            int(poll.id),
-        ) > (
+            candidate_poll.poll_id,
+        ) > latest_poll_key(
             latest_poll_usage.fieldwork_end,
             latest_poll_usage.fieldwork_start,
-            -1,
+            latest_poll_usage.poll_id,
         ):
             latest_poll_usage = candidate_poll
 
@@ -1530,6 +1532,7 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             opens the configured database.
     """
     args = parse_args()
+    validate_run_arguments(args, date.today())
     # Read polls and elections from SQLite, and write the model runs back to
     # the same SQLite file.
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())

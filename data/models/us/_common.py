@@ -60,6 +60,16 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database, ensure_elections_sqlite_schema
+from model_support.cli import (
+    single_date_window,
+    validate_date_range,
+    validate_date_window,
+    validate_day_count,
+    validate_half_life,
+    validate_prior_weight,
+    validate_run_arguments,
+)
+from model_support.polling import effective_pollster_weight, latest_poll_key
 from models import Election, Map, Poll, PollRow, Region, TrackedMatchup, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
@@ -181,6 +191,11 @@ class UsSimulationConfig:
     seat_prior_weight: float = 1.0
     ignore_seat_polls: bool = False
 
+    def __post_init__(self) -> None:
+        validate_half_life(self.half_life_days)
+        validate_prior_weight(self.seat_prior_weight)
+        validate_date_window(self.since_date, self.as_of_date)
+
 
 @dataclass
 class SeatRef:
@@ -204,6 +219,7 @@ class LatestPollUsage:
     fieldwork_start: date
     fieldwork_end: date
     matchup: str | None = None
+    poll_id: int = field(default=-1, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -447,22 +463,20 @@ def poll_usage(reading: PollReading) -> LatestPollUsage:
         fieldwork_start=reading.fieldwork_start,
         fieldwork_end=reading.fieldwork_end,
         matchup=reading.matchup,
+        poll_id=reading.poll_id,
     )
 
 
 def latest_poll_usage_of(usages: Iterable[LatestPollUsage | None]) -> LatestPollUsage | None:
-    """The most recent of several usages, by fieldwork end then start.
-
-    ``None`` entries are ignored; on a tie the earlier entry wins, so a caller
-    listing the national series first keeps it on a same-day seat poll.
-    """
+    """The most recent usage by fieldwork end, start and actual poll ID."""
     latest: LatestPollUsage | None = None
     for usage in usages:
         if usage is None:
             continue
-        if latest is None or (usage.fieldwork_end, usage.fieldwork_start) > (
-            latest.fieldwork_end,
-            latest.fieldwork_start,
+        if latest is None or latest_poll_key(
+            usage.fieldwork_end, usage.fieldwork_start, usage.poll_id
+        ) > latest_poll_key(
+            latest.fieldwork_end, latest.fieldwork_start, latest.poll_id
         ):
             latest = usage
     return latest
@@ -589,7 +603,8 @@ def collect_poll_readings(
     and seat-scoped polls of every matchup; filtering is the caller's job
     (:func:`aggregate_national`, and the seat-level averaging that follows it).
     """
-    decay_lambda = math.log(2.0) / max(half_life_days, 0.001)
+    validate_half_life(half_life_days)
+    validate_date_window(since_date, as_of_date)
     readings: list[PollReading] = []
 
     for poll in db.get_polls_for_map(map_id):
@@ -600,8 +615,8 @@ def collect_poll_readings(
         if days_since < 0:
             continue
 
-        decay_weight = math.exp(-decay_lambda * float(days_since))
-        pollster_weight = float(pollster_weight_by_id.get(poll.pollster_id, 1.0) or 1.0)
+        decay_weight = math.exp(-math.log(2.0) * float(days_since) / half_life_days)
+        pollster_weight = effective_pollster_weight(pollster_weight_by_id.get(poll.pollster_id))
         poll_weight = decay_weight * pollster_weight
         if poll_weight <= 0:
             continue
@@ -680,14 +695,14 @@ def aggregate_national(
                 weighted_sums[(region_id, party_id)] += share * reading.weight
                 total_weights[(region_id, party_id)] += reading.weight
 
-        if latest_poll_usage is None or (
+        if latest_poll_usage is None or latest_poll_key(
             reading.fieldwork_end,
             reading.fieldwork_start,
             reading.poll_id,
-        ) > (
+        ) > latest_poll_key(
             latest_poll_usage.fieldwork_end,
             latest_poll_usage.fieldwork_start,
-            -1,
+            latest_poll_usage.poll_id,
         ):
             latest_poll_usage = poll_usage(reading)
 
@@ -1069,11 +1084,9 @@ def aggregate_seat_polls(
         seat_weights[seat_id] += reading.weight
         seat_counts[seat_id] += 1
         latest = latest_by_seat.get(seat_id)
-        if latest is None or (
-            reading.fieldwork_end,
-            reading.fieldwork_start,
-            reading.poll_id,
-        ) > (latest.fieldwork_end, latest.fieldwork_start, latest.poll_id):
+        if latest is None or latest_poll_key(
+            reading.fieldwork_end, reading.fieldwork_start, reading.poll_id
+        ) > latest_poll_key(latest.fieldwork_end, latest.fieldwork_start, latest.poll_id):
             latest_by_seat[seat_id] = reading
         for party_id, share in decided.items():
             weighted_sums[seat_id][party_id] += share * reading.weight
@@ -1412,7 +1425,7 @@ def build_reference_data(
     party_name_by_id = {party.id: party.name for party in all_parties}
     all_pollsters = db.get_all_pollsters()
     pollster_weight_by_id = {
-        pollster.id: (pollster.weight if pollster.weight is not None else 1.0)
+        pollster.id: effective_pollster_weight(pollster.weight)
         for pollster in all_pollsters
     }
     pollster_name_by_id = {pollster.id: pollster.name for pollster in all_pollsters}
@@ -2381,8 +2394,7 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
     """
     start_date = date.fromisoformat(args.start_date)
     end_date = date.fromisoformat(args.end_date)
-    if end_date < start_date:
-        raise ValueError("--end-date must be on or after --start-date")
+    validate_date_range(start_date, end_date)
 
     run_retrospective_range(
         db,
@@ -2420,12 +2432,10 @@ def run_retrospective_range(
     Raises:
         ValueError: On an invalid date range, negative lookback, or non-positive half-life.
     """
-    if end_date < start_date:
-        raise ValueError("end_date must be on or after start_date")
-    if lookback_days < 0:
-        raise ValueError("--lookback-days must be zero or greater")
-    if args.half_life_days <= 0:
-        raise ValueError("--half-life-days must be greater than zero")
+    validate_date_range(start_date, end_date)
+    validate_day_count(lookback_days, "--lookback-days")
+    validate_half_life(args.half_life_days)
+    validate_prior_weight(args.seat_prior_weight)
 
     if reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
@@ -2491,9 +2501,10 @@ def _non_negative_float(raw: str) -> float:
         value = float(raw)
     except ValueError as err:
         raise argparse.ArgumentTypeError(f"expected a number, got {raw!r}") from err
-    if math.isnan(value) or value < 0.0:
-        raise argparse.ArgumentTypeError(f"must be zero or greater, got {raw!r}")
-    return value
+    try:
+        return validate_prior_weight(value)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(str(err)) from err
 
 
 def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
@@ -2551,19 +2562,9 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
 
 def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSimulationConfig:
     """Construct a single-date :class:`UsSimulationConfig` from CLI args."""
-    today = date.today()
-    as_of_date = (
-        date.fromisoformat(args.as_of_date)
-        if args.as_of_date
-        else today - timedelta(days=max(0, int(args.as_of_days_back)))
-    )
-    since_date = (
-        date.fromisoformat(args.since_date)
-        if args.since_date
-        else today - timedelta(days=max(0, int(args.since_days_back)))
-    )
-    if since_date > as_of_date:
-        raise ValueError("--since-days-back/--since-date must be older than or equal to as-of")
+    validate_half_life(args.half_life_days)
+    validate_prior_weight(args.seat_prior_weight)
+    since_date, as_of_date = single_date_window(args, date.today())
     return UsSimulationConfig(
         spec=spec,
         as_of_date=as_of_date,
@@ -2718,6 +2719,10 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                     "its own range from the existing trend series and its own as-of date "
                     "from the latest poll"
                 )
+    try:
+        validate_run_arguments(args, date.today())
+    except ValueError as err:
+        parser.error(str(err))
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     # Resolved first, so a president with no matchup writes no election, no trend

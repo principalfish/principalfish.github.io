@@ -523,11 +523,7 @@ class TestFetchHolyroodPollAverages:
 
         assert averages == {snp: pytest.approx(expected)}
 
-    def test_zero_pollster_weight_counts_in_full_pins_current_behaviour(
-        self, db: Database
-    ) -> None:
-        # ``float(p.weight or 1.0)`` turns a stored 0.0 into 1.0, so a pollster
-        # weighted out still counts in full: 30, where ignoring it would give 20.
+    def test_zero_pollster_weight_excludes_the_poll(self, db: Database) -> None:
         world = seed_holyrood_world(db)
         snp = world.party_ids["Scottish National Party"]
         _add_holyrood_poll(
@@ -544,7 +540,7 @@ class TestFetchHolyroodPollAverages:
 
         averages, _, _ = _fetch(db, world)
 
-        assert averages == {snp: pytest.approx(30.0)}
+        assert averages == {snp: pytest.approx(20.0)}
 
     def test_a_negative_pollster_weight_skips_its_polls(self, db: Database) -> None:
         world = seed_holyrood_world(db)
@@ -1697,9 +1693,9 @@ class TestBuildConfigFromArgs:
                 date(2026, 6, 13),
                 date(2026, 6, 5),
             ),
-            # Negative counts are clamped to today, and equal dates are allowed.
+            # Equal dates are allowed.
             (
-                ["--as-of-days-back", "-3", "--since-days-back", "-1"],
+                ["--as-of-days-back", "0", "--since-days-back", "0"],
                 date(2026, 6, 15),
                 date(2026, 6, 15),
             ),

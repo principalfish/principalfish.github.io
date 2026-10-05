@@ -1010,28 +1010,12 @@ class TestAggregatePollShares:
             {(None, green): 8.0, (None, labour): 20.0, (None, conservative): 7.5}
         )
 
-    @pytest.mark.parametrize("half_life_days", [0.0, -5.0])
-    def test_non_positive_half_life_is_clamped(
+    @pytest.mark.parametrize("half_life_days", [0.0, -5.0, float("nan"), float("inf")])
+    def test_invalid_half_life_is_rejected(
         self, db: Database, westminster_world: WestminsterWorld, half_life_days: float
     ) -> None:
-        world = westminster_world
-        labour = world.party_ids["Labour"]
-        conservative = world.party_ids["Conservative"]
-        green = world.party_ids["Green"]
-        _add_poll(db, world, date(2026, 6, 10), {labour: 40.0})
-        _add_poll(db, world, date(2026, 6, 9), {conservative: 30.0})
-        _add_poll(db, world, date(2026, 6, 8), {green: 8.0})
-
-        _, total_weights, _ = _aggregate(db, world, half_life_days=half_life_days)
-
-        # Clamped to 0.001 days: one day old halves the weight 1000 times, and
-        # two days old underflows to 0.0, which skips the poll.
-        assert set(total_weights) == {(None, labour), (None, conservative)}
-        assert total_weights[(None, labour)] == 1.0
-        assert total_weights[(None, conservative)] > 0.0
-        assert total_weights[(None, conservative)] == pytest.approx(
-            0.5**1000, rel=1e-9
-        )
+        with pytest.raises(ValueError, match="half-life-days"):
+            _aggregate(db, westminster_world, half_life_days=half_life_days)
 
     def test_pollster_weight_scales_the_poll(
         self, db: Database, westminster_world: WestminsterWorld
@@ -1054,14 +1038,9 @@ class TestAggregatePollShares:
             {(None, labour): 20.0, (None, conservative): 30.0}
         )
 
-    def test_zero_pollster_weight_counts_in_full_pins_current_behaviour(
+    def test_zero_pollster_weight_excludes_the_poll(
         self, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        """Pins current behaviour: ``weight or 1.0`` turns a 0.0 weight into 1.0.
-
-        A pollster weighted 0.0 is presumably meant to be ignored, but the
-        falsy check makes it count at full weight.
-        """
         world = westminster_world
         labour = world.party_ids["Labour"]
         poll = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="zeroed")
@@ -1070,9 +1049,9 @@ class TestAggregatePollShares:
             db, world, pollster_weight_by_id={poll.pollster_id: 0.0}
         )
 
-        assert total_weights == {(None, labour): 1.0}
-        assert weighted_sums == {(None, labour): 40.0}
-        assert latest is not None
+        assert total_weights == {}
+        assert weighted_sums == {}
+        assert latest is None
 
     def test_negative_pollster_weight_skips_the_poll(
         self, db: Database, westminster_world: WestminsterWorld
@@ -2618,7 +2597,7 @@ class TestRunRetrospective:
             (
                 ["--start-date", "2026-06-09", "--end-date", "2026-06-10"]
                 + ["--half-life-days", "0"],
-                "--half-life-days must be greater than zero",
+                "--half-life-days must be greater than zero and finite",
             ),
         ],
     )
@@ -2954,9 +2933,9 @@ class TestBuildConfigFromArgs:
                 date(2026, 6, 13),
                 date(2026, 6, 5),
             ),
-            # Negative counts are clamped to today.
+            # Equal dates are allowed.
             (
-                ["--as-of-days-back", "-3", "--since-days-back", "-1"],
+                ["--as-of-days-back", "0", "--since-days-back", "0"],
                 date(2026, 6, 15),
                 date(2026, 6, 15),
             ),

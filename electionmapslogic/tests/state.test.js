@@ -6,7 +6,10 @@ import { Seat, ElectionSummary, manifest, state, buildRouteSearchParams, seatCom
 // Object.assign + re-hydrate, so every key a block might set must be listed here to be
 // cleared. Run before AND after every test for order-independence.
 function resetManifest() {
-  manifest.init({ parties: [], mapModes: {}, elections: [], files: {}, parliamentFeatures: {}, partyKeyAliases: {} });
+  manifest.init({
+    parties: [], mapModes: {}, elections: [], defaultElection: null, files: {},
+    parliamentFeatures: {}, partyKeyAliases: {}, misc: {},
+  });
 }
 
 beforeEach(resetManifest);
@@ -233,6 +236,37 @@ describe('manifest.hiddenElectionIds', () => {
 
   it('returns an empty array for an unknown parliament', () => {
     expect(manifest.hiddenElectionIds('nowhere')).toEqual([]);
+  });
+});
+
+describe('manifest.parliamentTabs', () => {
+  it('returns misc.parliamentTabs in order, unfiltered', () => {
+    const tabs = [
+      { parliament: 'us_senate', label: 'Senate' },
+      { parliament: 'us_house', label: 'House' },
+      { parliament: 'us_presidential', label: 'President' },
+    ];
+    manifest.init({ misc: { parliamentTabs: tabs } });
+    expect(manifest.parliamentTabs()).toEqual(tabs);
+  });
+
+  it('returns an empty array when misc has no parliamentTabs', () => {
+    expect(manifest.parliamentTabs()).toEqual([]);
+  });
+});
+
+describe('manifest.defaultParliament', () => {
+  it("returns the default election's parliament", () => {
+    manifest.init({
+      elections: [{ id: 'h1', parliament: 'us_house' }, { id: 's1', parliament: 'us_senate' }],
+      defaultElection: 's1',
+    });
+    expect(manifest.defaultParliament()).toBe('us_senate');
+  });
+
+  it('returns an empty string when there is no default election', () => {
+    manifest.init({ elections: [{ id: 'h1', parliament: 'us_house' }] });
+    expect(manifest.defaultParliament()).toBe('');
   });
 });
 
@@ -597,6 +631,64 @@ describe('AppState.shouldShowCountdown', () => {
   it('hides when the current parliament has no nextElectionDate key at all', () => {
     state.currentParliament = 'us_presidential';
     expect(state.shouldShowCountdown()).toBe(false);
+  });
+});
+
+// ─── AppState.init: parliament resolution ────────────────────────────────────
+describe('AppState.init parliament resolution', () => {
+  let saved;
+
+  beforeEach(() => {
+    // A US-style manifest: no model elections, so init() never fetches prediction meta.
+    // The default election is deliberately not elections[0], so a fallback that picked the
+    // first election instead of the default would fail.
+    manifest.init({
+      mapModes: { 1: { voteTotalsViews: [{ id: 'all' }] } },
+      elections: [
+        { id: 'house-2024', parliament: 'us_house', mapId: 1 },
+        { id: 'senate-2024', parliament: 'us_senate', mapId: 1 },
+      ],
+      defaultElection: 'senate-2024',
+    });
+    saved = {
+      view: state.view,
+      parliament: state.currentParliament,
+      parliamentElections: state.parliamentElections,
+      election: state.currentElection,
+      regionLabelsByKey: state.currentRegionLabelsByKey,
+      isReferendumType: state.isReferendumType,
+      referendumConfig: state.referendumConfig,
+      voteTotalsMode: state.voteTotals.mode,
+    };
+  });
+
+  afterEach(() => {
+    state.view = saved.view;
+    state.currentParliament = saved.parliament;
+    state.parliamentElections = saved.parliamentElections;
+    state.currentElection = saved.election;
+    state.currentRegionLabelsByKey = saved.regionLabelsByKey;
+    state.isReferendumType = saved.isReferendumType;
+    state.referendumConfig = saved.referendumConfig;
+    state.voteTotals.mode = saved.voteTotalsMode;
+  });
+
+  it("falls back to the default parliament for another page's parliament", async () => {
+    await state.init('election', 'westminster', null);
+    expect(state.currentParliament).toBe('us_senate');
+    expect(state.currentElection.id).toBe('senate-2024');
+  });
+
+  it('falls back to the default parliament for an unknown parliament key', async () => {
+    await state.init('election', 'nonexistent', null);
+    expect(state.currentParliament).toBe('us_senate');
+    expect(state.currentElection.id).toBe('senate-2024');
+  });
+
+  it('keeps a valid non-default parliament', async () => {
+    await state.init('election', 'us_house', null);
+    expect(state.currentParliament).toBe('us_house');
+    expect(state.currentElection.id).toBe('house-2024');
   });
 });
 

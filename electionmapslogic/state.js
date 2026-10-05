@@ -10,13 +10,10 @@ import { fetchJson } from './files.js';
 // A distinct purple from the Independent party colour so the two don't blur.
 const SPLIT_COLOUR = '#7d3c98';
 
-// Per-page config set by the host HTML before the engine loads (window.MAPS_PAGE). It lets
-// one shared manifest + engine drive multiple pages (UK at electionmaps/, US at
-// uselectionmaps/): each page restricts the parliaments it shows, overrides the title and
-// default parliament, and points at the shared data dir. Empty object => unrestricted.
-//   parliaments?: string[]      — only these parliament tabs/elections are shown
-//   defaultParliament?: string  — landing parliament for the page
-//   title?: string              — page brand (H1 / document title)
+// Per-page config set by the host HTML before the engine loads (window.MAPS_PAGE). Its only
+// field is an optional data-path override; everything else comes from the page's own manifest
+// (<page>/data/map-modes.json), the source of truth for the brand (misc.title), parliament tabs
+// (misc.parliamentTabs) and landing election (defaultElection). Empty object => defaults.
 //   dataBase?: string           — base path for data fetches (default 'data')
 export const page = (typeof window !== 'undefined' && window.MAPS_PAGE) || {};
 
@@ -144,8 +141,6 @@ class Manifest {
    * @returns {string}
    */
   defaultParliament() {
-    // A page may pin its landing parliament; otherwise it is the default election's parliament.
-    if (page.defaultParliament) return page.defaultParliament;
     return this.elections.find((e) => e.id === this.defaultElection)?.parliament ?? '';
   }
 
@@ -185,12 +180,7 @@ class Manifest {
    * @returns {{ parliament: string, label: string }[]}
    */
   parliamentTabs() {
-    const tabs = this.misc?.parliamentTabs ?? [];
-    // Restrict to the host page's parliaments when set (so a page only shows its own tabs).
-    if (Array.isArray(page.parliaments)) {
-      return tabs.filter((tab) => page.parliaments.includes(tab.parliament));
-    }
-    return tabs;
+    return this.misc?.parliamentTabs ?? [];
   }
 
   /**
@@ -1228,13 +1218,14 @@ class AppState {
   async init(view, parliament, requestedId) {
     this.view = view;
     this.currentParliament = parliament || manifest.defaultParliament();
-    // Ignore a ?parliament= the host page doesn't host (e.g. ?parliament=westminster on the
-    // US page) and fall back to the page's default parliament.
-    if (Array.isArray(page.parliaments) && !page.parliaments.includes(this.currentParliament)) {
+    let parliamentElections = manifest.electionsForParliament(this.currentParliament);
+    // A ?parliament= with no elections in this page's manifest (another page's parliament, e.g.
+    // ?parliament=westminster on the US page, or a garbage key) falls back to the default
+    // parliament rather than throwing below.
+    if (!parliamentElections.length) {
       this.currentParliament = manifest.defaultParliament();
+      parliamentElections = manifest.electionsForParliament(this.currentParliament);
     }
-
-    const parliamentElections = manifest.electionsForParliament(this.currentParliament);
     this.parliamentElections = parliamentElections;
     let currentElection = parliamentElections.find((e) => e.id === requestedId);
     if (!currentElection) {

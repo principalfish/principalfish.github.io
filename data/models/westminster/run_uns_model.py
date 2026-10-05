@@ -778,8 +778,9 @@ def aggregate_poll_shares(
     For each poll whose fieldwork end date falls in ``[since_date, as_of_date]``,
     a combined weight is computed as ``exp(-λ × days_since) × pollster_weight``
     where ``λ = ln(2) / half_life_days``. Vote-share percentages from each poll
-    row are accumulated into ``weighted_sums`` and ``total_weights`` keyed by
-    ``(region_id, party_id)`` — ``region_id`` is ``None`` for national-level rows.
+    row are combined within the poll by ``(region_id, party_id)`` before one
+    poll weight is accumulated into ``total_weights`` for that observation.
+    ``region_id`` is ``None`` for national-level rows.
 
     Party ID aliases defined in ``PARTY_ID_ALIASES`` are applied before
     accumulation.
@@ -790,8 +791,7 @@ def aggregate_poll_shares(
         since_date: Lower bound for poll fieldwork end date (inclusive).
         as_of_date: Upper bound for poll fieldwork end date (inclusive); also the
             reference date for decay calculation.
-        half_life_days: Exponential decay half-life in days. Must be positive;
-            values ≤ 0 are clamped to ``0.001`` internally.
+        half_life_days: Exponential decay half-life in days, finite and positive.
         pollster_weight_by_id: Credibility weight per pollster ID; missing entries
             default to ``1.0``.
         pollster_name_by_id: Display name per pollster ID; used when recording
@@ -850,12 +850,16 @@ def aggregate_poll_shares(
         ):
             latest_poll_usage = candidate_poll
 
+        poll_shares: dict[tuple[int | None, int], float] = defaultdict(float)
         for row in rows:
             if row.party_id is None:
                 continue
             party_id = PARTY_ID_ALIASES.get(row.party_id, row.party_id)
             key = (row.region_id, party_id)
-            weighted_sums[key] += float(row.percentage) * poll_weight
+            poll_shares[key] += float(row.percentage)
+
+        for key, share in poll_shares.items():
+            weighted_sums[key] += share * poll_weight
             total_weights[key] += poll_weight
 
     return weighted_sums, total_weights, latest_poll_usage

@@ -19,7 +19,7 @@ import sys
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import closing
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -269,6 +269,38 @@ class TestComputeRegionDiffs:
         row = next(r for r in region_diff_rows if r["region_id"] == 10 and r["party_id"] == 1)
         assert row["weighted_share"] == pytest.approx(55.0)
         assert row["baseline_share"] == pytest.approx(50.0)
+
+    @pytest.mark.parametrize(
+        ("national", "regional", "expected"),
+        [
+            ({2: 35.0}, {}, 0.0),
+            ({1: 0.0, 2: 35.0}, {}, -40.0),
+            ({1: 45.0, 2: 35.0}, {2: 20.0}, 5.0),
+            ({1: 45.0, 2: 35.0}, {1: 0.0, 2: 20.0}, -60.0),
+        ],
+        ids=["national-omission", "national-zero", "regional-omission", "regional-zero"],
+    )
+    def test_omission_and_explicit_zero_have_distinct_meanings(
+        self,
+        national: dict[int, float],
+        regional: dict[int, float],
+        expected: float,
+    ) -> None:
+        sums: dict[tuple[int | None, int], float] = {
+            (None, party): share for party, share in national.items()
+        }
+        sums.update({(10, party): share for party, share in regional.items()})
+        _, swings, _ = self._run(
+            seats=[_make_seat(1, 10)],
+            region_by_id={10: _make_region(10, "North")},
+            party_name_by_id={1: "Labour", 2: "Conservative"},
+            national_totals={1: 400.0, 2: 600.0},
+            weighted_sums=sums,
+            total_weights={key: 1.0 for key in sums},
+            baseline_national={1: 40.0, 2: 60.0},
+            baseline_regional={10: {1: 60.0, 2: 40.0}},
+        )
+        assert swings[10][1] == pytest.approx(expected)
 
     def test_party_universe_union_of_baseline_and_polls(self) -> None:
         seats = [_make_seat(1, 10)]
@@ -1129,7 +1161,53 @@ class TestAggregatePollShares:
 
         assert len(weighted_sums) == 2
         assert weighted_sums == {(None, 15): 5.0, (scotland, 15): 4.0}
-        assert total_weights == {(None, 15): 2.0, (scotland, 15): 1.0}
+        assert total_weights == {(None, 15): 1.0, (scotland, 15): 1.0}
+        assert (
+            weighted_average(weighted_sums[(None, 15)], total_weights[(None, 15)])
+            == 5.0
+        )
+
+    def test_alias_rows_combine_within_each_poll_before_weighting(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        scotland = world.region_ids["Scotland"]
+        wales = world.region_ids["Wales"]
+        first = _add_poll(
+            db,
+            world,
+            _AS_OF,
+            {7: 3.0, 15: 2.0},
+            regional={scotland: {7: 4.0, 15: 2.0}, wales: {7: 1.0, 15: 2.0}},
+        )
+        _add_poll(
+            db,
+            world,
+            _AS_OF - timedelta(days=7),
+            {7: 10.0},
+            pollster="second",
+            regional={scotland: {15: 12.0}},
+        )
+
+        sums, weights, _ = _aggregate(
+            db, world, pollster_weight_by_id={first.pollster_id: 2.0}
+        )
+
+        # The second poll has half the recency weight; missing Wales supplies
+        # no observation and must not dilute its first poll's combined share.
+        assert sums == {(None, 15): 15.0, (scotland, 15): 18.0, (wales, 15): 6.0}
+        assert weights == {(None, 15): 2.5, (scotland, 15): 2.5, (wales, 15): 2.0}
+
+    def test_alias_rows_in_separate_polls_remain_independent_observations(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        _add_poll(db, westminster_world, _AS_OF, {7: 3.0})
+        _add_poll(db, westminster_world, _AS_OF, {15: 2.0})
+
+        sums, weights, _ = _aggregate(db, westminster_world)
+
+        assert sums[(None, 15)] == 5.0
+        assert weights[(None, 15)] == 2.0
 
     def test_national_and_regional_rows_keyed_separately(
         self, db: Database, westminster_world: WestminsterWorld

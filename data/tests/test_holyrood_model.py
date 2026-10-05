@@ -281,14 +281,29 @@ class TestComputeHolyroodSwings:
         )
         assert swings[10][1] == pytest.approx(-10.0)
 
-    def test_party_absent_from_polls_gets_negative_swing(self) -> None:
-        # Party 2 has no poll share (0) vs baseline 30 → swing = -30
+    def test_party_absent_from_polls_keeps_zero_swing(self) -> None:
         swings = compute_holyrood_swings(
             baseline_national_shares={1: 40.0, 2: 30.0},
             poll_shares={1: 42.0},
             region_ids={10},
         )
+        assert swings[10][2] == pytest.approx(0.0)
+
+    def test_explicit_zero_share_removes_the_baseline_support(self) -> None:
+        swings = compute_holyrood_swings(
+            baseline_national_shares={1: 40.0, 2: 30.0},
+            poll_shares={1: 42.0, 2: 0.0},
+            region_ids={10},
+        )
         assert swings[10][2] == pytest.approx(-30.0)
+
+    def test_no_polls_keeps_every_baseline_party_at_zero_swing(self) -> None:
+        swings = compute_holyrood_swings(
+            baseline_national_shares={1: 40.0, 2: 30.0},
+            poll_shares={},
+            region_ids={10, 11},
+        )
+        assert swings == {10: {1: 0.0, 2: 0.0}, 11: {1: 0.0, 2: 0.0}}
 
     def test_party_new_in_polls_gets_positive_swing(self) -> None:
         # Party 3 not in baseline (0) but shows 5% in polls → swing = +5
@@ -452,6 +467,48 @@ class TestFetchHolyroodPollAverages:
         averages, latest_name, latest_date = _fetch(db, world, "_holyrood_list")
         assert averages == {snp: pytest.approx(30.0)}
         assert (latest_name, latest_date) == ("List Pollster", _POLL_AS_OF)
+
+    @pytest.mark.parametrize("suffix", ["_holyrood", "_holyrood_list"])
+    def test_repeated_party_rows_are_combined_before_weighting(
+        self, db: Database, suffix: str
+    ) -> None:
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        poll = add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier=f"first{suffix}",
+            fieldwork_end=_POLL_AS_OF,
+            national={snp: 3.0},
+            pollster_weight=2.0,
+        )
+        db.add_poll_row(poll.id, snp, 2.0)
+        _add_holyrood_poll(
+            db,
+            world,
+            f"second{suffix}",
+            _POLL_AS_OF - timedelta(days=7),
+            {"Scottish National Party": 10.0},
+        )
+
+        averages, _, _ = _fetch(db, world, suffix, half_life_days=7.0)
+
+        # First poll is (3 + 2) at weight 2; second is 10 at weight 0.5.
+        assert averages == {snp: pytest.approx(6.0)}
+
+    @pytest.mark.parametrize("suffix", ["_holyrood", "_holyrood_list"])
+    def test_party_rows_in_separate_polls_remain_independent(
+        self, db: Database, suffix: str
+    ) -> None:
+        world = seed_holyrood_world(db)
+        for share in (3.0, 2.0):
+            _add_holyrood_poll(
+                db, world, f"same{suffix}", _POLL_AS_OF, {"Labour": share}
+            )
+
+        averages, _, _ = _fetch(db, world, suffix)
+
+        assert averages == {world.party_ids["Labour"]: pytest.approx(2.5)}
 
     def test_the_window_includes_both_bounds(self, db: Database) -> None:
         world = seed_holyrood_world(db)
@@ -682,26 +739,26 @@ class TestFetchHolyroodPollAverages:
             _POLL_AS_OF - timedelta(days=1),
         )
 
-    def test_regional_rows_are_averaged_into_the_national_share_pins_current_behaviour(
-        self, db: Database
+    @pytest.mark.parametrize("suffix", ["_holyrood", "_holyrood_list"])
+    @pytest.mark.parametrize("include_national", [True, False])
+    def test_regional_rows_do_not_supply_national_support(
+        self, db: Database, suffix: str, include_national: bool
     ) -> None:
-        # Rows are averaged whatever their ``region_id``, so a regional row pulls
-        # the national share: 30, where the national row alone gives 40. Holyrood
-        # polls are national-only today, so this is latent.
+        # Crossbreaks cannot stand in for Scotland-wide support on either ballot.
         world = seed_holyrood_world(db)
         snp = world.party_ids["Scottish National Party"]
         add_poll_with_rows(
             db,
             map_id=world.map_id,
-            pollster_identifier="a_holyrood",
+            pollster_identifier=f"a{suffix}",
             fieldwork_end=_POLL_AS_OF,
-            national={snp: 40.0},
+            national={snp: 40.0} if include_national else {},
             regional={world.region_ids["Glasgow"]: {snp: 20.0}},
         )
 
-        averages, _, _ = _fetch(db, world)
+        averages, _, _ = _fetch(db, world, suffix)
 
-        assert averages == {snp: pytest.approx(30.0)}
+        assert averages == ({snp: pytest.approx(40.0)} if include_national else {})
 
 
 # ── Integration test with test DB ─────────────────────────────────────────────
@@ -2233,6 +2290,89 @@ class TestRunHolyroodSimulation:
             "Running Holyrood UNS projection — baseline: "
             f"{world.constituency_election_name!r} (manual poll shares)"
         ) in capsys.readouterr().out
+
+    @pytest.mark.parametrize("ballot", ["constituency", "list", "manual"])
+    @pytest.mark.parametrize("explicit_zero", [False, True], ids=["omitted", "zero"])
+    def test_partial_shares_preserve_omitted_parties_through_projection(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+        ballot: str,
+        explicit_zero: bool,
+    ) -> None:
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        labour = world.party_ids["Labour"]
+        greens = world.party_ids["Scottish Greens"]
+        shares = {"Scottish National Party": 50.0, "Scottish Greens": 5.0}
+        if explicit_zero:
+            shares["Labour"] = 0.0
+        manual = None
+        if ballot == "manual":
+            manual = resolve_poll_shares(shares, db)
+        else:
+            suffix = "_holyrood_list" if ballot == "list" else "_holyrood"
+            _add_holyrood_poll(db, world, f"partial{suffix}", _POLL_END, shares)
+        cfg = _simulation_config(world)
+
+        output = run_holyrood_simulation(db, cfg, manual)
+
+        swings = (
+            cfg.list_swing_by_region_party
+            if ballot == "list"
+            else cfg.swing_by_region_party
+        )
+        labour_baseline = 100.0 * 700.0 / 2400.0 if ballot == "list" else 50.0
+        for region_swings in swings.values():
+            assert region_swings[labour] == pytest.approx(
+                -labour_baseline if explicit_zero else 0.0
+            )
+            assert region_swings[snp] == pytest.approx(0.0)
+            assert region_swings[greens] == pytest.approx(5.0)
+        projected = (
+            output.list_projected if ballot == "list" else output.const_projected
+        )
+        labour_votes = [
+            row["vote_total"] for row in projected if row["party_id"] == labour
+        ]
+        assert labour_votes
+        if explicit_zero:
+            if ballot == "list":
+                assert labour_votes == pytest.approx([0.0] * len(labour_votes))
+            else:
+                # A national -50 swing clips the 33.3% constituencies to zero;
+                # the 66.7% constituencies retain 16.7 points, normalized over
+                # SNP 33.3 + Labour 16.7 + Green 5 = 55 points at 30,000 turnout.
+                assert sorted(labour_votes) == pytest.approx(
+                    [0.0, 0.0, 100000.0 / 11.0, 100000.0 / 11.0]
+                )
+        else:
+            # SNP stays at its baseline; new Green support normalizes the retained
+            # Labour votes by 100 / 105 rather than removing Labour entirely.
+            baseline_votes = (
+                [700.0] * len(labour_votes)
+                if ballot == "list"
+                else [
+                    vote.vote_total
+                    for vote in db.get_votes_for_election(
+                        world.constituency_election_id
+                    )
+                    if vote.party_id == labour and vote.vote_total is not None
+                ]
+            )
+            assert sorted(labour_votes) == pytest.approx(
+                sorted(float(vote) * 100.0 / 105.0 for vote in baseline_votes)
+            )
+        green_votes = [
+            row["vote_total"] for row in projected if row["party_id"] == greens
+        ]
+        assert green_votes
+        assert all(votes > 0.0 for votes in green_votes)
+        assert sum(row["elected"] for row in output.const_projected) == 4
+        assert sum(row["elected"] for row in output.list_projected) == 6
 
     @pytest.mark.parametrize(
         ("constituency", "list_ballot", "mode", "seats", "latest_name"),

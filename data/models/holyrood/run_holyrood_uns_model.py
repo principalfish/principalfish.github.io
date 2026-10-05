@@ -369,7 +369,8 @@ def compute_holyrood_swings(
     """Derive per-region swings from national poll shares vs baseline national shares.
 
     Since Holyrood polls are national-level only, computes a single national swing
-    per party and applies it uniformly to every region.
+    per party and applies it uniformly to every region. Omitted parties retain
+    zero swing; an explicit zero share is evidence of zero support.
 
     Args:
         baseline_national_shares: party_id → national share % from the baseline election.
@@ -381,7 +382,11 @@ def compute_holyrood_swings(
     """
     all_party_ids = set(baseline_national_shares) | set(poll_shares)
     national_swings: dict[int, float] = {
-        party_id: poll_shares.get(party_id, 0.0) - baseline_national_shares.get(party_id, 0.0)
+        party_id: (
+            poll_shares[party_id] - baseline_national_shares.get(party_id, 0.0)
+            if party_id in poll_shares
+            else 0.0
+        )
         for party_id in all_party_ids
     }
     return {region_id: dict(national_swings) for region_id in region_ids}
@@ -401,7 +406,9 @@ def fetch_holyrood_poll_averages(
     ``ballot_suffix`` (e.g. ``"_holyrood"`` for constituency polls, or
     ``"_holyrood_list"`` for regional list polls).  Each poll is weighted by
     ``exp(-λ × days_since_fieldwork_end)`` where ``λ = ln(2) / half_life_days``,
-    multiplied by the pollster's ``weight`` field (defaults to 1.0).
+    multiplied by the pollster's ``weight`` field (defaults to 1.0). Repeated
+    party rows are summed within each poll before weighting. Regional crossbreaks
+    are excluded because these averages represent national support.
 
     Args:
         db: Active database connection.
@@ -462,11 +469,17 @@ def fetch_holyrood_poll_averages(
         if not rows:
             continue
 
+        poll_shares: dict[int, float] = defaultdict(float)
         for row in rows:
             if row.party_id is None or row.percentage is None:
                 continue
-            weighted_sums[row.party_id] += float(row.percentage) * poll_weight
-            total_weights[row.party_id] += poll_weight
+            if row.region_id is not None:
+                continue
+            poll_shares[row.party_id] += float(row.percentage)
+
+        for party_id, share in poll_shares.items():
+            weighted_sums[party_id] += share * poll_weight
+            total_weights[party_id] += poll_weight
 
         polls_used += 1
         candidate_key = latest_poll_key(

@@ -208,6 +208,36 @@ class TestComputeRegionDiffs:
         assert region_swings[10][DEMOCRAT] == pytest.approx(0.0)
         assert region_swings[10][REPUBLICAN] == pytest.approx(0.0)
 
+    @pytest.mark.parametrize(
+        ("national", "regional", "expected"),
+        [
+            ({REPUBLICAN: 50.0}, {}, 0.0),
+            ({DEMOCRAT: 0.0, REPUBLICAN: 50.0}, {}, -48.0),
+            ({DEMOCRAT: 52.0}, {REPUBLICAN: 35.0}, 4.0),
+            ({DEMOCRAT: 52.0}, {DEMOCRAT: 0.0, REPUBLICAN: 35.0}, -55.0),
+        ],
+        ids=["national-omission", "national-zero", "regional-omission", "regional-zero"],
+    )
+    def test_omission_and_explicit_zero_have_distinct_meanings(
+        self,
+        national: dict[int, float],
+        regional: dict[int, float],
+        expected: float,
+    ) -> None:
+        sums: dict[tuple[int | None, int], float] = {
+            (None, party): share for party, share in national.items()
+        }
+        sums.update({(10, party): share for party, share in regional.items()})
+        _, swings, _ = self._run(
+            seats=[_make_seat(1, 10)],
+            region_by_id={10: _make_region(10, "Pacific")},
+            weighted_sums=sums,
+            total_weights={key: 1.0 for key in sums},
+            baseline_national={DEMOCRAT: 48.0, REPUBLICAN: 50.0},
+            baseline_regional={10: {DEMOCRAT: 55.0, REPUBLICAN: 43.0}},
+        )
+        assert swings[10][DEMOCRAT] == pytest.approx(expected)
+
     def test_regional_poll_overrides_national_fallback(self) -> None:
         # Region 10 has its own poll; region 20 falls back to the national delta.
         seats = [_make_seat(1, 10), _make_seat(2, 20)]

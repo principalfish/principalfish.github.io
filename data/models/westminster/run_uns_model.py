@@ -42,7 +42,7 @@ from model_support.cli import (
     validate_half_life,
     validate_run_arguments,
 )
-from model_support.polling import effective_pollster_weight, latest_poll_key
+from model_support.polling import PollAggregation, PollContributor, effective_pollster_weight
 from models import Election, Map, Region
 
 
@@ -772,7 +772,7 @@ def aggregate_poll_shares(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
-) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], Any]:
+) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
     """Compute time-decayed, pollster-weighted average vote shares from recent polls.
 
     For each poll whose fieldwork end date falls in ``[since_date, as_of_date]``,
@@ -807,10 +807,37 @@ def aggregate_poll_shares(
         - **latest_poll_usage** (``LatestPollUsage | None``): metadata about the
           most recent poll included, or ``None`` if no polls were consumed.
     """
+    result = collect_poll_shares(
+        db, map_id, since_date, as_of_date, half_life_days,
+        pollster_weight_by_id, pollster_name_by_id,
+    )
+    latest = result.latest
+    latest_usage = (
+        LatestPollUsage(
+            pollster=latest.pollster,
+            fieldwork_start=latest.fieldwork_start,
+            fieldwork_end=latest.fieldwork_end,
+            poll_id=latest.poll_id,
+        )
+        if latest is not None else None
+    )
+    return result.weighted_sums, result.total_weights, latest_usage
+
+
+def collect_poll_shares(
+    db: Database,
+    map_id: int,
+    since_date: date,
+    as_of_date: date,
+    half_life_days: float,
+    pollster_weight_by_id: dict[int, float],
+    pollster_name_by_id: dict[int, str],
+) -> PollAggregation[tuple[int | None, int]]:
+    """Collect weighted UK observations and their admitted poll metadata."""
     polls = db.get_polls_for_map(map_id)
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
-    latest_poll_usage: LatestPollUsage | None = None
+    contributors: list[PollContributor] = []
 
     validate_half_life(half_life_days)
     validate_date_window(since_date, as_of_date)
@@ -833,36 +860,32 @@ def aggregate_poll_shares(
         if not rows:
             continue
 
-        candidate_poll = LatestPollUsage(
-            pollster=str(pollster_name_by_id.get(poll.pollster_id, f"Pollster {poll.pollster_id}")),
-            fieldwork_start=poll.fieldwork_start,
-            fieldwork_end=poll.fieldwork_end,
-            poll_id=int(poll.id),
-        )
-        if latest_poll_usage is None or latest_poll_key(
-            candidate_poll.fieldwork_end,
-            candidate_poll.fieldwork_start,
-            candidate_poll.poll_id,
-        ) > latest_poll_key(
-            latest_poll_usage.fieldwork_end,
-            latest_poll_usage.fieldwork_start,
-            latest_poll_usage.poll_id,
-        ):
-            latest_poll_usage = candidate_poll
-
         poll_shares: dict[tuple[int | None, int], float] = defaultdict(float)
         for row in rows:
-            if row.party_id is None:
+            if row.party_id is None or row.percentage is None:
                 continue
             party_id = PARTY_ID_ALIASES.get(row.party_id, row.party_id)
             key = (row.region_id, party_id)
             poll_shares[key] += float(row.percentage)
 
+        if not poll_shares:
+            continue
+        contributors.append(
+            PollContributor(
+                poll_id=int(poll.id),
+                pollster=pollster_name_by_id.get(
+                    poll.pollster_id, f"Pollster {poll.pollster_id}"
+                ),
+                fieldwork_start=poll.fieldwork_start,
+                fieldwork_end=poll.fieldwork_end,
+            )
+        )
+
         for key, share in poll_shares.items():
             weighted_sums[key] += share * poll_weight
             total_weights[key] += poll_weight
 
-    return weighted_sums, total_weights, latest_poll_usage
+    return PollAggregation(weighted_sums, total_weights, tuple(contributors))
 
 
 def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:

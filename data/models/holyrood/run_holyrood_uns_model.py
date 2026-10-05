@@ -175,7 +175,7 @@ from model_support.cli import (
     validate_manual_share,
     validate_run_arguments,
 )
-from model_support.polling import effective_pollster_weight, latest_poll_key
+from model_support.polling import PollAggregation, PollContributor, effective_pollster_weight
 from models import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
@@ -425,6 +425,26 @@ def fetch_holyrood_poll_averages(
         Tuple of (party_id → weighted average %, latest_poll_name, latest_poll_date).
         The averages dict is empty if no qualifying polls are found; latest fields are None.
     """
+    result = collect_holyrood_poll_shares(
+        db, map_id, ballot_suffix, as_of_date, since_date, half_life_days
+    )
+    latest = result.latest
+    return (
+        result.averages,
+        latest.pollster if latest is not None else None,
+        latest.fieldwork_end if latest is not None else None,
+    )
+
+
+def collect_holyrood_poll_shares(
+    db: "Database",
+    map_id: int,
+    ballot_suffix: str,
+    as_of_date: date,
+    since_date: date,
+    half_life_days: float = _DEFAULT_HALF_LIFE_DAYS,
+) -> PollAggregation[int]:
+    """Collect national observations and admitted polls for one Holyrood ballot."""
     # Build a lookup of pollster_id → identifier for fast filtering
     with db.session() as s:
         pollster_rows = s.execute(
@@ -447,10 +467,7 @@ def fetch_holyrood_poll_averages(
 
     weighted_sums: dict[int, float] = defaultdict(float)
     total_weights: dict[int, float] = defaultdict(float)
-    polls_used = 0
-    latest_poll_name: str | None = None
-    latest_poll_date: date | None = None
-    latest_key: tuple[date, date, int] | None = None
+    contributors: list[PollContributor] = []
 
     for poll in polls:
         # Only include polls from pollsters whose identifier ends with ballot_suffix
@@ -477,28 +494,22 @@ def fetch_holyrood_poll_averages(
                 continue
             poll_shares[row.party_id] += float(row.percentage)
 
+        if not poll_shares:
+            continue
+        contributors.append(
+            PollContributor(
+                poll_id=int(poll.id),
+                pollster=pollster_name_by_id[poll.pollster_id],
+                fieldwork_start=poll.fieldwork_start,
+                fieldwork_end=poll.fieldwork_end,
+            )
+        )
+
         for party_id, share in poll_shares.items():
             weighted_sums[party_id] += share * poll_weight
             total_weights[party_id] += poll_weight
 
-        polls_used += 1
-        candidate_key = latest_poll_key(
-            poll.fieldwork_end, poll.fieldwork_start, int(poll.id)
-        )
-        if latest_key is None or candidate_key > latest_key:
-            latest_key = candidate_key
-            latest_poll_date = poll.fieldwork_end
-            latest_poll_name = pollster_name_by_id.get(poll.pollster_id)
-
-    if polls_used == 0:
-        return {}, None, None
-
-    averages = {
-        party_id: weighted_sums[party_id] / total_weights[party_id]
-        for party_id in weighted_sums
-        if total_weights[party_id] > 0
-    }
-    return averages, latest_poll_name, latest_poll_date
+    return PollAggregation(weighted_sums, total_weights, tuple(contributors))
 
 
 # ── Pure projection functions ─────────────────────────────────────────────────
@@ -975,12 +986,22 @@ def run_holyrood_simulation(
         )
         mode = "manual poll shares"
     else:
-        const_polls, latest_poll_name, latest_poll_date = fetch_holyrood_poll_averages(
+        const_result = collect_holyrood_poll_shares(
             db, const_election.map_id, "_holyrood", cfg.as_of_date, since_date, cfg.half_life_days
         )
-        list_polls, _, _ = fetch_holyrood_poll_averages(
+        list_result = collect_holyrood_poll_shares(
             db, const_election.map_id, "_holyrood_list", cfg.as_of_date, since_date, cfg.half_life_days
         )
+        const_polls = const_result.averages
+        list_polls = list_result.averages
+        latest = max(
+            (*const_result.contributors, *list_result.contributors),
+            key=lambda poll: poll.latest_key,
+            default=None,
+        )
+        if latest is not None:
+            latest_poll_name = latest.pollster
+            latest_poll_date = latest.fieldwork_end
         if const_polls:
             swing_by_region_party = compute_holyrood_swings(
                 baseline_national_shares=baseline_shares,

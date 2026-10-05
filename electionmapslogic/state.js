@@ -144,7 +144,7 @@ class Manifest {
    * @returns {string}
    */
   defaultParliament() {
-    // A page may pin its landing parliament (e.g. the US page defaults to the House).
+    // A page may pin its landing parliament; otherwise it is the default election's parliament.
     if (page.defaultParliament) return page.defaultParliament;
     return this.elections.find((e) => e.id === this.defaultElection)?.parliament ?? '';
   }

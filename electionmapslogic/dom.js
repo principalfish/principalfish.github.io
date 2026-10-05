@@ -257,10 +257,14 @@ function renderCountdown() {
   const cfg = manifest.parliamentConfig(state.currentParliament);
   const electionDate = new Date(cfg.nextElectionDate);
   const label = cfg.nextElectionLabel ?? '';
+  // Format in UTC so every viewer sees the same day: a bare date parses as UTC midnight, and a
+  // midnight timestamp west of UTC (e.g. -05:00 for ET) still falls on that day in UTC. A
+  // positive-offset midnight would show the day before, so give those a bare date instead.
   const dateText = electionDate.toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   });
 
   const tick = () => {

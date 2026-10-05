@@ -546,6 +546,9 @@ describe('AppState.shouldShowCountdown', () => {
         // Holyrood has a confirmed upcoming date; Westminster's is not yet set (null).
         holyrood: { nextElectionDate: '2031-05-01', nextElectionLabel: 'Holyrood election' },
         westminster: { nextElectionDate: null, nextElectionLabel: 'UK general election' },
+        // The US chambers use a full timestamp with an offset; the presidency omits the key.
+        us_senate: { nextElectionDate: '2026-11-03T00:00:00-05:00', nextElectionLabel: 'US Senate election' },
+        us_presidential: { nextElectionLabel: 'US presidential election' },
       },
     });
     saved = { view: state.view, parliament: state.currentParliament, election: state.currentElection };
@@ -582,6 +585,17 @@ describe('AppState.shouldShowCountdown', () => {
 
   it('hides when the current parliament has no upcoming date set', () => {
     state.currentParliament = 'westminster';
+    expect(state.shouldShowCountdown()).toBe(false);
+  });
+
+  it('shows for a US chamber prediction configured with a timestamp date', () => {
+    state.currentParliament = 'us_senate';
+    state.view = 'election';
+    expect(state.shouldShowCountdown()).toBe(true);
+  });
+
+  it('hides when the current parliament has no nextElectionDate key at all', () => {
+    state.currentParliament = 'us_presidential';
     expect(state.shouldShowCountdown()).toBe(false);
   });
 });

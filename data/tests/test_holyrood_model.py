@@ -3362,3 +3362,141 @@ class TestMain:
         assert not outputs.prediction.exists()
         assert not outputs.meta.exists()
         assert outputs.configured.stat().st_size == 0
+
+
+class TestContributingEndpointCaps:
+    @pytest.mark.parametrize(
+        "rejection", ["rowless", "zero_weight", "wrong_ballot", "regional_only"]
+    )
+    @pytest.mark.parametrize("duration", [0, 7])
+    def test_stale_list_poll_caps_after_rejected_and_future_endpoints(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+        rejection: str,
+        duration: int,
+    ) -> None:
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        captured: list[tuple[date | None, date]] = []
+        original = hmod.run_holyrood_simulation
+
+        def capture(
+            db: Database,
+            cfg: HolyroodSimulationConfig,
+            manual_poll_shares: dict[int, float] | None = None,
+            *,
+            poll_aggregations: tuple[
+                hmod.PollAggregation[int], hmod.PollAggregation[int]
+            ]
+            | None = None,
+        ) -> hmod.HolyroodRunOutput:
+            captured.append((cfg.since_date, cfg.as_of_date))
+            return original(
+                db, cfg, manual_poll_shares, poll_aggregations=poll_aggregations
+            )
+
+        monkeypatch.setattr(hmod, "run_holyrood_simulation", capture)
+        world = seed_holyrood_world(db)
+        snp = world.party_ids["Scottish National Party"]
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="old_holyrood_list",
+            fieldwork_end=date(2025, 3, 8),
+            national={snp: 0},
+            pollster_name="Old list",
+        )
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="excluded_other"
+            if rejection == "wrong_ballot"
+            else "excluded_holyrood",
+            fieldwork_end=date(2026, 6, 20),
+            national={} if rejection in {"rowless", "regional_only"} else {snp: 99},
+            regional={next(iter(world.region_ids.values())): {snp: 50}}
+            if rejection == "regional_only"
+            else None,
+            pollster_weight=0 if rejection == "zero_weight" else 1,
+        )
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="future_holyrood",
+            fieldwork_end=date(2026, 7, 10),
+            national={snp: 99},
+        )
+        requested = date(2026, 6, 30)
+        _run_main(
+            monkeypatch,
+            db,
+            *_baseline_argv(world),
+            "--as-of-date",
+            requested.isoformat(),
+            "--since-date",
+            (requested - timedelta(days=duration)).isoformat(),
+            "--dry-run",
+            "--no-output",
+        )
+        out = capsys.readouterr().out
+        assert (
+            "CAPPING as_of_date from 2026-06-30 to latest poll date 2025-03-08" in out
+        )
+        assert "(db poll averages (constituency=no, list=yes))" in out
+        assert captured == [
+            (date(2025, 3, 8) - timedelta(days=duration), date(2025, 3, 8))
+        ]
+
+    def test_unusable_polls_do_not_cap_the_requested_date(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        captured: list[tuple[date | None, date]] = []
+        original = hmod.run_holyrood_simulation
+
+        def capture(
+            db: Database,
+            cfg: HolyroodSimulationConfig,
+            manual_poll_shares: dict[int, float] | None = None,
+            *,
+            poll_aggregations: tuple[
+                hmod.PollAggregation[int], hmod.PollAggregation[int]
+            ]
+            | None = None,
+        ) -> hmod.HolyroodRunOutput:
+            captured.append((cfg.since_date, cfg.as_of_date))
+            return original(
+                db, cfg, manual_poll_shares, poll_aggregations=poll_aggregations
+            )
+
+        monkeypatch.setattr(hmod, "run_holyrood_simulation", capture)
+        world = seed_holyrood_world(db)
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="empty_holyrood",
+            fieldwork_end=date(2026, 6, 20),
+            national={},
+        )
+        _run_main(
+            monkeypatch,
+            db,
+            *_baseline_argv(world),
+            "--as-of-date",
+            "2026-06-30",
+            "--since-date",
+            "2026-06-01",
+            "--dry-run",
+            "--no-output",
+        )
+        out = capsys.readouterr().out
+        assert "CAPPING" not in out
+        assert captured == [(date(2026, 6, 1), date(2026, 6, 30))]

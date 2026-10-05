@@ -69,7 +69,13 @@ from model_support.cli import (
     validate_prior_weight,
     validate_run_arguments,
 )
-from model_support.polling import effective_pollster_weight, latest_poll_key
+from model_support.polling import (
+    PollSource,
+    candidate_since,
+    effective_pollster_weight,
+    latest_poll_key,
+    select_poll_endpoint,
+)
 from models import Election, Map, Region, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
@@ -590,6 +596,8 @@ def collect_poll_readings(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
+    *,
+    source: PollSource | None = None,
 ) -> list[PollReading]:
     """Read one map's in-window polls into one weighted :class:`PollReading` each.
 
@@ -607,7 +615,12 @@ def collect_poll_readings(
     validate_date_window(since_date, as_of_date)
     readings: list[PollReading] = []
 
-    for poll in db.get_polls_for_map(map_id):
+    polls = (
+        db.get_polls_for_map(map_id)
+        if source is None
+        else (poll for poll in source.polls if poll.map_id == map_id)
+    )
+    for poll in polls:
         if poll.fieldwork_end < since_date or poll.fieldwork_end > as_of_date:
             continue
 
@@ -621,7 +634,11 @@ def collect_poll_readings(
         if poll_weight <= 0:
             continue
 
-        rows = db.get_rows_for_poll(poll.id)
+        rows = (
+            db.get_rows_for_poll(poll.id)
+            if source is None
+            else source.rows.get(poll.id, ())
+        )
         if not rows:
             continue
 
@@ -1632,6 +1649,8 @@ def collect_poll_window(
     half_life_days: float,
     include_seat_polls: bool = True,
     pollster_data: tuple[dict[int, float], dict[int, str]] | None = None,
+    source: PollSource | None = None,
+    seat_admission: tuple[frozenset[int], dict[int, str | None]] | None = None,
 ) -> SelectedPollWindow:
     """Use one admission path for projection, metadata and date selection.
 
@@ -1641,7 +1660,7 @@ def collect_poll_window(
     seat polls require a positive decided-vote total before rescaling.
     """
     if pollster_data is None:
-        pollsters = db.get_all_pollsters()
+        pollsters = db.get_all_pollsters() if source is None else source.pollsters
         weights = {
             pollster.id: effective_pollster_weight(pollster.weight)
             for pollster in pollsters
@@ -1657,6 +1676,7 @@ def collect_poll_window(
         half_life_days,
         weights,
         names,
+        source=source,
     )
     national_contributors: list[LatestPollUsage] = []
     weighted_sums, total_weights, _ = aggregate_national(
@@ -1676,21 +1696,26 @@ def collect_poll_window(
                 half_life_days,
                 weights,
                 names,
+                source=source,
             )
         )
-        projected_ids = scope.projected_seat_ids
-        if projected_ids is None:
-            projected_ids = frozenset(
-                seat.id for seat in fetch_seat_refs(db, scope.seat_map_id)
-            )
-        tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
-        seat_averages = aggregate_seat_polls(
-            (reading for reading in seat_readings if reading.seat_id in projected_ids),
-            seat_matchups={
+        if seat_admission is None:
+            projected_ids = scope.projected_seat_ids
+            if projected_ids is None:
+                projected_ids = frozenset(
+                    seat.id for seat in fetch_seat_refs(db, scope.seat_map_id)
+                )
+            tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
+            seat_matchups = {
                 int(row.seat_id): row.matchup
                 for row in tracked_rows
                 if row.seat_id is not None
-            },
+            }
+        else:
+            projected_ids, seat_matchups = seat_admission
+        seat_averages = aggregate_seat_polls(
+            (reading for reading in seat_readings if reading.seat_id in projected_ids),
+            seat_matchups=seat_matchups,
             national_matchup=scope.national_matchup,
             policy=scope.seat_matchup_policy,
             contributors=seat_contributors,
@@ -1701,6 +1726,60 @@ def collect_poll_window(
         seat_averages,
         tuple(national_contributors),
         tuple(seat_contributors),
+    )
+
+
+def candidate_poll_date_bounds(
+    db: Database,
+    scope: PollScope,
+    *,
+    since_date: date,
+    as_of_date: date,
+    half_life_days: float,
+    include_seat_polls: bool = True,
+    include_earliest: bool = False,
+) -> tuple[date | None, date | None, SelectedPollWindow | None]:
+    """Select raw endpoints using each candidate's own admission window."""
+    validate_date_window(since_date, as_of_date)
+    validate_half_life(half_life_days)
+    map_ids = [scope.national_map_id]
+    seat_admission: tuple[frozenset[int], dict[int, str | None]] | None = None
+    if include_seat_polls:
+        map_ids.append(scope.seat_map_id)
+        projected_ids = scope.projected_seat_ids
+        if projected_ids is None:
+            projected_ids = frozenset(
+                seat.id for seat in fetch_seat_refs(db, scope.seat_map_id)
+            )
+        tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
+        seat_admission = (
+            projected_ids,
+            {
+                int(row.seat_id): row.matchup
+                for row in tracked_rows
+                if row.seat_id is not None
+            },
+        )
+    source = PollSource.load(db, map_ids, as_of_date)
+    return select_poll_endpoint(
+        (poll.fieldwork_end for poll in source.polls),
+        as_of_date,
+        since_date,
+        lambda since, end: collect_poll_window(
+            db,
+            scope,
+            since_date=since,
+            as_of_date=end,
+            half_life_days=half_life_days,
+            include_seat_polls=include_seat_polls,
+            source=source,
+            seat_admission=seat_admission,
+        ),
+        lambda result, end: (
+            result is not None
+            and any(poll.fieldwork_end == end for poll in result.contributors)
+        ),
+        include_earliest=include_earliest,
     )
 
 
@@ -2174,7 +2253,10 @@ def dates_to_run_for_cfg(
 
 
 def run_simulation(
-    db: Database, cfg: UsSimulationConfig
+    db: Database,
+    cfg: UsSimulationConfig,
+    *,
+    poll_window: SelectedPollWindow | None = None,
 ) -> tuple[
     str,
     list[dict[str, Any]],
@@ -2227,15 +2309,16 @@ def run_simulation(
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
     )
 
-    poll_window = collect_poll_window(
-        db,
-        scope,
-        since_date=cfg.since_date,
-        as_of_date=cfg.as_of_date,
-        half_life_days=cfg.half_life_days,
-        include_seat_polls=not cfg.ignore_seat_polls,
-        pollster_data=(pollster_weight_by_id, pollster_name_by_id),
-    )
+    if poll_window is None:
+        poll_window = collect_poll_window(
+            db,
+            scope,
+            since_date=cfg.since_date,
+            as_of_date=cfg.as_of_date,
+            half_life_days=cfg.half_life_days,
+            include_seat_polls=not cfg.ignore_seat_polls,
+            pollster_data=(pollster_weight_by_id, pollster_name_by_id),
+        )
     weighted_sums = poll_window.weighted_sums
     total_weights = poll_window.total_weights
     latest_poll_usage = poll_window.latest_poll
@@ -2730,16 +2813,21 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
 
     cfg = _build_config_from_args(spec, args)
 
-    first_poll, latest_end = poll_date_bounds(
-        db, scope, include_seat_polls=not cfg.ignore_seat_polls
+    first_poll, latest_end, selected_polls = candidate_poll_date_bounds(
+        db,
+        scope,
+        since_date=cfg.since_date,
+        as_of_date=cfg.as_of_date,
+        half_life_days=cfg.half_life_days,
+        include_seat_polls=not cfg.ignore_seat_polls,
+        include_earliest=args.rebuild_history,
     )
     if latest_end is not None and cfg.as_of_date > latest_end:
         print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
-        shift = cfg.as_of_date - latest_end
         cfg = UsSimulationConfig(
             spec=spec,
             as_of_date=latest_end,
-            since_date=cfg.since_date - shift,
+            since_date=candidate_since(latest_end, cfg.as_of_date - cfg.since_date),
             half_life_days=cfg.half_life_days,
             dry_run=cfg.dry_run,
             seat_prior_weight=cfg.seat_prior_weight,
@@ -2775,7 +2863,11 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             latest_poll_usage,
             ev_by_party,
             seat_poll_diagnostics,
-        ) = run_simulation(db, run_cfg)
+        ) = run_simulation(
+            db,
+            run_cfg,
+            poll_window=selected_polls if run_date == cfg.as_of_date else None,
+        )
         seat_ids = {int(row["seat_id"]) for row in projected_votes}
 
         print(f"{spec.election_name_prefix} projection complete")
@@ -2808,7 +2900,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
         )
-        _, _, _, _, latest_poll_usage, _, _ = run_simulation(db, meta_cfg)
+        _, _, _, _, latest_poll_usage, _, _ = run_simulation(
+            db, meta_cfg, poll_window=selected_polls
+        )
 
     if not cfg.dry_run:
         write_trend_cache_meta(

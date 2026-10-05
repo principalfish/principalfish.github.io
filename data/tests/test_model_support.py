@@ -24,6 +24,7 @@ import run_us_senate_model
 from console.forms import HolyroodModelRunForm, ModelRunForm
 from db import Database
 from model_support.cli import parse_manual_shares
+from model_support.polling import select_poll_endpoint
 
 from tests.uk_fixtures import (
     WestminsterWorld,
@@ -314,3 +315,17 @@ def test_holyrood_and_us_direct_polling_reject_invalid_half_life(
         )
     with pytest.raises(ValueError, match="half-life-days"):
         _common.collect_poll_readings(db, 1, TODAY, TODAY, half_life, {}, {})
+
+
+@pytest.mark.parametrize("endpoints", [[], [date(2026, 6, 10)]])
+def test_invalid_candidate_window_fails_even_without_polls(
+    endpoints: list[date],
+) -> None:
+    with pytest.raises(ValueError, match="must be older than or equal to as-of"):
+        select_poll_endpoint(
+            endpoints,
+            date(2026, 6, 10),
+            date(2026, 6, 11),
+            lambda since, end: (),
+            lambda result, end: False,
+        )

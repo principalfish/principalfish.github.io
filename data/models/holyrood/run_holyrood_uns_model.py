@@ -178,6 +178,9 @@ from model_support.cli import (
 from model_support.polling import (
     PollAggregation,
     PollContributor,
+    PollSource,
+    candidate_since,
+    select_poll_endpoint,
     effective_pollster_weight,
 )
 from models import Election, ElectionType, Pollster, Seat
@@ -447,13 +450,16 @@ def collect_holyrood_poll_shares(
     as_of_date: date,
     since_date: date,
     half_life_days: float = _DEFAULT_HALF_LIFE_DAYS,
+    *,
+    source: PollSource | None = None,
 ) -> PollAggregation[int]:
     """Collect national observations and admitted polls for one Holyrood ballot."""
     # Build a lookup of pollster_id → identifier for fast filtering
-    with db.session() as s:
-        pollster_rows = s.execute(
-            sa_select(Pollster)
-        ).scalars().all()
+    if source is None:
+        with db.session() as s:
+            pollster_rows = s.execute(sa_select(Pollster)).scalars().all()
+    else:
+        pollster_rows = source.pollsters
     pollster_suffix_by_id: dict[int, bool] = {
         p.id: p.identifier.endswith(ballot_suffix)
         for p in pollster_rows
@@ -465,7 +471,11 @@ def collect_holyrood_poll_shares(
         p.id: effective_pollster_weight(p.weight) for p in pollster_rows
     }
 
-    polls = db.get_polls_for_map(map_id)
+    polls = (
+        db.get_polls_for_map(map_id)
+        if source is None
+        else (poll for poll in source.polls if poll.map_id == map_id)
+    )
     validate_half_life(half_life_days)
     validate_date_window(since_date, as_of_date)
 
@@ -486,7 +496,11 @@ def collect_holyrood_poll_shares(
         if poll_weight <= 0:
             continue
 
-        rows = db.get_rows_for_poll(poll.id)
+        rows = (
+            db.get_rows_for_poll(poll.id)
+            if source is None
+            else source.rows.get(poll.id, ())
+        )
         if not rows:
             continue
 
@@ -927,6 +941,8 @@ def run_holyrood_simulation(
     db: Database,
     cfg: HolyroodSimulationConfig,
     manual_poll_shares: dict[int, float] | None = None,
+    *,
+    poll_aggregations: tuple[PollAggregation[int], PollAggregation[int]] | None = None,
 ) -> HolyroodRunOutput:
     """Run a full single-date Holyrood UNS pipeline: swings → projection → persist.
 
@@ -990,22 +1006,25 @@ def run_holyrood_simulation(
         )
         mode = "manual poll shares"
     else:
-        const_result = collect_holyrood_poll_shares(
-            db,
-            const_election.map_id,
-            "_holyrood",
-            cfg.as_of_date,
-            since_date,
-            cfg.half_life_days,
-        )
-        list_result = collect_holyrood_poll_shares(
-            db,
-            const_election.map_id,
-            "_holyrood_list",
-            cfg.as_of_date,
-            since_date,
-            cfg.half_life_days,
-        )
+        if poll_aggregations is None:
+            const_result = collect_holyrood_poll_shares(
+                db,
+                const_election.map_id,
+                "_holyrood",
+                cfg.as_of_date,
+                since_date,
+                cfg.half_life_days,
+            )
+            list_result = collect_holyrood_poll_shares(
+                db,
+                const_election.map_id,
+                "_holyrood_list",
+                cfg.as_of_date,
+                since_date,
+                cfg.half_life_days,
+            )
+        else:
+            const_result, list_result = poll_aggregations
         const_polls = const_result.averages
         list_polls = list_result.averages
         latest = max(
@@ -1838,32 +1857,68 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
     if raw_manual_shares is not None:
         manual_poll_shares = resolve_poll_shares(raw_manual_shares, db)
 
-    # Cap as_of_date at the most recent poll fieldwork end for the map so that the
-    # model does not run past the point where poll data actually exists (decay-only
-    # drift past the last poll produces meaningless trend movement). Skipped for a
-    # manual poll-shares override, which is a deliberate single snapshot.
+    selected_polls: tuple[PollAggregation[int], PollAggregation[int]] | None = None
+    # Manual snapshots remain uncapped; database runs use either ballot's
+    # newest contributing endpoint in its own preserved window.
     if manual_poll_shares is None:
         baseline_election = db.get_election_by_name(cfg.constituency_election_name)
         if baseline_election is not None:
-            polls = db.get_polls_for_map(baseline_election.map_id)
-            if polls:
-                latest_poll_date = max(p.fieldwork_end for p in polls)
-                if cfg.as_of_date > latest_poll_date:
-                    print(
-                        f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
-                        f"to latest poll date {latest_poll_date.isoformat()}"
+            source = PollSource.load(db, [baseline_election.map_id], cfg.as_of_date)
+            since = cfg.since_date or cfg.as_of_date - timedelta(
+                days=_DEFAULT_LOOKBACK_DAYS
+            )
+
+            def collect_ballots(
+                lower: date, upper: date
+            ) -> tuple[PollAggregation[int], PollAggregation[int]]:
+                const_result = collect_holyrood_poll_shares(
+                    db,
+                    baseline_election.map_id,
+                    "_holyrood",
+                    upper,
+                    lower,
+                    cfg.half_life_days,
+                    source=source,
+                )
+                list_result = collect_holyrood_poll_shares(
+                    db,
+                    baseline_election.map_id,
+                    "_holyrood_list",
+                    upper,
+                    lower,
+                    cfg.half_life_days,
+                    source=source,
+                )
+                return const_result, list_result
+
+            _, latest_poll_date, selected_polls = select_poll_endpoint(
+                (poll.fieldwork_end for poll in source.polls),
+                cfg.as_of_date,
+                since,
+                collect_ballots,
+                lambda results, end: (
+                    results is not None
+                    and any(
+                        poll.fieldwork_end == end
+                        for result in results
+                        for poll in result.contributors
                     )
-                    # Shift the window back so its upper bound is latest_poll_date
-                    # but its length (lookback) is preserved.
-                    shift = cfg.as_of_date - latest_poll_date
-                    since = cfg.since_date - shift if cfg.since_date is not None else None
-                    cfg = HolyroodSimulationConfig(
-                        constituency_election_name=cfg.constituency_election_name,
-                        as_of_date=latest_poll_date,
-                        since_date=since,
-                        half_life_days=cfg.half_life_days,
-                        dry_run=cfg.dry_run,
-                    )
+                ),
+            )
+            if latest_poll_date is not None and cfg.as_of_date > latest_poll_date:
+                print(
+                    f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
+                    f"to latest poll date {latest_poll_date.isoformat()}"
+                )
+                cfg = HolyroodSimulationConfig(
+                    constituency_election_name=cfg.constituency_election_name,
+                    as_of_date=latest_poll_date,
+                    since_date=candidate_since(
+                        latest_poll_date, cfg.as_of_date - since
+                    ),
+                    half_life_days=cfg.half_life_days,
+                    dry_run=cfg.dry_run,
+                )
 
     lookback_days = max(0, (cfg.as_of_date - (cfg.since_date or cfg.as_of_date)).days)
 
@@ -1894,7 +1949,10 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             dry_run=cfg.dry_run,
         )
         output = run_holyrood_simulation(
-            db, run_cfg, manual_poll_shares if run_date == cfg.as_of_date else None
+            db,
+            run_cfg,
+            manual_poll_shares if run_date == cfg.as_of_date else None,
+            poll_aggregations=selected_polls if run_date == cfg.as_of_date else None,
         )
         _print_seat_table(output.seat_summary)
         if run_date == cfg.as_of_date:

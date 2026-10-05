@@ -1,8 +1,18 @@
-"""Narrow shared policies for polling weights and metadata ordering."""
+"""Shared polling observations, weights, metadata and endpoint selection."""
 
+from __future__ import annotations
+
+from collections import defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Generic, TypeVar
+
+from db import Database
+from models import Poll, PollRow, Pollster
+from sqlalchemy import select
+
+from model_support.cli import validate_date_window
 
 
 def effective_pollster_weight(weight: float | None) -> float:
@@ -34,6 +44,77 @@ class PollContributor:
 
 
 ObservationKey = TypeVar("ObservationKey")
+WindowResult = TypeVar("WindowResult")
+
+
+@dataclass(frozen=True, slots=True)
+class PollSource:
+    """A reusable snapshot, avoiding repeated history reads while selecting caps."""
+
+    polls: tuple[Poll, ...]
+    rows: dict[int, tuple[PollRow, ...]]
+    pollsters: tuple[Pollster, ...]
+
+    @classmethod
+    def load(cls, db: Database, map_ids: Iterable[int], upper: date) -> PollSource:
+        ids = tuple(set(map_ids))
+        with db.session() as session:
+            polls = tuple(
+                session.scalars(
+                    select(Poll)
+                    .where(Poll.map_id.in_(ids), Poll.fieldwork_end <= upper)
+                    .order_by(Poll.fieldwork_end.desc())
+                ).all()
+            )
+            raw_rows = session.scalars(
+                select(PollRow)
+                .join(Poll)
+                .where(Poll.map_id.in_(ids), Poll.fieldwork_end <= upper)
+            ).all()
+            pollsters = tuple(session.scalars(select(Pollster)).all())
+        rows: dict[int, list[PollRow]] = defaultdict(list)
+        for row in raw_rows:
+            rows[row.poll_id].append(row)
+        return cls(polls, {key: tuple(value) for key, value in rows.items()}, pollsters)
+
+
+def candidate_since(endpoint: date, duration: timedelta) -> date:
+    """Preserve duration, bounded by the representable calendar."""
+    return endpoint - min(duration, endpoint - date.min)
+
+
+def select_poll_endpoint(
+    raw_endpoints: Iterable[date],
+    requested: date,
+    since: date,
+    collect: Callable[[date, date], WindowResult],
+    contributes: Callable[[WindowResult, date], bool],
+    *,
+    include_earliest: bool = False,
+) -> tuple[date | None, date | None, WindowResult | None]:
+    """Admit each endpoint in its own preserved-length polling window.
+
+    Raw candidates must be retained: candidate completeness can change as
+    reference evidence leaves a window. No candidate after the request is used.
+    """
+    validate_date_window(since, requested)
+    duration = requested - since
+    latest: date | None = None
+    earliest: date | None = None
+    latest_result: WindowResult | None = None
+    for endpoint in sorted(
+        {day for day in raw_endpoints if day <= requested}, reverse=True
+    ):
+        result = collect(candidate_since(endpoint, duration), endpoint)
+        if not contributes(result, endpoint):
+            continue
+        earliest = endpoint
+        if latest is None:
+            latest = endpoint
+            latest_result = result
+        if not include_earliest:
+            break
+    return earliest, latest, latest_result
 
 
 @dataclass(frozen=True, slots=True)

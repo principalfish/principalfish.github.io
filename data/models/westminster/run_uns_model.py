@@ -45,6 +45,9 @@ from model_support.cli import (
 from model_support.polling import (
     PollAggregation,
     PollContributor,
+    PollSource,
+    candidate_since,
+    select_poll_endpoint,
     effective_pollster_weight,
 )
 from models import Election, Map, Region
@@ -846,9 +849,15 @@ def collect_poll_shares(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
+    *,
+    source: PollSource | None = None,
 ) -> PollAggregation[tuple[int | None, int]]:
     """Collect weighted UK observations and their admitted poll metadata."""
-    polls = db.get_polls_for_map(map_id)
+    polls = (
+        db.get_polls_for_map(map_id)
+        if source is None
+        else (poll for poll in source.polls if poll.map_id == map_id)
+    )
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
     contributors: list[PollContributor] = []
@@ -870,7 +879,11 @@ def collect_poll_shares(
         if poll_weight <= 0:
             continue
 
-        rows = db.get_rows_for_poll(poll.id)
+        rows = (
+            db.get_rows_for_poll(poll.id)
+            if source is None
+            else source.rows.get(poll.id, ())
+        )
         if not rows:
             continue
 
@@ -1436,7 +1449,15 @@ def update_trend_cache_json(
 def run_simulation(
     db: Database,
     cfg: SimulationConfig,
-) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], Counter[str], LatestPollUsage | None]:
+    *,
+    poll_aggregation: PollAggregation[tuple[int | None, int]] | None = None,
+) -> tuple[
+    str,
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    Counter[str],
+    LatestPollUsage | None,
+]:
     """Run a full UNS simulation for a single date and optionally persist results.
 
     Orchestrates the complete simulation pipeline:
@@ -1495,15 +1516,30 @@ def run_simulation(
         baseline_region_shares,
     ) = build_baseline_vote_state(db, baseline.id, region_by_seat_id)
 
-    weighted_sums, total_weights, latest_poll_usage = aggregate_poll_shares(
-        db,
-        poll_map.id,
-        cfg.since_date,
-        cfg.as_of_date,
-        cfg.half_life_days,
-        pollster_weight_by_id,
-        pollster_name_by_id,
-    )
+    if poll_aggregation is None:
+        weighted_sums, total_weights, latest_poll_usage = aggregate_poll_shares(
+            db,
+            poll_map.id,
+            cfg.since_date,
+            cfg.as_of_date,
+            cfg.half_life_days,
+            pollster_weight_by_id,
+            pollster_name_by_id,
+        )
+    else:
+        weighted_sums = poll_aggregation.weighted_sums
+        total_weights = poll_aggregation.total_weights
+        latest = poll_aggregation.latest
+        latest_poll_usage = (
+            LatestPollUsage(
+                latest.pollster,
+                latest.fieldwork_start,
+                latest.fieldwork_end,
+                latest.poll_id,
+            )
+            if latest is not None
+            else None
+        )
 
     party_universe, region_swings, region_diff_rows = compute_region_diffs(
         seats,
@@ -1584,32 +1620,50 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
 
     cfg = _build_config_from_args(args)
 
-    # Cap as_of_date at the most recent poll fieldwork end for the map so that
-    # the model does not run past the point where poll data actually exists.
-    # Decay-only drift between the last poll date and today produces meaningless
-    # movement in the trend chart.
-    latest_map = db.get_map_by_name(cfg.map_name)
-    if latest_map is not None:
-        polls = db.get_polls_for_map(latest_map.id)
-        if polls:
-            latest_poll_date = max(p.fieldwork_end for p in polls)
-            if cfg.as_of_date > latest_poll_date:
-                print(
-                    f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
-                    f"to latest poll date {latest_poll_date.isoformat()}"
-                )
-                # Shift the window back so its upper bound is latest_poll_date
-                # but its length (lookback) is preserved.
-                shift = cfg.as_of_date - latest_poll_date
-                cfg = SimulationConfig(
-                    map_name=cfg.map_name,
-                    baseline_election_name=cfg.baseline_election_name,
-                    as_of_date=latest_poll_date,
-                    since_date=cfg.since_date - shift,
-                    half_life_days=cfg.half_life_days,
-                    output_csv=cfg.output_csv,
-                    dry_run=cfg.dry_run,
-                )
+    # Choose the newest contributing endpoint in its own preserved window.
+    latest_map, _, effective_since = resolve_simulation_scope(db, cfg)
+    cfg.since_date = effective_since
+    source = PollSource.load(db, [latest_map.id], cfg.as_of_date)
+    weights = {
+        pollster.id: effective_pollster_weight(pollster.weight)
+        for pollster in source.pollsters
+    }
+    names = {pollster.id: pollster.name for pollster in source.pollsters}
+    _, latest_poll_date, selected_polls = select_poll_endpoint(
+        (poll.fieldwork_end for poll in source.polls),
+        cfg.as_of_date,
+        cfg.since_date,
+        lambda since, end: collect_poll_shares(
+            db,
+            latest_map.id,
+            since,
+            end,
+            cfg.half_life_days,
+            weights,
+            names,
+            source=source,
+        ),
+        lambda result, end: (
+            result is not None
+            and any(poll.fieldwork_end == end for poll in result.contributors)
+        ),
+    )
+    if latest_poll_date is not None and cfg.as_of_date > latest_poll_date:
+        print(
+            f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
+            f"to latest poll date {latest_poll_date.isoformat()}"
+        )
+        cfg = SimulationConfig(
+            map_name=cfg.map_name,
+            baseline_election_name=cfg.baseline_election_name,
+            as_of_date=latest_poll_date,
+            since_date=candidate_since(
+                latest_poll_date, cfg.as_of_date - cfg.since_date
+            ),
+            half_life_days=cfg.half_life_days,
+            output_csv=cfg.output_csv,
+            dry_run=cfg.dry_run,
+        )
 
     run_dates = dates_to_run_for_cfg(cfg, database_file(db))
     if len(run_dates) > 1:
@@ -1633,7 +1687,17 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             dry_run=cfg.dry_run,
         )
 
-        election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage = run_simulation(db, run_cfg)
+        (
+            election_name,
+            projected_votes,
+            region_diff_rows,
+            winners_by_party,
+            latest_poll_usage,
+        ) = run_simulation(
+            db,
+            run_cfg,
+            poll_aggregation=selected_polls if run_date == cfg.as_of_date else None,
+        )
 
         seat_ids = {int(row["seat_id"]) for row in projected_votes}
 
@@ -1700,7 +1764,9 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             output_csv=cfg.output_csv,
             dry_run=True,
         )
-        _, _, _, _, latest_poll_usage = run_simulation(db, meta_cfg)
+        _, _, _, _, latest_poll_usage = run_simulation(
+            db, meta_cfg, poll_aggregation=selected_polls
+        )
 
     if not cfg.dry_run:
         write_trend_cache_meta(

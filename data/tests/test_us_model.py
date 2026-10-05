@@ -25,7 +25,7 @@ from typing import Any, cast
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import event, text
 
 from db import Database
 from models import ElectionType, Map, Party, Pollster, Seat
@@ -2949,7 +2949,12 @@ class TestRebuildHistoryRun:
         spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
         calls = SimpleNamespace(runs=[], resets=[], metas=[])
 
-        def fake_run(_db: Database, cfg: UsSimulationConfig) -> tuple[Any, ...]:
+        def fake_run(
+            _db: Database,
+            cfg: UsSimulationConfig,
+            *,
+            poll_window: _common.SelectedPollWindow | None = None,
+        ) -> tuple[Any, ...]:
             calls.runs.append(cfg)
             return (f"US Test UNS {cfg.as_of_date}", [], [], Counter(), None, {}, [])
 
@@ -4192,3 +4197,306 @@ class TestSelectedUsPollContributors:
         assert weighted_sums == {(1, DEMOCRAT): 0.0, (2, DEMOCRAT): 40.0}
         assert total_weights == {(1, DEMOCRAT): 1.0, (2, DEMOCRAT): 1.0}
         assert len(contributors) == 1 and latest == contributors[0]
+
+
+class TestCandidateUsPollCaps:
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("rejection", ["rowless", "zero_weight", "wrong_matchup"])
+    def test_cli_skips_rejected_endpoints_and_future_polls(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+        rejection: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        pollster = (
+            world.pollster
+            if rejection != "zero_weight"
+            else db.add_pollster("Zero", "zero", weight=0)
+        )
+        _add_poll(
+            db,
+            map_id=world.national_map_id,
+            pollster=pollster,
+            end=date(2026, 6, 20),
+            rows=[] if rejection == "rowless" else world.complete,
+            matchup="Other (R) vs Blue (D)"
+            if rejection == "wrong_matchup"
+            else world.national_matchup,
+        )
+        _add_poll(
+            db,
+            map_id=world.national_map_id,
+            pollster=world.pollster,
+            end=date(2026, 7, 10),
+            rows=world.complete,
+            matchup=world.national_matchup,
+        )
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["model.py", "--as-of-date", "2026-06-30", "--since-date", "2026-06-01"],
+        )
+        assert main_for_spec(world.spec, db_factory=lambda: db) == 0
+        meta = json.loads(world.spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-10"
+        assert meta["since_date"] == "2026-05-12"
+        assert "2026-06-10" in meta["latest_poll_snippet"]
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_cap_rechecks_materiality_when_shifting_the_requested_window(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        reference = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 5, 31),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        partial = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[(world.rep.id, 40.0, "Red"), (world.dem.id, 45.0, "Blue")],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        # The requested window excludes the material reference. Moving the cap
+        # back to the partial endpoint brings it in and rejects that endpoint.
+        assert partial in {
+            poll.poll_id for poll in _selected_window(db, world).contributors
+        }
+        _, latest, selected = _common.candidate_poll_date_bounds(
+            db,
+            world.scope,
+            since_date=date(2026, 6, 1),
+            as_of_date=date(2026, 6, 30),
+            half_life_days=30,
+        )
+        assert latest == date(2026, 6, 10)
+        assert selected is not None
+        assert {poll.poll_id for poll in selected.contributors} == {
+            world.national_id,
+            reference,
+        }
+        cfg = dataclasses.replace(
+            world.cfg, as_of_date=latest, since_date=date(2026, 5, 12)
+        )
+        assert run_simulation(db, cfg)[4] == selected.latest_poll
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("duration", [29, 60])
+    def test_earliest_rebuild_bound_uses_its_own_window_not_the_final_window(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+        duration: int,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        partial = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 5, 1),
+            rows=[(world.rep.id, 40.0, "Red"), (world.dem.id, 45.0, "Blue")],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        reference = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        if duration == 60:
+            requested = collect_poll_window(
+                db,
+                world.scope,
+                since_date=date(2026, 5, 1),
+                as_of_date=date(2026, 6, 30),
+                half_life_days=30,
+            )
+            assert partial not in {poll.poll_id for poll in requested.contributors}
+        first, latest, selected = _common.candidate_poll_date_bounds(
+            db,
+            world.scope,
+            since_date=date(2026, 6, 30) - timedelta(days=duration),
+            as_of_date=date(2026, 6, 30),
+            half_life_days=30,
+            include_earliest=True,
+        )
+        assert (first, latest) == (date(2026, 5, 1), date(2026, 6, 20))
+        assert selected is not None
+        assert reference in {poll.poll_id for poll in selected.contributors}
+        assert partial not in {poll.poll_id for poll in selected.contributors}
+        assert poll_date_bounds(db, world.scope)[0] == date(2026, 6, 10)
+
+    @pytest.mark.parametrize("n_rejected", [1, 12])
+    def test_candidate_selection_reads_history_in_batches(
+        self,
+        db: Database,
+        tmp_path: Path,
+        n_rejected: int,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, "senate")
+        for offset in range(n_rejected):
+            _add_poll(
+                db,
+                map_id=world.national_map_id,
+                pollster=world.pollster,
+                end=date(2026, 6, 11) + timedelta(days=offset),
+                rows=[],
+            )
+        statements: list[str] = []
+
+        def record(
+            _connection: Any,
+            _cursor: Any,
+            statement: str,
+            _parameters: Any,
+            _context: Any,
+            _many: bool,
+        ) -> None:
+            statements.append(statement)
+
+        event.listen(db.engine, "before_cursor_execute", record)
+        try:
+            _, latest, _ = _common.candidate_poll_date_bounds(
+                db,
+                world.scope,
+                since_date=date(2026, 6, 1),
+                as_of_date=date(2026, 6, 30),
+                half_life_days=30,
+            )
+        finally:
+            event.remove(db.engine, "before_cursor_execute", record)
+        assert latest == date(2026, 6, 10)
+        assert (
+            sum(
+                "from polls " in " ".join(sql.lower().split()) + " "
+                for sql in statements
+            )
+            == 1
+        )
+        assert (
+            sum(
+                "from poll_rows " in " ".join(sql.lower().split()) + " "
+                for sql in statements
+            )
+            == 1
+        )
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("restriction", ["ignore_seat", "allowlist"])
+    def test_cli_seat_restrictions_match_the_final_projection(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+        restriction: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        spec = world.spec
+        extra: list[str] = []
+        if restriction == "ignore_seat":
+            extra = ["--ignore-seat-polls"]
+        else:
+            spec = dataclasses.replace(
+                spec, seat_name_allowlist=frozenset({world.district.seat_name})
+            )
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "model.py",
+                "--as-of-date",
+                "2026-06-30",
+                "--since-date",
+                "2026-06-01",
+                *extra,
+            ],
+        )
+        assert main_for_spec(spec, db_factory=lambda: db) == 0
+        meta = json.loads(spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-10"
+        assert meta["since_date"] == "2026-05-12"
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("duration", [0, 7])
+    def test_cli_preserves_duration_when_only_old_usable_history_exists(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+        duration: int,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        requested = date(2026, 9, 30)
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "model.py",
+                "--as-of-date",
+                requested.isoformat(),
+                "--since-date",
+                (requested - timedelta(days=duration)).isoformat(),
+            ],
+        )
+        assert main_for_spec(world.spec, db_factory=lambda: db) == 0
+        meta = json.loads(world.spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-10"
+        assert (
+            meta["since_date"]
+            == (date(2026, 6, 10) - timedelta(days=duration)).isoformat()
+        )
+        assert "2026-06-10" in meta["latest_poll_snippet"]
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_cli_retains_request_without_an_admitted_endpoint(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        with db.session() as session:
+            pollster = session.get(Pollster, world.pollster.id)
+            assert pollster is not None
+            pollster.weight = 0
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["model.py", "--as-of-date", "2026-06-30", "--since-date", "2026-06-01"],
+        )
+        assert main_for_spec(world.spec, db_factory=lambda: db) == 0
+        meta = json.loads(world.spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-30"
+        assert meta["since_date"] == "2026-06-01"
+        assert meta["latest_poll_snippet"] == ""

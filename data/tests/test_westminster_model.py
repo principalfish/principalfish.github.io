@@ -3547,3 +3547,85 @@ class TestMain:
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-06-09", 32)
         ]
+
+
+class TestContributingEndpointCaps:
+    @pytest.mark.parametrize("rejection", ["rowless", "zero_weight", "negative_weight"])
+    @pytest.mark.parametrize("duration", [0, 7])
+    def test_rejected_and_future_endpoints_leave_a_stale_usable_cap(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+        rejection: str,
+        duration: int,
+    ) -> None:
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = westminster_world
+        _seed_swing_poll(db, world, date(2025, 3, 8))
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="rejected",
+            fieldwork_end=date(2026, 6, 20),
+            national={} if rejection == "rowless" else {world.party_ids["Labour"]: 99},
+            pollster_weight={"rowless": 1, "zero_weight": 0, "negative_weight": -1}[
+                rejection
+            ],
+        )
+        _seed_swing_poll(db, world, date(2026, 7, 10), pollster="future")
+        requested = date(2026, 6, 30)
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            requested.isoformat(),
+            "--since-date",
+            (requested - timedelta(days=duration)).isoformat(),
+            "--dry-run",
+        )
+        out = capsys.readouterr().out
+        assert "As-of date: 2025-03-08" in out
+        assert (
+            f"Since date: {(date(2025, 3, 8) - timedelta(days=duration)).isoformat()}"
+            in out
+        )
+        assert "Latest poll used: pollster_a (2025-03-06 to 2025-03-08)" in out
+
+    def test_only_unusable_and_future_polls_preserve_requested_date(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = westminster_world
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="empty",
+            fieldwork_end=date(2026, 6, 20),
+            national={},
+        )
+        _seed_swing_poll(db, world, date(2026, 7, 10))
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-30",
+            "--since-date",
+            "2026-06-01",
+            "--dry-run",
+        )
+        out = capsys.readouterr().out
+        assert "CAPPING" not in out
+        assert "As-of date: 2026-06-30" in out
+        assert "Latest poll used:" not in out

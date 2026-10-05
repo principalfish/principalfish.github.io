@@ -6,7 +6,18 @@ The manifest file for the election maps application. Loaded once on boot by `ini
 
 ## `defaultElection`
 
-String ID of the election to load when the URL has no `?election=` param. With no `?parliament=` param either, its parliament is the tab the page opens on.
+String ID of the election to load when the URL has no `?election=` param. With no `?parliament=` param either, its parliament is the tab the page opens on. A `?parliament=` with no elections in this manifest (e.g. another page's parliament) also falls back to its parliament.
+
+---
+
+## `misc`
+
+Page-level settings, copied from the page's `map-modes-shell.json`. Each maps page (`/electionmaps`, `/uselectionmaps`) has its own manifest, so these are the only place the page's brand and tabs are set; the page HTML holds no config.
+
+| Field | Description |
+|---|---|
+| `title` | Page brand, e.g. `"UK Election Maps"` (default `"Election Maps"`). Shown in the H1 (`<title> · <parliament label>`) and the browser-tab title (`<election or view> \| <parliament label> \| <title> \| Principal Fish`). Keep the page's static `<title>` and `<h1>` in `index.html` in step, since they show before the manifest loads. |
+| `parliamentTabs` | The page's parliament tabs, in display order. Each has `parliament` (key matching `elections[].parliament`) and `label` (tab text, also used as the parliament's display name; without a tab the key is capitalised). Also decides which features the page switches on: only parliaments listed here contribute their `parliamentFeatures[].features`. |
 
 ---
 

@@ -1,5 +1,5 @@
 {
-  "defaultElection": "2024-us-president",
+  "defaultElection": "current-us-senate",
   "misc": {
     "title": "US Elections",
     "parliamentTabs": [
@@ -8,12 +8,12 @@
         "label": "Senate"
       },
       {
-        "parliament": "us_presidential",
-        "label": "President"
-      },
-      {
         "parliament": "us_house",
         "label": "House"
+      },
+      {
+        "parliament": "us_presidential",
+        "label": "President"
       }
     ]
   },

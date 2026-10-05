@@ -42,11 +42,10 @@
 
     <script type="module" src="../site/topbar.min.js"></script>
     <!-- US elections page: shares the /electionmapslogic engine, with its own data dir
-         (uselectionmaps/data), branded "US Elections", landing on the President. -->
+         (uselectionmaps/data), branded "US Elections". The landing election is the manifest's defaultElection. -->
     <script>
       window.MAPS_PAGE = {
-        parliaments: ['us_presidential', 'us_senate', 'us_house'],
-        defaultParliament: 'us_presidential',
+        parliaments: ['us_senate', 'us_house', 'us_presidential'],
         title: 'US Elections',
       };
     </script>

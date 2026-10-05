@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Election Maps | Principal Fish</title>
+    <title>UK Election Maps | Principal Fish</title>
     <meta
       name="description"
       content="Interactive election maps scaffold with election navigation, zoomable map canvas, and control panels."
@@ -40,8 +40,8 @@
     </main>
 
     <script type="module" src="../site/topbar.min.js"></script>
-    <!-- This page shows only the UK parliaments; the US contests live at /uselectionmaps. -->
-    <script>window.MAPS_PAGE = { parliaments: ['westminster', 'holyrood'] };</script>
+    <!-- This page shows only the UK parliaments (its manifest's tabs); the US contests live at
+         /uselectionmaps. -->
     <script type="module">
       import { loadShell } from '../electionmapslogic/shell-loader.min.js';
       try {

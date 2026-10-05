@@ -42,13 +42,8 @@
 
     <script type="module" src="../site/topbar.min.js"></script>
     <!-- US elections page: shares the /electionmapslogic engine, with its own data dir
-         (uselectionmaps/data), branded "US Elections". The landing election is the manifest's defaultElection. -->
-    <script>
-      window.MAPS_PAGE = {
-        parliaments: ['us_senate', 'us_house', 'us_presidential'],
-        title: 'US Elections',
-      };
-    </script>
+         (uselectionmaps/data). Its manifest supplies the "US Elections" brand, the parliament
+         tabs, and the landing election (defaultElection). -->
     <script type="module">
       import { loadShell } from '../electionmapslogic/shell-loader.min.js';
       try {

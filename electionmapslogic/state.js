@@ -10,10 +10,11 @@ import { fetchJson } from './files.js';
 // A distinct purple from the Independent party colour so the two don't blur.
 const SPLIT_COLOUR = '#7d3c98';
 
-// Per-page config set by the host HTML before the engine loads (window.MAPS_PAGE). Its only
-// field is an optional data-path override; everything else comes from the page's own manifest
-// (<page>/data/map-modes.json), the source of truth for the brand (misc.title), parliament tabs
-// (misc.parliamentTabs) and landing election (defaultElection). Empty object => defaults.
+// Optional per-page config a host HTML may set before the engine loads (window.MAPS_PAGE); no
+// page sets it today. Its only field is a data-path override; everything else comes from the
+// page's own manifest (<page>/data/map-modes.json), the source of truth for the brand
+// (misc.title), parliament tabs (misc.parliamentTabs) and landing election (defaultElection).
+// Unset => defaults.
 //   dataBase?: string           — base path for data fetches (default 'data')
 export const page = (typeof window !== 'undefined' && window.MAPS_PAGE) || {};
 

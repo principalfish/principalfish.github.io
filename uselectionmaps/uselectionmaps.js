@@ -3,8 +3,8 @@
 // Thin shell for the US page (President, Senate, House). The engine lives in
 // /electionmapslogic; this page enables the `predict` feature (interactive uniform-swing
 // forecasting) and imports only that feature module — it ships none of the poll-tracker or
-// postcode code. window.MAPS_PAGE is set inline in index.html before this module loads and
-// is read via `page` in state.js. index.html injects the shared app markup
+// postcode code. The page's brand, parliament tabs, and landing election come from its
+// manifest (uselectionmaps/data/map-modes.json). index.html injects the shared app markup
 // (electionmapslogic/shell.html, no fragments — postcode / referendum-info / polltracker
 // are UK-only) via shell-loader before importing this bundle.
 //

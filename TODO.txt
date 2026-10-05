@@ -2,3 +2,5 @@
 - check for uniformity of data / logic across models
 - check export order logic - unify
 - presidential EV counts: seats.electoral_votes exists, but export still uses the per-era table in old_data/scripts/usa/us_electoral_votes.py - needs per-era storage in the DB
+- remove redundant window.MAPS_PAGE fields (parliaments/title) now each maps page has its own manifest [remove-redundant-maps-page-config-in-favour-of-page-manifest]
+- Senate forecast subtitle says "Silver Bulletin (US House)" - label it as the generic ballot [clarify-senate-forecast-latest-poll-label-as-generic-ballot]

@@ -49,6 +49,7 @@ from _common import (
     build_arg_parser,
     build_baseline_vote_state,
     collect_poll_readings,
+    collect_poll_window,
     compute_region_diffs,
     decided_vote_shares,
     delete_model_for_as_of_date,
@@ -2893,13 +2894,15 @@ def _freeze_today(monkeypatch: pytest.MonkeyPatch, day: date) -> None:
     ``--rebuild-history`` rejects ``--as-of-date``/``--as-of-days-back`` (they
     would delete every point above the as-of), so a rebuild test cannot state the
     as-of on the command line and fixes today instead — which is what the flags
-    were standing in for. ``_common`` only ever calls ``date.today`` and
-    ``date.fromisoformat``, so those are the only two this stub needs.
+    were standing in for. Preserve parsing and the all-history date bounds
+    alongside the frozen clock.
     """
     monkeypatch.setattr(
         _common,
         "date",
-        SimpleNamespace(today=lambda: day, fromisoformat=date.fromisoformat),
+        SimpleNamespace(
+            today=lambda: day, fromisoformat=date.fromisoformat, min=date.min, max=date.max
+        ),
     )
 
 
@@ -3884,3 +3887,308 @@ class TestRebuildHistoryEndToEnd:
             date(2026, 6, 1), date(2026, 6, 10)
         )
         assert min(_trend_dates(spec)) >= date(2026, 6, 1)
+
+CONTRIBUTOR_MATCHUP = "Red (R) vs Blue (D) vs Gold (L)"
+
+
+def _contributor_world(db: Database, tmp_path: Path, contest: str) -> SimpleNamespace:
+    dem, rep = _parties(db)
+    libertarian = db.add_party("Libertarian", short_name="L")
+    map_name = {"house": HOUSE_MAP, "senate": SENATE_MAP, "president": PRESIDENT_MAP}[
+        contest
+    ]
+    election_map, seats = _seat_map_with_baseline(
+        db,
+        map_name,
+        f"us_{contest}",
+        {
+            "Maine": {dem.id: 400.0, rep.id: 600.0},
+            "Maine CD-2": {dem.id: 400.0, rep.id: 600.0},
+        },
+    )
+    national_map = (
+        db.add_map(HOUSE_MAP, parliament="us_house")
+        if contest == "senate"
+        else election_map
+    )
+    national_matchup = CONTRIBUTOR_MATCHUP if contest == "president" else None
+    if national_matchup:
+        db.set_tracked_matchup(national_map.id, None, national_matchup, source="manual")
+    db.set_tracked_matchup(
+        election_map.id, seats["Maine"].id, CONTRIBUTOR_MATCHUP, source="manual"
+    )
+    pollster = db.add_pollster("Contributor", f"contributor_{contest}")
+    spec = _us_spec(
+        tmp_path,
+        map_name=map_name,
+        national_poll_map_name=HOUSE_MAP if contest == "senate" else None,
+        tracked_matchup_required=contest == "president",
+        seat_matchup_policy="national" if contest == "president" else "per_seat",
+    )
+    cfg = dataclasses.replace(
+        _cfg(spec, as_of=date(2026, 6, 30)), since_date=date(2026, 6, 1)
+    )
+    national_id = _add_poll(
+        db,
+        map_id=national_map.id,
+        pollster=pollster,
+        end=date(2026, 6, 10),
+        rows=[(dem.id, 40.0), (rep.id, 60.0)],
+        matchup=national_matchup,
+    )
+    return SimpleNamespace(
+        spec=spec,
+        cfg=cfg,
+        scope=resolve_poll_scope(db, spec),
+        pollster=pollster,
+        map_id=election_map.id,
+        national_map_id=national_map.id,
+        national_matchup=national_matchup,
+        national_id=national_id,
+        seat=seats["Maine"],
+        district=seats["Maine CD-2"],
+        dem=dem,
+        rep=rep,
+        libertarian=libertarian,
+        complete=[
+            (rep.id, 40.0, "Red"),
+            (dem.id, 45.0, "Blue"),
+            (libertarian.id, 15.0, "Gold"),
+        ],
+    )
+
+
+def _selected_window(
+    db: Database, world: SimpleNamespace
+) -> _common.SelectedPollWindow:
+    return collect_poll_window(
+        db,
+        world.scope,
+        since_date=world.cfg.since_date,
+        as_of_date=world.cfg.as_of_date,
+        half_life_days=world.cfg.half_life_days,
+    )
+
+
+class TestSelectedUsPollContributors:
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("seat_scoped", [False, True])
+    @pytest.mark.parametrize(
+        "rejection", ["rowless", "zero_weight", "negative_weight", "wrong_matchup"]
+    )
+    def test_rejected_latest_poll_cannot_advance_metadata_or_bounds(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+        seat_scoped: bool,
+        rejection: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        pollster = world.pollster
+        if rejection in {"zero_weight", "negative_weight"}:
+            pollster = db.add_pollster(
+                "Excluded",
+                "excluded",
+                weight=0.0 if rejection == "zero_weight" else -1.0,
+            )
+        matchup = CONTRIBUTOR_MATCHUP if seat_scoped else world.national_matchup
+        if rejection == "wrong_matchup":
+            matchup = "Other (R) vs Blue (D)"
+        rows = [] if rejection == "rowless" else world.complete
+        _add_poll(
+            db,
+            map_id=world.map_id if seat_scoped else world.national_map_id,
+            pollster=pollster,
+            end=date(2026, 6, 20),
+            rows=rows,
+            seat_id=world.seat.id if seat_scoped else None,
+            matchup=matchup,
+        )
+        selected = _selected_window(db, world)
+        assert {poll.poll_id for poll in selected.contributors} == {world.national_id}
+        assert selected.seat_contributors == ()
+        assert selected.latest_poll is not None
+        assert selected.latest_poll.poll_id == world.national_id
+        assert run_simulation(db, world.cfg)[4] == selected.latest_poll
+        assert poll_date_bounds(
+            db,
+            world.scope,
+            since_date=world.cfg.since_date,
+            as_of_date=world.cfg.as_of_date,
+            half_life_days=world.cfg.half_life_days,
+        ) == (date(2026, 6, 10), date(2026, 6, 10))
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 10)
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("reference_in_window", [False, True])
+    def test_materiality_uses_the_same_selected_window_as_projection(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+        reference_in_window: bool,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        reference_id = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 12) if reference_in_window else date(2026, 5, 31),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        partial_id = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[(world.rep.id, 40.0, "Red"), (world.dem.id, 45.0, "Blue")],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        selected = _selected_window(db, world)
+        expected_id = reference_id if reference_in_window else partial_id
+        expected_date = date(2026, 6, 12) if reference_in_window else date(2026, 6, 20)
+        assert [poll.poll_id for poll in selected.seat_contributors] == [expected_id]
+        assert (
+            selected.latest_poll is not None
+            and selected.latest_poll.poll_id == expected_id
+        )
+        result = run_simulation(db, world.cfg)
+        assert result[4] == selected.latest_poll
+        average = selected.seat_averages[world.seat.id]
+        assert average.n_skipped == int(reference_in_window)
+        assert average.blocking_candidates == (("Gold",) if reference_in_window else ())
+        assert ("skipped_material=1" in result[6][0]) == reference_in_window
+        assert (
+            latest_poll_date(
+                db,
+                world.scope,
+                since_date=world.cfg.since_date,
+                as_of_date=world.cfg.as_of_date,
+                half_life_days=world.cfg.half_life_days,
+            )
+            == expected_date
+        )
+        if contest == "president":
+            assert _shares_by_party(result[1], world.district.id) == pytest.approx(
+                _shares_by_party(result[1], world.seat.id)
+            )
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_no_decided_seat_shares_do_not_supply_a_contributor(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[
+                (world.rep.id, 0.0, "Red"),
+                (world.dem.id, 0.0, "Blue"),
+                (world.libertarian.id, 0.0, "Gold"),
+            ],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        assert _selected_window(db, world).seat_contributors == ()
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 10)
+        latest = run_simulation(db, world.cfg)[4]
+        assert latest is not None and latest.poll_id == world.national_id
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_explicit_zero_national_share_is_a_contributor(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        zero_id = _add_poll(
+            db,
+            map_id=world.national_map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[(world.dem.id, 0.0)],
+            matchup=world.national_matchup,
+        )
+        selected = _selected_window(db, world)
+        assert {poll.poll_id for poll in selected.national_contributors} == {
+            world.national_id,
+            zero_id,
+        }
+        assert (
+            selected.latest_poll is not None and selected.latest_poll.poll_id == zero_id
+        )
+        assert run_simulation(db, world.cfg)[4] == selected.latest_poll
+
+    def test_all_history_bounds_preserve_old_weighted_evidence(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        world = _contributor_world(db, tmp_path, "house")
+        _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(1900, 1, 1),
+            rows=[(world.dem.id, 40.0)],
+        )
+        assert poll_date_bounds(db, world.scope) == (
+            date(1900, 1, 1),
+            date(2026, 6, 10),
+        )
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            {"since_date": date(2026, 6, 1)},
+            {"as_of_date": date(2026, 6, 30)},
+            {"half_life_days": 30.0},
+        ],
+    )
+    def test_partial_window_configuration_is_rejected(
+        self,
+        db: Database,
+        tmp_path: Path,
+        arguments: dict[str, Any],
+    ) -> None:
+        world = _contributor_world(db, tmp_path, "house")
+        with pytest.raises(ValueError):
+            latest_poll_date(db, world.scope, **arguments)
+
+    @pytest.mark.parametrize(
+        "weight, shares", [(1.0, {}), (0.0, {DEMOCRAT: 40.0}), (-1.0, {DEMOCRAT: 40.0})]
+    )
+    def test_national_aggregation_has_no_metadata_without_weighted_observations(
+        self,
+        weight: float,
+        shares: dict[int, float],
+    ) -> None:
+        contributors: list[LatestPollUsage] = []
+        weighted_sums, total_weights, latest = aggregate_national(
+            [_reading(None, None, weight, shares)],
+            None,
+            contributors=contributors,
+        )
+        assert weighted_sums == total_weights == {}
+        assert latest is None and contributors == []
+
+    def test_regional_only_national_reading_contributes_once(self) -> None:
+        reading = _reading(None, None, 1.0, {})
+        reading.region_shares = {1: {DEMOCRAT: 0.0}, 2: {DEMOCRAT: 40.0}}
+        contributors: list[LatestPollUsage] = []
+        weighted_sums, total_weights, latest = aggregate_national(
+            [reading],
+            None,
+            contributors=contributors,
+        )
+        assert weighted_sums == {(1, DEMOCRAT): 0.0, (2, DEMOCRAT): 40.0}
+        assert total_weights == {(1, DEMOCRAT): 1.0, (2, DEMOCRAT): 1.0}
+        assert len(contributors) == 1 and latest == contributors[0]

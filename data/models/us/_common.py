@@ -51,7 +51,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Literal
 
-from sqlalchemy import ColumnElement, and_, select, text
+from sqlalchemy import text
 
 # ``data/`` root — home of config.py / db.py / models.py.
 DATA_DIR = Path(__file__).resolve().parents[2]
@@ -70,7 +70,7 @@ from model_support.cli import (
     validate_run_arguments,
 )
 from model_support.polling import effective_pollster_weight, latest_poll_key
-from models import Election, Map, Poll, PollRow, Region, TrackedMatchup, Vote
+from models import Election, Map, Region, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
@@ -667,6 +667,8 @@ def collect_poll_readings(
 def aggregate_national(
     readings: Iterable[PollReading],
     national_matchup: str | None,
+    *,
+    contributors: list[LatestPollUsage] | None = None,
 ) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
     """Aggregate the national series out of a map's readings.
 
@@ -678,6 +680,8 @@ def aggregate_national(
     Returns ``(weighted_sums, total_weights, latest_poll_usage)`` keyed by
     ``(region_id, party_id)``, the shape :func:`compute_region_diffs` consumes.
     Both maps are defaultdicts, so a party absent from the polls reads as 0.
+    When supplied, ``contributors`` receives only polls adding positive weight
+    to at least one national or regional observation.
     """
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
@@ -686,6 +690,12 @@ def aggregate_national(
     for reading in readings:
         if reading.seat_id is not None or reading.matchup != national_matchup:
             continue
+        if reading.weight <= 0 or not (
+            reading.shares or any(reading.region_shares.values())
+        ):
+            continue
+        if contributors is not None:
+            contributors.append(poll_usage(reading))
 
         for party_id, share in reading.shares.items():
             weighted_sums[(None, party_id)] += share * reading.weight
@@ -876,10 +886,6 @@ def usable_seat_readings(
       (:func:`matchup_stored_candidate_count`);
     * a party-only series (no ``required`` matchup) names no candidates to miss.
 
-    Only :attr:`PollReading.seat_id`, :attr:`PollReading.candidate_shares` and
-    :attr:`PollReading.candidate_count` are read, so a caller that has no use for
-    the rest — the cap, which only wants dates — may leave them empty.
-
     Args:
         readings: Seat readings already restricted to those each seat is tracked
             on. Which matchup that is belongs to the caller; this function only
@@ -988,6 +994,7 @@ def aggregate_seat_polls(
     seat_matchups: Mapping[int, str | None],
     national_matchup: str | None,
     policy: SeatMatchupPolicy,
+    contributors: list[LatestPollUsage] | None = None,
 ) -> dict[int, SeatPollAverage]:
     """Average each seat's own polls into one :class:`SeatPollAverage`.
 
@@ -1029,6 +1036,7 @@ def aggregate_seat_polls(
             seat". Absent keys mean no tracked row.
         national_matchup: The scope's national matchup, used under ``"national"``.
         policy: The spec's :data:`SeatMatchupPolicy`.
+        contributors: Optional output list receiving only the admitted polls.
 
     Returns:
         Seat id → average, for every seat with at least one usable or skipped
@@ -1049,7 +1057,7 @@ def aggregate_seat_polls(
 
     for reading in readings:
         seat_id = reading.seat_id
-        if seat_id is None:
+        if seat_id is None or reading.weight <= 0:
             continue
 
         tracked = seat_id in seat_matchups
@@ -1081,6 +1089,8 @@ def aggregate_seat_polls(
             skipped_counts[seat_id] += 1
             continue
 
+        if contributors is not None:
+            contributors.append(poll_usage(reading))
         seat_weights[seat_id] += reading.weight
         seat_counts[seat_id] += 1
         latest = latest_by_seat.get(seat_id)
@@ -1594,164 +1604,185 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
     )
 
 
-def _matchup_clause(matchup: str | None) -> ColumnElement[bool]:
-    """``Poll.matchup`` filter that treats ``None`` as "the party-only series"."""
-    return Poll.matchup.is_(None) if matchup is None else Poll.matchup == matchup
+@dataclass(frozen=True, slots=True)
+class SelectedPollWindow:
+    """Averages and the actual contributing polls for one selected window."""
+
+    weighted_sums: dict[tuple[int | None, int], float]
+    total_weights: dict[tuple[int | None, int], float]
+    seat_averages: dict[int, SeatPollAverage]
+    national_contributors: tuple[LatestPollUsage, ...]
+    seat_contributors: tuple[LatestPollUsage, ...]
+
+    @property
+    def contributors(self) -> tuple[LatestPollUsage, ...]:
+        return self.national_contributors + self.seat_contributors
+
+    @property
+    def latest_poll(self) -> LatestPollUsage | None:
+        return latest_poll_usage_of(self.contributors)
 
 
-def _poll_end_dates(db: Database, scope: PollScope, *, include_seat_polls: bool) -> list[date]:
-    """Fieldwork end dates of every poll this run would actually use.
+def collect_poll_window(
+    db: Database,
+    scope: PollScope,
+    *,
+    since_date: date,
+    as_of_date: date,
+    half_life_days: float,
+    include_seat_polls: bool = True,
+    pollster_data: tuple[dict[int, float], dict[int, str]] | None = None,
+) -> SelectedPollWindow:
+    """Use one admission path for projection, metadata and date selection.
 
-    The as-of cap exists so decay-only drift never invents movement past the last
-    real poll. Once seat polls feed the projection they are real polls too: a
-    Senate race polled a week after the last generic-ballot update genuinely
-    changes the forecast on the day it lands, and a national-only cap would pull
-    ``as_of_date`` back before it and drop it from the window entirely — the
-    seat-blending step would then never see the newest polls in exactly the races
-    it was built for. So the cap covers both series.
-
-    Both halves apply the *same* filters the model does, so a poll it ignores can
-    never move the cap — nor, through :func:`poll_date_bounds`, the rebuild
-    window's start. The national half takes only ``seat_id IS NULL`` polls on the
-    national map carrying the scope's matchup. The seat half takes only
-    seat-scoped polls on the seat map, of a seat the run projects
-    (:attr:`PollScope.projected_seat_ids`), carrying that seat's tracked matchup
-    (the national matchup under the ``"national"`` policy, where a NULL tracked
-    row still opts the seat out) — and then, because the rest of the model's test
-    is not expressible in SQL, hands those polls' rows to the very function the
-    forecast decides with, :func:`usable_seat_readings`. A seat poll that leaves
-    a material candidate's cell blank is discarded by the model, so it does not
-    move the cap either.
-
-    Args:
-        db: Open database handle.
-        scope: The run's resolved :class:`PollScope`.
-        include_seat_polls: ``False`` restores the national-only cap, so
-            ``--ignore-seat-polls`` reproduces the pre-blending projection whole:
-            same window, same weights, same output. The seat query and its
-            companion row query are not run at all.
-
-    Returns:
-        Every qualifying fieldwork end date, unsorted and with duplicates.
+    Materiality is measured only against usable reference readings inside this
+    window. Rejected partial readings remain in the seat diagnostics, but never
+    in the contributors. National explicit-zero observations are evidence;
+    seat polls require a positive decided-vote total before rescaling.
     """
-    national_statement = select(Poll.fieldwork_end).where(
-        Poll.map_id == scope.national_map_id,
-        Poll.seat_id.is_(None),
-        _matchup_clause(scope.national_matchup),
-    )
-
-    # Widened from the end date alone: the materiality predicate needs to know
-    # which poll, which seat and which pairing each date belongs to.
-    seat_statement = select(Poll.id, Poll.seat_id, Poll.matchup, Poll.fieldwork_end).where(
-        Poll.map_id == scope.seat_map_id,
-        Poll.seat_id.is_not(None),
-    )
-    if scope.projected_seat_ids is not None:
-        seat_statement = seat_statement.where(
-            Poll.seat_id.in_(sorted(scope.projected_seat_ids))
-        )
-    if scope.seat_matchup_policy == "national":
-        opted_out = (
-            select(TrackedMatchup.id)
-            .where(
-                TrackedMatchup.map_id == Poll.map_id,
-                TrackedMatchup.seat_id == Poll.seat_id,
-                TrackedMatchup.matchup.is_(None),
-            )
-            .exists()
-        )
-        seat_statement = seat_statement.where(
-            _matchup_clause(scope.national_matchup), ~opted_out
-        )
+    if pollster_data is None:
+        pollsters = db.get_all_pollsters()
+        weights = {
+            pollster.id: effective_pollster_weight(pollster.weight)
+            for pollster in pollsters
+        }
+        names = {pollster.id: pollster.name for pollster in pollsters}
     else:
-        seat_statement = seat_statement.join(
-            TrackedMatchup,
-            and_(
-                TrackedMatchup.map_id == Poll.map_id,
-                TrackedMatchup.seat_id == Poll.seat_id,
-            ),
-        ).where(
-            TrackedMatchup.matchup.is_not(None),
-            Poll.matchup == TrackedMatchup.matchup,
+        weights, names = pollster_data
+    national_readings = collect_poll_readings(
+        db,
+        scope.national_map_id,
+        since_date,
+        as_of_date,
+        half_life_days,
+        weights,
+        names,
+    )
+    national_contributors: list[LatestPollUsage] = []
+    weighted_sums, total_weights, _ = aggregate_national(
+        national_readings, scope.national_matchup, contributors=national_contributors
+    )
+    seat_contributors: list[LatestPollUsage] = []
+    seat_averages: dict[int, SeatPollAverage] = {}
+    if include_seat_polls:
+        seat_readings = (
+            national_readings
+            if scope.seat_map_id == scope.national_map_id
+            else collect_poll_readings(
+                db,
+                scope.seat_map_id,
+                since_date,
+                as_of_date,
+                half_life_days,
+                weights,
+                names,
+            )
         )
-
-    with db.session() as session:
-        end_dates = list(session.execute(national_statement).scalars().all())
-        if not include_seat_polls:
-            return end_dates
-        seat_polls = session.execute(seat_statement).all()
-        # One companion query for the rows of exactly those polls, re-using the
-        # select above as a subquery so the poll ids never become bind parameters.
-        row_statement = select(
-            PollRow.poll_id, PollRow.party_id, PollRow.percentage, PollRow.candidate_name
-        ).where(
-            PollRow.poll_id.in_(seat_statement.with_only_columns(Poll.id)),
-            PollRow.region_id.is_(None),
+        projected_ids = scope.projected_seat_ids
+        if projected_ids is None:
+            projected_ids = frozenset(
+                seat.id for seat in fetch_seat_refs(db, scope.seat_map_id)
+            )
+        tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
+        seat_averages = aggregate_seat_polls(
+            (reading for reading in seat_readings if reading.seat_id in projected_ids),
+            seat_matchups={
+                int(row.seat_id): row.matchup
+                for row in tracked_rows
+                if row.seat_id is not None
+            },
+            national_matchup=scope.national_matchup,
+            policy=scope.seat_matchup_policy,
+            contributors=seat_contributors,
         )
-        poll_rows = session.execute(row_statement).all()
+    return SelectedPollWindow(
+        weighted_sums,
+        total_weights,
+        seat_averages,
+        tuple(national_contributors),
+        tuple(seat_contributors),
+    )
 
-    # Accumulated exactly as :func:`collect_poll_readings` does, so the predicate
-    # sees the same names and the same row count it would see in a real run.
-    shares_by_poll: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    counts_by_poll: dict[int, int] = defaultdict(int)
-    for poll_id, party_id, percentage, candidate_name in poll_rows:
-        if party_id is None:
-            continue
-        counts_by_poll[poll_id] += 1
-        name = (candidate_name or "").strip().casefold()
-        if name:
-            shares_by_poll[poll_id][name] += float(percentage)
 
-    # Only the fields the predicate reads carry real values; it never looks at a
-    # weight, a party share or a pollster, and the cap has no use for them.
-    readings = [
-        PollReading(
-            poll_id=poll_id,
-            seat_id=seat_id,
-            matchup=matchup,
-            weight=1.0,
-            shares={},
-            region_shares={},
-            pollster="",
-            fieldwork_start=fieldwork_end,
-            fieldwork_end=fieldwork_end,
-            candidate_count=counts_by_poll.get(poll_id, 0),
-            candidate_shares=dict(shares_by_poll.get(poll_id, {})),
-        )
-        for poll_id, seat_id, matchup, fieldwork_end in seat_polls
-    ]
-    # The SQL has already pinned every selected poll to the matchup the model
-    # requires of its seat — the seat's ``tracked_matchups`` row under
-    # ``"per_seat"``, the national matchup under ``"national"`` — so each row
-    # carries the resolved requirement with it.
-    required_by_seat: dict[int, str | None] = {
-        seat_id: matchup for _, seat_id, matchup, _ in seat_polls
-    }
+def _poll_end_dates(
+    db: Database,
+    scope: PollScope,
+    *,
+    include_seat_polls: bool,
+    since_date: date | None = None,
+    as_of_date: date | None = None,
+    half_life_days: float | None = None,
+) -> list[date]:
+    """Endpoints admitted by the same averaging path as a projection.
 
-    usable, _blocking = usable_seat_readings(readings, required_by_seat)
-    end_dates.extend(reading.fieldwork_end for reading in usable)
-    return end_dates
+    Explicit windows use the projection's decay (30 days unless supplied).
+    Without a window, retain the historical all-date query: effectively disable
+    decay with the largest finite half-life so old endpoints cannot underflow
+    away. Actual pollster weights, party rows and admission rules still apply.
+    """
+    if (since_date is None) != (as_of_date is None):
+        raise ValueError("since_date and as_of_date must be supplied together")
+    explicit_window = since_date is not None
+    if half_life_days is not None and not explicit_window:
+        raise ValueError("half_life_days requires an explicit polling window")
+    window = collect_poll_window(
+        db,
+        scope,
+        since_date=since_date or date.min,
+        as_of_date=as_of_date or date.max,
+        half_life_days=(
+            half_life_days
+            if half_life_days is not None
+            else 30.0
+            if explicit_window
+            else sys.float_info.max
+        ),
+        include_seat_polls=include_seat_polls,
+    )
+    return [poll.fieldwork_end for poll in window.contributors]
 
 
 def latest_poll_date(
-    db: Database, scope: PollScope, *, include_seat_polls: bool = True
+    db: Database,
+    scope: PollScope,
+    *,
+    include_seat_polls: bool = True,
+    since_date: date | None = None,
+    as_of_date: date | None = None,
+    half_life_days: float | None = None,
 ) -> date | None:
-    """Latest fieldwork end date across every poll the run would use, or ``None``.
-
-    This is the as-of cap — see :func:`_poll_end_dates` for which polls count.
-    """
-    return max(_poll_end_dates(db, scope, include_seat_polls=include_seat_polls), default=None)
+    """Latest admitted endpoint; pass the selected window to bound materiality."""
+    return max(
+        _poll_end_dates(
+            db,
+            scope,
+            include_seat_polls=include_seat_polls,
+            since_date=since_date,
+            as_of_date=as_of_date,
+            half_life_days=half_life_days,
+        ),
+        default=None,
+    )
 
 
 def poll_date_bounds(
-    db: Database, scope: PollScope, *, include_seat_polls: bool = True
+    db: Database,
+    scope: PollScope,
+    *,
+    include_seat_polls: bool = True,
+    since_date: date | None = None,
+    as_of_date: date | None = None,
+    half_life_days: float | None = None,
 ) -> tuple[date | None, date | None]:
-    """``(first, last)`` fieldwork end date across every poll the run would use.
-
-    ``(None, None)`` when the run has no usable polls at all. The first date bounds
-    a ``--rebuild-history`` window the way the last one caps ``as_of_date``.
-    """
-    end_dates = _poll_end_dates(db, scope, include_seat_polls=include_seat_polls)
+    """First and last admitted endpoints, or ``(None, None)`` without evidence."""
+    end_dates = _poll_end_dates(
+        db,
+        scope,
+        include_seat_polls=include_seat_polls,
+        since_date=since_date,
+        as_of_date=as_of_date,
+        half_life_days=half_life_days,
+    )
     return min(end_dates, default=None), max(end_dates, default=None)
 
 
@@ -2196,18 +2227,18 @@ def run_simulation(
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
     )
 
-    national_readings = collect_poll_readings(
+    poll_window = collect_poll_window(
         db,
-        scope.national_map_id,
-        cfg.since_date,
-        cfg.as_of_date,
-        cfg.half_life_days,
-        pollster_weight_by_id,
-        pollster_name_by_id,
+        scope,
+        since_date=cfg.since_date,
+        as_of_date=cfg.as_of_date,
+        half_life_days=cfg.half_life_days,
+        include_seat_polls=not cfg.ignore_seat_polls,
+        pollster_data=(pollster_weight_by_id, pollster_name_by_id),
     )
-    weighted_sums, total_weights, latest_poll_usage = aggregate_national(
-        national_readings, scope.national_matchup
-    )
+    weighted_sums = poll_window.weighted_sums
+    total_weights = poll_window.total_weights
+    latest_poll_usage = poll_window.latest_poll
 
     party_universe, region_swings, region_diff_rows = compute_region_diffs(
         seats,
@@ -2226,38 +2257,7 @@ def run_simulation(
     seat_averages: dict[int, SeatPollAverage] = {}
     seat_poll_diagnostics: list[str] = []
     if not cfg.ignore_seat_polls:
-        # The House and the President poll seats on the same map as their national
-        # series, so re-reading it would be a second pass over the same rows.
-        seat_readings = (
-            national_readings
-            if scope.seat_map_id == scope.national_map_id
-            else collect_poll_readings(
-                db,
-                scope.seat_map_id,
-                cfg.since_date,
-                cfg.as_of_date,
-                cfg.half_life_days,
-                pollster_weight_by_id,
-                pollster_name_by_id,
-            )
-        )
-        tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
-        seat_averages = {
-            seat_id: average
-            for seat_id, average in aggregate_seat_polls(
-                seat_readings,
-                seat_matchups={
-                    int(row.seat_id): row.matchup
-                    for row in tracked_rows
-                    if row.seat_id is not None
-                },
-                national_matchup=scope.national_matchup,
-                policy=scope.seat_matchup_policy,
-            ).items()
-            # A seat off this run's allowlist (a Class-1 Senate race) is polled but
-            # not projected, so it must not show up in the diagnostics either.
-            if seat_id in seat_name_by_id
-        }
+        seat_averages = poll_window.seat_averages
         # A candidate who exists only in seat polls — Nebraska's independent, with
         # no 2020 baseline and no national generic-ballot line — is otherwise
         # outside the party universe, so neither the blend nor the projection would
@@ -2288,15 +2288,6 @@ def run_simulation(
         region_swings,
         party_name_by_id,
         seat_swings=seat_swings,
-    )
-
-    # The as-of cap counts seat polls, so the "latest poll used" must too, or the
-    # meta could read as_of=09-15 beside a snippet dated 09-01.
-    latest_poll_usage = latest_poll_usage_of(
-        [
-            latest_poll_usage,
-            *(average.latest_poll for _seat_id, average in sorted(seat_averages.items())),
-        ]
     )
 
     election_name = _election_name_pattern(spec, cfg.as_of_date)

@@ -3,3 +3,5 @@
 - check export order logic - unify
 - presidential EV counts: seats.electoral_votes exists, but export still uses the per-era table in old_data/scripts/usa/us_electoral_votes.py - needs per-era storage in the DB
 - Senate forecast subtitle says "Silver Bulletin (US House)" - label it as the generic ballot [clarify-senate-forecast-latest-poll-label-as-generic-ballot]
+- electionmaps/data/map-modes.md is stale: names initElectionData()/hydrateManifestSettings() (gone), documents a `settings` block the manifest no longer has, and lists `parliament` as only westminster/holyrood - rewrite against the current manifest keys
+- server.sh watch loop records checksums after the rebuild, so a source edited mid-build is never rebuilt (stale .min.js can get committed) - take the checksum before running minify

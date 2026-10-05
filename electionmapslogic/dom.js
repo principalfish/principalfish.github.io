@@ -10,10 +10,16 @@ import { fetchJson } from './files.js';
 
 // ─── Page title ───────────────────────────────────────────────────────────────
 
-// Brand shown in the H1 and browser-tab title. The US page overrides it via page.title
-// ("US Elections"); the UK page keeps the default.
-const PAGE_BRAND = page.title || 'Election Maps';
-const MAPS_PAGE_TITLE_SUFFIX = `${PAGE_BRAND} | Principal Fish`;
+/**
+ * Brand shown in the H1 and browser-tab title, read from the page's manifest (`misc.title`,
+ * e.g. "UK Election Maps" / "US Elections"). Evaluated at call time rather than module load:
+ * the title renderers first run after app.js has fetched the manifest and run
+ * manifest.init(), so manifest.misc is populated by then.
+ * @returns {string}
+ */
+function pageBrand() {
+  return manifest.misc?.title || 'Election Maps';
+}
 
 /**
  * Sets the browser tab title from the current view: poll tracker, predict, or election name.
@@ -33,7 +39,8 @@ export function renderPageTitle() {
   // Use the manifest's display label (e.g. "US House"), not the raw key ("us_house"),
   // so the browser-tab title matches the on-page H1.
   const parlLabel = parliament ? manifest.parliamentLabel(parliament) : null;
-  const suffix = parlLabel ? `${parlLabel} | ${MAPS_PAGE_TITLE_SUFFIX}` : MAPS_PAGE_TITLE_SUFFIX;
+  const brandSuffix = `${pageBrand()} | Principal Fish`;
+  const suffix = parlLabel ? `${parlLabel} | ${brandSuffix}` : brandSuffix;
   document.title = label ? `${label} | ${suffix}` : suffix;
 }
 
@@ -109,7 +116,7 @@ function renderSubtitleText(text = '', error = false) {
  * @returns {void}
  */
 function renderTitle() {
-  const base = page.title || manifest.misc?.title || 'UK Election Maps';
+  const base = pageBrand();
   const label = manifest.parliamentLabel(state.currentParliament);
   mapsTitle.textContent = label ? `${base} · ${label}` : base;
 }

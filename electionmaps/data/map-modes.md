@@ -6,7 +6,7 @@ The manifest file for the election maps application. Loaded once on boot by `ini
 
 ## `defaultElection`
 
-String ID of the election to load when the URL has no `?election=` param.
+String ID of the election to load when the URL has no `?election=` param. With no `?parliament=` param either, its parliament is the tab the page opens on.
 
 ---
 
@@ -84,6 +84,11 @@ Per-parliament feature flags and predict mode configuration.
 | `features` | Array of feature strings. `"predict"` shows the Predict button; `"pollTracker"` shows the Poll tracker button. |
 | `predictAnchorElectionId` | The election that acts as the "current simulation" for the Apply prediction button. Also used as the default election when no URL param is present. |
 | `predictBaselineElectionId` | The election whose vote shares are used as the predict grid baseline. |
+| `nextElectionYear` | Year of the next election. Used in the "Predict YYYY" labels; for `us_senate` the export also uses it to pick which Senate special elections to include. |
+| `nextElectionDate` | Optional. When the next election starts, which turns on the countdown. Either a bare ISO date (`"2031-05-01"`, read as UTC midnight) or a timestamp with an offset for a precise moment (`"2026-11-03T00:00:00-05:00"` for midnight US Eastern). The date in the countdown text is shown in UTC, so a timestamp must fall on the intended day in UTC: midnight at a negative offset does, but midnight at a positive offset (e.g. UK summer time, `+01:00`) shows the day before. `null` or omitted = no countdown. |
+| `nextElectionLabel` | Name of the election shown in the countdown text, e.g. `"US Senate election"`. |
+
+The countdown (`"12d 3h 4m 5s · <label> · 3 November 2026"`) shows only when `nextElectionDate` is set, and only in Predict mode or on a prediction election (`model: true`). It never shows in the poll tracker, and hides itself once the date passes.
 
 ---
 

@@ -3166,8 +3166,8 @@ class TestMain:
         }
         assert f"Wrote {seat_count} seats → {custom}" in capsys.readouterr().out
         assert not outputs.prediction.exists()
-        # The meta file always goes to its default path.
-        assert outputs.meta.exists()
+        assert custom.with_name("prediction-meta.json").exists()
+        assert not outputs.meta.exists()
         assert outputs.configured.stat().st_size == 0
 
     @pytest.mark.parametrize("dry_run", [False, True], ids=["real", "dry-run"])
@@ -3202,7 +3202,7 @@ class TestMain:
         assert outputs.trend.exists() is not dry_run
         assert outputs.configured.stat().st_size == 0
 
-    def test_a_dry_run_still_writes_the_prediction_and_meta(
+    def test_a_default_dry_run_writes_no_prediction_or_meta(
         self,
         db: Database,
         tmp_path: Path,
@@ -3224,13 +3224,10 @@ class TestMain:
             "--dry-run",
         )
 
-        # --dry-run skips the database and trend cache, not the front-end files.
         assert _holyrood_uns_run_order(only_the_test_database) == []
         assert not outputs.trend.exists()
-        assert outputs.prediction.exists()
-        assert _read_json(outputs.meta) == {
-            "latest_poll_snippet": ("Latest poll used: List Pollster (2026-05-30)")
-        }
+        assert not outputs.prediction.exists()
+        assert not outputs.meta.exists()
 
     def test_manual_poll_shares_run_once_uncapped_with_an_empty_snippet(
         self,

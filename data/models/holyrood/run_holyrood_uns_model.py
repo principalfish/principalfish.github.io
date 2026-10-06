@@ -1546,14 +1546,28 @@ _DEFAULT_OUTPUT = _REPO_ROOT / "electionmaps" / "data" / "results" / RESULT_FILE
 _DEFAULT_META_OUTPUT = _REPO_ROOT / "electionmaps" / "data" / "results" / META_FILE_NAME
 
 
+def resolve_output_paths(
+    *, output: str | None, no_output: bool, dry_run: bool
+) -> tuple[Path, Path] | None:
+    """Resolve requested prediction and metadata writes, including dry previews."""
+    if no_output or (dry_run and output is None):
+        return None
+    if output is None:
+        return _DEFAULT_OUTPUT, _DEFAULT_META_OUTPUT
+    prediction = Path(output)
+    return prediction, prediction.with_name(f"{prediction.stem}-meta.json")
+
+
 def parse_args() -> argparse.Namespace:
     """Parse CLI arguments for single-date or retrospective Holyrood simulation.
 
     Single-date flags (default mode):
 
     - ``--election-name`` (str): baseline holyrood_general election name.
-    - ``--output FILE`` (str, optional): path for the pf-results-v4 JSON output.
-    - ``--no-output`` (flag): skip writing any JSON output file.
+    - ``--output FILE`` (str, optional): prediction path with sibling metadata;
+      an explicit path permits preview writes in dry-run mode.
+    - ``--no-output`` (flag): suppress prediction and metadata, even with an
+      explicit output path.
     - ``--poll-shares JSON`` (str, optional): party name → VI share % override that
       bypasses the DB poll fetch (also disables gap-fill and the as-of cap).
     - ``--as-of-date`` (ISO date, optional): upper-bound date for poll inclusion.
@@ -1585,12 +1599,15 @@ def parse_args() -> argparse.Namespace:
         "--output",
         metavar="FILE",
         default=None,
-        help=f"Write pf-results-v4 JSON to FILE (default: {_DEFAULT_OUTPUT})",
+        help=(
+            "Write prediction JSON to FILE and metadata to sibling <stem>-meta.json; "
+            f"allows an explicit dry-run preview (non-dry default: {_DEFAULT_OUTPUT})"
+        ),
     )
     parser.add_argument(
         "--no-output",
         action="store_true",
-        help="Skip writing the JSON output file",
+        help="Skip prediction and metadata files, including an explicit --output",
     )
     parser.add_argument(
         "--poll-shares",
@@ -1603,15 +1620,27 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--half-life-days", type=float, default=30.0)
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Compute without writes, except explicitly requested --output previews",
+    )
     # Single-date flags
     parser.add_argument("--as-of-days-back", type=int, default=0)
     parser.add_argument("--since-days-back", type=int, default=30)
     parser.add_argument("--as-of-date", default=None)
     parser.add_argument("--since-date", default=None)
     # Retrospective mode flags
-    parser.add_argument("--start-date", default=None, help="First date for retrospective backfill (YYYY-MM-DD)")
-    parser.add_argument("--end-date", default=None, help="Last date for retrospective backfill (YYYY-MM-DD)")
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        help="First date for retrospective backfill (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        help="Last date for retrospective backfill (YYYY-MM-DD)",
+    )
     parser.add_argument("--lookback-days", type=int, default=365)
     parser.add_argument(
         "--reset-existing",
@@ -1671,7 +1700,9 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
     Without those flags, runs a single-date simulation for the resolved
     ``as_of_date`` — automatically gap-filling any missing dates between the most
     recent cached date and ``as_of_date`` — then writes the pf-results-v4 JSON and
-    "Latest poll used" meta for the current date (unless ``--no-output``).
+    "Latest poll used" meta for the current date. Default dry runs write neither;
+    an explicit ``--output`` permits a preview with sibling metadata, unless
+    ``--no-output`` suppresses both.
 
     ``--poll-shares`` forces a single-snapshot run: it bypasses the DB poll fetch
     and disables both gap-fill and the as-of cap, yielding empty poll meta.
@@ -1685,6 +1716,9 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             opens the configured database.
     """
     args = parse_args()
+    output_paths = resolve_output_paths(
+        output=args.output, no_output=args.no_output, dry_run=args.dry_run
+    )
 
     # --poll-shares is a single-snapshot override and cannot be combined with the
     # retrospective date range (which fetches DB poll averages per date).
@@ -1823,9 +1857,9 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             if run_date == cfg.as_of_date:
                 final_output = output
 
-    # Front-end JSON + meta for the current as_of date (unless --no-output).
-    if final_output is not None and not args.no_output:
-        output_path = Path(args.output) if args.output else _DEFAULT_OUTPUT
+    # Publish only the resolved prediction/metadata pair requested for this run.
+    if final_output is not None and output_paths is not None:
+        output_path, meta_path = output_paths
 
         seat_name_by_id = {s.id: s.seat_name for s in final_output.all_seats}
         region_by_seat_id = {s.id: s.region_id for s in final_output.all_seats}
@@ -1847,8 +1881,8 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
         else:
             snippet = ""
         meta_payload: dict[str, Any] = {"latest_poll_snippet": snippet}
-        write_result_json(meta_payload, _DEFAULT_META_OUTPUT)
-        print(f"Wrote meta → {_DEFAULT_META_OUTPUT}")
+        write_result_json(meta_payload, meta_path)
+        print(f"Wrote meta → {meta_path}")
 
 
 if __name__ == "__main__":

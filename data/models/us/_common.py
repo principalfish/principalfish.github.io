@@ -2503,9 +2503,13 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     """Build the shared CLI parser for a runner, defaulted from ``spec``."""
     parser = argparse.ArgumentParser(description=f"Run the {spec.election_name_prefix} forecast model.")
     parser.add_argument("--half-life-days", type=float, default=30.0)
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Compute without database or file writes"
+    )
     # Single-date flags
-    parser.add_argument("--as-of-date", default=None, help="Upper-bound poll date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--as-of-date", default=None, help="Upper-bound poll date (YYYY-MM-DD)"
+    )
     parser.add_argument("--as-of-days-back", type=int, default=0)
     parser.add_argument("--since-date", default=None, help="Lower-bound poll date (YYYY-MM-DD)")
     parser.add_argument("--since-days-back", type=int, default=30)

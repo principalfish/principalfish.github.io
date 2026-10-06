@@ -264,16 +264,32 @@ def parse_args() -> argparse.Namespace:
         help=f"Baseline election the projection swings from (default: {BASELINE_ELECTION_NAME!r})",
     )
     parser.add_argument("--half-life-days", type=float, default=30.0)
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Compute without writes, except explicitly requested --output-csv previews",
+    )
     # Single-date flags
     parser.add_argument("--as-of-days-back", type=int, default=0)
     parser.add_argument("--since-days-back", type=int, default=30)
     parser.add_argument("--as-of-date", default=None)
     parser.add_argument("--since-date", default=None)
-    parser.add_argument("--output-csv", default=None)
+    parser.add_argument(
+        "--output-csv",
+        default=None,
+        help="Write projected votes and a sibling regional-differences CSV, including in dry runs",
+    )
     # Retrospective mode flags
-    parser.add_argument("--start-date", default=None, help="First date for retrospective backfill (YYYY-MM-DD)")
-    parser.add_argument("--end-date", default=None, help="Last date for retrospective backfill (YYYY-MM-DD)")
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        help="First date for retrospective backfill (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        help="Last date for retrospective backfill (YYYY-MM-DD)",
+    )
     parser.add_argument("--lookback-days", type=int, default=365)
     parser.add_argument(
         "--reset-existing",

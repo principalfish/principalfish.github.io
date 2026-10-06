@@ -32,7 +32,7 @@ if str(DATA_DIR) not in sys.path:
 from config import DatabaseConfig
 from db import Database
 from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json
+from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
     default_trend_path,
     publish_trends,
@@ -1144,6 +1144,21 @@ def project_seat_votes(
     return projected_votes, winners_by_party
 
 
+def output_csv_paths(output_csv: str) -> tuple[Path, Path]:
+    """Return the projection CSV and its regional-differences sibling."""
+    output_path = Path(output_csv)
+    return output_path, output_path.with_name(
+        f"{output_path.stem}_regional_diffs{output_path.suffix}"
+    )
+
+
+def validate_csv_outputs(output_csv: str | None, database: Path) -> None:
+    """Check both CSV destinations before calculation or either file write."""
+    if output_csv is not None:
+        for destination in output_csv_paths(output_csv):
+            validate_output_target(destination, database=database)
+
+
 def write_output_csvs(
     output_csv: str,
     projected_votes: list[dict[str, Any]],
@@ -1180,7 +1195,7 @@ def write_output_csvs(
     for row in projected_votes:
         seat_projected_totals[int(row["seat_id"])] += float(row["vote_total"] or 0.0)
 
-    output_path = Path(output_csv)
+    output_path, diff_output_path = output_csv_paths(output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
@@ -1204,7 +1219,6 @@ def write_output_csvs(
                 }
             )
 
-    diff_output_path = output_path.with_name(output_path.stem + "_regional_diffs" + output_path.suffix)
     with diff_output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
             handle,
@@ -1346,6 +1360,7 @@ def run_simulation(
             baseline election's map does not match the configured map, or if the
             baseline election has no vote rows.
     """
+    validate_csv_outputs(cfg.output_csv, database_file(db))
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date
 
@@ -1472,6 +1487,9 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
         return
 
     cfg = _build_config_from_args(args)
+    validate_csv_outputs(cfg.output_csv, database_file(db))
+    if not cfg.dry_run:
+        validate_output_target(TREND_CACHE_META_JSON, database=database_file(db))
 
     # Choose the newest contributing endpoint in its own preserved window.
     latest_map, _, effective_since = resolve_simulation_scope(db, cfg)

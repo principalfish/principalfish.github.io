@@ -56,7 +56,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(str(exc), file=sys.stderr)
         return 1
     print(
-        f"{'Validated' if args.dry_run else 'Published'} {len(entries)} trend points for map {args.map_id}: {destination}"
+        f"{'Validated' if args.dry_run else 'Published'} {len(entries)} "
+        f"trend points for map {args.map_id}: {destination}"
     )
     return 0
 

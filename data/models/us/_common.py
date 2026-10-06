@@ -507,6 +507,21 @@ def latest_poll_usage_of(usages: Iterable[LatestPollUsage | None]) -> LatestPoll
     return latest
 
 
+def usable_popular_vote_seat_ids(
+    seat_party_vote_totals: Mapping[int, Mapping[int, float]],
+    parent_seat_by_id: Mapping[int, int],
+) -> set[int]:
+    """Exclude overlapping districts only when their parent can be projected."""
+    return non_overlapping_seat_ids(
+        (
+            seat_id
+            for seat_id, totals in seat_party_vote_totals.items()
+            if sum(totals.values()) > 0
+        ),
+        parent_seat_by_id,
+    )
+
+
 def build_baseline_vote_state(
     db: Database,
     baseline_election_id: int,
@@ -514,6 +529,8 @@ def build_baseline_vote_state(
     seat_id_filter: set[int] | None = None,
     seat_baseline_election_ids: Mapping[int, int] | None = None,
     popular_vote_seat_ids: set[int] | None = None,
+    *,
+    popular_vote_parent_ids: Mapping[int, int] | None = None,
 ) -> tuple[
     dict[int, dict[int, float]],
     dict[int, float],
@@ -535,7 +552,9 @@ def build_baseline_vote_state(
 
     ``popular_vote_seat_ids`` restricts national and regional aggregate votes
     without discarding per-seat baselines or their parties. Presidential callers
-    exclude overlapping districts when their statewide parent is present.
+    exclude overlapping districts when their statewide parent has a usable
+    baseline. ``popular_vote_parent_ids`` derives that selection from the loaded
+    positive-turnout baselines, including per-seat election overrides.
 
     Returns ``(seat_party_vote_totals, national_party_totals,
     baseline_national_shares, baseline_region_shares)`` where the two share maps
@@ -552,11 +571,17 @@ def build_baseline_vote_state(
     # ``None`` means "every seat but the overridden ones"; a set means "only these".
     sources: list[tuple[Sequence[Vote], set[int] | None]] = [(baseline_votes, None)]
     for election_id in sorted(set(overrides.values())):
-        seat_ids = {seat_id for seat_id, other in overrides.items() if other == election_id}
+        seat_ids = {
+            seat_id for seat_id, other in overrides.items() if other == election_id
+        }
         sources.append((db.get_votes_for_election(election_id), seat_ids))
 
-    seat_party_vote_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
-    region_party_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    seat_party_vote_totals: dict[int, dict[int, float]] = defaultdict(
+        lambda: defaultdict(float)
+    )
+    region_party_totals: dict[int, dict[int, float]] = defaultdict(
+        lambda: defaultdict(float)
+    )
     region_totals: dict[int, float] = defaultdict(float)
     national_party_totals: dict[int, float] = defaultdict(float)
     national_total = 0.0
@@ -577,9 +602,21 @@ def build_baseline_vote_state(
             value = float(vote.vote_total)
             seat_party_vote_totals[seat_id][party_id] += value
 
+    if not seat_party_vote_totals:
+        raise ValueError("No baseline seat-party vote totals available")
+    if popular_vote_parent_ids is not None:
+        popular_vote_seat_ids = usable_popular_vote_seat_ids(
+            seat_party_vote_totals, popular_vote_parent_ids
+        )
+
+    for seat_id, party_totals in seat_party_vote_totals.items():
+        for party_id, value in party_totals.items():
             # Keep district-only parties in the projection's party universe.
             national_party_totals.setdefault(party_id, 0.0)
-            if popular_vote_seat_ids is not None and seat_id not in popular_vote_seat_ids:
+            if (
+                popular_vote_seat_ids is not None
+                and seat_id not in popular_vote_seat_ids
+            ):
                 continue
 
             national_party_totals[party_id] += value
@@ -590,9 +627,6 @@ def build_baseline_vote_state(
                 continue
             region_party_totals[region_id][party_id] += value
             region_totals[region_id] += value
-
-    if not seat_party_vote_totals:
-        raise ValueError("No baseline seat-party vote totals available")
 
     baseline_national_shares: dict[int, float] = {}
     if national_total > 0:
@@ -2181,9 +2215,11 @@ def run_simulation(
         pollster_name_by_id,
     ) = build_reference_data(db, poll_map.id, spec.seat_name_allowlist)
 
-    seat_id_filter = {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None
-    popular_vote_seat_ids = (
-        non_overlapping_seat_ids((seat.id for seat in seats), seat_parent_ids(seats))
+    seat_id_filter = (
+        {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None
+    )
+    popular_vote_parent_ids = (
+        seat_parent_ids(seats)
         if spec.election_type == "us_presidential_model"
         else None
     )
@@ -2199,7 +2235,12 @@ def run_simulation(
         region_by_seat_id,
         seat_id_filter,
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
-        popular_vote_seat_ids,
+        popular_vote_parent_ids=popular_vote_parent_ids,
+    )
+    popular_vote_seat_ids = (
+        usable_popular_vote_seat_ids(seat_party_vote_totals, popular_vote_parent_ids)
+        if popular_vote_parent_ids is not None
+        else None
     )
 
     if poll_window is None:

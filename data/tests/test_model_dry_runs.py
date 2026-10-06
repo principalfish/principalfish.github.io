@@ -14,14 +14,16 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westminster"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyrood"))
 
+import run_holyrood_uns_model
 import run_uns_model
 from _common import main_for_spec
+
 from db import Database
 from model_support import trends
 from model_support.persistence import OutputScope, OutputVote, replace_output
 from scripts import rebuild_model_trends
-
 from tests import test_holyrood_model as holy
 from tests import test_us_model as us
 from tests import test_westminster_model as west
@@ -46,6 +48,261 @@ def seed_files(paths: list[Path], existing: bool) -> None:
         for path in paths:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"old cache deliberately malformed\n")
+
+
+@pytest.mark.parametrize("model", ["holyrood", "westminster"])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_explicit_output_cannot_replace_the_database(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    model: str,
+    dry_run: bool,
+) -> None:
+    argv = [
+        "--output" if model == "holyrood" else "--output-csv",
+        str(only_the_test_database),
+    ]
+    if dry_run:
+        argv.append("--dry-run")
+    if model == "holyrood":
+        holy._guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = seed_holyrood_world(db)
+        holy._seed_scenario_polls(db, world, constituency=True, list_ballot=True)
+        argv.extend(
+            [
+                *holy._baseline_argv(world),
+                "--as-of-date",
+                "2026-05-30",
+                "--since-date",
+                "2026-05-01",
+            ]
+        )
+    else:
+        west._guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        west._seed_swing_poll(db, westminster_world, date(2026, 6, 10))
+        argv.extend(
+            [
+                "--as-of-date",
+                "2026-06-10",
+                "--since-date",
+                "2026-06-01",
+            ]
+        )
+    before_db = database_snapshot(only_the_test_database)
+    before_files = file_snapshot(tmp_path)
+
+    with pytest.raises(ValueError, match="database"):
+        if model == "holyrood":
+            holy._run_main(monkeypatch, db, *argv)
+        else:
+            west._run_main(db, monkeypatch, westminster_world, *argv)
+
+    assert database_snapshot(only_the_test_database) == before_db
+    assert file_snapshot(tmp_path) == before_files
+
+
+@pytest.mark.parametrize("mode", ["no-output", "default-dry", "retrospective"])
+def test_holyrood_ignores_output_targets_when_not_publishing(
+    db: Database,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+) -> None:
+    outputs = holy._guard_writes(tmp_path, monkeypatch, only_the_test_database)
+    world = seed_holyrood_world(db)
+    holy._seed_scenario_polls(db, world, constituency=True, list_ballot=True)
+    outputs.meta.mkdir(parents=True)
+    monkeypatch.setattr(
+        run_holyrood_uns_model, "_DEFAULT_OUTPUT", only_the_test_database
+    )
+    argv = [*holy._baseline_argv(world)]
+    if mode == "retrospective":
+        argv.extend(
+            [
+                "--start-date",
+                "2026-05-30",
+                "--end-date",
+                "2026-05-30",
+                "--output",
+                str(only_the_test_database),
+            ]
+        )
+    else:
+        argv.extend(
+            [
+                "--as-of-date",
+                "2026-05-30",
+                "--since-date",
+                "2026-05-01",
+            ]
+        )
+        argv.extend(
+            ["--dry-run"]
+            if mode == "default-dry"
+            else ["--no-output", "--output", str(only_the_test_database)]
+        )
+
+    holy._run_main(monkeypatch, db, *argv)
+
+    assert database_snapshot(only_the_test_database)
+    assert outputs.meta.is_dir()
+    assert not outputs.prediction.exists()
+
+
+@pytest.mark.parametrize("mode", ["default", "explicit", "preview"])
+@pytest.mark.parametrize("target", ["prediction", "meta"])
+@pytest.mark.parametrize("invalid", ["database", "hardlink", "directory"])
+def test_holyrood_rejects_invalid_outputs_before_any_write(
+    db: Database,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+    target: str,
+    invalid: str,
+) -> None:
+    outputs = holy._guard_writes(tmp_path, monkeypatch, only_the_test_database)
+    world = seed_holyrood_world(db)
+    holy._seed_scenario_polls(db, world, constituency=True, list_ballot=True)
+    seed_files([outputs.trend, outputs.prediction, outputs.meta], True)
+    destination = outputs.prediction if target == "prediction" else outputs.meta
+    destination.unlink()
+    if invalid == "database":
+        destination.symlink_to(only_the_test_database)
+    elif invalid == "hardlink":
+        destination.hardlink_to(only_the_test_database)
+    else:
+        destination.mkdir()
+    before_db = database_snapshot(only_the_test_database)
+    before_files = file_snapshot(tmp_path / "results")
+    argv = [
+        *holy._baseline_argv(world),
+        "--as-of-date",
+        "2026-05-30",
+        "--since-date",
+        "2026-05-01",
+    ]
+    if mode != "default":
+        argv.extend(["--output", str(outputs.prediction)])
+    if mode == "preview":
+        argv.append("--dry-run")
+
+    with pytest.raises(ValueError, match="database|not a file"):
+        holy._run_main(monkeypatch, db, *argv)
+
+    assert database_snapshot(only_the_test_database) == before_db
+    assert file_snapshot(tmp_path / "results") == before_files
+    if invalid == "directory":
+        assert destination.is_dir()
+    else:
+        assert destination.samefile(only_the_test_database)
+
+
+@pytest.mark.parametrize("dry_run", [False, True])
+@pytest.mark.parametrize("target", ["csv", "diff"])
+@pytest.mark.parametrize("invalid", ["database", "hardlink", "directory"])
+@pytest.mark.parametrize("entrypoint", ["cli", "direct"])
+def test_westminster_rejects_invalid_csv_outputs_before_any_write(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    dry_run: bool,
+    target: str,
+    invalid: str,
+    entrypoint: str,
+) -> None:
+    trend, meta = west._guard_writes(tmp_path, monkeypatch, only_the_test_database)
+    west._seed_swing_poll(db, westminster_world, date(2026, 6, 10))
+    preview = tmp_path / "results" / "votes.csv"
+    diff = preview.with_name("votes_regional_diffs.csv")
+    seed_files([trend, meta, preview, diff], True)
+    destination = preview if target == "csv" else diff
+    destination.unlink()
+    if invalid == "database":
+        destination.symlink_to(only_the_test_database)
+    elif invalid == "hardlink":
+        destination.hardlink_to(only_the_test_database)
+    else:
+        destination.mkdir()
+    before_db = database_snapshot(only_the_test_database)
+    before_files = file_snapshot(tmp_path / "results")
+    argv = [
+        "--as-of-date",
+        "2026-06-10",
+        "--since-date",
+        "2026-06-01",
+        "--output-csv",
+        str(preview),
+    ]
+    if dry_run:
+        argv.append("--dry-run")
+
+    with pytest.raises(ValueError, match="database|not a file"):
+        if entrypoint == "cli":
+            west._run_main(db, monkeypatch, westminster_world, *argv)
+        else:
+            run_uns_model.run_simulation(
+                db,
+                run_uns_model.SimulationConfig(
+                    map_name=westminster_world.map_name,
+                    baseline_election_name=westminster_world.baseline_election_name,
+                    as_of_date=date(2026, 6, 10),
+                    since_date=date(2026, 6, 1),
+                    half_life_days=30,
+                    output_csv=str(preview),
+                    dry_run=dry_run,
+                ),
+            )
+
+    assert database_snapshot(only_the_test_database) == before_db
+    assert file_snapshot(tmp_path / "results") == before_files
+    if invalid == "directory":
+        assert destination.is_dir()
+    else:
+        assert destination.samefile(only_the_test_database)
+
+
+@pytest.mark.parametrize("invalid", ["database", "hardlink", "directory"])
+def test_westminster_rejects_invalid_metadata_before_any_write(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    invalid: str,
+) -> None:
+    trend, meta = west._guard_writes(tmp_path, monkeypatch, only_the_test_database)
+    west._seed_swing_poll(db, westminster_world, date(2026, 6, 10))
+    seed_files([trend, meta], True)
+    meta.unlink()
+    if invalid == "database":
+        meta.symlink_to(only_the_test_database)
+    elif invalid == "hardlink":
+        meta.hardlink_to(only_the_test_database)
+    else:
+        meta.mkdir()
+    before_db = database_snapshot(only_the_test_database)
+    before_files = file_snapshot(tmp_path / "results")
+
+    with pytest.raises(ValueError, match="database|not a file"):
+        west._run_main(
+            db,
+            monkeypatch,
+            westminster_world,
+            "--as-of-date",
+            "2026-06-10",
+            "--since-date",
+            "2026-06-01",
+        )
+
+    assert database_snapshot(only_the_test_database) == before_db
+    assert file_snapshot(tmp_path / "results") == before_files
 
 
 @pytest.mark.parametrize("existing", [False, True])

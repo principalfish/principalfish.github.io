@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Generic, TypeVar
 
-from db import Database
-from models import Poll, PollRow, Pollster
 from sqlalchemy import select
 
+from db import Database
 from model_support.cli import validate_date_window
+from models import Poll, PollRow, Pollster
 
 
 def effective_pollster_weight(weight: float | None) -> float:

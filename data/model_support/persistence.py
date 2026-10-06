@@ -115,7 +115,7 @@ def replace_output(
     election_name: str,
     votes: Iterable[OutputVote],
 ) -> tuple[str, int]:
-    """Commit deletion and complete insertion together, preserving old rows on failure."""
+    """Commit deletion and insertion together, preserving old rows on failure."""
     if scope.date_from_name(election_name) != as_of:
         raise ValueError("Election name does not match the output date and scope")
     with closing(sqlite3.connect(sqlite_path)) as conn:

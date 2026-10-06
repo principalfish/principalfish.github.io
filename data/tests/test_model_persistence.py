@@ -20,10 +20,10 @@ for engine in ("westminster", "holyrood", "us"):
 import _common as us
 import run_holyrood_uns_model as holyrood
 import run_uns_model as westminster
+
 from db import Database
 from model_support.persistence import OutputScope, output_dates
 from models import ElectionType
-
 from tests.uk_fixtures import seed_holyrood_world, seed_westminster_world
 
 AS_OF = date(2026, 6, 1)
@@ -259,7 +259,8 @@ def test_deletion_and_dates_require_type_map_and_supported_name(
                 (map_id, name, kind),
             )
             conn.execute(
-                "INSERT INTO votes (election_id, seat_id, party_id, vote_total, elected) "
+                "INSERT INTO votes "
+                "(election_id, seat_id, party_id, vote_total, elected) "
                 "VALUES (?, 1, 1, 777, 0)",
                 (cursor.lastrowid,),
             )
@@ -319,7 +320,10 @@ def test_runner_failure_rolls_back_then_successful_rerun_replaces_once(
         run = lambda: holyrood.run_holyrood_simulation(db, holy_cfg)
         monkeypatch.setattr(holyrood, "update_trend_cache_json", lambda *_a, **_k: None)
     else:
-        seat_map = db.add_map("Runner map", parliament="us_president" if kind == "us_presidential" else kind)
+        seat_map = db.add_map(
+            "Runner map",
+            parliament="us_president" if kind == "us_presidential" else kind,
+        )
         region = db.add_region(seat_map.id, "Region")
         seat = db.add_seat(seat_map.id, "Alabama", region_id=region.id)
         dem = db.add_party("Democratic")
@@ -373,7 +377,8 @@ def test_runner_failure_rolls_back_then_successful_rerun_replaces_once(
             (scope.election_type, scope.map_id),
         ).fetchone()[0]
         seat_id, party_id = conn.execute(
-            "SELECT seat_id, party_id FROM votes WHERE election_id = ? ORDER BY id LIMIT 1 OFFSET 1",
+            "SELECT seat_id, party_id FROM votes WHERE election_id = ? "
+            "ORDER BY id LIMIT 1 OFFSET 1",
             (model_id,),
         ).fetchone()
         conn.execute(

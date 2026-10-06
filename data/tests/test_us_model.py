@@ -2564,6 +2564,80 @@ class TestResolveSpecialBaselines:
 
 
 class TestPresidentialRecordedSummaries:
+    @pytest.mark.parametrize("state", ["Maine", "Nebraska"])
+    @pytest.mark.parametrize("parent_baseline", ["missing", "zero", "nonpositive"])
+    def test_unusable_parent_preserves_district_swings_winners_and_trends(
+        self,
+        db: Database,
+        tmp_path: Path,
+        state: str,
+        parent_baseline: str,
+    ) -> None:
+        dem, rep = _parties(db)
+        district = f"{state} CD-1"
+        election_map, seats = _seat_map_with_baseline(
+            db,
+            PRESIDENT_MAP,
+            "us_president",
+            {
+                district: {dem.id: 20.0, rep.id: 80.0},
+                "District of Columbia": {dem.id: 50.0, rep.id: 50.0},
+            },
+        )
+        spec = dataclasses.replace(
+            _us_spec(tmp_path, map_name=PRESIDENT_MAP),
+            election_type="us_presidential_model",
+        )
+        pollster = db.add_pollster("National poll", "national_president")
+        _add_poll(
+            db,
+            map_id=election_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(dem.id, 35.0), (rep.id, 65.0)],
+        )
+        cfg = dataclasses.replace(_cfg(spec), dry_run=False)
+        _, expected_votes, expected_diffs, expected_winners, _, _, _ = run_simulation(
+            db, cfg
+        )
+        expected_trends = spec.trend_cache_json.read_bytes()
+        parent = db.add_seat(
+            election_map.id, state, region_id=seats[district].region_id
+        )
+        if parent_baseline != "missing":
+            baseline = db.get_election_by_name(spec.baseline_election_name)
+            assert baseline is not None
+            db.add_vote(baseline.id, parent.id, party_id=dem.id, vote_total=0)
+            db.add_vote(
+                baseline.id,
+                parent.id,
+                party_id=rep.id,
+                vote_total=-1 if parent_baseline == "nonpositive" else 0,
+            )
+
+        name, projected, diffs, winners, _, _, _ = run_simulation(db, cfg)
+
+        assert _shares_by_party(projected, seats[district].id) == {
+            dem.id: 20.0,
+            rep.id: 80.0,
+        }
+        assert _shares_by_party(projected, seats["District of Columbia"].id) == {
+            dem.id: 50.0,
+            rep.id: 50.0,
+        }
+        assert _vote_rows(projected) == _vote_rows(expected_votes)
+        assert diffs == expected_diffs
+        assert winners == expected_winners
+        assert spec.trend_cache_json.read_bytes() == expected_trends
+        parties = json.loads(expected_trends)[0]["parties"]
+        assert parties[str(dem.id)]["v"] == 35.0
+        assert parties[str(rep.id)]["v"] == 65.0
+        election = db.get_election_by_name(name)
+        assert election is not None
+        assert {vote.seat_id for vote in db.get_votes_for_election(election.id)} == {
+            seat.id for seat in seats.values()
+        }
+
     @pytest.mark.parametrize(
         "state,other", [("Maine", "Nebraska"), ("Nebraska", "Maine")]
     )

@@ -165,7 +165,7 @@ from sqlalchemy import select as sa_select
 from config import DatabaseConfig
 from db import Database
 from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json
+from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
     default_trend_path,
     publish_trends,
@@ -1743,6 +1743,10 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
     if args.start_date and args.end_date:
         run_retrospective(db, args)
         return
+
+    if output_paths is not None:
+        for destination in output_paths:
+            validate_output_target(destination, database=database_file(db))
 
     cfg = _build_config_from_args(args)
 

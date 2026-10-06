@@ -14,7 +14,14 @@ class OutputPublicationError(RuntimeError):
 
 def validate_output_target(destination: Path, *, database: Path | None = None) -> None:
     """Reject unusable destinations without creating files or directories."""
-    if database is not None and destination.resolve() == database.resolve():
+    if database is not None and (
+        destination.resolve() == database.resolve()
+        or (
+            destination.exists()
+            and database.exists()
+            and destination.samefile(database)
+        )
+    ):
         raise ValueError(f"Output destination is the database: {destination}")
     if destination.exists() and not destination.is_file():
         raise ValueError(f"Output destination is not a file: {destination}")

@@ -12,14 +12,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
-from polls.importers.us.us_geography import parent_seat_name
-
 from model_support.io import (
     OutputPublicationError,
     publish_json,
     validate_output_target,
 )
 from model_support.persistence import OutputScope, committed_dates
+from polls.importers.us.us_geography import parent_seat_name
 
 
 class TrendEntry(TypedDict):
@@ -90,7 +89,8 @@ def _validate_scope(conn: sqlite3.Connection, scope: OutputScope) -> None:
     if row is None or (expected is not None and row[0] != expected):
         raise ValueError(f"Map {scope.map_id} does not belong to {scope.election_type}")
     for name, seat_map_id in conn.execute(
-        "SELECT DISTINCT e.name, s.map_id FROM elections e JOIN votes v ON v.election_id=e.id "
+        "SELECT DISTINCT e.name, s.map_id FROM elections e "
+        "JOIN votes v ON v.election_id=e.id "
         "LEFT JOIN seats s ON s.id=v.seat_id WHERE e.type=? AND e.map_id=?",
         (scope.election_type, scope.map_id),
     ):
@@ -134,7 +134,8 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
         )
         id_by_name = {name: seat_id for seat_id, name in seats}
         conn.execute(
-            "CREATE TEMP TABLE trend_seats (id INTEGER PRIMARY KEY, popular INTEGER, parent_id INTEGER)"
+            "CREATE TEMP TABLE trend_seats "
+            "(id INTEGER PRIMARY KEY, popular INTEGER, parent_id INTEGER)"
         )
         conn.executemany(
             "INSERT INTO trend_seats VALUES (?,?,?)",
@@ -158,10 +159,15 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             eid: {} for eid in elections
         }
         for eid, pid, votes, elected, ev, has_popular in conn.execute(
-            "SELECT e.id,v.party_id,SUM(CASE WHEN t.popular=1 AND (t.parent_id IS NULL OR NOT EXISTS "
-            "(SELECT 1 FROM votes p WHERE p.election_id=e.id AND p.seat_id=t.parent_id)) THEN v.vote_total ELSE 0 END),"
-            "SUM(CASE WHEN v.elected THEN 1 ELSE 0 END),SUM(CASE WHEN v.elected THEN COALESCE(s.electoral_votes,0) ELSE 0 END),MAX(t.popular) "
-            "FROM elections e JOIN votes v ON v.election_id=e.id JOIN seats s ON s.id=v.seat_id JOIN trend_seats t ON t.id=s.id "
+            "SELECT e.id,v.party_id,SUM(CASE WHEN t.popular=1 "
+            "AND (t.parent_id IS NULL OR NOT EXISTS "
+            "(SELECT 1 FROM votes p WHERE p.election_id=e.id "
+            "AND p.seat_id=t.parent_id)) THEN v.vote_total ELSE 0 END),"
+            "SUM(CASE WHEN v.elected THEN 1 ELSE 0 END),"
+            "SUM(CASE WHEN v.elected THEN COALESCE(s.electoral_votes,0) "
+            "ELSE 0 END),MAX(t.popular) "
+            "FROM elections e JOIN votes v ON v.election_id=e.id "
+            "JOIN seats s ON s.id=v.seat_id JOIN trend_seats t ON t.id=s.id "
             "WHERE e.type=? AND e.map_id=? GROUP BY e.id,v.party_id",
             (scope.election_type, scope.map_id),
         ):
@@ -213,9 +219,14 @@ def publish_trends(sqlite_path: Path, scope: OutputScope, destination: Path) -> 
         None,
     )
     repair = (
-        f"Repair trends with rebuild_model_trends.py --model {model} --map-id {scope.map_id} --database {shlex.quote(str(sqlite_path))} --output {shlex.quote(str(destination))}."
+        f"Repair trends with rebuild_model_trends.py --model {model} "
+        f"--map-id {scope.map_id} "
+        f"--database {shlex.quote(str(sqlite_path))} "
+        f"--output {shlex.quote(str(destination))}."
         if model
-        else "Regenerate this custom model trend cache from its scoped database outputs."
+        else (
+            "Regenerate this custom model trend cache from its scoped database outputs."
+        )
     )
     publish_json(reconstruct_trends(sqlite_path, scope), destination, repair=repair)
 
@@ -262,10 +273,14 @@ def trend_batch(
                 )
                 repair = (
                     f"Regenerate trends with rebuild_model_trends.py --model {model} "
-                    f"--map-id {scope.map_id} --database {shlex.quote(str(sqlite_path))} "
+                    f"--map-id {scope.map_id} "
+                    f"--database {shlex.quote(str(sqlite_path))} "
                     f"--output {shlex.quote(str(destination))}."
                     if model
-                    else "Regenerate this custom model trend cache from its scoped database outputs."
+                    else (
+                        "Regenerate this custom model trend cache "
+                        "from its scoped database outputs."
+                    )
                 )
                 original = f" Original model failure: {failure}" if failure else ""
                 raise OutputPublicationError(

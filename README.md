@@ -233,13 +233,19 @@ cd data/models/westminster
 ```
 
 Useful options:
+
 - `--start-date YYYY-MM-DD`
 - `--end-date YYYY-MM-DD`
 - `--lookback-days 365`
 - `--half-life-days 30`
 - `--dry-run`
-- `--no-reset-existing` (preserve existing `model_uns` elections and trend CSV; default behavior is to clear them before backfill)
-- `--reset-existing` (explicitly force reset behavior; enabled by default)
+- `--reset-existing` / `--no-reset-existing` (retained compatibility flags; both recompute every requested date and retain its previous result until replacement succeeds)
+
+Backfills commit one date at a time. A failed calculation or insertion preserves
+that date's previous result; successful neighbours remain committed. With
+`--continue-on-error`, other dates still run, but the command reports failed dates
+and exits unsuccessfully. The trend cache is regenerated from stored results at
+the end, including after partial failure.
 
 ---
 
@@ -499,7 +505,9 @@ seats. It picks its own range and its own as-of date, so combining it with
 `--start-date`/`--end-date` or `--as-of-date`/`--as-of-days-back` is a usage
 error (exit 2): a past as-of would delete every trend point above it and rebuild
 only up to it. If the whole series lies outside the poll window, the points are
-still dropped and the poll window `[first poll, as-of]` is rebuilt in their place.
+replaced by the poll window `[first poll, as-of]`. Points outside the new scope
+are dropped only after all required replacement dates succeed. A partial failure
+retains those points and reports failure, so the console does not export the run.
 
 ### Senate specials (Ohio, Florida)
 

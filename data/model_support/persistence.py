@@ -4,13 +4,29 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from collections.abc import Iterable
-from contextlib import closing
+from collections.abc import Iterable, Iterator
+from contextlib import closing, contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
 from db import ensure_elections_sqlite_schema
+
+_COMMITTED: ContextVar[tuple[tuple[Path, OutputScope, list[date]], ...]] = ContextVar(
+    "committed_model_dates", default=()
+)
+
+
+@contextmanager
+def committed_dates(sqlite_path: Path, scope: OutputScope) -> Iterator[list[date]]:
+    """Observe successful per-date commits without extending their transactions."""
+    dates: list[date] = []
+    token = _COMMITTED.set(_COMMITTED.get() + ((sqlite_path.resolve(), scope, dates),))
+    try:
+        yield dates
+    finally:
+        _COMMITTED.reset(token)
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,4 +155,7 @@ def replace_output(
                     for vote in votes
                 ),
             )
+    for path, requested, dates in _COMMITTED.get():
+        if path == sqlite_path.resolve() and requested == scope:
+            dates.append(as_of)
     return election_name, election_id

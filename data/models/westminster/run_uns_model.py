@@ -31,6 +31,7 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database
+from model_support.history import HistoryRecomputationError
 from model_support.io import publish_json
 from model_support.trends import (
     default_trend_path,
@@ -247,9 +248,8 @@ def parse_args() -> argparse.Namespace:
     - ``--start-date`` (ISO date): first date to simulate.
     - ``--end-date`` (ISO date): last date to simulate.
     - ``--lookback-days`` (int ≥ 0, default 365): poll history window per date.
-    - ``--reset-existing`` / ``--no-reset-existing``: clear existing model_uns outputs
-      in the date range before backfilling (default: enabled).
-    - ``--continue-on-error`` (flag): log errors and continue rather than raising.
+    - ``--reset-existing`` / ``--no-reset-existing``: recompute dates while retaining previous results until replacement succeeds (default: enabled).
+    - ``--continue-on-error`` (flag): finish other dates, then report failures with a non-success outcome.
     - ``--progress-every`` (int, default 25): print progress every N successes.
 
     Shared flags:
@@ -295,7 +295,7 @@ def parse_args() -> argparse.Namespace:
         "--reset-existing",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Clear existing model_uns outputs in the date range before backfilling (default: enabled)",
+        help="Recompute dates, retaining previous results until each replacement succeeds (default: enabled)",
     )
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--progress-every", type=int, default=25)
@@ -397,28 +397,32 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     validate_day_count(args.lookback_days, "--lookback-days")
     validate_half_life(args.half_life_days)
 
+    _, baseline, _ = resolve_simulation_scope(
+        db,
+        SimulationConfig(
+            map_name=args.map_name,
+            baseline_election_name=args.baseline_election_name,
+            as_of_date=start_date,
+            since_date=start_date - timedelta(days=args.lookback_days),
+            half_life_days=args.half_life_days,
+            output_csv=None,
+            dry_run=args.dry_run,
+        ),
+    )
+    build_baseline_vote_state(db, baseline.id, {})
+
     with trend_batch(
         database_file(db),
         OutputScope("model_uns", _output_map_id(db, args.map_name), "UNS"),
         TREND_CACHE_JSON,
         enabled=not args.dry_run,
     ):
-        if args.reset_existing and not args.dry_run:
-            deleted_elections, deleted_votes, stripped_csv_rows = (
-                reset_existing_model_outputs(
-                    start_date,
-                    end_date,
-                    database_file(db),
-                    map_id=_output_map_id(db, args.map_name),
-                )
-            )
+        if args.reset_existing:
             print(
-                f"RESET deleted_elections={deleted_elections} "
-                f"deleted_votes={deleted_votes} "
-                "cache=database"
+                "RESET skipped for dry-run mode"
+                if args.dry_run
+                else "RESET recomputing dates; previous results retained until replacement succeeds"
             )
-        elif args.reset_existing and args.dry_run:
-            print("RESET skipped for dry-run mode")
 
         current = start_date
         success_count = 0
@@ -454,17 +458,21 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
             current += timedelta(days=1)
 
-    print("SUMMARY")
-    print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
-    print(f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
-    print(f"DRY_RUN={args.dry_run}")
-    print(f"SUCCESS={success_count} FAILED={failed_count}")
+        print("SUMMARY")
+        print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
+        print(
+            f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}"
+        )
+        print(f"DRY_RUN={args.dry_run}")
+        print(f"SUCCESS={success_count} FAILED={failed_count}")
 
-    if failures:
-        print("FAILURES")
-        for when, message in failures:
-            print(f"{when}\t{message}")
+        if failures:
+            print("FAILURES")
+            for when, message in failures:
+                print(f"{when}\t{message}")
 
+        if failures:
+            raise HistoryRecomputationError(failures)
 
 
 def delete_model_uns_for_as_of_date(

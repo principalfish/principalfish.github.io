@@ -2014,7 +2014,7 @@ class TestDatabasePathAtCallTime:
         assert configured.stat().st_size == 0
         assert trend.exists()
 
-    def test_run_retrospective_resets_the_database_it_read_from(
+    def test_run_retrospective_recomputes_the_database_it_read_from(
         self,
         db: Database,
         tmp_path: Path,
@@ -2042,7 +2042,7 @@ class TestDatabasePathAtCallTime:
         )
 
         assert (
-            "RESET deleted_elections=1 deleted_votes=0 cache=database"
+            "RESET recomputing dates; previous results retained until replacement succeeds"
             in capsys.readouterr().out
         )
         assert _holyrood_uns_elections(only_the_test_database) == [
@@ -2728,7 +2728,7 @@ def _summary(out: str) -> list[str]:
 class TestRunRetrospective:
     """run_retrospective: optional reset, then one run per day with a summary."""
 
-    def test_resets_the_range_then_runs_each_day(
+    def test_recomputes_the_range_then_runs_each_day(
         self,
         db: Database,
         tmp_path: Path,
@@ -2762,7 +2762,7 @@ class TestRunRetrospective:
         out = capsys.readouterr().out
         votes = _election_names_and_votes(only_the_test_database)
         assert _output_lines(out, "RESET", "PROGRESS", "ERROR") == [
-            "RESET deleted_elections=1 deleted_votes=2 cache=database",
+            "RESET recomputing dates; previous results retained until replacement succeeds",
             "PROGRESS success=2 failed=0 as_of=2026-06-02 "
             f"election=Holyrood UNS 2026-06-02 rows={votes['Holyrood UNS 2026-06-02']}",
         ]
@@ -2885,18 +2885,19 @@ class TestRunRetrospective:
 
         monkeypatch.setattr(hmod, "run_holyrood_simulation", failing_on_the_second)
 
-        run_retrospective(
-            db,
-            _retro_args(
-                start_date="2026-06-01",
-                end_date="2026-06-03",
-                lookback_days=60,
-                dry_run=False,
-                continue_on_error=True,
-                progress_every=1,
-                election_name=world.constituency_election_name,
-            ),
-        )
+        with pytest.raises(RuntimeError, match="2026-06-02: boom"):
+            run_retrospective(
+                db,
+                _retro_args(
+                    start_date="2026-06-01",
+                    end_date="2026-06-03",
+                    lookback_days=60,
+                    dry_run=False,
+                    continue_on_error=True,
+                    progress_every=1,
+                    election_name=world.constituency_election_name,
+                ),
+            )
 
         out = capsys.readouterr().out
         votes = _election_names_and_votes(only_the_test_database)
@@ -3025,7 +3026,7 @@ class TestMain:
         out = capsys.readouterr().out
         # --reset-existing is on by default.
         assert _output_lines(out, "RESET") == [
-            "RESET deleted_elections=1 deleted_votes=2 cache=database"
+            "RESET recomputing dates; previous results retained until replacement succeeds"
         ]
         assert _summary(out)[4:] == ["SUCCESS=2 FAILED=0"]
         assert _holyrood_uns_run_order(only_the_test_database) == [

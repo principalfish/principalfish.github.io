@@ -3051,7 +3051,9 @@ class TestRebuildHistoryRun:
     ) -> SimpleNamespace:
         series = self.EXISTING if existing is None else existing
         dem, rep = _parties(db)
-        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        house_map, _ = _seat_map_with_baseline(
+            db, HOUSE_MAP, "us_house", {"Seat": {dem.id: 60, rep.id: 40}}
+        )
         pollster = db.add_pollster("YouGov", "yougov_us_house")
         for end in (date(2026, 6, 1), date(2026, 6, 10)):
             _add_poll(
@@ -3109,7 +3111,6 @@ class TestRebuildHistoryRun:
         # on 1 June and runs through the last existing date (4 June), gap included …
         assert calls.resets == [
             (date(2026, 5, 25), date(2026, 5, 31)),
-            (date(2026, 6, 1), date(2026, 6, 4)),
         ]
         assert run_dates[:4] == [date(2026, 6, day) for day in (1, 2, 3, 4)]
         # … then the normal single-date path fills forward to the capped as-of …
@@ -3129,14 +3130,15 @@ class TestRebuildHistoryRun:
         assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, day) for day in range(5, 11)]
         assert calls.metas == [(date(2026, 6, 10), date(2026, 3, 22))]
 
-    def test_the_rebuild_resets_even_with_no_reset_existing(
+    def test_the_rebuild_recomputes_even_with_no_reset_existing(
         self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls = self._run(
             db, tmp_path, monkeypatch, [*self.ARGV, "--rebuild-history", "--no-reset-existing"]
         )
 
-        assert calls.resets[-1] == (date(2026, 6, 1), date(2026, 6, 4))
+        assert calls.resets == [(date(2026, 5, 25), date(2026, 5, 31))]
+        assert [cfg.as_of_date for cfg in calls.runs[:4]] == [date(2026, 6, day) for day in (1, 2, 3, 4)]
 
     def test_a_dry_run_skips_the_rebuild(
         self,
@@ -3174,7 +3176,6 @@ class TestRebuildHistoryRun:
 
         assert calls.resets == [
             (date(2026, 5, 20), date(2026, 5, 31)),
-            (date(2026, 6, 1), date(2026, 6, 10)),
         ]
         rebuilt = [cfg.as_of_date for cfg in calls.runs[:10]]
         assert rebuilt == [date(2026, 6, day) for day in range(1, 11)]

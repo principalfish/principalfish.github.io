@@ -59,7 +59,8 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database
-from model_support.io import publish_json
+from model_support.history import HistoryRecomputationError
+from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
     default_trend_path,
     publish_trends,
@@ -2387,6 +2388,20 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
     )
 
 
+def _validate_history_inputs(db: Database, spec: UsModelSpec) -> None:
+    """Resolve static inputs before a historical batch can publish or replace outputs."""
+    poll_map, baseline = resolve_simulation_scope(db, spec)
+    resolve_poll_scope(db, spec)
+    seats = fetch_seat_refs(db, poll_map.id, spec.seat_name_allowlist)
+    build_baseline_vote_state(
+        db,
+        baseline.id,
+        {seat.id: seat.region_id for seat in seats},
+        {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None,
+        resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
+    )
+
+
 def run_retrospective_range(
     db: Database,
     spec: UsModelSpec,
@@ -2406,8 +2421,8 @@ def run_retrospective_range(
     Two things are passed separately because a rebuild must not take them from
     the backfill flags: ``lookback_days`` (a rebuild reuses the single-date run's
     ``--since-*`` window, so rebuilt points match the ones the daily run writes,
-    not ``--lookback-days``' 365) and ``reset_existing`` (a rebuild always clears
-    the range it replaces, whatever ``--no-reset-existing`` says).
+    not ``--lookback-days``' 365) and ``reset_existing`` (a compatibility flag;
+    every requested date is recomputed without deleting previous results first).
 
     Raises:
         ValueError: On an invalid date range, negative lookback, or non-positive half-life.
@@ -2417,6 +2432,8 @@ def run_retrospective_range(
     validate_half_life(args.half_life_days)
     validate_prior_weight(args.seat_prior_weight)
 
+    _validate_history_inputs(db, spec)
+
     with trend_batch(
         database_file(db),
         OutputScope(
@@ -2425,20 +2442,12 @@ def run_retrospective_range(
         spec.trend_cache_json,
         enabled=not args.dry_run,
     ):
-        if reset_existing and not args.dry_run:
-            deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
-                spec,
-                start_date,
-                end_date,
-                database_file(db),
-                map_id=_output_map_id(db, spec),
-            )
+        if reset_existing:
             print(
-                f"RESET deleted_elections={deleted_elections} "
-                f"deleted_votes={deleted_votes} cache=database"
+                "RESET skipped for dry-run mode"
+                if args.dry_run
+                else "RESET recomputing dates; previous results retained until replacement succeeds"
             )
-        elif reset_existing and args.dry_run:
-            print("RESET skipped for dry-run mode")
 
         current = start_date
         success_count = 0
@@ -2471,12 +2480,15 @@ def run_retrospective_range(
                     raise
             current += timedelta(days=1)
 
-    print("SUMMARY")
-    print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
-    print(f"LOOKBACK_DAYS={lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
-    print(f"DRY_RUN={args.dry_run} SUCCESS={success_count} FAILED={failed_count}")
-    for when, message in failures:
-        print(f"FAILURE {when}\t{message}")
+        print("SUMMARY")
+        print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
+        print(f"LOOKBACK_DAYS={lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
+        print(f"DRY_RUN={args.dry_run} SUCCESS={success_count} FAILED={failed_count}")
+        for when, message in failures:
+            print(f"FAILURE {when}\t{message}")
+
+        if failures:
+            raise HistoryRecomputationError(failures)
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -2521,7 +2533,7 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
         "--reset-existing",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Clear existing model outputs in the date range before backfilling (default: enabled)",
+        help="Recompute dates, retaining previous results until each replacement succeeds (default: enabled)",
     )
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--progress-every", type=int, default=25)
@@ -2607,6 +2619,7 @@ def _rebuild_history(
         print("REBUILD-HISTORY skipped for dry-run mode")
         return
 
+    _validate_history_inputs(db, spec)
     sqlite_path = database_file(db)
     map_id = _output_map_id(db, spec)
     existing = existing_trend_dates(spec, sqlite_path, map_id=map_id)
@@ -2618,26 +2631,33 @@ def _rebuild_history(
             return
         window = (first_poll, cfg.as_of_date)
 
-    _drop_points_outside(
-        spec,
-        existing,
-        keep_from=first_poll,
-        keep_to=cfg.as_of_date,
-        sqlite_path=sqlite_path,
-        map_id=map_id,
-    )
+    with trend_batch(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        spec.trend_cache_json,
+    ):
+        start_date, end_date = window
+        print(
+            f"REBUILD-HISTORY from={start_date.isoformat()} to={end_date.isoformat()}"
+        )
+        run_retrospective_range(
+            db,
+            spec,
+            args,
+            start_date=start_date,
+            end_date=end_date,
+            lookback_days=lookback_days,
+            reset_existing=True,
+        )
 
-    start_date, end_date = window
-    print(f"REBUILD-HISTORY from={start_date.isoformat()} to={end_date.isoformat()}")
-    run_retrospective_range(
-        db,
-        spec,
-        args,
-        start_date=start_date,
-        end_date=end_date,
-        lookback_days=lookback_days,
-        reset_existing=True,
-    )
+        _drop_points_outside(
+            spec,
+            existing,
+            keep_from=first_poll,
+            keep_to=cfg.as_of_date,
+            sqlite_path=sqlite_path,
+            map_id=map_id,
+        )
 
 
 def _drop_points_outside(
@@ -2739,6 +2759,11 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     except TrackedMatchupMissing as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
+
+    if not args.dry_run:
+        validate_output_target(spec.trend_cache_json, database=database_file(db))
+        if not (args.start_date and args.end_date):
+            validate_output_target(spec.trend_cache_meta_json, database=database_file(db))
 
     if args.start_date and args.end_date:
         run_retrospective(db, spec, args)

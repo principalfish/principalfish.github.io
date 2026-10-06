@@ -14,8 +14,12 @@ from typing import TypedDict
 
 from polls.importers.us.us_geography import parent_seat_name
 
-from model_support.io import OutputPublicationError, publish_json
-from model_support.persistence import OutputScope
+from model_support.io import (
+    OutputPublicationError,
+    publish_json,
+    validate_output_target,
+)
+from model_support.persistence import OutputScope, committed_dates
 
 
 class TrendEntry(TypedDict):
@@ -224,24 +228,46 @@ def trend_batch(
         yield
         return
     validate_trend_scope(sqlite_path, scope)
+    validate_output_target(destination, database=sqlite_path)
     key = (sqlite_path.resolve(), scope, destination.resolve())
     if key in _DEFERRED.get():
         yield
         return
     token = _DEFERRED.set(_DEFERRED.get() | {key})
     failure: BaseException | None = None
-    try:
-        yield
-    except BaseException as exc:
-        failure = exc
-        raise
-    finally:
-        _DEFERRED.reset(token)
+    with committed_dates(sqlite_path, scope) as saved_dates:
         try:
-            publish_trends(sqlite_path, scope, destination)
-        except OutputPublicationError as exc:
-            if failure is not None:
-                raise OutputPublicationError(
-                    f"{exc} Original model failure: {failure}"
-                ) from failure
+            yield
+        except BaseException as exc:
+            failure = exc
             raise
+        finally:
+            _DEFERRED.reset(token)
+            try:
+                publish_trends(sqlite_path, scope, destination)
+            except (OutputPublicationError, OSError, sqlite3.Error, ValueError) as exc:
+                dates = ", ".join(day.isoformat() for day in sorted(set(saved_dates)))
+                saved = (
+                    f"Database dates committed in this batch: {dates}."
+                    if dates
+                    else "No database dates committed in this batch."
+                )
+                model = next(
+                    (
+                        slug
+                        for slug, definition in TREND_MODELS.items()
+                        if definition.election_type == scope.election_type
+                    ),
+                    None,
+                )
+                repair = (
+                    f"Regenerate trends with rebuild_model_trends.py --model {model} "
+                    f"--map-id {scope.map_id} --database {shlex.quote(str(sqlite_path))} "
+                    f"--output {shlex.quote(str(destination))}."
+                    if model
+                    else "Regenerate this custom model trend cache from its scoped database outputs."
+                )
+                original = f" Original model failure: {failure}" if failure else ""
+                raise OutputPublicationError(
+                    f"Could not finalize trends: {exc}. {saved} {repair}{original}"
+                ) from (failure if failure is not None else exc)

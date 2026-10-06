@@ -164,6 +164,7 @@ from sqlalchemy import select as sa_select
 
 from config import DatabaseConfig
 from db import Database
+from model_support.history import HistoryRecomputationError
 from model_support.io import publish_json
 from model_support.trends import (
     default_trend_path,
@@ -1262,6 +1263,22 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     validate_day_count(args.lookback_days, "--lookback-days")
     validate_half_life(args.half_life_days)
 
+    baseline = db.get_election_by_name(args.election_name)
+    if baseline is None:
+        raise ValueError(f"Baseline election not found: {args.election_name!r}")
+    list_baseline = find_list_election(db, baseline.id)
+    if list_baseline.map_id != baseline.map_id:
+        raise ValueError("Constituency and list baseline maps do not match")
+    if not load_constituency_vote_state(db, baseline.id):
+        raise ValueError(f"No constituency votes found for election id={baseline.id}")
+    list_seats = [
+        seat
+        for seat in load_seat_refs(db, baseline.map_id)
+        if _is_list_seat(seat.seat_name)
+    ]
+    if not load_list_regional_votes(db, list_baseline.id, list_seats):
+        raise ValueError(f"No list votes found for election id={list_baseline.id}")
+
     with trend_batch(
         database_file(db),
         OutputScope(
@@ -1270,22 +1287,12 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
         HOLYROOD_TREND_CACHE_JSON,
         enabled=not args.dry_run,
     ):
-        if args.reset_existing and not args.dry_run:
-            deleted_elections, deleted_votes, stripped_json_entries = (
-                reset_existing_model_outputs(
-                    start_date,
-                    end_date,
-                    database_file(db),
-                    map_id=_output_map_id(db, args.election_name),
-                )
-            )
+        if args.reset_existing:
             print(
-                f"RESET deleted_elections={deleted_elections} "
-                f"deleted_votes={deleted_votes} "
-                "cache=database"
+                "RESET skipped for dry-run mode"
+                if args.dry_run
+                else "RESET recomputing dates; previous results retained until replacement succeeds"
             )
-        elif args.reset_existing and args.dry_run:
-            print("RESET skipped for dry-run mode")
 
         current = start_date
         success_count = 0
@@ -1319,16 +1326,21 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
             current += timedelta(days=1)
 
-    print("SUMMARY")
-    print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
-    print(f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
-    print(f"DRY_RUN={args.dry_run}")
-    print(f"SUCCESS={success_count} FAILED={failed_count}")
+        print("SUMMARY")
+        print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
+        print(
+            f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}"
+        )
+        print(f"DRY_RUN={args.dry_run}")
+        print(f"SUCCESS={success_count} FAILED={failed_count}")
 
-    if failures:
-        print("FAILURES")
-        for when, message in failures:
-            print(f"{when}\t{message}")
+        if failures:
+            print("FAILURES")
+            for when, message in failures:
+                print(f"{when}\t{message}")
+
+        if failures:
+            raise HistoryRecomputationError(failures)
 
 
 # ── SQLite persistence ────────────────────────────────────────────────────────
@@ -1580,9 +1592,8 @@ def parse_args() -> argparse.Namespace:
     - ``--start-date`` (ISO date): first date to simulate.
     - ``--end-date`` (ISO date): last date to simulate.
     - ``--lookback-days`` (int ≥ 0, default 365): poll history window per date.
-    - ``--reset-existing`` / ``--no-reset-existing``: clear existing holyrood_uns
-      outputs in the date range before backfilling (default: enabled).
-    - ``--continue-on-error`` (flag): log errors and continue rather than raising.
+    - ``--reset-existing`` / ``--no-reset-existing``: recompute dates while retaining previous results until replacement succeeds (default: enabled).
+    - ``--continue-on-error`` (flag): finish other dates, then report failures with a non-success outcome.
     - ``--progress-every`` (int, default 25): print progress every N successes.
 
     Shared flags:
@@ -1646,7 +1657,7 @@ def parse_args() -> argparse.Namespace:
         "--reset-existing",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Clear existing holyrood_uns outputs in the date range before backfilling (default: enabled)",
+        help="Recompute dates, retaining previous results until each replacement succeeds (default: enabled)",
     )
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--progress-every", type=int, default=25)

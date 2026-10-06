@@ -2612,7 +2612,7 @@ class TestRunRetrospective:
             run_uns_model.run_retrospective(db, args)
         assert capsys.readouterr().out == ""
 
-    def test_resets_the_range_then_runs_each_day(
+    def test_recomputes_the_range_then_runs_each_day(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2649,7 +2649,7 @@ class TestRunRetrospective:
         run_uns_model.run_retrospective(db, args)
 
         lines = capsys.readouterr().out.splitlines()
-        assert lines[0] == ("RESET deleted_elections=1 deleted_votes=2 cache=database")
+        assert lines[0] == ("RESET recomputing dates; previous results retained until replacement succeeds")
         progress = [line for line in lines if line.startswith("PROGRESS")]
         assert progress == [
             "PROGRESS success=1 failed=0 as_of=2026-06-09 "
@@ -2752,7 +2752,7 @@ class TestRunRetrospective:
         assert not any(line.startswith("PROGRESS") for line in lines)
         assert "SUCCESS=2 FAILED=0" in lines
 
-    def test_continue_on_error_records_failures(
+    def test_invalid_baseline_is_rejected_even_with_continue_on_error(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2777,22 +2777,11 @@ class TestRunRetrospective:
             "--dry-run",
         )
 
-        run_uns_model.run_retrospective(db, args)
+        with pytest.raises(ValueError, match="Baseline election not found: Missing Election"):
+            run_uns_model.run_retrospective(db, args)
+        assert capsys.readouterr().out == ""
 
-        lines = capsys.readouterr().out.splitlines()
-        error = "Baseline election not found: Missing Election"
-        assert [line for line in lines if line.startswith("ERROR")] == [
-            f"ERROR as_of=2026-06-09 err={error}",
-            f"ERROR as_of=2026-06-10 err={error}",
-        ]
-        assert "SUCCESS=0 FAILED=2" in lines
-        assert lines[lines.index("FAILURES") :] == [
-            "FAILURES",
-            f"2026-06-09\t{error}",
-            f"2026-06-10\t{error}",
-        ]
-
-    def test_without_continue_on_error_the_first_failure_raises(
+    def test_invalid_baseline_is_rejected_before_starting(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2821,11 +2810,7 @@ class TestRunRetrospective:
         ):
             run_uns_model.run_retrospective(db, args)
 
-        assert capsys.readouterr().out.splitlines() == [
-            "RESET skipped for dry-run mode",
-            "ERROR as_of=2026-06-09 err=Baseline election not found: "
-            "Missing Election",
-        ]
+        assert capsys.readouterr().out == ""
 
 
 # ── parse_args / _build_config_from_args ──────────────────────────────────────
@@ -2993,7 +2978,7 @@ class TestMain:
         )
 
         out = capsys.readouterr().out
-        assert "RESET deleted_elections=0 deleted_votes=0 cache=database" in out
+        assert "RESET recomputing dates; previous results retained until replacement succeeds" in out
         assert "SUCCESS=2 FAILED=0" in out
         # The single-date path (its summary and the meta file) never runs.
         assert "UNS simulation complete" not in out

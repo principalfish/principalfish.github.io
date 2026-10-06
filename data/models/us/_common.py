@@ -42,7 +42,6 @@ import argparse
 import json
 import math
 import re
-import sqlite3
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
@@ -59,7 +58,14 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from db import Database, ensure_elections_sqlite_schema
+from db import Database
+from model_support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
+)
 from model_support.cli import (
     single_date_window,
     validate_date_range,
@@ -1904,78 +1910,56 @@ def database_file(db: Database) -> Path:
     return Path(db.config.database_path)
 
 
+def _output_map_id(db: Database, spec: UsModelSpec) -> int:
+    poll_map = db.get_map_by_name(spec.map_name)
+    if poll_map is None:
+        raise ValueError(f"Map not found: {spec.map_name}")
+    return poll_map.id
+
+
 def _election_name_pattern(spec: UsModelSpec, as_of_date: date) -> str:
     """Election name for a given run date, e.g. ``"US House UNS 2026-06-01"``."""
     return f"{spec.election_name_prefix} {as_of_date.isoformat()}"
 
 
 def delete_model_for_as_of_date(
-    spec: UsModelSpec, as_of_date: date, sqlite_path: Path | None = None
+    spec: UsModelSpec,
+    as_of_date: date,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int]:
-    """Delete this type's model election (and its votes) for one date.
-
-    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
-
-    Returns ``(deleted_elections, deleted_votes)``.
-    """
+    """Delete only this model/map/date and its supported legacy run names."""
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    if not sqlite_path.exists():
-        return 0, 0
-
-    name = _election_name_pattern(spec, as_of_date)
-    with sqlite3.connect(sqlite_path) as conn:
-        election_ids = [
-            row[0]
-            for row in conn.execute(
-                "SELECT id FROM elections WHERE name = ? AND type = ?",
-                (name, spec.election_type),
-            ).fetchall()
-        ]
-        if not election_ids:
-            return 0, 0
-        placeholders = ",".join("?" * len(election_ids))
-        deleted_votes = conn.execute(
-            f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        deleted_elections = conn.execute(
-            f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        conn.commit()
-
-    return int(deleted_elections), int(deleted_votes)
+    return delete_outputs(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        as_of_date,
+        as_of_date,
+    )
 
 
 def reset_existing_model_outputs(
-    spec: UsModelSpec, start_date: date, end_date: date, sqlite_path: Path | None = None
+    spec: UsModelSpec,
+    start_date: date,
+    end_date: date,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int, int]:
-    """Clear this type's model elections in ``[start_date, end_date]`` and strip trend rows.
+    """Clear this type/map's dated outputs in the range and strip trend rows.
 
     ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Returns ``(deleted_elections, deleted_votes, stripped_trend_entries)``.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    deleted_elections = 0
-    deleted_votes = 0
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            election_ids: list[int] = []
-            for row in conn.execute(
-                "SELECT id, name FROM elections WHERE type = ?", (spec.election_type,)
-            ).fetchall():
-                parsed = _parse_as_of_from_name(spec, str(row[1] or ""))
-                if parsed is not None and start_date <= parsed <= end_date:
-                    election_ids.append(int(row[0]))
-            if election_ids:
-                placeholders = ",".join("?" * len(election_ids))
-                deleted_votes = conn.execute(
-                    f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                deleted_elections = conn.execute(
-                    f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                conn.commit()
+    deleted_elections, deleted_votes = delete_outputs(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        start_date,
+        end_date,
+    )
 
     stripped = 0
     if spec.trend_cache_json.exists():
@@ -2008,39 +1992,31 @@ def persist_projection(
     party_name_by_id: dict[int, str],
     sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
-    """Insert a model election of ``spec.election_type`` and bulk-insert its votes.
+    """Replace this model/map/date and all its vote rows in one transaction.
+
+    An insertion failure restores the previous complete result.
 
     ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Returns ``(election_name, election_id)``.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    with sqlite3.connect(sqlite_path) as conn:
-        ensure_elections_sqlite_schema(conn)
-        cursor = conn.execute(
-            "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
-            (map_id, as_of_date.year, election_name, spec.election_type, as_of_date.isoformat()),
-        )
-        election_id = cursor.lastrowid
-        if election_id is None:
-            raise RuntimeError("Failed to obtain election id after INSERT")
-        conn.executemany(
-            "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, vote_total, elected) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                (
-                    election_id,
-                    int(row["seat_id"]),
-                    int(row["party_id"]),
-                    party_name_by_id.get(int(row["party_id"]), ""),
-                    float(row["vote_total"]),
-                    int(bool(row["elected"])),
-                )
-                for row in recorded_vote_rows(projected_votes)
-            ],
-        )
-        conn.commit()
-    return election_name, int(election_id)
+    return replace_output(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        as_of_date,
+        election_name,
+        (
+            OutputVote(
+                seat_id=int(row["seat_id"]),
+                party_id=int(row["party_id"]),
+                candidate_name=party_name_by_id.get(int(row["party_id"]), ""),
+                vote_total=float(row["vote_total"]),
+                elected=bool(row["elected"]),
+            )
+            for row in recorded_vote_rows(projected_votes)
+        ),
+    )
 
 
 def update_trend_cache_json(
@@ -2201,43 +2177,27 @@ def _parse_as_of_from_name(spec: UsModelSpec, name: str) -> date | None:
         return None
 
 
-def existing_trend_dates(spec: UsModelSpec, sqlite_path: Path | None = None) -> set[date]:
-    """Return every ``as_of_date`` already simulated for this type.
+def existing_trend_dates(
+    spec: UsModelSpec,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
+) -> set[date]:
+    """Return successful dates from the scoped SQLite archive.
 
-    Combines the trend JSON (which omits deduplicated dates) with the SQLite
-    election archive (which records every run) so backfill never re-runs a date.
-    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
+    Cache dates lack model/map ownership and cannot establish a completed run.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    dates: set[date] = set()
-
-    if spec.trend_cache_json.exists():
-        with spec.trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            raw = str(entry.get("as_of_date") or "").strip()
-            if not raw:
-                continue
-            try:
-                dates.add(date.fromisoformat(raw))
-            except ValueError:
-                continue
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            rows = conn.execute(
-                "SELECT name FROM elections WHERE type = ?", (spec.election_type,)
-            ).fetchall()
-        for (name,) in rows:
-            parsed = _parse_as_of_from_name(spec, str(name or ""))
-            if parsed is not None:
-                dates.add(parsed)
-
-    return dates
+    return output_dates(
+        sqlite_path, OutputScope(spec.election_type, map_id, spec.election_name_prefix)
+    )
 
 
 def dates_to_run_for_cfg(
-    cfg: UsSimulationConfig, sqlite_path: Path | None = None
+    cfg: UsSimulationConfig,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> list[date]:
     """Determine which dates to simulate: fill any gap up to ``as_of_date``.
 
@@ -2247,7 +2207,7 @@ def dates_to_run_for_cfg(
     if cfg.dry_run:
         return [cfg.as_of_date]
 
-    existing = existing_trend_dates(cfg.spec, sqlite_path)
+    existing = existing_trend_dates(cfg.spec, sqlite_path, map_id=map_id)
     previous_dates = [value for value in existing if value < cfg.as_of_date]
     if not previous_dates:
         return [cfg.as_of_date]
@@ -2418,7 +2378,6 @@ def run_simulation(
         )
 
     sqlite_path = database_file(db)
-    delete_model_for_as_of_date(spec, cfg.as_of_date, sqlite_path)
     persisted_name, persisted_election_id = persist_projection(
         spec,
         poll_map.id,
@@ -2542,7 +2501,11 @@ def run_retrospective_range(
 
     if reset_existing and not args.dry_run:
         deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
-            spec, start_date, end_date, database_file(db)
+            spec,
+            start_date,
+            end_date,
+            database_file(db),
+            map_id=_output_map_id(db, spec),
         )
         print(
             f"RESET deleted_elections={deleted_elections} "
@@ -2715,7 +2678,8 @@ def _rebuild_history(
         return
 
     sqlite_path = database_file(db)
-    existing = existing_trend_dates(spec, sqlite_path)
+    map_id = _output_map_id(db, spec)
+    existing = existing_trend_dates(spec, sqlite_path, map_id=map_id)
 
     window = rebuild_window(existing, first_poll, cfg.as_of_date)
     if window is None:
@@ -2725,7 +2689,12 @@ def _rebuild_history(
         window = (first_poll, cfg.as_of_date)
 
     _drop_points_outside(
-        spec, existing, keep_from=first_poll, keep_to=cfg.as_of_date, sqlite_path=sqlite_path
+        spec,
+        existing,
+        keep_from=first_poll,
+        keep_to=cfg.as_of_date,
+        sqlite_path=sqlite_path,
+        map_id=map_id,
     )
 
     start_date, end_date = window
@@ -2748,6 +2717,7 @@ def _drop_points_outside(
     keep_from: date | None,
     keep_to: date,
     sqlite_path: Path,
+    map_id: int,
 ) -> None:
     """Delete the model elections and trend rows a rebuild will not recompute.
 
@@ -2774,7 +2744,11 @@ def _drop_points_outside(
         ranges.append(("before", dates[0], keep_from - timedelta(days=1)))
     for side, start_date, end_date in ranges:
         deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
-            spec, start_date, end_date, sqlite_path
+            spec,
+            start_date,
+            end_date,
+            sqlite_path,
+            map_id=map_id,
         )
         print(
             f"REBUILD-HISTORY dropped {side} from={start_date.isoformat()} "
@@ -2868,7 +2842,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     if args.rebuild_history:
         _rebuild_history(db, spec, args, cfg, first_poll=first_poll, lookback_days=lookback_days)
 
-    run_dates = dates_to_run_for_cfg(cfg, database_file(db))
+    run_dates = dates_to_run_for_cfg(
+        cfg, database_file(db), map_id=_output_map_id(db, spec)
+    )
     if len(run_dates) > 1:
         print(f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}")
 

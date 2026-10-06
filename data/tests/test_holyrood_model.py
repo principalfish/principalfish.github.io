@@ -1128,7 +1128,7 @@ class TestPersistProjection:
 
         persist_projection(map_id, date(2026, 7, 5), name, rows, party_names, sqlite_path=out_db)
         deleted_elections, deleted_votes = delete_holyrood_uns_for_as_of_date(
-            date(2026, 7, 5), sqlite_path=out_db
+            date(2026, 7, 5), sqlite_path=out_db, map_id=map_id
         )
         assert deleted_elections == 1
         assert deleted_votes == len(rows)
@@ -1295,9 +1295,9 @@ class TestUpdateTrendCacheJson:
 
 
 class TestExistingTrendDates:
-    """existing_trend_dates unions the trend JSON dates with SQLite election names."""
+    """Only scoped SQLite dates establish that a model run succeeded."""
 
-    def test_union_of_json_and_sqlite(self, tmp_path: Path) -> None:
+    def test_ignores_unverified_json_dates(self, tmp_path: Path) -> None:
         trend = tmp_path / "trends.json"
         trend.write_text(
             json.dumps(
@@ -1316,9 +1316,10 @@ class TestExistingTrendDates:
         finally:
             conn.close()
 
-        dates = existing_trend_dates(trend_cache_json=trend, sqlite_path=out_db)
-        assert date(2026, 7, 1) in dates
-        assert date(2026, 7, 2) in dates
+        dates = existing_trend_dates(
+            trend_cache_json=trend, sqlite_path=out_db, map_id=1
+        )
+        assert dates == {date(2026, 7, 2)}
 
 
 # ── dates_to_run_for_cfg (gap-fill) ───────────────────────────────────────────
@@ -1329,7 +1330,7 @@ class TestDatesToRunForCfg:
 
     def test_dry_run_returns_only_as_of(self) -> None:
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 5), dry_run=True)
-        assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 5)]
+        assert dates_to_run_for_cfg(cfg, map_id=1) == [date(2026, 7, 5)]
 
     def test_fills_calendar_gap(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # Latest cached date is 2026-07-01; as-of is 2026-07-04 → fill the 3 gap days.
@@ -1337,7 +1338,11 @@ class TestDatesToRunForCfg:
             hmod, "existing_trend_dates", lambda *_a, **_k: {date(2026, 7, 1)}
         )
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
-        assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 2), date(2026, 7, 3), date(2026, 7, 4)]
+        assert dates_to_run_for_cfg(cfg, map_id=1) == [
+            date(2026, 7, 2),
+            date(2026, 7, 3),
+            date(2026, 7, 4),
+        ]
 
     def test_no_gap_returns_as_of(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # The day before already ran, so a rerun of as-of has nothing to fill.
@@ -1347,12 +1352,12 @@ class TestDatesToRunForCfg:
             lambda *_a, **_k: {date(2026, 7, 3), date(2026, 7, 4)},
         )
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
-        assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 4)]
+        assert dates_to_run_for_cfg(cfg, map_id=1) == [date(2026, 7, 4)]
 
     def test_no_prior_dates_returns_as_of(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(hmod, "existing_trend_dates", lambda *_a, **_k: set())
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 7, 4), dry_run=False)
-        assert dates_to_run_for_cfg(cfg) == [date(2026, 7, 4)]
+        assert dates_to_run_for_cfg(cfg, map_id=1) == [date(2026, 7, 4)]
 
 
 # ── reset_existing_model_outputs / delete_holyrood_uns_for_as_of_date ─────────
@@ -1427,7 +1432,10 @@ class TestResetExistingModelOutputs:
         before = _election_names_and_votes(only_the_test_database)
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            only_the_test_database,
+            map_id=world.map_id,
         )
 
         assert result == (2, 4, 0)
@@ -1453,21 +1461,23 @@ class TestResetExistingModelOutputs:
         before = _election_names_and_votes(only_the_test_database)
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            only_the_test_database,
+            map_id=world.map_id,
         )
 
         assert result == (0, 0, 0)
         assert _election_names_and_votes(only_the_test_database) == before
 
-    def test_range_matches_names_of_any_type_pins_current_behaviour(
+    def test_range_preserves_same_named_other_type(
         self,
         db: Database,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         only_the_test_database: Path,
     ) -> None:
-        # The range is on the name alone, unlike the per-date delete and
-        # ``existing_trend_dates``, which also require ``type = 'holyrood_uns'``.
+        # A matching display name does not establish ownership by this model.
         monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", tmp_path / "trends.json")
         world = seed_holyrood_world(db)
         db.add_election(
@@ -1479,11 +1489,14 @@ class TestResetExistingModelOutputs:
         )
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1),
+            date(2026, 6, 1),
+            only_the_test_database,
+            map_id=world.map_id,
         )
 
-        assert result == (1, 0, 0)
-        assert "Holyrood UNS 2026-06-01" not in _election_names_and_votes(
+        assert result == (0, 0, 0)
+        assert "Holyrood UNS 2026-06-01" in _election_names_and_votes(
             only_the_test_database
         )
 
@@ -1496,7 +1509,7 @@ class TestResetExistingModelOutputs:
         absent = tmp_path / "absent.db"
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 1), absent
+            date(2026, 6, 1), date(2026, 6, 1), absent, map_id=1
         )
 
         assert result == (0, 0, 1)
@@ -1514,7 +1527,7 @@ class TestResetExistingModelOutputs:
         monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), tmp_path / "absent.db"
+            date(2026, 6, 1), date(2026, 6, 2), tmp_path / "absent.db", map_id=1
         )
 
         assert result == (0, 0, 2)
@@ -1535,7 +1548,7 @@ class TestResetExistingModelOutputs:
         monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), tmp_path / "absent.db"
+            date(2026, 6, 1), date(2026, 6, 2), tmp_path / "absent.db", map_id=1
         )
 
         assert result == (0, 0, 0)
@@ -1559,7 +1572,7 @@ class TestDeleteHolyroodUnsForAsOfDate:
         before = _election_names_and_votes(only_the_test_database)
 
         result = delete_holyrood_uns_for_as_of_date(
-            date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         )
 
         assert result == (0, 0)
@@ -2038,18 +2051,21 @@ class TestDatabasePathAtCallTime:
 
         assert default_sqlite_path() == only_the_test_database
         assert database_file(db).resolve() == only_the_test_database
-        assert existing_trend_dates() == {
-            date(2026, 5, 31),
+        assert existing_trend_dates(map_id=world.map_id) == {
             date(2026, 6, 1),
             date(2026, 6, 2),
         }
-        assert reset_existing_model_outputs(date(2026, 6, 2), date(2026, 6, 2)) == (
+        assert reset_existing_model_outputs(
+            date(2026, 6, 2), date(2026, 6, 2), map_id=world.map_id
+        ) == (
             1,
             1,
             1,
         )
-        assert delete_holyrood_uns_for_as_of_date(date(2026, 6, 1)) == (1, 0)
-        assert existing_trend_dates() == {date(2026, 5, 31)}
+        assert delete_holyrood_uns_for_as_of_date(
+            date(2026, 6, 1), map_id=world.map_id
+        ) == (1, 0)
+        assert existing_trend_dates(map_id=world.map_id) == set()
 
     def test_the_default_is_reread_on_every_call(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2089,7 +2105,7 @@ class TestDatabasePathAtCallTime:
         _persist_stale_run(db, world, date(2026, 6, 1))
         cfg = HolyroodSimulationConfig(as_of_date=date(2026, 6, 3), dry_run=False)
 
-        assert dates_to_run_for_cfg(cfg, database_file(db)) == [
+        assert dates_to_run_for_cfg(cfg, database_file(db), map_id=world.map_id) == [
             date(2026, 6, 2),
             date(2026, 6, 3),
         ]
@@ -2944,8 +2960,7 @@ class TestRunRetrospective:
         outputs = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
         world = seed_holyrood_world(db)
         _seed_scenario_polls(db, world, constituency=True, list_ballot=True)
-        # Inside the reset's name range, but not the per-date delete's exact
-        # name, so only a reset would remove it.
+        # A supported legacy suffix belongs to the same model date.
         db.add_election(
             world.map_id,
             2026,
@@ -2969,9 +2984,14 @@ class TestRunRetrospective:
         out = capsys.readouterr().out
         assert _output_lines(out, "RESET") == []
         assert _summary(out)[3:] == [f"DRY_RUN={dry_run}", "SUCCESS=1 FAILED=0"]
-        assert "Holyrood UNS 2026-06-01 (rerun)" in _holyrood_uns_run_order(
-            only_the_test_database
-        )
+        if dry_run:
+            assert _holyrood_uns_run_order(only_the_test_database) == [
+                "Holyrood UNS 2026-06-01 (rerun)"
+            ]
+        else:
+            assert _holyrood_uns_run_order(only_the_test_database) == [
+                "Holyrood UNS 2026-06-01"
+            ]
         assert outputs.configured.stat().st_size == 0
 
     def test_continue_on_error_runs_the_rest_and_lists_failures(

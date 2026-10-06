@@ -3108,7 +3108,14 @@ class TestRebuildHistoryRun:
             calls.runs.append(cfg)
             return (f"US Test UNS {cfg.as_of_date}", [], [], Counter(), None, {}, [])
 
-        def fake_reset(_spec: UsModelSpec, start: date, end: date, *_: Any) -> tuple[int, int, int]:
+        def fake_reset(
+            _spec: UsModelSpec,
+            start: date,
+            end: date,
+            *_: Any,
+            map_id: int,
+        ) -> tuple[int, int, int]:
+            assert map_id == house_map.id
             calls.resets.append((start, end))
             return 0, 0, 0
 
@@ -3857,10 +3864,17 @@ class TestDatabasePathAtCallTime:
             as_of = date(2026, 6, day)
             persist_projection(spec, house_map.id, as_of, f"US Test UNS {as_of}", [], {})
 
-        assert existing_trend_dates(spec) == {date(2026, 6, 1), date(2026, 6, 2)}
-        assert reset_existing_model_outputs(spec, date(2026, 6, 2), date(2026, 6, 2)) == (1, 0, 0)
-        assert delete_model_for_as_of_date(spec, date(2026, 6, 1)) == (1, 0)
-        assert existing_trend_dates(spec) == set()
+        assert existing_trend_dates(spec, map_id=house_map.id) == {
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+        }
+        assert reset_existing_model_outputs(
+            spec, date(2026, 6, 2), date(2026, 6, 2), map_id=house_map.id
+        ) == (1, 0, 0)
+        assert delete_model_for_as_of_date(
+            spec, date(2026, 6, 1), map_id=house_map.id
+        ) == (1, 0)
+        assert existing_trend_dates(spec, map_id=house_map.id) == set()
         assert _common.default_sqlite_path() == only_the_test_database
 
 

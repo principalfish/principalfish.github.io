@@ -7,8 +7,6 @@ import argparse
 import csv
 import json
 import math
-import re
-import sqlite3
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
@@ -33,7 +31,14 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from db import Database, ensure_elections_sqlite_schema
+from db import Database
+from model_support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
+)
 from model_support.cli import (
     single_date_window,
     validate_date_range,
@@ -72,6 +77,13 @@ def database_file(db: Database) -> Path:
     same database it read its polls and baseline from.
     """
     return Path(db.config.database_path)
+
+
+def _output_map_id(db: Database, map_name: str) -> int:
+    poll_map = db.get_map_by_name(map_name)
+    if poll_map is None:
+        raise ValueError(f"Map not found: {map_name}")
+    return poll_map.id
 
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
@@ -151,61 +163,25 @@ class LatestPollUsage:
 
 
 def existing_trend_dates(
-    trend_cache_json: Path | None = None, sqlite_path: Path | None = None
+    trend_cache_json: Path | None = None,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> set[date]:
-    """Return all ``as_of_date`` values that have already been simulated.
+    """Return successful dates from the scoped SQLite archive.
 
-    Combines dates from the trend cache JSON with dates derived from the SQLite
-    archive. The JSON only contains dates whose seat snapshot differed from the
-    previous entry (duplicates are skipped), so using it alone would cause
-    gap-filling re-runs for those skipped dates on the next import. The SQLite
-    archive records every run regardless of deduplication, so including it gives
-    a complete picture of which dates have already been processed.
-
-    Args:
-        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
-            module's ``TREND_CACHE_JSON`` when called.
-        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
-            configured database when called.
-
-    Returns:
-        A set of ``date`` objects for which a simulation has already been run.
-        Returns an empty set if neither source exists.
+    Cache dates lack model/map ownership and cannot establish a completed run.
+    The cache path argument remains for compatibility.
     """
-    trend_cache_json = (
-        trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
-    )
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    dates: set[date] = set()
-
-    if trend_cache_json.exists():
-        with trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            raw = str(entry.get("as_of_date") or "").strip()
-            if not raw:
-                continue
-            try:
-                dates.add(date.fromisoformat(raw))
-            except ValueError:
-                continue
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            rows = conn.execute("SELECT name FROM elections").fetchall()
-        for (name,) in rows:
-            m = re.match(r"UNS (\d{4}-\d{2}-\d{2})", name or "")
-            if m:
-                try:
-                    dates.add(date.fromisoformat(m.group(1)))
-                except ValueError:
-                    continue
-
-    return dates
+    return output_dates(sqlite_path, OutputScope("model_uns", map_id, "UNS"))
 
 
 def dates_to_run_for_cfg(
-    cfg: SimulationConfig, sqlite_path: Path | None = None
+    cfg: SimulationConfig,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> list[date]:
     """Determine which simulation dates must be run for the given configuration.
 
@@ -228,7 +204,7 @@ def dates_to_run_for_cfg(
     if cfg.dry_run:
         return [cfg.as_of_date]
 
-    existing = existing_trend_dates(sqlite_path=sqlite_path)
+    existing = existing_trend_dates(sqlite_path=sqlite_path, map_id=map_id)
     previous_dates = [value for value in existing if value < cfg.as_of_date]
     if not previous_dates:
         return [cfg.as_of_date]
@@ -336,16 +312,18 @@ def reset_existing_model_outputs(
     end_date: date,
     sqlite_path: Path | None = None,
     trend_cache_json: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int, int]:
-    """Delete model_uns elections in [start_date, end_date] from SQLite and strip matching rows from the trend cache CSV.
+    """Delete scoped model_uns dates and strip matching trend-cache entries.
 
-    Election names follow the pattern ``UNS YYYY-MM-DD``, so a lexicographic
-    range on the name column correctly isolates the target dates. The trend
-    cache CSV is rewritten in place with matching rows removed.
+    Only the specified map, model type and supported dated names are selected.
+    The trend cache JSON is rewritten in place with matching rows removed.
 
     Args:
         start_date: Inclusive lower bound of the date range to clear.
         end_date: Inclusive upper bound of the date range to clear.
+        map_id: The resolved map whose model outputs belong to this operation.
         sqlite_path: Path to the SQLite archive file. ``None`` resolves the
             configured database when called.
         trend_cache_json: Path to the trend cache JSON. ``None`` reads the
@@ -358,30 +336,9 @@ def reset_existing_model_outputs(
     trend_cache_json = (
         trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
     )
-    start_name = f"UNS {start_date.isoformat()}"
-    upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
-
-    deleted_elections = 0
-    deleted_votes = 0
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            election_ids = [
-                row[0]
-                for row in conn.execute(
-                    "SELECT id FROM elections WHERE name >= ? AND name < ?",
-                    (start_name, upper_bound),
-                ).fetchall()
-            ]
-            if election_ids:
-                placeholders = ",".join("?" * len(election_ids))
-                deleted_votes = conn.execute(
-                    f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                deleted_elections = conn.execute(
-                    f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                conn.commit()
+    deleted_elections, deleted_votes = delete_outputs(
+        sqlite_path, OutputScope("model_uns", map_id, "UNS"), start_date, end_date
+    )
 
     stripped_json_entries = 0
     if trend_cache_json.exists():
@@ -430,8 +387,13 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     validate_half_life(args.half_life_days)
 
     if args.reset_existing and not args.dry_run:
-        deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
-            start_date, end_date, database_file(db)
+        deleted_elections, deleted_votes, stripped_csv_rows = (
+            reset_existing_model_outputs(
+                start_date,
+                end_date,
+                database_file(db),
+                map_id=_output_map_id(db, args.map_name),
+            )
         )
         print(
             f"RESET deleted_elections={deleted_elections} "
@@ -489,48 +451,16 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
 
 def delete_model_uns_for_as_of_date(
-    as_of_date: date, sqlite_path: Path | None = None
+    as_of_date: date,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int]:
-    """Delete all model_uns elections (and their votes) for a given date from SQLite.
-
-    Matches elections whose name starts with ``"UNS {as_of_date}"`` and
-    deletes their vote rows before removing the election rows.
-
-    Args:
-        as_of_date: The date whose simulation output should be removed.
-        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
-            configured database when called.
-
-    Returns:
-        A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
-        matching elections exist or the file does not exist.
-    """
+    """Delete only this model/map/date and its supported legacy run names."""
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    if not sqlite_path.exists():
-        return 0, 0
-
-    base_name = f"UNS {as_of_date.isoformat()}"
-
-    with sqlite3.connect(sqlite_path) as conn:
-        election_ids = [
-            row[0]
-            for row in conn.execute(
-                "SELECT id FROM elections WHERE name LIKE ?", (f"{base_name}%",)
-            ).fetchall()
-        ]
-        if not election_ids:
-            return 0, 0
-
-        placeholders = ",".join("?" * len(election_ids))
-        deleted_votes = conn.execute(
-            f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        deleted_elections = conn.execute(
-            f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        conn.commit()
-
-    return int(deleted_elections), int(deleted_votes)
+    return delete_outputs(
+        sqlite_path, OutputScope("model_uns", map_id, "UNS"), as_of_date, as_of_date
+    )
 
 
 def weighted_average(weighted_sum: float, total_weight: float) -> float | None:
@@ -1284,7 +1214,9 @@ def persist_projection(
     party_name_by_id: dict[int, str],
     sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
-    """Create a model_uns election row and bulk-insert all projected vote rows into SQLite.
+    """Replace this model/map/date and all its vote rows in one transaction.
+
+    An insertion failure restores the previous complete result.
 
     Args:
         map_id: Primary key of the electoral map the election belongs to.
@@ -1302,32 +1234,22 @@ def persist_projection(
         display name and primary key.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    with sqlite3.connect(sqlite_path) as conn:
-        ensure_elections_sqlite_schema(conn)
-        cursor = conn.execute(
-            "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
-            (map_id, as_of_date.year, election_name, "model_uns", as_of_date.isoformat()),
-        )
-        election_id = cursor.lastrowid
-        if election_id is None:
-            raise RuntimeError("Failed to obtain election id after INSERT")
-        conn.executemany(
-            "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, vote_total, elected) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                (
-                    election_id,
-                    int(row["seat_id"]),
-                    int(row["party_id"]),
-                    party_name_by_id.get(int(row["party_id"]), ""),
-                    float(row["vote_total"]),
-                    int(bool(row["elected"])),
-                )
-                for row in projected_votes
-            ],
-        )
-        conn.commit()
-    return election_name, int(election_id)
+    return replace_output(
+        sqlite_path,
+        OutputScope("model_uns", map_id, "UNS"),
+        as_of_date,
+        election_name,
+        (
+            OutputVote(
+                seat_id=int(row["seat_id"]),
+                party_id=int(row["party_id"]),
+                candidate_name=party_name_by_id.get(int(row["party_id"]), ""),
+                vote_total=float(row["vote_total"]),
+                elected=bool(row["elected"]),
+            )
+            for row in projected_votes
+        ),
+    )
 
 
 def update_trend_cache_json(
@@ -1576,7 +1498,6 @@ def run_simulation(
         return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
     sqlite_path = database_file(db)
-    delete_model_uns_for_as_of_date(cfg.as_of_date, sqlite_path)
 
     persisted_name, persisted_election_id = persist_projection(
         poll_map.id,
@@ -1665,7 +1586,7 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             dry_run=cfg.dry_run,
         )
 
-    run_dates = dates_to_run_for_cfg(cfg, database_file(db))
+    run_dates = dates_to_run_for_cfg(cfg, database_file(db), map_id=latest_map.id)
     if len(run_dates) > 1:
         print(
             "AUTO-BACKFILL "

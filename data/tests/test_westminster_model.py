@@ -1478,18 +1478,21 @@ class TestDatabasePathAtCallTime:
 
         assert default_sqlite_path() == only_the_test_database
         assert database_file(db).resolve() == only_the_test_database
-        assert existing_trend_dates() == {
-            date(2026, 5, 31),
+        assert existing_trend_dates(map_id=world.map_id) == {
             date(2026, 6, 1),
             date(2026, 6, 2),
         }
-        assert reset_existing_model_outputs(date(2026, 6, 2), date(2026, 6, 2)) == (
+        assert reset_existing_model_outputs(
+            date(2026, 6, 2), date(2026, 6, 2), map_id=world.map_id
+        ) == (
             1,
             1,
             1,
         )
-        assert delete_model_uns_for_as_of_date(date(2026, 6, 1)) == (1, 0)
-        assert existing_trend_dates() == {date(2026, 5, 31)}
+        assert delete_model_uns_for_as_of_date(
+            date(2026, 6, 1), map_id=world.map_id
+        ) == (1, 0)
+        assert existing_trend_dates(map_id=world.map_id) == set()
 
     def test_the_default_is_reread_on_every_call(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1536,7 +1539,7 @@ class TestDatabasePathAtCallTime:
             dry_run=False,
         )
 
-        assert dates_to_run_for_cfg(cfg, database_file(db)) == [
+        assert dates_to_run_for_cfg(cfg, database_file(db), map_id=world.map_id) == [
             date(2026, 6, 2),
             date(2026, 6, 3),
         ]
@@ -1932,7 +1935,10 @@ class TestDeleteModelUnsForAsOfDate:
         missing = tmp_path / "missing.db"
 
         # Connecting would trip ``only_the_test_database``.
-        assert delete_model_uns_for_as_of_date(date(2026, 6, 1), missing) == (0, 0)
+        assert delete_model_uns_for_as_of_date(date(2026, 6, 1), missing, map_id=1) == (
+            0,
+            0,
+        )
         assert not missing.exists()
 
     def test_no_matching_election_deletes_nothing(
@@ -1946,7 +1952,7 @@ class TestDeleteModelUnsForAsOfDate:
         _seed_model_run(db, world, "UNS 2026-06-02", 2)
 
         assert delete_model_uns_for_as_of_date(
-            date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         ) == (0, 0)
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-06-02", 2)
@@ -1967,7 +1973,7 @@ class TestDeleteModelUnsForAsOfDate:
         baseline_votes = len(db.get_votes_for_election(world.baseline_election_id))
 
         deleted = delete_model_uns_for_as_of_date(
-            date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         )
 
         assert deleted == (2, 3)
@@ -1981,18 +1987,13 @@ class TestDeleteModelUnsForAsOfDate:
             == baseline_votes
         )
 
-    def test_matches_by_name_not_type_pins_current_behaviour(
+    def test_preserves_same_named_other_type(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
         only_the_test_database: Path,
     ) -> None:
-        """Pins current behaviour: any election named for the date is deleted.
-
-        The query filters on ``name LIKE 'UNS <date>%'`` only, not on
-        ``type = 'model_uns'``, so a differently typed election that shares the
-        naming scheme is deleted along with its votes.
-        """
+        """A same-prefix election owned by another model survives."""
         _assert_path_defaults_are_none()
         world = westminster_world
         other_type = _seed_model_run(
@@ -2000,12 +2001,12 @@ class TestDeleteModelUnsForAsOfDate:
         )
 
         deleted = delete_model_uns_for_as_of_date(
-            date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         )
 
-        assert deleted == (1, 2)
-        assert db.get_election_by_name("UNS 2026-06-01 manual") is None
-        assert _vote_count(only_the_test_database, [other_type]) == 0
+        assert deleted == (0, 0)
+        assert db.get_election_by_name("UNS 2026-06-01 manual") is not None
+        assert _vote_count(only_the_test_database, [other_type]) == 2
 
 
 # ── reset_existing_model_outputs ──────────────────────────────────────────────
@@ -2044,7 +2045,11 @@ class TestResetExistingModelOutputs:
         )
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database, trend_json
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            only_the_test_database,
+            trend_json,
+            map_id=world.map_id,
         )
 
         assert result == (3, 9, 2)
@@ -2061,19 +2066,14 @@ class TestResetExistingModelOutputs:
             _trend_entry(6, "2026-06-03"),
         ]
 
-    def test_range_matches_names_of_any_type_pins_current_behaviour(
+    def test_range_preserves_same_named_other_type(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
         tmp_path: Path,
         only_the_test_database: Path,
     ) -> None:
-        """Pins current behaviour: the range deletes any election named in it.
-
-        The query filters on the name range only, not on ``type = 'model_uns'``,
-        so a differently typed election whose name falls inside the range is
-        deleted along with its votes.
-        """
+        """A same-prefix election owned by another model survives a range reset."""
         _assert_path_defaults_are_none()
         world = westminster_world
         other_type = _seed_model_run(
@@ -2085,11 +2085,12 @@ class TestResetExistingModelOutputs:
             date(2026, 6, 2),
             only_the_test_database,
             tmp_path / "missing.json",
+            map_id=world.map_id,
         )
 
-        assert result == (1, 3, 0)
-        assert db.get_election_by_name("UNS 2026-06-01 manual") is None
-        assert _vote_count(only_the_test_database, [other_type]) == 0
+        assert result == (0, 0, 0)
+        assert db.get_election_by_name("UNS 2026-06-01 manual") is not None
+        assert _vote_count(only_the_test_database, [other_type]) == 3
 
     def test_nothing_in_range_leaves_both_untouched(
         self,
@@ -2106,7 +2107,11 @@ class TestResetExistingModelOutputs:
         trend_json.write_text(original, encoding="utf-8")
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database, trend_json
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            only_the_test_database,
+            trend_json,
+            map_id=world.map_id,
         )
 
         assert result == (0, 0, 0)
@@ -2124,7 +2129,7 @@ class TestResetExistingModelOutputs:
         missing_json = tmp_path / "missing.json"
 
         assert reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), missing_db, missing_json
+            date(2026, 6, 1), date(2026, 6, 2), missing_db, missing_json, map_id=1
         ) == (0, 0, 0)
         assert not missing_db.exists()
         assert not missing_json.exists()
@@ -2134,9 +2139,9 @@ class TestResetExistingModelOutputs:
 
 
 class TestExistingTrendDates:
-    """Tests for existing_trend_dates — dates already run, from JSON and SQLite."""
+    """Only scoped SQLite dates establish that a model run succeeded."""
 
-    def test_union_of_trend_json_and_sqlite(
+    def test_ignores_unverified_trend_json_dates(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2164,8 +2169,9 @@ class TestExistingTrendDates:
             ],
         )
 
-        assert existing_trend_dates(trend_json, only_the_test_database) == {
-            date(2026, 6, 1),
+        assert existing_trend_dates(
+            trend_json, only_the_test_database, map_id=world.map_id
+        ) == {
             date(2026, 6, 2),
             date(2026, 6, 3),
         }
@@ -2176,7 +2182,9 @@ class TestExistingTrendDates:
         _assert_path_defaults_are_none()
 
         assert (
-            existing_trend_dates(tmp_path / "missing.json", tmp_path / "missing.db")
+            existing_trend_dates(
+                tmp_path / "missing.json", tmp_path / "missing.db", map_id=1
+            )
             == set()
         )
 
@@ -2198,15 +2206,30 @@ class TestDatesToRunForCfg:
         as_of_date: date = date(2026, 6, 10),
         dry_run: bool = False,
     ) -> list[date]:
-        """Run with ``existing`` as the trend JSON's dates; return the plan."""
+        """Seed completed scoped dates; the JSON is no longer authoritative."""
         trend_json = tmp_path / "trends.json"
         _write_json(
             trend_json,
             [_trend_entry(n, value) for n, value in enumerate(existing, start=1)],
         )
         monkeypatch.setattr(run_uns_model, "TREND_CACHE_JSON", trend_json)
+        for value in existing:
+            try:
+                as_of = date.fromisoformat(value)
+            except ValueError:
+                continue
+            persist_projection(
+                world.map_id,
+                as_of,
+                f"UNS {as_of.isoformat()}",
+                [],
+                {},
+                sqlite_path=sqlite_path,
+            )
         cfg = _simulation_config(world, as_of_date=as_of_date, dry_run=dry_run)
-        planned: list[date] = dates_to_run_for_cfg(cfg, sqlite_path)
+        planned: list[date] = dates_to_run_for_cfg(
+            cfg, sqlite_path, map_id=world.map_id
+        )
         return planned
 
     def test_dry_run_only_runs_the_as_of_date(

@@ -126,7 +126,11 @@ def adapter(
     tmp_path: Path,
 ) -> Adapter:
     kind = str(request.param)
-    primary_map = db.add_map("Primary output map")
+    parliament = "us_president" if kind == "us_presidential" else kind
+    primary_map = db.add_map("Primary output map", parliament=parliament)
+    db.add_seat(primary_map.id, "Scoped seat")
+    db.add_party("A")
+    db.add_party("B")
     prefix = {
         "westminster": "UNS",
         "holyrood": "Holyrood UNS",
@@ -315,7 +319,7 @@ def test_runner_failure_rolls_back_then_successful_rerun_replaces_once(
         run = lambda: holyrood.run_holyrood_simulation(db, holy_cfg)
         monkeypatch.setattr(holyrood, "update_trend_cache_json", lambda *_a, **_k: None)
     else:
-        seat_map = db.add_map("Runner map", parliament=kind)
+        seat_map = db.add_map("Runner map", parliament="us_president" if kind == "us_presidential" else kind)
         region = db.add_region(seat_map.id, "Region")
         seat = db.add_seat(seat_map.id, "Alabama", region_id=region.id)
         dem = db.add_party("Democratic")

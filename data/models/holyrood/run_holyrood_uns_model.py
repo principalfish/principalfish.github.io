@@ -164,6 +164,13 @@ from sqlalchemy import select as sa_select
 
 from config import DatabaseConfig
 from db import Database
+from model_support.io import publish_json
+from model_support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
 from model_support.persistence import (
     OutputScope,
     OutputVote,
@@ -197,7 +204,7 @@ LIST_SEATS_PER_REGION = 7
 
 # Repository root, used to derive front-end output paths (prediction + trends).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-HOLYROOD_TREND_CACHE_JSON = _REPO_ROOT / "electionmaps" / "data" / "results" / "holyrood-trends.json"
+HOLYROOD_TREND_CACHE_JSON = default_trend_path("holyrood")
 
 
 def default_sqlite_path() -> Path:
@@ -1088,6 +1095,10 @@ def run_holyrood_simulation(
     if not cfg.dry_run:
         party_name_by_id = {p.id: p.name for p in db.get_all_parties()}
         sqlite_path = database_file(db)
+        validate_trend_scope(
+            sqlite_path,
+            OutputScope("holyrood_uns", const_election.map_id, "Holyrood UNS"),
+        )
         _persisted_name, election_id = persist_projection(
             const_election.map_id,
             cfg.as_of_date,
@@ -1097,7 +1108,13 @@ def run_holyrood_simulation(
             sqlite_path,
         )
         update_trend_cache_json(
-            election_id, election_name, cfg.as_of_date, const_proj, list_proj
+            election_id,
+            election_name,
+            cfg.as_of_date,
+            const_proj,
+            list_proj,
+            sqlite_path=database_file(db),
+            map_id=const_election.map_id,
         )
         print(
             f"Persisted holyrood_uns election {election_name!r} "
@@ -1180,10 +1197,10 @@ def reset_existing_model_outputs(
     *,
     map_id: int,
 ) -> tuple[int, int, int]:
-    """Delete holyrood_uns elections in [start_date, end_date] and strip matching trend rows.
+    """Delete holyrood_uns elections in [start_date, end_date] and reconstruct its trend cache.
 
     Only the specified map, model type and supported dated names are selected.
-    The trend cache JSON is rewritten in place with matching rows removed.
+    The cache is reconstructed from remaining scoped database rows and published atomically.
 
     Args:
         start_date: Inclusive lower bound of the date range to clear.
@@ -1195,11 +1212,16 @@ def reset_existing_model_outputs(
             module's ``HOLYROOD_TREND_CACHE_JSON`` when called.
 
     Returns:
-        A 3-tuple ``(deleted_elections, deleted_votes, stripped_json_entries)``.
+        A 3-tuple ``(deleted_elections, deleted_votes, stripped_json_entries)``; the compatibility third field is always zero.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     trend_cache_json = (
         trend_cache_json if trend_cache_json is not None else HOLYROOD_TREND_CACHE_JSON
+    )
+    if not sqlite_path.exists():
+        return 0, 0, 0
+    validate_trend_scope(
+        sqlite_path, OutputScope("holyrood_uns", map_id, "Holyrood UNS")
     )
     deleted_elections, deleted_votes = delete_outputs(
         sqlite_path,
@@ -1209,25 +1231,11 @@ def reset_existing_model_outputs(
     )
 
     stripped_json_entries = 0
-    if trend_cache_json.exists():
-        with trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        kept_entries = []
-        for entry in entries:
-            raw = str(entry.get("as_of_date") or "").strip()
-            try:
-                entry_date = date.fromisoformat(raw)
-            except ValueError:
-                kept_entries.append(entry)
-                continue
-            if entry_date < start_date or entry_date > end_date:
-                kept_entries.append(entry)
-            else:
-                stripped_json_entries += 1
-
-        if stripped_json_entries > 0:
-            with trend_cache_json.open("w", encoding="utf-8") as handle:
-                json.dump(kept_entries, handle, separators=(",", ":"))
+    publish_trends(
+        sqlite_path,
+        OutputScope("holyrood_uns", map_id, "Holyrood UNS"),
+        trend_cache_json,
+    )
 
     return deleted_elections, deleted_votes, stripped_json_entries
 
@@ -1254,54 +1262,62 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     validate_day_count(args.lookback_days, "--lookback-days")
     validate_half_life(args.half_life_days)
 
-    if args.reset_existing and not args.dry_run:
-        deleted_elections, deleted_votes, stripped_json_entries = (
-            reset_existing_model_outputs(
-                start_date,
-                end_date,
-                database_file(db),
-                map_id=_output_map_id(db, args.election_name),
-            )
-        )
-        print(
-            f"RESET deleted_elections={deleted_elections} "
-            f"deleted_votes={deleted_votes} "
-            f"stripped_json_entries={stripped_json_entries}"
-        )
-    elif args.reset_existing and args.dry_run:
-        print("RESET skipped for dry-run mode")
-
-    current = start_date
-    success_count = 0
-    failed_count = 0
-    failures: list[tuple[str, str]] = []
-
-    while current <= end_date:
-        try:
-            cfg = HolyroodSimulationConfig(
-                constituency_election_name=args.election_name,
-                as_of_date=current,
-                since_date=current - timedelta(days=args.lookback_days),
-                half_life_days=args.half_life_days,
-                dry_run=args.dry_run,
-            )
-            output = run_holyrood_simulation(db, cfg)
-            success_count += 1
-
-            if args.progress_every > 0 and success_count % args.progress_every == 0:
-                print(
-                    f"PROGRESS success={success_count} failed={failed_count} "
-                    f"as_of={current.isoformat()} election={output.election_name} "
-                    f"rows={len(output.const_projected) + len(output.list_projected)}"
+    with trend_batch(
+        database_file(db),
+        OutputScope(
+            "holyrood_uns", _output_map_id(db, args.election_name), "Holyrood UNS"
+        ),
+        HOLYROOD_TREND_CACHE_JSON,
+        enabled=not args.dry_run,
+    ):
+        if args.reset_existing and not args.dry_run:
+            deleted_elections, deleted_votes, stripped_json_entries = (
+                reset_existing_model_outputs(
+                    start_date,
+                    end_date,
+                    database_file(db),
+                    map_id=_output_map_id(db, args.election_name),
                 )
-        except Exception as exc:
-            failed_count += 1
-            failures.append((current.isoformat(), str(exc)))
-            print(f"ERROR as_of={current.isoformat()} err={exc}")
-            if not args.continue_on_error:
-                raise
+            )
+            print(
+                f"RESET deleted_elections={deleted_elections} "
+                f"deleted_votes={deleted_votes} "
+                "cache=database"
+            )
+        elif args.reset_existing and args.dry_run:
+            print("RESET skipped for dry-run mode")
 
-        current += timedelta(days=1)
+        current = start_date
+        success_count = 0
+        failed_count = 0
+        failures: list[tuple[str, str]] = []
+
+        while current <= end_date:
+            try:
+                cfg = HolyroodSimulationConfig(
+                    constituency_election_name=args.election_name,
+                    as_of_date=current,
+                    since_date=current - timedelta(days=args.lookback_days),
+                    half_life_days=args.half_life_days,
+                    dry_run=args.dry_run,
+                )
+                output = run_holyrood_simulation(db, cfg)
+                success_count += 1
+
+                if args.progress_every > 0 and success_count % args.progress_every == 0:
+                    print(
+                        f"PROGRESS success={success_count} failed={failed_count} "
+                        f"as_of={current.isoformat()} election={output.election_name} "
+                        f"rows={len(output.const_projected) + len(output.list_projected)}"
+                    )
+            except Exception as exc:
+                failed_count += 1
+                failures.append((current.isoformat(), str(exc)))
+                print(f"ERROR as_of={current.isoformat()} err={exc}")
+                if not args.continue_on_error:
+                    raise
+
+            current += timedelta(days=1)
 
     print("SUMMARY")
     print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
@@ -1440,117 +1456,17 @@ def update_trend_cache_json(
     const_projected: list[dict[str, Any]],
     list_projected: list[dict[str, Any]],
     trend_cache_json: Path | None = None,
+    *,
+    sqlite_path: Path | None = None,
+    map_id: int,
 ) -> None:
-    """Merge this simulation's results into the trend cache JSON.
-
-    Reads the existing ``trend_cache_json``, strips any entry for ``as_of_date``
-    or ``election_id``, then appends a new entry summarising seat counts and
-    constituency-ballot national vote percentages per party. The combined
-    entries are sorted by ``election_id`` before being written back.
-
-    Seat counts are taken across all 129 seats (constituency + list); vote
-    percentages come from :func:`constituency_national_vote_shares` (const rows
-    only, so the list-vote duplication never inflates them).
-
-    **Deduplication logic**: if the new seat snapshot (the multiset of
-    party-seat-count pairs) is identical to that of the immediately preceding
-    cached date, the new entry is omitted and a ``TREND_CACHE_SKIP`` message is
-    printed instead.
-
-    Args:
-        election_id: Primary key of the newly persisted election.
-        election_name: Display name of the newly persisted election.
-        as_of_date: Simulation date; any existing entry for this date is replaced.
-        const_projected: Constituency vote rows from :func:`project_constituency_seats`.
-        list_projected: List seat vote rows from :func:`project_list_seats`.
-        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
-            module's ``HOLYROOD_TREND_CACHE_JSON`` when called.
-    """
-    trend_cache_json = (
-        trend_cache_json if trend_cache_json is not None else HOLYROOD_TREND_CACHE_JSON
+    """Reconstruct the scoped recorded series; projected arguments are compatibility-only."""
+    publish_trends(
+        sqlite_path if sqlite_path is not None else default_sqlite_path(),
+        OutputScope("holyrood_uns", map_id, "Holyrood UNS"),
+        trend_cache_json if trend_cache_json is not None else HOLYROOD_TREND_CACHE_JSON,
     )
-    trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
 
-    const_projected = recorded_vote_rows(const_projected)
-    list_projected = recorded_vote_rows(list_projected)
-    const_shares = constituency_national_vote_shares(const_projected)
-    seats_by_party = summarize_votes([*const_projected, *list_projected]).seats_by_party
-
-    def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
-        """Build a sorted snapshot tuple from a JSON entry's parties map."""
-        snapshot: dict[int, int] = {}
-        for pid_str, pdata in (entry.get("parties") or {}).items():
-            try:
-                party_id = int(pid_str)
-                seats = int(pdata.get("s") or 0)
-            except (ValueError, TypeError):
-                continue
-            if party_id > 0 and seats > 0:
-                snapshot[party_id] = seats
-        return tuple(sorted(snapshot.items()))
-
-    def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
-        """Build a sorted snapshot tuple from a party-seat-count dict."""
-        return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
-
-    existing_entries: list[dict[str, Any]] = []
-    entries_by_date: dict[date, dict[str, Any]] = {}
-    if trend_cache_json.exists():
-        with trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            if str(entry.get("as_of_date") or "").strip() == as_of_date.isoformat():
-                continue
-            if int(entry.get("election_id") or 0) == election_id:
-                continue
-            existing_entries.append(entry)
-            try:
-                parsed_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
-            except ValueError:
-                continue
-            if parsed_date < as_of_date:
-                entries_by_date[parsed_date] = entry
-
-    party_ids = sorted(set(seats_by_party) | set(const_shares))
-    new_entry = {
-        "election_id": election_id,
-        "election_name": election_name,
-        "as_of_date": as_of_date.isoformat(),
-        "parties": {
-            str(party_id): {
-                "s": seats_by_party.get(party_id, 0),
-                "v": round(const_shares.get(party_id, 0.0), 1),
-            }
-            for party_id in party_ids
-        },
-    }
-
-    previous_date = max(entries_by_date.keys(), default=None)
-    previous_snapshot = (
-        seat_snapshot_from_entry(entries_by_date[previous_date])
-        if previous_date is not None
-        else tuple()
-    )
-    current_snapshot = seat_snapshot_from_party_counts(seats_by_party)
-
-    if previous_date is not None and current_snapshot == previous_snapshot:
-        combined = existing_entries
-        print(
-            "TREND_CACHE_SKIP "
-            f"as_of_date={as_of_date.isoformat()} "
-            f"reason=unchanged_seat_snapshot "
-            f"previous_date={previous_date.isoformat()}"
-        )
-    else:
-        combined = existing_entries + [new_entry]
-
-    combined.sort(key=lambda e: int(e.get("election_id") or 0))
-
-    with trend_cache_json.open("w", encoding="utf-8") as handle:
-        json.dump(combined, handle, separators=(",", ":"))
-
-
-# ── JSON output ───────────────────────────────────────────────────────────────
 
 RESULT_FILE_NAME = "holyrood-prediction.json"
 META_FILE_NAME = "holyrood-prediction-meta.json"
@@ -1616,9 +1532,11 @@ def write_result_json(payload: dict[str, Any], output_path: Path) -> None:
 
     Creates parent directories if needed.
     """
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, separators=(",", ":"), ensure_ascii=False)
+    publish_json(
+        payload,
+        output_path,
+        repair="Rerun the Holyrood model/output command to regenerate prediction or poll metadata.",
+    )
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -1875,23 +1793,35 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
         )
 
     final_output: HolyroodRunOutput | None = None
-    for run_date in run_dates:
-        run_cfg = HolyroodSimulationConfig(
-            constituency_election_name=cfg.constituency_election_name,
-            as_of_date=run_date,
-            since_date=run_date - timedelta(days=lookback_days),
-            half_life_days=cfg.half_life_days,
-            dry_run=cfg.dry_run,
-        )
-        output = run_holyrood_simulation(
-            db,
-            run_cfg,
-            manual_poll_shares if run_date == cfg.as_of_date else None,
-            poll_aggregations=selected_polls if run_date == cfg.as_of_date else None,
-        )
-        _print_seat_table(output.seat_summary)
-        if run_date == cfg.as_of_date:
-            final_output = output
+    with trend_batch(
+        database_file(db),
+        OutputScope(
+            "holyrood_uns",
+            _output_map_id(db, cfg.constituency_election_name),
+            "Holyrood UNS",
+        ),
+        HOLYROOD_TREND_CACHE_JSON,
+        enabled=not cfg.dry_run,
+    ):
+        for run_date in run_dates:
+            run_cfg = HolyroodSimulationConfig(
+                constituency_election_name=cfg.constituency_election_name,
+                as_of_date=run_date,
+                since_date=run_date - timedelta(days=lookback_days),
+                half_life_days=cfg.half_life_days,
+                dry_run=cfg.dry_run,
+            )
+            output = run_holyrood_simulation(
+                db,
+                run_cfg,
+                manual_poll_shares if run_date == cfg.as_of_date else None,
+                poll_aggregations=selected_polls
+                if run_date == cfg.as_of_date
+                else None,
+            )
+            _print_seat_table(output.seat_summary)
+            if run_date == cfg.as_of_date:
+                final_output = output
 
     # Front-end JSON + meta for the current as_of date (unless --no-output).
     if final_output is not None and not args.no_output:

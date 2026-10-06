@@ -59,6 +59,13 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database
+from model_support.io import publish_json
+from model_support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
 from model_support.persistence import (
     OutputScope,
     OutputVote,
@@ -1947,13 +1954,18 @@ def reset_existing_model_outputs(
     *,
     map_id: int,
 ) -> tuple[int, int, int]:
-    """Clear this type/map's dated outputs in the range and strip trend rows.
+    """Clear this type/map's dated outputs in the range and reconstruct its trend cache.
 
     ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
-    Returns ``(deleted_elections, deleted_votes, stripped_trend_entries)``.
+    Returns ``(deleted_elections, deleted_votes, stripped_trend_entries)``; the compatibility third field is always zero.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
+    if not sqlite_path.exists():
+        return 0, 0, 0
+    validate_trend_scope(
+        sqlite_path, OutputScope(spec.election_type, map_id, spec.election_name_prefix)
+    )
     deleted_elections, deleted_votes = delete_outputs(
         sqlite_path,
         OutputScope(spec.election_type, map_id, spec.election_name_prefix),
@@ -1962,23 +1974,11 @@ def reset_existing_model_outputs(
     )
 
     stripped = 0
-    if spec.trend_cache_json.exists():
-        with spec.trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        kept: list[dict[str, Any]] = []
-        for entry in entries:
-            try:
-                entry_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
-            except ValueError:
-                kept.append(entry)
-                continue
-            if entry_date < start_date or entry_date > end_date:
-                kept.append(entry)
-            else:
-                stripped += 1
-        if stripped > 0:
-            with spec.trend_cache_json.open("w", encoding="utf-8") as handle:
-                json.dump(kept, handle, separators=(",", ":"))
+    publish_trends(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        spec.trend_cache_json,
+    )
 
     return int(deleted_elections), int(deleted_votes), stripped
 
@@ -2027,106 +2027,16 @@ def update_trend_cache_json(
     projected_votes: list[dict[str, Any]],
     seat_ev_by_id: dict[int, int] | None = None,
     popular_vote_seat_ids: set[int] | None = None,
+    *,
+    sqlite_path: Path | None = None,
+    map_id: int,
 ) -> None:
-    """Merge this run's per-party seat/vote summary into the type's trend JSON.
-
-    Replaces any existing entry for ``as_of_date`` / ``election_id``, then appends a
-    ``{election_id, election_name, as_of_date, parties:{id:{s,v}}}`` entry — unless
-    the projected seat snapshot equals the immediately preceding date's (then the
-    entry is skipped to keep the chart free of flat duplicate points).
-
-    When ``seat_ev_by_id`` gives non-zero electoral votes (the President), each party
-    entry also carries ``"e"`` (electoral votes won) so consumers can chart the EV
-    tally rather than the state count. Chambers without electoral votes omit ``"e"``.
-    ``popular_vote_seat_ids`` restricts only ``v``; all units still contribute
-    elected seats and electoral votes. Counts use the persisted rounding rule.
-    """
-    spec.trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
-    seat_ev_by_id = seat_ev_by_id or {}
-
-    summary = summarize_votes(
-        recorded_vote_rows(projected_votes),
-        popular_vote_seat_ids=popular_vote_seat_ids,
-        seat_ev_by_id=seat_ev_by_id,
+    """Reconstruct the scoped recorded series; projected arguments are compatibility-only."""
+    publish_trends(
+        sqlite_path if sqlite_path is not None else default_sqlite_path(),
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        spec.trend_cache_json,
     )
-    vote_totals_by_party = summary.vote_totals_by_party
-    seats_by_party = summary.seats_by_party
-    ev_by_party = summary.electoral_votes_by_party
-    vote_shares = summary.vote_shares()
-    has_electoral_votes = sum(ev_by_party.values()) > 0
-
-    def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
-        snapshot: dict[int, int] = {}
-        for pid_str, pdata in (entry.get("parties") or {}).items():
-            try:
-                party_id = int(pid_str)
-                seats = int(pdata.get("s") or 0)
-            except (ValueError, TypeError):
-                continue
-            if party_id > 0 and seats > 0:
-                snapshot[party_id] = seats
-        return tuple(sorted(snapshot.items()))
-
-    def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
-        return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
-
-    existing_entries: list[dict[str, Any]] = []
-    entries_by_date: dict[date, dict[str, Any]] = {}
-    if spec.trend_cache_json.exists():
-        with spec.trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            if str(entry.get("as_of_date") or "").strip() == as_of_date.isoformat():
-                continue
-            if int(entry.get("election_id") or 0) == election_id:
-                continue
-            existing_entries.append(entry)
-            try:
-                parsed_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
-            except ValueError:
-                continue
-            if parsed_date < as_of_date:
-                entries_by_date[parsed_date] = entry
-
-    def party_entry(party_id: int) -> dict[str, float | int]:
-        entry: dict[str, float | int] = {
-            "s": seats_by_party.get(party_id, 0),
-            "v": round(vote_shares.get(party_id, 0.0), 1),
-        }
-        if has_electoral_votes:
-            entry["e"] = ev_by_party.get(party_id, 0)
-        return entry
-
-    new_entry = {
-        "election_id": election_id,
-        "election_name": election_name,
-        "as_of_date": as_of_date.isoformat(),
-        "parties": {str(party_id): party_entry(party_id) for party_id in sorted(vote_totals_by_party.keys())},
-    }
-
-    previous_date = max(entries_by_date.keys(), default=None)
-    previous_snapshot = (
-        seat_snapshot_from_entry(entries_by_date[previous_date])
-        if previous_date is not None
-        else tuple()
-    )
-    current_snapshot = seat_snapshot_from_party_counts(seats_by_party)
-
-    if previous_date is not None and current_snapshot == previous_snapshot:
-        combined = existing_entries
-        print(
-            "TREND_CACHE_SKIP "
-            f"as_of_date={as_of_date.isoformat()} "
-            f"reason=unchanged_seat_snapshot "
-            f"previous_date={previous_date.isoformat()}"
-        )
-    else:
-        combined = existing_entries + [new_entry]
-
-    combined.sort(key=lambda e: int(e.get("election_id") or 0))
-
-    with spec.trend_cache_json.open("w", encoding="utf-8") as handle:
-        json.dump(combined, handle, separators=(",", ":"))
 
 
 def write_trend_cache_meta(
@@ -2142,7 +2052,6 @@ def write_trend_cache_meta(
     head-to-head); ``None`` for a party-only series, which is what the poll
     tracker shows for the House and Senate.
     """
-    spec.trend_cache_meta_json.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "as_of_date": as_of_date.isoformat(),
         "since_date": since_date.isoformat(),
@@ -2158,8 +2067,11 @@ def write_trend_cache_meta(
             else None
         ),
     }
-    with spec.trend_cache_meta_json.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, separators=(",", ":"))
+    publish_json(
+        payload,
+        spec.trend_cache_meta_json,
+        repair="Rerun this model to regenerate latest-used-poll metadata.",
+    )
 
 
 # ── Backfill bookkeeping ──────────────────────────────────────────────────────
@@ -2378,6 +2290,10 @@ def run_simulation(
         )
 
     sqlite_path = database_file(db)
+    validate_trend_scope(
+        sqlite_path,
+        OutputScope(spec.election_type, poll_map.id, spec.election_name_prefix),
+    )
     persisted_name, persisted_election_id = persist_projection(
         spec,
         poll_map.id,
@@ -2395,6 +2311,8 @@ def run_simulation(
         projected_votes,
         seat_ev_by_id,
         popular_vote_seat_ids,
+        sqlite_path=database_file(db),
+        map_id=poll_map.id,
     )
 
     return (
@@ -2499,51 +2417,59 @@ def run_retrospective_range(
     validate_half_life(args.half_life_days)
     validate_prior_weight(args.seat_prior_weight)
 
-    if reset_existing and not args.dry_run:
-        deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
-            spec,
-            start_date,
-            end_date,
-            database_file(db),
-            map_id=_output_map_id(db, spec),
-        )
-        print(
-            f"RESET deleted_elections={deleted_elections} "
-            f"deleted_votes={deleted_votes} stripped_trend_rows={stripped}"
-        )
-    elif reset_existing and args.dry_run:
-        print("RESET skipped for dry-run mode")
-
-    current = start_date
-    success_count = 0
-    failed_count = 0
-    failures: list[tuple[str, str]] = []
-
-    while current <= end_date:
-        try:
-            cfg = UsSimulationConfig(
-                spec=spec,
-                as_of_date=current,
-                since_date=current - timedelta(days=lookback_days),
-                half_life_days=args.half_life_days,
-                dry_run=args.dry_run,
-                seat_prior_weight=args.seat_prior_weight,
-                ignore_seat_polls=args.ignore_seat_polls,
+    with trend_batch(
+        database_file(db),
+        OutputScope(
+            spec.election_type, _output_map_id(db, spec), spec.election_name_prefix
+        ),
+        spec.trend_cache_json,
+        enabled=not args.dry_run,
+    ):
+        if reset_existing and not args.dry_run:
+            deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
+                spec,
+                start_date,
+                end_date,
+                database_file(db),
+                map_id=_output_map_id(db, spec),
             )
-            election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
-            success_count += 1
-            if args.progress_every > 0 and success_count % args.progress_every == 0:
-                print(
-                    f"PROGRESS success={success_count} failed={failed_count} "
-                    f"as_of={current.isoformat()} election={election_name} rows={len(projected_votes)}"
+            print(
+                f"RESET deleted_elections={deleted_elections} "
+                f"deleted_votes={deleted_votes} cache=database"
+            )
+        elif reset_existing and args.dry_run:
+            print("RESET skipped for dry-run mode")
+
+        current = start_date
+        success_count = 0
+        failed_count = 0
+        failures: list[tuple[str, str]] = []
+
+        while current <= end_date:
+            try:
+                cfg = UsSimulationConfig(
+                    spec=spec,
+                    as_of_date=current,
+                    since_date=current - timedelta(days=lookback_days),
+                    half_life_days=args.half_life_days,
+                    dry_run=args.dry_run,
+                    seat_prior_weight=args.seat_prior_weight,
+                    ignore_seat_polls=args.ignore_seat_polls,
                 )
-        except Exception as exc:  # noqa: BLE001 — surfaced per-date, optionally fatal
-            failed_count += 1
-            failures.append((current.isoformat(), str(exc)))
-            print(f"ERROR as_of={current.isoformat()} err={exc}")
-            if not args.continue_on_error:
-                raise
-        current += timedelta(days=1)
+                election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
+                success_count += 1
+                if args.progress_every > 0 and success_count % args.progress_every == 0:
+                    print(
+                        f"PROGRESS success={success_count} failed={failed_count} "
+                        f"as_of={current.isoformat()} election={election_name} rows={len(projected_votes)}"
+                    )
+            except Exception as exc:  # noqa: BLE001 — surfaced per-date, optionally fatal
+                failed_count += 1
+                failures.append((current.isoformat(), str(exc)))
+                print(f"ERROR as_of={current.isoformat()} err={exc}")
+                if not args.continue_on_error:
+                    raise
+            current += timedelta(days=1)
 
     print("SUMMARY")
     print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
@@ -2753,7 +2679,7 @@ def _drop_points_outside(
         print(
             f"REBUILD-HISTORY dropped {side} from={start_date.isoformat()} "
             f"to={end_date.isoformat()} deleted_elections={deleted_elections} "
-            f"deleted_votes={deleted_votes} stripped_trend_rows={stripped}"
+            f"deleted_votes={deleted_votes} cache=database"
         )
 
 
@@ -2850,50 +2776,64 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
 
     latest_poll_usage: LatestPollUsage | None = None
 
-    for index, run_date in enumerate(run_dates, start=1):
-        run_cfg = UsSimulationConfig(
-            spec=spec,
-            as_of_date=run_date,
-            since_date=run_date - timedelta(days=lookback_days),
-            half_life_days=cfg.half_life_days,
-            dry_run=cfg.dry_run,
-            seat_prior_weight=cfg.seat_prior_weight,
-            ignore_seat_polls=cfg.ignore_seat_polls,
-        )
-        (
-            election_name,
-            projected_votes,
-            _,
-            winners_by_party,
-            latest_poll_usage,
-            ev_by_party,
-            seat_poll_diagnostics,
-        ) = run_simulation(
-            db,
-            run_cfg,
-            poll_window=selected_polls if run_date == cfg.as_of_date else None,
-        )
-        seat_ids = {int(row["seat_id"]) for row in projected_votes}
+    with trend_batch(
+        database_file(db),
+        OutputScope(
+            spec.election_type, _output_map_id(db, spec), spec.election_name_prefix
+        ),
+        spec.trend_cache_json,
+        enabled=not cfg.dry_run,
+    ):
+        for index, run_date in enumerate(run_dates, start=1):
+            run_cfg = UsSimulationConfig(
+                spec=spec,
+                as_of_date=run_date,
+                since_date=run_date - timedelta(days=lookback_days),
+                half_life_days=cfg.half_life_days,
+                dry_run=cfg.dry_run,
+                seat_prior_weight=cfg.seat_prior_weight,
+                ignore_seat_polls=cfg.ignore_seat_polls,
+            )
+            (
+                election_name,
+                projected_votes,
+                _,
+                winners_by_party,
+                latest_poll_usage,
+                ev_by_party,
+                seat_poll_diagnostics,
+            ) = run_simulation(
+                db,
+                run_cfg,
+                poll_window=selected_polls if run_date == cfg.as_of_date else None,
+            )
+            seat_ids = {int(row["seat_id"]) for row in projected_votes}
 
-        print(f"{spec.election_name_prefix} projection complete")
-        print(f"As-of date: {run_cfg.as_of_date.isoformat()}  since: {run_cfg.since_date.isoformat()}")
-        print(f"Election: {election_name}  projected seats: {len(seat_ids)}")
-        for line in seat_poll_diagnostics:
-            print(line)
-        if len(run_dates) > 1:
-            print(f"Backfill progress: {index}/{len(run_dates)}")
-        snippet = latest_poll_snippet(latest_poll_usage)
-        if snippet:
-            print(snippet)
-        # For the President the headline tally is electoral votes; show EV (with the
-        # states/units won in parentheses). Other chambers just list seats won.
-        if sum(ev_by_party.values()) > 0:
-            for party_name, ev in sorted(ev_by_party.items(), key=lambda kv: (-kv[1], kv[0])):
-                if ev:
-                    print(f"- {party_name}: {ev} EV ({winners_by_party.get(party_name, 0)} states/units)")
-        else:
-            for party_name, seats in winners_by_party.most_common(8):
-                print(f"- {party_name}: {seats}")
+            print(f"{spec.election_name_prefix} projection complete")
+            print(
+                f"As-of date: {run_cfg.as_of_date.isoformat()}  since: {run_cfg.since_date.isoformat()}"
+            )
+            print(f"Election: {election_name}  projected seats: {len(seat_ids)}")
+            for line in seat_poll_diagnostics:
+                print(line)
+            if len(run_dates) > 1:
+                print(f"Backfill progress: {index}/{len(run_dates)}")
+            snippet = latest_poll_snippet(latest_poll_usage)
+            if snippet:
+                print(snippet)
+            # For the President the headline tally is electoral votes; show EV (with the
+            # states/units won in parentheses). Other chambers just list seats won.
+            if sum(ev_by_party.values()) > 0:
+                for party_name, ev in sorted(
+                    ev_by_party.items(), key=lambda kv: (-kv[1], kv[0])
+                ):
+                    if ev:
+                        print(
+                            f"- {party_name}: {ev} EV ({winners_by_party.get(party_name, 0)} states/units)"
+                        )
+            else:
+                for party_name, seats in winners_by_party.most_common(8):
+                    print(f"- {party_name}: {seats}")
 
     if cfg.as_of_date not in run_dates:
         meta_cfg = UsSimulationConfig(

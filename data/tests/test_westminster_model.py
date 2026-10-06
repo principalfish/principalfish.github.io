@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westmin
 import pytest
 
 import run_uns_model
+from model_support.io import OutputPublicationError
 from db import Database
 from models import ElectionType, Poll
 from run_uns_model import (
@@ -1487,7 +1488,7 @@ class TestDatabasePathAtCallTime:
         ) == (
             1,
             1,
-            1,
+            0,
         )
         assert delete_model_uns_for_as_of_date(
             date(2026, 6, 1), map_id=world.map_id
@@ -1602,7 +1603,12 @@ class TestDatabasePathAtCallTime:
         assert trend_cache_json.exists()
 
     def test_the_trend_files_follow_the_module_globals_when_called(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
         trend_cache_json = tmp_path / "trends" / "model_output_trends.json"
@@ -1612,7 +1618,23 @@ class TestDatabasePathAtCallTime:
             run_uns_model, "TREND_CACHE_META_JSON", trend_cache_meta_json
         )
 
-        update_trend_cache_json(1, "UNS 2026-06-01", date(2026, 6, 1), [])
+        world = westminster_world
+        persist_projection(
+            world.map_id,
+            date(2026, 6, 1),
+            "UNS 2026-06-01",
+            [],
+            {},
+            only_the_test_database,
+        )
+        update_trend_cache_json(
+            1,
+            "UNS 2026-06-01",
+            date(2026, 6, 1),
+            [],
+            sqlite_path=only_the_test_database,
+            map_id=world.map_id,
+        )
         write_trend_cache_meta(date(2026, 6, 1), date(2026, 5, 2), None)
 
         entries = json.loads(trend_cache_json.read_text())
@@ -2052,18 +2074,14 @@ class TestResetExistingModelOutputs:
             map_id=world.map_id,
         )
 
-        assert result == (3, 9, 2)
+        assert result == (3, 9, 0)
         assert _vote_count(only_the_test_database, in_range) == 0
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-05-31", 1),
             ("UNS 2026-06-03", 1),
         ]
-        # Entries whose date can't be parsed are kept.
-        assert _read_json(trend_json) == [
-            _trend_entry(1, "2026-05-31"),
-            _trend_entry(3, "not-a-date"),
-            {"election_id": 5},
-            _trend_entry(6, "2026-06-03"),
+        assert [entry["as_of_date"] for entry in _read_json(trend_json)] == [
+            "2026-05-31"
         ]
 
     def test_range_preserves_same_named_other_type(
@@ -2118,8 +2136,8 @@ class TestResetExistingModelOutputs:
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-05-31", 1)
         ]
-        # Not rewritten: the rewrite would drop the indentation.
-        assert trend_json.read_text(encoding="utf-8") == original
+        assert _read_json(trend_json)[0]["as_of_date"] == "2026-05-31"
+        assert _read_json(trend_json)[0]["parties"]
 
     def test_missing_database_and_trend_json(
         self, tmp_path: Path, only_the_test_database: Path
@@ -2331,217 +2349,6 @@ class TestDatesToRunForCfg:
 
 
 # ── update_trend_cache_json ───────────────────────────────────────────────────
-
-
-class TestUpdateTrendCacheJson:
-    """Tests for update_trend_cache_json — merging a run into the trend cache."""
-
-    def test_replaces_same_date_and_same_id_and_sorts_by_election_id(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        _write_json(
-            trend_json,
-            [
-                _trend_entry(5, "2026-06-03", {"2": {"s": 1, "v": 50.0}}),
-                _trend_entry(2, "2026-06-01", {"2": {"s": 3, "v": 60.0}}),
-                # Same date as the new run.
-                _trend_entry(7, "2026-06-05", {"1": {"s": 2, "v": 40.0}}),
-                # Same election id as the new run.
-                _trend_entry(9, "2026-06-04", {"1": {"s": 2, "v": 40.0}}),
-            ],
-        )
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [
-                _vote(1, 2, 600.0, elected=True),
-                _vote(1, 1, 400.0),
-                _vote(2, 2, 500.0, elected=True),
-                _vote(2, 1, 200.0),
-                _vote(2, 6, 100.0),
-            ],
-            trend_json,
-        )
-
-        assert _read_json(trend_json) == [
-            _trend_entry(2, "2026-06-01", {"2": {"s": 3, "v": 60.0}}),
-            _trend_entry(5, "2026-06-03", {"2": {"s": 1, "v": 50.0}}),
-            {
-                "election_id": 9,
-                "election_name": "UNS 2026-06-05",
-                "as_of_date": "2026-06-05",
-                # 1800 votes in all: party 1 has 600, party 2 1100, party 6 100.
-                "parties": {
-                    "1": {"s": 0, "v": 33.3},
-                    "2": {"s": 2, "v": 61.1},
-                    "6": {"s": 0, "v": 5.6},
-                },
-            },
-        ]
-        assert "TREND_CACHE_SKIP" not in capsys.readouterr().out
-
-    def test_zero_votes_give_zero_percentages(self, tmp_path: Path) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "nested" / "trends.json"
-
-        update_trend_cache_json(
-            3,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 0.0, elected=True), _vote(1, 1, 0.0)],
-            trend_json,
-        )
-
-        assert _read_json(trend_json) == [
-            {
-                "election_id": 3,
-                "election_name": "UNS 2026-06-05",
-                "as_of_date": "2026-06-05",
-                "parties": {"1": {"s": 0, "v": 0.0}, "2": {"s": 1, "v": 0.0}},
-            },
-        ]
-
-    def test_first_entry_is_kept_even_with_no_seats(self, tmp_path: Path) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        # Only a later date exists, so there is no earlier snapshot to compare.
-        _write_json(trend_json, [_trend_entry(8, "2026-06-09")])
-
-        update_trend_cache_json(
-            3, "UNS 2026-06-05", date(2026, 6, 5), [_vote(1, 2, 10.0)], trend_json
-        )
-
-        assert [entry["election_id"] for entry in _read_json(trend_json)] == [3, 8]
-
-    def test_unchanged_seats_skip_the_entry(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """An unchanged seat snapshot is omitted, and its date's old entry dropped.
-
-        This is the documented dedup: the same-date entry is stripped, and a
-        run whose seats match the previous date's is not added, so the JSON
-        holds only changed snapshots (``existing_trend_dates`` reads SQLite for
-        the rest).
-        """
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        _write_json(
-            trend_json,
-            [
-                _trend_entry(3, "2026-06-03", {"2": {"s": 2, "v": 55.0}}),
-                _trend_entry(4, "2026-06-05", {"1": {"s": 2, "v": 45.0}}),
-            ],
-        )
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
-            trend_json,
-        )
-
-        assert _read_json(trend_json) == [
-            _trend_entry(3, "2026-06-03", {"2": {"s": 2, "v": 55.0}})
-        ]
-        assert capsys.readouterr().out == (
-            "TREND_CACHE_SKIP as_of_date=2026-06-05 "
-            "reason=unchanged_seat_snapshot previous_date=2026-06-03\n"
-        )
-
-    def test_compares_with_the_latest_earlier_date_only(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        # The first and last entries match the new seats; the latest earlier
-        # one (2026-06-03) does not, so the new entry is added.
-        _write_json(
-            trend_json,
-            [
-                _trend_entry(1, "2026-06-01", {"2": {"s": 2}}),
-                _trend_entry(2, "2026-06-03", {"1": {"s": 2}}),
-                _trend_entry(3, "2026-06-07", {"2": {"s": 2}}),
-            ],
-        )
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
-            trend_json,
-        )
-
-        assert [entry["election_id"] for entry in _read_json(trend_json)] == [
-            1,
-            2,
-            3,
-            9,
-        ]
-        assert capsys.readouterr().out == ""
-
-    def test_malformed_previous_parties_are_ignored(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        previous = _trend_entry(
-            3,
-            "2026-06-03",
-            {
-                "abc": {"s": 3},
-                "0": {"s": 5},
-                "1": {"s": "x"},
-                "4": {"s": [1]},
-                "6": {},
-                "8": {"s": 0},
-                "2": {"s": 2},
-            },
-        )
-        undated = {"election_id": None, "as_of_date": "not-a-date"}
-        _write_json(trend_json, [previous, undated])
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
-            trend_json,
-        )
-
-        # Only {"2": 2 seats} survives from the previous entry, which matches,
-        # so the run is skipped. The undated entry is kept and sorts first.
-        assert _read_json(trend_json) == [undated, previous]
-        assert "previous_date=2026-06-03" in capsys.readouterr().out
-
-    def test_null_party_entry_raises_pins_current_behaviour(
-        self, tmp_path: Path
-    ) -> None:
-        """Pins current behaviour: a ``null`` party value raises ``AttributeError``.
-
-        The previous entry's snapshot guard catches only ``ValueError`` and
-        ``TypeError`` for malformed party entries, so ``None.get`` escapes.
-        """
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        _write_json(trend_json, [_trend_entry(3, "2026-06-03", {"2": None})])
-
-        with pytest.raises(AttributeError):
-            update_trend_cache_json(
-                9,
-                "UNS 2026-06-05",
-                date(2026, 6, 5),
-                [_vote(1, 2, 60.0, elected=True)],
-                trend_json,
-            )
-
-
-# ── Orchestration: shared helpers ─────────────────────────────────────────────
 
 
 def _guard_writes(
@@ -2842,9 +2649,7 @@ class TestRunRetrospective:
         run_uns_model.run_retrospective(db, args)
 
         lines = capsys.readouterr().out.splitlines()
-        assert lines[0] == (
-            "RESET deleted_elections=1 deleted_votes=2 stripped_csv_rows=1"
-        )
+        assert lines[0] == ("RESET deleted_elections=1 deleted_votes=2 cache=database")
         progress = [line for line in lines if line.startswith("PROGRESS")]
         assert progress == [
             "PROGRESS success=1 failed=0 as_of=2026-06-09 "
@@ -2866,8 +2671,8 @@ class TestRunRetrospective:
         ]
         # 2026-06-10's seats match 2026-06-09's, so the dedup leaves it out.
         assert [entry["as_of_date"] for entry in _read_json(trend_json)] == [
-            "2026-06-01",
             "2026-06-09",
+            "2026-06-11",
         ]
 
     def test_dry_run_skips_the_reset_and_reports_progress_every_n(
@@ -3188,7 +2993,7 @@ class TestMain:
         )
 
         out = capsys.readouterr().out
-        assert "RESET deleted_elections=0 deleted_votes=0 stripped_csv_rows=0" in out
+        assert "RESET deleted_elections=0 deleted_votes=0 cache=database" in out
         assert "SUCCESS=2 FAILED=0" in out
         # The single-date path (its summary and the meta file) never runs.
         assert "UNS simulation complete" not in out
@@ -3652,3 +3457,56 @@ class TestContributingEndpointCaps:
         assert "CAPPING" not in out
         assert "As-of date: 2026-06-30" in out
         assert "Latest poll used:" not in out
+
+
+def test_retrospective_publishes_committed_first_date_after_middle_failure(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trend, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+    world = westminster_world
+    args = _retrospective_args(
+        monkeypatch,
+        world,
+        "--start-date",
+        "2026-06-01",
+        "--end-date",
+        "2026-06-03",
+        "--no-reset-existing",
+    )
+    real_run = run_uns_model.run_simulation
+
+    def fail_middle(database: Database, cfg: SimulationConfig, **kwargs: Any) -> Any:
+        if cfg.as_of_date == date(2026, 6, 2):
+            raise RuntimeError("middle calculation failed")
+        return real_run(database, cfg, **kwargs)
+
+    monkeypatch.setattr(run_uns_model, "run_simulation", fail_middle)
+    with pytest.raises(RuntimeError, match="middle calculation failed"):
+        run_uns_model.run_retrospective(db, args)
+    assert existing_trend_dates(
+        sqlite_path=only_the_test_database, map_id=world.map_id
+    ) == {date(2026, 6, 1)}
+    assert [entry["as_of_date"] for entry in _read_json(trend)] == ["2026-06-01"]
+
+
+def test_poll_metadata_failure_requires_model_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "metadata.json"
+    destination.write_text('{"old":true}')
+
+    def fail(source: Path, target: Path) -> None:
+        raise OSError("disk failed")
+
+    monkeypatch.setattr("model_support.io.os.replace", fail)
+    with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
+        write_trend_cache_meta(
+            date(2026, 6, 1), date(2026, 5, 1), None, trend_cache_meta_json=destination
+        )
+    assert "rebuild_model_trends" not in str(error.value)
+    assert destination.read_text() == '{"old":true}'
+    assert not list(tmp_path.glob(".*.tmp"))

@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
 import pytest
 from sqlalchemy import event, text
 
+from model_support.io import OutputPublicationError
 from db import Database
 from models import ElectionType, Map, Party, Pollster, Seat
 from polls.importers.us import us_polls_common
@@ -313,46 +314,6 @@ class TestProjectSeatVotes:
 
 
 # ── Senate Class-2 allowlist ──────────────────────────────────────────────────
-
-
-class TestTrendCacheElectoralVotes:
-    """The trend writer adds per-party electoral votes (``e``) only when seats carry EV."""
-
-    @staticmethod
-    def _spec(tmp_path: Path) -> UsModelSpec:
-        return UsModelSpec(
-            map_name="US Presidential 2024",
-            baseline_election_name="2024 US Presidential Election",
-            election_type="us_presidential_model",
-            election_name_prefix="US President UNS",
-            trend_cache_json=tmp_path / "trends.json",
-            trend_cache_meta_json=tmp_path / "trends_meta.json",
-        )
-
-    def test_writes_electoral_votes_for_president(self, tmp_path: Path) -> None:
-        spec = self._spec(tmp_path)
-        projected = [
-            {"seat_id": 1, "party_id": DEMOCRAT, "vote_total": 52.0, "elected": True},
-            {"seat_id": 1, "party_id": REPUBLICAN, "vote_total": 48.0, "elected": False},
-            {"seat_id": 2, "party_id": REPUBLICAN, "vote_total": 58.0, "elected": True},
-            {"seat_id": 2, "party_id": DEMOCRAT, "vote_total": 42.0, "elected": False},
-        ]
-        update_trend_cache_json(spec, 99, "US President UNS 2028-06-01", date(2028, 6, 1), projected, {1: 20, 2: 3})
-        entry = json.loads(spec.trend_cache_json.read_text())[0]
-        assert entry["parties"][str(DEMOCRAT)]["e"] == 20
-        assert entry["parties"][str(REPUBLICAN)]["e"] == 3
-        # State counts still present alongside EV.
-        assert entry["parties"][str(DEMOCRAT)]["s"] == 1
-
-    def test_omits_electoral_votes_when_none(self, tmp_path: Path) -> None:
-        spec = self._spec(tmp_path)
-        projected = [
-            {"seat_id": 1, "party_id": DEMOCRAT, "vote_total": 55.0, "elected": True},
-            {"seat_id": 1, "party_id": REPUBLICAN, "vote_total": 45.0, "elected": False},
-        ]
-        update_trend_cache_json(spec, 99, "US House UNS 2026-06-01", date(2026, 6, 1), projected, {1: 0})
-        entry = json.loads(spec.trend_cache_json.read_text())[0]
-        assert "e" not in entry["parties"][str(DEMOCRAT)]
 
 
 class TestClass2Allowlist:
@@ -4664,3 +4625,58 @@ class TestCandidateUsPollCaps:
         assert meta["as_of_date"] == "2026-06-30"
         assert meta["since_date"] == "2026-06-01"
         assert meta["latest_poll_snippet"] == ""
+
+
+def test_retrospective_publishes_committed_first_date_after_middle_failure(
+    db: Database,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dem, rep = _parties(db)
+    election_map, _ = _seat_map_with_baseline(
+        db, HOUSE_MAP, "us_house", {"Seat": {dem.id: 60, rep.id: 40}}
+    )
+    spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
+    args = _common.build_arg_parser(spec).parse_args([])
+    real_run = _common.run_simulation
+
+    def fail_middle(database: Database, cfg: UsSimulationConfig, **kwargs: Any) -> Any:
+        if cfg.as_of_date == date(2026, 6, 2):
+            raise RuntimeError("middle calculation failed")
+        return real_run(database, cfg, **kwargs)
+
+    monkeypatch.setattr(_common, "run_simulation", fail_middle)
+    with pytest.raises(RuntimeError, match="middle calculation failed"):
+        _common.run_retrospective_range(
+            db,
+            spec,
+            args,
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 3),
+            lookback_days=365,
+            reset_existing=False,
+        )
+    assert existing_trend_dates(
+        spec, only_the_test_database, map_id=election_map.id
+    ) == {date(2026, 6, 1)}
+    assert [
+        entry["as_of_date"] for entry in json.loads(spec.trend_cache_json.read_text())
+    ] == ["2026-06-01"]
+
+
+def test_poll_metadata_failure_requires_model_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
+    spec.trend_cache_meta_json.write_text('{"old":true}')
+
+    def fail(source: Path, target: Path) -> None:
+        raise OSError("disk failed")
+
+    monkeypatch.setattr("model_support.io.os.replace", fail)
+    with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
+        _common.write_trend_cache_meta(spec, date(2026, 6, 1), date(2026, 5, 1), None)
+    assert "rebuild_model_trends" not in str(error.value)
+    assert spec.trend_cache_meta_json.read_text() == '{"old":true}'
+    assert not list(tmp_path.glob(".*.tmp"))

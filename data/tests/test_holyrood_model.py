@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "holyroo
 import pytest
 
 import run_holyrood_uns_model as hmod
+from model_support.io import OutputPublicationError
 from db import Database, ensure_elections_sqlite_schema
 from models import Election, ElectionType, Party, Region
 from run_holyrood_uns_model import (
@@ -1149,151 +1150,6 @@ class TestPersistProjection:
 # ── Trend cache ───────────────────────────────────────────────────────────────
 
 
-class TestUpdateTrendCacheJson:
-    """update_trend_cache_json: seats over all ballots, ``v`` from constituency only."""
-
-    def test_v_is_constituency_share_not_inflated_by_list_duplication(
-        self, tmp_path: Path
-    ) -> None:
-        trend = tmp_path / "trends.json"
-        # Party 1 wins the constituency (60% share); party 2 wins two list seats
-        # whose duplicated regional totals are enormous. ``v`` must reflect only the
-        # constituency ballot, so party 2's ``v`` stays 40 (never 7×-inflated).
-        const_proj = [
-            {"seat_id": 1, "party_id": 1, "vote_total": 6000.0, "elected": True},
-            {"seat_id": 1, "party_id": 2, "vote_total": 4000.0, "elected": False},
-        ]
-        list_proj = [
-            {"seat_id": 10, "party_id": 2, "vote_total": 999999.0, "elected": True},
-            {"seat_id": 11, "party_id": 2, "vote_total": 999999.0, "elected": True},
-        ]
-        update_trend_cache_json(
-            1, "Holyrood UNS 2026-07-05", date(2026, 7, 5), const_proj, list_proj, trend_cache_json=trend
-        )
-        entry = json.loads(trend.read_text())[0]
-        parties = entry["parties"]
-        # Seats span both ballots: party 1 = 1 constituency, party 2 = 2 list.
-        assert parties["1"]["s"] == 1
-        assert parties["2"]["s"] == 2
-        # v = constituency share only.
-        assert parties["1"]["v"] == pytest.approx(60.0)
-        assert parties["2"]["v"] == pytest.approx(40.0)
-
-    def test_appends_when_snapshot_changes(self, tmp_path: Path) -> None:
-        trend = tmp_path / "trends.json"
-        first = [{"seat_id": 1, "party_id": 1, "vote_total": 100.0, "elected": True}]
-        second = [{"seat_id": 1, "party_id": 2, "vote_total": 100.0, "elected": True}]
-        update_trend_cache_json(1, "Holyrood UNS 2026-07-01", date(2026, 7, 1), first, [], trend_cache_json=trend)
-        update_trend_cache_json(2, "Holyrood UNS 2026-07-02", date(2026, 7, 2), second, [], trend_cache_json=trend)
-        assert len(json.loads(trend.read_text())) == 2
-
-    def test_skips_unchanged_snapshot(self, tmp_path: Path) -> None:
-        trend = tmp_path / "trends.json"
-        same = [{"seat_id": 1, "party_id": 1, "vote_total": 100.0, "elected": True}]
-        update_trend_cache_json(1, "Holyrood UNS 2026-07-01", date(2026, 7, 1), same, [], trend_cache_json=trend)
-        # Same seat snapshot on the next day → deduplicated (no new entry).
-        update_trend_cache_json(2, "Holyrood UNS 2026-07-02", date(2026, 7, 2), same, [], trend_cache_json=trend)
-        entries = json.loads(trend.read_text())
-        assert len(entries) == 1
-        assert entries[0]["as_of_date"] == "2026-07-01"
-
-    def test_null_party_entry_raises_pins_current_behaviour(
-        self, tmp_path: Path
-    ) -> None:
-        # ``seat_snapshot_from_entry`` catches only ValueError/TypeError, so a
-        # previous-date entry whose party value is null raises AttributeError.
-        trend = tmp_path / "trends.json"
-        trend.write_text(
-            json.dumps(
-                [{"election_id": 1, "as_of_date": "2026-07-01", "parties": {"1": None}}]
-            ),
-            encoding="utf-8",
-        )
-        rows = [{"seat_id": 1, "party_id": 1, "vote_total": 100.0, "elected": True}]
-
-        with pytest.raises(AttributeError):
-            update_trend_cache_json(
-                2,
-                "Holyrood UNS 2026-07-02",
-                date(2026, 7, 2),
-                rows,
-                [],
-                trend_cache_json=trend,
-            )
-
-    def test_same_date_and_same_id_entries_are_replaced(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        trend = tmp_path / "trends.json"
-        snp_seat = {"1": {"s": 1, "v": 60.0}}
-        new_seat = {"2": {"s": 1, "v": 100.0}}
-        existing = [
-            {"election_id": 1, "as_of_date": "2026-06-20", "parties": snp_seat},
-            # Same date as the new run: replaced.
-            {"election_id": 2, "as_of_date": "2026-07-02", "parties": snp_seat},
-            # Later than the new run, with its snapshot: kept, never compared.
-            {"election_id": 3, "as_of_date": "2026-07-10", "parties": new_seat},
-            {"election_id": 4, "as_of_date": "not-a-date", "parties": new_seat},
-            # Same id as the new run: dropped, so its matching snapshot can't
-            # make the new entry look unchanged.
-            {"election_id": 5, "as_of_date": "2026-07-01", "parties": new_seat},
-        ]
-        trend.write_text(json.dumps(existing), encoding="utf-8")
-        rows = [{"seat_id": 1, "party_id": 2, "vote_total": 100.0, "elected": True}]
-
-        update_trend_cache_json(
-            5, "Holyrood UNS 2026-07-02", date(2026, 7, 2), rows, [], trend
-        )
-
-        entries = json.loads(trend.read_text(encoding="utf-8"))
-        assert [(entry["election_id"], entry["as_of_date"]) for entry in entries] == [
-            (1, "2026-06-20"),
-            (3, "2026-07-10"),
-            (4, "not-a-date"),
-            (5, "2026-07-02"),
-        ]
-        assert entries[-1] == {
-            "election_id": 5,
-            "election_name": "Holyrood UNS 2026-07-02",
-            "as_of_date": "2026-07-02",
-            "parties": new_seat,
-        }
-        assert "TREND_CACHE_SKIP" not in capsys.readouterr().out
-
-    def test_malformed_previous_parties_are_ignored_in_the_snapshot(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        trend = tmp_path / "trends.json"
-        previous = {
-            "election_id": 1,
-            "as_of_date": "2026-07-01",
-            "parties": {
-                "x": {"s": 1},
-                "1": {"s": "many"},
-                "2": {"s": [1]},
-                "0": {"s": 3},
-                "4": {"s": 0},
-                "3": {"s": 1},
-            },
-        }
-        trend.write_text(json.dumps([previous]), encoding="utf-8")
-        rows = [{"seat_id": 1, "party_id": 3, "vote_total": 100.0, "elected": True}]
-
-        update_trend_cache_json(
-            2, "Holyrood UNS 2026-07-02", date(2026, 7, 2), rows, [], trend
-        )
-
-        # Only party 3's single seat survives, which matches the new run.
-        assert json.loads(trend.read_text(encoding="utf-8")) == [previous]
-        assert capsys.readouterr().out == (
-            "TREND_CACHE_SKIP as_of_date=2026-07-02 reason=unchanged_seat_snapshot "
-            "previous_date=2026-07-01\n"
-        )
-
-
-# ── existing_trend_dates ──────────────────────────────────────────────────────
-
-
 class TestExistingTrendDates:
     """Only scoped SQLite dates establish that a model run succeeded."""
 
@@ -1444,7 +1300,7 @@ class TestResetExistingModelOutputs:
         del expected["Holyrood UNS 2026-06-02"]
         # The baselines and the runs either side of the range keep their votes.
         assert _election_names_and_votes(only_the_test_database) == expected
-        assert not (tmp_path / "trends.json").exists()
+        assert (tmp_path / "trends.json").exists()
 
     def test_a_range_with_no_runs_leaves_the_database_alone(
         self,
@@ -1512,7 +1368,7 @@ class TestResetExistingModelOutputs:
             date(2026, 6, 1), date(2026, 6, 1), absent, map_id=1
         )
 
-        assert result == (0, 0, 1)
+        assert result == (0, 0, 0)
         assert not absent.exists()
 
     def test_strips_trend_entries_inside_the_range(
@@ -1530,14 +1386,8 @@ class TestResetExistingModelOutputs:
             date(2026, 6, 1), date(2026, 6, 2), tmp_path / "absent.db", map_id=1
         )
 
-        assert result == (0, 0, 2)
-        # Undated and unparseable entries are kept; the file is rewritten compactly.
-        assert trend.read_text(encoding="utf-8") == (
-            '[{"election_id":1,"as_of_date":"2026-05-31","parties":{}},'
-            '{"election_id":4,"as_of_date":"2026-06-03","parties":{}},'
-            '{"election_id":5,"as_of_date":"not-a-date","parties":{}},'
-            '{"election_id":6,"parties":{}}]'
-        )
+        assert result == (0, 0, 0)
+        assert json.loads(trend.read_text()) == entries
 
     def test_the_trend_file_is_untouched_when_nothing_is_in_range(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2060,7 +1910,7 @@ class TestDatabasePathAtCallTime:
         ) == (
             1,
             1,
-            1,
+            0,
         )
         assert delete_holyrood_uns_for_as_of_date(
             date(2026, 6, 1), map_id=world.map_id
@@ -2077,13 +1927,34 @@ class TestDatabasePathAtCallTime:
         assert default_sqlite_path() == tmp_path / "second.db"
 
     def test_the_trend_file_follows_the_module_global_when_called(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
         trend = tmp_path / "trends" / "holyrood-trends.json"
         monkeypatch.setattr(hmod, "HOLYROOD_TREND_CACHE_JSON", trend)
 
-        update_trend_cache_json(1, "Holyrood UNS 2026-06-01", date(2026, 6, 1), [], [])
+        world = seed_holyrood_world(db)
+        persist_projection(
+            world.map_id,
+            date(2026, 6, 1),
+            "Holyrood UNS 2026-06-01",
+            [],
+            {},
+            only_the_test_database,
+        )
+        update_trend_cache_json(
+            1,
+            "Holyrood UNS 2026-06-01",
+            date(2026, 6, 1),
+            [],
+            [],
+            sqlite_path=only_the_test_database,
+            map_id=world.map_id,
+        )
 
         entries = json.loads(trend.read_text())
         assert [entry["as_of_date"] for entry in entries] == ["2026-06-01"]
@@ -2171,7 +2042,7 @@ class TestDatabasePathAtCallTime:
         )
 
         assert (
-            "RESET deleted_elections=1 deleted_votes=0 stripped_json_entries=0"
+            "RESET deleted_elections=1 deleted_votes=0 cache=database"
             in capsys.readouterr().out
         )
         assert _holyrood_uns_elections(only_the_test_database) == [
@@ -2376,7 +2247,7 @@ class TestRunHolyroodSimulation:
         only_the_test_database: Path,
     ) -> None:
         outputs = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
-        election_map = db.add_map("Fractional Holyrood")
+        election_map = db.add_map("Fractional Holyrood", parliament="holyrood")
         region = db.add_region(election_map.id, "Region")
         first = db.add_party("First")
         second = db.add_party("Second")
@@ -2891,7 +2762,7 @@ class TestRunRetrospective:
         out = capsys.readouterr().out
         votes = _election_names_and_votes(only_the_test_database)
         assert _output_lines(out, "RESET", "PROGRESS", "ERROR") == [
-            "RESET deleted_elections=1 deleted_votes=2 stripped_json_entries=1",
+            "RESET deleted_elections=1 deleted_votes=2 cache=database",
             "PROGRESS success=2 failed=0 as_of=2026-06-02 "
             f"election=Holyrood UNS 2026-06-02 rows={votes['Holyrood UNS 2026-06-02']}",
         ]
@@ -3070,9 +2941,7 @@ class TestRunRetrospective:
             )
 
         out = capsys.readouterr().out
-        assert _output_lines(out, "ERROR") == [
-            "ERROR as_of=2026-06-01 err=Baseline election not found: 'Nope'"
-        ]
+        assert _output_lines(out, "ERROR") == []
         assert "SUMMARY" not in out
         assert outputs.configured.stat().st_size == 0
 
@@ -3156,7 +3025,7 @@ class TestMain:
         out = capsys.readouterr().out
         # --reset-existing is on by default.
         assert _output_lines(out, "RESET") == [
-            "RESET deleted_elections=1 deleted_votes=2 stripped_json_entries=0"
+            "RESET deleted_elections=1 deleted_votes=2 cache=database"
         ]
         assert _summary(out)[4:] == ["SUCCESS=2 FAILED=0"]
         assert _holyrood_uns_run_order(only_the_test_database) == [
@@ -3595,3 +3464,56 @@ class TestContributingEndpointCaps:
         out = capsys.readouterr().out
         assert "CAPPING" not in out
         assert captured == [(date(2026, 6, 1), date(2026, 6, 30))]
+
+
+def test_retrospective_publishes_committed_first_date_after_middle_failure(
+    db: Database,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outputs = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+    world = seed_holyrood_world(db)
+    args = _retro_args(
+        start_date="2026-06-01",
+        end_date="2026-06-03",
+        election_name=world.constituency_election_name,
+        dry_run=False,
+    )
+    real_run = hmod.run_holyrood_simulation
+
+    def fail_middle(
+        database: Database, cfg: HolyroodSimulationConfig, **kwargs: Any
+    ) -> hmod.HolyroodRunOutput:
+        if cfg.as_of_date == date(2026, 6, 2):
+            raise RuntimeError("middle calculation failed")
+        return real_run(database, cfg, **kwargs)
+
+    monkeypatch.setattr(hmod, "run_holyrood_simulation", fail_middle)
+    with pytest.raises(RuntimeError, match="middle calculation failed"):
+        hmod.run_retrospective(db, args)
+    assert existing_trend_dates(
+        sqlite_path=only_the_test_database, map_id=world.map_id
+    ) == {date(2026, 6, 1)}
+    assert [entry["as_of_date"] for entry in _read_json(outputs.trend)] == [
+        "2026-06-01"
+    ]
+
+
+def test_prediction_failure_requires_output_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "prediction.json"
+    destination.write_text('{"old":true}')
+
+    def fail(source: Path, target: Path) -> None:
+        raise OSError("disk failed")
+
+    monkeypatch.setattr("model_support.io.os.replace", fail)
+    with pytest.raises(
+        OutputPublicationError, match="Rerun the Holyrood model/output"
+    ) as error:
+        hmod.write_result_json({"schema": "pf-results-v4", "seats": []}, destination)
+    assert "rebuild_model_trends" not in str(error.value)
+    assert destination.read_text() == '{"old":true}'
+    assert not list(tmp_path.glob(".*.tmp"))

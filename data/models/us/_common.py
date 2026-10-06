@@ -2541,7 +2541,7 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
         "--rebuild-history",
         action="store_true",
         help=(
-            "Before the normal run, recompute every date already in the trend series. "
+            "Before the normal run, recompute every date stored in SQLite within the poll window. "
             "Use after a change that moves the whole history — a new tracked matchup, "
             "a seat baseline override, or the Senate specials joining the field. "
             "It picks its own range and as-of date, so it cannot be combined with "

@@ -135,8 +135,8 @@ CLI usage
   python data/models/holyrood/run_holyrood_uns_model.py \\
       --election-name "2021 Scottish Parliament Election"
 
-  # Print seat totals only — no file writes
-  python data/models/holyrood/run_holyrood_uns_model.py --no-output
+  # Print seat totals without writing results or files
+  python data/models/holyrood/run_holyrood_uns_model.py --dry-run
 """
 
 from __future__ import annotations

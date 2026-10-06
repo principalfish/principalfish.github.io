@@ -1639,7 +1639,7 @@ class TestBuildResultPayload:
                     "n": "Zetland",
                     "r": 7,
                     "w": 20,
-                    "p": [[20, 2000.0], [10, 1000.46]],
+                    "p": [[20, 2000], [10, 1000]],
                 },
             ],
         }
@@ -2352,6 +2352,81 @@ def _read_json(path: Path) -> Any:
 class TestRunHolyroodSimulation:
     """run_holyrood_simulation: swings from polls or overrides, then persist."""
 
+    def test_recorded_outputs_agree_without_reallocating_rounded_ties(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
+    ) -> None:
+        outputs = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        election_map = db.add_map("Fractional Holyrood")
+        region = db.add_region(election_map.id, "Region")
+        first = db.add_party("First")
+        second = db.add_party("Second")
+        const_seat = db.add_seat(election_map.id, "Constituency", region_id=region.id)
+        list_seat = db.add_seat(election_map.id, "Region List 1", region_id=region.id)
+        baseline = db.add_election(
+            election_map.id, 2021, "Fractional baseline", ElectionType.holyrood_general
+        )
+        list_baseline = db.add_election(
+            election_map.id,
+            2021,
+            "Fractional list baseline",
+            ElectionType.holyrood_list,
+            parent_election_id=baseline.id,
+        )
+        for election, seat in [(baseline, const_seat), (list_baseline, list_seat)]:
+            db.add_vote(election.id, seat.id, party_id=first.id, vote_total=5.4)
+            db.add_vote(election.id, seat.id, party_id=second.id, vote_total=5.49)
+        cfg = HolyroodSimulationConfig(
+            constituency_election_name=baseline.name,
+            as_of_date=_SIM_AS_OF,
+            since_date=_SIM_SINCE,
+            dry_run=False,
+        )
+        raw_const, raw_list, raw_seats = run_holyrood_projection(db, cfg)
+        raw_counts = {row["party_id"]: row["vote_total"] for row in raw_const}
+        assert raw_counts[first.id] == pytest.approx(5.4)
+        assert raw_counts[second.id] == pytest.approx(5.49)
+        assert next(row for row in raw_const if row["elected"])["party_id"] == second.id
+        assert next(row for row in raw_list if row["elected"])["party_id"] == first.id
+
+        output = run_holyrood_simulation(db, cfg)
+
+        recorded = output.const_projected + output.list_projected
+        assert output.seat_summary == raw_seats
+        assert [row["elected"] for row in recorded] == [
+            row["elected"] for row in raw_const + raw_list
+        ]
+        assert all(row["vote_total"] == 5 for row in recorded)
+        election_id = _holyrood_uns_election_id(
+            only_the_test_database, output.election_name
+        )
+        stored = db.get_votes_for_election(election_id)
+        assert sorted(
+            (v.seat_id, v.party_id, v.vote_total, v.elected) for v in stored
+        ) == sorted(
+            (row["seat_id"], row["party_id"], row["vote_total"], row["elected"])
+            for row in recorded
+        )
+        trend = _read_json(outputs.trend)[0]["parties"]
+        assert trend == {
+            str(first.id): {"s": 1, "v": 50.0},
+            str(second.id): {"s": 1, "v": 50.0},
+        }
+        payload = build_result_payload(
+            output.const_projected,
+            output.list_projected,
+            {const_seat.id: const_seat.seat_name, list_seat.id: list_seat.seat_name},
+            {const_seat.id: region.id, list_seat.id: region.id},
+        )
+        assert [seat["w"] for seat in payload["seats"]] == [second.id, first.id]
+        assert all(
+            sorted(seat["p"]) == [[first.id, 5], [second.id, 5]]
+            for seat in payload["seats"]
+        )
+
     def test_a_missing_baseline_raises(
         self,
         db: Database,
@@ -2452,7 +2527,7 @@ class TestRunHolyroodSimulation:
                 # the 66.7% constituencies retain 16.7 points, normalized over
                 # SNP 33.3 + Labour 16.7 + Green 5 = 55 points at 30,000 turnout.
                 assert sorted(labour_votes) == pytest.approx(
-                    [0.0, 0.0, 100000.0 / 11.0, 100000.0 / 11.0]
+                    [0, 0, round(100000.0 / 11.0), round(100000.0 / 11.0)]
                 )
         else:
             # SNP stays at its baseline; new Green support normalizes the retained
@@ -2469,7 +2544,7 @@ class TestRunHolyroodSimulation:
                 ]
             )
             assert sorted(labour_votes) == pytest.approx(
-                sorted(float(vote) * 100.0 / 105.0 for vote in baseline_votes)
+                sorted(round(float(vote) * 100.0 / 105.0) for vote in baseline_votes)
             )
         green_votes = [
             row["vote_total"] for row in projected if row["party_id"] == greens

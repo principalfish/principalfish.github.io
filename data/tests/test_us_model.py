@@ -264,6 +264,18 @@ class TestComputeRegionDiffs:
 
 
 class TestProjectSeatVotes:
+    def test_fractional_counts_do_not_reselect_winner_after_rounding(self) -> None:
+        projected, winners = project_seat_votes(
+            {1: {DEMOCRAT: 5.4, REPUBLICAN: 5.49}},
+            {1: 10},
+            {DEMOCRAT, REPUBLICAN},
+            {},
+            {DEMOCRAT: "Democratic", REPUBLICAN: "Republican"},
+        )
+        assert [row["vote_total"] for row in projected] == [5, 5]
+        assert next(row for row in projected if row["elected"])["party_id"] == REPUBLICAN
+        assert winners == Counter({"Republican": 1})
+
     def test_swing_flips_a_marginal_seat(self) -> None:
         # Baseline: Rep 5100 / Dem 4900 (turnout 10000) in region 10.
         # A +3 Dem / -3 Rep swing on the shares (49→52, 51→48) → Dem wins.
@@ -2590,6 +2602,108 @@ class TestResolveSpecialBaselines:
 # ── Senate specials: the baseline loader ──────────────────────────────────────
 
 
+class TestPresidentialRecordedSummaries:
+    @pytest.mark.parametrize(
+        "state,other", [("Maine", "Nebraska"), ("Nebraska", "Maine")]
+    )
+    @pytest.mark.parametrize("district_independent_wins", [False, True])
+    def test_overlap_changes_units_and_evs_but_not_popular_votes(
+        self,
+        db: Database,
+        tmp_path: Path,
+        state: str,
+        other: str,
+        district_independent_wins: bool,
+    ) -> None:
+        dem, rep, independent, _others = _us_parties(db)
+        district = f"{state} CD-1"
+        orphan = f"{other} CD-1"
+        district_votes = (
+            {dem.id: 1000.0, rep.id: 2000.0, independent.id: 7000.0}
+            if district_independent_wins
+            else {dem.id: 1000.0, rep.id: 98000.0, independent.id: 1000.0}
+        )
+        election_map, seats = _seat_map_with_baseline(
+            db,
+            PRESIDENT_MAP,
+            "us_president",
+            {
+                state: {dem.id: 60.0, rep.id: 40.0},
+                "District of Columbia": {dem.id: 90.0, rep.id: 10.0},
+                orphan: {dem.id: 20.0, rep.id: 80.0},
+                district: district_votes,
+            },
+        )
+        with db.session() as session:
+            for name, electoral_votes in [
+                (state, 2),
+                ("District of Columbia", 3),
+                (orphan, 1),
+                (district, 1),
+            ]:
+                session.execute(
+                    text("UPDATE seats SET electoral_votes = :ev WHERE id = :id"),
+                    {"ev": electoral_votes, "id": seats[name].id},
+                )
+        spec = dataclasses.replace(
+            _us_spec(tmp_path, map_name=PRESIDENT_MAP),
+            election_type="us_presidential_model",
+        )
+        baseline = db.get_election_by_name(spec.baseline_election_name)
+        assert baseline is not None
+        included = {seats[state].id, seats["District of Columbia"].id, seats[orphan].id}
+        seat_totals, national, national_shares, regional_shares = (
+            build_baseline_vote_state(
+                db,
+                baseline.id,
+                {seat.id: seat.region_id for seat in seats.values()},
+                popular_vote_seat_ids=included,
+            )
+        )
+        assert dict(seat_totals[seats[district].id]) == district_votes
+        assert dict(national) == {dem.id: 170.0, rep.id: 130.0, independent.id: 0.0}
+        assert national_shares[dem.id] == pytest.approx(17000.0 / 300.0)
+        assert regional_shares[seats[state].region_id][dem.id] == pytest.approx(
+            17000.0 / 300.0
+        )
+        cfg = dataclasses.replace(_cfg(spec), dry_run=False)
+
+        name, projected, _, winners, _, electoral_votes, _ = run_simulation(db, cfg)
+
+        assert {row["seat_id"] for row in projected} == {
+            seat.id for seat in seats.values()
+        }
+        assert {row["party_id"] for row in projected} == {
+            dem.id,
+            rep.id,
+            independent.id,
+        }
+        election = db.get_election_by_name(name)
+        assert election is not None and election.map_id == election_map.id
+        stored = db.get_votes_for_election(election.id)
+        assert len(stored) == len(projected)
+        assert sorted(
+            (v.seat_id, v.party_id, v.vote_total, v.elected) for v in stored
+        ) == sorted(
+            (row["seat_id"], row["party_id"], row["vote_total"], row["elected"])
+            for row in projected
+        )
+        parties = json.loads(spec.trend_cache_json.read_text())[0]["parties"]
+        assert parties[str(dem.id)] == {"s": 2, "v": 56.7, "e": 5}
+        assert parties[str(rep.id)] == {
+            "s": 1 if district_independent_wins else 2,
+            "v": 43.3,
+            "e": 1 if district_independent_wins else 2,
+        }
+        assert parties[str(independent.id)] == {
+            "s": 1 if district_independent_wins else 0,
+            "v": 0.0,
+            "e": 1 if district_independent_wins else 0,
+        }
+        assert sum(winners.values()) == 4
+        assert sum(electoral_votes.values()) == 7
+
+
 class TestBuildBaselineVoteStateOverrides:
     def test_ohio_uses_2022_votes_while_the_rest_use_2020(self, db: Database) -> None:
         dem, rep = _parties(db)
@@ -2748,6 +2862,42 @@ class TestSenateSpecialsEndToEnd:
         # A dry run writes nothing.
         assert not world.spec.trend_cache_json.exists()
         assert not world.spec.trend_cache_meta_json.exists()
+
+    def test_recorded_vote_summary_counts_only_the_field_and_each_special_once(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        world = self._world(db, tmp_path)
+        spec = dataclasses.replace(world.spec, election_type="us_senate_model")
+        cfg = dataclasses.replace(
+            _cfg(spec),
+            as_of_date=date(2026, 6, 3),
+            since_date=date(2026, 6, 2),
+            dry_run=False,
+        )
+
+        name, projected, _, winners, _, _, _ = run_simulation(db, cfg)
+
+        expected_ids = {
+            world.seats[name].id for name in (*CLASS2_2026, "Florida", "Ohio")
+        }
+        assert {row["seat_id"] for row in projected} == expected_ids
+        assert sum(winners.values()) == 35
+        election = db.get_election_by_name(name)
+        assert election is not None
+        stored = db.get_votes_for_election(election.id)
+        assert {vote.seat_id for vote in stored} == expected_ids
+        totals = {
+            party_id: sum(
+                float(vote.vote_total or 0.0)
+                for vote in stored
+                if vote.party_id == party_id
+            )
+            for party_id in (world.dem.id, world.rep.id)
+        }
+        assert totals == {world.rep.id: 20900.0, world.dem.id: 14100.0}
+        parties = json.loads(world.spec.trend_cache_json.read_text())[0]["parties"]
+        assert parties[str(world.rep.id)] == {"s": 35, "v": 59.7}
+        assert parties[str(world.dem.id)] == {"s": 0, "v": 40.3}
 
     def test_the_specials_are_the_two_extra_seats(self, db: Database, tmp_path: Path) -> None:
         world = self._world(db, tmp_path)

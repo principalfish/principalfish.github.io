@@ -76,6 +76,11 @@ from model_support.polling import (
     latest_poll_key,
     select_poll_endpoint,
 )
+from model_support.summaries import (
+    non_overlapping_seat_ids,
+    recorded_vote_rows,
+    summarize_votes,
+)
 from models import Election, Map, Region, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
@@ -494,6 +499,7 @@ def build_baseline_vote_state(
     region_by_seat_id: dict[int, int | None],
     seat_id_filter: set[int] | None = None,
     seat_baseline_election_ids: Mapping[int, int] | None = None,
+    popular_vote_seat_ids: set[int] | None = None,
 ) -> tuple[
     dict[int, dict[int, float]],
     dict[int, float],
@@ -512,6 +518,10 @@ def build_baseline_vote_state(
     2020. Each override election contributes *only* the seats pointed at it, and
     those seats are dropped from the spec's own baseline — so a state that appears
     in both elections is counted once, on the override.
+
+    ``popular_vote_seat_ids`` restricts national and regional aggregate votes
+    without discarding per-seat baselines or their parties. Presidential callers
+    exclude overlapping districts when their statewide parent is present.
 
     Returns ``(seat_party_vote_totals, national_party_totals,
     baseline_national_shares, baseline_region_shares)`` where the two share maps
@@ -552,6 +562,11 @@ def build_baseline_vote_state(
             party_id = PARTY_ID_ALIASES.get(vote.party_id, vote.party_id)
             value = float(vote.vote_total)
             seat_party_vote_totals[seat_id][party_id] += value
+
+            # Keep district-only parties in the projection's party universe.
+            national_party_totals.setdefault(party_id, 0.0)
+            if popular_vote_seat_ids is not None and seat_id not in popular_vote_seat_ids:
+                continue
 
             national_party_totals[party_id] += value
             national_total += value
@@ -1386,12 +1401,12 @@ def project_seat_votes(
                     "party_id": party_id,
                     # Scale the projected share back to a vote count at the seat's baseline
                     # turnout so national totals aggregate turnout-weighted (see docstring).
-                    "vote_total": round((pct / 100.0) * seat_total),
+                    "vote_total": (pct / 100.0) * seat_total,
                     "elected": party_id == winner_party_id,
                 }
             )
 
-    return projected_votes, winners_by_party
+    return recorded_vote_rows(projected_votes), winners_by_party
 
 
 # ── DB reference loading ──────────────────────────────────────────────────────
@@ -2021,7 +2036,7 @@ def persist_projection(
                     float(row["vote_total"]),
                     int(bool(row["elected"])),
                 )
-                for row in projected_votes
+                for row in recorded_vote_rows(projected_votes)
             ],
         )
         conn.commit()
@@ -2035,6 +2050,7 @@ def update_trend_cache_json(
     as_of_date: date,
     projected_votes: list[dict[str, Any]],
     seat_ev_by_id: dict[int, int] | None = None,
+    popular_vote_seat_ids: set[int] | None = None,
 ) -> None:
     """Merge this run's per-party seat/vote summary into the type's trend JSON.
 
@@ -2046,21 +2062,21 @@ def update_trend_cache_json(
     When ``seat_ev_by_id`` gives non-zero electoral votes (the President), each party
     entry also carries ``"e"`` (electoral votes won) so consumers can chart the EV
     tally rather than the state count. Chambers without electoral votes omit ``"e"``.
+    ``popular_vote_seat_ids`` restricts only ``v``; all units still contribute
+    elected seats and electoral votes. Counts use the persisted rounding rule.
     """
     spec.trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
     seat_ev_by_id = seat_ev_by_id or {}
 
-    vote_totals_by_party: dict[int, float] = defaultdict(float)
-    seats_by_party: dict[int, int] = defaultdict(int)
-    ev_by_party: dict[int, int] = defaultdict(int)
-    for row in projected_votes:
-        party_id = int(row["party_id"])
-        vote_totals_by_party[party_id] += float(row["vote_total"])
-        if bool(row["elected"]):
-            seats_by_party[party_id] += 1
-            ev_by_party[party_id] += seat_ev_by_id.get(int(row["seat_id"]), 0)
-
-    total_votes = sum(vote_totals_by_party.values())
+    summary = summarize_votes(
+        recorded_vote_rows(projected_votes),
+        popular_vote_seat_ids=popular_vote_seat_ids,
+        seat_ev_by_id=seat_ev_by_id,
+    )
+    vote_totals_by_party = summary.vote_totals_by_party
+    seats_by_party = summary.seats_by_party
+    ev_by_party = summary.electoral_votes_by_party
+    vote_shares = summary.vote_shares()
     has_electoral_votes = sum(ev_by_party.values()) > 0
 
     def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
@@ -2099,9 +2115,7 @@ def update_trend_cache_json(
     def party_entry(party_id: int) -> dict[str, float | int]:
         entry: dict[str, float | int] = {
             "s": seats_by_party.get(party_id, 0),
-            "v": round((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0, 1)
-            if total_votes > 0
-            else 0.0,
+            "v": round(vote_shares.get(party_id, 0.0), 1),
         }
         if has_electoral_votes:
             entry["e"] = ev_by_party.get(party_id, 0)
@@ -2295,6 +2309,11 @@ def run_simulation(
     ) = build_reference_data(db, poll_map.id, spec.seat_name_allowlist)
 
     seat_id_filter = {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None
+    popular_vote_seat_ids = (
+        non_overlapping_seat_ids((seat.id for seat in seats), seat_parent_ids(seats))
+        if spec.election_type == "us_presidential_model"
+        else None
+    )
 
     (
         seat_party_vote_totals,
@@ -2307,6 +2326,7 @@ def run_simulation(
         region_by_seat_id,
         seat_id_filter,
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
+        popular_vote_seat_ids,
     )
 
     if poll_window is None:
@@ -2377,11 +2397,14 @@ def run_simulation(
 
     # Electoral votes won per party (by name), non-zero only for the President.
     seat_ev_by_id = {seat.id: seat.electoral_votes for seat in seats}
+    summary = summarize_votes(
+        projected_votes,
+        popular_vote_seat_ids=popular_vote_seat_ids,
+        seat_ev_by_id=seat_ev_by_id,
+    )
     ev_by_party: dict[str, int] = defaultdict(int)
-    for row in projected_votes:
-        if bool(row["elected"]):
-            party_id = int(row["party_id"])
-            ev_by_party[party_name_by_id.get(party_id, str(party_id))] += seat_ev_by_id.get(int(row["seat_id"]), 0)
+    for party_id, electoral_votes in summary.electoral_votes_by_party.items():
+        ev_by_party[party_name_by_id.get(party_id, str(party_id))] += electoral_votes
 
     if cfg.dry_run:
         return (
@@ -2406,7 +2429,13 @@ def run_simulation(
         sqlite_path,
     )
     update_trend_cache_json(
-        spec, persisted_election_id, persisted_name, cfg.as_of_date, projected_votes, seat_ev_by_id
+        spec,
+        persisted_election_id,
+        persisted_name,
+        cfg.as_of_date,
+        projected_votes,
+        seat_ev_by_id,
+        popular_vote_seat_ids,
     )
 
     return (

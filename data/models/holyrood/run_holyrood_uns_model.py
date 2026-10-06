@@ -183,6 +183,7 @@ from model_support.polling import (
     select_poll_endpoint,
     effective_pollster_weight,
 )
+from model_support.summaries import recorded_vote_rows, summarize_votes
 from models import Election, ElectionType, Pollster, Seat
 
 BASELINE_ELECTION_NAME = "2026 Scottish Parliament Election"
@@ -972,6 +973,8 @@ def run_holyrood_simulation(
     Returns:
         A :class:`HolyroodRunOutput` bundling the projection, seat summary,
         excluded party IDs, seat references, and latest-poll metadata.
+        Projection rows contain the same rounded counts written to SQLite;
+        allocation uses raw precision before these recorded rows are derived.
 
     Raises:
         ValueError: If the constituency election is not found.
@@ -1072,6 +1075,8 @@ def run_holyrood_simulation(
 
     print(f"Running Holyrood UNS projection — baseline: {cfg.constituency_election_name!r} ({mode})")
     const_proj, list_proj, seat_summary = run_holyrood_projection(db, cfg)
+    const_proj = recorded_vote_rows(const_proj)
+    list_proj = recorded_vote_rows(list_proj)
     election_name = _election_name(cfg.as_of_date)
 
     if not cfg.dry_run:
@@ -1358,10 +1363,10 @@ def persist_projection(
                     int(row["seat_id"]),
                     int(row["party_id"]),
                     party_name_by_id.get(int(row["party_id"]), ""),
-                    float(round(row["vote_total"])),
+                    float(row["vote_total"]),
                     int(bool(row["elected"])),
                 )
-                for row in projected_votes
+                for row in recorded_vote_rows(projected_votes)
             ],
         )
         conn.commit()
@@ -1540,12 +1545,10 @@ def update_trend_cache_json(
     )
     trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
 
+    const_projected = recorded_vote_rows(const_projected)
+    list_projected = recorded_vote_rows(list_projected)
     const_shares = constituency_national_vote_shares(const_projected)
-
-    seats_by_party: dict[int, int] = defaultdict(int)
-    for row in [*const_projected, *list_projected]:
-        if bool(row["elected"]):
-            seats_by_party[int(row["party_id"])] += 1
+    seats_by_party = summarize_votes([*const_projected, *list_projected]).seats_by_party
 
     def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
         """Build a sorted snapshot tuple from a JSON entry's parties map."""
@@ -1640,6 +1643,8 @@ def build_result_payload(
     name.  Each seat dict has keys ``n`` (name), ``r`` (region_id), ``w``
     (winner party_id), and ``p`` ([[party_id, vote_total], ...] sorted by votes
     descending).
+    Vote totals use the persisted nearest-integer counts, and winner flags are
+    preserved from allocation even when rounding produces a vote-count tie.
 
     Args:
         const_projected: Constituency vote rows from :func:`project_constituency_seats`.
@@ -1656,7 +1661,7 @@ def build_result_payload(
     _excluded = excluded_party_ids or set()
     # Group all rows by seat_id
     seats_by_id: dict[int, dict[str, Any]] = {}
-    for row in [*const_projected, *list_projected]:
+    for row in recorded_vote_rows([*const_projected, *list_projected]):
         if row["party_id"] in _excluded:
             continue
         seat_id = row["seat_id"]
@@ -1668,7 +1673,7 @@ def build_result_payload(
                 "p": [],
             }
         entry = seats_by_id[seat_id]
-        entry["p"].append([row["party_id"], round(row["vote_total"], 2)])
+        entry["p"].append([row["party_id"], row["vote_total"]])
         if row["elected"]:
             entry["w"] = row["party_id"]
 

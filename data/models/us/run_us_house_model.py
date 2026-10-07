@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _common import UsModelSpec, main_for_spec
+from model_support.trends import default_trend_path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RESULTS_DIR = REPO_ROOT / "uselectionmaps" / "data" / "results"
@@ -28,7 +29,7 @@ SPEC = UsModelSpec(
     baseline_election_name="2024 US House Election",
     election_type="us_house_model",
     election_name_prefix="US House UNS",
-    trend_cache_json=RESULTS_DIR / "us-house-trends.json",
+    trend_cache_json=default_trend_path("us-house"),
     trend_cache_meta_json=RESULTS_DIR / "us-house-trends_meta.json",
 )
 

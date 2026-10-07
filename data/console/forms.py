@@ -7,6 +7,7 @@ from datetime import date
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from model_support.cli import validate_half_life
 from polls.importers.us.us_wikipedia_polls import US_CONTESTS, normalise_states
 
 
@@ -20,6 +21,12 @@ class ModelRunForm(BaseModel):
     half_life_days: float = Field(gt=0)
     output_csv: str = ""
     dry_run: bool = False
+
+    @field_validator("half_life_days")
+    @classmethod
+    def check_half_life(cls, value: float) -> float:
+        """Use the same finite, positive decay parameter as the CLI."""
+        return validate_half_life(value)
 
     @model_validator(mode="after")
     def check_since_gte_as_of(self) -> "ModelRunForm":
@@ -44,6 +51,12 @@ class HolyroodModelRunForm(BaseModel):
     since_days_back: int = Field(ge=0)
     half_life_days: float = Field(gt=0)
     dry_run: bool = False
+
+    @field_validator("half_life_days")
+    @classmethod
+    def check_half_life(cls, value: float) -> float:
+        """Use the same finite, positive decay parameter as the CLI."""
+        return validate_half_life(value)
 
     @model_validator(mode="after")
     def check_since_gte_as_of(self) -> "HolyroodModelRunForm":

@@ -19,7 +19,7 @@ import sys
 from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import closing
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "westmin
 import pytest
 
 import run_uns_model
+from model_support.io import OutputPublicationError
 from db import Database
 from models import ElectionType, Poll
 from run_uns_model import (
@@ -269,6 +270,38 @@ class TestComputeRegionDiffs:
         row = next(r for r in region_diff_rows if r["region_id"] == 10 and r["party_id"] == 1)
         assert row["weighted_share"] == pytest.approx(55.0)
         assert row["baseline_share"] == pytest.approx(50.0)
+
+    @pytest.mark.parametrize(
+        ("national", "regional", "expected"),
+        [
+            ({2: 35.0}, {}, 0.0),
+            ({1: 0.0, 2: 35.0}, {}, -40.0),
+            ({1: 45.0, 2: 35.0}, {2: 20.0}, 5.0),
+            ({1: 45.0, 2: 35.0}, {1: 0.0, 2: 20.0}, -60.0),
+        ],
+        ids=["national-omission", "national-zero", "regional-omission", "regional-zero"],
+    )
+    def test_omission_and_explicit_zero_have_distinct_meanings(
+        self,
+        national: dict[int, float],
+        regional: dict[int, float],
+        expected: float,
+    ) -> None:
+        sums: dict[tuple[int | None, int], float] = {
+            (None, party): share for party, share in national.items()
+        }
+        sums.update({(10, party): share for party, share in regional.items()})
+        _, swings, _ = self._run(
+            seats=[_make_seat(1, 10)],
+            region_by_id={10: _make_region(10, "North")},
+            party_name_by_id={1: "Labour", 2: "Conservative"},
+            national_totals={1: 400.0, 2: 600.0},
+            weighted_sums=sums,
+            total_weights={key: 1.0 for key in sums},
+            baseline_national={1: 40.0, 2: 60.0},
+            baseline_regional={10: {1: 60.0, 2: 40.0}},
+        )
+        assert swings[10][1] == pytest.approx(expected)
 
     def test_party_universe_union_of_baseline_and_polls(self) -> None:
         seats = [_make_seat(1, 10)]
@@ -971,6 +1004,91 @@ class TestAggregatePollShares:
         assert total_weights == {}
         assert latest is None
 
+    @pytest.mark.parametrize(
+        "excluded",
+        [
+            "rowless",
+            "partyless",
+            "shareless",
+            "zero-weight",
+            "negative-weight",
+            "wrong-map",
+            "too-old",
+            "future",
+        ],
+    )
+    @pytest.mark.parametrize("regional", [False, True])
+    def test_contributors_match_usable_observations(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+        excluded: str,
+        regional: bool,
+    ) -> None:
+        world = westminster_world
+        party = world.party_ids["Labour"]
+        region = world.region_ids["Scotland"] if regional else None
+        accepted = _add_poll(
+            db,
+            world,
+            _AS_OF - timedelta(days=1),
+            {} if regional else {party: 0.0},
+            regional={region: {party: 0.0}} if region is not None else None,
+        )
+        map_id = (
+            db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
+        )
+        end = (
+            _SINCE - timedelta(days=1)
+            if excluded == "too-old"
+            else _AS_OF + timedelta(days=1)
+            if excluded == "future"
+            else _AS_OF
+        )
+        rejected = add_poll_with_rows(
+            db,
+            map_id=map_id,
+            pollster_identifier="rejected",
+            fieldwork_end=end,
+            national={} if excluded == "rowless" else {party: 90.0},
+        )
+        if excluded in {"partyless", "shareless"}:
+            real_rows = db.get_rows_for_poll
+            monkeypatch.setattr(
+                db,
+                "get_rows_for_poll",
+                lambda poll_id: (
+                    [
+                        SimpleNamespace(
+                            party_id=None if excluded == "partyless" else party,
+                            percentage=None if excluded == "shareless" else 90.0,
+                            region_id=None,
+                        )
+                    ]
+                    if poll_id == rejected.id
+                    else real_rows(poll_id)
+                ),
+            )
+        weights = {
+            rejected.pollster_id: {
+                "zero-weight": 0.0,
+                "negative-weight": -1.0,
+            }.get(excluded, 1.0)
+        }
+
+        result = run_uns_model.collect_poll_shares(
+            db, world.map_id, _SINCE, _AS_OF, 7.0, weights, {}
+        )
+        _, _, latest = _aggregate(db, world, pollster_weight_by_id=weights)
+
+        assert result.averages == {(region, party): 0.0}
+        assert [poll.poll_id for poll in result.contributors] == [accepted.id]
+        assert result.latest is not None
+        assert result.latest.fieldwork_end == accepted.fieldwork_end
+        assert latest is not None
+        assert latest.poll_id == accepted.id
+
     def test_polls_outside_the_window_are_skipped(
         self, db: Database, westminster_world: WestminsterWorld
     ) -> None:
@@ -1010,28 +1128,12 @@ class TestAggregatePollShares:
             {(None, green): 8.0, (None, labour): 20.0, (None, conservative): 7.5}
         )
 
-    @pytest.mark.parametrize("half_life_days", [0.0, -5.0])
-    def test_non_positive_half_life_is_clamped(
+    @pytest.mark.parametrize("half_life_days", [0.0, -5.0, float("nan"), float("inf")])
+    def test_invalid_half_life_is_rejected(
         self, db: Database, westminster_world: WestminsterWorld, half_life_days: float
     ) -> None:
-        world = westminster_world
-        labour = world.party_ids["Labour"]
-        conservative = world.party_ids["Conservative"]
-        green = world.party_ids["Green"]
-        _add_poll(db, world, date(2026, 6, 10), {labour: 40.0})
-        _add_poll(db, world, date(2026, 6, 9), {conservative: 30.0})
-        _add_poll(db, world, date(2026, 6, 8), {green: 8.0})
-
-        _, total_weights, _ = _aggregate(db, world, half_life_days=half_life_days)
-
-        # Clamped to 0.001 days: one day old halves the weight 1000 times, and
-        # two days old underflows to 0.0, which skips the poll.
-        assert set(total_weights) == {(None, labour), (None, conservative)}
-        assert total_weights[(None, labour)] == 1.0
-        assert total_weights[(None, conservative)] > 0.0
-        assert total_weights[(None, conservative)] == pytest.approx(
-            0.5**1000, rel=1e-9
-        )
+        with pytest.raises(ValueError, match="half-life-days"):
+            _aggregate(db, westminster_world, half_life_days=half_life_days)
 
     def test_pollster_weight_scales_the_poll(
         self, db: Database, westminster_world: WestminsterWorld
@@ -1054,14 +1156,9 @@ class TestAggregatePollShares:
             {(None, labour): 20.0, (None, conservative): 30.0}
         )
 
-    def test_zero_pollster_weight_counts_in_full_pins_current_behaviour(
+    def test_zero_pollster_weight_excludes_the_poll(
         self, db: Database, westminster_world: WestminsterWorld
     ) -> None:
-        """Pins current behaviour: ``weight or 1.0`` turns a 0.0 weight into 1.0.
-
-        A pollster weighted 0.0 is presumably meant to be ignored, but the
-        falsy check makes it count at full weight.
-        """
         world = westminster_world
         labour = world.party_ids["Labour"]
         poll = _add_poll(db, world, _AS_OF, {labour: 40.0}, pollster="zeroed")
@@ -1070,9 +1167,9 @@ class TestAggregatePollShares:
             db, world, pollster_weight_by_id={poll.pollster_id: 0.0}
         )
 
-        assert total_weights == {(None, labour): 1.0}
-        assert weighted_sums == {(None, labour): 40.0}
-        assert latest is not None
+        assert total_weights == {}
+        assert weighted_sums == {}
+        assert latest is None
 
     def test_negative_pollster_weight_skips_the_poll(
         self, db: Database, westminster_world: WestminsterWorld
@@ -1150,7 +1247,53 @@ class TestAggregatePollShares:
 
         assert len(weighted_sums) == 2
         assert weighted_sums == {(None, 15): 5.0, (scotland, 15): 4.0}
-        assert total_weights == {(None, 15): 2.0, (scotland, 15): 1.0}
+        assert total_weights == {(None, 15): 1.0, (scotland, 15): 1.0}
+        assert (
+            weighted_average(weighted_sums[(None, 15)], total_weights[(None, 15)])
+            == 5.0
+        )
+
+    def test_alias_rows_combine_within_each_poll_before_weighting(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        scotland = world.region_ids["Scotland"]
+        wales = world.region_ids["Wales"]
+        first = _add_poll(
+            db,
+            world,
+            _AS_OF,
+            {7: 3.0, 15: 2.0},
+            regional={scotland: {7: 4.0, 15: 2.0}, wales: {7: 1.0, 15: 2.0}},
+        )
+        _add_poll(
+            db,
+            world,
+            _AS_OF - timedelta(days=7),
+            {7: 10.0},
+            pollster="second",
+            regional={scotland: {15: 12.0}},
+        )
+
+        sums, weights, _ = _aggregate(
+            db, world, pollster_weight_by_id={first.pollster_id: 2.0}
+        )
+
+        # The second poll has half the recency weight; missing Wales supplies
+        # no observation and must not dilute its first poll's combined share.
+        assert sums == {(None, 15): 15.0, (scotland, 15): 18.0, (wales, 15): 6.0}
+        assert weights == {(None, 15): 2.5, (scotland, 15): 2.5, (wales, 15): 2.0}
+
+    def test_alias_rows_in_separate_polls_remain_independent_observations(
+        self, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        _add_poll(db, westminster_world, _AS_OF, {7: 3.0})
+        _add_poll(db, westminster_world, _AS_OF, {15: 2.0})
+
+        sums, weights, _ = _aggregate(db, westminster_world)
+
+        assert sums[(None, 15)] == 5.0
+        assert weights[(None, 15)] == 2.0
 
     def test_national_and_regional_rows_keyed_separately(
         self, db: Database, westminster_world: WestminsterWorld
@@ -1336,18 +1479,21 @@ class TestDatabasePathAtCallTime:
 
         assert default_sqlite_path() == only_the_test_database
         assert database_file(db).resolve() == only_the_test_database
-        assert existing_trend_dates() == {
-            date(2026, 5, 31),
+        assert existing_trend_dates(map_id=world.map_id) == {
             date(2026, 6, 1),
             date(2026, 6, 2),
         }
-        assert reset_existing_model_outputs(date(2026, 6, 2), date(2026, 6, 2)) == (
+        assert reset_existing_model_outputs(
+            date(2026, 6, 2), date(2026, 6, 2), map_id=world.map_id
+        ) == (
             1,
             1,
-            1,
+            0,
         )
-        assert delete_model_uns_for_as_of_date(date(2026, 6, 1)) == (1, 0)
-        assert existing_trend_dates() == {date(2026, 5, 31)}
+        assert delete_model_uns_for_as_of_date(
+            date(2026, 6, 1), map_id=world.map_id
+        ) == (1, 0)
+        assert existing_trend_dates(map_id=world.map_id) == set()
 
     def test_the_default_is_reread_on_every_call(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1394,7 +1540,7 @@ class TestDatabasePathAtCallTime:
             dry_run=False,
         )
 
-        assert dates_to_run_for_cfg(cfg, database_file(db)) == [
+        assert dates_to_run_for_cfg(cfg, database_file(db), map_id=world.map_id) == [
             date(2026, 6, 2),
             date(2026, 6, 3),
         ]
@@ -1457,7 +1603,12 @@ class TestDatabasePathAtCallTime:
         assert trend_cache_json.exists()
 
     def test_the_trend_files_follow_the_module_globals_when_called(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        only_the_test_database: Path,
     ) -> None:
         _assert_path_defaults_are_none()
         trend_cache_json = tmp_path / "trends" / "model_output_trends.json"
@@ -1467,7 +1618,23 @@ class TestDatabasePathAtCallTime:
             run_uns_model, "TREND_CACHE_META_JSON", trend_cache_meta_json
         )
 
-        update_trend_cache_json(1, "UNS 2026-06-01", date(2026, 6, 1), [])
+        world = westminster_world
+        persist_projection(
+            world.map_id,
+            date(2026, 6, 1),
+            "UNS 2026-06-01",
+            [],
+            {},
+            only_the_test_database,
+        )
+        update_trend_cache_json(
+            1,
+            "UNS 2026-06-01",
+            date(2026, 6, 1),
+            [],
+            sqlite_path=only_the_test_database,
+            map_id=world.map_id,
+        )
         write_trend_cache_meta(date(2026, 6, 1), date(2026, 5, 2), None)
 
         entries = json.loads(trend_cache_json.read_text())
@@ -1790,7 +1957,10 @@ class TestDeleteModelUnsForAsOfDate:
         missing = tmp_path / "missing.db"
 
         # Connecting would trip ``only_the_test_database``.
-        assert delete_model_uns_for_as_of_date(date(2026, 6, 1), missing) == (0, 0)
+        assert delete_model_uns_for_as_of_date(date(2026, 6, 1), missing, map_id=1) == (
+            0,
+            0,
+        )
         assert not missing.exists()
 
     def test_no_matching_election_deletes_nothing(
@@ -1804,7 +1974,7 @@ class TestDeleteModelUnsForAsOfDate:
         _seed_model_run(db, world, "UNS 2026-06-02", 2)
 
         assert delete_model_uns_for_as_of_date(
-            date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         ) == (0, 0)
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-06-02", 2)
@@ -1825,7 +1995,7 @@ class TestDeleteModelUnsForAsOfDate:
         baseline_votes = len(db.get_votes_for_election(world.baseline_election_id))
 
         deleted = delete_model_uns_for_as_of_date(
-            date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         )
 
         assert deleted == (2, 3)
@@ -1839,18 +2009,13 @@ class TestDeleteModelUnsForAsOfDate:
             == baseline_votes
         )
 
-    def test_matches_by_name_not_type_pins_current_behaviour(
+    def test_preserves_same_named_other_type(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
         only_the_test_database: Path,
     ) -> None:
-        """Pins current behaviour: any election named for the date is deleted.
-
-        The query filters on ``name LIKE 'UNS <date>%'`` only, not on
-        ``type = 'model_uns'``, so a differently typed election that shares the
-        naming scheme is deleted along with its votes.
-        """
+        """A same-prefix election owned by another model survives."""
         _assert_path_defaults_are_none()
         world = westminster_world
         other_type = _seed_model_run(
@@ -1858,12 +2023,12 @@ class TestDeleteModelUnsForAsOfDate:
         )
 
         deleted = delete_model_uns_for_as_of_date(
-            date(2026, 6, 1), only_the_test_database
+            date(2026, 6, 1), only_the_test_database, map_id=world.map_id
         )
 
-        assert deleted == (1, 2)
-        assert db.get_election_by_name("UNS 2026-06-01 manual") is None
-        assert _vote_count(only_the_test_database, [other_type]) == 0
+        assert deleted == (0, 0)
+        assert db.get_election_by_name("UNS 2026-06-01 manual") is not None
+        assert _vote_count(only_the_test_database, [other_type]) == 2
 
 
 # ── reset_existing_model_outputs ──────────────────────────────────────────────
@@ -1902,36 +2067,31 @@ class TestResetExistingModelOutputs:
         )
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database, trend_json
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            only_the_test_database,
+            trend_json,
+            map_id=world.map_id,
         )
 
-        assert result == (3, 9, 2)
+        assert result == (3, 9, 0)
         assert _vote_count(only_the_test_database, in_range) == 0
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-05-31", 1),
             ("UNS 2026-06-03", 1),
         ]
-        # Entries whose date can't be parsed are kept.
-        assert _read_json(trend_json) == [
-            _trend_entry(1, "2026-05-31"),
-            _trend_entry(3, "not-a-date"),
-            {"election_id": 5},
-            _trend_entry(6, "2026-06-03"),
+        assert [entry["as_of_date"] for entry in _read_json(trend_json)] == [
+            "2026-05-31"
         ]
 
-    def test_range_matches_names_of_any_type_pins_current_behaviour(
+    def test_range_preserves_same_named_other_type(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
         tmp_path: Path,
         only_the_test_database: Path,
     ) -> None:
-        """Pins current behaviour: the range deletes any election named in it.
-
-        The query filters on the name range only, not on ``type = 'model_uns'``,
-        so a differently typed election whose name falls inside the range is
-        deleted along with its votes.
-        """
+        """A same-prefix election owned by another model survives a range reset."""
         _assert_path_defaults_are_none()
         world = westminster_world
         other_type = _seed_model_run(
@@ -1943,11 +2103,12 @@ class TestResetExistingModelOutputs:
             date(2026, 6, 2),
             only_the_test_database,
             tmp_path / "missing.json",
+            map_id=world.map_id,
         )
 
-        assert result == (1, 3, 0)
-        assert db.get_election_by_name("UNS 2026-06-01 manual") is None
-        assert _vote_count(only_the_test_database, [other_type]) == 0
+        assert result == (0, 0, 0)
+        assert db.get_election_by_name("UNS 2026-06-01 manual") is not None
+        assert _vote_count(only_the_test_database, [other_type]) == 3
 
     def test_nothing_in_range_leaves_both_untouched(
         self,
@@ -1964,15 +2125,19 @@ class TestResetExistingModelOutputs:
         trend_json.write_text(original, encoding="utf-8")
 
         result = reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), only_the_test_database, trend_json
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+            only_the_test_database,
+            trend_json,
+            map_id=world.map_id,
         )
 
         assert result == (0, 0, 0)
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-05-31", 1)
         ]
-        # Not rewritten: the rewrite would drop the indentation.
-        assert trend_json.read_text(encoding="utf-8") == original
+        assert _read_json(trend_json)[0]["as_of_date"] == "2026-05-31"
+        assert _read_json(trend_json)[0]["parties"]
 
     def test_missing_database_and_trend_json(
         self, tmp_path: Path, only_the_test_database: Path
@@ -1982,7 +2147,7 @@ class TestResetExistingModelOutputs:
         missing_json = tmp_path / "missing.json"
 
         assert reset_existing_model_outputs(
-            date(2026, 6, 1), date(2026, 6, 2), missing_db, missing_json
+            date(2026, 6, 1), date(2026, 6, 2), missing_db, missing_json, map_id=1
         ) == (0, 0, 0)
         assert not missing_db.exists()
         assert not missing_json.exists()
@@ -1992,9 +2157,9 @@ class TestResetExistingModelOutputs:
 
 
 class TestExistingTrendDates:
-    """Tests for existing_trend_dates — dates already run, from JSON and SQLite."""
+    """Only scoped SQLite dates establish that a model run succeeded."""
 
-    def test_union_of_trend_json_and_sqlite(
+    def test_ignores_unverified_trend_json_dates(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2022,8 +2187,9 @@ class TestExistingTrendDates:
             ],
         )
 
-        assert existing_trend_dates(trend_json, only_the_test_database) == {
-            date(2026, 6, 1),
+        assert existing_trend_dates(
+            trend_json, only_the_test_database, map_id=world.map_id
+        ) == {
             date(2026, 6, 2),
             date(2026, 6, 3),
         }
@@ -2034,7 +2200,9 @@ class TestExistingTrendDates:
         _assert_path_defaults_are_none()
 
         assert (
-            existing_trend_dates(tmp_path / "missing.json", tmp_path / "missing.db")
+            existing_trend_dates(
+                tmp_path / "missing.json", tmp_path / "missing.db", map_id=1
+            )
             == set()
         )
 
@@ -2056,15 +2224,30 @@ class TestDatesToRunForCfg:
         as_of_date: date = date(2026, 6, 10),
         dry_run: bool = False,
     ) -> list[date]:
-        """Run with ``existing`` as the trend JSON's dates; return the plan."""
+        """Seed completed scoped dates; the JSON is no longer authoritative."""
         trend_json = tmp_path / "trends.json"
         _write_json(
             trend_json,
             [_trend_entry(n, value) for n, value in enumerate(existing, start=1)],
         )
         monkeypatch.setattr(run_uns_model, "TREND_CACHE_JSON", trend_json)
+        for value in existing:
+            try:
+                as_of = date.fromisoformat(value)
+            except ValueError:
+                continue
+            persist_projection(
+                world.map_id,
+                as_of,
+                f"UNS {as_of.isoformat()}",
+                [],
+                {},
+                sqlite_path=sqlite_path,
+            )
         cfg = _simulation_config(world, as_of_date=as_of_date, dry_run=dry_run)
-        planned: list[date] = dates_to_run_for_cfg(cfg, sqlite_path)
+        planned: list[date] = dates_to_run_for_cfg(
+            cfg, sqlite_path, map_id=world.map_id
+        )
         return planned
 
     def test_dry_run_only_runs_the_as_of_date(
@@ -2166,217 +2349,6 @@ class TestDatesToRunForCfg:
 
 
 # ── update_trend_cache_json ───────────────────────────────────────────────────
-
-
-class TestUpdateTrendCacheJson:
-    """Tests for update_trend_cache_json — merging a run into the trend cache."""
-
-    def test_replaces_same_date_and_same_id_and_sorts_by_election_id(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        _write_json(
-            trend_json,
-            [
-                _trend_entry(5, "2026-06-03", {"2": {"s": 1, "v": 50.0}}),
-                _trend_entry(2, "2026-06-01", {"2": {"s": 3, "v": 60.0}}),
-                # Same date as the new run.
-                _trend_entry(7, "2026-06-05", {"1": {"s": 2, "v": 40.0}}),
-                # Same election id as the new run.
-                _trend_entry(9, "2026-06-04", {"1": {"s": 2, "v": 40.0}}),
-            ],
-        )
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [
-                _vote(1, 2, 600.0, elected=True),
-                _vote(1, 1, 400.0),
-                _vote(2, 2, 500.0, elected=True),
-                _vote(2, 1, 200.0),
-                _vote(2, 6, 100.0),
-            ],
-            trend_json,
-        )
-
-        assert _read_json(trend_json) == [
-            _trend_entry(2, "2026-06-01", {"2": {"s": 3, "v": 60.0}}),
-            _trend_entry(5, "2026-06-03", {"2": {"s": 1, "v": 50.0}}),
-            {
-                "election_id": 9,
-                "election_name": "UNS 2026-06-05",
-                "as_of_date": "2026-06-05",
-                # 1800 votes in all: party 1 has 600, party 2 1100, party 6 100.
-                "parties": {
-                    "1": {"s": 0, "v": 33.3},
-                    "2": {"s": 2, "v": 61.1},
-                    "6": {"s": 0, "v": 5.6},
-                },
-            },
-        ]
-        assert "TREND_CACHE_SKIP" not in capsys.readouterr().out
-
-    def test_zero_votes_give_zero_percentages(self, tmp_path: Path) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "nested" / "trends.json"
-
-        update_trend_cache_json(
-            3,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 0.0, elected=True), _vote(1, 1, 0.0)],
-            trend_json,
-        )
-
-        assert _read_json(trend_json) == [
-            {
-                "election_id": 3,
-                "election_name": "UNS 2026-06-05",
-                "as_of_date": "2026-06-05",
-                "parties": {"1": {"s": 0, "v": 0.0}, "2": {"s": 1, "v": 0.0}},
-            },
-        ]
-
-    def test_first_entry_is_kept_even_with_no_seats(self, tmp_path: Path) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        # Only a later date exists, so there is no earlier snapshot to compare.
-        _write_json(trend_json, [_trend_entry(8, "2026-06-09")])
-
-        update_trend_cache_json(
-            3, "UNS 2026-06-05", date(2026, 6, 5), [_vote(1, 2, 10.0)], trend_json
-        )
-
-        assert [entry["election_id"] for entry in _read_json(trend_json)] == [3, 8]
-
-    def test_unchanged_seats_skip_the_entry(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """An unchanged seat snapshot is omitted, and its date's old entry dropped.
-
-        This is the documented dedup: the same-date entry is stripped, and a
-        run whose seats match the previous date's is not added, so the JSON
-        holds only changed snapshots (``existing_trend_dates`` reads SQLite for
-        the rest).
-        """
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        _write_json(
-            trend_json,
-            [
-                _trend_entry(3, "2026-06-03", {"2": {"s": 2, "v": 55.0}}),
-                _trend_entry(4, "2026-06-05", {"1": {"s": 2, "v": 45.0}}),
-            ],
-        )
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
-            trend_json,
-        )
-
-        assert _read_json(trend_json) == [
-            _trend_entry(3, "2026-06-03", {"2": {"s": 2, "v": 55.0}})
-        ]
-        assert capsys.readouterr().out == (
-            "TREND_CACHE_SKIP as_of_date=2026-06-05 "
-            "reason=unchanged_seat_snapshot previous_date=2026-06-03\n"
-        )
-
-    def test_compares_with_the_latest_earlier_date_only(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        # The first and last entries match the new seats; the latest earlier
-        # one (2026-06-03) does not, so the new entry is added.
-        _write_json(
-            trend_json,
-            [
-                _trend_entry(1, "2026-06-01", {"2": {"s": 2}}),
-                _trend_entry(2, "2026-06-03", {"1": {"s": 2}}),
-                _trend_entry(3, "2026-06-07", {"2": {"s": 2}}),
-            ],
-        )
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
-            trend_json,
-        )
-
-        assert [entry["election_id"] for entry in _read_json(trend_json)] == [
-            1,
-            2,
-            3,
-            9,
-        ]
-        assert capsys.readouterr().out == ""
-
-    def test_malformed_previous_parties_are_ignored(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        previous = _trend_entry(
-            3,
-            "2026-06-03",
-            {
-                "abc": {"s": 3},
-                "0": {"s": 5},
-                "1": {"s": "x"},
-                "4": {"s": [1]},
-                "6": {},
-                "8": {"s": 0},
-                "2": {"s": 2},
-            },
-        )
-        undated = {"election_id": None, "as_of_date": "not-a-date"}
-        _write_json(trend_json, [previous, undated])
-
-        update_trend_cache_json(
-            9,
-            "UNS 2026-06-05",
-            date(2026, 6, 5),
-            [_vote(1, 2, 60.0, elected=True), _vote(2, 2, 70.0, elected=True)],
-            trend_json,
-        )
-
-        # Only {"2": 2 seats} survives from the previous entry, which matches,
-        # so the run is skipped. The undated entry is kept and sorts first.
-        assert _read_json(trend_json) == [undated, previous]
-        assert "previous_date=2026-06-03" in capsys.readouterr().out
-
-    def test_null_party_entry_raises_pins_current_behaviour(
-        self, tmp_path: Path
-    ) -> None:
-        """Pins current behaviour: a ``null`` party value raises ``AttributeError``.
-
-        The previous entry's snapshot guard catches only ``ValueError`` and
-        ``TypeError`` for malformed party entries, so ``None.get`` escapes.
-        """
-        _assert_path_defaults_are_none()
-        trend_json = tmp_path / "trends.json"
-        _write_json(trend_json, [_trend_entry(3, "2026-06-03", {"2": None})])
-
-        with pytest.raises(AttributeError):
-            update_trend_cache_json(
-                9,
-                "UNS 2026-06-05",
-                date(2026, 6, 5),
-                [_vote(1, 2, 60.0, elected=True)],
-                trend_json,
-            )
-
-
-# ── Orchestration: shared helpers ─────────────────────────────────────────────
 
 
 def _guard_writes(
@@ -2618,7 +2590,7 @@ class TestRunRetrospective:
             (
                 ["--start-date", "2026-06-09", "--end-date", "2026-06-10"]
                 + ["--half-life-days", "0"],
-                "--half-life-days must be greater than zero",
+                "--half-life-days must be greater than zero and finite",
             ),
         ],
     )
@@ -2640,7 +2612,7 @@ class TestRunRetrospective:
             run_uns_model.run_retrospective(db, args)
         assert capsys.readouterr().out == ""
 
-    def test_resets_the_range_then_runs_each_day(
+    def test_recomputes_the_range_then_runs_each_day(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2677,9 +2649,7 @@ class TestRunRetrospective:
         run_uns_model.run_retrospective(db, args)
 
         lines = capsys.readouterr().out.splitlines()
-        assert lines[0] == (
-            "RESET deleted_elections=1 deleted_votes=2 stripped_csv_rows=1"
-        )
+        assert lines[0] == ("RESET recomputing dates; previous results retained until replacement succeeds")
         progress = [line for line in lines if line.startswith("PROGRESS")]
         assert progress == [
             "PROGRESS success=1 failed=0 as_of=2026-06-09 "
@@ -2701,8 +2671,8 @@ class TestRunRetrospective:
         ]
         # 2026-06-10's seats match 2026-06-09's, so the dedup leaves it out.
         assert [entry["as_of_date"] for entry in _read_json(trend_json)] == [
-            "2026-06-01",
             "2026-06-09",
+            "2026-06-11",
         ]
 
     def test_dry_run_skips_the_reset_and_reports_progress_every_n(
@@ -2782,7 +2752,7 @@ class TestRunRetrospective:
         assert not any(line.startswith("PROGRESS") for line in lines)
         assert "SUCCESS=2 FAILED=0" in lines
 
-    def test_continue_on_error_records_failures(
+    def test_invalid_baseline_is_rejected_even_with_continue_on_error(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2807,22 +2777,11 @@ class TestRunRetrospective:
             "--dry-run",
         )
 
-        run_uns_model.run_retrospective(db, args)
+        with pytest.raises(ValueError, match="Baseline election not found: Missing Election"):
+            run_uns_model.run_retrospective(db, args)
+        assert capsys.readouterr().out == ""
 
-        lines = capsys.readouterr().out.splitlines()
-        error = "Baseline election not found: Missing Election"
-        assert [line for line in lines if line.startswith("ERROR")] == [
-            f"ERROR as_of=2026-06-09 err={error}",
-            f"ERROR as_of=2026-06-10 err={error}",
-        ]
-        assert "SUCCESS=0 FAILED=2" in lines
-        assert lines[lines.index("FAILURES") :] == [
-            "FAILURES",
-            f"2026-06-09\t{error}",
-            f"2026-06-10\t{error}",
-        ]
-
-    def test_without_continue_on_error_the_first_failure_raises(
+    def test_invalid_baseline_is_rejected_before_starting(
         self,
         db: Database,
         westminster_world: WestminsterWorld,
@@ -2851,11 +2810,7 @@ class TestRunRetrospective:
         ):
             run_uns_model.run_retrospective(db, args)
 
-        assert capsys.readouterr().out.splitlines() == [
-            "RESET skipped for dry-run mode",
-            "ERROR as_of=2026-06-09 err=Baseline election not found: "
-            "Missing Election",
-        ]
+        assert capsys.readouterr().out == ""
 
 
 # ── parse_args / _build_config_from_args ──────────────────────────────────────
@@ -2954,9 +2909,9 @@ class TestBuildConfigFromArgs:
                 date(2026, 6, 13),
                 date(2026, 6, 5),
             ),
-            # Negative counts are clamped to today.
+            # Equal dates are allowed.
             (
-                ["--as-of-days-back", "-3", "--since-days-back", "-1"],
+                ["--as-of-days-back", "0", "--since-days-back", "0"],
                 date(2026, 6, 15),
                 date(2026, 6, 15),
             ),
@@ -3023,7 +2978,7 @@ class TestMain:
         )
 
         out = capsys.readouterr().out
-        assert "RESET deleted_elections=0 deleted_votes=0 stripped_csv_rows=0" in out
+        assert "RESET recomputing dates; previous results retained until replacement succeeds" in out
         assert "SUCCESS=2 FAILED=0" in out
         # The single-date path (its summary and the meta file) never runs.
         assert "UNS simulation complete" not in out
@@ -3405,3 +3360,138 @@ class TestMain:
         assert _model_uns_elections(only_the_test_database) == [
             ("UNS 2026-06-09", 32)
         ]
+
+
+class TestContributingEndpointCaps:
+    @pytest.mark.parametrize("rejection", ["rowless", "zero_weight", "negative_weight"])
+    @pytest.mark.parametrize("duration", [0, 7])
+    def test_rejected_and_future_endpoints_leave_a_stale_usable_cap(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+        rejection: str,
+        duration: int,
+    ) -> None:
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = westminster_world
+        _seed_swing_poll(db, world, date(2025, 3, 8))
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="rejected",
+            fieldwork_end=date(2026, 6, 20),
+            national={} if rejection == "rowless" else {world.party_ids["Labour"]: 99},
+            pollster_weight={"rowless": 1, "zero_weight": 0, "negative_weight": -1}[
+                rejection
+            ],
+        )
+        _seed_swing_poll(db, world, date(2026, 7, 10), pollster="future")
+        requested = date(2026, 6, 30)
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            requested.isoformat(),
+            "--since-date",
+            (requested - timedelta(days=duration)).isoformat(),
+            "--dry-run",
+        )
+        out = capsys.readouterr().out
+        assert "As-of date: 2025-03-08" in out
+        assert (
+            f"Since date: {(date(2025, 3, 8) - timedelta(days=duration)).isoformat()}"
+            in out
+        )
+        assert "Latest poll used: pollster_a (2025-03-06 to 2025-03-08)" in out
+
+    def test_only_unusable_and_future_polls_preserve_requested_date(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        only_the_test_database: Path,
+    ) -> None:
+        _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+        world = westminster_world
+        add_poll_with_rows(
+            db,
+            map_id=world.map_id,
+            pollster_identifier="empty",
+            fieldwork_end=date(2026, 6, 20),
+            national={},
+        )
+        _seed_swing_poll(db, world, date(2026, 7, 10))
+        _run_main(
+            db,
+            monkeypatch,
+            world,
+            "--as-of-date",
+            "2026-06-30",
+            "--since-date",
+            "2026-06-01",
+            "--dry-run",
+        )
+        out = capsys.readouterr().out
+        assert "CAPPING" not in out
+        assert "As-of date: 2026-06-30" in out
+        assert "Latest poll used:" not in out
+
+
+def test_retrospective_publishes_committed_first_date_after_middle_failure(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trend, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
+    world = westminster_world
+    args = _retrospective_args(
+        monkeypatch,
+        world,
+        "--start-date",
+        "2026-06-01",
+        "--end-date",
+        "2026-06-03",
+        "--no-reset-existing",
+    )
+    real_run = run_uns_model.run_simulation
+
+    def fail_middle(database: Database, cfg: SimulationConfig, **kwargs: Any) -> Any:
+        if cfg.as_of_date == date(2026, 6, 2):
+            raise RuntimeError("middle calculation failed")
+        return real_run(database, cfg, **kwargs)
+
+    monkeypatch.setattr(run_uns_model, "run_simulation", fail_middle)
+    with pytest.raises(RuntimeError, match="middle calculation failed"):
+        run_uns_model.run_retrospective(db, args)
+    assert existing_trend_dates(
+        sqlite_path=only_the_test_database, map_id=world.map_id
+    ) == {date(2026, 6, 1)}
+    assert [entry["as_of_date"] for entry in _read_json(trend)] == ["2026-06-01"]
+
+
+def test_poll_metadata_failure_requires_model_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    destination = tmp_path / "metadata.json"
+    destination.write_text('{"old":true}')
+
+    def fail(source: Path, target: Path) -> None:
+        raise OSError("disk failed")
+
+    monkeypatch.setattr("model_support.io.os.replace", fail)
+    with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
+        write_trend_cache_meta(
+            date(2026, 6, 1), date(2026, 5, 1), None, trend_cache_meta_json=destination
+        )
+    assert "rebuild_model_trends" not in str(error.value)
+    assert destination.read_text() == '{"old":true}'
+    assert not list(tmp_path.glob(".*.tmp"))

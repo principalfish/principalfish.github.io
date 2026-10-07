@@ -26,6 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _common import UsModelSpec, main_for_spec
+from model_support.trends import default_trend_path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 RESULTS_DIR = REPO_ROOT / "uselectionmaps" / "data" / "results"
@@ -35,7 +36,7 @@ SPEC = UsModelSpec(
     baseline_election_name="2024 US Presidential Election",
     election_type="us_presidential_model",
     election_name_prefix="US President UNS",
-    trend_cache_json=RESULTS_DIR / "us-president-trends.json",
+    trend_cache_json=default_trend_path("us-president"),
     trend_cache_meta_json=RESULTS_DIR / "us-president-trends_meta.json",
     # The national series is a head-to-head between two named candidates, so the
     # run needs to know which one: with no tracked matchup it exits 2.

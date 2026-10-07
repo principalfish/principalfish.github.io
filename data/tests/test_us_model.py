@@ -25,8 +25,9 @@ from typing import Any, cast
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "models" / "us"))
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import event, text
 
+from model_support.io import OutputPublicationError
 from db import Database
 from models import ElectionType, Map, Party, Pollster, Seat
 from polls.importers.us import us_polls_common
@@ -49,6 +50,7 @@ from _common import (
     build_arg_parser,
     build_baseline_vote_state,
     collect_poll_readings,
+    collect_poll_window,
     compute_region_diffs,
     decided_vote_shares,
     delete_model_for_as_of_date,
@@ -208,6 +210,36 @@ class TestComputeRegionDiffs:
         assert region_swings[10][DEMOCRAT] == pytest.approx(0.0)
         assert region_swings[10][REPUBLICAN] == pytest.approx(0.0)
 
+    @pytest.mark.parametrize(
+        ("national", "regional", "expected"),
+        [
+            ({REPUBLICAN: 50.0}, {}, 0.0),
+            ({DEMOCRAT: 0.0, REPUBLICAN: 50.0}, {}, -48.0),
+            ({DEMOCRAT: 52.0}, {REPUBLICAN: 35.0}, 4.0),
+            ({DEMOCRAT: 52.0}, {DEMOCRAT: 0.0, REPUBLICAN: 35.0}, -55.0),
+        ],
+        ids=["national-omission", "national-zero", "regional-omission", "regional-zero"],
+    )
+    def test_omission_and_explicit_zero_have_distinct_meanings(
+        self,
+        national: dict[int, float],
+        regional: dict[int, float],
+        expected: float,
+    ) -> None:
+        sums: dict[tuple[int | None, int], float] = {
+            (None, party): share for party, share in national.items()
+        }
+        sums.update({(10, party): share for party, share in regional.items()})
+        _, swings, _ = self._run(
+            seats=[_make_seat(1, 10)],
+            region_by_id={10: _make_region(10, "Pacific")},
+            weighted_sums=sums,
+            total_weights={key: 1.0 for key in sums},
+            baseline_national={DEMOCRAT: 48.0, REPUBLICAN: 50.0},
+            baseline_regional={10: {DEMOCRAT: 55.0, REPUBLICAN: 43.0}},
+        )
+        assert swings[10][DEMOCRAT] == pytest.approx(expected)
+
     def test_regional_poll_overrides_national_fallback(self) -> None:
         # Region 10 has its own poll; region 20 falls back to the national delta.
         seats = [_make_seat(1, 10), _make_seat(2, 20)]
@@ -233,6 +265,18 @@ class TestComputeRegionDiffs:
 
 
 class TestProjectSeatVotes:
+    def test_fractional_counts_do_not_reselect_winner_after_rounding(self) -> None:
+        projected, winners = project_seat_votes(
+            {1: {DEMOCRAT: 5.4, REPUBLICAN: 5.49}},
+            {1: 10},
+            {DEMOCRAT, REPUBLICAN},
+            {},
+            {DEMOCRAT: "Democratic", REPUBLICAN: "Republican"},
+        )
+        assert [row["vote_total"] for row in projected] == [5, 5]
+        assert next(row for row in projected if row["elected"])["party_id"] == REPUBLICAN
+        assert winners == Counter({"Republican": 1})
+
     def test_swing_flips_a_marginal_seat(self) -> None:
         # Baseline: Rep 5100 / Dem 4900 (turnout 10000) in region 10.
         # A +3 Dem / -3 Rep swing on the shares (49→52, 51→48) → Dem wins.
@@ -270,46 +314,6 @@ class TestProjectSeatVotes:
 
 
 # ── Senate Class-2 allowlist ──────────────────────────────────────────────────
-
-
-class TestTrendCacheElectoralVotes:
-    """The trend writer adds per-party electoral votes (``e``) only when seats carry EV."""
-
-    @staticmethod
-    def _spec(tmp_path: Path) -> UsModelSpec:
-        return UsModelSpec(
-            map_name="US Presidential 2024",
-            baseline_election_name="2024 US Presidential Election",
-            election_type="us_presidential_model",
-            election_name_prefix="US President UNS",
-            trend_cache_json=tmp_path / "trends.json",
-            trend_cache_meta_json=tmp_path / "trends_meta.json",
-        )
-
-    def test_writes_electoral_votes_for_president(self, tmp_path: Path) -> None:
-        spec = self._spec(tmp_path)
-        projected = [
-            {"seat_id": 1, "party_id": DEMOCRAT, "vote_total": 52.0, "elected": True},
-            {"seat_id": 1, "party_id": REPUBLICAN, "vote_total": 48.0, "elected": False},
-            {"seat_id": 2, "party_id": REPUBLICAN, "vote_total": 58.0, "elected": True},
-            {"seat_id": 2, "party_id": DEMOCRAT, "vote_total": 42.0, "elected": False},
-        ]
-        update_trend_cache_json(spec, 99, "US President UNS 2028-06-01", date(2028, 6, 1), projected, {1: 20, 2: 3})
-        entry = json.loads(spec.trend_cache_json.read_text())[0]
-        assert entry["parties"][str(DEMOCRAT)]["e"] == 20
-        assert entry["parties"][str(REPUBLICAN)]["e"] == 3
-        # State counts still present alongside EV.
-        assert entry["parties"][str(DEMOCRAT)]["s"] == 1
-
-    def test_omits_electoral_votes_when_none(self, tmp_path: Path) -> None:
-        spec = self._spec(tmp_path)
-        projected = [
-            {"seat_id": 1, "party_id": DEMOCRAT, "vote_total": 55.0, "elected": True},
-            {"seat_id": 1, "party_id": REPUBLICAN, "vote_total": 45.0, "elected": False},
-        ]
-        update_trend_cache_json(spec, 99, "US House UNS 2026-06-01", date(2026, 6, 1), projected, {1: 0})
-        entry = json.loads(spec.trend_cache_json.read_text())[0]
-        assert "e" not in entry["parties"][str(DEMOCRAT)]
 
 
 class TestClass2Allowlist:
@@ -2559,6 +2563,182 @@ class TestResolveSpecialBaselines:
 # ── Senate specials: the baseline loader ──────────────────────────────────────
 
 
+class TestPresidentialRecordedSummaries:
+    @pytest.mark.parametrize("state", ["Maine", "Nebraska"])
+    @pytest.mark.parametrize("parent_baseline", ["missing", "zero", "nonpositive"])
+    def test_unusable_parent_preserves_district_swings_winners_and_trends(
+        self,
+        db: Database,
+        tmp_path: Path,
+        state: str,
+        parent_baseline: str,
+    ) -> None:
+        dem, rep = _parties(db)
+        district = f"{state} CD-1"
+        election_map, seats = _seat_map_with_baseline(
+            db,
+            PRESIDENT_MAP,
+            "us_president",
+            {
+                district: {dem.id: 20.0, rep.id: 80.0},
+                "District of Columbia": {dem.id: 50.0, rep.id: 50.0},
+            },
+        )
+        spec = dataclasses.replace(
+            _us_spec(tmp_path, map_name=PRESIDENT_MAP),
+            election_type="us_presidential_model",
+        )
+        pollster = db.add_pollster("National poll", "national_president")
+        _add_poll(
+            db,
+            map_id=election_map.id,
+            pollster=pollster,
+            end=date(2026, 6, 1),
+            rows=[(dem.id, 35.0), (rep.id, 65.0)],
+        )
+        cfg = dataclasses.replace(_cfg(spec), dry_run=False)
+        _, expected_votes, expected_diffs, expected_winners, _, _, _ = run_simulation(
+            db, cfg
+        )
+        expected_trends = spec.trend_cache_json.read_bytes()
+        parent = db.add_seat(
+            election_map.id, state, region_id=seats[district].region_id
+        )
+        if parent_baseline != "missing":
+            baseline = db.get_election_by_name(spec.baseline_election_name)
+            assert baseline is not None
+            db.add_vote(baseline.id, parent.id, party_id=dem.id, vote_total=0)
+            db.add_vote(
+                baseline.id,
+                parent.id,
+                party_id=rep.id,
+                vote_total=-1 if parent_baseline == "nonpositive" else 0,
+            )
+
+        name, projected, diffs, winners, _, _, _ = run_simulation(db, cfg)
+
+        assert _shares_by_party(projected, seats[district].id) == {
+            dem.id: 20.0,
+            rep.id: 80.0,
+        }
+        assert _shares_by_party(projected, seats["District of Columbia"].id) == {
+            dem.id: 50.0,
+            rep.id: 50.0,
+        }
+        assert _vote_rows(projected) == _vote_rows(expected_votes)
+        assert diffs == expected_diffs
+        assert winners == expected_winners
+        assert spec.trend_cache_json.read_bytes() == expected_trends
+        parties = json.loads(expected_trends)[0]["parties"]
+        assert parties[str(dem.id)]["v"] == 35.0
+        assert parties[str(rep.id)]["v"] == 65.0
+        election = db.get_election_by_name(name)
+        assert election is not None
+        assert {vote.seat_id for vote in db.get_votes_for_election(election.id)} == {
+            seat.id for seat in seats.values()
+        }
+
+    @pytest.mark.parametrize(
+        "state,other", [("Maine", "Nebraska"), ("Nebraska", "Maine")]
+    )
+    @pytest.mark.parametrize("district_independent_wins", [False, True])
+    def test_overlap_changes_units_and_evs_but_not_popular_votes(
+        self,
+        db: Database,
+        tmp_path: Path,
+        state: str,
+        other: str,
+        district_independent_wins: bool,
+    ) -> None:
+        dem, rep, independent, _others = _us_parties(db)
+        district = f"{state} CD-1"
+        orphan = f"{other} CD-1"
+        district_votes = (
+            {dem.id: 1000.0, rep.id: 2000.0, independent.id: 7000.0}
+            if district_independent_wins
+            else {dem.id: 1000.0, rep.id: 98000.0, independent.id: 1000.0}
+        )
+        election_map, seats = _seat_map_with_baseline(
+            db,
+            PRESIDENT_MAP,
+            "us_president",
+            {
+                state: {dem.id: 60.0, rep.id: 40.0},
+                "District of Columbia": {dem.id: 90.0, rep.id: 10.0},
+                orphan: {dem.id: 20.0, rep.id: 80.0},
+                district: district_votes,
+            },
+        )
+        with db.session() as session:
+            for name, electoral_votes in [
+                (state, 2),
+                ("District of Columbia", 3),
+                (orphan, 1),
+                (district, 1),
+            ]:
+                session.execute(
+                    text("UPDATE seats SET electoral_votes = :ev WHERE id = :id"),
+                    {"ev": electoral_votes, "id": seats[name].id},
+                )
+        spec = dataclasses.replace(
+            _us_spec(tmp_path, map_name=PRESIDENT_MAP),
+            election_type="us_presidential_model",
+        )
+        baseline = db.get_election_by_name(spec.baseline_election_name)
+        assert baseline is not None
+        included = {seats[state].id, seats["District of Columbia"].id, seats[orphan].id}
+        seat_totals, national, national_shares, regional_shares = (
+            build_baseline_vote_state(
+                db,
+                baseline.id,
+                {seat.id: seat.region_id for seat in seats.values()},
+                popular_vote_seat_ids=included,
+            )
+        )
+        assert dict(seat_totals[seats[district].id]) == district_votes
+        assert dict(national) == {dem.id: 170.0, rep.id: 130.0, independent.id: 0.0}
+        assert national_shares[dem.id] == pytest.approx(17000.0 / 300.0)
+        assert regional_shares[seats[state].region_id][dem.id] == pytest.approx(
+            17000.0 / 300.0
+        )
+        cfg = dataclasses.replace(_cfg(spec), dry_run=False)
+
+        name, projected, _, winners, _, electoral_votes, _ = run_simulation(db, cfg)
+
+        assert {row["seat_id"] for row in projected} == {
+            seat.id for seat in seats.values()
+        }
+        assert {row["party_id"] for row in projected} == {
+            dem.id,
+            rep.id,
+            independent.id,
+        }
+        election = db.get_election_by_name(name)
+        assert election is not None and election.map_id == election_map.id
+        stored = db.get_votes_for_election(election.id)
+        assert len(stored) == len(projected)
+        assert sorted(
+            (v.seat_id, v.party_id, v.vote_total, v.elected) for v in stored
+        ) == sorted(
+            (row["seat_id"], row["party_id"], row["vote_total"], row["elected"])
+            for row in projected
+        )
+        parties = json.loads(spec.trend_cache_json.read_text())[0]["parties"]
+        assert parties[str(dem.id)] == {"s": 2, "v": 56.7, "e": 5}
+        assert parties[str(rep.id)] == {
+            "s": 1 if district_independent_wins else 2,
+            "v": 43.3,
+            "e": 1 if district_independent_wins else 2,
+        }
+        assert parties[str(independent.id)] == {
+            "s": 1 if district_independent_wins else 0,
+            "v": 0.0,
+            "e": 1 if district_independent_wins else 0,
+        }
+        assert sum(winners.values()) == 4
+        assert sum(electoral_votes.values()) == 7
+
+
 class TestBuildBaselineVoteStateOverrides:
     def test_ohio_uses_2022_votes_while_the_rest_use_2020(self, db: Database) -> None:
         dem, rep = _parties(db)
@@ -2718,6 +2898,42 @@ class TestSenateSpecialsEndToEnd:
         assert not world.spec.trend_cache_json.exists()
         assert not world.spec.trend_cache_meta_json.exists()
 
+    def test_recorded_vote_summary_counts_only_the_field_and_each_special_once(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        world = self._world(db, tmp_path)
+        spec = dataclasses.replace(world.spec, election_type="us_senate_model")
+        cfg = dataclasses.replace(
+            _cfg(spec),
+            as_of_date=date(2026, 6, 3),
+            since_date=date(2026, 6, 2),
+            dry_run=False,
+        )
+
+        name, projected, _, winners, _, _, _ = run_simulation(db, cfg)
+
+        expected_ids = {
+            world.seats[name].id for name in (*CLASS2_2026, "Florida", "Ohio")
+        }
+        assert {row["seat_id"] for row in projected} == expected_ids
+        assert sum(winners.values()) == 35
+        election = db.get_election_by_name(name)
+        assert election is not None
+        stored = db.get_votes_for_election(election.id)
+        assert {vote.seat_id for vote in stored} == expected_ids
+        totals = {
+            party_id: sum(
+                float(vote.vote_total or 0.0)
+                for vote in stored
+                if vote.party_id == party_id
+            )
+            for party_id in (world.dem.id, world.rep.id)
+        }
+        assert totals == {world.rep.id: 20900.0, world.dem.id: 14100.0}
+        parties = json.loads(world.spec.trend_cache_json.read_text())[0]["parties"]
+        assert parties[str(world.rep.id)] == {"s": 35, "v": 59.7}
+        assert parties[str(world.dem.id)] == {"s": 0, "v": 40.3}
+
     def test_the_specials_are_the_two_extra_seats(self, db: Database, tmp_path: Path) -> None:
         world = self._world(db, tmp_path)
         _, projected, _, _, _, _, _ = run_simulation(db, _cfg(world.spec))
@@ -2863,13 +3079,15 @@ def _freeze_today(monkeypatch: pytest.MonkeyPatch, day: date) -> None:
     ``--rebuild-history`` rejects ``--as-of-date``/``--as-of-days-back`` (they
     would delete every point above the as-of), so a rebuild test cannot state the
     as-of on the command line and fixes today instead — which is what the flags
-    were standing in for. ``_common`` only ever calls ``date.today`` and
-    ``date.fromisoformat``, so those are the only two this stub needs.
+    were standing in for. Preserve parsing and the all-history date bounds
+    alongside the frozen clock.
     """
     monkeypatch.setattr(
         _common,
         "date",
-        SimpleNamespace(today=lambda: day, fromisoformat=date.fromisoformat),
+        SimpleNamespace(
+            today=lambda: day, fromisoformat=date.fromisoformat, min=date.min, max=date.max
+        ),
     )
 
 
@@ -2907,7 +3125,9 @@ class TestRebuildHistoryRun:
     ) -> SimpleNamespace:
         series = self.EXISTING if existing is None else existing
         dem, rep = _parties(db)
-        house_map = db.add_map(HOUSE_MAP, parliament="us_house")
+        house_map, _ = _seat_map_with_baseline(
+            db, HOUSE_MAP, "us_house", {"Seat": {dem.id: 60, rep.id: 40}}
+        )
         pollster = db.add_pollster("YouGov", "yougov_us_house")
         for end in (date(2026, 6, 1), date(2026, 6, 10)):
             _add_poll(
@@ -2916,11 +3136,23 @@ class TestRebuildHistoryRun:
         spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
         calls = SimpleNamespace(runs=[], resets=[], metas=[])
 
-        def fake_run(_db: Database, cfg: UsSimulationConfig) -> tuple[Any, ...]:
+        def fake_run(
+            _db: Database,
+            cfg: UsSimulationConfig,
+            *,
+            poll_window: _common.SelectedPollWindow | None = None,
+        ) -> tuple[Any, ...]:
             calls.runs.append(cfg)
             return (f"US Test UNS {cfg.as_of_date}", [], [], Counter(), None, {}, [])
 
-        def fake_reset(_spec: UsModelSpec, start: date, end: date, *_: Any) -> tuple[int, int, int]:
+        def fake_reset(
+            _spec: UsModelSpec,
+            start: date,
+            end: date,
+            *_: Any,
+            map_id: int,
+        ) -> tuple[int, int, int]:
+            assert map_id == house_map.id
             calls.resets.append((start, end))
             return 0, 0, 0
 
@@ -2953,7 +3185,6 @@ class TestRebuildHistoryRun:
         # on 1 June and runs through the last existing date (4 June), gap included …
         assert calls.resets == [
             (date(2026, 5, 25), date(2026, 5, 31)),
-            (date(2026, 6, 1), date(2026, 6, 4)),
         ]
         assert run_dates[:4] == [date(2026, 6, day) for day in (1, 2, 3, 4)]
         # … then the normal single-date path fills forward to the capped as-of …
@@ -2973,14 +3204,15 @@ class TestRebuildHistoryRun:
         assert [cfg.as_of_date for cfg in calls.runs] == [date(2026, 6, day) for day in range(5, 11)]
         assert calls.metas == [(date(2026, 6, 10), date(2026, 3, 22))]
 
-    def test_the_rebuild_resets_even_with_no_reset_existing(
+    def test_the_rebuild_recomputes_even_with_no_reset_existing(
         self, db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         calls = self._run(
             db, tmp_path, monkeypatch, [*self.ARGV, "--rebuild-history", "--no-reset-existing"]
         )
 
-        assert calls.resets[-1] == (date(2026, 6, 1), date(2026, 6, 4))
+        assert calls.resets == [(date(2026, 5, 25), date(2026, 5, 31))]
+        assert [cfg.as_of_date for cfg in calls.runs[:4]] == [date(2026, 6, day) for day in (1, 2, 3, 4)]
 
     def test_a_dry_run_skips_the_rebuild(
         self,
@@ -3018,7 +3250,6 @@ class TestRebuildHistoryRun:
 
         assert calls.resets == [
             (date(2026, 5, 20), date(2026, 5, 31)),
-            (date(2026, 6, 1), date(2026, 6, 10)),
         ]
         rebuilt = [cfg.as_of_date for cfg in calls.runs[:10]]
         assert rebuilt == [date(2026, 6, day) for day in range(1, 11)]
@@ -3669,10 +3900,17 @@ class TestDatabasePathAtCallTime:
             as_of = date(2026, 6, day)
             persist_projection(spec, house_map.id, as_of, f"US Test UNS {as_of}", [], {})
 
-        assert existing_trend_dates(spec) == {date(2026, 6, 1), date(2026, 6, 2)}
-        assert reset_existing_model_outputs(spec, date(2026, 6, 2), date(2026, 6, 2)) == (1, 0, 0)
-        assert delete_model_for_as_of_date(spec, date(2026, 6, 1)) == (1, 0)
-        assert existing_trend_dates(spec) == set()
+        assert existing_trend_dates(spec, map_id=house_map.id) == {
+            date(2026, 6, 1),
+            date(2026, 6, 2),
+        }
+        assert reset_existing_model_outputs(
+            spec, date(2026, 6, 2), date(2026, 6, 2), map_id=house_map.id
+        ) == (1, 0, 0)
+        assert delete_model_for_as_of_date(
+            spec, date(2026, 6, 1), map_id=house_map.id
+        ) == (1, 0)
+        assert existing_trend_dates(spec, map_id=house_map.id) == set()
         assert _common.default_sqlite_path() == only_the_test_database
 
 
@@ -3854,3 +4092,666 @@ class TestRebuildHistoryEndToEnd:
             date(2026, 6, 1), date(2026, 6, 10)
         )
         assert min(_trend_dates(spec)) >= date(2026, 6, 1)
+
+CONTRIBUTOR_MATCHUP = "Red (R) vs Blue (D) vs Gold (L)"
+
+
+def _contributor_world(db: Database, tmp_path: Path, contest: str) -> SimpleNamespace:
+    dem, rep = _parties(db)
+    libertarian = db.add_party("Libertarian", short_name="L")
+    map_name = {"house": HOUSE_MAP, "senate": SENATE_MAP, "president": PRESIDENT_MAP}[
+        contest
+    ]
+    election_map, seats = _seat_map_with_baseline(
+        db,
+        map_name,
+        f"us_{contest}",
+        {
+            "Maine": {dem.id: 400.0, rep.id: 600.0},
+            "Maine CD-2": {dem.id: 400.0, rep.id: 600.0},
+        },
+    )
+    national_map = (
+        db.add_map(HOUSE_MAP, parliament="us_house")
+        if contest == "senate"
+        else election_map
+    )
+    national_matchup = CONTRIBUTOR_MATCHUP if contest == "president" else None
+    if national_matchup:
+        db.set_tracked_matchup(national_map.id, None, national_matchup, source="manual")
+    db.set_tracked_matchup(
+        election_map.id, seats["Maine"].id, CONTRIBUTOR_MATCHUP, source="manual"
+    )
+    pollster = db.add_pollster("Contributor", f"contributor_{contest}")
+    spec = _us_spec(
+        tmp_path,
+        map_name=map_name,
+        national_poll_map_name=HOUSE_MAP if contest == "senate" else None,
+        tracked_matchup_required=contest == "president",
+        seat_matchup_policy="national" if contest == "president" else "per_seat",
+    )
+    cfg = dataclasses.replace(
+        _cfg(spec, as_of=date(2026, 6, 30)), since_date=date(2026, 6, 1)
+    )
+    national_id = _add_poll(
+        db,
+        map_id=national_map.id,
+        pollster=pollster,
+        end=date(2026, 6, 10),
+        rows=[(dem.id, 40.0), (rep.id, 60.0)],
+        matchup=national_matchup,
+    )
+    return SimpleNamespace(
+        spec=spec,
+        cfg=cfg,
+        scope=resolve_poll_scope(db, spec),
+        pollster=pollster,
+        map_id=election_map.id,
+        national_map_id=national_map.id,
+        national_matchup=national_matchup,
+        national_id=national_id,
+        seat=seats["Maine"],
+        district=seats["Maine CD-2"],
+        dem=dem,
+        rep=rep,
+        libertarian=libertarian,
+        complete=[
+            (rep.id, 40.0, "Red"),
+            (dem.id, 45.0, "Blue"),
+            (libertarian.id, 15.0, "Gold"),
+        ],
+    )
+
+
+def _selected_window(
+    db: Database, world: SimpleNamespace
+) -> _common.SelectedPollWindow:
+    return collect_poll_window(
+        db,
+        world.scope,
+        since_date=world.cfg.since_date,
+        as_of_date=world.cfg.as_of_date,
+        half_life_days=world.cfg.half_life_days,
+    )
+
+
+class TestSelectedUsPollContributors:
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("seat_scoped", [False, True])
+    @pytest.mark.parametrize(
+        "rejection", ["rowless", "zero_weight", "negative_weight", "wrong_matchup"]
+    )
+    def test_rejected_latest_poll_cannot_advance_metadata_or_bounds(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+        seat_scoped: bool,
+        rejection: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        pollster = world.pollster
+        if rejection in {"zero_weight", "negative_weight"}:
+            pollster = db.add_pollster(
+                "Excluded",
+                "excluded",
+                weight=0.0 if rejection == "zero_weight" else -1.0,
+            )
+        matchup = CONTRIBUTOR_MATCHUP if seat_scoped else world.national_matchup
+        if rejection == "wrong_matchup":
+            matchup = "Other (R) vs Blue (D)"
+        rows = [] if rejection == "rowless" else world.complete
+        _add_poll(
+            db,
+            map_id=world.map_id if seat_scoped else world.national_map_id,
+            pollster=pollster,
+            end=date(2026, 6, 20),
+            rows=rows,
+            seat_id=world.seat.id if seat_scoped else None,
+            matchup=matchup,
+        )
+        selected = _selected_window(db, world)
+        assert {poll.poll_id for poll in selected.contributors} == {world.national_id}
+        assert selected.seat_contributors == ()
+        assert selected.latest_poll is not None
+        assert selected.latest_poll.poll_id == world.national_id
+        assert run_simulation(db, world.cfg)[4] == selected.latest_poll
+        assert poll_date_bounds(
+            db,
+            world.scope,
+            since_date=world.cfg.since_date,
+            as_of_date=world.cfg.as_of_date,
+            half_life_days=world.cfg.half_life_days,
+        ) == (date(2026, 6, 10), date(2026, 6, 10))
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 10)
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("reference_in_window", [False, True])
+    def test_materiality_uses_the_same_selected_window_as_projection(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+        reference_in_window: bool,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        reference_id = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 12) if reference_in_window else date(2026, 5, 31),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        partial_id = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[(world.rep.id, 40.0, "Red"), (world.dem.id, 45.0, "Blue")],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        selected = _selected_window(db, world)
+        expected_id = reference_id if reference_in_window else partial_id
+        expected_date = date(2026, 6, 12) if reference_in_window else date(2026, 6, 20)
+        assert [poll.poll_id for poll in selected.seat_contributors] == [expected_id]
+        assert (
+            selected.latest_poll is not None
+            and selected.latest_poll.poll_id == expected_id
+        )
+        result = run_simulation(db, world.cfg)
+        assert result[4] == selected.latest_poll
+        average = selected.seat_averages[world.seat.id]
+        assert average.n_skipped == int(reference_in_window)
+        assert average.blocking_candidates == (("Gold",) if reference_in_window else ())
+        assert ("skipped_material=1" in result[6][0]) == reference_in_window
+        assert (
+            latest_poll_date(
+                db,
+                world.scope,
+                since_date=world.cfg.since_date,
+                as_of_date=world.cfg.as_of_date,
+                half_life_days=world.cfg.half_life_days,
+            )
+            == expected_date
+        )
+        if contest == "president":
+            assert _shares_by_party(result[1], world.district.id) == pytest.approx(
+                _shares_by_party(result[1], world.seat.id)
+            )
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_no_decided_seat_shares_do_not_supply_a_contributor(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[
+                (world.rep.id, 0.0, "Red"),
+                (world.dem.id, 0.0, "Blue"),
+                (world.libertarian.id, 0.0, "Gold"),
+            ],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        assert _selected_window(db, world).seat_contributors == ()
+        assert latest_poll_date(db, world.scope) == date(2026, 6, 10)
+        latest = run_simulation(db, world.cfg)[4]
+        assert latest is not None and latest.poll_id == world.national_id
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_explicit_zero_national_share_is_a_contributor(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        zero_id = _add_poll(
+            db,
+            map_id=world.national_map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[(world.dem.id, 0.0)],
+            matchup=world.national_matchup,
+        )
+        selected = _selected_window(db, world)
+        assert {poll.poll_id for poll in selected.national_contributors} == {
+            world.national_id,
+            zero_id,
+        }
+        assert (
+            selected.latest_poll is not None and selected.latest_poll.poll_id == zero_id
+        )
+        assert run_simulation(db, world.cfg)[4] == selected.latest_poll
+
+    def test_all_history_bounds_preserve_old_weighted_evidence(
+        self, db: Database, tmp_path: Path
+    ) -> None:
+        world = _contributor_world(db, tmp_path, "house")
+        _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(1900, 1, 1),
+            rows=[(world.dem.id, 40.0)],
+        )
+        assert poll_date_bounds(db, world.scope) == (
+            date(1900, 1, 1),
+            date(2026, 6, 10),
+        )
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            {"since_date": date(2026, 6, 1)},
+            {"as_of_date": date(2026, 6, 30)},
+            {"half_life_days": 30.0},
+        ],
+    )
+    def test_partial_window_configuration_is_rejected(
+        self,
+        db: Database,
+        tmp_path: Path,
+        arguments: dict[str, Any],
+    ) -> None:
+        world = _contributor_world(db, tmp_path, "house")
+        with pytest.raises(ValueError):
+            latest_poll_date(db, world.scope, **arguments)
+
+    @pytest.mark.parametrize(
+        "weight, shares", [(1.0, {}), (0.0, {DEMOCRAT: 40.0}), (-1.0, {DEMOCRAT: 40.0})]
+    )
+    def test_national_aggregation_has_no_metadata_without_weighted_observations(
+        self,
+        weight: float,
+        shares: dict[int, float],
+    ) -> None:
+        contributors: list[LatestPollUsage] = []
+        weighted_sums, total_weights, latest = aggregate_national(
+            [_reading(None, None, weight, shares)],
+            None,
+            contributors=contributors,
+        )
+        assert weighted_sums == total_weights == {}
+        assert latest is None and contributors == []
+
+    def test_regional_only_national_reading_contributes_once(self) -> None:
+        reading = _reading(None, None, 1.0, {})
+        reading.region_shares = {1: {DEMOCRAT: 0.0}, 2: {DEMOCRAT: 40.0}}
+        contributors: list[LatestPollUsage] = []
+        weighted_sums, total_weights, latest = aggregate_national(
+            [reading],
+            None,
+            contributors=contributors,
+        )
+        assert weighted_sums == {(1, DEMOCRAT): 0.0, (2, DEMOCRAT): 40.0}
+        assert total_weights == {(1, DEMOCRAT): 1.0, (2, DEMOCRAT): 1.0}
+        assert len(contributors) == 1 and latest == contributors[0]
+
+
+class TestCandidateUsPollCaps:
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("rejection", ["rowless", "zero_weight", "wrong_matchup"])
+    def test_cli_skips_rejected_endpoints_and_future_polls(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+        rejection: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        pollster = (
+            world.pollster
+            if rejection != "zero_weight"
+            else db.add_pollster("Zero", "zero", weight=0)
+        )
+        _add_poll(
+            db,
+            map_id=world.national_map_id,
+            pollster=pollster,
+            end=date(2026, 6, 20),
+            rows=[] if rejection == "rowless" else world.complete,
+            matchup="Other (R) vs Blue (D)"
+            if rejection == "wrong_matchup"
+            else world.national_matchup,
+        )
+        _add_poll(
+            db,
+            map_id=world.national_map_id,
+            pollster=world.pollster,
+            end=date(2026, 7, 10),
+            rows=world.complete,
+            matchup=world.national_matchup,
+        )
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["model.py", "--as-of-date", "2026-06-30", "--since-date", "2026-06-01"],
+        )
+        assert main_for_spec(world.spec, db_factory=lambda: db) == 0
+        meta = json.loads(world.spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-10"
+        assert meta["since_date"] == "2026-05-12"
+        assert "2026-06-10" in meta["latest_poll_snippet"]
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_cap_rechecks_materiality_when_shifting_the_requested_window(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        reference = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 5, 31),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        partial = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=[(world.rep.id, 40.0, "Red"), (world.dem.id, 45.0, "Blue")],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        # The requested window excludes the material reference. Moving the cap
+        # back to the partial endpoint brings it in and rejects that endpoint.
+        assert partial in {
+            poll.poll_id for poll in _selected_window(db, world).contributors
+        }
+        _, latest, selected = _common.candidate_poll_date_bounds(
+            db,
+            world.scope,
+            since_date=date(2026, 6, 1),
+            as_of_date=date(2026, 6, 30),
+            half_life_days=30,
+        )
+        assert latest == date(2026, 6, 10)
+        assert selected is not None
+        assert {poll.poll_id for poll in selected.contributors} == {
+            world.national_id,
+            reference,
+        }
+        cfg = dataclasses.replace(
+            world.cfg, as_of_date=latest, since_date=date(2026, 5, 12)
+        )
+        assert run_simulation(db, cfg)[4] == selected.latest_poll
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("duration", [29, 60])
+    def test_earliest_rebuild_bound_uses_its_own_window_not_the_final_window(
+        self,
+        db: Database,
+        tmp_path: Path,
+        contest: str,
+        duration: int,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        partial = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 5, 1),
+            rows=[(world.rep.id, 40.0, "Red"), (world.dem.id, 45.0, "Blue")],
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        reference = _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        if duration == 60:
+            requested = collect_poll_window(
+                db,
+                world.scope,
+                since_date=date(2026, 5, 1),
+                as_of_date=date(2026, 6, 30),
+                half_life_days=30,
+            )
+            assert partial not in {poll.poll_id for poll in requested.contributors}
+        first, latest, selected = _common.candidate_poll_date_bounds(
+            db,
+            world.scope,
+            since_date=date(2026, 6, 30) - timedelta(days=duration),
+            as_of_date=date(2026, 6, 30),
+            half_life_days=30,
+            include_earliest=True,
+        )
+        assert (first, latest) == (date(2026, 5, 1), date(2026, 6, 20))
+        assert selected is not None
+        assert reference in {poll.poll_id for poll in selected.contributors}
+        assert partial not in {poll.poll_id for poll in selected.contributors}
+        assert poll_date_bounds(db, world.scope)[0] == date(2026, 6, 10)
+
+    @pytest.mark.parametrize("n_rejected", [1, 12])
+    def test_candidate_selection_reads_history_in_batches(
+        self,
+        db: Database,
+        tmp_path: Path,
+        n_rejected: int,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, "senate")
+        for offset in range(n_rejected):
+            _add_poll(
+                db,
+                map_id=world.national_map_id,
+                pollster=world.pollster,
+                end=date(2026, 6, 11) + timedelta(days=offset),
+                rows=[],
+            )
+        statements: list[str] = []
+
+        def record(
+            _connection: Any,
+            _cursor: Any,
+            statement: str,
+            _parameters: Any,
+            _context: Any,
+            _many: bool,
+        ) -> None:
+            statements.append(statement)
+
+        event.listen(db.engine, "before_cursor_execute", record)
+        try:
+            _, latest, _ = _common.candidate_poll_date_bounds(
+                db,
+                world.scope,
+                since_date=date(2026, 6, 1),
+                as_of_date=date(2026, 6, 30),
+                half_life_days=30,
+            )
+        finally:
+            event.remove(db.engine, "before_cursor_execute", record)
+        assert latest == date(2026, 6, 10)
+        assert (
+            sum(
+                "from polls " in " ".join(sql.lower().split()) + " "
+                for sql in statements
+            )
+            == 1
+        )
+        assert (
+            sum(
+                "from poll_rows " in " ".join(sql.lower().split()) + " "
+                for sql in statements
+            )
+            == 1
+        )
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("restriction", ["ignore_seat", "allowlist"])
+    def test_cli_seat_restrictions_match_the_final_projection(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+        restriction: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        _add_poll(
+            db,
+            map_id=world.map_id,
+            pollster=world.pollster,
+            end=date(2026, 6, 20),
+            rows=world.complete,
+            seat_id=world.seat.id,
+            matchup=CONTRIBUTOR_MATCHUP,
+        )
+        spec = world.spec
+        extra: list[str] = []
+        if restriction == "ignore_seat":
+            extra = ["--ignore-seat-polls"]
+        else:
+            spec = dataclasses.replace(
+                spec, seat_name_allowlist=frozenset({world.district.seat_name})
+            )
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "model.py",
+                "--as-of-date",
+                "2026-06-30",
+                "--since-date",
+                "2026-06-01",
+                *extra,
+            ],
+        )
+        assert main_for_spec(spec, db_factory=lambda: db) == 0
+        meta = json.loads(spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-10"
+        assert meta["since_date"] == "2026-05-12"
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("duration", [0, 7])
+    def test_cli_preserves_duration_when_only_old_usable_history_exists(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+        duration: int,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        requested = date(2026, 9, 30)
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "model.py",
+                "--as-of-date",
+                requested.isoformat(),
+                "--since-date",
+                (requested - timedelta(days=duration)).isoformat(),
+            ],
+        )
+        assert main_for_spec(world.spec, db_factory=lambda: db) == 0
+        meta = json.loads(world.spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-10"
+        assert (
+            meta["since_date"]
+            == (date(2026, 6, 10) - timedelta(days=duration)).isoformat()
+        )
+        assert "2026-06-10" in meta["latest_poll_snippet"]
+
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    def test_cli_retains_request_without_an_admitted_endpoint(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        contest: str,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        with db.session() as session:
+            pollster = session.get(Pollster, world.pollster.id)
+            assert pollster is not None
+            pollster.weight = 0
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["model.py", "--as-of-date", "2026-06-30", "--since-date", "2026-06-01"],
+        )
+        assert main_for_spec(world.spec, db_factory=lambda: db) == 0
+        meta = json.loads(world.spec.trend_cache_meta_json.read_text())
+        assert meta["as_of_date"] == "2026-06-30"
+        assert meta["since_date"] == "2026-06-01"
+        assert meta["latest_poll_snippet"] == ""
+
+
+def test_retrospective_publishes_committed_first_date_after_middle_failure(
+    db: Database,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dem, rep = _parties(db)
+    election_map, _ = _seat_map_with_baseline(
+        db, HOUSE_MAP, "us_house", {"Seat": {dem.id: 60, rep.id: 40}}
+    )
+    spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
+    args = _common.build_arg_parser(spec).parse_args([])
+    real_run = _common.run_simulation
+
+    def fail_middle(database: Database, cfg: UsSimulationConfig, **kwargs: Any) -> Any:
+        if cfg.as_of_date == date(2026, 6, 2):
+            raise RuntimeError("middle calculation failed")
+        return real_run(database, cfg, **kwargs)
+
+    monkeypatch.setattr(_common, "run_simulation", fail_middle)
+    with pytest.raises(RuntimeError, match="middle calculation failed"):
+        _common.run_retrospective_range(
+            db,
+            spec,
+            args,
+            start_date=date(2026, 6, 1),
+            end_date=date(2026, 6, 3),
+            lookback_days=365,
+            reset_existing=False,
+        )
+    assert existing_trend_dates(
+        spec, only_the_test_database, map_id=election_map.id
+    ) == {date(2026, 6, 1)}
+    assert [
+        entry["as_of_date"] for entry in json.loads(spec.trend_cache_json.read_text())
+    ] == ["2026-06-01"]
+
+
+def test_poll_metadata_failure_requires_model_rerun(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
+    spec.trend_cache_meta_json.write_text('{"old":true}')
+
+    def fail(source: Path, target: Path) -> None:
+        raise OSError("disk failed")
+
+    monkeypatch.setattr("model_support.io.os.replace", fail)
+    with pytest.raises(OutputPublicationError, match="Rerun this model") as error:
+        _common.write_trend_cache_meta(spec, date(2026, 6, 1), date(2026, 5, 1), None)
+    assert "rebuild_model_trends" not in str(error.value)
+    assert spec.trend_cache_meta_json.read_text() == '{"old":true}'
+    assert not list(tmp_path.glob(".*.tmp"))

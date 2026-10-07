@@ -42,7 +42,6 @@ import argparse
 import json
 import math
 import re
-import sqlite3
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
@@ -51,7 +50,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Literal
 
-from sqlalchemy import ColumnElement, and_, select, text
+from sqlalchemy import text
 
 # ``data/`` root — home of config.py / db.py / models.py.
 DATA_DIR = Path(__file__).resolve().parents[2]
@@ -59,8 +58,44 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from db import Database, ensure_elections_sqlite_schema
-from models import Election, Map, Poll, PollRow, Region, TrackedMatchup, Vote
+from db import Database
+from model_support.history import HistoryRecomputationError
+from model_support.io import publish_json, validate_output_target
+from model_support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
+from model_support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
+)
+from model_support.cli import (
+    single_date_window,
+    validate_date_range,
+    validate_date_window,
+    validate_day_count,
+    validate_half_life,
+    validate_prior_weight,
+    validate_run_arguments,
+)
+from model_support.polling import (
+    PollSource,
+    candidate_since,
+    effective_pollster_weight,
+    latest_poll_key,
+    select_poll_endpoint,
+)
+from model_support.summaries import (
+    non_overlapping_seat_ids,
+    recorded_vote_rows,
+    summarize_votes,
+)
+from models import Election, Map, Region, Vote
 from polls.importers.us.us_geography import parent_seat_name
 from polls.importers.us.us_polls_common import (
     MAJOR_PARTY_NAMES,
@@ -181,6 +216,11 @@ class UsSimulationConfig:
     seat_prior_weight: float = 1.0
     ignore_seat_polls: bool = False
 
+    def __post_init__(self) -> None:
+        validate_half_life(self.half_life_days)
+        validate_prior_weight(self.seat_prior_weight)
+        validate_date_window(self.since_date, self.as_of_date)
+
 
 @dataclass
 class SeatRef:
@@ -204,6 +244,7 @@ class LatestPollUsage:
     fieldwork_start: date
     fieldwork_end: date
     matchup: str | None = None
+    poll_id: int = field(default=-1, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -447,25 +488,38 @@ def poll_usage(reading: PollReading) -> LatestPollUsage:
         fieldwork_start=reading.fieldwork_start,
         fieldwork_end=reading.fieldwork_end,
         matchup=reading.matchup,
+        poll_id=reading.poll_id,
     )
 
 
 def latest_poll_usage_of(usages: Iterable[LatestPollUsage | None]) -> LatestPollUsage | None:
-    """The most recent of several usages, by fieldwork end then start.
-
-    ``None`` entries are ignored; on a tie the earlier entry wins, so a caller
-    listing the national series first keeps it on a same-day seat poll.
-    """
+    """The most recent usage by fieldwork end, start and actual poll ID."""
     latest: LatestPollUsage | None = None
     for usage in usages:
         if usage is None:
             continue
-        if latest is None or (usage.fieldwork_end, usage.fieldwork_start) > (
-            latest.fieldwork_end,
-            latest.fieldwork_start,
+        if latest is None or latest_poll_key(
+            usage.fieldwork_end, usage.fieldwork_start, usage.poll_id
+        ) > latest_poll_key(
+            latest.fieldwork_end, latest.fieldwork_start, latest.poll_id
         ):
             latest = usage
     return latest
+
+
+def usable_popular_vote_seat_ids(
+    seat_party_vote_totals: Mapping[int, Mapping[int, float]],
+    parent_seat_by_id: Mapping[int, int],
+) -> set[int]:
+    """Exclude overlapping districts only when their parent can be projected."""
+    return non_overlapping_seat_ids(
+        (
+            seat_id
+            for seat_id, totals in seat_party_vote_totals.items()
+            if sum(totals.values()) > 0
+        ),
+        parent_seat_by_id,
+    )
 
 
 def build_baseline_vote_state(
@@ -474,6 +528,9 @@ def build_baseline_vote_state(
     region_by_seat_id: dict[int, int | None],
     seat_id_filter: set[int] | None = None,
     seat_baseline_election_ids: Mapping[int, int] | None = None,
+    popular_vote_seat_ids: set[int] | None = None,
+    *,
+    popular_vote_parent_ids: Mapping[int, int] | None = None,
 ) -> tuple[
     dict[int, dict[int, float]],
     dict[int, float],
@@ -493,6 +550,12 @@ def build_baseline_vote_state(
     those seats are dropped from the spec's own baseline — so a state that appears
     in both elections is counted once, on the override.
 
+    ``popular_vote_seat_ids`` restricts national and regional aggregate votes
+    without discarding per-seat baselines or their parties. Presidential callers
+    exclude overlapping districts when their statewide parent has a usable
+    baseline. ``popular_vote_parent_ids`` derives that selection from the loaded
+    positive-turnout baselines, including per-seat election overrides.
+
     Returns ``(seat_party_vote_totals, national_party_totals,
     baseline_national_shares, baseline_region_shares)`` where the two share maps
     are 0–100 percentages.
@@ -508,11 +571,17 @@ def build_baseline_vote_state(
     # ``None`` means "every seat but the overridden ones"; a set means "only these".
     sources: list[tuple[Sequence[Vote], set[int] | None]] = [(baseline_votes, None)]
     for election_id in sorted(set(overrides.values())):
-        seat_ids = {seat_id for seat_id, other in overrides.items() if other == election_id}
+        seat_ids = {
+            seat_id for seat_id, other in overrides.items() if other == election_id
+        }
         sources.append((db.get_votes_for_election(election_id), seat_ids))
 
-    seat_party_vote_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
-    region_party_totals: dict[int, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    seat_party_vote_totals: dict[int, dict[int, float]] = defaultdict(
+        lambda: defaultdict(float)
+    )
+    region_party_totals: dict[int, dict[int, float]] = defaultdict(
+        lambda: defaultdict(float)
+    )
     region_totals: dict[int, float] = defaultdict(float)
     national_party_totals: dict[int, float] = defaultdict(float)
     national_total = 0.0
@@ -533,6 +602,23 @@ def build_baseline_vote_state(
             value = float(vote.vote_total)
             seat_party_vote_totals[seat_id][party_id] += value
 
+    if not seat_party_vote_totals:
+        raise ValueError("No baseline seat-party vote totals available")
+    if popular_vote_parent_ids is not None:
+        popular_vote_seat_ids = usable_popular_vote_seat_ids(
+            seat_party_vote_totals, popular_vote_parent_ids
+        )
+
+    for seat_id, party_totals in seat_party_vote_totals.items():
+        for party_id, value in party_totals.items():
+            # Keep district-only parties in the projection's party universe.
+            national_party_totals.setdefault(party_id, 0.0)
+            if (
+                popular_vote_seat_ids is not None
+                and seat_id not in popular_vote_seat_ids
+            ):
+                continue
+
             national_party_totals[party_id] += value
             national_total += value
 
@@ -541,9 +627,6 @@ def build_baseline_vote_state(
                 continue
             region_party_totals[region_id][party_id] += value
             region_totals[region_id] += value
-
-    if not seat_party_vote_totals:
-        raise ValueError("No baseline seat-party vote totals available")
 
     baseline_national_shares: dict[int, float] = {}
     if national_total > 0:
@@ -576,6 +659,8 @@ def collect_poll_readings(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
+    *,
+    source: PollSource | None = None,
 ) -> list[PollReading]:
     """Read one map's in-window polls into one weighted :class:`PollReading` each.
 
@@ -589,10 +674,16 @@ def collect_poll_readings(
     and seat-scoped polls of every matchup; filtering is the caller's job
     (:func:`aggregate_national`, and the seat-level averaging that follows it).
     """
-    decay_lambda = math.log(2.0) / max(half_life_days, 0.001)
+    validate_half_life(half_life_days)
+    validate_date_window(since_date, as_of_date)
     readings: list[PollReading] = []
 
-    for poll in db.get_polls_for_map(map_id):
+    polls = (
+        db.get_polls_for_map(map_id)
+        if source is None
+        else (poll for poll in source.polls if poll.map_id == map_id)
+    )
+    for poll in polls:
         if poll.fieldwork_end < since_date or poll.fieldwork_end > as_of_date:
             continue
 
@@ -600,13 +691,17 @@ def collect_poll_readings(
         if days_since < 0:
             continue
 
-        decay_weight = math.exp(-decay_lambda * float(days_since))
-        pollster_weight = float(pollster_weight_by_id.get(poll.pollster_id, 1.0) or 1.0)
+        decay_weight = math.exp(-math.log(2.0) * float(days_since) / half_life_days)
+        pollster_weight = effective_pollster_weight(pollster_weight_by_id.get(poll.pollster_id))
         poll_weight = decay_weight * pollster_weight
         if poll_weight <= 0:
             continue
 
-        rows = db.get_rows_for_poll(poll.id)
+        rows = (
+            db.get_rows_for_poll(poll.id)
+            if source is None
+            else source.rows.get(poll.id, ())
+        )
         if not rows:
             continue
 
@@ -652,6 +747,8 @@ def collect_poll_readings(
 def aggregate_national(
     readings: Iterable[PollReading],
     national_matchup: str | None,
+    *,
+    contributors: list[LatestPollUsage] | None = None,
 ) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
     """Aggregate the national series out of a map's readings.
 
@@ -663,6 +760,8 @@ def aggregate_national(
     Returns ``(weighted_sums, total_weights, latest_poll_usage)`` keyed by
     ``(region_id, party_id)``, the shape :func:`compute_region_diffs` consumes.
     Both maps are defaultdicts, so a party absent from the polls reads as 0.
+    When supplied, ``contributors`` receives only polls adding positive weight
+    to at least one national or regional observation.
     """
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
@@ -671,6 +770,12 @@ def aggregate_national(
     for reading in readings:
         if reading.seat_id is not None or reading.matchup != national_matchup:
             continue
+        if reading.weight <= 0 or not (
+            reading.shares or any(reading.region_shares.values())
+        ):
+            continue
+        if contributors is not None:
+            contributors.append(poll_usage(reading))
 
         for party_id, share in reading.shares.items():
             weighted_sums[(None, party_id)] += share * reading.weight
@@ -680,14 +785,14 @@ def aggregate_national(
                 weighted_sums[(region_id, party_id)] += share * reading.weight
                 total_weights[(region_id, party_id)] += reading.weight
 
-        if latest_poll_usage is None or (
+        if latest_poll_usage is None or latest_poll_key(
             reading.fieldwork_end,
             reading.fieldwork_start,
             reading.poll_id,
-        ) > (
+        ) > latest_poll_key(
             latest_poll_usage.fieldwork_end,
             latest_poll_usage.fieldwork_start,
-            -1,
+            latest_poll_usage.poll_id,
         ):
             latest_poll_usage = poll_usage(reading)
 
@@ -861,10 +966,6 @@ def usable_seat_readings(
       (:func:`matchup_stored_candidate_count`);
     * a party-only series (no ``required`` matchup) names no candidates to miss.
 
-    Only :attr:`PollReading.seat_id`, :attr:`PollReading.candidate_shares` and
-    :attr:`PollReading.candidate_count` are read, so a caller that has no use for
-    the rest — the cap, which only wants dates — may leave them empty.
-
     Args:
         readings: Seat readings already restricted to those each seat is tracked
             on. Which matchup that is belongs to the caller; this function only
@@ -973,6 +1074,7 @@ def aggregate_seat_polls(
     seat_matchups: Mapping[int, str | None],
     national_matchup: str | None,
     policy: SeatMatchupPolicy,
+    contributors: list[LatestPollUsage] | None = None,
 ) -> dict[int, SeatPollAverage]:
     """Average each seat's own polls into one :class:`SeatPollAverage`.
 
@@ -1014,6 +1116,7 @@ def aggregate_seat_polls(
             seat". Absent keys mean no tracked row.
         national_matchup: The scope's national matchup, used under ``"national"``.
         policy: The spec's :data:`SeatMatchupPolicy`.
+        contributors: Optional output list receiving only the admitted polls.
 
     Returns:
         Seat id → average, for every seat with at least one usable or skipped
@@ -1034,7 +1137,7 @@ def aggregate_seat_polls(
 
     for reading in readings:
         seat_id = reading.seat_id
-        if seat_id is None:
+        if seat_id is None or reading.weight <= 0:
             continue
 
         tracked = seat_id in seat_matchups
@@ -1066,14 +1169,14 @@ def aggregate_seat_polls(
             skipped_counts[seat_id] += 1
             continue
 
+        if contributors is not None:
+            contributors.append(poll_usage(reading))
         seat_weights[seat_id] += reading.weight
         seat_counts[seat_id] += 1
         latest = latest_by_seat.get(seat_id)
-        if latest is None or (
-            reading.fieldwork_end,
-            reading.fieldwork_start,
-            reading.poll_id,
-        ) > (latest.fieldwork_end, latest.fieldwork_start, latest.poll_id):
+        if latest is None or latest_poll_key(
+            reading.fieldwork_end, reading.fieldwork_start, reading.poll_id
+        ) > latest_poll_key(latest.fieldwork_end, latest.fieldwork_start, latest.poll_id):
             latest_by_seat[seat_id] = reading
         for party_id, share in decided.items():
             weighted_sums[seat_id][party_id] += share * reading.weight
@@ -1346,12 +1449,12 @@ def project_seat_votes(
                     "party_id": party_id,
                     # Scale the projected share back to a vote count at the seat's baseline
                     # turnout so national totals aggregate turnout-weighted (see docstring).
-                    "vote_total": round((pct / 100.0) * seat_total),
+                    "vote_total": (pct / 100.0) * seat_total,
                     "elected": party_id == winner_party_id,
                 }
             )
 
-    return projected_votes, winners_by_party
+    return recorded_vote_rows(projected_votes), winners_by_party
 
 
 # ── DB reference loading ──────────────────────────────────────────────────────
@@ -1412,7 +1515,7 @@ def build_reference_data(
     party_name_by_id = {party.id: party.name for party in all_parties}
     all_pollsters = db.get_all_pollsters()
     pollster_weight_by_id = {
-        pollster.id: (pollster.weight if pollster.weight is not None else 1.0)
+        pollster.id: effective_pollster_weight(pollster.weight)
         for pollster in all_pollsters
     }
     pollster_name_by_id = {pollster.id: pollster.name for pollster in all_pollsters}
@@ -1581,164 +1684,247 @@ def resolve_poll_scope(db: Database, spec: UsModelSpec) -> PollScope:
     )
 
 
-def _matchup_clause(matchup: str | None) -> ColumnElement[bool]:
-    """``Poll.matchup`` filter that treats ``None`` as "the party-only series"."""
-    return Poll.matchup.is_(None) if matchup is None else Poll.matchup == matchup
+@dataclass(frozen=True, slots=True)
+class SelectedPollWindow:
+    """Averages and the actual contributing polls for one selected window."""
+
+    weighted_sums: dict[tuple[int | None, int], float]
+    total_weights: dict[tuple[int | None, int], float]
+    seat_averages: dict[int, SeatPollAverage]
+    national_contributors: tuple[LatestPollUsage, ...]
+    seat_contributors: tuple[LatestPollUsage, ...]
+
+    @property
+    def contributors(self) -> tuple[LatestPollUsage, ...]:
+        return self.national_contributors + self.seat_contributors
+
+    @property
+    def latest_poll(self) -> LatestPollUsage | None:
+        return latest_poll_usage_of(self.contributors)
 
 
-def _poll_end_dates(db: Database, scope: PollScope, *, include_seat_polls: bool) -> list[date]:
-    """Fieldwork end dates of every poll this run would actually use.
+def collect_poll_window(
+    db: Database,
+    scope: PollScope,
+    *,
+    since_date: date,
+    as_of_date: date,
+    half_life_days: float,
+    include_seat_polls: bool = True,
+    pollster_data: tuple[dict[int, float], dict[int, str]] | None = None,
+    source: PollSource | None = None,
+    seat_admission: tuple[frozenset[int], dict[int, str | None]] | None = None,
+) -> SelectedPollWindow:
+    """Use one admission path for projection, metadata and date selection.
 
-    The as-of cap exists so decay-only drift never invents movement past the last
-    real poll. Once seat polls feed the projection they are real polls too: a
-    Senate race polled a week after the last generic-ballot update genuinely
-    changes the forecast on the day it lands, and a national-only cap would pull
-    ``as_of_date`` back before it and drop it from the window entirely — the
-    seat-blending step would then never see the newest polls in exactly the races
-    it was built for. So the cap covers both series.
-
-    Both halves apply the *same* filters the model does, so a poll it ignores can
-    never move the cap — nor, through :func:`poll_date_bounds`, the rebuild
-    window's start. The national half takes only ``seat_id IS NULL`` polls on the
-    national map carrying the scope's matchup. The seat half takes only
-    seat-scoped polls on the seat map, of a seat the run projects
-    (:attr:`PollScope.projected_seat_ids`), carrying that seat's tracked matchup
-    (the national matchup under the ``"national"`` policy, where a NULL tracked
-    row still opts the seat out) — and then, because the rest of the model's test
-    is not expressible in SQL, hands those polls' rows to the very function the
-    forecast decides with, :func:`usable_seat_readings`. A seat poll that leaves
-    a material candidate's cell blank is discarded by the model, so it does not
-    move the cap either.
-
-    Args:
-        db: Open database handle.
-        scope: The run's resolved :class:`PollScope`.
-        include_seat_polls: ``False`` restores the national-only cap, so
-            ``--ignore-seat-polls`` reproduces the pre-blending projection whole:
-            same window, same weights, same output. The seat query and its
-            companion row query are not run at all.
-
-    Returns:
-        Every qualifying fieldwork end date, unsorted and with duplicates.
+    Materiality is measured only against usable reference readings inside this
+    window. Rejected partial readings remain in the seat diagnostics, but never
+    in the contributors. National explicit-zero observations are evidence;
+    seat polls require a positive decided-vote total before rescaling.
     """
-    national_statement = select(Poll.fieldwork_end).where(
-        Poll.map_id == scope.national_map_id,
-        Poll.seat_id.is_(None),
-        _matchup_clause(scope.national_matchup),
-    )
-
-    # Widened from the end date alone: the materiality predicate needs to know
-    # which poll, which seat and which pairing each date belongs to.
-    seat_statement = select(Poll.id, Poll.seat_id, Poll.matchup, Poll.fieldwork_end).where(
-        Poll.map_id == scope.seat_map_id,
-        Poll.seat_id.is_not(None),
-    )
-    if scope.projected_seat_ids is not None:
-        seat_statement = seat_statement.where(
-            Poll.seat_id.in_(sorted(scope.projected_seat_ids))
-        )
-    if scope.seat_matchup_policy == "national":
-        opted_out = (
-            select(TrackedMatchup.id)
-            .where(
-                TrackedMatchup.map_id == Poll.map_id,
-                TrackedMatchup.seat_id == Poll.seat_id,
-                TrackedMatchup.matchup.is_(None),
-            )
-            .exists()
-        )
-        seat_statement = seat_statement.where(
-            _matchup_clause(scope.national_matchup), ~opted_out
-        )
+    if pollster_data is None:
+        pollsters = db.get_all_pollsters() if source is None else source.pollsters
+        weights = {
+            pollster.id: effective_pollster_weight(pollster.weight)
+            for pollster in pollsters
+        }
+        names = {pollster.id: pollster.name for pollster in pollsters}
     else:
-        seat_statement = seat_statement.join(
-            TrackedMatchup,
-            and_(
-                TrackedMatchup.map_id == Poll.map_id,
-                TrackedMatchup.seat_id == Poll.seat_id,
-            ),
-        ).where(
-            TrackedMatchup.matchup.is_not(None),
-            Poll.matchup == TrackedMatchup.matchup,
+        weights, names = pollster_data
+    national_readings = collect_poll_readings(
+        db,
+        scope.national_map_id,
+        since_date,
+        as_of_date,
+        half_life_days,
+        weights,
+        names,
+        source=source,
+    )
+    national_contributors: list[LatestPollUsage] = []
+    weighted_sums, total_weights, _ = aggregate_national(
+        national_readings, scope.national_matchup, contributors=national_contributors
+    )
+    seat_contributors: list[LatestPollUsage] = []
+    seat_averages: dict[int, SeatPollAverage] = {}
+    if include_seat_polls:
+        seat_readings = (
+            national_readings
+            if scope.seat_map_id == scope.national_map_id
+            else collect_poll_readings(
+                db,
+                scope.seat_map_id,
+                since_date,
+                as_of_date,
+                half_life_days,
+                weights,
+                names,
+                source=source,
+            )
         )
-
-    with db.session() as session:
-        end_dates = list(session.execute(national_statement).scalars().all())
-        if not include_seat_polls:
-            return end_dates
-        seat_polls = session.execute(seat_statement).all()
-        # One companion query for the rows of exactly those polls, re-using the
-        # select above as a subquery so the poll ids never become bind parameters.
-        row_statement = select(
-            PollRow.poll_id, PollRow.party_id, PollRow.percentage, PollRow.candidate_name
-        ).where(
-            PollRow.poll_id.in_(seat_statement.with_only_columns(Poll.id)),
-            PollRow.region_id.is_(None),
+        if seat_admission is None:
+            projected_ids = scope.projected_seat_ids
+            if projected_ids is None:
+                projected_ids = frozenset(
+                    seat.id for seat in fetch_seat_refs(db, scope.seat_map_id)
+                )
+            tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
+            seat_matchups = {
+                int(row.seat_id): row.matchup
+                for row in tracked_rows
+                if row.seat_id is not None
+            }
+        else:
+            projected_ids, seat_matchups = seat_admission
+        seat_averages = aggregate_seat_polls(
+            (reading for reading in seat_readings if reading.seat_id in projected_ids),
+            seat_matchups=seat_matchups,
+            national_matchup=scope.national_matchup,
+            policy=scope.seat_matchup_policy,
+            contributors=seat_contributors,
         )
-        poll_rows = session.execute(row_statement).all()
+    return SelectedPollWindow(
+        weighted_sums,
+        total_weights,
+        seat_averages,
+        tuple(national_contributors),
+        tuple(seat_contributors),
+    )
 
-    # Accumulated exactly as :func:`collect_poll_readings` does, so the predicate
-    # sees the same names and the same row count it would see in a real run.
-    shares_by_poll: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    counts_by_poll: dict[int, int] = defaultdict(int)
-    for poll_id, party_id, percentage, candidate_name in poll_rows:
-        if party_id is None:
-            continue
-        counts_by_poll[poll_id] += 1
-        name = (candidate_name or "").strip().casefold()
-        if name:
-            shares_by_poll[poll_id][name] += float(percentage)
 
-    # Only the fields the predicate reads carry real values; it never looks at a
-    # weight, a party share or a pollster, and the cap has no use for them.
-    readings = [
-        PollReading(
-            poll_id=poll_id,
-            seat_id=seat_id,
-            matchup=matchup,
-            weight=1.0,
-            shares={},
-            region_shares={},
-            pollster="",
-            fieldwork_start=fieldwork_end,
-            fieldwork_end=fieldwork_end,
-            candidate_count=counts_by_poll.get(poll_id, 0),
-            candidate_shares=dict(shares_by_poll.get(poll_id, {})),
+def candidate_poll_date_bounds(
+    db: Database,
+    scope: PollScope,
+    *,
+    since_date: date,
+    as_of_date: date,
+    half_life_days: float,
+    include_seat_polls: bool = True,
+    include_earliest: bool = False,
+) -> tuple[date | None, date | None, SelectedPollWindow | None]:
+    """Select raw endpoints using each candidate's own admission window."""
+    validate_date_window(since_date, as_of_date)
+    validate_half_life(half_life_days)
+    map_ids = [scope.national_map_id]
+    seat_admission: tuple[frozenset[int], dict[int, str | None]] | None = None
+    if include_seat_polls:
+        map_ids.append(scope.seat_map_id)
+        projected_ids = scope.projected_seat_ids
+        if projected_ids is None:
+            projected_ids = frozenset(
+                seat.id for seat in fetch_seat_refs(db, scope.seat_map_id)
+            )
+        tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
+        seat_admission = (
+            projected_ids,
+            {
+                int(row.seat_id): row.matchup
+                for row in tracked_rows
+                if row.seat_id is not None
+            },
         )
-        for poll_id, seat_id, matchup, fieldwork_end in seat_polls
-    ]
-    # The SQL has already pinned every selected poll to the matchup the model
-    # requires of its seat — the seat's ``tracked_matchups`` row under
-    # ``"per_seat"``, the national matchup under ``"national"`` — so each row
-    # carries the resolved requirement with it.
-    required_by_seat: dict[int, str | None] = {
-        seat_id: matchup for _, seat_id, matchup, _ in seat_polls
-    }
+    source = PollSource.load(db, map_ids, as_of_date)
+    return select_poll_endpoint(
+        (poll.fieldwork_end for poll in source.polls),
+        as_of_date,
+        since_date,
+        lambda since, end: collect_poll_window(
+            db,
+            scope,
+            since_date=since,
+            as_of_date=end,
+            half_life_days=half_life_days,
+            include_seat_polls=include_seat_polls,
+            source=source,
+            seat_admission=seat_admission,
+        ),
+        lambda result, end: (
+            result is not None
+            and any(poll.fieldwork_end == end for poll in result.contributors)
+        ),
+        include_earliest=include_earliest,
+    )
 
-    usable, _blocking = usable_seat_readings(readings, required_by_seat)
-    end_dates.extend(reading.fieldwork_end for reading in usable)
-    return end_dates
+
+def _poll_end_dates(
+    db: Database,
+    scope: PollScope,
+    *,
+    include_seat_polls: bool,
+    since_date: date | None = None,
+    as_of_date: date | None = None,
+    half_life_days: float | None = None,
+) -> list[date]:
+    """Endpoints admitted by the same averaging path as a projection.
+
+    Explicit windows use the projection's decay (30 days unless supplied).
+    Without a window, retain the historical all-date query: effectively disable
+    decay with the largest finite half-life so old endpoints cannot underflow
+    away. Actual pollster weights, party rows and admission rules still apply.
+    """
+    if (since_date is None) != (as_of_date is None):
+        raise ValueError("since_date and as_of_date must be supplied together")
+    explicit_window = since_date is not None
+    if half_life_days is not None and not explicit_window:
+        raise ValueError("half_life_days requires an explicit polling window")
+    window = collect_poll_window(
+        db,
+        scope,
+        since_date=since_date or date.min,
+        as_of_date=as_of_date or date.max,
+        half_life_days=(
+            half_life_days
+            if half_life_days is not None
+            else 30.0
+            if explicit_window
+            else sys.float_info.max
+        ),
+        include_seat_polls=include_seat_polls,
+    )
+    return [poll.fieldwork_end for poll in window.contributors]
 
 
 def latest_poll_date(
-    db: Database, scope: PollScope, *, include_seat_polls: bool = True
+    db: Database,
+    scope: PollScope,
+    *,
+    include_seat_polls: bool = True,
+    since_date: date | None = None,
+    as_of_date: date | None = None,
+    half_life_days: float | None = None,
 ) -> date | None:
-    """Latest fieldwork end date across every poll the run would use, or ``None``.
-
-    This is the as-of cap — see :func:`_poll_end_dates` for which polls count.
-    """
-    return max(_poll_end_dates(db, scope, include_seat_polls=include_seat_polls), default=None)
+    """Latest admitted endpoint; pass the selected window to bound materiality."""
+    return max(
+        _poll_end_dates(
+            db,
+            scope,
+            include_seat_polls=include_seat_polls,
+            since_date=since_date,
+            as_of_date=as_of_date,
+            half_life_days=half_life_days,
+        ),
+        default=None,
+    )
 
 
 def poll_date_bounds(
-    db: Database, scope: PollScope, *, include_seat_polls: bool = True
+    db: Database,
+    scope: PollScope,
+    *,
+    include_seat_polls: bool = True,
+    since_date: date | None = None,
+    as_of_date: date | None = None,
+    half_life_days: float | None = None,
 ) -> tuple[date | None, date | None]:
-    """``(first, last)`` fieldwork end date across every poll the run would use.
-
-    ``(None, None)`` when the run has no usable polls at all. The first date bounds
-    a ``--rebuild-history`` window the way the last one caps ``as_of_date``.
-    """
-    end_dates = _poll_end_dates(db, scope, include_seat_polls=include_seat_polls)
+    """First and last admitted endpoints, or ``(None, None)`` without evidence."""
+    end_dates = _poll_end_dates(
+        db,
+        scope,
+        include_seat_polls=include_seat_polls,
+        since_date=since_date,
+        as_of_date=as_of_date,
+        half_life_days=half_life_days,
+    )
     return min(end_dates, default=None), max(end_dates, default=None)
 
 
@@ -1766,97 +1952,68 @@ def database_file(db: Database) -> Path:
     return Path(db.config.database_path)
 
 
+def _output_map_id(db: Database, spec: UsModelSpec) -> int:
+    poll_map = db.get_map_by_name(spec.map_name)
+    if poll_map is None:
+        raise ValueError(f"Map not found: {spec.map_name}")
+    return poll_map.id
+
+
 def _election_name_pattern(spec: UsModelSpec, as_of_date: date) -> str:
     """Election name for a given run date, e.g. ``"US House UNS 2026-06-01"``."""
     return f"{spec.election_name_prefix} {as_of_date.isoformat()}"
 
 
 def delete_model_for_as_of_date(
-    spec: UsModelSpec, as_of_date: date, sqlite_path: Path | None = None
+    spec: UsModelSpec,
+    as_of_date: date,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int]:
-    """Delete this type's model election (and its votes) for one date.
-
-    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
-
-    Returns ``(deleted_elections, deleted_votes)``.
-    """
+    """Delete only this model/map/date and its supported legacy run names."""
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    if not sqlite_path.exists():
-        return 0, 0
-
-    name = _election_name_pattern(spec, as_of_date)
-    with sqlite3.connect(sqlite_path) as conn:
-        election_ids = [
-            row[0]
-            for row in conn.execute(
-                "SELECT id FROM elections WHERE name = ? AND type = ?",
-                (name, spec.election_type),
-            ).fetchall()
-        ]
-        if not election_ids:
-            return 0, 0
-        placeholders = ",".join("?" * len(election_ids))
-        deleted_votes = conn.execute(
-            f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        deleted_elections = conn.execute(
-            f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        conn.commit()
-
-    return int(deleted_elections), int(deleted_votes)
+    return delete_outputs(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        as_of_date,
+        as_of_date,
+    )
 
 
 def reset_existing_model_outputs(
-    spec: UsModelSpec, start_date: date, end_date: date, sqlite_path: Path | None = None
+    spec: UsModelSpec,
+    start_date: date,
+    end_date: date,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int, int]:
-    """Clear this type's model elections in ``[start_date, end_date]`` and strip trend rows.
+    """Clear this type/map's dated outputs in the range and reconstruct its trend cache.
 
     ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
-    Returns ``(deleted_elections, deleted_votes, stripped_trend_entries)``.
+    Returns ``(deleted_elections, deleted_votes, stripped_trend_entries)``; the compatibility third field is always zero.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    deleted_elections = 0
-    deleted_votes = 0
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            election_ids: list[int] = []
-            for row in conn.execute(
-                "SELECT id, name FROM elections WHERE type = ?", (spec.election_type,)
-            ).fetchall():
-                parsed = _parse_as_of_from_name(spec, str(row[1] or ""))
-                if parsed is not None and start_date <= parsed <= end_date:
-                    election_ids.append(int(row[0]))
-            if election_ids:
-                placeholders = ",".join("?" * len(election_ids))
-                deleted_votes = conn.execute(
-                    f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                deleted_elections = conn.execute(
-                    f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                conn.commit()
+    if not sqlite_path.exists():
+        return 0, 0, 0
+    validate_trend_scope(
+        sqlite_path, OutputScope(spec.election_type, map_id, spec.election_name_prefix)
+    )
+    deleted_elections, deleted_votes = delete_outputs(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        start_date,
+        end_date,
+    )
 
     stripped = 0
-    if spec.trend_cache_json.exists():
-        with spec.trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        kept: list[dict[str, Any]] = []
-        for entry in entries:
-            try:
-                entry_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
-            except ValueError:
-                kept.append(entry)
-                continue
-            if entry_date < start_date or entry_date > end_date:
-                kept.append(entry)
-            else:
-                stripped += 1
-        if stripped > 0:
-            with spec.trend_cache_json.open("w", encoding="utf-8") as handle:
-                json.dump(kept, handle, separators=(",", ":"))
+    publish_trends(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        spec.trend_cache_json,
+    )
 
     return int(deleted_elections), int(deleted_votes), stripped
 
@@ -1870,39 +2027,31 @@ def persist_projection(
     party_name_by_id: dict[int, str],
     sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
-    """Insert a model election of ``spec.election_type`` and bulk-insert its votes.
+    """Replace this model/map/date and all its vote rows in one transaction.
+
+    An insertion failure restores the previous complete result.
 
     ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
 
     Returns ``(election_name, election_id)``.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    with sqlite3.connect(sqlite_path) as conn:
-        ensure_elections_sqlite_schema(conn)
-        cursor = conn.execute(
-            "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
-            (map_id, as_of_date.year, election_name, spec.election_type, as_of_date.isoformat()),
-        )
-        election_id = cursor.lastrowid
-        if election_id is None:
-            raise RuntimeError("Failed to obtain election id after INSERT")
-        conn.executemany(
-            "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, vote_total, elected) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                (
-                    election_id,
-                    int(row["seat_id"]),
-                    int(row["party_id"]),
-                    party_name_by_id.get(int(row["party_id"]), ""),
-                    float(row["vote_total"]),
-                    int(bool(row["elected"])),
-                )
-                for row in projected_votes
-            ],
-        )
-        conn.commit()
-    return election_name, int(election_id)
+    return replace_output(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        as_of_date,
+        election_name,
+        (
+            OutputVote(
+                seat_id=int(row["seat_id"]),
+                party_id=int(row["party_id"]),
+                candidate_name=party_name_by_id.get(int(row["party_id"]), ""),
+                vote_total=float(row["vote_total"]),
+                elected=bool(row["elected"]),
+            )
+            for row in recorded_vote_rows(projected_votes)
+        ),
+    )
 
 
 def update_trend_cache_json(
@@ -1912,108 +2061,17 @@ def update_trend_cache_json(
     as_of_date: date,
     projected_votes: list[dict[str, Any]],
     seat_ev_by_id: dict[int, int] | None = None,
+    popular_vote_seat_ids: set[int] | None = None,
+    *,
+    sqlite_path: Path | None = None,
+    map_id: int,
 ) -> None:
-    """Merge this run's per-party seat/vote summary into the type's trend JSON.
-
-    Replaces any existing entry for ``as_of_date`` / ``election_id``, then appends a
-    ``{election_id, election_name, as_of_date, parties:{id:{s,v}}}`` entry — unless
-    the projected seat snapshot equals the immediately preceding date's (then the
-    entry is skipped to keep the chart free of flat duplicate points).
-
-    When ``seat_ev_by_id`` gives non-zero electoral votes (the President), each party
-    entry also carries ``"e"`` (electoral votes won) so consumers can chart the EV
-    tally rather than the state count. Chambers without electoral votes omit ``"e"``.
-    """
-    spec.trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
-    seat_ev_by_id = seat_ev_by_id or {}
-
-    vote_totals_by_party: dict[int, float] = defaultdict(float)
-    seats_by_party: dict[int, int] = defaultdict(int)
-    ev_by_party: dict[int, int] = defaultdict(int)
-    for row in projected_votes:
-        party_id = int(row["party_id"])
-        vote_totals_by_party[party_id] += float(row["vote_total"])
-        if bool(row["elected"]):
-            seats_by_party[party_id] += 1
-            ev_by_party[party_id] += seat_ev_by_id.get(int(row["seat_id"]), 0)
-
-    total_votes = sum(vote_totals_by_party.values())
-    has_electoral_votes = sum(ev_by_party.values()) > 0
-
-    def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
-        snapshot: dict[int, int] = {}
-        for pid_str, pdata in (entry.get("parties") or {}).items():
-            try:
-                party_id = int(pid_str)
-                seats = int(pdata.get("s") or 0)
-            except (ValueError, TypeError):
-                continue
-            if party_id > 0 and seats > 0:
-                snapshot[party_id] = seats
-        return tuple(sorted(snapshot.items()))
-
-    def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
-        return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
-
-    existing_entries: list[dict[str, Any]] = []
-    entries_by_date: dict[date, dict[str, Any]] = {}
-    if spec.trend_cache_json.exists():
-        with spec.trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            if str(entry.get("as_of_date") or "").strip() == as_of_date.isoformat():
-                continue
-            if int(entry.get("election_id") or 0) == election_id:
-                continue
-            existing_entries.append(entry)
-            try:
-                parsed_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
-            except ValueError:
-                continue
-            if parsed_date < as_of_date:
-                entries_by_date[parsed_date] = entry
-
-    def party_entry(party_id: int) -> dict[str, float | int]:
-        entry: dict[str, float | int] = {
-            "s": seats_by_party.get(party_id, 0),
-            "v": round((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0, 1)
-            if total_votes > 0
-            else 0.0,
-        }
-        if has_electoral_votes:
-            entry["e"] = ev_by_party.get(party_id, 0)
-        return entry
-
-    new_entry = {
-        "election_id": election_id,
-        "election_name": election_name,
-        "as_of_date": as_of_date.isoformat(),
-        "parties": {str(party_id): party_entry(party_id) for party_id in sorted(vote_totals_by_party.keys())},
-    }
-
-    previous_date = max(entries_by_date.keys(), default=None)
-    previous_snapshot = (
-        seat_snapshot_from_entry(entries_by_date[previous_date])
-        if previous_date is not None
-        else tuple()
+    """Reconstruct the scoped recorded series; projected arguments are compatibility-only."""
+    publish_trends(
+        sqlite_path if sqlite_path is not None else default_sqlite_path(),
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        spec.trend_cache_json,
     )
-    current_snapshot = seat_snapshot_from_party_counts(seats_by_party)
-
-    if previous_date is not None and current_snapshot == previous_snapshot:
-        combined = existing_entries
-        print(
-            "TREND_CACHE_SKIP "
-            f"as_of_date={as_of_date.isoformat()} "
-            f"reason=unchanged_seat_snapshot "
-            f"previous_date={previous_date.isoformat()}"
-        )
-    else:
-        combined = existing_entries + [new_entry]
-
-    combined.sort(key=lambda e: int(e.get("election_id") or 0))
-
-    with spec.trend_cache_json.open("w", encoding="utf-8") as handle:
-        json.dump(combined, handle, separators=(",", ":"))
 
 
 def write_trend_cache_meta(
@@ -2029,7 +2087,6 @@ def write_trend_cache_meta(
     head-to-head); ``None`` for a party-only series, which is what the poll
     tracker shows for the House and Senate.
     """
-    spec.trend_cache_meta_json.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "as_of_date": as_of_date.isoformat(),
         "since_date": since_date.isoformat(),
@@ -2045,8 +2102,11 @@ def write_trend_cache_meta(
             else None
         ),
     }
-    with spec.trend_cache_meta_json.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, separators=(",", ":"))
+    publish_json(
+        payload,
+        spec.trend_cache_meta_json,
+        repair="Rerun this model to regenerate latest-used-poll metadata.",
+    )
 
 
 # ── Backfill bookkeeping ──────────────────────────────────────────────────────
@@ -2064,43 +2124,27 @@ def _parse_as_of_from_name(spec: UsModelSpec, name: str) -> date | None:
         return None
 
 
-def existing_trend_dates(spec: UsModelSpec, sqlite_path: Path | None = None) -> set[date]:
-    """Return every ``as_of_date`` already simulated for this type.
+def existing_trend_dates(
+    spec: UsModelSpec,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
+) -> set[date]:
+    """Return successful dates from the scoped SQLite archive.
 
-    Combines the trend JSON (which omits deduplicated dates) with the SQLite
-    election archive (which records every run) so backfill never re-runs a date.
-    ``sqlite_path`` defaults to :func:`default_sqlite_path`, resolved now.
+    Cache dates lack model/map ownership and cannot establish a completed run.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    dates: set[date] = set()
-
-    if spec.trend_cache_json.exists():
-        with spec.trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            raw = str(entry.get("as_of_date") or "").strip()
-            if not raw:
-                continue
-            try:
-                dates.add(date.fromisoformat(raw))
-            except ValueError:
-                continue
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            rows = conn.execute(
-                "SELECT name FROM elections WHERE type = ?", (spec.election_type,)
-            ).fetchall()
-        for (name,) in rows:
-            parsed = _parse_as_of_from_name(spec, str(name or ""))
-            if parsed is not None:
-                dates.add(parsed)
-
-    return dates
+    return output_dates(
+        sqlite_path, OutputScope(spec.election_type, map_id, spec.election_name_prefix)
+    )
 
 
 def dates_to_run_for_cfg(
-    cfg: UsSimulationConfig, sqlite_path: Path | None = None
+    cfg: UsSimulationConfig,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> list[date]:
     """Determine which dates to simulate: fill any gap up to ``as_of_date``.
 
@@ -2110,7 +2154,7 @@ def dates_to_run_for_cfg(
     if cfg.dry_run:
         return [cfg.as_of_date]
 
-    existing = existing_trend_dates(cfg.spec, sqlite_path)
+    existing = existing_trend_dates(cfg.spec, sqlite_path, map_id=map_id)
     previous_dates = [value for value in existing if value < cfg.as_of_date]
     if not previous_dates:
         return [cfg.as_of_date]
@@ -2130,7 +2174,10 @@ def dates_to_run_for_cfg(
 
 
 def run_simulation(
-    db: Database, cfg: UsSimulationConfig
+    db: Database,
+    cfg: UsSimulationConfig,
+    *,
+    poll_window: SelectedPollWindow | None = None,
 ) -> tuple[
     str,
     list[dict[str, Any]],
@@ -2168,7 +2215,14 @@ def run_simulation(
         pollster_name_by_id,
     ) = build_reference_data(db, poll_map.id, spec.seat_name_allowlist)
 
-    seat_id_filter = {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None
+    seat_id_filter = (
+        {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None
+    )
+    popular_vote_parent_ids = (
+        seat_parent_ids(seats)
+        if spec.election_type == "us_presidential_model"
+        else None
+    )
 
     (
         seat_party_vote_totals,
@@ -2181,20 +2235,27 @@ def run_simulation(
         region_by_seat_id,
         seat_id_filter,
         resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
+        popular_vote_parent_ids=popular_vote_parent_ids,
+    )
+    popular_vote_seat_ids = (
+        usable_popular_vote_seat_ids(seat_party_vote_totals, popular_vote_parent_ids)
+        if popular_vote_parent_ids is not None
+        else None
     )
 
-    national_readings = collect_poll_readings(
-        db,
-        scope.national_map_id,
-        cfg.since_date,
-        cfg.as_of_date,
-        cfg.half_life_days,
-        pollster_weight_by_id,
-        pollster_name_by_id,
-    )
-    weighted_sums, total_weights, latest_poll_usage = aggregate_national(
-        national_readings, scope.national_matchup
-    )
+    if poll_window is None:
+        poll_window = collect_poll_window(
+            db,
+            scope,
+            since_date=cfg.since_date,
+            as_of_date=cfg.as_of_date,
+            half_life_days=cfg.half_life_days,
+            include_seat_polls=not cfg.ignore_seat_polls,
+            pollster_data=(pollster_weight_by_id, pollster_name_by_id),
+        )
+    weighted_sums = poll_window.weighted_sums
+    total_weights = poll_window.total_weights
+    latest_poll_usage = poll_window.latest_poll
 
     party_universe, region_swings, region_diff_rows = compute_region_diffs(
         seats,
@@ -2213,38 +2274,7 @@ def run_simulation(
     seat_averages: dict[int, SeatPollAverage] = {}
     seat_poll_diagnostics: list[str] = []
     if not cfg.ignore_seat_polls:
-        # The House and the President poll seats on the same map as their national
-        # series, so re-reading it would be a second pass over the same rows.
-        seat_readings = (
-            national_readings
-            if scope.seat_map_id == scope.national_map_id
-            else collect_poll_readings(
-                db,
-                scope.seat_map_id,
-                cfg.since_date,
-                cfg.as_of_date,
-                cfg.half_life_days,
-                pollster_weight_by_id,
-                pollster_name_by_id,
-            )
-        )
-        tracked_rows = db.get_tracked_matchups_for_map(scope.seat_map_id)
-        seat_averages = {
-            seat_id: average
-            for seat_id, average in aggregate_seat_polls(
-                seat_readings,
-                seat_matchups={
-                    int(row.seat_id): row.matchup
-                    for row in tracked_rows
-                    if row.seat_id is not None
-                },
-                national_matchup=scope.national_matchup,
-                policy=scope.seat_matchup_policy,
-            ).items()
-            # A seat off this run's allowlist (a Class-1 Senate race) is polled but
-            # not projected, so it must not show up in the diagnostics either.
-            if seat_id in seat_name_by_id
-        }
+        seat_averages = poll_window.seat_averages
         # A candidate who exists only in seat polls — Nebraska's independent, with
         # no 2020 baseline and no national generic-ballot line — is otherwise
         # outside the party universe, so neither the blend nor the projection would
@@ -2277,24 +2307,18 @@ def run_simulation(
         seat_swings=seat_swings,
     )
 
-    # The as-of cap counts seat polls, so the "latest poll used" must too, or the
-    # meta could read as_of=09-15 beside a snippet dated 09-01.
-    latest_poll_usage = latest_poll_usage_of(
-        [
-            latest_poll_usage,
-            *(average.latest_poll for _seat_id, average in sorted(seat_averages.items())),
-        ]
-    )
-
     election_name = _election_name_pattern(spec, cfg.as_of_date)
 
     # Electoral votes won per party (by name), non-zero only for the President.
     seat_ev_by_id = {seat.id: seat.electoral_votes for seat in seats}
+    summary = summarize_votes(
+        projected_votes,
+        popular_vote_seat_ids=popular_vote_seat_ids,
+        seat_ev_by_id=seat_ev_by_id,
+    )
     ev_by_party: dict[str, int] = defaultdict(int)
-    for row in projected_votes:
-        if bool(row["elected"]):
-            party_id = int(row["party_id"])
-            ev_by_party[party_name_by_id.get(party_id, str(party_id))] += seat_ev_by_id.get(int(row["seat_id"]), 0)
+    for party_id, electoral_votes in summary.electoral_votes_by_party.items():
+        ev_by_party[party_name_by_id.get(party_id, str(party_id))] += electoral_votes
 
     if cfg.dry_run:
         return (
@@ -2308,7 +2332,10 @@ def run_simulation(
         )
 
     sqlite_path = database_file(db)
-    delete_model_for_as_of_date(spec, cfg.as_of_date, sqlite_path)
+    validate_trend_scope(
+        sqlite_path,
+        OutputScope(spec.election_type, poll_map.id, spec.election_name_prefix),
+    )
     persisted_name, persisted_election_id = persist_projection(
         spec,
         poll_map.id,
@@ -2319,7 +2346,15 @@ def run_simulation(
         sqlite_path,
     )
     update_trend_cache_json(
-        spec, persisted_election_id, persisted_name, cfg.as_of_date, projected_votes, seat_ev_by_id
+        spec,
+        persisted_election_id,
+        persisted_name,
+        cfg.as_of_date,
+        projected_votes,
+        seat_ev_by_id,
+        popular_vote_seat_ids,
+        sqlite_path=database_file(db),
+        map_id=poll_map.id,
     )
 
     return (
@@ -2381,8 +2416,7 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
     """
     start_date = date.fromisoformat(args.start_date)
     end_date = date.fromisoformat(args.end_date)
-    if end_date < start_date:
-        raise ValueError("--end-date must be on or after --start-date")
+    validate_date_range(start_date, end_date)
 
     run_retrospective_range(
         db,
@@ -2392,6 +2426,20 @@ def run_retrospective(db: Database, spec: UsModelSpec, args: argparse.Namespace)
         end_date=end_date,
         lookback_days=args.lookback_days,
         reset_existing=bool(args.reset_existing),
+    )
+
+
+def _validate_history_inputs(db: Database, spec: UsModelSpec) -> None:
+    """Resolve static inputs before a historical batch can publish or replace outputs."""
+    poll_map, baseline = resolve_simulation_scope(db, spec)
+    resolve_poll_scope(db, spec)
+    seats = fetch_seat_refs(db, poll_map.id, spec.seat_name_allowlist)
+    build_baseline_vote_state(
+        db,
+        baseline.id,
+        {seat.id: seat.region_id for seat in seats},
+        {seat.id for seat in seats} if spec.seat_name_allowlist is not None else None,
+        resolve_seat_baselines(db, poll_map.id, seats, spec.seat_baseline_overrides),
     )
 
 
@@ -2414,67 +2462,74 @@ def run_retrospective_range(
     Two things are passed separately because a rebuild must not take them from
     the backfill flags: ``lookback_days`` (a rebuild reuses the single-date run's
     ``--since-*`` window, so rebuilt points match the ones the daily run writes,
-    not ``--lookback-days``' 365) and ``reset_existing`` (a rebuild always clears
-    the range it replaces, whatever ``--no-reset-existing`` says).
+    not ``--lookback-days``' 365) and ``reset_existing`` (a compatibility flag;
+    every requested date is recomputed without deleting previous results first).
 
     Raises:
         ValueError: On an invalid date range, negative lookback, or non-positive half-life.
     """
-    if end_date < start_date:
-        raise ValueError("end_date must be on or after start_date")
-    if lookback_days < 0:
-        raise ValueError("--lookback-days must be zero or greater")
-    if args.half_life_days <= 0:
-        raise ValueError("--half-life-days must be greater than zero")
+    validate_date_range(start_date, end_date)
+    validate_day_count(lookback_days, "--lookback-days")
+    validate_half_life(args.half_life_days)
+    validate_prior_weight(args.seat_prior_weight)
 
-    if reset_existing and not args.dry_run:
-        deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
-            spec, start_date, end_date, database_file(db)
-        )
-        print(
-            f"RESET deleted_elections={deleted_elections} "
-            f"deleted_votes={deleted_votes} stripped_trend_rows={stripped}"
-        )
-    elif reset_existing and args.dry_run:
-        print("RESET skipped for dry-run mode")
+    _validate_history_inputs(db, spec)
 
-    current = start_date
-    success_count = 0
-    failed_count = 0
-    failures: list[tuple[str, str]] = []
-
-    while current <= end_date:
-        try:
-            cfg = UsSimulationConfig(
-                spec=spec,
-                as_of_date=current,
-                since_date=current - timedelta(days=lookback_days),
-                half_life_days=args.half_life_days,
-                dry_run=args.dry_run,
-                seat_prior_weight=args.seat_prior_weight,
-                ignore_seat_polls=args.ignore_seat_polls,
+    with trend_batch(
+        database_file(db),
+        OutputScope(
+            spec.election_type, _output_map_id(db, spec), spec.election_name_prefix
+        ),
+        spec.trend_cache_json,
+        enabled=not args.dry_run,
+    ):
+        if reset_existing:
+            print(
+                "RESET skipped for dry-run mode"
+                if args.dry_run
+                else "RESET recomputing dates; previous results retained until replacement succeeds"
             )
-            election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
-            success_count += 1
-            if args.progress_every > 0 and success_count % args.progress_every == 0:
-                print(
-                    f"PROGRESS success={success_count} failed={failed_count} "
-                    f"as_of={current.isoformat()} election={election_name} rows={len(projected_votes)}"
-                )
-        except Exception as exc:  # noqa: BLE001 — surfaced per-date, optionally fatal
-            failed_count += 1
-            failures.append((current.isoformat(), str(exc)))
-            print(f"ERROR as_of={current.isoformat()} err={exc}")
-            if not args.continue_on_error:
-                raise
-        current += timedelta(days=1)
 
-    print("SUMMARY")
-    print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
-    print(f"LOOKBACK_DAYS={lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
-    print(f"DRY_RUN={args.dry_run} SUCCESS={success_count} FAILED={failed_count}")
-    for when, message in failures:
-        print(f"FAILURE {when}\t{message}")
+        current = start_date
+        success_count = 0
+        failed_count = 0
+        failures: list[tuple[str, str]] = []
+
+        while current <= end_date:
+            try:
+                cfg = UsSimulationConfig(
+                    spec=spec,
+                    as_of_date=current,
+                    since_date=current - timedelta(days=lookback_days),
+                    half_life_days=args.half_life_days,
+                    dry_run=args.dry_run,
+                    seat_prior_weight=args.seat_prior_weight,
+                    ignore_seat_polls=args.ignore_seat_polls,
+                )
+                election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
+                success_count += 1
+                if args.progress_every > 0 and success_count % args.progress_every == 0:
+                    print(
+                        f"PROGRESS success={success_count} failed={failed_count} "
+                        f"as_of={current.isoformat()} election={election_name} rows={len(projected_votes)}"
+                    )
+            except Exception as exc:  # noqa: BLE001 — surfaced per-date, optionally fatal
+                failed_count += 1
+                failures.append((current.isoformat(), str(exc)))
+                print(f"ERROR as_of={current.isoformat()} err={exc}")
+                if not args.continue_on_error:
+                    raise
+            current += timedelta(days=1)
+
+        print("SUMMARY")
+        print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
+        print(f"LOOKBACK_DAYS={lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
+        print(f"DRY_RUN={args.dry_run} SUCCESS={success_count} FAILED={failed_count}")
+        for when, message in failures:
+            print(f"FAILURE {when}\t{message}")
+
+        if failures:
+            raise HistoryRecomputationError(failures)
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -2491,18 +2546,23 @@ def _non_negative_float(raw: str) -> float:
         value = float(raw)
     except ValueError as err:
         raise argparse.ArgumentTypeError(f"expected a number, got {raw!r}") from err
-    if math.isnan(value) or value < 0.0:
-        raise argparse.ArgumentTypeError(f"must be zero or greater, got {raw!r}")
-    return value
+    try:
+        return validate_prior_weight(value)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(str(err)) from err
 
 
 def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     """Build the shared CLI parser for a runner, defaulted from ``spec``."""
     parser = argparse.ArgumentParser(description=f"Run the {spec.election_name_prefix} forecast model.")
     parser.add_argument("--half-life-days", type=float, default=30.0)
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Compute without database or file writes"
+    )
     # Single-date flags
-    parser.add_argument("--as-of-date", default=None, help="Upper-bound poll date (YYYY-MM-DD)")
+    parser.add_argument(
+        "--as-of-date", default=None, help="Upper-bound poll date (YYYY-MM-DD)"
+    )
     parser.add_argument("--as-of-days-back", type=int, default=0)
     parser.add_argument("--since-date", default=None, help="Lower-bound poll date (YYYY-MM-DD)")
     parser.add_argument("--since-days-back", type=int, default=30)
@@ -2514,7 +2574,7 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
         "--reset-existing",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Clear existing model outputs in the date range before backfilling (default: enabled)",
+        help="Recompute dates, retaining previous results until each replacement succeeds (default: enabled)",
     )
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--progress-every", type=int, default=25)
@@ -2522,7 +2582,7 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
         "--rebuild-history",
         action="store_true",
         help=(
-            "Before the normal run, recompute every date already in the trend series. "
+            "Before the normal run, recompute every date stored in SQLite within the poll window. "
             "Use after a change that moves the whole history — a new tracked matchup, "
             "a seat baseline override, or the Senate specials joining the field. "
             "It picks its own range and as-of date, so it cannot be combined with "
@@ -2551,19 +2611,9 @@ def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
 
 def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSimulationConfig:
     """Construct a single-date :class:`UsSimulationConfig` from CLI args."""
-    today = date.today()
-    as_of_date = (
-        date.fromisoformat(args.as_of_date)
-        if args.as_of_date
-        else today - timedelta(days=max(0, int(args.as_of_days_back)))
-    )
-    since_date = (
-        date.fromisoformat(args.since_date)
-        if args.since_date
-        else today - timedelta(days=max(0, int(args.since_days_back)))
-    )
-    if since_date > as_of_date:
-        raise ValueError("--since-days-back/--since-date must be older than or equal to as-of")
+    validate_half_life(args.half_life_days)
+    validate_prior_weight(args.seat_prior_weight)
+    since_date, as_of_date = single_date_window(args, date.today())
     return UsSimulationConfig(
         spec=spec,
         as_of_date=as_of_date,
@@ -2610,8 +2660,10 @@ def _rebuild_history(
         print("REBUILD-HISTORY skipped for dry-run mode")
         return
 
+    _validate_history_inputs(db, spec)
     sqlite_path = database_file(db)
-    existing = existing_trend_dates(spec, sqlite_path)
+    map_id = _output_map_id(db, spec)
+    existing = existing_trend_dates(spec, sqlite_path, map_id=map_id)
 
     window = rebuild_window(existing, first_poll, cfg.as_of_date)
     if window is None:
@@ -2620,21 +2672,33 @@ def _rebuild_history(
             return
         window = (first_poll, cfg.as_of_date)
 
-    _drop_points_outside(
-        spec, existing, keep_from=first_poll, keep_to=cfg.as_of_date, sqlite_path=sqlite_path
-    )
+    with trend_batch(
+        sqlite_path,
+        OutputScope(spec.election_type, map_id, spec.election_name_prefix),
+        spec.trend_cache_json,
+    ):
+        start_date, end_date = window
+        print(
+            f"REBUILD-HISTORY from={start_date.isoformat()} to={end_date.isoformat()}"
+        )
+        run_retrospective_range(
+            db,
+            spec,
+            args,
+            start_date=start_date,
+            end_date=end_date,
+            lookback_days=lookback_days,
+            reset_existing=True,
+        )
 
-    start_date, end_date = window
-    print(f"REBUILD-HISTORY from={start_date.isoformat()} to={end_date.isoformat()}")
-    run_retrospective_range(
-        db,
-        spec,
-        args,
-        start_date=start_date,
-        end_date=end_date,
-        lookback_days=lookback_days,
-        reset_existing=True,
-    )
+        _drop_points_outside(
+            spec,
+            existing,
+            keep_from=first_poll,
+            keep_to=cfg.as_of_date,
+            sqlite_path=sqlite_path,
+            map_id=map_id,
+        )
 
 
 def _drop_points_outside(
@@ -2644,6 +2708,7 @@ def _drop_points_outside(
     keep_from: date | None,
     keep_to: date,
     sqlite_path: Path,
+    map_id: int,
 ) -> None:
     """Delete the model elections and trend rows a rebuild will not recompute.
 
@@ -2670,12 +2735,16 @@ def _drop_points_outside(
         ranges.append(("before", dates[0], keep_from - timedelta(days=1)))
     for side, start_date, end_date in ranges:
         deleted_elections, deleted_votes, stripped = reset_existing_model_outputs(
-            spec, start_date, end_date, sqlite_path
+            spec,
+            start_date,
+            end_date,
+            sqlite_path,
+            map_id=map_id,
         )
         print(
             f"REBUILD-HISTORY dropped {side} from={start_date.isoformat()} "
             f"to={end_date.isoformat()} deleted_elections={deleted_elections} "
-            f"deleted_votes={deleted_votes} stripped_trend_rows={stripped}"
+            f"deleted_votes={deleted_votes} cache=database"
         )
 
 
@@ -2718,6 +2787,10 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                     "its own range from the existing trend series and its own as-of date "
                     "from the latest poll"
                 )
+    try:
+        validate_run_arguments(args, date.today())
+    except ValueError as err:
+        parser.error(str(err))
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
 
     # Resolved first, so a president with no matchup writes no election, no trend
@@ -2728,22 +2801,32 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
         print(f"ERROR {exc}", file=sys.stderr)
         return 2
 
+    if not args.dry_run:
+        validate_output_target(spec.trend_cache_json, database=database_file(db))
+        if not (args.start_date and args.end_date):
+            validate_output_target(spec.trend_cache_meta_json, database=database_file(db))
+
     if args.start_date and args.end_date:
         run_retrospective(db, spec, args)
         return 0
 
     cfg = _build_config_from_args(spec, args)
 
-    first_poll, latest_end = poll_date_bounds(
-        db, scope, include_seat_polls=not cfg.ignore_seat_polls
+    first_poll, latest_end, selected_polls = candidate_poll_date_bounds(
+        db,
+        scope,
+        since_date=cfg.since_date,
+        as_of_date=cfg.as_of_date,
+        half_life_days=cfg.half_life_days,
+        include_seat_polls=not cfg.ignore_seat_polls,
+        include_earliest=args.rebuild_history,
     )
     if latest_end is not None and cfg.as_of_date > latest_end:
         print(f"CAPPING as_of_date {cfg.as_of_date.isoformat()} → {latest_end.isoformat()}")
-        shift = cfg.as_of_date - latest_end
         cfg = UsSimulationConfig(
             spec=spec,
             as_of_date=latest_end,
-            since_date=cfg.since_date - shift,
+            since_date=candidate_since(latest_end, cfg.as_of_date - cfg.since_date),
             half_life_days=cfg.half_life_days,
             dry_run=cfg.dry_run,
             seat_prior_weight=cfg.seat_prior_weight,
@@ -2755,52 +2838,72 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     if args.rebuild_history:
         _rebuild_history(db, spec, args, cfg, first_poll=first_poll, lookback_days=lookback_days)
 
-    run_dates = dates_to_run_for_cfg(cfg, database_file(db))
+    run_dates = dates_to_run_for_cfg(
+        cfg, database_file(db), map_id=_output_map_id(db, spec)
+    )
     if len(run_dates) > 1:
         print(f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}")
 
     latest_poll_usage: LatestPollUsage | None = None
 
-    for index, run_date in enumerate(run_dates, start=1):
-        run_cfg = UsSimulationConfig(
-            spec=spec,
-            as_of_date=run_date,
-            since_date=run_date - timedelta(days=lookback_days),
-            half_life_days=cfg.half_life_days,
-            dry_run=cfg.dry_run,
-            seat_prior_weight=cfg.seat_prior_weight,
-            ignore_seat_polls=cfg.ignore_seat_polls,
-        )
-        (
-            election_name,
-            projected_votes,
-            _,
-            winners_by_party,
-            latest_poll_usage,
-            ev_by_party,
-            seat_poll_diagnostics,
-        ) = run_simulation(db, run_cfg)
-        seat_ids = {int(row["seat_id"]) for row in projected_votes}
+    with trend_batch(
+        database_file(db),
+        OutputScope(
+            spec.election_type, _output_map_id(db, spec), spec.election_name_prefix
+        ),
+        spec.trend_cache_json,
+        enabled=not cfg.dry_run,
+    ):
+        for index, run_date in enumerate(run_dates, start=1):
+            run_cfg = UsSimulationConfig(
+                spec=spec,
+                as_of_date=run_date,
+                since_date=run_date - timedelta(days=lookback_days),
+                half_life_days=cfg.half_life_days,
+                dry_run=cfg.dry_run,
+                seat_prior_weight=cfg.seat_prior_weight,
+                ignore_seat_polls=cfg.ignore_seat_polls,
+            )
+            (
+                election_name,
+                projected_votes,
+                _,
+                winners_by_party,
+                latest_poll_usage,
+                ev_by_party,
+                seat_poll_diagnostics,
+            ) = run_simulation(
+                db,
+                run_cfg,
+                poll_window=selected_polls if run_date == cfg.as_of_date else None,
+            )
+            seat_ids = {int(row["seat_id"]) for row in projected_votes}
 
-        print(f"{spec.election_name_prefix} projection complete")
-        print(f"As-of date: {run_cfg.as_of_date.isoformat()}  since: {run_cfg.since_date.isoformat()}")
-        print(f"Election: {election_name}  projected seats: {len(seat_ids)}")
-        for line in seat_poll_diagnostics:
-            print(line)
-        if len(run_dates) > 1:
-            print(f"Backfill progress: {index}/{len(run_dates)}")
-        snippet = latest_poll_snippet(latest_poll_usage)
-        if snippet:
-            print(snippet)
-        # For the President the headline tally is electoral votes; show EV (with the
-        # states/units won in parentheses). Other chambers just list seats won.
-        if sum(ev_by_party.values()) > 0:
-            for party_name, ev in sorted(ev_by_party.items(), key=lambda kv: (-kv[1], kv[0])):
-                if ev:
-                    print(f"- {party_name}: {ev} EV ({winners_by_party.get(party_name, 0)} states/units)")
-        else:
-            for party_name, seats in winners_by_party.most_common(8):
-                print(f"- {party_name}: {seats}")
+            print(f"{spec.election_name_prefix} projection complete")
+            print(
+                f"As-of date: {run_cfg.as_of_date.isoformat()}  since: {run_cfg.since_date.isoformat()}"
+            )
+            print(f"Election: {election_name}  projected seats: {len(seat_ids)}")
+            for line in seat_poll_diagnostics:
+                print(line)
+            if len(run_dates) > 1:
+                print(f"Backfill progress: {index}/{len(run_dates)}")
+            snippet = latest_poll_snippet(latest_poll_usage)
+            if snippet:
+                print(snippet)
+            # For the President the headline tally is electoral votes; show EV (with the
+            # states/units won in parentheses). Other chambers just list seats won.
+            if sum(ev_by_party.values()) > 0:
+                for party_name, ev in sorted(
+                    ev_by_party.items(), key=lambda kv: (-kv[1], kv[0])
+                ):
+                    if ev:
+                        print(
+                            f"- {party_name}: {ev} EV ({winners_by_party.get(party_name, 0)} states/units)"
+                        )
+            else:
+                for party_name, seats in winners_by_party.most_common(8):
+                    print(f"- {party_name}: {seats}")
 
     if cfg.as_of_date not in run_dates:
         meta_cfg = UsSimulationConfig(
@@ -2812,7 +2915,9 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
         )
-        _, _, _, _, latest_poll_usage, _, _ = run_simulation(db, meta_cfg)
+        _, _, _, _, latest_poll_usage, _, _ = run_simulation(
+            db, meta_cfg, poll_window=selected_polls
+        )
 
     if not cfg.dry_run:
         write_trend_cache_meta(

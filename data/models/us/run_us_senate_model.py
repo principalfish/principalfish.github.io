@@ -42,6 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _common import UsModelSpec, main_for_spec
+from model_support.trends import default_trend_path
 
 # Importable because ``_common`` (above) puts ``data/`` on the path, as it does for
 # its own ``scripts.export.naming`` import. The export's parser is the one rule
@@ -177,9 +178,11 @@ SPEC = UsModelSpec(
     baseline_election_name="2020 US Senate Election",
     election_type="us_senate_model",
     election_name_prefix="US Senate UNS",
-    trend_cache_json=RESULTS_DIR / "us-senate-trends.json",
+    trend_cache_json=default_trend_path("us-senate"),
     trend_cache_meta_json=RESULTS_DIR / "us-senate-trends_meta.json",
-    seat_name_allowlist=senate_field_allowlist(class2_state_allowlist(), SENATE_SPECIALS),
+    seat_name_allowlist=senate_field_allowlist(
+        class2_state_allowlist(), SENATE_SPECIALS
+    ),
     # The Senate has no national series of its own: its national swing is the
     # House generic ballot, polled once and stored on the House map.
     national_poll_map_name="US House Districts 2024",

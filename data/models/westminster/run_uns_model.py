@@ -7,12 +7,10 @@ import argparse
 import csv
 import json
 import math
-import re
-import sqlite3
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -24,7 +22,6 @@ REPO_ROOT = DATA_DIR.parent
 SCRIPTS_DIR = DATA_DIR / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
-TREND_CACHE_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends.json"
 TREND_CACHE_META_JSON = REPO_ROOT / "electionmaps" / "data" / "results" / "model_output_trends_meta.json"
 # Default baseline election the projection swings from (override with --baseline-election-name).
 # Bump to the latest general election once it lands. Mirrors Holyrood's BASELINE_ELECTION_NAME.
@@ -33,8 +30,41 @@ if str(DATA_DIR) not in sys.path:
     sys.path.insert(0, str(DATA_DIR))
 
 from config import DatabaseConfig
-from db import Database, ensure_elections_sqlite_schema
+from db import Database
+from model_support.history import HistoryRecomputationError
+from model_support.io import publish_json, validate_output_target
+from model_support.trends import (
+    default_trend_path,
+    publish_trends,
+    trend_batch,
+    validate_trend_scope,
+)
+from model_support.persistence import (
+    OutputScope,
+    OutputVote,
+    delete_outputs,
+    output_dates,
+    replace_output,
+)
+from model_support.cli import (
+    single_date_window,
+    validate_date_range,
+    validate_date_window,
+    validate_day_count,
+    validate_half_life,
+    validate_run_arguments,
+)
+from model_support.polling import (
+    PollAggregation,
+    PollContributor,
+    PollSource,
+    candidate_since,
+    select_poll_endpoint,
+    effective_pollster_weight,
+)
 from models import Election, Map, Region
+
+TREND_CACHE_JSON = default_trend_path("westminster")
 
 
 def default_sqlite_path() -> Path:
@@ -56,6 +86,13 @@ def database_file(db: Database) -> Path:
     same database it read its polls and baseline from.
     """
     return Path(db.config.database_path)
+
+
+def _output_map_id(db: Database, map_name: str) -> int:
+    poll_map = db.get_map_by_name(map_name)
+    if poll_map is None:
+        raise ValueError(f"Map not found: {map_name}")
+    return poll_map.id
 
 
 # Merge "Other" (named independents, id=7) into "Others" (catch-all aggregate, id=15)
@@ -94,6 +131,10 @@ class SimulationConfig:
     output_csv: str | None
     dry_run: bool
 
+    def __post_init__(self) -> None:
+        validate_half_life(self.half_life_days)
+        validate_date_window(self.since_date, self.as_of_date)
+
 
 @dataclass
 class SeatRef:
@@ -127,64 +168,29 @@ class LatestPollUsage:
     pollster: str
     fieldwork_start: date
     fieldwork_end: date
+    poll_id: int = field(default=-1, compare=False)
 
 
 def existing_trend_dates(
-    trend_cache_json: Path | None = None, sqlite_path: Path | None = None
+    trend_cache_json: Path | None = None,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> set[date]:
-    """Return all ``as_of_date`` values that have already been simulated.
+    """Return successful dates from the scoped SQLite archive.
 
-    Combines dates from the trend cache JSON with dates derived from the SQLite
-    archive. The JSON only contains dates whose seat snapshot differed from the
-    previous entry (duplicates are skipped), so using it alone would cause
-    gap-filling re-runs for those skipped dates on the next import. The SQLite
-    archive records every run regardless of deduplication, so including it gives
-    a complete picture of which dates have already been processed.
-
-    Args:
-        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
-            module's ``TREND_CACHE_JSON`` when called.
-        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
-            configured database when called.
-
-    Returns:
-        A set of ``date`` objects for which a simulation has already been run.
-        Returns an empty set if neither source exists.
+    Cache dates lack model/map ownership and cannot establish a completed run.
+    The cache path argument remains for compatibility.
     """
-    trend_cache_json = (
-        trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
-    )
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    dates: set[date] = set()
-
-    if trend_cache_json.exists():
-        with trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            raw = str(entry.get("as_of_date") or "").strip()
-            if not raw:
-                continue
-            try:
-                dates.add(date.fromisoformat(raw))
-            except ValueError:
-                continue
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            rows = conn.execute("SELECT name FROM elections").fetchall()
-        for (name,) in rows:
-            m = re.match(r"UNS (\d{4}-\d{2}-\d{2})", name or "")
-            if m:
-                try:
-                    dates.add(date.fromisoformat(m.group(1)))
-                except ValueError:
-                    continue
-
-    return dates
+    return output_dates(sqlite_path, OutputScope("model_uns", map_id, "UNS"))
 
 
 def dates_to_run_for_cfg(
-    cfg: SimulationConfig, sqlite_path: Path | None = None
+    cfg: SimulationConfig,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> list[date]:
     """Determine which simulation dates must be run for the given configuration.
 
@@ -207,7 +213,7 @@ def dates_to_run_for_cfg(
     if cfg.dry_run:
         return [cfg.as_of_date]
 
-    existing = existing_trend_dates(sqlite_path=sqlite_path)
+    existing = existing_trend_dates(sqlite_path=sqlite_path, map_id=map_id)
     previous_dates = [value for value in existing if value < cfg.as_of_date]
     if not previous_dates:
         return [cfg.as_of_date]
@@ -242,9 +248,8 @@ def parse_args() -> argparse.Namespace:
     - ``--start-date`` (ISO date): first date to simulate.
     - ``--end-date`` (ISO date): last date to simulate.
     - ``--lookback-days`` (int ≥ 0, default 365): poll history window per date.
-    - ``--reset-existing`` / ``--no-reset-existing``: clear existing model_uns outputs
-      in the date range before backfilling (default: enabled).
-    - ``--continue-on-error`` (flag): log errors and continue rather than raising.
+    - ``--reset-existing`` / ``--no-reset-existing``: recompute dates while retaining previous results until replacement succeeds (default: enabled).
+    - ``--continue-on-error`` (flag): finish other dates, then report failures with a non-success outcome.
     - ``--progress-every`` (int, default 25): print progress every N successes.
 
     Shared flags:
@@ -259,22 +264,38 @@ def parse_args() -> argparse.Namespace:
         help=f"Baseline election the projection swings from (default: {BASELINE_ELECTION_NAME!r})",
     )
     parser.add_argument("--half-life-days", type=float, default=30.0)
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Compute without writes, except explicitly requested --output-csv previews",
+    )
     # Single-date flags
     parser.add_argument("--as-of-days-back", type=int, default=0)
     parser.add_argument("--since-days-back", type=int, default=30)
     parser.add_argument("--as-of-date", default=None)
     parser.add_argument("--since-date", default=None)
-    parser.add_argument("--output-csv", default=None)
+    parser.add_argument(
+        "--output-csv",
+        default=None,
+        help="Write projected votes and a sibling regional-differences CSV, including in dry runs",
+    )
     # Retrospective mode flags
-    parser.add_argument("--start-date", default=None, help="First date for retrospective backfill (YYYY-MM-DD)")
-    parser.add_argument("--end-date", default=None, help="Last date for retrospective backfill (YYYY-MM-DD)")
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        help="First date for retrospective backfill (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        help="Last date for retrospective backfill (YYYY-MM-DD)",
+    )
     parser.add_argument("--lookback-days", type=int, default=365)
     parser.add_argument(
         "--reset-existing",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Clear existing model_uns outputs in the date range before backfilling (default: enabled)",
+        help="Recompute dates, retaining previous results until each replacement succeeds (default: enabled)",
     )
     parser.add_argument("--continue-on-error", action="store_true")
     parser.add_argument("--progress-every", type=int, default=25)
@@ -297,19 +318,8 @@ def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
     Raises:
         ValueError: If ``since_date`` is later than ``as_of_date``.
     """
-    today = date.today()
-    as_of_date = (
-        date.fromisoformat(args.as_of_date)
-        if args.as_of_date
-        else today - timedelta(days=max(0, int(args.as_of_days_back)))
-    )
-    since_date = (
-        date.fromisoformat(args.since_date)
-        if args.since_date
-        else today - timedelta(days=max(0, int(args.since_days_back)))
-    )
-    if since_date > as_of_date:
-        raise ValueError("--since-days-back/--since-date must be older than or equal to as-of")
+    validate_half_life(args.half_life_days)
+    since_date, as_of_date = single_date_window(args, date.today())
     return SimulationConfig(
         map_name=args.map_name,
         baseline_election_name=args.baseline_election_name,
@@ -326,73 +336,41 @@ def reset_existing_model_outputs(
     end_date: date,
     sqlite_path: Path | None = None,
     trend_cache_json: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int, int]:
-    """Delete model_uns elections in [start_date, end_date] from SQLite and strip matching rows from the trend cache CSV.
+    """Delete scoped model_uns dates and reconstruct its trend cache.
 
-    Election names follow the pattern ``UNS YYYY-MM-DD``, so a lexicographic
-    range on the name column correctly isolates the target dates. The trend
-    cache CSV is rewritten in place with matching rows removed.
+    Only the specified map, model type and supported dated names are selected.
+    The cache is reconstructed from remaining scoped database rows and published atomically.
 
     Args:
         start_date: Inclusive lower bound of the date range to clear.
         end_date: Inclusive upper bound of the date range to clear.
+        map_id: The resolved map whose model outputs belong to this operation.
         sqlite_path: Path to the SQLite archive file. ``None`` resolves the
             configured database when called.
         trend_cache_json: Path to the trend cache JSON. ``None`` reads the
             module's ``TREND_CACHE_JSON`` when called.
 
     Returns:
-        A 3-tuple ``(deleted_elections, deleted_votes, stripped_csv_rows)``.
+        A 3-tuple ``(deleted_elections, deleted_votes, stripped_csv_rows)``; the compatibility third field is always zero.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     trend_cache_json = (
         trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
     )
-    start_name = f"UNS {start_date.isoformat()}"
-    upper_bound = f"UNS {(end_date + timedelta(days=1)).isoformat()}"
-
-    deleted_elections = 0
-    deleted_votes = 0
-
-    if sqlite_path.exists():
-        with sqlite3.connect(sqlite_path) as conn:
-            election_ids = [
-                row[0]
-                for row in conn.execute(
-                    "SELECT id FROM elections WHERE name >= ? AND name < ?",
-                    (start_name, upper_bound),
-                ).fetchall()
-            ]
-            if election_ids:
-                placeholders = ",".join("?" * len(election_ids))
-                deleted_votes = conn.execute(
-                    f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                deleted_elections = conn.execute(
-                    f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-                ).rowcount or 0
-                conn.commit()
+    if not sqlite_path.exists():
+        return 0, 0, 0
+    validate_trend_scope(sqlite_path, OutputScope("model_uns", map_id, "UNS"))
+    deleted_elections, deleted_votes = delete_outputs(
+        sqlite_path, OutputScope("model_uns", map_id, "UNS"), start_date, end_date
+    )
 
     stripped_json_entries = 0
-    if trend_cache_json.exists():
-        with trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        kept_entries = []
-        for entry in entries:
-            raw = str(entry.get("as_of_date") or "").strip()
-            try:
-                entry_date = date.fromisoformat(raw)
-            except ValueError:
-                kept_entries.append(entry)
-                continue
-            if entry_date < start_date or entry_date > end_date:
-                kept_entries.append(entry)
-            else:
-                stripped_json_entries += 1
-
-        if stripped_json_entries > 0:
-            with trend_cache_json.open("w", encoding="utf-8") as handle:
-                json.dump(kept_entries, handle, separators=(",", ":"))
+    publish_trends(
+        sqlite_path, OutputScope("model_uns", map_id, "UNS"), trend_cache_json
+    )
 
     return deleted_elections, deleted_votes, stripped_json_entries
 
@@ -415,115 +393,99 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     start_date = date.fromisoformat(args.start_date)
     end_date = date.fromisoformat(args.end_date)
 
-    if end_date < start_date:
-        raise ValueError("--end-date must be on or after --start-date")
-    if args.lookback_days < 0:
-        raise ValueError("--lookback-days must be zero or greater")
-    if args.half_life_days <= 0:
-        raise ValueError("--half-life-days must be greater than zero")
+    validate_date_range(start_date, end_date)
+    validate_day_count(args.lookback_days, "--lookback-days")
+    validate_half_life(args.half_life_days)
 
-    if args.reset_existing and not args.dry_run:
-        deleted_elections, deleted_votes, stripped_csv_rows = reset_existing_model_outputs(
-            start_date, end_date, database_file(db)
-        )
-        print(
-            f"RESET deleted_elections={deleted_elections} "
-            f"deleted_votes={deleted_votes} "
-            f"stripped_csv_rows={stripped_csv_rows}"
-        )
-    elif args.reset_existing and args.dry_run:
-        print("RESET skipped for dry-run mode")
+    _, baseline, _ = resolve_simulation_scope(
+        db,
+        SimulationConfig(
+            map_name=args.map_name,
+            baseline_election_name=args.baseline_election_name,
+            as_of_date=start_date,
+            since_date=start_date - timedelta(days=args.lookback_days),
+            half_life_days=args.half_life_days,
+            output_csv=None,
+            dry_run=args.dry_run,
+        ),
+    )
+    build_baseline_vote_state(db, baseline.id, {})
 
-    current = start_date
-    success_count = 0
-    failed_count = 0
-    failures: list[tuple[str, str]] = []
-
-    while current <= end_date:
-        try:
-            cfg = SimulationConfig(
-                map_name=args.map_name,
-                baseline_election_name=args.baseline_election_name,
-                as_of_date=current,
-                since_date=current - timedelta(days=args.lookback_days),
-                half_life_days=args.half_life_days,
-                output_csv=None,
-                dry_run=args.dry_run,
+    with trend_batch(
+        database_file(db),
+        OutputScope("model_uns", _output_map_id(db, args.map_name), "UNS"),
+        TREND_CACHE_JSON,
+        enabled=not args.dry_run,
+    ):
+        if args.reset_existing:
+            print(
+                "RESET skipped for dry-run mode"
+                if args.dry_run
+                else "RESET recomputing dates; previous results retained until replacement succeeds"
             )
-            election_name, projected_votes, _, _, _ = run_simulation(db, cfg)
-            success_count += 1
 
-            if args.progress_every > 0 and success_count % args.progress_every == 0:
-                print(
-                    f"PROGRESS success={success_count} failed={failed_count} "
-                    f"as_of={current.isoformat()} election={election_name} "
-                    f"rows={len(projected_votes)}"
+        current = start_date
+        success_count = 0
+        failed_count = 0
+        failures: list[tuple[str, str]] = []
+
+        while current <= end_date:
+            try:
+                cfg = SimulationConfig(
+                    map_name=args.map_name,
+                    baseline_election_name=args.baseline_election_name,
+                    as_of_date=current,
+                    since_date=current - timedelta(days=args.lookback_days),
+                    half_life_days=args.half_life_days,
+                    output_csv=None,
+                    dry_run=args.dry_run,
                 )
-        except Exception as exc:
-            failed_count += 1
-            failures.append((current.isoformat(), str(exc)))
-            print(f"ERROR as_of={current.isoformat()} err={exc}")
-            if not args.continue_on_error:
-                raise
+                election_name, projected_votes, _, _, _ = run_simulation(db, cfg)
+                success_count += 1
 
-        current += timedelta(days=1)
+                if args.progress_every > 0 and success_count % args.progress_every == 0:
+                    print(
+                        f"PROGRESS success={success_count} failed={failed_count} "
+                        f"as_of={current.isoformat()} election={election_name} "
+                        f"rows={len(projected_votes)}"
+                    )
+            except Exception as exc:
+                failed_count += 1
+                failures.append((current.isoformat(), str(exc)))
+                print(f"ERROR as_of={current.isoformat()} err={exc}")
+                if not args.continue_on_error:
+                    raise
 
-    print("SUMMARY")
-    print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
-    print(f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}")
-    print(f"DRY_RUN={args.dry_run}")
-    print(f"SUCCESS={success_count} FAILED={failed_count}")
+            current += timedelta(days=1)
 
-    if failures:
-        print("FAILURES")
-        for when, message in failures:
-            print(f"{when}\t{message}")
+        print("SUMMARY")
+        print(f"START={start_date.isoformat()} END={end_date.isoformat()}")
+        print(
+            f"LOOKBACK_DAYS={args.lookback_days} HALF_LIFE_DAYS={args.half_life_days}"
+        )
+        print(f"DRY_RUN={args.dry_run}")
+        print(f"SUCCESS={success_count} FAILED={failed_count}")
 
+        if failures:
+            print("FAILURES")
+            for when, message in failures:
+                print(f"{when}\t{message}")
+
+        if failures:
+            raise HistoryRecomputationError(failures)
 
 
 def delete_model_uns_for_as_of_date(
-    as_of_date: date, sqlite_path: Path | None = None
+    as_of_date: date,
+    sqlite_path: Path | None = None,
+    *,
+    map_id: int,
 ) -> tuple[int, int]:
-    """Delete all model_uns elections (and their votes) for a given date from SQLite.
-
-    Matches elections whose name starts with ``"UNS {as_of_date}"`` and
-    deletes their vote rows before removing the election rows.
-
-    Args:
-        as_of_date: The date whose simulation output should be removed.
-        sqlite_path: Path to the SQLite archive file. ``None`` resolves the
-            configured database when called.
-
-    Returns:
-        A ``(deleted_elections, deleted_votes)`` tuple. Both are ``0`` if no
-        matching elections exist or the file does not exist.
-    """
+    """Delete only this model/map/date and its supported legacy run names."""
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    if not sqlite_path.exists():
-        return 0, 0
-
-    base_name = f"UNS {as_of_date.isoformat()}"
-
-    with sqlite3.connect(sqlite_path) as conn:
-        election_ids = [
-            row[0]
-            for row in conn.execute(
-                "SELECT id FROM elections WHERE name LIKE ?", (f"{base_name}%",)
-            ).fetchall()
-        ]
-        if not election_ids:
-            return 0, 0
-
-        placeholders = ",".join("?" * len(election_ids))
-        deleted_votes = conn.execute(
-            f"DELETE FROM votes WHERE election_id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        deleted_elections = conn.execute(
-            f"DELETE FROM elections WHERE id IN ({placeholders})", election_ids
-        ).rowcount or 0
-        conn.commit()
-
-    return int(deleted_elections), int(deleted_votes)
+    return delete_outputs(
+        sqlite_path, OutputScope("model_uns", map_id, "UNS"), as_of_date, as_of_date
+    )
 
 
 def weighted_average(weighted_sum: float, total_weight: float) -> float | None:
@@ -656,7 +618,7 @@ def build_reference_data(db: Database, map_id: int) -> tuple[
     all_parties = db.get_all_parties()
     party_name_by_id = {party.id: party.name for party in all_parties}
     pollster_weight_by_id = {
-        pollster.id: (pollster.weight if pollster.weight is not None else 1.0)
+        pollster.id: effective_pollster_weight(pollster.weight)
         for pollster in db.get_all_pollsters()
     }
     pollster_name_by_id = {
@@ -772,14 +734,19 @@ def aggregate_poll_shares(
     half_life_days: float,
     pollster_weight_by_id: dict[int, float],
     pollster_name_by_id: dict[int, str],
-) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], Any]:
+) -> tuple[
+    dict[tuple[int | None, int], float],
+    dict[tuple[int | None, int], float],
+    LatestPollUsage | None,
+]:
     """Compute time-decayed, pollster-weighted average vote shares from recent polls.
 
     For each poll whose fieldwork end date falls in ``[since_date, as_of_date]``,
     a combined weight is computed as ``exp(-λ × days_since) × pollster_weight``
     where ``λ = ln(2) / half_life_days``. Vote-share percentages from each poll
-    row are accumulated into ``weighted_sums`` and ``total_weights`` keyed by
-    ``(region_id, party_id)`` — ``region_id`` is ``None`` for national-level rows.
+    row are combined within the poll by ``(region_id, party_id)`` before one
+    poll weight is accumulated into ``total_weights`` for that observation.
+    ``region_id`` is ``None`` for national-level rows.
 
     Party ID aliases defined in ``PARTY_ID_ALIASES`` are applied before
     accumulation.
@@ -790,8 +757,7 @@ def aggregate_poll_shares(
         since_date: Lower bound for poll fieldwork end date (inclusive).
         as_of_date: Upper bound for poll fieldwork end date (inclusive); also the
             reference date for decay calculation.
-        half_life_days: Exponential decay half-life in days. Must be positive;
-            values ≤ 0 are clamped to ``0.001`` internally.
+        half_life_days: Exponential decay half-life in days, finite and positive.
         pollster_weight_by_id: Credibility weight per pollster ID; missing entries
             default to ``1.0``.
         pollster_name_by_id: Display name per pollster ID; used when recording
@@ -807,12 +773,52 @@ def aggregate_poll_shares(
         - **latest_poll_usage** (``LatestPollUsage | None``): metadata about the
           most recent poll included, or ``None`` if no polls were consumed.
     """
-    polls = db.get_polls_for_map(map_id)
+    result = collect_poll_shares(
+        db,
+        map_id,
+        since_date,
+        as_of_date,
+        half_life_days,
+        pollster_weight_by_id,
+        pollster_name_by_id,
+    )
+    latest = result.latest
+    latest_usage = (
+        LatestPollUsage(
+            pollster=latest.pollster,
+            fieldwork_start=latest.fieldwork_start,
+            fieldwork_end=latest.fieldwork_end,
+            poll_id=latest.poll_id,
+        )
+        if latest is not None
+        else None
+    )
+    return result.weighted_sums, result.total_weights, latest_usage
+
+
+def collect_poll_shares(
+    db: Database,
+    map_id: int,
+    since_date: date,
+    as_of_date: date,
+    half_life_days: float,
+    pollster_weight_by_id: dict[int, float],
+    pollster_name_by_id: dict[int, str],
+    *,
+    source: PollSource | None = None,
+) -> PollAggregation[tuple[int | None, int]]:
+    """Collect weighted UK observations and their admitted poll metadata."""
+    polls = (
+        db.get_polls_for_map(map_id)
+        if source is None
+        else (poll for poll in source.polls if poll.map_id == map_id)
+    )
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
-    latest_poll_usage: LatestPollUsage | None = None
+    contributors: list[PollContributor] = []
 
-    decay_lambda = math.log(2.0) / max(half_life_days, 0.001)
+    validate_half_life(half_life_days)
+    validate_date_window(since_date, as_of_date)
 
     for poll in polls:
         if poll.fieldwork_end < since_date or poll.fieldwork_end > as_of_date:
@@ -822,41 +828,46 @@ def aggregate_poll_shares(
         if days_since < 0:
             continue
 
-        decay_weight = math.exp(-decay_lambda * float(days_since))
-        pollster_weight = float(pollster_weight_by_id.get(poll.pollster_id, 1.0) or 1.0)
+        decay_weight = math.exp(-math.log(2.0) * float(days_since) / half_life_days)
+        pollster_weight = effective_pollster_weight(pollster_weight_by_id.get(poll.pollster_id))
         poll_weight = decay_weight * pollster_weight
         if poll_weight <= 0:
             continue
 
-        rows = db.get_rows_for_poll(poll.id)
+        rows = (
+            db.get_rows_for_poll(poll.id)
+            if source is None
+            else source.rows.get(poll.id, ())
+        )
         if not rows:
             continue
 
-        candidate_poll = LatestPollUsage(
-            pollster=str(pollster_name_by_id.get(poll.pollster_id, f"Pollster {poll.pollster_id}")),
-            fieldwork_start=poll.fieldwork_start,
-            fieldwork_end=poll.fieldwork_end,
-        )
-        if latest_poll_usage is None or (
-            candidate_poll.fieldwork_end,
-            candidate_poll.fieldwork_start,
-            int(poll.id),
-        ) > (
-            latest_poll_usage.fieldwork_end,
-            latest_poll_usage.fieldwork_start,
-            -1,
-        ):
-            latest_poll_usage = candidate_poll
-
+        poll_shares: dict[tuple[int | None, int], float] = defaultdict(float)
         for row in rows:
-            if row.party_id is None:
+            if row.party_id is None or row.percentage is None:
                 continue
             party_id = PARTY_ID_ALIASES.get(row.party_id, row.party_id)
             key = (row.region_id, party_id)
-            weighted_sums[key] += float(row.percentage) * poll_weight
+            poll_shares[key] += float(row.percentage)
+
+        if not poll_shares:
+            continue
+        contributors.append(
+            PollContributor(
+                poll_id=int(poll.id),
+                pollster=pollster_name_by_id.get(
+                    poll.pollster_id, f"Pollster {poll.pollster_id}"
+                ),
+                fieldwork_start=poll.fieldwork_start,
+                fieldwork_end=poll.fieldwork_end,
+            )
+        )
+
+        for key, share in poll_shares.items():
+            weighted_sums[key] += share * poll_weight
             total_weights[key] += poll_weight
 
-    return weighted_sums, total_weights, latest_poll_usage
+    return PollAggregation(weighted_sums, total_weights, tuple(contributors))
 
 
 def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:
@@ -919,7 +930,6 @@ def write_trend_cache_meta(
         if trend_cache_meta_json is not None
         else TREND_CACHE_META_JSON
     )
-    trend_cache_meta_json.parent.mkdir(parents=True, exist_ok=True)
 
     payload = {
         "as_of_date": as_of_date.isoformat(),
@@ -936,8 +946,11 @@ def write_trend_cache_meta(
         ),
     }
 
-    with trend_cache_meta_json.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, separators=(",", ":"))
+    publish_json(
+        payload,
+        trend_cache_meta_json,
+        repair="Rerun this model to regenerate latest-used-poll metadata.",
+    )
 
 
 def compute_region_diffs(
@@ -1131,6 +1144,21 @@ def project_seat_votes(
     return projected_votes, winners_by_party
 
 
+def output_csv_paths(output_csv: str) -> tuple[Path, Path]:
+    """Return the projection CSV and its regional-differences sibling."""
+    output_path = Path(output_csv)
+    return output_path, output_path.with_name(
+        f"{output_path.stem}_regional_diffs{output_path.suffix}"
+    )
+
+
+def validate_csv_outputs(output_csv: str | None, database: Path) -> None:
+    """Check both CSV destinations before calculation or either file write."""
+    if output_csv is not None:
+        for destination in output_csv_paths(output_csv):
+            validate_output_target(destination, database=database)
+
+
 def write_output_csvs(
     output_csv: str,
     projected_votes: list[dict[str, Any]],
@@ -1167,7 +1195,7 @@ def write_output_csvs(
     for row in projected_votes:
         seat_projected_totals[int(row["seat_id"])] += float(row["vote_total"] or 0.0)
 
-    output_path = Path(output_csv)
+    output_path, diff_output_path = output_csv_paths(output_csv)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
@@ -1191,7 +1219,6 @@ def write_output_csvs(
                 }
             )
 
-    diff_output_path = output_path.with_name(output_path.stem + "_regional_diffs" + output_path.suffix)
     with diff_output_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(
             handle,
@@ -1228,7 +1255,9 @@ def persist_projection(
     party_name_by_id: dict[int, str],
     sqlite_path: Path | None = None,
 ) -> tuple[str, int]:
-    """Create a model_uns election row and bulk-insert all projected vote rows into SQLite.
+    """Replace this model/map/date and all its vote rows in one transaction.
+
+    An insertion failure restores the previous complete result.
 
     Args:
         map_id: Primary key of the electoral map the election belongs to.
@@ -1246,32 +1275,22 @@ def persist_projection(
         display name and primary key.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    with sqlite3.connect(sqlite_path) as conn:
-        ensure_elections_sqlite_schema(conn)
-        cursor = conn.execute(
-            "INSERT INTO elections (map_id, year, name, type, election_date) VALUES (?, ?, ?, ?, ?)",
-            (map_id, as_of_date.year, election_name, "model_uns", as_of_date.isoformat()),
-        )
-        election_id = cursor.lastrowid
-        if election_id is None:
-            raise RuntimeError("Failed to obtain election id after INSERT")
-        conn.executemany(
-            "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, vote_total, elected) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            [
-                (
-                    election_id,
-                    int(row["seat_id"]),
-                    int(row["party_id"]),
-                    party_name_by_id.get(int(row["party_id"]), ""),
-                    float(row["vote_total"]),
-                    int(bool(row["elected"])),
-                )
-                for row in projected_votes
-            ],
-        )
-        conn.commit()
-    return election_name, int(election_id)
+    return replace_output(
+        sqlite_path,
+        OutputScope("model_uns", map_id, "UNS"),
+        as_of_date,
+        election_name,
+        (
+            OutputVote(
+                seat_id=int(row["seat_id"]),
+                party_id=int(row["party_id"]),
+                candidate_name=party_name_by_id.get(int(row["party_id"]), ""),
+                vote_total=float(row["vote_total"]),
+                elected=bool(row["elected"]),
+            )
+            for row in projected_votes
+        ),
+    )
 
 
 def update_trend_cache_json(
@@ -1280,120 +1299,30 @@ def update_trend_cache_json(
     as_of_date: date,
     projected_votes: list[dict[str, Any]],
     trend_cache_json: Path | None = None,
+    *,
+    sqlite_path: Path | None = None,
+    map_id: int,
 ) -> None:
-    """Merge this simulation's results into the trend cache JSON.
-
-    Reads the existing trend cache JSON (``TREND_CACHE_JSON`` by default),
-    strips any entry for ``as_of_date`` or ``election_id``, then appends a new
-    entry summarising seat counts and normalised vote percentages per party. The
-    combined entries are sorted by ``election_id`` before being written back.
-
-    **Deduplication logic**: if the new seat snapshot (the multiset of
-    party-seat-count pairs) is identical to that of the immediately preceding
-    cached date, the new entry is omitted and a ``TREND_CACHE_SKIP`` message is
-    printed instead.
-
-    Args:
-        election_id: Primary key of the newly persisted election.
-        election_name: Display name of the newly persisted election.
-        as_of_date: Simulation date; any existing entry for this date is replaced.
-        projected_votes: Seat/party projection records as produced by
-            ``project_seat_votes``.
-        trend_cache_json: Path to the trend cache JSON. ``None`` reads the
-            module's ``TREND_CACHE_JSON`` when called.
-    """
-    trend_cache_json = (
-        trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON
+    """Reconstruct the scoped recorded series; projected arguments are compatibility-only."""
+    publish_trends(
+        sqlite_path if sqlite_path is not None else default_sqlite_path(),
+        OutputScope("model_uns", map_id, "UNS"),
+        trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON,
     )
-    trend_cache_json.parent.mkdir(parents=True, exist_ok=True)
-
-    vote_totals_by_party: dict[int, float] = defaultdict(float)
-    seats_by_party: dict[int, int] = defaultdict(int)
-    for row in projected_votes:
-        party_id = int(row["party_id"])
-        vote_totals_by_party[party_id] += float(row["vote_total"])
-        if bool(row["elected"]):
-            seats_by_party[party_id] += 1
-
-    total_votes = sum(vote_totals_by_party.values())
-
-    def seat_snapshot_from_entry(entry: dict[str, Any]) -> tuple[tuple[int, int], ...]:
-        """Build a sorted snapshot tuple from a JSON entry's parties map."""
-        snapshot: dict[int, int] = {}
-        for pid_str, pdata in (entry.get("parties") or {}).items():
-            try:
-                party_id = int(pid_str)
-                seats = int(pdata.get("s") or 0)
-            except (ValueError, TypeError):
-                continue
-            if party_id > 0 and seats > 0:
-                snapshot[party_id] = seats
-        return tuple(sorted(snapshot.items()))
-
-    def seat_snapshot_from_party_counts(seat_counts: dict[int, int]) -> tuple[tuple[int, int], ...]:
-        """Build a sorted snapshot tuple from a party-seat-count dict."""
-        return tuple(sorted((party_id, seats) for party_id, seats in seat_counts.items() if seats > 0))
-
-    existing_entries: list[dict[str, Any]] = []
-    entries_by_date: dict[date, dict[str, Any]] = {}
-    if trend_cache_json.exists():
-        with trend_cache_json.open("r", encoding="utf-8") as handle:
-            entries = json.load(handle)
-        for entry in entries:
-            if str(entry.get("as_of_date") or "").strip() == as_of_date.isoformat():
-                continue
-            if int(entry.get("election_id") or 0) == election_id:
-                continue
-            existing_entries.append(entry)
-            try:
-                parsed_date = date.fromisoformat(str(entry.get("as_of_date") or ""))
-            except ValueError:
-                continue
-            if parsed_date < as_of_date:
-                entries_by_date[parsed_date] = entry
-
-    new_entry = {
-        "election_id": election_id,
-        "election_name": election_name,
-        "as_of_date": as_of_date.isoformat(),
-        "parties": {
-            str(party_id): {
-                "s": seats_by_party.get(party_id, 0),
-                "v": round((vote_totals_by_party.get(party_id, 0.0) / total_votes) * 100.0, 1) if total_votes > 0 else 0.0,
-            }
-            for party_id in sorted(vote_totals_by_party.keys())
-        },
-    }
-
-    previous_date = max(entries_by_date.keys(), default=None)
-    previous_snapshot = (
-        seat_snapshot_from_entry(entries_by_date[previous_date])
-        if previous_date is not None
-        else tuple()
-    )
-    current_snapshot = seat_snapshot_from_party_counts(seats_by_party)
-
-    if previous_date is not None and current_snapshot == previous_snapshot:
-        combined = existing_entries
-        print(
-            "TREND_CACHE_SKIP "
-            f"as_of_date={as_of_date.isoformat()} "
-            f"reason=unchanged_seat_snapshot "
-            f"previous_date={previous_date.isoformat()}"
-        )
-    else:
-        combined = existing_entries + [new_entry]
-
-    combined.sort(key=lambda e: int(e.get("election_id") or 0))
-
-    with trend_cache_json.open("w", encoding="utf-8") as handle:
-        json.dump(combined, handle, separators=(",", ":"))
 
 
 def run_simulation(
     db: Database,
     cfg: SimulationConfig,
-) -> tuple[str, list[dict[str, Any]], list[dict[str, Any]], Counter[str], LatestPollUsage | None]:
+    *,
+    poll_aggregation: PollAggregation[tuple[int | None, int]] | None = None,
+) -> tuple[
+    str,
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    Counter[str],
+    LatestPollUsage | None,
+]:
     """Run a full UNS simulation for a single date and optionally persist results.
 
     Orchestrates the complete simulation pipeline:
@@ -1431,6 +1360,7 @@ def run_simulation(
             baseline election's map does not match the configured map, or if the
             baseline election has no vote rows.
     """
+    validate_csv_outputs(cfg.output_csv, database_file(db))
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date
 
@@ -1452,15 +1382,30 @@ def run_simulation(
         baseline_region_shares,
     ) = build_baseline_vote_state(db, baseline.id, region_by_seat_id)
 
-    weighted_sums, total_weights, latest_poll_usage = aggregate_poll_shares(
-        db,
-        poll_map.id,
-        cfg.since_date,
-        cfg.as_of_date,
-        cfg.half_life_days,
-        pollster_weight_by_id,
-        pollster_name_by_id,
-    )
+    if poll_aggregation is None:
+        weighted_sums, total_weights, latest_poll_usage = aggregate_poll_shares(
+            db,
+            poll_map.id,
+            cfg.since_date,
+            cfg.as_of_date,
+            cfg.half_life_days,
+            pollster_weight_by_id,
+            pollster_name_by_id,
+        )
+    else:
+        weighted_sums = poll_aggregation.weighted_sums
+        total_weights = poll_aggregation.total_weights
+        latest = poll_aggregation.latest
+        latest_poll_usage = (
+            LatestPollUsage(
+                latest.pollster,
+                latest.fieldwork_start,
+                latest.fieldwork_end,
+                latest.poll_id,
+            )
+            if latest is not None
+            else None
+        )
 
     party_universe, region_swings, region_diff_rows = compute_region_diffs(
         seats,
@@ -1497,8 +1442,8 @@ def run_simulation(
         return election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
     sqlite_path = database_file(db)
-    delete_model_uns_for_as_of_date(cfg.as_of_date, sqlite_path)
 
+    validate_trend_scope(sqlite_path, OutputScope("model_uns", poll_map.id, "UNS"))
     persisted_name, persisted_election_id = persist_projection(
         poll_map.id,
         cfg.as_of_date,
@@ -1513,6 +1458,8 @@ def run_simulation(
         persisted_name,
         cfg.as_of_date,
         projected_votes,
+        sqlite_path=database_file(db),
+        map_id=poll_map.id,
     )
 
     return persisted_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
@@ -1530,6 +1477,7 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             opens the configured database.
     """
     args = parse_args()
+    validate_run_arguments(args, date.today())
     # Read polls and elections from SQLite, and write the model runs back to
     # the same SQLite file.
     db = db_factory() if db_factory is not None else Database(DatabaseConfig.from_env())
@@ -1539,35 +1487,56 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
         return
 
     cfg = _build_config_from_args(args)
+    validate_csv_outputs(cfg.output_csv, database_file(db))
+    if not cfg.dry_run:
+        validate_output_target(TREND_CACHE_META_JSON, database=database_file(db))
 
-    # Cap as_of_date at the most recent poll fieldwork end for the map so that
-    # the model does not run past the point where poll data actually exists.
-    # Decay-only drift between the last poll date and today produces meaningless
-    # movement in the trend chart.
-    latest_map = db.get_map_by_name(cfg.map_name)
-    if latest_map is not None:
-        polls = db.get_polls_for_map(latest_map.id)
-        if polls:
-            latest_poll_date = max(p.fieldwork_end for p in polls)
-            if cfg.as_of_date > latest_poll_date:
-                print(
-                    f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
-                    f"to latest poll date {latest_poll_date.isoformat()}"
-                )
-                # Shift the window back so its upper bound is latest_poll_date
-                # but its length (lookback) is preserved.
-                shift = cfg.as_of_date - latest_poll_date
-                cfg = SimulationConfig(
-                    map_name=cfg.map_name,
-                    baseline_election_name=cfg.baseline_election_name,
-                    as_of_date=latest_poll_date,
-                    since_date=cfg.since_date - shift,
-                    half_life_days=cfg.half_life_days,
-                    output_csv=cfg.output_csv,
-                    dry_run=cfg.dry_run,
-                )
+    # Choose the newest contributing endpoint in its own preserved window.
+    latest_map, _, effective_since = resolve_simulation_scope(db, cfg)
+    cfg.since_date = effective_since
+    source = PollSource.load(db, [latest_map.id], cfg.as_of_date)
+    weights = {
+        pollster.id: effective_pollster_weight(pollster.weight)
+        for pollster in source.pollsters
+    }
+    names = {pollster.id: pollster.name for pollster in source.pollsters}
+    _, latest_poll_date, selected_polls = select_poll_endpoint(
+        (poll.fieldwork_end for poll in source.polls),
+        cfg.as_of_date,
+        cfg.since_date,
+        lambda since, end: collect_poll_shares(
+            db,
+            latest_map.id,
+            since,
+            end,
+            cfg.half_life_days,
+            weights,
+            names,
+            source=source,
+        ),
+        lambda result, end: (
+            result is not None
+            and any(poll.fieldwork_end == end for poll in result.contributors)
+        ),
+    )
+    if latest_poll_date is not None and cfg.as_of_date > latest_poll_date:
+        print(
+            f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
+            f"to latest poll date {latest_poll_date.isoformat()}"
+        )
+        cfg = SimulationConfig(
+            map_name=cfg.map_name,
+            baseline_election_name=cfg.baseline_election_name,
+            as_of_date=latest_poll_date,
+            since_date=candidate_since(
+                latest_poll_date, cfg.as_of_date - cfg.since_date
+            ),
+            half_life_days=cfg.half_life_days,
+            output_csv=cfg.output_csv,
+            dry_run=cfg.dry_run,
+        )
 
-    run_dates = dates_to_run_for_cfg(cfg, database_file(db))
+    run_dates = dates_to_run_for_cfg(cfg, database_file(db), map_id=latest_map.id)
     if len(run_dates) > 1:
         print(
             "AUTO-BACKFILL "
@@ -1578,70 +1547,85 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
 
     lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
 
-    for index, run_date in enumerate(run_dates, start=1):
-        run_cfg = SimulationConfig(
-            map_name=cfg.map_name,
-            baseline_election_name=cfg.baseline_election_name,
-            as_of_date=run_date,
-            since_date=run_date - timedelta(days=lookback_days),
-            half_life_days=cfg.half_life_days,
-            output_csv=cfg.output_csv,
-            dry_run=cfg.dry_run,
-        )
-
-        election_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage = run_simulation(db, run_cfg)
-
-        seat_ids = {int(row["seat_id"]) for row in projected_votes}
-
-        print("UNS simulation complete")
-        print(f"Map: {run_cfg.map_name}")
-        print(f"Baseline election: {run_cfg.baseline_election_name}")
-        print(f"As-of date: {run_cfg.as_of_date.isoformat()}")
-        print(f"Since date: {run_cfg.since_date.isoformat()}")
-        print(f"Half-life days: {run_cfg.half_life_days}")
-        print(f"Election name: {election_name}")
-        print(f"Projected seats: {len(seat_ids)}")
-        print(f"Projected vote rows: {len(projected_votes)}")
-        if len(run_dates) > 1:
-            print(f"Backfill progress: {index}/{len(run_dates)}")
-        snippet = latest_poll_snippet(latest_poll_usage)
-        if snippet:
-            print(snippet)
-
-        print("Top projected seat winners:")
-        for party_name, seats in winners_by_party.most_common(8):
-            print(f"- {party_name}: {seats}")
-
-        print("Weighted regional diffs (swing) snapshot:")
-        by_region: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        for row in region_diff_rows:
-            by_region[str(row["region_name"])].append(row)
-
-        key_parties = {
-            "Conservative",
-            "Labour",
-            "Liberal Democrats",
-            "Reform UK",
-            "Green",
-            "Scottish National Party",
-            "Plaid Cymru",
-            "Others",
-        }
-
-        for region_name in sorted(by_region.keys()):
-            rows = [
-                row
-                for row in by_region[region_name]
-                if str(row["party_name"]) in key_parties
-            ]
-            rows.sort(key=lambda row: str(row["party_name"]))
-            if not rows:
-                continue
-            summary = ", ".join(
-                f"{row['party_name']}: {float(row['swing']):+.2f}"
-                for row in rows
+    with trend_batch(
+        database_file(db),
+        OutputScope("model_uns", _output_map_id(db, cfg.map_name), "UNS"),
+        TREND_CACHE_JSON,
+        enabled=not cfg.dry_run,
+    ):
+        for index, run_date in enumerate(run_dates, start=1):
+            run_cfg = SimulationConfig(
+                map_name=cfg.map_name,
+                baseline_election_name=cfg.baseline_election_name,
+                as_of_date=run_date,
+                since_date=run_date - timedelta(days=lookback_days),
+                half_life_days=cfg.half_life_days,
+                output_csv=cfg.output_csv,
+                dry_run=cfg.dry_run,
             )
-            print(f"- {region_name}: {summary}")
+
+            (
+                election_name,
+                projected_votes,
+                region_diff_rows,
+                winners_by_party,
+                latest_poll_usage,
+            ) = run_simulation(
+                db,
+                run_cfg,
+                poll_aggregation=selected_polls if run_date == cfg.as_of_date else None,
+            )
+
+            seat_ids = {int(row["seat_id"]) for row in projected_votes}
+
+            print("UNS simulation complete")
+            print(f"Map: {run_cfg.map_name}")
+            print(f"Baseline election: {run_cfg.baseline_election_name}")
+            print(f"As-of date: {run_cfg.as_of_date.isoformat()}")
+            print(f"Since date: {run_cfg.since_date.isoformat()}")
+            print(f"Half-life days: {run_cfg.half_life_days}")
+            print(f"Election name: {election_name}")
+            print(f"Projected seats: {len(seat_ids)}")
+            print(f"Projected vote rows: {len(projected_votes)}")
+            if len(run_dates) > 1:
+                print(f"Backfill progress: {index}/{len(run_dates)}")
+            snippet = latest_poll_snippet(latest_poll_usage)
+            if snippet:
+                print(snippet)
+
+            print("Top projected seat winners:")
+            for party_name, seats in winners_by_party.most_common(8):
+                print(f"- {party_name}: {seats}")
+
+            print("Weighted regional diffs (swing) snapshot:")
+            by_region: dict[str, list[dict[str, Any]]] = defaultdict(list)
+            for row in region_diff_rows:
+                by_region[str(row["region_name"])].append(row)
+
+            key_parties = {
+                "Conservative",
+                "Labour",
+                "Liberal Democrats",
+                "Reform UK",
+                "Green",
+                "Scottish National Party",
+                "Plaid Cymru",
+                "Others",
+            }
+
+            for region_name in sorted(by_region.keys()):
+                rows = [
+                    row
+                    for row in by_region[region_name]
+                    if str(row["party_name"]) in key_parties
+                ]
+                rows.sort(key=lambda row: str(row["party_name"]))
+                if not rows:
+                    continue
+                summary = ", ".join(
+                    f"{row['party_name']}: {float(row['swing']):+.2f}" for row in rows
+                )
+                print(f"- {region_name}: {summary}")
 
     # Write meta once for cfg.as_of_date (the capped latest-poll date).
     # If that date was not in run_dates (already cached from a prior run),
@@ -1656,7 +1640,9 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             output_csv=cfg.output_csv,
             dry_run=True,
         )
-        _, _, _, _, latest_poll_usage = run_simulation(db, meta_cfg)
+        _, _, _, _, latest_poll_usage = run_simulation(
+            db, meta_cfg, poll_aggregation=selected_polls
+        )
 
     if not cfg.dry_run:
         write_trend_cache_meta(

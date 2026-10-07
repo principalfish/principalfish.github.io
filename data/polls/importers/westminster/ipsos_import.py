@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, Field
-from pypdf import PdfReader
+from pypdf import PdfReader, PdfWriter
 from sqlalchemy import select
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
@@ -135,8 +135,8 @@ def extract_pdf_text(pdf_url: str) -> str:
     """Fetch a PDF from a URL and extract its full text content.
 
     Sends an HTTP GET request with a browser-like User-Agent header, validates
-    that the response body is a valid PDF (starts with ``%PDF``), then extracts
-    and concatenates the text from every page.
+    that the response body is a valid PDF (starts with ``%PDF``), then normalizes
+    page rotation and extracts visually aligned text from every page.
 
     Args:
         pdf_url: Fully-qualified URL of the PDF to download.
@@ -156,7 +156,17 @@ def extract_pdf_text(pdf_url: str) -> str:
         raise ValueError(f"Could not fetch PDF payload from URL: {pdf_url}")
 
     reader = PdfReader(BytesIO(payload))
-    return "\n".join((page.extract_text() or "") for page in reader.pages)
+    writer = PdfWriter(clone_from=reader)
+    pages = []
+    for page in writer.pages:
+        page.transfer_rotation_to_content()
+        pages.append(
+            page.extract_text(
+                extraction_mode="layout",
+                layout_mode_strip_rotated=False,
+            ) or "",
+        )
+    return "\n".join(pages)
 
 
 def _extract_lines(pdf_text: str) -> list[str]:
@@ -195,7 +205,11 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         raise ValueError("Fieldwork line not found in PDF")
 
     pattern = re.compile(
-        r"Fieldwork\s+dates\s*[-:]\s*[A-Za-z]+\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s+([A-Za-z.]+))?\s+to\s+[A-Za-z]+\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z.]+)(?:\s*\([^)]*\))?\s+(20\d{2})",
+        r"Fieldwork\s+dates\s*[-:]\s*[A-Za-z]+\s+"
+        r"(\d{1,2})(?:st|nd|rd|th)?(?:\s+([A-Za-z.]+))?\s+to\s+"
+        r"[A-Za-z]+\s+(\d{1,2})(?:st|nd|rd|th)?"
+        r"(?:\s*\((?:am|pm)\))?\s+([A-Za-z.]+)"
+        r"(?:\s*\([^)]*\))?\s+(20\d{2})",
         re.IGNORECASE,
     )
     match = pattern.search(fieldwork_line)
@@ -488,6 +502,134 @@ def _parse_party_region_percentages(lines: list[str]) -> dict[str, dict[str, flo
     return parsed
 
 
+def _layout_party_rows(lines: list[str], width: int) -> dict[str, list[float]]:
+    """Read a bounded table, keeping suppressed cells in their columns."""
+    parsed = {}
+    for index, line in enumerate(lines[:-1]):
+        party = next(
+            (
+                canonical
+                for marker, canonical in PARTY_LINE_MAP.items()
+                if line.strip().lower().startswith(marker.lower())
+            ),
+            None,
+        )
+        if party is None:
+            continue
+        if re.search(r"\s(?:\d+|\*|-)(?:\s|$)", line) is None:
+            continue
+        tokens = re.findall(
+            r"(?<!\S)(\d{1,3}%|\*|-)(?:s)?(?=\s|$)", lines[index + 1],
+        )
+        if len(tokens) != width:
+            raise ValueError(f"Incomplete aligned Ipsos percentage row: {party}")
+        if party in parsed:
+            raise ValueError(f"Duplicate aligned Ipsos party row: {party}")
+        values = [
+            0.0 if token in {"*", "-"} else float(token[:-1]) for token in tokens
+        ]
+        if any(value > 100 for value in values):
+            raise ValueError(f"Invalid aligned Ipsos percentage: {party}")
+        parsed[party] = values
+    return parsed
+
+
+def _parse_layout_tables(
+    pdf_text: str,
+) -> tuple[dict[str, float], dict[str, dict[str, float]]] | None:
+    """Read visually aligned tables using their column and region anchors."""
+    tables = re.split(r"(?m)^Table\s+\d+\s*$", pdf_text)[1:]
+    national: dict[str, float] = {}
+    regional: dict[str, dict[str, float]] = {}
+    found_layout = False
+    region_header = re.compile(
+        r"(?P<north>Scot)\s+(?P<midlands>(?:E\s+)?of England\))\s+"
+        r"(?P<south>London)\s+(?P<london>London)\s+(?P<england>land)\s+"
+        r"(?P<scotland>Scot)\s+(?P<wales>Wales)"
+    )
+    group_regions = {
+        "north": "North excl Scotland",
+        "midlands": "Midlands incl East of England",
+        "south": "South excl London",
+        "london": "London",
+        "scotland": "Scotland",
+        "wales": "Wales",
+    }
+    for table in tables:
+        lowered = table.lower()
+        is_all = "combined voting intention - all" in lowered
+        is_regional = (
+            "combined voting intention - likely to vote" in lowered
+            and "ONS Regions" in table
+        )
+        if not (is_all or is_regional):
+            continue
+        lines = table.splitlines()
+        count_row = next(
+            (line for line in lines if line.strip().startswith("Unweighted Total")),
+            None,
+        )
+        # Unstructured older text can put the label after its values.
+        if count_row is None:
+            if "ONS Regions" in table:
+                raise ValueError("Missing aligned Ipsos column anchors")
+            continue
+        found_layout = True
+        anchors = list(re.finditer(r"\d+", count_row))
+        if not anchors:
+            raise ValueError("Missing aligned Ipsos column anchors")
+        rows = _layout_party_rows(lines, len(anchors))
+        if is_all and not national:
+            missing = set(PARTY_LINE_MAP.values()) - rows.keys()
+            if missing:
+                raise ValueError(
+                    f"Missing aligned Ipsos national parties: {sorted(missing)}"
+                )
+            national = {party: values[0] for party, values in rows.items()}
+        if is_regional:
+            header = next(
+                (match for line in lines if (match := region_header.search(line))),
+                None,
+            )
+            if header is None:
+                raise ValueError("Could not resolve aligned Ipsos region headers")
+            columns = {}
+            for group, region in group_regions.items():
+                start, end = header.span(group)
+                centre = (start + end) / 2
+                column = min(
+                    range(len(anchors)),
+                    key=lambda col: abs(
+                        (anchors[col].start() + anchors[col].end()) / 2 - centre
+                    ),
+                )
+                anchor = anchors[column]
+                if abs((anchor.start() + anchor.end()) / 2 - centre) > 4:
+                    raise ValueError("Misaligned Ipsos regional column anchors")
+                columns[region] = column
+            if len(set(columns.values())) != len(columns):
+                raise ValueError("Overlapping Ipsos regional column anchors")
+            required = {
+                "Conservative", "Labour", "Liberal Democrats", "Reform UK", "Green",
+            }
+            if not required <= rows.keys():
+                raise ValueError("Missing aligned Ipsos regional parties")
+            current = {
+                party: {region: values[col] for region, col in columns.items()}
+                for party, values in rows.items()
+            }
+            for party in ("Scottish National Party", "Plaid Cymru", "Other"):
+                current.setdefault(party, dict.fromkeys(REGION_COLUMN_ORDER, 0.0))
+            if regional and regional != current:
+                raise ValueError("Conflicting aligned Ipsos regional tables")
+            regional = current
+    if not found_layout:
+        return None
+    if not national:
+        raise ValueError("Missing aligned Ipsos national table")
+    return national, regional
+
+
 def parse_poll(pdf_text: str) -> ParsedPoll:
     """Parse all structured poll data from raw Ipsos PDF text.
 
@@ -508,8 +650,12 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
     lines = _extract_lines(pdf_text)
     sample_size = _parse_sample_size(lines)
     fieldwork_start, fieldwork_end = _parse_fieldwork(lines)
-    party_percentages = _parse_party_percentages(lines)
-    party_region_percentages = _parse_party_region_percentages(lines)
+    layout = _parse_layout_tables(pdf_text)
+    if layout is None:
+        party_percentages = _parse_party_percentages(lines)
+        party_region_percentages = _parse_party_region_percentages(lines)
+    else:
+        party_percentages, party_region_percentages = layout
     return ParsedPoll(
         sample_size=sample_size,
         fieldwork_start=fieldwork_start,

@@ -1,0 +1,378 @@
+                                                                                                                                                                                                                                                                                                                                                                                     Page 1
+                                                                                                                                                    Ipsos Political Monitor - September 2026
+
+
+                                                                                                                                                                                                                                                                                                                                                                                18 Sep 2026
+Table 1
+V1AB/V2.  COMBINED VOTING INTENTION - ALL - How would you vote if there were a General Election tomorrow? (Which party/most inclined to support?)
+
+Base : All
+
+
+
+                                                                                      Likelihood
+                                                                                         to vote                                                                                                                                                                                            UnWgt
+                               Total (W'td)                                      (General Election)                                             Gender                           Age                                          Social grade                                Ethnicity          Total
+                                                             Always
+                                                            dependsusually
+
+                                                              AND        (10)
+                                                   Always     9/10      Absol                                                                                                                                                                                                      Ethnic
+                                                   usually    like-     -utely                                                                                                                                                                                                      min-
+                                                  depends    lihood    certain   (6 to 10) (7 to 10) (8 to 10)  (9 to 10) Would NOT vote      Men     Women      18-34      35-49     50-64      65+        AB        C1         C2        DE       ABC1      C2DE       White      ority      Total
+Unweighted Total                       1031          863       727       668        872       843       807        741             66         513        502       264       227        268       272       282        339       154       147        621       301       897        111       1031
+Weighted Total                         1031          840       692       635        863       823       785        713             60         489        525       288       239        257       246       237        289       184       227        526       411       860        141       1031
+Total voting (sub-base)                  860         761       652        600       798       767        734       672               7         426       420       239        182       221       219        214       247       152        179       460       332        729       108        867
+Conservative                             164         152       139       122        159       152       149        142               *          83        82        14         30        49        70         61        51        20         20       112        40       151         13        188
+                                          19%         20%       21%       20%        20%       20%       20%        21%              4%s        19%       19%        6%        17%       22%       32%        28%       21%       13%        11%       24%       12%        21%       12%        22%
+Labour                                   253         213       175       160        234       220       204        180               5        112        140        77         68        52        57         73        71        25         60       145        85       188         59        262
+                                          29%         28%       27%       27%        29%       29%       28%        27%             71%s        26%       33%       32%        37%       23%       26%        34%       29%       16%        33%       31%       26%        26%       54%        30%
+Reform UK                                202         174       148       143        183       178       172        157               1        118         83        35         36        66        64         20        50        67         50        69       117       185         10        192
+                                          23%         23%       23%       24%        23%       23%       23%        23%             17%s        28%       20%       15%        20%       30%       29%         9%       20%       44%        28%       15%       35%        25%        9%        22%
+Liberal Democrats (Lib                    71          64        53        50         66        63        61         56               *          42        27        27         13        20        12         22        21        10         12        43        22         60         7         70
+Dem)                                       8%          8%        8%         8%        8%        8%         8%        8%              3%s        10%        7%       11%         7%        9%        5%        10%        9%        7%         7%        9%        7%         8%        7%         8%
+Scottish National Party                   33          30        25        24         29        29        25         25               -          12        22         5          7        16         6          5         8         3         17        13        20         33         1         31
+(SNP)                                      4%          4%        4%         4%        4%        4%         3%        4%              -s          3%        5%        2%         4%        7%        3%         2%        3%        2%        10%        3%        6%         5%        *          4%
+Plaid Cymru                                6           6         6          6         6         6          6         6               -           1         4         2          -         2         2          2         2         2          -         3         2          6          -         7
+                                           1%          1%        1%         1%        1%        1%         1%        1%              -s          *         1%        1%         -         1%        1%         1%        1%        2%         -         1%        1%         1%         -         1%
+Green Party                              104         100        85        77         96        94        93         85               *          41        55        67         21        11         6         27        38        19         12        65        31         82        18         97
+                                          12%         13%       13%       13%        12%       12%       13%        13%              5%s        10%       13%       28%        11%        5%        3%        12%       15%       13%         7%       14%        9%        11%       17%        11%
+Alba Party                                 -            -         -         -         -          -         -         -               -           -          -         -         -          -         -         -         -          -         -          -         -         -          -          -
+                                           -            -         -         -         -          -         -         -               -s          -          -         -         -          -         -         -         -          -         -          -         -         -          -          -
+Restore Britain                           24          21        19        17         23        23        22         19               -          17         7        11          5         6         2          3         4         7          7         8        14         22         1         17
+                                           3%          3%        3%         3%        3%        3%         3%        3%              -s          4%        2%        5%         3%        3%        1%         2%        2%        5%         4%        2%        4%         3%        1%         2%
+Other                                      2           2         2          2         2         2          2         2               -           2         1         1          2          -         -         1         1          -         -         2          -         2          -         3
+                                           *           *         *          *         *         *          *         *               -s          *         *         *          1%         -         -         1%        *          -         -         *          -         *          -         *
+Would not vote                            83          11         1          2         6         5          4         2             52           25        55        24         30        16        14          6        21        19         25        27        44         68        16         81
+                                           8%          1%        *          *         1%        1%         1%        *              86%s         5%       11%        8%        12%        6%        6%         2%        7%       11%        11%        5%       11%         8%       11%         8%
+Undecided                                 79          64        35        29         55        48        43         36               2          37        42        24         24        19        12         16        19        12         21        35        33         58        16         74
+                                           8%          8%        5%         5%        6%        6%         5%        5%              3%s         7%        8%        8%        10%        7%        5%         7%        7%        7%         9%        7%        8%         7%       11%         7%
+Prefer not to say                          9           3         3          3         3         3          3         3               -           2         7         1          4         1         2          2         2          -         3         4         3          6         1          9
+                                           1%          *         *          1%        *         *          *         *               -s          *         1%        *          2%        *         1%         1%        1%         -         1%        1%        1%         1%        1%         1%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fieldwork dates - Thursday 10th to Wednesday 15th (am) September 2026 (Base total= 1,031).
+Respondent Type : Probability sample, adults 18+, Great Britain, online KnowledgePanel
+Source : Ipsos J26-001401-01
+*=Less than 0.5%
+s=Where unweighted base sizes smaller than 100, please note results are indicative only
+
+                                                                                                                    Our long term political and social trends have been collected over the last 30+ years and are unrivalled amongst polling organisations:
+                                                                                                                                                                    https://www.Ipsos.uk/politicalandsocialtrends
+                                                                                                                                                                                                                                                                                                                                                                                                  Page 2
+                                                                                                                                                         Ipsos Political Monitor - September 2026
+
+
+                                                                                                                                                                                                                                                                                                                                                                                            18 Sep 2026
+Table 2
+V1AB/V2.  COMBINED VOTING INTENTION - ALL - How would you vote if there were a General Election tomorrow? (Which party/most inclined to support?)
+
+Base : All
+
+
+
+                                     Total                                                                                                                                                                                                                                                                               Past vote                                                            UnW
+                                (Weighted)                                   Voting                                 Working status           Government         Work sector                           Tenure                                             ONS Regions                                          (2024 General Election)                              Qualifications              Tot.
+                                                                                                                                                                                                                             Total
+                                                                             Liberal                                           Not full-time/            Dis-                               Owned                            owner   North      Mid-       South    Grea                                                                 Oth    Did not vote/
+                                                                        Democrats (Lib                                          Not work      Satis     satis                        Mort    out-   Private  Social          occup   excl.  lands (incl. E  excl.    -ter    Eng-                                                       incl.   not eligible/
+                                                  Labour  Conservative       Dem)        Reform UK   Green Party    Full-time      ing         -fied    -fied    Public    Private  gage     right   renter  renter Renter    -ier   Scot    of England)  London   London    land    Scot  Wales    Lab     Con   Reform UK      LD    LD,Grn    too young    No qual' Other qual'  Degree+
+Unweighted Total                        1031       262          188               70          192           97         440          574        200       704       238       619     323     430      114    123      237     753    264          255       232      129     880      96      55    250     185        117       76      189         134        150         554        304     1031
+Weighted Total                          1031       253          164               71          202          104         474          548        186       719       224       669     315     393      135    150      284     708    243          273       241      136     893      88      50    244     170        114       72      190         144        172         525        317     1031
+Total voting (sub-base)                  860        253          164              71          202          104          398          458        175      605       195       559     263      339     107     120     227     602     201          223       201     113     739      82      40     227    160         102       60     163           86        145        422        281      867
+
+Conservative                             164          -         164                -             -            -         66            98          2      151        32       115      50       96       5      10      15     147     26           40         60      22     149      10       6     10     107           7       6       13            6        33          83         47      188
+                                          19%         -         100%               -s            -            -s        17%           21%         1%      25%       17%       21%     19%      28%      4%      8%      6%     24%    13%          18%        30%     20%     20%     12%s    15%s     4%    67%          7%      11%s     8%           8%       23%         20%        17%      22%
+Labour                                   253       253             -               -             -            -        126          127        122        92        71       155      85       89      41      29      70     175     88           59         36      47     229      11      13    150       7           4      13       29           29        42          98        105      262
+                                          29%      100%            -               -s            -            -s        32%           28%        70%      15%       36%       28%     32%      26%     38%     24%     31%     29%    44%          26%        18%     42%     31%     13%s    32%s   66%      4%          4%      22%s    18%          33%       29%         23%        37%      30%
+Reform UK                                202          -            -               -          202             -         94          106           3      190        34       138      47       94      22      36      58     140     48           55         60      14     178      15       9     16      38         79        2       12           27        42         126         32      192
+                                          23%         -            -               -s         100%            -s        24%           23%         2%      31%       17%       25%     18%      28%     21%     30%     26%     23%    24%          25%        30%     13%     24%     18%s    23%s     7%    24%        77%        3%s     7%          32%       29%         30%        11%      22%
+Liberal Democrats (Lib                    71          -            -              71             -            -         33            38         22       42        15        47      24       24       2      16      18      49     14           14         22      13      63       8       1     13       5           -      29       35            8          9         37         26       70
+Dem)                                        8%        -            -             100%s           -            -s          8%           8%        12%        7%        8%       8%      9%       7%      2%     13%      8%      8%      7%           6%       11%     11%      8%      9%s     3%s     6%     3%          -       48%s    22%           9%         6%         9%         9%       8%
+Scottish National Party                   33          -            -               -             -            -         10            24          5       25          6       18       8        9       2      15      16      17       -            -         -        -       -     33       -       6       -          2        -      17            7          7         16          9       31
+(SNP)                                       4%        -            -               -s            -            -s          2%           5%         3%        4%        3%       3%      3%       3%      2%     12%      7%      3%      -            -         -        -       -     41%s      -s     2%      -          2%       -s     11%           8%         5%         4%         3%       4%
+Plaid Cymru                                 6         -            -               -             -            -           2            4          -         5         4        *        -       5       *       -       *       5       -            -         -        -       -       -      6       -       -          -        -       3            *          1          3          2        7
+                                            1%        -            -               -s            -            -s          *            1%         -         1%        2%       *        -       1%      *       -       *       1%      -            -         -        -       -       -s    14%s     -       -          -        -s      2%           *          *          1%         1%       1%
+Green Party                              104          -            -               -             -         104          55            49         19       76        26        67      43       17      31       9      39      60     18           45         18      15      96       4       4     29       3           -       9       52            8          7         43         55       97
+                                          12%         -            -               -s            -         100%s        14%           11%        11%      13%       13%       12%     16%       5%     29%      7%     17%     10%      9%         20%         9%     13%     13%      5%s    11%s   13%      2%          -       16%s    32%           9%         5%        10%        19%      11%
+Alba Party                                  -         -            -               -             -            -           -            -          -         -         -         -       -       -        -      -        -      -       -            -         -        -       -       -      -       -       -          -        -        -           -          -           -          -        -
+                                            -         -            -               -s            -            -s          -            -          -         -         -         -       -       -        -      -        -      -       -            -         -        -       -       -s      -s     -       -          -        -s       -           -          -           -          -        -
+Restore Britain                           24          -            -               -             -            -         11            12          1       22          7       15       5        4       4       5       9       9       6          10          5        2     23        -      1       3       -        10         -       1            1          3         15          6       17
+                                            3%        -            -               -s            -            -s          3%           3%         1%        4%        3%       3%      2%       1%      4%      4%      4%      1%      3%           4%        3%       2%     3%       -s     2%s     1%      -        10%        -s      1%           1%         2%         4%         2%       2%
+Other                                       2         -            -               -             -            -           2            1          -         2         -        2       1        1        -      1       1       1       1            1         -        -      2       1       -       1       -          1        -       1            -          -          1          1        3
+                                            *         -            -               -s            -            -s          *            *          -         *         -        *       *        *        -      1%      *       *       1%           *         -        -      *       1%s      -s     *       -          1%       -s      *            -          -          *          *        *
+Would not vote                            83          -            -               -             -            -         35            46          8       54        15        49      26       25      18      10      28      51     20           27         16      12      75       4       5       2      2           3       2        4           45        18          47         17       81
+                                            8%        -            -               -s            -            -s          7%           8%         4%        7%        7%       7%      8%       6%     13%      7%     10%      7%      8%         10%         7%       9%     8%      4%s     9%s     1%     1%          3%       2%s     2%          31%       11%          9%         5%       8%
+Undecided                                 79          -            -               -             -            -         38            39          4       57        13        58      23       27       9      18      27      50     20           21         21      11      72       2       4     13       8           9      10       22           12          7         54         17       74
+                                            8%        -            -               -s            -            -s          8%           7%         2%        8%        6%       9%      7%       7%      7%     12%      9%      7%      8%           8%        9%       8%     8%      2%s     9%s     5%     5%          8%      14%s    11%           9%         4%        10%         5%       7%
+Prefer not to say                           9         -            -               -             -            -           2            5          -         4         1        4       3        2       1       1       3       5       2            2         3        -      6       1       1       2       -          -        -       1            1          3          3          2        9
+                                            1%        -            -               -s            -            -s          *            1%         -         1%        *        1%      1%       1%      1%      1%      1%      1%      1%           1%        1%       -      1%      2%s     2%s     1%      -          -        -s      *            1%         2%         *          1%       1%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fieldwork dates - Thursday 10th to Wednesday 15th (am) September 2026 (Base total= 1,031).
+Respondent Type : Probability sample, adults 18+, Great Britain, online KnowledgePanel
+Source : Ipsos J26-001401-01
+*=Less than 0.5%
+s=Where unweighted base sizes smaller than 100, please note results are indicative only
+
+                                                                                                                        Our long term political and social trends have been collected over the last 30+ years and are unrivalled amongst polling organisations:
+                                                                                                                                                                          https://www.Ipsos.uk/politicalandsocialtrends
+                                                                                                                                                                                                                                                                                                                                                                                           Page 3
+                                                                                                                                                      Ipsos Political Monitor - September 2026
+
+
+                                                                                                                                                                                                                                                                                                                                                                                     18 Sep 2026
+Table 3
+V1AB/V2.  COMBINED VOTING INTENTION - LIKELY TO VOTE - How would you vote if there were a General Election tomorrow? (Which party/most inclined to support?)
+
+Base : All 9/10 at likely to vote (LIKEV) and always/usually/it depends at vote frequency (votefreq)
+
+
+
+                                                                                       Likelihood
+                                                                                          to vote                                                                                                                                                                                               UnWgt
+                                Total (W'td)                                      (General Election)                                              Gender                            Age                                           Social grade                                 Ethnicity          Total
+                                                              Always
+                                                             dependsusually
+
+                                                               AND        (10)
+                                                   Always      9/10      Absol                                                                                                                                                                                                         Ethnic
+                                                   usually     like-     -utely                                                                                                                                                                                                         min-
+                                                  depends     lihood    certain   (6 to 10) (7 to 10)  (8 to 10) (9 to 10)  Would NOT vote      Men     Women       18-34     35-49      50-64      65+        AB         C1        C2         DE       ABC1      C2DE       White      ority      Total
+Unweighted Total                         727          727       727       655        727       727        727       727                -         396       321        159       142        199       227        235       251       103         81       486        184        665        55         727
+Weighted Total                           692          692       692       616        692       692        692       692                -         358       322        176       136        179       200        195       203       125        122       398        246        612        68         727
+Total voting (sub-base)                   652         652       652        583       652        652       652        652               -         341       299        169       124        168       192        185       194        120       111        380       231        584        58         691
+Conservative                             139          139       139       119        139       139        139       139                -          77        61         13        24         40        62         54        43         13        17         98        31        128        10         162
+                                          21%          21%       21%        20%       21%        21%       21%        21%              -s         23%       20%         8%       19%        24%       33%        29%       22%        11%       16%s       26%       13%        22%       17%s        23%
+Labour                                   175          175       175       154        175       175        175       175                -          85        89         46        42         37        49         61        47         17        34       108         50        144        31         194
+                                          27%          27%       27%        26%       27%        27%       27%        27%              -s         25%       30%        27%       34%        22%       26%        33%       24%        14%       30%s       28%       22%        25%       53%s        28%
+Reform UK                                148          148       148       134        148       148        148       148                -          90        58         21        23         51        53         17        40         56        31         57        87        141         4         150
+                                          23%          23%       23%        23%       23%        23%       23%        23%              -s         26%       19%        13%       18%        31%       28%         9%       21%        46%       28%s       15%       38%        24%        7%s        22%
+Liberal Democrats (Lib                    53           53        53         50        53         53        53         53               -          30        21         17        10         15        11         18        16          7         7         33        14         48         2          57
+Dem)                                        8%          8%        8%         8%        8%         8%        8%         8%              -s          9%        7%        10%        8%         9%        6%        10%        8%         6%         6%s       9%        6%         8%        4%s         8%
+Scottish National Party                   25           25        25         24        25         25        25         25               -          10        15          3         5         12         6          5         7          3        10         12        13         25         1          26
+(SNP)                                       4%          4%        4%         4%        4%         4%        4%         4%              -s          3%        5%         2%        4%         7%        3%         3%        4%         2%         9%s       3%        5%         4%        1%s         4%
+Plaid Cymru                                 6           6         6          6         6          6         6          6               -           1         4          2          -         2         2          2         2          2          -         3         2          6          -          7
+                                            1%          1%        1%         1%        1%         1%        1%         1%              -s          *         1%         1%         -         1%        1%         1%        1%         2%         -s        1%        1%         1%         -s         1%
+Green Party                               85           85        85         77        85         85        85         85               -          32        45         56        17          6         6         25        34         16         6         59        21         72        10          79
+                                          13%          13%       13%        13%       13%        13%       13%        13%              -s          9%       15%        33%       13%         4%        3%        13%       18%        13%         5%s      16%        9%        12%       17%s        11%
+Alba Party                                  -           -          -         -          -         -          -         -               -            -         -          -         -         -          -          -         -         -          -         -          -         -          -          -
+                                            -           -          -         -          -         -          -         -               -s           -         -          -         -         -          -          -         -         -          -s        -          -         -          -s         -
+Restore Britain                           19           19        19         17        19         19        19         19               -          15         5         10         3          4         2          3         4          6         6          7        12         17         1          13
+                                            3%          3%        3%         3%        3%         3%        3%         3%              -s          4%        2%         6%        3%         2%        1%         2%        2%         5%         6%s       2%        5%         3%        2%s         2%
+Other                                       2           2         2          2         2          2         2          2               -           2         1          1         2          -          -         1         1          -          -         2          -         2          -          3
+                                            *           *         *          *         *          *         *          *               -s          *         *          *         1%         -          -         1%        1%         -          -s        1%         -         *          -s         *
+Would not vote                              1           1         1          1         1          1         1          1               -            -        1          1          -         -          -          -         -         -          -         -          -         -         1           1
+                                            *           *         *          *         *          *         *          *               -s           -        *          *          -         -          -          -         -         -          -s        -          -         -         1%s         *
+Undecided                                 35           35        35         29        35         35        35         35               -          17        19          7        10         12         7          8         8          5        10         17        14         26         9          32
+                                            5%          5%        5%         5%        5%         5%        5%         5%              -s          5%        6%         4%        7%         7%        4%         4%        4%         4%         8%s       4%        6%         4%       13%s         4%
+Prefer not to say                           3           3         3          3         3          3         3          3               -            -        3           -        2          -         1          2         *          -         1          2         1          2          -          3
+                                            *           *         *          1%        *          *         *          *               -s           -        1%          -        1%         -         1%         1%        *          -          1%s       *         1%         *          -s         *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fieldwork dates - Thursday 10th to Wednesday 15th (am) September 2026 (Base total= 1,031).
+Respondent Type : Probability sample, adults 18+, Great Britain, online KnowledgePanel
+Source : Ipsos J26-001401-01
+*=Less than 0.5%
+s=Where unweighted base sizes smaller than 100, please note results are indicative only
+
+                                                                                                                     Our long term political and social trends have been collected over the last 30+ years and are unrivalled amongst polling organisations:
+                                                                                                                                                                       https://www.Ipsos.uk/politicalandsocialtrends
+                                                                                                                                                                                                                                                                                                                                                                                                           Page 4
+                                                                                                                                                            Ipsos Political Monitor - September 2026
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                     18 Sep 2026
+Table 4
+V1AB/V2.  COMBINED VOTING INTENTION - LIKELY TO VOTE - How would you vote if there were a General Election tomorrow? (Which party/most inclined to support?)
+
+Base : All 9/10 at likely to vote (LIKEV) and always/usually/it depends at vote frequency (votefreq)
+
+
+
+                                     Total                                                                                                                                                                                                                                                                                      Past vote                                                             UnW
+                                 (Weighted)                                    Voting                                 Working status            Government          Work sector                            Tenure                                              ONS Regions                                           (2024 General Election)                               Qualifications              Tot.
+                                                                                                                                                                                                                                  Total
+                                                                              Liberal                                             Not full-time/            Dis-                                Owned                             owner   North       Mid-       South    Grea                                                                  Oth    Did not vote/
+                                                                          Democrats (Lib                                           Not work       Satis     satis                        Mort    out-    Private Social           occup   excl.  lands (incl. E  excl.     -ter    Eng-                                                         incl.   not eligible/
+                                                   Labour  Conservative        Dem)        Reform UK    Green Party   Full-time       ing         -fied     -fied    Public    Private  gage     right   renter  renter  Renter    -ier   Scot    of England)   London   London    land    Scot   Wales    Lab     Con   Reform UK      LD    LD,Grn    too young    No qual'  Other qual'  Degree+
+Unweighted Total                          727        194          162              57           150            79         306          417         162       495       186       437     231      352      60      60      120    583     177           172       169       91     609      78      40     202     162         95       66      154           31         98         378        246      727
+Weighted Total                            692        175          139              53           148            85         317          372         141       492       172       444     217      309      68      74      142    526     151           174       167       95     587      68      36     188     150         93       59      145           32        103         337        248      727
+Total voting (sub-base)                   652        175          139               53          148            85         301           349        141       460       164       415      209     289       65      67     132     497     144          168       155       85     551      67      34     180     147          91       50     128           31          99        318        232       691
+
+Conservative                              139           -         139                -             -            -          52            86          2       128        31        91      44       82        5       5      10    126       23           32        48       22     125      10       4      10      95           5        6      10            3         27          71         40      162
+                                           21%          -         100%               -s            -            -s         17%           25%         1%       28%       19%       22%     21%      28%       7%s     8%s     8%     25%     16%          19%       31%      25%s    23%     15%s    11%s     5%     65%          6%s     13%s     8%            9%s       27%s       22%        17%       23%
+Labour                                    175        175             -               -             -            -          84            90         97        55        60        97      58       77      21      15       36    136       57           33        31       32     153       9      12     113       6           4      11       24            7         21          68         85      194
+                                           27%       100%            -               -s            -            -s         28%           26%        69%       12%       37%       23%     28%      27%      32%s    22%s    27%     27%     40%          20%       20%      37%s    28%     14%s    37%s    63%      4%          4%s     21%s    18%          24%s        21%s       21%        37%       28%
+Reform UK                                 148           -            -               -          148             -          71            78           -      146        26       105      36       78        9     22       31    115       39           43        40       10     131      11       6      15      37         70         1       3           14         29          99         20      150
+                                           23%          -            -               -s         100%            -s         23%           22%          -       32%       16%       25%     17%      27%      14%s    33%s    24%     23%     27%          26%       26%      12%s    24%     16%s    19%s     8%     25%         77%s      1%s     2%          46%s        29%s       31%         9%       22%
+Liberal Democrats (Lib                     53           -            -             53              -            -          25            27         18        31        11        33      19       19        2     10       11      38       9           12        15        8      44       8       1       9       5           -      23       28            2           9         23         21        57
+Dem)                                        8%          -            -             100%s           -            -s          8%            8%        13%        7%        6%        8%      9%       7%       3%s    14%s     9%      8%      6%           7%       10%        9%s    8%     11%s      3%s    5%      4%          -s      46%s    22%            6%s        9%s        7%         9%        8%
+Scottish National Party                    25           -            -               -             -            -           8            17          5        18         4        17       7        9        2       7       9      16       -             -         -        -       -     25        -      6        -          2        -      15            1           7          9          9        26
+(SNP)                                       4%          -            -               -s            -            -s          3%            5%         4%        4%        3%        4%      4%       3%       3%s    11%s     7%      3%      -             -         -        -s      -     38%s      -s     3%       -          2%s      -s     12%            3%s        7%s        3%         4%        4%
+Plaid Cymru                                 6           -            -               -             -            -           2             4           -        5         4         *        -       5        *       -       *       5       -             -         -        -       -       -      6        -       -          -        -       3            *           1          3          2         7
+                                            1%          -            -               -s            -            -s          1%            1%          -        1%        3%        *        -       2%       1%s     -s      *       1%      -             -         -        -s      -       -s    17%s      -       -          -s       -s      2%            1%s        1%s        1%         1%        1%
+Green Party                                85           -            -               -             -           85          50            35         18        58        22        57      41       14      23        4      26      55      11           38        17       12      78       4       3      24       3           -        9      44            4           5         31         49        79
+                                           13%          -            -               -s            -          100%s        16%           10%        13%       13%       14%       14%     19%       5%      34%s     6%s    20%     11%      8%          23%       11%      14%s    14%       6%s   10%s    13%      2%          -s      18%s    34%          12%s         5%s       10%        21%       11%
+Alba Party                                   -          -            -               -             -            -            -            -           -         -         -         -       -        -       -       -        -      -       -             -         -        -       -       -       -       -       -          -        -        -            -          -           -          -        -
+                                             -          -            -               -s            -            -s           -            -           -         -         -         -       -        -       -s      -s       -      -       -             -         -        -s      -       -s      -s      -       -          -s       -s       -            -s         -s          -          -        -
+Restore Britain                            19           -            -               -             -            -           8            11          1        17         5        12       2        4        4       3       7       6       3            9         4        2      18        -      1       3        -          9        -       1             -          1         12          6        13
+                                            3%          -            -               -s            -            -s          3%            3%         1%        4%        3%        3%      1%       1%       6%s     5%s     5%      1%      2%           5%        3%        2%s    3%       -s      3%s    2%       -         10%s      -s      1%            -s         1%s        4%         2%        2%
+Other                                       2           -            -               -             -            -           2             1           -        2          -        2       1        1        -       1       1       1       1            1          -        -      2       1        -      1        -          1        -       1             -          -          1          1         3
+                                            *           -            -               -s            -            -s          1%            *           -        *          -        1%      *        *        -s      2%s     1%      *       1%           *          -        -s     *        1%s     -s     *        -          1%s      -s      1%            -s         -s         *          1%        *
+Would not vote                              1           -            -               -             -            -            -            1           -        1          -        1        -        -       -       -        -      -       -             -         -       1       1        -       -       -       -          -        -        -            -          -          1           -        1
+                                            *           -            -               -s            -            -s           -            *           -        *          -        *        -        -       -s      -s       -      -       -             -         -        1%s    *        -s      -s      -       -          -s       -s       -            -s         -s         *           -        *
+Undecided                                  35           -            -               -             -            -          14            21          1        28         8        25       7       20        1       7       8      27       7            6        10       10      32       1       2       8       4           1        9      17            1           3         19         13        32
+                                            5%          -            -               -s            -            -s          5%            6%         *         6%        5%        6%      3%       6%       1%s    10%s     6%      5%      5%           3%        6%      10%s     5%       1%s     7%s    4%      2%          1%s     15%s    12%            2%s        3%s        5%         5%        4%
+Prefer not to say                           3           -            -               -             -            -           2             2           -        2          -        3       2        *        1       -       1       2       *             -        3         -      3        -       -      *        -          -        -        -            -          1           -         2         3
+                                            *           -            -               -s            -            -s          *             *           -        *          -        1%      1%       *        2%s     -s      1%      *       *             -        2%        -s     1%       -s      -s     *        -          -s       -s       -            -s         1%s         -         1%        *
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fieldwork dates - Thursday 10th to Wednesday 15th (am) September 2026 (Base total= 1,031).
+Respondent Type : Probability sample, adults 18+, Great Britain, online KnowledgePanel
+Source : Ipsos J26-001401-01
+*=Less than 0.5%
+s=Where unweighted base sizes smaller than 100, please note results are indicative only
+
+                                                                                                                          Our long term political and social trends have been collected over the last 30+ years and are unrivalled amongst polling organisations:
+                                                                                                                                                                              https://www.Ipsos.uk/politicalandsocialtrends

@@ -1700,6 +1700,34 @@ class TestAlignedSourceTables:
         with pytest.raises(ValueError, match="region headers"):
             parse_poll(text)
 
+    def test_identical_repeated_regional_table_preserves_all_values(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        regional_table = re.split(r"(?m)^Table\s+\d+\s*$", text)[4]
+        repeated = f"{text}\nTable 5\n{regional_table}"
+
+        assert parse_poll(repeated) == parse_poll(text)
+
+    def test_conflicting_repeated_regional_table_fails(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        regional_table = re.split(r"(?m)^Table\s+\d+\s*$", text)[4]
+        rows = regional_table.splitlines()
+        index = next(
+            i for i, line in enumerate(rows) if line.startswith("Conservative")
+        )
+        rows[index + 1] = re.sub(
+            r"(\d+)%",
+            lambda match: f"{min(int(match[1]) + 1, 100)}%",
+            rows[index + 1],
+        )
+        regional_text = "\n".join(rows)
+        repeated = f"{text}\nTable 5\n{regional_text}"
+
+        with pytest.raises(
+            ValueError,
+            match="Conflicting aligned Ipsos regional tables",
+        ):
+            parse_poll(repeated)
+
     def test_missing_regional_count_anchor_fails(self) -> None:
         text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
         parts = re.split(r"(?m)^Table\s+\d+\s*$", text)

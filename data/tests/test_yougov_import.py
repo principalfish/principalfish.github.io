@@ -610,6 +610,30 @@ class TestParseHeadlineViTableOctober2026:
 
         assert parse_headline_vi_table(text) == OCT_2026_EXPECTED_SHARES
 
+    @pytest.mark.parametrize("label", ["Con", "Your Party", "Restore Britain"])
+    @pytest.mark.parametrize("column", [0, -6, -2, -1])
+    @pytest.mark.parametrize("cell", ["N/A", "*", "-", "?", "22%", "1.5"])
+    def test_malformed_combined_cells_cannot_shift_region_values(
+        self,
+        label: str,
+        column: int,
+        cell: str,
+    ) -> None:
+        row = next(
+            line
+            for line in OCT_2026_TEXT.splitlines()
+            if line.startswith(f"{label} ")
+        )
+        values = row[len(label):].split()
+        values[column] = cell
+        text = OCT_2026_TEXT.replace(row, f"{label} {' '.join(values)}", 1)
+
+        with pytest.raises(
+            ValueError,
+            match="Invalid percentage cells|inconsistent widths",
+        ):
+            parse_poll(text)
+
     def test_consistent_rows_still_must_agree_with_percentage_header(self) -> None:
         headline, later_questions = OCT_2026_TEXT.split(
             "If there were a general election",
@@ -763,7 +787,10 @@ class TestParseHeadlineViTableRepeatedPages:
             parse_headline_vi_table(f"{prefix}Westminster Voting Intention{repeated}")
 
     @pytest.mark.parametrize("block_index", [0, 1])
-    def test_unmapped_party_width_must_match_its_own_block(self, block_index: int) -> None:
+    def test_unmapped_party_width_must_match_its_own_block(
+        self,
+        block_index: int,
+    ) -> None:
         sections = self._source_text().split("Westminster Voting Intention")
         block = sections[block_index + 1]
         row = next(line for line in block.splitlines() if line.startswith("Your Party "))

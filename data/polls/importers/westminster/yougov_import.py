@@ -244,6 +244,14 @@ _INTEGER_ROW = re.compile(r"-?\d+(?:\s+-?\d+)*")
 _SECOND_QUESTION_PREFIX = "If there were a general election"
 
 
+def _combined_headline_values(line: str, label: str) -> list[int]:
+    """Read complete integer cells without discarding malformed percentages."""
+    cells = line[len(label):].strip()
+    if _INTEGER_ROW.fullmatch(cells) is None:
+        raise ValueError(f"Invalid percentage cells in combined headline row: {label}")
+    return [int(cell) for cell in cells.split()]
+
+
 def _parse_old_format_rows(
     lines: list[str],
     row_labels: list[str],
@@ -274,7 +282,7 @@ def _parse_old_format_rows(
                 break
         if matched_label is None:
             continue
-        values = [int(v) for v in re.findall(r"-?\d+", line)]
+        values = _combined_headline_values(line, matched_label)
         if len(values) < 6:
             continue
         party_name = PARTY_NAME_MAP[matched_label]
@@ -295,11 +303,19 @@ def _validate_combined_headline_rows(
     header counts current columns; headline rows may also lead with one
     previous-poll total, but must all use the same width.
     """
-    widths = {
-        len(match.group(2).split())
-        for line in lines
-        if (match := _LABELLED_ROW.fullmatch(line)) is not None
-    }
+    row_labels = sorted(PARTY_NAME_MAP, key=len, reverse=True)
+    widths: set[int] = set()
+    for line in lines:
+        label = next(
+            (label for label in row_labels if line.startswith(f"{label} ")),
+            None,
+        )
+        if label is None:
+            match = _LABELLED_ROW.match(line)
+            if match is None:
+                continue
+            label = match.group(1)
+        widths.add(len(_combined_headline_values(line, label)))
     if not widths:
         raise ValueError("No headline rows found in combined-format PDF")
     if len(widths) != 1:

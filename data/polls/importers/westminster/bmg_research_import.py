@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import a BMG Research poll directly from an XLSX URL."""
+"""Import a BMG Research poll from a workbook or published source page."""
 
 from __future__ import annotations
 
@@ -7,9 +7,11 @@ import argparse
 import re
 import sys
 from datetime import date
+from html.parser import HTMLParser
 from io import BytesIO
 from pathlib import Path
 from typing import Any
+from urllib.parse import urldefrag, urljoin, urlsplit
 from urllib.request import Request, urlopen
 
 from openpyxl import load_workbook
@@ -26,6 +28,17 @@ DEFAULT_XLSX_URL = "https://bmgresearch.com/wp-content/uploads/2026/02/january-2
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
 DEFAULT_POLLSTER_IDENTIFIER = "bmg_research"
 NATIONAL_KEY = "__national__"
+_BMG_HOSTS = {
+    "bmgresearch.com",
+    "www.bmgresearch.com",
+    "bmgresearch.co.uk",
+    "www.bmgresearch.co.uk",
+}
+_INEWS_HOSTS = {"inews.co.uk", "www.inews.co.uk"}
+_MAX_NEWS_PAGES = 8
+_MAX_RELEASE_PAGES = 64
+_REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://bmgresearch.com/"}
+_FINAL_VI_BASE = "base: not sure and prefer not to say removed"
 
 SOURCE_REGION_TO_INTERNAL = {
     "East Midlands": "East Midlands",
@@ -271,6 +284,135 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
     raise ValueError(f"Could not parse fieldwork string: {fieldwork_text!r}")
 
 
+class _LinkParser(HTMLParser):
+    """Collect published hyperlinks without fetching any embedded resources."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[str] = []
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        if tag.lower() == "a":
+            for name, value in attrs:
+                if name.lower() == "href" and value:
+                    self.links.append(value)
+
+
+def _is_public_url(url: str, hosts: set[str]) -> bool:
+    parsed = urlsplit(url)
+    return (
+        parsed.scheme in {"https", "http"}
+        and parsed.netloc.lower() in hosts
+        and parsed.hostname in hosts
+    )
+
+
+def _fetch_page_links(url: str, hosts: set[str]) -> tuple[str, list[str]]:
+    with urlopen(Request(url, headers=_REQUEST_HEADERS), timeout=45) as response:
+        final_url = urldefrag(response.geturl()).url
+        if not _is_public_url(final_url, hosts):
+            raise ValueError(f"Unexpected source-page redirect: {final_url}")
+        content = response.read(2_000_001)
+    if len(content) > 2_000_000:
+        raise ValueError(f"Source page is too large: {final_url}")
+    parser = _LinkParser()
+    parser.feed(content.decode("utf-8", errors="replace"))
+    links = list(
+        dict.fromkeys(
+            urldefrag(urljoin(final_url, link)).url for link in parser.links
+        )
+    )
+    return final_url, links
+
+
+def _published_workbook(links: list[str]) -> str:
+    workbooks = {
+        link
+        for link in links
+        if _is_public_url(link, _BMG_HOSTS)
+        and urlsplit(link).path.startswith("/wp-content/uploads/")
+        and urlsplit(link).path.lower().endswith(".xlsx")
+    }
+    if len(workbooks) != 1:
+        raise ValueError(
+            f"Expected one published BMG XLSX link, found {len(workbooks)}"
+        )
+    return next(iter(workbooks))
+
+
+def resolve_source_url(source_url: str) -> str:
+    """Resolve a BMG release or i article using published source links.
+
+    Direct workbook URLs retain their existing download behaviour. An i article
+    must be linked exactly from a BMG release after following its redirects.
+    Search only published news listings and their releases, with fixed bounds.
+    All releases on a matching listing are checked for conflicting workbooks;
+    related links within release pages are not followed.
+    """
+    parsed = urlsplit(source_url)
+    is_bmg_release = (
+        _is_public_url(source_url, _BMG_HOSTS)
+        and parsed.path.startswith("/news/")
+        and parsed.path != "/news/"
+    )
+    if is_bmg_release:
+        final_url, links = _fetch_page_links(source_url, _BMG_HOSTS)
+        if not urlsplit(final_url).path.startswith("/news/"):
+            raise ValueError(f"Unexpected BMG release redirect: {final_url}")
+        return _published_workbook(links)
+    if not (
+        _is_public_url(source_url, _INEWS_HOSTS)
+        and parsed.path.startswith("/news/")
+    ):
+        return source_url
+
+    article_url, _ = _fetch_page_links(source_url, _INEWS_HOSTS)
+    if not urlsplit(article_url).path.startswith("/news/"):
+        raise ValueError(f"Unexpected i article redirect: {article_url}")
+    pending = ["https://bmgresearch.com/news/"]
+    visited_listings: set[str] = set()
+    visited_releases: set[str] = set()
+    while pending:
+        listing_url = pending.pop(0)
+        if listing_url in visited_listings:
+            continue
+        if len(visited_listings) >= _MAX_NEWS_PAGES:
+            raise ValueError("BMG news listing search limit reached")
+        visited_listings.add(listing_url)
+        final_listing, listing_links = _fetch_page_links(listing_url, _BMG_HOSTS)
+        if urlsplit(final_listing).path != "/news/":
+            raise ValueError(f"Unexpected BMG news listing redirect: {final_listing}")
+        matching_workbooks: set[str] = set()
+        for link in listing_links:
+            if not _is_public_url(link, _BMG_HOSTS):
+                continue
+            linked = urlsplit(link)
+            if linked.path == "/news/":
+                if re.fullmatch(r"results-page=\d+", linked.query):
+                    if link not in visited_listings and link not in pending:
+                        pending.append(link)
+                continue
+            if not re.fullmatch(r"/news/[^/]+/?", linked.path):
+                continue
+            if link in visited_releases:
+                continue
+            if len(visited_releases) >= _MAX_RELEASE_PAGES:
+                raise ValueError("BMG release search limit reached")
+            visited_releases.add(link)
+            final_release, release_links = _fetch_page_links(link, _BMG_HOSTS)
+            if not urlsplit(final_release).path.startswith("/news/"):
+                raise ValueError(f"Unexpected BMG release redirect: {final_release}")
+            if article_url in release_links:
+                matching_workbooks.add(_published_workbook(release_links))
+        if len(matching_workbooks) > 1:
+            raise ValueError("Multiple BMG workbooks link to the same i article")
+        if matching_workbooks:
+            return next(iter(matching_workbooks))
+    raise ValueError("No published BMG release links to this i article")
+
+
 def extract_workbook(xlsx_url: str) -> Any:
     """Fetch an XLSX file from a URL and return an openpyxl ``Workbook``.
 
@@ -291,6 +433,7 @@ def extract_workbook(xlsx_url: str) -> Any:
         ValueError: If none of the candidate URLs returns a valid XLSX payload,
             with a combined error message listing each failure reason.
     """
+    xlsx_url = resolve_source_url(xlsx_url)
     candidate_urls = [xlsx_url]
     if "bmgresearch.co.uk" in xlsx_url:
         candidate_urls.append(xlsx_url.replace("bmgresearch.co.uk", "bmgresearch.com"))
@@ -299,7 +442,7 @@ def extract_workbook(xlsx_url: str) -> Any:
     payload = None
     errors: list[str] = []
     for candidate in dict.fromkeys(candidate_urls):
-        req = Request(candidate, headers={"User-Agent": "Mozilla/5.0 (compatible; poll-importer/1.0)"})
+        req = Request(candidate, headers=_REQUEST_HEADERS)
         try:
             with urlopen(req, timeout=45) as response:
                 data = response.read()
@@ -414,8 +557,8 @@ def _parse_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date,
 
     Scans the first 80 rows and 5 columns of the methodology sheet for cells
     whose text contains ``"fieldwork date"`` (the date range) or starts with
-    ``"sample:"`` (the sample size).  The sample size is extracted by stripping
-    all non-digit characters from the sample line.
+    ``"sample:"`` (the sample size). Only the count immediately following the
+    sample label is read; demographic ages later in the line are excluded.
 
     Args:
         workbook: An openpyxl ``Workbook`` instance containing a methodology
@@ -456,11 +599,17 @@ def _parse_fieldwork_and_sample(workbook: Any, default_year: int) -> tuple[date,
 
     if not sample_raw:
         raise ValueError("Sample line not found in methodology sheet")
-    digits = re.sub(r"[^0-9]", "", sample_raw)
-    if not digits:
+    sample_match = re.match(
+        r"sample:\s*(\d{1,3}(?:,\d{3})+|\d+)(?=\s|$)",
+        sample_raw,
+        re.IGNORECASE,
+    )
+    if sample_match is None:
         raise ValueError("Could not parse sample size from methodology sheet")
-
-    return fieldwork_start, fieldwork_end, int(digits)
+    sample_size = int(sample_match.group(1).replace(",", ""))
+    if sample_size <= 0:
+        raise ValueError("Could not parse sample size from methodology sheet")
+    return fieldwork_start, fieldwork_end, sample_size
 
 
 def _find_tables_sheet(workbook: Any) -> Any:
@@ -489,8 +638,8 @@ def _find_vi_table_starts(sheet: Any) -> list[int]:
 
     Scans column B of the sheet for cells whose text (normalised to lower-case,
     whitespace stripped) contains ``"wouldvotetodayrevised"``.  The first match
-    is treated as the national table; the last match is treated as the regional
-    cross-tabulation table.
+    supplies legacy national values unless an explicit final base identifies
+    another stage; the last match supplies the regional cross-tabulation.
 
     Args:
         sheet: An openpyxl ``Worksheet`` — expected to be the tables sheet.
@@ -519,6 +668,10 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     tables, reads party rows from each, and merges them into a combined
     structure keyed first by canonical party name, then by region name (or
     :data:`NATIONAL_KEY` for the national figure).
+
+    National values come from the unique revised table whose base excludes
+    not-sure and prefer-not-to-say respondents. When that base is absent, the
+    first revised table preserves the older workbook layout's interpretation.
 
     Party labels are normalised via :data:`PARTY_NAME_MAP`.  Regional column
     headers are mapped to internal region names via
@@ -552,11 +705,26 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     starts = _find_vi_table_starts(sheet)
     national_start = starts[0]
     regional_start = starts[-1]
+    final_starts = []
+    for start in starts:
+        for row in range(start + 1, min(sheet.max_row + 1, start + 5)):
+            base = _normalize_header(_cell_text(sheet.cell(row, 2).value)).lower()
+            if base == _FINAL_VI_BASE:
+                final_starts.append(start)
+                break
+    if len(final_starts) > 1:
+        raise ValueError("Multiple final voting-intention tables found")
+    if final_starts:
+        national_start = final_starts[0]
 
     national_values: dict[str, float] = {}
-    for row in range(national_start + 1, min(sheet.max_row, national_start + 180)):
+    for row in range(national_start + 1, min(sheet.max_row + 1, national_start + 180)):
         label = _cell_text(sheet.cell(row, 2).value)
-        if label.lower().startswith("table ") and row > national_start + 4:
+        if row in starts:
+            break
+        if label.lower().startswith("table ") and (
+            row > national_start + 4 or national_values or final_starts
+        ):
             break
         canonical = PARTY_NAME_MAP.get(label)
         if canonical is None:
@@ -738,8 +906,9 @@ def build_import_plan(
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
 
-    workbook = extract_workbook(xlsx_url)
-    parsed = parse_poll(workbook, source_url=xlsx_url, year_hint=year_hint)
+    source_url = resolve_source_url(xlsx_url)
+    workbook = extract_workbook(source_url)
+    parsed = parse_poll(workbook, source_url=source_url, year_hint=year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -797,7 +966,7 @@ def build_import_plan(
         regions_mapping="",
         map_id=poll_map.id,
         map_name=poll_map.name,
-        source_url=xlsx_url,
+        source_url=source_url,
         parsed=parsed,
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,

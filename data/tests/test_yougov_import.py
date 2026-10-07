@@ -576,13 +576,10 @@ class TestParseHeadlineViTableOctober2026:
         assert result["Conservative"]["Wales"] == 12.0
         assert result["Conservative"]["Scotland"] == 11.0
 
-    def test_missing_second_question_boundary_raises(self) -> None:
-        text = OCT_2026_TEXT.replace(
-            "If there were a general election",
-            "Were there an election",
-        )
+    def test_missing_outer_question_boundary_raises(self) -> None:
+        text = OCT_2026_TEXT.replace("Now, thinking specifically", "Thinking about")
 
-        with pytest.raises(ValueError, match="end of the headline rows"):
+        with pytest.raises(ValueError, match="Could not isolate Westminster headline"):
             parse_headline_vi_table(text)
 
     @pytest.mark.parametrize("label", ["Con", "Your Party", "Restore Britain"])
@@ -661,6 +658,143 @@ class TestParseHeadlineViTableOctober2026:
         )
 
         assert parse_headline_vi_table(text) == OCT_2026_EXPECTED_SHARES
+
+
+class TestParseHeadlineViTableRepeatedPages:
+    """Real extracted pages retain metadata, repeated labels and later answers."""
+
+    @pytest.mark.parametrize(
+        ("filename", "sample_size", "start", "end", "shares"),
+        [
+            (
+                "20260928", 2310, date(2026, 9, 27), date(2026, 9, 28),
+                {
+                    "Conservative": [13, 13, 18, 20, 19, 22],
+                    "Labour": [18, 17, 31, 27, 32, 18],
+                    "Liberal Democrats": [1, 14, 8, 8, 14, 18],
+                    "Scottish National Party": [0, 26, 0, 0, 0, 0],
+                    "Plaid Cymru": [26, 0, 0, 0, 0, 0],
+                    "Reform UK": [32, 19, 27, 30, 14, 24],
+                    "Green": [5, 9, 12, 10, 16, 12],
+                    "Other": [1, 2, 2, 1, 2, 2],
+                },
+            ),
+            (
+                "20260921", 2286, date(2026, 9, 20), date(2026, 9, 21),
+                {
+                    "Conservative": [12, 12, 18, 21, 24, 25],
+                    "Labour": [24, 15, 33, 27, 27, 16],
+                    "Liberal Democrats": [7, 11, 7, 6, 14, 18],
+                    "Scottish National Party": [0, 28, 0, 0, 0, 0],
+                    "Plaid Cymru": [26, 0, 0, 0, 0, 0],
+                    "Reform UK": [22, 15, 25, 26, 9, 20],
+                    "Green": [7, 13, 13, 13, 22, 14],
+                    "Other": [2, 2, 1, 3, 2, 0],
+                },
+            ),
+            (
+                "20260209", 2466, date(2026, 2, 8), date(2026, 2, 9),
+                {
+                    "Conservative": [10, 5, 16, 23, 16, 23],
+                    "Labour": [19, 21, 22, 16, 30, 14],
+                    "Liberal Democrats": [6, 8, 10, 11, 14, 20],
+                    "Scottish National Party": [0, 33, 0, 0, 0, 0],
+                    "Plaid Cymru": [33, 0, 0, 0, 0, 0],
+                    "Reform UK": [22, 22, 32, 30, 17, 28],
+                    "Green": [10, 11, 18, 15, 22, 14],
+                    "Other": [1, 0, 2, 5, 1, 1],
+                },
+            ),
+        ],
+    )
+    def test_exact_metadata_and_all_regional_shares(
+        self,
+        filename: str,
+        sample_size: int,
+        start: date,
+        end: date,
+        shares: dict[str, list[int]],
+    ) -> None:
+        text = self._source_text(filename)
+        regions = ["Wales", "Scotland", "North", "Midlands", "London", "Rest of South"]
+
+        parsed = parse_poll(text)
+
+        assert parsed.sample_size == sample_size
+        assert parsed.fieldwork_start == start
+        assert parsed.fieldwork_end == end
+        assert parsed.party_macro_percentages == {
+            party: dict(zip(regions, values)) for party, values in shares.items()
+        }
+
+    @staticmethod
+    def _source_text(filename: str = "20260928") -> str:
+        path = Path(__file__).parent / "fixtures" / "yougov"
+        return (path / f"headline-{filename}.txt").read_text()
+
+    @pytest.mark.parametrize("block_index", [0, 1])
+    @pytest.mark.parametrize("label", ["Con", "Your Party", "Restore Britain"])
+    def test_duplicate_label_inside_each_block_is_rejected(
+        self,
+        block_index: int,
+        label: str,
+    ) -> None:
+        sections = self._source_text().split("Westminster Voting Intention")
+        block = sections[block_index + 1]
+        row = next(line for line in block.splitlines() if line.startswith(f"{label} "))
+        sections[block_index + 1] = block.replace(row, f"{row}\n{row}", 1)
+
+        with pytest.raises(ValueError, match="Duplicate party labels"):
+            parse_headline_vi_table("Westminster Voting Intention".join(sections))
+
+    @pytest.mark.parametrize("change", ["rename", "reorder", "missing", "extra"])
+    def test_repeated_block_must_keep_complete_party_order(self, change: str) -> None:
+        prefix, repeated = self._source_text().rsplit("Westminster Voting Intention", 1)
+        if change == "rename":
+            repeated = repeated.replace("Your Party 0 0", "Unmapped Party 0 0", 1)
+        elif change == "reorder":
+            repeated = repeated.replace("Con 21 19\nLab 23 24", "Lab 23 24\nCon 21 19")
+        elif change == "missing":
+            repeated = repeated.replace("Your Party 0 0\n", "", 1)
+        else:
+            repeated = repeated.replace("Other 1 2\n", "Other 1 2\nExtra Party 0 0\n", 1)
+
+        with pytest.raises(ValueError, match="different party order"):
+            parse_headline_vi_table(f"{prefix}Westminster Voting Intention{repeated}")
+
+    @pytest.mark.parametrize("block_index", [0, 1])
+    def test_unmapped_party_width_must_match_its_own_block(self, block_index: int) -> None:
+        sections = self._source_text().split("Westminster Voting Intention")
+        block = sections[block_index + 1]
+        row = next(line for line in block.splitlines() if line.startswith("Your Party "))
+        sections[block_index + 1] = block.replace(row, f"{row} 99", 1)
+
+        with pytest.raises(ValueError, match="inconsistent row widths"):
+            parse_headline_vi_table("Westminster Voting Intention".join(sections))
+
+    def test_routine_header_must_agree_with_percentage_width(self) -> None:
+        text = self._source_text("20260921").replace(
+            "% % % % % % % %\n", "% % % % % % %\n",
+        )
+
+        with pytest.raises(ValueError, match="Regions table has 7 columns"):
+            parse_headline_vi_table(text)
+
+    def test_anonymous_extra_column_is_rejected(self) -> None:
+        text = self._source_text("20260921").replace(
+            "Routine England Wales Scotland", "Unknown England Wales Scotland",
+        )
+
+        with pytest.raises(ValueError, match="Regions table has 8 columns"):
+            parse_headline_vi_table(text)
+
+    def test_truncated_routine_row_is_rejected(self) -> None:
+        text = self._source_text("20260921").replace(
+            "18 22 12 12 18 21 24 25\n", "22 12 12 18 21 24 25\n",
+        )
+
+        with pytest.raises(ValueError, match="Unexpected line in regions table"):
+            parse_headline_vi_table(text)
 
 
 class TestParseHeadlineViTableSeptember2026:

@@ -235,7 +235,8 @@ _COUNTRY_COLUMNS = ["England", "Wales", "Scotland"]
 
 # Separate regional tables may include country columns or England regions only.
 _REGION_TABLE_HEADER = re.compile(
-    r"(England\s+Wales\s+Scotland\s+)?North\s+Midlands\s+London\s+Rest of\s*South"
+    r"(?P<routine>Routine\s+)?(?P<countries>England\s+Wales\s+Scotland\s+)?"
+    r"North\s+Midlands\s+London\s+Rest of\s*South"
 )
 _PERCENT_ROW = re.compile(r"^[ \t]*%(?:[ \t]+%)+[ \t]*$", re.MULTILINE)
 _LABELLED_ROW = re.compile(r"(\D+?)\s+(-?\d+(?:\s+-?\d+)*)")
@@ -321,6 +322,48 @@ def _validate_combined_headline_rows(
             )
 
 
+def _parse_split_headline_rows(lines: list[str]) -> list[tuple[str, list[int]]]:
+    """Read contiguous headline blocks, checking repeated pages keep row order.
+
+    Sample-size metadata also matches the labelled integer-row pattern. Only
+    the first block and blocks following a repeated Westminster heading count
+    as party rows; a non-row line closes each block.
+    """
+    blocks: list[list[tuple[str, list[int]]]] = []
+    block: list[tuple[str, list[int]]] = []
+    awaiting_rows = True
+    for line in lines:
+        if line == "Westminster Voting Intention":
+            if block:
+                blocks.append(block)
+                block = []
+            awaiting_rows = True
+            continue
+        match = _LABELLED_ROW.fullmatch(line)
+        if match is not None and (block or awaiting_rows):
+            block.append((match.group(1), [int(v) for v in match.group(2).split()]))
+            awaiting_rows = False
+        elif block:
+            blocks.append(block)
+            block = []
+    if block:
+        blocks.append(block)
+    if not blocks:
+        raise ValueError("No MRP headline rows found in new-format PDF")
+
+    labels = [label for label, _ in blocks[0]]
+    for candidate in blocks:
+        candidate_labels = [label for label, _ in candidate]
+        if len(set(candidate_labels)) != len(candidate_labels):
+            raise ValueError("Duplicate party labels in MRP headline block")
+        if candidate_labels != labels:
+            raise ValueError("Repeated MRP headline block has different party order")
+        widths = {len(values) for _, values in candidate}
+        if len(widths) != 1:
+            raise ValueError("MRP headline block has inconsistent row widths")
+    return blocks[0]
+
+
 def _parse_new_format(
     section: str,
     lines: list[str],
@@ -344,6 +387,9 @@ def _parse_new_format(
       row, which is only trusted when the page-1 column header ends in the
       country columns.
 
+    A named ``Routine`` demographic column can precede the geographic
+    columns. It counts towards the expected width but is not a region.
+
     Args:
         section: Raw text of the Westminster VI section of the PDF.
         lines: Stripped, non-empty lines from ``section``.
@@ -361,27 +407,25 @@ def _parse_new_format(
             per headline row; or if neither the table nor page 1 carries
             Wales and Scotland columns.
     """
-    # Step 1: MRP headline rows, in order, up to the second question.
+    # Repeated pages must agree on labels; metadata cannot add party rows.
     second_question = next(
         (i for i, line in enumerate(lines) if line.startswith(_SECOND_QUESTION_PREFIX)),
         None,
     )
     if second_question is None:
         raise ValueError("Could not find the end of the MRP headline rows in new-format PDF")
-    headline_rows: list[tuple[str, list[int]]] = []
-    for line in lines[:second_question]:
-        match = _LABELLED_ROW.fullmatch(line)
-        if match is not None:
-            headline_rows.append((match.group(1), [int(v) for v in match.group(2).split()]))
-    if not headline_rows:
-        raise ValueError("No MRP headline rows found in new-format PDF")
+    headline_rows = _parse_split_headline_rows(lines[:second_question])
 
     # Step 2: region table header, and its column count from the "%" row.
     header_match = _REGION_TABLE_HEADER.search(section)
     if header_match is None:
         raise ValueError("Could not find regions table in new-format PDF")
-    has_country_columns = header_match.group(1) is not None
-    columns = (_COUNTRY_COLUMNS if has_country_columns else []) + _ENGLAND_REGION_ORDER
+    has_country_columns = header_match.group("countries") is not None
+    columns = (
+        (["Routine"] if header_match.group("routine") is not None else [])
+        + (_COUNTRY_COLUMNS if has_country_columns else [])
+        + _ENGLAND_REGION_ORDER
+    )
     pct_match = _PERCENT_ROW.search(section, header_match.end())
     if pct_match is None:
         raise ValueError("Could not find '%' header row in regions table")
@@ -424,6 +468,8 @@ def _parse_new_format(
         if has_country_columns:
             wales, scotland = by_column["Wales"], by_column["Scotland"]
         else:
+            if len(page_one_values) < 2:
+                raise ValueError("MRP headline row is missing Wales and Scotland values")
             wales, scotland = page_one_values[-2:]
         result[party_name] = {
             "Wales": float(wales),
@@ -439,9 +485,10 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
     Isolates the relevant section between the ``"Westminster Voting Intention"``
     and ``"Now, thinking specifically"`` markers. A complete regional suffix
     on page 1 identifies a combined cross-tab; its rows are validated and
-    bounded to the first question. Otherwise a ``"Region in England"`` block
-    selects the separate-table parser. Legacy combined rows are also bounded
-    when the second-question marker is present.
+    bounded to the first question, or the outer section boundary in older
+    polls without a direct voting question. Otherwise a ``"Region in England"``
+    block selects the separate-table parser. Legacy combined rows are also
+    bounded when the second-question marker is present.
 
     Args:
         full_text: Complete text content extracted from the YouGov PDF.
@@ -473,11 +520,7 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
         None,
     )
 
-    if combined_header is not None and combined_header.group(1) is not None:
-        if second_question is None:
-            raise ValueError(
-                "Could not find the end of the headline rows in combined-format PDF",
-            )
+    if combined_header is not None and combined_header.group("countries") is not None:
         headline_lines = lines[:second_question]
         percent_header = _PERCENT_ROW.search(page_one_header, combined_header.end())
         current_columns = (

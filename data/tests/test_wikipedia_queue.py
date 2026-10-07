@@ -327,6 +327,66 @@ class TestCitationResolution:
         assert row.citation_id == ""
         assert index.unresolved_citations == 1
 
+    @pytest.mark.parametrize("appended_scheme", ["", "https://", "http://"])
+    def test_concatenated_yougov_document_urls_resolve_to_first_document(
+        self, appended_scheme: str
+    ) -> None:
+        source_url = (
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_MRP_260928_w.pdf"
+        )
+        appended_url = (
+            f"{appended_scheme}a.yougov.net/documents/"
+            "VotingIntention_MRP_Results_260723_w.pdf"
+        )
+        parsed = fetch_poll_index(
+            html=_INDEX_HTML.replace(_YOUGOV_URL, f"{source_url}{appended_url}"),
+        )
+
+        assert _by_identifier(parsed, "yougov").source_url == source_url
+
+    @pytest.mark.parametrize(
+        "source_url",
+        [
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_Results_261005_w.pdf",
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_MRP_250303_w.pdf",
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_MRP_250113_w.pdf",
+            "https://a.yougov.net/documents/tables.pdf?signature=abc#page=1",
+            "https://a.yougov.net/documents/tables.pdf"
+            "?next=a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "#a.yougov.net/documents/older.pdf",
+            "https://example.test/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "example.test/documents/older.pdf",
+            "https://yougov.net.example.test/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://notyougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "notyougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/subfolder/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/subfolder/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf?signature=abc",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf#page=1",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf"
+            "a.yougov.net/documents/oldest.pdf",
+        ],
+    )
+    def test_other_citation_urls_are_preserved(self, source_url: str) -> None:
+        parsed = fetch_poll_index(html=_INDEX_HTML.replace(_YOUGOV_URL, source_url))
+
+        assert _by_identifier(parsed, "yougov").source_url == source_url
+
 
 class TestPollsterLabel:
     """Citation markers are stripped from the displayed pollster name."""

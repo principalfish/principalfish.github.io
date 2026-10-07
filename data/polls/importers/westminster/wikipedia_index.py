@@ -49,6 +49,13 @@ _PARENTHETICAL_RE = re.compile(r"\(.*?\)")
 _NON_SLUG_RE = re.compile(r"[^a-zA-Z0-9_ ]")
 _UNDERSCORE_RUN_RE = re.compile(r"_+")
 _CITE_ANCHOR_SELECTOR = 'a[href^="#cite_note"]'
+_YOUGOV_HOST_PATTERN = (
+    r"(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*yougov\.net"
+)
+_CONCATENATED_YOUGOV_PDF_RE = re.compile(
+    rf"(?P<first>https?://{_YOUGOV_HOST_PATTERN}/documents/[^/?#\s]+\.pdf)"
+    rf"(?:https?://)?{_YOUGOV_HOST_PATTERN}/documents/[^/?#\s]+\.pdf"
+)
 
 _COL_DATE = 0
 _COL_POLLSTER = 1
@@ -165,6 +172,12 @@ def normalize_pollster_name(label: str) -> str:
     return cleaned
 
 
+def _normalize_reference_url(url: str) -> str:
+    """Repair a citation containing two concatenated YouGov document URLs."""
+    match = _CONCATENATED_YOUGOV_PDF_RE.fullmatch(url)
+    return match.group("first") if match is not None else url
+
+
 def extract_reference_url_map(soup: BeautifulSoup) -> dict[str, str]:
     """Map every Wikipedia reference id on the page to its external URL.
 
@@ -197,7 +210,7 @@ def extract_reference_url_map(soup: BeautifulSoup) -> dict[str, str]:
 
         href = external_link.get("href")
         if isinstance(href, str) and href:
-            ref_map[li_id] = href
+            ref_map[li_id] = _normalize_reference_url(href)
     return ref_map
 
 

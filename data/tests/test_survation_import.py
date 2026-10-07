@@ -5,6 +5,7 @@ Covers pure parsing helpers that require no network access or database.
 
 from __future__ import annotations
 
+import json
 import sys
 from collections.abc import Mapping, Sequence
 from datetime import date
@@ -46,6 +47,142 @@ from tests.uk_fixtures import (
     build_workbook,
     workbook_bytes,
 )
+
+
+_GROUPED_SOURCE_URL = (
+    "https://cdn.survation.com/wp-content/uploads/2026/09/24091952/"
+    "Survation_2026-09-22_Tables.xlsx"
+)
+_GROUPED_EXPECTED_VALUES = {
+    # National, London, South, Midlands, North, Scotland, Wales, Northern Ireland.
+    "Reform UK": (24, 17, 25, 31, 27, 25, 15, 0),
+    "Labour": (27, 32, 26, 27, 36, 11, 24, 0),
+    "Conservative": (21, 27, 31, 23, 10, 10, 15, 0),
+    "Liberal Democrats": (11, 14, 9, 7, 16, 11, 1, 0),
+    "Green": (7, 6, 6, 11, 8, 4, 7, 0),
+    "Scottish National Party": (3, 0, 0, 0, 0, 35, 0, 0),
+    "Plaid Cymru": (2, 0, 0, 0, 0, 0, 38, 0),
+    "Other": (4, 1, 1, 0, 0, 0, 0, 99),
+}
+
+
+def _grouped_source_workbook() -> Workbook:
+    path = Path(__file__).parent / "fixtures/survation/headline-20260923.json"
+    return build_workbook(json.loads(path.read_text())["sheets"])
+
+
+def _grouped_expected_percentages() -> dict[str, dict[str, float]]:
+    regions_by_column = (
+        ("__national__",),
+        ("London",),
+        ("East of England", "South East England", "South West England"),
+        ("East Midlands", "West Midlands"),
+        ("North East England", "North West England", "Yorkshire and The Humber"),
+        ("Scotland",),
+        ("Wales",),
+        ("Northern Ireland",),
+    )
+    return {
+        party: {
+            region: float(values[column])
+            for column, regions in enumerate(regions_by_column)
+            for region in regions
+        }
+        for party, values in _GROUPED_EXPECTED_VALUES.items()
+    }
+
+
+class TestGroupedSourceRegions:
+    def test_reported_source_metadata_and_all_region_values(self) -> None:
+        parsed = parse_poll(_grouped_source_workbook(), source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.sample_size == 1224
+        assert parsed.fieldwork_start == date(2026, 9, 22)
+        assert parsed.fieldwork_end == date(2026, 9, 23)
+        assert parsed.party_region_percentages == _grouped_expected_percentages()
+
+    def test_reordered_group_columns_preserve_values(self) -> None:
+        workbook = _grouped_source_workbook()
+        sheet = workbook["Tables"]
+        columns = (14, 18, 13, 16, 11, 15, 12, 17)
+        for row in range(5, sheet.max_row + 1):
+            values = [sheet.cell(row, column).value for column in columns]
+            for column, value in enumerate(values, 11):
+                sheet.cell(row, column).value = value
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.party_region_percentages == _grouped_expected_percentages()
+
+    def test_group_headers_are_detected_without_direct_region_headers(self) -> None:
+        workbook = _grouped_source_workbook()
+        sheet = workbook["Tables"]
+        for column in (11, 15, 16, 17, 18):
+            sheet.cell(5, column).value = None
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.party_region_percentages["Reform UK"] == {
+            "__national__": 24.0,
+            "East of England": 25.0,
+            "South East England": 25.0,
+            "South West England": 25.0,
+            "East Midlands": 31.0,
+            "West Midlands": 31.0,
+            "North East England": 27.0,
+            "North West England": 27.0,
+            "Yorkshire and The Humber": 27.0,
+        }
+
+    @pytest.mark.parametrize("column", [11, 19])
+    @pytest.mark.parametrize("percentage", [0.0, 0.42])
+    def test_direct_region_overrides_group_regardless_of_column_order(
+        self,
+        column: int,
+        percentage: float,
+    ) -> None:
+        workbook = _grouped_source_workbook()
+        sheet = workbook["Tables"]
+        sheet.insert_cols(column)
+        sheet.cell(5, column).value = "North East"
+        sheet.cell(9, column).value = percentage
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+        reform = parsed.party_region_percentages["Reform UK"]
+
+        assert reform["North East England"] == percentage * 100
+        assert reform["North West England"] == 27
+        assert reform["Yorkshire and The Humber"] == 27
+        assert reform["London"] == 17
+
+    def test_preview_plans_all_source_percentages(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requested = _patch_urlopen(
+            monkeypatch,
+            workbook_bytes(_grouped_source_workbook()),
+        )
+
+        plan = build_import_plan(
+            db,
+            xlsx_url=_GROUPED_SOURCE_URL,
+            map_name=westminster_world.map_name,
+        )
+
+        expected = {
+            (party, "National" if region == "__national__" else region): percentage
+            for party, values in _grouped_expected_percentages().items()
+            for region, percentage in values.items()
+        }
+        actual = {
+            (row.party_name, row.region_name): row.percentage for row in plan.rows
+        }
+        assert requested == [_GROUPED_SOURCE_URL]
+        assert len(plan.rows) == 104
+        assert actual == expected
 
 
 # ── _month_number ─────────────────────────────────────────────────────────────

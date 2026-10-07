@@ -42,6 +42,16 @@ SOURCE_REGION_TO_INTERNAL = {
     "Northern Ireland": "Northern Ireland",
 }
 
+GROUPED_SOURCE_REGION_TO_INTERNAL = {
+    "North": (
+        "North East England",
+        "North West England",
+        "Yorkshire and The Humber",
+    ),
+    "Midlands": ("East Midlands", "West Midlands"),
+    "South": ("East of England", "South East England", "South West England"),
+}
+
 PARTY_NAME_MAP = {
     "Conservative": "Conservative",
     "Labour": "Labour",
@@ -499,7 +509,9 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     Locates the voting-intention table, identifies the region column headers,
     then reads the percentage value from the row below each party label.
     Party names are normalised via ``PARTY_NAME_MAP``; region names are
-    normalised via ``SOURCE_REGION_TO_INTERNAL``.
+    normalised via ``SOURCE_REGION_TO_INTERNAL``. Broad North, Midlands and
+    South figures are copied to their constituent regions; directly published
+    regional figures take precedence over these grouped values.
 
     Optional parties (SNP, Plaid Cymru, Other) default to 0.0 if absent.
     All region keys for those parties are also defaulted to 0.0.
@@ -522,7 +534,11 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     region_header_row = None
     for row in range(start_row + 1, min(sheet.max_row, start_row + 12)):
         headers = {_cell_text(sheet.cell(row, col).value) for col in range(11, 40)}
-        if any(header in SOURCE_REGION_TO_INTERNAL for header in headers):
+        if any(
+            header in SOURCE_REGION_TO_INTERNAL
+            or header in GROUPED_SOURCE_REGION_TO_INTERNAL
+            for header in headers
+        ):
             region_header_row = row
             break
 
@@ -533,6 +549,9 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
             internal = SOURCE_REGION_TO_INTERNAL.get(header)
             if internal is not None:
                 region_columns[internal] = col
+            else:
+                for region_name in GROUPED_SOURCE_REGION_TO_INTERNAL.get(header, ()):
+                    region_columns.setdefault(region_name, col)
 
     parsed: dict[str, dict[str, float]] = {}
     for row in range(start_row + 1, min(sheet.max_row, start_row + 220)):

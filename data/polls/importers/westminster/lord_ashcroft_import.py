@@ -6,13 +6,19 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from contextlib import closing
+from dataclasses import dataclass
 from datetime import date
+from io import BytesIO
 from pathlib import Path
+from typing import Protocol
 from urllib.parse import urljoin
 from urllib.request import Request, urlopen
+from zipfile import is_zipfile
 
 import xlrd
 from bs4 import BeautifulSoup
+from openpyxl import load_workbook
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -56,6 +62,62 @@ SOURCE_REGION_TO_INTERNAL = {
     "Wales": "Wales",
     "Scotland": "Scotland",
 }
+
+
+class _Sheet(Protocol):
+    """Cell access shared by the legacy and modern workbook readers."""
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def nrows(self) -> int: ...
+
+    @property
+    def ncols(self) -> int: ...
+
+    def cell_value(self, row_idx: int, col_idx: int) -> object: ...
+
+
+@dataclass(frozen=True, slots=True)
+class _ModernSheet:
+    name: str
+    rows: tuple[tuple[object, ...], ...]
+    ncols: int
+
+    @property
+    def nrows(self) -> int:
+        return len(self.rows)
+
+    def cell_value(self, row_idx: int, col_idx: int) -> object:
+        row = self.rows[row_idx]
+        return row[col_idx] if col_idx < len(row) else None
+
+
+def _read_sheets(payload: bytes) -> list[_Sheet]:
+    """Detect OOXML by content, retaining xlrd for legacy XLS payloads."""
+    if is_zipfile(BytesIO(payload)):
+        with closing(
+            load_workbook(BytesIO(payload), data_only=True, read_only=True)
+        ) as workbook:
+            sheets: list[_Sheet] = []
+            for worksheet in workbook.worksheets:
+                rows = tuple(
+                    tuple(row) for row in worksheet.iter_rows(values_only=True)
+                )
+                sheets.append(
+                    _ModernSheet(
+                        name=worksheet.title,
+                        rows=rows,
+                        ncols=max((len(row) for row in rows), default=0),
+                    )
+                )
+            return sheets
+    legacy_workbook = xlrd.open_workbook(file_contents=payload)
+    return [
+        legacy_workbook.sheet_by_index(index)
+        for index in range(legacy_workbook.nsheets)
+    ]
 
 
 class ParsedPoll(BaseModel):
@@ -226,26 +288,28 @@ def _as_int(value: object) -> int:
     return int(digits)
 
 
-def _find_fieldwork(sheet: xlrd.sheet.Sheet) -> tuple[date, date]:
+def _find_fieldwork(sheet: _Sheet) -> tuple[date, date]:
     """Locate the fieldwork date range in the first sheet of the workbook.
 
     Scans the first 30 rows of column A for a cell matching the pattern
-    ``Fieldwork: D-D Month YYYY`` (ordinal suffixes such as "st", "nd", "rd",
+    ``Fieldwork: D [Month]-D Month YYYY`` (ordinal suffixes such as "st", "nd", "rd",
     "th" are accepted).
 
     Args:
         sheet: The xlrd sheet to search (typically sheet index 0).
 
     Returns:
-        A ``(fieldwork_start, fieldwork_end)`` tuple of ``date`` objects.  Both
-        dates share the same month and year; only the day differs.
+        A ``(fieldwork_start, fieldwork_end)`` tuple of ``date`` objects.
+        Cross-year December/January ranges use the year of the end date.
 
     Raises:
         ValueError: If no fieldwork line is found, or if the month name cannot
             be parsed.
     """
     pattern = re.compile(
-        r"Fieldwork:\s*(\d{1,2})(?:st|nd|rd|th)?\s*-\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(20\d{2})",
+        r"Fieldwork:\s*(\d{1,2})(?:st|nd|rd|th)?\s*"
+        r"(?:([A-Za-z]+)\.?\s*)?[-–—]\s*(\d{1,2})(?:st|nd|rd|th)?\s+"
+        r"([A-Za-z]+)\.?\s+(20\d{2})",
         re.IGNORECASE,
     )
     for row_idx in range(min(30, sheet.nrows)):
@@ -257,17 +321,23 @@ def _find_fieldwork(sheet: xlrd.sheet.Sheet) -> tuple[date, date]:
             continue
 
         day_start = int(match.group(1))
-        day_end = int(match.group(2))
-        month = _month_number(match.group(3))
-        year = int(match.group(4))
-        if month is None:
+        day_end = int(match.group(3))
+        start_month = _month_number(match.group(2) or match.group(4))
+        end_month = _month_number(match.group(4))
+        end_year = int(match.group(5))
+        if start_month is None or end_month is None:
             raise ValueError(f"Could not parse month in fieldwork line: {value!r}")
-        return date(year, month, day_start), date(year, month, day_end)
+        start_year = end_year - 1 if start_month > end_month else end_year
+        start = date(start_year, start_month, day_start)
+        end = date(end_year, end_month, day_end)
+        if start > end:
+            raise ValueError(f"Reversed fieldwork dates in line: {value!r}")
+        return start, end
 
     raise ValueError("Fieldwork line not found in Lord Ashcroft workbook")
 
 
-def _find_sample_size(sheet: xlrd.sheet.Sheet) -> int:
+def _find_sample_size(sheet: _Sheet) -> int:
     """Find and return the poll sample size from the workbook's first sheet.
 
     Scans the first 30 rows looking for a cell in column A containing
@@ -292,7 +362,7 @@ def _find_sample_size(sheet: xlrd.sheet.Sheet) -> int:
     raise ValueError("Sample size not found in Lord Ashcroft workbook")
 
 
-def _find_vi_block_start(sheet: xlrd.sheet.Sheet) -> int:
+def _find_vi_block_start(sheet: _Sheet) -> int:
     """Return the row index of the "CURRENT WESTMINSTER VOTING INTENTION" header.
 
     The search is case-insensitive and scans the entire sheet.
@@ -332,7 +402,7 @@ def _canonical_party(label: str) -> str | None:
     return None
 
 
-def _parse_party_percentages(sheet: xlrd.sheet.Sheet) -> dict[str, float]:
+def _parse_party_percentages(sheet: _Sheet) -> dict[str, float]:
     """Parse national voting-intention percentages for each party from the sheet.
 
     Locates the "CURRENT WESTMINSTER VOTING INTENTION" block, then reads up to
@@ -365,7 +435,9 @@ def _parse_party_percentages(sheet: xlrd.sheet.Sheet) -> dict[str, float]:
         if value in ("", None):
             continue
 
-        percentage = float(value)
+        percentage = (
+            float(value) if isinstance(value, (int, float)) else float(_as_text(value))
+        )
         parsed[canonical_party] = float(int(round(percentage)))
 
         if len(parsed) == 8:
@@ -388,7 +460,7 @@ def _parse_party_percentages(sheet: xlrd.sheet.Sheet) -> dict[str, float]:
     return parsed
 
 
-def _find_region_columns(sheet: xlrd.sheet.Sheet) -> dict[int, str]:
+def _find_region_columns(sheet: _Sheet) -> dict[int, str]:
     """Identify the column indices that correspond to known UK regions.
 
     Scans the first 40 rows searching for a header row that contains at least 8
@@ -415,7 +487,7 @@ def _find_region_columns(sheet: xlrd.sheet.Sheet) -> dict[int, str]:
     return {}
 
 
-def _find_weighted_sample_row(sheet: xlrd.sheet.Sheet) -> int:
+def _find_weighted_sample_row(sheet: _Sheet) -> int:
     """Return the row index of the "Weighted Sample" denominator row.
 
     Scans the first 40 rows for a column-A cell whose text (lowercased) equals
@@ -462,7 +534,9 @@ def _to_float(value: object) -> float:
     return float(text)
 
 
-def _parse_party_region_percentages(values_sheet: xlrd.sheet.Sheet) -> dict[str, dict[str, float]]:
+def _parse_party_region_percentages(
+    values_sheet: _Sheet,
+) -> dict[str, dict[str, float]]:
     """Parse regional voting-intention percentages for each party from the values sheet.
 
     Locates the region header columns and the weighted-sample denominator row,
@@ -472,7 +546,7 @@ def _parse_party_region_percentages(values_sheet: xlrd.sheet.Sheet) -> dict[str,
 
     Args:
         values_sheet: The xlrd sheet that contains regional breakdowns
-            (the sheet whose name contains "values", or sheet 0 as fallback).
+            (a values or counts sheet, or sheet 0 as fallback).
 
     Returns:
         Nested dict of ``{canonical_party_name: {internal_region_name: percentage}}``.
@@ -502,7 +576,12 @@ def _parse_party_region_percentages(values_sheet: xlrd.sheet.Sheet) -> dict[str,
             continue
 
         canonical_party = _canonical_party(label)
-        if canonical_party is None:
+        if canonical_party is None or canonical_party in parsed:
+            continue
+        if all(
+            values_sheet.cell_value(row_idx, col_idx) in (None, "")
+            for col_idx in denominators
+        ):
             continue
 
         region_values: dict[str, float] = {}
@@ -517,6 +596,8 @@ def _parse_party_region_percentages(values_sheet: xlrd.sheet.Sheet) -> dict[str,
 
         if region_values:
             parsed[canonical_party] = region_values
+            if len(parsed) == 8:
+                break
 
     return parsed
 
@@ -525,8 +606,8 @@ def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
     """Download and parse a Lord Ashcroft XLS/XLSX workbook into a ``ParsedPoll``.
 
     The workbook must contain at least one sheet.  If any sheet name contains
-    "values" (case-insensitive) it is used for regional breakdowns; otherwise
-    sheet 0 is used for both national and regional data.
+    "values" (case-insensitive) it is used for regional breakdowns. Otherwise,
+    a counts sheet or a sheet ending in "- n" is used, falling back to sheet 0.
 
     Args:
         xls_url: Direct URL to an XLS or XLSX file.
@@ -541,19 +622,25 @@ def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
         urllib.error.URLError: If the download fails.
     """
     payload = _fetch_bytes(xls_url)
-    workbook = xlrd.open_workbook(file_contents=payload)
-    if workbook.nsheets == 0:
+    sheets = _read_sheets(payload)
+    if not sheets:
         raise ValueError("Lord Ashcroft workbook has no sheets")
 
-    sheet = workbook.sheet_by_index(0)
-    values_sheet = None
-    for idx in range(workbook.nsheets):
-        candidate = workbook.sheet_by_index(idx)
-        if "values" in candidate.name.lower():
-            values_sheet = candidate
-            break
+    sheet = sheets[0]
+    values_sheet = next(
+        (candidate for candidate in sheets if "values" in candidate.name.lower()),
+        None,
+    )
     if values_sheet is None:
-        values_sheet = sheet
+        values_sheet = next(
+            (
+                candidate
+                for candidate in sheets
+                if "counts" in candidate.name.lower()
+                or re.search(r"-\s*n$", candidate.name.strip(), re.IGNORECASE)
+            ),
+            sheet,
+        )
 
     sample_size = _find_sample_size(sheet)
     fieldwork_start, fieldwork_end = _find_fieldwork(sheet)

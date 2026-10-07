@@ -236,8 +236,8 @@ class SeatRef:
 class LatestPollUsage:
     """Metadata about the most recent poll consumed during a run.
 
-    ``matchup`` is the poll's candidate pairing (the President), ``None`` for a
-    party-only series such as the generic ballot.
+    ``matchup`` is the poll's candidate pairing, ``None`` for a party-only
+    series such as the generic ballot.
     """
 
     pollster: str
@@ -462,20 +462,30 @@ def baseline_shares_for_seat(base_vote_totals: Mapping[int, float]) -> dict[int,
     }
 
 
-def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:
+def latest_poll_snippet(
+    latest_poll_usage: LatestPollUsage | None,
+    *,
+    generic_ballot: bool = False,
+) -> str:
     """Format a human-readable description of the latest poll used in a run.
 
     Returns ``"Latest poll used: <Pollster> (<date>)"`` (a single ISO date when
     start == end, otherwise a ``"start to end"`` range), or ``""`` when no poll was
-    consumed. A poll with a matchup appends ``" — <matchup>"``; a party-only poll
-    (the generic ballot) reads exactly as it always has.
+    consumed. A poll with a matchup appends ``" — <matchup>"``. Enabling
+    ``generic_ballot`` labels party-only polls as generic-ballot polls and removes
+    the stored ``" (US House)"`` suffix from their display names.
     """
     if latest_poll_usage is None:
         return ""
     start = latest_poll_usage.fieldwork_start.isoformat()
     end = latest_poll_usage.fieldwork_end.isoformat()
     fieldwork_text = start if start == end else f"{start} to {end}"
-    snippet = f"Latest poll used: {latest_poll_usage.pollster} ({fieldwork_text})"
+    prefix = "Latest poll used"
+    pollster = latest_poll_usage.pollster
+    if generic_ballot and latest_poll_usage.matchup is None:
+        prefix = "Latest generic-ballot poll used"
+        pollster = pollster.removesuffix(" (US House)")
+    snippet = f"{prefix}: {pollster} ({fieldwork_text})"
     if latest_poll_usage.matchup:
         snippet = f"{snippet} — {latest_poll_usage.matchup}"
     return snippet
@@ -2091,7 +2101,10 @@ def write_trend_cache_meta(
         "as_of_date": as_of_date.isoformat(),
         "since_date": since_date.isoformat(),
         "matchup": matchup,
-        "latest_poll_snippet": latest_poll_snippet(latest_poll_usage),
+        "latest_poll_snippet": latest_poll_snippet(
+            latest_poll_usage,
+            generic_ballot=spec.election_type in {"us_house_model", "us_senate_model"},
+        ),
         "latest_poll": (
             {
                 "pollster": latest_poll_usage.pollster,
@@ -2888,7 +2901,10 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 print(line)
             if len(run_dates) > 1:
                 print(f"Backfill progress: {index}/{len(run_dates)}")
-            snippet = latest_poll_snippet(latest_poll_usage)
+            snippet = latest_poll_snippet(
+                latest_poll_usage,
+                generic_ballot=spec.election_type in {"us_house_model", "us_senate_model"},
+            )
             if snippet:
                 print(snippet)
             # For the President the headline tally is electoral votes; show EV (with the

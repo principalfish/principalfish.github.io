@@ -127,8 +127,9 @@ class TestLatestPollSnippet:
         snippet = latest_poll_snippet(usage)
         assert "to" in snippet and "2026-05-28" in snippet and "2026-06-03" in snippet
 
-    def test_none_is_empty(self) -> None:
-        assert latest_poll_snippet(None) == ""
+    @pytest.mark.parametrize("generic_ballot", [False, True])
+    def test_none_is_empty(self, generic_ballot: bool) -> None:
+        assert latest_poll_snippet(None, generic_ballot=generic_ballot) == ""
 
     def test_matchup_is_appended_when_set(self) -> None:
         usage = LatestPollUsage(
@@ -139,11 +140,55 @@ class TestLatestPollSnippet:
         )
         assert latest_poll_snippet(usage) == f"Latest poll used: Emerson (2028-06-01) — {VANCE_NEWSOM}"
 
-    def test_party_only_poll_snippet_is_unchanged(self) -> None:
-        # The generic ballot has no matchup, so the House/Senate snippet is the
-        # exact string it has always been.
-        usage = LatestPollUsage(pollster="YouGov", fieldwork_start=date(2026, 6, 3), fieldwork_end=date(2026, 6, 3))
-        assert latest_poll_snippet(usage) == "Latest poll used: YouGov (2026-06-03)"
+    @pytest.mark.parametrize("pollster", ["YouGov", "YouGov (US House)"])
+    def test_party_only_poll_snippet_is_unchanged(self, pollster: str) -> None:
+        # Callers must explicitly request the generic-ballot display.
+        usage = LatestPollUsage(pollster, date(2026, 6, 3), date(2026, 6, 3))
+        assert latest_poll_snippet(usage) == f"Latest poll used: {pollster} (2026-06-03)"
+
+    @pytest.mark.parametrize(
+        "pollster, displayed",
+        [
+            ("Silver Bulletin (US House)", "Silver Bulletin"),
+            ("YouGov", "YouGov"),
+            ("YouGov (registered voters) (US House)", "YouGov (registered voters)"),
+            (
+                "YouGov (US House) (registered voters)",
+                "YouGov (US House) (registered voters)",
+            ),
+            ("Emerson (US Senate)", "Emerson (US Senate)"),
+        ],
+    )
+    @pytest.mark.parametrize("start", [date(2026, 6, 1), date(2026, 6, 3)])
+    def test_generic_ballot_display(
+        self,
+        pollster: str,
+        displayed: str,
+        start: date,
+    ) -> None:
+        usage = LatestPollUsage(pollster, start, date(2026, 6, 3))
+        dates = (
+            "2026-06-03"
+            if start == date(2026, 6, 3)
+            else "2026-06-01 to 2026-06-03"
+        )
+
+        assert latest_poll_snippet(usage, generic_ballot=True) == (
+            f"Latest generic-ballot poll used: {displayed} ({dates})"
+        )
+        assert usage.pollster == pollster
+
+    def test_generic_ballot_option_preserves_candidate_race_label(self) -> None:
+        usage = LatestPollUsage(
+            "Emerson (US House)",
+            date(2026, 6, 3),
+            date(2026, 6, 3),
+            VANCE_NEWSOM,
+        )
+
+        assert latest_poll_snippet(usage, generic_ballot=True) == (
+            f"Latest poll used: Emerson (US House) (2026-06-03) — {VANCE_NEWSOM}"
+        )
 
 
 # ── compute_region_diffs — the national-swing fallback ─────────────────────────
@@ -978,6 +1023,57 @@ class TestTrendCacheMeta:
         assert payload["matchup"] == VANCE_NEWSOM
         assert VANCE_NEWSOM in payload["latest_poll_snippet"]
         assert payload["latest_poll"]["pollster"] == "Emerson"
+
+    @pytest.mark.parametrize(
+        "map_name, election_type, prefix, displayed",
+        [
+            (
+                HOUSE_MAP,
+                "us_house_model",
+                "Latest generic-ballot poll used",
+                "YouGov",
+            ),
+            (
+                SENATE_MAP,
+                "us_senate_model",
+                "Latest generic-ballot poll used",
+                "YouGov",
+            ),
+            (
+                PRESIDENT_MAP,
+                "us_presidential_model",
+                "Latest poll used",
+                "YouGov (US House)",
+            ),
+        ],
+    )
+    def test_party_only_label_is_scoped_to_house_and_senate(
+        self,
+        tmp_path: Path,
+        map_name: str,
+        election_type: str,
+        prefix: str,
+        displayed: str,
+    ) -> None:
+        spec = dataclasses.replace(
+            _us_spec(tmp_path, map_name=map_name), election_type=election_type
+        )
+        usage = LatestPollUsage("YouGov (US House)", date(2026, 6, 1), date(2026, 6, 3))
+
+        write_trend_cache_meta(spec, date(2026, 6, 3), date(2026, 5, 4), usage)
+        payload = json.loads(spec.trend_cache_meta_json.read_text())
+
+        assert payload == {
+            "as_of_date": "2026-06-03",
+            "since_date": "2026-05-04",
+            "matchup": None,
+            "latest_poll_snippet": f"{prefix}: {displayed} (2026-06-01 to 2026-06-03)",
+            "latest_poll": {
+                "pollster": "YouGov (US House)",
+                "fieldwork_start": "2026-06-01",
+                "fieldwork_end": "2026-06-03",
+            },
+        }
 
     def test_party_only_meta_is_otherwise_unchanged(self, tmp_path: Path) -> None:
         spec = _us_spec(tmp_path, map_name=HOUSE_MAP)
@@ -4400,6 +4496,50 @@ class TestSelectedUsPollContributors:
 
 
 class TestCandidateUsPollCaps:
+    @pytest.mark.parametrize("contest", ["house", "senate", "president"])
+    @pytest.mark.parametrize("latest_seat", [False, True])
+    def test_cli_and_metadata_describe_the_latest_contributing_poll(
+        self,
+        db: Database,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        contest: str,
+        latest_seat: bool,
+    ) -> None:
+        world = _contributor_world(db, tmp_path, contest)
+        election_type = (
+            "us_presidential_model" if contest == "president" else f"us_{contest}_model"
+        )
+        spec = dataclasses.replace(world.spec, election_type=election_type)
+        pollster = db.add_pollster("Latest (US House)", "latest")
+        matchup = CONTRIBUTOR_MATCHUP if latest_seat else world.national_matchup
+        _add_poll(
+            db,
+            map_id=world.map_id if latest_seat else world.national_map_id,
+            pollster=pollster,
+            end=date(2026, 6, 20),
+            rows=world.complete,
+            seat_id=world.seat.id if latest_seat else None,
+            matchup=matchup,
+        )
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["model.py", "--as-of-date", "2026-06-30", "--since-date", "2026-06-01"],
+        )
+
+        assert main_for_spec(spec, db_factory=lambda: db) == 0
+        payload = json.loads(spec.trend_cache_meta_json.read_text())
+        snippet = "Latest generic-ballot poll used: Latest (2026-06-20)"
+        if matchup is not None:
+            snippet = f"Latest poll used: Latest (US House) (2026-06-20) — {matchup}"
+
+        assert snippet in capsys.readouterr().out.splitlines()
+        assert payload["latest_poll_snippet"] == snippet
+        assert payload["latest_poll"]["pollster"] == "Latest (US House)"
+        assert payload["as_of_date"] == "2026-06-20"
+
     @pytest.mark.parametrize("contest", ["house", "senate", "president"])
     @pytest.mark.parametrize("rejection", ["rowless", "zero_weight", "wrong_matchup"])
     def test_cli_skips_rejected_endpoints_and_future_polls(

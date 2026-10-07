@@ -36,10 +36,12 @@ Two notes for callers:
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Sequence
 from collections.abc import Set as AbstractSet
 from datetime import date
 from typing import Any, Literal, TypeVar
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field
 
@@ -586,8 +588,8 @@ def _new_item(row: ScrapedPollRow) -> QueueItem:
         row: Scraped Wikipedia row.
 
     Returns:
-        A ``pending`` item, or a ``no_importer`` one when no importer module
-        covers the pollster or the row's citation resolved to no document.
+        A ``pending`` item, a ``skipped`` projection release, or a
+        ``no_importer`` item for an unknown pollster or missing citation.
     """
     if row.pollster_identifier not in IMPORTERS:
         return QueueItem(
@@ -601,4 +603,39 @@ def _new_item(row: ScrapedPollRow) -> QueueItem:
             status="no_importer",
             detail="No source document could be resolved from the Wikipedia citation",
         )
+    if _is_mrp_release_page(row):
+        return QueueItem(
+            row=row,
+            status="skipped",
+            detail=(
+                "Skipped MRP projection release: this source page is outside "
+                "the regional poll-table importer."
+            ),
+        )
     return QueueItem(row=row)
+
+
+def _is_mrp_release_page(row: ScrapedPollRow) -> bool:
+    """Identify official projection pages unsupported by regional importers.
+
+    An explicit MRP label and release-page path are both required. Direct
+    table links remain eligible, including weekly YouGov PDFs with MRP names.
+    """
+    if re.search(r"\(\s*MRP\s*\)", row.pollster_label, re.IGNORECASE) is None:
+        return False
+    source = urlsplit(row.source_url)
+    if source.scheme not in {"http", "https"}:
+        return False
+    path = source.path.lower()
+    if re.search(r"(?:^|[-/])mrp(?:[-/]|$)", path) is None:
+        return False
+    host = source.netloc.lower()
+    if row.pollster_identifier == "more_in_common":
+        return host in {"moreincommon.org.uk", "www.moreincommon.org.uk"} and (
+            path.startswith("/research/")
+        )
+    if row.pollster_identifier == "yougov":
+        return host in {"yougov.com", "www.yougov.com"} and (
+            path.startswith("/en-gb/articles/")
+        )
+    return False

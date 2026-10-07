@@ -2172,3 +2172,90 @@ class TestDescribeImportResult:
         assert describe_import_result(self._result(skipped=True)) == (
             "Poll #77 already had rows, so nothing was inserted"
         )
+
+
+_MRP_RELEASES = (
+    (
+        "more_in_common",
+        "More in Common (MRP)",
+        "https://www.moreincommon.org.uk/research/more-in-commons-september-2026-mrp/",
+    ),
+    (
+        "yougov",
+        "YouGov (MRP)",
+        "https://yougov.com/en-gb/articles/55618-yougov-mrp-shows-labour-would-be-"
+        "the-largest-party-in-a-hung-parliament-were-an-election-held-tomorrow",
+    ),
+)
+
+
+class TestUnsupportedMrpReleases:
+    @pytest.mark.parametrize(("identifier", "label", "source_url"), _MRP_RELEASES)
+    def test_release_is_visible_in_skips_and_does_not_interrupt_queue(
+        self, db: Database, identifier: str, label: str, source_url: str,
+    ) -> None:
+        _seed_westminster(db)
+        release = _row(
+            identifier, date(2026, 8, 21), date(2026, 9, 21),
+            label=label, source_url=source_url,
+        )
+        regular = _row("yougov", date(2026, 9, 27), date(2026, 9, 28))
+        state = build_queue(
+            db, _index_of([release, regular]), map_name=WESTMINSTER_MAP_NAME,
+            cutoff=date(2026, 1, 1),
+        )
+        assert state.items[0].status == "skipped"
+        assert "MRP projection" in state.items[0].detail
+        assert "regional poll-table" in state.items[0].detail
+        assert current_item(state) is state.items[1]
+        assert summarise(state)["skipped"] == [state.items[0]]
+        assert progress(state)["skipped"] == 1
+
+    def test_all_projection_pages_finish_queue(self, db: Database) -> None:
+        _seed_westminster(db)
+        rows = [
+            _row(
+                identifier, date(2026, 8, 21), date(2026, 9, 21),
+                label=label, source_url=url,
+            )
+            for identifier, label, url in _MRP_RELEASES
+        ]
+        state = build_queue(
+            db, _index_of(rows), map_name=WESTMINSTER_MAP_NAME,
+            cutoff=date(2026, 1, 1),
+        )
+        assert current_item(state) is None
+        assert len(summarise(state)["skipped"]) == 2
+
+    @pytest.mark.parametrize(
+        ("identifier", "label", "source_url"),
+        [
+            ("yougov", "YouGov (MRP)", "https://yougov.com/documents/MRP.pdf?x=1"),
+            (
+                "more_in_common", "More in Common (MRP)",
+                "https://www.moreincommon.org.uk/uploads/MRP.xlsx",
+            ),
+            ("yougov", "YouGov", _MRP_RELEASES[1][2]),
+            ("more_in_common", "More in Common", _MRP_RELEASES[0][2]),
+            ("yougov", "YouGov (MRP)", "https://lookalike.test/en-gb/articles/mrp"),
+            ("yougov", "YouGov (MRP)", "https://yougov.com.evil.test/en-gb/articles/mrp"),
+            ("yougov", "YouGov (MRP)", "https://user@yougov.com/en-gb/articles/mrp"),
+            ("yougov", "YouGov (MRP)", "https://yougov.com/en-gb/articles/notmrp"),
+            ("yougov", "YouGov (MRP)", "https://yougov.com/other/mrp"),
+            ("yougov", "YouGov (MRP)", "ftp://yougov.com/en-gb/articles/mrp"),
+        ],
+    )
+    def test_other_sources_remain_eligible(
+        self, db: Database, identifier: str, label: str, source_url: str,
+    ) -> None:
+        _seed_westminster(db)
+        row = _row(
+            identifier, date(2026, 8, 21), date(2026, 9, 21),
+            label=label, source_url=source_url,
+        )
+        state = build_queue(
+            db, _index_of([row]), map_name=WESTMINSTER_MAP_NAME,
+            cutoff=date(2026, 1, 1),
+        )
+        assert state.items[0].status == "pending"
+        assert current_item(state) is state.items[0]

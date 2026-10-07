@@ -294,6 +294,138 @@ constituency, if there were a general election
 """
 
 
+# 4-5 Oct 2026: one combined cross-tab, including previous-poll totals,
+# later direct-question answers and a repeated full header on page 2.
+OCT_2026_TEXT = """\
+YouGov Survey Results
+Sample size: 2312 adults in GB
+Fieldwork: 4th - 5th October 2026
+Total Con Lab Lib
+Dem
+Reform
+UK Green Remain Leave Male Female 18-24 25-49 50-64 65+ Higher Intermediate Routine England Wales Scotland North Midlands London Rest of
+South
+Weighted Sample 2312 416 594 213 250 131 786 832 1117 1195 243 953 571 546 784 518 691 2000 111 201 548 379 280 793
+Unweighted Sample 2312 340 636 223 253 133 944 747 1014 1298 179 860 657 616 958 504 522 1970 136 206 553 377 218 822
+% % % % % % % % % % % % % % % % % % % % % % % %
+27 - 28
+Sep
+4 - 5
+Oct
+HEADLINE VOTING INTENTION
+Westminster Voting Intention
+[Headline voting intention from
+constituency vote projected by YouGov
+MRP model]
+Con 19 20 57 5 13 10 5 18 25 18 21 4 15 21 26 24 19 17 21 12 11 17 25 21 21
+Lab 24 27 5 66 13 1 21 40 13 28 26 40 31 26 22 32 29 19 28 19 22 38 27 34 20
+Lib Dem 12 11 4 7 60 1 6 17 5 7 15 11 11 12 11 13 15 7 12 4 11 6 6 11 19
+SNP 2 3 0 0 0 0 0 3 2 3 2 2 1 2 4 2 2 5 0 0 28 0 0 0 0
+Plaid Cymru 1 1 0 1 0 0 1 2 1 2 1 2 1 1 1 2 1 1 0 25 0 0 0 0 0
+Reform UK 25 22 29 7 3 73 3 6 41 27 18 4 16 24 29 15 25 32 22 26 15 22 26 11 25
+Green 11 11 1 11 10 0 61 11 4 9 12 36 16 7 4 9 7 9 11 10 8 11 8 20 10
+Your Party 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+Restore Britain 3 3 2 2 0 13 0 1 6 4 3 1 4 6 1 2 1 7 3 5 3 3 3 1 4
+Other 2 2 1 1 0 2 4 1 3 3 1 0 2 2 2 2 1 3 2 0 1 3 4 2 0
+If there were a general election held
+tomorrow, which party would you
+vote for?
+Conservative 14 13 48 3 8 10 5 13 19 13 13 2 9 17 20 18 13 10 14 10 7 12 16 13 14
+Labour 21 24 5 61 17 1 15 38 13 26 21 31 24 23 21 29 24 20 24 24 21 28 25 32 18
+Liberal Democrat 7 6 1 4 36 0 6 10 3 5 7 8 5 5 7 7 7 4 6 4 6 3 4 6 9
+Scottish National Party (SNP) 2 2 0 0 0 0 0 3 1 2 2 1 1 2 4 1 1 4 0 0 23 0 0 0 0
+Plaid Cymru 1 1 0 1 0 0 0 1 1 1 0 1 1 1 1 1 1 1 0 14 0 0 0 0 0
+Reform UK 16 15 23 4 3 64 3 4 32 19 12 2 11 19 22 10 19 21 16 17 8 16 16 9 18
+Green 10 8 1 8 9 0 48 9 3 7 9 23 9 4 2 7 5 7 8 5 6 8 6 15 7
+Some other party 3 4 1 2 0 12 2 2 6 5 3 2 5 4 2 2 3 6 4 4 3 4 4 2 4
+Would not vote 10 10 3 3 4 1 3 4 6 9 12 12 16 6 4 8 10 10 10 11 10 12 11 7 10
+Don't know 13 14 16 12 17 10 15 14 15 10 17 7 13 16 16 14 15 13 14 10 14 12 14 12 16
+Refused 4 4 1 3 5 1 3 3 2 3 5 9 6 2 1 3 3 5 4 2 2 4 5 4 4
+Country Region in EnglandVote in 2024 GE EU Ref 2016 Gender Age Socio-economic classification (NS-
+1 © 2026 YouGov plc. All Rights Reserved www.yougov.com
+Sample size: 2312 adults in GB
+Fieldwork: 4th - 5th October 2026
+Total Con Lab Lib
+Dem
+Reform
+UK Green Remain Leave Male Female 18-24 25-49 50-64 65+ Higher Intermediate Routine England Wales Scotland North Midlands London Rest of
+South
+Weighted Sample 2312 416 594 213 250 131 786 832 1117 1195 243 953 571 546 784 518 691 2000 111 201 548 379 280 793
+Unweighted Sample 2312 340 636 223 253 133 944 747 1014 1298 179 860 657 616 958 504 522 1970 136 206 553 377 218 822
+% % % % % % % % % % % % % % % % % % % % % % % %
+Country Region in EnglandVote in 2024 GE EU Ref 2016 Gender Age Socio-economic classification (NS-
+Now, thinking specifically about
+"""
+
+
+OCT_2026_EXPECTED_SHARES = {
+    "Conservative": {
+        "Wales": 12.0,
+        "Scotland": 11.0,
+        "North": 17.0,
+        "Midlands": 25.0,
+        "London": 21.0,
+        "Rest of South": 21.0,
+    },
+    "Labour": {
+        "Wales": 19.0,
+        "Scotland": 22.0,
+        "North": 38.0,
+        "Midlands": 27.0,
+        "London": 34.0,
+        "Rest of South": 20.0,
+    },
+    "Liberal Democrats": {
+        "Wales": 4.0,
+        "Scotland": 11.0,
+        "North": 6.0,
+        "Midlands": 6.0,
+        "London": 11.0,
+        "Rest of South": 19.0,
+    },
+    "Scottish National Party": {
+        "Wales": 0.0,
+        "Scotland": 28.0,
+        "North": 0.0,
+        "Midlands": 0.0,
+        "London": 0.0,
+        "Rest of South": 0.0,
+    },
+    "Plaid Cymru": {
+        "Wales": 25.0,
+        "Scotland": 0.0,
+        "North": 0.0,
+        "Midlands": 0.0,
+        "London": 0.0,
+        "Rest of South": 0.0,
+    },
+    "Reform UK": {
+        "Wales": 26.0,
+        "Scotland": 15.0,
+        "North": 22.0,
+        "Midlands": 26.0,
+        "London": 11.0,
+        "Rest of South": 25.0,
+    },
+    "Green": {
+        "Wales": 10.0,
+        "Scotland": 8.0,
+        "North": 11.0,
+        "Midlands": 8.0,
+        "London": 20.0,
+        "Rest of South": 10.0,
+    },
+    "Other": {
+        "Wales": 0.0,
+        "Scotland": 1.0,
+        "North": 3.0,
+        "Midlands": 4.0,
+        "London": 2.0,
+        "Rest of South": 0.0,
+    },
+}
+
+
 # ── normalize_name ────────────────────────────────────────────────────────────
 
 
@@ -424,6 +556,113 @@ class TestParsePoll:
 # ── parse_headline_vi_table ───────────────────────────────────────────────────
 
 
+class TestParseHeadlineViTableOctober2026:
+    """Combined headline cross-tabs may also contain region grouping labels."""
+
+    def test_exact_metadata_and_all_headline_shares(self) -> None:
+        parsed = parse_poll(OCT_2026_TEXT)
+
+        assert parsed.sample_size == 2312
+        assert parsed.fieldwork_start == date(2026, 10, 4)
+        assert parsed.fieldwork_end == date(2026, 10, 5)
+        assert parsed.party_macro_percentages == OCT_2026_EXPECTED_SHARES
+        assert "Your Party" not in parsed.party_macro_percentages
+        assert "Restore Britain" not in parsed.party_macro_percentages
+
+    def test_later_direct_question_answers_cannot_replace_headline(self) -> None:
+        result = parse_headline_vi_table(OCT_2026_TEXT)
+
+        # The later Conservative answer has Wales 10 and Scotland 7.
+        assert result["Conservative"]["Wales"] == 12.0
+        assert result["Conservative"]["Scotland"] == 11.0
+
+    def test_missing_second_question_boundary_raises(self) -> None:
+        text = OCT_2026_TEXT.replace(
+            "If there were a general election",
+            "Were there an election",
+        )
+
+        with pytest.raises(ValueError, match="end of the headline rows"):
+            parse_headline_vi_table(text)
+
+    @pytest.mark.parametrize("label", ["Con", "Your Party", "Restore Britain"])
+    @pytest.mark.parametrize("extra_value", [False, True])
+    def test_inconsistent_row_width_including_unmapped_parties_raises(
+        self,
+        label: str,
+        extra_value: bool,
+    ) -> None:
+        row = next(
+            line
+            for line in OCT_2026_TEXT.splitlines()
+            if line.startswith(f"{label} ")
+        )
+        replacement = f"{row} 99" if extra_value else row.rsplit(" ", 1)[0]
+        text = OCT_2026_TEXT.replace(row, replacement, 1)
+
+        with pytest.raises(ValueError, match="inconsistent widths"):
+            parse_headline_vi_table(text)
+
+    def test_rows_without_previous_poll_total_are_accepted(self) -> None:
+        headline, later_questions = OCT_2026_TEXT.split(
+            "If there were a general election",
+            1,
+        )
+        headline = re.sub(r"(?m)^(\D+?) \d+ ", r"\1 ", headline)
+        text = f"{headline}If there were a general election{later_questions}"
+
+        assert parse_headline_vi_table(text) == OCT_2026_EXPECTED_SHARES
+
+    def test_consistent_rows_still_must_agree_with_percentage_header(self) -> None:
+        headline, later_questions = OCT_2026_TEXT.split(
+            "If there were a general election",
+            1,
+        )
+        headline = re.sub(r"(?m)^(\D+?) \d+ \d+ ", r"\1 ", headline)
+        text = f"{headline}If there were a general election{later_questions}"
+
+        with pytest.raises(
+            ValueError,
+            match="23 columns, but percentage header has 24",
+        ):
+            parse_headline_vi_table(text)
+
+    def test_rows_must_contain_the_complete_seven_column_suffix(self) -> None:
+        headline, later_questions = OCT_2026_TEXT.split(
+            "If there were a general election",
+            1,
+        )
+        headline = re.sub(
+            r"(?m)^(\D+?) (?:\d+ ){19}",
+            r"\1 ",
+            headline,
+        )
+        text = f"{headline}If there were a general election{later_questions}"
+
+        with pytest.raises(ValueError, match="headline rows have only 6 columns"):
+            parse_headline_vi_table(text)
+
+    def test_percentage_header_must_contain_all_seven_regions(self) -> None:
+        headline, later_questions = OCT_2026_TEXT.split(
+            "If there were a general election",
+            1,
+        )
+        headline = re.sub(r"(?m)^%(?: %)+$", "% % % % % %", headline)
+        text = f"{headline}If there were a general election{later_questions}"
+
+        with pytest.raises(ValueError, match="percentage header has only 6 columns"):
+            parse_headline_vi_table(text)
+
+    def test_combined_header_allows_wrapped_region_names(self) -> None:
+        text = OCT_2026_TEXT.replace(
+            "England Wales Scotland North Midlands London Rest of\nSouth",
+            "England\nWales\tScotland\nNorth\tMidlands London Rest of\nSouth",
+            1,
+        )
+
+        assert parse_headline_vi_table(text) == OCT_2026_EXPECTED_SHARES
+
+
 class TestParseHeadlineViTableSeptember2026:
     """Seven-column region table: every region comes from the table."""
 
@@ -543,6 +782,21 @@ class TestParseHeadlineViTableOldFormat:
             "London": 2.0,
             "Rest of South": 2.0,
         }
+
+    @pytest.mark.parametrize("keep_header", [False, True])
+    def test_later_answers_are_ignored_with_or_without_structural_header(
+        self,
+        keep_header: bool,
+    ) -> None:
+        text = OLD_FORMAT_TEXT
+        if not keep_header:
+            text = text[text.index("Westminster Voting Intention"):]
+        text = text.replace(
+            "Now, thinking specifically",
+            "Conservative 1 2 3 4 5 6\nNow, thinking specifically",
+        )
+
+        assert parse_headline_vi_table(text) == parse_headline_vi_table(OLD_FORMAT_TEXT)
 
 
 class TestParseHeadlineViTableRaises:
@@ -815,6 +1069,60 @@ class TestBuildImportPlanRegions:
 
 class TestBuildImportPlanFullBuild:
     """A full build over the seeded Westminster world: rows, mapping, pollster."""
+
+    def test_october_combined_cross_tab_builds_88_regional_rows(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        world = westminster_world
+        source_url = (
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_Results_261005_w.pdf"
+        )
+        calls = _patch_pdf_fetch(monkeypatch, [OCT_2026_TEXT])
+
+        plan = build_import_plan(db, pdf_url=source_url, map_name=world.map_name)
+
+        assert calls[0][0] == source_url
+        assert plan.source_url == source_url
+        assert plan.map_id == world.map_id
+        assert plan.regions_mapping == _expected_regions_mapping(world.region_ids)
+        assert plan.pollster_name == "YouGov"
+        assert plan.parsed.sample_size == 2312
+        assert plan.parsed.fieldwork_start == date(2026, 10, 4)
+        assert plan.parsed.fieldwork_end == date(2026, 10, 5)
+        assert plan.parsed.party_macro_percentages == OCT_2026_EXPECTED_SHARES
+        assert len(plan.rows) == 88
+        assert len({(row.party_id, row.region_id) for row in plan.rows}) == 88
+        assert {row.party_name for row in plan.rows} == set(OCT_2026_EXPECTED_SHARES)
+        assert {row.region_id for row in plan.rows} == {
+            region_id
+            for name, region_id in world.region_ids.items()
+            if name != "Northern Ireland"
+        }
+        assert all(
+            row.percentage == OCT_2026_EXPECTED_SHARES[row.party_name][row.macro_region]
+            for row in plan.rows
+        )
+        assert {
+            row.region_name: row.percentage
+            for row in plan.rows
+            if row.party_name == "Conservative"
+        } == {
+            "North East England": 17.0,
+            "North West England": 17.0,
+            "Yorkshire and The Humber": 17.0,
+            "East Midlands": 25.0,
+            "West Midlands": 25.0,
+            "London": 21.0,
+            "East of England": 21.0,
+            "South East England": 21.0,
+            "South West England": 21.0,
+            "Wales": 12.0,
+            "Scotland": 11.0,
+        }
 
     def test_regions_mapping_and_rows_cover_every_macro_region(
         self,

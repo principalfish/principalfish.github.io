@@ -233,8 +233,7 @@ _OLD_FORMAT_REGIONAL_INDICES = {
 _ENGLAND_REGION_ORDER = ["North", "Midlands", "London", "Rest of South"]
 _COUNTRY_COLUMNS = ["England", "Wales", "Scotland"]
 
-# The country columns lead the region table from September 2026 onwards; before
-# that the table held the four England regions only.
+# Separate regional tables may include country columns or England regions only.
 _REGION_TABLE_HEADER = re.compile(
     r"(England\s+Wales\s+Scotland\s+)?North\s+Midlands\s+London\s+Rest of\s*South"
 )
@@ -248,9 +247,9 @@ def _parse_old_format_rows(
     lines: list[str],
     row_labels: list[str],
 ) -> dict[str, dict[str, float]]:
-    """Parse regional vote shares from the older YouGov PDF cross-tab layout.
+    """Parse regional vote shares from labelled combined cross-tab rows.
 
-    In the old format each party row contains a series of integer percentages;
+    In a combined cross-tab each party row contains integer percentages;
     the last six values correspond to the six macro regions in the order defined
     by ``_OLD_FORMAT_REGIONAL_INDICES`` (Wales, Scotland, North, Midlands,
     London, Rest of South).
@@ -285,14 +284,51 @@ def _parse_old_format_rows(
     return result
 
 
+def _validate_combined_headline_rows(
+    lines: list[str],
+    current_columns: int | None,
+) -> None:
+    """Check every labelled row, including unmapped parties, before parsing.
+
+    The full regional suffix occupies seven columns. An optional percentage
+    header counts current columns; headline rows may also lead with one
+    previous-poll total, but must all use the same width.
+    """
+    widths = {
+        len(match.group(2).split())
+        for line in lines
+        if (match := _LABELLED_ROW.fullmatch(line)) is not None
+    }
+    if not widths:
+        raise ValueError("No headline rows found in combined-format PDF")
+    if len(widths) != 1:
+        raise ValueError(
+            f"Combined headline rows have inconsistent widths: {sorted(widths)}",
+        )
+    width = next(iter(widths))
+    regional_columns = len(_COUNTRY_COLUMNS) + len(_ENGLAND_REGION_ORDER)
+    if width < regional_columns:
+        raise ValueError(f"Combined headline rows have only {width} columns")
+    if current_columns is not None:
+        if current_columns < regional_columns:
+            raise ValueError(
+                f"Combined percentage header has only {current_columns} columns",
+            )
+        if width not in (current_columns, current_columns + 1):
+            raise ValueError(
+                f"Combined headline rows have {width} columns, but percentage "
+                f"header has {current_columns}",
+            )
+
+
 def _parse_new_format(
     section: str,
     lines: list[str],
     page_one_header: str,
 ) -> dict[str, dict[str, float]]:
-    """Parse regional vote shares from the newer YouGov PDF layout.
+    """Parse regional vote shares from a separate unlabelled regional table.
 
-    The newer format puts the regional figures in an unlabelled table inside
+    The split layout puts the regional figures in an unlabelled table inside
     the ``"Region in England"`` block, after a ``"% % ..."`` header row. The
     table has one row per MRP headline row, in the same order, so its rows are
     paired with the headline labels by position. Every headline row counts
@@ -301,9 +337,9 @@ def _parse_new_format(
 
     The table comes in two shapes:
 
-    - **From September 2026** — seven columns: England, Wales, Scotland and
+    - **Seven columns** — England, Wales, Scotland and
       the four England regions. Every region is read from the table.
-    - **March to August 2026** — the four England regions only. Wales and
+    - **Four columns** — the four England regions only. Wales and
       Scotland are then the last two values of each party's page-1 headline
       row, which is only trusted when the page-1 column header ends in the
       country columns.
@@ -401,9 +437,11 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
     """Extract per-region vote shares from the Westminster VI section of the PDF.
 
     Isolates the relevant section between the ``"Westminster Voting Intention"``
-    and ``"Now, thinking specifically"`` markers, then delegates to either
-    :func:`_parse_new_format` (when a ``"Region in England"`` sub-table is
-    present) or :func:`_parse_old_format_rows`.
+    and ``"Now, thinking specifically"`` markers. A complete regional suffix
+    on page 1 identifies a combined cross-tab; its rows are validated and
+    bounded to the first question. Otherwise a ``"Region in England"`` block
+    selects the separate-table parser. Legacy combined rows are also bounded
+    when the second-question marker is present.
 
     Args:
         full_text: Complete text content extracted from the YouGov PDF.
@@ -414,9 +452,9 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
         ``PARTY_NAME_MAP`` must be present.
 
     Raises:
-        ValueError: If the Westminster VI section cannot be isolated, or if
-            any party defined in ``PARTY_NAME_MAP`` is absent from the parsed
-            result.
+        ValueError: If the Westminster VI section cannot be isolated, a
+            structurally identified table is malformed, or any party defined
+            in ``PARTY_NAME_MAP`` is absent from the parsed result.
     """
     start_marker = "Westminster Voting Intention"
     end_marker = "Now, thinking specifically"
@@ -428,12 +466,31 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
 
     section = full_text[start_index:end_index]
     lines = [line.strip() for line in section.splitlines() if line.strip()]
+    page_one_header = full_text[:start_index]
+    combined_header = _REGION_TABLE_HEADER.search(page_one_header)
+    second_question = next(
+        (i for i, line in enumerate(lines) if line.startswith(_SECOND_QUESTION_PREFIX)),
+        None,
+    )
 
-    if "Region in England" in section:
-        result = _parse_new_format(section, lines, full_text[:start_index])
+    if combined_header is not None and combined_header.group(1) is not None:
+        if second_question is None:
+            raise ValueError(
+                "Could not find the end of the headline rows in combined-format PDF",
+            )
+        headline_lines = lines[:second_question]
+        percent_header = _PERCENT_ROW.search(page_one_header, combined_header.end())
+        current_columns = (
+            len(percent_header.group().split()) if percent_header is not None else None
+        )
+        _validate_combined_headline_rows(headline_lines, current_columns)
+        row_labels = sorted(PARTY_NAME_MAP.keys(), key=len, reverse=True)
+        result = _parse_old_format_rows(headline_lines, row_labels)
+    elif "Region in England" in section:
+        result = _parse_new_format(section, lines, page_one_header)
     else:
         row_labels = sorted(PARTY_NAME_MAP.keys(), key=len, reverse=True)
-        result = _parse_old_format_rows(lines, row_labels)
+        result = _parse_old_format_rows(lines[:second_question], row_labels)
 
     missing_parties = [p for p in PARTY_NAME_MAP.values() if p not in result]
     if missing_parties:

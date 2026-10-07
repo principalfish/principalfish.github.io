@@ -261,12 +261,111 @@ class TestMonthNumber:
 
 
 class TestParseFieldwork:
-    """Tests for _parse_fieldwork -- same-month day ranges, with/without year.
+    """Same-month and cross-month ranges with explicit or default end years."""
 
-    Unlike some sibling importers, Opinium's regexes only match a
-    "<day>-<day> <Month> [<year>]" same-month range: there is no cross-month
-    pattern and no single-day pattern.
-    """
+    def test_reported_cross_month_fieldwork(self) -> None:
+        start, end = op._parse_fieldwork("30th September - 2nd October 2026")
+        assert start == date(2026, 9, 30)
+        assert end == date(2026, 10, 2)
+
+    @pytest.mark.parametrize(
+        "fieldwork_text",
+        [
+            "30 Sep - 2 Oct 2026",
+            "  30th  sEpTeMbEr\t -\n2ND  oCtObEr 2026  ",
+            "30th September – 2nd October 2026",
+            "30th September — 2nd October 2026",
+        ],
+    )
+    def test_cross_month_normalization(self, fieldwork_text: str) -> None:
+        start, end = op._parse_fieldwork(fieldwork_text)
+        assert start == date(2026, 9, 30)
+        assert end == date(2026, 10, 2)
+
+    def test_cross_month_no_year_uses_default_year(self) -> None:
+        start, end = op._parse_fieldwork("30 Sep - 2 Oct", default_year=2026)
+        assert start == date(2026, 9, 30)
+        assert end == date(2026, 10, 2)
+
+    def test_cross_month_no_year_without_default_raises(self) -> None:
+        with pytest.raises(ValueError, match="Could not parse fieldwork string"):
+            op._parse_fieldwork("30 September - 2 October")
+
+    def test_cross_month_explicit_year_overrides_default(self) -> None:
+        start, end = op._parse_fieldwork(
+            "30 September - 2 October 2026",
+            default_year=2099,
+        )
+        assert start == date(2026, 9, 30)
+        assert end == date(2026, 10, 2)
+
+    @pytest.mark.parametrize(
+        ("fieldwork_text", "default_year"),
+        [
+            ("31st December - 2nd January 2027", None),
+            ("31 December - 2 January 2027", 2099),
+            ("31 December - 2 January", 2027),
+        ],
+    )
+    def test_cross_month_rollover_uses_end_year(
+        self,
+        fieldwork_text: str,
+        default_year: int | None,
+    ) -> None:
+        start, end = op._parse_fieldwork(fieldwork_text, default_year=default_year)
+        assert start == date(2026, 12, 31)
+        assert end == date(2027, 1, 2)
+
+    @pytest.mark.parametrize(
+        ("fieldwork_text", "default_year"),
+        [
+            ("30 Blah - 2 October 2026", None),
+            ("30 September - 2 Blah 2026", None),
+            ("30 Blah - 2 October", 2026),
+            ("30 September - 2 Blah", 2026),
+        ],
+    )
+    def test_cross_month_unknown_month_raises(
+        self,
+        fieldwork_text: str,
+        default_year: int | None,
+    ) -> None:
+        with pytest.raises(ValueError, match="Could not parse fieldwork string"):
+            op._parse_fieldwork(fieldwork_text, default_year=default_year)
+
+    @pytest.mark.parametrize(
+        ("fieldwork_text", "default_year"),
+        [
+            ("31 September - 2 October 2026", None),
+            ("30 March - 31 April 2026", None),
+            ("29 February - 2 March 2026", None),
+            ("28 January - 29 February 2026", None),
+            ("31 September - 2 October", 2026),
+            ("30 March - 31 April", 2026),
+        ],
+    )
+    def test_cross_month_invalid_calendar_date_raises(
+        self,
+        fieldwork_text: str,
+        default_year: int | None,
+    ) -> None:
+        with pytest.raises(ValueError, match="day"):
+            op._parse_fieldwork(fieldwork_text, default_year=default_year)
+
+    @pytest.mark.parametrize(
+        ("fieldwork_text", "expected_start", "expected_end"),
+        [
+            ("29 February - 2 March 2024", date(2024, 2, 29), date(2024, 3, 2)),
+            ("28 January - 29 February 2024", date(2024, 1, 28), date(2024, 2, 29)),
+        ],
+    )
+    def test_cross_month_leap_day_is_valid_in_leap_year(
+        self,
+        fieldwork_text: str,
+        expected_start: date,
+        expected_end: date,
+    ) -> None:
+        assert op._parse_fieldwork(fieldwork_text) == (expected_start, expected_end)
 
     def test_same_month_with_year(self) -> None:
         start, end = op._parse_fieldwork("3-5 February 2026")
@@ -314,8 +413,8 @@ class TestParseFieldwork:
         assert end == date(2026, 2, 5)
 
     def test_single_day_is_not_supported_and_raises(self) -> None:
-        # Both patterns require a "<day>-<day>" range; a lone day never
-        # matches either, even with a year present.
+        # All patterns require a range; a lone day never matches, even
+        # with a year present.
         with pytest.raises(ValueError, match="Could not parse fieldwork string"):
             op._parse_fieldwork("5 February 2026")
 
@@ -986,6 +1085,70 @@ class TestParsePollOptionalPartyRecognition:
 
 class TestParsePollFieldworkYear:
     """parse_poll's year resolution: URL, then fieldwork_year_hint."""
+
+    def test_reported_cross_month_workbook_preserves_poll_data(self) -> None:
+        workbook = _full_workbook(
+            front_page_rows=_front_page_rows(
+                fieldwork_text="30th September - 2nd October 2026",
+            ),
+        )
+        source_url = (
+            "https://www.opinium.com/wp-content/uploads/2026/10/"
+            "VI-2026-09-30-Observer-web-data-tables-1825.xlsx"
+        )
+        parsed = op.parse_poll(workbook, source_url=source_url)
+
+        assert parsed.fieldwork_start == date(2026, 9, 30)
+        assert parsed.fieldwork_end == date(2026, 10, 2)
+        assert parsed.sample_size == 2015
+        assert parsed.party_macro_percentages["Conservative"] == {
+            "__national__": 2.0,
+            "North": 3.0,
+            "Mids": 4.0,
+            "London": 5.0,
+            "South": 6.0,
+            "Wales": 7.0,
+            "Scotland": 8.0,
+            "Northern Ireland": 9.0,
+        }
+        assert parsed.party_macro_percentages["Labour"]["__national__"] == 10.0
+        assert parsed.party_macro_percentages["Reform UK"]["South"] == 30.0
+
+    def test_cross_month_year_inferred_from_source_url(self) -> None:
+        workbook = _full_workbook(
+            front_page_rows=_front_page_rows(fieldwork_text="30 Sep - 2 Oct"),
+        )
+        parsed = op.parse_poll(
+            workbook,
+            source_url="https://example.test/2026/tables.xlsx",
+        )
+        assert parsed.fieldwork_start == date(2026, 9, 30)
+        assert parsed.fieldwork_end == date(2026, 10, 2)
+
+    @pytest.mark.parametrize(
+        ("source_url", "fieldwork_year_hint"),
+        [
+            ("https://example.test/2027/tables.xlsx", None),
+            ("https://example.test/tables.xlsx", 2027),
+        ],
+    )
+    def test_cross_month_rollover_with_inferred_end_year(
+        self,
+        source_url: str,
+        fieldwork_year_hint: int | None,
+    ) -> None:
+        workbook = _full_workbook(
+            front_page_rows=_front_page_rows(
+                fieldwork_text="31 December - 2 January",
+            ),
+        )
+        parsed = op.parse_poll(
+            workbook,
+            source_url=source_url,
+            fieldwork_year_hint=fieldwork_year_hint,
+        )
+        assert parsed.fieldwork_start == date(2026, 12, 31)
+        assert parsed.fieldwork_end == date(2027, 1, 2)
 
     def test_year_inferred_from_source_url(self) -> None:
         # A literal URL with its own year, not op.DEFAULT_XLSX_URL -- see

@@ -121,7 +121,85 @@ class TestInferYear:
 
 
 class TestParseFieldwork:
-    """Tests for _parse_fieldwork — date-range string parsing."""
+    """Tests for _parse_fieldwork — single-day and date-range parsing."""
+
+    def test_reported_single_day(self) -> None:
+        start, end = _parse_fieldwork("29th September 2026")
+        assert start == end == date(2026, 9, 29)
+
+    def test_explicit_cross_month_year_overrides_default(self) -> None:
+        start, end = _parse_fieldwork("30 Jan - 1 Feb 2025", default_year=2026)
+        assert start == date(2025, 1, 30)
+        assert end == date(2025, 2, 1)
+
+    @pytest.mark.parametrize(
+        "fieldwork_text",
+        ["29 September 2026", "29 sep 2026", " 29TH\t SEPTEMBER\n 2026 "],
+    )
+    def test_single_day_normalisation(self, fieldwork_text: str) -> None:
+        start, end = _parse_fieldwork(fieldwork_text)
+        assert start == end == date(2026, 9, 29)
+
+    def test_single_day_no_year_uses_default(self) -> None:
+        start, end = _parse_fieldwork("29th September", default_year=2026)
+        assert start == end == date(2026, 9, 29)
+
+    def test_single_day_no_year_or_default_raises(self) -> None:
+        with pytest.raises(ValueError, match="Could not parse fieldwork string"):
+            _parse_fieldwork("29 September")
+
+    def test_single_day_explicit_year_overrides_default(self) -> None:
+        start, end = _parse_fieldwork("29 September 2025", default_year=2026)
+        assert start == end == date(2025, 9, 29)
+
+    def test_single_day_unknown_month_raises(self) -> None:
+        with pytest.raises(ValueError, match="Could not parse month"):
+            _parse_fieldwork("29 Notamonth 2026")
+
+    @pytest.mark.parametrize(
+        "fieldwork_text",
+        ["31 September 2026", "29 February 2026", "0 September 2026"],
+    )
+    def test_single_day_invalid_calendar_date_raises(self, fieldwork_text: str) -> None:
+        with pytest.raises(ValueError):
+            _parse_fieldwork(fieldwork_text)
+
+    def test_single_day_valid_leap_day(self) -> None:
+        start, end = _parse_fieldwork("29 February 2024", default_year=2026)
+        assert start == end == date(2024, 2, 29)
+
+    @pytest.mark.parametrize(
+        "fieldwork_text",
+        [
+            "29 September to 2 October 2026",
+            "Fieldwork: 29 September 2026",
+            "29 September 2026 extra",
+        ],
+    )
+    def test_single_day_must_match_complete_value(self, fieldwork_text: str) -> None:
+        with pytest.raises(ValueError, match="Could not parse fieldwork string"):
+            _parse_fieldwork(fieldwork_text, default_year=2026)
+
+    def test_explicit_same_month_year_overrides_default(self) -> None:
+        start, end = _parse_fieldwork("3-5 January 2025", default_year=2026)
+        assert start == date(2025, 1, 3)
+        assert end == date(2025, 1, 5)
+
+    def test_explicit_cross_year_overrides_default_and_decrements_start(self) -> None:
+        start, end = _parse_fieldwork("31 Dec - 2 Jan 2025", default_year=2026)
+        assert start == date(2024, 12, 31)
+        assert end == date(2025, 1, 2)
+
+    def test_range_search_keeps_surrounding_text(self) -> None:
+        start, end = _parse_fieldwork(
+            "Fieldwork: 30 Jan - 1 Feb 2025 inclusive", default_year=2026
+        )
+        assert start == date(2025, 1, 30)
+        assert end == date(2025, 2, 1)
+
+    def test_invalid_explicit_range_does_not_fall_back_to_default(self) -> None:
+        with pytest.raises(ValueError):
+            _parse_fieldwork("29 Feb - 1 Mar 2025", default_year=2024)
 
     def test_same_month_with_year(self) -> None:
         start, end = _parse_fieldwork("3-5 January 2026")
@@ -760,6 +838,43 @@ class TestParsePartyRegionPercentages:
 
 class TestParsePoll:
     """Tests for parse_poll — combining cover metadata with VI percentages."""
+
+    def test_reported_single_day_workbook(self) -> None:
+        workbook = _full_workbook(
+            cover_rows=_cover_rows(
+                fieldwork_text="29th September 2026", sample_cell=1548
+            )
+        )
+        source_url = (
+            "https://cdn.survation.com/wp-content/uploads/2026/09/30073002/"
+            "Mandate_Burnham_Speech_2026-09-29_Tables.xlsx"
+        )
+        parsed = parse_poll(workbook, source_url=source_url)
+        assert parsed.fieldwork_start == parsed.fieldwork_end == date(2026, 9, 29)
+        assert parsed.sample_size == 1548
+        assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
+        assert parsed.party_region_percentages["Conservative"][NATIONAL_KEY] == 32.0
+        assert parsed.party_region_percentages["Labour"]["London"] == 45.0
+        assert parsed.party_region_percentages["Reform UK"]["North East England"] == 18.0
+
+    def test_yearless_single_day_uses_url_year(self) -> None:
+        workbook = _full_workbook(
+            cover_rows=_cover_rows(fieldwork_text="29 September")
+        )
+        parsed = parse_poll(workbook, source_url=_XLSX_URL)
+        assert parsed.fieldwork_start == parsed.fieldwork_end == date(2026, 9, 29)
+        assert parsed.sample_size == 1511
+        assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
+
+    def test_explicit_cross_month_year_overrides_url_year(self) -> None:
+        workbook = _full_workbook(
+            cover_rows=_cover_rows(fieldwork_text="30 Jan - 1 Feb 2025")
+        )
+        parsed = parse_poll(workbook, source_url=_XLSX_URL)
+        assert parsed.fieldwork_start == date(2025, 1, 30)
+        assert parsed.fieldwork_end == date(2025, 2, 1)
+        assert parsed.sample_size == 1511
+        assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
 
     def test_full_workbook(self) -> None:
         workbook = _full_workbook()

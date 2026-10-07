@@ -6,23 +6,20 @@ This file covers everything else: the PDF-fetch step, the PDF-text parsing
 helpers, ``build_import_plan``'s region handling, ``_cli_preview`` and
 ``main``.
 
-Every PDF-text layout below (fieldwork lines, the national and regional
-voting-intention blocks) is synthetic: built to fit the shapes the parsing
-functions match on, not sourced from a real Ipsos PDF. Layouts were checked
-against the real module functions while writing them, but that only proves
-internal consistency between the fixture and the code under test, not that
-the fixture matches a real document -- running a function against its own
-hand-built input is not independent verification. Where a real signal was
-available and checked (the cross-month fieldwork bug in ``_parse_fieldwork``,
-verified against poll 225 in the live DB), that is called out explicitly in
-the relevant test instead.
+The older fixtures are synthetic layouts checked against the parser, rather
+than independent source evidence. The aligned-table tests add genuine excerpts
+from three 2026 PDFs and a four-page rotated source PDF. Their expected shares
+come from the published national and ONS region columns. The existing omitted
+start-month date behavior is pinned separately below.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable, Mapping, Sequence
 from datetime import date
+from pathlib import Path
 from urllib.request import Request
 
 import pytest
@@ -137,9 +134,18 @@ class _FakePdfPage:
 
     def __init__(self, text: str | None) -> None:
         self._text = text
+        self.rotation_transferred = False
 
-    def extract_text(self) -> str | None:
+    def transfer_rotation_to_content(self) -> None:
+        self.rotation_transferred = True
+
+    def extract_text(
+        self, *, extraction_mode: str, layout_mode_strip_rotated: bool,
+    ) -> str | None:
         """Return the fixed text this page was built with."""
+        assert self.rotation_transferred
+        assert extraction_mode == "layout"
+        assert layout_mode_strip_rotated is False
         return self._text
 
 
@@ -163,6 +169,12 @@ def _fake_pdf_reader_factory(
 
 class TestExtractPdfText:
     """Tests for extract_pdf_text — fetch, validate and extract PDF text."""
+
+    @pytest.fixture(autouse=True)
+    def fake_writer(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            ipsos_import, "PdfWriter", lambda *, clone_from: clone_from,
+        )
 
     def test_returns_joined_page_text(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
@@ -1625,3 +1637,123 @@ class TestMain:
             "documents/2026-01/politmkp_w1jan2026web1.pdf" in out
         )
         assert "[dry-run] would create pollster: ipsos" in out
+
+
+_IPSOS_FIXTURES = Path(__file__).parent / "fixtures/ipsos"
+
+
+class TestAnnotatedFieldwork:
+    @pytest.mark.parametrize("annotation", ["am", "pm", "AM", "PM"])
+    def test_time_before_month(self, annotation: str) -> None:
+        line = (
+            f"Fieldwork dates - Thursday 10th to Wednesday 15th ({annotation}) "
+            "September 2026 (Base total= 1,031)."
+        )
+        assert _parse_fieldwork([line]) == (date(2026, 9, 10), date(2026, 9, 15))
+
+    def test_annotation_preserves_cross_month_and_year(self) -> None:
+        line = "Fieldwork dates: Monday 30th December to Wednesday 2nd (pm) January 2026"
+        assert _parse_fieldwork([line]) == (date(2025, 12, 30), date(2026, 1, 2))
+
+    @pytest.mark.parametrize("annotation", ["(night)", "(am", "(am) (pm)"])
+    def test_unknown_or_malformed_annotation_is_rejected(self, annotation: str) -> None:
+        line = f"Fieldwork dates: Thursday 10th to Wednesday 15th {annotation} September 2026"
+        with pytest.raises(ValueError, match="Could not parse fieldwork line"):
+            _parse_fieldwork([line])
+
+    def test_invalid_calendar_date_still_fails(self) -> None:
+        line = "Fieldwork dates: Thursday 10th to Wednesday 31st (am) September 2026"
+        with pytest.raises(ValueError):
+            _parse_fieldwork([line])
+
+
+class TestAlignedSourceTables:
+    @pytest.mark.parametrize("end", ["2026-09-15", "2026-08-04", "2026-06-30"])
+    def test_actual_source_tables_and_all_mapped_values(self, end: str) -> None:
+        text = (_IPSOS_FIXTURES / f"tables-{end}.txt").read_text()
+        expected = json.loads((_IPSOS_FIXTURES / f"expected-{end}.json").read_text())
+        assert parse_poll(text).model_dump(mode="json") == expected
+
+    def test_actual_rotated_pdf_extraction(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        payload = (_IPSOS_FIXTURES / "tables-2026-09-15.pdf").read_bytes()
+        monkeypatch.setattr(
+            ipsos_import, "urlopen", lambda *_a, **_k: FakeUrlResponse(payload),
+        )
+        text = extract_pdf_text("https://www.ipsos.com/source.pdf")
+        expected = json.loads(
+            (_IPSOS_FIXTURES / "expected-2026-09-15.json").read_text()
+        )
+        assert parse_poll(text).model_dump(mode="json") == expected
+
+    def test_next_unrelated_table_cannot_overwrite_values(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        text += "\nTable 5\nOther question\nConservative 99\n99%\n"
+        parsed = parse_poll(text)
+        assert parsed.party_percentages["Conservative"] == 19
+        assert parsed.party_region_percentages["Conservative"]["Wales"] == 11
+
+    def test_missing_named_region_header_fails(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        text = text.replace("of England)", "Somewhere)")
+        with pytest.raises(ValueError, match="region headers"):
+            parse_poll(text)
+
+    def test_identical_repeated_regional_table_preserves_all_values(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        regional_table = re.split(r"(?m)^Table\s+\d+\s*$", text)[4]
+        repeated = f"{text}\nTable 5\n{regional_table}"
+
+        assert parse_poll(repeated) == parse_poll(text)
+
+    def test_conflicting_repeated_regional_table_fails(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        regional_table = re.split(r"(?m)^Table\s+\d+\s*$", text)[4]
+        rows = regional_table.splitlines()
+        index = next(
+            i for i, line in enumerate(rows) if line.startswith("Conservative")
+        )
+        rows[index + 1] = re.sub(
+            r"(\d+)%",
+            lambda match: f"{min(int(match[1]) + 1, 100)}%",
+            rows[index + 1],
+        )
+        regional_text = "\n".join(rows)
+        repeated = f"{text}\nTable 5\n{regional_text}"
+
+        with pytest.raises(
+            ValueError,
+            match="Conflicting aligned Ipsos regional tables",
+        ):
+            parse_poll(repeated)
+
+    def test_missing_regional_count_anchor_fails(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        parts = re.split(r"(?m)^Table\s+\d+\s*$", text)
+        rows = parts[4].splitlines()
+        index = next(i for i, line in enumerate(rows) if "Unweighted Total" in line)
+        rows[index] = rows[index].replace("727", "---", 1)
+        parts[4] = "\n".join(rows)
+        text = parts[0] + "".join(
+            f"\nTable {number}\n{part}" for number, part in enumerate(parts[1:], 1)
+        )
+        with pytest.raises(ValueError, match="Incomplete aligned"):
+            parse_poll(text)
+
+    def test_duplicate_party_row_fails(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        rows = text.splitlines()
+        index = next(i for i, line in enumerate(rows) if line.startswith("Conservative"))
+        rows[index:index] = rows[index:index + 2]
+        with pytest.raises(ValueError, match="Duplicate aligned"):
+            parse_poll("\n".join(rows))
+
+    def test_suppressed_cells_keep_region_positions(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        parsed = parse_poll(text)
+        snp = parsed.party_region_percentages["Scottish National Party"]
+        assert snp["Scotland"] == 38
+        assert snp["Wales"] == 0
+        assert parsed.party_region_percentages["Plaid Cymru"]["Wales"] == 17
+        assert parsed.party_percentages["Other"] == 0

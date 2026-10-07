@@ -27,9 +27,11 @@ real-world layout is safe.
 from __future__ import annotations
 
 from datetime import date
+from io import BytesIO
 
 import pytest
 import xlrd
+from openpyxl import Workbook
 
 from db import Database
 from polls.importers.westminster import lord_ashcroft_import
@@ -366,6 +368,51 @@ class TestFindFieldwork:
         sheet = FakeXlrdSheet("Sheet1", [["Fieldwork: 3-5 Fooruary 2026"]])
         with pytest.raises(ValueError, match="Could not parse month in fieldwork line"):
             _find_fieldwork(sheet)
+
+    @pytest.mark.parametrize(
+        "line, expected_start, expected_end",
+        [
+            (
+                "Fieldwork: 27th August - 1st September 2026",
+                date(2026, 8, 27),
+                date(2026, 9, 1),
+            ),
+            (
+                "Fieldwork: 30th July - 3rd August 2026",
+                date(2026, 7, 30),
+                date(2026, 8, 3),
+            ),
+            ("FIELDWORK: 27 Aug.–1 Sep. 2026", date(2026, 8, 27), date(2026, 9, 1)),
+            (
+                "Fieldwork: 29th December — 2nd January 2026",
+                date(2025, 12, 29),
+                date(2026, 1, 2),
+            ),
+            (
+                "Fieldwork: 3 January - 5 January 2026",
+                date(2026, 1, 3),
+                date(2026, 1, 5),
+            ),
+        ],
+    )
+    def test_explicit_month_ranges(
+        self, line: str, expected_start: date, expected_end: date
+    ) -> None:
+        sheet = FakeXlrdSheet("Sheet1", [[line]])
+        assert _find_fieldwork(sheet) == (expected_start, expected_end)
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "Fieldwork: 30 February - 2 March 2026",
+            "Fieldwork: 5-3 January 2026",
+            "Fieldwork: 27 Fooruary - 1 September 2026",
+            "Fieldwork: 27 August - 1 Fooruary 2026",
+        ],
+    )
+    def test_invalid_explicit_ranges_raise(self, line: str) -> None:
+        with pytest.raises(ValueError):
+            _find_fieldwork(FakeXlrdSheet("Sheet1", [[line]]))
 
     def test_not_found_raises(self) -> None:
         sheet = FakeXlrdSheet("Sheet1", [["No fieldwork line here"]])
@@ -849,53 +896,64 @@ class TestParsePartyRegionPercentages:
 
         assert result["Conservative"]["North East England"] == 23.0
 
-    def test_later_blank_row_overwrites_values_with_zero_pins_current_behaviour(
-        self,
+    @pytest.mark.parametrize("later_cells", [[""] * 8, [95] * 8])
+    def test_later_party_rows_do_not_overwrite_first_results(
+        self, later_cells: list[object]
     ) -> None:
-        """A later blank-cell row for an already-parsed party wipes it to zero.
-
-        Unlike ``_parse_party_percentages`` (the national parser), this
-        function has no blank-value skip and no early-stop-once-every-party-
-        is-found guard: every row whose label matches a canonical party is
-        processed and, if it produces any region_values at all — even all
-        zeros from blank cells — it *overwrites* ``parsed[canonical_party]``
-        unconditionally.
-
-        **Verdict: confirmed real, live bug — not fixed here (test-only
-        piece).** The real Feb 2026 Lord Ashcroft workbook (poll 260 in the
-        live DB) has question-header rows later in the scan window that
-        also match a canonical party — e.g. "Conservative-Reform Alliance"
-        matches "Conservative" via ``_canonical_party``'s substring
-        matching — with blank data cells. Confirmed against the live DB:
-        poll 260 stores 0.0 for Conservative, Labour and Liberal Democrats
-        across all 11 regions, although the source workbook has real
-        non-zero values for these parties (e.g. Labour is close to 17% in
-        North East England). This test reproduces the mechanism directly
-        with a same-named second row rather than the real workbook's exact
-        substring-collision label, since the overwrite itself — not the
-        label match — is the bug.
-        """
         rows = _values_sheet_rows(
-            denominators=[100, 100, 100, 100, 100, 100, 100, 100],
+            denominators=[100] * 8,
             party_rows=[
                 ["Labour", 22, 20, 25, 23, 21, 24, 18, 27],
-                ["Labour", "", "", "", "", "", "", "", ""],
+                ["Labour", *later_cells],
             ],
         )
-        sheet = FakeXlrdSheet("Values", rows)
-
-        result = _parse_party_region_percentages(sheet)
-
+        result = _parse_party_region_percentages(FakeXlrdSheet("Values", rows))
         assert result["Labour"] == {
-            "North East England": 0.0,
-            "North West England": 0.0,
-            "Yorkshire and The Humber": 0.0,
-            "East Midlands": 0.0,
-            "West Midlands": 0.0,
-            "East of England": 0.0,
-            "London": 0.0,
-            "South East England": 0.0,
+            "North East England": 22.0,
+            "North West England": 20.0,
+            "Yorkshire and The Humber": 25.0,
+            "East Midlands": 23.0,
+            "West Midlands": 21.0,
+            "East of England": 24.0,
+            "London": 18.0,
+            "South East England": 27.0,
         }
+
+    @pytest.mark.parametrize("blank", [None, ""])
+    def test_blank_party_heading_before_data_is_skipped(self, blank: object) -> None:
+        rows = _values_sheet_rows(
+            denominators=[100] * 8,
+            party_rows=[
+                ["Conservative-Reform Alliance", *([blank] * 8)],
+                ["Conservative", *([22] * 8)],
+            ],
+        )
+        result = _parse_party_region_percentages(FakeXlrdSheet("Values", rows))
+        assert set(result) == {"Conservative"}
+        assert set(result["Conservative"].values()) == {22.0}
+
+    def test_numeric_zero_is_a_valid_first_result(self) -> None:
+        rows = _values_sheet_rows(
+            denominators=[100] * 8,
+            party_rows=[
+                ["Plaid", *([0] * 8)],
+                ["Plaid", *([60] * 8)],
+            ],
+        )
+        result = _parse_party_region_percentages(FakeXlrdSheet("Values", rows))
+        assert set(result["Plaid Cymru"].values()) == {0.0}
+
+    def test_completed_party_block_stops_before_later_questions(self) -> None:
+        rows = _values_sheet_rows(
+            denominators=[100] * 8,
+            party_rows=[
+                *[[row[0], *([row[1]] * 8)] for row in _FULL_VI_ROWS[1:]],
+                ["Conservative-Reform Alliance", *(["not a count"] * 8)],
+            ],
+        )
+        result = _parse_party_region_percentages(FakeXlrdSheet("Values", rows))
+        assert len(result) == 8
+        assert set(result["Conservative"].values()) == {19.0}
 
 
 # ── parse_poll_from_xls_url ──────────────────────────────────────────────────
@@ -963,6 +1021,120 @@ class TestParsePollFromXlsUrl:
         parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
 
         assert parsed.party_region_percentages["Conservative"]["London"] == 18.0
+
+    @pytest.mark.parametrize(
+        "count_name",
+        ["Regional Counts", "COUNTS", "Demographics - n", "Demographics - N"],
+    )
+    def test_count_sheet_aliases_are_used_for_regions(
+        self, monkeypatch: pytest.MonkeyPatch, count_name: str
+    ) -> None:
+        book = FakeXlrdBook(
+            [
+                FakeXlrdSheet("National", _NATIONAL_SHEET_ROWS),
+                FakeXlrdSheet(count_name, _VALUES_SHEET_ROWS),
+            ]
+        )
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls")
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
+        parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
+        assert parsed.party_region_percentages["Conservative"]["London"] == 18.0
+
+    def test_values_sheet_has_priority_over_an_earlier_counts_sheet(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        counts_rows = _values_sheet_rows(
+            denominators=[100] * 8,
+            party_rows=[["Conservative", *([99] * 8)]],
+        )
+        book = FakeXlrdBook(
+            [
+                FakeXlrdSheet("National", _NATIONAL_SHEET_ROWS),
+                FakeXlrdSheet("Counts", counts_rows),
+                FakeXlrdSheet("Values", _VALUES_SHEET_ROWS),
+            ]
+        )
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls")
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
+        parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
+        assert parsed.party_region_percentages["Conservative"]["London"] == 18.0
+
+    def test_nonterminal_n_sheet_name_does_not_select_a_count_sheet(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        book = FakeXlrdBook(
+            [
+                FakeXlrdSheet("National", _NATIONAL_SHEET_ROWS),
+                FakeXlrdSheet("Demographics - notes", _VALUES_SHEET_ROWS),
+            ]
+        )
+        monkeypatch.setattr(lord_ashcroft_import, "_fetch_bytes", lambda _url: b"xls")
+        monkeypatch.setattr(xlrd, "open_workbook", lambda **_k: book)
+        parsed = parse_poll_from_xls_url("https://x.test/poll.xls")
+        assert parsed.party_region_percentages == {}
+
+    @pytest.mark.parametrize("url_suffix", ["xls", "xlsx"])
+    def test_real_xlsx_payload_with_percent_and_count_sheets(
+        self, monkeypatch: pytest.MonkeyPatch, url_suffix: str
+    ) -> None:
+        workbook = Workbook()
+        national = workbook.active
+        assert national is not None
+        national.title = "Demographics - %"
+        national.append(["Fieldwork: 27th August - 1st September 2026"])
+        national.append(["Sample Size: 1503 adults"])
+        for row in _FULL_VI_ROWS:
+            national.append(row)
+        counts = workbook.create_sheet("Demographics - n")
+        rows = _values_sheet_rows(
+            denominators=[200] * 8,
+            party_rows=[
+                ["Conservative-Reform Alliance", *([None] * 8)],
+                *[
+                    [row[0], *([float(str(row[1])) * 2] * 8)]
+                    for row in _FULL_VI_ROWS[1:]
+                ],
+                ["Conservative-Reform Alliance", *([None] * 8)],
+            ],
+        )
+        for row in rows:
+            counts.append(row)
+        payload = BytesIO()
+        workbook.save(payload)
+        workbook.close()
+        monkeypatch.setattr(
+            lord_ashcroft_import, "_fetch_bytes", lambda _url: payload.getvalue()
+        )
+
+        def reject_legacy_reader(**_kwargs: object) -> None:
+            raise AssertionError("OOXML content must use the modern reader")
+
+        monkeypatch.setattr(xlrd, "open_workbook", reject_legacy_reader)
+        parsed = parse_poll_from_xls_url(f"https://x.test/poll.{url_suffix}")
+        assert parsed.sample_size == 1503
+        assert (parsed.fieldwork_start, parsed.fieldwork_end) == (
+            date(2026, 8, 27), date(2026, 9, 1)
+        )
+        assert parsed.party_percentages == {
+            "Conservative": 19.0,
+            "Labour": 21.0,
+            "Liberal Democrats": 10.0,
+            "Scottish National Party": 4.0,
+            "Plaid Cymru": 1.0,
+            "Reform UK": 23.0,
+            "Green": 8.0,
+            "Other": 2.0,
+        }
+        assert parsed.party_region_percentages == {
+            party: dict.fromkeys(
+                [
+                    SOURCE_REGION_TO_INTERNAL[str(region)]
+                    for region in _REGION_HEADER_8[1:]
+                ],
+                percentage,
+            )
+            for party, percentage in parsed.party_percentages.items()
+        }
 
     def test_no_values_sheet_falls_back_to_sheet_zero_for_regions(
         self, monkeypatch: pytest.MonkeyPatch

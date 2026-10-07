@@ -357,6 +357,8 @@ class TestExtractWorkbook:
 
         def fake_urlopen(req: Request, timeout: float = 45) -> FakeUrlResponse:
             assert req.full_url == "https://bmgresearch.com/tables.xlsx"
+            assert req.get_header("User-agent") == "Mozilla/5.0"
+            assert req.get_header("Referer") == "https://bmgresearch.com/"
             return FakeUrlResponse(payload)
 
         monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
@@ -1264,3 +1266,447 @@ class TestMain:
 
         out = capsys.readouterr().out
         assert "[dry-run] would create pollster: bmg_research" in out
+
+
+class _PageResponse(FakeUrlResponse):
+    def __init__(self, final_url: str, html: str) -> None:
+        super().__init__(html.encode())
+        self.final_url = final_url
+
+    def geturl(self) -> str:
+        return self.final_url
+
+    def read(self, size: int = -1) -> bytes:
+        return super().read()[:size] if size >= 0 else super().read()
+
+
+_ARTICLE_URL = "https://inews.co.uk/news/politics/poll-478467"
+_CANONICAL_ARTICLE_URL = "https://inews.co.uk/news/politics/poll-4784677"
+_NEWS_URL = "https://bmgresearch.com/news/"
+_RELEASE_URL = f"{_NEWS_URL}september-poll/"
+_PUBLISHED_XLSX = (
+    "https://bmgresearch.com/wp-content/uploads/2026/09/september-tables.xlsx"
+)
+
+
+def _links(*urls: str) -> str:
+    return "".join(f'<a href="{url}">Source</a>' for url in urls)
+
+
+def _mock_pages(
+    monkeypatch: pytest.MonkeyPatch,
+    pages: Mapping[str, tuple[str, str]],
+) -> list[str]:
+    requested: list[str] = []
+
+    def fake_urlopen(req: Request, timeout: float = 45) -> _PageResponse:
+        assert timeout == 45
+        assert req.get_header("User-agent") == "Mozilla/5.0"
+        assert req.get_header("Referer") == "https://bmgresearch.com/"
+        requested.append(req.full_url)
+        final_url, html = pages[req.full_url]
+        return _PageResponse(final_url, html)
+
+    monkeypatch.setattr(bmg, "urlopen", fake_urlopen)
+    return requested
+
+
+class TestResolveSourceUrl:
+    @pytest.mark.parametrize(
+        "url",
+        [
+            _XLSX_URL,
+            "https://www.bmgresearch.co.uk/tables.xlsx",
+            "https://example.com/legacy-download",
+        ],
+    )
+    def test_direct_urls_do_not_fetch_html(
+        self, monkeypatch: pytest.MonkeyPatch, url: str
+    ) -> None:
+        requested = _mock_pages(monkeypatch, {})
+        assert bmg.resolve_source_url(url) == url
+        assert requested == []
+
+    def test_release_resolves_unique_relative_xlsx_link(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _mock_pages(
+            monkeypatch,
+            {
+                _RELEASE_URL: (
+                    _RELEASE_URL,
+                    _links(
+                        "/wp-content/uploads/2026/09/september-tables.xlsx",
+                        f"{_PUBLISHED_XLSX}#download",
+                    ),
+                ),
+            },
+        )
+        assert bmg.resolve_source_url(_RELEASE_URL) == _PUBLISHED_XLSX
+
+    def test_co_uk_release_remains_supported(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        source = "https://www.bmgresearch.co.uk/news/older-poll/"
+        _mock_pages(monkeypatch, {source: (_RELEASE_URL, _links(_PUBLISHED_XLSX))})
+        assert bmg.resolve_source_url(source) == _PUBLISHED_XLSX
+
+    def test_original_article_redirect_requires_exact_canonical_backlink(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        other_release = f"{_NEWS_URL}different-poll/"
+        requested = _mock_pages(
+            monkeypatch,
+            {
+                _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, "<html>Article</html>"),
+                _NEWS_URL: (_NEWS_URL, _links(_RELEASE_URL, other_release)),
+                _RELEASE_URL: (
+                    _RELEASE_URL,
+                    _links(f"{_CANONICAL_ARTICLE_URL}#results", _PUBLISHED_XLSX),
+                ),
+                other_release: (
+                    other_release,
+                    _links(_ARTICLE_URL, "/wp-content/uploads/2026/09/other.xlsx"),
+                ),
+            },
+        )
+        assert bmg.resolve_source_url(_ARTICLE_URL) == _PUBLISHED_XLSX
+        assert requested == [_ARTICLE_URL, _NEWS_URL, _RELEASE_URL, other_release]
+
+    def test_pagination_and_duplicate_links_are_bounded_and_visited_once(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        second_page = f"{_NEWS_URL}?results-page=2"
+        requested = _mock_pages(
+            monkeypatch,
+            {
+                _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, ""),
+                _NEWS_URL: (
+                    _NEWS_URL,
+                    _links("?results-page=2", "?results-page=2#next", _NEWS_URL),
+                ),
+                second_page: (
+                    second_page,
+                    _links(_NEWS_URL, _RELEASE_URL, _RELEASE_URL),
+                ),
+                _RELEASE_URL: (
+                    _RELEASE_URL,
+                    _links(_CANONICAL_ARTICLE_URL, _PUBLISHED_XLSX),
+                ),
+            },
+        )
+        assert bmg.resolve_source_url(_ARTICLE_URL) == _PUBLISHED_XLSX
+        assert requested == [_ARTICLE_URL, _NEWS_URL, second_page, _RELEASE_URL]
+
+    def test_news_traversal_ignores_foreign_hosts_and_non_news_paths(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        requested = _mock_pages(
+            monkeypatch,
+            {
+                _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, ""),
+                _NEWS_URL: (
+                    _NEWS_URL,
+                    _links(
+                        "https://bmgresearch.com.evil.example/news/poll/",
+                        "https://bmgresearch.com@evil.example/news/poll/",
+                        "https://evil.example/news/poll/",
+                        "/about/",
+                        "?news-category=polling",
+                        _RELEASE_URL,
+                    ),
+                ),
+                _RELEASE_URL: (
+                    _RELEASE_URL,
+                    _links(_CANONICAL_ARTICLE_URL, _PUBLISHED_XLSX, "/news/related/"),
+                ),
+            },
+        )
+        assert bmg.resolve_source_url(_ARTICLE_URL) == _PUBLISHED_XLSX
+        assert requested == [_ARTICLE_URL, _NEWS_URL, _RELEASE_URL]
+
+    @pytest.mark.parametrize(
+        "links",
+        [
+            [],
+            ["https://evil.example/wp-content/uploads/tables.xlsx"],
+            ["https://bmgresearch.com.evil.example/wp-content/uploads/tables.xlsx"],
+            ["https://bmgresearch.com/other/tables.xlsx"],
+            [_PUBLISHED_XLSX, _PUBLISHED_XLSX.replace("september", "other")],
+        ],
+    )
+    def test_release_requires_one_legitimate_published_workbook(
+        self, monkeypatch: pytest.MonkeyPatch, links: list[str]
+    ) -> None:
+        _mock_pages(monkeypatch, {_RELEASE_URL: (_RELEASE_URL, _links(*links))})
+        with pytest.raises(ValueError, match="Expected one published BMG XLSX"):
+            bmg.resolve_source_url(_RELEASE_URL)
+
+    def test_ambiguous_backlink_matches_fail(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        other_release = f"{_NEWS_URL}second-poll/"
+        _mock_pages(
+            monkeypatch,
+            {
+                _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, ""),
+                _NEWS_URL: (_NEWS_URL, _links(_RELEASE_URL, other_release)),
+                _RELEASE_URL: (
+                    _RELEASE_URL,
+                    _links(_CANONICAL_ARTICLE_URL, _PUBLISHED_XLSX),
+                ),
+                other_release: (
+                    other_release,
+                    _links(
+                        _CANONICAL_ARTICLE_URL,
+                        _PUBLISHED_XLSX.replace("september", "different"),
+                    ),
+                ),
+            },
+        )
+        with pytest.raises(ValueError, match="Multiple BMG workbooks"):
+            bmg.resolve_source_url(_ARTICLE_URL)
+
+    def test_repeated_matching_release_for_same_workbook_is_unambiguous(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        other_release = f"{_NEWS_URL}second-poll/"
+        _mock_pages(
+            monkeypatch,
+            {
+                _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, ""),
+                _NEWS_URL: (_NEWS_URL, _links(_RELEASE_URL, other_release)),
+                _RELEASE_URL: (
+                    _RELEASE_URL,
+                    _links(_CANONICAL_ARTICLE_URL, _PUBLISHED_XLSX),
+                ),
+                other_release: (
+                    other_release,
+                    _links(_CANONICAL_ARTICLE_URL, _PUBLISHED_XLSX),
+                ),
+            },
+        )
+        assert bmg.resolve_source_url(_ARTICLE_URL) == _PUBLISHED_XLSX
+
+    def test_no_canonical_backlink_fails_without_guessing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _mock_pages(
+            monkeypatch,
+            {
+                _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, ""),
+                _NEWS_URL: (_NEWS_URL, _links(_RELEASE_URL)),
+                _RELEASE_URL: (
+                    _RELEASE_URL,
+                    _links(_ARTICLE_URL, _PUBLISHED_XLSX),
+                ),
+            },
+        )
+        with pytest.raises(ValueError, match="No published BMG release"):
+            bmg.resolve_source_url(_ARTICLE_URL)
+
+    @pytest.mark.parametrize("kind", ["listing", "release"])
+    def test_search_limits_fail_clearly(
+        self, monkeypatch: pytest.MonkeyPatch, kind: str
+    ) -> None:
+        second_page = f"{_NEWS_URL}?results-page=2"
+        next_release = f"{_NEWS_URL}second-poll/"
+        pages = {
+            _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, ""),
+            _NEWS_URL: (
+                _NEWS_URL,
+                _links(second_page)
+                if kind == "listing"
+                else _links(_RELEASE_URL, next_release),
+            ),
+            _RELEASE_URL: (_RELEASE_URL, ""),
+        }
+        limit = "_MAX_RELEASE_PAGES" if kind == "release" else "_MAX_NEWS_PAGES"
+        monkeypatch.setattr(bmg, limit, 1)
+        requested = _mock_pages(monkeypatch, pages)
+        with pytest.raises(ValueError, match="search limit reached"):
+            bmg.resolve_source_url(_ARTICLE_URL)
+        assert second_page not in requested
+        assert next_release not in requested
+
+    @pytest.mark.parametrize("source", [_ARTICLE_URL, _RELEASE_URL])
+    def test_foreign_redirect_is_rejected(
+        self, monkeypatch: pytest.MonkeyPatch, source: str
+    ) -> None:
+        _mock_pages(monkeypatch, {source: ("https://evil.example/news/poll/", "")})
+        with pytest.raises(ValueError, match="Unexpected source-page redirect"):
+            bmg.resolve_source_url(source)
+
+    def test_non_news_listing_redirect_is_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _mock_pages(
+            monkeypatch,
+            {
+                _ARTICLE_URL: (_CANONICAL_ARTICLE_URL, ""),
+                _NEWS_URL: ("https://bmgresearch.com/about/", ""),
+            },
+        )
+        with pytest.raises(ValueError, match="Unexpected BMG news listing redirect"):
+            bmg.resolve_source_url(_ARTICLE_URL)
+
+    def test_oversize_html_fails_clearly(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _mock_pages(monkeypatch, {_RELEASE_URL: (_RELEASE_URL, "x" * 2_000_001)})
+        with pytest.raises(ValueError, match="Source page is too large"):
+            bmg.resolve_source_url(_RELEASE_URL)
+
+
+def _staged_vi_workbook(
+    final: Mapping[str, float] = _NATIONAL_FRACTIONS,
+    *,
+    base: str = "Base: Not sure and prefer not to say removed",
+) -> Workbook:
+    rows = [
+        _row({2: _VI_MARKER}),
+        *_national_block({party: 0.01 for party in final}),
+    ]
+    rows.extend([_row({2: "Table 2"}), _row({2: _VI_MARKER}), _row({2: base})])
+    rows.extend(_national_block(final))
+    rows.append(_row({2: "Table 3: unrelated party question"}))
+    rows.extend(_national_block({party: 0.99 for party in _REQUIRED_PARTIES}))
+    return build_workbook(
+        {
+            "Methodology": _methodology_sheet(
+                sample_text="Sample: 1,515 GB adults aged 18+"
+            ),
+            "Tables": _wrap_with_regional_trailer(rows),
+        }
+    )
+
+
+class TestFinalHeadlineAndSample:
+    @pytest.mark.parametrize(
+        ("sample_text", "expected"),
+        [
+            ("Sample: 1,515 GB adults aged 18+", 1515),
+            ("Sample: 1579 GB adults aged 18 to 75", 1579),
+            ("Sample: 1,559 adults in 11 regions", 1559),
+        ],
+    )
+    def test_sample_count_excludes_demographic_digits(
+        self, sample_text: str, expected: int
+    ) -> None:
+        workbook = build_workbook(
+            {"Methodology": _methodology_sheet(sample_text=sample_text)}
+        )
+        assert bmg._parse_fieldwork_and_sample(workbook, 2026)[2] == expected
+
+    @pytest.mark.parametrize(
+        "sample_text",
+        [
+            "Sample: GB adults 18+",
+            "Sample: 0 adults aged 18+",
+            "Sample: 1,xxx GB adults aged 18+",
+            "Sample: 1,51 GB adults aged 18+",
+            "Sample: 1,515, GB adults aged 18+",
+        ],
+    )
+    def test_age_digits_do_not_supply_missing_sample(self, sample_text: str) -> None:
+        workbook = build_workbook(
+            {"Methodology": _methodology_sheet(sample_text=sample_text)}
+        )
+        with pytest.raises(ValueError, match="Could not parse sample size"):
+            bmg._parse_fieldwork_and_sample(workbook, 2026)
+
+    @pytest.mark.parametrize(
+        "base",
+        [
+            "Base: Not sure and prefer not to say removed",
+            "BASE: Not sure   and prefer not to say removed\u00a0",
+        ],
+    )
+    def test_explicit_final_base_selects_headline_without_changing_regions(
+        self, base: str
+    ) -> None:
+        parsed = bmg.parse_poll(_staged_vi_workbook(base=base), source_url=_XLSX_URL)
+        legacy = bmg.parse_poll(_full_workbook(), source_url=_XLSX_URL)
+        assert parsed.sample_size == 1515
+        assert {
+            party: values[bmg.NATIONAL_KEY]
+            for party, values in parsed.party_region_percentages.items()
+        } == {
+            party: round(value * 100, 2)
+            for party, value in _NATIONAL_FRACTIONS.items()
+        }
+        assert {
+            party: {
+                region: value
+                for region, value in values.items()
+                if region != bmg.NATIONAL_KEY
+            }
+            for party, values in parsed.party_region_percentages.items()
+        } == {
+            party: {
+                region: value
+                for region, value in values.items()
+                if region != bmg.NATIONAL_KEY
+            }
+            for party, values in legacy.party_region_percentages.items()
+        }
+
+    def test_duplicate_explicit_final_tables_fail(self) -> None:
+        workbook = _staged_vi_workbook()
+        sheet = workbook["Tables"]
+        sheet.append(_row({2: _VI_MARKER}))
+        sheet.append(_row({2: "Base: Not sure and prefer not to say removed"}))
+        with pytest.raises(ValueError, match="Multiple final voting-intention"):
+            bmg._parse_party_region_percentages(workbook)
+
+    def test_next_table_cannot_supply_a_missing_headline_party(self) -> None:
+        final = {
+            party: value
+            for party, value in _NATIONAL_FRACTIONS.items()
+            if party != "Green"
+        }
+        with pytest.raises(ValueError, match="Missing expected party rows.*Green"):
+            bmg._parse_party_region_percentages(_staged_vi_workbook(final))
+
+    def test_next_vi_marker_does_not_overwrite_legacy_nationals(self) -> None:
+        workbook = _full_workbook()
+        starts = bmg._find_vi_table_starts(workbook["Tables"])
+        workbook["Tables"].cell(starts[-1] + 4, 3, 0.99)
+        parsed = bmg._parse_party_region_percentages(workbook)
+        assert parsed["Labour"][bmg.NATIONAL_KEY] == 32.0
+
+    def test_early_next_table_cannot_supply_a_missing_final_headline(self) -> None:
+        rows = [
+            _row({2: _VI_MARKER}),
+            _row({2: "Base: Not sure and prefer not to say removed"}),
+            _row({2: "Table 2: unrelated"}),
+            *_national_block(_NATIONAL_FRACTIONS),
+        ]
+        workbook = build_workbook({"Tables": _wrap_with_regional_trailer(rows)})
+        with pytest.raises(ValueError, match="Missing expected party rows"):
+            bmg._parse_party_region_percentages(workbook)
+
+    def test_resolved_workbook_url_controls_year_and_provenance(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        resolved_url = _PUBLISHED_XLSX.replace("2026", "2025")
+        requested: list[str] = []
+
+        def fake_resolve(url: str) -> str:
+            assert url == _ARTICLE_URL
+            return resolved_url
+
+        def fake_extract(url: str) -> Workbook:
+            requested.append(url)
+            return _full_workbook(fieldwork_text="Fieldwork dates: 3-4 January")
+
+        monkeypatch.setattr(bmg, "resolve_source_url", fake_resolve)
+        monkeypatch.setattr(bmg, "extract_workbook", fake_extract)
+        plan = bmg.build_import_plan(db, xlsx_url=_ARTICLE_URL, year_hint=2026)
+        assert plan.source_url == resolved_url
+        assert plan.parsed.fieldwork_start == date(2025, 1, 3)
+        assert plan.parsed.fieldwork_end == date(2025, 1, 4)
+        assert requested == [resolved_url]

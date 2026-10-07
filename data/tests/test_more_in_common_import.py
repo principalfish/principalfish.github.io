@@ -22,10 +22,12 @@ passes through unvalidated -- see that test's docstring for detail.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from collections.abc import Mapping, Sequence
 from datetime import date
+from pathlib import Path
 from types import MappingProxyType
 
 import pytest
@@ -1483,3 +1485,84 @@ class TestMain:
         assert "deleted existing rows: 104" in lines
         assert "inserted poll rows: 104" in lines
         assert len(db.get_rows_for_poll(poll_id)) == 104
+
+
+_SPLIT_HEADER_FIXTURE = (
+    Path(__file__).parent / "fixtures/more_in_common/headline-20260921.json"
+)
+
+
+def _split_header_workbook() -> Workbook:
+    fixture = json.loads(_SPLIT_HEADER_FIXTURE.read_text())
+    return build_workbook(fixture["sheets"])
+
+
+class TestSplitRegionHeaders:
+    """Percentage and count subcolumns under the September region headings."""
+
+    def test_source_metadata_and_all_mapped_shares(self) -> None:
+        workbook = _split_header_workbook()
+        sheet = workbook["votingintention (headline)"]
+        for col in range(22, 43, 2):
+            sheet.cell(17, col, 0.99)
+        sheet.cell(17, 1, "Conservative")
+        sheet.cell(17, 2, 0.99)
+        parsed = mic.parse_poll(workbook, source_url=_SOURCE_URL)
+        expected = json.loads(_SPLIT_HEADER_FIXTURE.read_text())["expected"]
+        assert parsed.model_dump(mode="json") == expected
+        assert "Restore Britain" not in parsed.party_region_percentages
+
+    def test_headline_preferred_to_competing_raw_table(self) -> None:
+        workbook = _split_header_workbook()
+        raw = workbook.copy_worksheet(workbook["votingintention (headline)"])
+        raw.title = "votingintention (raw)"
+        raw.cell(7, 2, 0.75)
+        sheet, row = mic._find_headline_sheet(workbook)
+        assert sheet.title == "votingintention (headline)"
+        assert row == 6
+        parsed = mic.parse_poll(workbook, source_url=_SOURCE_URL)
+        assert parsed.party_region_percentages["Conservative"][mic.NATIONAL_KEY] == 23
+
+    def test_reordered_geography_and_demographic_pairs(self) -> None:
+        workbook = _split_header_workbook()
+        sheet = workbook["votingintention (headline)"]
+        # Move London into the first demographic pair, including its count.
+        for row in range(1, 18):
+            for left, right in ((4, 26), (5, 27)):
+                first = sheet.cell(row, left).value
+                second = sheet.cell(row, right).value
+                sheet.cell(row, left).value = second
+                sheet.cell(row, right).value = first
+        parsed = mic.parse_poll(workbook, source_url=_SOURCE_URL)
+        expected = json.loads(_SPLIT_HEADER_FIXTURE.read_text())["expected"]
+        assert parsed.model_dump(mode="json") == expected
+
+    @pytest.mark.parametrize(
+        ("percentage_marker", "count_marker"),
+        [("Unweighted N", "%"), ("", "Unweighted N"), ("%", ""), ("%", "All")],
+    )
+    def test_invalid_pairs_cannot_supply_region_headers(
+        self, percentage_marker: str, count_marker: str,
+    ) -> None:
+        workbook = _split_header_workbook()
+        sheet = workbook["votingintention (headline)"]
+        for col in range(22, 43, 2):
+            sheet.cell(6, col).value = percentage_marker
+            sheet.cell(6, col + 1).value = count_marker
+        with pytest.raises(ValueError, match="Could not locate headline"):
+            mic.parse_poll(workbook, source_url=_SOURCE_URL)
+
+    def test_nonadjacent_region_labels_are_not_borrowed(self) -> None:
+        workbook = _split_header_workbook()
+        sheet = workbook["votingintention (headline)"]
+        sheet.insert_rows(6)
+        with pytest.raises(ValueError, match="Could not locate headline"):
+            mic.parse_poll(workbook, source_url=_SOURCE_URL)
+
+    def test_too_few_valid_region_pairs_still_fail(self) -> None:
+        workbook = _split_header_workbook()
+        sheet = workbook["votingintention (headline)"]
+        for col in range(24, 43, 2):
+            sheet.cell(6, col + 1).value = "Respondents"
+        with pytest.raises(ValueError, match="sufficient region columns"):
+            mic.parse_poll(workbook, source_url=_SOURCE_URL)

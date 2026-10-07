@@ -421,6 +421,20 @@ def _infer_fieldwork_from_source_url(
     return None
 
 
+def _column_headers(sheet: Any, row: int, max_column: int) -> dict[int, str]:
+    """Read direct headers and explicitly paired percentage/count headers."""
+    headers = {}
+    for col in range(1, max_column + 1):
+        header = _cell_text(sheet.cell(row, col).value)
+        if header == "%" and row > 1:
+            region = _cell_text(sheet.cell(row - 1, col).value)
+            count_header = normalize_name(_cell_text(sheet.cell(row, col + 1).value))
+            if region in REGION_HEADER_TO_INTERNAL and count_header == "unweighted n":
+                header = region
+        headers[col] = header
+    return headers
+
+
 def _find_headline_sheet(workbook: Any) -> tuple[Any, int]:
     """Locate the headline voting-intention worksheet and its header row.
 
@@ -465,14 +479,14 @@ def _find_headline_sheet(workbook: Any) -> tuple[Any, int]:
     for sheet_name in sorted(workbook.sheetnames, key=_sheet_priority):
         ws = workbook[sheet_name]
         for row in range(1, 35):
-            values = [_cell_text(ws.cell(row, col).value) for col in range(1, 60)]
+            values = _column_headers(ws, row, 59).values()
             if "All" in values and "East Midlands" in values:
                 return ws, row
 
     for sheet_name in sorted(workbook.sheetnames, key=_sheet_priority):
         ws = workbook[sheet_name]
         for row in range(1, 35):
-            values = [_cell_text(ws.cell(row, col).value) for col in range(1, 60)]
+            values = _column_headers(ws, row, 59).values()
             if "All" not in values:
                 continue
             if any(label in values for label in ("Conservative", "Labour", "Reform UK", "The Green Party")):
@@ -567,8 +581,7 @@ def parse_poll(
 
     region_columns: dict[int, str] = {}
     national_column: int | None = None
-    for col in range(1, 120):
-        header = _cell_text(sheet.cell(header_row, col).value)
+    for col, header in _column_headers(sheet, header_row, 119).items():
         if header == "All":
             national_column = col
         mapped_region = REGION_HEADER_TO_INTERNAL.get(header)

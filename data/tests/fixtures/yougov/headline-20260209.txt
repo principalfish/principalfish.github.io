@@ -1,0 +1,28 @@
+YouGov Survey Results
+Sample Size: 2466 GB Adults
+Fieldwork: 8th - 9th February 2026
+Total Con Lab Lib
+Dem
+Reform
+UK Green Remain Leave Male Female 18-24 25-49 50-64 65+ Higher Intermediate Routine England Wales Scotland North Midlands London Rest of
+South
+Weighted Sample 2466 444 634 227 266 144 866 880 1194 1272 259 1018 609 580 836 552 737 2133 118 215 584 404 298 846
+Unweighted Sample 2466 435 689 253 268 148 1003 829 1038 1428 208 926 646 686 1044 514 535 2136 123 207 567 406 287 876
+% % % % % % % % % % % % % % % % % % % % % % % %
+1 - 2
+Feb
+8 - 9
+Feb
+HEADLINE VOTING INTENTION
+Westminster Voting Intention
+[Headline voting intention projected by YouGov
+MRP model]
+Con 18 18 62 5 6 7 4 16 24 17 19 5 17 15 29 21 21 18 20 10 5 16 23 16 23
+Lab 19 19 2 49 10 0 7 30 8 19 19 13 23 21 14 23 17 15 19 19 21 22 16 30 14
+Lib Dem 14 14 5 14 63 0 4 20 7 12 15 13 14 13 14 16 14 11 15 6 8 10 11 14 20
+SNP 3 3 0 1 0 0 0 4 2 3 2 5 3 3 2 3 2 2 0 0 33 0 0 0 0
+Plaid Cymru 2 2 1 2 2 0 1 2 1 2 2 2 2 2 1 2 2 1 0 33 0 0 0 0 0
+Reform UK 26 27 27 12 7 90 6 8 50 30 23 9 23 33 33 20 29 40 28 22 22 32 30 17 28
+Green 17 16 3 17 12 1 73 17 6 14 17 49 17 11 6 14 13 10 16 10 11 18 15 22 14
+Other 2 2 1 1 0 2 5 2 2 2 2 3 2 2 1 1 2 2 2 1 0 2 5 1 1
+Now, thinking specifically

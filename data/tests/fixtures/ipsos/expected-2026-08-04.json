@@ -1,0 +1,81 @@
+{
+  "sample_size": 1033,
+  "fieldwork_start": "2026-07-30",
+  "fieldwork_end": "2026-08-04",
+  "party_percentages": {
+    "Conservative": 18,
+    "Labour": 30,
+    "Reform UK": 23,
+    "Liberal Democrats": 9,
+    "Scottish National Party": 3,
+    "Plaid Cymru": 1,
+    "Green": 12,
+    "Other": 1
+  },
+  "party_region_percentages": {
+    "Conservative": {
+      "Wales": 6,
+      "Scotland": 12,
+      "London": 20,
+      "South excl London": 23,
+      "Midlands incl East of England": 16,
+      "North excl Scotland": 18
+    },
+    "Labour": {
+      "Wales": 26,
+      "Scotland": 16,
+      "London": 34,
+      "South excl London": 25,
+      "Midlands incl East of England": 27,
+      "North excl Scotland": 33
+    },
+    "Reform UK": {
+      "Wales": 28,
+      "Scotland": 6,
+      "London": 15,
+      "South excl London": 25,
+      "Midlands incl East of England": 31,
+      "North excl Scotland": 30
+    },
+    "Liberal Democrats": {
+      "Wales": 6,
+      "Scotland": 12,
+      "London": 10,
+      "South excl London": 14,
+      "Midlands incl East of England": 5,
+      "North excl Scotland": 5
+    },
+    "Scottish National Party": {
+      "Wales": 0,
+      "Scotland": 35,
+      "London": 0,
+      "South excl London": 0,
+      "Midlands incl East of England": 0,
+      "North excl Scotland": 0
+    },
+    "Plaid Cymru": {
+      "Wales": 16,
+      "Scotland": 0,
+      "London": 0,
+      "South excl London": 0,
+      "Midlands incl East of England": 0,
+      "North excl Scotland": 0
+    },
+    "Green": {
+      "Wales": 4,
+      "Scotland": 15,
+      "London": 16,
+      "South excl London": 11,
+      "Midlands incl East of England": 12,
+      "North excl Scotland": 13
+    },
+    "Other": {
+      "Wales": 0,
+      "Scotland": 1,
+      "London": 3,
+      "South excl London": 0,
+      "Midlands incl East of England": 1,
+      "North excl Scotland": 0
+    }
+  }
+}

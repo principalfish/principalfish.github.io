@@ -327,6 +327,66 @@ class TestCitationResolution:
         assert row.citation_id == ""
         assert index.unresolved_citations == 1
 
+    @pytest.mark.parametrize("appended_scheme", ["", "https://", "http://"])
+    def test_concatenated_yougov_document_urls_resolve_to_first_document(
+        self, appended_scheme: str
+    ) -> None:
+        source_url = (
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_MRP_260928_w.pdf"
+        )
+        appended_url = (
+            f"{appended_scheme}a.yougov.net/documents/"
+            "VotingIntention_MRP_Results_260723_w.pdf"
+        )
+        parsed = fetch_poll_index(
+            html=_INDEX_HTML.replace(_YOUGOV_URL, f"{source_url}{appended_url}"),
+        )
+
+        assert _by_identifier(parsed, "yougov").source_url == source_url
+
+    @pytest.mark.parametrize(
+        "source_url",
+        [
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_Results_261005_w.pdf",
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_MRP_250303_w.pdf",
+            "https://ygo-assets-websites-editorial-emea.yougov.net/documents/"
+            "VotingIntention_MRP_250113_w.pdf",
+            "https://a.yougov.net/documents/tables.pdf?signature=abc#page=1",
+            "https://a.yougov.net/documents/tables.pdf"
+            "?next=a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "#a.yougov.net/documents/older.pdf",
+            "https://example.test/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "example.test/documents/older.pdf",
+            "https://yougov.net.example.test/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://notyougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "notyougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/subfolder/tables.pdf"
+            "a.yougov.net/documents/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/subfolder/older.pdf",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf?signature=abc",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf#page=1",
+            "https://a.yougov.net/documents/tables.pdf"
+            "a.yougov.net/documents/older.pdf"
+            "a.yougov.net/documents/oldest.pdf",
+        ],
+    )
+    def test_other_citation_urls_are_preserved(self, source_url: str) -> None:
+        parsed = fetch_poll_index(html=_INDEX_HTML.replace(_YOUGOV_URL, source_url))
+
+        assert _by_identifier(parsed, "yougov").source_url == source_url
+
 
 class TestPollsterLabel:
     """Citation markers are stripped from the displayed pollster name."""
@@ -2112,3 +2172,90 @@ class TestDescribeImportResult:
         assert describe_import_result(self._result(skipped=True)) == (
             "Poll #77 already had rows, so nothing was inserted"
         )
+
+
+_MRP_RELEASES = (
+    (
+        "more_in_common",
+        "More in Common (MRP)",
+        "https://www.moreincommon.org.uk/research/more-in-commons-september-2026-mrp/",
+    ),
+    (
+        "yougov",
+        "YouGov (MRP)",
+        "https://yougov.com/en-gb/articles/55618-yougov-mrp-shows-labour-would-be-"
+        "the-largest-party-in-a-hung-parliament-were-an-election-held-tomorrow",
+    ),
+)
+
+
+class TestUnsupportedMrpReleases:
+    @pytest.mark.parametrize(("identifier", "label", "source_url"), _MRP_RELEASES)
+    def test_release_is_visible_in_skips_and_does_not_interrupt_queue(
+        self, db: Database, identifier: str, label: str, source_url: str,
+    ) -> None:
+        _seed_westminster(db)
+        release = _row(
+            identifier, date(2026, 8, 21), date(2026, 9, 21),
+            label=label, source_url=source_url,
+        )
+        regular = _row("yougov", date(2026, 9, 27), date(2026, 9, 28))
+        state = build_queue(
+            db, _index_of([release, regular]), map_name=WESTMINSTER_MAP_NAME,
+            cutoff=date(2026, 1, 1),
+        )
+        assert state.items[0].status == "skipped"
+        assert "MRP projection" in state.items[0].detail
+        assert "regional poll-table" in state.items[0].detail
+        assert current_item(state) is state.items[1]
+        assert summarise(state)["skipped"] == [state.items[0]]
+        assert progress(state)["skipped"] == 1
+
+    def test_all_projection_pages_finish_queue(self, db: Database) -> None:
+        _seed_westminster(db)
+        rows = [
+            _row(
+                identifier, date(2026, 8, 21), date(2026, 9, 21),
+                label=label, source_url=url,
+            )
+            for identifier, label, url in _MRP_RELEASES
+        ]
+        state = build_queue(
+            db, _index_of(rows), map_name=WESTMINSTER_MAP_NAME,
+            cutoff=date(2026, 1, 1),
+        )
+        assert current_item(state) is None
+        assert len(summarise(state)["skipped"]) == 2
+
+    @pytest.mark.parametrize(
+        ("identifier", "label", "source_url"),
+        [
+            ("yougov", "YouGov (MRP)", "https://yougov.com/documents/MRP.pdf?x=1"),
+            (
+                "more_in_common", "More in Common (MRP)",
+                "https://www.moreincommon.org.uk/uploads/MRP.xlsx",
+            ),
+            ("yougov", "YouGov", _MRP_RELEASES[1][2]),
+            ("more_in_common", "More in Common", _MRP_RELEASES[0][2]),
+            ("yougov", "YouGov (MRP)", "https://lookalike.test/en-gb/articles/mrp"),
+            ("yougov", "YouGov (MRP)", "https://yougov.com.evil.test/en-gb/articles/mrp"),
+            ("yougov", "YouGov (MRP)", "https://user@yougov.com/en-gb/articles/mrp"),
+            ("yougov", "YouGov (MRP)", "https://yougov.com/en-gb/articles/notmrp"),
+            ("yougov", "YouGov (MRP)", "https://yougov.com/other/mrp"),
+            ("yougov", "YouGov (MRP)", "ftp://yougov.com/en-gb/articles/mrp"),
+        ],
+    )
+    def test_other_sources_remain_eligible(
+        self, db: Database, identifier: str, label: str, source_url: str,
+    ) -> None:
+        _seed_westminster(db)
+        row = _row(
+            identifier, date(2026, 8, 21), date(2026, 9, 21),
+            label=label, source_url=source_url,
+        )
+        state = build_queue(
+            db, _index_of([row]), map_name=WESTMINSTER_MAP_NAME,
+            cutoff=date(2026, 1, 1),
+        )
+        assert state.items[0].status == "pending"
+        assert current_item(state) is state.items[0]

@@ -42,6 +42,16 @@ SOURCE_REGION_TO_INTERNAL = {
     "Northern Ireland": "Northern Ireland",
 }
 
+GROUPED_SOURCE_REGION_TO_INTERNAL = {
+    "North": (
+        "North East England",
+        "North West England",
+        "Yorkshire and The Humber",
+    ),
+    "Midlands": ("East Midlands", "West Midlands"),
+    "South": ("East of England", "South East England", "South West England"),
+}
+
 PARTY_NAME_MAP = {
     "Conservative": "Conservative",
     "Labour": "Labour",
@@ -164,18 +174,22 @@ def _infer_year(url: str, fallback: int | None = None) -> int:
 
 
 def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tuple[date, date]:
-    """Parse a fieldwork date-range string into a (start, end) date pair.
+    """Parse a fieldwork day or date range into a (start, end) date pair.
 
     Handles several formats found in Survation cover sheets, normalising
     Unicode dashes and ordinal suffixes before matching:
 
     - Same-month with explicit year: ``"3-5 January 2026"``
+    - Cross-month with explicit year: ``"30 Jan - 1 Feb 2026"``
     - Same-month without year: ``"3-5 January"`` (requires ``default_year``)
     - Cross-month without year: ``"30 Jan - 1 Feb"`` (requires ``default_year``)
-    - Cross-month with explicit year: ``"30 Jan - 1 Feb 2026"``
+    - Single day with explicit year: ``"29th September 2026"``
+    - Single day without year: ``"29 September"`` (requires ``default_year``)
 
-    When a cross-month range spans a year boundary (e.g. ``"31 Dec - 2 Jan"``),
-    the start year is decremented by one automatically.
+    Explicit years take precedence over ``default_year``. When a cross-month
+    range spans a year boundary (e.g. ``"31 Dec - 2 Jan"``), the start year is
+    decremented by one automatically. A single day returns equal endpoints
+    and must match the complete normalised string.
 
     Args:
         fieldwork_text: Raw fieldwork date string as it appears in the workbook.
@@ -205,6 +219,21 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
             raise ValueError(f"Could not parse month in fieldwork: {fieldwork_text!r}")
         return date(year, month, day_start), date(year, month, day_end)
 
+    pattern_cross_month = re.compile(
+        r"(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
+    )
+    match = pattern_cross_month.search(normalized)
+    if match:
+        day_start = int(match.group(1))
+        month_start = _month_number(match.group(2))
+        day_end = int(match.group(3))
+        month_end = _month_number(match.group(4))
+        year_end = int(match.group(5))
+        if month_start is None or month_end is None:
+            raise ValueError(f"Could not parse months in fieldwork: {fieldwork_text!r}")
+        year_start = year_end - 1 if month_start > month_end else year_end
+        return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+
     pattern_no_year = re.compile(r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)")
     match = pattern_no_year.search(normalized)
     if match and default_year is not None:
@@ -227,20 +256,17 @@ def _parse_fieldwork(fieldwork_text: str, default_year: int | None = None) -> tu
         year_start = default_year - 1 if month_start > month_end else default_year
         return date(year_start, month_start, day_start), date(default_year, month_end, day_end)
 
-    pattern_cross_month = re.compile(
-        r"(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
-    )
-    match = pattern_cross_month.search(normalized)
+    match = re.fullmatch(r"(\d{1,2})\s+([A-Za-z]+)(?:\s+(\d{4}))?", normalized)
     if match:
-        day_start = int(match.group(1))
-        month_start = _month_number(match.group(2))
-        day_end = int(match.group(3))
-        month_end = _month_number(match.group(4))
-        year_end = int(match.group(5))
-        if month_start is None or month_end is None:
-            raise ValueError(f"Could not parse months in fieldwork: {fieldwork_text!r}")
-        year_start = year_end - 1 if month_start > month_end else year_end
-        return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+        single_day_year = (
+            int(match.group(3)) if match.group(3) is not None else default_year
+        )
+        if single_day_year is not None:
+            month = _month_number(match.group(2))
+            if month is None:
+                raise ValueError(f"Could not parse month in fieldwork: {fieldwork_text!r}")
+            fieldwork_date = date(single_day_year, month, int(match.group(1)))
+            return fieldwork_date, fieldwork_date
 
     raise ValueError(f"Could not parse fieldwork string: {fieldwork_text!r}")
 
@@ -483,7 +509,9 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     Locates the voting-intention table, identifies the region column headers,
     then reads the percentage value from the row below each party label.
     Party names are normalised via ``PARTY_NAME_MAP``; region names are
-    normalised via ``SOURCE_REGION_TO_INTERNAL``.
+    normalised via ``SOURCE_REGION_TO_INTERNAL``. Broad North, Midlands and
+    South figures are copied to their constituent regions; directly published
+    regional figures take precedence over these grouped values.
 
     Optional parties (SNP, Plaid Cymru, Other) default to 0.0 if absent.
     All region keys for those parties are also defaulted to 0.0.
@@ -506,7 +534,11 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     region_header_row = None
     for row in range(start_row + 1, min(sheet.max_row, start_row + 12)):
         headers = {_cell_text(sheet.cell(row, col).value) for col in range(11, 40)}
-        if any(header in SOURCE_REGION_TO_INTERNAL for header in headers):
+        if any(
+            header in SOURCE_REGION_TO_INTERNAL
+            or header in GROUPED_SOURCE_REGION_TO_INTERNAL
+            for header in headers
+        ):
             region_header_row = row
             break
 
@@ -517,6 +549,9 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
             internal = SOURCE_REGION_TO_INTERNAL.get(header)
             if internal is not None:
                 region_columns[internal] = col
+            else:
+                for region_name in GROUPED_SOURCE_REGION_TO_INTERNAL.get(header, ()):
+                    region_columns.setdefault(region_name, col)
 
     parsed: dict[str, dict[str, float]] = {}
     for row in range(start_row + 1, min(sheet.max_row, start_row + 220)):

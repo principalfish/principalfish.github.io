@@ -5,6 +5,7 @@ Covers pure parsing helpers that require no network access or database.
 
 from __future__ import annotations
 
+import json
 import sys
 from collections.abc import Mapping, Sequence
 from datetime import date
@@ -46,6 +47,142 @@ from tests.uk_fixtures import (
     build_workbook,
     workbook_bytes,
 )
+
+
+_GROUPED_SOURCE_URL = (
+    "https://cdn.survation.com/wp-content/uploads/2026/09/24091952/"
+    "Survation_2026-09-22_Tables.xlsx"
+)
+_GROUPED_EXPECTED_VALUES = {
+    # National, London, South, Midlands, North, Scotland, Wales, Northern Ireland.
+    "Reform UK": (24, 17, 25, 31, 27, 25, 15, 0),
+    "Labour": (27, 32, 26, 27, 36, 11, 24, 0),
+    "Conservative": (21, 27, 31, 23, 10, 10, 15, 0),
+    "Liberal Democrats": (11, 14, 9, 7, 16, 11, 1, 0),
+    "Green": (7, 6, 6, 11, 8, 4, 7, 0),
+    "Scottish National Party": (3, 0, 0, 0, 0, 35, 0, 0),
+    "Plaid Cymru": (2, 0, 0, 0, 0, 0, 38, 0),
+    "Other": (4, 1, 1, 0, 0, 0, 0, 99),
+}
+
+
+def _grouped_source_workbook() -> Workbook:
+    path = Path(__file__).parent / "fixtures/survation/headline-20260923.json"
+    return build_workbook(json.loads(path.read_text())["sheets"])
+
+
+def _grouped_expected_percentages() -> dict[str, dict[str, float]]:
+    regions_by_column = (
+        ("__national__",),
+        ("London",),
+        ("East of England", "South East England", "South West England"),
+        ("East Midlands", "West Midlands"),
+        ("North East England", "North West England", "Yorkshire and The Humber"),
+        ("Scotland",),
+        ("Wales",),
+        ("Northern Ireland",),
+    )
+    return {
+        party: {
+            region: float(values[column])
+            for column, regions in enumerate(regions_by_column)
+            for region in regions
+        }
+        for party, values in _GROUPED_EXPECTED_VALUES.items()
+    }
+
+
+class TestGroupedSourceRegions:
+    def test_reported_source_metadata_and_all_region_values(self) -> None:
+        parsed = parse_poll(_grouped_source_workbook(), source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.sample_size == 1224
+        assert parsed.fieldwork_start == date(2026, 9, 22)
+        assert parsed.fieldwork_end == date(2026, 9, 23)
+        assert parsed.party_region_percentages == _grouped_expected_percentages()
+
+    def test_reordered_group_columns_preserve_values(self) -> None:
+        workbook = _grouped_source_workbook()
+        sheet = workbook["Tables"]
+        columns = (14, 18, 13, 16, 11, 15, 12, 17)
+        for row in range(5, sheet.max_row + 1):
+            values = [sheet.cell(row, column).value for column in columns]
+            for column, value in enumerate(values, 11):
+                sheet.cell(row, column).value = value
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.party_region_percentages == _grouped_expected_percentages()
+
+    def test_group_headers_are_detected_without_direct_region_headers(self) -> None:
+        workbook = _grouped_source_workbook()
+        sheet = workbook["Tables"]
+        for column in (11, 15, 16, 17, 18):
+            sheet.cell(5, column).value = None
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+
+        assert parsed.party_region_percentages["Reform UK"] == {
+            "__national__": 24.0,
+            "East of England": 25.0,
+            "South East England": 25.0,
+            "South West England": 25.0,
+            "East Midlands": 31.0,
+            "West Midlands": 31.0,
+            "North East England": 27.0,
+            "North West England": 27.0,
+            "Yorkshire and The Humber": 27.0,
+        }
+
+    @pytest.mark.parametrize("column", [11, 19])
+    @pytest.mark.parametrize("percentage", [0.0, 0.42])
+    def test_direct_region_overrides_group_regardless_of_column_order(
+        self,
+        column: int,
+        percentage: float,
+    ) -> None:
+        workbook = _grouped_source_workbook()
+        sheet = workbook["Tables"]
+        sheet.insert_cols(column)
+        sheet.cell(5, column).value = "North East"
+        sheet.cell(9, column).value = percentage
+
+        parsed = parse_poll(workbook, source_url=_GROUPED_SOURCE_URL)
+        reform = parsed.party_region_percentages["Reform UK"]
+
+        assert reform["North East England"] == percentage * 100
+        assert reform["North West England"] == 27
+        assert reform["Yorkshire and The Humber"] == 27
+        assert reform["London"] == 17
+
+    def test_preview_plans_all_source_percentages(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        requested = _patch_urlopen(
+            monkeypatch,
+            workbook_bytes(_grouped_source_workbook()),
+        )
+
+        plan = build_import_plan(
+            db,
+            xlsx_url=_GROUPED_SOURCE_URL,
+            map_name=westminster_world.map_name,
+        )
+
+        expected = {
+            (party, "National" if region == "__national__" else region): percentage
+            for party, values in _grouped_expected_percentages().items()
+            for region, percentage in values.items()
+        }
+        actual = {
+            (row.party_name, row.region_name): row.percentage for row in plan.rows
+        }
+        assert requested == [_GROUPED_SOURCE_URL]
+        assert len(plan.rows) == 104
+        assert actual == expected
 
 
 # ── _month_number ─────────────────────────────────────────────────────────────
@@ -121,7 +258,85 @@ class TestInferYear:
 
 
 class TestParseFieldwork:
-    """Tests for _parse_fieldwork — date-range string parsing."""
+    """Tests for _parse_fieldwork — single-day and date-range parsing."""
+
+    def test_reported_single_day(self) -> None:
+        start, end = _parse_fieldwork("29th September 2026")
+        assert start == end == date(2026, 9, 29)
+
+    def test_explicit_cross_month_year_overrides_default(self) -> None:
+        start, end = _parse_fieldwork("30 Jan - 1 Feb 2025", default_year=2026)
+        assert start == date(2025, 1, 30)
+        assert end == date(2025, 2, 1)
+
+    @pytest.mark.parametrize(
+        "fieldwork_text",
+        ["29 September 2026", "29 sep 2026", " 29TH\t SEPTEMBER\n 2026 "],
+    )
+    def test_single_day_normalisation(self, fieldwork_text: str) -> None:
+        start, end = _parse_fieldwork(fieldwork_text)
+        assert start == end == date(2026, 9, 29)
+
+    def test_single_day_no_year_uses_default(self) -> None:
+        start, end = _parse_fieldwork("29th September", default_year=2026)
+        assert start == end == date(2026, 9, 29)
+
+    def test_single_day_no_year_or_default_raises(self) -> None:
+        with pytest.raises(ValueError, match="Could not parse fieldwork string"):
+            _parse_fieldwork("29 September")
+
+    def test_single_day_explicit_year_overrides_default(self) -> None:
+        start, end = _parse_fieldwork("29 September 2025", default_year=2026)
+        assert start == end == date(2025, 9, 29)
+
+    def test_single_day_unknown_month_raises(self) -> None:
+        with pytest.raises(ValueError, match="Could not parse month"):
+            _parse_fieldwork("29 Notamonth 2026")
+
+    @pytest.mark.parametrize(
+        "fieldwork_text",
+        ["31 September 2026", "29 February 2026", "0 September 2026"],
+    )
+    def test_single_day_invalid_calendar_date_raises(self, fieldwork_text: str) -> None:
+        with pytest.raises(ValueError):
+            _parse_fieldwork(fieldwork_text)
+
+    def test_single_day_valid_leap_day(self) -> None:
+        start, end = _parse_fieldwork("29 February 2024", default_year=2026)
+        assert start == end == date(2024, 2, 29)
+
+    @pytest.mark.parametrize(
+        "fieldwork_text",
+        [
+            "29 September to 2 October 2026",
+            "Fieldwork: 29 September 2026",
+            "29 September 2026 extra",
+        ],
+    )
+    def test_single_day_must_match_complete_value(self, fieldwork_text: str) -> None:
+        with pytest.raises(ValueError, match="Could not parse fieldwork string"):
+            _parse_fieldwork(fieldwork_text, default_year=2026)
+
+    def test_explicit_same_month_year_overrides_default(self) -> None:
+        start, end = _parse_fieldwork("3-5 January 2025", default_year=2026)
+        assert start == date(2025, 1, 3)
+        assert end == date(2025, 1, 5)
+
+    def test_explicit_cross_year_overrides_default_and_decrements_start(self) -> None:
+        start, end = _parse_fieldwork("31 Dec - 2 Jan 2025", default_year=2026)
+        assert start == date(2024, 12, 31)
+        assert end == date(2025, 1, 2)
+
+    def test_range_search_keeps_surrounding_text(self) -> None:
+        start, end = _parse_fieldwork(
+            "Fieldwork: 30 Jan - 1 Feb 2025 inclusive", default_year=2026
+        )
+        assert start == date(2025, 1, 30)
+        assert end == date(2025, 2, 1)
+
+    def test_invalid_explicit_range_does_not_fall_back_to_default(self) -> None:
+        with pytest.raises(ValueError):
+            _parse_fieldwork("29 Feb - 1 Mar 2025", default_year=2024)
 
     def test_same_month_with_year(self) -> None:
         start, end = _parse_fieldwork("3-5 January 2026")
@@ -760,6 +975,43 @@ class TestParsePartyRegionPercentages:
 
 class TestParsePoll:
     """Tests for parse_poll — combining cover metadata with VI percentages."""
+
+    def test_reported_single_day_workbook(self) -> None:
+        workbook = _full_workbook(
+            cover_rows=_cover_rows(
+                fieldwork_text="29th September 2026", sample_cell=1548
+            )
+        )
+        source_url = (
+            "https://cdn.survation.com/wp-content/uploads/2026/09/30073002/"
+            "Mandate_Burnham_Speech_2026-09-29_Tables.xlsx"
+        )
+        parsed = parse_poll(workbook, source_url=source_url)
+        assert parsed.fieldwork_start == parsed.fieldwork_end == date(2026, 9, 29)
+        assert parsed.sample_size == 1548
+        assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
+        assert parsed.party_region_percentages["Conservative"][NATIONAL_KEY] == 32.0
+        assert parsed.party_region_percentages["Labour"]["London"] == 45.0
+        assert parsed.party_region_percentages["Reform UK"]["North East England"] == 18.0
+
+    def test_yearless_single_day_uses_url_year(self) -> None:
+        workbook = _full_workbook(
+            cover_rows=_cover_rows(fieldwork_text="29 September")
+        )
+        parsed = parse_poll(workbook, source_url=_XLSX_URL)
+        assert parsed.fieldwork_start == parsed.fieldwork_end == date(2026, 9, 29)
+        assert parsed.sample_size == 1511
+        assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
+
+    def test_explicit_cross_month_year_overrides_url_year(self) -> None:
+        workbook = _full_workbook(
+            cover_rows=_cover_rows(fieldwork_text="30 Jan - 1 Feb 2025")
+        )
+        parsed = parse_poll(workbook, source_url=_XLSX_URL)
+        assert parsed.fieldwork_start == date(2025, 1, 30)
+        assert parsed.fieldwork_end == date(2025, 2, 1)
+        assert parsed.sample_size == 1511
+        assert parsed.party_region_percentages["Labour"][NATIONAL_KEY] == 40.0
 
     def test_full_workbook(self) -> None:
         workbook = _full_workbook()

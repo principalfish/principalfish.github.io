@@ -135,15 +135,17 @@ def _month_number(month_text: str) -> int | None:
 def _parse_fieldwork(value: str, default_year: int | None = None) -> tuple[date, date]:
     """Parse a fieldwork date-range string into a (start, end) pair of dates.
 
-    Handles formats such as ``"3-5 February 2026"`` or ``"3-5 Feb"`` (when a
-    ``default_year`` is supplied).  En-dashes and em-dashes are normalised to
-    hyphens; ordinal suffixes (``st``, ``nd``, ``rd``, ``th``) are stripped
-    before matching.
+    Handles same-month ranges such as ``"3-5 February 2026"`` and cross-month
+    ranges such as ``"30 September - 2 October 2026"``, with an optional year
+    when ``default_year`` is supplied. The explicit or default year is the
+    end year; a start month after the end month belongs to the previous year.
+    En-dashes and em-dashes are normalised to hyphens; ordinal suffixes
+    (``st``, ``nd``, ``rd``, ``th``) are stripped before matching.
 
     Args:
         value: Raw fieldwork string as it appears in the spreadsheet.
-        default_year: Year to use when no explicit 4-digit year is present in
-            ``value``. Optional; must be provided for year-less strings or a
+        default_year: End year to use when no explicit 4-digit year is present
+            in ``value``. Optional; must be provided for year-less strings or a
             ``ValueError`` is raised.
 
     Returns:
@@ -158,9 +160,15 @@ def _parse_fieldwork(value: str, default_year: int | None = None) -> tuple[date,
     normalized = re.sub(r"(\d)(st|nd|rd|th)", r"\1", normalized, flags=re.IGNORECASE)
 
     range_with_year = re.compile(
-        r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})"
+        r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})",
+    )
+    cross_month_with_year = re.compile(
+        r"(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})",
     )
     range_no_year = re.compile(r"(\d{1,2})\s*-\s*(\d{1,2})\s+([A-Za-z]+)")
+    cross_month_no_year = re.compile(
+        r"(\d{1,2})\s+([A-Za-z]+)\s*-\s*(\d{1,2})\s+([A-Za-z]+)",
+    )
 
     match = range_with_year.search(normalized)
     if match:
@@ -172,16 +180,35 @@ def _parse_fieldwork(value: str, default_year: int | None = None) -> tuple[date,
             raise ValueError(f"Could not parse fieldwork string: {value!r}")
         return date(year, month, day_start), date(year, month, day_end)
 
-    match = range_no_year.search(normalized)
-    if match and default_year is not None:
-        day_start = int(match.group(1))
-        day_end = int(match.group(2))
-        month = _month_number(match.group(3))
-        if month is None:
-            raise ValueError(f"Could not parse fieldwork string: {value!r}")
-        return date(default_year, month, day_start), date(default_year, month, day_end)
+    match = cross_month_with_year.search(normalized)
+    if match:
+        year_end = int(match.group(5))
+    else:
+        match = range_no_year.search(normalized)
+        if match and default_year is not None:
+            day_start = int(match.group(1))
+            day_end = int(match.group(2))
+            month = _month_number(match.group(3))
+            if month is None:
+                raise ValueError(f"Could not parse fieldwork string: {value!r}")
+            return (
+                date(default_year, month, day_start),
+                date(default_year, month, day_end),
+            )
 
-    raise ValueError(f"Could not parse fieldwork string: {value!r}")
+        match = cross_month_no_year.search(normalized)
+        if match is None or default_year is None:
+            raise ValueError(f"Could not parse fieldwork string: {value!r}")
+        year_end = default_year
+
+    day_start = int(match.group(1))
+    month_start = _month_number(match.group(2))
+    day_end = int(match.group(3))
+    month_end = _month_number(match.group(4))
+    if month_start is None or month_end is None:
+        raise ValueError(f"Could not parse fieldwork string: {value!r}")
+    year_start = year_end - 1 if month_start > month_end else year_end
+    return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
 
 
 def _infer_year_from_url(xlsx_url: str, fallback: int | None = None) -> int:

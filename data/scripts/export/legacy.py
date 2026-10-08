@@ -8,6 +8,7 @@ from typing import Any
 
 from models import Election, ElectionType, Party, Region
 from scripts.export.naming import map_filename_for_map_id, normalize_region_name
+from scripts.export.ordering import register_supplemental_entry
 from scripts.export.payload import convert_legacy_seatinfo_to_v4
 from scripts.export.serialize import write_json
 
@@ -153,21 +154,4 @@ def apply_supplemental_legacy_elections(
         if supplemental.get("upcomingElections"):
             supplemental_entry["upcomingElections"] = True
 
-        existing_index = next((idx for idx, entry in enumerate(manifest_entries) if entry.get("id") == election_id), None)
-        if existing_index is not None:
-            manifest_entries[existing_index] = supplemental_entry
-            continue
-
-        insert_before_id = supplemental.get("insertBeforeId")
-        if insert_before_id is not None:
-            insert_index = next(
-                (idx for idx, entry in enumerate(manifest_entries) if entry.get("id") == insert_before_id),
-                len(manifest_entries),
-            )
-        else:
-            insert_after_id = supplemental.get("insertAfterId")
-            insert_index = next(
-                (idx + 1 for idx, entry in enumerate(manifest_entries) if entry.get("id") == insert_after_id),
-                len(manifest_entries),
-            )
-        manifest_entries.insert(insert_index, supplemental_entry)
+        register_supplemental_entry(manifest_entries, supplemental_entry, supplemental)

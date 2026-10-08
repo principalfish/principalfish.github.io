@@ -78,7 +78,11 @@ from scripts.export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
     apply_supplemental_legacy_elections,
 )
-from scripts.export.ordering import finalize_manifest_order
+from scripts.export.ordering import (
+    finalize_manifest_order,
+    insert_current_parliament_entry,
+    insert_preserved_entry,
+)
 
 # old_data/scripts/usa/ is a scripts dir, not an importable package, so load the
 # per-era presidential EV table by file path (same pattern as tests use).
@@ -832,12 +836,7 @@ def _export_page(
                 "byElectionSeats": [change["seat"] for change in all_changes],
             }
 
-            # Insert after current-prediction so it appears below "Predict 2029" in the UI
-            prediction_index = next(
-                (idx for idx, e in enumerate(manifest_entries) if e.get("id") == "current-prediction"),
-                -1,
-            )
-            manifest_entries.insert(prediction_index + 1, composite_entry)
+            insert_current_parliament_entry(manifest_entries, composite_entry)
             default_election_id = composite_manifest_id
 
     expected_map_filenames = {Path(path).name for path in map_files_by_id.values()}
@@ -902,20 +901,7 @@ def _export_page(
             continue  # already present
         data_file = existing_data_files.get(entry_id)
         if data_file and (output_root / data_file).exists():
-            if entry_type == "model_uns":
-                insert_at = 0
-            elif entry_type in ("holyrood_uns", "holyrood_general"):
-                insert_at = next(
-                    (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
-                    len(manifest_entries),
-                )
-            else:
-                # eu_referendum and others: before holyrood block
-                insert_at = next(
-                    (i for i, e in enumerate(manifest_entries) if e.get("parliament") == "holyrood"),
-                    len(manifest_entries),
-                )
-            manifest_entries.insert(insert_at, entry)
+            insert_preserved_entry(manifest_entries, entry)
             data_files_by_election_id[entry_id] = data_file
             files["elections"]["electionsById"] = data_files_by_election_id
 

@@ -415,8 +415,7 @@ Stop before export on any failed refresh. Successful dates are retained, failed
 dates keep their old results, and `--continue-on-error` still exits unsuccessfully.
 Automatic US rebuild prunes out-of-scope history only after all required
 replacements succeed. Retry failed refreshes or the supplied cache repair command
-before exporting. Export ordering and historical per-era EV modelling remain
-separate work.
+before exporting. Historical per-era EV modelling remains separate work.
 
 ---
 
@@ -497,6 +496,30 @@ All commands in this section run from `data/`.
 The full export includes supported UK and US elections and, when present in the
 database, the latest Westminster UNS simulation and latest forecast for each US
 contest. It writes each page's manifest and data files.
+
+Election placement is owned by `data/scripts/export/ordering.py`. The previous
+generated manifest remains an ordering input; the shell does not define election
+order. After initial construction and restoration, final placement applies these
+rules in sequence:
+
+1. Restore the previous manifest's ID order. New entries prefer placement after
+   their first inbound comparer in built order if that comparer appears in the
+   previous manifest; later comparers are not searched. Otherwise they go before
+   their own remembered comparison baseline, or at the end if neither anchor is
+   remembered. Ties retain built order; without a previous order, the built order
+   is retained.
+2. Reapply supplemental anchors. A non-null `insertBeforeId` takes precedence
+   over `insertAfterId`; a missing selected anchor appends the entry.
+3. Promote forecasts to their parliament's first occurrence, preserving relative
+   forecast and non-forecast order without regrouping interleaved parliaments.
+
+Initial supplemental registration replaces existing IDs in place. Current
+Parliament initially follows `current-prediction` (or leads if absent); restored
+Westminster models initially lead, while other restored entries precede the first
+Holyrood entry (or append if absent). Final rules can override those initial
+positions. Comparison assignment still runs both before restoration and after
+final ordering, retaining links already set. Default selection is independent of
+final order and preserves a valid configured default.
 
 Dry-run:
 

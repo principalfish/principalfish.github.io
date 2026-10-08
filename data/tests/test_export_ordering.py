@@ -23,6 +23,8 @@ from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
 from scripts.export.ordering import (
     finalize_manifest_order,
     float_model_entries_first,
+    insert_preserved_entry,
+    register_supplemental_entry,
     reorder_manifest_entries,
     reposition_supplemental_entries,
 )
@@ -546,3 +548,87 @@ def test_finalize_uses_supplied_descriptors_without_mutating_input_list() -> Non
     assert ordered[0] is entries[1]
     assert ordered[1] is entries[2]
     assert ordered[2] is entries[0]
+
+
+@pytest.mark.parametrize(
+    "before_id, expected_ids",
+    [
+        ("before", ["", "after", "snapshot", "before"]),
+        ("missing", ["", "after", "before", "snapshot"]),
+        ("", ["snapshot", "", "after", "before"]),
+    ],
+)
+def test_supplemental_before_anchor_precedence_in_both_stages(
+    before_id: str,
+    expected_ids: list[str],
+) -> None:
+    descriptor = {
+        "id": "snapshot",
+        "insertBeforeId": before_id,
+        "insertAfterId": "after",
+    }
+    entry = {"id": "snapshot"}
+    initial: list[dict[str, Any]] = [
+        {"id": ""}, {"id": "after"}, {"id": "before"},
+    ]
+    final = [entry, *initial]
+
+    register_supplemental_entry(initial, entry, descriptor)
+    reposition_supplemental_entries(final, [descriptor])
+
+    assert [item["id"] for item in initial] == expected_ids
+    assert [item["id"] for item in final] == expected_ids
+    assert initial[expected_ids.index("snapshot")] is entry
+    assert final[expected_ids.index("snapshot")] is entry
+
+
+@pytest.mark.parametrize("explicit_none", [False, True])
+def test_anchorless_supplemental_stages_retain_distinct_none_handling(
+    explicit_none: bool,
+) -> None:
+    descriptor: dict[str, Any] = {"id": "snapshot"}
+    if explicit_none:
+        descriptor.update({"insertBeforeId": None, "insertAfterId": None})
+    # Initial registration historically matches an absent ID against after=None;
+    # final repositioning skips descriptors without either anchor.
+    missing_id: dict[str, Any] = {"name": "Unidentified entry"}
+    last = {"id": "last"}
+    entry = {"id": "snapshot"}
+    initial = [missing_id, last]
+    final = [entry, missing_id, last]
+
+    register_supplemental_entry(initial, entry, descriptor)
+    reposition_supplemental_entries(final, [descriptor])
+
+    assert initial == [missing_id, entry, last]
+    assert final == [entry, missing_id, last]
+
+
+@pytest.mark.parametrize(
+    "entry_type, include_holyrood, expected_ids",
+    [
+        ("model_uns", True, ["restored", "westminster", "holyrood", "house"]),
+        ("model_uns", False, ["restored", "westminster", "house"]),
+        ("eu_referendum", True, ["westminster", "restored", "holyrood", "house"]),
+        ("eu_referendum", False, ["westminster", "house", "restored"]),
+        ("holyrood_uns", False, ["westminster", "house", "restored"]),
+        ("holyrood_general", False, ["westminster", "house", "restored"]),
+    ],
+)
+def test_preserved_entry_initial_positions_without_previous_order(
+    entry_type: str,
+    include_holyrood: bool,
+    expected_ids: list[str],
+) -> None:
+    entries: list[dict[str, Any]] = [
+        {"id": "westminster", "parliament": "westminster"},
+    ]
+    if include_holyrood:
+        entries.append({"id": "holyrood", "parliament": "holyrood"})
+    entries.append({"id": "house", "parliament": "us_house"})
+    entry = {"id": "restored", "type": entry_type}
+
+    insert_preserved_entry(entries, entry)
+
+    assert [item["id"] for item in entries] == expected_ids
+    assert entries[expected_ids.index("restored")] is entry

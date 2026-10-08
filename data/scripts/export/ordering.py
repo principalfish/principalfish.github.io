@@ -7,6 +7,101 @@ from collections.abc import Sequence
 from typing import Any
 
 
+def _supplemental_insert_index(
+    manifest_entries: list[dict[str, Any]],
+    supplemental: dict[str, Any],
+) -> int:
+    """Prefer a before-anchor; append when the selected anchor is absent."""
+    before_id = supplemental.get("insertBeforeId")
+    if before_id is not None:
+        return next(
+            (
+                index
+                for index, entry in enumerate(manifest_entries)
+                if entry.get("id") == before_id
+            ),
+            len(manifest_entries),
+        )
+    after_id = supplemental.get("insertAfterId")
+    return next(
+        (
+            index + 1
+            for index, entry in enumerate(manifest_entries)
+            if entry.get("id") == after_id
+        ),
+        len(manifest_entries),
+    )
+
+
+def register_supplemental_entry(
+    manifest_entries: list[dict[str, Any]],
+    entry: dict[str, Any],
+    supplemental: dict[str, Any],
+) -> None:
+    """Replace an existing ID in place, or insert a new entry at its anchor.
+
+    Unlike final supplemental repositioning, replacement preserves the current
+    position so the initial comparison and default stages see the same order.
+    """
+    existing_index = next(
+        (
+            index
+            for index, existing_entry in enumerate(manifest_entries)
+            if existing_entry.get("id") == supplemental["id"]
+        ),
+        None,
+    )
+    if existing_index is not None:
+        manifest_entries[existing_index] = entry
+        return
+    manifest_entries.insert(
+        _supplemental_insert_index(manifest_entries, supplemental),
+        entry,
+    )
+
+
+def insert_current_parliament_entry(
+    manifest_entries: list[dict[str, Any]],
+    entry: dict[str, Any],
+) -> None:
+    """Initially place Current Parliament after prediction, or first if absent.
+
+    Remembered manifest order can override this position in the final stage.
+    """
+    prediction_index = next(
+        (
+            index
+            for index, existing_entry in enumerate(manifest_entries)
+            if existing_entry.get("id") == "current-prediction"
+        ),
+        -1,
+    )
+    manifest_entries.insert(prediction_index + 1, entry)
+
+
+def insert_preserved_entry(
+    manifest_entries: list[dict[str, Any]],
+    entry: dict[str, Any],
+) -> None:
+    """Initially place restored models first, other restored entries by Holyrood.
+
+    Non-Westminster-model entries go before the first Holyrood entry, or append
+    if none exists. Eligibility and file references belong to the caller.
+    """
+    if entry.get("type") == "model_uns":
+        insert_at = 0
+    else:
+        insert_at = next(
+            (
+                index
+                for index, existing_entry in enumerate(manifest_entries)
+                if existing_entry.get("parliament") == "holyrood"
+            ),
+            len(manifest_entries),
+        )
+    manifest_entries.insert(insert_at, entry)
+
+
 def reorder_manifest_entries(
     entries: list[dict[str, Any]],
     existing_order: Sequence[str],
@@ -136,25 +231,10 @@ def reposition_supplemental_entries(
         if entry is None or (before_id is None and after_id is None):
             continue
         manifest_entries.remove(entry)
-        if before_id is not None:
-            index = next(
-                (
-                    i
-                    for i, e in enumerate(manifest_entries)
-                    if e.get("id") == before_id
-                ),
-                len(manifest_entries),
-            )
-        else:
-            index = next(
-                (
-                    i + 1
-                    for i, e in enumerate(manifest_entries)
-                    if e.get("id") == after_id
-                ),
-                len(manifest_entries),
-            )
-        manifest_entries.insert(index, entry)
+        manifest_entries.insert(
+            _supplemental_insert_index(manifest_entries, supplemental),
+            entry,
+        )
 
 
 def finalize_manifest_order(

@@ -147,7 +147,7 @@ class Manifest {
 
   /**
    * Returns all elections for the given parliament.
-   * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
+   * @param {string} parliament - Manifest parliament key (e.g. 'westminster', 'us_senate').
    * @returns {object[]}
    */
   electionsForParliament(parliament) {
@@ -157,7 +157,7 @@ class Manifest {
   /**
    * Returns the per-parliament feature config (anchor/baseline election ids etc.),
    * or an empty object when no entry exists for the given parliament.
-   * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
+   * @param {string} parliament - Manifest parliament key (e.g. 'westminster', 'us_senate').
    * @returns {object}
    */
   parliamentConfig(parliament) {
@@ -275,7 +275,7 @@ class Manifest {
 
   /**
    * Fetches the parliament meta file and returns the latest poll snippet string, or null on failure.
-   * @param {string} parliament - Parliament key ('westminster' | 'holyrood').
+   * @param {string} parliament - Manifest parliament key (e.g. 'westminster', 'us_senate').
    * @returns {Promise<string|null>}
    */
   async fetchPredictionMeta(parliament) {

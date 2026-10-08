@@ -35,7 +35,7 @@ SENATE_PARLIAMENT_KEY = "us_senate"
 
 
 def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, Any]]:
-    """Build the ``settings.parties`` list for the elections manifest.
+    """Build the top-level ``parties`` list for the election-map manifest.
 
     Each entry contains the DB ``id``, resolved ``key``, display ``name``,
     and ``colour`` for one party, sorted alphabetically by name.
@@ -64,7 +64,7 @@ def build_manifest_party_settings(parties: Sequence[Party]) -> list[dict[str, An
 
 
 def build_manifest_regions_by_map_id(regions: Sequence[Region]) -> dict[str, list[dict[str, Any]]]:
-    """Build the ``settings.regionsByMapId`` dict for the elections manifest.
+    """Group region records by map ID for ``mapModes[mapId].regions``.
 
     Groups regions by their ``map_id``, sorted within each group by name
     then by primary key.  Keys are string map IDs so the output is valid

@@ -199,27 +199,24 @@ TopoJSON files; no PostGIS is required.
 
 ## 5) Import polls (Wikipedia-driven)
 
-### Mapping refresh only
+Start the console (section 7), then open [Import Poll](http://127.0.0.1:5055/import)
+and use **Catch Up from Wikipedia** for Westminster polls.
 
-```bash
-../election_data/bin/python polls/build_wikipedia_poll_mappings.py
-```
+1. Optionally set **Only polls ending on or after**. The cutoff includes polls
+   whose fieldwork ends on that date. Leaving it blank uses the latest stored
+   Westminster poll's fieldwork end date; if none is stored, every row in the
+   fetched index is in the window. Set an earlier date to backfill older gaps.
+2. Choose whether to keep **Run the UNS model and export once the queue is
+   finished** checked. This is optional and runs once at the end if at least one
+   poll was imported.
+3. Click **Catch Up from Wikipedia**. The console fetches the Westminster
+   voting-intention index, excludes polls already stored, and presents missing
+   polls oldest first for review and import or skip.
+4. Check the summary for failed imports, rows without an importer, and unreadable
+   Wikipedia rows.
 
-### Full poll import pipeline
-
-```bash
-../election_data/bin/python polls/update_mapping_and_import_new.py --include-unimported-parsers
-```
-
-Notes:
-- `--include-unimported-parsers` is important for fresh databases.
-- Without it, parsers with no historical rows can be skipped.
-
-Wrapper script alternative:
-
-```bash
-./update_polls.sh --include-unimported-parsers
-```
+The queue lives in memory. Restarting the console, including a development
+auto-reload, discards a catch-up in progress; confirmed polls remain stored.
 
 ---
 
@@ -228,7 +225,6 @@ Wrapper script alternative:
 From `data/`, use the main runner's retrospective mode:
 
 ```bash
-cd data
 ./election_data/bin/python models/westminster/run_uns_model.py \
   --start-date <first-date> --end-date <last-date> --continue-on-error
 ```
@@ -471,7 +467,9 @@ sqlite3 "$DATABASE_PATH" "SELECT type, count(*) FROM elections GROUP BY type ORD
 	  is mid-transaction, and never open the live DB off the Google Drive mount.
 
 - **Poll importer skips everything**
-	- Use `--include-unimported-parsers` on a fresh DB.
+	- Check the Catch Up from Wikipedia summary's window and already-imported count.
+	  Set an earlier cutoff on the import form to include older missing polls, and
+	  inspect its failed, no-importer, and unreadable-row reports.
 
 - **Many `0` regional poll rows**
 	- Current importers can default missing regional values to `0.0` for some source formats.
@@ -485,15 +483,20 @@ sqlite3 "$DATABASE_PATH" "SELECT poll_id, COUNT(*) AS zero_rows FROM poll_rows W
 
 ## 10) Static election-map export (manifest + files)
 
-Use scripts under `data/scripts/` to generate static files for `electionmaps/`.
+Use scripts under `data/scripts/` to generate static files for `electionmaps/`
+and `uselectionmaps/`.
 
 All commands in this section run from `data/`.
 
-### Bulk export (all non-simulation elections)
+### Full export (elections and latest forecasts)
 
 ```bash
 ./election_data/bin/python scripts/export_elections.py
 ```
+
+The full export includes supported UK and US elections and, when present in the
+database, the latest Westminster UNS simulation and latest forecast for each US
+contest. It writes each page's manifest and data files.
 
 Dry-run:
 
@@ -508,37 +511,31 @@ Dry-run:
 ./election_data/bin/python scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
 ```
 
-### Wrapper export (all elections + latest simulation)
-
-```bash
-./election_data/bin/python scripts/run_export_targets.py
-```
-
 ### Metadata-only manifest refresh
 
 ```bash
-./election_data/bin/python scripts/export_manifest_metadata.py
-```
-
-### UKIP/Reform DB split migration
-
-```bash
-./election_data/bin/python scripts/split_ukip_reform_parties.py --dry-run
-./election_data/bin/python scripts/split_ukip_reform_parties.py
+./election_data/bin/python scripts/export_elections.py --metadata-only
 ```
 
 ### Manifest contract used by webpage
 
-`electionmaps/data/elections.json` now includes:
+Each page loads its own generated manifest:
+[UK `map-modes.json`](electionmaps/data/map-modes.json) or
+[US `map-modes.json`](uselectionmaps/data/map-modes.json). Both use the same contract:
 
-- `defaultElection`
-- `settings.mapFilesById` (map_id -> `maps/map-<id>.topo.json`)
-- `settings.dataFilesByElectionId` (election id -> `results/<file>.json`)
-- `settings.parties`, `settings.partiesByKey` (party metadata + colour lookups)
-- `settings.regionsByMapId` (region metadata grouped by map)
-- `elections[]` entries containing at least `id`, `name`, `year`, `type`, `mapId`, and optional `comparisonElectionId`
+- `defaultElection` and ordered `elections` entries with `id`, `name`, `type`,
+  `mapId`, `parliament`, and optional behavior/comparison fields.
+- `files.elections.mapsById`, `files.elections.electionsById`, and `files.meta`,
+  with paths relative to that page's data directory.
+- `parties`, `partyKeyAliases`, and `mapModes[mapId].regions` for party and region metadata.
+- `misc`, `parliamentFeatures`, and `mapModes` for branding, features, prediction,
+  and map options.
 
-The webpage (`electionmaps/electionmaps.js`) resolves files from `settings` using election `id` + `mapId`.
+The [shared engine](electionmapslogic/app.js) initializes the manifest, derives
+party/region lookups, and resolves results and topology through `files.elections`.
+Edit each page's `map-modes-shell.json` for hand-authored configuration and
+regenerate its manifest. See the [full manifest reference](electionmaps/data/map-modes.md)
+for supported fields, selection rules, and shell transformations.
 
 ### Results schema
 

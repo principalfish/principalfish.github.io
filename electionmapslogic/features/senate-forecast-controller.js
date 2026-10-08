@@ -11,7 +11,7 @@ import {
 } from "../dom.js";
 import { buildSenateChamber } from "./senate-chamber.js";
 import { loadSenateSpecialBaseline } from "./senate-baseline.js";
-import { renderSenateForecastTabs } from "./senate-forecast-view.js";
+import { renderSenateForecastComparison, renderSenateForecastTabs } from "./senate-forecast-view.js";
 
 /**
  * Adds the seats-up / full-chamber output switch to the current saved Senate forecast.
@@ -20,6 +20,7 @@ import { renderSenateForecastTabs } from "./senate-forecast-view.js";
  */
 export async function activateSenateForecastView() {
   renderSenateForecastTabs();
+  renderSenateForecastComparison();
   const config = manifest.parliamentConfig(state.currentParliament);
   if (state.view !== "election" || config.predict?.model !== "senate"
       || !state.currentElection?.model
@@ -39,6 +40,7 @@ export async function activateSenateForecastView() {
 
   // Suppress partial deltas while additional per-seat results are still loading.
   state.comparisonElectionData = null;
+  renderSenateForecastComparison({ activeTab: "seatsup", comparisonAvailable: false, loading: true });
   refreshForecast();
   if (!regularComparison) {
     const regularElection = manifest.getElectionFromId(election.comparisonElectionId);
@@ -58,6 +60,7 @@ export async function activateSenateForecastView() {
   if (!isCurrent()) return;
   const comparisonData = completeForecastComparison(forecastKeys, regularComparison, specials, specialSeats);
   state.comparisonElectionData = comparisonData;
+  renderSenateForecastComparison({ activeTab: "seatsup", comparisonAvailable: !!comparisonData });
   refreshForecast();
 
   const chamberElection = manifest.getElectionFromId(config.predict.chamberElectionId);
@@ -103,6 +106,7 @@ export async function activateSenateForecastView() {
       state.comparisonElectionData = comparisonData;
     }
     displayedData = state.electionData;
+    renderSenateForecastComparison({ activeTab, comparisonAvailable: !!state.comparisonElectionData });
     refreshForecast();
     renderTabs();
   }

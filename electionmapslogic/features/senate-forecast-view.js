@@ -22,3 +22,25 @@ export function renderSenateForecastTabs(options = null) {
     nav.appendChild(button);
   });
 }
+
+/**
+ * Explains the saved forecast's comparison even when chamber tabs are unavailable.
+ * @param {{activeTab: string, comparisonAvailable: boolean, loading?: boolean}|null} [options]
+ * @returns {void}
+ */
+export function renderSenateForecastComparison(options = null) {
+  const note = document.getElementById("mapsSenateForecastComparison");
+  if (!note) return;
+  note.hidden = !options;
+  if (!options) {
+    note.textContent = "";
+  } else if (options.loading) {
+    note.textContent = "Loading comparison…";
+  } else if (options.activeTab === "chamber") {
+    note.textContent = "Changes vs Current Senate";
+  } else {
+    note.textContent = options.comparisonAvailable
+      ? "Changes vs previous election for each seat"
+      : "Comparison unavailable";
+  }
+}

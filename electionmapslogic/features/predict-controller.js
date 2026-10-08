@@ -18,6 +18,7 @@ import { state, manifest, ElectionData, activeMapMode, buildRouteSearchParams } 
 import { predictModelClassFor } from './predict.js';
 import { fetchJson } from '../files.js';
 import { loadSenateSpecialBaseline } from "./senate-baseline.js";
+import { renderSenateForecastComparison, renderSenateForecastTabs } from "./senate-forecast-view.js";
 import {
   renderHeader,
   renderMap,
@@ -87,6 +88,8 @@ export function parliamentHasForecast(parliament) {
  * @returns {Promise<void>}
  */
 export async function activatePredictView() {
+  renderSenateForecastComparison();
+  renderSenateForecastTabs();
   const parliament = state.currentParliament;
   const parliamentConfig = manifest.parliamentConfig(parliament);
   const PredictModelClass = predictModelClassFor(parliament);

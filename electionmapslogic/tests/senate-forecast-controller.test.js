@@ -10,10 +10,13 @@ vi.mock("../dom.js", () => ({
   refreshOpenSeatPopup: vi.fn(),
 }));
 vi.mock("../files.js", () => ({ fetchJson: vi.fn() }));
-vi.mock("../features/senate-forecast-view.js", () => ({ renderSenateForecastTabs: vi.fn() }));
+vi.mock("../features/senate-forecast-view.js", () => ({
+  renderSenateForecastTabs: vi.fn(),
+  renderSenateForecastComparison: vi.fn(),
+}));
 
 import { activateSenateForecastView } from "../features/senate-forecast-controller.js";
-import { renderSenateForecastTabs } from "../features/senate-forecast-view.js";
+import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
 import { renderMap, refreshOpenSeatPopup } from "../dom.js";
 import { fetchJson } from "../files.js";
 import { ElectionData, manifest, page, Seat, state } from "../state.js";
@@ -36,6 +39,7 @@ function fetchResults(url) {
   return Promise.resolve(results);
 }
 const latestTabs = () => renderSenateForecastTabs.mock.calls.at(-1)[0];
+const latestComparison = () => renderSenateForecastComparison.mock.calls.at(-1)[0];
 const tallies = (summary) => Object.fromEntries(summary.parties.filter((party) => party.seats).map((party) => [party.party, party.seats]));
 
 describe("activateSenateForecastView", () => {
@@ -70,8 +74,10 @@ describe("activateSenateForecastView", () => {
     expect(fetchJson).toHaveBeenCalledWith("data/results/senate-current.json");
     expect(latestTabs().activeTab).toBe("seatsup");
     expect(latestTabs().tabs.map((tab) => tab.key)).toEqual(["seatsup", "chamber"]);
+    expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
 
     latestTabs().onTabChange("chamber");
+    expect(latestComparison()).toEqual({ activeTab: "chamber", comparisonAvailable: true });
     expect(state.currentElection.multiMember).toBe(true);
     expect(state.electionData.currentSeats).toHaveLength(50);
     expect(state.filteredSeatsSummary.totalSeats).toBe(100);
@@ -104,9 +110,11 @@ describe("activateSenateForecastView", () => {
     for (let index = 0; index < 3; index += 1) {
       latestTabs().onTabChange("chamber");
       expect(latestTabs().activeTab).toBe("chamber");
+      expect(latestComparison()).toEqual({ activeTab: "chamber", comparisonAvailable: true });
       expect(state.filteredSeatsSummary.totalSeats).toBe(100);
       latestTabs().onTabChange("seatsup");
       expect(latestTabs().activeTab).toBe("seatsup");
+      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
       expect(state.currentElection.multiMember).toBe(false);
       expect(state.electionData).toBe(forecast);
       expect(state.comparisonElectionData).toBe(comparison);
@@ -159,6 +167,7 @@ describe("activateSenateForecastView", () => {
     const forecast = state.electionData;
     await activateSenateForecastView();
     expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
+    expect(renderSenateForecastComparison).toHaveBeenCalledExactlyOnceWith();
     expect(fetchJson).not.toHaveBeenCalled();
     expect(state.electionData).toBe(forecast);
     expect(renderMap).not.toHaveBeenCalled();
@@ -178,12 +187,50 @@ describe("activateSenateForecastView", () => {
     const forecast = state.electionData;
     await activateSenateForecastView();
     expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
+    expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
     expect(state.electionData).toBe(forecast);
     expect(state.comparisonElectionData.currentSeats).toHaveLength(35);
     expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(35);
     expect(state.filteredSeatsSummary.totalSeats).toBe(35);
     expect(state.currentElection.multiMember).toBeFalsy();
     expect(renderMap).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["historical Senate", "us_senate", "2022-us-senate", "election"],
+    ["House forecast", "us_house", "current-us-house", "election"],
+    ["interactive prediction", "us_senate", "current-us-senate", "predict"],
+  ])("clears saved chamber controls when activating %s", async (_, parliament, electionId, view) => {
+    await activateSenateForecastView();
+    latestTabs().onTabChange("chamber");
+    state.currentParliament = parliament;
+    state.currentElection = { ...manifest.getElectionFromId(electionId) };
+    state.view = view;
+    const destination = state.electionData;
+    await activateSenateForecastView();
+    expect(latestTabs()).toBeUndefined();
+    expect(latestComparison()).toBeUndefined();
+    expect(state.electionData).toBe(destination);
+  });
+
+  it.each(["missing", "empty", "failed"])("explains unavailable baselines without a %s chamber snapshot", async (failure) => {
+    const mode = manifest.mapModes[String(state.currentElection.mapId)];
+    delete mode.senateSpecialElections[0].baselineElectionId;
+    if (failure === "missing") {
+      manifest.elections = manifest.elections.filter((election) => election.id !== "current-senate");
+    } else {
+      fetchJson.mockImplementation((url) => {
+        if (!url.endsWith("senate-current.json")) return fetchResults(url);
+        return failure === "empty" ? Promise.resolve({ seats: [] }) : Promise.reject(new Error("Snapshot unavailable"));
+      });
+    }
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const forecast = state.electionData;
+    await activateSenateForecastView();
+    expect(latestTabs()).toBeUndefined();
+    expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: false });
+    expect(state.comparisonElectionData).toBeNull();
+    expect(state.electionData).toBe(forecast);
   });
 
   describe("per-seat comparison", () => {
@@ -291,11 +338,14 @@ describe("activateSenateForecastView", () => {
         await activateSenateForecastView();
         expect(state.comparisonElectionData).toBeNull();
         expect(state.filteredSeatsComparisonSummary).toBeNull();
+        expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: false });
         expect(state.electionData).toBe(forecast);
         expect(JSON.stringify(forecast.currentSeats)).toBe(output);
         const tabs = latestTabs();
         tabs.onTabChange("chamber");
+        expect(latestComparison()).toEqual({ activeTab: "chamber", comparisonAvailable: true });
         latestTabs().onTabChange("seatsup");
+        expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: false });
         expect(state.comparisonElectionData).toBeNull();
         expect(state.electionData).toBe(forecast);
 
@@ -308,6 +358,7 @@ describe("activateSenateForecastView", () => {
         });
         await activateSenateForecastView();
         expect(state.comparisonElectionData.currentSeats).toHaveLength(35);
+        expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
         expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ democrat: 13, republican: 22 });
         expect(state.electionData).toBe(forecast);
         expect(JSON.stringify(forecast.currentSeats)).toBe(output);
@@ -343,9 +394,11 @@ describe("activateSenateForecastView", () => {
       expect(state.filteredSeatsComparisonSummary).toBeNull();
       expect(renderMap).toHaveBeenCalledExactlyOnceWith(true);
       expect(latestTabs()).toBeUndefined();
+      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: false, loading: true });
       resolveBaseline(specialResults);
       await activation;
       expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(35);
+      expect(latestComparison()).toEqual({ activeTab: "seatsup", comparisonAvailable: true });
     });
 
     it.each([
@@ -367,12 +420,36 @@ describe("activateSenateForecastView", () => {
       state.electionData = destinationData;
       state.comparisonElectionData = destinationData;
       const renderCount = renderMap.mock.calls.length;
+      const noteRenderCount = renderSenateForecastComparison.mock.calls.length;
       resolveLoad(load === "chamber" ? chamberData : load === "regular" ? regularResults : specialResults);
       await activation;
       expect(state.electionData).toBe(destinationData);
       expect(state.comparisonElectionData).toBe(destinationData);
       expect(renderMap).toHaveBeenCalledTimes(renderCount);
+      expect(renderSenateForecastComparison).toHaveBeenCalledTimes(noteRenderCount);
       expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
+    });
+
+    it("keeps cleared destination controls hidden after a pending baseline resolves", async () => {
+      let resolveBaseline;
+      fetchJson.mockImplementation((url) => url.endsWith("us-senate-2022.json")
+        ? new Promise((resolve) => { resolveBaseline = resolve; }) : fetchResults(url));
+      const activation = activateSenateForecastView();
+      expect(latestComparison().loading).toBe(true);
+      state.currentElection = { ...manifest.getElectionFromId("2022-us-senate") };
+      const destinationData = new ElectionData({ seats: [result("Destination", "democrat")] });
+      state.electionData = destinationData;
+      state.comparisonElectionData = destinationData;
+      await activateSenateForecastView();
+      expect(latestComparison()).toBeUndefined();
+      expect(latestTabs()).toBeUndefined();
+      const noteRenderCount = renderSenateForecastComparison.mock.calls.length;
+      resolveBaseline(specialResults);
+      await activation;
+      expect(renderSenateForecastComparison).toHaveBeenCalledTimes(noteRenderCount);
+      expect(latestTabs()).toBeUndefined();
+      expect(state.electionData).toBe(destinationData);
+      expect(state.comparisonElectionData).toBe(destinationData);
     });
 
     it.each(["election object", "view"])("ignores a retained tab callback after the %s changes", async (destination) => {
@@ -381,6 +458,7 @@ describe("activateSenateForecastView", () => {
       const forecast = state.electionData;
       const comparison = state.comparisonElectionData;
       const renderCount = renderMap.mock.calls.length;
+      const noteRenderCount = renderSenateForecastComparison.mock.calls.length;
       if (destination === "election object") state.currentElection = { ...state.currentElection };
       else state.view = "predict";
       callback("chamber");
@@ -388,6 +466,7 @@ describe("activateSenateForecastView", () => {
       expect(state.comparisonElectionData).toBe(comparison);
       expect(state.currentElection.multiMember).toBeFalsy();
       expect(renderMap).toHaveBeenCalledTimes(renderCount);
+      expect(renderSenateForecastComparison).toHaveBeenCalledTimes(noteRenderCount);
     });
   });
 });

@@ -1058,6 +1058,8 @@ a {
 }
 
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-vote-tabs,
+.maps-vote-totals--collapsed .maps-predict-tabs,
+.maps-vote-totals--collapsed .maps-senate-forecast-comparison,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
   display: none;

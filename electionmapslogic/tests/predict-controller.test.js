@@ -18,6 +18,10 @@ vi.mock('../features/predict-view.js', () => ({
   setPredictWindowVisible: vi.fn(),
 }));
 vi.mock('../files.js', () => ({ fetchJson: vi.fn() }));
+vi.mock("../features/senate-forecast-view.js", () => ({
+  renderSenateForecastComparison: vi.fn(),
+  renderSenateForecastTabs: vi.fn(),
+}));
 
 import {
   activatePredictView,
@@ -28,6 +32,7 @@ import {
 import { setApplyActionVisible, setPredictActionHandlers } from '../features/predict-view.js';
 import { manifest, page, state, ElectionData } from '../state.js';
 import { fetchJson } from '../files.js';
+import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
 
 describe('getPredictBaseElection', () => {
   beforeEach(() => {
@@ -127,6 +132,8 @@ describe('activatePredictView forecast gating', () => {
     fetchJson.mockReset();
     setApplyActionVisible.mockClear();
     setPredictActionHandlers.mockClear();
+    renderSenateForecastComparison.mockClear();
+    renderSenateForecastTabs.mockClear();
   });
 
   it('with a model anchor: registers the apply handler, shows the button, prefetches', async () => {
@@ -137,6 +144,12 @@ describe('activatePredictView forecast gating', () => {
     const handlers = setPredictActionHandlers.mock.calls[0][0];
     expect(handlers.apply).toBeTypeOf('function');
     expect(fetchJson).toHaveBeenCalledWith('data/results/r.json');
+    expect(renderSenateForecastComparison).toHaveBeenCalledExactlyOnceWith();
+    expect(renderSenateForecastTabs).toHaveBeenCalledExactlyOnceWith();
+    expect(renderSenateForecastComparison.mock.invocationCallOrder[0])
+      .toBeLessThan(fetchJson.mock.invocationCallOrder[0]);
+    expect(renderSenateForecastTabs.mock.invocationCallOrder[0])
+      .toBeLessThan(fetchJson.mock.invocationCallOrder[0]);
   });
 
   it('without a model anchor (US-style): no apply handler, hidden button, no prefetch', async () => {

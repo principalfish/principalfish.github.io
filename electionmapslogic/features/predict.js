@@ -15,6 +15,7 @@
 
 import { state, manifest, Seat } from '../state.js';
 import { normalizeRegionKey, roundShare, base64urlEncode, base64urlDecode, seatLookupKey } from '../utils.js';
+import { buildSenateChamber } from './senate-chamber.js';
 
 /**
  * Computes baseline regional vote share percentages from a seat array. For each party in
@@ -1141,7 +1142,7 @@ export class SenatePredict extends FPTPPredict {
    * The seats join `projectionBase` (so they are projected and appear in the seats-up view and
    * its comparison), and the ballot baseline is recomputed over the enlarged base so the input
    * grid's regional starting shares include them. `specials` records each seat's contested
-   * class for `#buildChamber`; a seat whose baseline failed to load is inert there, because the
+   * class for the chamber merge; a seat whose baseline failed to load is inert there, because the
    * merge only replaces a member when the seat actually has a projected winner.
    * @param {Seat[]} seats - Baseline seats for the special contests.
    * @param {Array<{seat: string, class?: number}>} specials - The mapMode's special entries.
@@ -1202,37 +1203,7 @@ export class SenatePredict extends FPTPPredict {
       ? base.map((seat) => new Seat({ ...seat, candidates: {} }))
       : base.map((seat) => projectSeatUniformSwing(seat, swings, this.modelledPartyKeys, this.aggregateConfig));
     if (this.activeTab !== 'chamber') return projectedContested;
-    return this.#buildChamber(projectedContested);
-  }
-
-  /**
-   * Merges the projected winners into the chamber snapshot: each state's contested member takes
-   * the projected party; the other members carry over unchanged. The contested member is the
-   * Class-2 one, except in a state holding a special election, where it is the class that
-   * special contests (Ohio and Florida 2026: Class 3). The seat winner is recomputed for the
-   * map fill — a party when both members share it, else 'split' (matching how senate-current
-   * colours split states). Falls back to the projected contested seats when the snapshot hasn't
-   * loaded yet.
-   * @param {Seat[]} projectedContested
-   * @returns {Seat[]}
-   */
-  #buildChamber(projectedContested) {
-    if (!this.chamberSeats.length) return projectedContested;
-    const winnerByState = new Map();
-    projectedContested.forEach((seat) => winnerByState.set(seatLookupKey(seat.seat), seat.winner));
-
-    return this.chamberSeats.map((seat) => {
-      const seatKey = seatLookupKey(seat.seat);
-      const projectedWinner = winnerByState.get(seatKey);
-      const contestedClass = this.specialClassBySeat.get(seatKey) ?? 2;
-      const members = (seat.members || []).map((member) => {
-        if (Number(member?.class) !== contestedClass || !projectedWinner) return { ...member };
-        return { ...member, party: projectedWinner, name: `${manifest.labelParty(projectedWinner)} (projected)` };
-      });
-      const parties = members.map((m) => m.party);
-      const winner = parties.length && parties.every((p) => p === parties[0]) ? parties[0] : 'split';
-      return new Seat({ seat: seat.seat, region: seat.region, winner, members, votes: {} });
-    });
+    return buildSenateChamber(this.chamberSeats, projectedContested, this.specialClassBySeat);
   }
 }
 

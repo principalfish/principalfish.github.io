@@ -18,11 +18,13 @@ import {
   getPredictBaseElection,
 } from '../electionmapslogic/features/predict-controller.js';
 import { wirePredictControls } from '../electionmapslogic/features/predict-view.js';
+import { activateSenateForecastView } from '../electionmapslogic/features/senate-forecast-controller.js';
 
 startApp({
   predict: {
     wire: wirePredictControls,
     activate: activatePredictView,
     getBaseElection: getPredictBaseElection,
+    activateElection: activateSenateForecastView,
   },
 });

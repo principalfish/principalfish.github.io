@@ -45,6 +45,8 @@ const DATA_BASE = page.dataBase || 'data';
  *   (`predict` / `pollTracker`) that replace the election view.
  * @property {() => (object|null)} [getBaseElection] - `predict` only: resolves which
  *   election's files to fetch as the projection baseline.
+ * @property {() => Promise<void>} [activateElection] - Optional setup after the regular
+ *   election data has loaded and rendered.
  */
 
 /**
@@ -172,6 +174,12 @@ async function activateElection(features) {
   renderMapInit();
   renderMap();
   syncRightPanelHeight();
+
+  if (state.view === 'election') {
+    for (const feature of Object.values(features)) {
+      await feature.activateElection?.();
+    }
+  }
 
   const params = buildRouteSearchParams(state.view === 'predict' ? 'predict' : 'election');
   window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);

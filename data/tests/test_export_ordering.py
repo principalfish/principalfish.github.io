@@ -17,13 +17,15 @@ from sqlalchemy.orm import joinedload
 
 import export_elections
 from db import Database
-from export_elections import (
-    _export_page,
+from export_elections import _export_page
+from models import Election, ElectionType, Map
+from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
+from scripts.export.ordering import (
+    finalize_manifest_order,
     float_model_entries_first,
     reorder_manifest_entries,
+    reposition_supplemental_entries,
 )
-from models import Election, ElectionType, Map
-from scripts.export.legacy import reposition_supplemental_entries
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -502,7 +504,45 @@ def test_supplemental_missing_anchor_appends_without_regrouping() -> None:
         {"id": "2024-us-house", "parliament": "us_house"},
         {"id": "2020-us-senate", "parliament": "us_senate"},
     ]
-    reposition_supplemental_entries(entries, parliaments={"us_senate"})
+    reposition_supplemental_entries(
+        entries,
+        SUPPLEMENTAL_LEGACY_ELECTIONS,
+        parliaments={"us_senate"},
+    )
     assert [entry["id"] for entry in entries] == [
         "2024-us-house", "2020-us-senate", "current-senate",
     ]
+
+
+def test_finalize_uses_supplied_descriptors_without_mutating_input_list() -> None:
+    entries = [
+        {"id": "other-snapshot", "parliament": "westminster"},
+        {"id": "custom-snapshot", "parliament": "us_senate"},
+        {"id": "senate-anchor", "parliament": "us_senate"},
+    ]
+    supplemental_entries = [
+        {
+            "id": "custom-snapshot",
+            "parliament": "us_senate",
+            "insertBeforeId": "senate-anchor",
+        },
+        {"id": "other-snapshot", "insertBeforeId": "senate-anchor"},
+    ]
+
+    ordered = finalize_manifest_order(
+        entries,
+        ("senate-anchor", "other-snapshot", "custom-snapshot"),
+        supplemental_entries,
+        parliaments={"us_senate"},
+    )
+
+    assert [entry["id"] for entry in ordered] == [
+        "custom-snapshot", "senate-anchor", "other-snapshot",
+    ]
+    assert [entry["id"] for entry in entries] == [
+        "other-snapshot", "custom-snapshot", "senate-anchor",
+    ]
+    assert ordered is not entries
+    assert ordered[0] is entries[1]
+    assert ordered[1] is entries[2]
+    assert ordered[2] is entries[0]

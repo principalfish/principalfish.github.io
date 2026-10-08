@@ -48,37 +48,6 @@ SUPPLEMENTAL_LEGACY_ELECTION_NAMES = {
 }
 
 
-def reposition_supplemental_entries(
-    manifest_entries: list[dict[str, Any]],
-    parliaments: set[str] | None = None,
-) -> None:
-    """Re-apply each supplemental's ``insertBeforeId`` / ``insertAfterId`` position in-place.
-
-    ``reorder_manifest_entries`` sorts entries by the previous manifest's order, which can
-    override the position ``apply_supplemental_legacy_elections`` gave a supplemental (e.g.
-    a newly-promoted "Current Senate" that should lead its parliament). Running this after
-    the reorder restores the configured position. Idempotent.
-
-    Args:
-        manifest_entries: Manifest election list to reorder in-place.
-    """
-    by_id = {entry.get("id"): entry for entry in manifest_entries}
-    for supplemental in SUPPLEMENTAL_LEGACY_ELECTIONS:
-        if parliaments is not None and supplemental.get("parliament", "westminster") not in parliaments:
-            continue
-        before_id = supplemental.get("insertBeforeId")
-        after_id = supplemental.get("insertAfterId")
-        entry = by_id.get(supplemental["id"])
-        if entry is None or (before_id is None and after_id is None):
-            continue
-        manifest_entries.remove(entry)
-        if before_id is not None:
-            index = next((i for i, e in enumerate(manifest_entries) if e.get("id") == before_id), len(manifest_entries))
-        else:
-            index = next((i + 1 for i, e in enumerate(manifest_entries) if e.get("id") == after_id), len(manifest_entries))
-        manifest_entries.insert(index, entry)
-
-
 def apply_supplemental_legacy_elections(
     manifest_entries: list[dict[str, Any]],
     map_files_by_id: dict[str, str],

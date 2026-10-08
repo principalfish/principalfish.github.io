@@ -23,11 +23,10 @@ from export_elections import (
     _export_page,
     assign_comparison_elections,
     build_map_modes_with_regions,
-    float_model_entries_first,
     manifest_name_for_election,
     refresh_manifest_modes,
-    reorder_manifest_entries,
 )
+from scripts.export.ordering import float_model_entries_first, reorder_manifest_entries
 
 
 class _Election:

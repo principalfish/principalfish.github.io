@@ -22,8 +22,8 @@ from scripts.export import legacy
 from scripts.export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTIONS,
     apply_supplemental_legacy_elections,
-    reposition_supplemental_entries,
 )
+from scripts.export.ordering import reposition_supplemental_entries
 
 
 def _supplemental(sid: str) -> dict[str, Any]:
@@ -41,7 +41,11 @@ class TestRepositionSupplementalEntries:
         # reorder can push it to the end, so it must be pulled back in front of the anchor.
         anchor = _supplemental("current-senate")["insertBeforeId"]
         entries = [{"id": anchor}, {"id": "2022-us-senate"}, {"id": "current-senate"}]
-        reposition_supplemental_entries(entries, parliaments={"us_senate"})
+        reposition_supplemental_entries(
+            entries,
+            SUPPLEMENTAL_LEGACY_ELECTIONS,
+            parliaments={"us_senate"},
+        )
         assert _ids(entries) == ["current-senate", anchor, "2022-us-senate"]
 
     def test_insert_after_anchor(self) -> None:
@@ -53,13 +57,17 @@ class TestRepositionSupplementalEntries:
             {"id": "2019-general"},
         ]
         # parliaments=None processes every supplemental (the None default path).
-        reposition_supplemental_entries(entries, None)
+        reposition_supplemental_entries(entries, SUPPLEMENTAL_LEGACY_ELECTIONS)
         assert _ids(entries) == [anchor, "2019-general-changed-boundaries", "2019-general"]
 
     def test_parliament_filter_skips_other_pages_supplementals(self) -> None:
         # current-senate belongs to us_senate; a westminster-only page must leave it untouched.
         entries = [{"id": "2024-us-senate"}, {"id": "current-senate"}]
-        reposition_supplemental_entries(entries, parliaments={"westminster"})
+        reposition_supplemental_entries(
+            entries,
+            SUPPLEMENTAL_LEGACY_ELECTIONS,
+            parliaments={"westminster"},
+        )
         assert _ids(entries) == ["2024-us-senate", "current-senate"]
 
     def test_westminster_supplemental_skipped_on_us_page(self) -> None:
@@ -69,21 +77,33 @@ class TestRepositionSupplementalEntries:
             {"id": "2019-general-changed-boundaries"},
             {"id": "2024-general"},
         ]
-        reposition_supplemental_entries(entries, parliaments={"us_senate"})
+        reposition_supplemental_entries(
+            entries,
+            SUPPLEMENTAL_LEGACY_ELECTIONS,
+            parliaments={"us_senate"},
+        )
         assert _ids(entries) == ["2019-general-changed-boundaries", "2024-general"]
 
     def test_missing_entry_is_a_noop(self) -> None:
         # No supplemental ids present → nothing to reposition, no error.
         entries = [{"id": "2024-general"}, {"id": "2019-general"}]
-        reposition_supplemental_entries(entries, None)
+        reposition_supplemental_entries(entries, SUPPLEMENTAL_LEGACY_ELECTIONS)
         assert _ids(entries) == ["2024-general", "2019-general"]
 
     def test_is_idempotent(self) -> None:
         anchor = _supplemental("current-senate")["insertBeforeId"]
         entries = [{"id": anchor}, {"id": "current-senate"}]
-        reposition_supplemental_entries(entries, parliaments={"us_senate"})
+        reposition_supplemental_entries(
+            entries,
+            SUPPLEMENTAL_LEGACY_ELECTIONS,
+            parliaments={"us_senate"},
+        )
         once = _ids(entries)
-        reposition_supplemental_entries(entries, parliaments={"us_senate"})
+        reposition_supplemental_entries(
+            entries,
+            SUPPLEMENTAL_LEGACY_ELECTIONS,
+            parliaments={"us_senate"},
+        )
         assert _ids(entries) == once == ["current-senate", anchor]
 
 

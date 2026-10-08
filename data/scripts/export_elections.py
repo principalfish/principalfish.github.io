@@ -71,16 +71,14 @@ from scripts.export.manifest import (
     build_manifest_regions_by_map_id,
     build_map_modes_with_regions,
     assign_comparison_elections,
-    float_model_entries_first,
-    reorder_manifest_entries,
     remove_comparison_for_supplemental_entries,
 )
 from scripts.export.legacy import (
     SUPPLEMENTAL_LEGACY_ELECTIONS,
     SUPPLEMENTAL_LEGACY_ELECTION_NAMES,
-    reposition_supplemental_entries,
     apply_supplemental_legacy_elections,
 )
+from scripts.export.ordering import finalize_manifest_order
 
 # old_data/scripts/usa/ is a scripts dir, not an importable package, so load the
 # per-era presidential EV table by file path (same pattern as tests use).
@@ -944,17 +942,13 @@ def _export_page(
             if field in existing_entry and field not in entry:
                 entry[field] = existing_entry[field]
 
-    # Keep the curated election order from the existing manifest so regen does not
-    # reshuffle the UI election selector; new elections are slotted next to the entry
-    # that references them.
     existing_order = [e["id"] for e in existing.get("elections", []) if "id" in e]
-    manifest_entries = reorder_manifest_entries(manifest_entries, existing_order)
-    # Restore supplemental positions the reorder may have overridden (e.g. Current Senate
-    # leading the Senate list regardless of the previous manifest's order).
-    reposition_supplemental_entries(manifest_entries, parliaments=parliaments)
-    # Forecast entries lead their parliament's block (above Current Senate etc.), with the
-    # Predict / Poll-tracker links anchored after them by the front end.
-    float_model_entries_first(manifest_entries)
+    manifest_entries = finalize_manifest_order(
+        manifest_entries,
+        existing_order,
+        SUPPLEMENTAL_LEGACY_ELECTIONS,
+        parliaments=parliaments,
+    )
 
     # Second comparison pass, now that preserved boundary-changed baselines (e.g.
     # 2021-holyrood-2026) are present and the list is in curated newest-first order.

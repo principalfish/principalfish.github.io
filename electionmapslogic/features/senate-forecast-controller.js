@@ -1,4 +1,4 @@
-import { ElectionData, manifest, page, state } from "../state.js";
+import { activeMapMode, ElectionData, manifest, page, state } from "../state.js";
 import { fetchJson } from "../files.js";
 import { seatLookupKey } from "../utils.js";
 import {
@@ -10,6 +10,7 @@ import {
   syncRightPanelHeight,
 } from "../dom.js";
 import { buildSenateChamber } from "./senate-chamber.js";
+import { loadSenateSpecialBaseline } from "./senate-baseline.js";
 import { renderSenateForecastTabs } from "./senate-forecast-view.js";
 
 /**
@@ -24,15 +25,48 @@ export async function activateSenateForecastView() {
       || !state.currentElection?.model
       || state.currentElection.id !== config.predictAnchorElectionId) return;
 
+  const forecastData = state.electionData;
+  let regularComparison = state.comparisonElectionData;
+  const election = state.currentElection;
+  const parliament = state.currentParliament;
+  let displayedData = forecastData;
+  const isCurrent = () => state.currentElection === election && state.view === "election"
+    && state.currentParliament === parliament && state.electionData === displayedData;
+  const forecastKeys = new Set(forecastData.currentSeats.map((seat) => seatLookupKey(seat.seat)));
+  const specials = (activeMapMode().senateSpecialElections || [])
+    .filter((special) => Number(special.year) === Number(config.nextElectionYear)
+      && forecastKeys.has(seatLookupKey(special.seat)));
+
+  // Suppress partial deltas while additional per-seat results are still loading.
+  state.comparisonElectionData = null;
+  refreshForecast();
+  if (!regularComparison) {
+    const regularElection = manifest.getElectionFromId(election.comparisonElectionId);
+    if (regularElection) {
+      try {
+        const { dataFile } = manifest.resolveElectionFiles(regularElection);
+        const regularData = await fetchJson(`${page.dataBase || "data"}/${dataFile}`);
+        if (!isCurrent()) return;
+        regularComparison = new ElectionData(regularData);
+      } catch (error) {
+        console.error("Senate forecast regular baseline load failed", error);
+      }
+      if (!isCurrent()) return;
+    }
+  }
+  const specialSeats = await loadSenateSpecialBaseline(specials);
+  if (!isCurrent()) return;
+  const comparisonData = completeForecastComparison(forecastKeys, regularComparison, specials, specialSeats);
+  state.comparisonElectionData = comparisonData;
+  refreshForecast();
+
   const chamberElection = manifest.getElectionFromId(config.predict.chamberElectionId);
   if (!chamberElection) return;
-  const forecastData = state.electionData;
-  const comparisonData = state.comparisonElectionData;
-  const election = state.currentElection;
   let chamberSeats;
   try {
     const { dataFile } = manifest.resolveElectionFiles(chamberElection);
     const chamberData = await fetchJson(`${page.dataBase || "data"}/${dataFile}`);
+    if (!isCurrent()) return;
     chamberSeats = new ElectionData(chamberData).currentSeats;
   } catch (error) {
     console.error("Senate forecast chamber snapshot load failed", error);
@@ -42,8 +76,7 @@ export async function activateSenateForecastView() {
   if (!chamberSeats.length) return;
 
   const specialClassBySeat = new Map(
-    (state.mapConfig.senateSpecialElections || [])
-      .filter((special) => Number(special.year) === Number(config.nextElectionYear))
+    specials
       .map((special) => [seatLookupKey(special.seat), Number(special.class) || 2]),
   );
   const tabs = config.predict.tabs || [
@@ -57,7 +90,7 @@ export async function activateSenateForecastView() {
   }
 
   function changeTab(key) {
-    if (key === activeTab || !tabs.some((tab) => tab.key === key)) return;
+    if (!isCurrent() || key === activeTab || !tabs.some((tab) => tab.key === key)) return;
     activeTab = key;
     const fullChamber = key === "chamber";
     election.multiMember = fullChamber;
@@ -69,7 +102,12 @@ export async function activateSenateForecastView() {
       state.electionData = forecastData;
       state.comparisonElectionData = comparisonData;
     }
+    displayedData = state.electionData;
+    refreshForecast();
+    renderTabs();
+  }
 
+  function refreshForecast() {
     state.setupMapData();
     renderHeader(state.electionData.summary.text);
     renderMapControlOptions();
@@ -77,8 +115,24 @@ export async function activateSenateForecastView() {
     initRegionTable();
     syncRightPanelHeight();
     refreshOpenSeatPopup();
-    renderTabs();
   }
 
   renderTabs();
+}
+
+/** Builds exactly one usable result for each forecast key; required overrides cannot fall back. */
+function completeForecastComparison(forecastKeys, regularComparison, specials, specialSeats) {
+  const specialKeys = new Set(specials.map((special) => seatLookupKey(special.seat)));
+  const specialByKey = ElectionData.buildSeatIndex(specialSeats);
+  const seats = [];
+  for (const key of forecastKeys) {
+    const seat = specialKeys.has(key)
+      ? specialByKey.get(key)
+      : regularComparison?.seatsByKey.get(key);
+    if (!seat?.winner || !Number.isFinite(seat.turnout) || seat.turnout <= 0
+        || !(seat.votes[seat.winner] > 0)
+        || Object.values(seat.votes).some((votes) => !Number.isFinite(votes))) return null;
+    seats.push(seat);
+  }
+  return ElectionData.fromSeats(seats);
 }

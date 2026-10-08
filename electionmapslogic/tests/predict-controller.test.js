@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // predict-controller imports the DOM render layer (dom.js) and the predict view module
 // (predict-view.js) at module load, both of which touch document/observers. Stub them so the
@@ -26,7 +26,7 @@ import {
   parliamentHasForecast,
 } from '../features/predict-controller.js';
 import { setApplyActionVisible, setPredictActionHandlers } from '../features/predict-view.js';
-import { manifest, state, ElectionData } from '../state.js';
+import { manifest, page, state, ElectionData } from '../state.js';
 import { fetchJson } from '../files.js';
 
 describe('getPredictBaseElection', () => {
@@ -250,6 +250,7 @@ describe('activatePredictView Senate special elections', () => {
   }
 
   beforeEach(() => { fetchJson.mockReset(); });
+  afterEach(() => { delete page.dataBase; });
 
   it('fetches each distinct special baseline once and adds only the named seats', async () => {
     configureSenate('p_specials', { specialElections: specials });
@@ -284,5 +285,55 @@ describe('activatePredictView Senate special elections', () => {
     await runActivate();
     expect(fetchJson).not.toHaveBeenCalled();
     expect(state.predictModel.projectionBase.map((s) => s.seat)).toEqual(['Alpha']);
+  });
+
+  it("uses the page data path and normalized keys while preserving deduplication and share baselines", async () => {
+    configureSenate("p_specialdedup", { specialElections: [
+      ...specials.map((special) => ({ ...special, seat: ` ${special.seat.toUpperCase()} ` })),
+      { seat: "Alpha", class: 3, year: 2026, baselineElectionId: "2022-us-senate" },
+    ] });
+    page.dataBase = "custom-data";
+    fetchJson.mockImplementation((url) => {
+      if (url !== "custom-data/results/2022.json") throw new Error(`Unexpected URL: ${url}`);
+      return Promise.resolve({ seats: [
+        ...specialBaseline.seats, specialBaseline.seats[0],
+        { n: "Alpha", r: "east", w: "democrat", p: [["democrat", 900], ["republican", 100]] },
+      ] });
+    });
+    await runActivate();
+    const model = state.predictModel;
+    expect(fetchJson).toHaveBeenCalledExactlyOnceWith("custom-data/results/2022.json");
+    expect(model.projectionBase.map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida", "Ohio"]);
+    expect(model.projectionBase.find((seat) => seat.seat === "Alpha").votes).toEqual({ republican: 600, democrat: 400 });
+    expect(model.ballots[0].baseline.get("west").get("democrat")).toBe(30);
+    expect(model.ballots[0].baseline.get("south").get("democrat")).toBe(45);
+    expect(model.ballots[0].baseline.get("east").get("democrat")).toBe(40);
+    expect(model.comparisonSeatsForView()).toBe(model.projectionBase);
+    const payload = model.serialize();
+    model.deserialize(payload);
+    expect(model.serialize()).toBe(payload);
+    expect(model.project().map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida", "Ohio"]);
+  });
+
+  it("keeps loaded special groups when another baseline fails", async () => {
+    configureSenate("p_specialpartial", { specialElections: [
+      specials[0], { ...specials[1], baselineElectionId: "other-baseline" },
+    ] });
+    manifest.elections.push({ id: "other-baseline", mapId: 23 });
+    manifest.files.elections.electionsById["other-baseline"] = "results/other.json";
+    fetchJson.mockImplementation((url) => {
+      if (url === "data/results/2022.json") return Promise.resolve(specialBaseline);
+      if (url === "data/results/other.json") return Promise.reject(new Error("Unavailable"));
+      throw new Error(`Unexpected URL: ${url}`);
+    });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await runActivate();
+      expect(fetchJson.mock.calls.map(([url]) => url)).toEqual(["data/results/2022.json", "data/results/other.json"]);
+      expect(state.predictModel.projectionBase.map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida"]);
+      expect(state.predictModel.project().map((seat) => seat.seat).sort()).toEqual(["Alpha", "Florida"]);
+    } finally {
+      logged.mockRestore();
+    }
   });
 });

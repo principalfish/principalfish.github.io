@@ -17,7 +17,8 @@
 import { state, manifest, ElectionData, activeMapMode, buildRouteSearchParams } from '../state.js';
 import { predictModelClassFor } from './predict.js';
 import { fetchJson } from '../files.js';
-import { seatLookupKey } from '../utils.js';
+import { loadSenateSpecialBaseline } from "./senate-baseline.js";
+import { renderSenateForecastComparison, renderSenateForecastTabs } from "./senate-forecast-view.js";
 import {
   renderHeader,
   renderMap,
@@ -87,6 +88,8 @@ export function parliamentHasForecast(parliament) {
  * @returns {Promise<void>}
  */
 export async function activatePredictView() {
+  renderSenateForecastComparison();
+  renderSenateForecastTabs();
   const parliament = state.currentParliament;
   const parliamentConfig = manifest.parliamentConfig(parliament);
   const PredictModelClass = predictModelClassFor(parliament);
@@ -376,29 +379,7 @@ async function loadPredictSpecialSeats(model) {
   const specials = activeMapMode().senateSpecialElections || [];
   if (!specials.length) return;
 
-  const specialsByBaselineId = new Map();
-  specials.forEach((special) => {
-    const baselineId = special?.baselineElectionId;
-    if (!baselineId) return;
-    if (!specialsByBaselineId.has(baselineId)) specialsByBaselineId.set(baselineId, []);
-    specialsByBaselineId.get(baselineId).push(special);
-  });
-
-  const seats = [];
-  for (const [baselineId, entries] of specialsByBaselineId) {
-    const baselineElection = manifest.getElectionFromId(baselineId);
-    if (!baselineElection) continue;
-    const wanted = new Set(entries.map((special) => seatLookupKey(special?.seat || '')));
-    try {
-      const { dataFile } = manifest.resolveElectionFiles(baselineElection);
-      const baselineData = await fetchJson(`data/${dataFile}`);
-      const matching = new ElectionData(baselineData).currentSeats
-        .filter((seat) => wanted.has(seatLookupKey(seat.seat)));
-      seats.push(...matching);
-    } catch (error) {
-      console.error('Senate special baseline load failed', error);
-    }
-  }
+  const seats = await loadSenateSpecialBaseline(specials);
   model.setSpecialSeats(seats, specials);
 }
 

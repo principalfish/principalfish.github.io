@@ -721,6 +721,14 @@ replaces that state's class-3 member. Edit the shell and re-export when the cycl
 changes. A state with both a regular and a special race in one cycle cannot be
 represented; the queue reports it as a page failure.
 
+The saved Senate forecast's **Seats up** view compares each seat with its previous
+election: for 2026, the regular seats use 2020 results and Ohio and Florida use
+their declared 2022 baselines. These combined results drive seat and vote-share
+changes, gains and seat popups. If a required baseline is unavailable, the forecast
+still displays but its comparison is hidden and labelled "Comparison unavailable".
+**Full Senate** compares the projected chamber with current Senate membership;
+returning to **Seats up** restores the per-seat election comparison.
+
 ### CLI importers
 
 The same scrape without the review step. **The default is a dry-run listing**;

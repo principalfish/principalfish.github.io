@@ -1,5 +1,2 @@
 - add hover text on map (hover is currently disabled - dom.js sets mouseenter to null)
 - presidential EV counts: seats.electoral_votes exists, but export still uses the per-era table in old_data/scripts/usa/us_electoral_votes.py - needs per-era storage in the DB
-
-- server.sh watch loop records checksums after the rebuild, so a source edited mid-build is never rebuilt (stale .min.js can get committed) - take the checksum before running minify
-  - extend WATCH_FILES to include electionmapslogic/shell.html and electionmapslogic/features/{senate-baseline,senate-chamber,senate-forecast-controller,senate-forecast-view}.js, which are currently omitted

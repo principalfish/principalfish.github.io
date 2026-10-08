@@ -59,6 +59,15 @@ class TestEraForYear:
         assert us_ev._era_for_year(2000) == 1990
         assert us_ev._era_for_year(2004) == 2000
 
+    @pytest.mark.parametrize("year", [1960, 1970, 2022, 2032])
+    def test_unsupported_years_fail_for_all_units(self, year: int) -> None:
+        for unit in ("California", "Maine", "Maine CD-1", "Nebraska CD-3"):
+            with pytest.raises(ValueError, match=f"year {year}"):
+                us_ev.ev_for(unit, year)
+
+    def test_final_supported_target(self) -> None:
+        assert us_ev._era_for_year(2028) == 2020
+
 
 class TestEvFor:
     """ev_for: per-era lookups and ME/NE special cases."""
@@ -140,6 +149,10 @@ class TestEvFor:
     def test_unknown_unit_raises(self) -> None:
         with pytest.raises(KeyError):
             us_ev.ev_for("Nonexistent State", 2024)
+
+    def test_unknown_district_raises(self) -> None:
+        with pytest.raises(KeyError):
+            us_ev.ev_for("Maine CD-99", 2024)
 
 
 class TestEvMapForYear:

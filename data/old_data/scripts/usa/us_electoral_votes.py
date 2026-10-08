@@ -125,26 +125,30 @@ EV_BY_ERA: dict[int, dict[str, int]] = {
 }
 
 
+ELECTION_YEAR_INTERVALS: dict[int, tuple[int, int]] = {
+    1960: (1964, 1968),
+    1970: (1972, 1980),
+    1980: (1984, 1988),
+    1990: (1992, 2000),
+    2000: (2004, 2008),
+    2010: (2012, 2020),
+    2020: (2024, 2028),
+}
+
+
 def _era_for_year(year: int) -> int:
     """Return the apportionment era key for a presidential election year.
 
     Each election uses the apportionment from the previous decade's census:
     1964–1968 → 1960, 1972–1980 → 1970, 1984–1988 → 1980, 1992–2000 → 1990,
-    2004–2008 → 2000, 2012–2020 → 2010, 2024 and later → 2020.
+    2004–2008 → 2000, 2012–2020 → 2010, 2024–2028 → 2020.
+
+    Unsupported years raise ValueError rather than extending an allocation.
     """
-    if year <= 1968:
-        return 1960
-    if year <= 1980:
-        return 1970
-    if year <= 1988:
-        return 1980
-    if year <= 2000:
-        return 1990
-    if year <= 2008:
-        return 2000
-    if year <= 2020:
-        return 2010
-    return 2020
+    for era, (first, last) in ELECTION_YEAR_INTERVALS.items():
+        if first <= year <= last:
+            return era
+    raise ValueError(f"No supported electoral-vote allocation for year {year}")
 
 
 def ev_for(unit_name: str, year: int) -> int:
@@ -167,11 +171,7 @@ def ev_for(unit_name: str, year: int) -> int:
         KeyError: If ``unit_name`` is not a known unit for the year's era
             (a mis-named unit is a bug, not a silent zero).
     """
-    if unit_name == "Maine" or unit_name == "Nebraska":
-        return 2
-    if unit_name.startswith("Maine CD-") or unit_name.startswith("Nebraska CD-"):
-        return 1
-    return EV_BY_ERA[_era_for_year(year)][unit_name]
+    return ev_map_for_year(year)[unit_name]
 
 
 def ev_map_for_year(year: int) -> dict[str, int]:

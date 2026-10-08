@@ -201,6 +201,40 @@ class Seat(Base):
         return f"<Seat {self.seat_name}>"
 
 
+class USElectoralVoteEra(Base):
+    """Supported election-year interval for one census allocation."""
+
+    __tablename__ = "us_electoral_vote_eras"
+    __table_args__ = (
+        CheckConstraint(
+            "first_election_year <= last_election_year",
+            name="ck_us_electoral_vote_era_interval",
+        ),
+    )
+
+    census_year: Mapped[int] = mapped_column(Integer, primary_key=True)
+    first_election_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_election_year: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class USElectoralVoteAllocation(Base):
+    """Electoral votes for a stable presidential tally-unit name in an era."""
+
+    __tablename__ = "us_electoral_vote_allocations"
+    __table_args__ = (
+        CheckConstraint(
+            "electoral_votes > 0 AND typeof(electoral_votes) = 'integer'",
+            name="ck_us_electoral_vote_allocation_positive_integer",
+        ),
+    )
+
+    era_year: Mapped[int] = mapped_column(
+        Integer, ForeignKey("us_electoral_vote_eras.census_year"), primary_key=True,
+    )
+    unit_name: Mapped[str] = mapped_column(String, primary_key=True)
+    electoral_votes: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 class Election(Base):
     """ORM model for the ``elections`` table.
 
@@ -219,6 +253,7 @@ class Election(Base):
             Used by model runs to reference the real election they are derived
             from.
         election_date: Optional specific date of the election.
+        target_election_year: Target cycle for presidential model runs.
         map: The owning ``Map`` instance.
         parent_election: Optional parent ``Election`` instance.
         votes: All ``Vote`` records belonging to this election.
@@ -233,6 +268,7 @@ class Election(Base):
     type: Mapped[ElectionType] = mapped_column(Enum(ElectionType), nullable=False)
     parent_election_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("elections.id"), nullable=True)
     election_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    target_election_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     map: Mapped["Map"] = relationship("Map", back_populates="elections")
     parent_election: Mapped[Optional["Election"]] = relationship("Election", remote_side="Election.id")

@@ -77,7 +77,8 @@ def ensure_elections_sqlite_schema(conn: sqlite3.Connection) -> None:
             name TEXT NOT NULL UNIQUE,
             type TEXT NOT NULL,
             parent_election_id INTEGER,
-            election_date TEXT
+            election_date TEXT,
+            target_election_year INTEGER
         );
         CREATE TABLE IF NOT EXISTS votes (
             id INTEGER PRIMARY KEY,

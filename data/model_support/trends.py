@@ -168,11 +168,11 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             ):
                 if eid in year_by_election:
                     units_by_year.setdefault(year_by_election[eid], set()).add(
-                        unit_name
+                        unit_name,
                     )
             weights_by_year = {
                 year: get_electoral_votes_sqlite(
-                    conn, year, units_by_year.get(year, set())
+                    conn, year, units_by_year.get(year, set()),
                 )
                 for year in set(year_by_election.values())
             }

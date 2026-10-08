@@ -24,7 +24,7 @@ def seed_allocations(
         session.flush()
         session.add_all(
             USElectoralVoteAllocation(
-                era_year=census_year, unit_name=name, electoral_votes=weight
+                era_year=census_year, unit_name=name, electoral_votes=weight,
             )
             for name, weight in weights.items()
         )

@@ -33,8 +33,8 @@ from electoral_votes import (
     get_electoral_votes_sqlite,
 )
 from import_presidential_elections import import_presidential
-from model_support.persistence import OutputScope, OutputVote, replace_output
 from model_support import trends
+from model_support.persistence import OutputScope, OutputVote, replace_output
 from model_support.trends import reconstruct_trends
 from models import Election, ElectionType, Map, Seat, USElectoralVoteAllocation
 from scripts.export_elections import _export_page

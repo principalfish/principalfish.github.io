@@ -81,7 +81,9 @@ def allocation_year(
 ) -> int:
     """Actual elections use their year; presidential forecasts require a target."""
     kind = (
-        election_type.value if isinstance(election_type, ElectionType) else election_type
+        election_type.value
+        if isinstance(election_type, ElectionType)
+        else election_type
     )
     if kind == ElectionType.us_presidential.value:
         return positive_integer(year, context="Presidential election year")

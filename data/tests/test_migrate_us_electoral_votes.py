@@ -112,6 +112,60 @@ def test_rerun_preserves_edits_custom_rows_and_targets(
     assert list(legacy.iterdump()) == before
 
 
+@pytest.mark.parametrize("dry_run", [True, False], ids=["dry_run", "apply"])
+@pytest.mark.parametrize(
+    ("allocation", "error"),
+    [
+        pytest.param((2020, "California", 0), "Stored weight", id="zero_weight"),
+        pytest.param((2020, "California", -1), "Stored weight", id="negative_weight"),
+        pytest.param(
+            (2020, "California", 1.5), "Stored weight", id="fractional_weight",
+        ),
+        pytest.param(
+            (2020, "California", "invalid"), "Stored weight", id="text_weight",
+        ),
+        pytest.param((2020, "California", None), "Stored weight", id="null_weight"),
+        pytest.param((2020, "", 54), "Invalid allocation unit", id="empty_unit"),
+        pytest.param((2020, None, 54), "Invalid allocation unit", id="null_unit"),
+        pytest.param((2020, 123, 54), "Invalid allocation unit", id="numeric_unit"),
+        pytest.param((0, "California", 54), "Allocation era", id="zero_era"),
+        pytest.param((-1, "California", 54), "Allocation era", id="negative_era"),
+        pytest.param((1.5, "California", 54), "Allocation era", id="fractional_era"),
+        pytest.param(("2020", "California", 54), "Allocation era", id="text_era"),
+        pytest.param((None, "California", 54), "Allocation era", id="null_era"),
+        pytest.param((2030, "California", 54), "unknown era", id="unknown_era"),
+    ],
+)
+def test_migration_rejects_invalid_existing_allocations_without_changes(
+    legacy: sqlite3.Connection,
+    legacy_path: Path,
+    allocation: tuple[object, object, object],
+    error: str,
+    dry_run: bool,
+) -> None:
+    # Unconstrained legacy rows let the migration's validation face corrupt data.
+    legacy.execute(
+        "CREATE TABLE us_electoral_vote_allocations "
+        "(era_year, unit_name, electoral_votes)",
+    )
+    legacy.execute(
+        "INSERT INTO us_electoral_vote_allocations VALUES (?, ?, ?)", allocation,
+    )
+    legacy.execute("CREATE TABLE maps (id INTEGER PRIMARY KEY, parliament TEXT)")
+    legacy.execute("INSERT INTO maps VALUES (7, 'us_president')")
+    legacy.commit()
+    before_dump = list(legacy.iterdump())
+    before_bytes = legacy_path.read_bytes()
+
+    with closing(open_database(legacy_path, read_only=dry_run)) as conn:
+        with pytest.raises(ElectoralVoteError, match=error):
+            migrate(conn, dry_run=dry_run)
+        assert not conn.in_transaction
+
+    assert list(legacy.iterdump()) == before_dump
+    assert legacy_path.read_bytes() == before_bytes
+
+
 def _insert_legacy_rows(conn: sqlite3.Connection) -> None:
     conn.executemany(
         "INSERT INTO elections (map_id, year, name, type, election_date) "

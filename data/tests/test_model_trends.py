@@ -26,10 +26,13 @@ from model_support.trends import (
     trend_batch,
 )
 from scripts.rebuild_model_trends import main
+from tests.us_ev_fixtures import seed_allocations
 
 
 def setup_scope(db: Database, model: str) -> tuple[OutputScope, list[int], list[int]]:
     definition = TREND_MODELS[model]
+    if model == "us-president":
+        seed_allocations(db, {"Maine": 2, "Maine CD-1": 1})
     election_map = db.add_map("Test map", parliament=definition.parliament)
     party_ids = [db.add_party("A").id, db.add_party("B").id]
     seats = [
@@ -63,6 +66,7 @@ def store(
             OutputVote(seat, parties[i], "", votes, i == winner)
             for i, votes in enumerate((share, 100 - share))
         ],
+        target_election_year=2028 if scope.election_type == "us_presidential_model" else None,
     )
 
 
@@ -142,6 +146,7 @@ def test_popular_votes_use_nonduplicated_units(
             OutputVote(seats[0], parties[1], "", 40, False),
             OutputVote(child, parties[1], "", 10000, True),
         ],
+        target_election_year=2028 if model == "us-president" else None,
     )
     entry = reconstruct_trends(only_the_test_database, scope)[0]
     assert entry["parties"][str(parties[0])]["v"] == 60.0
@@ -373,6 +378,7 @@ def test_identical_serialized_metrics_and_zero_totals(
                 OutputVote(seats[0], party, "", 0, i == 0)
                 for i, party in enumerate(parties)
             ],
+            target_election_year=2028 if model == "us-president" else None,
         )
     entries = reconstruct_trends(only_the_test_database, scope)
     assert len(entries) == 1

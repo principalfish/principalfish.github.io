@@ -3,12 +3,13 @@
 Reads the ``{ "California": {seatInfo, partyInfo}, ... }`` JSON produced by
 ``convert_538_presidential.py`` and loads it as a ``us_presidential`` election: a Map
 (fixed id 22), one Region per state, 56 elector-unit Seats (50 states + DC + the
-Maine/Nebraska statewide and district units), each carrying ``electoral_votes``, and
+Maine/Nebraska statewide and district units), and
 per-party Vote rows. The two statewide ME/NE units have no map polygon — they are
-tally-only — but still hold their 2 EV. Seat geometry lives in the frontend TopoJSON
+tally-only. Electoral-vote weights come from the database allocation tables, not
+the JSON or seat rows. Seat geometry lives in the frontend TopoJSON
 (``uselectionmaps/data/maps/map-22.topo.json``).
 
-Run ``import_parties.py`` first so the US Party rows exist.
+Run ``import_parties.py`` and the electoral-vote migration/bootstrap first.
 
 Usage:
     python old_data/scripts/usa/import_presidential_elections.py \
@@ -27,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from db import Database
+from electoral_votes import get_electoral_votes
 from models import ElectionType
 from us_import import ensure_us_map, import_us_election
 
@@ -68,18 +70,20 @@ def import_presidential(
     Returns:
         The number of Vote rows inserted.
     """
+    data = json.loads(file.read_text(encoding="utf-8"))
+    # Validate before --replace can delete the existing map and results.
+    with db.session() as session:
+        get_electoral_votes(session, year, data)
     pres_map = ensure_us_map(
         db, MAP_ID, MAP_NAME, "us_presidential", replace=replace and not refresh
     )
-    data = json.loads(file.read_text(encoding="utf-8"))
     # An elector unit's state is its name with any " CD-N" district suffix stripped, so
-    # ME/NE district units group under their parent state; seats carry electoral votes.
+    # ME/NE district units group under their parent state.
     return import_us_election(
         db, data, pres_map,
         election_type=ElectionType.us_presidential,
         year=year, name=name,
         state_for_key=region_for,
-        with_electoral_votes=True,
         refresh=refresh,
     )
 

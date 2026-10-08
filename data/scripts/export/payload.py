@@ -95,10 +95,9 @@ def build_result_payload(
         election_year: Four-digit year of the election, forwarded to
             ``legacy_party_key_for_vote`` for Reform UK / UKIP resolution.
             Pass ``None`` when unknown.
-        ev_by_unit: Optional ``{seat_name: electoral_votes}`` map (the per-era
-            presidential EV table). When provided, a seat's ``ev`` is taken
-            from this map by seat name; when ``None``, it falls back to the
-            seat's stored ``electoral_votes`` (non-presidential maps, e.g. UK).
+        ev_by_unit: Optional ``{seat_name: electoral_votes}`` mapping. Application
+            presidential exports provide validated database allocation weights.
+            When ``None``, direct callers retain the legacy seat-field behavior.
 
     Returns:
         Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` where
@@ -169,8 +168,8 @@ def build_result_payload(
         }
         # Electoral-vote weight for presidential seats; omitted elsewhere so the field
         # only appears where a tally needs it.
-        # When ev_by_unit is provided (per-era presidential EV table), use it;
-        # fall back to the seat's stored value for non-presidential maps (UK etc.).
+        # Presidential callers supply validated database allocation weights;
+        # direct utility callers retain the legacy seat-field behavior.
         if ev_by_unit is not None:
             ev_val = ev_by_unit.get(seat.seat_name)
             if ev_val is not None:

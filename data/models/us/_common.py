@@ -50,7 +50,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Callable, Literal
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 # ``data/`` root — home of config.py / db.py / models.py.
 DATA_DIR = Path(__file__).resolve().parents[2]
@@ -59,6 +59,7 @@ if str(DATA_DIR) not in sys.path:
 
 from config import DatabaseConfig
 from db import Database
+from electoral_votes import allocation_year, get_electoral_votes, positive_integer
 from model_support.history import HistoryRecomputationError
 from model_support.io import publish_json, validate_output_target
 from model_support.trends import (
@@ -171,6 +172,8 @@ class UsModelSpec:
             source of truth is ``map-modes-shell.json``, which names elections the way
             the exported manifest does; :func:`resolve_special_baselines` turns them
             into rows. Consumed by the baseline loader.
+        target_election_year: Presidential allocation year; other chambers leave it
+            unset.
     """
 
     map_name: str
@@ -186,6 +189,7 @@ class UsModelSpec:
     # A factory, not a shared ``{}``: a mutable default would be one dict for
     # every spec ever built.
     seat_baseline_overrides: Mapping[str, str] = field(default_factory=dict)
+    target_election_year: int | None = None
 
 
 @dataclass
@@ -206,6 +210,8 @@ class UsSimulationConfig:
         ignore_seat_polls: When ``True``, skip the seat-blending step entirely and
             project the pure uniform national swing, as the model did before seat
             polls existed. Useful for comparing the two (``--ignore-seat-polls``).
+        target_election_year: Explicit presidential target, defaulted from the spec.
+            Independent of the run's as-of date.
     """
 
     spec: UsModelSpec
@@ -215,11 +221,22 @@ class UsSimulationConfig:
     dry_run: bool
     seat_prior_weight: float = 1.0
     ignore_seat_polls: bool = False
+    target_election_year: int | None = None
 
     def __post_init__(self) -> None:
         validate_half_life(self.half_life_days)
         validate_prior_weight(self.seat_prior_weight)
         validate_date_window(self.since_date, self.as_of_date)
+        if self.spec.election_type == "us_presidential_model":
+            self.target_election_year = allocation_year(
+                self.spec.election_type,
+                self.as_of_date.year,
+                self.target_election_year
+                if self.target_election_year is not None
+                else self.spec.target_election_year,
+            )
+        elif self.target_election_year is not None:
+            raise ValueError("Only presidential forecasts have a target election year")
 
 
 @dataclass
@@ -229,7 +246,6 @@ class SeatRef:
     id: int
     region_id: int | None
     seat_name: str = ""
-    electoral_votes: int = 0
 
 
 @dataclass
@@ -1476,7 +1492,7 @@ def fetch_seat_refs(db: Database, map_id: int, allowlist: frozenset[str] | None 
         rows = session.execute(
             text(
                 """
-                SELECT id, region_id, seat_name, electoral_votes
+                SELECT id, region_id, seat_name
                 FROM seats
                 WHERE map_id = :map_id
                 ORDER BY seat_name
@@ -1490,7 +1506,6 @@ def fetch_seat_refs(db: Database, map_id: int, allowlist: frozenset[str] | None 
             id=int(row.id),
             region_id=row.region_id,
             seat_name=str(row.seat_name or ""),
-            electoral_votes=int(row.electoral_votes or 0),
         )
         for row in rows
     ]
@@ -2036,6 +2051,8 @@ def persist_projection(
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
     sqlite_path: Path | None = None,
+    *,
+    target_election_year: int | None = None,
 ) -> tuple[str, int]:
     """Replace this model/map/date and all its vote rows in one transaction.
 
@@ -2046,6 +2063,14 @@ def persist_projection(
     Returns ``(election_name, election_id)``.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
+    if spec.election_type == "us_presidential_model":
+        target_election_year = allocation_year(
+            spec.election_type,
+            as_of_date.year,
+            target_election_year
+            if target_election_year is not None
+            else spec.target_election_year,
+        )
     return replace_output(
         sqlite_path,
         OutputScope(spec.election_type, map_id, spec.election_name_prefix),
@@ -2061,6 +2086,7 @@ def persist_projection(
             )
             for row in recorded_vote_rows(projected_votes)
         ),
+        target_election_year=target_election_year,
     )
 
 
@@ -2090,6 +2116,8 @@ def write_trend_cache_meta(
     since_date: date,
     latest_poll_usage: LatestPollUsage | None,
     matchup: str | None = None,
+    *,
+    target_election_year: int | None = None,
 ) -> None:
     """Overwrite the type's trend metadata JSON (date window + latest poll).
 
@@ -2097,7 +2125,7 @@ def write_trend_cache_meta(
     head-to-head); ``None`` for a party-only series, which is what the poll
     tracker shows for the House and Senate.
     """
-    payload = {
+    payload: dict[str, Any] = {
         "as_of_date": as_of_date.isoformat(),
         "since_date": since_date.isoformat(),
         "matchup": matchup,
@@ -2115,6 +2143,14 @@ def write_trend_cache_meta(
             else None
         ),
     }
+    if spec.election_type == "us_presidential_model":
+        payload["target_election_year"] = allocation_year(
+            spec.election_type,
+            as_of_date.year,
+            target_election_year
+            if target_election_year is not None
+            else spec.target_election_year,
+        )
     publish_json(
         payload,
         spec.trend_cache_meta_json,
@@ -2210,9 +2246,9 @@ def run_simulation(
     Returns ``(election_name, projected_votes, region_diff_rows, winners_by_party,
     latest_poll_usage, electoral_votes_by_party, seat_poll_diagnostics)``.
     ``electoral_votes_by_party`` is party-name → EV won, non-zero only for the
-    President (whose seats carry ``electoral_votes``). ``seat_poll_diagnostics``
-    holds the ``SEAT_POLL`` lines, returned rather than printed so a 365-day
-    backfill does not emit one per seat per day.
+    President, using the configured target's database allocation.
+    ``seat_poll_diagnostics`` holds the ``SEAT_POLL`` lines, returned rather than
+    printed so a 365-day backfill does not emit one per seat per day.
     """
     spec = cfg.spec
     poll_map, baseline = resolve_simulation_scope(db, spec)
@@ -2323,7 +2359,17 @@ def run_simulation(
     election_name = _election_name_pattern(spec, cfg.as_of_date)
 
     # Electoral votes won per party (by name), non-zero only for the President.
-    seat_ev_by_id = {seat.id: seat.electoral_votes for seat in seats}
+    seat_ev_by_id: dict[int, int] = {}
+    if spec.election_type == "us_presidential_model":
+        with db.session() as session:
+            ev_by_unit = get_electoral_votes(
+                session,
+                allocation_year(
+                    spec.election_type, cfg.as_of_date.year, cfg.target_election_year
+                ),
+                (seat.seat_name for seat in seats),
+            )
+        seat_ev_by_id = {seat.id: ev_by_unit[seat.seat_name] for seat in seats}
     summary = summarize_votes(
         projected_votes,
         popular_vote_seat_ids=popular_vote_seat_ids,
@@ -2357,6 +2403,7 @@ def run_simulation(
         projected_votes,
         party_name_by_id,
         sqlite_path,
+        target_election_year=cfg.target_election_year,
     )
     update_trend_cache_json(
         spec,
@@ -2518,6 +2565,7 @@ def run_retrospective_range(
                     dry_run=args.dry_run,
                     seat_prior_weight=args.seat_prior_weight,
                     ignore_seat_polls=args.ignore_seat_polls,
+                    target_election_year=getattr(args, "target_election_year", None),
                 )
                 election_name, projected_votes, _, _, _, _, _ = run_simulation(db, cfg)
                 success_count += 1
@@ -2565,9 +2613,23 @@ def _non_negative_float(raw: str) -> float:
         raise argparse.ArgumentTypeError(str(err)) from err
 
 
+def _positive_election_year(raw: str) -> int:
+    try:
+        return positive_integer(int(raw), context="target election year")
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(str(err)) from err
+
+
 def build_arg_parser(spec: UsModelSpec) -> argparse.ArgumentParser:
     """Build the shared CLI parser for a runner, defaulted from ``spec``."""
     parser = argparse.ArgumentParser(description=f"Run the {spec.election_name_prefix} forecast model.")
+    if spec.election_type == "us_presidential_model":
+        parser.add_argument(
+            "--target-election-year",
+            type=_positive_election_year,
+            default=spec.target_election_year,
+            help="Presidential election whose electoral-vote allocation to use",
+        )
     parser.add_argument("--half-life-days", type=float, default=30.0)
     parser.add_argument(
         "--dry-run", action="store_true", help="Compute without database or file writes"
@@ -2635,6 +2697,7 @@ def _build_config_from_args(spec: UsModelSpec, args: argparse.Namespace) -> UsSi
         dry_run=args.dry_run,
         seat_prior_weight=args.seat_prior_weight,
         ignore_seat_polls=args.ignore_seat_polls,
+        target_election_year=getattr(args, "target_election_year", None),
     )
 
 
@@ -2844,6 +2907,7 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             dry_run=cfg.dry_run,
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
+            target_election_year=cfg.target_election_year,
         )
 
     lookback_days = max(0, (cfg.as_of_date - cfg.since_date).days)
@@ -2854,6 +2918,30 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
     run_dates = dates_to_run_for_cfg(
         cfg, database_file(db), map_id=_output_map_id(db, spec)
     )
+    if (
+        spec.election_type == "us_presidential_model"
+        and cfg.as_of_date not in run_dates
+    ):
+        output_scope = OutputScope(
+            spec.election_type, _output_map_id(db, spec), spec.election_name_prefix
+        )
+        with db.session() as session:
+            current_targets = session.execute(
+                select(Election.name, Election.target_election_year).where(
+                    Election.type == spec.election_type,
+                    Election.map_id == output_scope.map_id,
+                    Election.name.startswith(
+                        f"{spec.election_name_prefix} {cfg.as_of_date}", autoescape=True
+                    ),
+                )
+            ).all()
+        # A gap fill must not leave the current date on a different target cycle.
+        if any(
+            output_scope.date_from_name(name) == cfg.as_of_date
+            and target != cfg.target_election_year
+            for name, target in current_targets
+        ):
+            run_dates.append(cfg.as_of_date)
     if len(run_dates) > 1:
         print(f"AUTO-BACKFILL missing_dates={len(run_dates)} from={run_dates[0]} to={run_dates[-1]}")
 
@@ -2876,6 +2964,7 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
                 dry_run=cfg.dry_run,
                 seat_prior_weight=cfg.seat_prior_weight,
                 ignore_seat_polls=cfg.ignore_seat_polls,
+                target_election_year=cfg.target_election_year,
             )
             (
                 election_name,
@@ -2930,6 +3019,7 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             dry_run=True,
             seat_prior_weight=cfg.seat_prior_weight,
             ignore_seat_polls=cfg.ignore_seat_polls,
+            target_election_year=cfg.target_election_year,
         )
         _, _, _, _, latest_poll_usage, _, _ = run_simulation(
             db, meta_cfg, poll_window=selected_polls
@@ -2942,6 +3032,7 @@ def main_for_spec(spec: UsModelSpec, db_factory: Callable[[], Database] | None =
             cfg.as_of_date - timedelta(days=lookback_days),
             latest_poll_usage,
             matchup=scope.national_matchup,
+            target_election_year=cfg.target_election_year,
         )
 
     return 0

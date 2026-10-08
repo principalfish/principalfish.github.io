@@ -21,6 +21,7 @@ from scripts.export.payload import SeatRow, build_result_payload
 from scripts.rebuild_model_trends import main
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
+from tests.us_ev_fixtures import seed_allocations
 
 
 @pytest.mark.parametrize("model", TREND_MODELS)
@@ -33,6 +34,8 @@ def test_repaired_history_feeds_export_and_console(
     cache_state: str,
 ) -> None:
     definition = TREND_MODELS[model]
+    if model == "us-president":
+        seed_allocations(db, {"Maine": 2, "Maine CD-1": 1})
     election_map = db.add_map("Consumer map", parliament=definition.parliament)
     party_a = db.add_party("A")
     party_b = db.add_party("B")
@@ -58,6 +61,7 @@ def test_repaired_history_feeds_export_and_console(
                 OutputVote(primary.id, party_b.id, "", 100 - share, False),
                 OutputVote(extra.id, party_b.id, "", 300, True),
             ],
+            target_election_year=2028 if model == "us-president" else None,
         )
     cache = tmp_path / "repaired.json"
     if cache_state == "corrupt":

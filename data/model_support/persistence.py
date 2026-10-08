@@ -12,6 +12,7 @@ from datetime import date
 from pathlib import Path
 
 from db import ensure_elections_sqlite_schema
+from electoral_votes import allocation_year
 
 _COMMITTED: ContextVar[tuple[tuple[Path, OutputScope, list[date]], ...]] = ContextVar(
     "committed_model_dates", default=()
@@ -114,10 +115,16 @@ def replace_output(
     as_of: date,
     election_name: str,
     votes: Iterable[OutputVote],
+    *,
+    target_election_year: int | None = None,
 ) -> tuple[str, int]:
     """Commit deletion and insertion together, preserving old rows on failure."""
     if scope.date_from_name(election_name) != as_of:
         raise ValueError("Election name does not match the output date and scope")
+    if scope.election_type == "us_presidential_model":
+        allocation_year(scope.election_type, as_of.year, target_election_year)
+    elif target_election_year is not None:
+        raise ValueError("Only presidential outputs have a target election year")
     with closing(sqlite3.connect(sqlite_path)) as conn:
         # Schema preparation commits, so it must precede the replacement transaction.
         ensure_elections_sqlite_schema(conn)
@@ -125,16 +132,20 @@ def replace_output(
             # Start before selection so concurrent changes cannot split the replacement.
             conn.execute("BEGIN IMMEDIATE")
             _delete_range(conn, scope, as_of, as_of)
+            columns = "map_id, year, name, type, election_date"
+            values: tuple[int | str | None, ...] = (
+                scope.map_id,
+                as_of.year,
+                election_name,
+                scope.election_type,
+                as_of.isoformat(),
+            )
+            if scope.election_type == "us_presidential_model":
+                columns += ", target_election_year"
+                values += (target_election_year,)
+            placeholders = ",".join("?" for _ in values)
             cursor = conn.execute(
-                "INSERT INTO elections (map_id, year, name, type, election_date) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (
-                    scope.map_id,
-                    as_of.year,
-                    election_name,
-                    scope.election_type,
-                    as_of.isoformat(),
-                ),
+                f"INSERT INTO elections ({columns}) VALUES ({placeholders})", values
             )
             election_id = cursor.lastrowid
             if election_id is None:

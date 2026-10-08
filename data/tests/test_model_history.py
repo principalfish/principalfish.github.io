@@ -33,6 +33,7 @@ from tests import test_holyrood_model as holy
 from tests import test_us_model as us
 from tests import test_westminster_model as west
 from tests.uk_fixtures import seed_holyrood_world
+from tests.us_ev_fixtures import seed_allocations
 
 
 @dataclasses.dataclass
@@ -88,6 +89,8 @@ def history_case(
         assert baseline is not None
         map_id = baseline.map_id
     else:
+        if model == "us-president":
+            seed_allocations(db, {"Seat": 3})
         dem, rep = us._parties(db)
         election_map, _ = us._seat_map_with_baseline(
             db, model, definition.parliament, {"Seat": {dem.id: 60, rep.id: 40}}
@@ -97,6 +100,7 @@ def history_case(
             us._us_spec(tmp_path, map_name=election_map.name),
             election_type=definition.election_type,
             election_name_prefix=definition.name_prefix,
+            target_election_year=2028 if model == "us-president" else None,
         )
         cache = spec.trend_cache_json
         module, function = _common, "run_simulation"
@@ -138,6 +142,9 @@ def store_old(path: Path, case: HistoryCase, day: int) -> None:
         as_of,
         f"{case.scope.name_prefix} {as_of}",
         [OutputVote(case.seat, case.party, "old candidate", 17, True)],
+        target_election_year=(
+            2028 if case.scope.election_type == "us_presidential_model" else None
+        ),
     )
 
 
@@ -182,6 +189,9 @@ def test_failed_date_retains_old_rows_and_finalizes_actual_database(
         date(2026, 6, 2),
         "Unrelated 2026-06-02",
         [OutputVote(foreign_seat.id, case.party, "untouched", 42, True)],
+        target_election_year=(
+            2028 if case.scope.election_type == "us_presidential_model" else None
+        ),
     )
     foreign_before = rows(only_the_test_database, foreign_scope)
     before = rows(only_the_test_database, case.scope)

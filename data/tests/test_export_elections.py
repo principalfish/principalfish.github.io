@@ -27,6 +27,7 @@ from export_elections import (
     refresh_manifest_modes,
 )
 from scripts.export.ordering import float_model_entries_first, reorder_manifest_entries
+from tests.us_ev_fixtures import seed_canonical_allocations
 
 
 class _Election:
@@ -425,7 +426,6 @@ class TestMissingPrebuiltMapFails:
                     manifest_parties=[],
                     manifest_regions_by_map_id={},
                     has_electorate=True,
-                    has_electoral_votes=True,
                     single_election_mode=False,
                 )
         # The failure must happen before any results are written for the broken map.
@@ -454,6 +454,7 @@ class TestStateTrendsExport:
         Returns the page output root; the dummy TopoJSON is pre-created so the export does
         not raise FileNotFoundError on the pre-built-map check.
         """
+        seed_canonical_allocations(db)
         us_map = db.add_map("us-president", parliament="us_presidential")
         with db.session() as s:
             s.add(Party(id=DEM_PARTY_ID, name="Democratic", colour="#1375E1"))
@@ -499,7 +500,6 @@ class TestStateTrendsExport:
                 manifest_parties=[],
                 manifest_regions_by_map_id={},
                 has_electorate=True,
-                has_electoral_votes=True,
                 single_election_mode=False,
             )
 
@@ -539,7 +539,6 @@ class TestStateTrendsExport:
                 manifest_parties=[],
                 manifest_regions_by_map_id={},
                 has_electorate=True,
-                has_electoral_votes=True,
                 single_election_mode=False,
             )
 
@@ -557,6 +556,7 @@ class TestStateTrendsThirdParty:
 
     @classmethod
     def _seed(cls, db: Database, tmp_path: Path) -> Path:
+        seed_canonical_allocations(db)
         us_map = db.add_map("us-president", parliament="us_presidential")
         with db.session() as s:
             s.add(Party(id=DEM_PARTY_ID, name="Democratic", colour="#1375E1"))
@@ -597,7 +597,6 @@ class TestStateTrendsThirdParty:
                 manifest_parties=[],
                 manifest_regions_by_map_id={},
                 has_electorate=True,
-                has_electoral_votes=True,
                 single_election_mode=False,
             )
         trends_path = output_root / "results" / "us-president-trends-by-state.json"

@@ -108,6 +108,8 @@ class TestBuildSteps:
     def test_starts_with_parties_ends_with_export(self) -> None:
         steps = build_steps()
         assert steps[0].label == "Import parties"
+        assert steps[1].script.name == "migrate_us_electoral_votes.py"
+        assert steps[1].args == ("--legacy-forecast-target-year", "2028")
         assert steps[-1].label == "Export elections to static data"
         assert steps[-1].script.name == "export_elections.py"
 

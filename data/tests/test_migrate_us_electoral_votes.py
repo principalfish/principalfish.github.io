@@ -39,6 +39,26 @@ def legacy(legacy_path: Path) -> Iterator[sqlite3.Connection]:
         yield conn
 
 
+def test_migration_normalizes_only_legacy_presidential_map_labels(
+    legacy: sqlite3.Connection,
+) -> None:
+    legacy.execute("CREATE TABLE maps (id INTEGER PRIMARY KEY, parliament TEXT)")
+    legacy.executemany(
+        "INSERT INTO maps VALUES (?, ?)",
+        [(7, "us_president"), (8, "us_presidential"), (9, "us_house")],
+    )
+    legacy.commit()
+    report = "\n".join(migrate(legacy, dry_run=False))
+    assert "normalize 1 presidential map labels" in report
+    assert legacy.execute("SELECT parliament FROM maps ORDER BY id").fetchall() == [
+        ("us_presidential",), ("us_presidential",), ("us_house",)
+    ]
+    before = list(legacy.iterdump())
+    report = "\n".join(migrate(legacy, dry_run=False))
+    assert "normalize 0 presidential map labels" in report
+    assert list(legacy.iterdump()) == before
+
+
 def test_seed_structure() -> None:
     seeds = bootstrap_seeds()
     assert len(seeds) == 7
@@ -112,11 +132,15 @@ def test_read_only_dry_run_reports_legacy_without_changing_file(
 ) -> None:
     with closing(sqlite3.connect(legacy_path)) as conn:
         _insert_legacy_rows(conn)
+        conn.execute("CREATE TABLE maps (id INTEGER PRIMARY KEY, parliament TEXT)")
+        conn.execute("INSERT INTO maps VALUES (7, 'us_president')")
+        conn.commit()
     before = legacy_path.read_bytes()
     with closing(open_database(legacy_path, read_only=True)) as conn:
         report = "\n".join(migrate(conn, dry_run=True))
         assert "7 eras and 392 allocation rows" in report
         assert "NULL targets: 3" in report
+        assert "normalize 1 presidential map labels" in report
         assert "map_id=7: 2 runs, dates 2025-01-01 through 2026-10-08" in report
         assert "map_id=8: 1 runs" in report
         assert "requires --legacy-forecast-target-year" in report
@@ -192,6 +216,9 @@ def test_merged_overlap_rejects_before_schema_changes(
 def test_failure_rolls_back_column_tables_and_seed_data(
     legacy: sqlite3.Connection,
 ) -> None:
+    legacy.execute("CREATE TABLE maps (id INTEGER PRIMARY KEY, parliament TEXT)")
+    legacy.execute("INSERT INTO maps VALUES (7, 'us_president')")
+    legacy.commit()
     before = list(legacy.iterdump())
 
     def reject_allocations(action: int, name: str | None, *args: object) -> int:

@@ -28,6 +28,7 @@ from tests import test_holyrood_model as holy
 from tests import test_us_model as us
 from tests import test_westminster_model as west
 from tests.uk_fixtures import WestminsterWorld, seed_holyrood_world
+from tests.us_ev_fixtures import seed_allocations
 
 
 def database_snapshot(path: Path) -> tuple[str, ...]:
@@ -388,14 +389,19 @@ def test_us_default_dry_run_preserves_all_outputs(
         trends, "default_trend_path", lambda _: results / "unexpected.json"
     )
     dem, rep = us._parties(db)
+    if model == "president":
+        seed_allocations(db, {"One": 3})
     election_map, seats = us._seat_map_with_baseline(
-        db, f"test {model}", f"us_{model}", {"One": {dem.id: 60, rep.id: 40}}
+        db, f"test {model}",
+        "us_presidential" if model == "president" else f"us_{model}",
+        {"One": {dem.id: 60, rep.id: 40}},
     )
     spec = dataclasses.replace(
         us._us_spec(results, map_name=election_map.name),
         election_type=f"us_{'presidential' if model == 'president' else model}_model",
         tracked_matchup_required=model == "president",
         seat_matchup_policy="national" if model == "president" else "per_seat",
+        target_election_year=2028 if model == "president" else None,
     )
     matchup = us.VANCE_NEWSOM if model == "president" else None
     if matchup:
@@ -423,6 +429,7 @@ def test_us_default_dry_run_preserves_all_outputs(
                 candidate_name="",
             )
         ],
+        target_election_year=2028 if model == "president" else None,
     )
     seed_files([spec.trend_cache_json, spec.trend_cache_meta_json], existing)
     before_db = database_snapshot(only_the_test_database)
@@ -552,6 +559,8 @@ def test_regeneration_dry_run_preserves_default_and_explicit_destinations(
     model: str,
 ) -> None:
     spec = trends.TREND_MODELS[model]
+    if model == "us-president":
+        seed_allocations(db, {"One": 3})
     election_map = db.add_map(f"test {model}", parliament=spec.parliament)
     seat = db.add_seat(election_map.id, "One")
     party = db.add_party("Party")
@@ -569,6 +578,7 @@ def test_regeneration_dry_run_preserves_default_and_explicit_destinations(
                 candidate_name="",
             )
         ],
+        target_election_year=2028 if model == "us-president" else None,
     )
     default = tmp_path / "results" / "default.json"
     custom = tmp_path / "results" / "custom.json"

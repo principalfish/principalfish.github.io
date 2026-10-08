@@ -20,6 +20,7 @@ from db import Database
 from export_elections import _export_page
 from models import Election, ElectionType, Map
 from scripts.export.legacy import SUPPLEMENTAL_LEGACY_ELECTIONS
+from tests.us_ev_fixtures import seed_canonical_allocations, set_model_target
 from scripts.export.ordering import (
     finalize_manifest_order,
     float_model_entries_first,
@@ -77,7 +78,6 @@ def _export(
             manifest_parties=[],
             manifest_regions_by_map_id={},
             has_electorate=True,
-            has_electoral_votes=True,
             single_election_mode=single_election_mode,
         )
 
@@ -291,6 +291,7 @@ def test_new_uk_manifest_current_parliament_placement_and_default(
 
 @pytest.fixture
 def us_page(db: Database, tmp_path: Path) -> tuple[Path, list[int]]:
+    seed_canonical_allocations(db)
     # Match the shipped map IDs, including the supplemental Senate descriptor.
     with db.session() as session:
         session.add_all([
@@ -312,6 +313,7 @@ def us_page(db: Database, tmp_path: Path) -> tuple[Path, list[int]]:
         db.add_election(map_id, year, name, election_type).id
         for map_id, year, name, election_type in specs
     ]
+    set_model_target(db, election_ids[2])
     output_root = _prepare_page(tmp_path, [21, 22, 23])
     _write_json(output_root / "results" / "senate-current.json", {
         "schema": "pf-results-v4", "seats": [],

@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from db import Database
 from models import ElectionType, Vote
+from tests.us_ev_fixtures import seed_canonical_allocations
 
 USA_DIR = Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa"
 
@@ -103,9 +104,10 @@ def _seed_us_parties(db: Database) -> None:
         db.add_party(name)
 
 
-def test_import_presidential_sets_electoral_votes_and_regions(db: Database, tmp_path: Path) -> None:
-    """Seats carry electoral_votes; ME units group under the Maine region."""
+def test_import_presidential_ignores_json_weights_and_groups_regions(db: Database, tmp_path: Path) -> None:
+    """Database allocations own EVs; ME units group under the Maine region."""
     _seed_us_parties(db)
+    seed_canonical_allocations(db)
     election_json = tmp_path / "presidential-2024.json"
     election_json.write_text(json.dumps({
         "California": {"seatInfo": {"current": "democrat", "electoral_votes": 54},
@@ -121,8 +123,8 @@ def test_import_presidential_sets_electoral_votes_and_regions(db: Database, tmp_
     pres_map = db.get_map(import_pres.MAP_ID)
     assert pres_map is not None and pres_map.parliament == "us_presidential"
     seats = {s.seat_name: s for s in db.get_seats_for_map(pres_map.id)}
-    assert seats["California"].electoral_votes == 54
-    assert seats["Maine CD-2"].electoral_votes == 1
+    assert seats["California"].electoral_votes is None
+    assert seats["Maine CD-2"].electoral_votes is None
     regions = {r.name for r in db.get_regions_for_map(pres_map.id)}
     assert regions == {"Pacific", "New England"}  # CA -> Pacific; Maine + CD-2 -> New England
     election = db.get_election_by_name("2024 US Presidential Election")
@@ -132,6 +134,7 @@ def test_import_presidential_sets_electoral_votes_and_regions(db: Database, tmp_
 def test_import_presidential_marks_third_party_state_winner_elected(db: Database, tmp_path: Path) -> None:
     """A state won by a third party (Wallace 1968, keyed independent) elects that vote."""
     _seed_us_parties(db)
+    seed_canonical_allocations(db)
     election_json = tmp_path / "presidential-1968.json"
     election_json.write_text(json.dumps({
         "Mississippi": {

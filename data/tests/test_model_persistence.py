@@ -25,6 +25,7 @@ from db import Database
 from model_support.persistence import OutputScope, output_dates
 from models import ElectionType
 from tests.uk_fixtures import seed_holyrood_world, seed_westminster_world
+from tests.us_ev_fixtures import seed_allocations
 
 AS_OF = date(2026, 6, 1)
 KINDS = ("westminster", "holyrood", "us_house", "us_senate", "us_presidential")
@@ -126,8 +127,10 @@ def adapter(
     tmp_path: Path,
 ) -> Adapter:
     kind = str(request.param)
-    parliament = "us_president" if kind == "us_presidential" else kind
+    parliament = kind
     primary_map = db.add_map("Primary output map", parliament=parliament)
+    if kind == "us_presidential":
+        seed_allocations(db, {"Scoped seat": 1})
     db.add_seat(primary_map.id, "Scoped seat")
     db.add_party("A")
     db.add_party("B")
@@ -150,6 +153,7 @@ def adapter(
         election_name_prefix=prefix,
         trend_cache_json=trend,
         trend_cache_meta_json=tmp_path / "meta.json",
+        target_election_year=2028 if kind == "us_presidential" else None,
     )
     return Adapter(
         kind,
@@ -264,6 +268,11 @@ def test_deletion_and_dates_require_type_map_and_supported_name(
                 "VALUES (?, 1, 1, 777, 0)",
                 (cursor.lastrowid,),
             )
+        if adapter.kind == "us_presidential":
+            conn.execute(
+                "UPDATE elections SET target_election_year=2028 WHERE type=?",
+                (scope.election_type,),
+            )
         conn.execute(
             "INSERT INTO elections (map_id, year, name, type) VALUES (?,2026,?,?)",
             (scope.map_id, f"{scope.name_prefix} {AS_OF} (rerun)", scope.election_type),
@@ -322,7 +331,7 @@ def test_runner_failure_rolls_back_then_successful_rerun_replaces_once(
     else:
         seat_map = db.add_map(
             "Runner map",
-            parliament="us_president" if kind == "us_presidential" else kind,
+            parliament=kind,
         )
         region = db.add_region(seat_map.id, "Region")
         seat = db.add_seat(seat_map.id, "Alabama", region_id=region.id)
@@ -357,7 +366,10 @@ def test_runner_failure_rolls_back_then_successful_rerun_replaces_once(
             election_name_prefix=f"{kind} UNS",
             trend_cache_json=tmp_path / "trends.json",
             trend_cache_meta_json=tmp_path / "meta.json",
+            target_election_year=2028 if kind == "us_presidential" else None,
         )
+        if kind == "us_presidential":
+            seed_allocations(db, {"Alabama": 9})
         scope = OutputScope(spec.election_type, seat_map.id, spec.election_name_prefix)
         us_cfg = us.UsSimulationConfig(
             spec=spec,

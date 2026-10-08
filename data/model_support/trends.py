@@ -12,6 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
 
+from electoral_votes import (
+    ElectoralVoteError,
+    allocation_year,
+    get_electoral_votes_sqlite,
+)
 from model_support.io import (
     OutputPublicationError,
     publish_json,
@@ -64,7 +69,7 @@ TREND_MODELS = {
     "us-president": TrendModel(
         "us_presidential_model",
         "US President UNS",
-        "us_president",
+        "us_presidential",
         "uselectionmaps/data/results/us-president-trends.json",
     ),
 }
@@ -117,6 +122,7 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
     with closing(sqlite3.connect(sqlite_path)) as conn:
         conn.execute("BEGIN")
         _validate_scope(conn, scope)
+        is_presidential = scope.election_type == "us_presidential_model"
         elections = {
             int(election_id): (name, as_of)
             for election_id, name in conn.execute(
@@ -133,6 +139,46 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             )
         )
         id_by_name = {name: seat_id for seat_id, name in seats}
+        ev_by_election: dict[int, dict[str, int]] = {}
+        if is_presidential:
+            election_columns = {
+                row[1] for row in conn.execute("PRAGMA table_info(elections)")
+            }
+            if "target_election_year" not in election_columns:
+                raise ElectoralVoteError(
+                    "Presidential target metadata is missing; run "
+                    "scripts/migrate_us_electoral_votes.py "
+                    "with an explicit legacy target."
+                )
+            year_by_election = {
+                int(eid): allocation_year(scope.election_type, year, target)
+                for eid, year, target in conn.execute(
+                    "SELECT id,year,target_election_year FROM elections "
+                    "WHERE type=? AND map_id=?",
+                    (scope.election_type, scope.map_id),
+                )
+                if eid in elections
+            }
+            units_by_year: dict[int, set[str]] = {}
+            for eid, unit_name in conn.execute(
+                "SELECT DISTINCT e.id,s.seat_name FROM elections e "
+                "JOIN votes v ON v.election_id=e.id JOIN seats s ON s.id=v.seat_id "
+                "WHERE e.type=? AND e.map_id=?",
+                (scope.election_type, scope.map_id),
+            ):
+                if eid in year_by_election:
+                    units_by_year.setdefault(year_by_election[eid], set()).add(
+                        unit_name
+                    )
+            weights_by_year = {
+                year: get_electoral_votes_sqlite(
+                    conn, year, units_by_year.get(year, set())
+                )
+                for year in set(year_by_election.values())
+            }
+            ev_by_election = {
+                eid: weights_by_year[year] for eid, year in year_by_election.items()
+            }
         conn.execute(
             "CREATE TEMP TABLE trend_seats "
             "(id INTEGER PRIMARY KEY, popular INTEGER, parent_id INTEGER)"
@@ -158,14 +204,13 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
         metrics: dict[int, dict[str, dict[str, int | float]]] = {
             eid: {} for eid in elections
         }
-        for eid, pid, votes, elected, ev, has_popular in conn.execute(
+        for eid, pid, votes, elected, has_popular in conn.execute(
             "SELECT e.id,v.party_id,SUM(CASE WHEN t.popular=1 "
             "AND (t.parent_id IS NULL OR NOT EXISTS "
             "(SELECT 1 FROM votes p WHERE p.election_id=e.id "
             "AND p.seat_id=t.parent_id)) THEN v.vote_total ELSE 0 END),"
             "SUM(CASE WHEN v.elected THEN 1 ELSE 0 END),"
-            "SUM(CASE WHEN v.elected THEN COALESCE(s.electoral_votes,0) "
-            "ELSE 0 END),MAX(t.popular) "
+            "MAX(t.popular) "
             "FROM elections e JOIN votes v ON v.election_id=e.id "
             "JOIN seats s ON s.id=v.seat_id JOIN trend_seats t ON t.id=s.id "
             "WHERE e.type=? AND e.map_id=? GROUP BY e.id,v.party_id",
@@ -176,7 +221,16 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             ):
                 metrics[eid][str(pid)] = {"s": int(elected), "v": float(votes)}
                 if scope.election_type == "us_presidential_model":
-                    metrics[eid][str(pid)]["e"] = int(ev)
+                    metrics[eid][str(pid)]["e"] = 0
+        if is_presidential:
+            for eid, pid, unit_name in conn.execute(
+                "SELECT e.id,v.party_id,s.seat_name FROM elections e "
+                "JOIN votes v ON v.election_id=e.id JOIN seats s ON s.id=v.seat_id "
+                "WHERE e.type=? AND e.map_id=? AND v.elected",
+                (scope.election_type, scope.map_id),
+            ):
+                if eid in metrics:
+                    metrics[eid][str(pid)]["e"] += ev_by_election[eid][unit_name]
         dates: set[str] = set()
         for eid, (name, as_of) in sorted(
             elections.items(), key=lambda item: (item[1][1], item[0])

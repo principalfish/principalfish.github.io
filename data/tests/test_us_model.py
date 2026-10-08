@@ -32,6 +32,7 @@ from db import Database
 from models import ElectionType, Map, Party, Pollster, Seat
 from polls.importers.us import us_polls_common
 from polls.importers.us.us_polls_common import CandidateColumn, matchup_label
+from tests.us_ev_fixtures import seed_canonical_allocations
 
 import _common
 from _common import (
@@ -710,7 +711,7 @@ class TestResolvePollScope:
             resolve_poll_scope(db, spec)
 
     def test_president_without_a_tracked_row_raises(self, db: Database, tmp_path: Path) -> None:
-        db.add_map(PRESIDENT_MAP, parliament="us_president")
+        db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
 
         with pytest.raises(TrackedMatchupMissing, match="no tracked matchup has been set"):
@@ -719,7 +720,7 @@ class TestResolvePollScope:
     def test_president_with_a_null_matchup_row_counts_as_ignored(self, db: Database, tmp_path: Path) -> None:
         # A manual row with matchup NULL means "ignore this race": distinct from
         # "never configured", but just as unrunnable for the President.
-        president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
+        president_map = db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         db.set_tracked_matchup(president_map.id, None, None, source="manual")
         spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
 
@@ -727,7 +728,7 @@ class TestResolvePollScope:
             resolve_poll_scope(db, spec)
 
     def test_president_with_a_tracked_matchup_resolves(self, db: Database, tmp_path: Path) -> None:
-        president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
+        president_map = db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         db.set_tracked_matchup(president_map.id, None, VANCE_NEWSOM, source="manual")
         spec = _us_spec(
             tmp_path,
@@ -759,7 +760,7 @@ class TestAggregateNational:
     def _scaffold(db: Database) -> tuple[Party, Party, Pollster, Map, Seat]:
         dem, rep = _parties(db)
         pollster = db.add_pollster("Emerson", "emerson_us_president")
-        president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
+        president_map = db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         nevada = db.add_seat(president_map.id, "Nevada")
         return dem, rep, pollster, president_map, nevada
 
@@ -877,7 +878,7 @@ class TestLatestPollDate:
     def test_respects_map_seat_and_matchup(self, db: Database, tmp_path: Path) -> None:
         dem, rep = _parties(db)
         pollster = db.add_pollster("Emerson", "emerson_us_president")
-        president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
+        president_map = db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         nevada = db.add_seat(president_map.id, "Nevada")
         db.set_tracked_matchup(president_map.id, None, VANCE_NEWSOM, source="manual")
 
@@ -944,7 +945,7 @@ class TestMainForSpecWithoutMatchup:
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
+        president_map = db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         spec = _us_spec(
             tmp_path,
             map_name=PRESIDENT_MAP,
@@ -969,7 +970,7 @@ class TestMainForSpecWithoutMatchup:
         monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        president_map = db.add_map(PRESIDENT_MAP, parliament="us_president")
+        president_map = db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         db.set_tracked_matchup(president_map.id, None, None, source="manual")
         spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
         monkeypatch.setattr(sys, "argv", ["run_us_presidential_model.py", "--dry-run"])
@@ -985,7 +986,7 @@ class TestMainForSpecWithoutMatchup:
     ) -> None:
         # The scope is resolved before the retrospective branch, so --start-date
         # cannot sneak past the missing matchup.
-        db.add_map(PRESIDENT_MAP, parliament="us_president")
+        db.add_map(PRESIDENT_MAP, parliament="us_presidential")
         spec = _us_spec(tmp_path, map_name=PRESIDENT_MAP, tracked_matchup_required=True)
         monkeypatch.setattr(
             sys,
@@ -1056,13 +1057,17 @@ class TestTrendCacheMeta:
         displayed: str,
     ) -> None:
         spec = dataclasses.replace(
-            _us_spec(tmp_path, map_name=map_name), election_type=election_type
+            _us_spec(tmp_path, map_name=map_name),
+            election_type=election_type,
+            target_election_year=2028 if election_type == "us_presidential_model" else None,
         )
         usage = LatestPollUsage("YouGov (US House)", date(2026, 6, 1), date(2026, 6, 3))
 
         write_trend_cache_meta(spec, date(2026, 6, 3), date(2026, 5, 4), usage)
         payload = json.loads(spec.trend_cache_meta_json.read_text())
 
+        if election_type == "us_presidential_model":
+            assert payload.pop("target_election_year") == 2028
         assert payload == {
             "as_of_date": "2026-06-03",
             "since_date": "2026-05-04",
@@ -1968,7 +1973,7 @@ class TestRunSimulationSeatBlending:
         president_map, seats = _seat_map_with_baseline(
             db,
             PRESIDENT_MAP,
-            "us_president",
+            "us_presidential",
             {
                 "Nevada": {rep.id: 500.0, dem.id: 500.0},
                 "Ohio": {rep.id: 550.0, dem.id: 450.0},
@@ -2026,7 +2031,7 @@ class TestRunSimulationSeatBlending:
         president_map, seats = _seat_map_with_baseline(
             db,
             PRESIDENT_MAP,
-            "us_president",
+            "us_presidential",
             {
                 "Maine": {rep.id: 450.0, dem.id: 550.0},
                 "Maine CD-1": {rep.id: 350.0, dem.id: 650.0},
@@ -2170,7 +2175,7 @@ class TestLatestPollDateWithSeatPolls:
         dem, rep, _independent, _others = _us_parties(db)
         pollster = db.add_pollster("Emerson", "emerson_us_president")
         president_map, seats = _seat_map_with_baseline(
-            db, PRESIDENT_MAP, "us_president", {"Nevada": {rep.id: 500.0, dem.id: 500.0}}
+            db, PRESIDENT_MAP, "us_presidential", {"Nevada": {rep.id: 500.0, dem.id: 500.0}}
         )
         db.set_tracked_matchup(president_map.id, None, VANCE_NEWSOM, source="manual")
         _add_poll(
@@ -2671,10 +2676,11 @@ class TestPresidentialRecordedSummaries:
     ) -> None:
         dem, rep = _parties(db)
         district = f"{state} CD-1"
+        seed_canonical_allocations(db)
         election_map, seats = _seat_map_with_baseline(
             db,
             PRESIDENT_MAP,
-            "us_president",
+            "us_presidential",
             {
                 district: {dem.id: 20.0, rep.id: 80.0},
                 "District of Columbia": {dem.id: 50.0, rep.id: 50.0},
@@ -2683,6 +2689,7 @@ class TestPresidentialRecordedSummaries:
         spec = dataclasses.replace(
             _us_spec(tmp_path, map_name=PRESIDENT_MAP),
             election_type="us_presidential_model",
+            target_election_year=2028,
         )
         pollster = db.add_pollster("National poll", "national_president")
         _add_poll(
@@ -2747,6 +2754,7 @@ class TestPresidentialRecordedSummaries:
         district_independent_wins: bool,
     ) -> None:
         dem, rep, independent, _others = _us_parties(db)
+        seed_canonical_allocations(db)
         district = f"{state} CD-1"
         orphan = f"{other} CD-1"
         district_votes = (
@@ -2757,7 +2765,7 @@ class TestPresidentialRecordedSummaries:
         election_map, seats = _seat_map_with_baseline(
             db,
             PRESIDENT_MAP,
-            "us_president",
+            "us_presidential",
             {
                 state: {dem.id: 60.0, rep.id: 40.0},
                 "District of Columbia": {dem.id: 90.0, rep.id: 10.0},
@@ -2779,6 +2787,7 @@ class TestPresidentialRecordedSummaries:
         spec = dataclasses.replace(
             _us_spec(tmp_path, map_name=PRESIDENT_MAP),
             election_type="us_presidential_model",
+            target_election_year=2028,
         )
         baseline = db.get_election_by_name(spec.baseline_election_name)
         assert baseline is not None
@@ -4116,7 +4125,7 @@ class TestRebuildHistoryEndToEnd:
         president_map, _seats = _seat_map_with_baseline(
             db,
             PRESIDENT_MAP,
-            "us_president",
+            "us_presidential",
             {"Nevada": {rep.id: 510.0, dem.id: 490.0}, "Arizona": {rep.id: 520.0, dem.id: 480.0}},
         )
         # Newsom polls to 10 September and carries both states; Shapiro was last
@@ -4201,7 +4210,7 @@ def _contributor_world(db: Database, tmp_path: Path, contest: str) -> SimpleName
     election_map, seats = _seat_map_with_baseline(
         db,
         map_name,
-        f"us_{contest}",
+        "us_presidential" if contest == "president" else f"us_{contest}",
         {
             "Maine": {dem.id: 400.0, rep.id: 600.0},
             "Maine CD-2": {dem.id: 400.0, rep.id: 600.0},
@@ -4511,7 +4520,13 @@ class TestCandidateUsPollCaps:
         election_type = (
             "us_presidential_model" if contest == "president" else f"us_{contest}_model"
         )
-        spec = dataclasses.replace(world.spec, election_type=election_type)
+        if contest == "president":
+            seed_canonical_allocations(db)
+        spec = dataclasses.replace(
+            world.spec,
+            election_type=election_type,
+            target_election_year=2028 if contest == "president" else None,
+        )
         pollster = db.add_pollster("Latest (US House)", "latest")
         matchup = CONTRIBUTOR_MATCHUP if latest_seat else world.national_matchup
         _add_poll(

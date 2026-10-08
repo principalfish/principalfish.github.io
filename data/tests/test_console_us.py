@@ -22,6 +22,7 @@ from flask.testing import FlaskClient
 
 from db import Database
 from models import ElectionType
+from tests.us_ev_fixtures import seed_allocations, set_model_target
 
 from console import create_app
 from console import paths as console_paths
@@ -74,6 +75,7 @@ def _seed_us_president(db: Database) -> dict[str, int]:
 
     Two elector units: Big (EV 20, flips Rep→Dem in the forecast) and Small (EV 3, stays Rep).
     """
+    seed_allocations(db, {"Big State": 20, "Small State": 3})
     m = db.add_map("US Presidential 2024")
     region = db.add_region(m.id, "Pacific")
     dem = db.add_party("Democratic", colour="#1d4ed8")
@@ -88,6 +90,7 @@ def _seed_us_president(db: Database) -> dict[str, int]:
     db.add_vote(baseline.id, small.id, party_id=dem.id, vote_total=40.0)
 
     model = db.add_election(m.id, 2028, "US President UNS 2028-06-01", ElectionType.us_presidential_model)
+    set_model_target(db, model.id)
     db.add_vote(model.id, big.id, party_id=dem.id, vote_total=52.0, elected=True)
     db.add_vote(model.id, big.id, party_id=rep.id, vote_total=48.0)
     db.add_vote(model.id, small.id, party_id=rep.id, vote_total=58.0, elected=True)

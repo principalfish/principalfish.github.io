@@ -166,6 +166,14 @@ def _migrate(
     has_target = column_exists(conn, "elections", "target_election_year")
     groups = _legacy_groups(conn, has_target=has_target)
     legacy_count = sum(count for _, count, _, _ in groups)
+    has_maps = schema_object_exists(conn, "table", "maps")
+    legacy_map_count = (
+        int(conn.execute(
+            "SELECT COUNT(*) FROM maps WHERE parliament = 'us_president'"
+        ).fetchone()[0])
+        if has_maps
+        else 0
+    )
     if legacy_forecast_target_year is not None:
         select_era(merged, legacy_forecast_target_year)
     if legacy_count and legacy_forecast_target_year is None and not dry_run:
@@ -179,6 +187,8 @@ def _migrate(
         f"{prefix} insert {len(missing_eras)} eras and "
         f"{len(missing_allocations)} allocation rows; existing values are preserved.",
         f"Legacy presidential forecasts with NULL targets: {legacy_count}",
+        f"{prefix} normalize {legacy_map_count} presidential map labels "
+        "from us_president to us_presidential.",
     ]
     lines.extend(
         f"  map_id={map_id}: {count} runs, dates {first or 'unknown'} "
@@ -199,6 +209,11 @@ def _migrate(
         conn.execute("ALTER TABLE elections ADD COLUMN target_election_year INTEGER")
     conn.execute(ERAS_DDL)
     conn.execute(ALLOCATIONS_DDL)
+    if legacy_map_count:
+        conn.execute(
+            "UPDATE maps SET parliament = 'us_presidential' "
+            "WHERE parliament = 'us_president'"
+        )
     conn.executemany(
         "INSERT INTO us_electoral_vote_eras "
         "(census_year, first_election_year, last_election_year) VALUES (?, ?, ?)",

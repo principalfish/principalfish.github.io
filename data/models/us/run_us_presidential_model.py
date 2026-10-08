@@ -6,7 +6,7 @@ average (imported as national ``PollRow`` rows) and picks a winner-take-all part
 per elector unit (50 states + DC + the Maine/Nebraska congressional-district
 splits). Persists a ``us_presidential_model`` election and appends a poll-tracker
 trend entry. The electoral-vote tally itself is computed by the front end from the
-per-unit winners and each seat's ``electoral_votes``.
+per-unit winners and the exported database allocation for the target election.
 
 Presidential polls are stored one poll per matchup, so the run follows the
 national tracked matchup chosen in the console. With none set it writes nothing
@@ -44,6 +44,7 @@ SPEC = UsModelSpec(
     # Statewide presidential polls ask the same head-to-head as the national ones,
     # so they follow the national matchup rather than a per-seat one.
     seat_matchup_policy="national",
+    target_election_year=2028,
 )
 
 

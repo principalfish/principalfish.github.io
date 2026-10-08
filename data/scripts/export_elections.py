@@ -38,6 +38,7 @@ from sqlalchemy import inspect, select
 from sqlalchemy.orm import joinedload, Session
 
 from db import Database
+from electoral_votes import allocation_year, get_electoral_votes
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 from scripts.export.naming import (
     PARTY_NAME_TO_KEY,
@@ -83,17 +84,6 @@ from scripts.export.ordering import (
     insert_current_parliament_entry,
     insert_preserved_entry,
 )
-
-# old_data/scripts/usa/ is a scripts dir, not an importable package, so load the
-# per-era presidential EV table by file path (same pattern as tests use).
-import importlib.util as _importlib_util
-_US_EV_SPEC = _importlib_util.spec_from_file_location(
-    "us_electoral_votes",
-    Path(__file__).resolve().parents[1] / "old_data" / "scripts" / "usa" / "us_electoral_votes.py",
-)
-_us_ev_mod = _importlib_util.module_from_spec(_US_EV_SPEC)  # type: ignore[arg-type]
-_US_EV_SPEC.loader.exec_module(_us_ev_mod)  # type: ignore[union-attr]
-ev_map_for_year = _us_ev_mod.ev_map_for_year
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
 REP_PARTY_ID = 21   # Republican
@@ -326,7 +316,6 @@ def main() -> None:
     set_others_party_id(others_party.id)
     seat_columns = {column["name"] for column in inspect(db.engine).get_columns("seats")}
     has_electorate = "electorate" in seat_columns
-    has_electoral_votes = "electoral_votes" in seat_columns
 
     with db.session() as session:
         parties = session.execute(select(Party)).scalars().all()
@@ -476,7 +465,6 @@ def main() -> None:
                 manifest_parties=manifest_parties,
                 manifest_regions_by_map_id=manifest_regions_by_map_id,
                 has_electorate=has_electorate,
-                has_electoral_votes=has_electoral_votes,
                 single_election_mode=single_election_mode,
             )
 
@@ -490,7 +478,6 @@ def _export_page(
     manifest_parties: list[dict[str, Any]],
     manifest_regions_by_map_id: dict[str, list[dict[str, Any]]],
     has_electorate: bool,
-    has_electoral_votes: bool,
     single_election_mode: bool,
 ) -> None:
     """Build and write one page's results, maps, and map-modes.json manifest.
@@ -516,17 +503,12 @@ def _export_page(
         if map_row is None:
             raise RuntimeError(f"Election {election.id} has no map")
 
-        # Optional columns (electorate, electoral_votes) are appended only when present
-        # in the schema, so index positions depend on those flags.
+        # Electorate is optional in older seat schemas.
         columns: list[Any] = [Seat.id, Seat.seat_name, Region.id, Region.name]
         electorate_idx = None
-        electoral_votes_idx = None
         if has_electorate:
             electorate_idx = len(columns)
             columns.append(Seat.electorate)
-        if has_electoral_votes:
-            electoral_votes_idx = len(columns)
-            columns.append(Seat.electoral_votes)
 
         seat_rows = session.execute(
             select(*columns)
@@ -542,7 +524,6 @@ def _export_page(
                 region_id=row[2],
                 region_name=row[3],
                 electorate=(row[electorate_idx] if electorate_idx is not None else None),
-                electoral_votes=(row[electoral_votes_idx] if electoral_votes_idx is not None else None),
             )
             for row in seat_rows
         ]
@@ -578,8 +559,17 @@ def _export_page(
         election_manifest_id = manifest_id_for_election(election)
 
         ev_by_unit: dict[str, int] | None = None
-        if election.type == ElectionType.us_presidential:
-            ev_by_unit = ev_map_for_year(election.year)
+        if election.type in {
+            ElectionType.us_presidential,
+            ElectionType.us_presidential_model,
+        }:
+            ev_by_unit = get_electoral_votes(
+                session,
+                allocation_year(
+                    election.type.value, election.year, election.target_election_year
+                ),
+                (seat.seat_name for seat in seats),
+            )
         result_payload = build_result_payload(seats, votes, election_year=election.year, ev_by_unit=ev_by_unit)
 
         if election.type == ElectionType.us_presidential:

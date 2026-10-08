@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy import delete, func, select
 
 from db import Database
+from electoral_votes import allocation_year, get_electoral_votes
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 
 from console.services.trends import load_trend_entries, trend_entry_as_of_date
@@ -371,6 +372,26 @@ def build_output_detail_context(
         total_votes = session.execute(
             select(func.count(Vote.id)).where(Vote.election_id == election.id)
         ).scalar_one()
+        current_ev_by_unit: dict[str, int] = {}
+        baseline_ev_by_unit: dict[str, int] = {}
+        if election.type == ElectionType.us_presidential_model:
+            current_ev_by_unit = get_electoral_votes(
+                session,
+                allocation_year(
+                    election.type.value, election.year, election.target_election_year
+                ),
+                (seat.seat_name for _, seat, _ in current_votes),
+            )
+            if baseline_election is not None:
+                baseline_ev_by_unit = get_electoral_votes(
+                    session,
+                    allocation_year(
+                        baseline_election.type.value,
+                        baseline_election.year,
+                        baseline_election.target_election_year,
+                    ),
+                    (seat.seat_name for _, seat in baseline_votes),
+                )
 
     party_totals: dict[int | None, dict[str, int | str | float]] = {}
     seats_baseline_winner_by_seat: dict[int, int | None] = {}
@@ -384,17 +405,15 @@ def build_output_detail_context(
     seat_rows: list[dict[str, object]] = []
 
     # Electoral votes are only meaningful for the Electoral College (US President): each
-    # unit is winner-take-all and the real tally is EV, not the unit count. Seats carry
-    # ``electoral_votes`` only on that map, so summing them per winning party yields a
-    # non-zero total only there — the flag below drives the EV column's visibility.
+    # unit is winner-take-all and the real tally is EV, not the unit count.
+    # Current and baseline elections can select different allocation eras.
     current_ev_by_party: dict[int | None, int] = {}
     baseline_ev_by_party: dict[int | None, int] = {}
-    seat_ev_by_id: dict[int, int] = {}
+    baseline_ev_by_seat: dict[int, int] = {}
 
     votes_by_seat: dict[int, list[tuple[Vote, Seat, Party | None]]] = {}
     for vote, seat, party in current_votes:
         votes_by_seat.setdefault(seat.id, []).append((vote, seat, party))
-        seat_ev_by_id[seat.id] = int(seat.electoral_votes or 0)
         party_key = vote.party_id
         party_name = party.name if party is not None else (vote.candidate_name or "Other")
         if party_key not in party_totals:
@@ -410,12 +429,15 @@ def build_output_detail_context(
         current_region_totals[region_key] = current_region_totals.get(region_key, 0.0) + vote_value
         if vote.elected:
             party_totals[party_key]["seats_won"] = int(party_totals[party_key]["seats_won"]) + 1
-            current_ev_by_party[party_key] = current_ev_by_party.get(party_key, 0) + int(seat.electoral_votes or 0)
+            current_ev_by_party[party_key] = (
+                current_ev_by_party.get(party_key, 0)
+                + current_ev_by_unit.get(seat.seat_name, 0)
+            )
 
     baseline_votes_by_seat: dict[int, list[Vote]] = {}
     for vote, seat in baseline_votes:
         baseline_votes_by_seat.setdefault(vote.seat_id, []).append(vote)
-        seat_ev_by_id.setdefault(vote.seat_id, int(seat.electoral_votes or 0))
+        baseline_ev_by_seat[vote.seat_id] = baseline_ev_by_unit.get(seat.seat_name, 0)
         vote_value = float(vote.vote_total or 0.0)
         baseline_vote_totals_by_party[vote.party_id] = baseline_vote_totals_by_party.get(vote.party_id, 0.0) + vote_value
         region_key = seat.region_id
@@ -429,7 +451,10 @@ def build_output_detail_context(
         winner = max(votes, key=lambda v: float(v.vote_total or 0.0))
         seats_baseline_winner_by_seat[seat_id] = winner.party_id
         baseline_seats_won_by_party[winner.party_id] = baseline_seats_won_by_party.get(winner.party_id, 0) + 1
-        baseline_ev_by_party[winner.party_id] = baseline_ev_by_party.get(winner.party_id, 0) + seat_ev_by_id.get(seat_id, 0)
+        baseline_ev_by_party[winner.party_id] = (
+            baseline_ev_by_party.get(winner.party_id, 0)
+            + baseline_ev_by_seat.get(seat_id, 0)
+        )
 
     shows_electoral_votes = sum(current_ev_by_party.values()) > 0
 

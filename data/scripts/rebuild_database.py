@@ -173,9 +173,9 @@ def by_election_steps(entries: list[ByElectionEntry]) -> list[Step]:
 def build_steps() -> list[Step]:
     """Assemble the full rebuild pipeline in dependency order.
 
-    Order: parties -> Westminster geometry -> region populations -> Westminster
-    GEs -> Holyrood constituency seats -> Holyrood elections -> US elections ->
-    by-elections -> export. Each base importer runs ID-preserving (``--refresh``
+    Order: parties -> US allocations -> Westminster geometry -> region populations
+    -> Westminster GEs -> Holyrood constituency seats -> Holyrood elections -> US
+    elections -> by-elections -> export. Each base importer runs ID-preserving (``--refresh``
     where the importer supports it); the export regenerates static data last.
 
     Returns:
@@ -183,6 +183,11 @@ def build_steps() -> list[Step]:
     """
     steps: list[Step] = [
         Step("Import parties", OLD_SCRIPTS / "import_parties.py", ()),
+        Step(
+            "Bootstrap US electoral vote allocations",
+            DATA_DIR / "scripts" / "migrate_us_electoral_votes.py",
+            ("--legacy-forecast-target-year", "2028"),
+        ),
         Step(
             "Import Westminster geometry",
             OLD_SCRIPTS / "westminster" / "import_topojson.py",

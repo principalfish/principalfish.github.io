@@ -3,8 +3,8 @@
 The three ``import_*_elections.py`` scripts previously carried near-verbatim copies of
 the party-key map, the ``ensure_map`` create-or-replace logic, and the region/seat/vote
 load loop. They now share this module. The only genuine per-chamber differences are the
-map id/name/parliament, the :class:`ElectionType`, how a data key maps to its state (for
-the Census-division region), and whether seats carry electoral votes.
+map id/name/parliament, the :class:`ElectionType`, and how a data key maps to its state
+for the Census-division region. Presidential JSON weights are descriptive only.
 """
 
 from __future__ import annotations
@@ -76,7 +76,6 @@ def import_us_election(
     year: int,
     name: str,
     state_for_key: Callable[[str], str],
-    with_electoral_votes: bool = False,
     refresh: bool = False,
 ) -> int:
     """Load a converted US election ``{key: {seatInfo, partyInfo}}`` mapping into ``db``.
@@ -95,8 +94,6 @@ def import_us_election(
             ``refresh`` is set).
         state_for_key: Maps a data key to the state name used for the division lookup
             (e.g. ``"TX-01" -> "Texas"``; for Senate the key already is the state).
-        with_electoral_votes: When True, seats carry ``electoral_votes`` from
-            ``seatInfo.electoral_votes`` (presidential only).
         refresh: When True and the election already exists, reuse that election
             row (preserving its id and links) and clear its votes before
             re-inserting, instead of raising. Existing seats and their
@@ -121,11 +118,9 @@ def import_us_election(
         if division not in region_id_by_division:
             region_id_by_division[division] = db.add_region(us_map.id, division).id
         if key not in seat_id_by_key:
-            electoral_votes = seat["seatInfo"]["electoral_votes"] if with_electoral_votes else None
             seat_id_by_key[key] = db.add_seat(
                 us_map.id, key,
                 region_id=region_id_by_division[division],
-                electoral_votes=electoral_votes,
             ).id
 
     if existing_election is not None:

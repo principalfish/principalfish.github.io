@@ -1,2 +1,1 @@
 - add hover text on map (hover is currently disabled - dom.js sets mouseenter to null)
-- presidential EV counts: seats.electoral_votes exists, but export still uses the per-era table in old_data/scripts/usa/us_electoral_votes.py - needs per-era storage in the DB

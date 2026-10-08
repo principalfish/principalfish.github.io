@@ -23,6 +23,9 @@ Electoral votes are then stamped from ``us_electoral_votes.ev_map_for_year`` so 
 carries the correct per-era, per-unit weights (ME statewide = 2, each CD unit = 1, …) and
 sums to 538 — matching the 538-sourced files.
 
+JSON EV fields are descriptive input data. Imported application tallies resolve
+allocations from the database for each actual election year or forecast target.
+
 Usage:
     python old_data/scripts/usa/convert_wiki_presidential.py \
         --year 1968 \
@@ -377,11 +380,11 @@ def convert(year: int, html: str | None = None) -> dict[str, Any]:
             raise ValueError(f"No candidate votes parsed for {state} in {year}")
         result[state] = unit
 
-    _backfill_me_ne_cd_units(result)
+    ev_map = ev_map_for_year(year)
+    _backfill_me_ne_cd_units(result, ev_map)
 
     # Stamp per-unit electoral votes from the year's apportionment era (the JSON's EV field
     # is otherwise inert at import, but this keeps the file self-consistent and summing to 538).
-    ev_map = ev_map_for_year(year)
     for unit_name, data in result.items():
         data["seatInfo"]["electoral_votes"] = ev_map.get(unit_name, 0)
 

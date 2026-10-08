@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
 from sqlalchemy import select
 
 from db import Database
@@ -42,10 +43,13 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def test_convert_assigns_electoral_votes_and_drops_pr(tmp_path: Path) -> None:
+@pytest.mark.parametrize(("year", "california_ev"), [("2020", 55), ("2024", 54)])
+def test_convert_assigns_electoral_votes_and_drops_pr(
+    tmp_path: Path, year: str, california_ev: int,
+) -> None:
     """EV from the table; Maine split into statewide + districts; PR dropped."""
     csv_path = tmp_path / "pres.csv"
-    _write_csv(csv_path, [
+    rows = [
         {"cycle": "2024", "stage": "general", "state_abbrev": "CA", "state": "California",
          "ballot_party": "DEM", "candidate_id": "1", "candidate_name": "D", "votes": "100", "winner": "true"},
         {"cycle": "2024", "stage": "general", "state_abbrev": "ME", "state": "Maine",
@@ -54,14 +58,44 @@ def test_convert_assigns_electoral_votes_and_drops_pr(tmp_path: Path) -> None:
          "ballot_party": "REP", "candidate_id": "2", "candidate_name": "R", "votes": "40", "winner": "true"},
         {"cycle": "2024", "stage": "general", "state_abbrev": "PR", "state": "Puerto Rico",
          "ballot_party": "DEM", "candidate_id": "3", "candidate_name": "X", "votes": "9", "winner": "true"},
+    ]
+    for row in rows:
+        row["cycle"] = year
+    rows.extend([
+        {"cycle": year, "stage": "primary", "state_abbrev": "TX", "state": "Texas",
+         "ballot_party": "DEM", "candidate_id": "4", "candidate_name": "P", "votes": "9", "winner": "true"},
+        {"cycle": "2016", "stage": "general", "state_abbrev": "FL", "state": "Florida",
+         "ballot_party": "REP", "candidate_id": "5", "candidate_name": "R", "votes": "9", "winner": "true"},
     ])
-    result = convert_pres.convert(csv_path, "2024")
+    _write_csv(csv_path, rows)
+    result = convert_pres.convert(csv_path, year)
     # PR dropped; Maine CD-1 (absent from source) is backfilled from the statewide Maine winner.
     assert set(result) == {"California", "Maine", "Maine CD-1", "Maine CD-2"}
-    assert result["California"]["seatInfo"] == {"current": "democrat", "electoral_votes": 54}
+    assert result["California"]["seatInfo"] == {
+        "current": "democrat", "electoral_votes": california_ev,
+    }
     assert result["Maine"]["seatInfo"]["electoral_votes"] == 2
     assert result["Maine CD-2"]["seatInfo"] == {"current": "republican", "electoral_votes": 1}
     assert result["Maine CD-1"]["seatInfo"] == {"current": "democrat", "electoral_votes": 1}  # backfilled
+
+
+def test_convert_rejects_unseeded_future_year(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pres.csv"
+    _write_csv(csv_path, [])
+    with pytest.raises(ValueError, match="2032"):
+        convert_pres.convert(csv_path, "2032")
+
+
+def test_convert_rejects_inconsistent_unit_names(tmp_path: Path) -> None:
+    csv_path = tmp_path / "pres.csv"
+    _write_csv(csv_path, [
+        {"cycle": "2024", "stage": "general", "state_abbrev": "CA", "state": "California",
+         "ballot_party": "DEM", "candidate_id": "1", "candidate_name": "D", "votes": "100", "winner": "true"},
+        {"cycle": "2024", "stage": "general", "state_abbrev": "CA", "state": "Colorado",
+         "ballot_party": "REP", "candidate_id": "2", "candidate_name": "R", "votes": "80", "winner": "false"},
+    ])
+    with pytest.raises(ValueError, match="disagree on state name"):
+        convert_pres.convert(csv_path, "2024")
 
 
 def test_convert_backfills_missing_nebraska_cd_units(tmp_path: Path) -> None:

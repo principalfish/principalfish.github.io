@@ -13,6 +13,9 @@ keyed by the 538 ``state`` field so they join the presidential TopoJSON polygons
 ("California", "Maine CD-1", …). The two statewide ME/NE units have no polygon — they are
 tally-only — but still carry their 2 EV.
 
+EV fields describe the requested cycle using the bounded bootstrap dataset. Imported
+application tallies use database allocations, not these descriptive JSON weights.
+
 Usage:
     python old_data/scripts/usa/convert_538_presidential.py \
         --csv /path/to/election_results_presidential.csv \
@@ -34,6 +37,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from convert_538_house import aggregate_unit
+from regions import STATE_NAMES
+from us_electoral_votes import ev_map_for_year
 
 # The Maine/Nebraska congressional-district units and their parent statewide unit. 538
 # occasionally omits a state's CD units for a cycle where it did not split (e.g. Nebraska in
@@ -44,15 +49,15 @@ ME_NE_CD_UNITS = {
     "Nebraska": ["Nebraska CD-1", "Nebraska CD-2", "Nebraska CD-3"],
 }
 
-# Electoral votes per 538 unit (2024 apportionment; ME/NE statewide = 2, their CD units = 1).
-ELECTORAL_VOTES = {
-    "AL": 9, "AK": 3, "AZ": 11, "AR": 6, "CA": 54, "CO": 10, "CT": 7, "DE": 3, "DC": 3,
-    "FL": 30, "GA": 16, "HI": 4, "ID": 4, "IL": 19, "IN": 11, "IA": 6, "KS": 6, "KY": 8,
-    "LA": 8, "ME": 2, "MD": 10, "MA": 11, "MI": 15, "MN": 10, "MS": 6, "MO": 10, "MT": 4,
-    "NE": 2, "NV": 6, "NH": 4, "NJ": 14, "NM": 5, "NY": 28, "NC": 16, "ND": 3, "OH": 17,
-    "OK": 7, "OR": 8, "PA": 19, "RI": 4, "SC": 9, "SD": 3, "TN": 11, "TX": 40, "UT": 6,
-    "VT": 3, "VA": 13, "WA": 12, "WV": 4, "WI": 10, "WY": 3,
-    "M1": 1, "M2": 1, "N1": 1, "N2": 1, "N3": 1,
+# Accepted source codes are independent of any cycle's allocation weights.
+UNIT_NAMES = {
+    **STATE_NAMES,
+    "DC": "District of Columbia",
+    "M1": "Maine CD-1",
+    "M2": "Maine CD-2",
+    "N1": "Nebraska CD-1",
+    "N2": "Nebraska CD-2",
+    "N3": "Nebraska CD-3",
 }
 
 
@@ -67,11 +72,14 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
         Mapping of unit display name (538 ``state``) to
         ``{"seatInfo": {"current", "electoral_votes"}, "partyInfo": {...}}``.
     """
+    ev_map = ev_map_for_year(int(year))
     with csv_path.open(encoding="utf-8") as handle:
         rows = [
             row
             for row in csv.DictReader(handle)
-            if row["cycle"] == year and row["stage"] == "general" and row["state_abbrev"] in ELECTORAL_VOTES
+            if row["cycle"] == year
+            and row["stage"] == "general"
+            and row["state_abbrev"] in UNIT_NAMES
         ]
 
     by_unit: dict[str, dict[str, dict[str, Any]]] = defaultdict(lambda: defaultdict(lambda: {
@@ -100,15 +108,20 @@ def convert(csv_path: Path, year: str) -> dict[str, Any]:
             raise ValueError(f"Unit {unit!r} rows disagree on state name: {sorted(display_names)}")
         display_name = display_names.pop()
         result[display_name] = {
-            "seatInfo": {"current": winner_key, "electoral_votes": ELECTORAL_VOTES[unit]},
+            "seatInfo": {
+                "current": winner_key,
+                "electoral_votes": ev_map[UNIT_NAMES[unit]],
+            },
             "partyInfo": party_info,
         }
 
-    _backfill_me_ne_cd_units(result)
+    _backfill_me_ne_cd_units(result, ev_map)
     return dict(sorted(result.items()))
 
 
-def _backfill_me_ne_cd_units(result: dict[str, Any]) -> None:
+def _backfill_me_ne_cd_units(
+    result: dict[str, Any], ev_map: dict[str, int],
+) -> None:
     """Add any Maine/Nebraska CD unit the source omitted, from its parent's statewide result.
 
     A cycle where Maine or Nebraska did not split (e.g. Nebraska 2004) can be missing its CD
@@ -119,6 +132,7 @@ def _backfill_me_ne_cd_units(result: dict[str, Any]) -> None:
 
     Args:
         result: Unit display name → ``{"seatInfo", "partyInfo"}`` mapping, mutated in place.
+        ev_map: Canonical bootstrap weights for the requested election year.
     """
     for parent, cd_units in ME_NE_CD_UNITS.items():
         if parent not in result:
@@ -129,7 +143,7 @@ def _backfill_me_ne_cd_units(result: dict[str, Any]) -> None:
             result[cd_unit] = {
                 "seatInfo": {
                     "current": result[parent]["seatInfo"]["current"],
-                    "electoral_votes": 1,
+                    "electoral_votes": ev_map[cd_unit],
                 },
                 "partyInfo": copy.deepcopy(result[parent]["partyInfo"]),
             }

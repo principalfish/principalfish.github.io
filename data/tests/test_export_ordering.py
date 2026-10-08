@@ -480,6 +480,24 @@ def test_reorder_anchor_precedence_first_comparer_and_stable_ties() -> None:
     assert {id(entry) for entry in reordered} == {id(entry) for entry in entries}
 
 
+def test_reorder_does_not_search_later_comparers_when_first_is_new() -> None:
+    entries = [
+        {"id": "first-new", "comparisonElectionId": "new-baseline"},
+        {"id": "remembered", "comparisonElectionId": "new-baseline"},
+        {"id": "new-baseline", "comparisonElectionId": "old"},
+        {"id": "old"},
+    ]
+
+    reordered = reorder_manifest_entries(entries, ["old", "remembered"])
+
+    assert [entry["id"] for entry in reordered] == [
+        "new-baseline",
+        "old",
+        "remembered",
+        "first-new",
+    ]
+
+
 def test_multiple_forecasts_keep_relative_order_with_interleaved_parliaments() -> None:
     entries: list[dict[str, Any]] = [
         {"id": "house-old", "parliament": "us_house"},

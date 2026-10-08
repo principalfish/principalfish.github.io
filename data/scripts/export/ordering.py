@@ -206,12 +206,13 @@ def reposition_supplemental_entries(
     *,
     parliaments: set[str] | None = None,
 ) -> None:
-    """Re-apply each supplemental's ``insertBeforeId`` / ``insertAfterId`` position in-place.
+    """Re-apply each supplemental's before/after anchor position in-place.
 
-    ``reorder_manifest_entries`` sorts entries by the previous manifest's order, which can
-    override the position ``apply_supplemental_legacy_elections`` gave a supplemental (e.g.
-    a newly-promoted "Current Senate" that should lead its parliament). Running this after
-    the reorder restores the configured position. Idempotent.
+    ``reorder_manifest_entries`` sorts entries by the previous manifest's order,
+    which can override the position ``apply_supplemental_legacy_elections`` gave
+    a supplemental (e.g. a newly-promoted "Current Senate" that should lead its
+    parliament). Running this after the reorder restores the configured
+    ``insertBeforeId`` / ``insertAfterId`` position. Idempotent.
 
     Args:
         manifest_entries: Manifest election list to reorder in-place.

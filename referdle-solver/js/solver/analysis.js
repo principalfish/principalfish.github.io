@@ -16,7 +16,7 @@ export function createManualAnalysis(st) {
     buildSuggestions(res, st.PM, st.N, st.poolIndex, expanded ? st.ALL_GUESSES : st.POOL,
       st.PLURALS, { slots, clueGrid, pool: st.POOL });
 
-  function analyse(inputSlots, rawGrid, expanded) {
+  function prepare(inputSlots, rawGrid) {
     const slots = structuredClone(inputSlots);
     const clueGrid = manualClue(rawGrid);
     const moves = [];
@@ -57,12 +57,18 @@ export function createManualAnalysis(st) {
       moves[i].expRemaining = undefined;
     }
     replayCache = { clueKey, moves, steps, startSlots };
+    return { slots, clueGrid, startSlots, moves, steps, reuse };
+  }
+
+  function analyse(inputSlots, rawGrid, expanded, compact = false) {
+    const { slots, clueGrid, startSlots, moves, steps, reuse } = prepare(inputSlots, rawGrid);
 
     // Solve ONLY the current/final state — that's all the displayed suggestion needs, and a
     // settled end-state is narrow (fast). The per-move replay is filled in lazily on scrub.
     const res = reSolve(slots, clueGrid);
     if (moves.length) steps[steps.length - 1].after = res;  // last step == final state; reuse it
-    return structuredClone({ result: res, clueGrid, startSlots, moves, steps,
+    return structuredClone({ result: res, clueGrid, startSlots, moves,
+      ...(compact ? { reuse, finalStep: steps.at(-1) } : { steps }),
       suggest: !moves.length && res.solvable ? buildSuggest(res, slots, clueGrid, expanded) : undefined });
   }
 
@@ -98,5 +104,5 @@ export function createManualAnalysis(st) {
   }
 
   function reset() { replayCache = null; }
-  return { analyse, replay, reset };
+  return { analyse, replay, reset, restore: prepare };
 }

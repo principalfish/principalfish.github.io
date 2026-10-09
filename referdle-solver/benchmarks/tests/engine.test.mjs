@@ -167,18 +167,18 @@ describe("manual computation and controller", () => {
     expect(module.capture.calls).toHaveLength(2);
     expect(module.capture.calls.map(c => c.slots.reduce((n, s) => n + s.guesses.length, 0))).toEqual([2, 1]);
     const beforeVisit = module.capture.calls.length;
-    controller.scrubTo(0);
+    await controller.scrubTo(0);
     expect(module.capture.calls.length).toBe(beforeVisit + 2);
     expect(module.capture.step.move.setSize).toBe(2);
     expect(module.capture.step.move.expRemaining).toBe(1);
     const visited = module.capture.calls.length;
-    controller.next();
-    controller.prev();
+    await controller.next();
+    await controller.prev();
     expect(module.capture.calls).toHaveLength(visited);
-    controller.next();
+    await controller.next();
     await controller.onEdit();
     expect(module.capture.calls).toHaveLength(visited + 1);
-    controller.scrubTo(0);
+    await controller.scrubTo(0);
     expect(module.capture.calls).toHaveLength(visited + 1);
   });
 
@@ -216,7 +216,7 @@ describe("manual computation and controller", () => {
     expect(module.capture.publication.game.solved).toBe(true);
     expect(module.capture.publication.moves).toHaveLength(5);
     expect(ui.uiEls.nextTurnBtn.disabled).toBe(false);
-    daily.resetSolve();
+    await daily.resetSolve();
     const paced = daily.solveToEnd();
     await vi.advanceTimersByTimeAsync(0);
     expect(module.capture.publication.moves).toHaveLength(1);
@@ -224,7 +224,7 @@ describe("manual computation and controller", () => {
     await vi.runAllTimersAsync();
     await paced;
     expect(module.capture.publication.moves).toHaveLength(1);
-    daily.nextTurn();
+    await daily.nextTurn();
     expect(module.capture.publication.moves).toHaveLength(2);
   });
 

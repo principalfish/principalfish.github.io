@@ -9,7 +9,7 @@ export function createComputeService(state) {
   let day = null;
   let answers = null;
 
-  function request(message) {
+  function dispatch(message) {
     switch (message.type) {
       case "initialize":
       case "catalogue":
@@ -31,7 +31,11 @@ export function createComputeService(state) {
         answers = message.continuation.words.slice();
         return daily.restore(message.continuation);
       case "analyse-manual":
-        return manual.analyse(message.slots, message.clueGrid, message.expanded);
+        return manual.analyse(message.slots, message.clueGrid, message.expanded, message.compact);
+      case "restore-manual":
+        manual.reset();
+        manual.restore(message.slots, message.clueGrid);
+        return null;
       case "replay-manual":
         return manual.replay(message.index, message.clueGrid, message.expanded);
       case "reset-manual":
@@ -42,5 +46,12 @@ export function createComputeService(state) {
     }
   }
 
-  return { request };
+  let lastTiming = null;
+  function request(message) {
+    const start = performance.now();
+    const result = dispatch(message);
+    lastTiming = { computeMs: performance.now() - start };
+    return result;
+  }
+  return { request, getTiming: () => lastTiming };
 }

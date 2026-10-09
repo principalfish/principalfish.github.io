@@ -1,4 +1,4 @@
-export const TIMING_BOUNDARIES = "Sum of synchronous nextTurn calls; excludes asset loading/decoding, bundling, animation delays, trace normalization/encoding, compression and comparison. Render helpers are capture/no-op shims; this does not measure browser rendering.";
+export const TIMING_BOUNDARIES = "Sum of synchronous computation-service intervals for daily advances; excludes Promise waiting, controller publication/rendering, asset loading/decoding, bundling, animation delays, trace normalization/encoding, compression and comparison. Original reference timings included synchronous nextTurn controller/publication work, so percentage comparisons are informative across this changed boundary. Render helpers are capture/no-op shims; this does not measure browser rendering.";
 export const RUN_ORDER = "Pool probes first, then expanded probes; ascending fixed days within each mode. One process, one measured pass, no warmup; earliest cases include JIT startup and host load can affect timings.";
 
 export function caseRow({ day, expanded, computeMs = null, baselineMs = null, moves = null, turnMs = [], status, error, difference }) {

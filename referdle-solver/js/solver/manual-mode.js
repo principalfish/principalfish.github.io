@@ -7,6 +7,7 @@
 
 import { createComputeService } from "./compute-service.js";
 import { clueIsSet } from "./analysis.js";
+import { isCancelled } from "./worker-client.js";
 import {
   buildOverlay, renderWordLists, renderStepSuggest, renderAutoSolveTable, perWordTopHTML,
 } from "./render.js";
@@ -14,12 +15,23 @@ import {
 export function initManualMode(state, manual, clueUI, uiEls, compute = createComputeService(state)) {
   let lastAutoSolve = null;
   let activeIdx = -1;
+  let revision = 0;
+  let viewToken = 0;
+  let busy = null;
+  let acceptedInput = null;
+  const invalidate = () => {
+    revision++;
+    viewToken++;
+    busy = null;
+    compute.cancel?.();
+  };
   const status = (m) => { if (uiEls.statusEl) uiEls.statusEl.textContent = m; };
   const expanded = () => !uiEls.expandedToggle || uiEls.expandedToggle.checked;
 
   // Entering manual mode: keep the carried-over board, but clear any leftover
   // daily results and wait for the user to ask. No solving until "Suggest".
   function notifyReady() {
+    invalidate();
     clearAll();
     const slots = manual.getSlots();
     const hasAny = slots.some((s) => s.guesses.length > 0) || clueIsSet(clueUI.getClueGrid());
@@ -29,6 +41,8 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
   }
 
   async function onEdit() {
+    invalidate();
+    const token = revision;
     // Refuse on a half-typed word — a partial row carries no valid guess and
     // would otherwise be silently dropped.
     const incomplete = manual.incompleteBoards ? manual.incompleteBoards() : [];
@@ -47,41 +61,55 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
       return;
     }
 
-    // The solve is synchronous and can be heavy — flag it and let the status
-    // paint before the work blocks the thread.
     status("Solving…");
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const owner = { token };
+    busy = owner;
+    try {
+      const reply = await compute.request({ type: "analyse-manual", slots, clueGrid: rawGrid,
+        expanded: expanded(), compact: true });
+      if (token !== revision || busy !== owner) return false;
+      acceptedInput = { slots: structuredClone(slots), clueGrid: structuredClone(rawGrid), expanded: expanded() };
+      compute.acceptManual?.(acceptedInput);
+      const { result: res, clueGrid, startSlots, moves } = reply;
+      const steps = reply.steps || moves.map((m, i) => i < reply.reuse && lastAutoSolve
+        ? lastAutoSolve.steps[i] : { after: undefined, suggest: undefined });
+      if (moves.length && reply.finalStep) steps[steps.length - 1] = reply.finalStep;
+      clueUI.setResults(buildOverlay(slots, res));
+      if (!res.solvable) {
+        status(`Unsolvable. ${res.reason || ""}`);
+        uiEls.slotsEl.innerHTML = "";
+        uiEls.suggestEl.innerHTML = "";
+        uiEls.moveTableEl.innerHTML = "";
+        disableScrub();
+        lastAutoSolve = null;
+        return;
+      }
+      const clueNote = res.clueUsed ? ` · ${res.viableFinals.length} possible final word(s)` : "";
+      status(`Solvable · ${res.unionFeasible.length} word(s) can appear${clueNote}.`);
+      renderWordLists(uiEls.slotsEl, slots, clueGrid, res);
 
-    const reply = compute.request({ type: "analyse-manual", slots, clueGrid: rawGrid, expanded: expanded() });
-    const { result: res, clueGrid, startSlots, moves, steps } = reply;
-    clueUI.setResults(buildOverlay(slots, res));
-    if (!res.solvable) {
-      status(`Unsolvable. ${res.reason || ""}`);
-      uiEls.slotsEl.innerHTML = "";
-      uiEls.suggestEl.innerHTML = "";
-      uiEls.moveTableEl.innerHTML = "";
-      disableScrub();
-      lastAutoSolve = null;
-      return;
-    }
-    const clueNote = res.clueUsed ? ` · ${res.viableFinals.length} possible final word(s)` : "";
-    status(`Solvable · ${res.unionFeasible.length} word(s) can appear${clueNote}.`);
-    renderWordLists(uiEls.slotsEl, slots, clueGrid, res);
-
-    if (moves.length) {
-      lastAutoSolve = {
-        game: { manual: true, solved: false, completedCount: moves.length, guessCount: moves.length, words: null },
-        startSlots, moves, steps,
-        source: "Replaying your entered guesses.", ms: null,
-      };
-      setupScrub(moves.length);
-      jumpToMove(moves.length - 1);
-    } else {
-      // Clue grid only — no move list; show the suggestion panel directly.
-      lastAutoSolve = null;
-      disableScrub();
-      uiEls.moveTableEl.innerHTML = "";
-      renderSuggestStandalone(reply.suggest);
+      if (moves.length) {
+        lastAutoSolve = {
+          game: { manual: true, solved: false, completedCount: moves.length, guessCount: moves.length, words: null },
+          startSlots, moves, steps,
+          source: "Replaying your entered guesses.", ms: null,
+        };
+        setupScrub(moves.length);
+        busy = null;
+        await jumpToMove(moves.length - 1);
+      } else {
+        // Clue grid only — no move list; show the suggestion panel directly.
+        lastAutoSolve = null;
+        disableScrub();
+        uiEls.moveTableEl.innerHTML = "";
+        renderSuggestStandalone(reply.suggest);
+      }
+      return true;
+    } catch (error) {
+      if (token === revision && !isCancelled(error)) status(`Calculation failed: ${error.message} Press "Suggest next guess" to retry.`);
+      return false;
+    } finally {
+      if (busy === owner) busy = null;
     }
   }
 
@@ -118,35 +146,52 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
   }
   function disableScrub() { setupScrub(0); }
 
-  function jumpToMove(K) {
-    if (!lastAutoSolve) return;
+  async function jumpToMove(K) {
+    if (!lastAutoSolve || !Number.isInteger(K) || K < 0 || K >= lastAutoSolve.moves.length) return;
+    compute.cancel?.();
+    const token = ++viewToken;
+    const inputRevision = revision;
+    const owner = { token };
+    busy = owner;
     const { moves, steps } = lastAutoSolve;
     activeIdx = K;
-    const reply = compute.request({ type: "replay-manual", index: K, clueGrid: clueUI.getClueGrid(), expanded: expanded() });
-    const { slots: slotsAfter, clueGrid, step } = reply;
-    moves[K] = reply.move;
-    steps[K] = step;
+    status(`Calculating move ${K + 1}…`);
+    try {
+      const reply = await compute.request({ type: "replay-manual", index: K,
+        clueGrid: acceptedInput.clueGrid, expanded: acceptedInput.expanded });
+      if (token !== viewToken || inputRevision !== revision || busy !== owner) return false;
+      const { slots: slotsAfter, clueGrid, step } = reply;
+      moves[K] = reply.move;
+      steps[K] = step;
 
-    manual.reset();
-    slotsAfter.forEach((s, b) => s.guesses.forEach((g) => manual.addGuess(b, g.word, g.colors)));
-    clueUI.setResults(buildOverlay(slotsAfter, step.after));
-    if (step.after.solvable) {
-      renderWordLists(uiEls.slotsEl, slotsAfter, clueGrid, step.after);
+      manual.reset();
+      slotsAfter.forEach((s, b) => s.guesses.forEach((g) => manual.addGuess(b, g.word, g.colors)));
+      clueUI.setResults(buildOverlay(slotsAfter, step.after));
+      if (step.after.solvable) {
+        renderWordLists(uiEls.slotsEl, slotsAfter, clueGrid, step.after);
+      }
+      renderStepSuggest(uiEls.suggestEl, K, moves[K], step.suggest, moves.length, "Played", K === moves.length - 1);
+      renderTable();
+      if (uiEls.sliderEl) uiEls.sliderEl.value = K;
+      status(`Move ${K + 1} / ${moves.length}`);
+      return true;
+    } catch (error) {
+      if (token === viewToken && inputRevision === revision && !isCancelled(error)) status(`Replay failed: ${error.message} Select the move again to retry.`);
+      return false;
+    } finally {
+      if (busy === owner) busy = null;
     }
-    renderStepSuggest(uiEls.suggestEl, K, moves[K], step.suggest, moves.length, "Played", K === moves.length - 1);
-    renderTable();
-    if (uiEls.sliderEl) uiEls.sliderEl.value = K;
   }
 
   function renderTable() {
     renderAutoSolveTable(uiEls.moveTableEl, lastAutoSolve, activeIdx, jumpToMove);
   }
 
-  function prev() { if (lastAutoSolve && activeIdx > 0) jumpToMove(activeIdx - 1); }
+  function prev() { if (lastAutoSolve && activeIdx > 0) return jumpToMove(activeIdx - 1); }
   function next() {
-    if (lastAutoSolve && activeIdx < lastAutoSolve.moves.length - 1) jumpToMove(activeIdx + 1);
+    if (lastAutoSolve && activeIdx < lastAutoSolve.moves.length - 1) return jumpToMove(activeIdx + 1);
   }
-  function scrubTo(v) { if (lastAutoSolve) jumpToMove(+v); }
+  function scrubTo(v) { if (lastAutoSolve) return jumpToMove(+v); }
 
   function clearAll() {
     if (clueUI) clueUI.setResults(null);
@@ -156,24 +201,34 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
     disableScrub();
     lastAutoSolve = null;
     activeIdx = -1;
-    compute.request({ type: "reset-manual" });
+    acceptedInput = null;
+    if (compute.resetManual) compute.resetManual();
+    else compute.request({ type: "reset-manual" });
   }
 
   // The probe word-set toggle changed — cached suggestions are stale (they rank
   // probes from the old set), so drop the cache and re-suggest with the new set.
   function refreshSuggest() {
-    compute.request({ type: "reset-manual" });
+    invalidate();
+    clearAll();
     return onEdit();
   }
 
   // Full reset of the manual state — clears the boards, the clue grid, the
   // results and the solve cache, but STAYS in manual mode (no page reload).
   function reset() {
+    invalidate();
     manual.reset();
     clueUI.setClueGrid(null);
     clearAll();
     status('Enter a game state, then "Suggest next guess".');
   }
 
-  return { onEdit, notifyReady, reset, refreshSuggest, prev, next, scrubTo };
+  function inputsChanged() {
+    invalidate();
+    clearAll();
+    status('Inputs changed — press "Suggest next guess" to analyse.');
+  }
+
+  return { onEdit, notifyReady, reset, refreshSuggest, prev, next, scrubTo, inputsChanged, stop: invalidate };
 }

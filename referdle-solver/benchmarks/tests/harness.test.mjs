@@ -96,7 +96,7 @@ describe("live daily controller observation", () => {
       const controller = module.initDailyMode(state(), ui.manual, ui.clueUI, ui.uiEls);
       await controller.loadDay(1000);
       for (let i = 0; i < 10; i++) {
-        controller.nextTurn();
+        await controller.nextTurn();
         if (module.capture.publication?.game.inProgress === false) break;
       }
       return { ...ui, publication: module.capture.publication, finalResult: module.capture.lastResult };
@@ -122,7 +122,7 @@ describe("live daily controller observation", () => {
     const ui = createUIDoubles(false);
     const controller = module.initDailyMode(state(), ui.manual, ui.clueUI, ui.uiEls);
     await controller.loadDay(1000);
-    const result = driveController(controller, module.capture);
+    const result = await driveController(controller, module.capture);
     expect(result.publication.moves).toEqual([]);
     expect(result.publication.game.solved).toBe(true);
     expect(result.finalResult).toEqual({ solvable: false, reason: "none" });
@@ -130,31 +130,31 @@ describe("live daily controller observation", () => {
 
   it("fails guards for removed or ambiguous observations and changed render exports", async () => {
     const source = await readFile(path.join(COMPONENT_DIR, "js/solver/daily-mode.js"), "utf8");
-    expect(() => observeDailySource(source.replace("      turn.moves.push(reply.move);", ""))).toThrow("engine before state");
-    expect(() => observeDailySource(`${source}\n      turn.moves.push(reply.move);`)).toThrow("engine before state");
+    expect(() => observeDailySource(source.replace("        turn.moves.push(reply.move);", ""))).toThrow("engine before state");
+    expect(() => observeDailySource(`${source}\n        turn.moves.push(reply.move);`)).toThrow("engine before state");
     expect(() => observeDailySource(source.replace("setupScrub(turn.moves.length);", ""))).toThrow("terminal publication");
-    expect(() => observeDailySource(source.replace("    turn.done = reply.continuation.done;", ""))).toThrow("engine final result");
+    expect(() => observeDailySource(source.replace("      turn.done = reply.continuation.done;", ""))).toThrow("engine final result");
     const changed = source.replace("buildOverlay, renderWordLists", "missingRenderExport, renderWordLists").replace("buildOverlay(slotsAfter", "missingRenderExport(slotsAfter");
     await expect(createControllerBundle({ observe: false, replacements: { ...REPLACEMENTS, "daily-mode.js": changed } })).rejects.toThrow("missingRenderExport");
   });
 });
 
 describe("bounded controller execution", () => {
-  it("sums only turn computation timings", () => {
+  it("sums only turn computation timings", async () => {
     const capture = {};
     let turns = 0;
     const nextTurn = () => { turns++; capture.lastResult = { solvable: true }; capture.publication = { moves: Array(turns).fill({}), game: { inProgress: turns < 2 } }; };
     const clock = [10, 14, 20, 27];
-    const result = driveController({ nextTurn }, capture, { now: () => clock.shift() });
+    const result = await driveController({ nextTurn }, capture, { now: () => clock.shift() });
     expect(result.turnMs).toEqual([4, 7]);
     expect(result.computeMs).toBe(11);
   });
-  it("rejects missing publications, nonprogress, stale final results and excessive turns", () => {
-    expect(() => driveController({ nextTurn() {} }, {}, { context: "Daily #1000" })).toThrow("Daily #1000: missing");
+  it("rejects missing publications, nonprogress, stale final results and excessive turns", async () => {
+    await expect(driveController({ nextTurn() {} }, {}, { context: "Daily #1000" })).rejects.toThrow("Daily #1000: missing");
     const capture = {};
-    expect(() => driveController({ nextTurn() { capture.publication = { moves: [], game: { inProgress: true } }; } }, capture)).toThrow("no progress");
-    expect(() => driveController({ nextTurn() { capture.publication = { moves: [], game: { inProgress: false } }; } }, capture)).toThrow("final solver result");
-    expect(() => driveController({ nextTurn() { capture.lastResult = {}; capture.publication = { moves: [{}], game: { inProgress: true } }; } }, capture, { maxTurns: 1 })).toThrow("exhausted");
-    expect(() => driveController({ nextTurn() { throw new Error("broken"); } }, {}, { context: "Daily #1000 (pool)" })).toThrow("Daily #1000 (pool): turn 0 failed: broken");
+    await expect(driveController({ nextTurn() { capture.publication = { moves: [], game: { inProgress: true } }; } }, capture)).rejects.toThrow("no progress");
+    await expect(driveController({ nextTurn() { capture.publication = { moves: [], game: { inProgress: false } }; } }, capture)).rejects.toThrow("final solver result");
+    await expect(driveController({ nextTurn() { capture.lastResult = {}; capture.publication = { moves: [{}], game: { inProgress: true } }; } }, capture, { maxTurns: 1 })).rejects.toThrow("exhausted");
+    await expect(driveController({ nextTurn() { throw new Error("broken"); } }, {}, { context: "Daily #1000 (pool)" })).rejects.toThrow("Daily #1000 (pool): turn 0 failed: broken");
   });
 });

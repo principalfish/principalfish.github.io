@@ -28,14 +28,16 @@ function codeFor(guess, cand, PM, N, poolIndex) {
 // 2D pattern-code block M[a][b] = code(aWords[a] vs bWords[b]).
 function poolBlock(aWords, bWords, PM, N, poolIndex) {
   const na = aWords.length, nb = bWords.length;
+  const bIndices = bWords.map((w) => poolIndex.get(w));
   const M = new Array(na);
   for (let ai = 0; ai < na; ai++) {
-    const row = new Array(nb);
+    const row = new Uint8Array(nb);
     const aIdx = poolIndex.get(aWords[ai]);
+    const offset = aIdx * N;
     for (let bi = 0; bi < nb; bi++) {
       if (aIdx !== undefined) {
-        const bIdx = poolIndex.get(bWords[bi]);
-        row[bi] = bIdx !== undefined ? pmCode(PM, N, aIdx, bIdx) : compareCode(aWords[ai], bWords[bi]);
+        const bIdx = bIndices[bi];
+        row[bi] = bIdx !== undefined ? PM[offset + bIdx] : compareCode(aWords[ai], bWords[bi]);
       } else {
         row[bi] = compareCode(aWords[ai], bWords[bi]);
       }

@@ -81,18 +81,15 @@ function replaceOnce(source, marker, replacement, label) {
 
 export function observeDailySource(source) {
   let result = replaceOnce(source,
-    "return { solvable: true, ranked, perBoard };",
-    "return { solvable: true, ranked, perBoard, __benchmarkBefore: res };", "buildSuggest");
+    '    turn.done = reply.continuation.done;',
+    '    benchmarkCapture.lastResult = reply.result;\n    turn.done = reply.continuation.done;', "engine final result");
   result = replaceOnce(result,
-    "const suggest = before.solvable ? buildSuggest(before) : { solvable: false };",
-    "const suggest = before.solvable ? buildSuggest(before) : { solvable: false, __benchmarkBefore: before };",
-    "closing before state");
+    '      turn.moves.push(reply.move);',
+    '      reply.suggest.__benchmarkBefore = reply.before;\n      turn.moves.push(reply.move);', "engine before state");
   // The real renderer is called only when a move exists. Observe empty terminals too.
   result = replaceOnce(result, "setupScrub(turn.moves.length);",
     "if (!turn.moves.length) renderAutoSolveTable(uiEls.moveTableEl, lastAutoSolve, activeIdx, jumpToMove);\n    setupScrub(turn.moves.length);",
     "empty terminal publication");
-  result = replaceOnce(result, "    return result;\n  }\n\n  // Per-board top-5",
-    "    benchmarkCapture.lastResult = result;\n    return result;\n  }\n\n  // Per-board top-5", "cached solve result");
   return `import { capture as benchmarkCapture } from "benchmark:capture";\n${result}`;
 }
 
@@ -101,7 +98,8 @@ const RENDER_SOURCE = `
 import { capture } from "benchmark:capture";
 export function buildOverlay() { return null; }
 export function renderWordLists() {}
-export function renderStepSuggest() {}
+export function renderStepSuggest(container, index, move, suggest) { capture.step = { index, move, suggest }; }
+export function perWordTopHTML() { return ""; }
 export function renderAutoSolveTable(container, publication) { capture.publication = publication; }
 `;
 
@@ -111,6 +109,8 @@ export async function createControllerBundle({ observe = true, replacements = {}
   const output = await build({
     stdin: {
       contents: `export { initDailyMode } from ${JSON.stringify(dailyPath)};
+export { initManualMode } from ${JSON.stringify(path.join(SOLVER_DIR, "manual-mode.js"))};
+export { createComputeService } from ${JSON.stringify(path.join(SOLVER_DIR, "compute-service.js"))};
 export { loadAssets, dailyGame, dailyClueGrid } from ${JSON.stringify(path.join(SOLVER_DIR, "data.js"))};
 export { STRATEGY } from ${JSON.stringify(path.join(SOLVER_DIR, "strategy.js"))};
 export { capture } from "benchmark:capture";`,
@@ -124,21 +124,10 @@ export { capture } from "benchmark:capture";`,
         builder.onResolve({ filter: /^benchmark:/ }, (args) => ({ path: args.path, namespace: "benchmark" }));
         builder.onLoad({ filter: /.*/, namespace: "benchmark" }, (args) => {
           if (args.path === "benchmark:capture") return { contents: CAPTURE_SOURCE };
-          if (args.path === "benchmark:solver") return {
-            contents: `import { solve as actualSolve, solveRelaxed as actualSolveRelaxed } from ${JSON.stringify(path.join(SOLVER_DIR, "solver.js"))};
-import { capture } from "benchmark:capture";
-export function solve(...args) { const result = actualSolve(...args); capture.lastResult = result; return result; }
-export function solveRelaxed(...args) { const result = actualSolveRelaxed(...args); capture.lastResult = result; return result; }`,
-            resolveDir: SOLVER_DIR,
-          };
           throw new Error(`Unknown benchmark module: ${args.path}`);
         });
-        builder.onResolve({ filter: /^\.\/solver\.js$/ }, (args) => {
-          if (observe && args.importer === dailyPath) return { path: "benchmark:solver", namespace: "benchmark" };
-          return undefined;
-        });
         builder.onLoad({ filter: /[/\\]render\.js$/ }, async () => ({ contents: RENDER_SOURCE, resolveDir: SOLVER_DIR }));
-        builder.onLoad({ filter: /[/\\](daily-mode|data|solver|suggest|strategy)\.js$/ }, async (args) => {
+        builder.onLoad({ filter: /[/\\](daily-mode|manual-mode|engine|analysis|compute-service|data|solver|suggest|strategy)\.js$/ }, async (args) => {
           const basename = path.basename(args.path);
           let contents = replacements[basename] ?? await readFile(args.path, "utf8");
           if (basename === "daily-mode.js" && observe) contents = observeDailySource(contents);

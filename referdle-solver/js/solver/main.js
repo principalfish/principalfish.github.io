@@ -3,6 +3,7 @@
 
 import { loadAssets, testableDays } from "./data.js";
 import { createManualUI, createClueGridUI } from "../manual.js";
+import { createComputeService } from "./compute-service.js";
 import { initDailyMode } from "./daily-mode.js";
 import { initManualMode } from "./manual-mode.js";
 
@@ -50,8 +51,9 @@ function initUI() {
   clueUI = createClueGridUI($("manual-cluegrid"), onManualEdit);
   manual = createManualUI($("manual-grid"), onManualEdit);
 
-  daily = initDailyMode(state, manual, clueUI, uiEls());
-  manualCtl = initManualMode(state, manual, clueUI, uiEls());
+  const compute = createComputeService(state);
+  daily = initDailyMode(state, manual, clueUI, uiEls(), compute);
+  manualCtl = initManualMode(state, manual, clueUI, uiEls(), compute);
 
   // Mode toggle.
   document.querySelectorAll('input[name="mode"]').forEach((r) => {

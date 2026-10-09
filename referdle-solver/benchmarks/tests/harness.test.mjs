@@ -130,10 +130,10 @@ describe("live daily controller observation", () => {
 
   it("fails guards for removed or ambiguous observations and changed render exports", async () => {
     const source = await readFile(path.join(COMPONENT_DIR, "js/solver/daily-mode.js"), "utf8");
-    expect(() => observeDailySource(source.replace("return { solvable: true, ranked, perBoard };", "return {};"))).toThrow("buildSuggest");
-    expect(() => observeDailySource(`${source}\nreturn { solvable: true, ranked, perBoard };`)).toThrow("buildSuggest");
+    expect(() => observeDailySource(source.replace("      turn.moves.push(reply.move);", ""))).toThrow("engine before state");
+    expect(() => observeDailySource(`${source}\n      turn.moves.push(reply.move);`)).toThrow("engine before state");
     expect(() => observeDailySource(source.replace("setupScrub(turn.moves.length);", ""))).toThrow("terminal publication");
-    expect(() => observeDailySource(source.replace("    return result;\n  }\n\n  // Per-board top-5", ""))).toThrow("cached solve result");
+    expect(() => observeDailySource(source.replace("    turn.done = reply.continuation.done;", ""))).toThrow("engine final result");
     const changed = source.replace("buildOverlay, renderWordLists", "missingRenderExport, renderWordLists").replace("buildOverlay(slotsAfter", "missingRenderExport(slotsAfter");
     await expect(createControllerBundle({ observe: false, replacements: { ...REPLACEMENTS, "daily-mode.js": changed } })).rejects.toThrow("missingRenderExport");
   });

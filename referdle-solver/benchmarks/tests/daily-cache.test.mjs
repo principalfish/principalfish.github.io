@@ -105,7 +105,7 @@ describe("daily solve reuse", () => {
         .toEqual([flags, [false, false, false]]);
     }
     expect(result.publication.steps.map((step) => step.after.note)).toEqual(["000:1", "000:2", "000:3", "000:4", "000:5"]);
-    expect(result.finalResult).toBe(result.publication.steps.at(-1).after);
+    expect(result.finalResult).toEqual(result.publication.steps.at(-1).after);
     expect(result.finalResult.note).toBe("000:5");
     expect(result.finalResult.solvable).toBe(true);
   });
@@ -170,7 +170,7 @@ describe("daily solve reuse", () => {
     expect(module.capture.calls.map((call) => call.count)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(result.publication.moves.map((move) => move.isClosing)).toEqual([false, false, false, false, false]);
     expect(result.turnMs).toHaveLength(6);
-    expect(result.finalResult).toBe(result.publication.steps.at(-1).after);
+    expect(result.finalResult).toEqual(result.publication.steps.at(-1).after);
     expect(result.finalResult.note).toBe("100:5");
     expect(result.finalResult.solvable).toBe(true);
   });

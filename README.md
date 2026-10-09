@@ -56,6 +56,72 @@ To use a different port:
 PORT=8001 ./server.sh
 ```
 
+## Referdle solver correctness and timing benchmark
+
+Requires Node.js 22 or later and the existing npm development dependencies.
+Fast harness tests run with `npm test`. The separate benchmark uses 100 frozen
+games spread across days #1000–1414, with pool probes first and expanded probes
+second (200 cases), through the application's actual daily controller.
+
+From the repository root, verify against the reference:
+
+```bash
+npm run benchmark:referdle
+npm run benchmark:referdle -- --days 1000,1414 --report /tmp/referdle-report.json
+```
+
+Verification never creates or replaces a reference. Missing/corrupt references,
+changed logical inputs/strategy, incomplete games and any exact trace mismatch
+exit nonzero. Traces compare each move, board, feedback, candidate array/order,
+ranking and score, plus the actual final board and outcome. Scores retain their
+full precision; missing fields, undefined, null and negative zero remain distinct.
+
+Initial recording and deliberate replacement are explicit actions:
+
+```bash
+npm run benchmark:referdle -- --record
+npm run benchmark:referdle -- --record --overwrite
+```
+
+The complete baseline lives in `referdle-solver/benchmarks/references/`, with one
+compressed trace per case under `pool/` and `expanded/`, plus
+`reference-manifest.json` and `timing-baseline.json`. Recording stages all cases
+before publishing the directory; a failed run preserves an existing baseline.
+Replacement refuses directories containing unrelated files. A writer lock
+prevents simultaneous recording; after an interrupted process, confirm it has
+stopped before manually removing the sibling `.references.lock` (or the matching
+lock for a custom baseline directory).
+
+For an isolated two-case smoke recording and verification:
+
+```bash
+npm run benchmark:referdle -- --record --days 1000 --baseline-dir /tmp/referdle-smoke
+npm run benchmark:referdle -- --days 1000 --baseline-dir /tmp/referdle-smoke
+```
+
+Partial recording requires an external baseline directory. Selected days must
+belong to the frozen sample, and both probe modes always run. Optional report
+files must be outside the repository and baseline; their parent directory must
+already exist. Incomplete games retain compressed trace evidence in a temporary
+directory, whose path appears in the report.
+
+Progress goes to stderr and the JSON report to stdout (npm also prints its command
+banner; invoke `node referdle-solver/benchmarks/runner.mjs` directly for pure JSON).
+Reports include per-case times/deltas, per-mode and overall computation totals,
+medians, slowest cases, setup/elapsed wall time and total reference bytes. Source
+and raw asset hashes are provenance; logical matrix hashes accept a different
+storage type or compression when every pattern code remains identical. Changes
+to Node/platform/CPU produce a timing comparability note instead of failing
+correctness.
+
+Compute time sums synchronous `nextTurn` calls. It excludes downloads, decoding,
+bundling, animation waits, trace normalization/encoding, compression and
+comparison. Render helpers are capture/no-op shims, so this is solver/controller
+timing rather than browser rendering performance. Each run is one sequential
+pass without warmup; early cases include JIT startup, and host load can change
+timings. Performance deltas are informative, with no pass/fail speed threshold;
+failed correctness runs are invalid for performance acceptance.
+
 ## Data subsystem setup and runbook
 
 This guide covers local setup for the `data/` part of the repo end-to-end:

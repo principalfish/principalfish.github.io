@@ -32,7 +32,7 @@ export function createDailyEngine(st) {
       lastPlayedWords: Array(5).fill(null), closingQueue: null, done: false,
     };
     lastResult = null;
-    return structuredClone({ words, grid: turn.grid });
+    return structuredClone({ words, grid: turn.grid, continuation: continuation() });
   }
 
   // A continuation contains every committed input needed to resume without replay:

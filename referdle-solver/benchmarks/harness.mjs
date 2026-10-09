@@ -1,9 +1,12 @@
-import { readFile, realpath } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { performance } from "node:perf_hooks";
 import { build } from "esbuild";
 import { normalizeTrace } from "./trace.mjs";
+import { createLocalFetch as confinedFetch } from "./local-fetch.mjs";
+
+export const createLocalFetch = (dataDir = DATA_DIR, fallback = globalThis.fetch) => confinedFetch(dataDir, fallback);
 
 export const COMPONENT_DIR = fileURLToPath(new URL("../", import.meta.url));
 export const DATA_DIR = path.join(COMPONENT_DIR, "data");
@@ -40,27 +43,6 @@ export async function validateSampleAnswers(sample, getAnswers) {
   }
 }
 
-export function createLocalFetch(dataDir = DATA_DIR, fallback = globalThis.fetch) {
-  const allowedDir = path.resolve(dataDir);
-  return async function localFetch(input, options) {
-    const url = new URL(input instanceof Request ? input.url : input);
-    if (url.protocol !== "file:") {
-      if (!fallback) throw new Error(`No fetch adapter for ${url.protocol}`);
-      return fallback(input, options);
-    }
-    const filename = fileURLToPath(url);
-    if (path.dirname(filename) !== allowedDir || url.search || url.hash) throw new Error("Local fetch outside solver data directory");
-    try {
-      const resolved = await realpath(filename);
-      if (path.dirname(resolved) !== await realpath(allowedDir)) throw new Error("Local fetch symlink outside solver data directory");
-      return new Response(await readFile(resolved), { status: 200 });
-    } catch (error) {
-      if (error.code === "ENOENT") return new Response("Not found", { status: 404 });
-      throw error;
-    }
-  };
-}
-
 export async function withLocalFetch(callback, dataDir = DATA_DIR) {
   if (fetchScopeActive) throw new Error("Concurrent local fetch scopes are not supported");
   fetchScopeActive = true;
@@ -81,11 +63,11 @@ function replaceOnce(source, marker, replacement, label) {
 
 export function observeDailySource(source) {
   let result = replaceOnce(source,
-    '    turn.done = reply.continuation.done;',
-    '    benchmarkCapture.lastResult = reply.result;\n    turn.done = reply.continuation.done;', "engine final result");
+    '      turn.done = reply.continuation.done;',
+    '      benchmarkCapture.lastResult = reply.result;\n      turn.done = reply.continuation.done;', "engine final result");
   result = replaceOnce(result,
-    '      turn.moves.push(reply.move);',
-    '      reply.suggest.__benchmarkBefore = reply.before;\n      turn.moves.push(reply.move);', "engine before state");
+    '        turn.moves.push(reply.move);',
+    '        reply.suggest.__benchmarkBefore = reply.before;\n        turn.moves.push(reply.move);', "engine before state");
   // The real renderer is called only when a move exists. Observe empty terminals too.
   result = replaceOnce(result, "setupScrub(turn.moves.length);",
     "if (!turn.moves.length) renderAutoSolveTable(uiEls.moveTableEl, lastAutoSolve, activeIdx, jumpToMove);\n    setupScrub(turn.moves.length);",
@@ -162,7 +144,7 @@ export function createUIDoubles(expanded) {
   return { manual, clueUI, uiEls };
 }
 
-export function driveController(controller, capture, { maxTurns = 80, context = "game", now = () => performance.now() } = {}) {
+export async function driveController(controller, capture, { maxTurns = 80, context = "game", now = () => performance.now() } = {}) {
   if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > 80) throw new Error("Invalid turn bound");
   const turnMs = [];
   let previousMoves = 0;
@@ -172,11 +154,12 @@ export function driveController(controller, capture, { maxTurns = 80, context = 
     capture.lastResult = null;
     const start = now();
     try {
-      controller.nextTurn();
+      await controller.nextTurn();
     } catch (error) {
       throw new Error(`${context}: turn ${i} failed: ${error.message}`, { cause: error });
     }
-    turnMs.push(now() - start);
+    const elapsed = now() - start;
+    turnMs.push(controller.getTiming?.()?.computeMs ?? elapsed);
     const publication = capture.publication;
     if (!publication?.game || !Array.isArray(publication.moves)) throw new Error(`${context}: missing game publication at turn ${i}`);
     if (capture.lastResult !== null) finalResult = capture.lastResult;
@@ -220,7 +203,7 @@ export async function createHarness({ sample, onProgress } = {}) {
         const answers = controller.getWords();
         if (!answers || answers.some((word, i) => word !== game.answers[i])) throw new Error(`Loaded answers changed for daily #${day}`);
         const clueGrid = clueUI.getClueGrid();
-        const result = driveController(controller, module.capture, { ...options, context: `Daily #${day} (${expanded ? "expanded" : "pool"})` });
+        const result = await driveController(controller, module.capture, { ...options, context: `Daily #${day} (${expanded ? "expanded" : "pool"})` });
         const trace = normalizeTrace({ day, answers, expanded, clueGrid, ...result, finalSlots: manual.getSlots() });
         return { trace, computeMs: result.computeMs, turnMs: result.turnMs };
       } finally {

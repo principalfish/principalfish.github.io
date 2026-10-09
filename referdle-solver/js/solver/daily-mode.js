@@ -324,7 +324,7 @@ export function initDailyMode(state, manual, clueUI, uiEls, compute = createComp
 
   function notifyReady() {
     enableControls(!!words);
-    if (!words) { status('Select a daily, or "Reload day" to retry loading.'); return; }
+    if (!words) { status("Select a daily, or \"Reload day\" to retry loading."); return; }
     clueUI.setClueGrid(dailyClueGrid(words));
     if (lastAutoSolve?.moves.length) {
       jumpToMove(activeIdx >= 0 ? activeIdx : lastAutoSolve.moves.length - 1);

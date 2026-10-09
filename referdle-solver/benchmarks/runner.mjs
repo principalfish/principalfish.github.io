@@ -12,6 +12,7 @@ import { caseRow, RUN_ORDER, summarize, TIMING_BOUNDARIES } from "./reporting.mj
 export const HELP = `Usage: npm run benchmark:referdle -- [options]
   --record                 Record explicitly; verification is the default
   --overwrite              Replace an existing valid reference (requires --record)
+  --backend worker|direct  Native Worker is the default; direct is for focused compatibility
   --days 1000,1414          Select only days from the frozen sample; both modes run
   --baseline-dir DIRECTORY Isolate smoke references outside the repository
   --report FILE.json       Also write JSON outside the repository and baseline
@@ -20,7 +21,7 @@ Requires Node.js 22 or later. A partial recording requires an external baseline 
 Progress goes to stderr; the JSON report goes to stdout.`;
 
 export function parseArgs(args) {
-  const options = { record: false, overwrite: false, days: null, baselineDir: DEFAULT_BASELINE_DIR, reportFile: null, help: false };
+  const options = { record: false, overwrite: false, days: null, baselineDir: DEFAULT_BASELINE_DIR, reportFile: null, backend: "worker", help: false };
   const seen = new Set();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -29,10 +30,13 @@ export function parseArgs(args) {
     if (arg === "--record") options.record = true;
     else if (arg === "--overwrite") options.overwrite = true;
     else if (arg === "--help") options.help = true;
-    else if (["--days", "--baseline-dir", "--report"].includes(arg)) {
+    else if (["--days", "--baseline-dir", "--report", "--backend"].includes(arg)) {
       const value = args[++i];
       if (!value || value.startsWith("--")) throw new Error(`Missing value for ${arg}`);
-      if (arg === "--days") {
+      if (arg === "--backend") {
+        if (!["worker", "direct"].includes(value)) throw new Error("--backend must be worker or direct");
+        options.backend = value;
+      } else if (arg === "--days") {
         if (!/^\d+(,\d+)*$/.test(value)) throw new Error("--days must contain comma-separated integers");
         options.days = value.split(",").map(Number);
         if (new Set(options.days).size !== options.days.length) throw new Error("--days must not contain duplicate days");
@@ -73,14 +77,14 @@ async function executeCase({ harness, day, expanded, options, baseline, transact
     return {
       inventory,
       row: caseRow({
-        day, expanded, baselineMs, computeMs: result.computeMs, moves: result.trace.moves.length, turnMs: result.turnMs, status,
+        day, expanded, baselineMs, computeMs: result.computeMs, moves: result.trace.moves.length, turnMs: result.turnMs, roundtripMs: result.roundtripMs, turnRoundtripMs: result.turnRoundtripMs, status,
         ...(incomplete ? { error: `Actual terminal state is incomplete; compressed trace evidence: ${evidenceFile}` } : {}),
         ...(!difference.equal ? { difference } : {}),
       }),
     };
   } catch (error) {
     return { inventory: null, row: caseRow({ day, expanded, baselineMs, status: "error", error: error.message,
-      ...(result ? { computeMs: result.computeMs, moves: result.trace.moves.length, turnMs: result.turnMs } : {}),
+      ...(result ? { computeMs: result.computeMs, moves: result.trace.moves.length, turnMs: result.turnMs, roundtripMs: result.roundtripMs, turnRoundtripMs: result.turnRoundtripMs } : {}),
     }) };
   }
 }
@@ -90,12 +94,13 @@ export async function runBenchmark(options, dependencies = {}) {
   const progress = dependencies.progress ?? ((message) => process.stderr.write(`${message}\n`));
   const started = now();
   const report = {
-    schemaVersion: 1, action: options.record ? "record" : "verify", valid: false,
+    schemaVersion: 1, backend: options.backend ?? "worker", action: options.record ? "record" : "verify", valid: false,
     timingBoundaries: TIMING_BOUNDARIES, order: RUN_ORDER,
     selection: null, setupMs: null, elapsedMs: null, referenceBytes: null,
     notes: [], errors: [], cases: [], summary: summarize([]),
   };
   let transaction;
+  let harness;
   try {
     await assertSafePaths(options.baselineDir, options.reportFile);
     const sample = await (dependencies.loadSample ?? loadSample)();
@@ -110,8 +115,9 @@ export async function runBenchmark(options, dependencies = {}) {
         if (!baseline.manifest.cases.some((entry) => entry.day === day && entry.expanded === expanded)) throw new Error(`Reference is missing requested case ${caseKey(day, expanded)}`);
       }
     } else transaction = await beginRecording(options.baselineDir, { overwrite: options.overwrite });
-    const harness = await (dependencies.createHarness ?? createHarness)({ sample, onProgress: progress });
-    const contract = createContract(harness);
+    harness = await (dependencies.createHarness ?? createHarness)({ sample, onProgress: progress, backend: options.backend ?? "worker" });
+    const contract = harness.contract ?? createContract(harness);
+    if (harness.ownership) report.assetOwnership = harness.ownership;
     const provenance = await (dependencies.collectProvenance ?? collectProvenance)();
     report.provenance = provenance;
     if (baseline) {
@@ -149,6 +155,10 @@ export async function runBenchmark(options, dependencies = {}) {
     report.errors.push(error.message);
     report.notes.push("The run did not complete successfully; timings are invalid for performance acceptance.");
   } finally {
+    try { await harness?.dispose?.(); } catch (error) {
+      report.valid = false;
+      report.errors.push(`Benchmark cleanup failed: ${error.message}`);
+    }
     if (transaction) await transaction.abort();
     report.setupMs ??= now() - started;
     report.elapsedMs = now() - started;

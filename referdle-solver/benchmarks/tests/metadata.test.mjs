@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { COMPONENT_DIR } from "../harness.mjs";
-import { assertCompatible, collectProvenance, createContract, sha256, timingNotes } from "../metadata.mjs";
+import { assertCompatible, collectProvenance, collectRuntimeFootprint, createContract, sha256, timingNotes } from "../metadata.mjs";
 import { caseRow, summarize } from "../reporting.mjs";
 
 function inputs(matrix = new Int16Array([0, 1, 242, 3])) {
@@ -65,4 +65,27 @@ describe("timing reporting", () => {
     expect(summarize([untimed]).overall).toMatchObject({ cases: 1, measuredCases: 0, medianMs: null, baselineComputeMs: null });
     expect(caseRow({ day: 1000, expanded: false, computeMs: 1, baselineMs: 0, status: "matched" }).deltaPercent).toBeNull();
   });
+});
+
+
+it("records shipped file bytes separately from decoded PM and excludes references", async () => {
+  const footprint = await collectRuntimeFootprint();
+  expect(footprint.matrixGzipBytes).toBe(7491562);
+  expect(footprint.decodedMatrixBytes).toBe(16378209);
+  expect(footprint.totalBytes).toBe(footprint.dataBytes + footprint.javascriptBytes + footprint.htmlCssBytes);
+  expect(footprint.totalBytes).toBeLessThan(9000000);
+  expect(footprint.scope).toContain("excludes benchmarks/references");
+});
+
+it("keeps unavailable roundtrips distinct and computes overhead on paired measurements only", () => {
+  const rows = [
+    caseRow({ day: 1000, expanded: false, computeMs: 10, roundtripMs: 14, status: "matched" }),
+    caseRow({ day: 1004, expanded: false, computeMs: 20, status: "matched" }),
+    caseRow({ day: 1000, expanded: true, roundtripMs: 9, status: "error" }),
+  ];
+  expect(rows[1].roundtripMs).toBeNull();
+  expect(rows[1].transportOverheadMs).toBeNull();
+  expect(summarize(rows).overall).toMatchObject({ computeMs: 30, roundtripMs: 23, roundtripMeanMs: 11.5, roundtripMedianMs: 11.5,
+    roundtripMeasuredCases: 2, overheadMeasuredCases: 1, transportOverheadMs: 4, transportOverheadMeanMs: 4 });
+  expect(summarize([rows[1]]).overall).toMatchObject({ roundtripMs: null, roundtripMeanMs: null, transportOverheadMs: null });
 });

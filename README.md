@@ -87,6 +87,9 @@ The complete baseline lives in `referdle-solver/benchmarks/references/`, with on
 compressed trace per case under `pool/` and `expanded/`, plus
 `reference-manifest.json` and `timing-baseline.json`. Recording stages all cases
 before publishing the directory; a failed run preserves an existing baseline.
+The initial archive has 200 compressed traces and two metadata files, totaling
+36,606,099 bytes (36.61 MB). Initial recording took 35m49.4s; an independent
+36m16.5s verification reproduced all 200 traces exactly.
 Replacement refuses directories containing unrelated files. A writer lock
 prevents simultaneous recording; after an interrupted process, confirm it has
 stopped before manually removing the sibling `.references.lock` (or the matching
@@ -98,6 +101,23 @@ For an isolated two-case smoke recording and verification:
 npm run benchmark:referdle -- --record --days 1000 --baseline-dir /tmp/referdle-smoke
 npm run benchmark:referdle -- --days 1000 --baseline-dir /tmp/referdle-smoke
 ```
+
+Turn a saved JSON report into a standalone HTML report without rerunning any games:
+
+```bash
+npm run report:referdle -- /tmp/referdle-report.json --output /tmp/referdle-report.html
+```
+
+The offline report plots per-game computation seconds with shared duration bands
+and count scales for pool/expanded modes and baseline/current series, alongside
+duration means. It also plots total played moves, including closing moves, and
+their means; baseline move counts are unavailable in timing rows. Comparison
+means/deltas use the same cases with both finite timings and show the paired
+count. Missing measurements are excluded, and partial/failed runs are labeled
+prominently. Record reports have no baseline series. With the initial maximum
+34.4s duration, the report uses nine 4-second bands covering 0–36s. The HTML
+includes its SVG charts and styles, uses no network or scripts, and must be
+written outside the repository/baseline, separately from the input JSON.
 
 Partial recording requires an external baseline directory. Selected days must
 belong to the frozen sample, and both probe modes always run. Optional report

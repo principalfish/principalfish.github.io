@@ -104,6 +104,10 @@ describe("saved report validation and escaping", () => {
     (value) => { value.cases[0].currentComputeMs = -1; },
     (value) => { value.cases[0].baselineComputeMs = Infinity; },
     (value) => { value.cases[0].moves = 2.5; },
+    (value) => { value.cases[0].roundtripMs = -1; },
+    (value) => { value.cases[0].roundtripMs = Infinity; },
+    (value) => { value.backend = "invented"; },
+    (value) => { value.provenance = { runtimeFootprint: { scope: "file bytes", matrixGzipBytes: -1 } }; },
     (value) => { value.cases[0].expanded = "false"; },
     (value) => { value.cases[0].status = "unknown"; },
     (value) => { value.cases.push(value.cases[0]); },
@@ -163,4 +167,25 @@ describe("offline report command", () => {
     await writeFile(input, "corrupt JSON");
     expect(await main([input, "--output", output], io)).toBe(1);
   });
+});
+
+
+it("plots Worker roundtrips separately without rebasing CPU or replacing missing transport values with zero", () => {
+  const model = buildReportModel(report([
+    row(1000, false, { currentComputeMs: 2000, baselineComputeMs: 10000, roundtripMs: 2500 }),
+    row(1004, false, { currentComputeMs: 1000, baselineComputeMs: 8000 }),
+    row(1000, true, { currentComputeMs: 3000, baselineComputeMs: 12000, roundtripMs: 3500 }),
+    row(1004, true, { currentComputeMs: null, baselineComputeMs: 15000, roundtripMs: null, status: "error" }),
+  ], { backend: "worker", valid: false }));
+  expect(model.aggregate).toMatchObject({ roundtripCount: 2, roundtripMean: 3, overheadCount: 2, overheadMean: 0.5, overheadTotal: 1,
+    missingRoundtrip: 2, pairedCount: 3, pairedCurrentMean: 2, pairedBaselineMean: 10 });
+  expect(model.modes.pool.roundtripCounts.reduce((sum, value) => sum + value, 0)).toBe(1);
+  const html = renderReportHTML(model);
+  expect(html).toContain("Worker job roundtrip time");
+  expect(html).toContain("worker backend");
+  expect(html).toContain("no historical roundtrip baseline");
+  const historical = buildReportModel(report([row(), row(1000, true)]));
+  expect(historical.aggregate.roundtripMean).toBeNull();
+  expect(historical.aggregate.overheadMean).toBeNull();
+  expect(renderReportHTML(historical)).toContain("Worker roundtrip timings are unavailable");
 });

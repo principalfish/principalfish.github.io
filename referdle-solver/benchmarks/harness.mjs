@@ -5,43 +5,15 @@ import { performance } from "node:perf_hooks";
 import { build } from "esbuild";
 import { normalizeTrace } from "./trace.mjs";
 import { createLocalFetch as confinedFetch } from "./local-fetch.mjs";
+import { loadSample, validateSample, validateSampleAnswers } from "./sample.mjs";
+export { loadSample, validateSample, validateSampleAnswers } from "./sample.mjs";
 
 export const createLocalFetch = (dataDir = DATA_DIR, fallback = globalThis.fetch) => confinedFetch(dataDir, fallback);
 
 export const COMPONENT_DIR = fileURLToPath(new URL("../", import.meta.url));
 export const DATA_DIR = path.join(COMPONENT_DIR, "data");
 const SOLVER_DIR = path.join(COMPONENT_DIR, "js", "solver");
-const SAMPLE_URL = new URL("sample.json", import.meta.url);
 let fetchScopeActive = false;
-
-export async function loadSample() {
-  const sample = JSON.parse(await readFile(SAMPLE_URL, "utf8"));
-  validateSample(sample);
-  return sample;
-}
-
-export function validateSample(sample) {
-  if (sample?.schemaVersion !== 1 || sample.range?.start !== 1000 || sample.range?.end !== 1414
-      || !Array.isArray(sample.games) || sample.games.length !== 100) throw new Error("Invalid frozen 100-game sample");
-  const expectedDays = Array.from({ length: 100 }, (_, i) => 1000 + Math.round(i * 414 / 99));
-  for (let i = 0; i < sample.games.length; i++) {
-    const game = sample.games[i];
-    if (game.day !== expectedDays[i] || !Array.isArray(game.answers) || game.answers.length !== 5
-        || !game.answers.every((word) => typeof word === "string" && /^[A-Z]{5}$/.test(word))) {
-      throw new Error(`Invalid frozen sample case at index ${i}`);
-    }
-  }
-}
-
-export async function validateSampleAnswers(sample, getAnswers) {
-  validateSample(sample);
-  for (const game of sample.games) {
-    const actual = await getAnswers(game.day);
-    if (!actual || actual.length !== game.answers.length || actual.some((word, i) => word !== game.answers[i])) {
-      throw new Error(`Frozen answers differ from loaded daily #${game.day}`);
-    }
-  }
-}
 
 export async function withLocalFetch(callback, dataDir = DATA_DIR) {
   if (fetchScopeActive) throw new Error("Concurrent local fetch scopes are not supported");
@@ -94,6 +66,7 @@ export async function createControllerBundle({ observe = true, replacements = {}
 export { initManualMode } from ${JSON.stringify(path.join(SOLVER_DIR, "manual-mode.js"))};
 export { createComputeService } from ${JSON.stringify(path.join(SOLVER_DIR, "compute-service.js"))};
 export { loadAssets, dailyGame, dailyClueGrid } from ${JSON.stringify(path.join(SOLVER_DIR, "data.js"))};
+export { createWorkerClient } from ${JSON.stringify(path.join(SOLVER_DIR, "worker-client.js"))};
 export { STRATEGY } from ${JSON.stringify(path.join(SOLVER_DIR, "strategy.js"))};
 export { capture } from "benchmark:capture";`,
       resolveDir: SOLVER_DIR,
@@ -147,6 +120,7 @@ export function createUIDoubles(expanded) {
 export async function driveController(controller, capture, { maxTurns = 80, context = "game", now = () => performance.now() } = {}) {
   if (!Number.isInteger(maxTurns) || maxTurns < 1 || maxTurns > 80) throw new Error("Invalid turn bound");
   const turnMs = [];
+  const turnRoundtripMs = [];
   let previousMoves = 0;
   let finalResult = null;
   for (let i = 0; i < maxTurns; i++) {
@@ -159,7 +133,9 @@ export async function driveController(controller, capture, { maxTurns = 80, cont
       throw new Error(`${context}: turn ${i} failed: ${error.message}`, { cause: error });
     }
     const elapsed = now() - start;
-    turnMs.push(controller.getTiming?.()?.computeMs ?? elapsed);
+    const timing = controller.getTiming?.();
+    turnMs.push(timing?.computeMs ?? elapsed);
+    turnRoundtripMs.push(timing?.roundtripMs ?? null);
     const publication = capture.publication;
     if (!publication?.game || !Array.isArray(publication.moves)) throw new Error(`${context}: missing game publication at turn ${i}`);
     if (capture.lastResult !== null) finalResult = capture.lastResult;
@@ -167,7 +143,9 @@ export async function driveController(controller, capture, { maxTurns = 80, cont
     if (count < previousMoves || count > previousMoves + 1) throw new Error(`${context}: inconsistent move progression at turn ${i}`);
     if (!publication.game.inProgress) {
       if (!finalResult) throw new Error(`${context}: missing final solver result`);
-      return { publication, finalResult, turnMs, computeMs: turnMs.reduce((sum, ms) => sum + ms, 0) };
+      return { publication, finalResult, turnMs, turnRoundtripMs,
+        computeMs: turnMs.reduce((sum, ms) => sum + ms, 0),
+        roundtripMs: turnRoundtripMs.every(ms => ms !== null) ? turnRoundtripMs.reduce((sum, ms) => sum + ms, 0) : null };
     }
     if (count === previousMoves) throw new Error(`${context}: no progress at turn ${i}`);
     previousMoves = count;
@@ -175,37 +153,69 @@ export async function driveController(controller, capture, { maxTurns = 80, cont
   throw new Error(`${context}: exhausted ${maxTurns}-turn bound`);
 }
 
-export async function createHarness({ sample, onProgress } = {}) {
+// The CLI selects Worker explicitly; direct remains useful for bounded fixtures.
+export async function createHarness({ sample, onProgress, backend = "direct", workerOptions } = {}) {
+  if (!["direct", "worker"].includes(backend)) throw new Error("Invalid benchmark backend");
   sample ??= await loadSample();
   validateSample(sample);
   const module = await createControllerBundle();
-  const state = await withLocalFetch(async () => {
-    const loaded = await module.loadAssets(onProgress);
-    await validateSampleAnswers(sample, (day) => module.dailyGame(loaded, day));
-    for (const game of sample.games) {
-      if (!game.answers.every((word) => loaded.poolIndex.has(word))) throw new Error(`Daily #${game.day} has an answer outside the pool`);
+  let bridge = null;
+  let client = null;
+  let state = null;
+  let contract = null;
+  let ownership = null;
+  try {
+    if (backend === "worker") {
+      const { createNativeWorkerFactory } = await import("./worker-bridge.mjs");
+      bridge = await createNativeWorkerFactory(workerOptions);
+      client = module.createWorkerClient({ workerFactory: bridge.factory, onProgress,
+        directFactory: async () => { throw new Error("Worker benchmark cannot use direct compatibility mode"); } });
+      const catalogue = await client.request({ type: "initialize" });
+      ({ contract, ownership } = await bridge.contract(bridge.workers[0], sample));
+      state = { POOL: catalogue.pool, ALL_GUESSES: catalogue.expanded };
+    } else {
+      state = await withLocalFetch(async () => {
+        const loaded = await module.loadAssets(onProgress);
+        await validateSampleAnswers(sample, day => module.dailyGame(loaded, day));
+        for (const game of sample.games) {
+          if (!game.answers.every(word => loaded.poolIndex.has(word))) throw new Error(`Daily #${game.day} has an answer outside the pool`);
+        }
+        return loaded;
+      });
     }
-    return loaded;
-  });
+  } catch (error) {
+    client?.dispose();
+    await bridge?.dispose();
+    throw error;
+  }
   let running = false;
+  let disposed = false;
   return {
-    sample, state, strategy: module.STRATEGY,
+    sample, state, strategy: module.STRATEGY, contract, ownership, backend,
+    async dispose() {
+      disposed = true;
+      client?.dispose();
+      await bridge?.dispose();
+    },
     async runGame(day, expanded, options = {}) {
-      const game = sample.games.find((entry) => entry.day === day);
+      if (disposed) throw new Error("Benchmark harness is disposed");
+      const game = sample.games.find(entry => entry.day === day);
       if (!game) throw new Error(`Day ${day} is outside the frozen sample`);
       if (typeof expanded !== "boolean") throw new Error("Probe mode must be explicitly true or false");
       if (running) throw new Error("Benchmark cases must run sequentially");
       running = true;
       try {
         const { manual, clueUI, uiEls } = createUIDoubles(expanded);
-        const controller = module.initDailyMode(state, manual, clueUI, uiEls);
-        await withLocalFetch(() => controller.loadDay(day));
+        const controller = module.initDailyMode(state, manual, clueUI, uiEls, client ?? undefined);
+        if (client) await controller.loadDay(day);
+        else await withLocalFetch(() => controller.loadDay(day));
         const answers = controller.getWords();
         if (!answers || answers.some((word, i) => word !== game.answers[i])) throw new Error(`Loaded answers changed for daily #${day}`);
         const clueGrid = clueUI.getClueGrid();
         const result = await driveController(controller, module.capture, { ...options, context: `Daily #${day} (${expanded ? "expanded" : "pool"})` });
         const trace = normalizeTrace({ day, answers, expanded, clueGrid, ...result, finalSlots: manual.getSlots() });
-        return { trace, computeMs: result.computeMs, turnMs: result.turnMs };
+        return { trace, computeMs: result.computeMs, turnMs: result.turnMs,
+          roundtripMs: result.roundtripMs, turnRoundtripMs: result.turnRoundtripMs };
       } finally {
         running = false;
       }

@@ -30,6 +30,12 @@ function validateReport(report) {
         || new Set(selection.days).size !== selection.days.length
         || selection.days.some((day) => !Number.isInteger(day) || day < 1000 || day > 1414)) throw new Error("Invalid report selection");
   }
+  if (report.backend !== undefined && !["worker", "direct"].includes(report.backend)) throw new Error("Invalid report backend");
+  const footprint = report.provenance?.runtimeFootprint;
+  if (footprint != null) {
+    if (typeof footprint !== "object" || typeof footprint.scope !== "string") throw new Error("Invalid runtime footprint");
+    for (const key of ["dataBytes", "javascriptBytes", "htmlCssBytes", "totalBytes", "matrixGzipBytes", "decodedMatrixBytes"]) optionalNumber(footprint[key], key, { integer: true });
+  }
   const seen = new Set();
   for (const row of report.cases) {
     if (!row || !Number.isInteger(row.day) || row.day < 1000 || row.day > 1414
@@ -42,6 +48,12 @@ function validateReport(report) {
     seen.add(key);
     optionalNumber(row.currentComputeMs, "current case time");
     optionalNumber(row.baselineComputeMs, "baseline case time");
+    optionalNumber(row.roundtripMs, "case roundtrip time");
+    optionalNumber(row.transportOverheadMs, "case transport overhead");
+    if (row.turnRoundtripMs !== undefined) {
+      if (!Array.isArray(row.turnRoundtripMs)) throw new Error("Invalid turn roundtrip times");
+      row.turnRoundtripMs.forEach(time => optionalNumber(time, "turn roundtrip time"));
+    }
     optionalNumber(row.moves, "played moves", { integer: true, max: 80 });
     if (report.action === "record" && row.baselineComputeMs != null) throw new Error("Record reports must not contain baseline timings");
   }
@@ -84,15 +96,22 @@ export function histogramCounts(values, bins) {
   return counts;
 }
 
-function series(rows, durationBins, moveBins) {
+function series(rows, durationBins, moveBins, roundtripBins) {
   const current = rows.filter((row) => row.currentComputeMs != null).map((row) => row.currentComputeMs / 1000);
   const baseline = rows.filter((row) => row.baselineComputeMs != null).map((row) => row.baselineComputeMs / 1000);
   const paired = rows.filter((row) => row.currentComputeMs != null && row.baselineComputeMs != null);
+  const roundtrips = rows.filter(row => row.roundtripMs != null).map(row => row.roundtripMs / 1000);
+  const transportPaired = rows.filter(row => row.roundtripMs != null && row.currentComputeMs != null);
+  const overheads = transportPaired.map(row => (row.roundtripMs - row.currentComputeMs) / 1000);
   const moves = rows.filter((row) => row.moves != null).map((row) => row.moves);
   const pairedCurrentMean = mean(paired.map((row) => row.currentComputeMs / 1000));
   const pairedBaselineMean = mean(paired.map((row) => row.baselineComputeMs / 1000));
   const deltaSeconds = paired.length ? pairedCurrentMean - pairedBaselineMean : null;
   return {
+    roundtripCount: roundtrips.length, roundtripMean: mean(roundtrips),
+    roundtripCounts: histogramCounts(roundtrips, roundtripBins), missingRoundtrip: rows.length - roundtrips.length,
+    overheadCount: overheads.length, overheadMean: mean(overheads),
+    overheadTotal: overheads.length ? overheads.reduce((sum, value) => sum + value, 0) : null,
     cases: rows.length, currentCount: current.length, baselineCount: baseline.length, pairedCount: paired.length,
     currentMean: mean(current), baselineMean: mean(baseline),
     pairedCurrentMean, pairedBaselineMean, deltaSeconds,
@@ -109,18 +128,22 @@ export function buildReportModel(report) {
   const times = report.cases.flatMap((row) => [row.currentComputeMs, row.baselineComputeMs])
     .filter((value) => value != null).map((value) => value / 1000);
   const durationBins = createDurationBins(times);
+  const roundtripBins = createDurationBins(report.cases.filter(row => row.roundtripMs != null).map(row => row.roundtripMs / 1000));
   const moves = report.cases.filter((row) => row.moves != null).map((row) => row.moves);
   const moveBins = moves.length ? Array.from({ length: Math.max(...moves) - Math.min(...moves) + 1 }, (_, i) => Math.min(...moves) + i) : [];
   const modes = {
-    pool: series(report.cases.filter((row) => !row.expanded), durationBins, moveBins),
-    expanded: series(report.cases.filter((row) => row.expanded), durationBins, moveBins),
+    pool: series(report.cases.filter((row) => !row.expanded), durationBins, moveBins, roundtripBins),
+    expanded: series(report.cases.filter((row) => row.expanded), durationBins, moveBins, roundtripBins),
   };
-  const aggregate = series(report.cases, durationBins, moveBins);
+  const aggregate = series(report.cases, durationBins, moveBins, roundtripBins);
   const selectionComplete = report.selection && report.cases.length === report.selection.cases;
   const successful = report.valid && Boolean(selectionComplete) && report.cases.every((row) => SUCCESS_STATUSES.has(row.status)) && !report.errors.length;
   return {
     action: report.action, successful, fullSample: Boolean(report.selection?.fullSample && report.selection.games === 100),
-    requestedCases: report.selection?.cases ?? null, aggregate, modes, durationBins, moveBins,
+    requestedCases: report.selection?.cases ?? null, aggregate, modes, durationBins, moveBins, roundtripBins,
+    backend: report.backend ?? null, runtimeFootprint: report.provenance?.runtimeFootprint ?? null,
+    hasRoundtrip: aggregate.roundtripCount > 0,
+    roundtripCountMax: Math.max(1, ...Object.values(modes).flatMap(mode => mode.roundtripCounts)),
     durationCountMax: Math.max(1, ...Object.values(modes).flatMap((mode) => [...mode.currentCounts, ...mode.baselineCounts])),
     moveCountMax: Math.max(1, ...Object.values(modes).flatMap((mode) => mode.moveCounts)),
     hasBaseline: report.action === "verify" && aggregate.baselineCount > 0,
@@ -179,7 +202,11 @@ export function renderReportHTML(model) {
 <div class="legend"><span class="current-key">Current (${mode.currentCount})</span>${model.hasBaseline ? `<span class="baseline-key">Baseline (${mode.baselineCount})</span>` : ""}</div>
 ${chart({ title: `${name}: computation time per game`, labels: model.durationBins.map((bin) => bin.label), current: mode.currentCounts, baseline: model.hasBaseline ? mode.baselineCounts : null, scaleMax: model.durationCountMax, unit: "Compute seconds per game" })}
 ${model.hasBaseline ? comparison(mode) : ""}<p class="coverage">Missing current timings: ${mode.missingCurrent}${model.hasBaseline ? ` · missing baseline timings: ${mode.missingBaseline}` : ""}. Missing values are excluded.</p>
-<details class="details"><summary>Duration band counts</summary><table class="table"><thead><tr><th>Seconds</th><th>Current cases</th>${model.hasBaseline ? "<th>Baseline cases</th>" : ""}</tr></thead><tbody>${model.durationBins.map((bin, i) => `<tr><td>${escapeHTML(bin.label)}</td><td>${mode.currentCounts[i]}</td>${model.hasBaseline ? `<td>${mode.baselineCounts[i]}</td>` : ""}</tr>`).join("")}</tbody></table></details>
+<details class="details"><summary>Duration band counts</summary><table class="table"><thead><tr><th scope="col">Seconds</th><th scope="col">Current cases</th>${model.hasBaseline ? "<th scope=\"col\">Baseline cases</th>" : ""}</tr></thead><tbody>${model.durationBins.map((bin, i) => `<tr><td>${escapeHTML(bin.label)}</td><td>${mode.currentCounts[i]}</td>${model.hasBaseline ? `<td>${mode.baselineCounts[i]}</td>` : ""}</tr>`).join("")}</tbody></table></details>
+${model.hasRoundtrip ? `<h3>Worker job roundtrip time</h3><p><strong>${metric(mode.roundtripMean, "s")}</strong> mean per game · ${mode.roundtripCount}/${mode.cases} measured cases</p>
+${chart({ title: `${name}: Worker job roundtrip time per game`, labels: model.roundtripBins.map(bin => bin.label), current: mode.roundtripCounts, scaleMax: model.roundtripCountMax, unit: "Advance job roundtrip seconds per game" })}
+<p class="coverage">Roundtrip minus compute: ${metric(mode.overheadMean === null ? null : mode.overheadMean * 1000, " ms")} mean per game across ${mode.overheadCount} paired cases. Missing roundtrip values: ${mode.missingRoundtrip}; excluded, never counted as zero. Includes benchmark evidence cloning and transfer; no historical roundtrip baseline.</p>
+<details class="details"><summary>Roundtrip band counts</summary><table class="table"><thead><tr><th scope="col">Seconds</th><th scope="col">Cases</th></tr></thead><tbody>${model.roundtripBins.map((bin, i) => `<tr><td>${escapeHTML(bin.label)}</td><td>${mode.roundtripCounts[i]}</td></tr>`).join("")}</tbody></table></details>` : ""}
 <h3>Total played moves</h3><p class="moves-mean"><strong>${metric(mode.movesMean)}</strong> mean moves · ${mode.movesCount}/${mode.cases} cases with move counts</p>
 ${chart({ title: `${name}: total played moves`, labels: model.moveBins.map(String), current: mode.moveCounts, scaleMax: model.moveCountMax, unit: "Played moves, including closing moves" })}
 <p class="coverage">Current move counts only; saved timing rows contain no baseline move counts. Missing move counts: ${mode.missingMoves}.</p></section>`;
@@ -448,13 +475,14 @@ footer p,
     grid-template-columns: repeat(4, 1fr);
   }
 }
-</style></head><body><main><div class="eyebrow">Referdle solver · saved benchmark report</div><h1>Computation time per game</h1><p class="scope">${escapeHTML(scope)}</p><p class="status${model.successful ? "" : " failed"}">${escapeHTML(outcome)}</p>
+</style></head><body><main><div class="eyebrow">Referdle solver · saved benchmark report</div><h1>Computation time per game</h1><p class="scope">${escapeHTML(scope)}${model.backend ? ` · ${escapeHTML(model.backend)} backend` : ""}</p><p class="status${model.successful ? "" : " failed"}">${escapeHTML(outcome)}</p>
 <p class="scope-note">${model.fullSample ? "100 frozen games in both probe modes." : "This selection does not represent the full 200-case benchmark."} ${model.successful ? "Timing differences describe this single pass; they do not establish a performance improvement." : "Correctness acceptance failed or the run is incomplete. Timing charts are diagnostic and cannot support performance acceptance."}</p>
 <div class="overview"><div class="card"><strong>${metric(model.aggregate.currentMean, "s")}</strong><span>Mean current compute time · ${model.aggregate.currentCount} measured cases</span></div><div class="card"><strong>${metric(model.aggregate.movesMean)}</strong><span>Mean total played moves · ${model.aggregate.movesCount} cases</span></div><div class="card"><strong>${metric(model.elapsedMs === null ? null : model.elapsedMs / 60000, " min")}</strong><span>Run elapsed wall time</span></div><div class="card"><strong>${metric(model.referenceBytes === null ? null : model.referenceBytes / 1000000, " MB")}</strong><span>Reference artifacts · decimal megabytes</span></div></div>
 ${model.hasBaseline ? `<div class="aggregate-comparison">${comparison(model.aggregate)}</div>` : ""}
+${model.hasRoundtrip ? `<p class="scope-note">Worker advance roundtrip mean: ${metric(model.aggregate.roundtripMean, "s")} per game (${model.aggregate.roundtripCount} measured cases). Total paired roundtrip minus compute: ${metric(model.aggregate.overheadTotal, "s")} across ${model.aggregate.overheadCount} cases. Original reference CPU timings are retained; no roundtrip baseline is inferred.</p>` : `<p class="scope-note">Worker roundtrip timings are unavailable in this report.</p>`}
 <div class="panels">${panels}</div>
 ${model.diagnostics.length ? `<section class="diagnostics"><h2>Run diagnostics</h2><ul>${model.diagnostics.map((text) => `<li>${escapeHTML(text)}</li>`).join("")}</ul></section>` : ""}
-<footer><p>${escapeHTML(model.timingBoundaries)}</p><p>${escapeHTML(model.order)}</p><p>Duration bands start at zero and share their boundaries and count scales across probe modes and timing series. Lower boundaries are inclusive; upper boundaries are exclusive, except the final band includes its maximum. Comparison means and changes use only the same cases with both finite timings (${model.aggregate.pairedCount} paired cases). Missing values are never counted as zero.</p><p>Setup time: ${metric(model.setupMs === null ? null : model.setupMs / 1000, "s")}. Total played moves include every closing move.</p>${model.notes.map((text) => `<p>${escapeHTML(text)}</p>`).join("")}</footer></main></body></html>\n`;
+<footer>${model.runtimeFootprint ? `<p>Component file footprint: ${metric(model.runtimeFootprint.totalBytes == null ? null : model.runtimeFootprint.totalBytes / 1000000, " MB")}. Matrix gzip: ${metric(model.runtimeFootprint.matrixGzipBytes == null ? null : model.runtimeFootprint.matrixGzipBytes / 1000000, " MB")}; decoded matrix: ${metric(model.runtimeFootprint.decodedMatrixBytes == null ? null : model.runtimeFootprint.decodedMatrixBytes / 1000000, " MB")}. ${escapeHTML(model.runtimeFootprint.scope)}</p>` : ""}<p>${escapeHTML(model.timingBoundaries)}</p><p>${escapeHTML(model.order)}</p><p>Duration bands start at zero and share their boundaries and count scales across probe modes and timing series. Lower boundaries are inclusive; upper boundaries are exclusive, except the final band includes its maximum. Comparison means and changes use only the same cases with both finite timings (${model.aggregate.pairedCount} paired cases). Missing values are never counted as zero.</p><p>Setup time: ${metric(model.setupMs === null ? null : model.setupMs / 1000, "s")}. Total played moves include every closing move.</p>${model.notes.map((text) => `<p>${escapeHTML(text)}</p>`).join("")}</footer></main></body></html>\n`;
 }
 
 export async function writeHTMLReport(inputFile, outputFile) {

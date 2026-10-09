@@ -3,6 +3,7 @@ import { mkdtemp, readFile, writeFile, rm, stat, rename, mkdir, symlink } from "
 import os from "node:os";
 import path from "node:path";
 import { COMPONENT_DIR, loadSample } from "../harness.mjs";
+import { createContract } from "../metadata.mjs";
 import { main, parseArgs, runBenchmark, selectDays } from "../runner.mjs";
 import { assertSafePaths, beginRecording, DEFAULT_BASELINE_DIR, readBaseline, readCase, writeCase } from "../references.mjs";
 
@@ -48,8 +49,9 @@ async function record(dir, extra = {}) {
 
 describe("CLI selection and paths", () => {
   it("defaults to verification and rejects ambiguous or invalid options", () => {
-    expect(parseArgs([])).toMatchObject({ record: false, overwrite: false, days: null, baselineDir: DEFAULT_BASELINE_DIR });
-    for (const args of [["--overwrite"], ["--days"], ["--days", "1000,1000"], ["--days", "no"], ["--record", "--record"], ["--unknown"]]) {
+    expect(parseArgs([])).toMatchObject({ record: false, overwrite: false, days: null, baselineDir: DEFAULT_BASELINE_DIR, backend: "worker" });
+    expect(parseArgs(["--backend", "direct"]).backend).toBe("direct");
+    for (const args of [["--overwrite"], ["--days"], ["--days", "1000,1000"], ["--days", "no"], ["--record", "--record"], ["--unknown"], ["--backend", "fake"], ["--backend"], ["--backend", "worker", "--backend", "direct"]]) {
       expect(() => parseArgs(args)).toThrow();
     }
     expect(selectDays(sample, [1414, 1000])).toEqual([1000, 1414]);
@@ -183,5 +185,46 @@ describe("correctness failures and CLI exits", () => {
       expect((await stat(evidence)).size).toBeGreaterThan(0);
       temporary.push(path.dirname(path.dirname(evidence)));
     }
+  });
+});
+
+
+describe("Worker contract, timing and cleanup", () => {
+  it("uses Worker-provided metadata without a host matrix, preserves historical CPU timings and disposes on success", async () => {
+    const dir = await directory(); await record(dir);
+    const deps = dependencies();
+    const create = deps.createHarness;
+    let disposed = 0;
+    deps.createHarness = async input => {
+      expect(input.backend).toBe("worker");
+      const harness = await create(input);
+      harness.contract = createContract(harness);
+      harness.state = { POOL: harness.state.POOL };
+      harness.dispose = async () => { disposed++; };
+      const run = harness.runGame;
+      harness.runGame = async (...args) => ({ ...await run(...args), roundtripMs: 30, turnRoundtripMs: [30] });
+      return harness;
+    };
+    const verified = await runBenchmark(options(dir), deps);
+    expect(verified.valid).toBe(true);
+    expect(disposed).toBe(1);
+    expect(verified.cases[0]).toMatchObject({ baselineComputeMs: 10, currentComputeMs: 10, roundtripMs: 30, transportOverheadMs: 20 });
+    expect(verified.summary.overall).toMatchObject({ computeMs: 30, roundtripMs: 60, transportOverheadMs: 30, roundtripMeasuredCases: 2 });
+  });
+  it.each(["contract", "provenance", "case"])("disposes the live backend on %s failure", async phase => {
+    const dir = await directory(); await record(dir);
+    const deps = dependencies({ failure: phase === "case" });
+    const create = deps.createHarness;
+    let disposed = 0;
+    deps.createHarness = async input => {
+      const harness = await create(input);
+      harness.dispose = async () => { disposed++; };
+      if (phase === "contract") harness.contract = { changed: true };
+      return harness;
+    };
+    if (phase === "provenance") deps.collectProvenance = async () => { throw new Error("Metadata unavailable"); };
+    const failed = await runBenchmark(options(dir), deps);
+    expect(failed.valid).toBe(false);
+    expect(disposed).toBe(1);
   });
 });

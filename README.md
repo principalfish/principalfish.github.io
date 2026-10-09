@@ -61,14 +61,24 @@ PORT=8001 ./server.sh
 Requires Node.js 22 or later and the existing npm development dependencies.
 Fast harness tests run with `npm test`. The separate benchmark uses 100 frozen
 games spread across days #1000–1414, with pool probes first and expanded probes
-second (200 cases), through the application's actual daily controller.
+second (200 cases), through the application's actual daily controller and the
+production Worker client/handler using native Node `worker_threads`. The default
+backend is `worker`; a single Worker owns and decodes the matrix once, then
+reuses it across the sequential cases. Logical hashes and frozen-answer checks
+are computed inside that Worker; the host does not load another decoded matrix.
 
 From the repository root, verify against the reference:
 
 ```bash
 npm run benchmark:referdle
 npm run benchmark:referdle -- --days 1000,1414 --report /tmp/referdle-report.json
+npm run benchmark:referdle -- --backend direct --days 1000,1414 --report /tmp/referdle-direct.json
 ```
+
+The explicit `direct` backend is for focused compatibility checks; it does not
+validate native Worker transport and has no message roundtrip measurements.
+Worker benchmarks fail rather than silently substituting a direct backend.
+Both backends close their resources on success or failure.
 
 Verification never creates or replaces a reference. Missing/corrupt references,
 changed logical inputs/strategy, incomplete games and any exact trace mismatch
@@ -110,7 +120,11 @@ npm run report:referdle -- /tmp/referdle-report.json --output /tmp/referdle-repo
 
 The offline report plots per-game computation seconds with shared duration bands
 and count scales for pool/expanded modes and baseline/current series, alongside
-duration means. It also plots total played moves, including closing moves, and
+duration means. Worker reports additionally plot advance-job roundtrip seconds
+and show roundtrip minus compute for the cases with both measurements. This
+overhead includes benchmark evidence cloning/transfer and is not pure messaging
+latency. Older/direct reports leave unavailable roundtrip values explicit; no
+historical roundtrip baseline is inferred. It also plots total played moves, including closing moves, and
 their means; baseline move counts are unavailable in timing rows. Comparison
 means/deltas use the same cases with both finite timings and show the paired
 count. Missing measurements are excluded, and partial/failed runs are labeled
@@ -128,19 +142,84 @@ directory, whose path appears in the report.
 Progress goes to stderr and the JSON report to stdout (npm also prints its command
 banner; invoke `node referdle-solver/benchmarks/runner.mjs` directly for pure JSON).
 Reports include per-case times/deltas, per-mode and overall computation totals,
-medians, slowest cases, setup/elapsed wall time and total reference bytes. Source
+medians, slowest cases, separate Worker roundtrip totals/means/medians and paired
+transport overhead, setup/elapsed wall time and total reference bytes. Runtime
+footprint records unminified component HTML/CSS/JavaScript and shipped data file
+bytes separately from decoded matrix bytes. It excludes references and shared
+site assets; these file counts are not an initial network-transfer measurement. Source
 and raw asset hashes are provenance; logical matrix hashes accept a different
 storage type or compression when every pattern code remains identical. Changes
 to Node/platform/CPU produce a timing comparability note instead of failing
 correctness.
 
-Compute time sums synchronous `nextTurn` calls. It excludes downloads, decoding,
-bundling, animation waits, trace normalization/encoding, compression and
-comparison. Render helpers are capture/no-op shims, so this is solver/controller
-timing rather than browser rendering performance. Each run is one sequential
-pass without warmup; early cases include JIT startup, and host load can change
-timings. Performance deltas are informative, with no pass/fail speed threshold;
-failed correctness runs are invalid for performance acceptance.
+Compute time sums synchronous computation-service intervals for daily advances
+inside the Worker (or the explicit direct service). It excludes Promise waiting,
+asset loading/decoding, bundling, controller publication/rendering, animation
+waits, trace normalization/encoding, transfer, compression and comparison.
+Roundtrip time sums each advance job from host send through accepted reply;
+initialization and day loading remain outside those totals in setup/wall time.
+Render helpers are capture/no-op shims; these timings do not measure browser
+rendering. The original baseline included synchronous `nextTurn` controller and
+publication work, so CPU percentage comparisons across that boundary are
+informative rather than identical-boundary measurements. Original timings are
+never erased or rebased. Each run is one sequential pass without warmup; early
+cases include JIT startup, and host load can change timings. Performance deltas
+have no pass/fail speed threshold; failed correctness runs are invalid for
+performance acceptance.
+
+The original 200-case compute total was 35m41.3s. Recorded optimization passes
+were 12m59.9s after pattern-block reuse, 12m06.0s after lossless uint8 storage,
+10m34.1s after daily-result reuse and 9m22s after shared suggestion analysis.
+The engine extraction pass was 9m25s. These are individual passes, not repeated
+statistical estimates; each reproduced all 200 complete traces exactly.
+
+### Referdle Worker behavior and browser checks
+
+The browser uses one dedicated module Worker, shared by daily and manual mode.
+The Worker owns the decoded matrix; the page receives lightweight words,
+results and accepted continuation state. Day/mode/probe/reset and manual-input
+controls remain usable while calculations run. Changing inputs invalidates
+obsolete replies and physically terminates active obsolete work. An idle Worker
+is reused; after cancellation it restarts lazily from accepted continuation or
+manual input without replaying all prior guesses. Manual typing does not trigger
+unsolicited analysis; Suggest and selected replay steps request computation.
+
+If a Worker cannot start, the page visibly reports compatibility mode and uses
+the direct service after disposing the failed Worker. That mode retains solver
+functionality but performs calculations on the page. Missing/corrupt assets stay
+explicit errors. Runtime/message errors preserve accepted state and permit an
+explicit retry; failed day loading has a Reload day control.
+
+Serve with `./server.sh` and open `/referdle-solver/`. Browser acceptance includes
+both probe modes, a slow daily solve with responsive controls, interruption by
+mode/day/probe/reset changes, manual Suggest, clue-only input, lazy scrubbing,
+and failure/retry. Native Worker tests verify exact computation/transport and
+host-event-loop progress, but cannot establish browser module URLs, rendering
+or frame/input responsiveness. Expanded words are currently loaded at startup.
+
+An isolated headless Edge check on 9 October 2026 passed both daily probe modes,
+slow-solve frame/control responsiveness, cancellation on probe/day/mode changes,
+reset, manual clue-only Suggest, lazy replay and rapid scrubbing, on-demand
+manual edits, and retry after a simulated Worker error event. The page produced
+no unhandled JavaScript errors during these checks; the error event was injected
+to exercise recovery rather than an actual engine crash.
+
+The full native Worker verification on 9 October 2026 matched all 200 frozen
+traces. Synchronous service computation totaled 556.55 seconds (9m17s), and
+advance-job roundtrips totaled 559.52 seconds (9m20s): 2.97 seconds of paired
+transport/job overhead, averaging 14.85 ms per game. Mean computation was 2.604
+seconds with pool probes and 2.962 seconds with expanded probes. The run took
+567.01 seconds overall, including setup and trace comparisons. These are one
+sequential pass's measurements; the original baseline also included controller
+publication in its compute interval, so comparisons across that boundary remain
+informative rather than an exact CPU speedup claim.
+
+The current matrix is 7,491,562 gzip bytes and 16,378,209 decoded bytes, compared
+with 8,857,127 gzip bytes and 32,756,418 decoded bytes before uint8 conversion.
+At that measurement, unminified component HTML/CSS, JavaScript and shipped data totaled
+7,804,246 file bytes, excluding the benchmark archive, stats page and shared
+site assets. This file inventory is separate from browser startup transfer or
+peak process memory.
 
 ### Referdle matrix storage
 

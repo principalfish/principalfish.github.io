@@ -227,7 +227,7 @@ export function initManualMode(state, manual, clueUI, uiEls, compute = createCom
   function inputsChanged() {
     invalidate();
     clearAll();
-    status('Inputs changed — press "Suggest next guess" to analyse.');
+    status("Inputs changed — press \"Suggest next guess\" to analyse.");
   }
 
   return { onEdit, notifyReady, reset, refreshSuggest, prev, next, scrubTo, inputsChanged, stop: invalidate };

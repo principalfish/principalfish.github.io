@@ -1,14 +1,11 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { readFile } from "node:fs/promises";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import path from "node:path";
 import { build } from "esbuild";
 import { COMPONENT_DIR } from "../harness.mjs";
 
 const solverDir = path.join(COMPONENT_DIR, "js/solver");
-const previousRevision = "76aa8e6de54107b4e671e0ccbe40360ddc518fc9";
-const runFile = promisify(execFile);
+const fixtureDir = new URL("./fixtures/", import.meta.url);
 let current, previous;
 
 async function load({ legacy = false, overrides = {}, refined = false } = {}) {
@@ -33,7 +30,7 @@ return { solvable: true, perSlotFeasible: word === "BRISK" ? [["A"], ["B"], ["C"
 export const solveRelaxed = solve; export function localCandidates() { return []; }`,
           };
           let contents = legacy && ["suggest.js", "autoplay.js"].includes(name)
-            ? (await runFile("git", ["show", `${previousRevision}:referdle-solver/js/solver/${name}`], { encoding: "utf8" })).stdout
+            ? await readFile(new URL(`legacy-${name}.txt`, fixtureDir), "utf8")
             : await readFile(filename, "utf8");
           // Overrides must follow the defaults; keep the shipped strategy source authoritative.
           if (name === "strategy.js") contents = contents.replace("\n});", `\n...${JSON.stringify(overrides)}\n});`);

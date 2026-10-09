@@ -22,4 +22,3 @@ export function createLocalFetch(dataDir, fallback = globalThis.fetch) {
     }
   };
 }
-

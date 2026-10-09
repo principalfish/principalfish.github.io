@@ -142,6 +142,50 @@ pass without warmup; early cases include JIT startup, and host load can change
 timings. Performance deltas are informative, with no pass/fail speed threshold;
 failed correctness runs are invalid for performance acceptance.
 
+### Referdle matrix storage
+
+The deployed solver has one matrix, `referdle-solver/data/pool_matrix.uint8.gz`.
+`data/manifest.json` declares its component-local filename, `uint8` storage,
+dimensions, compressed/decoded lengths and SHA256 hashes. The browser loads the
+declared gzip with `DecompressionStream`, checks dimensions, decoded length and
+pattern codes (0–242), and keeps a `Uint8Array`. Word order and logical pattern
+values are unchanged.
+
+The 4,047 × 4,047 matrix now occupies 16,378,209 decoded bytes, half the former
+32,756,418 bytes. Its gzip is 7,491,562 bytes, down from 8,857,127 bytes (15.42%).
+The logical SHA256 remains
+`27ac836c6842a1076564d7197b8af46840d42ca24d4768016b090127dbc3547d`.
+The legacy archive is retained in Git history rather than deployed alongside
+the byte matrix. Reference traces are development evidence, not page downloads.
+
+Reproduce the conversion in an isolated directory using the last revision with
+the legacy asset, from the repository root:
+
+```bash
+REFERDLE_REPRO_DIR=$(mktemp -d /tmp/referdle-matrix.XXXXXX)
+git show b0670d30aa7ff18b523860822eb5489a75cf8c38:referdle-solver/data/pool_matrix.int16.gz > "$REFERDLE_REPRO_DIR/legacy.int16.gz"
+node referdle-solver/benchmarks/convert-matrix.mjs \
+  --input "$REFERDLE_REPRO_DIR/legacy.int16.gz" \
+  --output "$REFERDLE_REPRO_DIR/pool_matrix.uint8.gz" \
+  --dimension 4047 --manifest "$REFERDLE_REPRO_DIR/manifest.json"
+```
+
+The converter reads signed little-endian int16 with `DataView`, validates every
+value before narrowing, and verifies every converted value, the complete
+logical hash and the gzip round trip before publication. It uses gzip level 9
+with zero mtime and no filename; identical inputs produce identical gzip under
+the same Node/zlib version. Output overwrite and input/output aliases are
+refused. Replacing an existing manifest requires `--replace-manifest` and
+matching dimensions. Output and manifest must share an existing directory;
+failed publication removes the new output and preserves an existing manifest.
+
+Focused loader tests exercise native Node `DecompressionStream` and streamed
+responses. These verify loading/validation, not browser rendering or browser
+module support; an actual browser smoke check remains a separate acceptance
+step. Serve with `./server.sh` and open `/referdle-solver/` to check asset loading
+and both probe modes in a browser. Full trace verification uses the benchmark
+command above and never replaces the original references.
+
 ## Data subsystem setup and runbook
 
 This guide covers local setup for the `data/` part of the repo end-to-end:

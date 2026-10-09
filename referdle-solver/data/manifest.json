@@ -1,5 +1,10 @@
 {
   "pool_n": 4047,
   "matrix_dim": 4047,
-  "gzip_bytes": 8857127
+  "matrix_file": "pool_matrix.uint8.gz",
+  "matrix_storage": "uint8",
+  "decoded_bytes": 16378209,
+  "gzip_bytes": 7491562,
+  "patterns_sha256": "27ac836c6842a1076564d7197b8af46840d42ca24d4768016b090127dbc3547d",
+  "gzip_sha256": "cf8c4f9b191b91b6645c34e358b09c25409844fd0125fa138ea67cc94c96f2f4"
 }

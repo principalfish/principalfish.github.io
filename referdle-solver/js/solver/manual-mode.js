@@ -6,8 +6,7 @@
 // doesn't know the answers, so it can't honestly play a game out).
 
 import { solveRelaxed } from "./solver.js";
-import { bestGuessAcrossBoards, topGuessesForBoard } from "./suggest.js";
-import { STRATEGY } from "./strategy.js";
+import { buildSuggestions } from "./suggest.js";
 import {
   buildOverlay, renderWordLists, renderStepSuggest, renderAutoSolveTable, perWordTopHTML,
 } from "./render.js";
@@ -40,20 +39,7 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     (uiEls.expandedToggle && !uiEls.expandedToggle.checked) ? st.POOL : st.ALL_GUESSES;
 
   function buildSuggest(res, ctx) {
-    const guesses = guessSet();
-    const ranked = bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, guesses, st.PLURALS, ctx);
-    const perBoard = [];
-    for (let b = 0; b < res.perSlotFeasible.length; b++) {
-      const ans = res.perSlotFeasible[b];
-      if (ans.length > 1) {
-        const avoid = b < 3 && STRATEGY.avoid_doubles_w13;
-        perBoard.push({
-          board: b,
-          top: topGuessesForBoard(ans, st.PM, st.N, st.poolIndex, guesses, st.PLURALS, 5, avoid, b),
-        });
-      }
-    }
-    return { solvable: true, ranked, perBoard };
+    return buildSuggestions(res, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS, ctx);
   }
 
   // Entering manual mode: keep the carried-over board, but clear any leftover

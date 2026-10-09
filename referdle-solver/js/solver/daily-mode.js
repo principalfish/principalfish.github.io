@@ -4,7 +4,7 @@
 //                 whole game), revealing the game incrementally.
 
 import { dailyGame, dailyClueGrid } from "./data.js";
-import { solve, solveRelaxed } from "./solver.js";
+import { solve } from "./solver.js";
 import { bestGuessAcrossBoards, topGuessesForBoard } from "./suggest.js";
 import { getComparison } from "./compare.js";
 import { STRATEGY } from "./strategy.js";
@@ -48,6 +48,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
 
   async function loadDay(d) {
     cancelAnim();
+    turn?.solveCache.clear();
     day = d;
     words = await dailyGame(state, d);
     if (!words) { status(`No bundled puzzle for day ${d}.`); return; }
@@ -73,6 +74,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   // recomputes — used when the probe word-set toggle changes.
   function resetSolve() {
     cancelAnim();
+    turn?.solveCache.clear();
     if (!words) return;
     clueUI.setClueGrid(dailyClueGrid(words));
     manual.reset();
@@ -176,7 +178,14 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   }
 
   function turnSolve(p13, p5, pc) {
-    return solve(turn.slots, turn.grid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, p13, p5, pc, null);
+    // Entries belong to the current slots/grid; every guess append clears them.
+    const key = `${p13 ? 1 : 0}${p5 ? 1 : 0}${pc ? 1 : 0}`;
+    let result = turn.solveCache.get(key);
+    if (!turn.solveCache.has(key)) {
+      result = solve(turn.slots, turn.grid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, p13, p5, pc, null);
+      turn.solveCache.set(key, result);
+    }
+    return result;
   }
 
   // Per-board top-5 (probes included when one wins) for the state-before-move panel.
@@ -202,7 +211,14 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
 
   // After-move solve (relaxed) for the overlay + word-list panels.
   function afterSolve() {
-    return solveRelaxed(turn.slots, turn.grid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, null);
+    // Display solves start with global defaults; move selection may already have
+    // disabled sticky prunes. Reuse results only for the same pruning options.
+    const p13 = STRATEGY.prune_w13_doubles;
+    const p5 = STRATEGY.prune_w5_plurals;
+    const pc = STRATEGY.prune_w13_combos;
+    let result = turnSolve(p13, p5, pc);
+    if (!result.solvable && (p13 || p5 || pc)) result = turnSolve(false, false, false);
+    return result;
   }
 
   function startClosing() {
@@ -220,6 +236,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
     const before = afterSolve();
     const suggest = before.solvable ? buildSuggest(before, rank(before)) : { solvable: false };
     turn.slots[b].guesses.push({ word: words[b], colors: "22222" });
+    turn.solveCache.clear();
     turn.moves.push({
       board: b, word: words[b], colors: "22222", probe: false, expanded: false,
       setSize: null, expRemaining: null, isClosing: true,
@@ -238,6 +255,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
         pruneW13: STRATEGY.prune_w13_doubles,
         pruneW5: STRATEGY.prune_w5_plurals,
         pruneCombos: STRATEGY.prune_w13_combos,
+        solveCache: new Map(),
         moves: [], steps: [], closingQueue: null, done: false,
       };
       lastAutoSolve = null;
@@ -277,6 +295,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
     const top = ranked[0];
     const colors = getComparison(top.word, words[top.board]);
     turn.slots[top.board].guesses.push({ word: top.word, colors });
+    turn.solveCache.clear();
     turn.moves.push({
       board: top.board, word: top.word, colors,
       probe: top.probe || false,

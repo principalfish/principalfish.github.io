@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
 import { createHarness, loadSample } from "../harness.mjs";
 import { createNativeWorkerFactory } from "../worker-bridge.mjs";
 import { workerModules } from "./worker-support.mjs";
@@ -64,7 +65,7 @@ describe("native benchmark adapter", () => {
     expect(bridge.workers[0].native.listenerCount("error")).toBe(0);
   }, 10000);
 
-  it("computes compatible metadata in the single Worker-owned matrix and drives a complete live-controller trace", async () => {
+  it.skipIf(!existsSync(DEFAULT_BASELINE_DIR))("computes compatible metadata in the single Worker-owned matrix and drives a complete live-controller trace (local baseline)", async () => {
     const sample = await loadSample();
     const harness = await createHarness({ sample, backend: "worker" });
     try {

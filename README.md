@@ -67,7 +67,20 @@ backend is `worker`; a single Worker owns and decodes the matrix once, then
 reuses it across the sequential cases. Logical hashes and frozen-answer checks
 are computed inside that Worker; the host does not load another decoded matrix.
 
-From the repository root, verify against the reference:
+The full reference archive is local and ignored by Git. On a fresh checkout,
+generate it from the current solver before running full verification:
+
+```bash
+npm run benchmark:referdle -- --record
+```
+
+This records all 100 games in both modes (200 traces) and their current timings.
+It takes roughly ten minutes on the development machine; other machines vary.
+Recording refuses to replace an existing archive. Keep a baseline unchanged
+while checking later solver changes; regenerating it records the current
+version, not the original unoptimized timing baseline.
+
+From the repository root, verify against the local reference:
 
 ```bash
 npm run benchmark:referdle
@@ -93,13 +106,18 @@ npm run benchmark:referdle -- --record
 npm run benchmark:referdle -- --record --overwrite
 ```
 
-The complete baseline lives in `referdle-solver/benchmarks/references/`, with one
+The complete local baseline lives in `referdle-solver/benchmarks/references/`, with one
 compressed trace per case under `pool/` and `expanded/`, plus
 `reference-manifest.json` and `timing-baseline.json`. Recording stages all cases
 before publishing the directory; a failed run preserves an existing baseline.
 The initial archive has 200 compressed traces and two metadata files, totaling
 36,606,099 bytes (36.61 MB). Initial recording took 35m49.4s; an independent
-36m16.5s verification reproduced all 200 traces exactly.
+36m16.5s verification reproduced all 200 traces exactly. The existing local
+archive is preserved; these files are no longer tracked or shipped with the
+site. The production matrix under `referdle-solver/data/` remains tracked.
+Three fast-suite integration checks use the local archive when present and are
+explicitly skipped without it. The remaining unit and Worker transport tests
+run in fresh checkouts and CI without generating an archive.
 Replacement refuses directories containing unrelated files. A writer lock
 prevents simultaneous recording; after an interrupted process, confirm it has
 stopped before manually removing the sibling `.references.lock` (or the matching

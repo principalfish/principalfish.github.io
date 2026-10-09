@@ -38,3 +38,8 @@ data/*.db
 
 # ── Claude ──────────────────────────────────────────────────────────────────────
 .claude/*
+
+# Local Referdle benchmark archives
+/referdle-solver/benchmarks/references/
+/referdle-solver/benchmarks/.references.lock
+/referdle-solver/benchmarks/.references.staging-*

@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
 import { DEFAULT_BASELINE_DIR, readBaseline, readCase } from "../references.mjs";
 import { createNativeWorkerFactory, workerModules } from "./worker-support.mjs";
 
@@ -73,7 +74,7 @@ export const solve = solveRelaxed;`,
   });
 });
 
-describe("bounded native Worker transport", () => {
+describe.skipIf(!existsSync(DEFAULT_BASELINE_DIR))("bounded native Worker transport (local baseline)", () => {
   it("runs the real engine in both probe modes with exact frozen opening state and host progress", async () => {
     const bridge = await createNativeWorkerFactory();
     const client = modules.createWorkerClient({ workerFactory: bridge.factory,

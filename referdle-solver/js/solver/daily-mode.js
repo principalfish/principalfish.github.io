@@ -3,16 +3,13 @@
 //   • Next turn — advance exactly ONE solver move per press (one solve, not the
 //                 whole game), revealing the game incrementally.
 
-import { dailyGame, dailyClueGrid } from "./data.js";
-import { solve } from "./solver.js";
-import { buildSuggestions } from "./suggest.js";
-import { getComparison } from "./compare.js";
-import { STRATEGY } from "./strategy.js";
+import { createComputeService } from "./compute-service.js";
+import { freshSlots, reconstructSlots } from "./engine.js";
 import {
   buildOverlay, renderWordLists, renderStepSuggest, renderAutoSolveTable,
 } from "./render.js";
 
-export function initDailyMode(state, manual, clueUI, uiEls) {
+export function initDailyMode(state, manual, clueUI, uiEls, compute = createComputeService(state)) {
   let day = null;
   let words = null;
   let lastAutoSolve = null;
@@ -32,15 +29,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   const cancelAnim = () => { animToken++; };
 
-  const st = {
-    PM: state.PM, N: state.N, POOL: state.POOL, poolIndex: state.poolIndex,
-    ALL_GUESSES: state.ALL_GUESSES, PLURALS: state.PLURALS,
-  };
-
-  // Guess universe for probe search: the full expanded set, or just the answer
-  // pool when the "Expanded probes" toggle is off.
-  const guessSet = () =>
-    (uiEls.expandedToggle && !uiEls.expandedToggle.checked) ? st.POOL : st.ALL_GUESSES;
+  const expanded = () => !uiEls.expandedToggle || uiEls.expandedToggle.checked;
 
   function status(msg) {
     if (uiEls.statusEl) uiEls.statusEl.textContent = msg;
@@ -48,11 +37,11 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
 
   async function loadDay(d) {
     cancelAnim();
-    turn?.solveCache.clear();
     day = d;
-    words = await dailyGame(state, d);
+    const loaded = await compute.request({ type: "load-day", day: d });
+    words = loaded.words || null;
     if (!words) { status(`No bundled puzzle for day ${d}.`); return; }
-    const grid = dailyClueGrid(words);
+    const grid = loaded.grid;
     clueUI.setClueGrid(grid);
     manual.reset();
     lastAutoSolve = null;
@@ -74,9 +63,9 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   // recomputes — used when the probe word-set toggle changes.
   function resetSolve() {
     cancelAnim();
-    turn?.solveCache.clear();
     if (!words) return;
-    clueUI.setClueGrid(dailyClueGrid(words));
+    const loaded = compute.request({ type: "reset-daily" });
+    clueUI.setClueGrid(loaded.grid);
     manual.reset();
     lastAutoSolve = null;
     turn = null;
@@ -89,10 +78,6 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   function enableControls(on) {
     if (uiEls.solveToEndBtn) uiEls.solveToEndBtn.disabled = !on;
     if (uiEls.nextTurnBtn) uiEls.nextTurnBtn.disabled = !on;
-  }
-
-  function freshSlots() {
-    return [0, 1, 2, 3, 4].map(() => ({ guesses: [] }));
   }
 
   // --- Solve (whole game, then scrub) -------------------------------------------
@@ -173,124 +158,21 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
 
   // --- Next turn (one solver move per press) ------------------------------------
 
-  function allPinned(res) {
-    return res.solvable && res.perSlotFeasible.every((s) => s.length === 1);
-  }
-
-  function turnSolve(p13, p5, pc) {
-    // Entries belong to the current slots/grid; every guess append clears them.
-    const key = `${p13 ? 1 : 0}${p5 ? 1 : 0}${pc ? 1 : 0}`;
-    let result = turn.solveCache.get(key);
-    if (!turn.solveCache.has(key)) {
-      result = solve(turn.slots, turn.grid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, p13, p5, pc, null);
-      turn.solveCache.set(key, result);
-    }
-    return result;
-  }
-
-  // Per-board top-5 (probes included when one wins) for the state-before-move panel.
-  function buildSuggest(res) {
-    const { ranked, perBoard } = buildSuggestions(res, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS,
-      { slots: turn.slots, clueGrid: turn.grid, pool: st.POOL });
-    return { solvable: true, ranked, perBoard };
-  }
-
-  // After-move solve (relaxed) for the overlay + word-list panels.
-  function afterSolve() {
-    // Display solves start with global defaults; move selection may already have
-    // disabled sticky prunes. Reuse results only for the same pruning options.
-    const p13 = STRATEGY.prune_w13_doubles;
-    const p5 = STRATEGY.prune_w5_plurals;
-    const pc = STRATEGY.prune_w13_combos;
-    let result = turnSolve(p13, p5, pc);
-    if (!result.solvable && (p13 || p5 || pc)) result = turnSolve(false, false, false);
-    return result;
-  }
-
-  function startClosing() {
-    const lastOn = {};
-    for (const m of turn.moves) lastOn[m.board] = m.word;
-    turn.closingQueue = [];
-    for (let b = 0; b < 5; b++) if (lastOn[b] !== words[b]) turn.closingQueue.push(b);
-    if (!turn.closingQueue.length) turn.done = true;
-  }
-
-  function playClosing() {
-    if (!turn.closingQueue) startClosing();
-    if (!turn.closingQueue.length) { turn.done = true; finishStep(); return; }
-    const b = turn.closingQueue.shift();
-    const before = afterSolve();
-    const suggest = before.solvable ? buildSuggest(before) : { solvable: false };
-    turn.slots[b].guesses.push({ word: words[b], colors: "22222" });
-    turn.solveCache.clear();
-    turn.moves.push({
-      board: b, word: words[b], colors: "22222", probe: false, expanded: false,
-      setSize: null, expRemaining: null, isClosing: true,
-    });
-    turn.steps.push({ after: afterSolve(), suggest });
-    if (!turn.closingQueue.length) turn.done = true;
-    finishStep();
-  }
-
   function nextTurn() {
     if (!words) return;
     if (!turn) {
-      turn = {
-        slots: freshSlots(),
-        grid: dailyClueGrid(words),
-        pruneW13: STRATEGY.prune_w13_doubles,
-        pruneW5: STRATEGY.prune_w5_plurals,
-        pruneCombos: STRATEGY.prune_w13_combos,
-        solveCache: new Map(),
-        moves: [], steps: [], closingQueue: null, done: false,
-      };
+      turn = { moves: [], steps: [], done: false };
       lastAutoSolve = null;
       activeIdx = -1;
       manual.reset();
     }
     if (turn.done) return;
-    if (turn.closingQueue) { playClosing(); return; }
-
-    // One solve of the current state, relaxing sticky prunes only if forced.
-    let res = turnSolve(turn.pruneW13, turn.pruneW5, turn.pruneCombos);
-    if (!res.solvable && turn.pruneCombos) {
-      turn.pruneCombos = false;
-      res = turnSolve(turn.pruneW13, turn.pruneW5, false);
+    const reply = compute.request({ type: "advance-daily", expanded: expanded() });
+    turn.done = reply.continuation.done;
+    if (reply.move) {
+      turn.moves.push(reply.move);
+      turn.steps.push({ after: reply.after, suggest: reply.suggest });
     }
-    if (!res.solvable && (turn.pruneW13 || turn.pruneW5)) {
-      turn.pruneW13 = turn.pruneW5 = false;
-      res = turnSolve(false, false, false);
-    }
-    if (!res.solvable) { turn.done = true; finishStep(); return; }
-    if (allPinned(res)) { playClosing(); return; }
-
-    let suggest = buildSuggest(res);
-    let ranked = suggest.ranked;
-    if (!ranked.length && turn.pruneCombos) {
-      turn.pruneCombos = false;
-      res = turnSolve(turn.pruneW13, turn.pruneW5, false);
-      suggest = res.solvable ? buildSuggest(res) : { solvable: false };
-      ranked = suggest.ranked || [];
-    }
-    if (!ranked.length && (turn.pruneW13 || turn.pruneW5)) {
-      turn.pruneW13 = turn.pruneW5 = false;
-      res = turnSolve(false, false, false);
-      suggest = res.solvable ? buildSuggest(res) : { solvable: false };
-      ranked = suggest.ranked || [];
-    }
-    if (!ranked.length) { playClosing(); return; }
-
-    const top = ranked[0];
-    const colors = getComparison(top.word, words[top.board]);
-    turn.slots[top.board].guesses.push({ word: top.word, colors });
-    turn.solveCache.clear();
-    turn.moves.push({
-      board: top.board, word: top.word, colors,
-      probe: top.probe || false,
-      expanded: !!top.probe && !st.poolIndex.has(top.word),
-      setSize: top.setSize, expRemaining: top.expRemaining, isClosing: false,
-    });
-    turn.steps.push({ after: afterSolve(), suggest });
     finishStep();
   }
 
@@ -334,16 +216,6 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
     }
     if (uiEls.prevBtn) uiEls.prevBtn.disabled = n === 0;
     if (uiEls.nextBtn) uiEls.nextBtn.disabled = n === 0;
-  }
-
-  function reconstructSlots(startSlots, moves, upto) {
-    const slots = (startSlots.length ? startSlots : freshSlots())
-      .map((s) => ({ guesses: (s.guesses || []).map((g) => ({ ...g })) }));
-    for (let i = 0; i < upto; i++) {
-      const m = moves[i];
-      slots[m.board].guesses.push({ word: m.word, colors: m.colors });
-    }
-    return slots;
   }
 
   function jumpToMove(K) {

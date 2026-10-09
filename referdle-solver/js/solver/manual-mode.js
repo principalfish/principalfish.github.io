@@ -5,42 +5,17 @@
 // entered guesses you can scrub through. No whole-game auto-solve (manual mode
 // doesn't know the answers, so it can't honestly play a game out).
 
-import { solveRelaxed } from "./solver.js";
-import { buildSuggestions } from "./suggest.js";
+import { createComputeService } from "./compute-service.js";
+import { clueIsSet } from "./analysis.js";
 import {
   buildOverlay, renderWordLists, renderStepSuggest, renderAutoSolveTable, perWordTopHTML,
 } from "./render.js";
 
-export function initManualMode(state, manual, clueUI, uiEls) {
+export function initManualMode(state, manual, clueUI, uiEls, compute = createComputeService(state)) {
   let lastAutoSolve = null;
   let activeIdx = -1;
-  // Cache of the last replay ({ clueKey, moves, steps }) so a re-press reuses the
-  // unchanged prefix instead of re-solving every move from scratch.
-  let replayCache = null;
-
-  const st = {
-    PM: state.PM, N: state.N, POOL: state.POOL, poolIndex: state.poolIndex,
-    ALL_GUESSES: state.ALL_GUESSES, PLURALS: state.PLURALS,
-  };
-
   const status = (m) => { if (uiEls.statusEl) uiEls.statusEl.textContent = m; };
-  // "Set" only when a tile is actually coloured (yellow/green). A default
-  // all-gray grid carries no signal — and solving it from empty boards would
-  // branch over the whole pool of finals (a freeze), so treat it as unset.
-  const clueIsSet = (grid) =>
-    grid && grid.slice(0, 4).some((c) => typeof c === "string" && (c.includes("1") || c.includes("2")));
-  const freshSlots = () => [0, 1, 2, 3, 4].map(() => ({ guesses: [] }));
-  const reSolve = (slots, clueGrid) =>
-    solveRelaxed(slots, clueGrid, st.POOL, st.PM, st.N, st.poolIndex, st.PLURALS, null);
-
-  // Guess universe for probe search: the full expanded set, or just the answer
-  // pool when the "Expanded probes" toggle is off.
-  const guessSet = () =>
-    (uiEls.expandedToggle && !uiEls.expandedToggle.checked) ? st.POOL : st.ALL_GUESSES;
-
-  function buildSuggest(res, ctx) {
-    return buildSuggestions(res, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS, ctx);
-  }
+  const expanded = () => !uiEls.expandedToggle || uiEls.expandedToggle.checked;
 
   // Entering manual mode: keep the carried-over board, but clear any leftover
   // daily results and wait for the user to ask. No solving until "Suggest".
@@ -77,59 +52,8 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     status("Solving…");
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    // An all-gray clue grid is "unset" — pass null so the solver uses the fast
-    // no-clue path. (A literal all-gray clue would otherwise branch the clue
-    // solver over the whole final-word pool — a freeze.)
-    const clueGrid = clueIsSet(rawGrid) ? rawGrid : null;
-
-    // Build a move list from the entered guesses (board, then row order) and
-    // replay it from empty, caching each prefix's solve + the next-guess
-    // suggestion at that point.
-    const moves = [];
-    for (let b = 0; b < slots.length; b++) {
-      for (const g of slots[b].guesses) {
-        moves.push({ board: b, word: g.word, colors: g.colors, probe: false, expanded: false, isClosing: false });
-      }
-    }
-
-    // Reuse the longest unchanged prefix from the previous solve: same clue grid
-    // and identical earlier moves. Only the diverging tail is re-solved — so a
-    // continued game reuses everything but the new move, while an earlier edit or
-    // reset shortens the reusable prefix (down to zero → solve from the start).
-    const clueKey = clueGrid ? clueGrid.join("|") : "";
-    let reuse = 0;
-    if (replayCache && replayCache.clueKey === clueKey) {
-      const cm = replayCache.moves;
-      while (reuse < cm.length && reuse < moves.length &&
-             cm[reuse].board === moves[reuse].board &&
-             cm[reuse].word === moves[reuse].word &&
-             cm[reuse].colors === moves[reuse].colors) {
-        reuse++;
-      }
-    }
-
-    const startSlots = freshSlots();
-    const steps = [];
-    for (let i = 0; i < reuse; i++) {                 // unchanged prefix — reuse cached solve (lazy)
-      moves[i].setSize = replayCache.moves[i].setSize;
-      moves[i].expRemaining = replayCache.moves[i].expRemaining;
-      steps.push(replayCache.steps[i]);
-    }
-    for (let i = reuse; i < moves.length; i++) {      // diverging tail — solve LAZILY (on scrub)
-      // Do NOT solve every prefix up front: the broad EARLY prefixes are ~2s solves each, so a
-      // long/completed game froze (it was 2 solves per move). Leave each step's before/after
-      // undefined; ensureStepSolved() (in jumpToMove) computes a step's solve + cut on demand
-      // when the user actually scrubs to that move. Same lazy spirit as the per-step suggestion.
-      steps.push({ after: undefined, suggest: undefined });
-      moves[i].setSize = undefined;
-      moves[i].expRemaining = undefined;
-    }
-    replayCache = { clueKey, moves, steps };
-
-    // Solve ONLY the current/final state — that's all the displayed suggestion needs, and a
-    // settled end-state is narrow (fast). The per-move replay is filled in lazily on scrub.
-    const res = reSolve(slots, clueGrid);
-    if (moves.length) steps[steps.length - 1].after = res;  // last step == final state; reuse it
+    const reply = compute.request({ type: "analyse-manual", slots, clueGrid: rawGrid, expanded: expanded() });
+    const { result: res, clueGrid, startSlots, moves, steps } = reply;
     clueUI.setResults(buildOverlay(slots, res));
     if (!res.solvable) {
       status(`Unsolvable. ${res.reason || ""}`);
@@ -157,7 +81,7 @@ export function initManualMode(state, manual, clueUI, uiEls) {
       lastAutoSolve = null;
       disableScrub();
       uiEls.moveTableEl.innerHTML = "";
-      renderSuggestStandalone(buildSuggest(res, { slots, clueGrid, pool: st.POOL }));
+      renderSuggestStandalone(reply.suggest);
     }
   }
 
@@ -194,46 +118,14 @@ export function initManualMode(state, manual, clueUI, uiEls) {
   }
   function disableScrub() { setupScrub(0); }
 
-  function reconstructSlots(startSlots, moves, upto) {
-    const slots = startSlots.map((s) => ({ guesses: (s.guesses || []).map((g) => ({ ...g })) }));
-    for (let i = 0; i < upto; i++) {
-      const m = moves[i];
-      slots[m.board].guesses.push({ word: m.word, colors: m.colors });
-    }
-    return slots;
-  }
-
-  // Lazily compute a replayed move's solve + cut numbers, only when scrubbed to. The step's
-  // `after` (state through move K) and the move's before/after candidate counts are solved on
-  // demand — so the broad early prefixes are only ever solved if the user actually visits them.
-  function ensureStepSolved(K, clueGrid) {
-    const { startSlots, moves, steps } = lastAutoSolve;
-    const step = steps[K];
-    if (step.after === undefined) {
-      step.after = reSolve(reconstructSlots(startSlots, moves, K + 1), clueGrid);
-    }
-    if (moves[K].setSize === undefined) {
-      const before = reSolve(reconstructSlots(startSlots, moves, K), clueGrid);
-      moves[K].setSize = before.solvable ? before.perSlotFeasible[moves[K].board].length : null;
-      moves[K].expRemaining = step.after.solvable
-        ? step.after.perSlotFeasible[moves[K].board].length : null;
-    }
-  }
-
   function jumpToMove(K) {
     if (!lastAutoSolve) return;
-    const { startSlots, moves, steps } = lastAutoSolve;
+    const { moves, steps } = lastAutoSolve;
     activeIdx = K;
-    const slotsAfter = reconstructSlots(startSlots, moves, K + 1);
-    const rawGrid = clueUI.getClueGrid();
-    const clueGrid = clueIsSet(rawGrid) ? rawGrid : null;
-    ensureStepSolved(K, clueGrid);
-    const step = steps[K];
-    if (step.suggest === undefined) {
-      step.suggest = step.after.solvable
-        ? buildSuggest(step.after, { slots: slotsAfter, clueGrid, pool: st.POOL })
-        : { solvable: false };
-    }
+    const reply = compute.request({ type: "replay-manual", index: K, clueGrid: clueUI.getClueGrid(), expanded: expanded() });
+    const { slots: slotsAfter, clueGrid, step } = reply;
+    moves[K] = reply.move;
+    steps[K] = step;
 
     manual.reset();
     slotsAfter.forEach((s, b) => s.guesses.forEach((g) => manual.addGuess(b, g.word, g.colors)));
@@ -264,14 +156,14 @@ export function initManualMode(state, manual, clueUI, uiEls) {
     disableScrub();
     lastAutoSolve = null;
     activeIdx = -1;
-    replayCache = null;
+    compute.request({ type: "reset-manual" });
   }
 
   // The probe word-set toggle changed — cached suggestions are stale (they rank
   // probes from the old set), so drop the cache and re-suggest with the new set.
   function refreshSuggest() {
-    replayCache = null;
-    onEdit();
+    compute.request({ type: "reset-manual" });
+    return onEdit();
   }
 
   // Full reset of the manual state — clears the boards, the clue grid, the

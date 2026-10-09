@@ -1,14 +1,17 @@
 // Bootstrap: load assets, wire the mode toggle, daily dropdown, auto-solve and
 // scrub controls. All solving happens client-side (no server).
 
-import { loadAssets, testableDays } from "./data.js";
+
 import { createManualUI, createClueGridUI } from "../manual.js";
+import { createWorkerClient } from "./worker-client.js";
 import { initDailyMode } from "./daily-mode.js";
 import { initManualMode } from "./manual-mode.js";
 
 const $ = (id) => document.getElementById(id);
 
 let state = null;
+let compute = null;
+let days = [];
 let manual = null;
 let clueUI = null;
 let daily = null;
@@ -20,9 +23,22 @@ boot();
 
 async function boot() {
   try {
-    state = await loadAssets((msg) => { $("loading").textContent = msg; });
+    compute = createWorkerClient({
+      onProgress: (msg) => { $("loading").textContent = msg; },
+      onCompatibility: (msg) => {
+        const note = document.createElement("p");
+        note.id = "compute-compatibility";
+        note.textContent = msg;
+        $("app").before(note);
+      },
+    });
+    const catalogue = await compute.request({ type: "initialize" });
+    state = { POOL: catalogue.pool, ALL_GUESSES: catalogue.expanded };
+    days = catalogue.days;
   } catch (e) {
-    $("loading").innerHTML = `<span class="bad">Failed to load assets: ${e.message}</span>`;
+    $("loading").textContent = `Failed to load assets: ${e.message} Reload the page to retry.`;
+    $("loading").classList.add("bad");
+    compute?.dispose();
     return;
   }
   $("loading").style.display = "none";
@@ -50,8 +66,8 @@ function initUI() {
   clueUI = createClueGridUI($("manual-cluegrid"), onManualEdit);
   manual = createManualUI($("manual-grid"), onManualEdit);
 
-  daily = initDailyMode(state, manual, clueUI, uiEls());
-  manualCtl = initManualMode(state, manual, clueUI, uiEls());
+  daily = initDailyMode(state, manual, clueUI, uiEls(), compute);
+  manualCtl = initManualMode(state, manual, clueUI, uiEls(), compute);
 
   // Mode toggle.
   document.querySelectorAll('input[name="mode"]').forEach((r) => {
@@ -63,8 +79,12 @@ function initUI() {
   $("daily-select").addEventListener("change", (e) => {
     if (e.target.value !== "") loadDaily(+e.target.value);
   });
+  $("daily-reload").addEventListener("click", () => {
+    const selected = $("daily-select").value;
+    if (selected !== "") loadDaily(+selected);
+  });
   $("solve-to-end").addEventListener("click", () => daily.solveToEnd());
-  $("next-turn").addEventListener("click", () => daily.nextTurn());
+  $("next-turn").addEventListener("click", () => daily.nextTurn().catch(() => {}));
   // Changing the probe word-set invalidates the current result. In daily mode,
   // reset so the next Solve re-runs; in manual mode, re-suggest immediately.
   $("expanded-toggle").addEventListener("change", () => {
@@ -92,7 +112,8 @@ function activeCtl() {
 
 function setMode(m) {
   mode = m;
-  daily?.stop?.(); // halt any in-flight Solve playback before switching mode
+  daily?.stop?.();
+  manualCtl?.stop?.();
   const isDaily = m === "daily";
   $("daily-section").style.display = isDaily ? "" : "none";
   $("manual-section").style.display = isDaily ? "none" : "";
@@ -107,7 +128,8 @@ function setMode(m) {
   // daily mid-game) but does NOT solve on entry — solving is on demand only, via
   // "Suggest next guess". (Auto-solving here would also freeze on a completed
   // daily, replaying every prefix's suggestion up front.)
-  if (!isDaily) manualCtl.notifyReady();
+  if (isDaily) daily.notifyReady();
+  else manualCtl.notifyReady();
 }
 
 function gridMatches(a, b) {
@@ -124,16 +146,15 @@ function onManualEdit() {
     if (dailyGrid && gridMatches(clueUI.getClueGrid(), dailyGrid)) return; // still the daily
     setMode("manual");
   }
+  manualCtl?.inputsChanged();
 }
 
 async function loadDaily(day) {
-  await daily.loadDay(day);
-  dailyGrid = clueUI.getClueGrid();
+  if (await daily.loadDay(day)) dailyGrid = clueUI.getClueGrid();
 }
 
-async function populateDailyDropdown() {
+function populateDailyDropdown() {
   const sel = $("daily-select");
-  const days = await testableDays(state);
   const fmt = (iso) =>
     new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
       weekday: "short", day: "numeric", month: "short", year: "numeric",
@@ -152,3 +173,5 @@ function isoForDay(day) {
   const da = String(dt.getDate()).padStart(2, "0");
   return `${dt.getFullYear()}-${mo}-${da}`;
 }
+
+addEventListener("pagehide", (event) => { if (!event.persisted) compute?.dispose(); });

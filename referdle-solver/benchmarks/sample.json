@@ -1,0 +1,1009 @@
+{
+  "schemaVersion": 1,
+  "range": {
+    "start": 1000,
+    "end": 1414
+  },
+  "games": [
+    {
+      "day": 1000,
+      "answers": [
+        "GLOAT",
+        "SOLVE",
+        "NOBLY",
+        "COYLY",
+        "DOILY"
+      ]
+    },
+    {
+      "day": 1004,
+      "answers": [
+        "GLYPH",
+        "SNAKY",
+        "CRONY",
+        "NEEDY",
+        "NIFTY"
+      ]
+    },
+    {
+      "day": 1008,
+      "answers": [
+        "SALVO",
+        "SLEPT",
+        "SLUNK",
+        "SLURS",
+        "SLUSH"
+      ]
+    },
+    {
+      "day": 1013,
+      "answers": [
+        "WHOMP",
+        "GRUNT",
+        "QUICK",
+        "CULLS",
+        "DUCAL"
+      ]
+    },
+    {
+      "day": 1017,
+      "answers": [
+        "BRISK",
+        "PUKES",
+        "SHAKE",
+        "SLAKE",
+        "SNAKE"
+      ]
+    },
+    {
+      "day": 1021,
+      "answers": [
+        "WEANS",
+        "MULCH",
+        "ROUGH",
+        "DOUGH",
+        "BOUGH"
+      ]
+    },
+    {
+      "day": 1025,
+      "answers": [
+        "PIVOT",
+        "LONGS",
+        "SOBER",
+        "DOUSE",
+        "DOWSE"
+      ]
+    },
+    {
+      "day": 1029,
+      "answers": [
+        "GROIN",
+        "BLIMP",
+        "SPIKY",
+        "SPITS",
+        "SPITE"
+      ]
+    },
+    {
+      "day": 1033,
+      "answers": [
+        "DINER",
+        "COAST",
+        "BAYOU",
+        "ALOOF",
+        "AGLOW"
+      ]
+    },
+    {
+      "day": 1038,
+      "answers": [
+        "BULKS",
+        "VOUCH",
+        "UNWED",
+        "UNJAM",
+        "UNIFY"
+      ]
+    },
+    {
+      "day": 1042,
+      "answers": [
+        "TYING",
+        "AWFUL",
+        "HELPS",
+        "BLOOM",
+        "BLOOD"
+      ]
+    },
+    {
+      "day": 1046,
+      "answers": [
+        "SCORE",
+        "APHID",
+        "FAULT",
+        "GAWKY",
+        "KAYAK"
+      ]
+    },
+    {
+      "day": 1050,
+      "answers": [
+        "CLOMP",
+        "BRAYS",
+        "SHRUG",
+        "SHIRK",
+        "SHIRE"
+      ]
+    },
+    {
+      "day": 1054,
+      "answers": [
+        "CRISP",
+        "VAULT",
+        "BLOKE",
+        "FLOOD",
+        "GLOOM"
+      ]
+    },
+    {
+      "day": 1059,
+      "answers": [
+        "DREAM",
+        "BEFIT",
+        "GECKO",
+        "HENGE",
+        "SEGUE"
+      ]
+    },
+    {
+      "day": 1063,
+      "answers": [
+        "WOMAN",
+        "GUISE",
+        "FLECK",
+        "BERRY",
+        "DEPTH"
+      ]
+    },
+    {
+      "day": 1067,
+      "answers": [
+        "YODEL",
+        "PUMAS",
+        "CRAFT",
+        "ABACK",
+        "KNACK"
+      ]
+    },
+    {
+      "day": 1071,
+      "answers": [
+        "WREAK",
+        "TOUCH",
+        "TUMMY",
+        "TUFTS",
+        "TULIP"
+      ]
+    },
+    {
+      "day": 1075,
+      "answers": [
+        "LYCRA",
+        "SMOKY",
+        "ENVOY",
+        "DOWDY",
+        "POPPY"
+      ]
+    },
+    {
+      "day": 1079,
+      "answers": [
+        "GHOUL",
+        "SCALE",
+        "INLET",
+        "ELDER",
+        "LEPER"
+      ]
+    },
+    {
+      "day": 1084,
+      "answers": [
+        "CRANE",
+        "PIOUS",
+        "GUSTY",
+        "BLUSH",
+        "SLUSH"
+      ]
+    },
+    {
+      "day": 1088,
+      "answers": [
+        "TICKS",
+        "SPLIT",
+        "SHIRT",
+        "SAINT",
+        "SWIFT"
+      ]
+    },
+    {
+      "day": 1092,
+      "answers": [
+        "AXING",
+        "OUNCE",
+        "NEWTS",
+        "ENTRY",
+        "KNELT"
+      ]
+    },
+    {
+      "day": 1096,
+      "answers": [
+        "DAWNS",
+        "ALIVE",
+        "BEACH",
+        "OMEGA",
+        "FREAK"
+      ]
+    },
+    {
+      "day": 1100,
+      "answers": [
+        "TUNAS",
+        "SCOUR",
+        "SQUIB",
+        "SKULL",
+        "SPUME"
+      ]
+    },
+    {
+      "day": 1105,
+      "answers": [
+        "LOWED",
+        "SHIFT",
+        "SPIKY",
+        "SKIMS",
+        "SMIRK"
+      ]
+    },
+    {
+      "day": 1109,
+      "answers": [
+        "DEPOT",
+        "LIMOS",
+        "CAROL",
+        "ALOOF",
+        "AGLOW"
+      ]
+    },
+    {
+      "day": 1113,
+      "answers": [
+        "MIRED",
+        "OBEYS",
+        "SHAKE",
+        "CAUSE",
+        "FALSE"
+      ]
+    },
+    {
+      "day": 1117,
+      "answers": [
+        "STEIN",
+        "ADEPT",
+        "BLEAT",
+        "TREAT",
+        "WHEAT"
+      ]
+    },
+    {
+      "day": 1121,
+      "answers": [
+        "FLING",
+        "MOGUL",
+        "BULGE",
+        "GULLY",
+        "GULCH"
+      ]
+    },
+    {
+      "day": 1125,
+      "answers": [
+        "BUILD",
+        "FETAL",
+        "HALVE",
+        "PLANE",
+        "GLARE"
+      ]
+    },
+    {
+      "day": 1130,
+      "answers": [
+        "LURID",
+        "BLAZE",
+        "NOVEL",
+        "HOTEL",
+        "MOTEL"
+      ]
+    },
+    {
+      "day": 1134,
+      "answers": [
+        "GLAND",
+        "TRIPE",
+        "WHISK",
+        "WHIFF",
+        "WHICH"
+      ]
+    },
+    {
+      "day": 1138,
+      "answers": [
+        "SCOUT",
+        "DOWRY",
+        "LOVER",
+        "GORGE",
+        "BORNE"
+      ]
+    },
+    {
+      "day": 1142,
+      "answers": [
+        "POSER",
+        "FOILS",
+        "COAST",
+        "SOUND",
+        "SOGGY"
+      ]
+    },
+    {
+      "day": 1146,
+      "answers": [
+        "SHREW",
+        "BLANK",
+        "DAUNT",
+        "NANNY",
+        "CANNY"
+      ]
+    },
+    {
+      "day": 1151,
+      "answers": [
+        "PAWNS",
+        "SMOKY",
+        "SHIRK",
+        "SLEEK",
+        "SKULK"
+      ]
+    },
+    {
+      "day": 1155,
+      "answers": [
+        "BAIZE",
+        "EQUIP",
+        "FIVER",
+        "IDLES",
+        "INLET"
+      ]
+    },
+    {
+      "day": 1159,
+      "answers": [
+        "RULES",
+        "GHOUL",
+        "CLUNK",
+        "PLUMP",
+        "BLUFF"
+      ]
+    },
+    {
+      "day": 1163,
+      "answers": [
+        "STRIP",
+        "FLASK",
+        "MOUSE",
+        "NOOSE",
+        "DOWSE"
+      ]
+    },
+    {
+      "day": 1167,
+      "answers": [
+        "OLDIE",
+        "IMBUE",
+        "CHIVE",
+        "SWIPE",
+        "KNIFE"
+      ]
+    },
+    {
+      "day": 1171,
+      "answers": [
+        "SHRUB",
+        "WAFER",
+        "OLDER",
+        "VOTER",
+        "TONER"
+      ]
+    },
+    {
+      "day": 1176,
+      "answers": [
+        "REGAL",
+        "GECKO",
+        "WEIGH",
+        "BEIGE",
+        "FEIGN"
+      ]
+    },
+    {
+      "day": 1180,
+      "answers": [
+        "ROUGH",
+        "EBONY",
+        "CLOAK",
+        "SLOOP",
+        "FLOOD"
+      ]
+    },
+    {
+      "day": 1184,
+      "answers": [
+        "SHARD",
+        "BRISK",
+        "WREST",
+        "TRYST",
+        "TRUST"
+      ]
+    },
+    {
+      "day": 1188,
+      "answers": [
+        "JUMBO",
+        "PSYCH",
+        "DELIS",
+        "WISED",
+        "SNIDE"
+      ]
+    },
+    {
+      "day": 1192,
+      "answers": [
+        "TEMPO",
+        "NOBLY",
+        "OWING",
+        "ARSON",
+        "KNOCK"
+      ]
+    },
+    {
+      "day": 1197,
+      "answers": [
+        "GRIEF",
+        "GAUZY",
+        "GUMBO",
+        "GULPS",
+        "GULCH"
+      ]
+    },
+    {
+      "day": 1201,
+      "answers": [
+        "PATSY",
+        "DOUGH",
+        "BUILD",
+        "UNDER",
+        "UDDER"
+      ]
+    },
+    {
+      "day": 1205,
+      "answers": [
+        "ANKLE",
+        "WRONG",
+        "VYING",
+        "SUING",
+        "USING"
+      ]
+    },
+    {
+      "day": 1209,
+      "answers": [
+        "VEINS",
+        "BREAK",
+        "TOYED",
+        "ELOPE",
+        "EPOCH"
+      ]
+    },
+    {
+      "day": 1213,
+      "answers": [
+        "BIRCH",
+        "MOLAR",
+        "PROWS",
+        "SNORE",
+        "SNORT"
+      ]
+    },
+    {
+      "day": 1217,
+      "answers": [
+        "JAUNT",
+        "SMOKE",
+        "POWER",
+        "VIDEO",
+        "OGLED"
+      ]
+    },
+    {
+      "day": 1222,
+      "answers": [
+        "WHISK",
+        "URBAN",
+        "GLAND",
+        "NANNY",
+        "ATONE"
+      ]
+    },
+    {
+      "day": 1226,
+      "answers": [
+        "SATIN",
+        "THUMB",
+        "DEPOT",
+        "EJECT",
+        "CLEFT"
+      ]
+    },
+    {
+      "day": 1230,
+      "answers": [
+        "SQUAT",
+        "BROTH",
+        "NIFTY",
+        "JETTY",
+        "EMPTY"
+      ]
+    },
+    {
+      "day": 1234,
+      "answers": [
+        "SWORN",
+        "REBUT",
+        "LYRIC",
+        "FRIZZ",
+        "PRIMP"
+      ]
+    },
+    {
+      "day": 1238,
+      "answers": [
+        "SMOKY",
+        "VAUNT",
+        "APHID",
+        "ALGAE",
+        "AGREE"
+      ]
+    },
+    {
+      "day": 1243,
+      "answers": [
+        "EDICT",
+        "HALVE",
+        "AWOKE",
+        "GRAZE",
+        "SNARE"
+      ]
+    },
+    {
+      "day": 1247,
+      "answers": [
+        "UNCLE",
+        "AMUSE",
+        "VOGUE",
+        "PUREE",
+        "RUPEE"
+      ]
+    },
+    {
+      "day": 1251,
+      "answers": [
+        "AXING",
+        "CRIME",
+        "DRILY",
+        "TRILL",
+        "KRILL"
+      ]
+    },
+    {
+      "day": 1255,
+      "answers": [
+        "SWORD",
+        "KNIFE",
+        "CLUNG",
+        "MANTA",
+        "NYMPH"
+      ]
+    },
+    {
+      "day": 1259,
+      "answers": [
+        "ENTRY",
+        "BLUSH",
+        "SMOCK",
+        "DOFFS",
+        "OASIS"
+      ]
+    },
+    {
+      "day": 1263,
+      "answers": [
+        "ALDER",
+        "WORMS",
+        "SCORN",
+        "STORK",
+        "SPORT"
+      ]
+    },
+    {
+      "day": 1268,
+      "answers": [
+        "SNOUT",
+        "HABIT",
+        "ADEPT",
+        "CRAFT",
+        "TRACT"
+      ]
+    },
+    {
+      "day": 1272,
+      "answers": [
+        "BROKE",
+        "LAUGH",
+        "MIGHT",
+        "NIGHT",
+        "TIGHT"
+      ]
+    },
+    {
+      "day": 1276,
+      "answers": [
+        "DRUNK",
+        "SCALY",
+        "SWEAT",
+        "SAGES",
+        "SEPIA"
+      ]
+    },
+    {
+      "day": 1280,
+      "answers": [
+        "MORAY",
+        "AISLE",
+        "SHAPE",
+        "CEASE",
+        "TEASE"
+      ]
+    },
+    {
+      "day": 1284,
+      "answers": [
+        "ARSON",
+        "BRUSH",
+        "PRISE",
+        "GRIST",
+        "WRIST"
+      ]
+    },
+    {
+      "day": 1289,
+      "answers": [
+        "WISED",
+        "STEAK",
+        "SPORE",
+        "SNORE",
+        "SCORE"
+      ]
+    },
+    {
+      "day": 1293,
+      "answers": [
+        "SAVER",
+        "SCOUT",
+        "SLUNK",
+        "SNUGS",
+        "SNUFF"
+      ]
+    },
+    {
+      "day": 1297,
+      "answers": [
+        "RUNIC",
+        "ENJOY",
+        "KNELT",
+        "KNEES",
+        "KNEAD"
+      ]
+    },
+    {
+      "day": 1301,
+      "answers": [
+        "CLONE",
+        "SOLAR",
+        "DOLLY",
+        "GOLLY",
+        "JOLLY"
+      ]
+    },
+    {
+      "day": 1305,
+      "answers": [
+        "GLAND",
+        "COAST",
+        "PHASE",
+        "SMASH",
+        "BRASH"
+      ]
+    },
+    {
+      "day": 1309,
+      "answers": [
+        "SNAKE",
+        "OWING",
+        "NIFTY",
+        "CUMIN",
+        "LUPIN"
+      ]
+    },
+    {
+      "day": 1314,
+      "answers": [
+        "WREST",
+        "UNSAY",
+        "SNAIL",
+        "SNAGS",
+        "SNACK"
+      ]
+    },
+    {
+      "day": 1318,
+      "answers": [
+        "PLAID",
+        "MOCHA",
+        "VEGAN",
+        "BARGE",
+        "GAUZE"
+      ]
+    },
+    {
+      "day": 1322,
+      "answers": [
+        "INGOT",
+        "JUICE",
+        "LIARS",
+        "RABBI",
+        "RABID"
+      ]
+    },
+    {
+      "day": 1326,
+      "answers": [
+        "HAZED",
+        "STOVE",
+        "UNCLE",
+        "BIBLE",
+        "RIFLE"
+      ]
+    },
+    {
+      "day": 1330,
+      "answers": [
+        "WACKY",
+        "FOULS",
+        "OXIDE",
+        "GNOME",
+        "GROVE"
+      ]
+    },
+    {
+      "day": 1335,
+      "answers": [
+        "IDEAS",
+        "SHRUB",
+        "SMOCK",
+        "SCOOP",
+        "SCOFF"
+      ]
+    },
+    {
+      "day": 1339,
+      "answers": [
+        "BEACH",
+        "DEVIL",
+        "LEMON",
+        "LEGGY",
+        "LEPER"
+      ]
+    },
+    {
+      "day": 1343,
+      "answers": [
+        "SNIDE",
+        "WACKO",
+        "GRAPH",
+        "VULVA",
+        "ALBUM"
+      ]
+    },
+    {
+      "day": 1347,
+      "answers": [
+        "CHURL",
+        "AUDIT",
+        "PUMAS",
+        "QUAKE",
+        "GUAVA"
+      ]
+    },
+    {
+      "day": 1351,
+      "answers": [
+        "STONY",
+        "ALOFT",
+        "WROTE",
+        "PHOTO",
+        "BOOTH"
+      ]
+    },
+    {
+      "day": 1355,
+      "answers": [
+        "BRAIN",
+        "SMOKE",
+        "MUSHY",
+        "MUMPS",
+        "MUCUS"
+      ]
+    },
+    {
+      "day": 1360,
+      "answers": [
+        "CLASP",
+        "BREAD",
+        "AMONG",
+        "HAMMY",
+        "MAFIA"
+      ]
+    },
+    {
+      "day": 1364,
+      "answers": [
+        "ABIDE",
+        "SPOIL",
+        "LIGHT",
+        "HILLY",
+        "ZILCH"
+      ]
+    },
+    {
+      "day": 1368,
+      "answers": [
+        "HOKEY",
+        "FLUME",
+        "EVICT",
+        "REEDS",
+        "ZEBRA"
+      ]
+    },
+    {
+      "day": 1372,
+      "answers": [
+        "JUMBO",
+        "FAULT",
+        "SNUCK",
+        "SHUNS",
+        "SWUNG"
+      ]
+    },
+    {
+      "day": 1376,
+      "answers": [
+        "GECKO",
+        "FLAIR",
+        "YARDS",
+        "STRAW",
+        "STRAP"
+      ]
+    },
+    {
+      "day": 1381,
+      "answers": [
+        "LYRIC",
+        "FUSED",
+        "DEPTH",
+        "EVADE",
+        "BADGE"
+      ]
+    },
+    {
+      "day": 1385,
+      "answers": [
+        "OWING",
+        "STEAL",
+        "UMBRA",
+        "JAZZY",
+        "CADDY"
+      ]
+    },
+    {
+      "day": 1389,
+      "answers": [
+        "CRAVE",
+        "PLIES",
+        "GOLEM",
+        "YOKEL",
+        "YODEL"
+      ]
+    },
+    {
+      "day": 1393,
+      "answers": [
+        "BUILT",
+        "SWING",
+        "SPIKE",
+        "SKIES",
+        "SKIED"
+      ]
+    },
+    {
+      "day": 1397,
+      "answers": [
+        "WREAK",
+        "CABLE",
+        "SHAVE",
+        "ADAGE",
+        "IMAGE"
+      ]
+    },
+    {
+      "day": 1401,
+      "answers": [
+        "TANGO",
+        "DECAY",
+        "ALDER",
+        "ASKED",
+        "ADIEU"
+      ]
+    },
+    {
+      "day": 1406,
+      "answers": [
+        "WHIST",
+        "GROVE",
+        "RAMEN",
+        "RELAY",
+        "RECAP"
+      ]
+    },
+    {
+      "day": 1410,
+      "answers": [
+        "MULTI",
+        "BYLAW",
+        "HOLEY",
+        "DOLLY",
+        "JOLLY"
+      ]
+    },
+    {
+      "day": 1414,
+      "answers": [
+        "CHORD",
+        "TOPIC",
+        "VOCAL",
+        "SOCKS",
+        "FOCUS"
+      ]
+    }
+  ]
+}

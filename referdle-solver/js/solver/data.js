@@ -53,16 +53,14 @@ function parseWordList(text) {
     .filter((w) => w.length === 5);
 }
 
-// Decompress the gzipped raw int16 matrix into an Int16Array.
+// Decompress the gzipped row-major byte codes into a Uint8Array.
 async function loadMatrix(path) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`${path} -> ${res.status}`);
   const ds = new DecompressionStream("gzip");
   const stream = res.body.pipeThrough(ds);
   const buf = await new Response(stream).arrayBuffer();
-  // Raw little-endian int16. On little-endian hosts (every browser target),
-  // a direct Int16Array view is correct.
-  return new Int16Array(buf);
+  return new Uint8Array(buf);
 }
 
 export async function loadAssets(onProgress) {
@@ -80,15 +78,27 @@ export async function loadAssets(onProgress) {
   const EXPANDED = parseWordList(expandedTxt);
   const PLURALS = new Set(parseWordList(pluralsTxt));
   const ALL_GUESSES = POOL.concat(EXPANDED);
-  const N = manifest.matrix_dim || POOL.length;
+  const N = manifest.matrix_dim;
+  if (manifest.matrix_storage !== "uint8") throw new Error("Unsupported matrix storage format");
+  if (typeof manifest.matrix_file !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]*\.gz$/.test(manifest.matrix_file)) {
+    throw new Error("Invalid component-local matrix filename");
+  }
+  if (!Number.isSafeInteger(N) || N < 1 || N !== POOL.length || manifest.pool_n !== N
+      || !Number.isSafeInteger(N * N) || manifest.decoded_bytes !== N * N) {
+    throw new Error("Invalid matrix dimensions or decoded byte length");
+  }
+  if (!Number.isSafeInteger(manifest.gzip_bytes) || manifest.gzip_bytes < 1) throw new Error("Invalid matrix gzip byte length");
 
   const poolIndex = new Map();
   for (let i = 0; i < POOL.length; i++) poolIndex.set(POOL[i], i);
 
   note(`Decompressing pattern matrix (${(manifest.gzip_bytes / 1e6).toFixed(1)} MB)…`);
-  const PM = await loadMatrix(`${BASE}/pool_matrix.int16.gz`);
+  const PM = await loadMatrix(`${BASE}/${manifest.matrix_file}`);
   if (PM.length !== N * N) {
     throw new Error(`matrix length ${PM.length} != ${N}*${N}`);
+  }
+  for (let i = 0; i < PM.length; i++) {
+    if (PM[i] > 242) throw new Error(`Invalid matrix pattern code ${PM[i]} at index ${i}`);
   }
 
   return {

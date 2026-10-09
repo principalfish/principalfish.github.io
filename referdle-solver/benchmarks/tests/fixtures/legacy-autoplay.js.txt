@@ -3,7 +3,7 @@
 
 import { getComparison } from "./compare.js";
 import { solve, solveRelaxed, localCandidates } from "./solver.js";
-import { bestGuessAcrossBoards, buildSuggestions } from "./suggest.js";
+import { bestGuessAcrossBoards, topGuessesForBoard } from "./suggest.js";
 import { STRATEGY, MAX_STEPS } from "./strategy.js";
 
 const FINAL = 4;
@@ -174,7 +174,19 @@ export function buildSteps(autoResult, startSlots, st) {
     const resB = solveRelaxed(state, clueGrid, POOL, PM, N, poolIndex, PLURALS, null);
     let suggest;
     if (resB.solvable) {
-      suggest = buildSuggestions(resB, PM, N, poolIndex, ALL_GUESSES, PLURALS);
+      const ranked = bestGuessAcrossBoards(resB, PM, N, poolIndex, ALL_GUESSES, PLURALS);
+      const perBoard = [];
+      for (let b = 0; b < resB.perSlotFeasible.length; b++) {
+        const ans = resB.perSlotFeasible[b];
+        if (ans.length > 1) {
+          const avoid = b < 3 && STRATEGY.avoid_doubles_w13;
+          perBoard.push({
+            board: b,
+            top: topGuessesForBoard(ans, PM, N, poolIndex, ALL_GUESSES, PLURALS, 5, avoid, b),
+          });
+        }
+      }
+      suggest = { solvable: true, ranked, perBoard };
     } else {
       suggest = { solvable: false };
     }

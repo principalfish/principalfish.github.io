@@ -91,7 +91,9 @@ export function observeDailySource(source) {
   result = replaceOnce(result, "setupScrub(turn.moves.length);",
     "if (!turn.moves.length) renderAutoSolveTable(uiEls.moveTableEl, lastAutoSolve, activeIdx, jumpToMove);\n    setupScrub(turn.moves.length);",
     "empty terminal publication");
-  return result;
+  result = replaceOnce(result, "    return result;\n  }\n\n  // Per-board top-5",
+    "    benchmarkCapture.lastResult = result;\n    return result;\n  }\n\n  // Per-board top-5", "cached solve result");
+  return `import { capture as benchmarkCapture } from "benchmark:capture";\n${result}`;
 }
 
 const CAPTURE_SOURCE = "export const capture = { publication: null, lastResult: null };";
@@ -136,7 +138,7 @@ export function solveRelaxed(...args) { const result = actualSolveRelaxed(...arg
           return undefined;
         });
         builder.onLoad({ filter: /[/\\]render\.js$/ }, async () => ({ contents: RENDER_SOURCE, resolveDir: SOLVER_DIR }));
-        builder.onLoad({ filter: /[/\\](daily-mode|data|solver|suggest)\.js$/ }, async (args) => {
+        builder.onLoad({ filter: /[/\\](daily-mode|data|solver|suggest|strategy)\.js$/ }, async (args) => {
           const basename = path.basename(args.path);
           let contents = replacements[basename] ?? await readFile(args.path, "utf8");
           if (basename === "daily-mode.js" && observe) contents = observeDailySource(contents);

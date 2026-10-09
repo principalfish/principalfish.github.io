@@ -5,7 +5,7 @@
 
 import { dailyGame, dailyClueGrid } from "./data.js";
 import { solve } from "./solver.js";
-import { bestGuessAcrossBoards, topGuessesForBoard } from "./suggest.js";
+import { buildSuggestions } from "./suggest.js";
 import { getComparison } from "./compare.js";
 import { STRATEGY } from "./strategy.js";
 import {
@@ -189,24 +189,10 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
   }
 
   // Per-board top-5 (probes included when one wins) for the state-before-move panel.
-  function buildSuggest(res, ranked) {
-    const perBoard = [];
-    for (let b = 0; b < res.perSlotFeasible.length; b++) {
-      const ans = res.perSlotFeasible[b];
-      if (ans.length > 1) {
-        const avoid = b < 3 && STRATEGY.avoid_doubles_w13;
-        perBoard.push({
-          board: b,
-          top: topGuessesForBoard(ans, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS, 5, avoid, b),
-        });
-      }
-    }
-    return { solvable: true, ranked, perBoard };
-  }
-
-  function rank(res) {
-    return bestGuessAcrossBoards(res, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS,
+  function buildSuggest(res) {
+    const { ranked, perBoard } = buildSuggestions(res, st.PM, st.N, st.poolIndex, guessSet(), st.PLURALS,
       { slots: turn.slots, clueGrid: turn.grid, pool: st.POOL });
+    return { solvable: true, ranked, perBoard };
   }
 
   // After-move solve (relaxed) for the overlay + word-list panels.
@@ -234,7 +220,7 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
     if (!turn.closingQueue.length) { turn.done = true; finishStep(); return; }
     const b = turn.closingQueue.shift();
     const before = afterSolve();
-    const suggest = before.solvable ? buildSuggest(before, rank(before)) : { solvable: false };
+    const suggest = before.solvable ? buildSuggest(before) : { solvable: false };
     turn.slots[b].guesses.push({ word: words[b], colors: "22222" });
     turn.solveCache.clear();
     turn.moves.push({
@@ -278,20 +264,22 @@ export function initDailyMode(state, manual, clueUI, uiEls) {
     if (!res.solvable) { turn.done = true; finishStep(); return; }
     if (allPinned(res)) { playClosing(); return; }
 
-    let ranked = rank(res);
+    let suggest = buildSuggest(res);
+    let ranked = suggest.ranked;
     if (!ranked.length && turn.pruneCombos) {
       turn.pruneCombos = false;
       res = turnSolve(turn.pruneW13, turn.pruneW5, false);
-      ranked = res.solvable ? rank(res) : [];
+      suggest = res.solvable ? buildSuggest(res) : { solvable: false };
+      ranked = suggest.ranked || [];
     }
     if (!ranked.length && (turn.pruneW13 || turn.pruneW5)) {
       turn.pruneW13 = turn.pruneW5 = false;
       res = turnSolve(false, false, false);
-      ranked = res.solvable ? rank(res) : [];
+      suggest = res.solvable ? buildSuggest(res) : { solvable: false };
+      ranked = suggest.ranked || [];
     }
     if (!ranked.length) { playClosing(); return; }
 
-    const suggest = buildSuggest(res, ranked); // state-before-move
     const top = ranked[0];
     const colors = getComparison(top.word, words[top.board]);
     turn.slots[top.board].guesses.push({ word: top.word, colors });

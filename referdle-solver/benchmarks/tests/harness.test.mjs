@@ -27,7 +27,13 @@ export function solveRelaxed(slots) { return result(slots); }`,
 export function bestGuessAcrossBoards(res, PM, N, poolIndex, guesses) {
   return res.perSlotFeasible[0].length === 1 ? [] : [{ board: 0, word: "AAAAA", probe: false, setSize: 2, expRemaining: guesses.length, score: -0 }];
 }
-export function topGuessesForBoard(answers, PM, N, poolIndex, guesses) { return [{ word: answers[0], score: 1.0000000000000002, guessCount: guesses.length }]; }`,
+export function topGuessesForBoard(answers, PM, N, poolIndex, guesses) { return [{ word: answers[0], score: 1.0000000000000002, guessCount: guesses.length }]; }
+export function buildSuggestions(res, PM, N, poolIndex, guesses) {
+  const ranked = bestGuessAcrossBoards(res, PM, N, poolIndex, guesses);
+  const perBoard = res.perSlotFeasible.flatMap((answers, board) => answers.length > 1
+    ? [{ board, top: topGuessesForBoard(answers, PM, N, poolIndex, guesses) }] : []);
+  return { solvable: true, ranked, perBoard };
+}`,
 };
 function state() {
   return { POOL: ANSWERS, ALL_GUESSES: [...ANSWERS, "FFFFF"], PM: new Int16Array(), N: 5, poolIndex: new Map(ANSWERS.map((w, i) => [w, i])), PLURALS: new Set() };

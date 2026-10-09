@@ -84,8 +84,8 @@ export function observeDailySource(source) {
     "return { solvable: true, ranked, perBoard };",
     "return { solvable: true, ranked, perBoard, __benchmarkBefore: res };", "buildSuggest");
   result = replaceOnce(result,
-    "const suggest = before.solvable ? buildSuggest(before, rank(before)) : { solvable: false };",
-    "const suggest = before.solvable ? buildSuggest(before, rank(before)) : { solvable: false, __benchmarkBefore: before };",
+    "const suggest = before.solvable ? buildSuggest(before) : { solvable: false };",
+    "const suggest = before.solvable ? buildSuggest(before) : { solvable: false, __benchmarkBefore: before };",
     "closing before state");
   // The real renderer is called only when a move exists. Observe empty terminals too.
   result = replaceOnce(result, "setupScrub(turn.moves.length);",

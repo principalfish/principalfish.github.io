@@ -42,7 +42,13 @@ export function bestGuessAcrossBoards(res, PM, N, poolIndex, guesses) {
   const board = res.perSlotFeasible.findIndex((words) => words.length > 1);
   return board < 0 ? [] : [{ board, word: res.perSlotFeasible[board][0], setSize: 2, expRemaining: 1.0000000000000002, probe: false }];
 }
-export function topGuessesForBoard(answers) { return [{ word: answers[0], expRemaining: 1, score: 1, probe: false }]; }`,
+export function topGuessesForBoard(answers) { return [{ word: answers[0], expRemaining: 1, score: 1, probe: false }]; }
+export function buildSuggestions(res, PM, N, poolIndex, guesses) {
+  const ranked = bestGuessAcrossBoards(res, PM, N, poolIndex, guesses);
+  const perBoard = res.perSlotFeasible.flatMap((answers, board) => answers.length > 1
+    ? [{ board, top: topGuessesForBoard(answers) }] : []);
+  return { solvable: true, ranked, perBoard };
+}`,
   };
 }
 

@@ -55,6 +55,25 @@ WESTMINSTER_REGION_NAMES: tuple[str, ...] = (
     "Yorkshire and The Humber",
 )
 
+# Region populations as the live map holds them (old_data region_populations.csv),
+# so the poll-base apportioning and the n resolver's estimate have real weights.
+WESTMINSTER_REGION_POPULATIONS: Mapping[str, int] = MappingProxyType(
+    {
+        "East Midlands": 4_900_000,
+        "East of England": 6_300_000,
+        "London": 9_100_000,
+        "North East England": 2_700_000,
+        "North West England": 7_700_000,
+        "Northern Ireland": 1_900_000,
+        "Scotland": 5_500_000,
+        "South East England": 9_600_000,
+        "South West England": 5_600_000,
+        "Wales": 3_100_000,
+        "West Midlands": 6_000_000,
+        "Yorkshire and The Humber": 5_500_000,
+    }
+)
+
 # Seeded in this order into an empty parties table, so each party's id is its
 # 1-based position. "Other" lands on id 7 and "Others" on id 15, the pair the
 # UNS model's ``PARTY_ID_ALIASES`` merges.
@@ -156,16 +175,21 @@ class WestminsterWorld:
 def seed_westminster_world(db: Database) -> WestminsterWorld:
     """Build the Westminster map the importers and the UNS model look up by name.
 
-    Seeds every internal region, every party any importer maps to (plus the
-    NI parties and "Others"), four seats in London, Scotland, Wales and the
-    North East, and a ``uk_general`` baseline with ``WESTMINSTER_BASELINE_VOTES``.
+    Seeds every internal region (with its population), every party any
+    importer maps to (plus the NI parties and "Others"), four seats in London,
+    Scotland, Wales and the North East, and a ``uk_general`` baseline with
+    ``WESTMINSTER_BASELINE_VOTES``.
 
     Must run on an empty parties table: party ids are asserted to match their
     position in ``WESTMINSTER_PARTY_NAMES`` so the model's id alias lines up.
     """
     westminster_map = db.add_map(WESTMINSTER_MAP_NAME, parliament="westminster")
     region_ids = {
-        name: db.add_region(westminster_map.id, name).id
+        name: db.add_region(
+            westminster_map.id,
+            name,
+            population=WESTMINSTER_REGION_POPULATIONS[name],
+        ).id
         for name in WESTMINSTER_REGION_NAMES
     }
 

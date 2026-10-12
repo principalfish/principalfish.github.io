@@ -12,9 +12,12 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from typing import Literal
 from urllib.request import urlopen
 
 from pydantic import BaseModel, Field
@@ -25,6 +28,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
+from polls.importers.sanity import regional_alignment_problem
 from polls.importers.types import PollImportResult
 
 DEFAULT_PDF_URL = (
@@ -66,12 +78,38 @@ MACRO_TO_INTERNAL_REGIONS = {
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from a YouGov PDF."""
+    """Parsed poll data extracted from a YouGov PDF.
+
+    ``bases`` holds the "Weighted Sample"/"Unweighted Sample" rows for the
+    Total column and each macro region. YouGov prints only these all-adult
+    bases (its headline shares are MRP projections, with don't-knows
+    removed), so every base is labelled ``all_adults``.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_macro_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return no national shares: YouGov's headline rows are regional only."""
+        return {}
+
+    def regional_shares(self) -> dict[str, dict[str, float]]:
+        """Return internal region -> party -> share, as the importer stores them.
+
+        Each macro region's share is copied to every internal region it maps
+        to, rounded as ``build_import_plan`` rounds it.
+        """
+        shares: dict[str, dict[str, float]] = {}
+        for party, macro_values in self.party_macro_percentages.items():
+            for macro, percentage in macro_values.items():
+                for region in MACRO_TO_INTERNAL_REGIONS.get(macro, ()):
+                    shares.setdefault(region, {})[party] = _normalize_percentage(
+                        percentage
+                    )
+        return shares
 
 
 class PlannedPollRow(BaseModel):
@@ -100,6 +138,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def normalize_name(value: str) -> str:
@@ -380,10 +419,25 @@ def _parse_split_headline_rows(lines: list[str]) -> list[tuple[str, list[int]]]:
     return blocks[0]
 
 
+def _region_table_columns(header_match: re.Match[str]) -> list[str]:
+    """Name the region table's columns from its ``_REGION_TABLE_HEADER`` match.
+
+    A named ``Routine`` demographic column can lead, then optionally England,
+    Wales and Scotland, then the four England regions.
+    """
+    return (
+        (["Routine"] if header_match.group("routine") is not None else [])
+        + (_COUNTRY_COLUMNS if header_match.group("countries") is not None else [])
+        + _ENGLAND_REGION_ORDER
+    )
+
+
 def _parse_new_format(
     section: str,
     lines: list[str],
     page_one_header: str,
+    *,
+    is_table_after_section: bool = False,
 ) -> dict[str, dict[str, float]]:
     """Parse regional vote shares from a separate unlabelled regional table.
 
@@ -411,6 +465,9 @@ def _parse_new_format(
         lines: Stripped, non-empty lines from ``section``.
         page_one_header: PDF text before the section, holding the page-1
             column header.
+        is_table_after_section: The region table follows the section (passed as
+            *section*: the text from the section start to the table), and the
+            section's *lines* end where the second question begins.
 
     Returns:
         Mapping of canonical party name to a dict of macro-region name →
@@ -428,6 +485,10 @@ def _parse_new_format(
         (i for i, line in enumerate(lines) if line.startswith(_SECOND_QUESTION_PREFIX)),
         None,
     )
+    if second_question is None and is_table_after_section:
+        # The section stopped at the second question's "Now, thinking
+        # specifically" marker, so its lines are the headline rows alone.
+        second_question = len(lines)
     if second_question is None:
         raise ValueError("Could not find the end of the MRP headline rows in new-format PDF")
     headline_rows = _parse_split_headline_rows(lines[:second_question])
@@ -437,11 +498,7 @@ def _parse_new_format(
     if header_match is None:
         raise ValueError("Could not find regions table in new-format PDF")
     has_country_columns = header_match.group("countries") is not None
-    columns = (
-        (["Routine"] if header_match.group("routine") is not None else [])
-        + (_COUNTRY_COLUMNS if has_country_columns else [])
-        + _ENGLAND_REGION_ORDER
-    )
+    columns = _region_table_columns(header_match)
     pct_match = _PERCENT_ROW.search(section, header_match.end())
     if pct_match is None:
         raise ValueError("Could not find '%' header row in regions table")
@@ -495,6 +552,250 @@ def _parse_new_format(
     return result
 
 
+def _headline_section(full_text: str) -> tuple[str, str]:
+    """Split the PDF text around the Westminster headline VI section.
+
+    Args:
+        full_text: Complete text content extracted from the YouGov PDF.
+
+    Returns:
+        ``(page_one_header, section)``: the text before the
+        ``"Westminster Voting Intention"`` marker, and the text from it up to
+        ``"Now, thinking specifically"``.
+
+    Raises:
+        ValueError: If the section cannot be isolated.
+    """
+    start_index = full_text.find("Westminster Voting Intention")
+    end_index = full_text.find("Now, thinking specifically")
+    if start_index == -1 or end_index == -1 or end_index <= start_index:
+        raise ValueError(
+            "Could not isolate Westminster headline voting intention section"
+        )
+    return full_text[:start_index], full_text[start_index:end_index]
+
+
+def _region_table_text(full_text: str, page_one_header: str) -> str | None:
+    """Return the text holding the separate "Region in England" table, if any.
+
+    The table usually sits inside the headline section. In some 2025-26 PDFs
+    (page 1 ending in the country columns) it follows the second question on
+    page 2, after the section's end marker; the text then runs from the
+    section start to that table's "Region in England" label. Its column
+    header is the first ``_REGION_TABLE_HEADER`` match after the section
+    start, since page 1 carries no region columns in that layout.
+
+    Args:
+        full_text: Complete text content extracted from the YouGov PDF.
+        page_one_header: The text before the headline section.
+
+    Returns:
+        The text to read the region table from, or None when there is none.
+    """
+    tail = full_text[len(page_one_header):]
+    marker = tail.find("Region in England")
+    if marker == -1:
+        return None
+    return tail[:marker + len("Region in England")]
+
+
+LayoutKind = Literal["combined", "in_section", "after_section", "page_one_rows"]
+
+
+@dataclass(frozen=True, slots=True)
+class _Layout:
+    """Where a PDF's headline regional figures are, for shares and bases alike.
+
+    Attributes:
+        kind: ``combined`` — page 1 carries the country and region columns;
+            ``in_section`` — a separate "Region in England" table inside the
+            headline section; ``after_section`` — that table after the second
+            question (Jun 2025 - Feb 2026); ``page_one_rows`` — no region
+            table found, so regions can only come from page-1 rows (which the
+            sanity guard then usually rejects).
+        page_one_header: The text before the headline section.
+        section: The headline section's text.
+        lines: The section's stripped, non-empty lines.
+        combined_header: The page-1 region header match (``combined`` only).
+        region_text: The text holding the region table (``in_section`` and
+            ``after_section`` only).
+    """
+
+    kind: LayoutKind
+    page_one_header: str
+    section: str
+    lines: list[str]
+    combined_header: re.Match[str] | None = None
+    region_text: str | None = None
+
+
+def _detect_layout(full_text: str) -> _Layout:
+    """Find which layout a YouGov PDF's headline figures use.
+
+    Raises:
+        ValueError: If the headline section cannot be isolated.
+    """
+    page_one_header, section = _headline_section(full_text)
+    lines = [line.strip() for line in section.splitlines() if line.strip()]
+    combined_header = _REGION_TABLE_HEADER.search(page_one_header)
+    if combined_header is not None and combined_header.group("countries") is not None:
+        return _Layout(
+            "combined", page_one_header, section, lines, combined_header=combined_header
+        )
+    if "Region in England" in section:
+        return _Layout(
+            "in_section", page_one_header, section, lines, region_text=section
+        )
+    region_text = _region_table_text(full_text, page_one_header)
+    if region_text is not None:
+        return _Layout(
+            "after_section", page_one_header, section, lines, region_text=region_text
+        )
+    return _Layout("page_one_rows", page_one_header, section, lines)
+
+
+# "Weighetd" is a typo some 2025 PDFs print (e.g. 6-7 Jul 2025).
+_SAMPLE_ROW = re.compile(
+    r"^[ \t]*(Weighted|Weighetd|Unweighted) Sample((?:[ \t]+\d+)+)[ \t]*$", re.M
+)
+
+
+def _sample_rows(page_one_header: str) -> tuple[list[int], list[int], bool] | None:
+    """Return page 1's (weighted, unweighted) sample rows, and their order.
+
+    Args:
+        page_one_header: PDF text before the headline section.
+
+    Returns:
+        ``(weighted, unweighted, is_weighted_first)``, or None unless both rows
+        are present with the same number of columns.
+    """
+    found: dict[str, tuple[int, list[int]]] = {}
+    for match in _SAMPLE_ROW.finditer(page_one_header):
+        values = [int(v) for v in match.group(2).split()]
+        label = "Weighted" if match.group(1) == "Weighetd" else match.group(1)
+        found.setdefault(label, (match.start(), values))
+    if "Weighted" not in found or "Unweighted" not in found:
+        return None
+    weighted_at, weighted = found["Weighted"]
+    unweighted_at, unweighted = found["Unweighted"]
+    if len(weighted) != len(unweighted):
+        return None
+    return weighted, unweighted, weighted_at < unweighted_at
+
+
+def _regional_bases(by_region: dict[str, tuple[int, int]]) -> list[ParsedBase]:
+    """Build one all-adults base per macro region from (unweighted, weighted)."""
+    candidates = [
+        make_base(
+            tuple(MACRO_TO_INTERNAL_REGIONS[region]), unweighted, weighted, "all_adults"
+        )
+        for region, (unweighted, weighted) in by_region.items()
+        if region in MACRO_TO_INTERNAL_REGIONS
+    ]
+    return [candidate for candidate in candidates if candidate is not None]
+
+
+def _split_table_counts(
+    section: str, is_weighted_first: bool
+) -> dict[str, tuple[int, int]] | None:
+    """Read the split layout's regional table counts, as (unweighted, weighted).
+
+    The "Region in England" table repeats the sample rows, unlabelled, between
+    its column header and its ``%`` row, in page 1's order.
+
+    Args:
+        section: The headline VI section text.
+        is_weighted_first: Whether page 1 prints the weighted row first.
+
+    Returns:
+        Column name -> (unweighted, weighted), or None when the table does not
+        hold exactly two count rows of its header's width.
+    """
+    header_match = _REGION_TABLE_HEADER.search(section)
+    if header_match is None:
+        return None
+    pct_match = _PERCENT_ROW.search(section, header_match.end())
+    if pct_match is None:
+        return None
+    columns = _region_table_columns(header_match)
+    rows = [
+        [int(v) for v in line.split()]
+        for line in section[header_match.end():pct_match.start()].splitlines()
+        if _INTEGER_ROW.fullmatch(line.strip())
+    ]
+    if len(rows) != 2 or any(len(row) != len(columns) for row in rows):
+        return None
+    weighted, unweighted = rows if is_weighted_first else rows[::-1]
+    return {
+        column: (u, w)
+        for column, u, w in zip(columns, unweighted, weighted, strict=True)
+        if column != "Routine"
+    }
+
+
+def parse_bases(full_text: str) -> list[ParsedBase]:
+    """Read the national and macro-region bases from a YouGov PDF.
+
+    The national base is page 1's first "Weighted Sample"/"Unweighted Sample"
+    pair. Regional bases come from the same columns the regional shares come
+    from: page 1's last seven columns in the combined layout, or the
+    "Region in England" table in the split layout (Wales and Scotland from
+    page 1 when that table has England regions only). The regional unweighted
+    counts must add up — England + Wales + Scotland (or the four England
+    regions + Wales + Scotland) to the total, and the four England regions to
+    England — or no regional base is kept.
+
+    Args:
+        full_text: Complete text content extracted from the YouGov PDF.
+
+    Returns:
+        The national base then one per macro region; empty when page 1 has no
+        sample rows.
+
+    Raises:
+        ValueError: If the headline section cannot be isolated.
+    """
+    layout = _detect_layout(full_text)
+    page_one_header = layout.page_one_header
+    sample = _sample_rows(page_one_header)
+    if sample is None:
+        return []
+    weighted, unweighted, is_weighted_first = sample
+    national = make_base((), unweighted[0], weighted[0], "all_adults")
+    if national is None:
+        return []
+    total = unweighted[0]
+
+    counts: dict[str, tuple[int, int]] | None = None
+    if layout.kind == "combined":
+        names = _COUNTRY_COLUMNS + _ENGLAND_REGION_ORDER
+        if len(unweighted) > len(names):
+            counts = {
+                name: (u, w)
+                for name, u, w in zip(
+                    names, unweighted[-len(names):], weighted[-len(names):], strict=True
+                )
+            }
+    elif layout.region_text is not None:
+        counts = _split_table_counts(layout.region_text, is_weighted_first)
+        if counts is not None and "England" not in counts:
+            if re.search(r"Wales\s+Scotland", page_one_header) is None:
+                counts = None
+            else:
+                counts["Wales"] = (unweighted[-2], weighted[-2])
+                counts["Scotland"] = (unweighted[-1], weighted[-1])
+
+    if counts is None:
+        return [national]
+    regions_sum = sum(counts[name][0] for name in _ENGLAND_REGION_ORDER)
+    countries = counts["Wales"][0] + counts["Scotland"][0]
+    england = counts["England"][0] if "England" in counts else regions_sum
+    if england != regions_sum or england + countries != total:
+        return [national]
+    return [national, *_regional_bases(counts)]
+
+
 def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
     """Extract per-region vote shares from the Westminster VI section of the PDF.
 
@@ -519,34 +820,31 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
             structurally identified table is malformed, or any party defined
             in ``PARTY_NAME_MAP`` is absent from the parsed result.
     """
-    start_marker = "Westminster Voting Intention"
-    end_marker = "Now, thinking specifically"
-
-    start_index = full_text.find(start_marker)
-    end_index = full_text.find(end_marker)
-    if start_index == -1 or end_index == -1 or end_index <= start_index:
-        raise ValueError("Could not isolate Westminster headline voting intention section")
-
-    section = full_text[start_index:end_index]
-    lines = [line.strip() for line in section.splitlines() if line.strip()]
-    page_one_header = full_text[:start_index]
-    combined_header = _REGION_TABLE_HEADER.search(page_one_header)
+    layout = _detect_layout(full_text)
+    page_one_header, lines = layout.page_one_header, layout.lines
     second_question = next(
         (i for i, line in enumerate(lines) if line.startswith(_SECOND_QUESTION_PREFIX)),
         None,
     )
 
-    if combined_header is not None and combined_header.group("countries") is not None:
+    if layout.kind == "combined" and layout.combined_header is not None:
         headline_lines = lines[:second_question]
-        percent_header = _PERCENT_ROW.search(page_one_header, combined_header.end())
+        percent_header = _PERCENT_ROW.search(
+            page_one_header, layout.combined_header.end()
+        )
         current_columns = (
             len(percent_header.group().split()) if percent_header is not None else None
         )
         _validate_combined_headline_rows(headline_lines, current_columns)
         row_labels = sorted(PARTY_NAME_MAP.keys(), key=len, reverse=True)
         result = _parse_old_format_rows(headline_lines, row_labels)
-    elif "Region in England" in section:
-        result = _parse_new_format(section, lines, page_one_header)
+    elif layout.region_text is not None:
+        result = _parse_new_format(
+            layout.region_text,
+            lines,
+            page_one_header,
+            is_table_after_section=layout.kind == "after_section",
+        )
     else:
         row_labels = sorted(PARTY_NAME_MAP.keys(), key=len, reverse=True)
         result = _parse_old_format_rows(lines[:second_question], row_labels)
@@ -554,8 +852,22 @@ def parse_headline_vi_table(full_text: str) -> dict[str, dict[str, float]]:
     missing_parties = [p for p in PARTY_NAME_MAP.values() if p not in result]
     if missing_parties:
         raise ValueError(f"Missing party rows in headline table: {missing_parties}")
+    problem = regional_alignment_problem(_by_region(result))
+    if problem is not None:
+        raise ValueError(f"Rejected YouGov regional table: {problem}")
 
     return result
+
+
+def _by_region(
+    party_regions: Mapping[str, Mapping[str, float]],
+) -> dict[str, dict[str, float]]:
+    """Turn party -> region -> share into region -> party -> share."""
+    regions: dict[str, dict[str, float]] = {}
+    for party, values in party_regions.items():
+        for region, share in values.items():
+            regions.setdefault(region, {})[party] = share
+    return regions
 
 
 def _normalize_percentage(value: float) -> float:
@@ -609,6 +921,7 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_macro_percentages=party_macro_percentages,
+        bases=parse_bases(pdf_text),
     )
 
 
@@ -642,6 +955,21 @@ def _find_existing_poll(
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str) -> ParsedPoll:
+    """Download a YouGov PDF and parse it.
+
+    Args:
+        source_url: URL of the PDF.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the PDF cannot be parsed.
+    """
+    return parse_poll(extract_pdf_text(source_url))
 
 
 def build_import_plan(
@@ -697,8 +1025,7 @@ def build_import_plan(
         for macro, region_ids in macro_to_region_ids.items()
     )
 
-    pdf_text = extract_pdf_text(pdf_url)
-    parsed = parse_poll(pdf_text)
+    parsed = fetch_parsed_poll(pdf_url)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -754,6 +1081,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -859,6 +1187,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -867,6 +1196,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -966,6 +1296,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

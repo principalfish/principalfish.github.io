@@ -1710,7 +1710,7 @@ class TestAlignedSourceTables:
     def test_actual_source_tables_and_all_mapped_values(self, end: str) -> None:
         text = (_IPSOS_FIXTURES / f"tables-{end}.txt").read_text()
         expected = json.loads((_IPSOS_FIXTURES / f"expected-{end}.json").read_text())
-        assert parse_poll(text).model_dump(mode="json") == expected
+        assert parse_poll(text).model_dump(mode="json", exclude={"bases"}) == expected
 
     def test_actual_rotated_pdf_extraction(
         self, monkeypatch: pytest.MonkeyPatch,
@@ -1723,7 +1723,7 @@ class TestAlignedSourceTables:
         expected = json.loads(
             (_IPSOS_FIXTURES / "expected-2026-09-15.json").read_text()
         )
-        assert parse_poll(text).model_dump(mode="json") == expected
+        assert parse_poll(text).model_dump(mode="json", exclude={"bases"}) == expected
 
     def test_next_unrelated_table_cannot_overwrite_values(self) -> None:
         text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
@@ -1795,3 +1795,72 @@ class TestAlignedSourceTables:
         assert snp["Wales"] == 0
         assert parsed.party_region_percentages["Plaid Cymru"]["Wales"] == 17
         assert parsed.party_percentages["Other"] == 0
+
+
+class TestAlignedSourceBases:
+    """The aligned layout's column bases: decided nationally, LTV by region."""
+
+    _NORTH = ("North East England", "North West England", "Yorkshire and The Humber")
+    _MIDLANDS = ("East Midlands", "West Midlands", "East of England")
+    _SOUTH = ("South East England", "South West England")
+
+    def _bases(
+        self, text: str
+    ) -> dict[tuple[str, ...], tuple[int | None, int | None, str]]:
+        return {
+            base.regions: (base.unweighted_n, base.weighted_n, base.kind)
+            for base in parse_poll(text).bases
+        }
+
+    def test_fixture_bases_come_from_the_tables_the_shares_use(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+
+        parsed = parse_poll(text)
+
+        # sample_size stays the first "Unweighted Total" (all adults), which
+        # duplicate detection keys on; the national base is the decided
+        # sub-base behind Table 1's shares.
+        assert parsed.sample_size == 1031
+        assert self._bases(text) == {
+            (): (867, 860, "decided"),
+            self._NORTH: (177, 151, "likely_voters"),
+            self._MIDLANDS: (172, 174, "likely_voters"),
+            self._SOUTH: (169, 167, "likely_voters"),
+            ("London",): (91, 95, "likely_voters"),
+            ("Scotland",): (78, 68, "likely_voters"),
+            ("Wales",): (40, 36, "likely_voters"),
+        }
+
+    def test_older_fixture_bases(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-06-30.txt").read_text()
+
+        bases = self._bases(text)
+
+        assert bases[()] == (877, 871, "decided")
+        assert bases[self._NORTH] == (148, 177, "likely_voters")
+        assert bases[("Wales",)] == (40, 41, "likely_voters")
+
+    def test_national_base_needs_the_unweighted_total_column(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        text = text.replace("UnWgt", "Other", 1)
+
+        bases = self._bases(text)
+
+        assert () not in bases
+        assert bases[("London",)] == (91, 95, "likely_voters")
+
+    def test_misaligned_weighted_row_keeps_the_unweighted_regional_base(self) -> None:
+        text = (_IPSOS_FIXTURES / "tables-2026-09-15.txt").read_text()
+        parts = re.split(r"(?m)^Table\s+\d+\s*$", text)
+        rows = parts[4].splitlines()
+        index = next(i for i, line in enumerate(rows) if "Weighted Total" in line)
+        rows[index] = rows[index].replace(" 692 ", " ", 1)
+        parts[4] = "\n".join(rows)
+        text = parts[0] + "".join(
+            f"\nTable {number}\n{part}" for number, part in enumerate(parts[1:], 1)
+        )
+
+        bases = self._bases(text)
+
+        assert bases[("London",)] == (91, None, "likely_voters")
+        assert bases[()] == (867, 860, "decided")

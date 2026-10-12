@@ -26,6 +26,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    count_value,
+    make_base,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
+from polls.importers.sanity import regional_basis_problem
 from polls.importers.types import PollImportResult
 
 DEFAULT_SOURCE_URL = "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that-britain-is-broken/"
@@ -124,13 +134,40 @@ def _read_sheets(payload: bytes) -> list[_Sheet]:
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds the "Weighted Sample"/"Unweighted Sample" rows: the first
+    sheet's Total column, and each region column of the sheet the regional
+    shares come from. Lord Ashcroft's shares keep "Don't know / would not
+    vote" in the denominator and the rows count every respondent, so the
+    bases are all-adult.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_percentages: dict[str, float]
     party_region_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return dict(self.party_percentages)
+
+    def regional_shares(self) -> dict[str, dict[str, float]]:
+        """Return internal region -> party -> share, as the importer stores them."""
+        return self.regions_of(self.party_region_percentages)
+
+    @staticmethod
+    def regions_of(
+        party_regions: dict[str, dict[str, float]],
+    ) -> dict[str, dict[str, float]]:
+        """Turn party -> region -> share into region -> party -> share."""
+        shares: dict[str, dict[str, float]] = {}
+        for party, regions in party_regions.items():
+            for region, percentage in regions.items():
+                shares.setdefault(region, {})[party] = percentage
+        return shares
 
 
 class PlannedPollRow(BaseModel):
@@ -158,6 +195,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -533,6 +571,68 @@ def _find_weighted_sample_row(sheet: _Sheet) -> int:
     raise ValueError("Weighted Sample row not found in Lord Ashcroft workbook")
 
 
+def _sample_rows(sheet: _Sheet) -> tuple[int, int] | None:
+    """Return the (weighted, unweighted) sample rows of *sheet*, or None."""
+    rows: dict[str, int] = {}
+    for row_idx in range(min(40, sheet.nrows)):
+        label = _as_text(sheet.cell_value(row_idx, 0)).lower()
+        if label in {"weighted sample", "unweighted sample"}:
+            rows.setdefault(label, row_idx)
+    if "weighted sample" not in rows or "unweighted sample" not in rows:
+        return None
+    return rows["weighted sample"], rows["unweighted sample"]
+
+
+def _parse_bases(sheet: _Sheet, values_sheet: _Sheet) -> list[ParsedBase]:
+    """Read the all-adult column bases behind the national and regional shares.
+
+    Args:
+        sheet: The first sheet (national shares).
+        values_sheet: The sheet the regional shares come from.
+
+    Returns:
+        The national base then one per region column; a region printed in two
+        columns takes the later one, as its shares do. The regional bases are
+        kept only when their unweighted counts add up to the sheet's Total.
+    """
+    bases: list[ParsedBase] = []
+    national_rows = _sample_rows(sheet)
+    if national_rows is not None:
+        weighted_row, unweighted_row = national_rows
+        national = make_base(
+            (),
+            sheet.cell_value(unweighted_row, 1),
+            sheet.cell_value(weighted_row, 1),
+            "all_adults",
+        )
+        if national is not None:
+            bases.append(national)
+
+    regional_rows = _sample_rows(values_sheet)
+    if regional_rows is None:
+        return bases
+    weighted_row, unweighted_row = regional_rows
+    columns_by_region = {
+        region: col for col, region in _find_region_columns(values_sheet).items()
+    }
+    regional: list[ParsedBase] = []
+    for region, col in columns_by_region.items():
+        base = make_base(
+            (region,),
+            values_sheet.cell_value(unweighted_row, col),
+            values_sheet.cell_value(weighted_row, col),
+            "all_adults",
+        )
+        if base is not None:
+            regional.append(base)
+    # The regions partition Great Britain: their unweighted counts must add up
+    # to the sheet's Total column, or the columns are not what they seem.
+    total = count_value(values_sheet.cell_value(unweighted_row, 1))
+    if total is None or sum(b.unweighted_n or 0 for b in regional) != total:
+        return bases
+    return bases + regional
+
+
 def _to_float(value: object) -> float:
     """Safely convert a cell value to a float, returning 0.0 for blank cells.
 
@@ -626,6 +726,62 @@ def _parse_party_region_percentages(
     return parsed
 
 
+def _parse_direct_region_percentages(sheet: _Sheet) -> dict[str, dict[str, float]]:
+    """Read regional percentages printed in the percentage sheet's VI block.
+
+    The percentage sheet prints every column of the "CURRENT WESTMINSTER
+    VOTING INTENTION" block as a percentage of that column's own base, so its
+    region columns share the national figures' basis (don't-know included,
+    turnout-weighted when the national figures are). A region printed in two
+    columns takes the later one.
+
+    Dividing a count or percentage by the all-adult "Weighted Sample" instead
+    (the fallback, :func:`_parse_party_region_percentages`) understated every
+    region: the September 2026 counts are turnout-weighted likely voters, and
+    the single-sheet 2025 workbooks hold percentages, not counts.
+
+    Args:
+        sheet: The workbook's first (percentage) sheet.
+
+    Returns:
+        Canonical party -> internal region -> rounded percentage, or an empty
+        dict when the sheet has no region columns or no regional figures.
+
+    Raises:
+        ValueError: If a region's party shares add up to more than 105, i.e.
+            the sheet holds counts rather than percentages.
+    """
+    region_columns = _find_region_columns(sheet)
+    if not region_columns:
+        return {}
+    start_idx = _find_vi_block_start(sheet)
+    parsed: dict[str, dict[str, float]] = {}
+    for row_idx in range(start_idx + 1, min(start_idx + 40, sheet.nrows)):
+        label = _as_text(sheet.cell_value(row_idx, 0))
+        canonical_party = _canonical_party(label) if label else None
+        if canonical_party is None or canonical_party in parsed:
+            continue
+        region_values: dict[str, float] = {}
+        for col_idx, internal_name in region_columns.items():
+            value = sheet.cell_value(row_idx, col_idx)
+            if value in (None, ""):
+                continue
+            region_values[internal_name] = float(int(round(_to_float(value))))
+        if region_values:
+            parsed[canonical_party] = region_values
+            if len(parsed) == 8:
+                break
+
+    totals: dict[str, float] = {}
+    for values in parsed.values():
+        for region, share in values.items():
+            totals[region] = totals.get(region, 0.0) + share
+    overfull = sorted(region for region, total in totals.items() if total > 105)
+    if overfull:
+        raise ValueError(f"Regional shares exceed 100% in {overfull}: not percentages")
+    return parsed
+
+
 def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
     """Download and parse a Lord Ashcroft XLS/XLSX workbook into a ``ParsedPoll``.
 
@@ -669,7 +825,18 @@ def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
     sample_size = _find_sample_size(sheet)
     fieldwork_start, fieldwork_end = _find_fieldwork(sheet)
     party_percentages = _parse_party_percentages(sheet)
-    party_region_percentages = _parse_party_region_percentages(values_sheet)
+    # The first sheet holds percentages; when it also has the region columns
+    # their figures are on the same basis as the national ones. Only a first
+    # sheet without regions falls back to counts / weighted sample.
+    party_region_percentages = _parse_direct_region_percentages(sheet)
+    region_sheet = sheet
+    if not party_region_percentages:
+        party_region_percentages = _parse_party_region_percentages(values_sheet)
+        region_sheet = values_sheet
+    regional = ParsedPoll.regions_of(party_region_percentages)
+    problem = regional_basis_problem(regional, party_percentages)
+    if problem is not None:
+        raise ValueError(f"Rejected Lord Ashcroft regional shares: {problem}")
 
     return ParsedPoll(
         sample_size=sample_size,
@@ -677,6 +844,7 @@ def parse_poll_from_xls_url(xls_url: str) -> ParsedPoll:
         fieldwork_end=fieldwork_end,
         party_percentages=party_percentages,
         party_region_percentages=party_region_percentages,
+        bases=_parse_bases(sheet, region_sheet),
     )
 
 
@@ -705,6 +873,21 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str) -> ParsedPoll:
+    """Resolve a Lord Ashcroft article or workbook URL, download it and parse it.
+
+    Args:
+        source_url: An article page linking the full tables, or the workbook.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If no workbook is found or it cannot be parsed.
+    """
+    return parse_poll_from_xls_url(_resolve_xls_url(source_url))
 
 
 def build_import_plan(
@@ -744,8 +927,7 @@ def build_import_plan(
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
 
-    resolved_xls_url = _resolve_xls_url(source_url)
-    parsed = parse_poll_from_xls_url(resolved_xls_url)
+    parsed = fetch_parsed_poll(source_url)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -810,6 +992,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(region_by_name.values())),
     )
 
 
@@ -907,6 +1090,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -915,6 +1099,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -1014,6 +1199,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

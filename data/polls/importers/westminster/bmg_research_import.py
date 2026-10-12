@@ -21,7 +21,16 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
+from models import Poll, PollBaseKind, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    national_shares_from,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://bmgresearch.com/wp-content/uploads/2026/02/january-2026-omnibus-tables-for-the-i.xlsx"
@@ -76,12 +85,22 @@ PARTY_NAME_MAP = {
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds each used VI table's "Unweighted row" and "Base: Total"
+    (weighted) counts: the national table's Total column, the regional
+    table's region columns.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_region_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return national_shares_from(self.party_region_percentages, NATIONAL_KEY)
 
 
 class PlannedPollRow(BaseModel):
@@ -109,6 +128,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -661,6 +681,115 @@ def _find_vi_table_starts(sheet: Any) -> list[int]:
     return starts
 
 
+def _select_vi_tables(sheet: Any) -> tuple[list[int], int, int, list[int]]:
+    """Choose the national and regional ``WouldVoteTodayRevised`` tables.
+
+    National values come from the unique revised table whose base excludes
+    not-sure and prefer-not-to-say respondents; without one, from the first
+    revised table. Regional values come from the last.
+
+    Args:
+        sheet: The tables worksheet.
+
+    Returns:
+        ``(starts, national_start, regional_start, final_starts)``: every
+        revised table's header row, the two chosen, and the final-base tables.
+
+    Raises:
+        ValueError: If no revised table exists, or several have the final base.
+    """
+    starts = _find_vi_table_starts(sheet)
+    national_start = starts[0]
+    regional_start = starts[-1]
+    final_starts = []
+    for start in starts:
+        for row in range(start + 1, min(sheet.max_row + 1, start + 5)):
+            base = _normalize_header(_cell_text(sheet.cell(row, 2).value)).lower()
+            if base == _FINAL_VI_BASE:
+                final_starts.append(start)
+                break
+    if len(final_starts) > 1:
+        raise ValueError("Multiple final voting-intention tables found")
+    if final_starts:
+        national_start = final_starts[0]
+    return starts, national_start, regional_start, final_starts
+
+
+def _region_columns(sheet: Any, regional_start: int) -> dict[str, int]:
+    """Map each internal region to its column in the regional table."""
+    region_header_row = regional_start + 3
+    region_columns: dict[str, int] = {}
+    for col in range(34, 90):
+        header = _normalize_header(_cell_text(sheet.cell(region_header_row, col).value))
+        if not header:
+            continue
+        internal = SOURCE_REGION_TO_INTERNAL.get(header)
+        if internal is not None:
+            region_columns[internal] = col
+    return region_columns
+
+
+def _table_base_rows(
+    sheet: Any, start: int
+) -> tuple[PollBaseKind, int, int | None] | None:
+    """Locate one revised table's base rows and say what they count.
+
+    Each table prints its "Base:" description, then an "Unweighted row" and a
+    "Base: Total" (weighted) row with one count per column. The final table's
+    base (not sure and prefer not to say removed) is decided; any other
+    described base is turnout-filtered with the undecided still in it.
+
+    Args:
+        sheet: The tables worksheet.
+        start: The table's header row.
+
+    Returns:
+        ``(kind, unweighted_row, weighted_row)``, or None when the table has
+        no base description or no "Unweighted row".
+    """
+    kind: PollBaseKind | None = None
+    unweighted_row = weighted_row = None
+    for row in range(start + 1, min(sheet.max_row + 1, start + 10)):
+        label = _normalize_header(_cell_text(sheet.cell(row, 2).value)).lower()
+        if label == "unweighted row":
+            unweighted_row = row
+        elif label == "base: total":
+            weighted_row = row
+        elif label.startswith("base:") and kind is None:
+            kind = "decided" if label == _FINAL_VI_BASE else "likely_voters"
+    if kind is None or unweighted_row is None:
+        return None
+    return kind, unweighted_row, weighted_row
+
+
+def _parse_bases(workbook: Any) -> list[ParsedBase]:
+    """Read the national and regional tables' column bases.
+
+    Args:
+        workbook: An openpyxl ``Workbook`` instance.
+
+    Returns:
+        The national base (national table, Total column) then one per region
+        (regional table); a table without recognisable base rows adds none.
+    """
+    sheet = _find_tables_sheet(workbook)
+    _starts, national_start, regional_start, _finals = _select_vi_tables(sheet)
+
+    def base(start: int, regions: tuple[str, ...], col: int) -> ParsedBase | None:
+        rows = _table_base_rows(sheet, start)
+        if rows is None:
+            return None
+        kind, unweighted_row, weighted_row = rows
+        weighted = sheet.cell(weighted_row, col).value if weighted_row else None
+        return make_base(regions, sheet.cell(unweighted_row, col).value, weighted, kind)
+
+    candidates = [base(national_start, (), 3)] + [
+        base(regional_start, (region,), col)
+        for region, col in _region_columns(sheet, regional_start).items()
+    ]
+    return [candidate for candidate in candidates if candidate is not None]
+
+
 def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]]:
     """Extract national and regional voting-intention percentages from the tables sheet.
 
@@ -702,20 +831,7 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
             national table.
     """
     sheet = _find_tables_sheet(workbook)
-    starts = _find_vi_table_starts(sheet)
-    national_start = starts[0]
-    regional_start = starts[-1]
-    final_starts = []
-    for start in starts:
-        for row in range(start + 1, min(sheet.max_row + 1, start + 5)):
-            base = _normalize_header(_cell_text(sheet.cell(row, 2).value)).lower()
-            if base == _FINAL_VI_BASE:
-                final_starts.append(start)
-                break
-    if len(final_starts) > 1:
-        raise ValueError("Multiple final voting-intention tables found")
-    if final_starts:
-        national_start = final_starts[0]
+    starts, national_start, regional_start, final_starts = _select_vi_tables(sheet)
 
     national_values: dict[str, float] = {}
     for row in range(national_start + 1, min(sheet.max_row + 1, national_start + 180)):
@@ -742,16 +858,7 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
 
         national_values[canonical] = percentage
 
-    region_header_row = regional_start + 3
-    region_columns: dict[str, int] = {}
-    for col in range(34, 90):
-        header = _normalize_header(_cell_text(sheet.cell(region_header_row, col).value))
-        if not header:
-            continue
-        internal = SOURCE_REGION_TO_INTERNAL.get(header)
-        if internal is not None:
-            region_columns[internal] = col
-
+    region_columns = _region_columns(sheet, regional_start)
     if not region_columns:
         raise ValueError("Could not locate BMG regional columns in tables sheet")
 
@@ -836,6 +943,7 @@ def parse_poll(workbook: Any, *, source_url: str, year_hint: int | None = None) 
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_region_percentages=party_region_percentages,
+        bases=_parse_bases(workbook),
     )
 
 
@@ -865,6 +973,27 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str, *, year_hint: int | None = None) -> ParsedPoll:
+    """Download a BMG workbook and parse it.
+
+    Takes the workbook URL itself (what a poll's ``source_url`` stores); a
+    release or i article URL is resolved by :func:`build_import_plan` first.
+
+    Args:
+        source_url: URL of the XLSX workbook.
+        year_hint: Fallback year when none can be inferred.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the workbook cannot be fetched or parsed.
+    """
+    return parse_poll(
+        extract_workbook(source_url), source_url=source_url, year_hint=year_hint
+    )
 
 
 def build_import_plan(
@@ -907,8 +1036,7 @@ def build_import_plan(
         raise ValueError(f"Map not found: {map_name!r}")
 
     source_url = resolve_source_url(xlsx_url)
-    workbook = extract_workbook(source_url)
-    parsed = parse_poll(workbook, source_url=source_url, year_hint=year_hint)
+    parsed = fetch_parsed_poll(source_url, year_hint=year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -971,6 +1099,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -1074,6 +1203,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -1082,6 +1212,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -1185,6 +1316,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

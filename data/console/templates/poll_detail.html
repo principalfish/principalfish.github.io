@@ -50,7 +50,38 @@
             </tr>
           {% endfor %}
         </tbody>
+        <tfoot>
+          {% set n_rows = [
+            ("n", "n"), ("n source", "source"), ("Weighted n", "weighted_n"),
+          ] %}
+          {% for label, attribute in n_rows %}
+            <tr class="poll-n">
+              <th scope="row">{{ label }}</th>
+              {% if show_candidates %}
+                <td></td>
+              {% endif %}
+              {% for cell in n_cells %}
+                {% set value = cell[attribute] %}
+                <td>
+                  {{- value if value is not none else "-" -}}
+                  {%- if attribute == "source" and cell.split_from_macro -%}
+                    {{ " (split)" }}
+                  {%- endif -%}
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tfoot>
       </table>
     </div>
+    <p>
+      n is the respondent count behind each column's shares: the captured
+      base (<code>base:&lt;kind&gt;</code>; <code>(weighted)</code> means only a
+      weighted base was printed and is used as n; "split" means apportioned
+      from a wider column by population), else the sample size nationally, or
+      regionally a population estimate (<code>estimate:&lt;kind&gt;</code> when
+      scaled from the national base, <code>estimate:sample_size</code> when
+      scaled from the sample size).
+    </p>
   </section>
 {% endblock %}

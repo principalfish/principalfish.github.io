@@ -28,6 +28,7 @@ import pytest
 from flask import Flask
 
 from db import Database
+from models import PollBase
 
 from tests.console_fixtures import app, flashes as _flashes
 from tests.uk_fixtures import WestminsterWorld, add_poll_with_rows
@@ -43,7 +44,7 @@ def _table_headers(body: str) -> list[str]:
     """Return the ``<th>`` texts inside the page's single ``<thead>`` block."""
     match = re.search(r"<thead>(.*?)</thead>", body, re.DOTALL)
     assert match is not None, "no <thead> in body"
-    headers = re.findall(r"<th>(.*?)</th>", match.group(1))
+    headers = re.findall(r"<th(?: [^>]*)?>(.*?)</th>", match.group(1))
     return [html.unescape(h.strip()) for h in headers]
 
 
@@ -264,20 +265,26 @@ class TestPollList:
             "Sample",
             "Source URL",
             "Rows",
+            "n",
+            "n source",
+            "Weighted n",
             "Actions",
         ]
         rows = _table_rows(body)
         assert len(rows) == 1
         [row] = rows
-        assert [html.unescape(cell).strip() for cell in row[:6]] == [
+        assert [html.unescape(cell).strip() for cell in row[:9]] == [
             f'<a href="/polls/{poll.id}">#{poll.id}</a>',
             "Named Pollster Ltd (named_pollster)",
             "2026-02-01 to 2026-02-06",
             "777",
             "-",
             "1",
+            "777",
+            "sample_size",
+            "-",
         ]
-        assert f'action="/polls/{poll.id}/delete"' in row[6]
+        assert f'action="/polls/{poll.id}/delete"' in row[9]
 
 
 class TestPollDetail:
@@ -622,3 +629,209 @@ class TestPollDetailCsv:
 
         assert response.status_code == 404
         assert response.get_data(as_text=True) == "Poll not found"
+
+
+# ── Respondent n ──────────────────────────────────────────────────────────────
+
+
+def _add_base(
+    db: Database,
+    poll_id: int,
+    unweighted_n: int | None,
+    *,
+    region_id: int | None = None,
+    weighted_n: int | None = None,
+    kind: str = "decided",
+    split_from_macro: bool = False,
+) -> None:
+    with db.session() as session:
+        session.add(
+            PollBase(
+                poll_id=poll_id,
+                region_id=region_id,
+                unweighted_n=unweighted_n,
+                weighted_n=weighted_n,
+                kind=kind,
+                split_from_macro=split_from_macro,
+            )
+        )
+
+
+def _tfoot_rows(body: str) -> dict[str, list[str]]:
+    """Return the matrix footer rows as ``{label: [cell, ...]}``."""
+    match = re.search(r"<tfoot>(.*?)</tfoot>", body, re.DOTALL)
+    assert match is not None, "no <tfoot> in body"
+    rows: dict[str, list[str]] = {}
+    for row_html in re.findall(r"<tr[^>]*>(.*?)</tr>", match.group(1), re.DOTALL):
+        label = re.search(r'<th scope="row">(.*?)</th>', row_html, re.DOTALL)
+        assert label is not None
+        cells = re.findall(r"<td>(.*?)</td>", row_html, re.DOTALL)
+        rows[html.unescape(label.group(1).strip())] = [
+            html.unescape(cell.strip()) for cell in cells
+        ]
+    return rows
+
+
+class TestPollListN:
+    """GET /polls shows each poll's resolved national n and its source."""
+
+    def test_captured_base_beats_sample_size_per_poll(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        labour = world.party_ids["Labour"]
+        based = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="more_in_common",
+            fieldwork_end=date(2026, 9, 21), national={labour: 26.0}, sample_size=2113,
+        )
+        plain = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="find_out_now",
+            fieldwork_end=date(2026, 9, 20), national={labour: 27.0}, sample_size=2607,
+        )
+        unsized = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="techne",
+            fieldwork_end=date(2026, 9, 19), national={labour: 25.0}, sample_size=None,
+        )
+        _add_base(db, based.id, 1491, weighted_n=1402)
+        # A regional base must not stand in for the national n.
+        _add_base(db, plain.id, 239, region_id=world.region_ids["London"])
+        weighted_only = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="find_out_now",
+            fieldwork_end=date(2026, 9, 30), national={labour: 27.0}, sample_size=2607,
+        )
+        _add_base(db, weighted_only.id, None, weighted_n=1452)
+
+        body = app.test_client().get("/polls").get_data(as_text=True)
+
+        rows = {
+            re.sub(r"<[^>]+>", "", row[0]).strip(): [
+                html.unescape(c).strip() for c in (row[3], *row[6:9])
+            ]
+            for row in _table_rows(body)
+        }
+        assert rows[f"#{based.id}"] == ["2113", "1491", "base:decided", "1402"]
+        assert rows[f"#{plain.id}"] == ["2607", "2607", "sample_size", "-"]
+        assert rows[f"#{unsized.id}"] == ["None", "-", "-", "-"]
+        assert rows[f"#{weighted_only.id}"] == [
+            "2607", "1452", "base:decided(weighted)", "1452"
+        ]
+        assert 'href="/polls/coverage"' in body
+
+
+class TestPollDetailN:
+    """GET /polls/<id> footer rows give each column's n, source and weighted n."""
+
+    def test_footer_resolves_each_column(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        labour = world.party_ids["Labour"]
+        london, wales, scotland, ni = (
+            world.region_ids[name]
+            for name in ("London", "Wales", "Scotland", "Northern Ireland")
+        )
+        poll = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 28), national={labour: 23.0},
+            regional={
+                london: {labour: 32.0},
+                scotland: {labour: 17.0},
+                wales: {labour: 18.0},
+                ni: {labour: 0.0},
+            },
+            sample_size=2310,
+        )
+        _add_base(db, poll.id, 2286, weighted_n=2286, kind="all_adults")
+        _add_base(db, poll.id, 241, region_id=london, weighted_n=280, kind="all_adults")
+        _add_base(
+            db,
+            poll.id,
+            187,
+            region_id=scotland,
+            kind="all_adults",
+            split_from_macro=True,
+        )
+
+        body = app.test_client().get(f"/polls/{poll.id}").get_data(as_text=True)
+
+        assert _table_headers(body) == [
+            "Party", "London", "National", "Northern Ireland", "Scotland", "Wales",
+        ]
+        # Wales: 2286 x 3.1m / (9.1m + 5.5m + 3.1m) = 400.4; Northern Ireland
+        # has only a zero placeholder row, so it is neither estimated nor in
+        # the denominator.
+        assert _tfoot_rows(body) == {
+            "n": ["241", "2286", "-", "187", "400"],
+            "n source": [
+                "base:all_adults", "base:all_adults", "-", "base:all_adults (split)",
+                "estimate:all_adults",
+            ],
+            "Weighted n": ["280", "2286", "-", "-", "-"],
+        }
+
+
+class TestPollCoverage:
+    """GET /polls/coverage summarises captured bases per pollster."""
+
+    def test_counts_per_pollster(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        labour = world.party_ids["Labour"]
+        london, wales = world.region_ids["London"], world.region_ids["Wales"]
+        based = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="yougov",
+            pollster_name="YouGov",
+            fieldwork_end=date(2026, 9, 28), national={labour: 23.0},
+            regional={london: {labour: 32.0}, wales: {labour: 18.0}},
+        )
+        add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="yougov",
+            fieldwork_end=date(2026, 10, 5), national={labour: 22.0},
+            regional={london: {labour: 31.0}, wales: {labour: 19.0}},
+        )
+        _add_base(db, based.id, 2310)
+        _add_base(db, based.id, 241, region_id=london)
+
+        body = app.test_client().get("/polls/coverage").get_data(as_text=True)
+
+        assert _table_headers(body) == [
+            "Pollster", "Polls", "With national base", "National %", "Crossbreaks",
+            "With base", "Crossbreak %",
+        ]
+        cells = [[html.unescape(c).strip() for c in row] for row in _table_rows(body)]
+        assert cells == [["YouGov (yougov)", "2", "1", "50%", "4", "1", "25%"]]
+
+    def test_no_westminster_map_shows_empty_message(
+        self, app: Flask, db: Database
+    ) -> None:
+        body = app.test_client().get("/polls/coverage").get_data(as_text=True)
+
+        assert "No polls on this map." in body
+
+
+class TestDeletePollWithBases:
+    def test_deleting_a_poll_deletes_only_its_bases(
+        self, app: Flask, db: Database, westminster_world: WestminsterWorld
+    ) -> None:
+        world = westminster_world
+        labour = world.party_ids["Labour"]
+        doomed = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="yougov",
+            fieldwork_end=date(2026, 9, 28), national={labour: 23.0},
+        )
+        kept = add_poll_with_rows(
+            db, map_id=world.map_id, pollster_identifier="yougov",
+            fieldwork_end=date(2026, 10, 5), national={labour: 22.0},
+        )
+        _add_base(db, doomed.id, 2310)
+        _add_base(db, kept.id, 2312)
+
+        response = app.test_client().post(f"/polls/{doomed.id}/delete")
+
+        assert response.status_code == 302
+        with sqlite3.connect(db.config.database_path) as conn:
+            rows = conn.execute(
+                "SELECT poll_id, unweighted_n FROM poll_bases"
+            ).fetchall()
+        assert rows == [(kept.id, 2312)]

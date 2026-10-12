@@ -1,4 +1,11 @@
-"""Poll viewing: list, detail (party x region matrix), CSV export, delete."""
+"""Poll viewing: list, detail (party x region matrix), CSV export, delete.
+
+The list and detail views also show the respondent count (n) behind each
+column of shares, resolved by ``model_support.poll_bases`` (captured base,
+else sample size, else a population estimate) and labelled with its source;
+``/polls/coverage`` summarises how many polls and crossbreaks have captured
+bases, per pollster.
+"""
 
 from __future__ import annotations
 
@@ -17,8 +24,10 @@ from flask import (
 from flask.typing import ResponseReturnValue
 from sqlalchemy import delete, func, select
 
-from models import Party, Poll, PollRow, Pollster, Region, Seat
+from model_support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
+from models import Map, Party, Poll, PollBase, PollRow, Pollster, Region, Seat
 
+from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
 
 bp = Blueprint("polls", __name__)
@@ -42,20 +51,32 @@ def poll_list() -> str:
                 .group_by(PollRow.poll_id)
             ).all()
         }
+        # National n needs only national bases and sample sizes: no rows.
+        national_bases = session.scalars(
+            select(PollBase).where(PollBase.region_id.is_(None))
+        ).all()
+        n_index = PollNIndex.from_records(
+            [poll for poll, _ in polls], [], national_bases, []
+        )
 
-    items = [
-        {
-            "poll_id": poll.id,
-            "pollster_name": pollster.name,
-            "pollster_identifier": pollster.identifier,
-            "fieldwork_start": poll.fieldwork_start,
-            "fieldwork_end": poll.fieldwork_end,
-            "sample_size": poll.sample_size,
-            "source_url": poll.source_url,
-            "row_count": int(row_counts.get(poll.id, 0)),
-        }
-        for poll, pollster in polls
-    ]
+    items = []
+    for poll, pollster in polls:
+        resolved = n_index.resolve(poll.id, None)
+        items.append(
+            {
+                "poll_id": poll.id,
+                "pollster_name": pollster.name,
+                "pollster_identifier": pollster.identifier,
+                "fieldwork_start": poll.fieldwork_start,
+                "fieldwork_end": poll.fieldwork_end,
+                "sample_size": poll.sample_size,
+                "source_url": poll.source_url,
+                "row_count": int(row_counts.get(poll.id, 0)),
+                "n": resolved.n,
+                "n_source": resolved.source,
+                "weighted_n": resolved.weighted_n,
+            }
+        )
 
     return render_template("poll_list.html", polls=items)
 
@@ -97,10 +118,18 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
             .where(PollRow.poll_id == poll_id)
             .order_by(Party.name.asc(), Region.name.asc())
         ).all()
+        n_index = PollNIndex.load(session, [poll_id])
 
     region_headers = sorted(
         {region.name if region is not None else "National" for _, _, region in rows}
     )
+    region_ids: dict[str, int | None] = {
+        (region.name if region is not None else "National"): row.region_id
+        for row, _, region in rows
+    }
+    n_cells: list[ResolvedN] = [
+        n_index.resolve(poll_id, region_ids[name]) for name in region_headers
+    ]
     row_keys = sorted(
         {(party.name, row.candidate_name or "") for row, party, _ in rows}
     )
@@ -132,6 +161,31 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
         show_candidates=any(candidate for _, candidate in row_keys),
         region_headers=region_headers,
         matrix_rows=matrix_rows,
+        n_cells=n_cells,
+    )
+
+
+@bp.route("/polls/coverage", methods=["GET"])
+def poll_coverage() -> str:
+    """GET /polls/coverage — Per-pollster coverage of captured respondent bases.
+
+    Counts, for the Westminster map, each pollster's polls with a national
+    base and its reported crossbreaks (poll x region with a non-zero share)
+    with a regional base. Uncovered columns fall back to ``sample_size`` or a
+    population estimate when n is resolved.
+    """
+    db = get_db()
+    with db.session() as session:
+        westminster = session.scalars(
+            select(Map).where(Map.name == WESTMINSTER_MAP_NAME)
+        ).one_or_none()
+        coverage = (
+            poll_base_coverage(session, westminster.id)
+            if westminster is not None
+            else []
+        )
+    return render_template(
+        "poll_coverage.html", map_name=WESTMINSTER_MAP_NAME, coverage=coverage
     )
 
 

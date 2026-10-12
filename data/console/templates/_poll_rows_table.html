@@ -14,6 +14,16 @@
   {"heading": "Percentage", "attribute": "percentage"},
 ] %}
 
+{# ...and the respondent bases planned beside them (Westminster importers). #}
+{% set plan_base_columns = [
+  {"heading": "Region", "attribute": "region_name"},
+  {"heading": "Unweighted n", "attribute": "unweighted_n",
+   "blank": "- (weighted only)"},
+  {"heading": "Weighted n", "attribute": "weighted_n", "blank": "-"},
+  {"heading": "Kind", "attribute": "kind"},
+  {"heading": "Split from macro", "attribute": "split_from_macro"},
+] %}
+
 {% macro poll_rows_table(rows, columns, title=none) %}
   {% if title %}
     <section class="card">

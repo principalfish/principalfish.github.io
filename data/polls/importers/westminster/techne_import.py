@@ -19,6 +19,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    plan_poll_bases,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_PDF_URL = "https://www.techneuk.com/wp-content/uploads/2026/02/R162-UK-2026-2-13-DATA.pdf"
@@ -42,6 +49,10 @@ PARTY_NAME_MAP = {
 
 # The rest of the line after the label; the figures are parsed from it.
 _UNWEIGHTED_SAMPLE_ROW = re.compile(r"Unweighted Sample(?P<figures>[^\n]*)")
+# The weighted row's previous- and current-wave figures, as separate numbers.
+_WEIGHTED_SAMPLE_ROW = re.compile(
+    r"^\s*Weighted Sample\s+(?P<previous>\d{1,5})\s+(?P<current>\d{1,5})(?!\d)", re.M
+)
 # Techne's samples are ~1,600; a longer digit run is figures glued together.
 _MAX_SAMPLE_FIGURE_DIGITS = 5
 _LEADING_DIGITS = re.compile(r"[0-9]+")
@@ -68,12 +79,22 @@ class UnweightedSample(BaseModel):
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds the national "Unweighted Sample"/"Weighted Sample"
+    current-wave figures. Techne prints no base for its decided-only VI table,
+    so this is the all-adult base; there are no regional figures.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_percentages: dict[str, float]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return dict(self.party_percentages)
 
 
 class PlannedPollRow(BaseModel):
@@ -101,6 +122,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -465,11 +487,16 @@ def parse_poll(pdf_text: str, *, inferred_year: int) -> ParsedPoll:
     sample_size = _parse_sample_size(pdf_text)
     fieldwork_start, fieldwork_end = _parse_fieldwork(pdf_text, inferred_year)
     party_percentages = _parse_party_percentages(pdf_text)
+    weighted = _WEIGHTED_SAMPLE_ROW.search(pdf_text)
+    national = make_base(
+        (), sample_size, weighted.group("current") if weighted else None, "all_adults"
+    )
     return ParsedPoll(
         sample_size=sample_size,
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_percentages=party_percentages,
+        bases=[national] if national is not None else [],
     )
 
 
@@ -498,6 +525,24 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str, *, year_hint: int | None = None) -> ParsedPoll:
+    """Download a Techne PDF and parse it.
+
+    Args:
+        source_url: URL of the PDF.
+        year_hint: Fallback year when none can be inferred from the URL.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the year cannot be inferred or the PDF cannot be
+            fetched or parsed.
+    """
+    inferred_year = _infer_year(source_url, fallback=year_hint)
+    return parse_poll(extract_pdf_text(source_url), inferred_year=inferred_year)
 
 
 def build_import_plan(
@@ -539,9 +584,7 @@ def build_import_plan(
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
 
-    inferred_year = _infer_year(pdf_url, fallback=year_hint)
-    pdf_text = extract_pdf_text(pdf_url)
-    parsed = parse_poll(pdf_text, inferred_year=inferred_year)
+    parsed = fetch_parsed_poll(pdf_url, year_hint=year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -589,6 +632,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, {}),
     )
 
 
@@ -693,6 +737,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -701,6 +746,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -805,6 +851,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

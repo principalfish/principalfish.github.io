@@ -20,6 +20,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    national_shares_from,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+    weighted_value,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://www.opinium.com/wp-content/uploads/2026/02/Observer-VI-2026-02-04-Web-Data-Tables-1152.xlsx"
@@ -58,12 +68,21 @@ PARTY_NAME_MAP = {
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds the HeadlineVI sheet's "Base: ... (Unweighted)" and
+    "(Weighted)" rows for the Total column and each macro region.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_macro_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return national_shares_from(self.party_macro_percentages, NATIONAL_KEY)
 
 
 class PlannedPollRow(BaseModel):
@@ -91,6 +110,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -362,6 +382,71 @@ def _find_headline_sheet(workbook: Any) -> Any:
     raise ValueError("Could not find HeadlineVI sheet")
 
 
+def _parse_bases(
+    sheet: Any, header_row: int, header_labels: dict[str, int]
+) -> list[ParsedBase]:
+    """Read the HeadlineVI table's unweighted and weighted base rows.
+
+    The table opens with "Base: ... (Unweighted)" and "Base: ... (Weighted)"
+    rows, one count per column. It is a decided base when its label says
+    "giving voting intention", or when the party counts under the Total
+    column add up to the weighted base (within 1%): 2024 workbooks label the
+    same base "All UK respondents" although it is ~1,500 of a ~2,050 sample.
+
+    Args:
+        sheet: The HeadlineVI worksheet.
+        header_row: Its column-header row.
+        header_labels: Header text -> column.
+
+    Returns:
+        The national base then one per macro region with a positive count, or
+        an empty list when the base rows are missing or not a decided base.
+    """
+    unweighted_row = weighted_row = None
+    for row in range(header_row + 1, header_row + 8):
+        label = _cell_text(sheet.cell(row, 1).value).lower()
+        if "base:" not in label:
+            continue
+        if "(unweighted)" in label and unweighted_row is None:
+            unweighted_row = row
+        elif "(weighted)" in label and weighted_row is None:
+            weighted_row = row
+    if unweighted_row is None:
+        return []
+
+    total_col = header_labels["Total"]
+    label = _cell_text(sheet.cell(unweighted_row, 1).value).lower()
+    if "giving voting intention" not in label:
+        if weighted_row is None:
+            return []
+        weighted_total = weighted_value(sheet.cell(weighted_row, total_col).value)
+        party_counts = 0.0
+        for row in range(max(unweighted_row, weighted_row) + 1, header_row + 40):
+            row_label = _cell_text(sheet.cell(row, 1).value).lower()
+            if row_label.startswith("return to index"):
+                break
+            value = sheet.cell(row, total_col).value
+            if not row_label and isinstance(value, (int, float)):
+                party_counts += float(value)
+        if (
+            not weighted_total
+            or abs(party_counts - weighted_total) > 0.01 * weighted_total
+        ):
+            return []
+
+    def base(regions: tuple[str, ...], col: int) -> ParsedBase | None:
+        weighted = sheet.cell(weighted_row, col).value if weighted_row else None
+        unweighted = sheet.cell(unweighted_row, col).value
+        return make_base(regions, unweighted, weighted, "decided")
+
+    candidates = [base((), total_col)] + [
+        base(tuple(MACRO_TO_INTERNAL_REGIONS[macro]), header_labels[macro])
+        for macro in MACRO_TO_INTERNAL_REGIONS
+        if macro in header_labels
+    ]
+    return [candidate for candidate in candidates if candidate is not None]
+
+
 def parse_poll(workbook: Any, *, source_url: str, fieldwork_year_hint: int | None = None) -> ParsedPoll:
     """Extract poll metadata and regional vote-share data from a loaded workbook.
 
@@ -478,6 +563,7 @@ def parse_poll(workbook: Any, *, source_url: str, fieldwork_year_hint: int | Non
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_macro_percentages=party_macro_percentages,
+        bases=_parse_bases(sheet, header_row, header_labels),
     )
 
 
@@ -506,6 +592,26 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str, *, year_hint: int | None = None) -> ParsedPoll:
+    """Download an Opinium workbook and parse it.
+
+    Args:
+        source_url: URL of the XLSX data tables.
+        year_hint: Fallback year when none can be inferred from the URL.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the workbook cannot be parsed.
+    """
+    return parse_poll(
+        extract_workbook(source_url),
+        source_url=source_url,
+        fieldwork_year_hint=year_hint,
+    )
 
 
 def build_import_plan(
@@ -565,8 +671,7 @@ def build_import_plan(
         for macro, region_ids in macro_to_region_ids.items()
     )
 
-    workbook = extract_workbook(xlsx_url)
-    parsed = parse_poll(workbook, source_url=xlsx_url, fieldwork_year_hint=fieldwork_year_hint)
+    parsed = fetch_parsed_poll(xlsx_url, year_hint=fieldwork_year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -629,6 +734,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -730,6 +836,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -738,6 +845,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -841,6 +949,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

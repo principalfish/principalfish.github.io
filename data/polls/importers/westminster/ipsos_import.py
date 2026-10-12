@@ -19,6 +19,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
 from models import Poll, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_PDF_URL = "https://www.ipsos.com/sites/default/files/ct/news/documents/2026-01/politmkp_w1jan2026web1.pdf"
@@ -59,13 +67,24 @@ REGION_COLUMN_ORDER = [
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` comes from the aligned-table layout only: the national decided
+    base (Table 1's "Total voting (sub-base)" row, unweighted from its UnWgt
+    Total column) and the likely-to-vote table's "Unweighted Total"/"Weighted
+    Total" rows for each region column. Older unaligned text gives none.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_percentages: dict[str, float]
     party_region_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return dict(self.party_percentages)
 
 
 class PlannedPollRow(BaseModel):
@@ -93,6 +112,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -562,13 +582,59 @@ def _layout_party_rows(lines: list[str], width: int) -> dict[str, list[float]]:
     return parsed
 
 
+_LAYOUT_CELL = re.compile(r"(?<!\S)(\d+|-|\*)(?=\s|$)")
+
+
+def _layout_row_cells(lines: list[str], label: str) -> list[str] | None:
+    """Return the cells of the first row starting with *label*, or None."""
+    row = next((line for line in lines if line.strip().startswith(label)), None)
+    if row is None:
+        return None
+    return _LAYOUT_CELL.findall(row.strip()[len(label):])
+
+
+def _layout_national_base(table: str, lines: list[str]) -> ParsedBase | None:
+    """Read the national decided base from the voting-intention (all) table.
+
+    The shares are percentages of the "Total voting (sub-base)" row, which
+    prints the weighted count in the Total column and the unweighted count in
+    the final "UnWgt Total" column. That column is recognised by its header
+    and by holding the unweighted total in both base rows.
+
+    Args:
+        table: The table's text.
+        lines: The table's lines.
+
+    Returns:
+        The decided base, or None when the table does not print it this way.
+    """
+    if "UnWgt" not in table:
+        return None
+    unweighted = _layout_row_cells(lines, "Unweighted Total")
+    weighted = _layout_row_cells(lines, "Weighted Total")
+    sub_base = _layout_row_cells(lines, "Total voting (sub-base)")
+    if not unweighted or not weighted or not sub_base:
+        return None
+    if not len(unweighted) == len(weighted) == len(sub_base):
+        return None
+    if not (unweighted[0] == unweighted[-1] == weighted[-1]):
+        return None
+    return make_base((), sub_base[-1], sub_base[0], "decided")
+
+
 def _parse_layout_tables(
     pdf_text: str,
-) -> tuple[dict[str, float], dict[str, dict[str, float]]] | None:
-    """Read visually aligned tables using their column and region anchors."""
+) -> tuple[dict[str, float], dict[str, dict[str, float]], list[ParsedBase]] | None:
+    """Read visually aligned tables using their column and region anchors.
+
+    Returns national shares, regional shares and the column bases (see
+    :class:`ParsedPoll`), or None when the text has no aligned tables.
+    """
     tables = re.split(r"(?m)^Table\s+\d+\s*$", pdf_text)[1:]
     national: dict[str, float] = {}
     regional: dict[str, dict[str, float]] = {}
+    national_base: ParsedBase | None = None
+    regional_bases: list[ParsedBase] = []
     found_layout = False
     region_header = re.compile(
         r"(?P<north>Scot)\s+(?P<midlands>(?:E\s+)?of England\))\s+"
@@ -614,6 +680,7 @@ def _parse_layout_tables(
                     f"Missing aligned Ipsos national parties: {sorted(missing)}"
                 )
             national = {party: values[0] for party, values in rows.items()}
+            national_base = _layout_national_base(table, lines)
         if is_regional:
             header = next(
                 (match for line in lines if (match := region_header.search(line))),
@@ -651,11 +718,49 @@ def _parse_layout_tables(
             if regional and regional != current:
                 raise ValueError("Conflicting aligned Ipsos regional tables")
             regional = current
+            if not regional_bases:
+                regional_bases = _layout_regional_bases(lines, anchors, columns)
     if not found_layout:
         return None
     if not national:
         raise ValueError("Missing aligned Ipsos national table")
-    return national, regional
+    bases = ([national_base] if national_base is not None else []) + regional_bases
+    return national, regional, bases
+
+
+def _layout_regional_bases(
+    lines: list[str], anchors: list[re.Match[str]], columns: dict[str, int]
+) -> list[ParsedBase]:
+    """Read each region column's base from the likely-to-vote ONS table.
+
+    The table's "Unweighted Total" row (whose numbers are the column anchors)
+    counts everyone certain to vote, undecided included, so the bases are
+    likely-voter bases. The "Weighted Total" row supplies the weighted base
+    when it has one number per anchor.
+
+    Args:
+        lines: The table's lines.
+        anchors: The "Unweighted Total" row's numbers.
+        columns: Macro region -> anchor index.
+
+    Returns:
+        One base per macro region column.
+    """
+    weighted_row = next(
+        (line for line in lines if line.strip().startswith("Weighted Total")), None
+    )
+    weighted = re.findall(r"\d+", weighted_row) if weighted_row else []
+    aligned = len(weighted) == len(anchors)
+    candidates = [
+        make_base(
+            MACRO_REGION_TO_INTERNAL[region],
+            anchors[column].group(),
+            weighted[column] if aligned else None,
+            "likely_voters",
+        )
+        for region, column in columns.items()
+    ]
+    return [candidate for candidate in candidates if candidate is not None]
 
 
 def parse_poll(pdf_text: str) -> ParsedPoll:
@@ -679,17 +784,19 @@ def parse_poll(pdf_text: str) -> ParsedPoll:
     sample_size = _parse_sample_size(lines)
     fieldwork_start, fieldwork_end = _parse_fieldwork(lines)
     layout = _parse_layout_tables(pdf_text)
+    bases: list[ParsedBase] = []
     if layout is None:
         party_percentages = _parse_party_percentages(lines)
         party_region_percentages = _parse_party_region_percentages(lines)
     else:
-        party_percentages, party_region_percentages = layout
+        party_percentages, party_region_percentages, bases = layout
     return ParsedPoll(
         sample_size=sample_size,
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_percentages=party_percentages,
         party_region_percentages=party_region_percentages,
+        bases=bases,
     )
 
 
@@ -718,6 +825,21 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str) -> ParsedPoll:
+    """Download an Ipsos PDF and parse it.
+
+    Args:
+        source_url: URL of the PDF.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the PDF cannot be fetched or parsed.
+    """
+    return parse_poll(extract_pdf_text(source_url))
 
 
 def build_import_plan(
@@ -759,8 +881,7 @@ def build_import_plan(
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
 
-    pdf_text = extract_pdf_text(pdf_url)
-    parsed = parse_poll(pdf_text)
+    parsed = fetch_parsed_poll(pdf_url)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -827,6 +948,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(region_by_name.values())),
     )
 
 
@@ -927,6 +1049,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -935,6 +1058,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -1033,6 +1157,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

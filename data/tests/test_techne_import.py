@@ -1534,3 +1534,38 @@ class TestMain:
             "2026/02/R162-UK-2026-2-13-DATA.pdf" in out
         )
         assert "[dry-run] would create pollster: techne" in out
+
+
+# ── Column bases ─────────────────────────────────────────────────────────────
+
+
+class TestParseBases:
+    """parse_poll records the current wave's all-adult sample as the base."""
+
+    def test_current_wave_unweighted_and_weighted_sample(self) -> None:
+        text = _FULL_PDF_TEXT.replace(
+            "Unweighted Sample 1647 1636 795 841\n",
+            "Unweighted Sample 1647 1636 795 841\nWeighted Sample 1650 1641 800 841\n",
+        )
+
+        parsed = parse_poll(text, inferred_year=2026)
+
+        bases = [
+            (b.regions, b.unweighted_n, b.weighted_n, b.kind) for b in parsed.bases
+        ]
+        assert bases == [((), 1636, 1641, "all_adults")]
+
+    def test_missing_weighted_row_keeps_the_unweighted_base(self) -> None:
+        parsed = parse_poll(_FULL_PDF_TEXT, inferred_year=2026)
+
+        assert [(b.unweighted_n, b.weighted_n) for b in parsed.bases] == [(1636, None)]
+
+    def test_glued_weighted_figures_are_not_read(self) -> None:
+        text = _FULL_PDF_TEXT.replace(
+            "Unweighted Sample 1647 1636 795 841\n",
+            "Unweighted Sample 1647 1636 795 841\nWeighted Sample 16501641800841\n",
+        )
+
+        parsed = parse_poll(text, inferred_year=2026)
+
+        assert [(b.unweighted_n, b.weighted_n) for b in parsed.bases] == [(1636, None)]

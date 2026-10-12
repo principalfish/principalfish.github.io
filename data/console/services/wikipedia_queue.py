@@ -531,6 +531,8 @@ def describe_import_result(result: PollImportResult) -> str:
     detail = f"Poll #{result.poll_id}, {result.inserted_rows} rows inserted"
     if result.replaced_rows:
         detail += f", {result.replaced_rows} rows replaced"
+    if result.inserted_bases:
+        detail += f", {result.inserted_bases} respondent bases stored"
     return detail
 
 

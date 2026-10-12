@@ -2187,6 +2187,12 @@ class TestDescribeImportResult:
             "Poll #77, 0 rows inserted, 104 rows replaced"
         )
 
+    def test_stored_bases_are_appended(self) -> None:
+        result = self._result(inserted=104).model_copy(update={"inserted_bases": 12})
+        assert describe_import_result(result) == (
+            "Poll #77, 104 rows inserted, 12 respondent bases stored"
+        )
+
     def test_an_untouched_poll_says_so(self) -> None:
         assert describe_import_result(self._result(skipped=True)) == (
             "Poll #77 already had rows, so nothing was inserted"

@@ -1455,3 +1455,61 @@ class TestMain:
         assert "deleted existing rows: 104" in out
         assert "inserted poll rows: 104" in out
         assert len(db.get_rows_for_poll(poll_id)) == 104
+
+
+# ── Weighted-only bases from "Filtered N" ──────────────────────────────────────
+
+_FILTERED_N = (
+    1451.671, 97.704, 148.936, 255.237, 56.374, 131.052, 136.345, 188.722,
+    122.994, 73.717, 130.024, 110.565,
+)
+
+
+class TestFilteredNBases:
+    """The Headline VI "Filtered N" row becomes weighted-only decided bases."""
+
+    def _rows(self) -> list[list[object]]:
+        rows = _headline_vi_rows(include_sentinel=False)
+        rows.append(["Filtered N", *_FILTERED_N])
+        return rows
+
+    def test_filtered_n_per_column(self) -> None:
+        parsed = fon.parse_poll(_full_workbook(headline_rows=self._rows()))
+
+        bases = {b.regions: (b.unweighted_n, b.weighted_n) for b in parsed.bases}
+        assert bases[()] == (None, 1452)
+        assert bases[("London",)] == (None, 255)
+        assert bases[("North East England",)] == (None, 56)
+        assert bases[("Yorkshire and The Humber",)] == (None, 111)
+        assert len(bases) == 12
+        assert {b.kind for b in parsed.bases} == {"decided"}
+        assert all(b.weighted_only for b in parsed.bases)
+
+    def test_q2_fallback_has_no_bases(self) -> None:
+        workbook = _full_workbook(include_headline=False, q2_sheet_name="Q2")
+
+        assert fon.parse_poll(workbook).bases == []
+
+    def test_missing_filtered_n_row_gives_no_bases(self) -> None:
+        rows = _headline_vi_rows(include_sentinel=False)
+
+        assert fon.parse_poll(_full_workbook(headline_rows=rows)).bases == []
+
+    def test_plan_keeps_the_bases_weighted_only(
+        self,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        workbook = _full_workbook(headline_rows=self._rows())
+        monkeypatch.setattr(fon, "extract_workbook", lambda _url: workbook)
+
+        plan = fon.build_import_plan(
+            db,
+            xlsx_url="https://example.test/2026/30th-September-VI.xlsx",
+            map_name=westminster_world.map_name,
+        )
+
+        national = next(b for b in plan.bases if b.region_id is None)
+        assert (national.unweighted_n, national.weighted_n) == (None, 1452)
+        assert len(plan.bases) == 12

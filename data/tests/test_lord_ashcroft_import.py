@@ -402,10 +402,72 @@ class TestFindFieldwork:
         assert _find_fieldwork(sheet) == (expected_start, expected_end)
 
     @pytest.mark.parametrize(
+        "line, expected_start, expected_end",
+        [
+            # The omitted start month is the month before the end month.
+            (
+                "Fieldwork: 30th-5th November 2025",
+                date(2025, 10, 30),
+                date(2025, 11, 5),
+            ),
+            ("Fieldwork: 30-2 January 2026", date(2025, 12, 30), date(2026, 1, 2)),
+            ("Fieldwork: 31-4 November 2025", date(2025, 10, 31), date(2025, 11, 4)),
+            # Start day not after the end day: same month.
+            ("Fieldwork: 5-5 January 2026", date(2026, 1, 5), date(2026, 1, 5)),
+        ],
+    )
+    def test_omitted_start_month_ranges(
+        self, line: str, expected_start: date, expected_end: date
+    ) -> None:
+        sheet = FakeXlrdSheet("Sheet1", [[line]])
+        assert _find_fieldwork(sheet) == (expected_start, expected_end)
+
+    @pytest.mark.parametrize(
+        "line, expected_start, expected_end",
+        [
+            # 22 October to 5 November is exactly 14 days: accepted.
+            (
+                "Fieldwork: 22nd-5th November 2025",
+                date(2025, 10, 22),
+                date(2025, 11, 5),
+            ),
+            # Same-month ranges are uncapped: nothing was guessed.
+            (
+                "Fieldwork: 1st-20th November 2025",
+                date(2025, 11, 1),
+                date(2025, 11, 20),
+            ),
+        ],
+    )
+    def test_window_cap_boundary_accepted(
+        self, line: str, expected_start: date, expected_end: date
+    ) -> None:
+        sheet = FakeXlrdSheet("Sheet1", [[line]])
+        assert _find_fieldwork(sheet) == (expected_start, expected_end)
+
+    def test_fifteen_day_window_from_an_omitted_start_month_raises(self) -> None:
+        # 21 October to 5 November is 15 days.
+        sheet = FakeXlrdSheet("Sheet1", [["Fieldwork: 21st-5th November 2025"]])
+        with pytest.raises(ValueError, match="Ambiguous fieldwork dates"):
+            _find_fieldwork(sheet)
+
+    def test_day_not_in_the_inferred_start_month_raises_a_parse_error(self) -> None:
+        # November has no 31st.
+        sheet = FakeXlrdSheet("Sheet1", [["Fieldwork: 31-2 December 2025"]])
+        with pytest.raises(ValueError, match="Invalid fieldwork date in line"):
+            _find_fieldwork(sheet)
+
+    def test_long_window_from_an_omitted_start_month_raises(self) -> None:
+        # 5 December to 3 January is 29 days: more likely a typo.
+        sheet = FakeXlrdSheet("Sheet1", [["Fieldwork: 5-3 January 2026"]])
+        with pytest.raises(ValueError, match="Ambiguous fieldwork dates"):
+            _find_fieldwork(sheet)
+
+    @pytest.mark.parametrize(
         "line",
         [
             "Fieldwork: 30 February - 2 March 2026",
-            "Fieldwork: 5-3 January 2026",
+            "Fieldwork: 5 January - 3 January 2026",
             "Fieldwork: 27 Fooruary - 1 September 2026",
             "Fieldwork: 27 August - 1 Fooruary 2026",
         ],

@@ -435,6 +435,25 @@ class TestRowFiltering:
         assert parsed.skipped_rows == 1
         assert parsed.unrecognised_areas == {}
 
+    def test_inverted_date_range_is_still_queued(self) -> None:
+        # "5–3 Feb" is a source typo, but Westminster uses Wikipedia's dates
+        # only to find the poll: the importer stores the document's own dates
+        # and the review flags the disagreement. Dropping the row would hide
+        # a poll that imports correctly.
+        def row(dates: str) -> str:
+            return (
+                f"<tr><td>{dates}</td><td>YouGov</td><td>The Times</td><td>GB</td>"
+                "<td>2,113</td><td>27%</td></tr>"
+            )
+
+        rows = row("5–3 Feb") + row("1–3 Feb")
+        parsed = fetch_poll_index(html=_page(_year_section(2026, rows)))
+        assert [(r.fieldwork_start, r.fieldwork_end) for r in parsed.rows] == [
+            (date(2026, 2, 5), date(2026, 2, 3)),
+            (date(2026, 2, 1), date(2026, 2, 3)),
+        ]
+        assert parsed.skipped_rows == 0
+
 
 class TestDateParsing:
     """Fieldwork dates take their year from the enclosing section heading."""

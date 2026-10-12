@@ -1,6 +1,6 @@
 sqlalchemy[mypy]>=2.0
 shapely>=2.0
-pypdf>=5.0
+pypdf>=6.16.2
 flask>=3.0
 beautifulsoup4>=4.12
 lxml>=5.0

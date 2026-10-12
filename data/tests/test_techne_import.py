@@ -9,12 +9,11 @@ the one Westminster importer with no regional breakdown at all), ``_cli_preview`
 and ``main``.
 
 Every PDF-text layout below is synthetic: built to fit the shapes the parsing
-functions match on, not sourced from a real Techne PDF. Two exceptions, both
-in ``TestParseSampleSize``: a wrong-wave-figure test and a digit-concatenation
-test, whose pinned mechanisms were independently verified against real,
-currently-hosted Techne PDFs (including reinstalling an older pypdf into a
-scratch environment) and against all 27 stored Techne polls in the live DB --
-see each test's docstring for the verification.
+functions match on, not sourced from a real Techne PDF. The exceptions are
+in ``TestParseSampleSize``: the current-wave, real-row and concatenation
+tests use rows taken from real, currently-hosted Techne PDFs (the
+concatenated one as an older pypdf extracts it), checked against all 27
+stored Techne polls in the live DB -- see each test's docstring.
 """
 
 from __future__ import annotations
@@ -33,6 +32,7 @@ from polls.importers.westminster.techne_import import (
     ImportPlan,
     ParsedPoll,
     PlannedPollRow,
+    UnweightedSample,
     _cli_preview,
     _infer_year,
     _month_number,
@@ -43,6 +43,7 @@ from polls.importers.westminster.techne_import import (
     build_import_plan,
     extract_pdf_text,
     parse_poll,
+    parse_unweighted_sample,
 )
 from tests.uk_fixtures import FakeUrlResponse, WestminsterWorld
 
@@ -412,7 +413,7 @@ class TestParseFieldwork:
 
     def test_no_fieldwork_label_raises(self) -> None:
         with pytest.raises(ValueError, match="Fieldwork window not found in PDF"):
-            _parse_fieldwork("Unweighted Sample 1636", 2026)
+            _parse_fieldwork("Unweighted Sample 1647 1636", 2026)
 
     def test_missing_colon_after_label_raises(self) -> None:
         # The literal ":" is required by the pattern, unlike Ipsos's fieldwork
@@ -433,55 +434,87 @@ class TestParseFieldwork:
 
 
 class TestParseSampleSize:
-    """Tests for _parse_sample_size -- the Unweighted Sample figure."""
+    """Tests for _parse_sample_size -- the current wave's Unweighted Sample figure."""
 
-    def test_extracts_the_unweighted_sample_figure(self) -> None:
-        assert _parse_sample_size("Unweighted Sample 1636") == 1636
+    def test_extracts_the_current_wave_figure(self) -> None:
+        assert _parse_sample_size("Unweighted Sample 1647 1636 795 841") == 1636
 
     def test_found_among_other_text(self) -> None:
-        text = "FIELDWORK: February 11th - February 13th\nUnweighted Sample 2000"
+        text = "FIELDWORK: February 11th - February 13th\nUnweighted Sample 1990 2000"
         assert _parse_sample_size(text) == 2000
 
-    def test_three_digit_minimum(self) -> None:
-        assert _parse_sample_size("Unweighted Sample 500") == 500
+    def test_two_figures_without_male_female_return_the_second(self) -> None:
+        assert _parse_sample_size("Unweighted Sample 480 500") == 500
 
-    def test_two_number_columns_picks_the_previous_wave_not_the_current_pins_current_behaviour(
+    def test_current_wave_of_exactly_100_is_accepted(self) -> None:
+        assert _parse_sample_size("Unweighted Sample 100 100") == 100
+
+    def test_five_digit_figures_are_accepted(self) -> None:
+        assert _parse_sample_size("Unweighted Sample 12345 12345") == 12345
+
+    def test_six_digit_figure_raises(self) -> None:
+        with pytest.raises(ValueError, match="look concatenated"):
+            _parse_sample_size("Unweighted Sample 1636 123456")
+
+    def test_two_number_columns_takes_the_current_wave_not_the_previous(
         self,
     ) -> None:
-        """Bug, confirmed real -- distinct from the concatenation bug below.
+        """The second figure is this poll's sample; the first is the previous poll's.
 
         Techne's PDF places two number columns in every "Unweighted Sample"
         row: the previous poll's wave, then the current one (the real
-        header reads "UK JAN 15th | UK FEB 12th"). The regex has only one
-        capture group, so ``re.search`` always returns the FIRST number --
-        the previous wave, not the current one this poll is actually about.
-
-        Confirmed against two real, currently-hosted Techne PDFs: in both,
-        "Male" + "Female" (later columns on the same row) sum to the
-        SECOND number, not the first (e.g. 808 + 836 = 1644 for the PDF
-        this fixture is drawn from, not the 1636 the parser actually
-        returns). Cross-checked against the live DB's stored dates: this
-        PDF is poll 155 (fieldwork 2026-02-11/2026-02-12); the value this
-        parser actually returns, 1636, is poll 156's (the *preceding*
-        poll's, fieldwork 2026-01-14/2026-01-15) real current-wave figure,
-        not poll 155's own. The same pattern -- Male+Female summing to the
-        second column, and the first column matching the prior poll's
-        second column -- holds across all 27 Techne polls stored in the
-        live DB, re-verified by re-fetching and re-parsing every one of
-        their still-hosted PDFs with this exact, unmodified production
-        code.
-
-        This is a distinct bug from the digit-concatenation one pinned
-        below: even setting concatenation aside entirely, the plain
-        4-digit figure this regex selects is itself the wrong wave's
-        number.
+        header reads "UK JAN 15th | UK FEB 12th"). Confirmed against all 27
+        Techne PDFs stored in the live DB: in every one "Male" + "Female"
+        (the next two columns) sum to the SECOND figure, never the first
+        (808 + 836 = 1644 for the PDF this fixture is drawn from, poll 155),
+        and the first figure is the preceding poll's second one (1636 is
+        poll 156's own current-wave sample). The parser returns the second
+        figure.
         """
         text = (
             "UK\nJAN 15th\nUK\nFEB 12th\nMale\nFemale\n"
             "Unweighted Sample 1636 1644 808 836"
         )
 
-        assert _parse_sample_size(text) == 1636
+        assert _parse_sample_size(text) == 1644
+
+    def test_real_row_returns_the_current_wave(self) -> None:
+        # Poll 155's full row, as pypdf 6.19.0 extracts it.
+        text = (
+            "Unweighted Sample 1636 1644 808 836 438 265 291 256 394 630 645 369 "
+            "1.140 403 101 390 364 881 207 498 103 453 566"
+        )
+
+        assert _parse_sample_size(text) == 1644
+
+    def test_figures_after_the_first_non_integer_token_are_never_read(
+        self,
+    ) -> None:
+        # Reading past "1.140" would hit the 7-digit token and raise.
+        text = "Unweighted Sample 1636 1644 808 836 1.140 1234567"
+
+        assert _parse_sample_size(text) == 1644
+
+    def test_leading_non_integer_token_ends_the_run_before_any_figure(
+        self,
+    ) -> None:
+        # Skipping "n/a" instead of stopping would return 1644.
+        with pytest.raises(ValueError, match="previous- and current-wave figures"):
+            _parse_sample_size("Unweighted Sample n/a 1636 1644")
+
+    def test_takes_the_first_row_when_the_table_repeats(self) -> None:
+        text = "Unweighted Sample 1636 1644 808 836\nUnweighted Sample 1 2000 999 1001"
+
+        assert _parse_sample_size(text) == 1644
+
+    def test_male_plus_female_mismatch_raises(self) -> None:
+        with pytest.raises(
+            ValueError, match=r"Male \+ Female \(808 \+ 836 = 1644\).*1636"
+        ):
+            _parse_sample_size("Unweighted Sample 1644 1636 808 836")
+
+    def test_three_figures_skip_the_male_female_check(self) -> None:
+        assert _parse_sample_size("Unweighted Sample 1636 1644 808") == 1644
 
     def test_missing_label_raises(self) -> None:
         with pytest.raises(
@@ -491,61 +524,69 @@ class TestParseSampleSize:
 
     def test_lowercase_label_does_not_match(self) -> None:
         # The regex has no re.IGNORECASE flag, unlike _parse_fieldwork's and
-        # _parse_party_percentages's patterns -- asserted as current
-        # behaviour. Harmless against real Techne PDFs, which always
-        # capitalise "Unweighted Sample" exactly (confirmed against a
-        # currently-hosted file).
+        # _parse_party_percentages's patterns. Harmless against real Techne
+        # PDFs, which always capitalise "Unweighted Sample" exactly.
         with pytest.raises(
             ValueError, match="Unweighted sample size not found in PDF"
         ):
-            _parse_sample_size("unweighted sample 1636")
+            _parse_sample_size("unweighted sample 1636 1644")
 
-    def test_fewer_than_three_digits_does_not_match(self) -> None:
-        with pytest.raises(
-            ValueError, match="Unweighted sample size not found in PDF"
-        ):
-            _parse_sample_size("Unweighted Sample 99")
+    @pytest.mark.parametrize(
+        "row",
+        ["Unweighted Sample 1636", "Unweighted Sample", "Unweighted Sample n/a 1644"],
+    )
+    def test_fewer_than_two_figures_raises(self, row: str) -> None:
+        with pytest.raises(ValueError, match="previous- and current-wave figures"):
+            _parse_sample_size(row)
 
-    def test_adjacent_second_number_glued_onto_first_when_no_separating_space_pins_current_behaviour(
-        self,
-    ) -> None:
-        """Bug, confirmed real and version-dependent -- distinct from the wrong-wave bug above.
+    def test_current_wave_below_three_digits_raises(self) -> None:
+        with pytest.raises(ValueError, match="99 is below 100"):
+            _parse_sample_size("Unweighted Sample 1636 99")
 
-        The regex ``r"Unweighted Sample\\s*(\\d{3,5})"`` has no upper bound
-        against a second number sitting directly after the first with no
-        separating whitespace: it greedily captures up to 5 digits, so two
-        adjacent numbers with no space between them become one wrong one.
+    def test_concatenated_figures_raise_rather_than_guess(self) -> None:
+        """pypdf 6.6.0 to 6.16.1 dropped the spaces between the row's figures.
 
-        Confirmed as the actual historical import-time cause, not just a
-        hypothetical mechanism: pypdf versions 6.6.0 through 6.16.1 --
-        6.7.x was the current release around 2026-02-13, when this poll's
-        PDF was fetched -- extract this exact PDF's "Unweighted Sample" row
-        WITHOUT the spaces between numbers (``"Unweighted Sample
-        163616448088364382652912563946306453691...."``); versions before
-        6.6.0 and from 6.16.2 onward, including this repo's installed
-        6.19.0, keep the spaces. Verified directly: reinstalling
-        ``pypdf==6.7.0`` into a scratch environment and re-running the
-        unmodified ``extract_pdf_text``/``_parse_sample_size`` against the
-        real, still-hosted PDF for poll 155 reproduces the exact stored
-        value, 16361, end to end; reinstalling ``pypdf==6.16.1`` reproduces
-        it too, and ``pypdf==6.16.2`` does not (the space survives).
-
-        Re-running the parser against the same hosted PDFs with this
-        repo's installed pypdf (6.19.0, which keeps the spaces) does NOT
-        return the correct value either -- it returns the wrong-wave value
-        (1636, see the test above), not a "correct" one. Combined, every
-        one of the 27 stored Techne ``sample_size`` values is wrong twice
-        over: concatenated (via the pypdf version live at import time) AND
-        selecting the previous wave instead of the current one. A fix
-        would need a data migration for all 27 rows, taking each PDF's
-        second (current-wave) figure. ``requirements.txt`` does not pin
-        pypdf, so this could recur, or silently self-correct to a
-        still-wrong value, depending on whatever version gets installed
-        next.
+        Verified against the real, still-hosted PDF for poll 155: those
+        pypdf versions extract its row with no separators between the
+        figures (1636, 1644, 808, 836, ...). The fixture is a cut-down
+        all-digit run of that shape; the full de-spaced row is tested
+        below. Versions before 6.6.0 and from 6.16.2 keep the spaces, and
+        ``requirements.txt`` pins ``pypdf>=6.16.2``. A run like this can't
+        be split reliably into figures, so the parser raises rather than
+        guessing.
         """
         text = "Unweighted Sample 163616448088364382652912563946306453691"
 
-        assert _parse_sample_size(text) == 16361
+        with pytest.raises(ValueError, match="look concatenated"):
+            _parse_sample_size(text)
+
+    def test_full_despaced_real_row_raises_concatenated(self) -> None:
+        # Poll 155's whole row with every space removed: one token that runs
+        # on into the "1.140" column, so it is not all digits.
+        text = "Unweighted Sample 163616448088364382652912563946306453691.140403101390364881207498103453566"
+
+        with pytest.raises(ValueError, match="look concatenated"):
+            _parse_sample_size(text)
+
+    def test_concatenation_after_the_sample_figures_also_raises(self) -> None:
+        with pytest.raises(ValueError, match="look concatenated"):
+            _parse_sample_size("Unweighted Sample 1636 1644 808836438265")
+
+
+class TestParseUnweightedSample:
+    """Tests for parse_unweighted_sample -- the row's leading figures."""
+
+    def test_returns_waves_and_male_female(self) -> None:
+        assert parse_unweighted_sample(
+            "Unweighted Sample 1636 1644 808 836 438"
+        ) == UnweightedSample(
+            previous_wave=1636, current_wave=1644, male=808, female=836
+        )
+
+    def test_male_female_none_without_four_figures(self) -> None:
+        assert parse_unweighted_sample(
+            "Unweighted Sample 1636 1644"
+        ) == UnweightedSample(previous_wave=1636, current_wave=1644)
 
 
 # ── _party_percentage_from_line ─────────────────────────────────────────────
@@ -560,8 +601,8 @@ class TestPartyPercentageFromLine:
     extracts as "unweighted" and "weighted" -- on a real Techne PDF's
     voting-intention line the two numbers are actually the previous-wave
     and current-wave headline figures (the same two-column layout as the
-    "Unweighted Sample" row -- see TestParseSampleSize's pinned wrong-wave
-    bug). These tests exercise the function's own (unused) logic as
+    "Unweighted Sample" row -- see TestParseSampleSize's current-wave
+    test). These tests exercise the function's own (unused) logic as
     written, without repeating that mislabelling.
     """
 
@@ -603,9 +644,8 @@ def _line(party: str, previous_wave: int, current_wave: int) -> str:
     "UK JAN 15th"/"UK FEB 12th" columns. ``_parse_party_percentages``'s
     real extraction path takes the *second* value here (via
     ``matches[-1].group(2)``), which is therefore the correct,
-    current-wave headline figure -- unlike ``_parse_sample_size``, which
-    has only one capture group and always takes the wrong, previous-wave
-    first one (see TestParseSampleSize's pinned bug).
+    current-wave headline figure, as ``_parse_sample_size`` does for the
+    "Unweighted Sample" row (see TestParseSampleSize).
     """
     return f"{party} {previous_wave}% {current_wave}%"
 
@@ -827,7 +867,7 @@ class TestParsePartyPercentages:
 _FULL_PDF_TEXT = f"""\
 Techne UK Tracker
 FIELDWORK: February 11th - February 13th
-Unweighted Sample 1636
+Unweighted Sample 1647 1636 795 841
 {_FULL_BLOCK_TEXT}
 """
 
@@ -850,7 +890,7 @@ class TestParsePoll:
     def test_inferred_year_affects_a_cross_year_fieldwork_window(self) -> None:
         text = f"""\
 FIELDWORK: December 30th - January 2nd
-Unweighted Sample 1636
+Unweighted Sample 1647 1636 795 841
 {_FULL_BLOCK_TEXT}
 """
         parsed = parse_poll(text, inferred_year=2026)
@@ -866,7 +906,7 @@ Unweighted Sample 1636
             parse_poll(text, inferred_year=2026)
 
     def test_missing_fieldwork_propagates(self) -> None:
-        text = f"Unweighted Sample 1636\n{_FULL_BLOCK_TEXT}"
+        text = f"Unweighted Sample 1647 1636 795 841\n{_FULL_BLOCK_TEXT}"
         with pytest.raises(ValueError, match="Fieldwork window not found in PDF"):
             parse_poll(text, inferred_year=2026)
 

@@ -24,6 +24,9 @@ from polls.importers.types import PollImportResult
 DEFAULT_PDF_URL = "https://www.ipsos.com/sites/default/files/ct/news/documents/2026-01/politmkp_w1jan2026web1.pdf"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
 DEFAULT_POLLSTER_IDENTIFIER = "ipsos"
+# Longest window accepted when an omitted start month is inferred to be the
+# month before the end month. Same-month ranges ("1st to 20th") are uncapped.
+MAX_INFERRED_FIELDWORK_DAYS = 14
 
 PARTY_LINE_MAP = {
     "Conservative": "Conservative",
@@ -188,6 +191,9 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
     range using a regex. Handles cross-month ranges (e.g. "31 January to
     3 February 2026") by inferring that the start year is one less than the
     end year when the start month is later in the calendar than the end month.
+    When the start month is omitted it is the end month, unless the start day
+    is after the end day ("30th to 5th November"), when it is the month before
+    (December of the previous year for a January end).
 
     Args:
         lines: Non-empty, stripped lines from the PDF text.
@@ -198,7 +204,11 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
 
     Raises:
         ValueError: If no fieldwork line is found, or the date pattern does
-            not match, or a month name cannot be parsed.
+            not match, a month name cannot be parsed, a day does not exist
+            in its month, the dates are reversed (an explicit typo such as
+            "5th February to 3rd February"), or a start month inferred as the
+            previous month
+            gives a window longer than ``MAX_INFERRED_FIELDWORK_DAYS``.
     """
     fieldwork_line = next((line for line in lines if "fieldwork dates" in line.lower()), None)
     if fieldwork_line is None:
@@ -217,18 +227,36 @@ def _parse_fieldwork(lines: list[str]) -> tuple[date, date]:
         raise ValueError(f"Could not parse fieldwork line: {fieldwork_line!r}")
 
     day_start = int(match.group(1))
-    month_start_text = (match.group(2) or match.group(4)).strip()
     day_end = int(match.group(3))
-    month_end_text = match.group(4).strip()
     year_end = int(match.group(5))
 
-    month_start = _month_number(month_start_text)
-    month_end = _month_number(month_end_text)
+    month_end = _month_number(match.group(4).strip())
+    is_previous_month = False
+    if match.group(2):
+        month_start = _month_number(match.group(2).strip())
+    elif day_start > day_end:
+        # "Thursday 30th to Wednesday 5th November": the start month is omitted
+        # because it is the month before the end month.
+        month_start = None if month_end is None else (month_end - 2) % 12 + 1
+        is_previous_month = True
+    else:
+        month_start = month_end
     if month_start is None or month_end is None:
         raise ValueError(f"Could not parse month names in fieldwork line: {fieldwork_line!r}")
 
     year_start = year_end - 1 if month_start > month_end else year_end
-    return date(year_start, month_start, day_start), date(year_end, month_end, day_end)
+    try:
+        start = date(year_start, month_start, day_start)
+        end = date(year_end, month_end, day_end)
+    except ValueError as err:
+        raise ValueError(f"Invalid fieldwork date in line: {fieldwork_line!r}") from err
+    if start > end:
+        raise ValueError(f"Reversed fieldwork dates in line: {fieldwork_line!r}")
+    if is_previous_month and (end - start).days > MAX_INFERRED_FIELDWORK_DAYS:
+        # A long window from a guessed month is more likely a typo than a
+        # real fieldwork period.
+        raise ValueError(f"Ambiguous fieldwork dates in line: {fieldwork_line!r}")
+    return start, end
 
 
 def _parse_sample_size(lines: list[str]) -> int:

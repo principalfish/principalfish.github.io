@@ -97,6 +97,20 @@ class TestParseDateRange:
     def test_unparseable_returns_none(self) -> None:
         assert parse_date_range("sometime last week") is None
 
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "June 5–3, 2026",  # Same-month typo.
+            "June 29, 2026 – January 9, 2025",  # Explicit years, backwards.
+        ],
+    )
+    def test_inverted_range_returns_none(self, raw: str) -> None:
+        # Storing one would invert the poll's fieldwork window.
+        assert parse_date_range(raw) is None
+
+    def test_same_start_and_end_day_is_kept(self) -> None:
+        assert parse_date_range("June 3–3, 2026") == (date(2026, 6, 3), date(2026, 6, 3))
+
 
 class TestPollsterIdentifier:
     def test_slug_with_suffix(self) -> None:
@@ -1241,6 +1255,27 @@ class TestParseTableRows:
         rows, _ = parse_table_rows(info)
         assert [(r.candidate_name, r.percentage) for r in rows[0].readings] == [
             ("Jane Roe", 47.0),
+        ]
+
+    def test_inverted_date_row_is_skipped_and_the_rest_parse(self) -> None:
+        # The rows the CLI's _import_rows and the console queue import come
+        # from here, so an inverted typo never reaches their batch loops.
+        info = classify_table(
+            _table(
+                "<table id='t'><tr><th>Poll source</th><th>Date(s) administered</th>"
+                "<th>Jane Roe<br /><small>(D)</small></th>"
+                "<th>John Doe<br /><small>(R)</small></th></tr>"
+                "<tr><td>Typo Polling</td><td>June 5–3, 2026</td><td>40%</td>"
+                "<td>41%</td></tr>"
+                "<tr><td>Emerson</td><td>June 1–3, 2026</td><td>47%</td><td>44%</td></tr>"
+                "</table>",
+                "t",
+            )
+        )
+        assert info is not None
+        rows, _ = parse_table_rows(info)
+        assert [(r.pollster_label, r.fieldwork_start) for r in rows] == [
+            ("Emerson", date(2026, 6, 1)),
         ]
 
     @pytest.mark.parametrize("cell", ["inf", "-inf", "nan", "1e400", "150%", "-5%"])

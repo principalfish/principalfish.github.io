@@ -1,6 +1,6 @@
 import enum
 from datetime import date
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -13,9 +13,11 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    event,
     text,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -422,6 +424,33 @@ class Poll(Base):
     def __repr__(self) -> str:
         """Return a debug string representation of the Poll."""
         return f"<Poll {self.pollster_id} {self.fieldwork_start}–{self.fieldwork_end}>"
+
+
+@event.listens_for(Poll, "before_insert")
+@event.listens_for(Poll, "before_update")
+def _reject_inverted_fieldwork(
+    _mapper: Mapper[Any], _connection: Connection, target: Poll
+) -> None:
+    """Refuse to flush a poll whose fieldwork starts after it ends.
+
+    Covers every ORM write path (importers, the console, ``db.py``). Core
+    ``update()``/``insert()`` statements and raw ``sqlite3`` bypass mapper
+    events, so they are not covered.
+
+    Args:
+        _mapper: The ``Poll`` mapper (unused).
+        _connection: The flush's connection (unused).
+        target: The poll being inserted or updated.
+
+    Raises:
+        ValueError: If ``fieldwork_start`` is after ``fieldwork_end``.
+    """
+    start, end = target.fieldwork_start, target.fieldwork_end
+    if start is not None and end is not None and start > end:
+        raise ValueError(
+            f"Poll fieldwork_start {start} is after fieldwork_end {end}"
+            f" (pollster_id={target.pollster_id})"
+        )
 
 
 class PollRow(Base):

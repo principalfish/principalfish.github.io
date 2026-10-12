@@ -9,8 +9,9 @@ helpers, ``build_import_plan``'s region handling, ``_cli_preview`` and
 The older fixtures are synthetic layouts checked against the parser, rather
 than independent source evidence. The aligned-table tests add genuine excerpts
 from three 2026 PDFs and a four-page rotated source PDF. Their expected shares
-come from the published national and ONS region columns. The existing omitted
-start-month date behavior is pinned separately below.
+come from the published national and ONS region columns. The omitted
+start-month cases in ``TestParseFieldwork`` come from real fieldwork lines
+(poll 225's PDF reads "Thursday 30th to Wednesday 5th November 2025").
 """
 
 from __future__ import annotations
@@ -280,8 +281,8 @@ class TestParseFieldwork:
         assert _parse_fieldwork(lines) == (date(2026, 3, 3), date(2026, 3, 5))
 
     def test_same_month_with_month_named_once_before_to(self) -> None:
-        # No month repeated between the start day and "to" (group 2 is None,
-        # so month_start falls back to month_end via the "or" in the code).
+        # No start month, and the start day is not after the end day, so the
+        # start month is the end month.
         lines = ["Fieldwork dates: Monday 27th to Wednesday 29th January 2026"]
         assert _parse_fieldwork(lines) == (date(2026, 1, 27), date(2026, 1, 29))
 
@@ -304,6 +305,13 @@ class TestParseFieldwork:
         ]
         assert _parse_fieldwork(lines) == (date(2026, 1, 27), date(2026, 1, 29))
 
+    def test_reversed_explicit_dates_raise(self) -> None:
+        # Both months named, so nothing is inferred: a plain typo.
+        lines = ["Fieldwork dates: Thursday 5th February to Tuesday 3rd February 2026"]
+
+        with pytest.raises(ValueError, match="Reversed fieldwork dates in line"):
+            _parse_fieldwork(lines)
+
     def test_unparseable_fieldwork_line_raises(self) -> None:
         lines = ["Fieldwork dates: sometime in January 2026"]
         with pytest.raises(ValueError, match="Could not parse fieldwork line"):
@@ -316,46 +324,76 @@ class TestParseFieldwork:
         ):
             _parse_fieldwork(lines)
 
-    def test_cross_month_start_month_omitted_pins_current_behaviour(self) -> None:
-        """Bug, pinned not fixed (real, confirmed against the live DB).
-
-        When a cross-month range omits the start month before "to" (only the
-        end month is named), ``month_start_text = match.group(2) or
-        match.group(4)`` falls back to the *end* month instead of signalling
-        "unknown start month". The start day is then paired with the end
-        month, silently inverting the range when the start day is later in
-        the month than the end day.
-
-        Confirmed live: poll id 225 (pollster "ipsos") is stored with
-        ``fieldwork_start=2025-11-30`` and ``fieldwork_end=2025-11-05`` --
-        exactly this inversion, from a PDF fieldwork line of this shape
-        ("... 30th to ... 5th November 2025"). A re-import after any future
-        fix would also create a duplicate poll rather than matching this one,
-        since ``_find_existing_poll`` matches on the (wrong) stored dates.
-        """
-        lines = ["Fieldwork dates: Thursday 30th to Wednesday 5th November 2025"]
-
-        result = _parse_fieldwork(lines)
-
-        assert result == (date(2025, 11, 30), date(2025, 11, 5))
-        assert result[0] > result[1]
-
-    def test_cross_month_omitted_start_month_invalid_day_pins_current_behaviour(
+    def test_omitted_start_month_with_later_start_day_is_the_previous_month(
         self,
     ) -> None:
-        """Same root cause, worse symptom: a raw, un-wrapped date error.
+        """Poll 225's real fieldwork line: the start month is left implicit.
 
-        If the start day doesn't exist in the (wrongly assumed) end month --
-        e.g. day 31 paired with November, which has 30 days -- the function
-        raises Python's own ``ValueError`` from ``date(...)`` construction
-        instead of one of its own "Could not parse ..." messages.
+        Ipsos omits the start month when it is the month before the end
+        month. Reading it as the end month stored poll 225 as
+        2025-11-30..2025-11-05, an inverted window.
         """
+        lines = ["Fieldwork dates - Thursday 30th to Wednesday 5th November 2025."]
+
+        assert _parse_fieldwork(lines) == (date(2025, 10, 30), date(2025, 11, 5))
+
+    def test_omitted_start_month_before_january_is_december_of_the_previous_year(
+        self,
+    ) -> None:
+        lines = ["Fieldwork dates: Tuesday 30th to Monday 5th January 2026"]
+
+        assert _parse_fieldwork(lines) == (date(2025, 12, 30), date(2026, 1, 5))
+
+    def test_omitted_start_month_day_31_in_a_30_day_end_month(self) -> None:
+        # The 31st is in October, so it no longer trips November's 30 days.
         lines = ["Fieldwork dates: Friday 31st to Tuesday 4th November 2025"]
 
-        with pytest.raises(
-            ValueError,
-            match=r"day (?:31 must be in range|is out of range for month)",
-        ):
+        assert _parse_fieldwork(lines) == (date(2025, 10, 31), date(2025, 11, 4))
+
+    def test_omitted_start_month_with_equal_days_stays_in_the_end_month(self) -> None:
+        lines = ["Fieldwork dates: Wednesday 5th to Wednesday 5th November 2025"]
+
+        assert _parse_fieldwork(lines) == (date(2025, 11, 5), date(2025, 11, 5))
+
+    @pytest.mark.parametrize(
+        ("line", "expected"),
+        [
+            # 22 October to 5 November is exactly 14 days: accepted.
+            (
+                "Fieldwork dates: Wednesday 22nd to Wednesday 5th November 2025",
+                (date(2025, 10, 22), date(2025, 11, 5)),
+            ),
+            # Same-month ranges are uncapped: nothing was guessed.
+            (
+                "Fieldwork dates: Saturday 1st to Thursday 20th November 2025",
+                (date(2025, 11, 1), date(2025, 11, 20)),
+            ),
+        ],
+    )
+    def test_window_cap_boundary_accepted(
+        self, line: str, expected: tuple[date, date]
+    ) -> None:
+        assert _parse_fieldwork([line]) == expected
+
+    def test_fifteen_day_window_from_an_inferred_start_month_raises(self) -> None:
+        # 21 October to 5 November is 15 days.
+        lines = ["Fieldwork dates: Tuesday 21st to Wednesday 5th November 2025"]
+
+        with pytest.raises(ValueError, match="Ambiguous fieldwork dates in line"):
+            _parse_fieldwork(lines)
+
+    def test_long_window_from_an_inferred_start_month_raises(self) -> None:
+        # 5th October to 3rd November is 29 days: more likely a typo.
+        lines = ["Fieldwork dates: Sunday 5th to Monday 3rd November 2025"]
+
+        with pytest.raises(ValueError, match="Ambiguous fieldwork dates in line"):
+            _parse_fieldwork(lines)
+
+    def test_day_not_in_the_inferred_start_month_raises_a_parse_error(self) -> None:
+        # November has no 31st.
+        lines = ["Fieldwork dates: Monday 31st to Tuesday 2nd December 2025"]
+
+        with pytest.raises(ValueError, match="Invalid fieldwork date in line"):
             _parse_fieldwork(lines)
 
 

@@ -31,6 +31,9 @@ from polls.importers.types import PollImportResult
 DEFAULT_SOURCE_URL = "https://lordashcroftpolls.com/2026/01/kemis-been-tough-and-jenricks-a-bit-of-a-bounder-say-tory-voters-but-plenty-agree-with-him-that-britain-is-broken/"
 DEFAULT_MAP_NAME = "UK Constituencies post 2022"
 DEFAULT_POLLSTER_IDENTIFIER = "lord_ashcroft"
+# Longest window accepted when an omitted start month is inferred to be the
+# month before the end month. Same-month ranges ("1-20 November") are uncapped.
+MAX_INFERRED_FIELDWORK_DAYS = 14
 
 PARTY_NAME_MAP = {
     "Conservative": "Conservative",
@@ -295,6 +298,10 @@ def _find_fieldwork(sheet: _Sheet) -> tuple[date, date]:
     ``Fieldwork: D [Month]-D Month YYYY`` (ordinal suffixes such as "st", "nd", "rd",
     "th" are accepted).
 
+    When the start month is omitted it is the end month, unless the start
+    day is after the end day ("30th-5th November"), when it is the month
+    before (December of the previous year for a January end).
+
     Args:
         sheet: The xlrd sheet to search (typically sheet index 0).
 
@@ -303,8 +310,10 @@ def _find_fieldwork(sheet: _Sheet) -> tuple[date, date]:
         Cross-year December/January ranges use the year of the end date.
 
     Raises:
-        ValueError: If no fieldwork line is found, or if the month name cannot
-            be parsed.
+        ValueError: If no fieldwork line is found, if the month name cannot
+            be parsed, if a day does not exist in its month, if the dates are
+            reversed, or if a start month inferred as the previous month gives
+            a window longer than ``MAX_INFERRED_FIELDWORK_DAYS``.
     """
     pattern = re.compile(
         r"Fieldwork:\s*(\d{1,2})(?:st|nd|rd|th)?\s*"
@@ -322,16 +331,31 @@ def _find_fieldwork(sheet: _Sheet) -> tuple[date, date]:
 
         day_start = int(match.group(1))
         day_end = int(match.group(3))
-        start_month = _month_number(match.group(2) or match.group(4))
         end_month = _month_number(match.group(4))
         end_year = int(match.group(5))
+        is_previous_month = False
+        if match.group(2):
+            start_month = _month_number(match.group(2))
+        elif day_start > day_end and end_month is not None:
+            # "30th-5th November": the omitted start month is the month before.
+            start_month = (end_month - 2) % 12 + 1
+            is_previous_month = True
+        else:
+            start_month = end_month
         if start_month is None or end_month is None:
             raise ValueError(f"Could not parse month in fieldwork line: {value!r}")
         start_year = end_year - 1 if start_month > end_month else end_year
-        start = date(start_year, start_month, day_start)
-        end = date(end_year, end_month, day_end)
+        try:
+            start = date(start_year, start_month, day_start)
+            end = date(end_year, end_month, day_end)
+        except ValueError as err:
+            raise ValueError(f"Invalid fieldwork date in line: {value!r}") from err
         if start > end:
             raise ValueError(f"Reversed fieldwork dates in line: {value!r}")
+        if is_previous_month and (end - start).days > MAX_INFERRED_FIELDWORK_DAYS:
+            # A long window from a guessed month is more likely a typo
+            # ("5-3 January") than a real fieldwork period.
+            raise ValueError(f"Ambiguous fieldwork dates in line: {value!r}")
         return start, end
 
     raise ValueError("Fieldwork line not found in Lord Ashcroft workbook")

@@ -1,0 +1,1825 @@
+{
+  "schema": "pf-uncertainty-calibration-v1",
+  "credit": {
+    "text": "Final-poll data: Mark Pack, PollBase — https://www.markpack.org.uk/opinion-polls/",
+    "name": "Mark Pack, PollBase",
+    "url": "https://www.markpack.org.uk/opinion-polls/",
+    "edition": "PollBase-Q3-2026.xlsx"
+  },
+  "parameters": [
+    {
+      "name": "design_effect",
+      "value": 1.5,
+      "unit": "×",
+      "source": "literature",
+      "meaning": "Variance inflation from weighting; n is divided by it. UK online panels run at about 1.5-2.",
+      "derivation": "1.5 ×: Variance inflation from weighting; n is divided by it. UK online panels run at about 1.5-2. (literature; not fitted here)."
+    },
+    {
+      "name": "n_eff_cap",
+      "value": 3000.0,
+      "unit": "respondents",
+      "source": "setting",
+      "meaning": "Largest effective n one poll or crossbreak may have, so a mis-parsed n cannot claim near-zero error.",
+      "derivation": "3000.0 respondents: Largest effective n one poll or crossbreak may have, so a mis-parsed n cannot claim near-zero error. (setting; not fitted here)."
+    },
+    {
+      "name": "interval",
+      "value": 0.9,
+      "unit": "probability",
+      "source": "setting",
+      "meaning": "Central probability of every reported interval.",
+      "derivation": "0.9 probability: Central probability of every reported interval. (setting; not fitted here)."
+    },
+    {
+      "name": "p_ref",
+      "value": 0.3,
+      "unit": "proportion",
+      "source": "setting",
+      "meaning": "Share at which every σ is quoted; s(p) scales it to other shares.",
+      "derivation": "0.3 proportion: Share at which every σ is quoted; s(p) scales it to other shares. (setting; not fitted here)."
+    },
+    {
+      "name": "decided_fraction",
+      "value": 0.8,
+      "unit": "fraction",
+      "source": "calibrated",
+      "meaning": "Share of an all-adult base or total sample who name a party (multiplies those n before the design effect).",
+      "derivation": "0.8: the share of a total sample who name a party. Mean of decided base ÷ sample size over 34 polls (bmg_research 0.86 (1), focaldata 0.89 (4), ipsos 0.84 (1), more_in_common 0.75 (15), survation 0.81 (13)); bases equal to the sample size (Opinium) and weighted-only bases (Find Out Now) left out."
+    },
+    {
+      "name": "likely_voters_fraction",
+      "value": 0.9,
+      "unit": "fraction",
+      "source": "guess",
+      "meaning": "Share of a likely-voter base who name a party.",
+      "derivation": "0.9 fraction: Share of a likely-voter base who name a party. (guess; not fitted here)."
+    },
+    {
+      "name": "sigma_nat",
+      "value": 2.94,
+      "unit": "points at p_ref",
+      "source": "calibrated",
+      "meaning": "SD of the industry-wide polling error, shared by every region.",
+      "derivation": "2.94 pt (raw, engine units): the industry-wide polling error drawn for a party on 30%. Realised 2.55 = RMS of 35 party × election misses z = (A − R)/s(R) over 9 general elections 1992–2024, each election weighted equally (final polls and results: Mark Pack, PollBase); with each z first divided by its own party's share of a raw error kept after the engine's centring (at that election's results; median 0.821 for the two largest parties, 0.927 for the rest)."
+    },
+    {
+      "name": "sigma_reg",
+      "value": 1.5,
+      "unit": "points at p_ref",
+      "source": "guess",
+      "meaning": "SD of a region's own polling error beyond sampling. No historical regional poll data to calibrate it.",
+      "derivation": "1.5 points at p_ref: SD of a region's own polling error beyond sampling. No historical regional poll data to calibrate it. (guess; not fitted here)."
+    },
+    {
+      "name": "sigma_seat",
+      "value": 4.9,
+      "unit": "points at p_ref",
+      "source": "calibrated",
+      "meaning": "SD of a seat's departure from its region's swing.",
+      "derivation": "4.9 pt (raw, engine units): the seat noise drawn for a party on 30%. Realised 4.41 = 1.4826 × MAD of 11304 residuals u (seat change left after the fitted swing type, scaled by s(predicted share)) pooled over 4 pairs (per pair: 2010→2015 4.32, 2015→2017 4.18, 2017→2019 3.65, 2019n→2024 5.71); the raw value takes each u first divided by its own cell's share of a raw error kept after the engine's centring (median 0.822 for a seat's two leading parties, 0.962 for the rest)."
+    },
+    {
+      "name": "sigma_lambda",
+      "value": 0.38,
+      "unit": "λ (0 uniform, 1 proportional)",
+      "source": "calibrated",
+      "meaning": "SD of the swing-type factor shared by all seats in a simulation.",
+      "derivation": "0.38: how far the swing type (0 uniform, 1 proportional) moves between elections. RMS of λ̂ over 4 same-boundary pairs (2010→2015 +0.24, 2015→2017 +0.44, 2017→2019 +0.12, 2019n→2024 +0.57); their mean +0.34 is reported, not applied."
+    },
+    {
+      "name": "lambda_min_share",
+      "value": 1.0,
+      "unit": "points",
+      "source": "setting",
+      "meaning": "Smallest regional baseline at which a party's swing can be proportional (Others always additive).",
+      "derivation": "1.0 points: Smallest regional baseline at which a party's swing can be proportional (Others always additive). (setting; not fitted here)."
+    },
+    {
+      "name": "min_polled_share",
+      "value": 0.5,
+      "unit": "points",
+      "source": "setting",
+      "meaning": "Regional poll average below which a party counts as not polled there.",
+      "derivation": "0.5 points: Regional poll average below which a party counts as not polled there. (setting; not fitted here)."
+    },
+    {
+      "name": "simulations",
+      "value": 10000,
+      "unit": "count",
+      "source": "setting",
+      "meaning": "Simulated elections per model run.",
+      "derivation": "10000 count: Simulated elections per model run. (setting; not fitted here)."
+    },
+    {
+      "name": "chunk_size",
+      "value": 1000,
+      "unit": "count",
+      "source": "setting",
+      "meaning": "Simulations drawn at once (bounds memory).",
+      "derivation": "1000 count: Simulations drawn at once (bounds memory). (setting; not fitted here)."
+    },
+    {
+      "name": "majority_threshold",
+      "value": 326,
+      "unit": "seats",
+      "source": "setting",
+      "meaning": "Seats needed for a majority.",
+      "derivation": "326 seats: Seats needed for a majority. (setting; not fitted here)."
+    }
+  ],
+  "national": {
+    "method": "z = (A − R) / s(R) per election and party; σ_nat = √(mean over elections of mean over its parties of z²), each election weighted equally. RMS rather than SD: a shared industry bias is error.",
+    "sigma_nat_realised": 2.5506,
+    "mean_z2": 6.5054,
+    "sigma_nat_raw": 2.9436,
+    "mean_z2_raw": 8.6646,
+    "ratios_contenders": {
+      "count": 18,
+      "p10": 0.7949,
+      "median": 0.8212,
+      "p90": 0.843
+    },
+    "ratios_others": {
+      "count": 17,
+      "p10": 0.8772,
+      "median": 0.9271,
+      "p90": 0.9865
+    },
+    "centring_method": "The engine draws a raw N(0, (σ_nat·s(P̂))²) per party and centres it over the polled parties with weights P̂ normalised, so a party keeps only a fraction of its raw SD (monte_carlo.centring_sd_ratio). That ratio is worked out per election × party at the election's result shares (named parties plus one remainder party for those PollBase omits); each z is divided by its own ratio, then the same election-weighted RMS gives σ_nat raw.",
+    "sigma_nat_cells": 2.6219,
+    "sigma_nat_core": 2.3502,
+    "cells": 35,
+    "elections": [
+      {
+        "year": 1992,
+        "polling_day": "1992-04-09",
+        "final_polls": 5,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 11.433,
+        "rms_z": 3.3813,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 38.3,
+            "result": 42.8,
+            "scale": 1.0797,
+            "error": -4.5,
+            "z": -4.1678,
+            "z2": 17.3702,
+            "ratio": 0.7977,
+            "z_raw": -5.2244
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 39.4,
+            "result": 35.2,
+            "scale": 1.0422,
+            "error": 4.2,
+            "z": 4.03,
+            "z2": 16.2405,
+            "ratio": 0.8084,
+            "z_raw": 4.9853
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 19.0,
+            "result": 18.3,
+            "scale": 0.8438,
+            "error": 0.7,
+            "z": 0.8296,
+            "z2": 0.6882,
+            "ratio": 0.884,
+            "z_raw": 0.9385
+          }
+        ]
+      },
+      {
+        "year": 1997,
+        "polling_day": "1997-05-01",
+        "final_polls": 5,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 2.1121,
+        "rms_z": 1.4533,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 30.8,
+            "result": 31.0,
+            "scale": 1.0092,
+            "error": -0.2,
+            "z": -0.1982,
+            "z2": 0.0393,
+            "ratio": 0.8266,
+            "z_raw": -0.2397
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 46.6,
+            "result": 44.0,
+            "scale": 1.0832,
+            "error": 2.6,
+            "z": 2.4003,
+            "z2": 5.7614,
+            "ratio": 0.8064,
+            "z_raw": 2.9764
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 16.4,
+            "result": 17.0,
+            "scale": 0.8197,
+            "error": -0.6,
+            "z": -0.732,
+            "z2": 0.5358,
+            "ratio": 0.8935,
+            "z_raw": -0.8193
+          }
+        ]
+      },
+      {
+        "year": 2001,
+        "polling_day": "2001-06-07",
+        "final_polls": 3,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 3.8868,
+        "rms_z": 1.9715,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 31.3333,
+            "result": 32.7,
+            "scale": 1.0237,
+            "error": -1.3667,
+            "z": -1.3351,
+            "z2": 1.7824,
+            "ratio": 0.8216,
+            "z_raw": -1.625
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 45.3333,
+            "result": 42.0,
+            "scale": 1.077,
+            "error": 3.3333,
+            "z": 3.0949,
+            "z2": 9.5784,
+            "ratio": 0.8064,
+            "z_raw": 3.8378
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 18.3333,
+            "result": 18.8,
+            "scale": 0.8526,
+            "error": -0.4667,
+            "z": -0.5474,
+            "z2": 0.2996,
+            "ratio": 0.8836,
+            "z_raw": -0.6195
+          }
+        ]
+      },
+      {
+        "year": 2005,
+        "polling_day": "2005-05-05",
+        "final_polls": 6,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 0.8107,
+        "rms_z": 0.9004,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 32.5,
+            "result": 33.2,
+            "scale": 1.0277,
+            "error": -0.7,
+            "z": -0.6812,
+            "z2": 0.464,
+            "ratio": 0.8274,
+            "z_raw": -0.8233
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 37.6667,
+            "result": 36.2,
+            "scale": 1.0487,
+            "error": 1.4667,
+            "z": 1.3986,
+            "z2": 1.956,
+            "ratio": 0.8209,
+            "z_raw": 1.7037
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 22.5,
+            "result": 22.6,
+            "scale": 0.9127,
+            "error": -0.1,
+            "z": -0.1096,
+            "z2": 0.012,
+            "ratio": 0.8676,
+            "z_raw": -0.1263
+          }
+        ]
+      },
+      {
+        "year": 2010,
+        "polling_day": "2010-05-06",
+        "final_polls": 9,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 7.8229,
+        "rms_z": 2.7969,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 35.5556,
+            "result": 36.9,
+            "scale": 1.053,
+            "error": -1.3444,
+            "z": -1.2768,
+            "z2": 1.6301,
+            "ratio": 0.823,
+            "z_raw": -1.5513
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 27.5556,
+            "result": 29.7,
+            "scale": 0.9971,
+            "error": -2.1444,
+            "z": -2.1506,
+            "z2": 4.6251,
+            "ratio": 0.8403,
+            "z_raw": -2.5593
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 27.4444,
+            "result": 23.6,
+            "scale": 0.9266,
+            "error": 3.8444,
+            "z": 4.1489,
+            "z2": 17.2136,
+            "ratio": 0.8645,
+            "z_raw": 4.799
+          }
+        ]
+      },
+      {
+        "year": 2015,
+        "polling_day": "2015-05-07",
+        "final_polls": 12,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 6.1885,
+        "rms_z": 2.4877,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 33.5833,
+            "result": 37.7,
+            "scale": 1.0576,
+            "error": -4.1167,
+            "z": -3.8926,
+            "z2": 15.1526,
+            "ratio": 0.83,
+            "z_raw": -4.6899
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 33.0,
+            "result": 31.2,
+            "scale": 1.011,
+            "error": 1.8,
+            "z": 1.7804,
+            "z2": 3.1697,
+            "ratio": 0.8414,
+            "z_raw": 2.116
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 8.9167,
+            "result": 8.1,
+            "scale": 0.5954,
+            "error": 0.8167,
+            "z": 1.3717,
+            "z2": 1.8817,
+            "ratio": 0.95,
+            "z_raw": 1.4439
+          },
+          {
+            "key": "green",
+            "label": "Green",
+            "average": 5.1667,
+            "result": 3.8,
+            "scale": 0.4172,
+            "error": 1.3667,
+            "z": 3.2757,
+            "z2": 10.7302,
+            "ratio": 0.9762,
+            "z_raw": 3.3557
+          },
+          {
+            "key": "ukip",
+            "label": "UKIP",
+            "average": 12.8333,
+            "result": 12.9,
+            "scale": 0.7315,
+            "error": -0.0667,
+            "z": -0.0912,
+            "z2": 0.0083,
+            "ratio": 0.9222,
+            "z_raw": -0.0989
+          }
+        ]
+      },
+      {
+        "year": 2017,
+        "polling_day": "2017-06-08",
+        "final_polls": 11,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 17.5159,
+        "rms_z": 4.1852,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 43.0909,
+            "result": 43.4,
+            "scale": 1.0815,
+            "error": -0.3091,
+            "z": -0.2858,
+            "z2": 0.0817,
+            "ratio": 0.7868,
+            "z_raw": -0.3632
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 36.4545,
+            "result": 41.0,
+            "scale": 1.0733,
+            "error": -4.5455,
+            "z": -4.2352,
+            "z2": 17.9369,
+            "ratio": 0.7883,
+            "z_raw": -5.3727
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 7.7273,
+            "result": 7.6,
+            "scale": 0.5783,
+            "error": 0.1273,
+            "z": 0.2201,
+            "z2": 0.0485,
+            "ratio": 0.9488,
+            "z_raw": 0.232
+          },
+          {
+            "key": "green",
+            "label": "Green",
+            "average": 2.0,
+            "result": 1.7,
+            "scale": 0.2821,
+            "error": 0.3,
+            "z": 1.0635,
+            "z2": 1.131,
+            "ratio": 0.9884,
+            "z_raw": 1.0759
+          },
+          {
+            "key": "ukip",
+            "label": "UKIP",
+            "average": 4.3636,
+            "result": 1.9,
+            "scale": 0.2979,
+            "error": 2.4636,
+            "z": 8.2693,
+            "z2": 68.3813,
+            "ratio": 0.9871,
+            "z_raw": 8.3776
+          }
+        ]
+      },
+      {
+        "year": 2019,
+        "polling_day": "2019-12-12",
+        "final_polls": 12,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 2.0495,
+        "rms_z": 1.4316,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 43.125,
+            "result": 44.7,
+            "scale": 1.0849,
+            "error": -1.575,
+            "z": -1.4517,
+            "z2": 2.1074,
+            "ratio": 0.8065,
+            "z_raw": -1.8
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 33.8083,
+            "result": 32.9,
+            "scale": 1.0253,
+            "error": 0.9083,
+            "z": 0.8859,
+            "z2": 0.7848,
+            "ratio": 0.8199,
+            "z_raw": 1.0805
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 11.9417,
+            "result": 11.8,
+            "scale": 0.704,
+            "error": 0.1417,
+            "z": 0.2013,
+            "z2": 0.0405,
+            "ratio": 0.9242,
+            "z_raw": 0.2178
+          },
+          {
+            "key": "green",
+            "label": "Green",
+            "average": 3.0167,
+            "result": 2.8,
+            "scale": 0.36,
+            "error": 0.2167,
+            "z": 0.6019,
+            "z2": 0.3623,
+            "ratio": 0.9815,
+            "z_raw": 0.6133
+          },
+          {
+            "key": "brexit",
+            "label": "Brexit Party",
+            "average": 2.925,
+            "result": 2.1,
+            "scale": 0.3129,
+            "error": 0.825,
+            "z": 2.6367,
+            "z2": 6.9522,
+            "ratio": 0.9861,
+            "z_raw": 2.6738
+          }
+        ]
+      },
+      {
+        "year": 2024,
+        "polling_day": "2024-07-04",
+        "final_polls": 19,
+        "source_url": "https://www.markpack.org.uk/opinion-polls/",
+        "mean_z2": 6.7289,
+        "rms_z": 2.594,
+        "parties": [
+          {
+            "key": "con",
+            "label": "Conservative",
+            "average": 21.3158,
+            "result": 24.4,
+            "scale": 0.9372,
+            "error": -3.0842,
+            "z": -3.2908,
+            "z2": 10.8291,
+            "ratio": 0.8727,
+            "z_raw": -3.7708
+          },
+          {
+            "key": "lab",
+            "label": "Labour",
+            "average": 38.7895,
+            "result": 34.7,
+            "scale": 1.0388,
+            "error": 4.0895,
+            "z": 3.9369,
+            "z2": 15.4995,
+            "ratio": 0.8467,
+            "z_raw": 4.6496
+          },
+          {
+            "key": "ld",
+            "label": "Liberal Democrats",
+            "average": 11.2632,
+            "result": 12.6,
+            "scale": 0.7242,
+            "error": -1.3368,
+            "z": -1.846,
+            "z2": 3.4078,
+            "ratio": 0.9271,
+            "z_raw": -1.9912
+          },
+          {
+            "key": "green",
+            "label": "Green",
+            "average": 6.7368,
+            "result": 6.9,
+            "scale": 0.5531,
+            "error": -0.1632,
+            "z": -0.2951,
+            "z2": 0.0871,
+            "ratio": 0.9588,
+            "z_raw": -0.3078
+          },
+          {
+            "key": "reform",
+            "label": "Reform UK",
+            "average": 16.2105,
+            "result": 14.7,
+            "scale": 0.7727,
+            "error": 1.5105,
+            "z": 1.9548,
+            "z2": 3.8212,
+            "ratio": 0.9161,
+            "z_raw": 2.1338
+          }
+        ]
+      }
+    ],
+    "parties": [
+      {
+        "key": "con",
+        "label": "Conservative",
+        "cells": 9,
+        "rms_z": 2.3442
+      },
+      {
+        "key": "lab",
+        "label": "Labour",
+        "cells": 9,
+        "rms_z": 2.8974
+      },
+      {
+        "key": "ld",
+        "label": "Liberal Democrats",
+        "cells": 9,
+        "rms_z": 1.6373
+      },
+      {
+        "key": "green",
+        "label": "Green",
+        "cells": 4,
+        "rms_z": 1.7543
+      },
+      {
+        "key": "ukip",
+        "label": "UKIP",
+        "cells": 2,
+        "rms_z": 5.8476
+      },
+      {
+        "key": "brexit",
+        "label": "Brexit Party",
+        "cells": 1,
+        "rms_z": 2.6367
+      },
+      {
+        "key": "reform",
+        "label": "Reform UK",
+        "cells": 1,
+        "rms_z": 1.9548
+      }
+    ],
+    "cross_check": [
+      {
+        "year": 2010,
+        "key": "con",
+        "pollbase": 36.9,
+        "database": 36.89,
+        "difference": 0.01
+      },
+      {
+        "year": 2010,
+        "key": "lab",
+        "pollbase": 29.7,
+        "database": 29.67,
+        "difference": 0.03
+      },
+      {
+        "year": 2010,
+        "key": "ld",
+        "pollbase": 23.6,
+        "database": 23.56,
+        "difference": 0.04
+      },
+      {
+        "year": 2015,
+        "key": "con",
+        "pollbase": 37.7,
+        "database": 37.66,
+        "difference": 0.04
+      },
+      {
+        "year": 2015,
+        "key": "lab",
+        "pollbase": 31.2,
+        "database": 31.18,
+        "difference": 0.02
+      },
+      {
+        "year": 2015,
+        "key": "ld",
+        "pollbase": 8.1,
+        "database": 8.06,
+        "difference": 0.04
+      },
+      {
+        "year": 2015,
+        "key": "green",
+        "pollbase": 3.8,
+        "database": 3.84,
+        "difference": -0.04
+      },
+      {
+        "year": 2015,
+        "key": "ukip",
+        "pollbase": 12.9,
+        "database": 12.88,
+        "difference": 0.02
+      },
+      {
+        "year": 2017,
+        "key": "con",
+        "pollbase": 43.4,
+        "database": 43.43,
+        "difference": -0.03
+      },
+      {
+        "year": 2017,
+        "key": "lab",
+        "pollbase": 41.0,
+        "database": 41.03,
+        "difference": -0.03
+      },
+      {
+        "year": 2017,
+        "key": "ld",
+        "pollbase": 7.6,
+        "database": 7.56,
+        "difference": 0.04
+      },
+      {
+        "year": 2017,
+        "key": "green",
+        "pollbase": 1.7,
+        "database": 1.65,
+        "difference": 0.05
+      },
+      {
+        "year": 2017,
+        "key": "ukip",
+        "pollbase": 1.9,
+        "database": 1.89,
+        "difference": 0.01
+      },
+      {
+        "year": 2019,
+        "key": "con",
+        "pollbase": 44.7,
+        "database": 44.72,
+        "difference": -0.02
+      },
+      {
+        "year": 2019,
+        "key": "lab",
+        "pollbase": 32.9,
+        "database": 32.9,
+        "difference": 0.0
+      },
+      {
+        "year": 2019,
+        "key": "ld",
+        "pollbase": 11.8,
+        "database": 11.84,
+        "difference": -0.04
+      },
+      {
+        "year": 2019,
+        "key": "green",
+        "pollbase": 2.8,
+        "database": 2.77,
+        "difference": 0.03
+      },
+      {
+        "year": 2019,
+        "key": "brexit",
+        "pollbase": 2.1,
+        "database": 2.06,
+        "difference": 0.04
+      },
+      {
+        "year": 2024,
+        "key": "con",
+        "pollbase": 24.4,
+        "database": 24.39,
+        "difference": 0.01
+      },
+      {
+        "year": 2024,
+        "key": "lab",
+        "pollbase": 34.7,
+        "database": 34.67,
+        "difference": 0.03
+      },
+      {
+        "year": 2024,
+        "key": "ld",
+        "pollbase": 12.6,
+        "database": 12.57,
+        "difference": 0.03
+      },
+      {
+        "year": 2024,
+        "key": "green",
+        "pollbase": 6.9,
+        "database": 6.91,
+        "difference": -0.01
+      },
+      {
+        "year": 2024,
+        "key": "reform",
+        "pollbase": 14.7,
+        "database": 14.71,
+        "difference": -0.01
+      }
+    ]
+  },
+  "swing": {
+    "method": "Per pair, y = p¹ − p⁰ (seat), a = P¹ − P⁰ (region), b = a·p⁰/P⁰; λ̂ = Σ(y − a)(b − a) / Σ(b − a)²; u = (y − a − λ̂(b − a)) / s(p̂); σ_seat = 1.4826 × MAD(u). σ_λ = RMS of the per-pair λ̂; σ_seat pooled over every pair's u. p̂ = max(0, p⁰ + a + λ̂(b − a)) renormalised over the seat's parties, as the engine projects; a cell with p̂ = 0, or with s(p̂) = 0 or no finite centring ratio, is left out of u.",
+    "centring_method": "The engine draws a raw N(0, (σ_seat·s(p̂))²) per party and centres it with weights p̂ normalised, so a party keeps only a fraction of its raw SD (monte_carlo.centring_sd_ratio), worked out per seat × party at the seat's predicted shares. Each u is divided by its own ratio before the same robust spread, per pair and pooled: σ_seat raw = 1.4826 × MAD(u ÷ ratio).",
+    "speaker_seats": {
+      "2010 General Election": "Buckingham",
+      "2015 General Election": "Buckingham",
+      "2017 General Election": "Buckingham",
+      "2019 General Election": "Chorley",
+      "2019 Election (changed boundaries)": "Chorley",
+      "2024 General Election": "Chorley"
+    },
+    "exclusion_reasons": {
+      "speaker_seat": "the Speaker's seat (at either election)",
+      "others_aggregate": "the Others aggregate: always additive in the simulation, and it mixes unrelated local candidates",
+      "party_absent": "party absent nationally at either election",
+      "regional_share_below_min": "regional share P⁰ below lambda_min_share",
+      "not_standing_earlier": "party did not stand in the seat at the earlier election (p⁰ = 0): its change is a new candidacy, not a swing"
+    },
+    "pairs": [
+      {
+        "label": "2010→2015",
+        "earlier": "2010 General Election",
+        "later": "2015 General Election",
+        "cells": 2810,
+        "stood_down": 6,
+        "cross": 14159.44,
+        "lever_squares": 59374.54,
+        "lambda": 0.2385,
+        "lambda2": 0.0569,
+        "residual_median": -0.4029,
+        "mad": 2.9128,
+        "sigma_seat_realised": 4.3186,
+        "residuals_used": 2719,
+        "predicted_zero": 91,
+        "no_seat_noise": 0,
+        "raw_median": -0.4504,
+        "raw_mad": 3.2763,
+        "sigma_seat_raw": 4.8575,
+        "ratios_contenders": {
+          "count": 1290,
+          "p10": 0.7959,
+          "median": 0.824,
+          "p90": 0.8819
+        },
+        "ratios_others": {
+          "count": 1429,
+          "p10": 0.8952,
+          "median": 0.9382,
+          "p90": 0.9818
+        },
+        "residuals": {
+          "percentiles": {
+            "5": -7.9254,
+            "10": -6.14,
+            "25": -3.1001,
+            "50": -0.4029,
+            "75": 2.7296,
+            "90": 6.1414,
+            "95": 8.9529
+          },
+          "edges": [
+            -10,
+            -9,
+            -8,
+            -7,
+            -6,
+            -5,
+            -4,
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "counts": [
+            26,
+            44,
+            59,
+            96,
+            74,
+            159,
+            179,
+            243,
+            252,
+            282,
+            220,
+            214,
+            186,
+            131,
+            130,
+            77,
+            68,
+            46,
+            41,
+            23
+          ],
+          "below": 61,
+          "above": 108
+        },
+        "exclusions": {
+          "speaker_seat": 3,
+          "others_aggregate": 597,
+          "party_absent": 0,
+          "regional_share_below_min": 387,
+          "not_standing_earlier": 108
+        },
+        "parties": [
+          {
+            "party_id": 1,
+            "name": "Labour",
+            "cells": 631,
+            "cross": 2854.66,
+            "lever_squares": 4241.85,
+            "lambda": 0.673
+          },
+          {
+            "party_id": 4,
+            "name": "Conservative",
+            "cells": 631,
+            "cross": 112.03,
+            "lever_squares": 151.69,
+            "lambda": 0.7385
+          },
+          {
+            "party_id": 5,
+            "name": "Liberal Democrats",
+            "cells": 631,
+            "cross": 10680.91,
+            "lever_squares": 24803.91,
+            "lambda": 0.4306
+          },
+          {
+            "party_id": 14,
+            "name": "UK Independence Party",
+            "cells": 529,
+            "cross": 3224.29,
+            "lever_squares": 12177.1,
+            "lambda": 0.2648
+          },
+          {
+            "party_id": 6,
+            "name": "Green",
+            "cells": 205,
+            "cross": 817.36,
+            "lever_squares": 7603.63,
+            "lambda": 0.1075
+          },
+          {
+            "party_id": 8,
+            "name": "Scottish National Party",
+            "cells": 59,
+            "cross": -3616.1,
+            "lever_squares": 10101.63,
+            "lambda": -0.358
+          },
+          {
+            "party_id": 3,
+            "name": "Plaid Cymru",
+            "cells": 40,
+            "cross": -20.43,
+            "lever_squares": 25.16,
+            "lambda": -0.812
+          },
+          {
+            "party_id": 10,
+            "name": "Alliance",
+            "cells": 18,
+            "cross": 59.81,
+            "lever_squares": 158.44,
+            "lambda": 0.3775
+          },
+          {
+            "party_id": 12,
+            "name": "SDLP",
+            "cells": 18,
+            "cross": 66.59,
+            "lever_squares": 84.72,
+            "lambda": 0.786
+          },
+          {
+            "party_id": 13,
+            "name": "Sinn Féin",
+            "cells": 17,
+            "cross": 35.15,
+            "lever_squares": 10.04,
+            "lambda": 3.5004
+          },
+          {
+            "party_id": 9,
+            "name": "Democratic Unionist Party",
+            "cells": 16,
+            "cross": 1.22,
+            "lever_squares": 2.74,
+            "lambda": 0.4452
+          },
+          {
+            "party_id": 11,
+            "name": "Ulster Unionist Party",
+            "cells": 15,
+            "cross": -56.05,
+            "lever_squares": 13.63,
+            "lambda": -4.1113
+          }
+        ]
+      },
+      {
+        "label": "2015→2017",
+        "earlier": "2015 General Election",
+        "later": "2017 General Election",
+        "cells": 3283,
+        "stood_down": 383,
+        "cross": 13813.26,
+        "lever_squares": 31596.31,
+        "lambda": 0.4372,
+        "lambda2": 0.1911,
+        "residual_median": -0.0977,
+        "mad": 2.8171,
+        "sigma_seat_realised": 4.1766,
+        "residuals_used": 3104,
+        "predicted_zero": 179,
+        "no_seat_noise": 0,
+        "raw_median": -0.1125,
+        "raw_mad": 3.1312,
+        "sigma_seat_raw": 4.6423,
+        "ratios_contenders": {
+          "count": 1294,
+          "p10": 0.7465,
+          "median": 0.8003,
+          "p90": 0.8467
+        },
+        "ratios_others": {
+          "count": 1810,
+          "p10": 0.9199,
+          "median": 0.981,
+          "p90": 0.9955
+        },
+        "residuals": {
+          "percentiles": {
+            "5": -7.4662,
+            "10": -5.8111,
+            "25": -2.9603,
+            "50": -0.0977,
+            "75": 2.6446,
+            "90": 5.531,
+            "95": 8.2312
+          },
+          "edges": [
+            -10,
+            -9,
+            -8,
+            -7,
+            -6,
+            -5,
+            -4,
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "counts": [
+            29,
+            33,
+            74,
+            100,
+            92,
+            155,
+            231,
+            247,
+            261,
+            303,
+            298,
+            290,
+            234,
+            194,
+            142,
+            93,
+            63,
+            45,
+            36,
+            35
+          ],
+          "below": 58,
+          "above": 91
+        },
+        "exclusions": {
+          "speaker_seat": 3,
+          "others_aggregate": 469,
+          "party_absent": 0,
+          "regional_share_below_min": 7,
+          "not_standing_earlier": 18
+        },
+        "parties": [
+          {
+            "party_id": 4,
+            "name": "Conservative",
+            "cells": 647,
+            "cross": -304.48,
+            "lever_squares": 6020.82,
+            "lambda": -0.0506
+          },
+          {
+            "party_id": 1,
+            "name": "Labour",
+            "cells": 631,
+            "cross": 2548.56,
+            "lever_squares": 11540.57,
+            "lambda": 0.2208
+          },
+          {
+            "party_id": 5,
+            "name": "Liberal Democrats",
+            "cells": 631,
+            "cross": 1078.5,
+            "lever_squares": 1138.91,
+            "lambda": 0.947
+          },
+          {
+            "party_id": 14,
+            "name": "UK Independence Party",
+            "cells": 623,
+            "cross": 8922.31,
+            "lever_squares": 10243.79,
+            "lambda": 0.871
+          },
+          {
+            "party_id": 6,
+            "name": "Green",
+            "cells": 567,
+            "cross": 864.09,
+            "lever_squares": 1216.02,
+            "lambda": 0.7106
+          },
+          {
+            "party_id": 8,
+            "name": "Scottish National Party",
+            "cells": 59,
+            "cross": 316.86,
+            "lever_squares": 196.44,
+            "lambda": 1.613
+          },
+          {
+            "party_id": 3,
+            "name": "Plaid Cymru",
+            "cells": 40,
+            "cross": -9.52,
+            "lever_squares": 84.6,
+            "lambda": -0.1126
+          },
+          {
+            "party_id": 10,
+            "name": "Alliance",
+            "cells": 18,
+            "cross": 17.17,
+            "lever_squares": 8.86,
+            "lambda": 1.9377
+          },
+          {
+            "party_id": 12,
+            "name": "SDLP",
+            "cells": 18,
+            "cross": 76.08,
+            "lever_squares": 70.88,
+            "lambda": 1.0733
+          },
+          {
+            "party_id": 13,
+            "name": "Sinn Féin",
+            "cells": 18,
+            "cross": 161.02,
+            "lever_squares": 214.76,
+            "lambda": 0.7498
+          },
+          {
+            "party_id": 9,
+            "name": "Democratic Unionist Party",
+            "cells": 16,
+            "cross": 48.53,
+            "lever_squares": 593.12,
+            "lambda": 0.0818
+          },
+          {
+            "party_id": 11,
+            "name": "Ulster Unionist Party",
+            "cells": 15,
+            "cross": 94.15,
+            "lever_squares": 267.53,
+            "lambda": 0.3519
+          }
+        ]
+      },
+      {
+        "label": "2017→2019",
+        "earlier": "2017 General Election",
+        "later": "2019 General Election",
+        "cells": 2884,
+        "stood_down": 274,
+        "cross": 2666.69,
+        "lever_squares": 22665.27,
+        "lambda": 0.1177,
+        "lambda2": 0.0138,
+        "residual_median": -0.2697,
+        "mad": 2.4648,
+        "sigma_seat_realised": 3.6543,
+        "residuals_used": 2870,
+        "predicted_zero": 14,
+        "no_seat_noise": 0,
+        "raw_median": -0.3056,
+        "raw_mad": 2.8004,
+        "sigma_seat_raw": 4.1519,
+        "ratios_contenders": {
+          "count": 1292,
+          "p10": 0.7741,
+          "median": 0.808,
+          "p90": 0.8579
+        },
+        "ratios_others": {
+          "count": 1578,
+          "p10": 0.9105,
+          "median": 0.9673,
+          "p90": 0.9862
+        },
+        "residuals": {
+          "percentiles": {
+            "5": -8.0634,
+            "10": -6.1742,
+            "25": -2.8943,
+            "50": -0.2697,
+            "75": 2.0663,
+            "90": 4.727,
+            "95": 6.7095
+          },
+          "edges": [
+            -10,
+            -9,
+            -8,
+            -7,
+            -6,
+            -5,
+            -4,
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "counts": [
+            26,
+            51,
+            66,
+            92,
+            107,
+            123,
+            163,
+            206,
+            284,
+            333,
+            321,
+            286,
+            220,
+            153,
+            110,
+            70,
+            53,
+            24,
+            25,
+            19
+          ],
+          "below": 72,
+          "above": 66
+        },
+        "exclusions": {
+          "speaker_seat": 11,
+          "others_aggregate": 434,
+          "party_absent": 0,
+          "regional_share_below_min": 81,
+          "not_standing_earlier": 148
+        },
+        "parties": [
+          {
+            "party_id": 1,
+            "name": "Labour",
+            "cells": 630,
+            "cross": 753.13,
+            "lever_squares": 4659.13,
+            "lambda": 0.1616
+          },
+          {
+            "party_id": 4,
+            "name": "Conservative",
+            "cells": 630,
+            "cross": 77.49,
+            "lever_squares": 393.66,
+            "lambda": 0.1969
+          },
+          {
+            "party_id": 5,
+            "name": "Liberal Democrats",
+            "cells": 628,
+            "cross": -353.29,
+            "lever_squares": 13601.29,
+            "lambda": -0.026
+          },
+          {
+            "party_id": 6,
+            "name": "Green",
+            "cells": 445,
+            "cross": 153.1,
+            "lever_squares": 431.99,
+            "lambda": 0.3544
+          },
+          {
+            "party_id": 14,
+            "name": "UK Independence Party",
+            "cells": 367,
+            "cross": 1321.48,
+            "lever_squares": 1280.29,
+            "lambda": 1.0322
+          },
+          {
+            "party_id": 8,
+            "name": "Scottish National Party",
+            "cells": 59,
+            "cross": 9.25,
+            "lever_squares": 64.07,
+            "lambda": 0.1443
+          },
+          {
+            "party_id": 3,
+            "name": "Plaid Cymru",
+            "cells": 40,
+            "cross": -10.11,
+            "lever_squares": 11.67,
+            "lambda": -0.866
+          },
+          {
+            "party_id": 10,
+            "name": "Alliance",
+            "cells": 18,
+            "cross": 173.79,
+            "lever_squares": 1561.81,
+            "lambda": 0.1113
+          },
+          {
+            "party_id": 12,
+            "name": "SDLP",
+            "cells": 18,
+            "cross": 228.04,
+            "lever_squares": 148.55,
+            "lambda": 1.5351
+          },
+          {
+            "party_id": 13,
+            "name": "Sinn Féin",
+            "cells": 18,
+            "cross": 194.11,
+            "lever_squares": 374.05,
+            "lambda": 0.5189
+          },
+          {
+            "party_id": 9,
+            "name": "Democratic Unionist Party",
+            "cells": 17,
+            "cross": 152.31,
+            "lever_squares": 102.66,
+            "lambda": 1.4837
+          },
+          {
+            "party_id": 11,
+            "name": "Ulster Unionist Party",
+            "cells": 14,
+            "cross": -32.62,
+            "lever_squares": 36.1,
+            "lambda": -0.9034
+          }
+        ]
+      },
+      {
+        "label": "2019n→2024",
+        "earlier": "2019 Election (changed boundaries)",
+        "later": "2024 General Election",
+        "cells": 2626,
+        "stood_down": 12,
+        "cross": 20659.16,
+        "lever_squares": 36456.67,
+        "lambda": 0.5667,
+        "lambda2": 0.3211,
+        "residual_median": -0.6715,
+        "mad": 3.8505,
+        "sigma_seat_realised": 5.7088,
+        "residuals_used": 2611,
+        "predicted_zero": 15,
+        "no_seat_noise": 0,
+        "raw_median": -0.7387,
+        "raw_mad": 4.2509,
+        "sigma_seat_raw": 6.3024,
+        "ratios_contenders": {
+          "count": 1196,
+          "p10": 0.8241,
+          "median": 0.8435,
+          "p90": 0.8798
+        },
+        "ratios_others": {
+          "count": 1415,
+          "p10": 0.908,
+          "median": 0.9539,
+          "p90": 0.9758
+        },
+        "residuals": {
+          "percentiles": {
+            "5": -10.2877,
+            "10": -7.331,
+            "25": -4.1982,
+            "50": -0.6715,
+            "75": 3.6977,
+            "90": 8.4479,
+            "95": 11.6466
+          },
+          "edges": [
+            -10,
+            -9,
+            -8,
+            -7,
+            -6,
+            -5,
+            -4,
+            -3,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "counts": [
+            31,
+            50,
+            65,
+            99,
+            131,
+            165,
+            174,
+            197,
+            186,
+            193,
+            156,
+            151,
+            140,
+            112,
+            91,
+            99,
+            91,
+            52,
+            54,
+            47
+          ],
+          "below": 142,
+          "above": 185
+        },
+        "exclusions": {
+          "speaker_seat": 2,
+          "others_aggregate": 617,
+          "party_absent": 946,
+          "regional_share_below_min": 26,
+          "not_standing_earlier": 66
+        },
+        "parties": [
+          {
+            "party_id": 1,
+            "name": "Labour",
+            "cells": 631,
+            "cross": 752.68,
+            "lever_squares": 6376.57,
+            "lambda": 0.118
+          },
+          {
+            "party_id": 4,
+            "name": "Conservative",
+            "cells": 631,
+            "cross": 16182.66,
+            "lever_squares": 19641.72,
+            "lambda": 0.8239
+          },
+          {
+            "party_id": 5,
+            "name": "Liberal Democrats",
+            "cells": 621,
+            "cross": 1649.96,
+            "lever_squares": 2020.17,
+            "lambda": 0.8167
+          },
+          {
+            "party_id": 6,
+            "name": "Green",
+            "cells": 568,
+            "cross": 1239.75,
+            "lever_squares": 6774.47,
+            "lambda": 0.183
+          },
+          {
+            "party_id": 8,
+            "name": "Scottish National Party",
+            "cells": 57,
+            "cross": 110.68,
+            "lever_squares": 165.41,
+            "lambda": 0.6691
+          },
+          {
+            "party_id": 3,
+            "name": "Plaid Cymru",
+            "cells": 31,
+            "cross": 179.47,
+            "lever_squares": 761.92,
+            "lambda": 0.2356
+          },
+          {
+            "party_id": 9,
+            "name": "Democratic Unionist Party",
+            "cells": 18,
+            "cross": 253.61,
+            "lever_squares": 255.82,
+            "lambda": 0.9914
+          },
+          {
+            "party_id": 10,
+            "name": "Alliance",
+            "cells": 18,
+            "cross": 17.94,
+            "lever_squares": 26.75,
+            "lambda": 0.6705
+          },
+          {
+            "party_id": 11,
+            "name": "Ulster Unionist Party",
+            "cells": 18,
+            "cross": 5.39,
+            "lever_squares": 3.28,
+            "lambda": 1.6438
+          },
+          {
+            "party_id": 12,
+            "name": "SDLP",
+            "cells": 17,
+            "cross": 188.83,
+            "lever_squares": 267.3,
+            "lambda": 0.7064
+          },
+          {
+            "party_id": 13,
+            "name": "Sinn Féin",
+            "cells": 16,
+            "cross": 78.19,
+            "lever_squares": 163.27,
+            "lambda": 0.4789
+          }
+        ]
+      }
+    ],
+    "pooled": {
+      "pairs": 4,
+      "mean_lambda2": 0.1457,
+      "sigma_lambda": 0.3818,
+      "mean_lambda": 0.34,
+      "cells": 11304,
+      "residual_median": -0.3248,
+      "mad": 2.9773,
+      "sigma_seat_realised": 4.4141,
+      "raw_median": -0.3647,
+      "raw_mad": 3.307,
+      "sigma_seat_raw": 4.9029,
+      "ratios_contenders": {
+        "count": 5072,
+        "p10": 0.7744,
+        "median": 0.8222,
+        "p90": 0.8707
+      },
+      "ratios_others": {
+        "count": 6232,
+        "p10": 0.904,
+        "median": 0.962,
+        "p90": 0.9905
+      },
+      "residuals": {
+        "percentiles": {
+          "5": -8.2932,
+          "10": -6.3198,
+          "25": -3.2598,
+          "50": -0.3248,
+          "75": 2.6813,
+          "90": 6.1222,
+          "95": 9.0625
+        },
+        "edges": [
+          -10,
+          -9,
+          -8,
+          -7,
+          -6,
+          -5,
+          -4,
+          -3,
+          -2,
+          -1,
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ],
+        "counts": [
+          112,
+          178,
+          264,
+          387,
+          404,
+          602,
+          747,
+          893,
+          983,
+          1111,
+          995,
+          941,
+          780,
+          590,
+          473,
+          339,
+          275,
+          167,
+          156,
+          124
+        ],
+        "below": 333,
+        "above": 450
+      }
+    }
+  },
+  "decided_fraction": {
+    "method": "National unweighted decided base ÷ polls.sample_size for each Westminster poll with both; the mean over polls (a pollster weighs by its poll count), rounded to 2 dp.",
+    "value": 0.7987,
+    "ratio_sum": 27.1545,
+    "rounded": 0.8,
+    "polls": 34,
+    "pollsters": [
+      {
+        "pollster": "bmg_research",
+        "polls": 1,
+        "mean_ratio": 0.862,
+        "ratio_sum": 0.862,
+        "low": 0.862,
+        "high": 0.862
+      },
+      {
+        "pollster": "focaldata",
+        "polls": 4,
+        "mean_ratio": 0.8949,
+        "ratio_sum": 3.5797,
+        "low": 0.8814,
+        "high": 0.9007
+      },
+      {
+        "pollster": "ipsos",
+        "polls": 1,
+        "mean_ratio": 0.8409,
+        "ratio_sum": 0.8409,
+        "low": 0.8409,
+        "high": 0.8409
+      },
+      {
+        "pollster": "more_in_common",
+        "polls": 15,
+        "mean_ratio": 0.7529,
+        "ratio_sum": 11.2941,
+        "low": 0.6949,
+        "high": 0.8404
+      },
+      {
+        "pollster": "survation",
+        "polls": 13,
+        "mean_ratio": 0.8137,
+        "ratio_sum": 10.5778,
+        "low": 0.751,
+        "high": 0.8452
+      }
+    ],
+    "exclusions": {
+      "weighted_only": 87,
+      "equals_sample_size": 37,
+      "exceeds_sample_size": 0
+    },
+    "exclusion_reasons": {
+      "weighted_only": "only a weighted decided base is printed (Find Out Now)",
+      "equals_sample_size": "decided base equals the sample size, so the stored sample size is already the decided base (Opinium)",
+      "exceeds_sample_size": "decided base larger than the sample size"
+    }
+  },
+  "config": {
+    "design_effect": 1.5,
+    "n_eff_cap": 3000.0,
+    "interval": 0.9,
+    "p_ref": 0.3,
+    "decided_fraction": 0.8,
+    "likely_voters_fraction": 0.9,
+    "sigma_nat": 2.94,
+    "sigma_reg": 1.5,
+    "sigma_seat": 4.9,
+    "sigma_lambda": 0.38,
+    "lambda_min_share": 1.0,
+    "min_polled_share": 0.5,
+    "simulations": 10000,
+    "chunk_size": 1000,
+    "majority_threshold": 326
+  }
+}

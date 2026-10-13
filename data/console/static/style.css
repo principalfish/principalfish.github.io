@@ -276,3 +276,27 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+/* Uncertainty calibration: histogram bars. The width is set inline per row
+   (it is the data: the bin's count as a share of the largest bin); the
+   minimum width gives the bars room beside the counts, and the colour is the
+   primary-button blue used elsewhere in the console. */
+.hist-cell {
+  min-width: 160px;
+}
+
+.hist-bar {
+  display: inline-block;
+  height: 0.8em;
+  background: #2563eb;
+}
+
+/* Text for screen readers only (e.g. a header over a column of bars). */
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

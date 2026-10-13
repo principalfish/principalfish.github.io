@@ -1,0 +1,17 @@
+{
+  "design_effect": 1.5,
+  "n_eff_cap": 3000.0,
+  "interval": 0.9,
+  "p_ref": 0.3,
+  "decided_fraction": 0.8,
+  "likely_voters_fraction": 0.9,
+  "sigma_nat": 2.94,
+  "sigma_reg": 1.5,
+  "sigma_seat": 4.9,
+  "sigma_lambda": 0.38,
+  "lambda_min_share": 1.0,
+  "min_polled_share": 0.5,
+  "simulations": 10000,
+  "chunk_size": 1000,
+  "majority_threshold": 326
+}

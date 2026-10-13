@@ -1,0 +1,307 @@
+"""Westminster uncertainty diagnostics: a hub and the calibration report.
+
+Each view is its own route and template, so one can be removed without
+touching the others. The calibration view reads the committed settings
+(``model_support.uncertainty.load_uncertainty_config``) and the report
+``scripts/calibrate_uncertainty.py`` writes
+(``model_support.calibration.load_calibration_report``); either being absent
+or malformed shows a message rather than failing the page.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import math
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any
+
+from flask import Blueprint, render_template
+
+from model_support import calibration as calibration_module
+from model_support import uncertainty as uncertainty_module
+from model_support.calibration import (
+    PARAMETER_NOTES,
+    POLLBASE_CREDIT,
+    POLLBASE_URL,
+    CalibrationError,
+    load_calibration_report,
+)
+from model_support.uncertainty import (
+    UncertaintyConfig,
+    UncertaintyConfigError,
+    load_uncertainty_config,
+)
+
+bp = Blueprint("uncertainty", __name__)
+
+
+def fmt(value: object, spec: str = ".2f") -> str:
+    """Format a report number, or "-" for anything that is not one.
+
+    The report is a file; a hand-edited or truncated value must not stop the
+    page rendering.
+    """
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return "-"
+    if not math.isfinite(value):
+        return "-"
+    return format(value, spec)
+
+
+@dataclass(frozen=True, slots=True)
+class ParameterRow:
+    """One setting as the model uses it.
+
+    Attributes:
+        name: The ``UncertaintyConfig`` field.
+        value: The value in use.
+        unit: Its unit.
+        source: calibrated / literature / guess / setting.
+        meaning: What it does.
+        reported: The value the last calibration wrote (None without a
+            report).
+        differs: True when the value in use is not the reported one.
+        derivation: One line on what the value means and what it was
+            computed from (the report's, else built from the notes).
+    """
+
+    name: str
+    value: object
+    unit: str
+    source: str
+    meaning: str
+    reported: object
+    differs: bool
+    derivation: str
+
+
+def parameter_rows(
+    config: UncertaintyConfig, report: Mapping[str, Any] | None
+) -> list[ParameterRow]:
+    """Return every setting in use with its notes, reported value and derivation."""
+    reported: Mapping[str, object] | None = None if report is None else report["config"]
+    derived: dict[str, str] = {}
+    if report is not None:
+        for row in report["parameters"]:
+            name, line = row.get("name"), row.get("derivation")
+            if isinstance(name, str) and isinstance(line, str):
+                derived[name] = line
+    rows: list[ParameterRow] = []
+    for name, value in dataclasses.asdict(config).items():
+        note = PARAMETER_NOTES[name]
+        written = None if reported is None else reported.get(name)
+        fallback = f"{note.meaning} ({note.source})"
+        if note.source == "calibrated" and report is None:
+            fallback += "; no calibration report to show its derivation"
+        rows.append(
+            ParameterRow(
+                name=name,
+                value=value,
+                unit=note.unit,
+                source=note.source,
+                meaning=note.meaning,
+                reported=written,
+                differs=reported is not None and written != value,
+                derivation=derived.get(name, fallback),
+            )
+        )
+    return rows
+
+
+def _residuals(block: object) -> Mapping[str, Any]:
+    if isinstance(block, Mapping):
+        residuals = block.get("residuals")
+        if isinstance(residuals, Mapping):
+            return residuals
+    return {}
+
+
+def percentile_rows(
+    pairs: Sequence[Mapping[str, Any]], pooled: Mapping[str, Any]
+) -> list[PivotRow]:
+    """Return each percentile of u across the pairs, then pooled (last cell)."""
+    blocks = [*pairs, pooled]
+    keys: list[str] = []
+    for block in blocks:
+        percentiles = _residuals(block).get("percentiles")
+        if isinstance(percentiles, Mapping):
+            keys.extend(str(key) for key in percentiles if str(key) not in keys)
+    rows: list[PivotRow] = []
+    for key in keys:
+        cells = []
+        for block in blocks:
+            percentiles = _residuals(block).get("percentiles")
+            if isinstance(percentiles, Mapping):
+                cells.append(percentiles.get(key))
+            else:
+                cells.append(None)
+        rows.append(PivotRow(label=f"p{key}", cells=tuple(cells)))
+    return rows
+
+
+@dataclass(frozen=True, slots=True)
+class HistogramRow:
+    """One bin of the u histogram.
+
+    Attributes:
+        label: The bin, e.g. "[-1, 0)" or "< -10".
+        counts: Count per pair, then pooled.
+        share: Pooled count as a percentage of the largest pooled bin (bar
+            width).
+    """
+
+    label: str
+    counts: tuple[int | None, ...]
+    share: float
+
+
+def _int_list(value: object) -> list[int] | None:
+    if isinstance(value, list) and all(
+        isinstance(item, int) and not isinstance(item, bool) for item in value
+    ):
+        return value
+    return None
+
+
+def histogram_rows(
+    pairs: Sequence[Mapping[str, Any]], pooled: Mapping[str, Any]
+) -> list[HistogramRow]:
+    """Return the u histogram's bins with per-pair and pooled counts.
+
+    The bins are the pooled block's; a block whose histogram is missing or
+    malformed shows None counts. No pooled histogram, no rows.
+    """
+    pooled_residuals = _residuals(pooled)
+    edges = _int_list(pooled_residuals.get("edges"))
+    pooled_counts = _int_list(pooled_residuals.get("counts"))
+    if not edges or pooled_counts is None or len(pooled_counts) != len(edges) - 1:
+        return []
+    labels = [f"< {edges[0]}"]
+    labels += [f"[{low}, {high})" for low, high in zip(edges, edges[1:], strict=False)]
+    labels.append(f"≥ {edges[-1]}")
+
+    def bins(block: Mapping[str, Any]) -> list[int | None]:
+        residuals = _residuals(block)
+        counts = _int_list(residuals.get("counts"))
+        below, above = residuals.get("below"), residuals.get("above")
+        if (
+            counts is None
+            or len(counts) != len(edges) - 1
+            or not isinstance(below, int)
+            or not isinstance(above, int)
+        ):
+            return [None] * len(labels)
+        return [below, *counts, above]
+
+    columns = [bins(block) for block in [*pairs, pooled]]
+    pooled_bins = [count or 0 for count in columns[-1]]
+    peak = max(pooled_bins) or 1
+    return [
+        HistogramRow(
+            label=label,
+            counts=tuple(column[index] for column in columns),
+            share=100 * pooled_bins[index] / peak,
+        )
+        for index, label in enumerate(labels)
+    ]
+
+
+@dataclass(frozen=True, slots=True)
+class PivotRow:
+    """One row of a party × pair (or reason × pair) table.
+
+    Attributes:
+        label: The party or reason.
+        cells: One value per pair, aligned to the pair labels (None where
+            the pair has none).
+    """
+
+    label: str
+    cells: tuple[Any, ...]
+
+
+def party_lambda_pivot(pairs: Sequence[Mapping[str, Any]]) -> list[PivotRow]:
+    """Return each party's per-pair ``{"cells", "lambda"}``, parties by first sight."""
+    order: list[str] = []
+    by_pair: list[dict[str, Mapping[str, Any]]] = []
+    for pair in pairs:
+        parties: dict[str, Mapping[str, Any]] = {}
+        for party in pair.get("parties", []):
+            name = str(party.get("name", party.get("party_id", "?")))
+            parties[name] = party
+            if name not in order:
+                order.append(name)
+        by_pair.append(parties)
+    return [
+        PivotRow(label=name, cells=tuple(parties.get(name) for parties in by_pair))
+        for name in order
+    ]
+
+
+def exclusion_pivot(
+    pairs: Sequence[Mapping[str, Any]], reasons: Mapping[str, Any]
+) -> list[PivotRow]:
+    """Return each exclusion reason's per-pair cell count."""
+    keys = list(reasons)
+    for pair in pairs:
+        keys.extend(key for key in pair.get("exclusions", {}) if key not in keys)
+    return [
+        PivotRow(
+            label=str(reasons.get(key, key)),
+            cells=tuple(pair.get("exclusions", {}).get(key) for pair in pairs),
+        )
+        for key in keys
+    ]
+
+
+@bp.route("/westminster/uncertainty")
+def uncertainty_hub() -> str:
+    """GET /westminster/uncertainty — Links to each uncertainty view."""
+    return render_template("uncertainty_hub.html")
+
+
+@bp.route("/westminster/uncertainty/calibration")
+def uncertainty_calibration() -> str:
+    """GET /westminster/uncertainty/calibration — The calibration report."""
+    config_path = uncertainty_module.UNCERTAINTY_CONFIG_PATH
+    report_path = calibration_module.CALIBRATION_REPORT_PATH
+    config_error: str | None = None
+    try:
+        config = load_uncertainty_config()
+    except UncertaintyConfigError as err:
+        config_error = str(err)
+        config = UncertaintyConfig()
+    report: dict[str, Any] | None = None
+    report_error: str | None = None
+    if not report_path.exists():
+        report_error = f"No calibration report at {report_path}."
+    else:
+        try:
+            report = load_calibration_report()
+        except CalibrationError as err:
+            report_error = str(err)
+    pairs: list[dict[str, Any]] = [] if report is None else report["swing"]["pairs"]
+    reasons: Mapping[str, Any] = (
+        {} if report is None else report["swing"]["exclusion_reasons"]
+    )
+    pooled: Mapping[str, Any] = {} if report is None else report["swing"]["pooled"]
+    return render_template(
+        "uncertainty_calibration.html",
+        config_path=config_path,
+        config_present=config_path.exists(),
+        config_error=config_error,
+        p_ref_pct=config.p_ref * 100,
+        parameters=parameter_rows(config, report),
+        report=report,
+        report_error=report_error,
+        report_path=report_path,
+        pairs=pairs,
+        party_lambdas=party_lambda_pivot(pairs),
+        percentiles=percentile_rows(pairs, pooled),
+        histogram=histogram_rows(pairs, pooled),
+        exclusions=exclusion_pivot(pairs, reasons),
+        credit_name=POLLBASE_CREDIT,
+        credit_url=POLLBASE_URL,
+        fmt=fmt,
+    )

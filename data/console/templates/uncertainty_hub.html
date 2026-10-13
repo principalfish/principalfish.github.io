@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="card">
+    <h2>Westminster Uncertainty</h2>
+    <p>
+      Diagnostics for the polling-error model behind the projection's ranges
+      and odds.
+    </p>
+    <ul>
+      <li>
+        <a href="{{ url_for('uncertainty.uncertainty_calibration') }}">Calibration</a>:
+        every setting in use, where its value comes from, and the historical
+        tables the calibrated ones were fitted on.
+      </li>
+    </ul>
+  </section>
+{% endblock %}

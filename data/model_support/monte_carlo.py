@@ -498,7 +498,18 @@ class ErrorScales:
     sigma_lambda: float
 
 
-def _centring_weights(shares: FloatArray, receives: BoolArray) -> FloatArray:
+def centring_weights(shares: FloatArray, receives: BoolArray) -> FloatArray:
+    """Return the centring weights q: *shares* normalised over the receivers.
+
+    Args:
+        shares: The shares the term scales by, percent; parties on the last
+            axis.
+        receives: Which parties receive the term (same shape).
+
+    Returns:
+        q per party, summing to 1 over the receivers (all 0 where none has a
+        positive share); 0 for a party that does not receive the term.
+    """
     masked = np.where(receives, shares, 0.0)
     totals = masked.sum(axis=-1, keepdims=True)
     weights: FloatArray = np.divide(
@@ -533,15 +544,15 @@ def error_scales(
     national_by_region = np.broadcast_to(inputs.national_average, reach.shape)
     return ErrorScales(
         national_sd=np.where(inputs.national_polled, national, 0.0),
-        national_weight=_centring_weights(
+        national_weight=centring_weights(
             inputs.national_average, inputs.national_polled
         ),
         national_reach=reach,
-        national_region_weight=_centring_weights(national_by_region, reach),
+        national_region_weight=centring_weights(national_by_region, reach),
         regional_sd=np.where(inputs.region_polled, regional, 0.0),
-        regional_weight=_centring_weights(inputs.region_average, inputs.region_polled),
+        regional_weight=centring_weights(inputs.region_average, inputs.region_polled),
         seat_sd=config.sigma_seat * share_scale_array(projected_share, config),
-        seat_weight=_centring_weights(projected_share, seat_receives),
+        seat_weight=centring_weights(projected_share, seat_receives),
         sigma_lambda=config.sigma_lambda,
     )
 
@@ -632,6 +643,33 @@ class ErrorDraws:
             seat=np.zeros((count, n, k), dtype=np.float32),
             swing_type=np.zeros(count),
         )
+
+
+def centring_sd_ratio(sd: FloatArray, weights: FloatArray) -> FloatArray:
+    """Return each party's error SD after centring divided by its SD before.
+
+    The draws centre each error vector as ``ẽₖ = eₖ − qₖ·Σⱼ eⱼ`` with
+    independent ``eⱼ ~ N(0, sdⱼ²)``, so
+    ``Var(ẽₖ) = sdₖ² − 2qₖ·sdₖ² + qₖ²·Σⱼ sdⱼ²``. A party with a large weight
+    absorbs much of its own error: a seat's front-runners keep about 0.8 of
+    their raw SD. The calibration divides an observed (already zero-sum)
+    error size by this ratio to get the raw σ to draw with.
+
+    Args:
+        sd: Raw SDs per party (parties on the last axis), e.g. ``σ·s(p̂)``.
+        weights: The centring weights q (:func:`centring_weights`).
+
+    Returns:
+        The ratio per party; NaN where the raw SD is 0.
+    """
+    variance = sd**2
+    total = variance.sum(axis=-1, keepdims=True)
+    centred = variance * (1 - 2 * weights) + weights**2 * total
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio: FloatArray = np.where(
+            sd > 0, np.sqrt(np.maximum(centred, 0.0)) / sd, np.nan
+        )
+    return ratio
 
 
 def _centre(errors: NDArray[Float], weights: NDArray[Float]) -> NDArray[Float]:

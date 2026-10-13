@@ -18,6 +18,8 @@ from db import Database
 from model_support.poll_bases import (
     UNRESOLVED,
     CapturedBase,
+    NBasis,
+    NOrigin,
     PollNIndex,
     PollNInputs,
     PollsterCoverage,
@@ -264,13 +266,13 @@ class TestResolvePollN:
     def test_captured_national_base_beats_sample_size(self) -> None:
         inputs = PollNInputs(2113, {None: CapturedBase(1491, 1402, "decided")})
         assert resolve_poll_n(inputs, None, _POPULATIONS) == ResolvedN(
-            1491, "base:decided", 1402
+            1491, "base", "decided", weighted_n=1402
         )
 
     def test_national_falls_back_to_sample_size(self) -> None:
         inputs = PollNInputs(2113, {17: CapturedBase(239, None, "decided")})
         resolved = resolve_poll_n(inputs, None, _POPULATIONS)
-        assert resolved == ResolvedN(2113, "sample_size")
+        assert resolved == ResolvedN(2113, "sample_size", "sample_size")
 
     @pytest.mark.parametrize("sample_size", [None, 0])
     def test_national_without_base_or_sample_is_unresolved(
@@ -286,7 +288,7 @@ class TestResolvePollN:
             frozenset({22}),
         )
         assert resolve_poll_n(inputs, 22, _POPULATIONS) == ResolvedN(
-            187, "base:all_adults", 201, True
+            187, "base", "all_adults", weighted_n=201, split_from_macro=True
         )
 
     def test_regional_estimate_uses_sample_size_without_a_national_base(self) -> None:
@@ -294,8 +296,8 @@ class TestResolvePollN:
         # 2000 x 9.1 / (9.1 + 5.5 + 3.1) = 1028.2
         london = resolve_poll_n(inputs, 17, _POPULATIONS)
         wales = resolve_poll_n(inputs, 23, _POPULATIONS)
-        assert london == ResolvedN(1028, "estimate:sample_size")
-        assert wales == ResolvedN(350, "estimate:sample_size")
+        assert london == ResolvedN(1028, "estimate", "sample_size")
+        assert wales == ResolvedN(350, "estimate", "sample_size")
 
     def test_regional_estimate_prefers_the_national_base(self) -> None:
         inputs = PollNInputs(
@@ -303,13 +305,13 @@ class TestResolvePollN:
         )
         # 1500 x 9.1 / 17.7 = 771.2
         resolved = resolve_poll_n(inputs, 17, _POPULATIONS)
-        assert resolved == ResolvedN(771, "estimate:decided")
+        assert resolved == ResolvedN(771, "estimate", "decided")
 
     def test_estimate_denominator_is_only_the_reported_regions(self) -> None:
         inputs = PollNInputs(2000, reported_region_ids=frozenset({17, 22}))
         # 2000 x 9.1 / 14.6 = 1246.6
         resolved = resolve_poll_n(inputs, 17, _POPULATIONS)
-        assert resolved == ResolvedN(1247, "estimate:sample_size")
+        assert resolved == ResolvedN(1247, "estimate", "sample_size")
 
     def test_unreported_region_is_unresolved(self) -> None:
         inputs = PollNInputs(2000, reported_region_ids=frozenset({17, 22}))
@@ -327,7 +329,7 @@ class TestResolvePollN:
             frozenset({17, 22, 23}),
         )
         assert resolve_poll_n(inputs, 23, _POPULATIONS) == ResolvedN(
-            405, "estimate:all_adults"
+            405, "estimate", "all_adults"
         )
 
     def test_weighted_only_base_uses_its_weighted_count(self) -> None:
@@ -337,11 +339,11 @@ class TestResolvePollN:
             frozenset({17, 22, 23}),
         )
         assert resolve_poll_n(inputs, None, _POPULATIONS) == ResolvedN(
-            1452, "base:decided(weighted)", 1452
+            1452, "base", "decided", weighted_only=True, weighted_n=1452
         )
         # 1452 x 3.1m / 17.7m = 254.3
         assert resolve_poll_n(inputs, 23, _POPULATIONS) == ResolvedN(
-            254, "estimate:decided(weighted)"
+            254, "estimate", "decided", weighted_only=True
         )
 
     def test_estimate_rounding_below_one_is_unresolved(self) -> None:
@@ -351,12 +353,76 @@ class TestResolvePollN:
         assert resolve_poll_n(inputs, 30, populations) is UNRESOLVED
         # 40 x 9.1m / 9.11m = 39.96 still resolves.
         assert resolve_poll_n(inputs, 17, populations) == ResolvedN(
-            40, "estimate:sample_size"
+            40, "estimate", "sample_size"
         )
 
     def test_estimate_without_any_poll_n_is_unresolved(self) -> None:
         inputs = PollNInputs(None, reported_region_ids=frozenset({17}))
         assert resolve_poll_n(inputs, 17, _POPULATIONS) is UNRESOLVED
+
+
+class TestResolvedNSource:
+    """The console label rendered from the structured origin and basis."""
+
+    @pytest.mark.parametrize(
+        ("resolved", "label"),
+        [
+            (ResolvedN(1491, "base", "decided"), "base:decided"),
+            (ResolvedN(241, "base", "all_adults"), "base:all_adults"),
+            (ResolvedN(300, "base", "likely_voters"), "base:likely_voters"),
+            (
+                ResolvedN(1452, "base", "decided", weighted_only=True),
+                "base:decided(weighted)",
+            ),
+            (ResolvedN(2113, "sample_size", "sample_size"), "sample_size"),
+            (ResolvedN(771, "estimate", "decided"), "estimate:decided"),
+            (
+                ResolvedN(254, "estimate", "decided", weighted_only=True),
+                "estimate:decided(weighted)",
+            ),
+            (ResolvedN(1028, "estimate", "sample_size"), "estimate:sample_size"),
+        ],
+    )
+    def test_label(self, resolved: ResolvedN, label: str) -> None:
+        assert resolved.source == label
+
+    def test_unresolved_has_no_label(self) -> None:
+        assert UNRESOLVED.source is None
+
+
+class TestResolvedNInvariants:
+    @pytest.mark.parametrize(
+        ("n", "origin", "basis"),
+        [
+            (None, "base", "decided"),
+            (500, None, "decided"),
+            (500, "base", None),
+            (500, None, None),
+            (None, None, "decided"),
+        ],
+    )
+    def test_n_origin_and_basis_are_all_or_nothing(
+        self, n: int | None, origin: NOrigin | None, basis: NBasis | None
+    ) -> None:
+        with pytest.raises(ValueError, match="all set or all None"):
+            ResolvedN(n, origin, basis)
+
+    @pytest.mark.parametrize(
+        ("origin", "basis"),
+        [
+            ("sample_size", "decided"),
+            ("sample_size", "all_adults"),
+            ("base", "sample_size"),
+        ],
+    )
+    def test_sample_size_basis_matches_its_origin(
+        self, origin: NOrigin, basis: NBasis
+    ) -> None:
+        with pytest.raises(ValueError, match="cannot have basis"):
+            ResolvedN(500, origin, basis)
+
+    def test_estimate_from_sample_size_is_allowed(self) -> None:
+        assert ResolvedN(500, "estimate", "sample_size").n == 500
 
 
 # ── PollNIndex ────────────────────────────────────────────────────────────────
@@ -380,7 +446,7 @@ class TestPollNIndex:
         assert index.inputs[5].reported_region_ids == frozenset({17, 22})
         assert 6 not in index.inputs
         # 2000 x 9.1 / (9.1 + 5.5); Northern Ireland's zero rows don't count.
-        assert index.resolve(5, 17) == ResolvedN(1247, "estimate:sample_size")
+        assert index.resolve(5, 17) == ResolvedN(1247, "estimate", "sample_size")
         assert index.resolve(5, 24) is UNRESOLVED
         assert index.resolve(6, 23) is UNRESOLVED
 
@@ -417,14 +483,16 @@ class TestPollNIndex:
         with db.session() as session:
             index = PollNIndex.load(session, [first.id, second.id, 9999])
 
-        assert index.resolve(first.id, None) == ResolvedN(1491, "base:decided")
-        assert index.resolve(first.id, london) == ResolvedN(239, "base:decided")
+        assert index.resolve(first.id, None) == ResolvedN(1491, "base", "decided")
+        assert index.resolve(first.id, london) == ResolvedN(239, "base", "decided")
         # 1491 x 3.1 / (9.1 + 3.1) = 378.9
-        assert index.resolve(first.id, wales) == ResolvedN(379, "estimate:decided")
-        assert index.resolve(second.id, None) == ResolvedN(2607, "sample_size")
+        assert index.resolve(first.id, wales) == ResolvedN(379, "estimate", "decided")
+        assert index.resolve(second.id, None) == ResolvedN(
+            2607, "sample_size", "sample_size"
+        )
         # 2607 x 9.1 / 12.2 = 1944.6
         resolved = index.resolve(second.id, london)
-        assert resolved == ResolvedN(1945, "estimate:sample_size")
+        assert resolved == ResolvedN(1945, "estimate", "sample_size")
         assert index.resolve(9999, None) is UNRESOLVED
 
     def test_load_with_no_polls_is_empty(self, db: Database) -> None:

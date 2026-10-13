@@ -33,6 +33,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
+from typing import Literal
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -180,33 +181,85 @@ class CapturedBase:
         return self.unweighted_n if self.unweighted_n is not None else self.weighted_n
 
     @property
-    def label(self) -> str:
-        """The kind, suffixed ``(weighted)`` for a weighted-only base."""
-        return f"{self.kind}(weighted)" if self.unweighted_n is None else self.kind
+    def is_weighted_only(self) -> bool:
+        """True when only a weighted base was printed, so n is that count."""
+        return self.unweighted_n is None
+
+
+# Where a resolved n came from: a captured base, the poll's sample size, or a
+# population estimate.
+NOrigin = Literal["base", "sample_size", "estimate"]
+# What the count behind a resolved n counts: a base's kind, or the poll's
+# total sample (which includes don't-knows). An estimate's basis is that of
+# the poll n it was scaled from.
+NBasis = PollBaseKind | Literal["sample_size"]
 
 
 @dataclass(frozen=True, slots=True)
 class ResolvedN:
     """The n behind one poll's shares in one region, and where it came from.
 
+    *origin*, *basis* and *weighted_only* are the structured description that
+    code reads (``model_support.uncertainty`` adjusts n by its basis);
+    :attr:`source` renders them as the label the console shows.
+
     Attributes:
         n: The respondent count, or None when nothing resolves (no base, no
             sample size, or a region the poll did not report).
-        source: ``"base:<kind>"`` (``"base:<kind>(weighted)"`` when only a
-            weighted base was printed), ``"sample_size"``,
-            ``"estimate:<kind>"`` or ``"estimate:sample_size"``; None when *n*
-            is None.
-        weighted_n: The captured weighted base, when the source is a base.
+        origin: Where *n* came from; None when *n* is None.
+        basis: What the count behind *n* counts; None when *n* is None. For an
+            estimate, the basis of the poll n it was scaled from.
+        weighted_only: True when that count is a weighted-only base (the
+            pollster printed no unweighted count).
+        weighted_n: The captured weighted base, when the origin is a base.
         split_from_macro: True when the base was apportioned by population.
     """
 
     n: int | None
-    source: str | None
+    origin: NOrigin | None
+    basis: NBasis | None
+    weighted_only: bool = False
     weighted_n: int | None = None
     split_from_macro: bool = False
 
+    def __post_init__(self) -> None:
+        """Reject a description that contradicts itself.
 
-UNRESOLVED = ResolvedN(None, None)
+        Raises:
+            ValueError: *n*, *origin* and *basis* are not all set or all None;
+                a sample-size origin has another basis; or a base claims a
+                sample-size basis (an estimate may be scaled from either).
+        """
+        present = {self.n is not None, self.origin is not None, self.basis is not None}
+        if len(present) != 1:
+            raise ValueError(
+                "n, origin and basis must be all set or all None, got "
+                f"{self.n!r}, {self.origin!r}, {self.basis!r}"
+            )
+        if (self.origin == "sample_size" and self.basis != "sample_size") or (
+            self.origin == "base" and self.basis == "sample_size"
+        ):
+            raise ValueError(
+                f"origin {self.origin!r} cannot have basis {self.basis!r}"
+            )
+
+    @property
+    def source(self) -> str | None:
+        """The console label: ``"base:<kind>"``, ``"sample_size"``, etc.
+
+        ``"base:<kind>"`` (``"base:<kind>(weighted)"`` when only a weighted
+        base was printed), ``"sample_size"``, ``"estimate:<kind>"`` (likewise
+        suffixed) or ``"estimate:sample_size"``; None when unresolved.
+        """
+        if self.origin is None or self.basis is None:
+            return None
+        if self.origin == "sample_size":
+            return "sample_size"
+        suffix = "(weighted)" if self.weighted_only else ""
+        return f"{self.origin}:{self.basis}{suffix}"
+
+
+UNRESOLVED = ResolvedN(None, None, None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,24 +296,26 @@ def resolve_poll_n(
     if base is not None and base.n is not None:
         return ResolvedN(
             base.n,
-            f"base:{base.label}",
-            base.weighted_n,
-            base.split_from_macro,
+            "base",
+            base.kind,
+            weighted_only=base.is_weighted_only,
+            weighted_n=base.weighted_n,
+            split_from_macro=base.split_from_macro,
         )
     if region_id is None:
         if inputs.sample_size is None or inputs.sample_size <= 0:
             return UNRESOLVED
-        return ResolvedN(inputs.sample_size, "sample_size")
+        return ResolvedN(inputs.sample_size, "sample_size", "sample_size")
 
     if region_id not in inputs.reported_region_ids:
         return UNRESOLVED
     national = inputs.bases.get(None)
-    basis: str
+    basis: NBasis
     if national is not None and national.n is not None:
         poll_n: int | None = national.n
-        basis = national.label
+        basis, weighted_only = national.kind, national.is_weighted_only
     else:
-        poll_n, basis = inputs.sample_size, "sample_size"
+        poll_n, basis, weighted_only = inputs.sample_size, "sample_size", False
     if poll_n is None or poll_n <= 0:
         return UNRESOLVED
     population = populations.get(region_id)
@@ -271,7 +326,7 @@ def resolve_poll_n(
     estimate = round(poll_n * population / total)
     if estimate < 1:
         return UNRESOLVED
-    return ResolvedN(estimate, f"estimate:{basis}")
+    return ResolvedN(estimate, "estimate", basis, weighted_only=weighted_only)
 
 
 @dataclass(frozen=True, slots=True)

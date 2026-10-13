@@ -19,7 +19,7 @@ import { activateSenateForecastView } from "../features/senate-forecast-controll
 import { renderSenateForecastComparison, renderSenateForecastTabs } from "../features/senate-forecast-view.js";
 import { renderMap, refreshOpenSeatPopup } from "../dom.js";
 import { fetchJson } from "../files.js";
-import { ElectionData, manifest, page, Seat, state } from "../state.js";
+import { activeMapMode, ElectionData, manifest, page, Seat, state } from "../state.js";
 import { seatLookupKey } from "../utils.js";
 
 const readData = (file) => JSON.parse(readFileSync(new URL(`../../uselectionmaps/data/${file}`, import.meta.url), "utf8"));
@@ -41,6 +41,26 @@ function fetchResults(url) {
 const latestTabs = () => renderSenateForecastTabs.mock.calls.at(-1)[0];
 const latestComparison = () => renderSenateForecastComparison.mock.calls.at(-1)[0];
 const tallies = (summary) => Object.fromEntries(summary.parties.filter((party) => party.seats).map((party) => [party.party, party.seats]));
+// Full-chamber tallies expected from the published data, so poll exports that flip a seat
+// don't break the test: each contested seat swaps its outgoing member's party (Class 2,
+// or the special election's class) for the forecast winner.
+function expectedChamberTallies() {
+  const year = Number(manifest.parliamentConfig("us_senate").nextElectionYear);
+  const specialClass = new Map((activeMapMode().senateSpecialElections || [])
+    .filter((special) => Number(special.year) === year)
+    .map((special) => [seatLookupKey(special.seat), Number(special.class)]));
+  const chamber = ElectionData.buildSeatIndex(new ElectionData(chamberData).currentSeats);
+  const counts = {};
+  const add = (party, change) => { counts[party] = (counts[party] || 0) + change; };
+  chamber.forEach((seat) => seat.members.forEach((member) => add(member.party, 1)));
+  new ElectionData(forecastData).currentSeats.forEach((seat) => {
+    const key = seatLookupKey(seat.seat);
+    const contestedClass = specialClass.get(key) ?? 2;
+    add(chamber.get(key).members.find((member) => Number(member.class) === contestedClass).party, -1);
+    add(seat.winner, 1);
+  });
+  return Object.fromEntries(Object.entries(counts).filter(([, seats]) => seats));
+}
 
 describe("activateSenateForecastView", () => {
   beforeEach(() => {
@@ -81,7 +101,9 @@ describe("activateSenateForecastView", () => {
     expect(state.currentElection.multiMember).toBe(true);
     expect(state.electionData.currentSeats).toHaveLength(50);
     expect(state.filteredSeatsSummary.totalSeats).toBe(100);
-    expect(tallies(state.filteredSeatsSummary)).toEqual({ democrat: 51, republican: 47, independent: 2 });
+    const expectedTallies = expectedChamberTallies();
+    expect(Object.values(expectedTallies).reduce((sum, seats) => sum + seats, 0)).toBe(100);
+    expect(tallies(state.filteredSeatsSummary)).toEqual(expectedTallies);
     expect(tallies(state.filteredSeatsComparisonSummary)).toEqual({ republican: 53, democrat: 45, independent: 2 });
     expect(state.filteredSeatsComparisonSummary.totalSeats).toBe(100);
     expect(state.filteredSeatsSummary.totalVotes).toBe(0);

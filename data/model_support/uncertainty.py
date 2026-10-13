@@ -81,6 +81,14 @@ class UncertaintyConfig:
             points at ``p_ref``.
         sigma_lambda: SD of the swing-type factor (0 = uniform swing,
             1 = proportional).
+        lambda_min_share: Smallest regional baseline share, in points, at
+            which a named party's swing can be proportional; below it (and
+            always for the "Others" aggregate) the swing stays additive, so
+            a near-zero baseline cannot blow the proportional term up.
+        min_polled_share: Regional poll average, in points, below which a
+            party counts as not polled in that region and gets no national
+            or regional error there (SNP and Plaid read 0 to 0.13 in English
+            crossbreaks).
         simulations: Simulated elections per model run.
         chunk_size: Simulations drawn at once, bounding memory.
         majority_threshold: Seats needed for a majority.
@@ -96,6 +104,8 @@ class UncertaintyConfig:
     sigma_reg: float = 1.5
     sigma_seat: float = 3.0
     sigma_lambda: float = 0.3
+    lambda_min_share: float = 1.0
+    min_polled_share: float = 0.5
     simulations: int = 10_000
     chunk_size: int = 1_000
     majority_threshold: int = 326
@@ -115,6 +125,8 @@ class UncertaintyConfig:
         # A σ of 0 is allowed: it switches that error term off.
         for name in ("sigma_nat", "sigma_reg", "sigma_seat", "sigma_lambda"):
             _require(self, name, lambda v: v >= 0, "be non-negative")
+        _require(self, "lambda_min_share", lambda v: 0 < v <= 100, "be in (0, 100]")
+        _require(self, "min_polled_share", lambda v: 0 <= v < 100, "be in [0, 100)")
         for name in ("simulations", "chunk_size", "majority_threshold"):
             _require(self, name, lambda v: v > 0, "be positive")
 
@@ -187,6 +199,12 @@ def load_uncertainty_config(path: Path | None = None) -> UncertaintyConfig:
         sigma_reg=_number(data, "sigma_reg", defaults.sigma_reg),
         sigma_seat=_number(data, "sigma_seat", defaults.sigma_seat),
         sigma_lambda=_number(data, "sigma_lambda", defaults.sigma_lambda),
+        lambda_min_share=_number(
+            data, "lambda_min_share", defaults.lambda_min_share
+        ),
+        min_polled_share=_number(
+            data, "min_polled_share", defaults.min_polled_share
+        ),
         simulations=_integer(data, "simulations", defaults.simulations),
         chunk_size=_integer(data, "chunk_size", defaults.chunk_size),
         majority_threshold=_integer(

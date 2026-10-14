@@ -259,6 +259,7 @@ class Election(Base):
         map: The owning ``Map`` instance.
         parent_election: Optional parent ``Election`` instance.
         votes: All ``Vote`` records belonging to this election.
+        uncertainty: The run's ``ModelUncertainty`` summary, if one is stored.
     """
 
     __tablename__ = "elections"
@@ -275,6 +276,16 @@ class Election(Base):
     map: Mapped["Map"] = relationship("Map", back_populates="elections")
     parent_election: Mapped[Optional["Election"]] = relationship("Election", remote_side="Election.id")
     votes: Mapped[list["Vote"]] = relationship("Vote", back_populates="election", cascade="all, delete-orphan")
+    # passive_deletes: deleting an election must not SELECT this table, which
+    # a database migrated before migrate_add_model_uncertainty.py lacks; the
+    # foreign key's ON DELETE CASCADE removes the row where it exists.
+    uncertainty: Mapped[Optional["ModelUncertainty"]] = relationship(
+        "ModelUncertainty",
+        back_populates="election",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def __repr__(self) -> str:
         """Return a debug string representation of the Election."""
@@ -323,6 +334,58 @@ class Vote(Base):
         return (
             f"<Vote {self.candidate_name or '(no candidate)'} "
             f"party={self.party_id} votes={self.vote_total}>"
+        )
+
+
+class ModelUncertainty(Base):
+    """ORM model for the ``model_uncertainty`` table.
+
+    The Monte Carlo summary of one model run, keyed by that run's election.
+    Each block is compact JSON (sorted keys, no whitespace), so the same
+    summary always stores the same text. ``schema`` names the blocks' format
+    (``model_support.persistence.UNCERTAINTY_SCHEMA``), so a reader can tell a
+    row written in an older format from the current one.
+
+    The national block is kept for every run. The region and seat blocks are
+    kept only on the latest-dated run of a scope (model type, map and name
+    prefix): every ``model_support.persistence.replace_output`` sets every
+    other run's to NULL, whatever order the runs were saved in.
+
+    Rows are deleted with their election (ORM cascade, and ``ON DELETE
+    CASCADE`` for raw SQL with foreign keys enforced; the persistence module's
+    raw ``sqlite3`` writers do not enforce them and delete the rows
+    explicitly).
+
+    Attributes:
+        election_id: Primary key and foreign key to the model run's
+            ``Election``.
+        schema: Format of the JSON blocks, e.g. "pf-model-uncertainty-v1".
+        national_json: National outcomes, intervals and error-budget inputs.
+        regions_json: Per-region outcomes and error budget; NULL once pruned.
+        seats_json: Per-seat win probabilities and share intervals; NULL once
+            pruned.
+        election: The owning ``Election`` instance.
+    """
+
+    __tablename__ = "model_uncertainty"
+
+    election_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("elections.id", ondelete="CASCADE"), primary_key=True
+    )
+    schema: Mapped[str] = mapped_column(Text, nullable=False)
+    national_json: Mapped[str] = mapped_column(Text, nullable=False)
+    regions_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seats_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    election: Mapped["Election"] = relationship(
+        "Election", back_populates="uncertainty"
+    )
+
+    def __repr__(self) -> str:
+        """Return a debug string representation of the ModelUncertainty."""
+        return (
+            f"<ModelUncertainty election={self.election_id} schema={self.schema} "
+            f"detail={self.regions_json is not None or self.seats_json is not None}>"
         )
 
 

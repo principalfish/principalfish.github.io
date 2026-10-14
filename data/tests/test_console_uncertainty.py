@@ -3,7 +3,8 @@
 The settings and report paths are patched (autouse) to temporary files, so
 the committed calibration files never decide what a test sees. Fixture
 values are distinctive (no default or committed value), so a view that read
-the wrong file would fail.
+the wrong file would fail. The blueprint's ``get_db`` is patched (autouse) to
+the temp-DB fixture.
 """
 
 from __future__ import annotations
@@ -11,14 +12,30 @@ from __future__ import annotations
 import html
 import json
 import re
+import sqlite3
+from contextlib import closing
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 import pytest
 from flask import Flask
 
-from console.blueprints.uncertainty import exclusion_pivot, fmt, party_lambda_pivot
+from console.blueprints.uncertainty import (
+    exclusion_pivot,
+    fmt,
+    party_lambda_pivot,
+    status_line,
+)
+from db import Database
 from model_support.calibration import CALIBRATION_REPORT_SCHEMA, POLLBASE_URL
+from model_support.persistence import (
+    OutputScope,
+    UncertaintyPayload,
+    UncertaintyRun,
+    UncertaintyStatus,
+    replace_output,
+)
 
 from tests.console_fixtures import app
 
@@ -31,6 +48,13 @@ def paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     monkeypatch.setattr("model_support.uncertainty.UNCERTAINTY_CONFIG_PATH", config)
     monkeypatch.setattr("model_support.calibration.CALIBRATION_REPORT_PATH", report)
     return {"config": config, "report": report}
+
+
+@pytest.fixture(autouse=True)
+def console_db(db: Database, monkeypatch: pytest.MonkeyPatch) -> Database:
+    """Serve every page from the temp-DB fixture."""
+    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    return db
 
 
 def fixture_report() -> dict[str, Any]:
@@ -185,6 +209,94 @@ def _write(path: Path, payload: object) -> None:
 def test_hub_links_to_the_calibration_view(app: Flask) -> None:
     body = _get(app, "/westminster/uncertainty")
     assert 'href="/westminster/uncertainty/calibration"' in body
+
+
+class TestHubStoredStatus:
+    """The hub's line on what the UNS model has stored."""
+
+    STORED = re.compile(r'<p class="uncertainty-stored">(.*?)</p>', re.DOTALL)
+
+    def stored(self, app: Flask) -> str:
+        matches = self.STORED.findall(_get(app, "/westminster/uncertainty"))
+        assert len(matches) == 1
+        return str(matches[0]).strip()
+
+    def save(
+        self, db: Database, scope: OutputScope, day: int, *, summary: bool = True
+    ) -> None:
+        as_of = date(2026, 10, day)
+        replace_output(
+            Path(db.config.database_path),
+            scope,
+            as_of,
+            f"{scope.name_prefix} {as_of}",
+            [],
+            uncertainty=UncertaintyPayload({"hung": 0.5}, {}, {}) if summary else None,
+        )
+
+    def test_names_the_run_holding_full_detail(
+        self, app: Flask, console_db: Database
+    ) -> None:
+        westminster = console_db.add_map("UK Constituencies post 2022").id
+        other = console_db.add_map("UK Constituencies pre 2019").id
+        self.save(console_db, OutputScope("model_uns", westminster, "UNS"), 2)
+        self.save(console_db, OutputScope("model_uns", westminster, "UNS"), 9)
+        self.save(console_db, OutputScope("model_uns", westminster, "UNS"), 4)
+        # Later, but another map: neither counted nor named.
+        self.save(console_db, OutputScope("model_uns", other, "UNS"), 20)
+
+        assert self.stored(app) == (
+            "3 runs have stored uncertainty; full detail on: UNS 2026-10-09"
+        )
+
+    def test_no_run_holds_full_detail(self, app: Flask, console_db: Database) -> None:
+        westminster = console_db.add_map("UK Constituencies post 2022").id
+        self.save(
+            console_db, OutputScope("model_uns", westminster, "UNS"), 2, summary=False
+        )
+
+        assert self.stored(app) == (
+            "0 runs have stored uncertainty; no run holds full detail"
+        )
+
+    def test_table_not_migrated_yet(self, app: Flask, console_db: Database) -> None:
+        console_db.add_map("UK Constituencies post 2022")
+        with closing(sqlite3.connect(console_db.config.database_path)) as conn:
+            conn.execute("DROP TABLE model_uncertainty")
+            conn.commit()
+
+        assert self.stored(app) == (
+            "Stored uncertainty: table not migrated yet "
+            "(run scripts/migrate_add_model_uncertainty.py)."
+        )
+
+    def test_no_westminster_map(self, app: Flask) -> None:
+        assert self.stored(app) == (
+            "No UK Constituencies post 2022 map in the database."
+        )
+
+
+@pytest.mark.parametrize(
+    ("status", "line"),
+    [
+        (
+            UncertaintyStatus(0, None),
+            "0 runs have stored uncertainty; no run holds full detail",
+        ),
+        (
+            UncertaintyStatus(
+                1, UncertaintyRun(5, "UNS 2026-10-03", date(2026, 10, 3))
+            ),
+            "1 run has stored uncertainty; full detail on: UNS 2026-10-03",
+        ),
+        (
+            UncertaintyStatus(2, None),
+            "2 runs have stored uncertainty; no run holds full detail",
+        ),
+    ],
+)
+def test_status_line(status: UncertaintyStatus, line: str) -> None:
+    assert status_line(status) == line
 
 
 def test_home_links_to_the_hub(app: Flask) -> None:

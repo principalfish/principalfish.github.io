@@ -40,11 +40,11 @@ from model_support.trends import (
     validate_trend_scope,
 )
 from model_support.persistence import (
-    OutputScope,
     OutputVote,
     delete_outputs,
     output_dates,
     replace_output,
+    westminster_uns_scope,
 )
 from model_support.cli import (
     single_date_window,
@@ -183,7 +183,7 @@ def existing_trend_dates(
     The cache path argument remains for compatibility.
     """
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
-    return output_dates(sqlite_path, OutputScope("model_uns", map_id, "UNS"))
+    return output_dates(sqlite_path, westminster_uns_scope(map_id))
 
 
 def dates_to_run_for_cfg(
@@ -362,14 +362,14 @@ def reset_existing_model_outputs(
     )
     if not sqlite_path.exists():
         return 0, 0, 0
-    validate_trend_scope(sqlite_path, OutputScope("model_uns", map_id, "UNS"))
+    validate_trend_scope(sqlite_path, westminster_uns_scope(map_id))
     deleted_elections, deleted_votes = delete_outputs(
-        sqlite_path, OutputScope("model_uns", map_id, "UNS"), start_date, end_date
+        sqlite_path, westminster_uns_scope(map_id), start_date, end_date
     )
 
     stripped_json_entries = 0
     publish_trends(
-        sqlite_path, OutputScope("model_uns", map_id, "UNS"), trend_cache_json
+        sqlite_path, westminster_uns_scope(map_id), trend_cache_json
     )
 
     return deleted_elections, deleted_votes, stripped_json_entries
@@ -413,7 +413,7 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
 
     with trend_batch(
         database_file(db),
-        OutputScope("model_uns", _output_map_id(db, args.map_name), "UNS"),
+        westminster_uns_scope(_output_map_id(db, args.map_name)),
         TREND_CACHE_JSON,
         enabled=not args.dry_run,
     ):
@@ -484,7 +484,7 @@ def delete_model_uns_for_as_of_date(
     """Delete only this model/map/date and its supported legacy run names."""
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     return delete_outputs(
-        sqlite_path, OutputScope("model_uns", map_id, "UNS"), as_of_date, as_of_date
+        sqlite_path, westminster_uns_scope(map_id), as_of_date, as_of_date
     )
 
 
@@ -1277,7 +1277,7 @@ def persist_projection(
     sqlite_path = sqlite_path if sqlite_path is not None else default_sqlite_path()
     return replace_output(
         sqlite_path,
-        OutputScope("model_uns", map_id, "UNS"),
+        westminster_uns_scope(map_id),
         as_of_date,
         election_name,
         (
@@ -1306,7 +1306,7 @@ def update_trend_cache_json(
     """Reconstruct the scoped recorded series; projected arguments are compatibility-only."""
     publish_trends(
         sqlite_path if sqlite_path is not None else default_sqlite_path(),
-        OutputScope("model_uns", map_id, "UNS"),
+        westminster_uns_scope(map_id),
         trend_cache_json if trend_cache_json is not None else TREND_CACHE_JSON,
     )
 
@@ -1443,7 +1443,7 @@ def run_simulation(
 
     sqlite_path = database_file(db)
 
-    validate_trend_scope(sqlite_path, OutputScope("model_uns", poll_map.id, "UNS"))
+    validate_trend_scope(sqlite_path, westminster_uns_scope(poll_map.id))
     persisted_name, persisted_election_id = persist_projection(
         poll_map.id,
         cfg.as_of_date,
@@ -1549,7 +1549,7 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
 
     with trend_batch(
         database_file(db),
-        OutputScope("model_uns", _output_map_id(db, cfg.map_name), "UNS"),
+        westminster_uns_scope(_output_map_id(db, cfg.map_name)),
         TREND_CACHE_JSON,
         enabled=not cfg.dry_run,
     ):

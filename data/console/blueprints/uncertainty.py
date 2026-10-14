@@ -1,7 +1,9 @@
 """Westminster uncertainty diagnostics: a hub and the calibration report.
 
 Each view is its own route and template, so one can be removed without
-touching the others. The calibration view reads the committed settings
+touching the others. The hub states what the UNS model has stored
+(``model_support.persistence.uncertainty_status``), or that the table has not
+been migrated yet. The calibration view reads the committed settings
 (``model_support.uncertainty.load_uncertainty_config``) and the report
 ``scripts/calibrate_uncertainty.py`` writes
 (``model_support.calibration.load_calibration_report``); either being absent
@@ -14,10 +16,14 @@ import dataclasses
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from flask import Blueprint, render_template
+from sqlalchemy import select
 
+from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
+from console.db import get_db
 from model_support import calibration as calibration_module
 from model_support import uncertainty as uncertainty_module
 from model_support.calibration import (
@@ -27,11 +33,17 @@ from model_support.calibration import (
     CalibrationError,
     load_calibration_report,
 )
+from model_support.persistence import (
+    UncertaintyStatus,
+    uncertainty_status,
+    westminster_uns_scope,
+)
 from model_support.uncertainty import (
     UncertaintyConfig,
     UncertaintyConfigError,
     load_uncertainty_config,
 )
+from models import Map
 
 bp = Blueprint("uncertainty", __name__)
 
@@ -255,10 +267,45 @@ def exclusion_pivot(
     ]
 
 
+def status_line(status: UncertaintyStatus | None) -> str:
+    """Describe what the UNS model has stored, for the hub.
+
+    Args:
+        status: The scope's status, or None when the table is absent.
+
+    Returns:
+        One sentence, e.g. "3 runs have stored uncertainty; full detail on:
+        UNS 2026-10-14", or "...; no run holds full detail" when none does
+        (none stored yet, or the detailed run was deleted).
+    """
+    if status is None:
+        return (
+            "Stored uncertainty: table not migrated yet "
+            "(run scripts/migrate_add_model_uncertainty.py)."
+        )
+    count = status.stored_runs
+    runs = "1 run has" if count == 1 else f"{count} runs have"
+    if status.detail_run is None:
+        return f"{runs} stored uncertainty; no run holds full detail"
+    return f"{runs} stored uncertainty; full detail on: {status.detail_run.name}"
+
+
 @bp.route("/westminster/uncertainty")
 def uncertainty_hub() -> str:
-    """GET /westminster/uncertainty — Links to each uncertainty view."""
-    return render_template("uncertainty_hub.html")
+    """GET /westminster/uncertainty — Stored-run status and each view's link."""
+    db = get_db()
+    with db.session() as session:
+        map_id = session.execute(
+            select(Map.id).where(Map.name == WESTMINSTER_MAP_NAME)
+        ).scalar_one_or_none()
+    if map_id is None:
+        stored = f"No {WESTMINSTER_MAP_NAME} map in the database."
+    else:
+        status = uncertainty_status(
+            Path(db.config.database_path), westminster_uns_scope(map_id)
+        )
+        stored = status_line(status)
+    return render_template("uncertainty_hub.html", stored=stored)
 
 
 @bp.route("/westminster/uncertainty/calibration")

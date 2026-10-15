@@ -7,7 +7,7 @@ Shared by ``backfill_poll_bases.py`` and ``repair_regional_poll_rows.py``:
   with its national and regional shares and a :data:`Fingerprint` of its rows
   and bases, all from the same read;
 - :func:`poll_fingerprint` re-reads one poll's fingerprint at write time, for
-  stale guards;
+  stale guards, and :func:`stale_reason` re-reads its own columns too;
 - :func:`source_mismatch` decides whether a re-parsed source is the stored
   poll (fieldwork, sample size, shares);
 - :func:`fetch_with_importer` fetches a source with its pollster's importer;
@@ -48,6 +48,9 @@ RowKey = tuple[int | None, int, float]
 BaseKey = tuple[int | None, int | None, int | None, str, int]
 # Every row and base of one poll, in a fixed order: what stale guards compare.
 Fingerprint = tuple[tuple[RowKey, ...], tuple[BaseKey, ...]]
+# A poll's own columns as (pollster identifier, fieldwork_start,
+# fieldwork_end, sample_size, source_url): what a source was checked against.
+PollHead = tuple[str, str, str, int | None, str | None]
 
 _INSERT_BASE_SQL = (
     "INSERT INTO poll_bases"
@@ -61,6 +64,11 @@ _BASES_SQL = (
     "SELECT b.poll_id, b.region_id, b.unweighted_n, b.weighted_n, b.kind,"
     " b.split_from_macro FROM poll_bases AS b"
 )
+# The PollHead columns, in order.
+_HEAD_COLUMNS = (
+    "ps.identifier, p.fieldwork_start, p.fieldwork_end, p.sample_size, p.source_url"
+)
+_HEAD_FROM = " FROM polls AS p JOIN pollsters AS ps ON ps.id = p.pollster_id"
 
 
 class MissingTableError(Exception):
@@ -134,6 +142,17 @@ class StoredPoll:
         """True when the poll already has stored bases."""
         return bool(self.fingerprint[1])
 
+    @property
+    def head(self) -> PollHead:
+        """The poll's own columns, as :func:`poll_head` re-reads them."""
+        return (
+            self.pollster,
+            self.fieldwork_start,
+            self.fieldwork_end,
+            self.sample_size,
+            self.source_url,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class StoredMap:
@@ -182,6 +201,58 @@ def poll_fingerprint(conn: sqlite3.Connection, poll_id: int) -> Fingerprint:
     return _fingerprint(row_keys, base_keys)
 
 
+def poll_head(conn: sqlite3.Connection, poll_id: int) -> PollHead | None:
+    """Read one poll's own columns, or None if it is not a poll on ``MAP_NAME``."""
+    row = conn.execute(
+        f"SELECT {_HEAD_COLUMNS}{_HEAD_FROM}"
+        " JOIN maps AS m ON m.id = p.map_id WHERE p.id = ? AND m.name = ?",
+        (poll_id, MAP_NAME),
+    ).fetchone()
+    if row is None:
+        return None
+    pollster, start, end, sample_size, source_url = row
+    return pollster, start, end, sample_size, source_url
+
+
+def stale_reason(
+    conn: sqlite3.Connection,
+    poll_id: int,
+    head: PollHead,
+    fingerprint: Fingerprint,
+) -> str | None:
+    """Say how a poll differs from what was read at planning time, if it does.
+
+    Call it inside the write transaction (after ``BEGIN IMMEDIATE``) so
+    nothing can change between the check and the write. Comparing the poll's
+    own columns as well as its rows catches a poll deleted and its id reused
+    by SQLite for a new poll.
+
+    Args:
+        conn: Open SQLite connection.
+        poll_id: ``polls.id``.
+        head: The poll's columns as planned (:attr:`StoredPoll.head`).
+        fingerprint: Its rows and bases as planned.
+
+    Returns:
+        Why the planned poll is no longer the stored one, or None when it
+        is unchanged.
+    """
+    current = poll_head(conn, poll_id)
+    if current is None:
+        return "poll deleted (or moved off the map) since planning"
+    if current != head:
+        return (
+            "poll details (pollster, fieldwork, sample size, source) changed"
+            " since planning"
+        )
+    rows, bases = poll_fingerprint(conn, poll_id)
+    if rows != fingerprint[0]:
+        return "poll rows changed since planning"
+    if bases != fingerprint[1]:
+        return "poll bases changed since planning"
+    return None
+
+
 def load_stored_polls(
     conn: sqlite3.Connection,
     pollsters: Sequence[str] = (),
@@ -214,12 +285,7 @@ def load_stored_polls(
     region_names = {ref.id: name for name, ref in regions.items()}
     party_names = dict(conn.execute("SELECT id, name FROM parties").fetchall())
 
-    query = (
-        "SELECT p.id, ps.identifier, p.fieldwork_start, p.fieldwork_end,"
-        " p.sample_size, p.source_url"
-        " FROM polls AS p JOIN pollsters AS ps ON ps.id = p.pollster_id"
-        " WHERE p.map_id = ?"
-    )
+    query = f"SELECT p.id, {_HEAD_COLUMNS}{_HEAD_FROM} WHERE p.map_id = ?"
     params: list[object] = [map_id]
     if is_without_bases_only:
         query += (

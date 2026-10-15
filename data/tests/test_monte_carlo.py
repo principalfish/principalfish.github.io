@@ -37,18 +37,26 @@ from model_support.monte_carlo import (
     SimulationInputs,
     SimulationSummary,
     build_simulation_inputs,
+    centring_sd_ratio,
+    centring_weights,
     config_hash,
     deterministic_projection,
     draw_errors,
     error_scales,
     load_draws,
+    regional_sampling_multinomial,
     project_seats_vectorised,
     run_simulations,
     save_draws,
     seat_outcome_probabilities,
     share_scale_array,
 )
-from model_support.uncertainty import UncertaintyConfig, UncertaintyError, share_scale
+from model_support.uncertainty import (
+    UncertaintyConfig,
+    UncertaintyError,
+    share_scale,
+    weighted_average_variance,
+)
 from run_uns_model import project_seat_votes
 
 SEED = date(2026, 10, 5).toordinal()
@@ -601,10 +609,22 @@ class TestErrorScales:
             )
             assert scales.national_sd[k] == pytest.approx(expected, rel=1e-12)
             for r in range(inputs.region_count):
+                # Only σ_reg: the sampling variance V (0.8) is no longer
+                # folded into a raw SD that centring would shrink; it has
+                # its own zero-sum term (TestRegionalSampling).
                 systematic = 1.3 * share_scale(inputs.region_average[r, k], config)
                 polled = inputs.region_polled[r, k]
-                expected = math.sqrt(0.8 + systematic**2) if polled else 0.0
-                assert scales.regional_sd[r, k] == pytest.approx(expected, rel=1e-12)
+                expected = systematic if polled else 0.0
+                assert scales.regional_systematic_sd[r, k] == pytest.approx(
+                    expected, rel=1e-12
+                )
+        # Every polled cell has V = 0.8, delivered exactly by the zero-sum
+        # sampling term.
+        expected_variance = np.where(inputs.region_polled, 0.8, 0.0)
+        assert scales.regional_sampling_sd**2 == pytest.approx(
+            expected_variance, rel=1e-9, abs=1e-12
+        )
+        assert scales.regional_sampling_exact.all()
         for n in range(inputs.seat_count):
             for k in range(inputs.party_count):
                 expected = 3.7 * share_scale(projected[n, k], config)
@@ -728,6 +748,283 @@ class TestDrawErrors:
         assert draws.swing_type.std() == pytest.approx(0.3, rel=0.03)
         assert abs(draws.swing_type.mean()) < 0.01
 
+
+
+# ── Regional sampling error ──────────────────────────────────────────────────
+
+# Sampling only: every systematic, seat and swing-type term switched off.
+SAMPLING_ONLY = UncertaintyConfig(
+    sigma_nat=0.0, sigma_reg=0.0, sigma_seat=0.0, sigma_lambda=0.0
+)
+SAMPLING_DRAWS = 200_000
+# The variance of a variance estimate from n normal draws has relative SD
+# √(2/n), 0.3% at 200k; 2% is over six of those.
+VARIANCE_TOLERANCE = 0.02
+
+
+def _sampling_inputs(
+    region_shares: dict[int, dict[int, float]],
+    region_variances: dict[int, dict[int, float]],
+    *,
+    national_shares: dict[int, float] | None = None,
+    national_variances: dict[int, float] | None = None,
+) -> SimulationInputs:
+    """One seat per region, every party standing everywhere, no swing."""
+    parties = sorted({p for shares in region_shares.values() for p in shares})
+    regions = sorted(region_shares)
+    votes = {
+        100 + r: {party: 1000.0 * (1 + i) for i, party in enumerate(parties)}
+        for r in regions
+    }
+    return build_simulation_inputs(
+        config=SAMPLING_ONLY,
+        seat_party_vote_totals=votes,
+        region_by_seat_id={100 + r: r for r in regions},
+        party_universe=parties,
+        region_swings={},
+        region_baseline_shares={r: dict.fromkeys(parties, 10.0) for r in regions},
+        region_average_shares={
+            r: shares for r, shares in region_shares.items() if r in region_variances
+        },
+        region_variances=region_variances,
+        national_average_shares=national_shares or {},
+        national_variances=national_variances or {},
+    )
+
+
+def _sampling_draws(
+    inputs: SimulationInputs, count: int = SAMPLING_DRAWS, seed: int = SEED
+) -> tuple[ErrorDraws, np.ndarray]:
+    """Draw *count* simulations; return the draws and the analytic SDs."""
+    projected = deterministic_projection(inputs).share[0]
+    scales = error_scales(inputs, SAMPLING_ONLY, projected)
+    draws = draw_errors(ErrorStreams.from_seed(seed), scales, count)
+    return draws, scales.regional_sampling_sd
+
+
+def _variance(
+    shares: dict[int, float], entries: list[tuple[float, float]]
+) -> dict[int, float]:
+    """V per party from the real 3a formula, every party on the same polls."""
+    result: dict[int, float] = {}
+    for party, share in shares.items():
+        average = weighted_average_variance(entries, share)
+        assert average is not None
+        result[party] = average.variance
+    return result
+
+
+class TestRegionalSampling:
+    """The sampling term delivers the analytic V after the zero-sum step."""
+
+    def test_two_party_even_split_keeps_its_full_variance(self) -> None:
+        # 50 × 50 / 1000 = 2.5 pt². Drawing raw N(0, 2.5) and centring with
+        # q = (½, ½) gave (e₁ − e₂)/2, variance 1.25.
+        variances = _variance({1: 50.0, 2: 50.0}, [(1.0, 1000.0)])
+        assert variances == {1: pytest.approx(2.5), 2: pytest.approx(2.5)}
+        inputs = _sampling_inputs({7: {1: 50.0, 2: 50.0}}, {7: variances})
+
+        draws, sd = _sampling_draws(inputs)
+
+        assert sd[0] ** 2 == pytest.approx([2.5, 2.5], rel=1e-12)
+        empirical = draws.regional[:, 0].var(axis=0)
+        assert empirical == pytest.approx([2.5, 2.5], rel=VARIANCE_TOLERANCE)
+        # The pre-fix construction would sit at half of that.
+        assert (empirical > 2.0).all()
+
+    def test_unequal_multiparty_shares_reproduce_each_partys_variance(
+        self,
+    ) -> None:
+        shares = {1: 41.0, 2: 29.0, 3: 18.0, 4: 9.0, 5: 3.0}
+        entries = [(1.0, 800.0), (0.6, 1200.0), (0.3, 450.0)]
+        variances = _variance(shares, entries)
+        inputs = _sampling_inputs({7: shares}, {7: variances})
+        expected = np.array([variances[party] for party in inputs.party_ids])
+
+        draws, sd = _sampling_draws(inputs)
+
+        assert sd[0] ** 2 == pytest.approx(expected, rel=1e-12)
+        errors = draws.regional[:, 0]
+        assert errors.var(axis=0) == pytest.approx(expected, rel=VARIANCE_TOLERANCE)
+        # Covariance c·(diag(q) − qqᵀ): parties pull against each other in
+        # proportion to their sizes.
+        q = np.array([shares[party] for party in inputs.party_ids]) / 100
+        c = expected[0] / (q[0] * (1 - q[0]))
+        analytic = c * (np.diag(q) - np.outer(q, q))
+        empirical = np.cov(errors, rowvar=False)
+        assert np.abs(empirical - analytic).max() < 0.03 * analytic.max()
+
+    def test_shares_short_of_100_still_reproduce_each_variance(self) -> None:
+        # Polled shares sum to 96 (the rest unlisted), as most real polls do:
+        # V is not exactly of the form c·q(1 − q) for the normalised shares,
+        # so the shape t moves a little off q to keep every V exact.
+        shares = {1: 30.0, 2: 28.0, 3: 20.0, 4: 10.0, 5: 8.0}
+        variances = _variance(shares, [(1.0, 900.0), (0.5, 700.0)])
+        inputs = _sampling_inputs({7: shares}, {7: variances})
+        projected = deterministic_projection(inputs).share[0]
+        scales = error_scales(inputs, SAMPLING_ONLY, projected)
+
+        draws, sd = _sampling_draws(inputs)
+
+        expected = np.array([variances[party] for party in inputs.party_ids])
+        assert scales.regional_sampling_exact.tolist() == [True]
+        assert sd[0] ** 2 == pytest.approx(expected, rel=1e-9)
+        assert draws.regional[:, 0].var(axis=0) == pytest.approx(
+            expected, rel=VARIANCE_TOLERANCE
+        )
+        q = scales.regional_weight[0]
+        t = scales.regional_sampling_shape[0]
+        assert t.sum() == pytest.approx(1.0, rel=1e-12)
+        assert not np.allclose(t, q, rtol=1e-6)
+        assert t == pytest.approx(q, abs=0.005)
+
+    def test_party_on_fewer_polls_keeps_its_larger_variance(self) -> None:
+        # Party 3 is missing from one of the two polls, so its average (and
+        # its V) rests on one poll.
+        shares = {1: 38.0, 2: 33.0, 3: 24.0, 4: 5.0}
+        two_polls = [(1.0, 900.0), (0.5, 700.0)]
+        variances = {
+            **_variance({1: 38.0, 2: 33.0, 4: 5.0}, two_polls),
+            **_variance({3: 24.0}, two_polls[:1]),
+        }
+        inputs = _sampling_inputs({7: shares}, {7: variances})
+
+        draws, sd = _sampling_draws(inputs)
+
+        expected = np.array([variances[party] for party in inputs.party_ids])
+        assert sd[0] ** 2 == pytest.approx(expected, rel=1e-9)
+        assert draws.regional[:, 0].var(axis=0) == pytest.approx(
+            expected, rel=VARIANCE_TOLERANCE
+        )
+
+    def test_majority_party_takes_the_larger_root(self) -> None:
+        # A party on 60% of the polled vote: t₁ > ½ is the other root.
+        shares = {1: 60.0, 2: 30.0, 3: 10.0}
+        variances = _variance(shares, [(1.0, 400.0)])
+        inputs = _sampling_inputs({7: shares}, {7: variances})
+        projected = deterministic_projection(inputs).share[0]
+
+        scales = error_scales(inputs, SAMPLING_ONLY, projected)
+
+        expected = np.array([variances[party] for party in inputs.party_ids])
+        assert scales.regional_sampling_sd[0] ** 2 == pytest.approx(expected, rel=1e-9)
+        assert scales.regional_sampling_shape[0] == pytest.approx(
+            [0.6, 0.3, 0.1], rel=1e-6
+        )
+
+    def test_fallback_region_uses_the_national_average_and_variance(self) -> None:
+        national = {1: 44.0, 2: 36.0, 3: 20.0}
+        national_variances = _variance(national, [(1.0, 1500.0), (0.8, 2000.0)])
+        regional = {1: 30.0, 2: 45.0, 3: 25.0}
+        regional_variances = _variance(regional, [(1.0, 250.0)])
+        inputs = _sampling_inputs(
+            {7: regional, 8: national},
+            {7: regional_variances},  # region 8 has no crossbreaks
+            national_shares=national,
+            national_variances=national_variances,
+        )
+        assert inputs.region_fallback.tolist() == [[False] * 3, [True] * 3]
+
+        draws, sd = _sampling_draws(inputs)
+
+        for r, variances in enumerate((regional_variances, national_variances)):
+            expected = np.array([variances[party] for party in inputs.party_ids])
+            assert sd[r] ** 2 == pytest.approx(expected, rel=1e-12)
+            assert draws.regional[:, r].var(axis=0) == pytest.approx(
+                expected, rel=VARIANCE_TOLERANCE
+            )
+
+    def test_every_draw_is_zero_sum_and_is_all_sampling(self) -> None:
+        shares = {1: 41.0, 2: 29.0, 3: 18.0, 4: 9.0, 5: 3.0}
+        inputs = _sampling_inputs({7: shares}, {7: _variance(shares, [(1.0, 600.0)])})
+
+        draws, _ = _sampling_draws(inputs, count=5000)
+
+        assert np.abs(draws.regional.sum(axis=-1)).max() < 1e-9
+        assert np.abs(draws.regional_sampling.sum(axis=-1)).max() < 1e-9
+        assert np.array_equal(draws.regional, draws.regional_sampling)
+        assert draws.regional.std() > 0.5
+
+    def test_systematic_term_is_still_drawn_raw_then_centred(self) -> None:
+        # σ_reg alone, V = 0: the systematic term keeps the old path, so its
+        # spread is the raw SD times the centring ratio.
+        shares = {1: 41.0, 2: 29.0, 3: 18.0, 4: 9.0, 5: 3.0}
+        inputs = _sampling_inputs({7: shares}, {7: dict.fromkeys(shares, 0.0)})
+        config = dataclasses.replace(SAMPLING_ONLY, sigma_reg=1.5)
+        projected = deterministic_projection(inputs).share[0]
+        scales = error_scales(inputs, config, projected)
+
+        draws = draw_errors(ErrorStreams.from_seed(SEED), scales, SAMPLING_DRAWS)
+
+        assert scales.regional_sampling_scale.tolist() == [0.0]
+        assert (draws.regional_sampling == 0).all()
+        raw = scales.regional_systematic_sd[0]
+        ratio = centring_sd_ratio(raw, scales.regional_weight[0])
+        assert draws.regional[:, 0].std(axis=0) == pytest.approx(
+            raw * ratio, rel=VARIANCE_TOLERANCE / 2
+        )
+
+    def test_small_and_infeasible_regions(self) -> None:
+        # Rows: one polled party; none; two with equal V; two with unequal
+        # V (a zero sum forces them equal); one V above the others' total.
+        receives = np.array(
+            [
+                [True, False, False],
+                [False, False, False],
+                [True, True, False],
+                [True, True, False],
+                [True, True, True],
+            ]
+        )
+        variance = np.array(
+            [
+                [3.0, 9.0, 9.0],
+                [1.0, 1.0, 1.0],
+                [2.0, 2.0, 9.0],
+                [3.0, 1.0, 9.0],
+                [10.0, 1.0, 1.0],
+            ]
+        )
+        weights = centring_weights(np.array([[50.0, 30.0, 20.0]] * 5), receives)
+
+        fit = regional_sampling_multinomial(variance, receives, weights)
+
+        # Unpolled parties' variances (the 9s) do not count.
+        assert fit.exact.tolist() == [False, True, True, False, False]
+        assert fit.scale[:2].tolist() == [0.0, 0.0]
+        assert (fit.shape[:2] == 0).all()
+        delivered = fit.scale[:, np.newaxis] * fit.shape * (1 - fit.shape)
+        # Fallback: t = q, c keeps the total variance.
+        assert delivered[2, :2] == pytest.approx([2.0, 2.0], rel=1e-12)
+        assert delivered[3, :2] == pytest.approx([2.0, 2.0], rel=1e-12)
+        assert fit.shape[4] == pytest.approx([0.5, 0.3, 0.2], rel=1e-12)
+        assert delivered[4].sum() == pytest.approx(12.0, rel=1e-12)
+        assert (delivered[:, 2][:4] == 0).all()
+
+    def test_chunking_and_seed(self) -> None:
+        shares = {1: 41.0, 2: 29.0, 3: 18.0, 4: 9.0, 5: 3.0}
+        inputs = _sampling_inputs(
+            {7: shares, 8: shares},
+            {
+                7: _variance(shares, [(1.0, 600.0)]),
+                8: _variance(shares, [(1.0, 300.0)]),
+            },
+        )
+        config = dataclasses.replace(SAMPLING_ONLY, sigma_reg=1.5)
+        projected = deterministic_projection(inputs).share[0]
+        scales = error_scales(inputs, config, projected)
+
+        whole = draw_errors(ErrorStreams.from_seed(SEED), scales, 300)
+        streams = ErrorStreams.from_seed(SEED)
+        parts = [draw_errors(streams, scales, count) for count in (1, 99, 200)]
+        again = draw_errors(ErrorStreams.from_seed(SEED), scales, 300)
+        other = draw_errors(ErrorStreams.from_seed(SEED + 1), scales, 300)
+
+        for name in ("regional", "regional_sampling"):
+            joined = np.concatenate([getattr(part, name) for part in parts])
+            assert np.array_equal(joined, getattr(whole, name)), name
+            assert np.array_equal(getattr(again, name), getattr(whole, name)), name
+            assert not np.allclose(getattr(other, name), getattr(whole, name)), name
 
 # ── Projection ────────────────────────────────────────────────────────────────
 

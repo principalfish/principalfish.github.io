@@ -16,15 +16,38 @@ Each simulated election j draws (:func:`draw_errors`):
 
 - a national error per party, ``N(0, (σ_nat·s(P̂ₖ))²)``, shared by every seat
   in every region where the party is polled;
-- a regional error per region and party, ``N(0, Vᵣ,ₖ + (σ_reg·s(P̂ᵣ,ₖ))²)``,
-  where V is the sampling variance of the regional poll average;
+- a regional systematic error per region and party,
+  ``N(0, (σ_reg·s(P̂ᵣ,ₖ))²)``;
 - a seat error per seat and party, ``N(0, (σ_seat·s(p̂ₛ,ₖ))²)`` at the
   deterministic projected share p̂;
 - a swing-type factor ``λ ~ N(0, σ_λ²)``, shared by every seat.
 
-Each error vector is centred across parties (``ẽₖ = eₖ − qₖ·Σe``, q the shares
-the term scales by, normalised over the parties that receive it), so an
-overstated party implies others are understated in proportion to their size.
+Each of those error vectors is centred across parties (``ẽₖ = eₖ − qₖ·Σe``, q
+the shares the term scales by, normalised over the parties that receive it),
+so an overstated party implies others are understated in proportion to their
+size. The σs are raw (pre-centring) SDs: centring shrinks them, and the
+calibration allows for that.
+
+The regional sampling error of the poll average is drawn differently, so that
+centring does not shrink it below the variance V that the effective sample
+sizes imply. It is drawn already zero-sum, with the covariance of a
+multinomial share average (:func:`regional_sampling_multinomial`)::
+
+    e_samp = √cᵣ · (√t ⊙ ε − t · Σⱼ √tⱼ εⱼ),   ε ~ N(0, I)
+    Cov(e_samp) = cᵣ · (diag(t) − t tᵀ),      Σₖ tₖ = 1
+
+with (cᵣ, t) chosen so that every polled party's variance cᵣ·tₖ(1 − tₖ) is
+its Vᵣ,ₖ. When the V come from one set of polls (one effective n per poll)
+and the polled shares sum to 100, ``V = 100²·C·qₖ(1 − qₖ)`` with q the
+averaged shares, and the fit is exactly t = q, cᵣ = 100²·C. When they are not
+quite of that form (shares summing to a little under 100, a party missing
+from some polls, a region mixing its own crossbreaks with national fallback
+cells), t moves away from q just enough to keep every V exact. Only when no
+such (cᵣ, t) exists (two polled parties with different V, or one party's V
+above the others' total) does it fall back to t = q with cᵣ keeping the
+region's total variance Σₖ Vᵣ,ₖ. The regional error applied is the centred
+systematic term plus this sampling term.
+
 A party with no poll average in a region (flagged in the inputs: the NI
 parties everywhere, SNP and Plaid outside their nations) gets neither the
 national nor the regional error there, only seat noise; the national error is
@@ -36,7 +59,7 @@ scaled by its regional share, carries most of its uncertainty.
 The seat projection (:func:`project_seats_vectorised`) is then::
 
     swing = (1 − λ)·Δ + λ·Δ·p⁰/P⁰        (additive only where λ does not apply)
-    x     = p⁰ + swing + ẽ_nat[R(s)] + ẽ_reg[R(s)] + ẽ_seat
+    x     = p⁰ + swing + ẽ_nat[R(s)] + (ẽ_reg + e_samp)[R(s)] + ẽ_seat
     share = max(0, x) / Σ max(0, x)       (baseline shares if that sum is 0)
     winner = argmax(share)                (first party in input order on a tie)
 
@@ -52,7 +75,7 @@ import hashlib
 import json
 import zipfile
 import zlib
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
@@ -132,6 +155,8 @@ class SimulationInputs:
             not polled.
         region_variance: Sampling variance V of that average in points
             squared, shape (R, K): the national average's for a fallback cell.
+            Sets the size of the regional sampling error
+            (:func:`regional_sampling_multinomial`).
         region_polled: Whether each region and party has a poll average, and
             so gets the national and regional errors there, shape (R, K).
         region_fallback: Whether a polled cell's average and variance are the
@@ -469,7 +494,10 @@ class ErrorScales:
     """The SD and centring weights of each error term, before any draws.
 
     A party that does not receive a term has SD 0 and weight 0 for it, so it
-    neither moves nor absorbs part of the other parties' centring.
+    neither moves nor absorbs part of the other parties' centring. The SDs
+    of the national, regional systematic and seat terms are raw (before
+    centring); the regional sampling term is drawn zero-sum with variance
+    :attr:`regional_sampling_sd` squared.
 
     Attributes:
         national_sd: SD of the national error, shape (K,).
@@ -480,8 +508,19 @@ class ErrorScales:
         national_region_weight: Centring weights for the national error as
             applied in each region, shape (R, K): national shares normalised
             over the parties it reaches there.
-        regional_sd: SD of the regional error, shape (R, K).
-        regional_weight: Centring weights per region, shape (R, K).
+        regional_systematic_sd: Raw SD of the regional systematic error
+            ``σ_reg·s(P̂ᵣ,ₖ)``, shape (R, K).
+        regional_weight: Centring weights of the systematic term per region,
+            shape (R, K): the averaged shares normalised over the polled
+            parties.
+        regional_sampling_scale: cᵣ, the scale of the regional sampling
+            error in points squared, shape (R,).
+        regional_sampling_shape: t, its multinomial shape, shape (R, K),
+            summing to 1 over the polled parties (0 elsewhere); equal to
+            *regional_weight* when the variances are multinomial-shaped.
+        regional_sampling_exact: Whether each region's sampling variances
+            reproduce V exactly, shape (R,) (False on the total-variance
+            fallback).
         seat_sd: SD of the seat error, shape (N, K).
         seat_weight: Centring weights per seat, shape (N, K).
         sigma_lambda: SD of the swing-type factor λ.
@@ -491,11 +530,26 @@ class ErrorScales:
     national_weight: FloatArray
     national_reach: BoolArray
     national_region_weight: FloatArray
-    regional_sd: FloatArray
+    regional_systematic_sd: FloatArray
     regional_weight: FloatArray
+    regional_sampling_scale: FloatArray
+    regional_sampling_shape: FloatArray
+    regional_sampling_exact: BoolArray
     seat_sd: FloatArray
     seat_weight: FloatArray
     sigma_lambda: float
+
+    @property
+    def regional_sampling_sd(self) -> FloatArray:
+        """SD of each region and party's sampling error, shape (R, K).
+
+        ``√(cᵣ·tₖ(1 − tₖ))``: the zero-sum draw's exact marginal SD, √Vᵣ,ₖ
+        wherever *regional_sampling_exact*; 0 for an unpolled party.
+        """
+        t = self.regional_sampling_shape
+        variance = self.regional_sampling_scale[:, np.newaxis] * t * (1 - t)
+        sd: FloatArray = np.sqrt(variance)
+        return sd
 
 
 def centring_weights(shares: FloatArray, receives: BoolArray) -> FloatArray:
@@ -518,6 +572,148 @@ def centring_weights(shares: FloatArray, receives: BoolArray) -> FloatArray:
     return weights
 
 
+@dataclass(frozen=True, slots=True, eq=False)
+class SamplingMultinomial:
+    """The regional sampling error's covariance ``cᵣ·(diag(t) − t tᵀ)``.
+
+    Attributes:
+        scale: cᵣ per region in points squared, shape (R,).
+        shape: t per region and party, shape (R, K), summing to 1 over the
+            parties that get the term (all 0 where none does).
+        exact: Whether every party's variance ``cᵣ·tₖ(1 − tₖ)`` is its V,
+            shape (R,).
+    """
+
+    scale: FloatArray
+    shape: FloatArray
+    exact: BoolArray
+
+
+# Bisection steps for the multinomial fit: the bracket is at most ~2**64
+# wide, so 200 halvings reach the float64 root.
+_FIT_STEPS: Final = 200
+_FIT_DOUBLINGS: Final = 128
+
+
+def _small_root(variance: FloatArray, scale: float) -> FloatArray:
+    """The root t ≤ ½ of ``scale·t(1 − t) = variance``, without cancellation."""
+    x = variance / scale
+    root: FloatArray = 2 * x / (1 + np.sqrt(np.maximum(1 - 4 * x, 0.0)))
+    return root
+
+
+def _bisect(gap: Callable[[float], float], lo: float, hi: float) -> float:
+    """Root of a function positive at *lo* and non-positive at *hi*."""
+    for _ in range(_FIT_STEPS):
+        middle = 0.5 * (lo + hi)
+        if middle in (lo, hi):
+            break
+        if gap(middle) > 0:
+            lo = middle
+        else:
+            hi = middle
+    return 0.5 * (lo + hi)
+
+
+def _fit_multinomial(variance: FloatArray) -> tuple[float, FloatArray] | None:
+    """Solve ``c·tₖ(1 − tₖ) = Vₖ`` with Σt = 1 for three or more positive V.
+
+    Given c, each tₖ is a root of a quadratic; at most one party can take the
+    larger root (tₖ > ½). With every party on the smaller root, Σt falls as c
+    grows, so there is one c when Σt ≥ 1 at the smallest admissible c, 4·max V.
+    Otherwise the largest-V party takes the larger root, which needs its V
+    below the others' total.
+
+    Returns:
+        ``(c, t)``, or None when no such multinomial exists.
+    """
+    dominant = int(np.argmax(variance))
+    lowest = 4 * float(variance[dominant])
+    if float(_small_root(variance, lowest).sum()) >= 1:
+
+        def gap(scale: float) -> float:
+            return float(_small_root(variance, scale).sum()) - 1
+
+        highest = max(lowest, 2 * float(variance.sum()))  # Σt ≤ 2ΣV/c there
+        scale = _bisect(gap, lowest, highest)
+        shape = _small_root(variance, scale)
+    else:
+        others = np.delete(variance, dominant)
+        if float(others.sum()) <= float(variance[dominant]):
+            return None
+        own = variance[dominant : dominant + 1]
+
+        def gap(scale: float) -> float:
+            # Larger root for the dominant party: Σt − 1 = Σ others − own.
+            mine = float(_small_root(own, scale)[0])
+            return mine - float(_small_root(others, scale).sum())
+
+        highest = lowest
+        for _ in range(_FIT_DOUBLINGS):
+            highest *= 2
+            if gap(highest) <= 0:
+                break
+        else:
+            return None
+        scale = _bisect(gap, lowest, highest)
+        shape = _small_root(variance, scale)
+        shape[dominant] = 1 - shape[dominant]
+    return scale, shape / shape.sum()
+
+
+def regional_sampling_multinomial(
+    variance: FloatArray, receives: BoolArray, weights: FloatArray
+) -> SamplingMultinomial:
+    """Fit each region's zero-sum sampling covariance to its variances V.
+
+    The sampling error is drawn as ``√c·(√t ⊙ ε − t·Σⱼ √tⱼ εⱼ)``, whose
+    covariance ``c·(diag(t) − t tᵀ)`` sums to zero across parties. For the
+    3a variance of an average of polls, ``Vₖ = 100²·C·qₖ(1 − qₖ)`` with one
+    factor C (``Σwᵢ²/n_eff,ᵢ ÷ (Σwᵢ)²``) when every party's average comes
+    from the same polls and the polled shares q sum to 1; then t = q and
+    c = 100²·C reproduce every Vₖ, i.e. the multinomial covariance of the
+    weighted average. In general (c, t) is solved for so that
+    ``c·tₖ(1 − tₖ) = Vₖ`` for every polled party, which keeps both each V and
+    the zero sum exactly; t stays close to q when the V are close to that
+    form. Where no solution exists (two polled parties with unequal V, which
+    a zero sum forces equal, or one V above the others' total), t falls back
+    to the shares q and c to ``Σₖ Vₖ / Σₖ qₖ(1 − qₖ)``, which keeps the
+    region's total sampling variance. A party with V = 0 gets no sampling
+    error and fewer than two parties with V > 0 get none at all.
+
+    Args:
+        variance: V per region and party in points squared (parties on the
+            last axis).
+        receives: Which parties get the term (the polled cells).
+        weights: The shares q, normalised over the polled parties
+            (:func:`centring_weights`), for the fallback.
+
+    Returns:
+        c, t and whether each region's fit is exact.
+    """
+    regions = variance.shape[0]
+    scale = np.zeros(regions)
+    shape = np.zeros(variance.shape)
+    exact = np.ones(regions, dtype=np.bool_)
+    for r in range(regions):
+        positive = receives[r] & (variance[r] > 0)
+        count = int(positive.sum())
+        if count < 2:
+            exact[r] = count == 0
+            continue
+        values = variance[r, positive]
+        fit = _fit_multinomial(values) if count > 2 else None
+        if fit is not None:
+            scale[r], shape[r, positive] = fit
+            continue
+        q = weights[r, positive]
+        q = q / q.sum() if q.sum() > 0 else np.full(count, 1 / count)
+        scale[r] = float(values.sum()) / float((q * (1 - q)).sum())
+        shape[r, positive] = q
+        exact[r] = count == 2 and bool(np.isclose(values[0], values[1], rtol=1e-12))
+    return SamplingMultinomial(scale=scale, shape=shape, exact=exact)
+
+
 def error_scales(
     inputs: SimulationInputs,
     config: UncertaintyConfig,
@@ -538,7 +734,10 @@ def error_scales(
     regional_systematic = config.sigma_reg * share_scale_array(
         inputs.region_average, config
     )
-    regional = np.sqrt(inputs.region_variance + regional_systematic**2)
+    regional_weight = centring_weights(inputs.region_average, inputs.region_polled)
+    sampling = regional_sampling_multinomial(
+        inputs.region_variance, inputs.region_polled, regional_weight
+    )
     seat_receives = np.ones(projected_share.shape, dtype=np.bool_)
     reach = inputs.region_polled & inputs.national_polled
     national_by_region = np.broadcast_to(inputs.national_average, reach.shape)
@@ -549,8 +748,13 @@ def error_scales(
         ),
         national_reach=reach,
         national_region_weight=centring_weights(national_by_region, reach),
-        regional_sd=np.where(inputs.region_polled, regional, 0.0),
-        regional_weight=centring_weights(inputs.region_average, inputs.region_polled),
+        regional_systematic_sd=np.where(
+            inputs.region_polled, regional_systematic, 0.0
+        ),
+        regional_weight=regional_weight,
+        regional_sampling_scale=sampling.scale,
+        regional_sampling_shape=sampling.shape,
+        regional_sampling_exact=sampling.exact,
         seat_sd=config.sigma_seat * share_scale_array(projected_share, config),
         seat_weight=centring_weights(projected_share, seat_receives),
         sigma_lambda=config.sigma_lambda,
@@ -563,10 +767,13 @@ class ErrorStreams:
 
     Each term draws its standard normals from its own stream in simulation
     order, so simulation j gets the same draws however the run is chunked.
+    Per simulation the streams hold: national, K normals; regional, 2·R·K
+    normals, the systematic term's R×K (region-major) then the sampling
+    term's R×K; seat, N×K; swing type, one.
 
     Attributes:
         national: Stream for the national errors.
-        regional: Stream for the regional errors.
+        regional: Stream for the regional errors, systematic and sampling.
         seat: Stream for the seat errors.
         swing_type: Stream for λ.
     """
@@ -608,7 +815,10 @@ class ErrorDraws:
         national_by_region: The national error as applied in each region,
             shape (S, R, K): zero where the party is not polled, re-centred
             over the parties it reaches.
-        regional: ẽ_reg, shape (S, R, K).
+        regional: The regional error as applied, shape (S, R, K): the
+            centred systematic error plus the sampling error.
+        regional_sampling: The sampling part of *regional*, shape (S, R, K),
+            zero-sum by construction; the systematic part is the difference.
         seat: ẽ_seat, shape (S, N, K), float32.
         swing_type: λ, shape (S,).
     """
@@ -616,6 +826,7 @@ class ErrorDraws:
     national: FloatArray
     national_by_region: FloatArray
     regional: FloatArray
+    regional_sampling: FloatArray
     seat: NDArray[np.float32]
     swing_type: FloatArray
 
@@ -640,6 +851,7 @@ class ErrorDraws:
             national=np.zeros((count, k)),
             national_by_region=np.zeros((count, r, k)),
             regional=np.zeros((count, r, k)),
+            regional_sampling=np.zeros((count, r, k)),
             seat=np.zeros((count, n, k), dtype=np.float32),
             swing_type=np.zeros(count),
         )
@@ -679,8 +891,33 @@ def _centre(errors: NDArray[Float], weights: NDArray[Float]) -> NDArray[Float]:
     return errors
 
 
+def _sampling_errors(
+    normals: NDArray[np.float32], shape: FloatArray, scale: FloatArray
+) -> FloatArray:
+    """Zero-sum multinomial errors ``√c·(√t ⊙ ε − t·Σⱼ √tⱼ εⱼ)``.
+
+    With Σt = 1 over the receivers the result sums to zero and has
+    covariance ``c·(diag(t) − t tᵀ)``; a party with t = 0 gets 0.
+
+    Args:
+        normals: Standard normals ε, shape (S, R, K).
+        shape: t per region and party, shape (R, K).
+        scale: c per region, shape (R,).
+    """
+    errors: FloatArray = np.sqrt(shape) * normals
+    totals = errors.sum(axis=-1, keepdims=True)
+    errors -= shape * totals
+    errors *= np.sqrt(scale)[:, np.newaxis]
+    return errors
+
+
 def draw_errors(streams: ErrorStreams, scales: ErrorScales, count: int) -> ErrorDraws:
-    """Draw the centred errors and λ for the next *count* simulations.
+    """Draw the centred errors, the sampling error and λ for *count* simulations.
+
+    The national, regional systematic and seat terms are drawn raw and
+    centred; the regional sampling term is drawn zero-sum
+    (:func:`regional_sampling_multinomial`) and added to the centred
+    systematic term, never centred itself.
 
     Args:
         streams: The random streams; each advances by *count* simulations.
@@ -691,7 +928,7 @@ def draw_errors(streams: ErrorStreams, scales: ErrorScales, count: int) -> Error
         The draws.
     """
     k = scales.national_sd.shape[0]
-    r = scales.regional_sd.shape[0]
+    r = scales.regional_systematic_sd.shape[0]
     n = scales.seat_sd.shape[0]
     # float32 normals are about twice as fast and ample for an error term.
     # The small national and regional terms are scaled up to float64; the
@@ -700,8 +937,16 @@ def draw_errors(streams: ErrorStreams, scales: ErrorScales, count: int) -> Error
         (count, k), dtype=np.float32
     )
     national_by_region = national[:, np.newaxis, :] * scales.national_reach
-    regional = scales.regional_sd * streams.regional.standard_normal(
-        (count, r, k), dtype=np.float32
+    # One block of 2·R·K normals per simulation (systematic, then sampling),
+    # so the regional stream stays in simulation order whatever the chunking.
+    regional_normals = streams.regional.standard_normal(
+        (count, 2, r, k), dtype=np.float32
+    )
+    systematic = scales.regional_systematic_sd * regional_normals[:, 0]
+    sampling = _sampling_errors(
+        regional_normals[:, 1],
+        scales.regional_sampling_shape,
+        scales.regional_sampling_scale,
     )
     seat = streams.seat.standard_normal((count, n, k), dtype=np.float32)
     seat *= scales.seat_sd.astype(np.float32)
@@ -711,7 +956,8 @@ def draw_errors(streams: ErrorStreams, scales: ErrorScales, count: int) -> Error
         national_by_region=_centre(
             national_by_region, scales.national_region_weight
         ),
-        regional=_centre(regional, scales.regional_weight),
+        regional=_centre(systematic, scales.regional_weight) + sampling,
+        regional_sampling=sampling,
         seat=_centre(seat, scales.seat_weight.astype(np.float32)),
         swing_type=swing_type,
     )
@@ -1286,7 +1532,8 @@ def config_hash(config: UncertaintyConfig) -> str:
 class SimulationDraws:
     """Every simulated election of a run, in compact dtypes.
 
-    S simulations, K parties, R regions, N seats. Errors are centred.
+    S simulations, K parties, R regions, N seats. Errors sum to zero across
+    parties.
 
     Attributes:
         party_ids: Party id per party index (K).
@@ -1303,8 +1550,9 @@ class SimulationDraws:
             polled party, shape (S, K), float32. Each region applied it
             re-centred over the parties polled there
             (``ErrorDraws.national_by_region``, not stored).
-        e_reg: The regional error in points as applied, shape (S, R, K),
-            float32.
+        e_reg: The total regional error in points as applied, shape
+            (S, R, K), float32: the centred systematic term plus the
+            sampling term (``ErrorDraws.regional``).
         winner: Party index of each seat's winner, shape (S, N), uint8.
         margin: Winner's share minus the runner-up's in points, shape (S, N),
             float16.

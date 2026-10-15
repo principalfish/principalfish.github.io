@@ -27,8 +27,16 @@ script repairs would otherwise fail the regional share check here.
 
 ``--dry-run`` opens the database read-only and prints the plan and the
 coverage it would reach. Without it, every insert is written in one
-transaction; a poll that gained bases since planning is left alone. Re-running
-finds nothing to do for polls already backfilled.
+transaction. Fetching every source takes a while, so inside that transaction
+each planned poll is first re-read and compared with what planning checked
+the source against (``scripts.poll_sources.stale_reason``: the poll's own
+columns plus the fingerprint of its rows and bases). A poll deleted, edited
+or given bases in the meantime is skipped and reported, and the others are
+still written. (``repair_regional_poll_rows.py`` aborts the whole run on the
+same guard instead, because it rewrites rows; here each poll's insert is
+independent and only adds rows, so one stale poll need not cost the rest of
+a long fetch.) Re-running re-plans the skipped polls and finds nothing to do
+for polls already backfilled.
 
 Usage:
     python data/scripts/backfill_poll_bases.py --dry-run
@@ -44,7 +52,7 @@ import sys
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from contextlib import closing
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Literal
 
@@ -65,13 +73,16 @@ from polls.importers.bases import PlannedPollBase, RegionRef, plan_poll_bases
 from scripts.migrate_add_us_poll_scope import open_database
 from scripts.poll_sources import (
     Fetcher,
+    Fingerprint,
     MissingTableError,
+    PollHead,
     StoredPoll,
     fetch_with_importer,
     insert_poll_bases,
     load_stored_polls,
     map_id_for,
     source_mismatch,
+    stale_reason,
 )
 
 
@@ -88,6 +99,9 @@ class BackfillItem:
         fieldwork_end: ``polls.fieldwork_end`` as stored (ISO date text).
         status: ``insert`` to write *bases*, ``skip`` to leave the poll alone.
         note: The skip reason, or a summary of the bases to insert.
+        head: The poll's own columns as read at planning time.
+        fingerprint: Its rows and bases as read at planning time; with
+            *head*, what the source was checked against.
         bases: The rows to insert (empty when skipped).
     """
 
@@ -96,6 +110,8 @@ class BackfillItem:
     fieldwork_end: str
     status: Status
     note: str
+    head: PollHead
+    fingerprint: Fingerprint
     bases: tuple[PlannedPollBase, ...] = field(default=())
 
     def line(self) -> str:
@@ -129,10 +145,22 @@ def _describe(bases: Sequence[PlannedPollBase]) -> str:
 def _plan_one(
     poll: StoredPoll, regions: Mapping[str, RegionRef], fetch: Fetcher
 ) -> BackfillItem:
-    def skip(note: str) -> BackfillItem:
+    def item(
+        status: Status, note: str, bases: Sequence[PlannedPollBase] = ()
+    ) -> BackfillItem:
         return BackfillItem(
-            poll.poll_id, poll.pollster, poll.fieldwork_end, "skip", note
+            poll.poll_id,
+            poll.pollster,
+            poll.fieldwork_end,
+            status,
+            note,
+            poll.head,
+            poll.fingerprint,
+            tuple(bases),
         )
+
+    def skip(note: str) -> BackfillItem:
+        return item("skip", note)
 
     if poll.pollster not in IMPORTERS:
         return skip("no importer for this pollster")
@@ -157,14 +185,7 @@ def _plan_one(
         return skip(f"bases could not be placed: {err}")
     if not planned:
         return skip("no base could be placed on the map's regions")
-    return BackfillItem(
-        poll.poll_id,
-        poll.pollster,
-        poll.fieldwork_end,
-        "insert",
-        _describe(planned),
-        tuple(planned),
-    )
+    return item("insert", _describe(planned), planned)
 
 
 def plan_backfill(
@@ -197,13 +218,32 @@ def plan_backfill(
     return [_plan_one(poll, stored.regions, fetch) for poll in stored.polls]
 
 
+@dataclass(frozen=True, slots=True)
+class BackfillResult:
+    """What :func:`apply_backfill` wrote and what it found stale.
+
+    Attributes:
+        polls_written: Polls that got bases.
+        rows_written: Bases inserted.
+        stale: Planned inserts left alone because the poll was deleted or
+            changed since planning, as ``skip`` items whose note says how.
+    """
+
+    polls_written: int
+    rows_written: int
+    stale: tuple[BackfillItem, ...] = ()
+
+
 def apply_backfill(
     conn: sqlite3.Connection, items: Sequence[BackfillItem]
-) -> tuple[int, int]:
+) -> BackfillResult:
     """Insert every ``insert`` item's bases in one transaction.
 
-    A poll that has gained bases since planning is left alone rather than
-    failing the transaction on the unique index.
+    Under the write lock, each poll is re-read first; one that was deleted
+    (its id possibly reused by a new poll), whose own columns, rows or bases
+    changed, or that gained bases since planning is skipped and reported
+    rather than given bases checked against a poll that is no longer there.
+    The other polls are still written.
 
     Args:
         conn: Open read-write SQLite connection with no transaction in
@@ -211,24 +251,25 @@ def apply_backfill(
         items: The plan from :func:`plan_backfill`.
 
     Returns:
-        ``(polls_written, rows_written)``.
+        The counts written and the stale polls skipped.
     """
     inserts = [item for item in items if item.status == "insert"]
     if not inserts:
-        return 0, 0
+        return BackfillResult(0, 0)
     polls_written = rows_written = 0
-    # ``with conn`` commits, or rolls back and re-raises.
+    stale: list[BackfillItem] = []
+    # ``with conn`` commits, or rolls back and re-raises. The lock is taken
+    # before the first re-read, so nothing can change between check and write.
     conn.execute("BEGIN IMMEDIATE")
     with conn:
         for item in inserts:
-            exists = conn.execute(
-                "SELECT 1 FROM poll_bases WHERE poll_id = ? LIMIT 1", (item.poll_id,)
-            ).fetchone()
-            if exists is not None:
+            reason = stale_reason(conn, item.poll_id, item.head, item.fingerprint)
+            if reason is not None:
+                stale.append(replace(item, status="skip", note=reason, bases=()))
                 continue
             rows_written += insert_poll_bases(conn, item.poll_id, item.bases)
             polls_written += 1
-    return polls_written, rows_written
+    return BackfillResult(polls_written, rows_written, tuple(stale))
 
 
 def coverage(conn: sqlite3.Connection) -> list[PollsterCoverage]:
@@ -360,8 +401,17 @@ def main(
             print("\nDry-run complete. No changes written.")
             return 0
 
-        polls_written, rows_written = apply_backfill(conn, items)
-        print(f"Inserted {rows_written} bases for {polls_written} polls.")
+        result = apply_backfill(conn, items)
+        print(
+            f"Inserted {result.rows_written} bases for {result.polls_written} polls."
+        )
+        if result.stale:
+            print(
+                f"\nSkipped {len(result.stale)} polls that changed since planning"
+                " (re-run to plan them again):"
+            )
+            for item in result.stale:
+                print(item.line())
         print("\nCoverage:")
         for line in coverage_lines(coverage(conn)):
             print(line)

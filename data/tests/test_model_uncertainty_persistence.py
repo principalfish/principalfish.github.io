@@ -424,6 +424,74 @@ class TestWithoutPayload:
         assert not has_table(path)
 
 
+def snapshot(path: Path) -> dict[str, list[tuple[object, ...]]]:
+    """Every row of the tables a run write touches, by value."""
+    with closing(sqlite3.connect(path)) as conn:
+        return {
+            table: conn.execute(f"SELECT * FROM {table} ORDER BY 1, 2").fetchall()
+            for table in ("elections", "votes", "model_uncertainty")
+        }
+
+
+def add_failing_trigger(path: Path, event: str) -> None:
+    """Make the next *event* (``INSERT`` / ``UPDATE``) on the table abort."""
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute(
+            f"CREATE TRIGGER fail_uncertainty BEFORE {event} ON model_uncertainty "
+            "BEGIN SELECT RAISE(ABORT, 'injected uncertainty failure'); END"
+        )
+        conn.commit()
+
+
+class TestLateFailureRollsBack:
+    """A failure after the election and votes are written undoes the whole run."""
+
+    def test_failed_summary_insert_restores_the_replaced_run(
+        self, path: Path, scopes: dict[str, OutputScope]
+    ) -> None:
+        # A detailed earlier run, the run being replaced (same date), and a
+        # bystander in another scope: all must survive untouched.
+        save(path, scopes["main"], 1, payload(1))
+        save(path, scopes["main"], 2, payload(2))
+        save(path, scopes["other_map"], 9, payload(7))  # names are unique
+        before = snapshot(path)
+        assert len(before["model_uncertainty"]) == 3
+        add_failing_trigger(path, "INSERT")
+
+        with pytest.raises(sqlite3.IntegrityError, match="injected"):
+            save(path, scopes["main"], 2, payload(22))
+
+        assert snapshot(path) == before
+
+    def test_failed_prune_update_rolls_back_the_new_run(
+        self, path: Path, scopes: dict[str, OutputScope]
+    ) -> None:
+        earlier = save(path, scopes["main"], 1, payload(1))
+        save(path, scopes["other_map"], 9, payload(7))  # names are unique
+        before = snapshot(path)
+        assert all_rows(path)[earlier] == (compact(payload(1).national), True, True)
+        add_failing_trigger(path, "UPDATE")
+
+        # The newer run's INSERTs succeed; pruning the earlier run's detail
+        # is the statement that fails.
+        with pytest.raises(sqlite3.IntegrityError, match="injected"):
+            save(path, scopes["main"], 2, payload(2))
+
+        assert snapshot(path) == before
+
+    def test_failed_prune_without_a_payload_rolls_back_too(
+        self, path: Path, scopes: dict[str, OutputScope]
+    ) -> None:
+        save(path, scopes["main"], 1, payload(1))
+        before = snapshot(path)
+        add_failing_trigger(path, "UPDATE")
+
+        with pytest.raises(sqlite3.IntegrityError, match="injected"):
+            save(path, scopes["main"], 2)
+
+        assert snapshot(path) == before
+
+
 class TestDelete:
     """Deleting runs deletes their rows, and only theirs."""
 

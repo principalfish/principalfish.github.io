@@ -207,6 +207,19 @@ def _bases(conn: sqlite3.Connection, poll_id: int) -> list[tuple[object, ...]]:
     ).fetchall()
 
 
+def _delete_poll(conn: sqlite3.Connection, poll_id: int) -> None:
+    """Delete a poll with its rows and bases, as the console would."""
+    conn.execute("DELETE FROM poll_bases WHERE poll_id = ?", (poll_id,))
+    conn.execute("DELETE FROM poll_rows WHERE poll_id = ?", (poll_id,))
+    conn.execute("DELETE FROM polls WHERE id = ?", (poll_id,))
+    conn.commit()
+
+
+def _stale_notes(result: backfill.BackfillResult) -> dict[int, str]:
+    assert all(item.status == "skip" and not item.bases for item in result.stale)
+    return {item.poll_id: item.note for item in result.stale}
+
+
 class TestPlanBackfill:
     def test_plans_inserts_and_skips_with_reasons(
         self, conn: sqlite3.Connection, seeded: _Seeded
@@ -404,7 +417,7 @@ class TestApplyBackfill:
         polls_before = conn.execute("SELECT * FROM polls ORDER BY id").fetchall()
         items = backfill.plan_backfill(conn, _fetcher(_SOURCES))
 
-        assert backfill.apply_backfill(conn, items) == (2, 6)
+        assert backfill.apply_backfill(conn, items) == backfill.BackfillResult(2, 6)
 
         london = westminster_world.region_ids["London"]
         assert _bases(conn, seeded.mic.id) == [
@@ -420,7 +433,7 @@ class TestApplyBackfill:
 
         again = backfill.plan_backfill(conn, _fetcher(_SOURCES))
         assert {item.status for item in again} == {"skip"}
-        assert backfill.apply_backfill(conn, again) == (0, 0)
+        assert backfill.apply_backfill(conn, again) == backfill.BackfillResult(0, 0)
 
     def test_poll_that_gained_bases_since_planning_is_left_alone(
         self, conn: sqlite3.Connection, seeded: _Seeded
@@ -433,8 +446,159 @@ class TestApplyBackfill:
         )
         conn.commit()
 
-        assert backfill.apply_backfill(conn, items) == (1, 4)
+        result = backfill.apply_backfill(conn, items)
+
+        assert (result.polls_written, result.rows_written) == (1, 4)
+        assert _stale_notes(result) == {
+            seeded.mic.id: "poll bases changed since planning"
+        }
         assert _bases(conn, seeded.mic.id) == [(None, 1500, None, "decided", 0)]
+
+    def test_poll_deleted_since_planning_gets_no_bases(
+        self, conn: sqlite3.Connection, seeded: _Seeded
+    ) -> None:
+        items = backfill.plan_backfill(conn, _fetcher(_SOURCES))
+        _delete_poll(conn, seeded.mic.id)
+
+        result = backfill.apply_backfill(conn, items)
+
+        assert _stale_notes(result) == {
+            seeded.mic.id: "poll deleted (or moved off the map) since planning"
+        }
+        assert _bases(conn, seeded.mic.id) == []
+        # Skip and continue: the unchanged poll is still written.
+        assert (result.polls_written, result.rows_written) == (1, 4)
+        assert len(_bases(conn, seeded.yougov.id)) == 4
+
+    def test_new_poll_reusing_a_deleted_polls_id_gets_none_of_its_bases(
+        self, conn: sqlite3.Connection, seeded: _Seeded
+    ) -> None:
+        items = backfill.plan_backfill(conn, _fetcher(_SOURCES))
+        pollster_id, map_id = conn.execute(
+            "SELECT pollster_id, map_id FROM polls WHERE id = ?", (seeded.mic.id,)
+        ).fetchone()
+        rows = conn.execute(
+            "SELECT region_id, party_id, percentage FROM poll_rows WHERE poll_id = ?",
+            (seeded.mic.id,),
+        ).fetchall()
+        _delete_poll(conn, seeded.mic.id)
+        # SQLite hands a deleted rowid to the next insert when it was the
+        # largest; pin the reuse explicitly. The new poll even has identical
+        # rows, so only its own columns tell it apart.
+        conn.execute(
+            "INSERT INTO polls (id, pollster_id, map_id, fieldwork_start,"
+            " fieldwork_end, sample_size, source_url)"
+            " VALUES (?, ?, ?, '2026-10-01', '2026-10-02', 9999, ?)",
+            (seeded.mic.id, pollster_id, map_id, "https://example.test/new.xlsx"),
+        )
+        conn.executemany(
+            "INSERT INTO poll_rows (poll_id, region_id, party_id, percentage)"
+            " VALUES (?, ?, ?, ?)",
+            [(seeded.mic.id, *row) for row in rows],
+        )
+        conn.commit()
+
+        result = backfill.apply_backfill(conn, items)
+
+        assert _stale_notes(result) == {
+            seeded.mic.id: (
+                "poll details (pollster, fieldwork, sample size, source) changed"
+                " since planning"
+            )
+        }
+        assert _bases(conn, seeded.mic.id) == []
+        assert len(_bases(conn, seeded.yougov.id)) == 4
+
+    @pytest.mark.parametrize(
+        ("column", "value"),
+        [
+            ("fieldwork_start", "2026-09-17"),
+            ("fieldwork_end", "2026-09-22"),
+            ("sample_size", 2114),
+            ("source_url", "https://example.test/mic-2026-v2.xlsx"),
+            ("pollster_id", None),  # another pollster's id, set below
+        ],
+    )
+    def test_poll_whose_details_changed_is_skipped(
+        self,
+        conn: sqlite3.Connection,
+        seeded: _Seeded,
+        column: str,
+        value: object,
+    ) -> None:
+        items = backfill.plan_backfill(conn, _fetcher(_SOURCES))
+        if column == "pollster_id":
+            value = seeded.yougov.pollster_id
+            assert value != seeded.mic.pollster_id
+        conn.execute(
+            f"UPDATE polls SET {column} = ? WHERE id = ?", (value, seeded.mic.id)
+        )
+        conn.commit()
+
+        result = backfill.apply_backfill(conn, items)
+
+        assert set(_stale_notes(result)) == {seeded.mic.id}
+        assert _bases(conn, seeded.mic.id) == []
+        assert len(_bases(conn, seeded.yougov.id)) == 4
+
+    def test_poll_moved_to_another_map_is_skipped(
+        self, conn: sqlite3.Connection, seeded: _Seeded
+    ) -> None:
+        items = backfill.plan_backfill(conn, _fetcher(_SOURCES))
+        conn.execute(
+            "UPDATE polls SET map_id = ? WHERE id = ?",
+            (seeded.other_map.map_id, seeded.mic.id),
+        )
+        conn.commit()
+
+        result = backfill.apply_backfill(conn, items)
+
+        assert _stale_notes(result) == {
+            seeded.mic.id: "poll deleted (or moved off the map) since planning"
+        }
+        assert _bases(conn, seeded.mic.id) == []
+
+    @pytest.mark.parametrize(
+        "change",
+        [
+            "UPDATE poll_rows SET percentage = 27.0"
+            " WHERE poll_id = ? AND region_id IS NULL AND percentage = 26.0",
+            "UPDATE poll_rows SET percentage = 36.0"
+            " WHERE poll_id = ? AND region_id IS NOT NULL AND percentage = 35.0",
+            "DELETE FROM poll_rows WHERE poll_id = ? AND region_id IS NOT NULL",
+        ],
+        ids=["national-share", "regional-share", "rows-removed"],
+    )
+    def test_poll_whose_shares_changed_is_skipped(
+        self, conn: sqlite3.Connection, seeded: _Seeded, change: str
+    ) -> None:
+        items = backfill.plan_backfill(conn, _fetcher(_SOURCES))
+        assert conn.execute(change, (seeded.mic.id,)).rowcount > 0
+        conn.commit()
+
+        result = backfill.apply_backfill(conn, items)
+
+        assert _stale_notes(result) == {
+            seeded.mic.id: "poll rows changed since planning"
+        }
+        assert _bases(conn, seeded.mic.id) == []
+        assert len(_bases(conn, seeded.yougov.id)) == 4
+
+    def test_stale_poll_processed_last_does_not_undo_earlier_inserts(
+        self, conn: sqlite3.Connection, seeded: _Seeded
+    ) -> None:
+        # The plan runs in pollster order, so YouGov is the last insert:
+        # skipping it must leave More in Common's bases written.
+        items = backfill.plan_backfill(conn, _fetcher(_SOURCES))
+        inserts = [item.pollster for item in items if item.status == "insert"]
+        assert inserts == ["more_in_common", "yougov"]
+        _delete_poll(conn, seeded.yougov.id)
+
+        result = backfill.apply_backfill(conn, items)
+
+        assert set(_stale_notes(result)) == {seeded.yougov.id}
+        assert (result.polls_written, result.rows_written) == (1, 2)
+        assert len(_bases(conn, seeded.mic.id)) == 2
 
 
 class TestCoverage:
@@ -532,6 +696,41 @@ class TestMain:
         with closing(sqlite3.connect(db.config.database_path)) as connection:
             count = connection.execute("SELECT COUNT(*) FROM poll_bases").fetchone()
         assert count == (6,)
+
+    def test_run_reports_a_poll_deleted_while_sources_were_fetched(
+        self,
+        db: Database,
+        seeded: _Seeded,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        monkeypatch.setenv("DATABASE_PATH", db.config.database_path)
+        fetch_source = _fetcher(_SOURCES)
+
+        def fetch(identifier: str, url: str) -> ParsedPollWithBases:
+            # The console deletes the More in Common poll while the
+            # (slow) YouGov source is being fetched, after MiC was planned.
+            if identifier == "yougov":
+                with closing(sqlite3.connect(db.config.database_path)) as other:
+                    _delete_poll(other, seeded.mic.id)
+            return fetch_source(identifier, url)
+
+        assert backfill.main([], fetch=fetch) == 0
+
+        out = capsys.readouterr().out.splitlines()
+        assert "Inserted 4 bases for 1 polls." in out
+        assert (
+            "Skipped 1 polls that changed since planning (re-run to plan them again):"
+            in out
+        )
+        stale_line = (
+            f"{seeded.mic.id:>6}  {'more_in_common':<16}{'2026-09-21':<12}"
+            "SKIP: poll deleted (or moved off the map) since planning"
+        )
+        assert out.index(stale_line) > out.index("Inserted 4 bases for 1 polls.")
+        with closing(sqlite3.connect(db.config.database_path)) as connection:
+            count = connection.execute("SELECT COUNT(*) FROM poll_bases").fetchone()
+        assert count == (4,)
 
 
 class TestMissingTable:

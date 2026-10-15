@@ -385,6 +385,7 @@ class TestCutoffs:
                 us_db,
                 seat="Texas",
                 pollster="Stored",
+                start=date(2026, 2, 26),
                 end=date(2026, 3, 1),
                 matchup=TEXAS_MATCHUP,
                 readings=TEXAS_READINGS,
@@ -395,6 +396,7 @@ class TestCutoffs:
             us_db,
             seat="Texas",
             pollster="New",
+            start=date(2026, 3, 2),
             end=date(2026, 3, 5),
             matchup=TEXAS_MATCHUP,
             readings=TEXAS_READINGS,
@@ -536,7 +538,7 @@ class TestPrepare:
     def test_a_clean_lead_row_has_no_warnings_once_its_pollster_exists(
         self, us_db: Database
     ) -> None:
-        _store(us_db, _row(us_db, end=date(2026, 5, 1)))
+        _store(us_db, _row(us_db, start=date(2026, 4, 28), end=date(2026, 5, 1)))
         item = _prepared(us_db, _row(us_db))
         assert item.warnings == []
 

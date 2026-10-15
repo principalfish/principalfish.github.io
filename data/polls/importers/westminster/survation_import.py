@@ -19,7 +19,16 @@ from sqlalchemy import select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 from db import Database
-from models import Poll, PollRow, Pollster
+from models import Poll, PollBaseKind, PollRow, Pollster
+from polls.importers.bases import (
+    ParsedBase,
+    PlannedPollBase,
+    make_base,
+    national_shares_from,
+    plan_poll_bases,
+    region_refs,
+    replace_poll_bases,
+)
 from polls.importers.types import PollImportResult
 
 DEFAULT_XLSX_URL = "https://cdn.survation.com/wp-content/uploads/2026/01/30163059/Survation_Voter_Intention_Jan_2026.xlsx"
@@ -70,12 +79,21 @@ PARTY_NAME_MAP = {
 
 
 class ParsedPoll(BaseModel):
-    """Parsed poll data extracted from source."""
+    """Parsed poll data extracted from source.
+
+    ``bases`` holds the VI table's "Unweighted Total"/"Weighted Total" rows for
+    the Total column and each region column the shares come from.
+    """
 
     sample_size: int = Field(gt=0)
     fieldwork_start: date
     fieldwork_end: date
     party_region_percentages: dict[str, dict[str, float]]
+    bases: list[ParsedBase] = Field(default_factory=list)
+
+    def national_shares(self) -> dict[str, float]:
+        """Return canonical party name -> national share."""
+        return national_shares_from(self.party_region_percentages, NATIONAL_KEY)
 
 
 class PlannedPollRow(BaseModel):
@@ -103,6 +121,7 @@ class ImportPlan(BaseModel):
     poll_id: int | None
     poll_exists: bool
     rows: list[PlannedPollRow]
+    bases: list[PlannedPollBase] = Field(default_factory=list)
 
 
 def _month_number(month_text: str) -> int | None:
@@ -503,6 +522,109 @@ def _find_vi_table_start(sheet: Any) -> int:
     raise ValueError("Could not locate voting intention table in Survation workbook")
 
 
+def _region_header_row(sheet: Any, start_row: int) -> int | None:
+    """Return the VI table's region header row, or None if it has none."""
+    for row in range(start_row + 1, min(sheet.max_row, start_row + 12)):
+        headers = {_cell_text(sheet.cell(row, col).value) for col in range(11, 40)}
+        if any(
+            header in SOURCE_REGION_TO_INTERNAL
+            or header in GROUPED_SOURCE_REGION_TO_INTERNAL
+            for header in headers
+        ):
+            return row
+    return None
+
+
+def _region_columns(sheet: Any, start_row: int) -> dict[str, int]:
+    """Map each internal region to the VI table column its figures come from.
+
+    Finds the table's region header row, then maps each directly published
+    region to its column and each region of a broad North, Midlands or South
+    column to that column, unless the region is also published directly.
+
+    Args:
+        sheet: The tables worksheet.
+        start_row: The VI table's header row.
+
+    Returns:
+        Internal region name -> column, empty when no region header is found.
+    """
+    region_header_row = _region_header_row(sheet, start_row)
+    region_columns: dict[str, int] = {}
+    if region_header_row is not None:
+        for col in range(11, 45):
+            header = _cell_text(sheet.cell(region_header_row, col).value)
+            internal = SOURCE_REGION_TO_INTERNAL.get(header)
+            if internal is not None:
+                region_columns[internal] = col
+            else:
+                for region_name in GROUPED_SOURCE_REGION_TO_INTERNAL.get(header, ()):
+                    region_columns.setdefault(region_name, col)
+    return region_columns
+
+
+def _base_kind(base_text: str) -> PollBaseKind | None:
+    """Classify the VI table's "Base:" line, or None if it is not recognised."""
+    lowered = base_text.lower()
+    if "undecided" in lowered and "remove" in lowered:
+        return "decided"
+    if "likely to vote" in lowered:
+        return "likely_voters"
+    return None
+
+
+def _parse_bases(workbook: Any) -> list[ParsedBase]:
+    """Read the VI table's "Unweighted Total" and "Weighted Total" rows.
+
+    The rows sit between the table's header and its first party row, one
+    count per column. The headline table's base ("likely to vote ... with
+    undecided and refused removed") makes them decided bases. A broad North,
+    Midlands or South column's base covers all of that group's regions and is
+    apportioned across them later; when one of the group's regions is also
+    published directly, the broad column's base is not used at all.
+
+    Args:
+        workbook: An openpyxl ``Workbook`` for the Survation XLSX.
+
+    Returns:
+        The national base then one per region column, or an empty list when
+        the table has no "Unweighted Total" row or an unrecognised base line.
+    """
+    sheet = _tables_sheet(workbook)
+    start_row = _find_vi_table_start(sheet)
+    kind = _base_kind(_cell_text(sheet.cell(start_row + 1, 1).value))
+    if kind is None:
+        return []
+
+    label_rows: dict[str, int] = {}
+    for row in range(start_row + 1, min(sheet.max_row, start_row + 12) + 1):
+        label = _cell_text(sheet.cell(row, 1).value).lower()
+        if label in {"unweighted total", "weighted total"}:
+            label_rows.setdefault(label, row)
+    unweighted_row = label_rows.get("unweighted total")
+    if unweighted_row is None:
+        return []
+    weighted_row = label_rows.get("weighted total")
+
+    def base(regions: tuple[str, ...], col: int) -> ParsedBase | None:
+        weighted = sheet.cell(weighted_row, col).value if weighted_row else None
+        return make_base(regions, sheet.cell(unweighted_row, col).value, weighted, kind)
+
+    regions_by_column: dict[int, list[str]] = {}
+    for region_name, col in _region_columns(sheet, start_row).items():
+        regions_by_column.setdefault(col, []).append(region_name)
+
+    header_row = _region_header_row(sheet, start_row)
+    candidates = [base((), 2)]
+    for col, region_names in regions_by_column.items():
+        header = _cell_text(sheet.cell(header_row, col).value) if header_row else ""
+        group = GROUPED_SOURCE_REGION_TO_INTERNAL.get(header)
+        if group is not None and set(region_names) != set(group):
+            continue
+        candidates.append(base(tuple(region_names), col))
+    return [candidate for candidate in candidates if candidate is not None]
+
+
 def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]]:
     """Extract party vote-share percentages by region from the tables sheet.
 
@@ -530,28 +652,7 @@ def _parse_party_region_percentages(workbook: Any) -> dict[str, dict[str, float]
     """
     sheet = _tables_sheet(workbook)
     start_row = _find_vi_table_start(sheet)
-
-    region_header_row = None
-    for row in range(start_row + 1, min(sheet.max_row, start_row + 12)):
-        headers = {_cell_text(sheet.cell(row, col).value) for col in range(11, 40)}
-        if any(
-            header in SOURCE_REGION_TO_INTERNAL
-            or header in GROUPED_SOURCE_REGION_TO_INTERNAL
-            for header in headers
-        ):
-            region_header_row = row
-            break
-
-    region_columns: dict[str, int] = {}
-    if region_header_row is not None:
-        for col in range(11, 45):
-            header = _cell_text(sheet.cell(region_header_row, col).value)
-            internal = SOURCE_REGION_TO_INTERNAL.get(header)
-            if internal is not None:
-                region_columns[internal] = col
-            else:
-                for region_name in GROUPED_SOURCE_REGION_TO_INTERNAL.get(header, ()):
-                    region_columns.setdefault(region_name, col)
+    region_columns = _region_columns(sheet, start_row)
 
     parsed: dict[str, dict[str, float]] = {}
     for row in range(start_row + 1, min(sheet.max_row, start_row + 220)):
@@ -629,6 +730,7 @@ def parse_poll(workbook: Any, *, source_url: str, year_hint: int | None = None) 
         fieldwork_start=fieldwork_start,
         fieldwork_end=fieldwork_end,
         party_region_percentages=party_region_percentages,
+        bases=_parse_bases(workbook),
     )
 
 
@@ -657,6 +759,24 @@ def _find_existing_poll(db: Database, pollster_id: int, map_id: int, parsed: Par
                 Poll.sample_size == parsed.sample_size,
             )
         ).scalar_one_or_none()
+
+
+def fetch_parsed_poll(source_url: str, *, year_hint: int | None = None) -> ParsedPoll:
+    """Download a Survation workbook and parse it.
+
+    Args:
+        source_url: URL of the XLSX file.
+        year_hint: Fallback year when none can be inferred from the URL.
+
+    Returns:
+        The parsed poll.
+
+    Raises:
+        ValueError: If the workbook cannot be fetched or parsed.
+    """
+    return parse_poll(
+        extract_workbook(source_url), source_url=source_url, year_hint=year_hint
+    )
 
 
 def build_import_plan(
@@ -697,8 +817,7 @@ def build_import_plan(
     if poll_map is None:
         raise ValueError(f"Map not found: {map_name!r}")
 
-    workbook = extract_workbook(xlsx_url)
-    parsed = parse_poll(workbook, source_url=xlsx_url, year_hint=year_hint)
+    parsed = fetch_parsed_poll(xlsx_url, year_hint=year_hint)
 
     pollster = db.get_pollster_by_identifier(pollster_identifier)
     pollster_exists = pollster is not None
@@ -760,6 +879,7 @@ def build_import_plan(
         poll_id=(existing_poll.id if existing_poll else None),
         poll_exists=existing_poll is not None,
         rows=rows,
+        bases=plan_poll_bases(parsed.bases, region_refs(regions)),
     )
 
 
@@ -856,6 +976,7 @@ def commit_import_plan(
                     percentage=row.percentage,
                 )
             )
+        inserted_bases = replace_poll_bases(session, poll_id, plan.bases)
 
     return PollImportResult(
         created_pollster=created_pollster,
@@ -864,6 +985,7 @@ def commit_import_plan(
         inserted_rows=len(plan.rows),
         replaced_rows=replaced_rows,
         skipped_existing_rows=False,
+        inserted_bases=inserted_bases,
     )
 
 
@@ -969,6 +1091,7 @@ def main() -> None:
         if result.replaced_rows:
             print(f"deleted existing rows: {result.replaced_rows}")
         print(f"inserted poll rows: {result.inserted_rows}")
+        print(f"inserted bases: {result.inserted_bases}")
 
 
 if __name__ == "__main__":

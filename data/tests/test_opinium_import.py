@@ -1813,3 +1813,83 @@ class TestMain:
         assert "deleted existing rows: 104" in lines
         assert "inserted poll rows: 104" in lines
         assert len(db.get_rows_for_poll(poll_id)) == 104
+
+
+# ── Column bases ────────────────────────────────────────────────────────
+
+_BASE_HEADER: tuple[object, ...] = (
+    None, "Total", "North", "Mids", "London", "South", "Wales", "Scotland",
+    "Northern Ireland",
+)
+# Total, North, Mids, London, South, Wales, Scotland, Northern Ireland.
+_UNWEIGHTED = (1547, 394, 271, 157, 513, 67, 145, 0)
+_WEIGHTED = (1508, 371, 248, 212, 496, 61, 120, 0)
+# Party share rows, each followed by its weighted count row (Total column
+# only matters to the decided-base check); the counts sum to 1508.
+_PARTY_COUNTS = (("Lab", 0.267, 402), ("Reform", 0.247, 373), ("Con", 0.188, 284),
+                 ("Green", 0.116, 175), ("Lib Dem", 0.097, 147), ("Other", 0.085, 127))
+
+
+def _based_headline_rows(
+    unweighted_label: str = "Base: All giving voting intention (Unweighted)",
+    weighted_label: str = "Base: All giving voting intention (Weighted)",
+    extra_count: int = 0,
+) -> list[list[object]]:
+    rows: list[list[object]] = [
+        list(_BASE_HEADER),
+        [unweighted_label, *_UNWEIGHTED],
+        [weighted_label, *_WEIGHTED],
+    ]
+    for label, share, count in _PARTY_COUNTS:
+        rows.append([label, *([share] * 8)])
+        rows.append([None, count, *([1] * 7)])
+    if extra_count:
+        rows.append(["Don't know", *([0.05] * 8)])
+        rows.append([None, extra_count, *([1] * 7)])
+    rows.append(["Return to index"])
+    return rows
+
+
+class TestParseBases:
+    """parse_poll reads HeadlineVI's (Unweighted)/(Weighted) base rows."""
+
+    _NORTH = ("North East England", "North West England", "Yorkshire and The Humber")
+    _SOUTH = ("East of England", "South East England", "South West England")
+
+    def _bases(
+        self, rows: list[list[object]]
+    ) -> dict[tuple[str, ...], tuple[int | None, int | None, str]]:
+        workbook = _full_workbook(headline_rows=rows)
+        parsed = op.parse_poll(workbook, source_url=_SOURCE_URL)
+        return {b.regions: (b.unweighted_n, b.weighted_n, b.kind) for b in parsed.bases}
+
+    def test_giving_voting_intention_base_per_column(self) -> None:
+        assert self._bases(_based_headline_rows()) == {
+            (): (1547, 1508, "decided"),
+            self._NORTH: (394, 371, "decided"),
+            ("East Midlands", "West Midlands"): (271, 248, "decided"),
+            ("London",): (157, 212, "decided"),
+            self._SOUTH: (513, 496, "decided"),
+            ("Wales",): (67, 61, "decided"),
+            ("Scotland",): (145, 120, "decided"),
+        }
+
+    def test_mislabelled_base_counts_as_decided_when_party_counts_add_up(self) -> None:
+        rows = _based_headline_rows(
+            "Base: All UK respondents (Unweighted)",
+            "Base: All UK respondents (Weighted)",
+        )
+
+        assert self._bases(rows)[()] == (1547, 1508, "decided")
+
+    def test_base_wider_than_the_party_counts_is_not_recorded(self) -> None:
+        rows = _based_headline_rows(
+            "Base: All UK respondents (Unweighted)",
+            "Base: All UK respondents (Weighted)",
+            extra_count=90,
+        )
+
+        assert self._bases(rows) == {}
+
+    def test_weighted_only_base_row_gives_no_bases(self) -> None:
+        assert self._bases(_headline_sheet_rows()) == {}

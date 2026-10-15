@@ -1,6 +1,6 @@
 import enum
 from datetime import date
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -13,9 +13,11 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    event,
     text,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import DeclarativeBase, Mapped, Mapper, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -396,6 +398,8 @@ class Poll(Base):
         map: The associated ``Map`` instance.
         seat: The ``Seat`` this poll covers, if any.
         rows: All ``PollRow`` records belonging to this poll.
+        bases: The ``PollBase`` respondent counts its tables printed, if
+            captured.
     """
 
     __tablename__ = "polls"
@@ -418,10 +422,40 @@ class Poll(Base):
     map: Mapped["Map"] = relationship("Map")
     seat: Mapped["Seat | None"] = relationship("Seat")
     rows: Mapped[list["PollRow"]] = relationship("PollRow", back_populates="poll", cascade="all, delete-orphan")
+    bases: Mapped[list["PollBase"]] = relationship(
+        "PollBase", back_populates="poll", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         """Return a debug string representation of the Poll."""
         return f"<Poll {self.pollster_id} {self.fieldwork_start}–{self.fieldwork_end}>"
+
+
+@event.listens_for(Poll, "before_insert")
+@event.listens_for(Poll, "before_update")
+def _reject_inverted_fieldwork(
+    _mapper: Mapper[Any], _connection: Connection, target: Poll
+) -> None:
+    """Refuse to flush a poll whose fieldwork starts after it ends.
+
+    Covers every ORM write path (importers, the console, ``db.py``). Core
+    ``update()``/``insert()`` statements and raw ``sqlite3`` bypass mapper
+    events, so they are not covered.
+
+    Args:
+        _mapper: The ``Poll`` mapper (unused).
+        _connection: The flush's connection (unused).
+        target: The poll being inserted or updated.
+
+    Raises:
+        ValueError: If ``fieldwork_start`` is after ``fieldwork_end``.
+    """
+    start, end = target.fieldwork_start, target.fieldwork_end
+    if start is not None and end is not None and start > end:
+        raise ValueError(
+            f"Poll fieldwork_start {start} is after fieldwork_end {end}"
+            f" (pollster_id={target.pollster_id})"
+        )
 
 
 class PollRow(Base):
@@ -462,6 +496,106 @@ class PollRow(Base):
     def __repr__(self) -> str:
         """Return a debug string representation of the PollRow."""
         return f"<PollRow party={self.party_id} pct={self.percentage}>"
+
+
+# What a PollBase counts; mirrors the poll_bases.kind CHECK constraint.
+#   decided       — respondents who named a party: don't-knows, refusals and
+#                   won't-votes removed, so the base is the shares' denominator.
+#   likely_voters — a turnout-filtered base that still includes undecided or
+#                   refusing respondents, so it overstates the shares' n a little.
+#   all_adults    — everyone interviewed in the column, before any turnout or
+#                   don't-know filter.
+PollBaseKind = Literal["decided", "likely_voters", "all_adults"]
+POLL_BASE_KINDS: tuple[PollBaseKind, ...] = ("decided", "likely_voters", "all_adults")
+
+
+class PollBase(Base):
+    """ORM model for the ``poll_bases`` table.
+
+    The number of respondents behind one column of a poll's voting-intention
+    table, as the pollster printed it: national (``region_id`` NULL) or one
+    region. At most one row exists per ``(poll_id, region_id)``, enforced by a
+    unique index over ``IFNULL(region_id, 0)`` because a plain UNIQUE
+    constraint treats every NULL ``region_id`` as distinct.
+
+    A source column that covers several internal regions (YouGov's "North",
+    say) is apportioned across them in proportion to ``regions.population``,
+    keeping whole numbers that sum to the printed base; those rows carry
+    ``split_from_macro`` so a reader knows the per-region n is an estimate of
+    that region's share of the column.
+
+    A pollster that prints only a weighted count of the respondents behind
+    its shares (Find Out Now's "Filtered N") is stored weighted-only:
+    ``unweighted_n`` NULL, ``weighted_n`` set. At least one is always present.
+
+    Rows are deleted with their poll (ORM cascade, and ``ON DELETE CASCADE``
+    for raw SQL with foreign keys enforced).
+
+    Attributes:
+        id: Auto-incrementing primary key.
+        poll_id: Foreign key to the owning ``Poll``.
+        region_id: Optional foreign key to the ``Region`` the column covers.
+            ``None`` means the national ("Total"/"All") column.
+        unweighted_n: Respondents actually interviewed in the column; > 0, or
+            None when the pollster prints only a weighted base.
+        weighted_n: The column's weighted base, when printed; > 0 or None.
+        kind: What the base counts. See ``PollBaseKind``.
+        split_from_macro: True when the counts were apportioned from a wider
+            source column by population rather than printed for the region.
+        poll: The owning ``Poll`` instance.
+        region: The ``Region`` this base covers, if any.
+    """
+
+    __tablename__ = "poll_bases"
+    __table_args__ = (
+        CheckConstraint(
+            "unweighted_n IS NULL OR unweighted_n > 0",
+            name="ck_poll_bases_unweighted_n",
+        ),
+        CheckConstraint(
+            "unweighted_n IS NOT NULL OR weighted_n IS NOT NULL",
+            name="ck_poll_bases_has_n",
+        ),
+        CheckConstraint(
+            "weighted_n IS NULL OR weighted_n > 0", name="ck_poll_bases_weighted_n"
+        ),
+        CheckConstraint(
+            "kind IN ('decided', 'likely_voters', 'all_adults')",
+            name="ck_poll_bases_kind",
+        ),
+        # One base per poll column; IFNULL folds the national column (NULL
+        # region) onto 0, which no autoincrement region id can take.
+        Index(
+            "ux_poll_bases_scope",
+            "poll_id",
+            text("IFNULL(region_id, 0)"),
+            unique=True,
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    poll_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("polls.id", ondelete="CASCADE"), nullable=False
+    )
+    region_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("regions.id"), nullable=True
+    )  # null = national
+    unweighted_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weighted_n: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    kind: Mapped[PollBaseKind] = mapped_column(String, nullable=False)
+    split_from_macro: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
+
+    poll: Mapped["Poll"] = relationship("Poll", back_populates="bases")
+    region: Mapped[Optional["Region"]] = relationship("Region")
+
+    def __repr__(self) -> str:
+        """Return a debug string representation of the PollBase."""
+        return (
+            f"<PollBase poll={self.poll_id} region={self.region_id} "
+            f"n={self.unweighted_n} kind={self.kind}>"
+        )
 
 
 # Who set a TrackedMatchup; mirrors the tracked_matchups.source CHECK constraint.

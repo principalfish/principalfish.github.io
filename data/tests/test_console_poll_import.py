@@ -22,6 +22,7 @@ spawning a real subprocess.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -362,6 +363,96 @@ class TestImportPollPreview:
         assert "<p><strong>Sample size:</strong> 1511</p>" in lines
         assert "<p><strong>Rows to insert:</strong> 104</p>" in lines
         assert _TOKEN_RE.search(body) is not None
+
+
+class TestImportPreviewBases:
+    """The preview lists the respondent bases the import will store."""
+
+    def test_bases_table_lists_each_planned_region(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fixture = Path(__file__).parent / "fixtures/survation/headline-20260923.json"
+        workbook = build_workbook(json.loads(fixture.read_text())["sheets"])
+        monkeypatch.setattr(survation_import, "extract_workbook", lambda _url: workbook)
+
+        response = app.test_client().post(
+            "/import/preview",
+            data={
+                "pollster_identifier": "survation",
+                "source_url": _DEFAULT_SOURCE_URL,
+            },
+        )
+
+        body = response.get_data(as_text=True)
+        assert "<h3>Respondent Bases</h3>" in body
+        section = body.split("<h3>Respondent Bases</h3>", 1)[1]
+        cells = [
+            re.findall(r"<td>(.*?)</td>", row, re.DOTALL)
+            for row in re.findall(
+                r"<tr>(.*?)</tr>", section.split("</tbody>", 1)[0], re.DOTALL
+            )
+        ]
+        rows = {
+            cell[0].strip(): [c.strip() for c in cell[1:]] for cell in cells if cell
+        }
+        assert rows["National"] == ["1026", "1041", "decided", "False"]
+        assert rows["London"] == ["138", "140", "decided", "False"]
+        assert rows["South East England"] == ["149", "144", "decided", "True"]
+        assert len(rows) == 13
+
+    def test_confirm_flash_counts_the_stored_bases(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fixture = Path(__file__).parent / "fixtures/survation/headline-20260923.json"
+        workbook = build_workbook(json.loads(fixture.read_text())["sheets"])
+        monkeypatch.setattr(survation_import, "extract_workbook", lambda _url: workbook)
+        client = app.test_client()
+        preview = client.post(
+            "/import/preview",
+            data={
+                "pollster_identifier": "survation",
+                "source_url": _DEFAULT_SOURCE_URL,
+            },
+        )
+        token = _extract_token(preview.get_data(as_text=True))
+
+        response = client.post(f"/import/confirm/{token}", data={})
+
+        poll_id = _poll_id_from_redirect(response.headers["Location"])
+        assert _flashes(client, response) == [
+            f"Import complete. Poll #{poll_id}, inserted 104 rows"
+            " and 13 respondent bases."
+        ]
+
+    def test_no_bases_hides_the_table(
+        self,
+        app: Flask,
+        db: Database,
+        westminster_world: WestminsterWorld,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        client = app.test_client()
+        monkeypatch.setattr(
+            survation_import, "extract_workbook", lambda _url: _survation_workbook()
+        )
+
+        response = client.post(
+            "/import/preview",
+            data={
+                "pollster_identifier": "survation",
+                "source_url": _DEFAULT_SOURCE_URL,
+            },
+        )
+
+        assert "Respondent Bases" not in response.get_data(as_text=True)
 
 
 class TestImportPollConfirm:

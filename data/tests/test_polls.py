@@ -167,6 +167,49 @@ class TestAddPoll:
             db.add_poll(pollster.id, 9999, date(2026, 1, 1), date(2026, 1, 1))
 
 
+class TestInvertedFieldworkGuard:
+    """models.py's before_insert/before_update guard on Poll fieldwork order."""
+
+    def test_insert_with_start_after_end_raises(self, db: Database) -> None:
+        pollster, m, _, _ = _make_poll_scaffold(db)
+
+        with pytest.raises(
+            ValueError, match="2025-11-30 is after fieldwork_end 2025-11-05"
+        ):
+            db.add_poll(pollster.id, m.id, date(2025, 11, 30), date(2025, 11, 5))
+
+        assert db.get_polls_for_map(m.id) == []
+
+    def test_update_to_start_after_end_raises_and_rolls_back(
+        self, db: Database
+    ) -> None:
+        pollster, m, _, _ = _make_poll_scaffold(db)
+        poll = db.add_poll(pollster.id, m.id, date(2026, 2, 20), date(2026, 2, 23))
+
+        with pytest.raises(ValueError, match="is after fieldwork_end 2026-02-13"):
+            with db.session() as session:
+                stored = session.get(Poll, poll.id)
+                assert stored is not None
+                stored.fieldwork_end = date(2026, 2, 13)
+
+        reloaded = db.get_poll(poll.id)
+        assert reloaded is not None
+        assert reloaded.fieldwork_end == date(2026, 2, 23)
+
+    def test_update_keeping_the_order_is_allowed(self, db: Database) -> None:
+        pollster, m, _, _ = _make_poll_scaffold(db)
+        poll = db.add_poll(pollster.id, m.id, date(2025, 11, 30), date(2025, 12, 5))
+
+        with db.session() as session:
+            stored = session.get(Poll, poll.id)
+            assert stored is not None
+            stored.fieldwork_start = date(2025, 12, 5)
+
+        reloaded = db.get_poll(poll.id)
+        assert reloaded is not None
+        assert reloaded.fieldwork_start == reloaded.fieldwork_end
+
+
 class TestGetPoll:
     """Tests for Database.get_poll — lookup by id."""
 

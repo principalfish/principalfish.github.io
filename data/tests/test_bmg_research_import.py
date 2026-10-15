@@ -1710,3 +1710,97 @@ class TestFinalHeadlineAndSample:
         assert plan.parsed.fieldwork_start == date(2025, 1, 3)
         assert plan.parsed.fieldwork_end == date(2025, 1, 4)
         assert requested == [resolved_url]
+
+
+# ── Column bases ─────────────────────────────────────────────────────────────
+
+_BASE_REGION_COLUMNS: Mapping[str, int] = MappingProxyType(
+    {"London": 36, "North East": 37, "Scotland": 43, "Wales": 44}
+)
+
+
+def _counted_table(
+    base: str | None,
+    unweighted: Mapping[int, object],
+    weighted: Mapping[int, object],
+    fractions: Mapping[str, float] = _NATIONAL_FRACTIONS,
+) -> list[list[object]]:
+    """One revised VI table laid out as BMG prints it, base rows included."""
+    rows = [_row({2: _VI_MARKER}), _row({2: base} if base else {})]
+    rows.append(_row({2: " ", 3: "Total", 34: "Region"}))
+    rows.append(
+        _row({3: "Total", **{col: name for name, col in _BASE_REGION_COLUMNS.items()}})
+    )
+    rows.append(_row({2: " ", 3: "(A)"}))
+    rows.append(_row({2: "Unweighted row", **unweighted}))
+    rows.append(_row({2: "Base: Total", **weighted}))
+    for party, fraction in fractions.items():
+        rows.append(_row({2: party, 3: fraction * 1000}))
+        regional = {col: fraction for col in _BASE_REGION_COLUMNS.values()}
+        rows.append(_row({3: fraction, **regional}))
+    return rows
+
+
+def _counted_workbook(*tables: list[list[object]]) -> Workbook:
+    rows: list[list[object]] = []
+    for number, table in enumerate(tables, 1):
+        rows.append(_row({2: f"Table {number}"}))
+        rows.extend(table)
+    return build_workbook(
+        {"Methodology": _methodology_sheet(), "Tables": rows}
+    )
+
+
+_FINAL_UNWEIGHTED = {3: 1306, 36: 166, 37: 57, 43: 114, 44: 71}
+_FINAL_WEIGHTED = {3: 954.641, 36: 123.948, 37: 40.009, 43: 80.573, 44: 37.912}
+_EARLY_UNWEIGHTED = {3: 1434, 36: 179, 37: 68, 43: 128, 44: 74}
+_EARLY_BASE = "Base: Where not 'Definitely will not vote'"
+_FINAL_BASE = "Base: Not sure and prefer not to say removed"
+_SQUEEZE_BASE = "Base: Including squeeze and weight for those who are unsure"
+_EARLY_WEIGHTED = {3: 1367.843, 36: 186.888, 37: 59.462, 43: 114.888, 44: 49.897}
+
+
+class TestParseBases:
+    """parse_poll reads each used table's Unweighted row and Base: Total."""
+
+    def _bases(
+        self, workbook: Workbook
+    ) -> dict[tuple[str, ...], tuple[int | None, int | None, str]]:
+        parsed = bmg.parse_poll(workbook, source_url=_XLSX_URL)
+        return {b.regions: (b.unweighted_n, b.weighted_n, b.kind) for b in parsed.bases}
+
+    def test_final_table_supplies_decided_national_and_regional_bases(self) -> None:
+        workbook = _counted_workbook(
+            _counted_table(_EARLY_BASE, _EARLY_UNWEIGHTED, _EARLY_WEIGHTED),
+            _counted_table(_FINAL_BASE, _FINAL_UNWEIGHTED, _FINAL_WEIGHTED),
+        )
+
+        assert self._bases(workbook) == {
+            (): (1306, 955, "decided"),
+            ("London",): (166, 124, "decided"),
+            ("North East England",): (57, 40, "decided"),
+            ("Scotland",): (114, 81, "decided"),
+            ("Wales",): (71, 38, "decided"),
+        }
+
+    def test_older_layout_takes_national_from_the_first_table(self) -> None:
+        workbook = _counted_workbook(
+            _counted_table(_EARLY_BASE, _EARLY_UNWEIGHTED, _EARLY_WEIGHTED),
+            _counted_table(_SQUEEZE_BASE, _FINAL_UNWEIGHTED, _FINAL_WEIGHTED),
+        )
+
+        bases = self._bases(workbook)
+
+        assert bases[()] == (1434, 1368, "likely_voters")
+        assert bases[("London",)] == (166, 124, "likely_voters")
+
+    def test_table_without_a_base_line_adds_no_base(self) -> None:
+        workbook = _counted_workbook(
+            _counted_table(_EARLY_BASE, _EARLY_UNWEIGHTED, _EARLY_WEIGHTED),
+            _counted_table(None, _FINAL_UNWEIGHTED, _FINAL_WEIGHTED),
+        )
+
+        assert self._bases(workbook) == {(): (1434, 1368, "likely_voters")}
+
+    def test_legacy_synthetic_layout_without_base_rows_gives_none(self) -> None:
+        assert bmg.parse_poll(_full_workbook(), source_url=_XLSX_URL).bases == []

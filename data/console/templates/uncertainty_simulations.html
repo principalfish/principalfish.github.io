@@ -1,0 +1,10 @@
+{% extends "uncertainty_run_base.html" %}
+{% block heading %}Explore simulations{% endblock %}
+{% block diagnostics %}{% if draws %}
+<section class="card"><form method="get"><input type="hidden" name="election_id" value="{{ run.election_id }}">
+{% for field, label in [('majority', 'Majority'), ('largest', 'Largest party (including ties)')] %}<label>{{ label }} <select name="{{ field }}"><option value="">Any</option>{% for party in draws.party_ids %}<option value="{{ party }}" {% if request.args.get(field) == party|string %}selected{% endif %}>{{ labels.parties.get(party|string, party) }}</option>{% endfor %}</select></label> {% endfor %}
+<label>Hung parliament <select name="hung"><option value="">Any</option><option value="yes" {% if request.args.get('hung') == 'yes' %}selected{% endif %}>Yes</option><option value="no" {% if request.args.get('hung') == 'no' %}selected{% endif %}>No</option></select></label>
+<details><summary>Seat range per party (all filters combine)</summary>{% for party in draws.party_ids %}<p>{{ labels.parties.get(party|string, party) }} <input type="number" min="0" max="{{ draws.seat_ids|length }}" name="min_{{ party }}" aria-label="Minimum seats for {{ labels.parties.get(party|string, party) }}" value="{{ request.args.get('min_' ~ party, '') }}"> to <input type="number" min="0" max="{{ draws.seat_ids|length }}" name="max_{{ party }}" aria-label="Maximum seats for {{ labels.parties.get(party|string, party) }}" value="{{ request.args.get('max_' ~ party, '') }}"></p>{% endfor %}</details><button>Filter simulations</button></form>
+{% if draws.replay is none %}<p>This older file has no supported replay snapshot. Stored results can be explored; exact applied national errors and seat decomposition are unavailable.</p>{% endif %}
+{% if comparison %}{% include '_uncertainty_comparison.html' %}{% endif %}</section>
+{% endif %}{% endblock %}

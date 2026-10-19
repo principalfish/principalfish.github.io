@@ -76,16 +76,19 @@ import json
 import zipfile
 import zlib
 from collections.abc import Callable, Collection, Iterable, Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Final, TypeVar
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 import numpy as np
 from numpy.typing import NDArray
 
 from model_support.uncertainty import UncertaintyConfig, UncertaintyError
+
+if TYPE_CHECKING:
+    from model_support.simulation_replay import ReplaySnapshot
 
 FloatArray = NDArray[np.float64]
 IndexArray = NDArray[np.intp]
@@ -1206,6 +1209,8 @@ class RegionPartyOutcome:
 
     vote: tuple[float, float]
     seats: tuple[int, int, int]
+    p_majority: float | None = None
+    p_largest: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1251,6 +1256,8 @@ class SimulationSummary:
     p_hung: float
     regions: dict[int, dict[int, RegionPartyOutcome]]
     seats: dict[int, dict[int, SeatPartyOutcome]]
+    region_hung: dict[int, float] | None = None
+    input_hash: str | None = None
 
     def national_json(self) -> dict[str, object]:
         """Return the national block, with the run's metadata, as JSON data.
@@ -1269,6 +1276,7 @@ class SimulationSummary:
             The data, serialisable with ``json.dumps``.
         """
         return {
+            **({"input_hash": self.input_hash} if self.input_hash else {}),
             "simulations": self.simulations,
             "interval": self.interval,
             "seed": self.seed,
@@ -1305,9 +1313,15 @@ class SimulationSummary:
                     str(party_id): {
                         "v": _round_pair(outcome.vote),
                         "s": list(outcome.seats),
+                        **({"pm": round(outcome.p_majority, _PROBABILITY_DECIMALS),
+                            "pl": round(outcome.p_largest, _PROBABILITY_DECIMALS)}
+                           if outcome.p_majority is not None and outcome.p_largest is not None
+                           else {}),
                     }
                     for party_id, outcome in parties.items()
-                }
+                },
+                **({"hung": round(self.region_hung[region_id], _PROBABILITY_DECIMALS)}
+                   if self.region_hung is not None else {}),
             }
             for region_id, parties in self.regions.items()
         }
@@ -1462,11 +1476,21 @@ def summarise(
     region_range = _seat_range(tallies.region_seats, config)
     region_seat_max = tallies.region_seats.max(axis=0)
     regions: dict[int, dict[int, RegionPartyOutcome]] = {}
+    region_hung: dict[int, float] = {}
     for r, region_id in enumerate(inputs.region_ids):
+        threshold = int(np.count_nonzero(inputs.seat_region == r)) // 2 + 1
+        reg_majority, reg_largest = seat_outcome_probabilities(
+            tallies.region_seats[:, r], threshold
+        )
+        region_hung[region_id] = float(
+            (tallies.region_seats[:, r].max(axis=1) < threshold).mean()
+        )
         regions[region_id] = {
             party_id: RegionPartyOutcome(
                 vote=(float(region_band[0, r, k]), float(region_band[1, r, k])),
                 seats=_triple(region_range[:, r, k]),
+                p_majority=float(reg_majority[k]),
+                p_largest=float(reg_largest[k]),
             )
             for k, party_id in enumerate(party_ids)
             if region_band[1, r, k] >= COMPACT_SHARE_FLOOR or region_seat_max[r, k] > 0
@@ -1501,6 +1525,7 @@ def summarise(
         ),
         regions=regions,
         seats=seats,
+        region_hung=region_hung,
     )
 
 
@@ -1571,6 +1596,7 @@ class SimulationDraws:
     e_reg: NDArray[np.float32]
     winner: NDArray[np.uint8]
     margin: NDArray[np.float16]
+    replay: ReplaySnapshot | None = None
 
     def __post_init__(self) -> None:
         """Check every array's dtype and shape, and the winner indices.
@@ -1719,6 +1745,12 @@ def save_draws(path: Path, draws: SimulationDraws, meta: DrawsMeta) -> None:
         "election_id": meta.election_id,
         "as_of_date": meta.as_of_date.isoformat(),
     }
+    from model_support.simulation_replay import snapshot_members
+
+    extra: dict[str, Any] = {}
+    if draws.replay is not None:
+        replay_header, extra = snapshot_members(draws.replay)
+        header["replay"] = replay_header
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
     try:
@@ -1741,6 +1773,7 @@ def save_draws(path: Path, draws: SimulationDraws, meta: DrawsMeta) -> None:
                 e_reg=draws.e_reg,
                 winner=draws.winner,
                 margin=draws.margin,
+                **extra,
             )
         temporary.replace(path)
         temporary = None
@@ -1814,6 +1847,9 @@ def load_draws(path: Path) -> tuple[SimulationDraws, DrawsMeta]:
         )
     except (SimulationFileError, ValueError) as err:
         raise SimulationFileError(f"{path}: {err}") from err
+    from model_support.simulation_replay import read_snapshot
+
+    draws = replace(draws, replay=read_snapshot(header.get("replay"), arrays, draws))
     return draws, meta
 
 
@@ -1918,6 +1954,10 @@ def run_simulations(
         if keep_raw
         else None
     )
+    if draws is not None:
+        from model_support.simulation_replay import ReplaySnapshot
+
+        draws = replace(draws, replay=ReplaySnapshot(inputs, config))
     for start in range(0, config.simulations, config.chunk_size):
         count = min(config.chunk_size, config.simulations - start)
         errors = draw_errors(streams, scales, count)
@@ -1926,4 +1966,7 @@ def run_simulations(
         if draws is not None:
             draws.record(start, errors, projection, tallies)
     summary = summarise(inputs, tallies, config, seed=seed)
+    from model_support.simulation_replay import input_fingerprint
+
+    summary = replace(summary, input_hash=input_fingerprint(inputs))
     return SimulationRun(summary=summary, scales=scales, draws=draws)

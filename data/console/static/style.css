@@ -300,3 +300,17 @@ th {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.uncertainty-histogram {
+  display: block;
+  width: 12rem;
+  height: 4rem;
+}
+
+.uncertainty-histogram__bar {
+  fill: #2563eb;
+}
+
+.uncertainty-nav {
+  line-height: 2;
+}

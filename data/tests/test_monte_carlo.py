@@ -1459,7 +1459,9 @@ class TestToJsonDict:
             },
         }
         region = data["regions"]["14"]["parties"]["3"]
-        assert set(region) == {"v", "s"}
+        assert set(region) == {"v", "s", "pm", "pl"}
+        assert summary.region_hung is not None
+        assert data["regions"]["14"]["hung"] == round(summary.region_hung[14], 4)
         seat_id = inputs.seat_ids[0]
         assert set(data["seats"]) == {str(s) for s in inputs.seat_ids}
         assert all(
@@ -1519,6 +1521,16 @@ def _assert_draws_equal(actual: SimulationDraws, expected: SimulationDraws) -> N
         if isinstance(right, np.ndarray):
             assert left.dtype == right.dtype, field.name
             assert np.array_equal(left, right), field.name
+        elif field.name == "replay" and right is not None:
+            assert left is not None
+            assert config_hash(left.config) == config_hash(right.config)
+            for item in dataclasses.fields(SimulationInputs):
+                a, b = getattr(left.inputs, item.name), getattr(right.inputs, item.name)
+                if isinstance(b, np.ndarray):
+                    assert a.dtype == b.dtype
+                    assert np.array_equal(a, b), item.name
+                else:
+                    assert a == b, item.name
         else:
             assert left == right, field.name
 

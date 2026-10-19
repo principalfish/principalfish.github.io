@@ -13,6 +13,10 @@
         every setting in use, where its value comes from, and the historical
         tables the calibrated ones were fitted on.
       </li>
+      <li><a href="{{ url_for('uncertainty_runs.budget') }}">Error budget</a>: polling evidence and raw versus applied error scales.</li>
+      <li><a href="{{ url_for('uncertainty_runs.results') }}">Simulation results</a>: odds, outcome ranges, histograms and competitive seats.</li>
+      <li><a href="{{ url_for('uncertainty_runs.history') }}">Odds history</a>: every retained national summary.</li>
+      <li><a href="{{ url_for('uncertainty_explorer.simulations') }}">Explore simulations</a>: filter outcomes, inspect draws and explain individual seats.</li>
     </ul>
   </section>
 {% endblock %}

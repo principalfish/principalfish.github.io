@@ -10,7 +10,7 @@ import math
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -32,7 +32,31 @@ if str(DATA_DIR) not in sys.path:
 from config import DatabaseConfig
 from db import Database
 from model_support.history import HistoryRecomputationError
-from model_support.io import publish_json, validate_output_target
+from model_support.io import OutputPublicationError, publish_json, validate_output_target
+from model_support.monte_carlo import (
+    DrawsMeta,
+    SimulationRun,
+    build_simulation_inputs,
+    run_simulations,
+    save_draws,
+)
+from model_support.poll_bases import PollNIndex
+from model_support.uncertainty import (
+    UncertaintyConfig,
+    UncertaintyError,
+    load_uncertainty_config,
+)
+from model_support.westminster_uncertainty import (
+    NI_POLLING_EXCLUSION,
+    NI_REGION_NAME,
+    PollKey,
+    PollSample,
+    WestminsterPollAggregation,
+    exclude_polling_regions,
+    poll_sample,
+    split_averages,
+    uncertainty_payload,
+)
 from model_support.trends import (
     default_trend_path,
     publish_trends,
@@ -41,6 +65,8 @@ from model_support.trends import (
 )
 from model_support.persistence import (
     OutputVote,
+    UncertaintyPayload,
+    UncertaintyStoreError,
     delete_outputs,
     output_dates,
     replace_output,
@@ -121,6 +147,10 @@ class SimulationConfig:
             If None, no CSV is written.
         dry_run: If True, perform all calculations but skip DB writes and trend
             cache updates.
+        uncertainty: Monte Carlo settings, or None for the legacy deterministic
+            programmatic API. The CLI loads the calibrated settings by default.
+        keep_raw: Save raw simulations after a successful database write. The
+            orchestration disables this for earlier retrospective dates.
     """
 
     map_name: str
@@ -130,6 +160,8 @@ class SimulationConfig:
     half_life_days: float
     output_csv: str | None
     dry_run: bool
+    uncertainty: UncertaintyConfig | None = None
+    keep_raw: bool = True
 
     def __post_init__(self) -> None:
         validate_half_life(self.half_life_days)
@@ -265,6 +297,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--half-life-days", type=float, default=30.0)
     parser.add_argument(
+        "--simulations", type=int, default=None,
+        help="Monte Carlo elections per date (default: calibrated configuration)",
+    )
+    parser.add_argument(
+        "--no-uncertainty", action="store_true",
+        help="Run only the deterministic projection, without uncertainty or raw draws",
+    )
+    parser.add_argument(
+        "--no-raw-sims", action="store_true",
+        help="Store uncertainty summaries without writing the raw simulations file",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Compute without writes, except explicitly requested --output-csv previews",
@@ -302,6 +346,17 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _uncertainty_from_args(args: argparse.Namespace) -> UncertaintyConfig | None:
+    """Enable calibrated uncertainty unless explicitly disabled."""
+    simulations = getattr(args, "simulations", None)
+    if simulations is not None and simulations <= 0:
+        raise ValueError("--simulations must be positive")
+    if getattr(args, "no_uncertainty", False):
+        return None
+    config = load_uncertainty_config()
+    return config if simulations is None else replace(config, simulations=simulations)
+
+
 def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
     """Construct a SimulationConfig from parsed single-date CLI arguments.
 
@@ -328,6 +383,8 @@ def _build_config_from_args(args: argparse.Namespace) -> SimulationConfig:
         half_life_days=args.half_life_days,
         output_csv=args.output_csv,
         dry_run=args.dry_run,
+        uncertainty=_uncertainty_from_args(args),
+        keep_raw=not getattr(args, "no_raw_sims", False),
     )
 
 
@@ -396,6 +453,7 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
     validate_date_range(start_date, end_date)
     validate_day_count(args.lookback_days, "--lookback-days")
     validate_half_life(args.half_life_days)
+    uncertainty = _uncertainty_from_args(args)
 
     _, baseline, _ = resolve_simulation_scope(
         db,
@@ -439,6 +497,8 @@ def run_retrospective(db: Database, args: argparse.Namespace) -> None:
                     half_life_days=args.half_life_days,
                     output_csv=None,
                     dry_run=args.dry_run,
+                    uncertainty=uncertainty,
+                    keep_raw=current == end_date and not getattr(args, "no_raw_sims", False),
                 )
                 election_name, projected_votes, _, _, _ = run_simulation(db, cfg)
                 success_count += 1
@@ -806,9 +866,10 @@ def collect_poll_shares(
     pollster_name_by_id: dict[int, str],
     *,
     source: PollSource | None = None,
-) -> PollAggregation[tuple[int | None, int]]:
+    uncertainty: UncertaintyConfig | None = None,
+) -> WestminsterPollAggregation:
     """Collect weighted UK observations and their admitted poll metadata."""
-    polls = (
+    polls = list(
         db.get_polls_for_map(map_id)
         if source is None
         else (poll for poll in source.polls if poll.map_id == map_id)
@@ -816,6 +877,21 @@ def collect_poll_shares(
     weighted_sums: dict[tuple[int | None, int], float] = defaultdict(float)
     total_weights: dict[tuple[int | None, int], float] = defaultdict(float)
     contributors: list[PollContributor] = []
+    samples: dict[PollKey, list[PollSample]] = defaultdict(list)
+    pollsters = db.get_all_pollsters() if source is None else source.pollsters
+    ashcroft = {p.id for p in pollsters if p.identifier == "lord_ashcroft"}
+    excluded_regions = {
+        region.id: NI_POLLING_EXCLUSION
+        for region in db.get_regions_for_map(map_id)
+        if region.name == NI_REGION_NAME
+    }
+    n_index: PollNIndex | None = None
+    if uncertainty is not None:
+        with db.session() as session:
+            n_index = PollNIndex.load(
+                session,
+                (poll.id for poll in polls if since_date <= poll.fieldwork_end <= as_of_date),
+            )
 
     validate_half_life(half_life_days)
     validate_date_window(since_date, as_of_date)
@@ -846,12 +922,33 @@ def collect_poll_shares(
         for row in rows:
             if row.party_id is None or row.percentage is None:
                 continue
+            if row.region_id in excluded_regions:
+                continue
             party_id = PARTY_ID_ALIASES.get(row.party_id, row.party_id)
             key = (row.region_id, party_id)
             poll_shares[key] += float(row.percentage)
 
         if not poll_shares:
             continue
+        totals: dict[int | None, float] = defaultdict(float)
+        for (region_id, _), share in poll_shares.items():
+            totals[region_id] += share
+        # Importers retain all-zero placeholders for unpublished regions.
+        # They are missing observations, not polls putting every party on 0:
+        # including their weights dilutes genuine crossbreaks from other polls.
+        # A zero party share within a reported region remains an observation.
+        poll_shares = {
+            key: share for key, share in poll_shares.items()
+            if key[0] is None or totals[key[0]] > 0
+        }
+        if not poll_shares:
+            continue
+        is_ashcroft = poll.pollster_id in ashcroft
+        if is_ashcroft:
+            for key, share in poll_shares.items():
+                total = totals[key[0]]
+                if total > 0:
+                    poll_shares[key] = share / total * 100.0
         contributors.append(
             PollContributor(
                 poll_id=int(poll.id),
@@ -866,8 +963,17 @@ def collect_poll_shares(
         for key, share in poll_shares.items():
             weighted_sums[key] += share * poll_weight
             total_weights[key] += poll_weight
+            if uncertainty is not None and n_index is not None:
+                samples[key].append(poll_sample(
+                    poll.id, poll_weight, n_index.resolve(poll.id, key[0]), uncertainty,
+                    ashcroft_party_total=totals[key[0]] if is_ashcroft else None,
+                ))
 
-    return PollAggregation(weighted_sums, total_weights, tuple(contributors))
+    return WestminsterPollAggregation(
+        weighted_sums, total_weights, tuple(contributors),
+        {key: tuple(value) for key, value in samples.items()}, uncertainty,
+        excluded_regions,
+    )
 
 
 def latest_poll_snippet(latest_poll_usage: LatestPollUsage | None) -> str:
@@ -1031,7 +1137,11 @@ def compute_region_diffs(
                 weighted_sums[(region_id, party_id)],
                 total_weights[(region_id, party_id)],
             )
-            if region_poll is not None:
+            if region_name == NI_REGION_NAME:
+                baseline_share = baseline_region_shares.get(region_id, {}).get(party_id, 0.0)
+                current_share = baseline_share
+                swing = 0.0
+            elif region_poll is not None:
                 current_share = region_poll
                 swing = region_poll - baseline_share
             else:
@@ -1254,6 +1364,8 @@ def persist_projection(
     projected_votes: list[dict[str, Any]],
     party_name_by_id: dict[int, str],
     sqlite_path: Path | None = None,
+    *,
+    uncertainty: UncertaintyPayload | None = None,
 ) -> tuple[str, int]:
     """Replace this model/map/date and all its vote rows in one transaction.
 
@@ -1269,6 +1381,7 @@ def persist_projection(
             populate ``candidate_name`` on each vote row.
         sqlite_path: Path to the SQLite file to write into. ``None`` resolves the
             configured database when called.
+        uncertainty: Optional summary and diagnostics committed with the votes.
 
     Returns:
         A ``(election_name, election_id)`` tuple with the persisted election's
@@ -1290,6 +1403,7 @@ def persist_projection(
             )
             for row in projected_votes
         ),
+        uncertainty=uncertainty,
     )
 
 
@@ -1341,6 +1455,8 @@ def run_simulation(
     Args:
         db: The active database connection wrapper.
         cfg: Simulation configuration for a single ``as_of_date``.
+            ``cfg.uncertainty=None`` preserves the deterministic programmatic
+            API; the CLI enables calibrated uncertainty unless disabled.
 
     Returns:
         A 5-tuple containing:
@@ -1361,6 +1477,16 @@ def run_simulation(
             baseline election has no vote rows.
     """
     validate_csv_outputs(cfg.output_csv, database_file(db))
+    raw_path: Path | None = None
+    if cfg.uncertainty is not None and cfg.keep_raw and not cfg.dry_run:
+        raw_path = Path(DatabaseConfig.from_env().simulations_path)
+        validate_output_target(raw_path, database=database_file(db))
+        protected = [TREND_CACHE_JSON, TREND_CACHE_META_JSON]
+        if cfg.output_csv:
+            csv_path = Path(cfg.output_csv)
+            protected.extend([csv_path, csv_path.with_name(f"{csv_path.stem}_regional_diffs.csv")])
+        if any(raw_path.resolve() == path.resolve() for path in protected):
+            raise ValueError("SIMULATIONS_PATH must not overwrite a trend or CSV output")
     poll_map, baseline, since_date = resolve_simulation_scope(db, cfg)
     cfg.since_date = since_date
 
@@ -1383,7 +1509,7 @@ def run_simulation(
     ) = build_baseline_vote_state(db, baseline.id, region_by_seat_id)
 
     if poll_aggregation is None:
-        weighted_sums, total_weights, latest_poll_usage = aggregate_poll_shares(
+        poll_aggregation = collect_poll_shares(
             db,
             poll_map.id,
             cfg.since_date,
@@ -1391,21 +1517,21 @@ def run_simulation(
             cfg.half_life_days,
             pollster_weight_by_id,
             pollster_name_by_id,
+            uncertainty=cfg.uncertainty,
         )
-    else:
-        weighted_sums = poll_aggregation.weighted_sums
-        total_weights = poll_aggregation.total_weights
-        latest = poll_aggregation.latest
-        latest_poll_usage = (
-            LatestPollUsage(
-                latest.pollster,
-                latest.fieldwork_start,
-                latest.fieldwork_end,
-                latest.poll_id,
-            )
-            if latest is not None
-            else None
+    weighted_sums = poll_aggregation.weighted_sums
+    total_weights = poll_aggregation.total_weights
+    latest = poll_aggregation.latest
+    latest_poll_usage = (
+        LatestPollUsage(
+            latest.pollster,
+            latest.fieldwork_start,
+            latest.fieldwork_end,
+            latest.poll_id,
         )
+        if latest is not None
+        else None
+    )
 
     party_universe, region_swings, region_diff_rows = compute_region_diffs(
         seats,
@@ -1425,6 +1551,61 @@ def run_simulation(
         region_swings,
         party_name_by_id,
     )
+
+    simulation: SimulationRun | None = None
+    payload: UncertaintyPayload | None = None
+    if cfg.uncertainty is not None:
+        if not isinstance(poll_aggregation, WestminsterPollAggregation) or (
+            poll_aggregation.uncertainty_config != cfg.uncertainty
+        ):
+            raise UncertaintyError("Uncertainty requires aggregation with matching sampling settings")
+        sampling = poll_aggregation.sampling()
+        national_average, regional_average = split_averages(poll_aggregation.averages)
+        national_variance, regional_variance = split_averages({
+            key: value.variance for key, value in sampling.items()
+        })
+        # A printed zero column is still a regional observation, rather than
+        # a missing crossbreak that should acquire national fallback noise.
+        for key, average in poll_aggregation.averages.items():
+            region, party = key
+            if average == 0:
+                if region is None:
+                    national_variance[party] = 0.0
+                else:
+                    regional_variance.setdefault(region, {})[party] = 0.0
+        inputs = build_simulation_inputs(
+            config=cfg.uncertainty,
+            seat_party_vote_totals=seat_party_vote_totals,
+            region_by_seat_id=region_by_seat_id,
+            party_universe=party_universe,
+            region_swings=region_swings,
+            region_baseline_shares=baseline_region_shares,
+            region_average_shares=regional_average,
+            region_variances=regional_variance,
+            national_average_shares=national_average,
+            national_variances=national_variance,
+            additive_party_ids=set(PARTY_ID_ALIASES.values()),
+        )
+        inputs = exclude_polling_regions(inputs, poll_aggregation.excluded_regions)
+        simulation = run_simulations(
+            inputs, cfg.uncertainty, cfg.as_of_date.toordinal(),
+            keep_raw=raw_path is not None,
+        )
+        payload = uncertainty_payload(
+            inputs, simulation, cfg.uncertainty, poll_aggregation, sampling,
+            baseline_national_shares,
+        )
+        if cfg.dry_run:
+            print(f"Uncertainty ({simulation.summary.simulations} simulations, if an election were held today):")
+            for party, outcome in simulation.summary.national.items():
+                if outcome.seats[2] > 0:
+                    lo, median, hi = outcome.seats
+                    print(
+                        f"- {party_name_by_id.get(party, str(party))}: "
+                        f"seats {lo}/{median}/{hi}; "
+                        f"majority {outcome.p_majority:.1%}; largest {outcome.p_largest:.1%}"
+                    )
+            print(f"Hung parliament: {simulation.summary.p_hung:.1%}")
 
     base_election_name = f"UNS {cfg.as_of_date.isoformat()}"
     election_name = base_election_name
@@ -1451,6 +1632,7 @@ def run_simulation(
         projected_votes,
         party_name_by_id,
         sqlite_path,
+        uncertainty=payload,
     )
 
     update_trend_cache_json(
@@ -1461,6 +1643,19 @@ def run_simulation(
         sqlite_path=database_file(db),
         map_id=poll_map.id,
     )
+
+    if raw_path is not None and simulation is not None and simulation.draws is not None:
+        try:
+            save_draws(
+                raw_path, simulation.draws,
+                DrawsMeta(persisted_election_id, cfg.as_of_date),
+            )
+        except OSError as exc:
+            raise OutputPublicationError(
+                f"Election {persisted_election_id} ({persisted_name}) and its uncertainty "
+                f"were committed, but raw simulations could not be published to {raw_path}. "
+                "The previous raw file is unchanged. Fix the destination and rerun this date."
+            ) from exc
 
     return persisted_name, projected_votes, region_diff_rows, winners_by_party, latest_poll_usage
 
@@ -1513,6 +1708,7 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             weights,
             names,
             source=source,
+            uncertainty=cfg.uncertainty,
         ),
         lambda result, end: (
             result is not None
@@ -1524,16 +1720,12 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
             f"CAPPING as_of_date from {cfg.as_of_date.isoformat()} "
             f"to latest poll date {latest_poll_date.isoformat()}"
         )
-        cfg = SimulationConfig(
-            map_name=cfg.map_name,
-            baseline_election_name=cfg.baseline_election_name,
+        cfg = replace(
+            cfg,
             as_of_date=latest_poll_date,
             since_date=candidate_since(
                 latest_poll_date, cfg.as_of_date - cfg.since_date
             ),
-            half_life_days=cfg.half_life_days,
-            output_csv=cfg.output_csv,
-            dry_run=cfg.dry_run,
         )
 
     run_dates = dates_to_run_for_cfg(cfg, database_file(db), map_id=latest_map.id)
@@ -1554,14 +1746,11 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
         enabled=not cfg.dry_run,
     ):
         for index, run_date in enumerate(run_dates, start=1):
-            run_cfg = SimulationConfig(
-                map_name=cfg.map_name,
-                baseline_election_name=cfg.baseline_election_name,
+            run_cfg = replace(
+                cfg,
                 as_of_date=run_date,
                 since_date=run_date - timedelta(days=lookback_days),
-                half_life_days=cfg.half_life_days,
-                output_csv=cfg.output_csv,
-                dry_run=cfg.dry_run,
+                keep_raw=cfg.keep_raw and index == len(run_dates),
             )
 
             (
@@ -1653,4 +1842,7 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (UncertaintyError, UncertaintyStoreError, OutputPublicationError) as exc:
+        raise SystemExit(f"error: {exc}") from exc

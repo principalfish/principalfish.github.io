@@ -1034,7 +1034,8 @@ class TestAggregatePollShares:
             world,
             _AS_OF - timedelta(days=1),
             {} if regional else {party: 0.0},
-            regional={region: {party: 0.0}} if region is not None else None,
+            regional={region: {party: 0.0, world.party_ids["Conservative"]: 20.0}}
+            if region is not None else None,
         )
         map_id = (
             db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
@@ -1082,7 +1083,10 @@ class TestAggregatePollShares:
         )
         _, _, latest = _aggregate(db, world, pollster_weight_by_id=weights)
 
-        assert result.averages == {(region, party): 0.0}
+        expected = {(region, party): 0.0}
+        if region is not None:
+            expected[(region, world.party_ids["Conservative"])] = 20.0
+        assert result.averages == expected
         assert [poll.poll_id for poll in result.contributors] == [accepted.id]
         assert result.latest is not None
         assert result.latest.fieldwork_end == accepted.fieldwork_end
@@ -2833,6 +2837,9 @@ class TestParseArgs:
             # The one test tied to the CLI default; the rest pass it explicitly.
             "baseline_election_name": run_uns_model.BASELINE_ELECTION_NAME,
             "half_life_days": 30.0,
+            "simulations": None,
+            "no_uncertainty": False,
+            "no_raw_sims": False,
             "dry_run": False,
             "as_of_days_back": 0,
             "since_days_back": 30,
@@ -2898,6 +2905,7 @@ class TestBuildConfigFromArgs:
             half_life_days=14.0,
             output_csv="out.csv",
             dry_run=True,
+            uncertainty=run_uns_model.load_uncertainty_config(),
         )
 
     @pytest.mark.parametrize(
@@ -3233,7 +3241,7 @@ class TestMain:
         )
 
         lines = capsys.readouterr().out.splitlines()
-        assert lines[0] == "UNS simulation complete"
+        assert "UNS simulation complete" in lines
         assert "Election name: UNS 2026-06-09" in lines
         assert not meta_json.exists()
         assert not trend_json.exists()

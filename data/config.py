@@ -27,6 +27,10 @@ class DatabaseConfig(BaseSettings):
         default="/home/philiph/dbs/elections.db",
         validation_alias="DATABASE_PATH",
     )
+    simulations_path: str = Field(
+        default="/home/philiph/dbs/simulations/westminster-latest.npz",
+        validation_alias="SIMULATIONS_PATH",
+    )
 
     @computed_field  # type: ignore[prop-decorator]
     @property

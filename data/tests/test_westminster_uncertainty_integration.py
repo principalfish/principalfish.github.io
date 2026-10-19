@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import math
 import sqlite3
@@ -77,6 +78,48 @@ def _stored(db: Database, day: date = DAY) -> Any:
     stored = load_uncertainty(Path(db.config.database_path), election.id)
     assert stored is not None
     return stored
+
+
+@pytest.mark.parametrize("has_crossbreak", [False, True])
+def test_absent_regional_party_gets_no_votes_or_simulated_uncertainty(
+    db: Database,
+    westminster_world: WestminsterWorld,
+    tmp_path: Path,
+    has_crossbreak: bool,
+) -> None:
+    world = westminster_world
+    snp = world.party_ids["Scottish National Party"]
+    lab = world.party_ids["Labour"]
+    region = world.region_ids["North East England"]
+    seat = world.seat_ids["Hexham"]
+    _poll(
+        db, world,
+        national={lab: 80.0, snp: 20.0},
+        regional={region: {lab: 80.0, snp: 20.0}} if has_crossbreak else {},
+    )
+    _, votes, diffs, _, _ = runner.run_simulation(
+        db, _cfg(world, output_csv=str(tmp_path / "preview.csv")),
+    )
+    projected = next(row for row in votes if row["seat_id"] == seat
+                     and row["party_id"] == snp)
+    assert projected["vote_total"] == 0
+    diagnostic = next(row for row in diffs if row["region_id"] == region
+                      and row["party_id"] == snp)
+    assert diagnostic["applicable"] is False
+    assert diagnostic["swing"] == 0.0
+    stored = _stored(db)
+    assert str(snp) not in stored.seats[str(seat)]
+    budget = stored.regions[str(region)]["budget"][str(snp)]
+    assert budget["polled"] is False
+    assert budget["swing"] == 0.0
+    assert budget["combined_sd"] == 0.0
+    assert budget["seat_sd"] == 0.0
+    with (tmp_path / "preview_regional_diffs.csv").open() as handle:
+        csv_row = next(row for row in csv.DictReader(handle)
+                       if int(row["region_id"]) == region
+                       and int(row["party_id"]) == snp)
+    assert csv_row["weighted_share"] == "N/A"
+    assert csv_row["swing"] == "N/A"
 
 
 def test_ashcroft_normalises_before_averaging_and_uses_actual_decided_n(

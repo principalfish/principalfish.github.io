@@ -1072,8 +1072,10 @@ def compute_region_diffs(
     """Derive per-region poll-vs-baseline swings for every party.
 
     For each region present on the map, computes a swing in percentage points
-    between the weighted-average regional poll share and the baseline share
-    (falling back to the national baseline when no regional baseline exists).
+    between the weighted-average regional poll share and the regional baseline.
+    A party with baseline support elsewhere gets no swing in regions where it
+    had none. Parties with no baseline anywhere remain eligible as new entrants,
+    matching the simulation engine's regional eligibility rule.
 
     When a region has no cross-break poll for a party, we do NOT converge that
     region toward the national poll level. Instead we apply the *uniform
@@ -1107,11 +1109,18 @@ def compute_region_diffs(
         - **region_diff_rows** (``list[dict[str, Any]]``): flat list of per-
           region/party diff records suitable for CSV export, each with keys
           ``region_id``, ``region_name``, ``party_id``, ``party_name``,
-          ``baseline_share``, ``weighted_share``, and ``swing``.
+          ``baseline_share``, ``weighted_share``, ``swing``, and ``applicable``.
+          Ineligible cells carry zero swing internally and display as N/A.
     """
     party_universe: set[int] = set(national_party_totals.keys())
     party_universe.update(party_id for _, party_id in weighted_sums.keys())
     region_ids = sorted({seat.region_id for seat in seats if seat.region_id is not None})
+    parties_with_baseline = {
+        party_id
+        for shares in baseline_region_shares.values()
+        for party_id, share in shares.items()
+        if share > 0
+    }
 
     # National swing delta per party, used as the fallback for regions with no
     # cross-break poll for that party.
@@ -1130,15 +1139,14 @@ def compute_region_diffs(
         region_name = region_by_id[region_id].name if region_id in region_by_id else str(region_id)
         for party_id in sorted(party_universe, key=lambda party: party_name_by_id.get(party, "")):
             baseline_share = baseline_region_shares.get(region_id, {}).get(
-                party_id,
-                baseline_national_shares.get(party_id, 0.0),
+                party_id, 0.0,
             )
+            applicable = baseline_share > 0 or party_id not in parties_with_baseline
             region_poll = weighted_average(
                 weighted_sums[(region_id, party_id)],
                 total_weights[(region_id, party_id)],
             )
-            if region_name == NI_REGION_NAME:
-                baseline_share = baseline_region_shares.get(region_id, {}).get(party_id, 0.0)
+            if not applicable or region_name == NI_REGION_NAME:
                 current_share = baseline_share
                 swing = 0.0
             elif region_poll is not None:
@@ -1158,6 +1166,7 @@ def compute_region_diffs(
                     "baseline_share": baseline_share,
                     "weighted_share": current_share,
                     "swing": swing,
+                    "applicable": applicable,
                 }
             )
 
@@ -1351,8 +1360,14 @@ def write_output_csvs(
                     "party_id": int(row["party_id"]),
                     "party_name": str(row["party_name"]),
                     "baseline_share": f"{float(row['baseline_share']):.4f}",
-                    "weighted_share": f"{float(row['weighted_share']):.4f}",
-                    "swing": f"{float(row['swing']):.4f}",
+                    "weighted_share": (
+                        f"{float(row['weighted_share']):.4f}"
+                        if row.get("applicable", True) else "N/A"
+                    ),
+                    "swing": (
+                        f"{float(row['swing']):.4f}"
+                        if row.get("applicable", True) else "N/A"
+                    ),
                 }
             )
 
@@ -1812,7 +1827,10 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
                 if not rows:
                     continue
                 summary = ", ".join(
-                    f"{row['party_name']}: {float(row['swing']):+.2f}" for row in rows
+                    f"{row['party_name']}: {float(row['swing']):+.2f}"
+                    if row.get("applicable", True)
+                    else f"{row['party_name']}: N/A"
+                    for row in rows
                 )
                 print(f"- {region_name}: {summary}")
 

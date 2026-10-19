@@ -339,48 +339,48 @@ class TestCalibrationView:
     def test_report_tables(self, app: Flask, paths: dict[str, Path]) -> None:
         _write(paths["report"], fixture_report())
         body = _get(app)
-        assert "Realised σ_nat = <strong>2.717</strong>" in body
+        assert "Realised σ_nat = <strong>2.72</strong>" in body
         flat = re.sub(r"\s+", " ", body)
-        assert "Raw (engine) σ_nat = <strong>3.307</strong>:" in flat
-        assert "Raw σ_nat = the same with z ÷ ratio = √10.939" in flat
-        assert "2.111 over" in body
+        assert "Raw (engine) σ_nat = <strong>3.31</strong>:" in flat
+        assert "Raw σ_nat = the same with z ÷ ratio = √10.94" in flat
+        assert "2.11 over" in body
         assert _row(body, "1992") == [
-            "5", "3.38", "Conservative", "38.30", "42.80", "-4.50", "1.080", "-4.17",
-            "17.36", "11.43", "0.798", "-5.22",
+            "5", "3.38", "Conservative", "38.30", "42.80", "-4.50", "1.08", "-4.17",
+            "17.36", "11.43", "0.80", "-5.22",
         ]  # fmt: skip
         assert _row(body, "2019") == ["con", "44.70", "44.72", "-0.02"]
         # The λ̂ fit row, then the σ_seat row.
         assert _rows(body, "2010→2015") == [
-            ["2810", "6", "14159.4", "59374.5", "+0.238", "0.057"],
+            ["2810", "6", "14159.4", "59374.5", "+0.24", "0.06"],
             [
-                "2719", "91", "2", "-0.267", "3.104", "4.602", "-0.450", "3.300",
-                "4.857", "0.824 / 0.938",
+                "2719", "91", "2", "-0.27", "3.10", "4.60", "-0.45", "3.30",
+                "4.86", "0.82 / 0.94",
             ],
         ]
-        assert "√(mean over 2 pairs of λ̂²) = √0.146" in re.sub(r"\s+", " ", body)
+        assert "√(mean over 2 pairs of λ̂²) = √0.15" in re.sub(r"\s+", " ", body)
         assert _row(body, "Pooled") == [
-            "11603", "", "", "-0.169", "2.878", "4.267", "-0.330", "3.310", "4.903",
-            "0.822 / 0.962",
+            "11603", "", "", "-0.17", "2.88", "4.27", "-0.33", "3.31", "4.90",
+            "0.82 / 0.96",
         ]  # fmt: skip
         # A garbled or missing ratio summary shows dashes.
         assert _rows(body, "2019n→2024")[1][-1] == "- / -"
         assert _row(body, "σ_nat: each election's two largest parties") == [
-            "18", "0.795", "0.821", "0.843",
+            "18", "0.80", "0.82", "0.84",
         ]  # fmt: skip
         assert _row(body, "σ_nat: other parties") == ["-", "-", "-", "-"]
         assert _row(body, "σ_seat: other parties (pooled)") == [
-            "6232", "0.904", "0.962", "0.991",
+            "6232", "0.90", "0.96", "0.99",
         ]  # fmt: skip
-        assert "the election mean z²) = √7.382" in re.sub(r"\s+", " ", body)
+        assert "the election mean z²) = √7.38" in re.sub(r"\s+", " ", body)
         # Per-party λ̂ pivot: Labour in both pairs, Conservative only in the second.
-        assert _row(body, "Labour") == ["+0.673 (631)", "+0.118 (630)"]
+        assert _row(body, "Labour") == ["+0.67 (631)", "+0.12 (630)"]
         # Conservative heads a by-party σ_nat row and a λ̂ pivot row.
-        assert _rows(body, "Conservative") == [["9", "2.34"], ["-", "+0.824 (631)"]]
+        assert _rows(body, "Conservative") == [["9", "2.34"], ["-", "+0.82 (631)"]]
         assert _row(body, "the Speaker's seat") == ["3", "2"]
         assert _row(body, "more_in_common") == [
-            "15", "0.7529", "11.294", "0.695", "0.840",
+            "15", "0.75", "11.29", "0.69", "0.84",
         ]  # fmt: skip
-        assert _row(body, "All") == ["34", "27.156 ÷ 34 polls = 0.7987 → 0.8"]
+        assert _row(body, "All") == ["34", "27.16 ÷ 34 polls = 0.80 → 0.8"]
         # Percentiles: each pair, then pooled.
         assert _row(body, "p5") == ["-10.67", "-11.82", "-9.50"]
         # Histogram: the garbled pair shows dashes; the bar scales to the

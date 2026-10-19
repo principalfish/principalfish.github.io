@@ -58,7 +58,27 @@ def fmt(value: object, spec: str = ".2f") -> str:
         return "-"
     if not math.isfinite(value):
         return "-"
-    return format(value, spec)
+    result = format(value, spec)
+    # A value that rounds to zero reads as "0.00", never "-0.00".
+    if result.startswith("-") and float(result) == 0:
+        return result.removeprefix("-")
+    return result
+
+
+def round_display(value: object) -> object:
+    """Round nested diagnostic values for display without changing stored data."""
+    if isinstance(value, float):
+        return (round(value, 2) or 0.0) if math.isfinite(value) else "-"
+    if isinstance(value, dict):
+        return {key: round_display(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [round_display(item) for item in value]
+    return value
+
+
+# Registered by call rather than decorator: Flask's decorator is untyped, which
+# strict mypy rejects.
+bp.add_app_template_filter(round_display, "round_display")
 
 
 @dataclass(frozen=True, slots=True)

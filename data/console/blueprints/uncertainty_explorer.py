@@ -121,6 +121,10 @@ def seat(seat_id: int) -> str:
             tail = (1 - interval) / 2
             counts = np.bincount(draws.winner[:, s], minlength=len(draws.party_ids))
             view.update(seat_id=str(seat_id), seat_index=s,
+                        party_order=sorted(
+                            range(len(draws.party_ids)),
+                            key=lambda k: central_seat.get("shares", {}).get(
+                                str(draws.party_ids[k]), 0), reverse=True),
                         comparison=comparison(draws, flip),
                         central=central_seat, central_margin=central_margin,
                         outcomes=mapping((view["run"].stored.seats or {}).get(str(seat_id))),

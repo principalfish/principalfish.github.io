@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% macro ratio_cells(summary) -%}
   {%- if summary is mapping -%}
-    <td>{{ summary.count }}</td><td>{{ fmt(summary.p10, ".3f") }}</td><td>{{ fmt(summary.median, ".3f") }}</td><td>{{ fmt(summary.p90, ".3f") }}</td>
+    <td>{{ summary.count }}</td><td>{{ fmt(summary.p10, ".2f") }}</td><td>{{ fmt(summary.median, ".2f") }}</td><td>{{ fmt(summary.p90, ".2f") }}</td>
   {%- else -%}
     <td>-</td><td>-</td><td>-</td><td>-</td>
   {%- endif -%}
 {%- endmacro %}
 {% macro ratio_median(summary) -%}
-  {%- if summary is mapping %}{{ fmt(summary.median, ".3f") }}{% else %}-{% endif -%}
+  {%- if summary is mapping %}{{ fmt(summary.median, ".2f") }}{% else %}-{% endif -%}
 {%- endmacro %}
 {% block container_class %} container-wide{% endblock %}
 {% block content %}
@@ -50,11 +50,11 @@
           {% for row in parameters %}
             <tr>
               <th scope="row"><code>{{ row.name }}</code></th>
-              <td>{{ row.value }}</td>
+              <td>{{ row.value|round_display }}</td>
               <td>{{ row.unit }}</td>
               <td>{{ row.source }}</td>
               <td>
-                {%- if row.reported is none %}-{% else %}{{ row.reported }}{% endif -%}
+                {%- if row.reported is none %}-{% else %}{{ row.reported|round_display }}{% endif -%}
                 {%- if row.differs %} <strong>(differs)</strong>{% endif -%}
               </td>
               <td>{{ row.derivation }}</td>
@@ -71,14 +71,14 @@
       <h3>σ_nat: final polls against results</h3>
       <p>{{ national.method }}</p>
       <p>
-        Realised σ_nat = <strong>{{ fmt(national.sigma_nat_realised, ".3f") }}</strong>
+        Realised σ_nat = <strong>{{ fmt(national.sigma_nat_realised, ".2f") }}</strong>
         (elections weighted equally);
-        {{ fmt(national.sigma_nat_cells, ".3f") }} with every election &times;
-        party weighted equally; {{ fmt(national.sigma_nat_core, ".3f") }} over
+        {{ fmt(national.sigma_nat_cells, ".2f") }} with every election &times;
+        party weighted equally; {{ fmt(national.sigma_nat_core, ".2f") }} over
         Con, Lab and LD only.
       </p>
       <p>
-        Raw (engine) σ_nat = <strong>{{ fmt(national.sigma_nat_raw, ".3f") }}</strong>:
+        Raw (engine) σ_nat = <strong>{{ fmt(national.sigma_nat_raw, ".2f") }}</strong>:
         the same RMS with each z first divided by its own centring ratio.
         {{ national.centring_method }}
       </p>
@@ -116,13 +116,13 @@
                   <td>{{ fmt(party.average) }}</td>
                   <td>{{ fmt(party.result) }}</td>
                   <td>{{ fmt(party.error, "+.2f") }}</td>
-                  <td>{{ fmt(party.scale, ".3f") }}</td>
+                  <td>{{ fmt(party.scale, ".2f") }}</td>
                   <td>{{ fmt(party.z, "+.2f") }}</td>
                   <td>{{ fmt(party.z2) }}</td>
                   {% if loop.first %}
                     <td rowspan="{{ election.parties | length }}">{{ fmt(election.mean_z2) }}</td>
                   {% endif %}
-                  <td>{{ fmt(party.ratio, ".3f") }}</td>
+                  <td>{{ fmt(party.ratio, ".2f") }}</td>
                   <td>{{ fmt(party.z_raw, "+.2f") }}</td>
                 </tr>
               {% endfor %}
@@ -132,16 +132,16 @@
             <tr>
               <th scope="row" colspan="9">
                 Realised σ_nat = √(mean over {{ national.elections | length }}
-                elections of the election mean z²) = √{{ fmt(national.mean_z2, ".3f") }}
+                elections of the election mean z²) = √{{ fmt(national.mean_z2, ".2f") }}
               </th>
-              <td colspan="4"><strong>{{ fmt(national.sigma_nat_realised, ".3f") }}</strong></td>
+              <td colspan="4"><strong>{{ fmt(national.sigma_nat_realised, ".2f") }}</strong></td>
             </tr>
             <tr>
               <th scope="row" colspan="9">
                 Raw σ_nat = the same with z &divide; ratio =
-                √{{ fmt(national.mean_z2_raw, ".3f") }}
+                √{{ fmt(national.mean_z2_raw, ".2f") }}
               </th>
-              <td colspan="4"><strong>{{ fmt(national.sigma_nat_raw, ".3f") }}</strong></td>
+              <td colspan="4"><strong>{{ fmt(national.sigma_nat_raw, ".2f") }}</strong></td>
             </tr>
           </tfoot>
         </table>
@@ -221,8 +221,8 @@
                 <td>{{ pair.stood_down }}</td>
                 <td>{{ fmt(pair.cross, ".1f") }}</td>
                 <td>{{ fmt(pair.lever_squares, ".1f") }}</td>
-                <td>{{ fmt(pair["lambda"], "+.3f") }}</td>
-                <td>{{ fmt(pair.lambda2, ".3f") }}</td>
+                <td>{{ fmt(pair["lambda"], "+.2f") }}</td>
+                <td>{{ fmt(pair.lambda2, ".2f") }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -230,10 +230,10 @@
             <tr>
               <th scope="row" colspan="5">
                 σ_λ = √(mean over {{ swing.pooled.pairs }} pairs of λ̂²) =
-                √{{ fmt(swing.pooled.mean_lambda2, ".3f") }};
-                mean λ̂ {{ fmt(swing.pooled.mean_lambda, "+.3f") }} (reported, not applied)
+                √{{ fmt(swing.pooled.mean_lambda2, ".2f") }};
+                mean λ̂ {{ fmt(swing.pooled.mean_lambda, "+.2f") }} (reported, not applied)
               </th>
-              <td colspan="2"><strong>{{ fmt(swing.pooled.sigma_lambda, ".3f") }}</strong></td>
+              <td colspan="2"><strong>{{ fmt(swing.pooled.sigma_lambda, ".2f") }}</strong></td>
             </tr>
           </tfoot>
         </table>
@@ -265,12 +265,12 @@
                 <td>{{ pair.residuals_used }}</td>
                 <td>{{ pair.predicted_zero }}</td>
                 <td>{{ pair.no_seat_noise }}</td>
-                <td>{{ fmt(pair.residual_median, "+.3f") }}</td>
-                <td>{{ fmt(pair.mad, ".3f") }}</td>
-                <td>{{ fmt(pair.sigma_seat_realised, ".3f") }}</td>
-                <td>{{ fmt(pair.raw_median, "+.3f") }}</td>
-                <td>{{ fmt(pair.raw_mad, ".3f") }}</td>
-                <td>{{ fmt(pair.sigma_seat_raw, ".3f") }}</td>
+                <td>{{ fmt(pair.residual_median, "+.2f") }}</td>
+                <td>{{ fmt(pair.mad, ".2f") }}</td>
+                <td>{{ fmt(pair.sigma_seat_realised, ".2f") }}</td>
+                <td>{{ fmt(pair.raw_median, "+.2f") }}</td>
+                <td>{{ fmt(pair.raw_mad, ".2f") }}</td>
+                <td>{{ fmt(pair.sigma_seat_raw, ".2f") }}</td>
                 <td>{{ ratio_median(pair.ratios_contenders) }} / {{ ratio_median(pair.ratios_others) }}</td>
               </tr>
             {% endfor %}
@@ -281,12 +281,12 @@
               <td>{{ swing.pooled.cells }}</td>
               <td></td>
               <td></td>
-              <td>{{ fmt(swing.pooled.residual_median, "+.3f") }}</td>
-              <td>{{ fmt(swing.pooled.mad, ".3f") }}</td>
-              <td><strong>{{ fmt(swing.pooled.sigma_seat_realised, ".3f") }}</strong></td>
-              <td>{{ fmt(swing.pooled.raw_median, "+.3f") }}</td>
-              <td>{{ fmt(swing.pooled.raw_mad, ".3f") }}</td>
-              <td><strong>{{ fmt(swing.pooled.sigma_seat_raw, ".3f") }}</strong></td>
+              <td>{{ fmt(swing.pooled.residual_median, "+.2f") }}</td>
+              <td>{{ fmt(swing.pooled.mad, ".2f") }}</td>
+              <td><strong>{{ fmt(swing.pooled.sigma_seat_realised, ".2f") }}</strong></td>
+              <td>{{ fmt(swing.pooled.raw_median, "+.2f") }}</td>
+              <td>{{ fmt(swing.pooled.raw_mad, ".2f") }}</td>
+              <td><strong>{{ fmt(swing.pooled.sigma_seat_raw, ".2f") }}</strong></td>
               <td>{{ ratio_median(swing.pooled.ratios_contenders) }} / {{ ratio_median(swing.pooled.ratios_others) }}</td>
             </tr>
           </tfoot>
@@ -377,7 +377,7 @@
               <tr>
                 <th scope="row">{{ row.label }}</th>
                 {% for cell in row.cells %}
-                  <td>{% if cell %}{{ fmt(cell["lambda"], "+.3f") }} ({{ cell.cells }}){% else %}-{% endif %}</td>
+                  <td>{% if cell %}{{ fmt(cell["lambda"], "+.2f") }} ({{ cell.cells }}){% else %}-{% endif %}</td>
                 {% endfor %}
               </tr>
             {% endfor %}
@@ -415,7 +415,7 @@
       <h3>decided_fraction</h3>
       <p>{{ decided.method }}</p>
       <p>
-        Mean over {{ decided.polls }} polls: {{ fmt(decided.value, ".4f") }},
+        Mean over {{ decided.polls }} polls: {{ fmt(decided.value, ".2f") }},
         written as <strong>{{ decided.rounded }}</strong>.
       </p>
       <div class="table-wrap">
@@ -435,10 +435,10 @@
               <tr>
                 <th scope="row">{{ row.pollster }}</th>
                 <td>{{ row.polls }}</td>
-                <td>{{ fmt(row.mean_ratio, ".4f") }}</td>
-                <td>{{ fmt(row.ratio_sum, ".3f") }}</td>
-                <td>{{ fmt(row.low, ".3f") }}</td>
-                <td>{{ fmt(row.high, ".3f") }}</td>
+                <td>{{ fmt(row.mean_ratio, ".2f") }}</td>
+                <td>{{ fmt(row.ratio_sum, ".2f") }}</td>
+                <td>{{ fmt(row.low, ".2f") }}</td>
+                <td>{{ fmt(row.high, ".2f") }}</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -447,8 +447,8 @@
               <th scope="row">All</th>
               <td>{{ decided.polls }}</td>
               <td colspan="4">
-                {{ fmt(decided.ratio_sum, ".3f") }} ÷ {{ decided.polls }} polls =
-                {{ fmt(decided.value, ".4f") }} → <strong>{{ decided.rounded }}</strong>
+                {{ fmt(decided.ratio_sum, ".2f") }} ÷ {{ decided.polls }} polls =
+                {{ fmt(decided.value, ".2f") }} → <strong>{{ decided.rounded }}</strong>
               </td>
             </tr>
           </tfoot>

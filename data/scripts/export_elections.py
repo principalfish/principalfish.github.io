@@ -10,11 +10,19 @@ Outputs (per page root):
         - <root>/maps/*.topo.json (TopoJSON map per map_id)
         - <root>/map-modes.json (manifest, built from that page's map-modes-shell.json)
 
+Page roots are also read: each page's map-modes-shell.json, existing map-modes.json,
+maps/ and parent results. ``--output-base DIR`` moves every page root to
+``DIR/<page>/data`` (seeded once by copying the repo's page data directory), for a
+scratch export that leaves the repository untouched; it works with every mode.
+``--output-root DIR`` applies only to ``--current-simulation``.
+
 Usage:
     python data/scripts/export_elections.py
     python data/scripts/export_elections.py --dry-run
+    python data/scripts/export_elections.py --output-base /tmp/export-check
     python data/scripts/export_elections.py --election-name "2019 General Election"
     python data/scripts/export_elections.py --current-simulation --output-file /tmp/current-simulation.json
+    python data/scripts/export_elections.py --current-simulation --output-root /tmp/uk-data
     python data/scripts/export_elections.py --metadata-only
 """
 
@@ -23,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
@@ -39,6 +48,7 @@ from sqlalchemy.orm import joinedload, Session
 
 from db import Database
 from electoral_votes import allocation_year, get_electoral_votes
+from model_support.persistence import load_uncertainty
 from models import Election, ElectionType, Map, Party, Region, Seat, Vote
 from scripts.export.naming import (
     PARTY_NAME_TO_KEY,
@@ -84,12 +94,17 @@ from scripts.export.ordering import (
     insert_current_parliament_entry,
     insert_preserved_entry,
 )
+from scripts.export.uncertainty import (
+    ModelUncertaintyExport,
+    latest_model_run,
+    model_run_uncertainty,
+    sync_uncertainty_file,
+)
 
 DEM_PARTY_ID = 20   # Democratic — see uselectionmaps/data/map-modes.json parties[]
 REP_PARTY_ID = 21   # Republican
 
 REPO_ROOT = DATA_DIR.parent
-OUTPUT_ROOT_DEFAULT = REPO_ROOT / "electionmaps" / "data"
 LEGACY_FILES_DIR_DEFAULT = DATA_DIR / "old_data" / "files" / "westminster"
 
 # Each front-end page owns its own data directory + manifest. The full export partitions
@@ -148,6 +163,37 @@ def refresh_manifest_modes(
                 mode.pop(key, None)
 
 
+def resolve_page_roots(output_base: Path | None) -> dict[str, Path]:
+    """Return each page's data directory for this export.
+
+    Without ``output_base`` these are :data:`PAGE_OUTPUT_ROOTS` (the repository). With
+    it, each page's root is ``output_base/<page>/data``; a root that does not exist yet
+    is seeded by copying the page's repository data directory, because the export reads
+    the shell, the existing manifest, maps and parent results from the page root. An
+    existing scratch root is reused as it is. Seeding happens under ``--dry-run`` too:
+    it writes only inside ``output_base``, so the plan reads the same inputs.
+
+    Args:
+        output_base: The scratch base directory, or None for the repository.
+
+    Returns:
+        Page name -> its data directory.
+    """
+    if output_base is None:
+        return dict(PAGE_OUTPUT_ROOTS)
+    roots: dict[str, Path] = {}
+    for page, source in PAGE_OUTPUT_ROOTS.items():
+        destination = output_base.resolve() / page / "data"
+        if not destination.exists():
+            if source.is_dir():
+                shutil.copytree(source, destination)
+            else:
+                destination.mkdir(parents=True)
+            print(f"Seeded scratch page: {source} -> {destination}")
+        roots[page] = destination
+    return roots
+
+
 def partition_elections_by_page(elections: Sequence[Election]) -> dict[str, list[Election]]:
     """Group ``elections`` by the front-end page that owns their parliament.
 
@@ -177,8 +223,12 @@ def parse_args() -> argparse.Namespace:
       in the existing ``map-modes.json``.
 
     Other flags:
-    - ``--output-root PATH``: override the default output directory
-      (``electionmaps/data``).
+    - ``--output-base DIR``: write every page under ``DIR/<page>/data`` instead of
+      the repository (see :func:`resolve_page_roots`). Works with every mode.
+    - ``--output-root DIR``: ``--current-simulation`` only: the UK page data
+      directory to write ``results/prediction-simulation.json`` (and the uncertainty
+      file) under; defaults to ``electionmaps/data``. Mutually exclusive with
+      ``--output-base``.
     - ``--legacy-files-dir PATH``: override the directory containing legacy
       map template files.
     - ``--dry-run``: print planned actions without writing any files.
@@ -190,7 +240,9 @@ def parse_args() -> argparse.Namespace:
 
     Raises:
         SystemExit: If ``--output-file`` is given without ``--election-name``
-            or ``--current-simulation``.
+            or ``--current-simulation``, or ``--output-root`` without
+            ``--current-simulation``, or both ``--output-root`` and
+            ``--output-base``.
     """
     parser = argparse.ArgumentParser(description="Export non-simulation elections to electionmaps/data")
     target_group = parser.add_mutually_exclusive_group()
@@ -210,11 +262,26 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Update only parties and per-map regions in map-modes.json",
     )
-    parser.add_argument(
+    output_group = parser.add_mutually_exclusive_group()
+    output_group.add_argument(
         "--output-root",
         type=Path,
-        default=OUTPUT_ROOT_DEFAULT,
-        help="Output directory containing map-modes.json, maps/, results/",
+        default=None,
+        help=(
+            "With --current-simulation only: the UK page data directory to write "
+            "results/prediction-simulation.json under (default electionmaps/data). "
+            "For a scratch export of every page, use --output-base."
+        ),
+    )
+    output_group.add_argument(
+        "--output-base",
+        type=Path,
+        default=None,
+        help=(
+            "Write every page under DIR/<page>/data (electionmaps, uselectionmaps) "
+            "instead of the repository, seeding each from the repository's page data "
+            "directory if it does not exist yet. Works with every mode."
+        ),
     )
     parser.add_argument(
         "--legacy-files-dir",
@@ -238,6 +305,11 @@ def parse_args() -> argparse.Namespace:
 
     if args.output_file and not (args.election_name or args.current_simulation):
         parser.error("--output-file requires --election-name or --current-simulation")
+    if args.output_root is not None and not args.current_simulation:
+        parser.error(
+            "--output-root applies only to --current-simulation; use --output-base DIR "
+            "to write a full export (every page) under DIR instead of the repository"
+        )
 
     return args
 
@@ -264,6 +336,7 @@ def main() -> None:
     """
     args = parse_args()
     single_election_mode = bool(args.election_name or args.current_simulation)
+    page_roots = resolve_page_roots(args.output_base)
 
     if args.metadata_only:
         # Refresh parties + per-map regions in every page manifest that exists. Each page's
@@ -276,7 +349,7 @@ def main() -> None:
         manifest_parties = build_manifest_party_settings(parties)
         manifest_regions_by_map_id = build_manifest_regions_by_map_id(regions)
         wrote_any = False
-        for page_root in PAGE_OUTPUT_ROOTS.values():
+        for page_root in page_roots.values():
             manifest_path = page_root / "map-modes.json"
             if not manifest_path.exists():
                 continue
@@ -305,11 +378,12 @@ def main() -> None:
             wrote_any = True
         if not wrote_any:
             raise FileNotFoundError(
-                f"No map-modes.json found under any page root: {[str(r) for r in PAGE_OUTPUT_ROOTS.values()]}"
+                f"No map-modes.json found under any page root: {[str(r) for r in page_roots.values()]}"
             )
         return
 
     db = Database()
+    database_path = Path(db.config.database_path)
     others_party = db.get_party_by_name("Others")
     if others_party is None:
         raise RuntimeError("'Others' party not found in DB — run import_parties.py first")
@@ -333,12 +407,7 @@ def main() -> None:
                 raise RuntimeError(f"Election not found: {args.election_name}")
         elif args.current_simulation:
             # Export the latest model_uns election (the current prediction).
-            sim_election = session.execute(
-                select(Election)
-                .where(Election.type == ElectionType.model_uns)
-                .order_by(Election.id.desc())
-                .limit(1)
-            ).scalars().first()
+            sim_election = latest_model_run(session)
             if sim_election is None:
                 raise RuntimeError("No model_uns elections found for --current-simulation")
 
@@ -375,7 +444,15 @@ def main() -> None:
                 .where(Vote.election_id == sim_election.id)
                 .options(joinedload(Vote.party))
             ).scalars().all())
-            result_payload = build_result_payload(seats, votes, election_year=sim_election.year)
+            published = model_run_uncertainty(
+                sim_election, load_uncertainty(database_path, sim_election.id)
+            )
+            result_payload = build_result_payload(
+                seats,
+                votes,
+                election_year=sim_election.year,
+                seat_uncertainty=published.seat_bands,
+            )
 
             if args.output_file:
                 output_file = args.output_file.resolve()
@@ -387,13 +464,19 @@ def main() -> None:
                     print(f"Wrote simulation payload: {output_file} ({seat_count} seats from election '{sim_election.name}')")
             else:
                 # Write to default results dir
-                result_path = args.output_root.resolve() / "results" / "prediction-simulation.json"
+                # --output-root and --output-base are exclusive; without either this
+                # is the repository's UK page, electionmaps/data.
+                uk_root = args.output_root or page_roots["electionmaps"]
+                result_path = uk_root.resolve() / "results" / "prediction-simulation.json"
                 seat_count = len(result_payload.get("seats", []))
                 if args.dry_run:
                     print(f"Would write simulation: {result_path} ({seat_count} seats)")
                 else:
                     write_json(result_path, result_payload)
                     print(f"Wrote simulation: {result_path} ({seat_count} seats from election '{sim_election.name}')")
+                sync_uncertainty_file(
+                    result_path.parent, published.document, dry_run=args.dry_run
+                )
             return
         else:
             elections = session.execute(
@@ -419,13 +502,7 @@ def main() -> None:
             if not elections:
                 raise RuntimeError("No non-simulation elections found (uk_general/by_election/holyrood_general)")
 
-            latest_simulation = session.execute(
-                select(Election)
-                .where(Election.type == ElectionType.model_uns)
-                .options(joinedload(Election.map))
-                .order_by(Election.id.desc())
-                .limit(1)
-            ).scalars().first()
+            latest_simulation = latest_model_run(session)
             if latest_simulation is not None:
                 elections = [latest_simulation, *elections]
 
@@ -454,18 +531,32 @@ def main() -> None:
         if args.output_file and len(elections) != 1:
             raise RuntimeError("--output-file supports exactly one target election")
 
+        # The exported model_uns run (at most one: the latest, or a named run)
+        # publishes its stored uncertainty alongside its result file. Built once,
+        # before any file is written, so a malformed summary writes nothing.
+        model_run = next(
+            (election for election in elections if election.type == ElectionType.model_uns),
+            None,
+        )
+        model_uncertainty = (
+            model_run_uncertainty(model_run, load_uncertainty(database_path, model_run.id))
+            if model_run is not None
+            else None
+        )
+
         elections_by_page = partition_elections_by_page(elections)
         for _page_name, _page_parliaments in PAGE_PARLIAMENTS.items():
             _export_page(
                 session=session,
                 elections=elections_by_page[_page_name],
-                output_root=PAGE_OUTPUT_ROOTS[_page_name],
+                output_root=page_roots[_page_name],
                 parliaments=_page_parliaments,
                 args=args,
                 manifest_parties=manifest_parties,
                 manifest_regions_by_map_id=manifest_regions_by_map_id,
                 has_electorate=has_electorate,
                 single_election_mode=single_election_mode,
+                model_uncertainty=model_uncertainty,
             )
 
 
@@ -479,12 +570,20 @@ def _export_page(
     manifest_regions_by_map_id: dict[str, list[dict[str, Any]]],
     has_electorate: bool,
     single_election_mode: bool,
+    model_uncertainty: ModelUncertaintyExport | None = None,
 ) -> None:
     """Build and write one page's results, maps, and map-modes.json manifest.
 
     Runs the per-election export + manifest assembly for the subset of ``elections`` whose
     parliament belongs to this page, writing under ``output_root`` and reading that root's
     ``map-modes-shell.json``. Called once per page by :func:`main`.
+
+    ``model_uncertainty`` is what the exported ``model_uns`` run publishes (``main``
+    exports at most one): its seat bands add ``u`` rows to that run's result file, and
+    its document is written to ``results/prediction-uncertainty.json`` beside it. When
+    it has no document, a stale uncertainty file is removed instead (see
+    :func:`scripts.export.uncertainty.sync_uncertainty_file`). None leaves the model
+    run's file without ``u`` and removes a stale uncertainty file.
     """
     maps_dir = output_root / "maps"
     results_dir = output_root / "results"
@@ -570,7 +669,16 @@ def _export_page(
                 ),
                 (seat.seat_name for seat in seats),
             )
-        result_payload = build_result_payload(seats, votes, election_year=election.year, ev_by_unit=ev_by_unit)
+        published: ModelUncertaintyExport | None = None
+        if election.type == ElectionType.model_uns:
+            published = model_uncertainty or ModelUncertaintyExport(None, None)
+        result_payload = build_result_payload(
+            seats,
+            votes,
+            election_year=election.year,
+            ev_by_unit=ev_by_unit,
+            seat_uncertainty=published.seat_bands if published is not None else None,
+        )
 
         if election.type == ElectionType.us_presidential:
             for seat_row in result_payload["seats"]:
@@ -673,6 +781,9 @@ def _export_page(
                     # boundary fixes) and is not reflected in the legacy templates.
                     map_payload = json.loads(map_template_path.read_text(encoding="utf-8"))
                     write_json(map_path, map_payload)
+
+        if published is not None:
+            sync_uncertainty_file(results_dir, published.document, dry_run=args.dry_run)
 
         map_files_by_id[str(election.map_id)] = map_relpath
         written_map_ids.add(election.map_id)

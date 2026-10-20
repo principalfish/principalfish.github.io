@@ -485,3 +485,59 @@ def test_northern_ireland_keeps_baseline_and_only_seat_noise(
     assert "Northern Ireland keeps its baseline" in budget["polling_exclusion"]
     assert budget["combined_sd"] == 0.0
     assert budget["seat_sd"] > 0.0
+
+
+def test_rerunning_an_older_date_keeps_raw_and_meta_with_the_latest(
+    db: Database, westminster_world: WestminsterWorld, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The raw file and the meta file belong to the latest dated run only."""
+    world = westminster_world
+    older = DAY - timedelta(days=3)
+    _poll(db, world, fieldwork_end=older)
+    _poll(db, world, pollster_identifier="later", fieldwork_end=DAY)
+    meta = tmp_path / "meta.json"
+    _main(db, world, monkeypatch, "--as-of-date", DAY.isoformat(),
+          "--since-date", (DAY - timedelta(days=30)).isoformat())
+    latest = _stored(db)
+    _, raw_meta = load_draws(tmp_path / "draws.npz")
+    assert raw_meta.election_id == latest.election_id
+    meta_before = meta.read_bytes()
+    assert json.loads(meta_before)["as_of_date"] == DAY.isoformat()
+    raw_before = (tmp_path / "draws.npz").read_bytes()
+    capsys.readouterr()
+
+    _main(db, world, monkeypatch, "--as-of-date", older.isoformat(),
+          "--since-date", (older - timedelta(days=30)).isoformat())
+
+    rerun = _stored(db, older)
+    assert rerun.election_id > latest.election_id
+    out = capsys.readouterr().out.splitlines()
+    assert (
+        f"Raw simulations not written: UNS {older} is not the latest dated run "
+        f"(latest: {DAY}); the raw file is left unchanged."
+    ) in out
+    assert (
+        f"Trend metadata not written: {older} is not the latest dated run "
+        f"(latest: {DAY}); the metadata is left unchanged."
+    ) in out
+    assert (tmp_path / "draws.npz").read_bytes() == raw_before
+    assert meta.read_bytes() == meta_before
+    # The latest run keeps its detail; the re-run older date does not.
+    assert _stored(db).regions is not None and rerun.regions is None
+
+
+def test_saving_the_latest_date_writes_raw_and_meta(
+    db: Database, westminster_world: WestminsterWorld, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    world = westminster_world
+    earlier = DAY - timedelta(days=3)
+    _poll(db, world, fieldwork_end=DAY)
+    runner.run_simulation(db, _cfg(world, as_of_date=earlier, uncertainty=None))
+    _main(db, world, monkeypatch, "--as-of-date", DAY.isoformat(),
+          "--since-date", (DAY - timedelta(days=30)).isoformat())
+    assert "not written" not in capsys.readouterr().out
+    _, raw_meta = load_draws(tmp_path / "draws.npz")
+    assert raw_meta.election_id == _stored(db).election_id
+    assert json.loads((tmp_path / "meta.json").read_text())["as_of_date"] == str(DAY)

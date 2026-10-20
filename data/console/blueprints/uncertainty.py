@@ -24,6 +24,8 @@ from sqlalchemy import select
 
 from console.blueprints.poll_import import WESTMINSTER_MAP_NAME
 from console.db import get_db
+from console.services.uncertainty_export import ExportPreview, export_preview
+from db import Database
 from model_support import calibration as calibration_module
 from model_support import uncertainty as uncertainty_module
 from model_support.calibration import (
@@ -35,9 +37,11 @@ from model_support.calibration import (
 )
 from model_support.persistence import (
     UncertaintyStatus,
+    UncertaintyStoreError,
     uncertainty_status,
     westminster_uns_scope,
 )
+from model_support.public_uncertainty import PublicUncertaintyError
 from model_support.uncertainty import (
     UncertaintyConfig,
     UncertaintyConfigError,
@@ -310,10 +314,27 @@ def status_line(status: UncertaintyStatus | None) -> str:
     return f"{runs} stored uncertainty; full detail on: {status.detail_run.name}"
 
 
+def published_export(db: Database) -> tuple[ExportPreview | None, str | None]:
+    """The hub's "Published export" panel: the preview, or why there is none.
+
+    Returns:
+        ``(preview, None)``, or ``(None, message)`` when there is no model run
+        or its stored summary cannot be published.
+    """
+    try:
+        preview = export_preview(db)
+    except (UncertaintyStoreError, PublicUncertaintyError) as err:
+        return None, f"The export would fail on this run's stored summary: {err}"
+    if preview is None:
+        return None, "No model run to export."
+    return preview, None
+
+
 @bp.route("/westminster/uncertainty")
 def uncertainty_hub() -> str:
     """GET /westminster/uncertainty — Stored-run status and each view's link."""
     db = get_db()
+    preview, preview_error = published_export(db)
     with db.session() as session:
         map_id = session.execute(
             select(Map.id).where(Map.name == WESTMINSTER_MAP_NAME)
@@ -325,7 +346,12 @@ def uncertainty_hub() -> str:
             Path(db.config.database_path), westminster_uns_scope(map_id)
         )
         stored = status_line(status)
-    return render_template("uncertainty_hub.html", stored=stored)
+    return render_template(
+        "uncertainty_hub.html",
+        stored=stored,
+        preview=preview,
+        preview_error=preview_error,
+    )
 
 
 @bp.route("/westminster/uncertainty/calibration")

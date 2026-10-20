@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
+from model_support.public_uncertainty import SeatBand
 from models import Vote
 from scripts.export.naming import legacy_party_key_for_vote, normalize_region_name, normalize_vote_total_value
 
@@ -74,6 +76,7 @@ def build_result_payload(
     votes: Sequence[Vote],
     election_year: int | None = None,
     ev_by_unit: dict[str, int] | None = None,
+    seat_uncertainty: Mapping[int, Mapping[int, SeatBand]] | None = None,
 ) -> dict[str, Any]:
     """Build a ``pf-results-v4`` result payload for a single election.
 
@@ -98,6 +101,13 @@ def build_result_payload(
         ev_by_unit: Optional ``{seat_name: electoral_votes}`` mapping. Application
             presidential exports provide validated database allocation weights.
             When ``None``, direct callers retain the legacy seat-field behavior.
+        seat_uncertainty: Optional ``{seat_id: {party_id: SeatBand}}`` from a
+            model run's stored seat block. A seat listed there gains
+            ``u: [[party_id, lo, hi, win], ...]``: in ``p`` order, one row per
+            ``p`` party the block has (it leaves out parties below its compact
+            floor, so a row can be missing); ``lo``/``hi`` are the share
+            interval in points (1 dp) and ``win`` the win probability (0-1,
+            4 dp). Without one, or with no matching party, ``u`` is omitted.
 
     Returns:
         Dict with ``{"schema": "pf-results-v4", "seats": [...]}`` where
@@ -176,6 +186,15 @@ def build_result_payload(
                 seat_entry["ev"] = ev_val
         elif seat.electoral_votes is not None:
             seat_entry["ev"] = seat.electoral_votes
+        bands = seat_uncertainty.get(seat.seat_id) if seat_uncertainty else None
+        if bands:
+            uncertainty_rows = [
+                [row[0], band.lo, band.hi, band.win]
+                for row in compact_party_rows
+                if (band := bands.get(row[0])) is not None
+            ]
+            if uncertainty_rows:
+                seat_entry["u"] = uncertainty_rows
         payload_seats.append(seat_entry)
 
     return {

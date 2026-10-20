@@ -19,4 +19,42 @@
       <li><a href="{{ url_for('uncertainty_explorer.simulations') }}">Explore simulations</a>: filter outcomes, inspect draws and explain individual seats.</li>
     </ul>
   </section>
+  <section class="card uncertainty-export">
+    <h2>Published export</h2>
+    {% if preview_error %}
+      <p class="uncertainty-export-message">{{ preview_error }}</p>
+    {% else %}
+      <p>
+        What <code>scripts/export_elections.py</code> would publish now for the
+        model run it ships as the current prediction,
+        <strong>{{ preview.election_name }}</strong>. Built in memory by the
+        export's own functions; nothing is written.
+      </p>
+      {% if preview.basis %}
+        <p>Basis label: <q class="uncertainty-export-basis">{{ preview.basis }}</q></p>
+      {% endif %}
+      <table>
+        <thead>
+          <tr><th scope="col">File</th><th scope="col">Size</th><th scope="col">Contents</th></tr>
+        </thead>
+        <tbody>
+          {% for file in preview.files %}
+            <tr>
+              <td><code>{{ file.name }}</code></td>
+              <td>{% if file.size is none %}-{% else %}{{ "{:,}".format(file.size) }} bytes{% endif %}</td>
+              <td>
+                {% for line in file.details %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if preview.withheld %}
+        <p>Never published (stored for the console only):</p>
+        <ul class="uncertainty-export-withheld">
+          {% for line in preview.withheld %}<li>{{ line }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
+  </section>
 {% endblock %}

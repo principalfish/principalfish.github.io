@@ -68,6 +68,7 @@ from model_support.persistence import (
     UncertaintyPayload,
     UncertaintyStoreError,
     delete_outputs,
+    latest_saved_run,
     output_dates,
     replace_output,
     westminster_uns_scope,
@@ -1660,6 +1661,18 @@ def run_simulation(
     )
 
     if raw_path is not None and simulation is not None and simulation.draws is not None:
+        # The raw file belongs with the run that keeps the detailed summary:
+        # the scope's latest dated run. Re-running an older date must not
+        # replace it with draws the console would then pair with stale detail.
+        keeper = latest_saved_run(sqlite_path, westminster_uns_scope(poll_map.id))
+        if keeper is None or keeper[0] != persisted_election_id:
+            latest_date = keeper[1].isoformat() if keeper is not None else "none"
+            print(
+                f"Raw simulations not written: {persisted_name} is not the latest "
+                f"dated run (latest: {latest_date}); the raw file is left unchanged."
+            )
+            raw_path = None
+    if raw_path is not None and simulation is not None and simulation.draws is not None:
         try:
             save_draws(
                 raw_path, simulation.draws,
@@ -1852,11 +1865,24 @@ def main(db_factory: Callable[[], Database] | None = None) -> None:
         )
 
     if not cfg.dry_run:
-        write_trend_cache_meta(
-            cfg.as_of_date,
-            cfg.as_of_date - timedelta(days=lookback_days),
-            latest_poll_usage,
+        # The meta file describes the current prediction: write it only when
+        # this date is the scope's latest dated run.
+        keeper = latest_saved_run(
+            database_file(db), westminster_uns_scope(_output_map_id(db, cfg.map_name))
         )
+        if keeper is not None and keeper[1] == cfg.as_of_date:
+            write_trend_cache_meta(
+                cfg.as_of_date,
+                cfg.as_of_date - timedelta(days=lookback_days),
+                latest_poll_usage,
+            )
+        else:
+            latest_date = keeper[1].isoformat() if keeper is not None else "none"
+            print(
+                f"Trend metadata not written: {cfg.as_of_date.isoformat()} is not "
+                f"the latest dated run (latest: {latest_date}); the metadata is left "
+                "unchanged."
+            )
 
 
 if __name__ == "__main__":

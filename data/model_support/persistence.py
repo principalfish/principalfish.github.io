@@ -167,6 +167,45 @@ def scoped_elections(
     return result
 
 
+def latest_run(runs: Iterable[tuple[int, date]]) -> tuple[int, date] | None:
+    """Return the latest of ``(election_id, as_of)`` runs: by date, then by id.
+
+    The one definition of "latest run" for a model scope: the run that keeps
+    the detailed summary (:func:`replace_output`'s pruning), the run the
+    console calls detailed, and the run the export ships as the current
+    prediction. Write order does not matter; the id only breaks a tie between
+    runs of the same date (e.g. "UNS 2026-10-05 rerun").
+
+    Args:
+        runs: ``(election_id, as_of)`` pairs; undated names are the caller's
+            to leave out (see :meth:`OutputScope.date_from_name`).
+
+    Returns:
+        The latest pair, or None when there are none.
+    """
+    return max(runs, key=lambda run: (run[1], run[0]), default=None)
+
+
+def latest_scoped_run(
+    conn: sqlite3.Connection, scope: OutputScope
+) -> tuple[int, date] | None:
+    """Return the scope's latest dated run (:func:`latest_run`), or None."""
+    return latest_run(scoped_elections(conn, scope))
+
+
+def latest_saved_run(
+    sqlite_path: Path, scope: OutputScope
+) -> tuple[int, date] | None:
+    """Open ``sqlite_path`` and return the scope's latest dated run, or None.
+
+    None also when the file does not exist (it is never created).
+    """
+    if not sqlite_path.exists():
+        return None
+    with closing(sqlite3.connect(sqlite_path)) as conn:
+        return latest_scoped_run(conn, scope)
+
+
 def _delete_range(
     conn: sqlite3.Connection, scope: OutputScope, start: date, end: date
 ) -> tuple[int, int]:
@@ -357,17 +396,17 @@ def _encode_payload(payload: UncertaintyPayload) -> tuple[str, str | None, str |
 def _prune_detail(conn: sqlite3.Connection, scope: OutputScope) -> int:
     """Null the region and seat blocks of every scoped run but the latest.
 
-    "Latest" is by as-of date (parsed from the name, as everywhere in this
-    module), then by id, not by write order.
+    "Latest" is :func:`latest_run`: by as-of date (parsed from the name, as
+    everywhere in this module), then by id, not by write order.
 
     Returns:
         Rows pruned.
     """
     runs = scoped_elections(conn, scope)
-    if not runs:
+    keeper = latest_run(runs)
+    if keeper is None:
         return 0
-    keeper_id = max(runs, key=lambda run: (run[1], run[0]))[0]
-    others = [election_id for election_id, _ in runs if election_id != keeper_id]
+    others = [election_id for election_id, _ in runs if election_id != keeper[0]]
     if not others:
         return 0
     placeholders = ",".join("?" for _ in others)
@@ -377,6 +416,14 @@ def _prune_detail(conn: sqlite3.Connection, scope: OutputScope) -> int:
         "AND (regions_json IS NOT NULL OR seats_json IS NOT NULL)",
         others,
     ).rowcount
+
+
+def _check_schema(schema: object, election_id: int) -> None:
+    if schema != UNCERTAINTY_SCHEMA:
+        raise UncertaintyStoreError(
+            f"Election {election_id}: stored format {schema!r}, "
+            f"expected {UNCERTAINTY_SCHEMA!r}"
+        )
 
 
 def _decode_block(text: str, column: str, election_id: int) -> dict[str, object]:
@@ -422,11 +469,7 @@ def load_uncertainty(sqlite_path: Path, election_id: int) -> StoredUncertainty |
     if row is None:
         return None
     schema, national, regions, seats = row
-    if schema != UNCERTAINTY_SCHEMA:
-        raise UncertaintyStoreError(
-            f"Election {election_id}: stored format {schema!r}, "
-            f"expected {UNCERTAINTY_SCHEMA!r}"
-        )
+    _check_schema(schema, election_id)
     region_block = seat_block = None
     if regions is not None:
         region_block = _decode_block(regions, "regions_json", election_id)
@@ -438,6 +481,38 @@ def load_uncertainty(sqlite_path: Path, election_id: int) -> StoredUncertainty |
         regions=region_block,
         seats=seat_block,
     )
+
+
+def iter_national_blocks(
+    conn: sqlite3.Connection, scope: OutputScope
+) -> Iterator[tuple[int, dict[str, object]]]:
+    """Yield the decoded national block of every scoped run that has one.
+
+    Reads on ``conn``, so a caller inside a transaction sees the same
+    snapshot as its other reads. One block is decoded at a time: a national
+    block carries its error budget (~60 KB), and a backfilled scope has
+    hundreds.
+
+    Args:
+        conn: An open connection to the database.
+        scope: Model type and map (runs on other maps are not read).
+
+    Yields:
+        ``(election_id, national block)``; nothing when the table is absent.
+
+    Raises:
+        UncertaintyStoreError: A row is in another format or its block is not
+            a JSON object.
+    """
+    if not _has_uncertainty_table(conn):
+        return
+    for election_id, schema, national in conn.execute(
+        f"SELECT u.election_id, u.schema, u.national_json FROM {UNCERTAINTY_TABLE} u "
+        "JOIN elections e ON e.id = u.election_id WHERE e.type = ? AND e.map_id = ?",
+        (scope.election_type, scope.map_id),
+    ):
+        _check_schema(schema, election_id)
+        yield int(election_id), _decode_block(national, "national_json", election_id)
 
 
 def uncertainty_status(
@@ -474,7 +549,8 @@ def uncertainty_status(
         stored += 1
         if has_detail:
             detailed.append(UncertaintyRun(int(election_id), str(name), as_of))
-    detail_run = max(
-        detailed, key=lambda run: (run.as_of, run.election_id), default=None
+    latest = latest_run((run.election_id, run.as_of) for run in detailed)
+    detail_run = next(
+        (run for run in detailed if latest and run.election_id == latest[0]), None
     )
     return UncertaintyStatus(stored_runs=stored, detail_run=detail_run)

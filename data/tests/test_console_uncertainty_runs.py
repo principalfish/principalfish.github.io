@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import re
+import sqlite3
+from contextlib import closing
 from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
@@ -20,8 +23,10 @@ from db import Database
 from model_support.monte_carlo import (
     DrawsMeta, SimulationFileError, load_draws, save_draws,
 )
+from model_support.persistence import OutputVote, replace_output, westminster_uns_scope
 from model_support.simulation_replay import replay_simulation
 from tests.console_fixtures import app
+from tests.export_golden import run_export
 from tests.test_westminster_uncertainty_integration import DAY, _cfg, _poll
 import run_uns_model as runner
 from tests.uk_fixtures import WestminsterWorld
@@ -282,3 +287,77 @@ def test_unknown_ids_and_empty_database(db: Database, app: Flask,
         response = app.test_client().get("/westminster/uncertainty/" + suffix)
         assert response.status_code == 200
         assert "No stored Westminster uncertainty" in response.get_data(as_text=True)
+
+
+def _hub(app: Flask) -> str:
+    response = app.test_client().get("/westminster/uncertainty")
+    assert response.status_code == 200
+    return response.get_data(as_text=True)
+
+
+def test_hub_previews_the_published_export(
+    app: Flask, saved: dict[str, Any], db: Database, tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    body = _hub(app)
+    # The sizes are those of the files a real export writes.
+    files = run_export(db, tmp_path / "export", [], monkeypatch)["files"]
+    for name in ("results/prediction-simulation.json",
+                 "results/prediction-uncertainty.json"):
+        size = len(files[name].encode("utf-8"))
+        assert re.search(
+            rf"<td><code>{re.escape(name)}</code></td>\s*<td>{size:,} bytes</td>", body
+        ), name
+    assert "<strong>UNS 2026-06-10</strong>" in body
+    assert ("Nowcast: if an election were held today. 90% ranges and probabilities "
+            "from 50 simulations") in body
+    assert "4 of 4 seats gain u" in body
+    assert "1 run on this map has a stored national block" in body
+    withheld = re.findall(r"<li>((?:national|region|seat)[^<]*)</li>", body)
+    assert withheld == [
+        "national: budget, config_hash, input_hash, seed",
+        "national parties: none",
+        "regions: budget",
+        "region parties: none",
+        "seat parties: none",
+    ]
+
+
+def test_hub_preview_without_detail_and_with_a_bad_summary(
+    app: Flask, saved: dict[str, Any], db: Database, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    election_id = saved["record"].election_id
+    with closing(sqlite3.connect(db.config.database_path)) as conn:
+        conn.execute("UPDATE model_uncertainty SET regions_json = NULL, "
+                     "seats_json = NULL WHERE election_id = ?", (election_id,))
+        conn.commit()
+    body = _hub(app)
+    assert "Not written: the run has no stored regional detail" in body
+    assert "No u rows: the run has no stored seat detail." in body
+    with closing(sqlite3.connect(db.config.database_path)) as conn:
+        conn.execute("UPDATE model_uncertainty SET national_json = '{}' "
+                     "WHERE election_id = ?", (election_id,))
+        conn.commit()
+    assert ("The export would fail on this run&#39;s stored summary: "
+            "national.simulations") in _hub(app)
+
+
+def test_hub_preview_ships_the_latest_date_after_an_older_rerun(
+    app: Flask, saved: dict[str, Any], db: Database, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("console.blueprints.uncertainty.get_db", lambda: db)
+    world = saved["world"]
+    older = DAY - timedelta(days=1)
+    replace_output(
+        Path(db.config.database_path), westminster_uns_scope(world.map_id), older,
+        f"UNS {older}",
+        [OutputVote(next(iter(world.seat_ids.values())), world.party_ids["Labour"],
+                    "", 9.0, True)],
+    )
+    body = _hub(app)
+    assert f"<strong>UNS {DAY}</strong>" in body
+    assert "4 of 4 seats gain u" in body
+    assert "Not written" not in body
+

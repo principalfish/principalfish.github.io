@@ -38,6 +38,9 @@ from model_support.persistence import (
     UncertaintyStatus,
     UncertaintyStoreError,
     delete_outputs,
+    iter_national_blocks,
+    latest_run,
+    latest_saved_run,
     load_uncertainty,
     replace_output,
     uncertainty_status,
@@ -603,6 +606,84 @@ class TestRead:
 
         with pytest.raises(UncertaintyStoreError, match=message):
             load_uncertainty(path, election_id)
+
+    def test_latest_run_is_by_date_then_id(self) -> None:
+        # The highest id is the earliest date: date wins.
+        assert latest_run([(9, date(2026, 10, 1)), (3, date(2026, 10, 5))]) == (
+            3, date(2026, 10, 5),
+        )
+        # Equal dates: the higher id wins, whatever the order given.
+        assert latest_run([(7, date(2026, 10, 5)), (4, date(2026, 10, 5))]) == (
+            7, date(2026, 10, 5),
+        )
+        assert latest_run([]) is None
+
+    def test_latest_saved_run_skips_undated_and_other_scopes(
+        self, path: Path, scopes: dict[str, OutputScope], tmp_path: Path
+    ) -> None:
+        latest = save(path, scopes["main"], 5)
+        save(path, scopes["main"], 2)  # saved later: higher id, earlier date
+        save(path, scopes["other_map"], 9)
+        with closing(sqlite3.connect(path)) as conn:
+            conn.execute(
+                "INSERT INTO elections (map_id, year, name, type) VALUES (?,?,?,?)",
+                (scopes["main"].map_id, 2026, "UNS latest", "model_uns"),
+            )
+            conn.commit()
+        assert latest_saved_run(path, scopes["main"]) == (latest, date(2026, 10, 5))
+        missing = tmp_path / "missing.db"
+        assert latest_saved_run(missing, scopes["main"]) is None
+        assert not missing.exists()
+
+    def test_national_blocks_cover_the_scope_only_including_pruned_runs(
+        self, path: Path, scopes: dict[str, OutputScope]
+    ) -> None:
+        earlier = save(path, scopes["main"], 1, payload(1))
+        later = save(path, scopes["main"], 2, payload(2))
+        save(path, scopes["main"], 3)
+        save(path, scopes["other_type"], 4, payload(4))
+        save(path, scopes["other_map"], 5, payload(5))
+
+        with closing(sqlite3.connect(path)) as conn:
+            blocks = dict(iter_national_blocks(conn, scopes["main"]))
+
+        assert blocks == {
+            earlier: dict(payload(1).national),
+            later: dict(payload(2).national),
+        }
+
+    def test_national_blocks_without_the_table(
+        self, path: Path, scopes: dict[str, OutputScope]
+    ) -> None:
+        save(path, scopes["main"], 1)
+        drop_table(path)
+        with closing(sqlite3.connect(path)) as conn:
+            assert list(iter_national_blocks(conn, scopes["main"])) == []
+
+    @pytest.mark.parametrize(
+        ("column", "value", "message"),
+        [
+            ("schema", "pf-model-uncertainty-v0", "stored format"),
+            ("national_json", "[1]", "national_json is not a JSON object"),
+        ],
+    )
+    def test_national_blocks_refuse_unreadable_rows(
+        self,
+        path: Path,
+        scopes: dict[str, OutputScope],
+        column: str,
+        value: str,
+        message: str,
+    ) -> None:
+        election_id = save(path, scopes["main"], 1, payload(1))
+        with closing(sqlite3.connect(path)) as conn:
+            conn.execute(
+                f"UPDATE model_uncertainty SET {column} = ? WHERE election_id = ?",
+                (value, election_id),
+            )
+            conn.commit()
+            with pytest.raises(UncertaintyStoreError, match=message):
+                list(iter_national_blocks(conn, scopes["main"]))
 
     def test_status_counts_the_scopes_runs_and_names_the_detailed_one(
         self, path: Path, scopes: dict[str, OutputScope]

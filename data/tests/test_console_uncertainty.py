@@ -211,6 +211,11 @@ def test_hub_links_to_the_calibration_view(app: Flask) -> None:
     assert 'href="/westminster/uncertainty/calibration"' in body
 
 
+def test_hub_export_panel_without_a_model_run(app: Flask) -> None:
+    body = _get(app, "/westminster/uncertainty")
+    assert '<p class="uncertainty-export-message">No model run to export.</p>' in body
+
+
 class TestHubStoredStatus:
     """The hub's line on what the UNS model has stored."""
 

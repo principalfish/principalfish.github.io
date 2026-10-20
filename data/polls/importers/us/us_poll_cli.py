@@ -3,7 +3,8 @@
 ``us_senate_import.py``, ``us_presidential_import.py`` and
 ``us_house_generic_ballot_import.py`` each hand :func:`run_importer` their
 contests. The default run fetches, parses and lists what it found, writing
-nothing; ``--commit`` stores the polls and applies automatic matchup tracking.
+nothing; ``--commit`` moves stored polls onto renamed matchups, stores the new
+polls and applies automatic matchup tracking.
 
 Kept apart from :mod:`polls.importers.us.us_wikipedia_polls`, which the console
 imports, so the scraping and importing code there never prints.
@@ -31,6 +32,7 @@ from polls.importers.us.us_wikipedia_polls import (
     UsPollIndex,
     UsPollRow,
     apply_auto_tracked_matchups,
+    apply_relabelled_polls,
     build_us_import_plan,
     commit_us_import_plan,
     fetch_us_poll_index,
@@ -197,7 +199,8 @@ def run_importer(
     """Run a wrapper script's contests and print what they found.
 
     The default is a **dry run**: it fetches, parses and lists, and writes
-    nothing. ``--commit`` stores the polls and then points each ``auto_lead``
+    nothing. ``--commit`` moves stored polls the scrape lists under a renamed
+    matchup onto it, stores the new polls and then points each ``auto_lead``
     race at its lead table's matchup.
 
     Args:
@@ -236,8 +239,11 @@ def run_importer(
         print(f"Dry run: {len(index.rows)} poll(s) found, nothing written.")
         return 1 if index.page_failures else 0
 
+    # Before the import, so a renamed table's rows match their moved polls.
+    relabelled = apply_relabelled_polls(database, index.rows)
     counts = _import_rows(database, index.rows)
     tracking = apply_auto_tracked_matchups(database, index.rows)
+    print(f"Relabelled: {relabelled} stored poll(s) moved onto a renamed matchup")
     print(
         f"Imported: created={counts['created']} skipped={counts['skipped']} "
         f"failed={counts['failed']} rows={counts['rows_written']} "

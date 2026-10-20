@@ -35,6 +35,8 @@ from console.services.us_poll_queue import (
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
     PER_RACE_CUTOFF_NOTE,
+    RELABEL_ERROR_KEY,
+    RELABEL_KEY,
     STATE_KEY,
     BulkOutcome,
     approve_group,
@@ -80,6 +82,7 @@ PRESIDENT_MAP = "US Presidential 2024"
 
 MICHIGAN_MATCHUP = "Rogers (R) vs El-Sayed (D)"
 TEXAS_MATCHUP = "Paxton (R) vs Talarico (D)"
+TEXAS_THREE_WAY = "Paxton (R) vs Talarico (D) vs Brown (I)"
 CORNYN_MATCHUP = "Cornyn (R) vs Talarico (D)"
 NEWSOM_MATCHUP = "Vance (R) vs Newsom (D)"
 SHAPIRO_MATCHUP = "Vance (R) vs Shapiro (D)"
@@ -161,6 +164,10 @@ MICHIGAN_READINGS = _readings(
 TEXAS_READINGS = _readings(
     ("Republican", "Ken Paxton", 47.0),
     ("Democratic", "James Talarico", 45.0),
+)
+TEXAS_THREE_WAY_READINGS = (
+    *TEXAS_READINGS,
+    *_readings(("Independent", "Ted Brown", 3.0)),
 )
 CORNYN_READINGS = _readings(
     ("Republican", "John Cornyn", 46.0),
@@ -431,6 +438,33 @@ class TestPresence:
 
         assert _queued(state) == [elsewhere]
         assert state.skipped_present == 1
+
+
+    def test_a_stored_poll_under_a_renamed_matchup_is_dropped(
+        self, us_db: Database
+    ) -> None:
+        two_way = _row(
+            us_db, seat="Texas", matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS
+        )
+        poll_id = _store(us_db, two_way)
+        renamed = two_way.model_copy(
+            update={"matchup": TEXAS_THREE_WAY, "readings": TEXAS_THREE_WAY_READINGS}
+        )
+        new_poll = renamed.model_copy(
+            update={
+                "pollster_label": "Emerson College",
+                "pollster_identifier": "emerson_college_us_senate",
+            }
+        )
+
+        state = _queue(us_db, renamed, new_poll)
+
+        assert _queued(state) == [new_poll]
+        assert state.skipped_present == 1
+        # Building the queue only reads: the move happens in the finish step.
+        stored = us_db.get_poll(poll_id)
+        assert stored is not None
+        assert stored.matchup == TEXAS_MATCHUP
 
 
 class TestOrderAndGroups:
@@ -897,6 +931,57 @@ class TestFinish:
         assert texas is not None
         assert (texas.matchup, texas.source) == ("Cornyn (R) vs Allred (D)", "manual")
         assert texas.auto_matchup == TEXAS_MATCHUP
+
+    def test_moves_renamed_polls_and_tracks_their_new_label(
+        self, us_db: Database
+    ) -> None:
+        senate = _map_id(us_db, SENATE_MAP)
+        texas_id = _seat_id(us_db, SENATE_MAP, "Texas")
+        two_way = _row(
+            us_db, seat="Texas", matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS
+        )
+        poll_id = _store(us_db, two_way)
+        us_db.set_tracked_matchup(senate, texas_id, TEXAS_MATCHUP, source="auto")
+        renamed = two_way.model_copy(
+            update={"matchup": TEXAS_THREE_WAY, "readings": TEXAS_THREE_WAY_READINGS}
+        )
+        payload = _imported_payload(us_db, renamed)
+        runner = _RecordingRunner()
+
+        finish_us_queue(us_db, payload, runner=runner)
+
+        assert payload[RELABEL_KEY] == 1
+        poll = us_db.get_poll(poll_id)
+        assert poll is not None
+        assert poll.matchup == TEXAS_THREE_WAY
+        assert sorted(
+            (row.candidate_name, row.percentage)
+            for row in us_db.get_rows_for_poll(poll_id)
+        ) == [("James Talarico", 45.0), ("Ken Paxton", 47.0), ("Ted Brown", 3.0)]
+        assert len(us_db.get_polls_for_map(senate)) == 1
+        assert payload[AUTO_TRACKING_KEY]["updated"] == 1
+        tracked = us_db.get_tracked_matchup(senate, texas_id)
+        assert tracked is not None
+        assert tracked.matchup == TEXAS_THREE_WAY
+        assert len(runner.calls) == 3
+
+    def test_a_relabelling_pass_that_raised_is_recorded(
+        self, us_db: Database, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def failing(db: Database, rows: list[UsPollRow]) -> int:
+            raise UsImportError("boom")
+
+        monkeypatch.setattr(us_poll_queue, "apply_relabelled_polls", failing)
+        payload = _imported_payload(us_db, _row(us_db))
+
+        finish_us_queue(us_db, payload, runner=_RecordingRunner())
+
+        assert payload[RELABEL_ERROR_KEY] == (
+            "Moving polls onto renamed matchups failed: boom"
+        )
+        assert RELABEL_KEY not in payload
+        assert payload[AUTO_TRACKING_KEY]["created"] == 1
+        assert isinstance(payload[MODEL_RUN_KEY], UsModelRun)
 
     def test_runs_the_models_once_when_something_was_imported(
         self, us_db: Database
@@ -1862,6 +1947,31 @@ class TestFinishRoute:
         )
         assert tracked is not None
         assert tracked.matchup == MICHIGAN_MATCHUP
+
+    def test_the_summary_reports_polls_moved_onto_a_renamed_matchup(
+        self,
+        client: FlaskClient[Any],
+        us_db: Database,
+        monkeypatch: pytest.MonkeyPatch,
+        model_runner: _RecordingRunner,
+    ) -> None:
+        two_way = _row(
+            us_db, seat="Texas", matchup=TEXAS_MATCHUP, readings=TEXAS_READINGS
+        )
+        _store(us_db, two_way)
+        renamed = two_way.model_copy(
+            update={"matchup": TEXAS_THREE_WAY, "readings": TEXAS_THREE_WAY_READINGS}
+        )
+        token = _open_queue(client, monkeypatch, renamed)
+
+        body = " ".join(_body(client, f"/us/import/{token}").split())
+
+        assert "1 poll(s) in the window were already in the database" in body
+        assert (
+            "1 stored poll(s) were moved onto their race's renamed matchup"
+            in html.unescape(body)
+        )
+        assert len(model_runner.calls) == 3
 
     def test_nothing_imported_runs_no_models(
         self,

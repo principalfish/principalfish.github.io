@@ -50,6 +50,16 @@
       {{ state.skipped_present }} poll(s) in the window were already in the database and never
       entered the queue. {{ index.pages_fetched }} Wikipedia page(s) read.
     </p>
+    {% if relabel_error %}
+      <div class="alerts">
+        <div class="alert">{{ relabel_error }}</div>
+      </div>
+    {% elif relabelled %}
+      <p>
+        {{ relabelled }} stored poll(s) were moved onto their race's renamed matchup
+        instead of being imported again.
+      </p>
+    {% endif %}
     <div class="actions">
       <a class="button primary" href="{{ url_for('home.home') }}">Back to home</a>
       <a class="button" href="{{ url_for('us_poll_import.import_form') }}">Import again</a>

@@ -702,6 +702,10 @@ class TestModelRunUncertaintyExport:
         result = run_export(db, tmp_path, [], monkeypatch, shell=SHELL_WITH_FLAG)
         files = result["files"]
         document = json.loads(files["results/prediction-uncertainty.json"])
+        payload = json.loads(files["results/prediction-simulation.json"])
+        identity = document.pop("uncertaintyId")
+        assert identity == payload["uncertaintyId"]
+        assert len(identity) == 64
         assert document == public_document(
             model_run.national,
             model_run.regions or {},

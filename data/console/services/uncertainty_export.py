@@ -39,6 +39,7 @@ from scripts.export.serialize import compact_json
 from scripts.export.uncertainty import (
     UNCERTAINTY_FILENAME,
     latest_model_run,
+    link_uncertainty_payload,
     model_run_uncertainty,
 )
 
@@ -156,6 +157,7 @@ def export_preview(db: Database) -> ExportPreview | None:
             election_year=election.year,
             seat_uncertainty=published.seat_bands,
         )
+        document = link_uncertainty_payload(with_u, published.document)
         election_name = election.name
         map_id = election.map_id
 
@@ -180,7 +182,6 @@ def export_preview(db: Database) -> ExportPreview | None:
         )
     ]
 
-    document = published.document
     if document is None:
         files.append(
             PublishedFile(

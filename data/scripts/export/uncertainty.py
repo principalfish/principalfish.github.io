@@ -16,6 +16,8 @@ run is removed so it cannot sit beside a newer projection.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 from pathlib import Path
 
 from sqlalchemy import select
@@ -31,6 +33,35 @@ from models import Election, ElectionType
 from scripts.export.serialize import write_json
 
 UNCERTAINTY_FILENAME = "prediction-uncertainty.json"
+
+
+def link_uncertainty_payload(
+    result_payload: dict[str, object], document: dict[str, object] | None
+) -> dict[str, object] | None:
+    """Pair public results and ranges so mixed cached exports cannot show stale odds.
+
+    The fingerprint covers only public values, including the central seat results.
+    A same-day re-run with different votes or uncertainty therefore gets a new id.
+    Results without uncertainty are left byte-for-byte compatible.
+    """
+    if document is None:
+        return None
+    public_results = {
+        key: value for key, value in result_payload.items() if key != "uncertaintyId"
+    }
+    public_summary = {
+        key: value for key, value in document.items() if key != "uncertaintyId"
+    }
+    encoded = json.dumps(
+        [public_results, public_summary],
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    identity = hashlib.sha256(encoded).hexdigest()
+    result_payload["uncertaintyId"] = identity
+    return {**public_summary, "uncertaintyId": identity}
 
 
 @dataclass(frozen=True, slots=True)

@@ -97,6 +97,7 @@ from scripts.export.ordering import (
 from scripts.export.uncertainty import (
     ModelUncertaintyExport,
     latest_model_run,
+    link_uncertainty_payload,
     model_run_uncertainty,
     sync_uncertainty_file,
 )
@@ -453,6 +454,9 @@ def main() -> None:
                 election_year=sim_election.year,
                 seat_uncertainty=published.seat_bands,
             )
+            uncertainty_document = link_uncertainty_payload(
+                result_payload, published.document
+            )
 
             if args.output_file:
                 output_file = args.output_file.resolve()
@@ -475,7 +479,7 @@ def main() -> None:
                     write_json(result_path, result_payload)
                     print(f"Wrote simulation: {result_path} ({seat_count} seats from election '{sim_election.name}')")
                 sync_uncertainty_file(
-                    result_path.parent, published.document, dry_run=args.dry_run
+                    result_path.parent, uncertainty_document, dry_run=args.dry_run
                 )
             return
         else:
@@ -679,6 +683,9 @@ def _export_page(
             ev_by_unit=ev_by_unit,
             seat_uncertainty=published.seat_bands if published is not None else None,
         )
+        uncertainty_document = link_uncertainty_payload(
+            result_payload, published.document if published is not None else None
+        )
 
         if election.type == ElectionType.us_presidential:
             for seat_row in result_payload["seats"]:
@@ -783,7 +790,7 @@ def _export_page(
                     write_json(map_path, map_payload)
 
         if published is not None:
-            sync_uncertainty_file(results_dir, published.document, dry_run=args.dry_run)
+            sync_uncertainty_file(results_dir, uncertainty_document, dry_run=args.dry_run)
 
         map_files_by_id[str(election.map_id)] = map_relpath
         written_map_ids.add(election.map_id)

@@ -215,7 +215,9 @@ a {
 }
 
 .maps-subtitle-main,
-.maps-subtitle-latest {
+.maps-subtitle-latest,
+.maps-subtitle-uncertainty,
+.maps-subtitle-basis {
   max-width: 100%;
 }
 
@@ -1001,6 +1003,17 @@ a {
   color: #0f172a;
 }
 
+.maps-popup-values:has(.maps-popup-uncertainty) {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.maps-popup-uncertainty {
+  flex-basis: 100%;
+  text-align: end;
+  font-weight: 600;
+}
+
 .seat {
   stroke: rgba(255, 255, 255, 0.45);
   stroke-width: 2;
@@ -1060,6 +1073,7 @@ a {
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-vote-tabs,
 .maps-vote-totals--collapsed .maps-predict-tabs,
 .maps-vote-totals--collapsed .maps-senate-forecast-comparison,
+.maps-vote-totals--collapsed .maps-uncertainty-toggle,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed .maps-table,
 #mapsVoteTotalsCard.maps-vote-totals--collapsed #mapsVoteTotalsToggle {
   display: none;
@@ -1096,6 +1110,18 @@ a {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
+}
+
+.maps-vote-table-scroll {
+  overflow-x: auto;
+}
+
+.maps-table.hide-uncertainty-cols .uncertainty-col {
+  display: none;
+}
+
+.maps-table .uncertainty-col {
+  white-space: nowrap;
 }
 
 .maps-table th,

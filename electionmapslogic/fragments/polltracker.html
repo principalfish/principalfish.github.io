@@ -9,14 +9,26 @@
     </div>
 
     <div class="maps-polltracker-controls">
-      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked /> Seats</label>
-      <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox" checked /> Vote %</label>
+      <div id="mapsPollTrackerViewControls" class="maps-polltracker-switch" role="group" aria-label="Poll tracker view" hidden>
+        <button type="button" class="maps-apply-btn is-active" data-polltracker-view="totals" aria-pressed="true">Seats &amp; votes</button>
+        <button type="button" class="maps-apply-btn" data-polltracker-view="chances" aria-pressed="false">Chances</button>
+      </div>
+      <div id="mapsPollTrackerMetrics" class="maps-polltracker-switch">
+        <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricSeats" type="checkbox" checked> Seats</label>
+        <label class="maps-polltracker-toggle"><input id="mapsPollTrackerMetricVotes" type="checkbox"> Vote %</label>
+      </div>
+      <div id="mapsPollTrackerChanceControls" class="maps-polltracker-switch" role="group" aria-label="Chance measure" hidden>
+        <button type="button" class="maps-apply-btn is-active" data-polltracker-chance="pMaj" aria-pressed="true">Majority</button>
+        <button type="button" class="maps-apply-btn" data-polltracker-chance="pLargest" aria-pressed="false">Largest party</button>
+      </div>
       <div class="maps-polltracker-range-group" aria-label="Poll tracker date range">
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn is-active" data-polltracker-range="all">All</button>
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="30">Last 30</button>
         <button type="button" class="maps-apply-btn maps-polltracker-range-btn" data-polltracker-range="90">Last 90</button>
       </div>
     </div>
+
+    <p id="mapsPollTrackerUncertaintyNote" class="maps-control-note maps-polltracker-status" hidden></p>
 
     <div id="mapsPollTrackerPartyControls" class="maps-polltracker-party-controls" aria-label="Poll tracker party toggles"></div>
 

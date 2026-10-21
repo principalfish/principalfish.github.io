@@ -501,10 +501,10 @@ def test_summary_adds_rounded_bands_nonzero_odds_and_hung(
     assert entry["parties"] == {
         # 55.86 -> 55.9 and 44.14 -> 44.1: rounded to 1 dp, not truncated.
         str(parties[0]): {
-            "s": 1, "v": 60.0, "vl": 55.9, "vh": 64.0, "pm": 0.7312, "pl": 0.9999,
+            "s": 1, "v": 60.0, "vl": 55.9, "vh": 64.0, "sl": 0, "sh": 1, "pm": 0.7312, "pl": 0.9999,
         },
         # A zero probability is left out; 0.0001 is kept.
-        str(parties[1]): {"s": 0, "v": 40.0, "vl": 36.0, "vh": 44.1, "pl": 0.0001},
+        str(parties[1]): {"s": 0, "v": 40.0, "vl": 36.0, "vh": 44.1, "sl": 0, "sh": 1, "pl": 0.0001},
     }
     assert entry["hung"] == 0.2688
     text = json.dumps(entry)
@@ -751,4 +751,5 @@ def test_full_backfill_trend_size(
     assert 300 <= len(entries) <= 340
     assert all("hung" in entry for entry in entries)
     size = destination.stat().st_size
-    assert size < 250_000, size
+    # Includes both vote and seat bounds for every party in the full history.
+    assert size < 300_000, size

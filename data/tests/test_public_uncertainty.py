@@ -221,11 +221,18 @@ class TestTrendUncertainty:
     def test_bands_rounded_zero_odds_dropped(self) -> None:
         result = trend_uncertainty(national())
         assert result.parties == {
-            "2": {"vl": 22.8, "vh": 30.6, "pm": 0.306, "pl": 0.9697},
-            "10": {"vl": 0.4, "vh": 0.4, "pl": 0.0303},
+            "2": {"vl": 22.8, "vh": 30.6, "sl": 220, "sh": 376, "pm": 0.306, "pl": 0.9697},
+            "10": {"vl": 0.4, "vh": 0.4, "sl": 0, "sh": 2, "pl": 0.0303},
         }
         assert list(result.parties) == ["2", "10"]
         assert result.hung == 0.694
+
+    @pytest.mark.parametrize("seats", [[2, 1, 3], [-1, 1, 3], [0, 1, 2.5], [False, 1, 2], [0, 2]])
+    def test_seat_bounds_require_an_ordered_integer_range(self, seats: object) -> None:
+        stored = national()
+        stored["parties"]["2"]["s"] = seats
+        with pytest.raises(PublicUncertaintyError, match="national.parties.2.s"):
+            trend_uncertainty(stored)
 
     def test_smallest_probability_is_kept(self) -> None:
         stored = national()

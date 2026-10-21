@@ -48,13 +48,14 @@ class TrendUncertainty:
     """One run's additions to its trend-file entry.
 
     Attributes:
-        parties: Party id -> ``{"vl", "vh"}`` (the national vote band) plus
+        parties: Party id -> ``{"vl", "vh", "sl", "sh"}`` (national vote
+            and seat bounds) plus
             ``"pm"`` (P majority) and ``"pl"`` (P largest) when non-zero; a
             zero probability is left out to keep the file small.
         hung: P(hung parliament).
     """
 
-    parties: dict[str, dict[str, float]]
+    parties: dict[str, dict[str, int | float]]
     hung: float
 
 
@@ -192,20 +193,23 @@ def trend_uncertainty(national: Mapping[str, object]) -> TrendUncertainty:
         national: The run's decoded ``national_json``.
 
     Returns:
-        Per party the 1 dp vote band and its non-zero P(majority) and
+        Per party the 1 dp vote band, integer seat bounds and non-zero P(majority) and
         P(largest), plus P(hung).
 
     Raises:
         PublicUncertaintyError: A published field is missing or malformed.
     """
-    parties: dict[str, dict[str, float]] = {}
+    parties: dict[str, dict[str, int | float]] = {}
     odds: dict[str, dict[str, object]] = {}
     block = _parties(national)
     for party_id in _sorted_ids(block, "national.parties"):
         where = f"national.parties.{party_id}"
         party = _mapping(block[party_id], where)
         lo, hi = _share_band(party.get("v"), f"{where}.v")
-        fields: dict[str, float] = {"vl": lo, "vh": hi}
+        seat_lo, _, seat_hi = _seat_range(party.get("s"), f"{where}.s")
+        fields: dict[str, int | float] = {
+            "vl": lo, "vh": hi, "sl": seat_lo, "sh": seat_hi,
+        }
         odds[party_id] = {}
         for key in ("pm", "pl"):
             probability = _probability(party.get(key), f"{where}.{key}")

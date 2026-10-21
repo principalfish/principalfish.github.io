@@ -1230,7 +1230,7 @@ a {
 .maps-polltracker-card {
   min-height: 630px;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -1243,6 +1243,30 @@ a {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.45rem;
+}
+
+.maps-polltracker-switch:not([hidden]) {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.maps-polltracker-band {
+  fill-opacity: 0.2;
+  pointer-events: none;
+}
+
+.maps-polltracker-band-shade {
+  fill-opacity: 0.07;
+  stroke: none;
+  pointer-events: none;
+}
+
+.maps-polltracker-band-point {
+  stroke-width: 6;
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .maps-polltracker-range-group {

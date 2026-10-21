@@ -1075,7 +1075,7 @@ class AppState {
 
     /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
      * Populated by assigning to state.pollTrackerData when poll tracker mode activates; empty until then. */
-    this.pollTrackerData = { timeline: [], seriesByParty: new Map() };
+    this.pollTrackerData = { timeline: [], seriesByParty: new Map(), hung: [] };
 
     /** Map from normalised region key to display label for the current election.
      * Built from manifest.regionsByMapId on each election load; used by getRegionLabel. */

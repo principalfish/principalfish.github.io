@@ -1,5 +1,8 @@
 import { formatInt, formatPct } from "../utils.js";
 
+/** Model updates averaged per drawn band step; the tooltip keeps each day's own range. */
+const BAND_SMOOTHING_POINTS = 5;
+
 export function pollTrackerCapabilities(data) {
   const series = Array.from(data.seriesByParty.values());
   const hasBands = (loKey, hiKey) => series.some((row) => row[loKey]?.some((lo, index) => Number.isFinite(lo) && Number.isFinite(row[hiKey][index])));
@@ -17,7 +20,7 @@ export function pollTrackerUncertaintyNote(capabilities, { chances, seats, votes
   const metrics = [];
   if (seats && capabilities.seatBands) metrics.push("seat");
   if (votes && capabilities.voteBands) metrics.push("vote-share");
-  return metrics.length ? `Shaded bands show 90% ${metrics.join(" and ")} ranges ${basis}`
+  return metrics.length ? `Shaded bands show 90% ${metrics.join(" and ")} ranges (averaged over ${BAND_SMOOTHING_POINTS} model updates) ${basis}`
     : `Uncertainty describes an election held today, conditional on current polls and the model's error assumptions.`;
 }
 
@@ -56,6 +59,35 @@ function validBand(values) {
 }
 
 /**
+ * Centred moving average of both bounds over model updates, damping run-to-run simulation noise.
+ * Days carried forward repeat their run's band, so consecutive equal bands form one step that
+ * counts once and stays flat. The window stays inside each unbroken stretch of valid steps
+ * (shrinking at its ends), so smoothing never bridges a missing day or drags an isolated range.
+ */
+export function smoothPollTrackerBand(band, points = BAND_SMOOTHING_POINTS) {
+  const radius = Math.floor(points / 2);
+  const steps = [];
+  band.forEach((values, index) => {
+    const previous = steps.at(-1);
+    if (previous && previous.values[0] === values[0] && previous.values[1] === values[1]) previous.end = index;
+    else steps.push({ values, start: index, end: index });
+  });
+  const isValidStep = (step) => step !== undefined && validBand(step.values);
+  const smoothed = band.slice();
+  steps.forEach((step, position) => {
+    if (!isValidStep(step)) return;
+    let first = position;
+    let last = position;
+    while (first > position - radius && isValidStep(steps[first - 1])) first -= 1;
+    while (last < position + radius && isValidStep(steps[last + 1])) last += 1;
+    const window = steps.slice(first, last + 1);
+    const mean = [0, 1].map((side) => window.reduce((sum, { values }) => sum + values[side], 0) / window.length);
+    for (let index = step.start; index <= step.end; index += 1) smoothed[index] = mean;
+  });
+  return smoothed;
+}
+
+/**
  * Nested ribbons follow the central curve and each side's distance to its interval edge.
  * This is a display fade, not an estimate of probability density within the interval.
  * A central projection outside its simulation interval anchors the fade at the nearest edge.
@@ -76,7 +108,7 @@ export function pollTrackerBandRibbons(band, central) {
 export function drawPollTrackerBands(plot, series, xAt, y, createArea, metric) {
   const [loKey, hiKey] = metric === "seats" ? ["seatLo", "seatHi"] : ["voteLo", "voteHi"];
   for (const row of series) {
-    const band = (row[loKey] || []).map((lo, index) => [lo, row[hiKey][index]]);
+    const band = smoothPollTrackerBand((row[loKey] || []).map((lo, index) => [lo, row[hiKey][index]]));
     const defined = validBand;
     const indices = band.map((values, index) => defined(values) ? index : -1).filter((index) => index >= 0);
     if (!indices.length) continue;

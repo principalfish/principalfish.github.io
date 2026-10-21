@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as d3 from "../../site/vendor/d3.v7.esm.js";
 import {
   chanceSeries, drawPollTrackerBands, pollTrackerCapabilities, pollTrackerTooltipValues,
-  pollTrackerUncertaintyNote, pollTrackerBandRibbons,
+  pollTrackerUncertaintyNote, pollTrackerBandRibbons, smoothPollTrackerBand,
 } from "../features/polltracker-uncertainty.js";
 
 const series = {
@@ -70,6 +70,23 @@ describe("poll tracker uncertainty display", () => {
     const seatMarker = drawn.find((item) => item.type === "line");
     expect(seatMarker.attrs.y1).toBe(280);
     expect(seatMarker.attrs.y2).toBe(124);
+  });
+
+  it("smooths bands over five points without bridging missing or malformed days", () => {
+    const band = [[10, 20], [12, 22], [20, 40], [12, 22], [10, 20], [11, 21], [null, null], [30, 40], [50, 10]];
+    const smoothed = smoothPollTrackerBand(band);
+    expect(smoothed[2]).toEqual([12.8, 24.8]);
+    expect(smoothed[0]).toEqual([14, 82 / 3]);
+    expect(smoothed[5][0]).toBeCloseTo((12 + 10 + 11) / 3);
+    expect(smoothed.slice(6)).toEqual([[null, null], [30, 40], [50, 10]]);
+    smoothed.slice(0, 6).forEach(([lo, hi]) => expect(lo).toBeLessThanOrEqual(hi));
+  });
+
+  it("averages over model updates, holding each carried-forward step flat", () => {
+    const band = [[10, 20], [10, 20], [10, 20], [20, 30], [20, 30], [30, 40], [null, null], [null, null], [5, 6], [5, 6]];
+    expect(smoothPollTrackerBand(band, 3)).toEqual([
+      [15, 25], [15, 25], [15, 25], [20, 30], [20, 30], [25, 35], [null, null], [null, null], [5, 6], [5, 6],
+    ]);
   });
 
   it("fades towards a varying central curve rather than the midpoint of asymmetric bounds", () => {

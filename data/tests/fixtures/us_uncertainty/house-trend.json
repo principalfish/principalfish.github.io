@@ -1,0 +1,113 @@
+{
+  "schema": "pf-us-model-trends-v1",
+  "model": "house",
+  "points": [
+    {
+      "election_id": 1,
+      "election_name": "fixture-house 2026-10-22",
+      "as_of_date": "2026-10-22",
+      "context": {
+        "model": "house",
+        "map_id": 21,
+        "as_of_date": "2026-10-22",
+        "target_cycle": 2026,
+        "matchup_id": "fixture-matchup",
+        "field_id": "fixture-field",
+        "baseline_id": "fixture-baseline",
+        "central_options_id": "fixture-options",
+        "comparability_id": "fixture-comparison-v1",
+        "roster_id": null,
+        "control_policy_id": null,
+        "electoral_allocation_id": null
+      },
+      "parties": {
+        "1": {
+          "s": 220,
+          "v": 50.2
+        },
+        "2": {
+          "s": 215,
+          "v": 49.8
+        }
+      },
+      "metrics": {
+        "house_seats": {
+          "unit": "seats",
+          "domain": "party",
+          "total": 435,
+          "central": {
+            "1": 220,
+            "2": 215
+          }
+        },
+        "national_vote_share": {
+          "unit": "percent",
+          "domain": "party",
+          "total": 100,
+          "central": {
+            "1": 50.2,
+            "2": 49.8
+          }
+        }
+      },
+      "summary": {
+        "simulations": 1000,
+        "interval": 0.9,
+        "metrics": {
+          "house_seats": {
+            "unit": "seats",
+            "domain": "party",
+            "total": 435,
+            "central": {
+              "1": 220,
+              "2": 215
+            },
+            "ranges": {
+              "1": [
+                190,
+                221,
+                250
+              ],
+              "2": [
+                185,
+                214,
+                245
+              ]
+            }
+          },
+          "national_vote_share": {
+            "unit": "percent",
+            "domain": "party",
+            "total": 100,
+            "central": {
+              "1": 50.2,
+              "2": 49.8
+            },
+            "ranges": {
+              "1": [
+                47.5,
+                50.1,
+                52.6
+              ],
+              "2": [
+                47.4,
+                49.9,
+                52.5
+              ]
+            }
+          }
+        },
+        "outcomes": {
+          "majority": {
+            "domain": "party",
+            "probabilities": {
+              "1": 0.6,
+              "2": 0.4
+            }
+          },
+          "no_majority": 0.0
+        }
+      }
+    }
+  ]
+}

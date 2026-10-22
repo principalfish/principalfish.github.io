@@ -1,0 +1,140 @@
+{
+  "schema": "pf-us-model-trends-v1",
+  "model": "senate",
+  "points": [
+    {
+      "election_id": 1,
+      "election_name": "fixture-senate 2026-10-22",
+      "as_of_date": "2026-10-22",
+      "context": {
+        "model": "senate",
+        "map_id": 22,
+        "as_of_date": "2026-10-22",
+        "target_cycle": 2026,
+        "matchup_id": "fixture-matchup",
+        "field_id": "fixture-field",
+        "baseline_id": "fixture-baseline",
+        "central_options_id": "fixture-options",
+        "comparability_id": "fixture-comparison-v1",
+        "roster_id": "fixture-roster",
+        "control_policy_id": "fixture-control-policy",
+        "electoral_allocation_id": null
+      },
+      "parties": {
+        "1": {
+          "s": 16,
+          "v": 46.1
+        },
+        "2": {
+          "s": 18,
+          "v": 50.2
+        },
+        "3": {
+          "s": 1,
+          "v": 3.7
+        }
+      },
+      "metrics": {
+        "senate_contested_seats": {
+          "unit": "seats",
+          "domain": "party",
+          "total": 35,
+          "central": {
+            "1": 16,
+            "2": 18,
+            "3": 1
+          }
+        },
+        "senate_full_seats": {
+          "unit": "seats",
+          "domain": "party",
+          "total": 100,
+          "central": {
+            "1": 48,
+            "2": 51,
+            "3": 1
+          }
+        }
+      },
+      "summary": {
+        "simulations": 1000,
+        "interval": 0.9,
+        "metrics": {
+          "senate_contested_seats": {
+            "unit": "seats",
+            "domain": "party",
+            "total": 35,
+            "central": {
+              "1": 16,
+              "2": 18,
+              "3": 1
+            },
+            "ranges": {
+              "1": [
+                12,
+                16,
+                20
+              ],
+              "2": [
+                14,
+                18,
+                22
+              ],
+              "3": [
+                0,
+                1,
+                1
+              ]
+            }
+          },
+          "senate_full_seats": {
+            "unit": "seats",
+            "domain": "party",
+            "total": 100,
+            "central": {
+              "1": 48,
+              "2": 51,
+              "3": 1
+            },
+            "ranges": {
+              "1": [
+                44,
+                48,
+                52
+              ],
+              "2": [
+                47,
+                51,
+                55
+              ],
+              "3": [
+                0,
+                1,
+                1
+              ]
+            }
+          }
+        },
+        "outcomes": {
+          "control": {
+            "domain": "caucus",
+            "probabilities": {
+              "democratic": 0.3,
+              "republican": 0.7
+            }
+          },
+          "unresolved_control": 0.0,
+          "tied_caucuses": 0.2,
+          "majority": {
+            "domain": "caucus",
+            "probabilities": {
+              "democratic": 0.3,
+              "republican": 0.5
+            }
+          },
+          "no_caucus_majority": 0.2
+        }
+      }
+    }
+  ]
+}

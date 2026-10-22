@@ -1,0 +1,850 @@
+{
+  "audit_date": "2026-10-22",
+  "checkout": "35e527a1",
+  "method": "SQLite mode=ro, PRAGMA query_only=ON, one read transaction; no model run or writes. SQL inventory counts are not selected-contributor counts.",
+  "queries": {
+    "maps": "SELECT m.id,m.name,m.parliament,COUNT(s.id) AS units FROM maps m LEFT JOIN seats s ON s.map_id=m.id WHERE m.parliament LIKE 'us_%' GROUP BY m.id",
+    "poll_coverage": "SELECT map_id,CASE WHEN seat_id IS NULL THEN 'national' ELSE 'seat' END AS scope,COUNT(*) AS polls,SUM(sample_size IS NULL OR sample_size<=0) AS unresolved_n,MIN(fieldwork_end) AS first_end,MAX(fieldwork_end) AS last_end,SUM(source_url IS NULL OR source_url='') AS missing_url,SUM(matchup IS NULL OR matchup='') AS missing_matchup FROM polls WHERE map_id IN (21,22,23) GROUP BY map_id,scope",
+    "missing_individual_n": "SELECT p.id,p.map_id,s.seat_name,p.fieldwork_end,p.matchup,p.source_url FROM polls p LEFT JOIN seats s ON s.id=p.seat_id WHERE p.map_id IN (21,22,23) AND (p.sample_size IS NULL OR p.sample_size<=0) AND NOT(p.map_id=21 AND p.seat_id IS NULL) ORDER BY p.map_id,p.id",
+    "poll_bases": "SELECT p.map_id,COUNT(b.id) AS bases FROM polls p JOIN poll_bases b ON b.poll_id=p.id WHERE p.map_id IN (21,22,23) GROUP BY p.map_id",
+    "tracked_national": "SELECT * FROM tracked_matchups WHERE map_id IN (21,22,23) AND seat_id IS NULL",
+    "tracked_seat_counts": "SELECT map_id,source,COUNT(*) AS scopes,SUM(matchup IS NULL OR matchup='') AS ignored FROM tracked_matchups WHERE map_id IN (21,22,23) AND seat_id IS NOT NULL GROUP BY map_id,source",
+    "presidential_matchups": "SELECT p.matchup,COUNT(*) AS polls,SUM(p.sample_size IS NULL OR p.sample_size<=0) AS unresolved_n,CASE WHEN p.seat_id IS NULL THEN 'national' ELSE 'seat' END AS scope FROM polls p WHERE p.map_id=22 GROUP BY p.matchup,scope",
+    "historical_results": "SELECT e.id,e.name,e.map_id,e.year,e.type,COUNT(DISTINCT v.seat_id) AS units FROM elections e LEFT JOIN votes v ON v.election_id=e.id WHERE e.map_id IN (21,22,23) AND e.type NOT LIKE '%model%' GROUP BY e.id ORDER BY e.map_id,e.year",
+    "model_history": "SELECT map_id,type,COUNT(*) AS runs,MIN(election_date) AS first_date,MAX(election_date) AS last_date,MIN(year) AS first_year,MAX(year) AS last_year FROM elections WHERE map_id IN (21,22,23) AND type LIKE '%model%' GROUP BY map_id,type",
+    "pre_2024_polls": "SELECT map_id,COUNT(*) AS polls FROM polls WHERE map_id IN (21,22,23) AND fieldwork_end < '2024-11-05' GROUP BY map_id",
+    "ev_eras": "SELECT e.census_year,e.first_election_year,e.last_election_year,COUNT(a.unit_name) AS units,SUM(a.electoral_votes) AS electoral_votes FROM us_electoral_vote_eras e JOIN us_electoral_vote_allocations a ON a.era_year=e.census_year GROUP BY e.census_year",
+    "house_single_party_baselines": "SELECT s.seat_name,COUNT(DISTINCT v.party_id) AS parties FROM votes v JOIN elections e ON e.id=v.election_id JOIN seats s ON s.id=v.seat_id WHERE e.name='2024 US House Election' AND v.vote_total>0 GROUP BY s.id HAVING COUNT(DISTINCT v.party_id)=1 ORDER BY s.seat_name",
+    "schema_columns": "SELECT name FROM pragma_table_info('polls')",
+    "stored_uncertainty": "SELECT e.map_id,u.schema,COUNT(*) AS runs FROM model_uncertainty u JOIN elections e ON e.id=u.election_id WHERE e.map_id IN (21,22,23) GROUP BY e.map_id,u.schema",
+    "missing_n_current_window_matchup": "SELECT p.id,p.map_id,s.seat_name,p.fieldwork_end,p.matchup,t.matchup AS tracked_matchup FROM polls p JOIN seats s ON s.id=p.seat_id LEFT JOIN tracked_matchups t ON t.map_id=p.map_id AND t.seat_id=p.seat_id WHERE p.map_id IN(21,23) AND (p.sample_size IS NULL OR p.sample_size<=0) AND p.fieldwork_end BETWEEN date('2026-10-19','-60 days') AND '2026-10-19' ORDER BY p.map_id,p.id",
+    "presidential_target_cycles": "SELECT target_election_year,COUNT(*) AS runs FROM elections WHERE type='us_presidential_model' GROUP BY target_election_year",
+    "generic_sources": "SELECT s.name,COUNT(*) AS snapshots FROM polls p JOIN pollsters s ON p.pollster_id=s.id WHERE map_id=21 AND seat_id IS NULL GROUP BY s.id",
+    "baseline_party_mapping": "SELECT DISTINCT p.id,p.name,p.short_name FROM parties p JOIN votes v ON v.party_id=p.id JOIN elections e ON e.id=v.election_id WHERE e.map_id IN (21,22,23) AND e.type NOT LIKE '%model%' ORDER BY p.id"
+  },
+  "maps": [
+    {
+      "id": 21,
+      "name": "US House Districts 2024",
+      "parliament": "us_house",
+      "units": 435
+    },
+    {
+      "id": 22,
+      "name": "US Presidential 2024",
+      "parliament": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 23,
+      "name": "US Senate 2024",
+      "parliament": "us_senate",
+      "units": 50
+    }
+  ],
+  "poll_coverage": [
+    {
+      "map_id": 21,
+      "scope": "national",
+      "polls": 47,
+      "unresolved_n": 47,
+      "first_end": "2026-06-29",
+      "last_end": "2026-10-18",
+      "missing_url": 0,
+      "missing_matchup": 47
+    },
+    {
+      "map_id": 21,
+      "scope": "seat",
+      "polls": 265,
+      "unresolved_n": 11,
+      "first_end": "2025-06-10",
+      "last_end": "2026-10-19",
+      "missing_url": 0,
+      "missing_matchup": 0
+    },
+    {
+      "map_id": 22,
+      "scope": "national",
+      "polls": 50,
+      "unresolved_n": 0,
+      "first_end": "2024-12-20",
+      "last_end": "2026-08-28",
+      "missing_url": 0,
+      "missing_matchup": 0
+    },
+    {
+      "map_id": 22,
+      "scope": "seat",
+      "polls": 1,
+      "unresolved_n": 0,
+      "first_end": "2026-06-24",
+      "last_end": "2026-06-24",
+      "missing_url": 0,
+      "missing_matchup": 0
+    },
+    {
+      "map_id": 23,
+      "scope": "seat",
+      "polls": 495,
+      "unresolved_n": 3,
+      "first_end": "2023-04-25",
+      "last_end": "2026-10-19",
+      "missing_url": 0,
+      "missing_matchup": 0
+    }
+  ],
+  "missing_individual_n": [
+    {
+      "id": 1117,
+      "map_id": 21,
+      "seat_name": "AL-02",
+      "fieldwork_end": "2026-08-31",
+      "matchup": "Marques (R) vs Figures (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_Alabama#Polling_3"
+    },
+    {
+      "id": 1126,
+      "map_id": 21,
+      "seat_name": "CA-11",
+      "fieldwork_end": "2026-07-19",
+      "matchup": "Wiener (D) vs Chan (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_California#Polling_8"
+    },
+    {
+      "id": 1127,
+      "map_id": 21,
+      "seat_name": "CA-14",
+      "fieldwork_end": "2026-04-04",
+      "matchup": "Huang (R) vs Maldonado (R) vs Aguilar (D) vs Elam (D) vs Hernandez (D) vs Ortega (D) vs Singh (D) vs Wahab (D) vs Chenault (I)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_California#Polling_9"
+    },
+    {
+      "id": 1139,
+      "map_id": 21,
+      "seat_name": "FL-08",
+      "fieldwork_end": "2026-07-29",
+      "matchup": "Haridopolos (R) vs Jenkins (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_Florida#Polling_6"
+    },
+    {
+      "id": 1141,
+      "map_id": 21,
+      "seat_name": "FL-11",
+      "fieldwork_end": "2026-07-29",
+      "matchup": "Strada (R) vs Pericola (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_Florida#Polling_10"
+    },
+    {
+      "id": 1149,
+      "map_id": 21,
+      "seat_name": "FL-22",
+      "fieldwork_end": "2026-08-31",
+      "matchup": "Askar (R) vs Dandiya (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_Florida#Polling_20"
+    },
+    {
+      "id": 1159,
+      "map_id": 21,
+      "seat_name": "IA-02",
+      "fieldwork_end": "2026-07-19",
+      "matchup": "Mitchell (R) vs James (D)",
+      "source_url": "https://en.wikipedia.org/wiki/Global_Strategy_Group"
+    },
+    {
+      "id": 1230,
+      "map_id": 21,
+      "seat_name": "OH-07",
+      "fieldwork_end": "2026-07-30",
+      "matchup": "Miller (R) vs Poindexter (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_Ohio#Polling_2"
+    },
+    {
+      "id": 1676,
+      "map_id": 21,
+      "seat_name": "SD-01",
+      "fieldwork_end": "2026-08-30",
+      "matchup": "Jackley (R) vs Gronli (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_election_in_South_Dakota#Polling_2"
+    },
+    {
+      "id": 1677,
+      "map_id": 21,
+      "seat_name": "TX-09",
+      "fieldwork_end": "2026-09-19",
+      "matchup": "Mealer (R) vs Gutierrez (D)",
+      "source_url": "https://en.wikipedia.org/wiki/Public_Policy_Polling"
+    },
+    {
+      "id": 1894,
+      "map_id": 21,
+      "seat_name": "FL-09",
+      "fieldwork_end": "2026-10-15",
+      "matchup": "Green (R) vs Soto (D)",
+      "source_url": "https://en.wikipedia.org/wiki/2026_United_States_House_of_Representatives_elections_in_Florida#Polling_8"
+    },
+    {
+      "id": 1870,
+      "map_id": 23,
+      "seat_name": "Iowa",
+      "fieldwork_end": "2026-10-11",
+      "matchup": "Hinson (R) vs Turek (D)",
+      "source_url": "https://en.wikipedia.org/wiki/Marist_University"
+    },
+    {
+      "id": 1965,
+      "map_id": 23,
+      "seat_name": "Ohio",
+      "fieldwork_end": "2026-10-18",
+      "matchup": "Husted (R) vs Brown (D) vs Levy (I)",
+      "source_url": "https://en.wikipedia.org/wiki/Marist_University"
+    },
+    {
+      "id": 2019,
+      "map_id": 23,
+      "seat_name": "Texas",
+      "fieldwork_end": "2026-10-11",
+      "matchup": "Paxton (R) vs Talarico (D) vs Brown (L)",
+      "source_url": "https://en.wikipedia.org/wiki/Marist_University"
+    }
+  ],
+  "poll_bases": [],
+  "tracked_national": [
+    {
+      "id": 116,
+      "map_id": 22,
+      "seat_id": null,
+      "matchup": "Vance (R) vs Newsom (D)",
+      "source": "manual",
+      "auto_matchup": null
+    }
+  ],
+  "tracked_seat_counts": [
+    {
+      "map_id": 21,
+      "source": "auto",
+      "scopes": 108,
+      "ignored": 0
+    },
+    {
+      "map_id": 23,
+      "source": "auto",
+      "scopes": 29,
+      "ignored": 0
+    }
+  ],
+  "presidential_matchups": [
+    {
+      "matchup": "Rubio (R) vs Harris (D)",
+      "polls": 3,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Rubio (R) vs Newsom (D)",
+      "polls": 4,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Rubio (R) vs Ocasio-Cortez (D)",
+      "polls": 2,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Rubio (R) vs Ossoff (D)",
+      "polls": 1,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Buttigieg (D)",
+      "polls": 3,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Harris (D)",
+      "polls": 8,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Newsom (D)",
+      "polls": 17,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Newsom (D)",
+      "polls": 1,
+      "unresolved_n": 0,
+      "scope": "seat"
+    },
+    {
+      "matchup": "Vance (R) vs Ocasio-Cortez (D)",
+      "polls": 8,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Ossoff (D)",
+      "polls": 1,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Shapiro (D)",
+      "polls": 1,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Smith (D)",
+      "polls": 1,
+      "unresolved_n": 0,
+      "scope": "national"
+    },
+    {
+      "matchup": "Vance (R) vs Whitmer (D)",
+      "polls": 1,
+      "unresolved_n": 0,
+      "scope": "national"
+    }
+  ],
+  "historical_results": [
+    {
+      "id": 101101,
+      "name": "2022 US House Election",
+      "map_id": 21,
+      "year": 2022,
+      "type": "us_house",
+      "units": 435
+    },
+    {
+      "id": 101102,
+      "name": "2024 US House Election",
+      "map_id": 21,
+      "year": 2024,
+      "type": "us_house",
+      "units": 435
+    },
+    {
+      "id": 101110,
+      "name": "1964 US Presidential Election",
+      "map_id": 22,
+      "year": 1964,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101111,
+      "name": "1968 US Presidential Election",
+      "map_id": 22,
+      "year": 1968,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101112,
+      "name": "1972 US Presidential Election",
+      "map_id": 22,
+      "year": 1972,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101113,
+      "name": "1976 US Presidential Election",
+      "map_id": 22,
+      "year": 1976,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101114,
+      "name": "1980 US Presidential Election",
+      "map_id": 22,
+      "year": 1980,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101115,
+      "name": "1984 US Presidential Election",
+      "map_id": 22,
+      "year": 1984,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101116,
+      "name": "1988 US Presidential Election",
+      "map_id": 22,
+      "year": 1988,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101117,
+      "name": "1992 US Presidential Election",
+      "map_id": 22,
+      "year": 1992,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 101118,
+      "name": "1996 US Presidential Election",
+      "map_id": 22,
+      "year": 1996,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100031,
+      "name": "2000 US Presidential Election",
+      "map_id": 22,
+      "year": 2000,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100032,
+      "name": "2004 US Presidential Election",
+      "map_id": 22,
+      "year": 2004,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100033,
+      "name": "2008 US Presidential Election",
+      "map_id": 22,
+      "year": 2008,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100034,
+      "name": "2012 US Presidential Election",
+      "map_id": 22,
+      "year": 2012,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100035,
+      "name": "2016 US Presidential Election",
+      "map_id": 22,
+      "year": 2016,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100036,
+      "name": "2020 US Presidential Election",
+      "map_id": 22,
+      "year": 2020,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100024,
+      "name": "2024 US Presidential Election",
+      "map_id": 22,
+      "year": 2024,
+      "type": "us_presidential",
+      "units": 56
+    },
+    {
+      "id": 100037,
+      "name": "2020 US Senate Election",
+      "map_id": 23,
+      "year": 2020,
+      "type": "us_senate",
+      "units": 33
+    },
+    {
+      "id": 100038,
+      "name": "2022 US Senate Election",
+      "map_id": 23,
+      "year": 2022,
+      "type": "us_senate",
+      "units": 34
+    },
+    {
+      "id": 100025,
+      "name": "2024 US Senate Election",
+      "map_id": 23,
+      "year": 2024,
+      "type": "us_senate",
+      "units": 33
+    }
+  ],
+  "model_history": [
+    {
+      "map_id": 21,
+      "type": "us_house_model",
+      "runs": 113,
+      "first_date": "2026-06-29",
+      "last_date": "2026-10-19",
+      "first_year": 2026,
+      "last_year": 2026
+    },
+    {
+      "map_id": 22,
+      "type": "us_presidential_model",
+      "runs": 603,
+      "first_date": "2024-12-23",
+      "last_date": "2026-08-17",
+      "first_year": 2024,
+      "last_year": 2026
+    },
+    {
+      "map_id": 23,
+      "type": "us_senate_model",
+      "runs": 113,
+      "first_date": "2026-06-29",
+      "last_date": "2026-10-19",
+      "first_year": 2026,
+      "last_year": 2026
+    }
+  ],
+  "pre_2024_polls": [
+    {
+      "map_id": 23,
+      "polls": 1
+    }
+  ],
+  "ev_eras": [
+    {
+      "census_year": 1960,
+      "first_election_year": 1964,
+      "last_election_year": 1968,
+      "units": 56,
+      "electoral_votes": 538
+    },
+    {
+      "census_year": 1970,
+      "first_election_year": 1972,
+      "last_election_year": 1980,
+      "units": 56,
+      "electoral_votes": 538
+    },
+    {
+      "census_year": 1980,
+      "first_election_year": 1984,
+      "last_election_year": 1988,
+      "units": 56,
+      "electoral_votes": 538
+    },
+    {
+      "census_year": 1990,
+      "first_election_year": 1992,
+      "last_election_year": 2000,
+      "units": 56,
+      "electoral_votes": 538
+    },
+    {
+      "census_year": 2000,
+      "first_election_year": 2004,
+      "last_election_year": 2008,
+      "units": 56,
+      "electoral_votes": 538
+    },
+    {
+      "census_year": 2010,
+      "first_election_year": 2012,
+      "last_election_year": 2020,
+      "units": 56,
+      "electoral_votes": 538
+    },
+    {
+      "census_year": 2020,
+      "first_election_year": 2024,
+      "last_election_year": 2028,
+      "units": 56,
+      "electoral_votes": 538
+    }
+  ],
+  "house_single_party_baselines": [
+    {
+      "seat_name": "CA-12",
+      "parties": 1
+    },
+    {
+      "seat_name": "CA-16",
+      "parties": 1
+    },
+    {
+      "seat_name": "CA-20",
+      "parties": 1
+    },
+    {
+      "seat_name": "CA-34",
+      "parties": 1
+    },
+    {
+      "seat_name": "FL-20",
+      "parties": 1
+    },
+    {
+      "seat_name": "KY-05",
+      "parties": 1
+    },
+    {
+      "seat_name": "LA-04",
+      "parties": 1
+    },
+    {
+      "seat_name": "MS-03",
+      "parties": 1
+    },
+    {
+      "seat_name": "OK-03",
+      "parties": 1
+    },
+    {
+      "seat_name": "PA-03",
+      "parties": 1
+    },
+    {
+      "seat_name": "TX-01",
+      "parties": 1
+    },
+    {
+      "seat_name": "TX-09",
+      "parties": 1
+    },
+    {
+      "seat_name": "TX-11",
+      "parties": 1
+    },
+    {
+      "seat_name": "TX-13",
+      "parties": 1
+    },
+    {
+      "seat_name": "TX-20",
+      "parties": 1
+    }
+  ],
+  "schema_columns": [
+    {
+      "name": "id"
+    },
+    {
+      "name": "pollster_id"
+    },
+    {
+      "name": "map_id"
+    },
+    {
+      "name": "fieldwork_start"
+    },
+    {
+      "name": "fieldwork_end"
+    },
+    {
+      "name": "sample_size"
+    },
+    {
+      "name": "source_url"
+    },
+    {
+      "name": "matchup"
+    },
+    {
+      "name": "seat_id"
+    }
+  ],
+  "stored_uncertainty": [],
+  "senate": {
+    "roster_sha256": "13a0234b35cfb66b71aa245556322bca5d37488e3cd2341728fe43f302e6341d",
+    "states": 50,
+    "members": 100,
+    "parties": {
+      "republican": 53,
+      "democrat": 45,
+      "independent": 2
+    },
+    "classes": {
+      "2": 33,
+      "3": 34,
+      "1": 33
+    },
+    "specials": [
+      {
+        "seat": "Florida",
+        "class": 3,
+        "year": 2026,
+        "baselineElectionId": "2022-us-senate"
+      },
+      {
+        "seat": "Ohio",
+        "class": 3,
+        "year": 2026,
+        "baselineElectionId": "2022-us-senate"
+      }
+    ],
+    "contested_2026": 35,
+    "holdovers_2026": 65,
+    "holdover_parties": {
+      "republican": 31,
+      "democrat": 32,
+      "independent": 2
+    },
+    "independents": [
+      {
+        "party": "independent",
+        "name": "Angus S. King, Jr.",
+        "class": 1,
+        "state": "Maine"
+      },
+      {
+        "party": "independent",
+        "name": "Bernard Sanders",
+        "class": 1,
+        "state": "Vermont"
+      }
+    ],
+    "target_year": 2026,
+    "policy_keys_present": []
+  },
+  "missing_n_current_window_matchup": [
+    {
+      "id": 1117,
+      "map_id": 21,
+      "seat_name": "AL-02",
+      "fieldwork_end": "2026-08-31",
+      "matchup": "Marques (R) vs Figures (D)",
+      "tracked_matchup": "Marques (R) vs Figures (D)"
+    },
+    {
+      "id": 1149,
+      "map_id": 21,
+      "seat_name": "FL-22",
+      "fieldwork_end": "2026-08-31",
+      "matchup": "Askar (R) vs Dandiya (D)",
+      "tracked_matchup": "Askar (R) vs Dandiya (D)"
+    },
+    {
+      "id": 1676,
+      "map_id": 21,
+      "seat_name": "SD-01",
+      "fieldwork_end": "2026-08-30",
+      "matchup": "Jackley (R) vs Gronli (D)",
+      "tracked_matchup": "Jackley (R) vs Gronli (D)"
+    },
+    {
+      "id": 1677,
+      "map_id": 21,
+      "seat_name": "TX-09",
+      "fieldwork_end": "2026-09-19",
+      "matchup": "Mealer (R) vs Gutierrez (D)",
+      "tracked_matchup": "Mealer (R) vs Gutierrez (D)"
+    },
+    {
+      "id": 1894,
+      "map_id": 21,
+      "seat_name": "FL-09",
+      "fieldwork_end": "2026-10-15",
+      "matchup": "Green (R) vs Soto (D)",
+      "tracked_matchup": "Green (R) vs Soto (D)"
+    },
+    {
+      "id": 1870,
+      "map_id": 23,
+      "seat_name": "Iowa",
+      "fieldwork_end": "2026-10-11",
+      "matchup": "Hinson (R) vs Turek (D)",
+      "tracked_matchup": "Hinson (R) vs Turek (D)"
+    },
+    {
+      "id": 1965,
+      "map_id": 23,
+      "seat_name": "Ohio",
+      "fieldwork_end": "2026-10-18",
+      "matchup": "Husted (R) vs Brown (D) vs Levy (I)",
+      "tracked_matchup": "Husted (R) vs Brown (D) vs Levy (I)"
+    },
+    {
+      "id": 2019,
+      "map_id": 23,
+      "seat_name": "Texas",
+      "fieldwork_end": "2026-10-11",
+      "matchup": "Paxton (R) vs Talarico (D) vs Brown (L)",
+      "tracked_matchup": "Paxton (R) vs Talarico (D) vs Brown (L)"
+    }
+  ],
+  "presidential_target_cycles": [
+    {
+      "target_election_year": 2028,
+      "runs": 603
+    }
+  ],
+  "generic_sources": [
+    {
+      "name": "Decision Desk HQ (US House)",
+      "snapshots": 9
+    },
+    {
+      "name": "FiftyPlusOne (US House)",
+      "snapshots": 9
+    },
+    {
+      "name": "RealClearPolitics (US House)",
+      "snapshots": 9
+    },
+    {
+      "name": "Silver Bulletin (US House)",
+      "snapshots": 9
+    },
+    {
+      "name": "VoteHub (US House)",
+      "snapshots": 3
+    },
+    {
+      "name": "Race to the WH (US House)",
+      "snapshots": 3
+    },
+    {
+      "name": "NBC News (US House)",
+      "snapshots": 5
+    }
+  ],
+  "baseline_party_mapping": [
+    {
+      "id": 15,
+      "name": "Others",
+      "short_name": "others"
+    },
+    {
+      "id": 20,
+      "name": "Democratic",
+      "short_name": "democratic"
+    },
+    {
+      "id": 21,
+      "name": "Republican",
+      "short_name": "republican"
+    },
+    {
+      "id": 22,
+      "name": "Independent",
+      "short_name": "independent"
+    },
+    {
+      "id": 23,
+      "name": "Libertarian",
+      "short_name": "libertarian"
+    },
+    {
+      "id": 24,
+      "name": "US Green",
+      "short_name": "usgreen"
+    }
+  ]
+}

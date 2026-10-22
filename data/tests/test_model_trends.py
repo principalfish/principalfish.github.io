@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 import sqlite3
 from contextlib import closing
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 from db import Database
@@ -15,6 +16,7 @@ from model_support.io import OutputPublicationError, publish_json
 from model_support.persistence import (
     OutputScope,
     OutputVote,
+    UncertaintyPayload,
     delete_outputs,
     output_dates,
     replace_output,
@@ -423,3 +425,379 @@ def test_cli_refuses_database_as_destination(
             ]
         )
     assert only_the_test_database.read_bytes() == before
+
+
+# ── Uncertainty keys ─────────────────────────────────────────────────────────
+
+
+def national_block(
+    party_ids: list[int],
+    *,
+    bands: tuple[tuple[float, float], ...] = ((55.86, 64.04), (35.95, 44.14)),
+    pm: tuple[float, ...] | None = None,
+    pl: tuple[float, ...] = (0.9999, 0.0001),
+    hung: float = 0.2688,
+) -> dict[str, object]:
+    """A stored national block: published fields plus private diagnostics.
+
+    By default the first party holds every majority not hung, so the odds add
+    up as the export requires.
+    """
+    if pm is None:
+        pm = (round(1 - hung, 4), 0.0)
+    return {
+        "budget": {"parties": {"secret": 1}},
+        "config_hash": "c0ffee",
+        "input_hash": "feed",
+        "seed": 739901,
+        "simulations": 10000,
+        "interval": 0.9,
+        "hung": hung,
+        "parties": {
+            str(party): {
+                "v": list(band),
+                "s": [0, 1, 1],
+                "pm": majority,
+                "pl": largest,
+                "hist": {"start": 0, "counts": [5000, 5000]},
+            }
+            for party, band, majority, largest in zip(party_ids, bands, pm, pl)
+        },
+    }
+
+
+def store_with_summary(
+    path: Path,
+    scope: OutputScope,
+    day: int,
+    seat: int,
+    parties: list[int],
+    share: float,
+    national: dict[str, object] | None,
+) -> None:
+    as_of = date(2026, 6, day)
+    replace_output(
+        path,
+        scope,
+        as_of,
+        f"{scope.name_prefix} {as_of}",
+        [
+            OutputVote(seat, parties[i], "", votes, i == 0)
+            for i, votes in enumerate((share, 100 - share))
+        ],
+        uncertainty=None if national is None else UncertaintyPayload(national),
+    )
+
+
+def test_summary_adds_rounded_bands_nonzero_odds_and_hung(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(
+        only_the_test_database, scope, 1, seats[0], parties, 60,
+        national_block(parties),
+    )
+    (entry,) = reconstruct_trends(only_the_test_database, scope)
+    assert entry["parties"] == {
+        # 55.86 -> 55.9 and 44.14 -> 44.1: rounded to 1 dp, not truncated.
+        str(parties[0]): {
+            "s": 1, "v": 60.0, "vl": 55.9, "vh": 64.0, "sl": 0, "sh": 1, "pm": 0.7312, "pl": 0.9999,
+        },
+        # A zero probability is left out; 0.0001 is kept.
+        str(parties[1]): {"s": 0, "v": 40.0, "vl": 36.0, "vh": 44.1, "sl": 0, "sh": 1, "pl": 0.0001},
+    }
+    assert entry["hung"] == 0.2688
+    text = json.dumps(entry)
+    for private in ("budget", "config_hash", "input_hash", "seed", "hist", "739901"):
+        assert private not in text
+
+
+def test_runs_without_a_summary_are_unchanged(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(only_the_test_database, scope, 1, seats[0], parties, 60, None)
+    store_with_summary(
+        only_the_test_database, scope, 2, seats[0], parties, 70,
+        national_block(parties),
+    )
+    first, second = reconstruct_trends(only_the_test_database, scope)
+    assert first == {
+        "election_id": first["election_id"],
+        "election_name": "UNS 2026-06-01",
+        "as_of_date": "2026-06-01",
+        "parties": {
+            str(parties[0]): {"s": 1, "v": 60.0},
+            str(parties[1]): {"s": 0, "v": 40.0},
+        },
+    }
+    assert "hung" in second
+
+
+def test_equal_projection_collapses_whatever_its_odds(
+    db: Database, only_the_test_database: Path
+) -> None:
+    """The seed changes daily, so equal projections differ only by noise."""
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(
+        only_the_test_database, scope, 1, seats[0], parties, 60,
+        national_block(parties, hung=0.25),
+    )
+    store_with_summary(
+        only_the_test_database, scope, 2, seats[0], parties, 60,
+        national_block(parties, hung=0.30),
+    )
+    store_with_summary(
+        only_the_test_database, scope, 3, seats[0], parties, 65,
+        national_block(parties, hung=0.35),
+    )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [(e["as_of_date"], e.get("hung")) for e in entries] == [
+        ("2026-06-01", 0.25),
+        ("2026-06-03", 0.35),
+    ]
+
+
+def test_first_summary_is_kept_after_an_equal_run_without_one(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(only_the_test_database, scope, 1, seats[0], parties, 60, None)
+    store_with_summary(
+        only_the_test_database, scope, 2, seats[0], parties, 60,
+        national_block(parties),
+    )
+    store_with_summary(
+        only_the_test_database, scope, 3, seats[0], parties, 60,
+        national_block(parties, hung=0.5),
+    )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [(e["as_of_date"], e.get("hung")) for e in entries] == [
+        ("2026-06-01", None),
+        ("2026-06-02", 0.2688),
+    ]
+
+
+def test_equal_run_without_a_summary_after_one_with_is_dropped(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(
+        only_the_test_database, scope, 1, seats[0], parties, 60,
+        national_block(parties),
+    )
+    store_with_summary(only_the_test_database, scope, 2, seats[0], parties, 60, None)
+    # A later equal run with a summary is still a duplicate of day 1.
+    store_with_summary(
+        only_the_test_database, scope, 3, seats[0], parties, 60,
+        national_block(parties, hung=0.5),
+    )
+    store_with_summary(only_the_test_database, scope, 4, seats[0], parties, 65, None)
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [(e["as_of_date"], e.get("hung")) for e in entries] == [
+        ("2026-06-01", 0.2688),
+        ("2026-06-04", None),
+    ]
+
+
+def polled_block(parties: list[int], counts: tuple[int, ...]) -> dict[str, object]:
+    """A national block whose Westminster budget records these poll counts."""
+    block = national_block(parties)
+    block["budget"] = {
+        "parties": {str(party): {"poll_count": count} for party, count in zip(parties, counts)}
+    }
+    return block
+
+
+def test_run_with_no_polls_is_left_out(
+    db: Database, only_the_test_database: Path
+) -> None:
+    """With nothing polled the run is the baseline with no error: a spike."""
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, counts in ((1, 60, (2, 2)), (2, 75, (0, 0)), (3, 65, (1, 1))):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            polled_block(parties, counts),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [e["as_of_date"] for e in entries] == ["2026-06-01", "2026-06-03"]
+
+
+def test_run_after_a_skipped_one_still_collapses_onto_the_last_entry(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    for day, share, counts in ((1, 60, (2, 2)), (2, 75, (0, 0)), (3, 60, (1, 1))):
+        store_with_summary(
+            only_the_test_database, scope, day, seats[0], parties, share,
+            polled_block(parties, counts),
+        )
+    entries = reconstruct_trends(only_the_test_database, scope)
+    assert [e["as_of_date"] for e in entries] == ["2026-06-01"]
+
+
+def test_run_with_any_polled_party_is_kept(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(
+        only_the_test_database, scope, 1, seats[0], parties, 60,
+        polled_block(parties, (1, 0)),
+    )
+    (entry,) = reconstruct_trends(only_the_test_database, scope)
+    assert entry["as_of_date"] == "2026-06-01"
+
+
+def test_parties_missing_from_either_side(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    stray = db.add_party("C").id
+    # The block lists only the first trend party, plus one with no votes.
+    store_with_summary(
+        only_the_test_database, scope, 1, seats[0], parties, 60,
+        national_block([parties[0], stray]),
+    )
+    (entry,) = reconstruct_trends(only_the_test_database, scope)
+    assert set(entry["parties"]) == {str(parties[0]), str(parties[1])}
+    assert entry["parties"][str(parties[1])] == {"s": 0, "v": 40.0}
+    assert "vl" in entry["parties"][str(parties[0])]
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda block: block.pop("hung"), "national.hung"),
+        (lambda block: block["parties"]["1"].update(v=[70, 60]), "share interval"),
+        (lambda block: block["parties"]["1"].update(pm=1.5), "outside 0-1"),
+        (lambda block: block["parties"]["1"].update(pl=True), "expected a number"),
+    ],
+)
+def test_malformed_summary_fails_reconstruction(
+    db: Database,
+    only_the_test_database: Path,
+    tmp_path: Path,
+    change: Any,
+    message: str,
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    assert parties[0] == 1
+    block = national_block(parties)
+    change(block)
+    store_with_summary(only_the_test_database, scope, 1, seats[0], parties, 60, block)
+    with pytest.raises(ValueError, match=message):
+        reconstruct_trends(only_the_test_database, scope)
+    # The CLI reports it as a failure rather than publishing a partial file.
+    output = tmp_path / "cache.json"
+    assert main([
+        "--model", "westminster", "--map-id", str(scope.map_id),
+        "--database", str(only_the_test_database), "--output", str(output),
+    ]) == 1
+    assert not output.exists()
+
+
+def test_unreadable_stored_format_fails_reconstruction(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(
+        only_the_test_database, scope, 1, seats[0], parties, 60,
+        national_block(parties),
+    )
+    with closing(sqlite3.connect(only_the_test_database)) as conn:
+        conn.execute("UPDATE model_uncertainty SET schema = 'pf-model-uncertainty-v0'")
+        conn.commit()
+    with pytest.raises(ValueError, match="unreadable.*pf-model-uncertainty-v0"):
+        reconstruct_trends(only_the_test_database, scope)
+
+
+def test_only_dated_runs_summaries_are_read(
+    db: Database, only_the_test_database: Path
+) -> None:
+    scope, seats, parties = setup_scope(db, "westminster")
+    store_with_summary(only_the_test_database, scope, 1, seats[0], parties, 60, None)
+    # In the scope's type and map, but not a dated run, with a block that
+    # would fail if it were read.
+    with closing(sqlite3.connect(only_the_test_database)) as conn:
+        undated = conn.execute(
+            "INSERT INTO elections (map_id, year, name, type) VALUES (?,?,?,?)",
+            (scope.map_id, 2026, "UNS scratch", scope.election_type),
+        ).lastrowid
+        conn.execute(
+            "INSERT INTO model_uncertainty (election_id, schema, national_json) "
+            "VALUES (?, 'pf-model-uncertainty-v1', '{\"bad\": true}')",
+            (undated,),
+        )
+        conn.commit()
+    (entry,) = reconstruct_trends(only_the_test_database, scope)
+    assert "hung" not in entry
+
+
+def test_full_backfill_trend_size(
+    db: Database, only_the_test_database: Path, tmp_path: Path
+) -> None:
+    """A synthetic full history: 830 daily runs, every one with a summary.
+
+    Shaped like the live Westminster history: 13 parties, 650 seats, and the
+    projection changing on 323 of 824 days (equal days collapse). Every run's
+    national block has a band for each party and three non-zero odds.
+    """
+    party_ids = [db.add_party(f"P{i}").id for i in range(13)]
+    election_map = db.add_map("Synthetic", parliament="westminster")
+    scope = OutputScope("model_uns", election_map.id, "UNS")
+    with closing(sqlite3.connect(only_the_test_database)) as conn:
+        seat_ids = [
+            conn.execute(
+                "INSERT INTO seats (map_id, seat_name) VALUES (?, ?)",
+                (election_map.id, f"Seat {i}"),
+            ).lastrowid
+            for i in range(650)
+        ]
+        runs = 830
+        for day in range(runs):
+            as_of = date(2024, 7, 5) + timedelta(days=day)
+            election_id = conn.execute(
+                "INSERT INTO elections (map_id, year, name, type) VALUES (?,?,?,?)",
+                (election_map.id, as_of.year, f"UNS {as_of}", "model_uns"),
+            ).lastrowid
+            # 39% of days move the projection, as 323 of 824 live days do.
+            step = (day * 323) // 824
+            leader_seats = 250 + step % 97
+            winners = [
+                party_ids[0 if seat < leader_seats else 1 + seat % 12]
+                for seat in range(650)
+            ]
+            conn.executemany(
+                "INSERT INTO votes (election_id, seat_id, party_id, candidate_name, "
+                "vote_total, elected) VALUES (?,?,?,?,?,?)",
+                [
+                    (election_id, seat, winner, "", 31234.5 + step, 1)
+                    for seat, winner in zip(seat_ids, winners)
+                ]
+                + [
+                    (election_id, seat_ids[0], party, "", 1234.5 + step, 0)
+                    for party in party_ids
+                ],
+            )
+            hung = round(0.5 + day / 10000, 4)
+            national = national_block(
+                party_ids,
+                bands=tuple((22.84 + i, 30.59 + i) for i in range(13)),
+                pm=(round(1 - hung - 0.0002, 4), 0.0002) + (0.0,) * 11,
+                pl=(0.9697, 0.0279, 0.0024) + (0.0,) * 10,
+                hung=hung,
+            )
+            conn.execute(
+                "INSERT INTO model_uncertainty (election_id, schema, national_json) "
+                "VALUES (?,?,?)",
+                (election_id, "pf-model-uncertainty-v1", json.dumps(national)),
+            )
+        conn.commit()
+    destination = tmp_path / "trends.json"
+    publish_trends(only_the_test_database, scope, destination)
+    entries = json.loads(destination.read_text())
+    assert 300 <= len(entries) <= 340
+    assert all("hung" in entry for entry in entries)
+    size = destination.stat().st_size
+    # Includes both vote and seat bounds for every party in the full history.
+    assert size < 300_000, size

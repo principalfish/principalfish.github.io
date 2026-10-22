@@ -5,6 +5,7 @@
 import * as d3 from '../site/vendor/d3.v7.esm.js';
 import { normalizeRegionKey, formatInt, formatPct, formatSigned, seatLookupKey, getRegionLabel, clampNumber, DEFAULT_PARTY_COLOUR } from './utils.js';
 import { fetchJson } from './files.js';
+import { decodeSeatUncertainty } from "./uncertainty.js";
 
 // Colour for a "split" seat — a multi-member seat whose members are from different parties.
 // A distinct purple from the Independent party colour so the two don't blur.
@@ -334,6 +335,7 @@ export class Seat {
     // Optional candidate names by party key; absent for projections / older data,
     // where the UI falls back to the party label.
     this.candidates = { ...(input?.candidates || {}) };
+    this.u = decodeSeatUncertainty(input?.u, (party) => manifest.resolvePartyRef(party));
     // Electoral College votes for this seat (presidential maps only); 0 otherwise.
     this.ev = Number(input?.ev) || 0;
     // Multi-member seats only (a seat that returns several members, each {party, name, up});
@@ -353,6 +355,7 @@ export class Seat {
       winner: rawSeat?.w,
       votes: Seat.#decodeCompactVotes(rawSeat?.p),
       candidates: Seat.#decodeCandidates(rawSeat?.p),
+      u: rawSeat?.u,
       ev: rawSeat?.ev,
       members: rawSeat?.members,
     });
@@ -951,6 +954,8 @@ export class ElectionData {
     /** Display label of the election this data represents (e.g. "2024 General Election").
      * Null for the comparison ElectionData instance, which never renders a subtitle. */
     this.electionName = electionName;
+    this.uncertaintyId = resultsData?.uncertaintyId ?? null;
+    this.uncertainty = null;
 
     /** Pristine normalised seat records as parsed from the results JSON. */
     this.baseSeats = ElectionData.normalizeSeats(resultsData);
@@ -993,6 +998,8 @@ export class ElectionData {
   static fromSeats(seats, electionName = null) {
     const instance = Object.create(ElectionData.prototype);
     instance.electionName = electionName;
+    instance.uncertaintyId = null;
+    instance.uncertainty = null;
     instance.baseSeats = seats;
     instance.currentSeats = seats;
     instance.seatsByKey = ElectionData.buildSeatIndex(seats);
@@ -1068,7 +1075,7 @@ class AppState {
 
     /** Parsed poll tracker data: a dense daily timeline plus per-party seats/votePct series.
      * Populated by assigning to state.pollTrackerData when poll tracker mode activates; empty until then. */
-    this.pollTrackerData = { timeline: [], seriesByParty: new Map() };
+    this.pollTrackerData = { timeline: [], seriesByParty: new Map(), hung: [] };
 
     /** Map from normalised region key to display label for the current election.
      * Built from manifest.regionsByMapId on each election load; used by getRegionLabel. */
@@ -1100,6 +1107,7 @@ class AppState {
       columns: { votes: true, votePct: true },
       mode: 'all',
       expanded: false,
+      showUncertainty: false,
       sort: { key: 'seats', direction: 'desc' },
     };
 

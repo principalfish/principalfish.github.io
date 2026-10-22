@@ -875,6 +875,17 @@ Dry-run:
 ./election_data/bin/python scripts/export_elections.py --dry-run
 ```
 
+Scratch export (writes every page under `DIR/<page>/data`, seeding each from the
+repository's page data directory on first use; the repository is not touched):
+
+```bash
+./election_data/bin/python scripts/export_elections.py --output-base /tmp/export-check
+```
+
+`--output-base` works with every mode. `--output-root DIR` applies only to
+`--current-simulation` (the UK page directory to write under) and is refused for the
+other modes.
+
 ### Targeted exports
 
 ```bash
@@ -914,6 +925,10 @@ for supported fields, selection rules, and shell transformations.
 	- top-level: `{"schema":"pf-results-v4","seats":[...]}`
 	- seat keys: `n` (seat name), `r` (region), `w` (winner), `e` (electorate), `m` (majority), `t` (turnout), `p` (party rows)
 	- party row: `[partyKey, total, name]`
+	- model run only, optional: `u` (per-party share range and win probability, aligned to `p`)
+- The current Westminster model run also writes `results/prediction-uncertainty.json`
+  (`pf-uncertainty-v1`: national and regional ranges, odds and seat histograms) when it
+  has full detail; see the [manifest reference](electionmaps/data/map-modes.md).
 - Frontend loader supports both compact and legacy result formats.
 
 ### Topo output behavior

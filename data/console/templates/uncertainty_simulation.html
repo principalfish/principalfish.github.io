@@ -1,0 +1,39 @@
+{% extends "uncertainty_run_base.html" %}
+{% block heading %}Simulation #{{ index if index is defined else '?' }}{% endblock %}
+{% block diagnostics %}{% if index is defined %}
+<p>
+  <a class="button" href="{{ url_for('uncertainty_explorer.simulations', election_id=run.election_id) }}">← Back to all simulations</a>
+</p>
+<section class="card"><h3>National result</h3><p>λ = {{ fmt(lambda_value, '.2f') }}.{% if lambda_stats %} SD {{ fmt(lambda_stats.sd, '.2f') }}, z {{ fmt(lambda_stats.z) }}, two-sided marginal tail 1 in {{ fmt(lambda_stats.one_in, '.1f') }}.{% endif %}</p>
+{% if replay_error %}<p class="alert">{{ replay_error }}</p>{% endif %}
+<div class="table-wrap"><table><thead><tr><th scope="col">Party</th><th scope="col">Central seats</th><th scope="col">Simulated seats</th><th scope="col">Central vote</th><th scope="col">Simulated vote</th><th scope="col">Saved globally centred national error</th></tr></thead><tbody>{% for party in draws.party_ids %}{% set k = loop.index0 %}<tr><td>{{ labels.parties.get(party|string, party) }}</td><td>{{ central.totals.get(party|string, 0) }}</td><td>{{ draws.seats[index, k] }}</td><td>{{ fmt(central.vote.get(party|string, 0)) }}</td><td>{{ fmt(draws.vote[index, k]|float) }}</td><td>{{ fmt(draws.e_nat[index, k]|float) }}</td></tr>{% endfor %}</tbody></table></div></section>
+{% if regional_errors %}<section class="card"><h3>Exact applied regional polling swings</h3><p>Verified against the saved results. Central swing + applied national error + total regional error gives the shared polling swing before seat noise. λ changes the seat-specific uniform/proportional blend; it is shown in each seat decomposition. Tail frequencies are two-sided marginal normal tails, not the probability of this whole election.</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Region</th><th scope="col">Party</th><th scope="col">Central Δ</th><th scope="col">Applied national (SD; z; 1 in N)</th><th scope="col">Regional (SD; z; 1 in N)</th><th scope="col">Effective polling swing</th></tr></thead><tbody>{% for row in regional_errors %}<tr><td>{{ labels.regions.get(row.region, row.region) }}</td><td>{{ labels.parties.get(row.party, row.party) }}{% if row.exclusion %}<br>{{ row.exclusion }}{% endif %}</td><td>{{ fmt(row.swing) }}</td>{% for term in [row.national, row.regional] %}<td>{{ fmt(term.value) }} ({{ fmt(term.sd) }}; {{ fmt(term.z) }}; {{ fmt(term.one_in, '.1f') }})</td>{% endfor %}<td>{{ fmt(row.effective) }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+{% if not regional_errors %}
+<section class="card">
+  <h3>Saved regional errors</h3>
+  <p>These combined sampling and systematic errors are retained in the raw file.
+    Applied national errors require a supported replay snapshot.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">Region</th><th scope="col">Party</th><th scope="col">Regional error</th></tr></thead>
+      <tbody>
+        {% for region in draws.region_ids %}
+        {% set r = loop.index0 %}
+        {% for party in draws.party_ids %}
+        {% set k = loop.index0 %}
+        <tr>
+          <td>{{ labels.regions.get(region|string, region) }}</td>
+          <td>{{ labels.parties.get(party|string, party) }}</td>
+          <td>{{ fmt(draws.e_reg[index, r, k]|float) }}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+<section class="card"><h3>{{ flips|length }} seats flipped from the central projection</h3><div class="table-wrap"><table><thead><tr><th scope="col">Seat</th><th scope="col">Region</th><th scope="col">Central winner</th><th scope="col">Simulated winner</th><th scope="col">Simulated margin</th><th scope="col">Exact decomposition</th></tr></thead><tbody>{% for s in flips %}{% set sid = draws.seat_ids[s]|string %}{% set label = labels.seats.get(sid, {}) %}<tr><td><a href="{{ url_for('uncertainty_explorer.seat', seat_id=sid, election_id=run.election_id) }}">{{ label.get('name', sid) }}</a></td><td>{{ labels.regions.get(label.get('region'), '-') }}</td><td>{{ labels.parties.get(draws.party_ids[draws.projected_winner[s]]|string, '?') }}</td><td>{{ labels.parties.get(draws.party_ids[draws.winner[index, s]]|string, '?') }}</td><td>{{ fmt(draws.margin[index, s]|float) }}</td><td><a href="{{ url_for('uncertainty_explorer.simulation_seat', index=index, seat_id=sid, election_id=run.election_id) }}">Explain</a></td></tr>{% else %}<tr><td colspan="6">No flips</td></tr>{% endfor %}</tbody></table></div>
+<details><summary>Explain any seat in this simulation</summary><ul>{% for sid in draws.seat_ids %}<li><a href="{{ url_for('uncertainty_explorer.simulation_seat', index=index, seat_id=sid, election_id=run.election_id) }}">{{ labels.seats.get(sid|string, {}).get('name', sid) }}</a></li>{% endfor %}</ul></details></section>
+{% endif %}{% endblock %}

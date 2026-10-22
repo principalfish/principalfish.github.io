@@ -39,6 +39,7 @@ def _never_open_the_live_database(
     import console.db
 
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "default-guard.db"))
+    monkeypatch.setenv("SIMULATIONS_PATH", str(tmp_path / "simulations-guard.npz"))
     # The console's after_request hook starts a background backup of the
     # default database. It must never run from a test: by the time its thread
     # wakes, this fixture has restored the live DATABASE_PATH.

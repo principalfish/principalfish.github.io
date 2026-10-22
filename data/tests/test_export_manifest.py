@@ -8,6 +8,7 @@ refresh both rely on.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,7 @@ from scripts.export.manifest import (
     _senate_class_next_election,
     build_map_modes_with_regions,
 )
+from scripts.export.uncertainty import UNCERTAINTY_FILENAME
 
 
 class TestSenateClassNextElection:
@@ -178,3 +180,25 @@ class TestSenateSpecialElections:
         )
         assert len(modes["23"]["senateSpecialElections"]) == 1
         assert result["23"]["senateSpecialElections"] == []
+
+
+def test_committed_westminster_shell_points_at_the_uncertainty_file() -> None:
+    """The flag the front end reads names the file the export writes."""
+    shell_path = (
+        Path(__file__).resolve().parents[2]
+        / "electionmaps"
+        / "data"
+        / "map-modes-shell.json"
+    )
+    shell = json.loads(shell_path.read_text(encoding="utf-8"))
+    features = shell["parliamentFeatures"]
+    assert UNCERTAINTY_FILENAME == "prediction-uncertainty.json"
+    assert (
+        features["westminster"]["uncertaintyDataPath"]
+        == f"results/{UNCERTAINTY_FILENAME}"
+    )
+    assert all(
+        "uncertaintyDataPath" not in config
+        for key, config in features.items()
+        if key != "westminster"
+    )

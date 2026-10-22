@@ -1,16 +1,38 @@
-"""Chronological model trends reconstructed from authoritative recorded votes."""
+"""Chronological model trends reconstructed from authoritative recorded votes.
+
+Each entry is one run's national seats ``s`` and vote share ``v`` per party.
+A run with a stored Monte Carlo summary also carries, per party, its vote band
+``vl``/``vh`` (the summary's vote interval, 90%; 1 dp), ``sl``/``sh``
+(integer seat bounds), and P(majority) ``pm`` /
+P(largest) ``pl`` (fractions, 4 dp; left out when zero), plus an entry-level
+``hung``. A run without one gets none of these keys, so its entry is exactly
+as before. In an entry with ``hung``, a party lacking ``pm``/``pl`` has
+probability 0, and a party lacking ``vl``/``vh`` was not in the summary.
+
+Consecutive runs with the same seats and shares collapse to the first, as
+before; uncertainty does not keep a duplicate (the simulation seed changes
+daily, so its odds always differ slightly). The one exception: a run with a
+summary is kept after an equal run without one, so the odds appear. The
+reverse is not kept: an equal run without a summary after one with a summary
+adds nothing, and the earlier entry's odds carry forward. With no summaries
+anywhere the rule is exactly the old one.
+
+A run whose stored error budget shows no national polls for any party is
+left out: with nothing polled it projects the baseline with no error, which
+would plot as a spike. The previous entry carries across the gap.
+"""
 
 from __future__ import annotations
 
 import re
 import shlex
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator, Mapping
 from contextlib import closing, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 from electoral_votes import (
     ElectoralVoteError,
@@ -22,7 +44,17 @@ from model_support.io import (
     publish_json,
     validate_output_target,
 )
-from model_support.persistence import OutputScope, committed_dates
+from model_support.persistence import (
+    OutputScope,
+    UncertaintyStoreError,
+    committed_dates,
+    iter_national_blocks,
+)
+from model_support.public_uncertainty import (
+    PublicUncertaintyError,
+    TrendUncertainty,
+    trend_uncertainty,
+)
 from polls.importers.us.us_geography import parent_seat_name
 
 
@@ -31,6 +63,7 @@ class TrendEntry(TypedDict):
     election_name: str
     as_of_date: str
     parties: dict[str, dict[str, int | float]]
+    hung: NotRequired[float]
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,7 +264,9 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             ):
                 if eid in metrics:
                     metrics[eid][str(pid)]["e"] += ev_by_election[eid][unit_name]
+        uncertainty, unpolled = _trend_uncertainty(conn, scope, elections)
         dates: set[str] = set()
+        previous: tuple[dict[str, dict[str, int | float]], bool] | None = None
         for eid, (name, as_of) in sorted(
             elections.items(), key=lambda item: (item[1][1], item[0])
         ):
@@ -244,15 +279,90 @@ def reconstruct_trends(sqlite_path: Path, scope: OutputScope) -> list[TrendEntry
             total = sum(party["v"] for party in parties.values())
             for party in parties.values():
                 party["v"] = round(party["v"] / total * 100.0, 1) if total > 0 else 0.0
+            if eid in unpolled:
+                continue
+            summary = uncertainty.get(eid)
+            if (
+                previous is not None
+                and previous[0] == parties
+                and (summary is None or previous[1])
+            ):
+                continue
+            previous = (parties, summary is not None)
             entry: TrendEntry = {
                 "election_id": eid,
                 "election_name": name,
                 "as_of_date": as_of.isoformat(),
-                "parties": dict(sorted(parties.items(), key=lambda item: int(item[0]))),
+                "parties": {
+                    party_id: (
+                        {**fields, **summary.parties.get(party_id, {})}
+                        if summary is not None
+                        else fields
+                    )
+                    for party_id, fields in sorted(
+                        parties.items(), key=lambda item: int(item[0])
+                    )
+                },
             }
-            if not entries or entries[-1]["parties"] != parties:
-                entries.append(entry)
+            if summary is not None:
+                entry["hung"] = summary.hung
+            entries.append(entry)
     return entries
+
+
+def _trend_uncertainty(
+    conn: sqlite3.Connection, scope: OutputScope, election_ids: Collection[int]
+) -> tuple[dict[int, TrendUncertainty], set[int]]:
+    """Read each scoped run's trend additions from its stored national block.
+
+    Args:
+        conn: The reconstruction's connection, inside its transaction.
+        scope: The model scope.
+        election_ids: The scope's dated runs.
+
+    Returns:
+        Election id -> its additions, for the runs with a summary; and the
+        runs whose budget shows no national polls (:func:`_unpolled`).
+
+    Raises:
+        ValueError: A stored block is unreadable or lacks a published field
+            (callers report trend failures as ``ValueError``).
+    """
+    result: dict[int, TrendUncertainty] = {}
+    unpolled: set[int] = set()
+    try:
+        for election_id, national in iter_national_blocks(conn, scope):
+            if election_id not in election_ids:
+                continue
+            if _unpolled(national):
+                unpolled.add(election_id)
+            try:
+                result[election_id] = trend_uncertainty(national)
+            except PublicUncertaintyError as err:
+                raise ValueError(
+                    f"Stored uncertainty for election {election_id}: {err}"
+                ) from err
+    except UncertaintyStoreError as err:
+        raise ValueError(f"Stored uncertainty is unreadable: {err}") from err
+    return result, unpolled
+
+
+def _unpolled(national: Mapping[str, object]) -> bool:
+    """Whether a stored block's error budget shows no national polls at all.
+
+    Only the Westminster budget records ``poll_count`` per party. Any other or
+    malformed budget is private and unvalidated, so it counts as polled and
+    its run is kept.
+    """
+    budget = national.get("budget")
+    parties = budget.get("parties") if isinstance(budget, Mapping) else None
+    if not isinstance(parties, Mapping) or not parties:
+        return False
+    counts = [
+        party.get("poll_count") if isinstance(party, Mapping) else None
+        for party in parties.values()
+    ]
+    return all(type(count) is int and count == 0 for count in counts)
 
 
 _DEFERRED: ContextVar[frozenset[tuple[Path, OutputScope, Path]]] = ContextVar(

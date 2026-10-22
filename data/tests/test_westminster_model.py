@@ -319,6 +319,53 @@ class TestComputeRegionDiffs:
         assert 1 in party_universe  # from baseline
         assert 2 in party_universe  # from poll
 
+    @pytest.mark.parametrize("regional_poll", [None, 0.146, 10.0])
+    @pytest.mark.parametrize("explicit_zero", [False, True])
+    def test_party_absent_from_region_gets_no_swing(
+        self, regional_poll: float | None, explicit_zero: bool,
+    ) -> None:
+        sums: dict[tuple[int | None, int], float] = {(None, 8): 10.0}
+        if regional_poll is not None:
+            sums[(18, 8)] = regional_poll
+        _, swings, rows = self._run(
+            seats=[_make_seat(1, 18), _make_seat(2, 23)],
+            region_by_id={
+                18: _make_region(18, "Yorkshire"),
+                23: _make_region(23, "Scotland"),
+            },
+            party_name_by_id={1: "Labour", 8: "Scottish National Party"},
+            national_totals={1: 9748.0, 8: 252.0},
+            weighted_sums=sums,
+            total_weights={key: 1.0 for key in sums},
+            baseline_national={1: 97.48, 8: 2.52},
+            baseline_regional={
+                18: {1: 100.0, **({8: 0.0} if explicit_zero else {})},
+                23: {1: 70.0, 8: 30.0},
+            },
+        )
+        yorkshire = next(
+            row for row in rows if row["region_id"] == 18 and row["party_id"] == 8
+        )
+        assert yorkshire["applicable"] is False
+        assert yorkshire["baseline_share"] == 0.0
+        assert swings[18][8] == 0.0
+        assert swings[23][8] == pytest.approx(7.48)
+
+    def test_new_party_remains_eligible_without_any_baseline(self) -> None:
+        _, swings, rows = self._run(
+            seats=[_make_seat(1, 18)],
+            region_by_id={18: _make_region(18, "Yorkshire")},
+            party_name_by_id={1: "Labour", 99: "New party"},
+            national_totals={1: 1000.0},
+            weighted_sums={(None, 99): 10.0},
+            total_weights={(None, 99): 1.0},
+            baseline_national={1: 100.0},
+            baseline_regional={18: {1: 100.0}},
+        )
+        new_party = next(row for row in rows if row["party_id"] == 99)
+        assert new_party["applicable"] is True
+        assert swings[18][99] == 10.0
+
 
 # ── project_seat_votes ────────────────────────────────────────────────────────
 
@@ -1034,7 +1081,8 @@ class TestAggregatePollShares:
             world,
             _AS_OF - timedelta(days=1),
             {} if regional else {party: 0.0},
-            regional={region: {party: 0.0}} if region is not None else None,
+            regional={region: {party: 0.0, world.party_ids["Conservative"]: 20.0}}
+            if region is not None else None,
         )
         map_id = (
             db.add_map("Unrelated map").id if excluded == "wrong-map" else world.map_id
@@ -1082,7 +1130,10 @@ class TestAggregatePollShares:
         )
         _, _, latest = _aggregate(db, world, pollster_weight_by_id=weights)
 
-        assert result.averages == {(region, party): 0.0}
+        expected = {(region, party): 0.0}
+        if region is not None:
+            expected[(region, world.party_ids["Conservative"])] = 20.0
+        assert result.averages == expected
         assert [poll.poll_id for poll in result.contributors] == [accepted.id]
         assert result.latest is not None
         assert result.latest.fieldwork_end == accepted.fieldwork_end
@@ -2833,6 +2884,9 @@ class TestParseArgs:
             # The one test tied to the CLI default; the rest pass it explicitly.
             "baseline_election_name": run_uns_model.BASELINE_ELECTION_NAME,
             "half_life_days": 30.0,
+            "simulations": None,
+            "no_uncertainty": False,
+            "no_raw_sims": False,
             "dry_run": False,
             "as_of_days_back": 0,
             "since_days_back": 30,
@@ -2898,6 +2952,7 @@ class TestBuildConfigFromArgs:
             half_life_days=14.0,
             output_csv="out.csv",
             dry_run=True,
+            uncertainty=run_uns_model.load_uncertainty_config(),
         )
 
     @pytest.mark.parametrize(
@@ -3233,7 +3288,7 @@ class TestMain:
         )
 
         lines = capsys.readouterr().out.splitlines()
-        assert lines[0] == "UNS simulation complete"
+        assert "UNS simulation complete" in lines
         assert "Election name: UNS 2026-06-09" in lines
         assert not meta_json.exists()
         assert not trend_json.exists()
@@ -3269,20 +3324,19 @@ class TestMain:
         lines = capsys.readouterr().out.splitlines()
         summary = lines[lines.index("Weighted regional diffs (swing) snapshot:") + 1 :]
         unswung = (
-            "Green: +0.00, Labour: +5.00, Liberal Democrats: +0.00, Others: +0.00, "
-            "Plaid Cymru: +0.00, Reform UK: +0.00"
+            "Green: +0.00, Labour: +5.00, Liberal Democrats: +0.00"
         )
-        # Regions sorted by name, parties by name; Scotland's SNP swing comes
-        # from its cross-break, everyone else's from the national delta.
+        # Parties absent from a region's baseline are marked inapplicable;
+        # Scotland's SNP swing still comes from its regional crossbreak.
         assert summary == [
-            f"- London: Conservative: -5.00, {unswung}, "
-            "Scottish National Party: +0.00",
-            f"- North East England: Conservative: -5.00, {unswung}, "
-            "Scottish National Party: +0.00",
-            f"- Scotland: Conservative: -5.00, {unswung}, "
-            "Scottish National Party: -4.29",
-            f"- Wales: Conservative: -5.00, {unswung}, "
-            "Scottish National Party: +0.00",
+            f"- London: Conservative: -5.00, {unswung}, Others: +0.00, "
+            "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: N/A",
+            f"- North East England: Conservative: -5.00, {unswung}, Others: +0.00, "
+            "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: N/A",
+            f"- Scotland: Conservative: -5.00, {unswung}, Others: N/A, "
+            "Plaid Cymru: N/A, Reform UK: +0.00, Scottish National Party: -4.29",
+            f"- Wales: Conservative: -5.00, {unswung}, Others: N/A, "
+            "Plaid Cymru: +0.00, Reform UK: +0.00, Scottish National Party: N/A",
         ]
 
     def test_region_without_key_parties_is_left_out_of_the_summary(
@@ -3453,6 +3507,8 @@ def test_retrospective_publishes_committed_first_date_after_middle_failure(
 ) -> None:
     trend, _ = _guard_writes(tmp_path, monkeypatch, only_the_test_database)
     world = westminster_world
+    # A run with no polls is left out of the trends, so give the first date one.
+    _seed_swing_poll(db, world, date(2026, 6, 1))
     args = _retrospective_args(
         monkeypatch,
         world,

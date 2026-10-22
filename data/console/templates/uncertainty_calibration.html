@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+{% macro ratio_cells(summary) -%}
+  {%- if summary is mapping -%}
+    <td>{{ summary.count }}</td><td>{{ fmt(summary.p10, ".2f") }}</td><td>{{ fmt(summary.median, ".2f") }}</td><td>{{ fmt(summary.p90, ".2f") }}</td>
+  {%- else -%}
+    <td>-</td><td>-</td><td>-</td><td>-</td>
+  {%- endif -%}
+{%- endmacro %}
+{% macro ratio_median(summary) -%}
+  {%- if summary is mapping %}{{ fmt(summary.median, ".2f") }}{% else %}-{% endif -%}
+{%- endmacro %}
+{% block container_class %} container-wide{% endblock %}
+{% block content %}
+  <section class="card">
+    <h2>Uncertainty Calibration</h2>
+    <p>
+      The settings of the Westminster polling-error model, and how the
+      calibrated ones were fitted (<code>scripts/calibrate_uncertainty.py</code>).
+      σs are in points for a party on {{ "%g" | format(p_ref_pct) }}%.
+    </p>
+    <p>
+      Final-poll data: {{ credit_name }} &mdash;
+      <a href="{{ credit_url }}">{{ credit_url }}</a>
+    </p>
+    {% if config_error %}
+      <div class="alert">Settings file unreadable ({{ config_error }}); the defaults are shown.</div>
+    {% elif not config_present %}
+      <div class="alert">No settings file at {{ config_path }}; the model uses the defaults shown.</div>
+    {% endif %}
+    {% if report_error %}
+      <div class="alert">{{ report_error }} Run <code>scripts/calibrate_uncertainty.py</code> to write it.</div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Settings in use</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Setting</th>
+            <th scope="col">Value</th>
+            <th scope="col">Unit</th>
+            <th scope="col">Source</th>
+            <th scope="col">Calibration wrote</th>
+            <th scope="col">What it is, and how it was built</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in parameters %}
+            <tr>
+              <th scope="row"><code>{{ row.name }}</code></th>
+              <td>{{ row.value|round_display }}</td>
+              <td>{{ row.unit }}</td>
+              <td>{{ row.source }}</td>
+              <td>
+                {%- if row.reported is none %}-{% else %}{{ row.reported|round_display }}{% endif -%}
+                {%- if row.differs %} <strong>(differs)</strong>{% endif -%}
+              </td>
+              <td>{{ row.derivation }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if report %}
+    {% set national = report.national %}
+    <section class="card">
+      <h3>σ_nat: final polls against results</h3>
+      <p>{{ national.method }}</p>
+      <p>
+        Realised σ_nat = <strong>{{ fmt(national.sigma_nat_realised, ".2f") }}</strong>
+        (elections weighted equally);
+        {{ fmt(national.sigma_nat_cells, ".2f") }} with every election &times;
+        party weighted equally; {{ fmt(national.sigma_nat_core, ".2f") }} over
+        Con, Lab and LD only.
+      </p>
+      <p>
+        Raw (engine) σ_nat = <strong>{{ fmt(national.sigma_nat_raw, ".2f") }}</strong>:
+        the same RMS with each z first divided by its own centring ratio.
+        {{ national.centring_method }}
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Election</th>
+              <th scope="col">Final polls</th>
+              <th scope="col">RMS z</th>
+              <th scope="col">Party</th>
+              <th scope="col">A (poll avg)</th>
+              <th scope="col">R (result)</th>
+              <th scope="col">A &minus; R</th>
+              <th scope="col">s(R)</th>
+              <th scope="col">z</th>
+              <th scope="col">z²</th>
+              <th scope="col">Election mean z²</th>
+              <th scope="col">Centring ratio</th>
+              <th scope="col">z &divide; ratio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for election in national.elections %}
+              {% for party in election.parties %}
+                <tr>
+                  {% if loop.first %}
+                    <th scope="row" rowspan="{{ election.parties | length }}">
+                      {%- if election.source_url is string and election.source_url.startswith("https://") %}<a href="{{ election.source_url }}">{{ election.year }}</a>{% else %}{{ election.year }}{% endif -%}
+                    </th>
+                    <td rowspan="{{ election.parties | length }}">{{ election.final_polls }}</td>
+                    <td rowspan="{{ election.parties | length }}">{{ fmt(election.rms_z) }}</td>
+                  {% endif %}
+                  <td>{{ party.label }}</td>
+                  <td>{{ fmt(party.average) }}</td>
+                  <td>{{ fmt(party.result) }}</td>
+                  <td>{{ fmt(party.error, "+.2f") }}</td>
+                  <td>{{ fmt(party.scale, ".2f") }}</td>
+                  <td>{{ fmt(party.z, "+.2f") }}</td>
+                  <td>{{ fmt(party.z2) }}</td>
+                  {% if loop.first %}
+                    <td rowspan="{{ election.parties | length }}">{{ fmt(election.mean_z2) }}</td>
+                  {% endif %}
+                  <td>{{ fmt(party.ratio, ".2f") }}</td>
+                  <td>{{ fmt(party.z_raw, "+.2f") }}</td>
+                </tr>
+              {% endfor %}
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="9">
+                Realised σ_nat = √(mean over {{ national.elections | length }}
+                elections of the election mean z²) = √{{ fmt(national.mean_z2, ".2f") }}
+              </th>
+              <td colspan="4"><strong>{{ fmt(national.sigma_nat_realised, ".2f") }}</strong></td>
+            </tr>
+            <tr>
+              <th scope="row" colspan="9">
+                Raw σ_nat = the same with z &divide; ratio =
+                √{{ fmt(national.mean_z2_raw, ".2f") }}
+              </th>
+              <td colspan="4"><strong>{{ fmt(national.sigma_nat_raw, ".2f") }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <h4>By party</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Party</th>
+              <th scope="col">Elections</th>
+              <th scope="col">RMS z</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for party in national.parties %}
+              <tr>
+                <th scope="row">{{ party.label }}</th>
+                <td>{{ party.cells }}</td>
+                <td>{{ fmt(party.rms_z) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Results cross-check (PollBase vs database GB shares)</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Election</th>
+              <th scope="col">Party</th>
+              <th scope="col">PollBase</th>
+              <th scope="col">Database</th>
+              <th scope="col">Difference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for check in national.cross_check %}
+              <tr>
+                <th scope="row">{{ check.year }}</th>
+                <td>{{ check.key }}</td>
+                <td>{{ fmt(check.pollbase) }}</td>
+                <td>{{ fmt(check.database) }}</td>
+                <td>{{ fmt(check.difference, "+.2f") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {% set swing = report.swing %}
+    <section class="card">
+      <h3>λ and σ_seat: seat swings against regional swings</h3>
+      <p>{{ swing.method }}</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Pair</th>
+              <th scope="col">Cells</th>
+              <th scope="col">Stood down</th>
+              <th scope="col">Σ(y−a)(b−a)</th>
+              <th scope="col">Σ(b−a)²</th>
+              <th scope="col">λ̂ = ratio</th>
+              <th scope="col">λ̂²</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pair in pairs %}
+              <tr>
+                <th scope="row">{{ pair.label }}</th>
+                <td>{{ pair.cells }}</td>
+                <td>{{ pair.stood_down }}</td>
+                <td>{{ fmt(pair.cross, ".1f") }}</td>
+                <td>{{ fmt(pair.lever_squares, ".1f") }}</td>
+                <td>{{ fmt(pair["lambda"], "+.2f") }}</td>
+                <td>{{ fmt(pair.lambda2, ".2f") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="5">
+                σ_λ = √(mean over {{ swing.pooled.pairs }} pairs of λ̂²) =
+                √{{ fmt(swing.pooled.mean_lambda2, ".2f") }};
+                mean λ̂ {{ fmt(swing.pooled.mean_lambda, "+.2f") }} (reported, not applied)
+              </th>
+              <td colspan="2"><strong>{{ fmt(swing.pooled.sigma_lambda, ".2f") }}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <h4>σ_seat: robust spread of the scaled residuals u, then engine units</h4>
+      <p>{{ swing.centring_method }}</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Pair</th>
+              <th scope="col">u used</th>
+              <th scope="col">Left out: p̂ = 0</th>
+              <th scope="col">Left out: no seat noise</th>
+              <th scope="col">Median u</th>
+              <th scope="col">MAD</th>
+              <th scope="col">Realised σ_seat = 1.4826 × MAD</th>
+              <th scope="col">Median u ÷ ratio</th>
+              <th scope="col">MAD of u ÷ ratio</th>
+              <th scope="col">Raw σ_seat = 1.4826 × MAD</th>
+              <th scope="col">Median ratio: contenders / others</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pair in pairs %}
+              <tr>
+                <th scope="row">{{ pair.label }}</th>
+                <td>{{ pair.residuals_used }}</td>
+                <td>{{ pair.predicted_zero }}</td>
+                <td>{{ pair.no_seat_noise }}</td>
+                <td>{{ fmt(pair.residual_median, "+.2f") }}</td>
+                <td>{{ fmt(pair.mad, ".2f") }}</td>
+                <td>{{ fmt(pair.sigma_seat_realised, ".2f") }}</td>
+                <td>{{ fmt(pair.raw_median, "+.2f") }}</td>
+                <td>{{ fmt(pair.raw_mad, ".2f") }}</td>
+                <td>{{ fmt(pair.sigma_seat_raw, ".2f") }}</td>
+                <td>{{ ratio_median(pair.ratios_contenders) }} / {{ ratio_median(pair.ratios_others) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">Pooled</th>
+              <td>{{ swing.pooled.cells }}</td>
+              <td></td>
+              <td></td>
+              <td>{{ fmt(swing.pooled.residual_median, "+.2f") }}</td>
+              <td>{{ fmt(swing.pooled.mad, ".2f") }}</td>
+              <td><strong>{{ fmt(swing.pooled.sigma_seat_realised, ".2f") }}</strong></td>
+              <td>{{ fmt(swing.pooled.raw_median, "+.2f") }}</td>
+              <td>{{ fmt(swing.pooled.raw_mad, ".2f") }}</td>
+              <td><strong>{{ fmt(swing.pooled.sigma_seat_raw, ".2f") }}</strong></td>
+              <td>{{ ratio_median(swing.pooled.ratios_contenders) }} / {{ ratio_median(swing.pooled.ratios_others) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <h4>Centring ratios (share of a raw error a party keeps)</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Cells</th>
+              <th scope="col">Count</th>
+              <th scope="col">p10</th>
+              <th scope="col">Median</th>
+              <th scope="col">p90</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">σ_nat: each election's two largest parties</th>{{ ratio_cells(national.ratios_contenders) }}</tr>
+            <tr><th scope="row">σ_nat: other parties</th>{{ ratio_cells(national.ratios_others) }}</tr>
+            <tr><th scope="row">σ_seat: each seat's two largest (pooled)</th>{{ ratio_cells(swing.pooled.ratios_contenders) }}</tr>
+            <tr><th scope="row">σ_seat: other parties (pooled)</th>{{ ratio_cells(swing.pooled.ratios_others) }}</tr>
+          </tbody>
+        </table>
+      </div>
+
+      {% if percentiles %}
+        <h4>Percentiles of u (points at p_ref)</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Percentile</th>
+                {% for pair in pairs %}<th scope="col">{{ pair.label }}</th>{% endfor %}
+                <th scope="col">Pooled</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in percentiles %}
+                <tr>
+                  <th scope="row">{{ row.label }}</th>
+                  {% for value in row.cells %}<td>{{ fmt(value, "+.2f") }}</td>{% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if histogram %}
+        <h4>Histogram of u (cells per 1-point bin)</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">u</th>
+                {% for pair in pairs %}<th scope="col">{{ pair.label }}</th>{% endfor %}
+                <th scope="col">Pooled</th>
+                <th scope="col"><span class="u-visually-hidden">Pooled bar</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in histogram %}
+                <tr>
+                  <th scope="row">{{ row.label }}</th>
+                  {% for count in row.counts %}<td>{{ "-" if count is none else count }}</td>{% endfor %}
+                  {# Inline width: it is the data (count as a share of the largest bin). #}
+                  <td class="hist-cell"><span class="hist-bar" style="width: {{ "%.1f" | format(row.share) }}%"></span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      <h4>λ̂ by party (cells)</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Party</th>
+              {% for pair in pairs %}<th scope="col">{{ pair.label }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in party_lambdas %}
+              <tr>
+                <th scope="row">{{ row.label }}</th>
+                {% for cell in row.cells %}
+                  <td>{% if cell %}{{ fmt(cell["lambda"], "+.2f") }} ({{ cell.cells }}){% else %}-{% endif %}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Cells left out</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Reason</th>
+              {% for pair in pairs %}<th scope="col">{{ pair.label }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in exclusions %}
+              <tr>
+                <th scope="row">{{ row.label }}</th>
+                {% for count in row.cells %}<td>{{ "-" if count is none else count }}</td>{% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Speaker's seats:
+        {% for election, seat in swing.speaker_seats.items() %}{{ election }}: {{ seat }}{% if not loop.last %}; {% endif %}{% endfor %}.
+      </p>
+    </section>
+
+    {% set decided = report.decided_fraction %}
+    <section class="card">
+      <h3>decided_fraction</h3>
+      <p>{{ decided.method }}</p>
+      <p>
+        Mean over {{ decided.polls }} polls: {{ fmt(decided.value, ".2f") }},
+        written as <strong>{{ decided.rounded }}</strong>.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Pollster</th>
+              <th scope="col">Polls</th>
+              <th scope="col">Mean ratio</th>
+              <th scope="col">Polls × mean</th>
+              <th scope="col">Lowest</th>
+              <th scope="col">Highest</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in decided.pollsters %}
+              <tr>
+                <th scope="row">{{ row.pollster }}</th>
+                <td>{{ row.polls }}</td>
+                <td>{{ fmt(row.mean_ratio, ".2f") }}</td>
+                <td>{{ fmt(row.ratio_sum, ".2f") }}</td>
+                <td>{{ fmt(row.low, ".2f") }}</td>
+                <td>{{ fmt(row.high, ".2f") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">All</th>
+              <td>{{ decided.polls }}</td>
+              <td colspan="4">
+                {{ fmt(decided.ratio_sum, ".2f") }} ÷ {{ decided.polls }} polls =
+                {{ fmt(decided.value, ".2f") }} → <strong>{{ decided.rounded }}</strong>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <h4>Polls left out</h4>
+      <ul>
+        {% for key, count in decided.exclusions.items() %}
+          <li>{{ decided.exclusion_reasons.get(key, key) }}: {{ count }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <p><a href="{{ url_for('uncertainty.uncertainty_hub') }}">Uncertainty views</a></p>
+{% endblock %}

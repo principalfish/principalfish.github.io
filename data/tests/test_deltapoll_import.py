@@ -1360,3 +1360,72 @@ class TestMain:
             "260105_Deltapoll-Mirror-pdf.pdf" in out
         )
         assert "[dry-run] would create pollster: deltapoll" in out
+
+
+# ── Column bases ─────────────────────────────────────────────────────────────
+
+_BASED_PDF_TEXT = """\
+Deltapoll Survey Results
+Sample size: 1, 749 adults in Great Britain
+Fieldwork: 14th to 18th November 2024
+All GB Adults 1749 840 904
+Unweighted Sample 1749 834 910
+Voting Intention
+Conservative 27 24
+Labour 29 31
+Liberal Democrat 12 13
+Reform UK 18 19
+Scottish National Party (SNP) 4 5
+Plaid Cymru (PC) 1 1
+Green 8 6
+Other 1 1
+Total London Rest of South Midlands North Wales Scotland ABC1 C2DE
+233 565 289 424 84 153 992 748
+210 455 237 579 128 140 1030 710
+% % % % % % % %
+28 30 36 26 8 12 32 19
+37 22 26 36 33 24 29 28
+6 20 10 10 7 3 13 10
+0 0 0 0 0 45 2 7
+0 0 0 0 14 0 1 0
+22 16 20 19 23 14 16 22
+7 10 8 8 14 1 6 12
+0 1 0 1 1 2 1 1
+"""
+
+
+class TestParseBases:
+    """parse_poll reads the all-adult "All GB Adults"/"Unweighted Sample" bases."""
+
+    def test_national_and_regional_bases(self) -> None:
+        parsed = parse_poll(_BASED_PDF_TEXT)
+
+        assert {b.regions: (b.unweighted_n, b.weighted_n) for b in parsed.bases} == {
+            (): (1749, 1749),
+            ("London",): (210, 233),
+            ("East of England", "South East England", "South West England"): (455, 565),
+            ("East Midlands", "West Midlands"): (237, 289),
+            (
+                "North East England",
+                "North West England",
+                "Yorkshire and The Humber",
+            ): (579, 424),
+            ("Wales",): (128, 84),
+            ("Scotland",): (140, 153),
+        }
+        assert {b.kind for b in parsed.bases} == {"all_adults"}
+        assert parsed.party_region_percentages["Conservative"]["London"] == 28.0
+
+    def test_regional_counts_that_do_not_add_up_are_dropped(self) -> None:
+        text = _BASED_PDF_TEXT.replace("210 455 237 579", "211 455 237 579")
+
+        assert [b.regions for b in parse_poll(text).bases] == [()]
+
+    def test_no_regional_block_gives_the_national_base_only(self) -> None:
+        text = _BASED_PDF_TEXT.split("Total London")[0]
+
+        bases = parse_poll(text).bases
+        assert [(b.regions, b.unweighted_n) for b in bases] == [((), 1749)]
+
+    def test_no_sample_rows_gives_no_bases(self) -> None:
+        assert parse_poll(_FULL_PDF_TEXT).bases == []

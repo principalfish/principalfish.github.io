@@ -1,0 +1,30 @@
+{% extends "uncertainty_run_base.html" %}
+{% block heading %}Polling error budget{% endblock %}
+{% block diagnostics %}
+{% if run %}
+<section class="card">
+<p>All shares and errors are percentage points. Raw systematic SD describes the independent draws before centring. Applied SD includes centring and geographic reach. Sampling errors are already zero-sum; the actual sampling SD may differ from the poll variance when an exact covariance fit is impossible.</p>
+<p>The combined polling SD is √(national² + regional systematic² + sampling²). Its normal band excludes seat noise, λ, clamping and renormalisation; it is <strong>not the simulation outcome interval</strong>. Seat SD here is a regional/national reference, not a constituency's SD.</p>
+<details><summary>Stored settings and national aggregation assumptions</summary><pre>{{ mapping(run.stored.national.get('budget'))|round_display|tojson(indent=2) if not groups[0].cells else mapping(run.stored.national.get('budget')).get('config', {})|round_display|tojson(indent=2) }}</pre>
+<p>{{ mapping(run.stored.national.get('budget')).get('shared_error_scope', '') }}. {{ mapping(run.stored.national.get('budget')).get('sampling_assumption', '') }}.</p></details>
+{% if selected %}
+{% set v = selected["values"] %}
+<p class="alert">{{ labels.parties.get(selected.party, selected.party) }} in {{ labels.regions.get(selected_region, selected_region) }}:
+{% if selected.ineligible %}N/A: this party has no baseline presence in this region and has baseline presence elsewhere. No polling swing or error is applied.
+{% elif v.get('polling_exclusion') %}{{ v.polling_exclusion }}. Seat noise remains.
+{% else %}the poll average is {{ fmt(v.get('poll_average')) }}%, against a baseline of {{ fmt(v.get('baseline_share')) }}%. The central swing is {{ fmt(v.get('swing')) }} points. Applied sampling SD {{ fmt(v.get('sampling_sd')) }}, regional systematic SD {{ fmt(v.get('regional_systematic_sd')) }}, and national SD {{ fmt(v.get('national_sd')) }} combine to {{ fmt(v.get('combined_sd')) }} points. The polling-only normal band for that swing is {{ v.get('swing_interval', 'not stored')|round_display }}; it does not describe the final vote-share outcomes.{% endif %}</p>
+{% endif %}
+</section>
+{% for group in groups %}
+<section class="card" id="region-{{ group.id }}"><h3>{{ group.name }}</h3>
+{% if not group.cells %}<p>No error budget stored for this run.</p>{% endif %}
+<div class="table-wrap"><table><thead><tr><th scope="col">Party</th><th scope="col">Polls / Kish</th><th scope="col">Total n_eff</th><th scope="col">Average / baseline / swing</th><th scope="col">National raw / applied SD</th><th scope="col">Regional systematic raw / applied SD</th><th scope="col">Sampling poll / applied SD</th><th scope="col">Combined polling SD</th><th scope="col">Polling-only normal swing band</th><th scope="col">Evidence</th></tr></thead><tbody>
+{% for cell in group.cells %}{% set v = cell["values"] %}<tr>
+<td><a href="{{ url_for('uncertainty_runs.budget', election_id=run.election_id, region=group.id, party=cell.party) }}">{{ labels.parties.get(cell.party, cell.party) }}</a>{% if cell.ineligible %} (N/A: geographically ineligible){% endif %}{% if v.get('polling_exclusion') %}<br>{{ v.polling_exclusion }}{% endif %}</td>
+<td>{{ v.get('poll_count', '-') }} / {{ fmt(v.get('kish_count')) }}</td><td>{{ fmt(v.get('total_n_eff'), '.0f') }}</td>
+<td>{% if cell.ineligible %}N/A{% else %}{{ fmt(v.get('poll_average')) }} / {{ fmt(v.get('baseline_share')) }} / {{ fmt(v.get('swing')) }}{% endif %}</td>
+<td>{{ fmt(v.get('national_raw_sd')) }} / {{ fmt(v.get('national_sd')) }}</td><td>{{ fmt(v.get('regional_systematic_raw_sd')) }} / {{ fmt(v.get('regional_systematic_sd')) }}</td><td>{{ fmt(v.get('poll_sampling_sd')) }} / {{ fmt(v.get('sampling_sd')) }}</td><td>{{ fmt(v.get('combined_sd')) }}</td><td>{{ (v.get('swing_interval', '-') if not cell.ineligible else 'N/A')|round_display }}</td>
+<td><details><summary>{{ v.get('sampling_source', 'not stored') }} · all fields and poll provenance</summary><dl>{% for key, value in v.items() if key != 'polls' %}<dt>{{ key|replace('_', ' ') }}</dt><dd>{{ value|round_display }}</dd>{% endfor %}</dl>{% for poll in v.get('polls', []) %}<p><a href="{{ url_for('polls.poll_detail', poll_id=poll.poll_id) }}">Poll #{{ poll.poll_id }}</a></p><pre>{{ poll|round_display|tojson(indent=2) }}</pre>{% endfor %}</details></td></tr>{% endfor %}
+</tbody></table></div></section>{% endfor %}
+{% endif %}
+{% endblock %}

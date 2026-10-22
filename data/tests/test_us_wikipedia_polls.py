@@ -1040,6 +1040,8 @@ class TestSenateRows:
             seat_ids=_seat_ids(us_db, SENATE_RACES.map_name),
         )
         assert page.variants_dropped == 1
+        assert page.rows[0].population == "LV"
+        assert page.rows[0].sample_size == 600
         assert len(page.rows) == 2
         assert any("repeat row" in note for note in page.rows[0].notes)
 
@@ -1388,6 +1390,8 @@ class TestHouseNationalRows:
         assert {row.seat_name for row in page.rows} == {None}
         assert _matchups(page.rows) == [None, None]
         assert page.rows[0].pollster_identifier == "decision_desk_hq_us_house"
+        assert all(row.evidence_kind == "aggregate_estimate" for row in page.rows)
+        assert all(row.sample_moe is None for row in page.rows)
 
     def test_party_readings_carry_no_candidate_name(self, us_db: Database) -> None:
         page = rows_for_page(

@@ -17,7 +17,11 @@
       ({{ row.pollster_identifier }})
     </p>
     <p><strong>Dates:</strong> {{ row.date_label }} ({{ row.fieldwork_start }} to {{ row.fieldwork_end }})</p>
-    <p><strong>Sample:</strong> {{ row.sample_size or "-" }}</p>
+    <p><strong>Sample:</strong> {{ "not applicable" if row.evidence_kind == "aggregate_estimate" else row.sample_size or "unknown" }}</p>
+    <p><strong>Evidence:</strong> {{ row.evidence_kind }} · N source: {{ "not applicable" if row.evidence_kind == "aggregate_estimate" else "reported sample" if row.sample_size else "unresolved" }}</p>
+    {% if row.sample_moe is not none %}
+      <p>Sample-only MoE: ±{{ "%.2f"|format(row.sample_moe) }} points at 50%, 90% confidence, assuming simple random sampling. Excludes design, weighting and systematic error.</p>
+    {% endif %}
     <p><strong>Population:</strong> {{ row.population or "-" }}</p>
   </section>
 

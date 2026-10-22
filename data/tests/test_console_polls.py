@@ -285,6 +285,8 @@ class TestPollList:
             "n_eff",
             "MoE at 30%",
             "Actions",
+            "Evidence / population",
+            "Sample-only MoE (90%, at 50%)",
         ]
         rows = _table_rows(body)
         assert len(rows) == 1

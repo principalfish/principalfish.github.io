@@ -451,6 +451,9 @@ class Poll(Base):
         map_id: Foreign key to the ``Map`` this poll applies to.
         fieldwork_start: Start date of the fieldwork period.
         fieldwork_end: End date of the fieldwork period.
+        evidence_kind: Individual poll, aggregate estimate, or legacy unknown.
+        population_type: Reported LV/RV/A population (nullable).
+        evidence_source: Source page and section, separate from the poll URL.
         sample_size: Optional number of respondents.
         source_url: Optional URL to the published poll source.
         matchup: Optional label of the candidate pairing polled (e.g.
@@ -478,6 +481,9 @@ class Poll(Base):
     fieldwork_end: Mapped[date] = mapped_column(Date, nullable=False)
     sample_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    evidence_kind: Mapped[str | None] = mapped_column(String, nullable=True)
+    population_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    evidence_source: Mapped[str | None] = mapped_column(String, nullable=True)
     matchup: Mapped[str | None] = mapped_column(String, nullable=True)
     seat_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("seats.id"), nullable=True)  # null = national
 

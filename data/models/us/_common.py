@@ -345,6 +345,11 @@ class PollReading:
     fieldwork_end: date
     candidate_count: int
     candidate_shares: Mapping[str, float]
+    evidence_kind: str | None = None
+    population_type: str | None = None
+    sample_size: int | None = None
+    evidence_source: str | None = None
+    source_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -763,6 +768,11 @@ def collect_poll_readings(
                 fieldwork_start=poll.fieldwork_start,
                 fieldwork_end=poll.fieldwork_end,
                 candidate_count=candidate_count,
+                evidence_kind=poll.evidence_kind,
+                population_type=poll.population_type,
+                sample_size=poll.sample_size,
+                evidence_source=poll.evidence_source,
+                source_url=poll.source_url,
                 candidate_shares=dict(candidate_shares),
             )
         )
@@ -775,6 +785,7 @@ def aggregate_national(
     national_matchup: str | None,
     *,
     contributors: list[LatestPollUsage] | None = None,
+    evidence_contributors: list[PollReading] | None = None,
 ) -> tuple[dict[tuple[int | None, int], float], dict[tuple[int | None, int], float], LatestPollUsage | None]:
     """Aggregate the national series out of a map's readings.
 
@@ -802,6 +813,8 @@ def aggregate_national(
             continue
         if contributors is not None:
             contributors.append(poll_usage(reading))
+        if evidence_contributors is not None:
+            evidence_contributors.append(reading)
 
         for party_id, share in reading.shares.items():
             weighted_sums[(None, party_id)] += share * reading.weight
@@ -1101,6 +1114,7 @@ def aggregate_seat_polls(
     national_matchup: str | None,
     policy: SeatMatchupPolicy,
     contributors: list[LatestPollUsage] | None = None,
+    evidence_contributors: list[PollReading] | None = None,
 ) -> dict[int, SeatPollAverage]:
     """Average each seat's own polls into one :class:`SeatPollAverage`.
 
@@ -1197,6 +1211,8 @@ def aggregate_seat_polls(
 
         if contributors is not None:
             contributors.append(poll_usage(reading))
+        if evidence_contributors is not None:
+            evidence_contributors.append(reading)
         seat_weights[seat_id] += reading.weight
         seat_counts[seat_id] += 1
         latest = latest_by_seat.get(seat_id)

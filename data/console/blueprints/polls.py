@@ -31,6 +31,7 @@ from flask.typing import ResponseReturnValue
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from model_support.us_poll_evidence import simple_random_sample_moe
 from model_support.poll_bases import PollNIndex, ResolvedN, poll_base_coverage
 from model_support.uncertainty import (
     EffectiveN,
@@ -110,6 +111,12 @@ def poll_list() -> str:
         effective = (
             effective_n(resolved, config) if poll.map_id == westminster_id else None
         )
+        n, n_source = resolved.n, resolved.source
+        if poll.evidence_kind == "aggregate_estimate":
+            n, n_source = None, "not applicable"
+        elif poll.evidence_kind == "individual_poll":
+            n = poll.sample_size if poll.sample_size and poll.sample_size > 0 else None
+            n_source = "reported sample" if n is not None else "unresolved"
         items.append(
             {
                 "poll_id": poll.id,
@@ -118,10 +125,17 @@ def poll_list() -> str:
                 "fieldwork_start": poll.fieldwork_start,
                 "fieldwork_end": poll.fieldwork_end,
                 "sample_size": poll.sample_size,
+                "evidence_kind": poll.evidence_kind or "unknown",
+                "population_type": poll.population_type,
+                "evidence_source": poll.evidence_source,
+                "sample_moe": (
+                    simple_random_sample_moe(poll.sample_size)
+                    if poll.evidence_kind == "individual_poll" else None
+                ),
                 "source_url": poll.source_url,
                 "row_count": int(row_counts.get(poll.id, 0)),
-                "n": resolved.n,
-                "n_source": resolved.source,
+                "n": n,
+                "n_source": n_source,
                 "weighted_n": resolved.weighted_n,
                 "effective": effective,
                 "moe": (
@@ -220,6 +234,10 @@ def poll_detail(poll_id: int) -> ResponseReturnValue:
         "poll_detail.html",
         poll=poll,
         pollster=pollster,
+        sample_moe=(
+            simple_random_sample_moe(poll.sample_size)
+            if poll.evidence_kind == "individual_poll" else None
+        ),
         seat_name=seat_name,
         show_candidates=any(candidate for _, candidate in row_keys),
         region_headers=region_headers,

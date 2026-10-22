@@ -47,7 +47,7 @@ from bs4 import BeautifulSoup, Tag
 # ``data/`` root — home of db.py / models.py.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from db import Database
+from db import Database, StoredPollReadings
 from models import Poll, PollRow, Pollster, Seat
 from polls.importers.types import PollImportResult, ScrapedPollRow
 from polls.importers.us.us_geography import (
@@ -1783,6 +1783,173 @@ def commit_us_import_plan(
         replaced_rows=0,
         skipped_existing_rows=False,
     )
+
+
+#: A poll without its matchup: pollster slug, fieldwork start and end, seat id.
+_PollScope = tuple[str, date, date, int | None]
+
+
+@dataclass(frozen=True, slots=True)
+class RelabelledPoll:
+    """A stored poll that a scrape lists again under a renamed matchup.
+
+    Attributes:
+        poll_id: The stored poll.
+        old_matchup: The label it is stored under.
+        row: The scraped row that carries it under its new label.
+    """
+
+    poll_id: int
+    old_matchup: str
+    row: UsPollRow
+
+
+def find_relabelled_polls(
+    db: Database,
+    rows: Sequence[UsPollRow],
+) -> list[RelabelledPoll]:
+    """Find stored polls that a scrape lists again under a renamed matchup.
+
+    Wikipedia renames a race's matchup when it adds a candidate column: Texas
+    went from "Paxton (R) vs Talarico (D)" to "Paxton (R) vs Talarico (D) vs
+    Brown (L)". A poll's identity includes its matchup, so every row of the
+    renamed table would otherwise look new and be stored a second time.
+
+    A row is a stored poll under a new label when the pollster, fieldwork dates
+    and seat match, the labels differ, and they share at least two candidates
+    with identical figures. Requiring two keeps one poll's separate
+    head-to-heads apart: "Paxton vs Talarico" and "Cornyn vs Talarico" share
+    only Talarico.
+
+    A match is ignored when it is not one-to-one, when the row's own label is
+    already stored, or when the scrape still lists the stored poll under its
+    old label. In that last case the page carries both tables, and moving the
+    poll would only make the next run import it back.
+
+    Args:
+        db: Database to read. Nothing is written.
+        rows: The scraped rows of a run, in any order.
+
+    Returns:
+        One :class:`RelabelledPoll` per stored poll to move, map by map in scrape
+        order.
+    """
+    rows_by_map: dict[str, list[UsPollRow]] = {}
+    for row in rows:
+        if row.matchup is not None:
+            rows_by_map.setdefault(row.map_name, []).append(row)
+
+    found: list[RelabelledPoll] = []
+    for map_name, map_rows in rows_by_map.items():
+        poll_map = db.get_map_by_name(map_name)
+        if poll_map is None:
+            continue
+        stored = db.get_poll_readings_for_map(
+            poll_map.id, {row.pollster_identifier for row in map_rows}
+        )
+        stored_keys = {(_stored_scope(poll), poll.matchup) for poll in stored}
+        scraped_keys = {(_row_scope(row), row.matchup) for row in map_rows}
+        by_scope: dict[_PollScope, list[StoredPollReadings]] = {}
+        for poll in stored:
+            if poll.matchup is not None:
+                by_scope.setdefault(_stored_scope(poll), []).append(poll)
+
+        claims: dict[int, list[UsPollRow]] = {}
+        for row in map_rows:
+            scope = _row_scope(row)
+            if (scope, row.matchup) in stored_keys:
+                continue
+            matches = [
+                poll
+                for poll in by_scope.get(scope, ())
+                if poll.matchup != row.matchup
+                and (scope, poll.matchup) not in scraped_keys
+                and _same_figures(poll.readings, row.readings)
+            ]
+            if len(matches) == 1:
+                claims.setdefault(matches[0].poll_id, []).append(row)
+
+        old_matchups = {poll.poll_id: poll.matchup for poll in stored}
+        for poll_id, claimants in claims.items():
+            old_matchup = old_matchups[poll_id]
+            if len(claimants) == 1 and old_matchup is not None:
+                found.append(RelabelledPoll(poll_id, old_matchup, claimants[0]))
+    return found
+
+
+def _stored_scope(poll: StoredPollReadings) -> _PollScope:
+    """Return a stored poll's identity, less its matchup."""
+    return (
+        poll.pollster_identifier,
+        poll.fieldwork_start,
+        poll.fieldwork_end,
+        poll.seat_id,
+    )
+
+
+def _row_scope(row: UsPollRow) -> _PollScope:
+    """Return a scraped row's identity, less its matchup."""
+    return (
+        row.pollster_identifier,
+        row.fieldwork_start,
+        row.fieldwork_end,
+        row.seat_id,
+    )
+
+
+def _same_figures(
+    stored: Mapping[str, float],
+    readings: Sequence[CandidateReading],
+) -> bool:
+    """Whether two polls share two or more candidates, all with equal figures."""
+    scraped = {
+        reading.candidate_name: reading.percentage
+        for reading in readings
+        if reading.candidate_name
+    }
+    shared = stored.keys() & scraped.keys()
+    return len(shared) >= 2 and all(stored[name] == scraped[name] for name in shared)
+
+
+def apply_relabelled_polls(db: Database, rows: Sequence[UsPollRow]) -> int:
+    """Move stored polls onto the renamed matchups a scrape lists them under.
+
+    Each poll found by :func:`find_relabelled_polls` takes the row's matchup,
+    and its figures are replaced by the row's, so a candidate the renamed table
+    added (Brown's 3%) is stored too. Run this before importing the same rows:
+    a moved poll then matches its row exactly and is skipped, and the race
+    keeps its history under one label for automatic tracking to follow.
+
+    Args:
+        db: Database to write to.
+        rows: The scraped rows of a run, in any order.
+
+    Returns:
+        How many stored polls were moved.
+
+    Raises:
+        UsImportError: If a moved poll's row can no longer be planned.
+    """
+    moved = 0
+    for relabel in find_relabelled_polls(db, rows):
+        plan = build_us_import_plan(db, relabel.row)
+        with db.session() as session:
+            poll = session.get(Poll, relabel.poll_id)
+            # Deleted or moved by another connection since the scan.
+            if poll is None or poll.matchup != relabel.old_matchup:
+                continue
+            poll.matchup = relabel.row.matchup
+            poll.rows = [
+                PollRow(
+                    region_id=None,
+                    party_id=planned.party_id,
+                    percentage=planned.percentage,
+                    candidate_name=planned.candidate_name,
+                )
+                for planned in plan.rows
+            ]
+        moved += 1
+    return moved
 
 
 #: The outcomes :func:`apply_auto_tracked_matchups` counts, in report order.

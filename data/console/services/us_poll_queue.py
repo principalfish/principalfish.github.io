@@ -21,14 +21,19 @@ What makes the US queue different from Westminster's:
 - **Bulk approval.** A race is reviewed as a block (the worklist is sorted
   race by race), and :func:`approve_group` commits the rest of a race in one
   go.
-- **A finish step with two jobs.** Automatic matchup tracking is applied over
-  every row the run scraped, then the three US models and the export run once
-  if the run imported anything or moved a race's tracked matchup.
+- **Renamed matchups.** A stored poll the page now lists under a renamed
+  matchup (a candidate column was added) never enters the queue; the finish
+  step moves it onto the new label instead (see
+  :func:`~polls.importers.us.us_wikipedia_polls.find_relabelled_polls`).
+- **A finish step with three jobs.** Renamed matchups are applied, automatic
+  matchup tracking runs over every row the run scraped, then the three US
+  models and the export run once if the run imported anything, moved a stored
+  poll onto a renamed matchup or moved a race's tracked matchup.
 
 The finish step records its results on the cached payload under
-:data:`AUTO_TRACKING_KEY` (or :data:`AUTO_TRACKING_ERROR_KEY`),
-:data:`MODEL_RUN_KEY` and :data:`MODEL_ERROR_KEY`, so refreshing the summary
-page repeats neither.
+:data:`RELABEL_KEY` (or :data:`RELABEL_ERROR_KEY`), :data:`AUTO_TRACKING_KEY`
+(or :data:`AUTO_TRACKING_ERROR_KEY`), :data:`MODEL_RUN_KEY` and
+:data:`MODEL_ERROR_KEY`, so refreshing the summary page repeats none of them.
 """
 
 from __future__ import annotations
@@ -53,8 +58,10 @@ from polls.importers.us.us_wikipedia_polls import (
     UsPollIndex,
     UsPollRow,
     apply_auto_tracked_matchups,
+    apply_relabelled_polls,
     build_us_import_plan,
     commit_us_import_plan,
+    find_relabelled_polls,
 )
 
 from console.services.us_models import (
@@ -94,6 +101,14 @@ AUTO_TRACKING_KEY = "auto_tracking"
 #: written once instead of :data:`AUTO_TRACKING_KEY` so a refresh does not
 #: retry it.
 AUTO_TRACKING_ERROR_KEY = "auto_tracking_error"
+
+#: Payload key for how many stored polls the finish step moved onto a renamed
+#: matchup (``apply_relabelled_polls``'s count), written once.
+RELABEL_KEY = "relabelled"
+
+#: Payload key for the message of a relabelling pass that raised, written once
+#: instead of :data:`RELABEL_KEY` so a refresh does not retry it.
+RELABEL_ERROR_KEY = "relabel_error"
 
 #: Payload key for the ``UsModelRun`` of the finish step, written once. When a
 #: step died part-way it is the partial run up to that step, with return code 1;
@@ -163,7 +178,9 @@ def build_us_queue(
     map's legacy national polls are both ``(seat None, matchup None)``.
 
     Rows already stored — the same pollster, dates, matchup *and* seat on the
-    same map — are dropped. With no explicit cutoff, each ``(map, seat,
+    same map — are dropped, and so are rows that are a stored poll under a
+    renamed matchup, which the finish step relabels; both count towards
+    ``skipped_present``. With no explicit cutoff, each ``(map, seat,
     matchup)`` scope keeps only rows ending on or after its own latest stored
     poll, and a scope with no stored polls keeps everything.
 
@@ -202,7 +219,16 @@ def build_us_queue(
         for map_name, rows in rows_by_map.items()
     ]
 
-    items = [item for part in parts for item in part.items]
+    relabelled = {
+        _poll_key(found.row) for found in find_relabelled_polls(db, index.rows)
+    }
+    items = [
+        item
+        for part in parts
+        for item in part.items
+        if _poll_key(narrow_us_row(item.row)) not in relabelled
+    ]
+    skipped_relabelled = sum(len(part.items) for part in parts) - len(items)
     items.sort(key=lambda item: _sort_key(narrow_us_row(item.row)))
     if cutoff is not None:
         effective_cutoff = cutoff
@@ -214,7 +240,9 @@ def build_us_queue(
         cutoff=effective_cutoff,
         cutoff_note=cutoff_note,
         run_model_at_end=run_model_at_end,
-        skipped_present=sum(part.skipped_present for part in parts),
+        skipped_present=(
+            sum(part.skipped_present for part in parts) + skipped_relabelled
+        ),
     )
     advance(state)
     return state
@@ -619,7 +647,13 @@ def finish_us_queue(
     runner: ScriptRunner,
     abandon: bool = False,
 ) -> None:
-    """Close a queue run: track every scraped race, then run the models once.
+    """Close a queue run: relabel, track every scraped race, then run the models.
+
+    Stored polls the scrape lists under a renamed matchup are moved onto it
+    first, over every scraped row like tracking, so the renamed race keeps its
+    history and tracking finds its new label stored. This is applied even when
+    the run is abandoned, for the same reason as tracking; if it raises, the
+    message is recorded and the rest of the step still goes ahead.
 
     Automatic tracking points each Senate and House race at its lead table's
     matchup (manual overrides stand). It runs over **every** row of the scraped
@@ -635,19 +669,20 @@ def finish_us_queue(
     — the message is recorded instead and the model run still goes ahead.
 
     The models and the export then run once, if the run asked for that, was not
-    abandoned, and either imported anything or moved a race onto a new tracked
-    matchup — a run whose only effect was tracking must still move the forecast
-    off the old pairing. Both results are recorded on the payload, so a refresh
-    of the summary repeats neither. The tracking outcome is read back off the
-    payload, so it counts on a refresh too, when an earlier request applied it.
-    A tracking pass that raised counts as no change, even if it moved some
+    abandoned, and either imported anything, relabelled a stored poll or moved a
+    race onto a new tracked matchup — a run whose only effect was tracking must
+    still move the forecast off the old pairing. Every result is recorded on the
+    payload, so a refresh of the summary repeats none of them. The relabel and
+    tracking outcomes are read back off the payload, so they count on a refresh
+    too, when an earlier request applied them. A tracking pass that raised counts as no change, even if it moved some
     races before failing; its error is shown on the summary instead.
 
     Args:
         db: Active Database instance.
         payload: The cached queue payload, holding the ``QueueState`` under
             :data:`STATE_KEY` and the ``UsPollIndex`` under :data:`INDEX_KEY`.
-            Results are written to it under :data:`AUTO_TRACKING_KEY` (or
+            Results are written to it under :data:`RELABEL_KEY` (or
+            :data:`RELABEL_ERROR_KEY`), :data:`AUTO_TRACKING_KEY` (or
             :data:`AUTO_TRACKING_ERROR_KEY` if tracking raised),
             :data:`MODEL_RUN_KEY` and, if the model run raised or was refused
             because another run was in progress, :data:`MODEL_ERROR_KEY`.
@@ -668,6 +703,15 @@ def finish_us_queue(
     if abandon:
         state.run_model_at_end = False
 
+    if RELABEL_KEY not in payload and RELABEL_ERROR_KEY not in payload:
+        try:
+            payload[RELABEL_KEY] = apply_relabelled_polls(db, index.rows)
+        except (UsImportError, SQLAlchemyError) as err:
+            logger.warning("US renamed-matchup relabelling failed", exc_info=True)
+            payload[RELABEL_ERROR_KEY] = (
+                f"Moving polls onto renamed matchups failed: {err}"
+            )
+
     if AUTO_TRACKING_KEY not in payload and AUTO_TRACKING_ERROR_KEY not in payload:
         try:
             payload[AUTO_TRACKING_KEY] = apply_auto_tracked_matchups(db, index.rows)
@@ -680,7 +724,8 @@ def finish_us_queue(
     if MODEL_RUN_KEY in payload or not state.run_model_at_end:
         return
     imported = any(item.status == "imported" for item in state.items)
-    if not imported and not tracking_changed(payload.get(AUTO_TRACKING_KEY)):
+    changed = imported or bool(payload.get(RELABEL_KEY))
+    if not changed and not tracking_changed(payload.get(AUTO_TRACKING_KEY)):
         return
     with model_run_slot() as free:
         if not free:

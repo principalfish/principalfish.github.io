@@ -44,12 +44,14 @@ from polls.importers.us.us_wikipedia_polls import (
     UsImportError,
     UsPollRow,
     apply_auto_tracked_matchups,
+    apply_relabelled_polls,
     build_us_import_plan,
     commit_us_import_plan,
     discover_house_pages,
     discover_senate_pages,
     fetch_pages,
     fetch_us_poll_index,
+    find_relabelled_polls,
     normalise_states,
     rows_for_page,
 )
@@ -2169,6 +2171,110 @@ class TestApplyAutoTrackedMatchups:
         assert set(apply_auto_tracked_matchups(import_db, followers).values()) == {0}
 
 
+MICHIGAN_MATCHUP = "Rogers (R) vs El-Sayed (D)"
+MICHIGAN_THREE_WAY = "Rogers (R) vs El-Sayed (D) vs Hall (I)"
+
+
+def _renamed(row: UsPollRow, matchup: str = MICHIGAN_THREE_WAY) -> UsPollRow:
+    """The row as a renamed table lists it: a third candidate column added."""
+    hall = CandidateReading(
+        party_name="Independent", candidate_name="Jo Hall", percentage=3.0
+    )
+    return row.model_copy(
+        update={"matchup": matchup, "readings": (*row.readings, hall)}
+    )
+
+
+class TestRelabelledPolls:
+    @pytest.fixture()
+    def relabel_db(self, import_db: Database) -> Database:
+        import_db.add_party("Independent")
+        return import_db
+
+    def test_a_renamed_table_moves_the_stored_poll(
+        self, relabel_db: Database
+    ) -> None:
+        stored = _michigan_row(relabel_db)
+        poll_id = _commit(relabel_db, stored)
+        renamed = _renamed(stored)
+
+        found = find_relabelled_polls(relabel_db, [renamed])
+        assert [(f.poll_id, f.old_matchup, f.row) for f in found] == [
+            (poll_id, MICHIGAN_MATCHUP, renamed)
+        ]
+
+        assert apply_relabelled_polls(relabel_db, [renamed]) == 1
+        poll = relabel_db.get_poll(poll_id)
+        assert poll is not None
+        assert poll.matchup == MICHIGAN_THREE_WAY
+        assert _stored_rows(relabel_db, poll_id) == [
+            ("Abdul El-Sayed", 44.0, None),
+            ("Jo Hall", 3.0, None),
+            ("Mike Rogers", 45.0, None),
+        ]
+        # The renamed row now matches the moved poll, so importing it is a no-op.
+        result = commit_us_import_plan(
+            relabel_db, renamed, build_us_import_plan(relabel_db, renamed)
+        )
+        assert result.skipped_existing_rows is True
+        assert result.poll_id == poll_id
+        assert apply_relabelled_polls(relabel_db, [renamed]) == 0
+
+    def test_one_shared_candidate_is_another_head_to_head(
+        self, relabel_db: Database
+    ) -> None:
+        stored = _michigan_row(relabel_db)
+        stevens = CandidateReading(
+            party_name="Democratic", candidate_name="Haley Stevens", percentage=41.0
+        )
+        _commit(
+            relabel_db,
+            stored.model_copy(
+                update={
+                    "matchup": "Rogers (R) vs Stevens (D)",
+                    "readings": (stored.readings[1], stevens),
+                }
+            ),
+        )
+        assert find_relabelled_polls(relabel_db, [stored]) == []
+
+    def test_different_figures_are_another_poll(self, relabel_db: Database) -> None:
+        stored = _michigan_row(relabel_db)
+        _commit(relabel_db, stored)
+        leaners = _renamed(stored).model_copy(
+            update={
+                "readings": tuple(
+                    dataclasses.replace(reading, percentage=reading.percentage + 2)
+                    for reading in _renamed(stored).readings
+                )
+            }
+        )
+        assert find_relabelled_polls(relabel_db, [leaners]) == []
+
+    def test_a_page_still_listing_the_old_label_moves_nothing(
+        self, relabel_db: Database
+    ) -> None:
+        stored = _michigan_row(relabel_db)
+        _commit(relabel_db, stored)
+        assert find_relabelled_polls(relabel_db, [stored, _renamed(stored)]) == []
+
+    def test_a_new_label_already_stored_moves_nothing(
+        self, relabel_db: Database
+    ) -> None:
+        stored = _michigan_row(relabel_db)
+        _commit(relabel_db, stored)
+        _commit(relabel_db, _renamed(stored))
+        assert find_relabelled_polls(relabel_db, [_renamed(stored)]) == []
+
+    def test_two_rows_claiming_one_poll_move_nothing(
+        self, relabel_db: Database
+    ) -> None:
+        stored = _michigan_row(relabel_db)
+        _commit(relabel_db, stored)
+        rows = [_renamed(stored), _renamed(stored, "Rogers (R) vs El-Sayed (D) (I)")]
+        assert find_relabelled_polls(relabel_db, rows) == []
+
+
 # ── The command line ──────────────────────────────────────────────────────────
 
 
@@ -2229,6 +2335,33 @@ class TestRunImporter:
         assert "created=0 skipped=2 failed=0" in capsys.readouterr().out
         senate = _map_id(import_db, "US Senate 2024")
         assert len(import_db.get_polls_for_map(senate)) == 2
+
+    def test_commit_moves_polls_stored_under_an_old_label(
+        self, import_db: Database, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        old_label = "El-Sayed (D) vs Rogers (R)"
+        rows = _page_rows(import_db, SENATE_RACES, MICHIGAN_URL, MICHIGAN_PAGE)
+        for row in rows:
+            _commit(import_db, row.model_copy(update={"matchup": old_label}))
+
+        code = run_importer(
+            [SENATE_RACES],
+            ["--state", "Michigan", "--commit"],
+            db=import_db,
+            fetcher=_full_fetcher(),
+        )
+
+        out = capsys.readouterr().out
+        assert code == 0
+        assert "Relabelled: 2 stored poll(s) moved onto a renamed matchup" in out
+        assert "created=0 skipped=2 failed=0" in out
+        senate = _map_id(import_db, "US Senate 2024")
+        polls = import_db.get_polls_for_map(senate)
+        assert [poll.matchup for poll in polls] == [MICHIGAN_MATCHUP] * 2
+        seat_id = _seat_ids(import_db, "US Senate 2024")["Michigan"]
+        tracked = import_db.get_tracked_matchup(senate, seat_id)
+        assert tracked is not None
+        assert tracked.matchup == MICHIGAN_MATCHUP
 
     def test_the_contest_flag_narrows_the_run(
         self, import_db: Database, capsys: pytest.CaptureFixture[str]

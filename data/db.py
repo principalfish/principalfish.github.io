@@ -62,6 +62,29 @@ class MatchupSummary:
     latest_fieldwork_end: date
 
 
+@dataclass(frozen=True, slots=True)
+class StoredPollReadings:
+    """One stored poll's identity and its candidates' figures.
+
+    Attributes:
+        poll_id: Primary key of the Poll.
+        pollster_identifier: The conducting pollster's slug.
+        fieldwork_start: First day of fieldwork.
+        fieldwork_end: Last day of fieldwork.
+        matchup: The poll's matchup label, or None for a party-only poll.
+        seat_id: Seat the poll covers, or None for a national poll.
+        readings: Percentage by candidate name, for the rows that name one.
+    """
+
+    poll_id: int
+    pollster_identifier: str
+    fieldwork_start: date
+    fieldwork_end: date
+    matchup: str | None
+    seat_id: int | None
+    readings: dict[str, float]
+
+
 def ensure_elections_sqlite_schema(conn: sqlite3.Connection) -> None:
     """Ensure the unified elections/votes tables exist (no-op on the main DB).
 
@@ -1086,6 +1109,59 @@ class Database:
                 .where(Poll.map_id == map_id, Pollster.identifier.in_(identifiers))
             ).tuples()
             return set(rows)
+
+    def get_poll_readings_for_map(
+        self,
+        map_id: int,
+        identifiers: set[str],
+    ) -> list[StoredPollReadings]:
+        """Return every poll stored on a map for these pollsters, with figures.
+
+        Args:
+            map_id: Only polls on this map are returned.
+            identifiers: Pollster slugs to look up. Slugs with no pollster row
+                simply match nothing.
+
+        Returns:
+            One :class:`StoredPollReadings` per poll, in id order; empty when
+            ``identifiers`` is empty. Rows without a candidate name are left
+            out of ``readings``.
+        """
+        if not identifiers:
+            return []
+        with self.session() as s:
+            rows = s.execute(
+                select(
+                    Poll.id,
+                    Pollster.identifier,
+                    Poll.fieldwork_start,
+                    Poll.fieldwork_end,
+                    Poll.matchup,
+                    Poll.seat_id,
+                    PollRow.candidate_name,
+                    PollRow.percentage,
+                )
+                .join(Pollster, Poll.pollster_id == Pollster.id)
+                .outerjoin(PollRow, PollRow.poll_id == Poll.id)
+                .where(Poll.map_id == map_id, Pollster.identifier.in_(identifiers))
+                .order_by(Poll.id)
+            ).tuples()
+            polls: dict[int, StoredPollReadings] = {}
+            for poll_id, identifier, start, end, matchup, seat_id, name, pct in rows:
+                poll = polls.get(poll_id)
+                if poll is None:
+                    poll = polls[poll_id] = StoredPollReadings(
+                        poll_id=poll_id,
+                        pollster_identifier=identifier,
+                        fieldwork_start=start,
+                        fieldwork_end=end,
+                        matchup=matchup,
+                        seat_id=seat_id,
+                        readings={},
+                    )
+                if name:
+                    poll.readings[name] = pct
+            return list(polls.values())
 
     def get_latest_poll_end_by_scope(
         self, map_id: int

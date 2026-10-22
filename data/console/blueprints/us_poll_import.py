@@ -68,6 +68,8 @@ from console.services.us_poll_queue import (
     INDEX_KEY,
     MODEL_ERROR_KEY,
     MODEL_RUN_KEY,
+    RELABEL_ERROR_KEY,
+    RELABEL_KEY,
     STATE_KEY,
     approve_group,
     build_us_queue,
@@ -447,6 +449,8 @@ def finish(token: str) -> ResponseReturnValue:
         auto_tracking=_auto_tracking_lines(auto_tracking),
         tracking_changed=tracking_changed(auto_tracking),
         auto_tracking_error=payload.get(AUTO_TRACKING_ERROR_KEY, ""),
+        relabelled=payload.get(RELABEL_KEY, 0),
+        relabel_error=payload.get(RELABEL_ERROR_KEY, ""),
         model_run=payload.get(MODEL_RUN_KEY),
         model_error=payload.get(MODEL_ERROR_KEY, ""),
     )
